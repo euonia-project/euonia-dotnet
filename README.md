@@ -45,7 +45,7 @@ graph TD
 ## Core module
 - [Euonia.Core](/Source/Euonia.Core)
   > Core library that providers base class, helpers and extension methods.
-- [Euonia.Business](/Source/Euonia.Business)
+- [Euonia.Osba](/Source/Euonia.Osba)
   > Object oriented & scalable business architecture library.
 - [Euonia.Grpc](/Source/Euonia.Grpc)
   

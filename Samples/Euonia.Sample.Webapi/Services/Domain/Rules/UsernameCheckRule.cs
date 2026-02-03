@@ -1,4 +1,4 @@
-using Nerosoft.Euonia.Business;
+using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Sample.Domain.Repositories;
 
 namespace Nerosoft.Euonia.Sample.Business.Rules;

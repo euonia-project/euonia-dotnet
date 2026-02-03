@@ -45,7 +45,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Euonia.Caching.Runtime", "S
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{5DC17AB4-46C2-4004-93CB-1446201C3AEA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Euonia.Business", "Source\Euonia.Business\Euonia.Business.csproj", "{423B2048-622A-40F6-A671-3DA95C18AEBB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Euonia.Osba", "Source\Euonia.Osba\Euonia.Osba.csproj", "{423B2048-622A-40F6-A671-3DA95C18AEBB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Euonia.Core", "Source\Euonia.Core\Euonia.Core.csproj", "{C4935163-9EE3-453A-9937-8F8DC4B8C4C0}"
 EndProject
@@ -136,7 +136,7 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Euonia.Bus.Tests.Shared", "
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Euonia.Hosting.Serilog", "Source\Euonia.Hosting.Serilog\Euonia.Hosting.Serilog.csproj", "{49969510-E0E4-4DF4-95F8-8B334CA9C5C6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Euonia.Business.Tests", "Tests\Euonia.Business.Tests\Euonia.Business.Tests.csproj", "{F6508A78-064F-4FB6-ABD6-7C43C7AB5A96}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Euonia.Osba.Tests", "Tests\Euonia.Osba.Tests\Euonia.Osba.Tests.csproj", "{F6508A78-064F-4FB6-ABD6-7C43C7AB5A96}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

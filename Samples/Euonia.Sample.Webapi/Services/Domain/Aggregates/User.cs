@@ -1,4 +1,4 @@
-﻿using Nerosoft.Euonia.Business;
+﻿using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Sample.Business.Rules;
 using Nerosoft.Euonia.Sample.Domain.Events;
 using Nerosoft.Euonia.Sample.Domain.Repositories;

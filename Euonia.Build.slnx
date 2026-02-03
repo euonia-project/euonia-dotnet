@@ -13,7 +13,7 @@
         <Project Path="Source/Euonia.Caching/Euonia.Caching.csproj" />
     </Folder>
     <Folder Name="/Source/Core/">
-        <Project Path="Source/Euonia.Business/Euonia.Business.csproj" />
+        <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
         <Project Path="Source/Euonia.Grpc/Euonia.Grpc.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />

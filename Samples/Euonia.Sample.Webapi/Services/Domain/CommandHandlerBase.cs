@@ -1,5 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Nerosoft.Euonia.Business;
+using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Domain;
 using Nerosoft.Euonia.Uow;
 
