@@ -313,7 +313,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <summary>
 	/// Gets or sets a value indicating whether the object should bypass property checks.
 	/// </summary>
-	protected bool IsBypassingRuleChecks { get; set; }
+	protected virtual bool IsBypassingRuleChecks { get; set; }
 
 	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
 

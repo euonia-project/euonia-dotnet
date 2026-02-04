@@ -7,369 +7,377 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <typeparam name="T"></typeparam>
 public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperableProperty
-    where T : ReadOnlyObject<T>
+	where T : ReadOnlyObject<T>
 {
-    #region Get Properties
+	/// <summary>
+	/// Override the IsBypassingRuleChecks to prevent the PropertyChanged event raise up.
+	/// </summary>
+	protected override bool IsBypassingRuleChecks
+	{
+		get => true;
+	}
 
-    /// <summary>
-    /// Gets a property's value, first checking authorization.
-    /// </summary>
-    /// <param name="propertyName"></param>
-    /// <param name="field"></param>
-    /// <param name="defaultValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
-    {
-        #region Check to see if the property is marked with RelationshipTypes.PrivateField
+	#region Get Properties
 
-        var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
+	/// <summary>
+	/// Gets a property's value, first checking authorization.
+	/// </summary>
+	/// <param name="propertyName"></param>
+	/// <param name="field"></param>
+	/// <param name="defaultValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
+	{
+		#region Check to see if the property is marked with RelationshipTypes.PrivateField
 
-        #endregion
+		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
 
-        if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, true))
-        {
-            return field;
-        }
+		#endregion
 
-        return defaultValue;
-    }
+		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, true))
+		{
+			return field;
+		}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="field"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field)
-    {
-        return GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue);
-    }
+		return defaultValue;
+	}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="field"></param>
-    /// <param name="defaultValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field, TValue defaultValue)
-    {
-        return GetProperty(propertyInfo.Name, field, defaultValue);
-    }
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="field"></param>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field)
+	{
+		return GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue);
+	}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="field"></param>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TField field)
-    {
-        return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue));
-    }
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="field"></param>
+	/// <param name="defaultValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field, TValue defaultValue)
+	{
+		return GetProperty(propertyInfo.Name, field, defaultValue);
+	}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo)
-    {
-        return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo));
-    }
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="field"></param>
+	/// <typeparam name="TField"></typeparam>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TField field)
+	{
+		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue));
+	}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo)
-    {
-        TValue result;
-        if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, true))
-            result = ReadProperty(propertyInfo);
-        else
-            result = propertyInfo.DefaultValue;
-        return result;
-    }
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <typeparam name="TField"></typeparam>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo)
+	{
+		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo));
+	}
 
-    /// <inheritdoc />
-    public object GetProperty(IPropertyInfo propertyInfo)
-    {
-        object result;
-        if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
-        {
-            // call ReadProperty (may be overloaded in actual class)
-            result = ReadProperty(propertyInfo);
-        }
-        else
-        {
-            result = propertyInfo.DefaultValue;
-        }
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo)
+	{
+		TValue result;
+		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, true))
+			result = ReadProperty(propertyInfo);
+		else
+			result = propertyInfo.DefaultValue;
+		return result;
+	}
 
-        return result;
-    }
+	/// <inheritdoc />
+	public object GetProperty(IPropertyInfo propertyInfo)
+	{
+		object result;
+		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
+		{
+			// call ReadProperty (may be overloaded in actual class)
+			result = ReadProperty(propertyInfo);
+		}
+		else
+		{
+			result = propertyInfo.DefaultValue;
+		}
 
-    /// <summary>
-    /// Gets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <typeparam name="TValue"></typeparam>
-    /// <returns></returns>
-    protected TValue GetProperty<TValue>(IPropertyInfo propertyInfo)
-    {
-        return (TValue)GetProperty(propertyInfo);
-    }
+		return result;
+	}
 
-    #endregion
+	/// <summary>
+	/// Gets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <typeparam name="TValue"></typeparam>
+	/// <returns></returns>
+	protected TValue GetProperty<TValue>(IPropertyInfo propertyInfo)
+	{
+		return (TValue)GetProperty(propertyInfo);
+	}
 
-    #region Set Properties
+	#endregion
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="field"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
-    {
-        SetProperty(propertyInfo.Name, ref field, newValue);
-    }
+	#region Set Properties
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="field"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
-    {
-        SetPropertyConvert(propertyInfo.Name, ref field, newValue);
-    }
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="field"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
+	{
+		SetProperty(propertyInfo.Name, ref field, newValue);
+	}
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyName"></param>
-    /// <param name="field"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
-    {
-        #region Check to see if the property is marked with RelationshipTypes.PrivateField
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="field"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TField"></typeparam>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
+	{
+		SetPropertyConvert(propertyInfo.Name, ref field, newValue);
+	}
 
-        var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyName"></param>
+	/// <param name="field"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
+	{
+		#region Check to see if the property is marked with RelationshipTypes.PrivateField
 
-        #endregion
+		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
 
-        if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
-        {
-            return;
-        }
+		#endregion
 
-        var doChange = false;
-        if (field == null)
-        {
-            if (newValue != null)
-                doChange = true;
-        }
-        else
-        {
-            if (typeof(TValue) == typeof(string) && newValue == null)
-                newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
-            if (!field.Equals(newValue))
-                doChange = true;
-        }
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
 
-        if (doChange)
-        {
-            if (!IsBypassingRuleChecks)
-            {
-                OnPropertyChanging(propertyName);
-            }
+		var doChange = false;
+		if (field == null)
+		{
+			if (newValue != null)
+				doChange = true;
+		}
+		else
+		{
+			if (typeof(TValue) == typeof(string) && newValue == null)
+				newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+			if (!field.Equals(newValue))
+				doChange = true;
+		}
 
-            field = newValue;
-            if (!IsBypassingRuleChecks)
-            {
-                PropertyHasChanged(propertyName);
-            }
-        }
-    }
+		if (doChange)
+		{
+			if (!IsBypassingRuleChecks)
+			{
+				OnPropertyChanging(propertyName);
+			}
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyName"></param>
-    /// <param name="field"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
-    {
-        #region Check to see if the property is marked with RelationshipTypes.PrivateField
+			field = newValue;
+			if (!IsBypassingRuleChecks)
+			{
+				PropertyHasChanged(propertyName);
+			}
+		}
+	}
 
-        var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyName"></param>
+	/// <param name="field"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TField"></typeparam>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
+	{
+		#region Check to see if the property is marked with RelationshipTypes.PrivateField
 
-        #endregion
+		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
 
-        if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
-        {
-            return;
-        }
+		#endregion
 
-        var doChange = false;
-        if (field == null)
-        {
-            if (newValue != null)
-            {
-                doChange = true;
-            }
-        }
-        else
-        {
-            if (typeof(TValue) == typeof(string) && newValue == null)
-            {
-                newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
-            }
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
 
-            if (!field.Equals(newValue))
-            {
-                doChange = true;
-            }
-        }
+		var doChange = false;
+		if (field == null)
+		{
+			if (newValue != null)
+			{
+				doChange = true;
+			}
+		}
+		else
+		{
+			if (typeof(TValue) == typeof(string) && newValue == null)
+			{
+				newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+			}
 
-        if (doChange)
-        {
-            if (!IsBypassingRuleChecks)
-            {
-                OnPropertyChanging(propertyName);
-            }
+			if (!field.Equals(newValue))
+			{
+				doChange = true;
+			}
+		}
 
-            field = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
-            if (!IsBypassingRuleChecks)
-            {
-                PropertyHasChanged(propertyName);
-            }
-        }
-    }
+		if (doChange)
+		{
+			if (!IsBypassingRuleChecks)
+			{
+				OnPropertyChanging(propertyName);
+			}
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TField"></typeparam>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue)
-    {
-        if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
-        {
-            return;
-        }
+			field = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			if (!IsBypassingRuleChecks)
+			{
+				PropertyHasChanged(propertyName);
+			}
+		}
+	}
 
-        TField oldValue;
-        var fieldData = FieldManager.GetFieldData(propertyInfo);
-        switch (fieldData)
-        {
-            case null:
-                oldValue = propertyInfo.DefaultValue;
-                var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-                break;
-            case IFieldData<TField> fd:
-                oldValue = fd.Value;
-                break;
-            default:
-                oldValue = (TField)fieldData.Value;
-                break;
-        }
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TField"></typeparam>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue)
+	{
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
 
-        if (typeof(TValue) == typeof(string) && newValue == null)
-        {
-            newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
-        }
+		TField oldValue;
+		var fieldData = FieldManager.GetFieldData(propertyInfo);
+		switch (fieldData)
+		{
+			case null:
+				oldValue = propertyInfo.DefaultValue;
+				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
+				break;
+			case IFieldData<TField> fd:
+				oldValue = fd.Value;
+				break;
+			default:
+				oldValue = (TField)fieldData.Value;
+				break;
+		}
 
-        LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks);
-    }
+		if (typeof(TValue) == typeof(string) && newValue == null)
+		{
+			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+		}
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
-    {
-        if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
-        {
-            return;
-        }
+		LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks);
+	}
 
-        TValue oldValue;
-        var fieldData = FieldManager.GetFieldData(propertyInfo);
-        switch (fieldData)
-        {
-            case null:
-                oldValue = propertyInfo.DefaultValue;
-                var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-                break;
-            case IFieldData<TValue> fd:
-                oldValue = fd.Value;
-                break;
-            default:
-                oldValue = (TValue)fieldData.Value;
-                break;
-        }
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
+	{
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
 
-        if (typeof(TValue) == typeof(string) && newValue == null)
-        {
-            newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
-        }
+		TValue oldValue;
+		var fieldData = FieldManager.GetFieldData(propertyInfo);
+		switch (fieldData)
+		{
+			case null:
+				oldValue = propertyInfo.DefaultValue;
+				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
+				break;
+			case IFieldData<TValue> fd:
+				oldValue = fd.Value;
+				break;
+			default:
+				oldValue = (TValue)fieldData.Value;
+				break;
+		}
 
-        LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks);
-    }
+		if (typeof(TValue) == typeof(string) && newValue == null)
+		{
+			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+		}
 
-    /// <inheritdoc />
-    public void SetProperty(IPropertyInfo propertyInfo, object newValue)
-    {
-        if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
-        {
-            return;
-        }
+		LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks);
+	}
 
-        if (!IsBypassingRuleChecks)
-        {
-            OnPropertyChanging(propertyInfo);
-        }
+	/// <inheritdoc />
+	public void SetProperty(IPropertyInfo propertyInfo, object newValue)
+	{
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
 
-        FieldManager.SetFieldData(propertyInfo, newValue);
+		if (!IsBypassingRuleChecks)
+		{
+			OnPropertyChanging(propertyInfo);
+		}
 
-        if (!IsBypassingRuleChecks)
-        {
-            PropertyHasChanged(propertyInfo);
-        }
-    }
+		FieldManager.SetFieldData(propertyInfo, newValue);
 
-    /// <summary>
-    /// Sets the value of specified property.
-    /// </summary>
-    /// <param name="propertyInfo"></param>
-    /// <param name="newValue"></param>
-    /// <typeparam name="TValue"></typeparam>
-    protected virtual void SetProperty<TValue>(IPropertyInfo propertyInfo, TValue newValue)
-    {
-        SetProperty(propertyInfo, (object)newValue);
-    }
+		if (!IsBypassingRuleChecks)
+		{
+			PropertyHasChanged(propertyInfo);
+		}
+	}
 
-    #endregion
+	/// <summary>
+	/// Sets the value of specified property.
+	/// </summary>
+	/// <param name="propertyInfo"></param>
+	/// <param name="newValue"></param>
+	/// <typeparam name="TValue"></typeparam>
+	protected virtual void SetProperty<TValue>(IPropertyInfo propertyInfo, TValue newValue)
+	{
+		SetProperty(propertyInfo, (object)newValue);
+	}
+
+	#endregion
 }
