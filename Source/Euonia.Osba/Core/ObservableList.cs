@@ -15,13 +15,11 @@ namespace Nerosoft.Euonia.Osba;
 /// collection or its items.
 /// </summary>
 /// <remarks>
-/// <![CDATA[
-/// ObservableList<T> extends ObservableCollection<T> by providing additional support for monitoring
+/// ObservableList{T} extends ObservableCollection{T} by providing additional support for monitoring
 /// changes in child objects and busy state notifications. This makes it suitable for data binding scenarios where UI
 /// elements need to stay synchronized with the underlying data and be aware of long-running operations. The collection
 /// can suppress change notifications during batch updates to improve performance and avoid unnecessary UI refreshes. It
 /// also propagates property and busy state changes from child items, enabling more granular change tracking.
-/// ]]>
 /// </remarks>
 /// <typeparam name="T">The type of elements contained in the observable list.</typeparam>
 public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
