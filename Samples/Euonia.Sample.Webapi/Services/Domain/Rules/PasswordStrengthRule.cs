@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using Nerosoft.Euonia.Business;
+using Nerosoft.Euonia.Osba;
 
 namespace Nerosoft.Euonia.Sample.Business.Rules;
 

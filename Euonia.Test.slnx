@@ -1,5 +1,5 @@
 <Solution>
-	<Project Path="Tests/Euonia.Business.Tests/Euonia.Business.Tests.csproj" />
+	<Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
     <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
 	<Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
     <Folder Name="/Bus/">

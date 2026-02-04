@@ -1,5 +1,5 @@
 ﻿using Nerosoft.Euonia.Bus;
-using Nerosoft.Euonia.Business;
+using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Sample.Domain;
 using Nerosoft.Euonia.Sample.Domain.Aggregates;
 using Nerosoft.Euonia.Sample.Domain.Commands;

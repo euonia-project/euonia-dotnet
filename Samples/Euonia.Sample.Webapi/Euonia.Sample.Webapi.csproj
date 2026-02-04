@@ -18,7 +18,7 @@
         <ProjectReference Include="..\..\Source\Euonia.Application\Euonia.Application.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus.InMemory\Euonia.Bus.InMemory.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus.RabbitMq\Euonia.Bus.RabbitMq.csproj" />
-        <ProjectReference Include="..\..\Source\Euonia.Business\Euonia.Business.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus\Euonia.Bus.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Domain\Euonia.Domain.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Hosting\Euonia.Hosting.csproj" />
