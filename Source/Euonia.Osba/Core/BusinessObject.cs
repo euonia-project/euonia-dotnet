@@ -11,8 +11,16 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Abstract class that serves as the base for all business objects.
+/// Provides a base class for business objects, supporting property change notification, rule validation, and business
+/// context management.
 /// </summary>
+/// <remarks>
+/// BusinessObject implements interfaces for property change notification (INotifyPropertyChanged,
+/// INotifyPropertyChanging), rule checking (IHasRuleCheck), and resource management (IDisposable). Derived classes
+/// should override relevant methods to implement custom business logic and validation rules. The class manages rule
+/// checking, tracks changed properties, and provides mechanisms to bypass rule checks when necessary. Thread safety and
+/// event handling are supported for property and validation changes.
+/// </remarks>
 public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposable
 {
 	private readonly List<IPropertyInfo> _changedProperties = [];
@@ -151,6 +159,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		Events.HandleEvent(this, EventArgs.Empty, nameof(ValidationComplete));
 	}
 
+	/// <summary>
+	/// Initializes the validation rules for the current type, ensuring that all required rules are set up before use.
+	/// </summary>
+	/// <remarks>This method is thread-safe and prevents concurrent initialization of rules for the same type. If an
+	/// error occurs during initialization, any partially initialized rules are cleaned up to maintain consistency. Call
+	/// this method before performing operations that depend on the type's validation rules.</remarks>
 	private void InitializeRules()
 	{
 		var rules = RuleManager.GetRules(GetType());
@@ -190,8 +204,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	///  Adds the rules applicable to this business object.
+	/// Adds validation rules to the current context. Derived classes should override this method to specify custom
+	/// validation logic.
 	/// </summary>
+	/// <remarks>
+	/// Implementations should ensure that all necessary rules are added to maintain data integrity. This
+	/// method is called during the initialization phase of the validation process.
+	/// </remarks>
 	protected virtual void AddRules()
 	{
 	}
@@ -446,12 +465,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		return TypeHelper.CoerceValue<TProperty>(typeof(TValue), ReadProperty(propertyInfo));
 	}
 
-	/// <summary>
-	/// Gets a property's value as a specified type.
-	/// </summary>
-	/// <param name="propertyInfo">PropertyInfo object containing property metadata.</param>
-	/// <typeparam name="TValue">Type of the property value.</typeparam>
-	/// <returns></returns>
+	/// <inheritdoc />
 	public TValue ReadProperty<TValue>(PropertyInfo<TValue> propertyInfo)
 	{
 		TValue result;
@@ -498,22 +512,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 	#region Load Properties
 
-	/// <summary>
-	/// Checks if the provided property exists in the field manager.
-	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
+	/// <inheritdoc />
 	public bool FieldExists(IPropertyInfo property)
 	{
 		return FieldManager.FieldExists(property);
 	}
 
-	/// <summary>
-	/// Loads a property's managed field with a new value.
-	/// </summary>
-	/// <typeparam name="TValue"></typeparam>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
+	/// <inheritdoc />
 	public void LoadProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
 		TValue oldValue;
@@ -536,13 +541,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Loads property value.
+	/// Loads a new value for the specified property and updates its state if the value has changed.
 	/// </summary>
-	/// <typeparam name="TValue"></typeparam>
-	/// <param name="propertyInfo"></param>
-	/// <param name="oldValue"></param>
-	/// <param name="newValue"></param>
-	/// <param name="markAsChanged"></param>
+	/// <remarks>
+	/// If the new value differs from the old value and <paramref name="markAsChanged"/> is <see
+	/// langword="true"/>, the method triggers property change notifications and updates the property's state accordingly.
+	/// Otherwise, the value is loaded without marking the property as changed.
+	/// </remarks>
+	/// <typeparam name="TValue">The type of the property's value.</typeparam>
+	/// <param name="propertyInfo">The metadata that identifies the property whose value is being loaded.</param>
+	/// <param name="oldValue">The previous value of the property before the update.</param>
+	/// <param name="newValue">The new value to assign to the property.</param>
+	/// <param name="markAsChanged">Indicates whether to mark the property as changed and trigger change notifications if the value has changed.</param>
 	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged)
 	{
 		var valuesDiffer = ValuesDiffer(propertyInfo, newValue, oldValue);
@@ -650,13 +660,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Check if old and new values are different.
+	/// Determines whether the specified new and old values for a property are different.
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <param name="oldValue"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <remarks>
+	/// For properties whose type implements IBusinessObject, this method uses reference equality to
+	/// determine if the values differ. For other types, value equality is used. Null values are handled
+	/// appropriately.
+	/// </remarks>
+	/// <typeparam name="TValue">The type of the values to compare.</typeparam>
+	/// <param name="propertyInfo">The property metadata used to determine the comparison strategy based on the property's type.</param>
+	/// <param name="newValue">The new value to compare. May be null.</param>
+	/// <param name="oldValue">The old value to compare. May be null.</param>
+	/// <returns>true if the new value differs from the old value; otherwise, false.</returns>
 	protected virtual bool ValuesDiffer<TValue>(IPropertyInfo propertyInfo, TValue newValue, TValue oldValue)
 	{
 		bool valuesDiffer;
