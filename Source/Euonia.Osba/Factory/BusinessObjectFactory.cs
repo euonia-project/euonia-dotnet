@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Threading;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -29,6 +30,61 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		_provider = provider;
 		_activator = activator;
+	}
+
+	/// <inheritdoc/>
+	public TTarget Create<TTarget>(params object[] criteria)
+	{
+		criteria ??= [null];
+		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryCreateAttribute>(criteria);
+		var target = GetObjectInstance<TTarget>();
+		if (target is IEditableObject editable)
+		{
+			editable.MarkAsNew();
+		}
+
+		try
+		{
+			_activator?.InitializeInstance(target);
+			if (method.IsAsync())
+			{
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+			}
+			else
+			{
+				method.Invoke(target, parameters: criteria);
+			}
+			return target;
+		}
+		finally
+		{
+			_activator?.FinalizeInstance(target);
+		}
+	}
+
+	/// <inheritdoc/>
+	public TTarget Fetch<TTarget>(params object[] criteria)
+	{
+		criteria ??= [null];
+		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
+		var target = GetObjectInstance<TTarget>();
+		try
+		{
+			_activator?.InitializeInstance(target);
+			if (method.IsAsync())
+			{
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+			}
+			else
+			{
+				method.Invoke(target, parameters: criteria);
+			}
+			return target;
+		}
+		finally
+		{
+			_activator?.FinalizeInstance(target);
+		}
 	}
 
 	/// <inheritdoc/>
@@ -211,9 +267,9 @@ public class BusinessObjectFactory : IObjectFactory
 		var @object = ActivatorUtilities.GetServiceOrCreateInstance<TTarget>(_provider);
 
 		// ReSharper disable once ConvertIfStatementToSwitchStatement
-		
+
 		// The object may be both IHasLazyServiceProvider and IUseBusinessContext
-		
+
 		if (@object is IHasLazyServiceProvider lazy)
 		{
 			lazy.LazyServiceProvider = _provider.GetRequiredService<ILazyServiceProvider>();
