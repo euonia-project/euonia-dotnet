@@ -351,7 +351,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
 		private BusinessObject _target;
-		private static readonly object _lock = new();
+		private static readonly Lock _lock = new();
 
 		private BypassRuleChecksObject(BusinessObject target)
 		{
@@ -416,12 +416,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			lock (_lock)
 			{
 				_refCount -= 1;
-				if (_refCount == 0)
+				if (_refCount != 0)
 				{
-					_target.IsBypassingRuleChecks = false;
-					_target.InternalBypassRuleChecks = null;
-					_target = null;
+					return;
 				}
+
+				_target.IsBypassingRuleChecks = false;
+				_target.InternalBypassRuleChecks = null;
+				_target = null;
 			}
 		}
 
@@ -506,6 +508,52 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// Gets a property's value by property name.
+	/// </summary>
+	/// <param name="propertyName"></param>
+	/// <returns></returns>
+	/// <exception cref="InvalidOperationException"></exception>
+	public virtual object ReadProperty(string propertyName)
+	{
+		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
+		if (propertyInfo == null)
+		{
+			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+		}
+
+		return ReadProperty(propertyInfo);
+	}
+
+	/// <summary>
+	/// Reads the value of the specified property by its name and returns it as the requested type.
+	/// </summary>
+	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
+	/// <typeparam name="TValue">The type of the property value to be read.</typeparam>
+	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
+	/// <exception cref="InvalidOperationException">
+	///	Thrown if the property name provided does not correspond to a valid property that can be read, or if the value cannot be cast to the specified type.
+	/// </exception>
+	public virtual TValue ReadProperty<TValue>(string propertyName)
+	{
+		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
+		
+		if (propertyInfo == null)
+		{
+			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+		}
+
+		if (propertyInfo is not PropertyInfo<TValue> property)
+		{
+			throw new InvalidOperationException("The property type does not match the expected type.");
+		}
+
+		{
+		}
+
+		return ReadProperty(property);
 	}
 
 	#endregion

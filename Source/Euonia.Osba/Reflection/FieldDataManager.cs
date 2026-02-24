@@ -103,6 +103,24 @@ public class FieldDataManager
 		}
 	}
 
+	/// <summary>
+	/// Gets the field data for a property with specified name.
+	/// </summary>
+	/// <param name="propertyName"></param>
+	/// <returns></returns>
+	/// <exception cref="InvalidOperationException"></exception>
+	public IFieldData GetFieldData(string propertyName)
+	{
+		try
+		{
+			return _fieldData.GetValueOrDefault(propertyName);
+		}
+		catch (IndexOutOfRangeException ex)
+		{
+			throw new InvalidOperationException(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, ex);
+		}
+	}
+
 	private IFieldData GetOrCreateFieldData(IPropertyInfo property)
 	{
 		try

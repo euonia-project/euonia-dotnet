@@ -46,6 +46,17 @@ public interface IBusinessObject : IUseBusinessContext, INotifyPropertyChanged, 
 	object ReadProperty(IPropertyInfo propertyInfo);
 
 	/// <summary>
+	/// Retrieves the value of the property specified by its name.
+	/// </summary>
+	/// <remarks>
+	///	Use this method to access the current value of a property identified by its name.
+	/// Ensure that the property name provided corresponds to a valid property that can be read. This method does not set or modify the property value.
+	/// </remarks>
+	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
+	/// <returns>The value of the specified property, or null if the property has not been set.</returns>
+	object ReadProperty(string propertyName);
+	
+	/// <summary>
 	/// Reads the value of the specified property and returns it as the requested type.
 	/// </summary>
 	/// <remarks>
@@ -58,6 +69,18 @@ public interface IBusinessObject : IUseBusinessContext, INotifyPropertyChanged, 
 	/// null.</param>
 	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
 	TValue ReadProperty<TValue>(PropertyInfo<TValue> propertyInfo);
+	
+	/// <summary>
+	/// Reads the value of the specified property by its name and returns it as the requested type.
+	/// </summary>
+	/// <remarks>
+	///	Ensure that the property name provided corresponds to a valid property that can be read and that the value can be cast to <typeparamref name="TValue"/>.
+	/// An exception may be thrown if the property is not readable or if the value cannot be cast to the specified type.
+	/// </remarks>
+	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
+	/// <typeparam name="TValue">The type of the property value to be read.</typeparam>
+	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
+	TValue ReadProperty<TValue>(string propertyName);
 
 	/// <summary>
 	/// Loads the specified property with a new value, updating the property's value according to its metadata information.

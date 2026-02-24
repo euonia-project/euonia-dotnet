@@ -14,7 +14,7 @@ public class Validator
     public static void Validate<T>(T item)
         where T : class
     {
-		ArgumentAssert.ThrowIfNull(item, nameof(item));
+		ArgumentAssert.ThrowIfNull(item);
 		
         if (item is IValidatableObject @object)
         {
@@ -42,7 +42,7 @@ public class Validator
 	public static async Task ValidateAsync<T>(T item)
 		where T : class
 	{
-		ArgumentAssert.ThrowIfNull(item, nameof(item));
+		ArgumentAssert.ThrowIfNull(item);
 		
 		if (item is IValidatableObject @object)
 		{
