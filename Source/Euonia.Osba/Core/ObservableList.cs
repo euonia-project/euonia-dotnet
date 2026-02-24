@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -21,8 +16,8 @@ namespace Nerosoft.Euonia.Osba;
 /// can suppress change notifications during batch updates to improve performance and avoid unnecessary UI refreshes. It
 /// also propagates property and busy state changes from child items, enabling more granular change tracking.
 /// </remarks>
-/// <typeparam name="T">The type of elements contained in the observable list.</typeparam>
-public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
+/// <typeparam name="TItem">The type of elements contained in the observable list.</typeparam>
+public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 {
 	private EventHandler<ObjectChangedEventArgs> _childChanged = null;
 
@@ -50,7 +45,8 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	public bool RaiseListChangedEvents { get; set; } = true;
 
 	#region BusyChanged
-	private BusyChangedEventHandler _busyChanged = null;
+
+	private BusyChangedEventHandler _busyChanged;
 
 	/// <summary>
 	/// Event indicating that the busy status of the
@@ -96,6 +92,7 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	/// <remarks>This property reflects the state of the IsBusy property, providing a convenient way to check if the
 	/// instance is currently engaged in operations.</remarks>
 	public virtual bool IsSelfBusy => IsBusy;
+
 	#endregion
 
 	/// <summary>
@@ -117,7 +114,7 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	/// after insertion. This allows the collection to respond to events raised by the item.</remarks>
 	/// <param name="index">The zero-based index at which the item should be inserted into the collection.</param>
 	/// <param name="item">The item to insert and attach event hooks to.</param>
-	protected override void InsertItem(int index, T item)
+	protected override void InsertItem(int index, TItem item)
 	{
 		base.InsertItem(index, item);
 		AddEventHooks(item);
@@ -142,7 +139,7 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	/// Removes event hooks from an item.
 	/// </summary>
 	/// <param name="item"></param>
-	protected virtual void RemoveEventHooks(T item)
+	protected virtual void RemoveEventHooks(TItem item)
 	{
 		if (item == null)
 		{
@@ -167,7 +164,7 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	/// PropertyChanged event if the item implements INotifyPropertyChanged. These subscriptions enable the system to
 	/// respond to changes in the item's state or properties.</remarks>
 	/// <param name="item">The item to which event handlers are added. This parameter must not be null; if null, no handlers are attached.</param>
-	protected virtual void AddEventHooks(T item)
+	protected virtual void AddEventHooks(TItem item)
 	{
 		if (item == null)
 		{
@@ -203,6 +200,7 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	}
 
 	#region Event Subscriptions
+
 	private void OnItemBusyChanged(object sender, BusyChangedEventArgs e)
 	{
 		OnBusyChanged(e);
@@ -212,13 +210,14 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	{
 		RaiseChildChanged(sender, e, null);
 	}
+
 	#endregion
 
 	/// <summary>
 	/// Use this object to suppress ListChangedEvents for an entire code block.
 	/// May be nested in multiple levels for the same object.
 	/// </summary>
-	public IDisposable SuppressListChangedEvents => new SuppressListChangedEventsClass<T>(this);
+	public IDisposable SuppressListChangedEvents => new SuppressListChangedEventsClass<TItem>(this);
 
 	/// <summary>
 	/// <![CDATA[Provides a mechanism to temporarily suppress change notifications for an ObservableList<T> instance.]]>
@@ -230,13 +229,13 @@ public class ObservableList<T> : ObservableCollection<T>, INotifyBusy
 	/// improving performance and avoiding unnecessary updates to data-bound controls during batch operations.
 	/// ]]>
 	/// </remarks>
-	/// <typeparam name="D">The type of elements contained in the observable list.</typeparam>
-	private class SuppressListChangedEventsClass<D> : IDisposable
+	/// <typeparam name="TList">The type of elements contained in the observable list.</typeparam>
+	private class SuppressListChangedEventsClass<TList> : IDisposable
 	{
-		private readonly ObservableList<D> _listObject;
+		private readonly ObservableList<TList> _listObject;
 		private readonly bool _initialRaiseListChangedEvents;
 
-		public SuppressListChangedEventsClass(ObservableList<D> listObject)
+		public SuppressListChangedEventsClass(ObservableList<TList> listObject)
 		{
 			_listObject = listObject;
 			_initialRaiseListChangedEvents = listObject.RaiseListChangedEvents;

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel;
-using Nerosoft.Euonia.Reflection;
+﻿using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Domain;
 

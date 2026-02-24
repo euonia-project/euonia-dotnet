@@ -351,7 +351,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
 		private BusinessObject _target;
-		private static readonly object _lock = new();
+		private static readonly Lock _lock = new();
 
 		private BypassRuleChecksObject(BusinessObject target)
 		{
@@ -416,12 +416,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			lock (_lock)
 			{
 				_refCount -= 1;
-				if (_refCount == 0)
+				if (_refCount != 0)
 				{
-					_target.IsBypassingRuleChecks = false;
-					_target.InternalBypassRuleChecks = null;
-					_target = null;
+					return;
 				}
+
+				_target.IsBypassingRuleChecks = false;
+				_target.InternalBypassRuleChecks = null;
+				_target = null;
 			}
 		}
 

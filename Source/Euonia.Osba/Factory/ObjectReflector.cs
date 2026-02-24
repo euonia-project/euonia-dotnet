@@ -194,8 +194,9 @@ public class ObjectReflector
 	public static MethodInfo FindMatchedMethod<TTarget>(Type attributeType, IReadOnlyList<Type> parameterTypes)
 	{
 		var methods = typeof(TTarget).GetRuntimeMethods()
-		                             .Where(t => t.GetCustomAttribute(attributeType) != null);
-		if (methods == null || !methods.Any())
+		                             .Where(t => t.GetCustomAttribute(attributeType) != null)
+		                             .ToList();
+		if (methods is not { Count: > 0 })
 		{
 			throw new MissingMethodException($"Missing method with attribute '{attributeType.Name}' on {typeof(TTarget).FullName}");
 		}
