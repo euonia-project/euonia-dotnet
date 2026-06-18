@@ -69,7 +69,7 @@ public class RabbitMqTransport : ITransport
 			            var exchangeName = $"{exchangePrefix}:{message.Channel}";
 
 			            await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
-			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@*", true, props, messageBody, cancellationToken: cancellationToken);
+			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Data, null));
 		            });
