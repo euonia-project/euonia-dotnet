@@ -3,30 +3,30 @@ using System.Globalization;
 namespace System.ComponentModel.DataAnnotations;
 
 /// <summary>
-/// Attribute to validate the number of items in a collection property.
-/// Ensures a collection contains at least <see cref="MinimumCount"/> items and,
-/// optionally, no more than <see cref="MaximumCount"/> items. When <see cref="AllowNull"/>
-/// is true, a null value will be considered valid.
+/// 用于验证集合属性中元素数量的特性。
+/// 确保集合至少包含 <see cref="MinimumCount"/> 个元素，
+/// 并可选择性地限制不超过 <see cref="MaximumCount"/> 个元素。
+/// 当 <see cref="AllowNull"/> 为 true 时，null 值将被视为有效。
 /// </summary>
 [AttributeUsage(AttributeTargets.Property | AttributeTargets.Field | AttributeTargets.Parameter)]
 public class CollectionCountAttribute : ValidationAttribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum item count.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小元素数量。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
 	public CollectionCountAttribute(int minimumCount)
 	{
 		MinimumCount = minimumCount;
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum and maximum item count.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小和最大元素数量。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
-	/// <param name="maximumCount">The maximum number of items allowed in the collection.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
+	/// <param name="maximumCount">集合中允许的最大元素数量。</param>
 	public CollectionCountAttribute(int minimumCount, int maximumCount)
 	{
 		MinimumCount = minimumCount;
@@ -34,11 +34,11 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum item count and uses an error message accessor.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小元素数量，并使用错误消息访问器。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
-	/// <param name="errorMessageAccessor">A function that returns the error message.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
+	/// <param name="errorMessageAccessor">返回错误消息的函数。</param>
 	public CollectionCountAttribute(int minimumCount, Func<string> errorMessageAccessor)
 		: base(errorMessageAccessor)
 	{
@@ -46,12 +46,12 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum and maximum item count and uses an error message accessor.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小和最大元素数量，并使用错误消息访问器。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
-	/// <param name="maximumCount">The maximum number of items allowed in the collection.</param>
-	/// <param name="errorMessageAccessor">A function that returns the error message.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
+	/// <param name="maximumCount">集合中允许的最大元素数量。</param>
+	/// <param name="errorMessageAccessor">返回错误消息的函数。</param>
 	public CollectionCountAttribute(int minimumCount, int maximumCount, Func<string> errorMessageAccessor)
 		: base(errorMessageAccessor)
 	{
@@ -60,11 +60,11 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum item count and uses a static error message.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小元素数量，并使用静态错误消息。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
-	/// <param name="errorMessage">The error message to use when validation fails.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
+	/// <param name="errorMessage">验证失败时使用的错误消息。</param>
 	public CollectionCountAttribute(int minimumCount, string errorMessage)
 		: base(errorMessage)
 	{
@@ -72,12 +72,12 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CollectionCountAttribute"/> class that
-	/// enforces a minimum and maximum item count and uses a static error message.
+	/// 初始化 <see cref="CollectionCountAttribute"/> 类的新实例，
+	/// 强制要求最小和最大元素数量，并使用静态错误消息。
 	/// </summary>
-	/// <param name="minimumCount">The minimum number of items required in the collection.</param>
-	/// <param name="maximumCount">The maximum number of items allowed in the collection.</param>
-	/// <param name="errorMessage">The error message to use when validation fails.</param>
+	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
+	/// <param name="maximumCount">集合中允许的最大元素数量。</param>
+	/// <param name="errorMessage">验证失败时使用的错误消息。</param>
 	public CollectionCountAttribute(int minimumCount, int maximumCount, string errorMessage)
 		: base(errorMessage)
 	{
@@ -86,38 +86,38 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Gets or sets the minimum number of items required in the collection.
-	/// Default is 0.
+	/// 获取集合中所需的最小元素数量。
+	/// 默认值为 0。
 	/// </summary>
 	public int MinimumCount { get; }
 
 	/// <summary>
-	/// Gets or sets the optional maximum number of items allowed in the collection.
-	/// When null, no upper bound is enforced.
+	/// 获取或设置集合中允许的可选最大元素数量。
+	/// 为 null 时，不强制上限。
 	/// </summary>
 	public int? MaximumCount { get; }
 
 	/// <summary>
-	/// Gets or sets a value indicating whether a null collection is considered valid.
-	/// Default is true.
+	/// 获取或设置一个值，指示 null 集合是否被视为有效。
+	/// 默认值为 true。
 	/// </summary>
 	public bool AllowNull { get; set; } = true;
 
 	/// <summary>
-	/// Validates the specified value with respect to the configured minimum/maximum counts.
-	/// Returns <see cref="ValidationResult.Success"/> when the value is valid; otherwise
-	/// returns a <see cref="ValidationResult"/> containing a formatted error message.
-	/// Behavior:
-	/// - If value is null and <see cref="AllowNull"/> is true, validation succeeds.
-	/// - If value is null and <see cref="AllowNull"/> is false, a validation error is returned.
-	/// - If value implements <c>ICollection</c> and its <c>Count</c> is less than
-	///   <see cref="MinimumCount"/>, a validation error is returned.
-	/// - If value implements <c>ICollection</c> and <see cref="MaximumCount"/> has a value
-	///   and <c>Count</c> is greater than <see cref="MaximumCount"/>, a validation error is returned.
+	/// 根据配置的最小/最大数量验证指定的值。
+	/// 当值有效时返回 <see cref="ValidationResult.Success"/>；
+	/// 否则返回包含格式化错误消息的 <see cref="ValidationResult"/>。
+	/// 行为说明：
+	/// - 如果值为 null 且 <see cref="AllowNull"/> 为 true，则验证成功。
+	/// - 如果值为 null 且 <see cref="AllowNull"/> 为 false，则返回验证错误。
+	/// - 如果值实现了 <c>ICollection</c> 且其 <c>Count</c> 小于
+	///   <see cref="MinimumCount"/>，则返回验证错误。
+	/// - 如果值实现了 <c>ICollection</c> 且 <see cref="MaximumCount"/> 有值
+	///   并且 <c>Count</c> 大于 <see cref="MaximumCount"/>，则返回验证错误。
 	/// </summary>
-	/// <param name="value">The value of the property to validate (expected to be a collection).</param>
-	/// <param name="validationContext">The context information about the validation operation.</param>
-	/// <returns>A <see cref="ValidationResult"/> indicating success or failure.</returns>
+	/// <param name="value">要验证的属性值（预期为集合）。</param>
+	/// <param name="validationContext">验证操作的上下文信息。</param>
+	/// <returns>指示成功或失败的 <see cref="ValidationResult"/>。</returns>
 	protected override ValidationResult IsValid(object value, ValidationContext validationContext)
 	{
 		return value switch
@@ -133,12 +133,12 @@ public class CollectionCountAttribute : ValidationAttribute
 	}
 
 	/// <summary>
-	/// Formats an error message using the current culture and the provided display name.
-	/// The message is expected to contain a single format placeholder ({0}) for the display name.
+	/// 使用当前区域性和提供的显示名称格式化错误消息。
+	/// 消息应包含用于显示名称的单个格式占位符 ({0})。
 	/// </summary>
-	/// <param name="message">The message template to format.</param>
-	/// <param name="displayName">The display name of the validated member.</param>
-	/// <returns>The formatted error message.</returns>
+	/// <param name="message">要格式化的消息模板。</param>
+	/// <param name="displayName">已验证成员的显示名称。</param>
+	/// <returns>格式化后的错误消息。</returns>
 	private static string FormatErrorMessage(string message, string displayName)
 	{
 		return string.Format(CultureInfo.CurrentCulture, message, displayName);

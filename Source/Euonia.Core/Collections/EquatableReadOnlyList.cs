@@ -1,17 +1,17 @@
-﻿namespace Nerosoft.Euonia.Collections;
+namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
-/// Represents a read-only list that enabled comparison of two instance of the <see cref="EquatableReadOnlyList{T}"/> for equality.
+/// 表示一个只读列表，可对两个 <see cref="EquatableReadOnlyList{T}"/> 实例进行相等性比较。
 /// </summary>
-/// <typeparam name="T">The element type.</typeparam>
+/// <typeparam name="T">元素类型。</typeparam>
 public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<EquatableReadOnlyList<T>>
 {
     private readonly T[] _array;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="EquatableReadOnlyList{T}"/> class.
+    /// 初始化 <see cref="EquatableReadOnlyList{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="items"></param>
+    /// <param name="items">集合元素。</param>
     public EquatableReadOnlyList(IEnumerable<T> items)
     {
         _array = items.ToArray();
@@ -21,7 +21,7 @@ public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<E
     public T this[int index] => _array[index];
 
     /// <summary>
-    /// Gets the element count of the list.
+    /// 获取列表的元素数量。
     /// </summary>
     public int Count => _array.Length;
 
@@ -38,30 +38,31 @@ public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<E
     }
 
     /// <summary>
-    /// Returns an enumerator that iterates through the collection.
+    /// 返回一个循环访问集合的枚举器。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>可用于循环访问集合的 <see cref="IEnumerator{T}"/>。</returns>
     public IEnumerator<T> GetEnumerator() => _array.As<IEnumerable<T>>().GetEnumerator();
 
+    /// <inheritdoc />
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     /// <summary>
-    /// Determines whether two specified <see cref="EquatableReadOnlyList{T}"/> have the same value.
+    /// 确定两个指定的 <see cref="EquatableReadOnlyList{T}"/> 是否具有相同的值。
     /// </summary>
-    /// <param name="left"></param>
-    /// <param name="right"></param>
-    /// <returns></returns>
+    /// <param name="left">要比较的第一个列表。</param>
+    /// <param name="right">要比较的第二个列表。</param>
+    /// <returns>如果两个列表的值相等，则为 true；否则为 false。</returns>
     public static bool operator ==(EquatableReadOnlyList<T> left, EquatableReadOnlyList<T> right)
     {
         return left.Equals(right);
     }
 
     /// <summary>
-    /// Determines whether two specified <see cref="EquatableReadOnlyList{T}"/> have different values.
+    /// 确定两个指定的 <see cref="EquatableReadOnlyList{T}"/> 是否具有不同的值。
     /// </summary>
-    /// <param name="left"></param>
-    /// <param name="right"></param>
-    /// <returns></returns>
+    /// <param name="left">要比较的第一个列表。</param>
+    /// <param name="right">要比较的第二个列表。</param>
+    /// <returns>如果两个列表的值不同，则为 true；否则为 false。</returns>
     public static bool operator !=(EquatableReadOnlyList<T> left, EquatableReadOnlyList<T> right)
     {
         return !(left == right);
