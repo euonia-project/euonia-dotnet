@@ -1,14 +1,14 @@
-﻿namespace Nerosoft.Euonia.Collections;
+namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
-/// To be added.
+/// 视图集合类。
 /// </summary>
-/// <typeparam name="T"></typeparam>
-public class ViewCollection<T> 
+/// <typeparam name="T">元素类型，必须是引用类型且具有无参构造函数。</typeparam>
+public class ViewCollection<T>
     where T : class, new()
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ViewCollection{T}"/> class.
+    /// 初始化 <see cref="ViewCollection{T}"/> 类的新实例。
     /// </summary>
     public ViewCollection()
     {
@@ -16,19 +16,19 @@ public class ViewCollection<T>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ViewCollection{T}"/> class.
+    /// 初始化 <see cref="ViewCollection{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="items">The items.</param>
+    /// <param name="items">集合元素。</param>
     public ViewCollection(IList<T> items)
     {
         Items = new List<T>(items);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ViewCollection{T}"/> class.
+    /// 初始化 <see cref="ViewCollection{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="items">The items.</param>
-    /// <param name="totalCount">The total count.</param>
+    /// <param name="items">集合元素。</param>
+    /// <param name="totalCount">总记录数。</param>
     public ViewCollection(IList<T> items, long totalCount)
         : this(items)
     {
@@ -36,14 +36,14 @@ public class ViewCollection<T>
     }
 
     /// <summary>
-    /// Gets the items.
+    /// 获取元素集合。
     /// </summary>
-    /// <value>The items.</value>
+    /// <value>元素集合。</value>
     public ICollection<T> Items { get; }
 
     /// <summary>
-    /// Gets or sets the total count.
+    /// 获取或设置总记录数。
     /// </summary>
-    /// <value>The total count.</value>
+    /// <value>总记录数。</value>
     public long TotalCount { get; set; }
 }

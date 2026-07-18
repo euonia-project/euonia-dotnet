@@ -1,36 +1,36 @@
-﻿using System.Reflection;
+using System.Reflection;
 
 namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
-/// A shortcut for <see cref="TypeList{TBaseType}"/> to use object as base type.
+/// <see cref="TypeList{TBaseType}"/> 的快捷方式，使用 object 作为基类型。
 /// </summary>
 public class TypeList : TypeList<object>, ITypeList
 {
 }
 
 /// <summary>
-/// Extends <see cref="List{Type}"/> to add restriction a specific base type.
+/// 扩展 <see cref="List{Type}"/> 以添加对特定基类型的限制。
 /// </summary>
-/// <typeparam name="TBaseType">Base Type of <see cref="Type"/>s in this list</typeparam>
+/// <typeparam name="TBaseType">此列表中 <see cref="Type"/> 的基类型</typeparam>
 public class TypeList<TBaseType> : ITypeList<TBaseType>
 {
 	/// <summary>
-	/// Gets the count.
+	/// 获取元素数量。
 	/// </summary>
-	/// <value>The count.</value>
+	/// <value>元素数量。</value>
 	public int Count => _typeList.Count;
 
 	/// <summary>
-	/// Gets a value indicating whether this instance is read only.
+	/// 获取一个值，指示此实例是否为只读。
 	/// </summary>
-	/// <value><c>true</c> if this instance is read only; otherwise, <c>false</c>.</value>
+	/// <value>如果此实例为只读，则为 <c>true</c>；否则为 <c>false</c>。</value>
 	public bool IsReadOnly => false;
 
 	/// <summary>
-	/// Gets or sets the <see cref="Type"/> at the specified index.
+	/// 获取或设置指定索引处的 <see cref="Type"/>。
 	/// </summary>
-	/// <param name="index">Index.</param>
+	/// <param name="index">索引。</param>
 	public Type this[int index]
 	{
 		get => _typeList[index];
@@ -44,7 +44,7 @@ public class TypeList<TBaseType> : ITypeList<TBaseType>
 	private readonly List<Type> _typeList;
 
 	/// <summary>
-	/// Creates a new <see cref="TypeList{T}"/> object.
+	/// 创建新的 <see cref="TypeList{T}"/> 对象。
 	/// </summary>
 	public TypeList()
 	{
