@@ -1,9 +1,9 @@
-﻿using System.Net;
+using System.Net;
 
 namespace System;
 
 /// <summary>
-/// Represents errors that occur when HTTP status code is not 200.
+/// 表示当 HTTP 状态码不是 200 时发生的错误。
 /// </summary>
 [Serializable]
 public class HttpStatusException : Exception
@@ -11,9 +11,9 @@ public class HttpStatusException : Exception
 	private readonly HttpStatusCode _statusCode;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="HttpStatusException"/> class.
+	/// 初始化 <see cref="HttpStatusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="statusCode"></param>
+	/// <param name="statusCode">HTTP 状态码。</param>
 	public HttpStatusException(HttpStatusCode statusCode)
 		: base(statusCode.ToString())
 	{
@@ -21,10 +21,10 @@ public class HttpStatusException : Exception
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="HttpStatusException"/> class.
+	/// 初始化 <see cref="HttpStatusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="statusCode"></param>
-	/// <param name="message"></param>
+	/// <param name="statusCode">HTTP 状态码。</param>
+	/// <param name="message">错误消息。</param>
 	public HttpStatusException(HttpStatusCode statusCode, string message)
 		: base(message)
 	{
@@ -32,11 +32,11 @@ public class HttpStatusException : Exception
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="HttpStatusException"/> class.
+	/// 初始化 <see cref="HttpStatusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="statusCode"></param>
-	/// <param name="message"></param>
-	/// <param name="innerException"></param>
+	/// <param name="statusCode">HTTP 状态码。</param>
+	/// <param name="message">错误消息。</param>
+	/// <param name="innerException">内部异常。</param>
 	public HttpStatusException(HttpStatusCode statusCode, string message, Exception innerException)
 		: base(message, innerException)
 	{
@@ -44,12 +44,16 @@ public class HttpStatusException : Exception
 	}
 
 	/// <summary>
-	/// Gets the HTTP status code.
+	/// 获取 HTTP 状态码。
 	/// </summary>
 	public virtual HttpStatusCode StatusCode => _statusCode;
 
 #pragma warning disable SYSLIB0051
-	/// <inheritdoc />
+	/// <summary>
+	/// 使用序列化数据初始化 <see cref="HttpStatusException"/> 类的新实例。
+	/// </summary>
+	/// <param name="info">序列化对象所需的信息。</param>
+	/// <param name="context">序列化的上下文。</param>
 	public HttpStatusException(SerializationInfo info, StreamingContext context)
 		: base(info, context)
 	{
@@ -57,7 +61,11 @@ public class HttpStatusException : Exception
 	}
 
 #pragma warning disable CS0672
-	/// <inheritdoc />
+	/// <summary>
+	/// 使用将目标对象序列化所需的数据填充 <see cref="SerializationInfo"/>。
+	/// </summary>
+	/// <param name="info">要填充数据的 <see cref="SerializationInfo"/>。</param>
+	/// <param name="context">此序列化的目标。</param>
 	public override void GetObjectData(SerializationInfo info, StreamingContext context)
 
 	{
