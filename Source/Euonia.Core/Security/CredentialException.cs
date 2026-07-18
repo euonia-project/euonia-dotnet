@@ -3,25 +3,25 @@ using System.Security.Authentication;
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Base exception type for errors related to credentials used during authentication.
-/// Carries the credential object that caused the error and an optional details dictionary for extra metadata.
+/// 身份验证期间与凭据相关的错误的基类异常。
+/// 携带导致错误的凭据对象以及用于存储额外元数据的可选详细信息字典。
 /// </summary>
 public abstract class CredentialException : AuthenticationException
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialException"/> class for the specified credential.
+	/// 使用指定的凭据初始化 <see cref="CredentialException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object associated with the error.</param>
+	/// <param name="credential">与错误关联的凭据对象。</param>
 	protected CredentialException(object credential)
 	{
 		Credential = credential;
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialException"/> class with a specified error message.
+	/// 使用指定的错误消息初始化 <see cref="CredentialException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object associated with the error.</param>
-	/// <param name="message">The message that describes the error.</param>
+	/// <param name="credential">与错误关联的凭据对象。</param>
+	/// <param name="message">描述错误的消息。</param>
 	protected CredentialException(object credential, string message)
 		: base(message)
 	{
@@ -29,11 +29,11 @@ public abstract class CredentialException : AuthenticationException
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+	/// 使用指定的错误消息和对导致此异常的内部异常的引用初始化 <see cref="CredentialException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object associated with the error.</param>
-	/// <param name="message">The message that describes the error.</param>
-	/// <param name="innerException">The exception that is the cause of the current exception, or <c>null</c> if no inner exception is specified.</param>
+	/// <param name="credential">与错误关联的凭据对象。</param>
+	/// <param name="message">描述错误的消息。</param>
+	/// <param name="innerException">导致当前异常的异常，如果没有内部异常则为 <c>null</c>。</param>
 	protected CredentialException(object credential, string message, Exception innerException)
 		: base(message, innerException)
 	{
@@ -41,13 +41,13 @@ public abstract class CredentialException : AuthenticationException
 	}
 
 	/// <summary>
-	/// Gets the credential object that caused the exception.
+	/// 获取导致异常的凭据对象。
 	/// </summary>
 	public object Credential { get; }
 
 	/// <summary>
-	/// Gets a dictionary for storing additional details or metadata about the credential error.
-	/// Keys are strings and values are arbitrary objects.
+	/// 获取用于存储凭据错误额外详细信息或元数据的字典。
+	/// 键为字符串类型，值为任意对象。
 	/// </summary>
 	public virtual Dictionary<string, object> Details { get; } = new();
 }

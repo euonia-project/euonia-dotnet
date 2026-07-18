@@ -1,36 +1,36 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Exception thrown when a credential is not found during authentication or lookup.
-/// Carries the credential object that was not found for diagnostics.
+/// 当在身份验证或查找过程中找不到凭据时抛出的异常。
+/// 携带未找到的凭据对象以便诊断。
 /// </summary>
 public class CredentialNotFoundException : CredentialException
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialNotFoundException"/> class for the specified credential.
+	/// 使用指定的凭据初始化 <see cref="CredentialNotFoundException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object that could not be found.</param>
+	/// <param name="credential">未找到的凭据对象。</param>
 	public CredentialNotFoundException(object credential)
 		: base(credential)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialNotFoundException"/> class with a specified error message for the specified credential.
+	/// 使用指定的凭据和错误消息初始化 <see cref="CredentialNotFoundException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object that could not be found.</param>
-	/// <param name="message">The message that describes the error.</param>
+	/// <param name="credential">未找到的凭据对象。</param>
+	/// <param name="message">描述错误的消息。</param>
 	public CredentialNotFoundException(object credential, string message)
 		: base(credential, message)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CredentialNotFoundException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception, for the specified credential.
+	/// 使用指定的凭据、错误消息和对导致此异常的内部异常的引用初始化 <see cref="CredentialNotFoundException"/> 类的新实例。
 	/// </summary>
-	/// <param name="credential">The credential object that could not be found.</param>
-	/// <param name="message">The message that describes the error.</param>
-	/// <param name="innerException">The exception that is the cause of the current exception, or <c>null</c> if no inner exception is specified.</param>
+	/// <param name="credential">未找到的凭据对象。</param>
+	/// <param name="message">描述错误的消息。</param>
+	/// <param name="innerException">导致当前异常的异常，如果没有内部异常则为 <c>null</c>。</param>
 	public CredentialNotFoundException(object credential, string message, Exception innerException)
 		: base(credential, message, innerException)
 	{

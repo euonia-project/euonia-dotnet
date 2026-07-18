@@ -1,36 +1,36 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Exception thrown when an account is locked and cannot be used for authentication or access.
-/// Carries the identity of the locked account for diagnostics.
+/// 当账户被锁定且不能用于身份验证或访问时抛出的异常。
+/// 携带被锁定账户的标识信息以便诊断。
 /// </summary>
 public class AccountLockedException : AccountException
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountLockedException"/> class for the specified identity.
+	/// 使用指定的账户标识初始化 <see cref="AccountLockedException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the locked account.</param>
+	/// <param name="identity">被锁定账户的标识（例如用户名或账户 ID）。</param>
 	public AccountLockedException(string identity)
 		: base(identity)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountLockedException"/> class with a specified error message for the specified identity.
+	/// 使用指定的错误消息和账户标识初始化 <see cref="AccountLockedException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the locked account.</param>
-	/// <param name="message">A message that describes the error.</param>
+	/// <param name="identity">被锁定账户的标识（例如用户名或账户 ID）。</param>
+	/// <param name="message">描述错误的消息。</param>
 	public AccountLockedException(string identity, string message)
 		: base(identity, message)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountLockedException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception, for the specified identity.
+	/// 使用指定的错误消息、账户标识和对导致此异常的内部异常的引用初始化 <see cref="AccountLockedException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the locked account.</param>
-	/// <param name="message">A message that describes the error.</param>
-	/// <param name="innerException">The exception that is the cause of the current exception, or <c>null</c> if no inner exception is specified.</param>
+	/// <param name="identity">被锁定账户的标识（例如用户名或账户 ID）。</param>
+	/// <param name="message">描述错误的消息。</param>
+	/// <param name="innerException">导致当前异常的异常，如果没有内部异常则为 <c>null</c>。</param>
 	public AccountLockedException(string identity, string message, Exception innerException)
 		: base(identity, message, innerException)
 	{
