@@ -1,24 +1,21 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// Provides strong-typed reflection
+/// 提供强类型的反射操作方法。
 /// </summary>
 public static class Reflect
 {
 	/// <summary>
-	/// Extracts the property from a property expression.
+	/// 从属性表达式中提取属性信息。
 	/// </summary>
-	/// <typeparam name="T">The object type containing the property specified in the expression.</typeparam>
-	/// <param name="expression">The property expression (e.g. p =&gt; p.PropertyName)</param>
-	/// <returns>The name of the property.</returns>
-	/// <exception cref="ArgumentNullException">Thrown if the <paramref name="expression" /> is null.</exception>
-	/// <exception cref="ArgumentException">Thrown when the expression is:<br />
-	/// Not a <see cref="MemberExpression" /><br />
-	/// The <see cref="MemberExpression" /> does not represent a property.<br />
-	/// Or, the property is static.</exception>
+	/// <typeparam name="T">包含表达式中所指定属性的对象类型。</typeparam>
+	/// <param name="expression">属性表达式（例如 p => p.PropertyName）。</param>
+	/// <returns>属性的 <see cref="PropertyInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="expression"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentException">当表达式不是 <see cref="MemberExpression"/>、或不表示属性、或属性为静态时抛出。</exception>
 	public static PropertyInfo GetProperty<T>(Expression<Func<T>> expression)
 	{
 		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
@@ -38,25 +35,25 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Extracts the property from a property expression.
+	/// 从属性表达式中提取属性信息。
 	/// </summary>
-	/// <param name="expression"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">包含表达式中所指定属性的对象类型。</typeparam>
+	/// <param name="expression">属性表达式（例如 p => p.PropertyName）。</param>
+	/// <returns>属性的 <see cref="PropertyInfo"/>。</returns>
 	public static PropertyInfo GetProperty<T>(Expression<Func<T, object>> expression)
 	{
 		return GetProperty<T, object>(expression);
 	}
 
 	/// <summary>
-	/// Extracts the property from a property expression.
+	/// 从属性表达式中提取属性信息。
 	/// </summary>
-	/// <param name="expression"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <typeparam name="TResult"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
-	/// <exception cref="ArgumentException"></exception>
+	/// <typeparam name="T">包含表达式中所指定属性的对象类型。</typeparam>
+	/// <typeparam name="TResult">属性的返回类型。</typeparam>
+	/// <param name="expression">属性表达式（例如 p => p.PropertyName）。</param>
+	/// <returns>属性的 <see cref="PropertyInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="expression"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentException">当表达式不引用属性时抛出。</exception>
 	public static PropertyInfo GetProperty<T, TResult>(Expression<Func<T, TResult>> expression)
 	{
 		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
@@ -81,33 +78,24 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Gets the method information represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="expression"></param>
-	/// <returns></returns>
+	/// <typeparam name="T">包含方法的对象类型。</typeparam>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
 	public static MethodInfo GetMethodInfo<T>(Expression<Func<T, Delegate>> expression)
 	{
 		return GetMethodInfo((LambdaExpression)expression);
 	}
 
-	//public static MethodInfo GetMethodInfo(LambdaExpression expression)
-	//{
-	//    var unaryExpression = (UnaryExpression)expression.Body;
-	//    var methodCallExpression = (MethodCallExpression)unaryExpression.Operand;
-	//    var methodCallObject = (ConstantExpression)methodCallExpression.Object;
-	//    var methodInfo = (MethodInfo)methodCallObject.Value;
-	//    return methodInfo;
-	//}
-
 	/// <summary>
-	/// Gets the method information represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <param name="expression"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
-	/// <exception cref="ArgumentException"></exception>
-	/// <exception cref="NullReferenceException"></exception>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="expression"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentException">当表达式不是 Lambda 表达式或不表示方法调用时抛出。</exception>
+	/// <exception cref="NullReferenceException">当方法调用对象为 null 时抛出。</exception>
 	public static MethodInfo GetMethodInfo(Expression expression)
 	{
 		if (expression == null)
@@ -144,12 +132,12 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Get the member information represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的成员信息。
 	/// </summary>
-	/// <param name="expression"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="expression">成员表达式。</param>
+	/// <returns>成员的 <see cref="MemberInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="expression"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentException">当表达式不是 Lambda 表达式或不表示成员访问时抛出。</exception>
 	public static MemberInfo GetMemberInfo(Expression expression)
 	{
 		if (expression == null)
@@ -164,8 +152,8 @@ public static class Reflect
 
 		var memberExpr = lambda.Body.NodeType switch
 		{
-			// The Func<TTarget, object> we use returns an object, so first statement can be either 
-			// a cast (if the field/property does not return an object) or the direct member access.
+			// Func<TTarget, object> 返回 object 类型，因此第一条语句可能是
+			// 强制转换（如果字段/属性不返回 object）或直接的成员访问。
 			ExpressionType.Convert => ((UnaryExpression)lambda.Body).Operand as MemberExpression,
 			ExpressionType.MemberAccess => lambda.Body as MemberExpression,
 			_ => null
@@ -180,14 +168,14 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Sets the value to property.
+	/// 设置属性值。
 	/// </summary>
-	/// <typeparam name="T">The item type.</typeparam>
-	/// <typeparam name="TValue">The type of the value.</typeparam>
-	/// <param name="item">The item.</param>
-	/// <param name="value">The value.</param>
-	/// <param name="property">The property.</param>
-	/// <exception cref="ArgumentNullException">property</exception>
+	/// <typeparam name="T">对象类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="item">目标对象。</param>
+	/// <param name="value">要设置的值。</param>
+	/// <param name="property">属性表达式。</param>
+	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 null 时抛出。</exception>
 	public static void SetValue<T, TValue>(T item, TValue value, Expression<Func<T, TValue>> property)
 	{
 		if (property == null)
@@ -201,13 +189,13 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Gets the value.
+	/// 获取属性值。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="item">The item.</param>
-	/// <param name="property">The property.</param>
-	/// <returns>System.Object.</returns>
-	/// <exception cref="ArgumentNullException">property</exception>
+	/// <typeparam name="T">对象类型。</typeparam>
+	/// <param name="item">目标对象。</param>
+	/// <param name="property">属性表达式。</param>
+	/// <returns>属性值。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 null 时抛出。</exception>
 	public static object GetValue<T>(T item, Expression<Func<T, object>> property)
 	{
 		if (property == null)
@@ -221,10 +209,11 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Checks whether <paramref name="givenType"/> implements/inherits <paramref name="genericType"/>.
+	/// 检查 <paramref name="givenType"/> 是否实现/继承 <paramref name="genericType"/>。
 	/// </summary>
-	/// <param name="givenType">Type to check</param>
-	/// <param name="genericType">Generic type</param>
+	/// <param name="givenType">要检查的类型。</param>
+	/// <param name="genericType">泛型类型。</param>
+	/// <returns>如果 <paramref name="givenType"/> 实现或继承了 <paramref name="genericType"/>，则为 true；否则为 false。</returns>
 	public static bool IsAssignableToGenericType(Type givenType, Type genericType)
 	{
 		var givenTypeInfo = givenType.GetTypeInfo();
@@ -246,11 +235,11 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Gets the implemented generic types.
+	/// 获取类型实现的泛型类型列表。
 	/// </summary>
-	/// <param name="givenType"></param>
-	/// <param name="genericType"></param>
-	/// <returns></returns>
+	/// <param name="givenType">要检查的类型。</param>
+	/// <param name="genericType">目标泛型类型。</param>
+	/// <returns>实现的泛型类型列表。</returns>
 	public static List<Type> GetImplementedGenericTypes(Type givenType, Type genericType)
 	{
 		var result = new List<Type>();
@@ -284,17 +273,16 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Tries to gets an of attribute defined for a class member and it's declaring type including inherited attributes.
-	/// Returns default value if it's not declared at all.
+	/// 尝试获取类成员及其声明类型上定义的特性（包括继承的特性）。如果未声明则返回默认值。
 	/// </summary>
-	/// <typeparam name="TAttribute">Type of the attribute</typeparam>
-	/// <param name="memberInfo">MemberInfo</param>
-	/// <param name="defaultValue">Default value (null as default)</param>
-	/// <param name="inherit">Inherit attribute from base classes</param>
+	/// <typeparam name="TAttribute">特性类型。</typeparam>
+	/// <param name="memberInfo">成员信息。</param>
+	/// <param name="defaultValue">默认值（默认为 null）。</param>
+	/// <param name="inherit">是否从基类继承特性。</param>
+	/// <returns>找到的特性实例，如果未找到则返回 <paramref name="defaultValue"/>。</returns>
 	public static TAttribute GetSingleAttributeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default, bool inherit = true)
 		where TAttribute : Attribute
 	{
-		//Get attribute on the member
 		if (memberInfo.IsDefined(typeof(TAttribute), inherit))
 		{
 			return memberInfo.GetCustomAttributes(typeof(TAttribute), inherit).Cast<TAttribute>().First();
@@ -304,13 +292,13 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Tries to gets an of attribute defined for a class member and it's declaring type including inherited attributes.
-	/// Returns default value if it's not declared at all.
+	/// 尝试获取类成员及其声明类型上定义的特性（包括继承的特性）。如果未声明则返回默认值。
 	/// </summary>
-	/// <typeparam name="TAttribute">Type of the attribute</typeparam>
-	/// <param name="memberInfo">MemberInfo</param>
-	/// <param name="defaultValue">Default value (null as default)</param>
-	/// <param name="inherit">Inherit attribute from base classes</param>
+	/// <typeparam name="TAttribute">特性类型，必须是引用类型。</typeparam>
+	/// <param name="memberInfo">成员信息。</param>
+	/// <param name="defaultValue">默认值（默认为 null）。</param>
+	/// <param name="inherit">是否从基类继承特性。</param>
+	/// <returns>找到的特性实例，如果未找到则返回 <paramref name="defaultValue"/>。</returns>
 	public static TAttribute GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default, bool inherit = true)
 		where TAttribute : class
 	{
@@ -320,11 +308,12 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Tries to gets attributes defined for a class member and it's declaring type including inherited attributes.
+	/// 尝试获取类成员及其声明类型上定义的所有特性（包括继承的特性）。
 	/// </summary>
-	/// <typeparam name="TAttribute">Type of the attribute</typeparam>
-	/// <param name="memberInfo">MemberInfo</param>
-	/// <param name="inherit">Inherit attribute from base classes</param>
+	/// <typeparam name="TAttribute">特性类型，必须是引用类型。</typeparam>
+	/// <param name="memberInfo">成员信息。</param>
+	/// <param name="inherit">是否从基类继承特性。</param>
+	/// <returns>找到的特性集合。</returns>
 	public static IEnumerable<TAttribute> GetAttributesOfMemberOrDeclaringType<TAttribute>(MemberInfo memberInfo, bool inherit = true)
 		where TAttribute : class
 	{
@@ -337,8 +326,12 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Gets value of a property by it's full path from given object
+	/// 通过完整属性路径从给定对象获取属性值。
 	/// </summary>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="objectType">对象类型。</param>
+	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
+	/// <returns>属性值，如果路径中某个属性不存在则返回 null。</returns>
 	public static object GetValue(object obj, Type objectType, string propertyPath)
 	{
 		var value = obj;
@@ -373,8 +366,13 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Sets value of a property by it's full path on given object
+	/// 通过完整属性路径在给定对象上设置属性值。
 	/// </summary>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="objectType">对象类型。</param>
+	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
+	/// <param name="value">要设置的值。</param>
+	/// <exception cref="MissingMemberException">当路径中的某个属性不存在时抛出。</exception>
 	public static void SetValue(object obj, Type objectType, string propertyPath, object value)
 	{
 		var currentType = objectType;
@@ -422,10 +420,10 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Get all the constant values in the specified type (including the base type).
+	/// 递归获取指定类型（包括其基类）中所有公共常量的值。
 	/// </summary>
-	/// <param name="type"></param>
-	/// <returns></returns>
+	/// <param name="type">要获取常量的类型。</param>
+	/// <returns>常量值的字符串集合。</returns>
 	public static IEnumerable<string> GetPublicConstantsRecursively(Type type)
 	{
 		const int maxRecursiveParameterValidationDepth = 8;
@@ -457,14 +455,14 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Invokes the generic method.
+	/// 调用泛型方法。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <param name="methodName"></param>
-	/// <param name="genericTypes"></param>
-	/// <param name="parameters"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="methodName">方法名称。</param>
+	/// <param name="genericTypes">泛型类型参数数组。</param>
+	/// <param name="parameters">方法参数。</param>
+	/// <returns>方法调用的返回值。</returns>
+	/// <exception cref="ArgumentNullException">当找不到指定名称的方法时抛出。</exception>
 	public static object InvokeGenericMethod(object obj, string methodName, Type[] genericTypes, params object[] parameters)
 	{
 		var method = obj.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
@@ -478,13 +476,13 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Tries to get the property value.
+	/// 尝试获取对象的属性值。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <param name="propertyName"></param>
-	/// <param name="value"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">属性值类型。</typeparam>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="value">输出属性值。</param>
+	/// <returns>如果属性存在且类型匹配，则为 true；否则为 false。</returns>
 	public static bool TryGetPropertyValue<T>(object obj, string propertyName, out T value)
 	{
 		value = default!;
@@ -499,12 +497,12 @@ public static class Reflect
 	}
 
 	/// <summary>
-	/// Tries to get the property value.
+	/// 尝试获取对象的属性值。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <param name="propertyName"></param>
-	/// <param name="value"></param>
-	/// <returns></returns>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="value">输出属性值。</param>
+	/// <returns>如果属性存在，则为 true；否则为 false。</returns>
 	public static bool TryGetPropertyValue(object obj, string propertyName, out object value)
 	{
 		value = null!;
@@ -521,45 +519,39 @@ public static class Reflect
 	#region Public Static Methods
 
 	/// <summary>
-	/// Attempts to find the overloaded method that we want to call. Returns null if not found. This overload looks at the parameter types passed in vs method parameters off of the type we pass in
+	/// 尝试查找要调用的重载方法。如果未找到则返回 null。此重载根据传入的参数类型与类型上的方法参数进行匹配。
 	/// </summary>
-	/// <param name="methodNameToRetrieve">What is the method to name to find</param>
-	/// <param name="typeToLookThroughTheMethods">The type to retrieve the methods off of, so we can look through it and try to find the correct method</param>
-	/// <param name="methodParameterTypes">Look for the method parameter types in the method to match. If the method takes a string and an int, then we will look for that in every method</param>
-	/// <returns>Method info found, or null value if not found</returns>
+	/// <param name="methodNameToRetrieve">要查找的方法名称。</param>
+	/// <param name="typeToLookThroughTheMethods">要检索方法的类型，以便遍历并尝试找到正确的方法。</param>
+	/// <param name="methodParameterTypes">要匹配的方法参数类型数组。</param>
+	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
 	public static MethodInfo FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, params Type[] methodParameterTypes)
 	{
-		//going to use the overload. So we can create the func with calling the other method
 		return FindMethod(methodNameToRetrieve, typeToLookThroughTheMethods, x => MethodParameterSelector(x, methodParameterTypes));
 	}
 
 	/// <summary>
-	/// Attempts to find the overloaded method that we want to call. Returns null if not found. This method will try to evaluate the MethodSelect for each method and check to see if it returns true.
+	/// 尝试查找要调用的重载方法。如果未找到则返回 null。此方法将对每个方法评估 MethodSelector 并检查是否返回 true。
 	/// </summary>
-	/// <param name="methodNameToRetrieve">What is the method to name to find</param>
-	/// <param name="methodSelector">Gives the calling method the ability to look through the parameters and pick the correct method</param>
-	/// <param name="typeToLookThroughTheMethods">The type to retrieve the methods off of, so we can look through it and try to find the correct method</param>
-	/// <returns>Method info found, or null value if not found</returns>
+	/// <param name="methodNameToRetrieve">要查找的方法名称。</param>
+	/// <param name="typeToLookThroughTheMethods">要检索方法的类型，以便遍历并尝试找到正确的方法。</param>
+	/// <param name="methodSelector">允许调用方查看参数并选择正确方法的委托。</param>
+	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
 	public static MethodInfo FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, Func<MethodInfo, bool> methodSelector)
 	{
-		//use the overload
 		return FindMethod(methodNameToRetrieve, typeToLookThroughTheMethods.GetMethods(), methodSelector);
 	}
 
 	/// <summary>
-	/// Attempts to find the overloaded method that we want to call. Returns null if not found. This method will try to evaluate the MethodSelect for each method and check to see if it returns true.
-	/// Call this method if you already have the method info's that match the same name you are looking for
+	/// 尝试查找要调用的重载方法。如果未找到则返回 null。如果你已有相同名称的方法信息集合，请调用此方法。
 	/// </summary>
-	/// <param name="methodNameToRetrieve">What is the method to name to find</param>
-	/// <param name="methodSelector">Gives the calling method the ability to look through the parameters and pick the correct method</param>
-	/// <param name="methodsToLookThrough">Methods that have the same name. Or methods to loop through and inspect against the method selector.</param>
-	/// <returns>Method info found, or null value if not found</returns>
+	/// <param name="methodNameToRetrieve">要查找的方法名称。</param>
+	/// <param name="methodsToLookThrough">名称相同的方法集合，用于遍历并根据方法选择器进行检查。</param>
+	/// <param name="methodSelector">允许调用方查看参数并选择正确方法的委托。</param>
+	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
 	public static MethodInfo FindMethod(string methodNameToRetrieve, IEnumerable<MethodInfo> methodsToLookThrough, Func<MethodInfo, bool> methodSelector)
 	{
-		//let's start looping through the methods to see if we can find a match
 		return methodsToLookThrough.FirstOrDefault(methodToInspect => string.Equals(methodNameToRetrieve, methodToInspect.Name, StringComparison.OrdinalIgnoreCase) && methodSelector(methodToInspect));
-
-		//we never found a match, so just return null
 	}
 
 	#endregion
@@ -567,11 +559,11 @@ public static class Reflect
 	#region Private Static Methods
 
 	/// <summary>
-	/// Private helper method to look at the current method and inspect it for the method parameter types. If they match return true, else return false
+	/// 私有辅助方法，用于检查当前方法并检查其方法参数类型。如果匹配则返回 true，否则返回 false。
 	/// </summary>
-	/// <param name="methodToEvaluate">Method to evaluate and check if we have a match based on the method parameter types</param>
-	/// <param name="methodParameterTypes"></param>
-	/// <returns>Do we have a match? Do the method parameter types match?</returns>
+	/// <param name="methodToEvaluate">要评估并检查参数类型是否匹配的方法。</param>
+	/// <param name="methodParameterTypes">要匹配的方法参数类型数组。</param>
+	/// <returns>方法参数类型是否完全匹配。</returns>
 	private static bool MethodParameterSelector(MethodBase methodToEvaluate, params Type[] methodParameterTypes)
 	{
 		//we are going to match the GetParameters and the MethodParameterTypes. It needs to match index for index and type for type. So GetParameters[0].Type must match MethodParameterTypes[0].Type...[1].Type must match [1].Type
@@ -622,57 +614,72 @@ public static class Reflect
 }
 
 /// <summary>
-/// Provides strong-typed reflection of the <typeparamref name="TTarget"/> 
-/// type.
+/// 提供对 <typeparamref name="TTarget"/> 类型的强类型反射操作。
 /// </summary>
-/// <typeparam name="TTarget">Type to reflect.</typeparam>
+/// <typeparam name="TTarget">要反射的类型。</typeparam>
 public static class Reflect<TTarget>
 {
 	/// <summary>
-	/// Gets the method represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a method invocation.</exception>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示方法调用。</exception>
 	public static MethodInfo GetMethod(Expression<Action<TTarget>> expression)
 	{
 		return Reflect.GetMethodInfo(expression);
 	}
 
 	/// <summary>
-	/// Gets the method represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a method invocation.</exception>
+	/// <typeparam name="T1">方法的第一个参数类型。</typeparam>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示方法调用。</exception>
 	public static MethodInfo GetMethod<T1>(Expression<Action<TTarget, T1>> expression)
 	{
 		return Reflect.GetMethodInfo(expression);
 	}
 
 	/// <summary>
-	/// Gets the method represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a method invocation.</exception>
+	/// <typeparam name="T1">方法的第一个参数类型。</typeparam>
+	/// <typeparam name="T2">方法的第二个参数类型。</typeparam>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示方法调用。</exception>
 	public static MethodInfo GetMethod<T1, T2>(Expression<Action<TTarget, T1, T2>> expression)
 	{
 		return Reflect.GetMethodInfo(expression);
 	}
 
 	/// <summary>
-	/// Gets the method represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的方法信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a method invocation.</exception>
+	/// <typeparam name="T1">方法的第一个参数类型。</typeparam>
+	/// <typeparam name="T2">方法的第二个参数类型。</typeparam>
+	/// <typeparam name="T3">方法的第三个参数类型。</typeparam>
+	/// <param name="expression">方法表达式。</param>
+	/// <returns>方法的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示方法调用。</exception>
 	public static MethodInfo GetMethod<T1, T2, T3>(Expression<Action<TTarget, T1, T2, T3>> expression)
 	{
 		return Reflect.GetMethodInfo(expression);
 	}
 
 	/// <summary>
-	/// Gets the property represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的属性信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a property access.</exception>
+	/// <param name="expression">属性表达式。</param>
+	/// <returns>属性的 <see cref="PropertyInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示属性访问。</exception>
 	public static PropertyInfo GetProperty(Expression<Func<TTarget, object>> expression)
 	{
 		var info = Reflect.GetMemberInfo(expression) as PropertyInfo;
@@ -683,13 +690,13 @@ public static class Reflect<TTarget>
 	}
 
 	/// <summary>
-	/// Gets the property represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的属性信息。
 	/// </summary>
-	/// <typeparam name="TValue">Type assigned to the property</typeparam>
-	/// <param name="expression">Property Expression</param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a property access.</exception>
+	/// <typeparam name="TValue">属性类型。</typeparam>
+	/// <param name="expression">属性表达式。</param>
+	/// <returns>属性的 <see cref="PropertyInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示属性访问。</exception>
 	public static PropertyInfo GetProperty<TValue>(Expression<Func<TTarget, TValue>> expression)
 	{
 		var info = Reflect.GetMemberInfo(expression) as PropertyInfo;
@@ -702,10 +709,12 @@ public static class Reflect<TTarget>
 	}
 
 	/// <summary>
-	/// Gets the field represented by the lambda expression.
+	/// 获取 Lambda 表达式表示的字段信息。
 	/// </summary>
-	/// <exception cref="ArgumentNullException">The <paramref name="expression"/> is null.</exception>
-	/// <exception cref="ArgumentException">The <paramref name="expression"/> is not a lambda expression or it does not represent a field access.</exception>
+	/// <param name="expression">字段表达式。</param>
+	/// <returns>字段的 <see cref="FieldInfo"/>。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 null。</exception>
+	/// <exception cref="ArgumentException"><paramref name="expression"/> 不是 Lambda 表达式或不表示字段访问。</exception>
 	public static FieldInfo GetField(Expression<Func<TTarget, object>> expression)
 	{
 		var info = Reflect.GetMemberInfo(expression) as FieldInfo;
@@ -718,13 +727,13 @@ public static class Reflect<TTarget>
 	}
 
 	/// <summary>
-	/// Sets the value to property.
+	/// 设置属性值。
 	/// </summary>
-	/// <typeparam name="TValue">The type of the value.</typeparam>
-	/// <param name="item">The item.</param>
-	/// <param name="value">The value.</param>
-	/// <param name="property">The property.</param>
-	/// <exception cref="ArgumentNullException">property</exception>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="item">目标对象。</param>
+	/// <param name="value">要设置的值。</param>
+	/// <param name="property">属性表达式。</param>
+	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 null。</exception>
 	public static void SetValue<TValue>(TTarget item, TValue value, Expression<Func<TTarget, TValue>> property)
 	{
 		ArgumentAssert.ThrowIfNull(property, nameof(property));
@@ -735,12 +744,12 @@ public static class Reflect<TTarget>
 	}
 
 	/// <summary>
-	/// Gets the value.
+	/// 获取属性值。
 	/// </summary>
-	/// <param name="item">The item.</param>
-	/// <param name="property">The property.</param>
-	/// <returns>System.Object.</returns>
-	/// <exception cref="ArgumentNullException">property</exception>
+	/// <param name="item">目标对象。</param>
+	/// <param name="property">属性表达式。</param>
+	/// <returns>属性值。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 null。</exception>
 	public static object GetValue(TTarget item, Expression<Func<TTarget, object>> property)
 	{
 		if (property == null)
@@ -754,51 +763,51 @@ public static class Reflect<TTarget>
 	}
 
 	/// <summary>
-	/// Detects whether the specified type is assignable to a generic type.
+	/// 检测指定类型是否可赋值给泛型类型。
 	/// </summary>
-	/// <param name="genericType"></param>
-	/// <returns></returns>
+	/// <param name="genericType">目标泛型类型。</param>
+	/// <returns>如果 <typeparamref name="TTarget"/> 可赋值给 <paramref name="genericType"/>，则为 true；否则为 false。</returns>
 	public static bool IsAssignableToGenericType(Type genericType)
 	{
 		return Reflect.IsAssignableToGenericType(typeof(TTarget), genericType);
 	}
 
 	/// <summary>
-	/// Gets the implemented generic types.
+	/// 获取 <typeparamref name="TTarget"/> 实现的泛型类型列表。
 	/// </summary>
-	/// <param name="genericType"></param>
-	/// <returns></returns>
+	/// <param name="genericType">目标泛型类型。</param>
+	/// <returns>实现的泛型类型列表。</returns>
 	public static List<Type> GetImplementedGenericTypes(Type genericType)
 	{
 		return Reflect.GetImplementedGenericTypes(typeof(TTarget), genericType);
 	}
 
 	/// <summary>
-	/// Gets value of the property.
+	/// 通过属性路径获取对象的属性值。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <param name="propertyPath"></param>
-	/// <returns></returns>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
+	/// <returns>属性值。</returns>
 	public static object GetValue(TTarget obj, string propertyPath)
 	{
 		return Reflect.GetValue(obj, typeof(TTarget), propertyPath);
 	}
 
 	/// <summary>
-	/// Sets value of the property.
+	/// 通过属性路径设置对象的属性值。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <param name="propertyPath"></param>
-	/// <param name="value"></param>
+	/// <param name="obj">目标对象。</param>
+	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
+	/// <param name="value">要设置的值。</param>
 	public static void SetValue(TTarget obj, string propertyPath, object value)
 	{
 		Reflect.SetValue(obj, typeof(TTarget), propertyPath, value);
 	}
 
 	/// <summary>
-	/// Gets the public constants recursively.
+	/// 递归获取 <typeparamref name="TTarget"/> 类型中所有公共常量的值。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>常量值的字符串集合。</returns>
 	public static IEnumerable<string> GetPublicConstantsRecursively()
 	{
 		return Reflect.GetPublicConstantsRecursively(typeof(TTarget));
