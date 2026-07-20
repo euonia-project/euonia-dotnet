@@ -1,33 +1,33 @@
-﻿public static partial class Extensions
+public static partial class Extensions
 {
     /// <summary>
-    /// Raises given event safely with given arguments.
+    /// 安全地触发给定事件。
     /// </summary>
-    /// <param name="handler">The event handler</param>
-    /// <param name="sender">Source of the event</param>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="sender">事件源。</param>
     public static void CheckAndInvoke(this EventHandler handler, object sender)
     {
         handler.CheckAndInvoke(sender, EventArgs.Empty);
     }
 
     /// <summary>
-    /// Raises given event safely with given arguments.
+    /// 安全地触发给定事件。
     /// </summary>
-    /// <param name="handler">The event handler</param>
-    /// <param name="sender">Source of the event</param>
-    /// <param name="e">Event argument</param>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="sender">事件源。</param>
+    /// <param name="e">事件参数。</param>
     public static void CheckAndInvoke(this EventHandler handler, object sender, EventArgs e)
     {
         handler?.Invoke(sender, e);
     }
 
     /// <summary>
-    /// Raises given event safely with given arguments.
+    /// 安全地触发给定事件。
     /// </summary>
-    /// <typeparam name="TEventArgs">Type of the <see cref="EventArgs"/></typeparam>
-    /// <param name="handler">The event handler</param>
-    /// <param name="sender">Source of the event</param>
-    /// <param name="e">Event argument</param>
+    /// <typeparam name="TEventArgs"><see cref="EventArgs"/> 的类型。</typeparam>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="sender">事件源。</param>
+    /// <param name="e">事件参数。</param>
     public static void CheckAndInvoke<TEventArgs>(this EventHandler<TEventArgs> handler, object sender, TEventArgs e)
         where TEventArgs : EventArgs
     {

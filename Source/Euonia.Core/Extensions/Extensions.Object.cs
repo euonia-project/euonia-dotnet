@@ -1,15 +1,15 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 
 public static partial class Extensions
 {
 	/// <summary>
-	/// Used to simplify and beautify casting an object to a type.
+	/// 简化和美化将对象转换为类型。
 	/// </summary>
-	/// <typeparam name="T">Type to be casted</typeparam>
-	/// <param name="obj">Object to cast</param>
-	/// <returns>Casted object</returns>
+	/// <typeparam name="T">要转换的目标类型</typeparam>
+	/// <param name="obj">要转换的对象</param>
+	/// <returns>转换后的对象</returns>
 	public static T As<T>(this object obj)
 		where T : class
 	{
@@ -17,11 +17,11 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Converts given object to a value type using <see cref="Convert.ChangeType(object,System.Type)"/> method.
+	/// 使用 <see cref="Convert.ChangeType(object,System.Type)"/> 方法将给定对象转换为值类型。
 	/// </summary>
-	/// <param name="obj">Object to be converted</param>
-	/// <typeparam name="T">Type of the target object</typeparam>
-	/// <returns>Converted object</returns>
+	/// <param name="obj">要转换的对象</param>
+	/// <typeparam name="T">目标对象的类型</typeparam>
+	/// <returns>转换后的对象</returns>
 	public static T To<T>(this object obj)
 		where T : struct
 	{
@@ -45,70 +45,62 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Check if an item is in a list.
+	/// 检查元素是否在列表中。
 	/// </summary>
-	/// <param name="item">Item to check</param>
-	/// <param name="list">List of items</param>
-	/// <typeparam name="T">Type of the items</typeparam>
+	/// <param name="item">要检查的元素</param>
+	/// <param name="list">元素列表</param>
+	/// <typeparam name="T">元素类型</typeparam>
 	public static bool IsIn<T>(this T item, params T[] list)
 	{
 		return list.Contains(item);
 	}
 
 	/// <summary>
-	/// Check if an item is in the given enumerable.
+	/// 检查元素是否在给定的集合中。
 	/// </summary>
-	/// <param name="item">Item to check</param>
-	/// <param name="items">Items</param>
-	/// <typeparam name="T">Type of the items</typeparam>
+	/// <param name="item">要检查的元素</param>
+	/// <param name="items">元素集合</param>
+	/// <typeparam name="T">元素类型</typeparam>
+	/// <returns>如果元素在集合中，则返回 true；否则返回 false。</returns>
 	public static bool IsIn<T>(this T item, IEnumerable<T> items)
 	{
 		return items.Contains(item);
 	}
 
 	/// <summary>
-	/// 
+	/// 使用指定的比较器检查元素是否在集合中。
 	/// </summary>
-	/// <param name="item"></param>
-	/// <param name="items"></param>
-	/// <param name="comparer"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <param name="item">要检查的元素</param>
+	/// <param name="items">元素集合</param>
+	/// <param name="comparer">用于比较元素的比较器</param>
+	/// <typeparam name="T">元素类型</typeparam>
+	/// <returns>如果元素在集合中，则返回 true；否则返回 false。</returns>
 	public static bool IsIn<T>(this T item, IEnumerable<T> items, IEqualityComparer<T> comparer)
 	{
 		return items.Contains(item, comparer);
 	}
 
 	/// <summary>
-	/// Can be used to conditionally perform a function
-	/// on an object and return the modified or the original object.
-	/// It is useful for chained calls.
+	/// 根据条件对对象执行函数并返回修改后或原始的对象。适用于链式调用。
 	/// </summary>
-	/// <param name="obj">An object</param>
-	/// <param name="condition">A condition</param>
-	/// <param name="func">A function that is executed only if the condition is <code>true</code></param>
-	/// <typeparam name="T">Type of the object</typeparam>
-	/// <returns>
-	/// Returns the modified object (by the <paramref name="func"/> if the <paramref name="condition"/> is <code>true</code>)
-	/// or the original object if the <paramref name="condition"/> is <code>false</code>
-	/// </returns>
+	/// <typeparam name="T">对象类型</typeparam>
+	/// <param name="obj">要操作的对象</param>
+	/// <param name="condition">条件</param>
+	/// <param name="func">要执行的函数</param>
+	/// <returns>如果条件为 true，则返回函数执行后的对象；否则返回原始对象。</returns>
 	public static T If<T>(this T obj, bool condition, Func<T, T> func)
 	{
 		return condition ? func(obj) : obj;
 	}
 
 	/// <summary>
-	/// Can be used to conditionally perform an action
-	/// on an object and return the original object.
-	/// It is useful for chained calls on the object.
+	/// 根据条件对对象执行操作并返回原始对象。适用于链式调用。
 	/// </summary>
-	/// <param name="obj">An object</param>
-	/// <param name="condition">A condition</param>
-	/// <param name="action">An action that is executed only if the condition is <code>true</code></param>
-	/// <typeparam name="T">Type of the object</typeparam>
-	/// <returns>
-	/// Returns the original object.
-	/// </returns>
+	/// <typeparam name="T">对象类型</typeparam>
+	/// <param name="obj">要操作的对象</param>
+	/// <param name="condition">条件</param>
+	/// <param name="action">要执行的操作</param>
+	/// <returns>返回原始对象。</returns>
 	public static T If<T>(this T obj, bool condition, Action<T> action)
 	{
 		if (condition)
@@ -120,12 +112,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 检查类型是否定义了指定特性。
 	/// </summary>
-	/// <param name="type"></param>
-	/// <param name="inherit"></param>
-	/// <typeparam name="TAttribute"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TAttribute">要检查的特性类型</typeparam>
+	/// <param name="type">要检查的类型</param>
+	/// <param name="inherit">是否搜索继承链以查找特性</param>
+	/// <returns>如果类型定义了指定特性，则返回 true；否则返回 false。</returns>
 	public static bool HasAttribute<TAttribute>(this Type type, bool inherit = true)
 		where TAttribute : Attribute
 	{
@@ -134,12 +126,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 检查方法是否定义了指定特性。
 	/// </summary>
-	/// <typeparam name="TAttribute"></typeparam>
-	/// <param name="method"></param>
-	/// <param name="inherit"></param>
-	/// <returns></returns>
+	/// <typeparam name="TAttribute">要检查的特性类型</typeparam>
+	/// <param name="method">要检查的方法</param>
+	/// <param name="inherit">是否搜索继承链以查找特性</param>
+	/// <returns>如果方法定义了指定特性，则返回 true；否则返回 false。</returns>
 	public static bool HasAttribute<TAttribute>(this MethodInfo method, bool inherit = true)
 		where TAttribute : Attribute
 	{
@@ -148,13 +140,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 检查对象类型是否定义了指定特性，并输出该特性。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="attribute"></param>
-	/// <param name="inherit"></param>
-	/// <typeparam name="TAttribute"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TAttribute">要检查的特性类型</typeparam>
+	/// <param name="source">要检查的对象</param>
+	/// <param name="attribute">输出的特性</param>
+	/// <param name="inherit">是否搜索继承链以查找特性</param>
+	/// <returns>如果对象类型定义了指定特性，则返回 true；否则返回 false。</returns>
 	public static bool HasAttribute<TAttribute>(this object source, out TAttribute attribute, bool inherit = true)
 		where TAttribute : Attribute
 	{
@@ -164,13 +156,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 检查对象类型是否定义了指定特性，并输出所有匹配的特性。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="attributes"></param>
-	/// <param name="inherit"></param>
-	/// <typeparam name="TAttribute"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TAttribute">要检查的特性类型</typeparam>
+	/// <param name="source">要检查的对象</param>
+	/// <param name="attributes">输出的特性集合</param>
+	/// <param name="inherit">是否搜索继承链以查找特性</param>
+	/// <returns>如果对象类型定义了指定特性，则返回 true；否则返回 false。</returns>
 	public static bool HasAttribute<TAttribute>(this object source, out IEnumerable<TAttribute> attributes, bool inherit = true)
 		where TAttribute : Attribute
 	{

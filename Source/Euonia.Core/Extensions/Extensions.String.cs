@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
@@ -9,48 +9,49 @@ using System.Text.RegularExpressions;
 public static partial class Extensions
 {
 	/// <summary>
-	/// Regular expression for matching a phone number.
+	/// 匹配电话号码的正则表达式。
 	/// </summary>
 	internal const string PhoneNumberRegex = @"^[+]?(\d{1,3})?[\s.-]?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$";
 
 	/// <summary>
-	/// Regular expression for matching a string that contains only letters.
+	/// 匹配仅包含字母的字符串的正则表达式。
 	/// </summary>
 	internal const string CharactersRegex = "^[A-Za-z]+$";
 
 	/// <summary>
-	/// Regular expression for matching an email address.
+	/// 匹配电子邮件地址的正则表达式。
 	/// </summary>
-	/// <remarks>General Email Regex (RFC 5322 Official Standard) from https://emailregex.com.</remarks>
+	/// <remarks>来自 https://emailregex.com 的通用电子邮件正则表达式（RFC 5322 官方标准）。</remarks>
 	internal const string EmailRegex = "(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-z0-9-]*[a-z0-9]:(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21-\\x5a\\x53-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])+)\\])";
 
 	/// <summary>
-	/// Regular expression of HTML tags to remove.
+	/// 用于移除 HTML 标签的正则表达式。
 	/// </summary>
-	// ReSharper disable once InconsistentNaming
 	private const string REMOVE_HTML_TAGS_REGEX = """(?></?\w+)(?>(?:[^>'"]+|'[^']*'|"[^"]*")*)>""";
 
 	/// <summary>
-	/// Regular expression for removing comments from HTML.
+	/// 用于移除 HTML 注释的正则表达式。
 	/// </summary>
 	private static readonly Regex _removeHtmlCommentsRegex = new("<!--.*?-->", RegexOptions.Singleline);
 
 	/// <summary>
-	/// Regular expression for removing scripts from HTML.
+	/// 用于移除 HTML 脚本的正则表达式。
 	/// </summary>
 	private static readonly Regex _removeHtmlScriptsRegex = new(@"(?s)<script.*?(/>|</script>)", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
 	/// <summary>
-	/// Regular expression for removing styles from HTML.
+	/// 用于移除 HTML 样式的正则表达式。
 	/// </summary>
 	private static readonly Regex _removeHtmlStylesRegex = new(@"(?s)<style.*?(/>|</style>)", RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
-	/// <param name="source">source string to be searched</param>
+	/// <param name="source">要搜索的源字符串</param>
 	extension(string source)
 	{
 		/// <summary>
-		/// Adds a char to end of given string if it does not end with the char.
+		/// 如果字符串不以指定字符结尾，则将该字符添加到末尾。
 		/// </summary>
+		/// <param name="c">要添加的字符。</param>
+		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
 		public string EnsureEndsWith(char c, StringComparison comparisonType = StringComparison.Ordinal)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -64,8 +65,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Adds a char to beginning of given string if it does not starts with the char.
+		/// 如果字符串不以指定字符开头，则将该字符添加到开头。
 		/// </summary>
+		/// <param name="c">要添加的字符。</param>
+		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
 		public string EnsureStartsWith(char c, StringComparison comparisonType = StringComparison.Ordinal)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -79,26 +82,30 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Indicates whether this string is null or an System.String.Empty string.
+		/// 指示此字符串是否为 null 或空字符串。
 		/// </summary>
+		/// <returns>true 如果字符串为 null 或空字符串；否则为 false。</returns>
 		public bool IsNullOrEmpty()
 		{
 			return string.IsNullOrEmpty(source);
 		}
 
 		/// <summary>
-		/// indicates whether this string is null, empty, or consists only of white-space characters.
+		/// 指示此字符串是否为 null、空或仅由空白字符组成。
 		/// </summary>
+		/// <returns>true 如果字符串为 null、空或仅由空白字符组成；否则为 false。</returns>
 		public bool IsNullOrWhiteSpace()
 		{
 			return string.IsNullOrWhiteSpace(source);
 		}
 
 		/// <summary>
-		/// Gets a substring of a string from beginning of the string.
+		/// 从字符串开头获取指定长度的子字符串。
 		/// </summary>
-		/// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
-		/// <exception cref="ArgumentException">Thrown if <paramref name="length"/> is bigger that string's length</exception>
+		/// <param name="length">要获取的子字符串的长度。</param>
+		/// <returns>从字符串开头获取的子字符串。</returns>
+		/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+		/// <exception cref="ArgumentException">当 <paramref name="length"/> 大于字符串长度时抛出。</exception>
 		public string Left(int length)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -112,10 +119,12 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Gets a substring of a string from end of the string.
+		/// 从字符串末尾获取指定长度的子字符串。
 		/// </summary>
-		/// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
-		/// <exception cref="ArgumentException">Thrown if <paramref name="length"/> is bigger that string's length</exception>
+		/// <param name="length">要获取的子字符串的长度。</param>
+		/// <returns>从字符串末尾获取的子字符串。</returns>
+		/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+		/// <exception cref="ArgumentException">当 <paramref name="length"/> 大于字符串长度时抛出。</exception>
 		public string Right(int length)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -129,18 +138,19 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts line endings in the string to <see cref="Environment.NewLine"/>.
+		/// 将字符串中的换行符转换为 <see cref="Environment.NewLine"/>。
 		/// </summary>
+		/// <returns>转换后的字符串。</returns>
 		public string NormalizeLineEndings()
 		{
 			return source.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", Environment.NewLine);
 		}
 
 		/// <summary>
-		/// Gets index of nth occurrence of a char in a string.
+		/// 获取字符串中指定字符第 n 次出现的索引。
 		/// </summary>
-		/// <param name="c">Char to search in source string.</param>
-		/// <param name="n">Count of the occurrence</param>
+		/// <param name="c">要在源字符串中搜索的字符。</param>
+		/// <param name="n">出现的次数。</param>
 		public int NthIndexOf(char c, int n)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -163,21 +173,21 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Removes first occurrence of the given postfixes from end of the given string.
+		/// 从字符串末尾移除第一个匹配的后缀。
 		/// </summary>
-		/// <param name="postFixes">one or more postfix.</param>
-		/// <returns>Modified string or the same string if it has not any of given postfixes</returns>
+		/// <param name="postFixes">要移除的后缀数组。</param>
+		/// <returns>移除后缀后的字符串。</returns>
 		public string RemovePostFix(params string[] postFixes)
 		{
 			return source.RemovePostFix(StringComparison.Ordinal, postFixes);
 		}
 
 		/// <summary>
-		/// Removes first occurrence of the given postfixes from end of the given string.
+		/// 从字符串末尾移除第一个匹配的后缀。
 		/// </summary>
-		/// <param name="comparisonType">String comparison type</param>
-		/// <param name="postFixes">one or more postfix.</param>
-		/// <returns>Modified string or the same string if it has not any of given postfixes</returns>
+		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
+		/// <param name="postFixes">要移除的后缀数组。</param>
+		/// <returns>移除后缀后的字符串。</returns>
 		public string RemovePostFix(StringComparison comparisonType, params string[] postFixes)
 		{
 			if (source.IsNullOrEmpty())
@@ -202,21 +212,21 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Removes first occurrence of the given prefixes from beginning of the given string.
+		/// 从字符串开头移除第一个匹配的前缀。
 		/// </summary>
-		/// <param name="preFixes">one or more prefix.</param>
-		/// <returns>Modified string or the same string if it has not any of given prefixes</returns>
+		/// <param name="preFixes">要移除的前缀数组。</param>
+		/// <returns>移除前缀后的字符串。</returns>
 		public string RemovePreFix(params string[] preFixes)
 		{
 			return source.RemovePreFix(StringComparison.Ordinal, preFixes);
 		}
 
 		/// <summary>
-		/// Removes first occurrence of the given prefixes from beginning of the given string.
+		/// 从字符串开头移除第一个匹配的前缀。
 		/// </summary>
-		/// <param name="comparisonType">String comparison type</param>
-		/// <param name="preFixes">one or more prefix.</param>
-		/// <returns>Modified string or the same string if it has not any of given prefixes</returns>
+		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
+		/// <param name="preFixes">要移除的前缀数组。</param>
+		/// <returns>移除前缀后的字符串。</returns>
 		public string RemovePreFix(StringComparison comparisonType, params string[] preFixes)
 		{
 			if (source.IsNullOrEmpty())
@@ -241,12 +251,8 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// 
+		/// 替换字符串中第一个匹配的搜索字符串。
 		/// </summary>
-		/// <param name="search"></param>
-		/// <param name="replace"></param>
-		/// <param name="comparisonType"></param>
-		/// <returns></returns>
 		public string ReplaceFirst(string search, string replace, StringComparison comparisonType = StringComparison.Ordinal)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -261,42 +267,50 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Uses string.Split method to split given string by given separator.
+		/// 使用指定分隔符分割字符串。
 		/// </summary>
+		/// <param name="separator">用于分割的字符串。</param>
+		/// <returns>分割后的字符串数组。</returns>
 		public string[] Split(string separator)
 		{
 			return source.Split([separator], StringSplitOptions.None);
 		}
 
 		/// <summary>
-		/// Uses string.Split method to split given string by given separator.
+		/// 使用指定分隔符和选项分割字符串。
 		/// </summary>
+		/// <param name="separator">用于分割的字符串。</param>
+		/// <param name="options">指定是否返回空字符串的选项。</param>
+		/// <returns>分割后的字符串数组。</returns>
 		public string[] Split(string separator, StringSplitOptions options)
 		{
 			return source.Split([separator], options);
 		}
 
 		/// <summary>
-		/// Uses string.Split method to split given string by <see cref="Environment.NewLine"/>.
+		/// 使用 <see cref="Environment.NewLine"/> 分割字符串为行。
 		/// </summary>
+		/// <returns>分割后的字符串数组。</returns>
 		public string[] SplitToLines()
 		{
 			return source.Split(Environment.NewLine);
 		}
 
 		/// <summary>
-		/// Uses string.Split method to split given string by <see cref="Environment.NewLine"/>.
+		/// 使用 <see cref="Environment.NewLine"/> 和指定选项分割字符串为行。
 		/// </summary>
+		/// <param name="options">指定是否返回空字符串的选项。</param>
+		/// <returns>分割后的字符串数组。</returns>
 		public string[] SplitToLines(StringSplitOptions options)
 		{
 			return source.Split(Environment.NewLine, options);
 		}
 
 		/// <summary>
-		/// Converts PascalCase string to camelCase string.
+		/// 将 PascalCase 字符串转换为 camelCase 字符串。
 		/// </summary>
-		/// <param name="useCurrentCulture">set true to use current culture. Otherwise, invariant culture will be used.</param>
-		/// <returns>camelCase of the string</returns>
+		/// <param name="useCurrentCulture">是否使用当前文化进行大小写转换。</param>
+		/// <returns>转换后的 camelCase 字符串。</returns>
 		public string ToCamelCase(bool useCurrentCulture = false)
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -313,10 +327,11 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts given PascalCase/camelCase string to sentence (by splitting words by space).
-		/// Example: "ThisIsSampleSentence" is converted to "This is a sample sentence".
+		/// 将 PascalCase/camelCase 字符串转换为句子格式（通过空格分隔单词）。
+		/// 例如："ThisIsSampleSentence" 转换为 "This is a sample sentence"。
 		/// </summary>
-		/// <param name="useCurrentCulture">set true to use current culture. Otherwise, invariant culture will be used.</param>
+		/// <param name="useCurrentCulture">是否使用当前文化进行大小写转换。</param>
+		/// <returns>转换后的句子格式字符串。</returns>
 		public string ToSentenceCase(bool useCurrentCulture = false)
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -330,9 +345,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts given PascalCase/camelCase string to kebab-case.
+		/// 将 PascalCase/camelCase 字符串转换为 kebab-case 格式。
 		/// </summary>
-		/// <param name="useCurrentCulture">set true to use current culture. Otherwise, invariant culture will be used.</param>
+		/// <param name="useCurrentCulture">是否使用当前文化进行大小写转换。</param>
+		/// <returns>转换后的 kebab-case 字符串。</returns>
 		public string ToKebabCase(bool useCurrentCulture = false)
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -348,11 +364,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts given PascalCase/camelCase string to snake case.
-		/// Example: "ThisIsSampleSentence" is converted to "this_is_a_sample_sentence".
-		/// https://github.com/npgsql/npgsql/blob/dev/src/Npgsql/NameTranslation/NpgsqlSnakeCaseNameTranslator.cs#L51
+		/// 将 PascalCase/camelCase 字符串转换为 snake_case 格式。
+		/// 例如："ThisIsSampleSentence" 转换为 "this_is_a_sample_sentence"。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>转换后的 snake_case 字符串。</returns>
 		public string ToSnakeCase()
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -418,10 +433,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts string to enum value.
+		/// 将字符串转换为枚举值。
 		/// </summary>
-		/// <typeparam name="T">Type of enum</typeparam>
-		/// <returns>Returns enum object</returns>
+		/// <typeparam name="T">枚举类型</typeparam>
+		/// <returns>枚举对象。</returns>
 		public T ToEnum<T>()
 			where T : struct
 		{
@@ -430,11 +445,11 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts string to enum value.
+		/// 将字符串转换为枚举值。
 		/// </summary>
-		/// <typeparam name="T">Type of enum</typeparam>
-		/// <param name="ignoreCase">Ignore case</param>
-		/// <returns>Returns enum object</returns>
+		/// <typeparam name="T">枚举类型</typeparam>
+		/// <param name="ignoreCase">是否忽略大小写。</param>
+		/// <returns>枚举对象。</returns>
 		public T ToEnum<T>(bool ignoreCase)
 			where T : struct
 		{
@@ -443,9 +458,9 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// 
+		/// 计算字符串的 MD5 哈希值。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>字符串的 MD5 哈希值。</returns>
 		public string ToMd5()
 		{
 			using var md5 = MD5.Create();
@@ -462,10 +477,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts camelCase string to PascalCase string.
+		/// 将 camelCase 字符串转换为 PascalCase 字符串。
 		/// </summary>
-		/// <param name="useCurrentCulture">set true to use current culture. Otherwise, invariant culture will be used.</param>
-		/// <returns>PascalCase of the string</returns>
+		/// <param name="useCurrentCulture">是否使用当前文化进行大小写转换。</param>
+		/// <returns>转换后的 PascalCase 字符串。</returns>
 		public string ToPascalCase(bool useCurrentCulture = false)
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -482,9 +497,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Gets a substring of a string from Ending of the string if it exceeds maximum length.
+		/// 如果字符串超过最大长度，则从末尾截取子字符串。
 		/// </summary>
-		/// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
+		/// <param name="maxLength">最大长度。</param>
+		/// <returns>截取后的字符串。</returns>
 		public string TruncateFromBeginning(int maxLength)
 		{
 			if (source == null)
@@ -501,23 +517,21 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Gets a substring of a string from beginning of the string if it exceeds maximum length.
-		/// It adds a "..." postfix to end of the string if it's truncated.
-		/// Returning string can not be longer than maxLength.
+		/// 如果字符串超过最大长度，则从开头截取并添加 "..." 后缀。返回的字符串长度不会超过指定的最大长度。
 		/// </summary>
-		/// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
+		/// <param name="maxLength">最大长度。</param>
+		/// <returns>截取后的字符串。</returns>
 		public string TruncateWithPostfix(int maxLength)
 		{
-			// ReSharper disable once IntroduceOptionalParameters.Global
-			return TruncateWithPostfix(source, maxLength, "...");
+			return source.TruncateWithPostfix(maxLength, "...");
 		}
 
 		/// <summary>
-		/// Gets a substring of a string from beginning of the string if it exceeds maximum length.
-		/// It adds given <paramref name="postfix"/> to end of the string if it's truncated.
-		/// Returning string can not be longer than maxLength.
+		/// 如果字符串超过最大长度，则从开头截取并添加指定后缀。返回的字符串长度不会超过指定的最大长度。
 		/// </summary>
-		/// <exception cref="ArgumentNullException">Thrown if <paramref name="source"/> is null</exception>
+		/// <param name="maxLength">最大长度。</param>
+		/// <param name="postfix">后缀字符串。</param>
+		/// <returns>截取后的字符串。</returns>
 		public string TruncateWithPostfix(int maxLength, string postfix)
 		{
 			if (source == null)
@@ -544,47 +558,48 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts given string to a byte array using <see cref="Encoding.UTF8"/> encoding.
+		/// 使用 <see cref="Encoding.UTF8"/> 编码将字符串转换为字节数组。
 		/// </summary>
-		public byte[] GetBytes()
+		/// <returns>字符串的字节数组表示。</returns>
+		public byte[] GetUtf8Bytes()
 		{
 			return source.GetBytes(Encoding.UTF8);
 		}
 
 		/// <summary>
-		/// Determines whether a string is a valid email address.
+		/// 确定字符串是否为有效的电子邮件地址。
 		/// </summary>
-		/// <returns><c>true</c> for a valid email address; otherwise, <c>false</c>.</returns>
+		/// <returns>如果字符串是有效的电子邮件地址，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 		public bool IsEmail() => Regex.IsMatch(source, EmailRegex);
 
 		/// <summary>
-		/// Determines whether a string is a valid decimal number.
+		/// 确定字符串是否为有效的十进制数字。
 		/// </summary>
-		/// <returns><c>true</c> for a valid decimal number; otherwise, <c>false</c>.</returns>
+		/// <returns>如果字符串是有效的十进制数字，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 		public bool IsDecimal() => decimal.TryParse(source, NumberStyles.Number, CultureInfo.InvariantCulture, out _);
 
 		/// <summary>
-		/// Determines whether a string is a valid integer.
+		/// 确定字符串是否为有效的整数。
 		/// </summary>
-		/// <returns><c>true</c> for a valid integer; otherwise, <c>false</c>.</returns>
+		/// <returns>如果字符串是有效的整数，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 		public bool IsNumeric() => int.TryParse(source, out _);
 
 		/// <summary>
-		/// Determines whether a string is a valid phone number.
+		/// 确定字符串是否为有效的电话号码。
 		/// </summary>
-		/// <returns><c>true</c> for a valid phone number; otherwise, <c>false</c>.</returns>
+		/// <returns>如果字符串是有效的电话号码，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 		public bool IsPhoneNumber() => Regex.IsMatch(source, PhoneNumberRegex);
 
 		/// <summary>
-		/// Determines whether a string contains only letters.
+		/// 确定字符串是否仅包含字母。
 		/// </summary>
-		/// <returns><c>true</c> if the string contains only letters; otherwise, <c>false</c>.</returns>
+		/// <returns>如果字符串仅包含字母，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 		public bool IsCharacterString() => Regex.IsMatch(source, CharactersRegex);
 
 		/// <summary>
-		/// Returns a string with HTML comments, scripts, styles, and tags removed.
+		/// 返回移除 HTML 注释、脚本、样式和标签后的字符串。
 		/// </summary>
-		/// <returns>Decoded HTML string.</returns>
+		/// <returns>移除 HTML 内容后的字符串。</returns>
 		public string DecodeHtml()
 		{
 			if (source == null)
@@ -594,50 +609,50 @@ public static partial class Extensions
 
 			var ret = source.FixHtml();
 
-			// Remove html tags
+			// 移除 HTML 标签
 			ret = new Regex(REMOVE_HTML_TAGS_REGEX).Replace(ret, string.Empty);
 
 			return WebUtility.HtmlDecode(ret);
 		}
 
 		/// <summary>
-		/// Returns a string with HTML comments, scripts, and styles removed.
+		/// 返回移除 HTML 注释、脚本和样式后的字符串。
 		/// </summary>
-		/// <returns>Fixed HTML string.</returns>
+		/// <returns>移除 HTML 内容后的字符串。</returns>
 		public string FixHtml()
 		{
-			// Remove comments
+			// 移除注释
 			var withoutComments = _removeHtmlCommentsRegex.Replace(source, string.Empty);
 
-			// Remove scripts
+			// 移除脚本
 			var withoutScripts = _removeHtmlScriptsRegex.Replace(withoutComments, string.Empty);
 
-			// Remove styles
+			// 移除样式
 			var withoutStyles = _removeHtmlStylesRegex.Replace(withoutScripts, string.Empty);
 
 			return withoutStyles;
 		}
 
 		/// <summary>
-		/// Truncates a string to the specified length.
+		/// 将字符串截断到指定长度。
 		/// </summary>
-		/// <param name="length">The maximum length.</param>
-		/// <returns>Truncated string.</returns>
+		/// <param name="length">要截断的长度。</param>
+		/// <returns>截断后的字符串。</returns>
 		public string Truncate(int length) => Truncate(source, length, false);
 
 		/// <summary>
-		/// Provide better linking for resourced strings.
+		/// 使用参数格式化字符串。
 		/// </summary>
-		/// <param name="args">The object which will receive the linked String.</param>
-		/// <returns>Truncated string.</returns>
+		/// <param name="args">要格式化的参数。</param>
+		/// <returns>格式化后的字符串。</returns>
 		public string AsFormat(params object[] args) => string.Format(source, args);
 
 		/// <summary>
-		/// Truncates a string to the specified length.
+		/// 将字符串截断到指定长度。
 		/// </summary>
-		/// <param name="length">The maximum length.</param>
-		/// <param name="ellipsis"><c>true</c> to add ellipsis to the truncated text; otherwise, <c>false</c>.</param>
-		/// <returns>Truncated string.</returns>
+		/// <param name="length">要截断的长度。</param>
+		/// <param name="ellipsis">是否添加省略号。</param>
+		/// <returns>截断后的字符串。</returns>
 		public string Truncate(int length, bool ellipsis)
 		{
 			if (!string.IsNullOrEmpty(source))
@@ -654,15 +669,18 @@ public static partial class Extensions
 				}
 			}
 
+			{
+			}
+
 			return source ?? string.Empty;
 		}
 
 		/// <summary>
-		/// Trim text and return new string.
+		/// 按指定方式修剪文本并返回新字符串。
 		/// </summary>
-		/// <param name="type"></param>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <param name="type">要应用的修剪类型。</param>
+		/// <returns>修剪后的字符串。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当指定的修剪类型无效时抛出。</exception>
 		public string Trim(TextTrimType type)
 		{
 			if (string.IsNullOrEmpty(source))
@@ -682,11 +700,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Normalize text and return new string.
+		/// 按指定大小写格式规范化文本并返回新字符串。
 		/// </summary>
-		/// <param name="caseType"></param>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <param name="caseType">要应用的大小写类型。</param>
+		/// <returns>规范化后的字符串。</returns>
 		public string Normalize(TextCaseType caseType)
 		{
 			if (string.IsNullOrEmpty(source))
@@ -706,12 +723,12 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Mask text and return new string.
+		/// 对字符串的指定部分进行掩码处理。
 		/// </summary>
-		/// <param name="start"></param>
-		/// <param name="length"></param>
-		/// <param name="maskChar"></param>
-		/// <returns></returns>
+		/// <param name="start">要掩码的起始索引。</param>
+		/// <param name="length">要掩码的长度。</param>
+		/// <param name="maskChar">用于掩码的字符，默认为 '*'。</param>
+		/// <returns>掩码处理后的字符串。</returns>
 		public string Mask(int start, int length, char maskChar = '*')
 		{
 			var end = start + length;
@@ -729,19 +746,19 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Returns a value if the string is null or white space.
+		/// 如果字符串为 null 或空白则返回默认值。
 		/// </summary>
-		/// <param name="default">The string to return if source string is null or white space.</param>
-		/// <returns>The source string or <paramref name="default"/>.</returns>
+		/// <param name="default">默认值。</param>
+		/// <returns>原字符串或默认值。</returns>
 		public string DefaultIfNullOrWhiteSpace([NotNull] string @default)
 		{
 			return string.IsNullOrWhiteSpace(source) ? @default : source;
 		}
 
 		/// <summary>
-		/// Encoding the given string using Base64 and returns a new string.
+		/// 使用 Base64 编码字符串。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>Base64 编码后的字符串。</returns>
 		public string ToBase64()
 		{
 			if (string.IsNullOrWhiteSpace(source))
@@ -754,12 +771,12 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// 
+		/// 安全截取子字符串，避免越界异常。
 		/// </summary>
-		/// <param name="index"></param>
-		/// <param name="length"></param>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <param name="index">起始索引。</param>
+		/// <param name="length">要截取的长度，默认为 0，表示截取到字符串末尾。</param>
+		/// <returns>截取后的子字符串。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当索引或长度超出范围时抛出。</exception>
 		public string SafeSubstring(int index, int length = 0)
 		{
 			if (length < 0 || index < 0 || index > source.Length - 1)
@@ -767,13 +784,7 @@ public static partial class Extensions
 				throw new ArgumentOutOfRangeException(nameof(length));
 			}
 
-			if (length == 0)
-			{
-				return source[index..];
-			}
-
-			// ReSharper disable once ConvertIfStatementToReturnStatement
-			if (length > (source.Length - index))
+			if (length == 0 || length > (source.Length - index))
 			{
 				return source[index..];
 			}
@@ -782,8 +793,10 @@ public static partial class Extensions
 		}
 
 		/// <summary>
-		/// Converts given string to a byte array using the given <paramref name="encoding"/>
+		/// 使用指定编码将字符串转换为字节数组。
 		/// </summary>
+		/// <param name="encoding">用于编码的编码对象。</param>
+		/// <returns>字符串的字节数组表示。</returns>
 		public byte[] GetBytes([NotNull] Encoding encoding)
 		{
 			Check.EnsureNotNull(source, nameof(source));
@@ -794,15 +807,15 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Decoding the given Base64 string and returns a new string.
+	/// 提供对字符串的扩展方法。
 	/// </summary>
 	extension(string)
 	{
 		/// <summary>
-		/// Collapses the given string parts into a single string by returning the first non-null and non-empty string.
+		/// 返回第一个非 null 且非空的字符串部分作为结果。
 		/// </summary>
-		/// <param name="parts"></param>
-		/// <returns></returns>
+		/// <param name="parts">要检查的字符串数组。</param>
+		/// <returns>第一个非 null 且非空的字符串部分，如果没有，则返回空字符串。</returns>
 		public static string Collapse(params string[] parts)
 		{
 			foreach (var part in parts)

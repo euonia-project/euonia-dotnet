@@ -1,11 +1,11 @@
-﻿public static partial class Extensions
+public static partial class Extensions
 {
     /// <summary>
-    /// Checks a value is between a minimum and maximum value.
+    /// 检查值是否在最小值和最大值之间（含边界）。
     /// </summary>
-    /// <param name="value">The value to be checked</param>
-    /// <param name="minValue">Minimum (inclusive) value</param>
-    /// <param name="maxValue">Maximum (inclusive) value</param>
+    /// <param name="value">要检查的值。</param>
+    /// <param name="minValue">最小值（含）。</param>
+    /// <param name="maxValue">最大值（含）。</param>
     public static bool IsBetween<T>(this T value, T minValue, T maxValue)
         where T : IComparable<T>
     {
@@ -13,11 +13,11 @@
     }
 
     /// <summary>
-    /// Checks a value is not in range.
+    /// 检查值是否不在指定范围内。
     /// </summary>
-    /// <param name="value">The value to be checked</param>
-    /// <param name="minValue">Minimum value</param>
-    /// <param name="maxValue">Maximum value</param>
+    /// <param name="value">要检查的值。</param>
+    /// <param name="minValue">最小值。</param>
+    /// <param name="maxValue">最大值。</param>
     public static bool IsNotInRange<T>(this T value, T minValue, T maxValue)
         where T : IComparable<T>
     {
