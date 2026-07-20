@@ -1,18 +1,18 @@
-﻿using System.Security.Authentication;
+using System.Security.Authentication;
 using System.Security.Claims;
 using Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Extension methods for <see cref="UserPrincipal"/> and <see cref="ClaimsPrincipal"/>.
+/// <see cref="UserPrincipal"/> 和 <see cref="ClaimsPrincipal"/> 的扩展方法。
 /// </summary>
 public static partial class Extensions
 {
     /// <summary>
-    /// To be added.
+    /// 获取 <see cref="Guid"/> 类型的用户 ID。
     /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
-    /// <exception cref="FormatException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <returns>用户的 GUID。</returns>
+    /// <exception cref="FormatException">当用户 ID 格式无效时抛出。</exception>
     public static Guid GetUserIdOfGuid(this UserPrincipal user)
     {
         if (!user.IsAuthenticated || string.IsNullOrWhiteSpace(user.UserId))
@@ -29,12 +29,12 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Gets user id of <see cref="long"/>.
+    /// 获取 <see cref="long"/> 类型的用户 ID。
     /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
-    /// <exception cref="AuthenticationException"></exception>
-    /// <exception cref="FormatException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <returns>用户的 Int64 ID。</returns>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
+    /// <exception cref="FormatException">当用户 ID 格式无效时抛出。</exception>
     public static long GetUserIdOfInt64(this UserPrincipal user)
     {
         if (!user.IsAuthenticated || string.IsNullOrWhiteSpace(user.UserId))
@@ -51,12 +51,12 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Gets user id of int32.
+    /// 获取 <see cref="int"/> 类型的用户 ID。
     /// </summary>
-    /// <param name="user"></param>
-    /// <returns></returns>
-    /// <exception cref="AuthenticationException"></exception>
-    /// <exception cref="FormatException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <returns>用户的 Int32 ID。</returns>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
+    /// <exception cref="FormatException">当用户 ID 格式无效时抛出。</exception>
     public static int GetUserIdOfInt32(this UserPrincipal user)
     {
         if (!user.IsAuthenticated || string.IsNullOrWhiteSpace(user.UserId))
@@ -73,10 +73,10 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// To be added.
+    /// 确保用户已通过身份验证。
     /// </summary>
-    /// <param name="user"></param>
-    /// <exception cref="AuthenticationException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
     public static void EnsureAuthenticated(this UserPrincipal user)
     {
         if (!user.IsAuthenticated && !string.IsNullOrWhiteSpace(user.Username) && !string.IsNullOrWhiteSpace(user.UserId))
@@ -86,13 +86,13 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Ensure user is in roles.
+    /// 确保用户属于指定的角色。
     /// </summary>
-    /// <param name="user"></param>
-    /// <param name="roles"></param>
-    /// <param name="message"></param>
-    /// <exception cref="AuthenticationException"></exception>
-    /// <exception cref="UnauthorizedAccessException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <param name="roles">角色集合。</param>
+    /// <param name="message">授权失败时的错误消息。</param>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
+    /// <exception cref="UnauthorizedAccessException">当用户不属于指定角色时抛出。</exception>
     public static void EnsureInRoles(this UserPrincipal user, IEnumerable<string> roles, string message)
     {
         user.EnsureAuthenticated();
@@ -104,13 +104,13 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Ensure user is in roles.
+    /// 确保用户属于指定的角色，并执行相应的回调。
     /// </summary>
-    /// <param name="user"></param>
-    /// <param name="roles"></param>
-    /// <param name="successCallback"></param>
-    /// <param name="failureCallback"></param>
-    /// <exception cref="AuthenticationException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <param name="roles">角色集合。</param>
+    /// <param name="successCallback">成功时的回调。</param>
+    /// <param name="failureCallback">失败时的回调。</param>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
     public static void EnsureInRoles(this UserPrincipal user, IEnumerable<string> roles, Action successCallback = null, Action failureCallback = null)
     {
         user.EnsureAuthenticated();
@@ -126,14 +126,14 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Ensure user is in roles.
+    /// 异步确保用户属于指定的角色，并执行相应的回调。
     /// </summary>
-    /// <param name="user"></param>
-    /// <param name="roles"></param>
-    /// <param name="successCallback"></param>
-    /// <param name="failureCallback"></param>
-    /// <returns></returns>
-    /// <exception cref="AuthenticationException"></exception>
+    /// <param name="user">用户主体。</param>
+    /// <param name="roles">角色集合。</param>
+    /// <param name="successCallback">成功时的异步回调。</param>
+    /// <param name="failureCallback">失败时的异步回调。</param>
+    /// <returns>表示异步操作的任务。</returns>
+    /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
     public static Task EnsureInRolesAsync(this UserPrincipal user, IEnumerable<string> roles, Func<Task> successCallback = null, Func<Task> failureCallback = null)
     {
         user.EnsureAuthenticated();
@@ -149,10 +149,10 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Logic for normalizing scope claims to separate claim types
+    /// 将 scope 声明规范化为单独的声明类型。
     /// </summary>
-    /// <param name="principal"></param>
-    /// <returns></returns>
+    /// <param name="principal">声明主体。</param>
+    /// <returns>规范化后的声明主体。</returns>
     public static ClaimsPrincipal NormalizeScopeClaims(this ClaimsPrincipal principal)
     {
         var identities = new List<ClaimsIdentity>();

@@ -1,35 +1,35 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Describes the type of a sequential GUID value.
+/// 描述顺序 GUID 值的类型。
 /// </summary>
 public enum GuidType
 {
     /// <summary>
-    /// 
+    /// 空 GUID（全零）。
     /// </summary>
     Empty,
 
     /// <summary>
-    /// 
+    /// 标准随机 GUID。
     /// </summary>
     Simple,
 
     /// <summary>
-    /// The GUID should be sequential when formatted using the <see cref="Guid.ToString()" /> method.
-    /// Used by MySql and PostgreSql.
+    /// GUID 在使用 <see cref="Guid.ToString()" /> 方法格式化时应该是顺序的。
+    /// 用于 MySql 和 PostgreSql。
     /// </summary>
     SequentialAsString,
 
     /// <summary>
-    /// The GUID should be sequential when formatted using the <see cref="Guid.ToByteArray()" /> method.
-    /// Used by Oracle.
+    /// GUID 在使用 <see cref="Guid.ToByteArray()" /> 方法格式化时应该是顺序的。
+    /// 用于 Oracle。
     /// </summary>
     SequentialAsBinary,
 
     /// <summary>
-    /// The sequential portion of the GUID should be located at the end of the Data4 block.
-    /// Used by SqlServer.
+    /// GUID 的顺序部分应位于 Data4 块的末尾。
+    /// 用于 SqlServer。
     /// </summary>
     SequentialAtEnd
 }

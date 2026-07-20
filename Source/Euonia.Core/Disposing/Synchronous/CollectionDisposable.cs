@@ -1,25 +1,25 @@
-﻿using System.Collections.Immutable;
+using System.Collections.Immutable;
 
 namespace Nerosoft.Euonia.Disposing;
 
 /// <summary>
-/// Disposes a collection of disposables.
+/// 释放一组可释放对象的可释放集合。
 /// </summary>
 public sealed class CollectionDisposable : SingleDisposable<ImmutableQueue<IDisposable>>
 {
     /// <summary>
-    /// Creates a disposable that disposes a collection of disposables.
+    /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
-    /// <param name="disposables">The disposables to dispose.</param>
+    /// <param name="disposables">要释放的可释放对象。</param>
     public CollectionDisposable(params IDisposable[] disposables)
         : this((IEnumerable<IDisposable>)disposables)
     {
     }
 
     /// <summary>
-    /// Creates a disposable that disposes a collection of disposables.
+    /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
-    /// <param name="disposables">The disposables to dispose.</param>
+    /// <param name="disposables">要释放的可释放对象。</param>
     public CollectionDisposable(IEnumerable<IDisposable> disposables)
         : base(ImmutableQueue.CreateRange(disposables))
     {
@@ -33,16 +33,16 @@ public sealed class CollectionDisposable : SingleDisposable<ImmutableQueue<IDisp
     }
 
     /// <summary>
-    /// Adds a disposable to the collection of disposables. If this instance is already disposed or disposing, then <paramref name="disposable"/> is disposed immediately.
+    /// 向可释放集合中添加一个可释放对象。如果此实例已经释放或正在释放，则立即释放 <paramref name="disposable"/>。
     /// </summary>
-    /// <param name="disposable">The disposable to add to our collection.</param>
+    /// <param name="disposable">要添加到集合中的可释放对象。</param>
     public void Add(IDisposable disposable)
     {
         if (disposable == null)
         {
             throw new ArgumentNullException(nameof(disposable));
         }
-            
+
         // ReSharper disable once AccessToDisposedClosure
         if (!TryUpdateContext(x => x.Enqueue(disposable)))
         {
@@ -51,14 +51,14 @@ public sealed class CollectionDisposable : SingleDisposable<ImmutableQueue<IDisp
     }
 
     /// <summary>
-    /// Creates a disposable that disposes a collection of disposables.
+    /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
-    /// <param name="disposables">The disposables to dispose.</param>
+    /// <param name="disposables">要释放的可释放对象。</param>
     public static CollectionDisposable Create(params IDisposable[] disposables) => new(disposables);
 
     /// <summary>
-    /// Creates a disposable that disposes a collection of disposables.
+    /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
-    /// <param name="disposables">The disposables to dispose.</param>
+    /// <param name="disposables">要释放的可释放对象。</param>
     public static CollectionDisposable Create(IEnumerable<IDisposable> disposables) => new(disposables);
 }

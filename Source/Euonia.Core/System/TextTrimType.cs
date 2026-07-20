@@ -1,32 +1,32 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// The text trim type.
+/// 文本修剪类型。
 /// </summary>
 public enum TextTrimType
 {
 	/// <summary>
-	/// Represents no trim.
+	/// 不修剪。
 	/// </summary>
 	None,
 
 	/// <summary>
-	/// Represents trim at the head of the text.
+	/// 修剪文本开头。
 	/// </summary>
 	Head,
 
 	/// <summary>
-	/// Represents trim at the tail of the text.
+	/// 修剪文本末尾。
 	/// </summary>
 	Tail,
 
 	/// <summary>
-	/// Represents trim at both head and tail of the text.
+	/// 修剪文本开头和末尾。
 	/// </summary>
 	Both,
 
 	/// <summary>
-	/// Represents trim all the white spaces.
+	/// 移除所有空白字符。
 	/// </summary>
 	All,
 }

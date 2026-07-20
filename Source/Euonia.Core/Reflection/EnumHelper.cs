@@ -1,18 +1,18 @@
-﻿using System.Reflection;
+using System.Reflection;
 
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// The methods to perform enumeration operations.
+/// 提供执行枚举操作的方法。
 /// </summary>
 public static class EnumHelper
 {
     /// <summary>
-    /// Gets the enum values.
+    /// 获取枚举的所有值。
     /// </summary>
-    /// <typeparam name="TEnum"></typeparam>
-    /// <returns></returns>
-    /// <exception cref="InvalidCastException"></exception>
+    /// <typeparam name="TEnum">枚举类型。</typeparam>
+    /// <returns>枚举值数组。</returns>
+    /// <exception cref="InvalidCastException">当 <typeparamref name="TEnum"/> 不是枚举类型时抛出。</exception>
     public static TEnum[] GetEnumValues<TEnum>()
     {
         var type = typeof(TEnum);
@@ -23,16 +23,16 @@ public static class EnumHelper
         }
 
         return (
-            from field in type.GetRuntimeFields() //.GetFields(BindingFlags.Public | BindingFlags.Static)
+            from field in type.GetRuntimeFields()
             where field.IsLiteral
             select (TEnum)field.GetValue(type)).ToArray();
     }
 
     /// <summary>
-    /// Gets the enum names.
+    /// 获取枚举的所有名称。
     /// </summary>
-    /// <typeparam name="TEnum"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TEnum">枚举类型。</typeparam>
+    /// <returns>枚举名称数组。</returns>
     public static string[] GetEnumNames<TEnum>()
     {
         var type = typeof(TEnum);
@@ -42,23 +42,23 @@ public static class EnumHelper
         }
 
         return (
-            from field in type.GetRuntimeFields() //.GetFields(BindingFlags.Public | BindingFlags.Static)
+            from field in type.GetRuntimeFields()
             where field.IsLiteral
             select field.Name).ToArray();
     }
 
     /// <summary>
-    /// Gets the first occurrence of the specified type of <see cref="Attribute"/>.
+    /// 获取枚举字段上指定类型的第一个 <see cref="Attribute"/>。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="e"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">特性类型。</typeparam>
+    /// <param name="e">枚举值。</param>
+    /// <returns>找到的特性实例，如果未找到则返回默认值。</returns>
     public static T GetAttribute<T>(Enum e)
         where T : Attribute
     {
         T attribute = default;
         var enumType = e.GetType();
-        var members = enumType.GetTypeInfo().DeclaredMembers.ToArray(); //.GetMember(e.ToString());
+        var members = enumType.GetTypeInfo().DeclaredMembers.ToArray();
 
         if (members.Length == 1)
         {
@@ -76,11 +76,11 @@ public static class EnumHelper
     }
 
     /// <summary>
-    /// Gets customer attribute of enum.
+    /// 获取枚举值的自定义特性。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">特性类型。</typeparam>
+    /// <param name="value">枚举值。</param>
+    /// <returns>找到的特性实例，如果未找到则返回默认值。</returns>
     public static T GetCustomerAttribute<T>(Enum value)
         where T : Attribute
     {

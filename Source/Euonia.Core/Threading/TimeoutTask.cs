@@ -1,8 +1,7 @@
-﻿namespace Nerosoft.Euonia.Threading.Redis;
+namespace Nerosoft.Euonia.Threading.Redis;
 
 /// <summary>
-/// Acts as a <see cref="Task.Delay(TimeSpan, CancellationToken)"/> which is cleaned up when
-/// the <see cref="TimeoutTask"/> gets disposed
+/// 充当 <see cref="Task.Delay(TimeSpan, CancellationToken)"/> 的包装器，当 <see cref="TimeoutTask"/> 被释放时会自动清理。
 /// </summary>
 public readonly struct TimeoutTask : IDisposable
 {
@@ -10,10 +9,10 @@ public readonly struct TimeoutTask : IDisposable
     private readonly CancellationTokenSource _linkedTokenSource;
 
     /// <summary>
-    /// Initialize a new instance of <see cref="TimeoutTask"/> with the specified timeout value.
+    /// 使用指定的超时值初始化 <see cref="TimeoutTask"/> 的新实例。
     /// </summary>
-    /// <param name="timeout"></param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="timeout">超时值。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
     public TimeoutTask(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         _cleanupTokenSource = new CancellationTokenSource();
@@ -24,7 +23,7 @@ public readonly struct TimeoutTask : IDisposable
     }
 
     /// <summary>
-    /// Gets the underlying <see cref="Task"/>
+    /// 获取底层的 <see cref="Task"/>。
     /// </summary>
     public Task Task { get; }
 

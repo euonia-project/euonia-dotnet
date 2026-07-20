@@ -1,40 +1,40 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Nerosoft.Euonia.Threading.Interop;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible condition variable. This type uses Mesa-style semantics (the notifying tasks do not yield).
+/// 一个异步兼容的条件变量。此类型使用 Mesa 风格语义（通知任务不会让出执行权）。
 /// </summary>
 [DebuggerDisplay("Id = {Id}, AsyncLockId = {_asyncLock.Id}")]
 [DebuggerTypeProxy(typeof(DebugView))]
 public sealed class AsyncConditionVariable
 {
     /// <summary>
-    /// The lock associated with this condition variable.
+    /// 与此条件变量关联的锁。
     /// </summary>
     private readonly AsyncLock _asyncLock;
 
     /// <summary>
-    /// The queue of waiting tasks.
+    /// 等待任务的队列。
     /// </summary>
     private readonly IAsyncWaitQueue<object> _queue;
 
     /// <summary>
-    /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
+    /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
     /// </summary>
     private int _id;
 
     /// <summary>
-    /// The object used for mutual exclusion.
+    /// 用于互斥的对象。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// Creates an async-compatible condition variable associated with an async-compatible lock.
+    /// 创建一个与异步兼容锁关联的异步兼容条件变量。
     /// </summary>
-    /// <param name="asyncLock">The lock associated with this condition variable.</param>
-    /// <param name="queue">The wait queue used to manage waiters. This may be <c>null</c> to use a default (FIFO) queue.</param>
+    /// <param name="asyncLock">与此条件变量关联的锁。</param>
+    /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
     internal AsyncConditionVariable(AsyncLock asyncLock, IAsyncWaitQueue<object> queue)
     {
         _asyncLock = asyncLock;
@@ -43,21 +43,21 @@ public sealed class AsyncConditionVariable
     }
 
     /// <summary>
-    /// Creates an async-compatible condition variable associated with an async-compatible lock.
+    /// 创建一个与异步兼容锁关联的异步兼容条件变量。
     /// </summary>
-    /// <param name="asyncLock">The lock associated with this condition variable.</param>
+    /// <param name="asyncLock">与此条件变量关联的锁。</param>
     public AsyncConditionVariable(AsyncLock asyncLock)
         : this(asyncLock, null)
     {
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous condition variable.
+    /// 获取此异步条件变量的半唯一标识符。
     /// </summary>
     public int Id => IdentifierManager<AsyncConditionVariable>.GetId(ref _id);
 
     /// <summary>
-    /// Sends a signal to a single task waiting on this condition variable. The associated lock MUST be held when calling this method, and it will still be held when this method returns.
+    /// 向正在等待此条件变量的单个任务发送信号。调用此方法时必须持有关联的锁，并且在此方法返回时锁仍将被持有。
     /// </summary>
     public void Notify()
     {
@@ -69,7 +69,7 @@ public sealed class AsyncConditionVariable
     }
 
     /// <summary>
-    /// Sends a signal to all tasks waiting on this condition variable. The associated lock MUST be held when calling this method, and it will still be held when this method returns.
+    /// 向正在等待此条件变量的所有任务发送信号。调用此方法时必须持有关联的锁，并且在此方法返回时锁仍将被持有。
     /// </summary>
     public void NotifyAll()
     {
@@ -80,21 +80,21 @@ public sealed class AsyncConditionVariable
     }
 
     /// <summary>
-    /// Asynchronously waits for a signal on this condition variable. The associated lock MUST be held when calling this method, and it will still be held when this method returns, even if the method is cancelled.
+    /// 异步等待此条件变量的信号。调用此方法时必须持有关联的锁，并且在此方法返回时锁仍将被持有，即使该方法被取消。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation signal used to cancel this wait.</param>
+    /// <param name="cancellationToken">用于取消此等待的取消信号。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
         Task task;
         lock (_mutex)
         {
-            // Begin waiting for either a signal or cancellation.
+            // 开始等待信号或取消。
             task = _queue.Enqueue(_mutex, cancellationToken);
 
-            // Attach to the signal or cancellation.
+            // 附加到信号或取消。
             var ret = WaitAndRetakeLockAsync(task, _asyncLock);
 
-            // Release the lock while we are waiting.
+            // 在等待期间释放锁。
             _asyncLock.ReleaseLock();
 
             return ret;
@@ -109,13 +109,13 @@ public sealed class AsyncConditionVariable
         }
         finally
         {
-            // Re-take the lock.
+            // 重新获取锁。
             await asyncLock.LockAsync().ConfigureAwait(false);
         }
     }
 
     /// <summary>
-    /// Asynchronously waits for a signal on this condition variable. The associated lock MUST be held when calling this method, and it will still be held when the returned task completes.
+    /// 异步等待此条件变量的信号。调用此方法时必须持有关联的锁，并且当返回的任务完成时锁仍将被持有。
     /// </summary>
     public Task WaitAsync()
     {
@@ -123,16 +123,16 @@ public sealed class AsyncConditionVariable
     }
 
     /// <summary>
-    /// Synchronously waits for a signal on this condition variable. This method may block the calling thread. The associated lock MUST be held when calling this method, and it will still be held when this method returns, even if the method is cancelled.
+    /// 同步等待此条件变量的信号。此方法可能会阻塞调用线程。调用此方法时必须持有关联的锁，并且在此方法返回时锁仍将被持有，即使该方法被取消。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation signal used to cancel this wait.</param>
+    /// <param name="cancellationToken">用于取消此等待的取消信号。</param>
     public void Wait(CancellationToken cancellationToken)
     {
         WaitAsync(cancellationToken).WaitAndUnwrapException(cancellationToken);
     }
 
     /// <summary>
-    /// Synchronously waits for a signal on this condition variable. This method may block the calling thread. The associated lock MUST be held when calling this method, and it will still be held when this method returns.
+    /// 同步等待此条件变量的信号。此方法可能会阻塞调用线程。调用此方法时必须持有关联的锁，并且在此方法返回时锁仍将被持有。
     /// </summary>
     public void Wait()
     {

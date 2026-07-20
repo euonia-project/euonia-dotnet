@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Runtime.Loader;
 
@@ -9,7 +9,7 @@ using System.Runtime.Loader;
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// Exposes static methods for load assembly and types.
+/// 提供加载程序集和类型的静态方法。
 /// </summary>
 public static class AssemblyHelper
 {
@@ -17,11 +17,11 @@ public static class AssemblyHelper
 	private static readonly ConcurrentDictionary<Assembly, IReadOnlyList<TypeInfo>> _definedTypeCache = new();
 
 	/// <summary>
-	/// Load assemblies from executable files found in <paramref name="directory"/>.
+	/// 从 <paramref name="directory"/> 目录中的可执行文件加载程序集。
 	/// </summary>
-	/// <param name="directory">The directory path.</param>
-	/// <param name="searchOption">The option specifies whether the search operation should include only the current directory or all subdirectories.</param>
-	/// <returns>The found assemblies.</returns>
+	/// <param name="directory">目录路径。</param>
+	/// <param name="searchOption">指定搜索操作是仅包含当前目录还是包含所有子目录。</param>
+	/// <returns>找到的程序集列表。</returns>
 	public static List<Assembly> LoadAssemblies(string directory, SearchOption searchOption)
 	{
 		return GetAssemblyFiles(directory, searchOption).Select(AssemblyLoadContext.Default.LoadFromAssemblyPath)
@@ -29,11 +29,11 @@ public static class AssemblyHelper
 	}
 
 	/// <summary>
-	/// Gets assembly files in <paramref name="directory"/>.
+	/// 获取 <paramref name="directory"/> 目录中的程序集文件。
 	/// </summary>
-	/// <param name="directory">The directory path.</param>
-	/// <param name="searchOption">The option specifies whether the search operation should include only the current directory or all subdirectories.</param>
-	/// <returns>The found assembly files.</returns>
+	/// <param name="directory">目录路径。</param>
+	/// <param name="searchOption">指定搜索操作是仅包含当前目录还是包含所有子目录。</param>
+	/// <returns>找到的程序集文件路径集合。</returns>
 	public static IEnumerable<string> GetAssemblyFiles(string directory, SearchOption searchOption)
 	{
 		return Directory.EnumerateFiles(directory, "*.*", searchOption)
@@ -41,10 +41,10 @@ public static class AssemblyHelper
 	}
 
 	/// <summary>
-	/// Gets all types in <paramref name="assembly"/>.
+	/// 获取 <paramref name="assembly"/> 中的所有类型。
 	/// </summary>
-	/// <param name="assembly">The assembly.</param>
-	/// <returns>Types found in assembly.</returns>
+	/// <param name="assembly">要获取类型的程序集。</param>
+	/// <returns>在程序集中找到的类型列表。</returns>
 	public static IReadOnlyList<Type> GetAllTypes(Assembly assembly)
 	{
 		try
@@ -78,10 +78,10 @@ public static class AssemblyHelper
 	*/
 
 	/// <summary>
-	/// Gets all defined types in <paramref name="assembly"/>.
+	/// 获取 <paramref name="assembly"/> 中所有已定义的类型。
 	/// </summary>
-	/// <param name="assembly"></param>
-	/// <returns></returns>
+	/// <param name="assembly">要获取已定义类型的程序集。</param>
+	/// <returns>在程序集中找到的 <see cref="TypeInfo"/> 列表。</returns>
 	public static IReadOnlyList<TypeInfo> GetDefinedTypes(Assembly assembly)
 	{
 		return _definedTypeCache.GetOrAdd(assembly, assembly.DefinedTypes.ToList);

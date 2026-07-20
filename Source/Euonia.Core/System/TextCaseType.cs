@@ -1,27 +1,27 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// The text case type.
+/// 文本大小写类型。
 /// </summary>
 public enum TextCaseType
 {
 	/// <summary>
-	/// Represents no case.
+	/// 无大小写转换。
 	/// </summary>
 	None,
 
 	/// <summary>
-	/// Represents upper case.
+	/// 大写。
 	/// </summary>
 	Upper,
 
 	/// <summary>
-	/// Represents lower case.
+	/// 小写。
 	/// </summary>
 	Lower,
 
 	/// <summary>
-	/// Represents title case.
+	/// 首字母大写（标题大小写）。
 	/// </summary>
 	Title
 }

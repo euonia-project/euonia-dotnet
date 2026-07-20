@@ -1,40 +1,40 @@
-﻿using Nerosoft.Euonia.Disposing;
+using Nerosoft.Euonia.Disposing;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A source for deferrals. Event argument types may implement this interface to indicate they understand async event handlers.
+/// 延迟请求的来源。事件参数类型可以实现此接口以表明它们理解异步事件处理程序。
 /// </summary>
 public interface IDeferralSource
 {
     /// <summary>
-    /// Requests a deferral. When the deferral is disposed, it is considered complete.
+    /// 请求一个延迟。当延迟被释放时，视为完成。
     /// </summary>
     IDisposable GetDeferral();
 }
 
 /// <summary>
-/// Manages the deferrals for an event that may have asynchonous handlers and needs to know when they complete. Instances of this type may not be reused.
+/// 管理可能具有异步处理程序且需要知道它们何时完成的事件的延迟。此类型的实例不可重复使用。
 /// </summary>
 public sealed class DeferralManager
 {
     /// <summary>
-    /// The deferral source for deferrals managed by this manager.
+    /// 由此管理器管理的延迟的来源。
     /// </summary>
     private readonly IDeferralSource _source;
 
     /// <summary>
-    /// The lock protecting <see cref="_countdownEvent"/>.
+    /// 保护 <see cref="_countdownEvent"/> 的锁。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// The underlying countdown event. May be <c>null</c> if no deferrals were ever requested.
+    /// 底层的倒计时事件。如果从未请求过延迟，则可能为 <c>null</c>。
     /// </summary>
     private AsyncCountdownEvent _countdownEvent = new(1);
 
     /// <summary>
-    /// Creates a new deferral manager.
+    /// 创建一个新的延迟管理器。
     /// </summary>
     public DeferralManager()
     {
@@ -43,7 +43,7 @@ public sealed class DeferralManager
     }
 
     /// <summary>
-    /// Increments the count of active deferrals for this manager.
+    /// 递增此管理器的活跃延迟计数。
     /// </summary>
     internal void IncrementCount()
     {
@@ -61,7 +61,7 @@ public sealed class DeferralManager
     }
 
     /// <summary>
-    /// Decrements the count of active deferrals for this manager. If the count reaches <c>0</c>, then the manager notifies the code raising the event.
+    /// 递减此管理器的活跃延迟计数。如果计数达到 <c>0</c>，则管理器通知引发事件的代码。
     /// </summary>
     internal void DecrementCount()
     {
@@ -72,12 +72,12 @@ public sealed class DeferralManager
     }
 
     /// <summary>
-    /// Gets a source for deferrals managed by this deferral manager. This is generally used to implement <see cref="IDeferralSource"/> for event argument types.
+    /// 获取由此延迟管理器管理的延迟来源。通常用于为事件参数类型实现 <see cref="IDeferralSource"/>。
     /// </summary>
     public IDeferralSource DeferralSource => _source;
 
     /// <summary>
-    /// Notifies the manager that all deferral requests have been made, and returns a task that is completed when all deferrals have completed.
+    /// 通知管理器所有延迟请求已完成，并返回一个当所有延迟完成时完成的任务。
     /// </summary>
     public Task WaitForDeferralsAsync()
     {
@@ -93,12 +93,12 @@ public sealed class DeferralManager
     }
 
     /// <summary>
-    /// A source for deferrals.
+    /// 延迟的来源。
     /// </summary>
     private sealed class ManagedDeferralSource : IDeferralSource
     {
         /// <summary>
-        /// The deferral manager in charge of this deferral source.
+        /// 负责此延迟来源的延迟管理器。
         /// </summary>
         private readonly DeferralManager _manager;
 
@@ -114,7 +114,7 @@ public sealed class DeferralManager
         }
 
         /// <summary>
-        /// A deferral.
+        /// 一个延迟。
         /// </summary>
         private sealed class Deferral : SingleDisposable<DeferralManager>
         {

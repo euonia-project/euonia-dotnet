@@ -1,24 +1,27 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// 
+/// 提供类型转换和强制转换的辅助方法。
 /// </summary>
 public class TypeHelper
 {
 	/// <summary>
-	/// 
+	/// 将值强制转换为所需的目标类型。
 	/// </summary>
-	/// <param name="desiredType"></param>
-	/// <param name="valueType"></param>
-	/// <param name="value"></param>
-	/// <returns></returns>
+	/// <param name="desiredType">目标类型。</param>
+	/// <param name="valueType">值的原始类型。</param>
+	/// <param name="value">要转换的值。</param>
+	/// <returns>转换后的对象。</returns>
+	/// <remarks>
+	/// 此方法处理多种转换场景，包括：直接赋值兼容、可空类型、枚举解析、基本类型转换以及通过 <see cref="TypeDescriptor"/> 进行的类型转换。
+	/// </remarks>
 	public static object CoerceValue(Type desiredType, Type valueType, object value)
 	{
 		if (desiredType.IsAssignableFrom(valueType))
 		{
-			// types match, just return value
+			// 类型匹配，直接返回值
 			return value;
 		}
 
@@ -104,24 +107,24 @@ public class TypeHelper
 	}
 
 	/// <summary>
-	/// 
+	/// 将值强制转换为指定的目标类型 <typeparamref name="T"/>。
 	/// </summary>
-	/// <param name="valueType"></param>
-	/// <param name="value"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">目标类型。</typeparam>
+	/// <param name="valueType">值的原始类型。</param>
+	/// <param name="value">要转换的值。</param>
+	/// <returns>转换后的 <typeparamref name="T"/> 类型值。</returns>
 	public static T CoerceValue<T>(Type valueType, object value)
 	{
 		return (T)CoerceValue(typeof(T), valueType, value);
 	}
 
 	/// <summary>
-	/// 
+	/// 将输入类型的值强制转换为输出类型。
 	/// </summary>
-	/// <typeparam name="TOutput"></typeparam>
-	/// <typeparam name="TInput"></typeparam>
-	/// <param name="value"></param>
-	/// <returns></returns>
+	/// <typeparam name="TOutput">输出目标类型。</typeparam>
+	/// <typeparam name="TInput">输入值类型。</typeparam>
+	/// <param name="value">要转换的值。</param>
+	/// <returns>转换后的 <typeparamref name="TOutput"/> 类型值。</returns>
 	public static TOutput CoerceValue<TOutput, TInput>(TInput value)
 	{
 		return (TOutput)CoerceValue(typeof(TOutput), typeof(TInput), value);

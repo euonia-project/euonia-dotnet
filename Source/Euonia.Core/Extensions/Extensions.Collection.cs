@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using Nerosoft.Euonia.Collections;
@@ -8,13 +8,13 @@ public static partial class Extensions
 	private static readonly Random _random = new();
 
 	/// <summary>
-	/// Performs the specified action on each element of the <see cref="IEnumerable{T}"/>
+	/// 对 <see cref="IEnumerable{T}"/> 的每个元素执行指定操作。
 	/// </summary>
-	/// <typeparam name="T">The type of the element.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="action">The System.Action`1 delegate to perform on each element of the <see cref="IEnumerable{T}"/>.</param>
-	/// <exception cref="NullReferenceException">Throws if <paramref name="source"/> is null.</exception>
-	/// <exception cref="ArgumentNullException">Throws if action is null.</exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="action">对每个元素执行的委托。</param>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 action 为 null 时抛出。</exception>
 	public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
 	{
 		if (source == null)
@@ -31,13 +31,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Determines whether the collection contains the object.
+	/// 确定字符串集合是否包含指定值。
 	/// </summary>
-	/// <param name="source">The source.</param>
-	/// <param name="value">The value.</param>
-	/// <param name="comparison">The comparison.</param>
-	/// <returns><c>true</c> if [contains] [the specified value]; otherwise, <c>false</c>.</returns>
-	/// <exception cref="NullReferenceException"></exception>
+	/// <param name="source">源集合。</param>
+	/// <param name="value">要查找的值。</param>
+	/// <param name="comparison">字符串比较类型。</param>
+	/// <returns>如果包含指定值，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static bool Contains(this IEnumerable<string> source, string value, StringComparison comparison)
 	{
 		if (source == null)
@@ -49,10 +49,10 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Determines whether the specified collection [is null or empty].
+	/// 确定集合是否为 null 或空。
 	/// </summary>
-	/// <param name="source">The source.</param>
-	/// <returns><c>true</c> if the specified source [is null or empty]; otherwise, <c>false</c>.</returns>
+	/// <param name="source">源集合。</param>
+	/// <returns>如果集合为 null 或空，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public static bool IsNullOrEmpty(this IEnumerable source)
 	{
 		if (source == null)
@@ -64,25 +64,25 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Determines whether a sequence is null or empty.
+	/// 确定序列是否为 null 或空。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="source">A sequence in which to locate a value.</param>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">要查找值的序列。</param>
+	/// <returns>如果序列为 null 或空，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public static bool IsNullOrEmpty<T>(this IEnumerable<T> source)
 	{
 		return source == null || !source.Any();
 	}
 
 	/// <summary>
-	/// Determine whether the specified collection is equals to another.
+	/// 确定指定集合是否等于另一个集合。
 	/// </summary>
-	/// <typeparam name="T">The type of the collection item.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="dest">The dest.</param>
-	/// <returns><c>true</c> if collection is equals to another, <c>false</c> otherwise.</returns>
-	/// <exception cref="NullReferenceException"></exception>
-	/// <exception cref="ArgumentNullException">dest</exception>
+	/// <typeparam name="T">集合元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="dest">目标集合。</param>
+	/// <returns>如果集合相等，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="dest"/> 为 null 时抛出。</exception>
 	public static bool Equals<T>(this IEnumerable<T> source, IEnumerable<T> dest) where T : IComparable
 	{
 		if (source == null)
@@ -96,12 +96,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Concatenates the elements of an object array, using the specified separator between each element.
+	/// 使用指定分隔符连接集合元素。
 	/// </summary>
-	/// <typeparam name="T">Member type.</typeparam>
-	/// <param name="values">A collection that contains the objects to concatenate.</param>
-	/// <param name="separator"></param>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="values">包含要连接的对象的集合。</param>
+	/// <param name="separator">分隔符。</param>
+	/// <returns>连接后的字符串。</returns>
 	public static string Join<T>(this IEnumerable<T> values, string separator)
 	{
 		if (values == null)
@@ -113,14 +113,16 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Concatenates the members of a collection, using the specified separator between each member.
+	/// 使用指定分隔符连接集合中从指定位置开始的指定数量的元素。
 	/// </summary>
-	/// <typeparam name="T">Member type.</typeparam>
-	/// <param name="values">A collection that contains the objects to concatenate.</param>
-	/// <param name="separator">The string to use as a separator.separator is included in the returned string only if values has more than one element.</param>
-	/// <param name="startIndex"></param>
-	/// <param name="count"></param>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="values">包含要连接的对象的集合。</param>
+	/// <param name="separator">分隔符。</param>
+	/// <param name="startIndex">起始索引。</param>
+	/// <param name="count">要连接的元素数量。</param>
+	/// <returns>连接后的字符串。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="values"/> 为 null 时抛出。</exception>
+	/// <exception cref="IndexOutOfRangeException">当 <paramref name="startIndex"/> 超出集合范围时抛出。</exception>
 	public static string Join<T>(this IEnumerable<T> values, string separator, int startIndex, int count)
 	{
 		if (values == null)
@@ -137,11 +139,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Convert Pageable collection to view collection.
+	/// 将可分页集合转换为视图集合。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="source"></param>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源可分页集合。</param>
+	/// <returns>视图集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static ViewCollection<T> ToView<T>(this PageableCollection<T> source) where T : class, new()
 	{
 		if (source == null)
@@ -153,15 +156,15 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Read <see cref="IList{T}"/> to a pageable collection.
+	/// 将 <see cref="IList{T}"/> 转换为可分页集合。
 	/// </summary>
-	/// <typeparam name="T">The type of the element.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="totalCount">The total count.</param>
-	/// <param name="index">The index.</param>
-	/// <param name="size">The size.</param>
-	/// <returns>A new pageable collection contains all elements of <paramref name="source"/>.</returns>
-	/// <exception cref="NullReferenceException">Throws if source is null.</exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="totalCount">总记录数。</param>
+	/// <param name="index">页码。</param>
+	/// <param name="size">每页大小。</param>
+	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Paginate<T>(this IList<T> source, long totalCount, int index, int size)
 	{
 		if (source == null)
@@ -173,14 +176,14 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Converts an exists pageable collection to another.
+	/// 将现有可分页集合转换为另一个可分页集合。
 	/// </summary>
-	/// <typeparam name="T">The type of collection items.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="index">The index.</param>
-	/// <param name="size">The size.</param>
-	/// <returns>A new pageable collection.</returns>
-	/// <exception cref="ArgumentNullException">Throw if source is null.</exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源可分页集合。</param>
+	/// <param name="index">页码。</param>
+	/// <param name="size">每页大小。</param>
+	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Convert<T>(this PageableCollection<T> source, int index, int size)
 	{
 		if (source == null)
@@ -192,13 +195,19 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 随机打乱集合中的元素顺序。
 	/// </summary>
-	/// <param name="enumerable"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="enumerable">要打乱的集合。</param>
+	/// <returns>打乱顺序后的集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="enumerable"/> 为 null 时抛出。</exception>
 	public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> enumerable)
 	{
+		if (enumerable == null)
+		{
+			throw new NullReferenceException(nameof(enumerable));
+		}
+
 		var buffer = enumerable.ToList();
 
 		for (var i = 0; i < buffer.Count; i++)
@@ -212,11 +221,11 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 将集合转换为 <see cref="ObservableCollection{T}"/>。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <returns>包含 <paramref name="source"/> 所有元素的 <see cref="ObservableCollection{T}"/>。</returns>
 	public static ObservableCollection<T> ToObservable<T>(this IEnumerable<T> source)
 	{
 		var collection = new ObservableCollection<T>(source);
@@ -224,12 +233,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Reify the specified collection.
+	/// 将源集合具体化为 <see cref="IReadOnlyCollection{T}"/>。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <returns>包含 <paramref name="source"/> 所有元素的 <see cref="IReadOnlyCollection{T}"/>。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static IReadOnlyCollection<T> Reify<T>(this IEnumerable<T> source)
 	{
 		return source switch
@@ -243,12 +252,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 在列表的指定索引处批量插入元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="index"></param>
-	/// <param name="items"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="index">插入的起始索引。</param>
+	/// <param name="items">要插入的元素集合。</param>
 	public static void InsertRange<T>(this IList<T> source, int index, IEnumerable<T> items)
 	{
 		foreach (var item in items)
@@ -258,12 +267,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 查找列表中匹配指定条件的第一个元素的索引。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <returns>匹配条件的第一个元素的索引，如果未找到则返回 -1。</returns>
 	public static int FindIndex<T>(this IList<T> source, Predicate<T> selector)
 	{
 		for (var i = 0; i < source.Count; ++i)
@@ -278,34 +287,34 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 将元素添加到列表开头。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="item">要添加的元素。</param>
 	public static void AddFirst<T>(this IList<T> source, T item)
 	{
 		source.Insert(0, item);
 	}
 
 	/// <summary>
-	/// 
+	/// 将元素添加到列表末尾。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="item">要添加的元素。</param>
 	public static void AddLast<T>(this IList<T> source, T item)
 	{
 		source.Insert(source.Count, item);
 	}
 
 	/// <summary>
-	/// 
+	/// 在指定元素之后插入新元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="existingItem"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="existingItem">指定的现有元素。</param>
+	/// <param name="item">要插入的新元素。</param>
 	public static void InsertAfter<T>(this IList<T> source, T existingItem, T item)
 	{
 		var index = source.IndexOf(existingItem);
@@ -319,12 +328,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 在匹配条件的第一个元素之后插入新元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="item">要插入的新元素。</param>
 	public static void InsertAfter<T>(this IList<T> source, Predicate<T> selector, T item)
 	{
 		var index = source.FindIndex(selector);
@@ -338,12 +347,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 在指定元素之前插入新元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="existingItem"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="existingItem">指定的现有元素。</param>
+	/// <param name="item">要插入的新元素。</param>
 	public static void InsertBefore<T>(this IList<T> source, T existingItem, T item)
 	{
 		var index = source.IndexOf(existingItem);
@@ -357,12 +366,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 在匹配条件的第一个元素之前插入新元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="item">要插入的新元素。</param>
 	public static void InsertBefore<T>(this IList<T> source, Predicate<T> selector, T item)
 	{
 		var index = source.FindIndex(selector);
@@ -376,12 +385,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 替换列表中所有匹配条件的元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="item">要替换的元素。</param>
 	public static void ReplaceWhile<T>(this IList<T> source, Predicate<T> selector, T item)
 	{
 		for (var i = 0; i < source.Count; i++)
@@ -394,12 +403,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 使用工厂方法替换列表中所有匹配条件的元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="itemFactory"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="itemFactory">用于生成新元素的工厂方法。</param>
 	public static void ReplaceWhile<T>(this IList<T> source, Predicate<T> selector, Func<T, T> itemFactory)
 	{
 		for (var i = 0; i < source.Count; i++)
@@ -413,12 +422,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 替换列表中第一个匹配条件的元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="item">要替换的元素。</param>
 	public static void ReplaceOne<T>(this IList<T> source, Predicate<T> selector, T item)
 	{
 		for (var i = 0; i < source.Count; i++)
@@ -432,12 +441,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 使用工厂方法替换列表中第一个匹配条件的元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="itemFactory"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="itemFactory">用于生成新元素的工厂方法。</param>
 	public static void ReplaceOne<T>(this IList<T> source, Predicate<T> selector, Func<T, T> itemFactory)
 	{
 		for (var i = 0; i < source.Count; i++)
@@ -454,12 +463,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 替换列表中与指定元素相等的第一个元素。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="item"></param>
-	/// <param name="replaceWith"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="item">要替换的元素。</param>
+	/// <param name="replaceWith">用于替换的新元素。</param>
 	public static void ReplaceOne<T>(this IList<T> source, T item, T replaceWith)
 	{
 		for (var i = 0; i < source.Count; i++)
@@ -475,13 +484,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 将匹配条件的元素移动到目标索引位置。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="targetIndex"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <exception cref="IndexOutOfRangeException"></exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="targetIndex">目标索引位置。</param>
+	/// <exception cref="IndexOutOfRangeException">当 <paramref name="targetIndex"/> 不在有效范围内时抛出。</exception>
 	public static void MoveItem<T>(this List<T> source, Predicate<T> selector, int targetIndex)
 	{
 		if (!targetIndex.IsBetween(0, source.Count - 1))
@@ -501,13 +510,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 从列表中获取匹配条件的元素，如果不存在则使用工厂方法创建并添加。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="selector"></param>
-	/// <param name="factory"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源列表。</param>
+	/// <param name="selector">用于匹配元素的条件。</param>
+	/// <param name="factory">用于创建新元素的工厂方法。</param>
 	public static T GetOrAdd<T>([NotNull] this IList<T> source, Func<T, bool> selector, Func<T> factory)
 	{
 		Check.EnsureNotNull(source, nameof(source));
@@ -524,25 +532,18 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Sort a list by a topological sorting, which consider their dependencies.
+	/// 使用拓扑排序对列表进行排序，考虑元素之间的依赖关系。
 	/// </summary>
-	/// <typeparam name="T">The type of the members of values.</typeparam>
-	/// <param name="source">A list of objects to sort</param>
-	/// <param name="getDependencies">Function to resolve the dependencies</param>
-	/// <param name="comparer">Equality comparer for dependencies </param>
-	/// <returns>
-	/// Returns a new list ordered by dependencies.
-	/// If A depends on B, then B will come before than A in the resulting list.
-	/// </returns>
-	public static List<T> SortByDependencies<T>(
-		this IEnumerable<T> source,
-		Func<T, IEnumerable<T>> getDependencies,
-		IEqualityComparer<T> comparer = null)
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">要排序的对象列表。</param>
+	/// <param name="getDependencies">解析依赖关系的函数。</param>
+	/// <param name="comparer">依赖关系的相等比较器。</param>
+	/// <returns>按依赖关系排序的新列表。如果 A 依赖于 B，则 B 在结果列表中排在 A 之前。</returns>
+	public static List<T> SortByDependencies<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> getDependencies, IEqualityComparer<T> comparer = null)
 	{
 		/* See: http://www.codeproject.com/Articles/869059/Topological-sorting-in-Csharp
 		 *      http://en.wikipedia.org/wiki/Topological_sorting
 		 */
-
 		var sorted = new List<T>();
 		var visited = new Dictionary<T, bool>(comparer);
 
@@ -555,13 +556,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	///
+	/// 拓扑排序的递归访问方法。
 	/// </summary>
-	/// <typeparam name="T">The type of the members of values.</typeparam>
-	/// <param name="item">Item to resolve</param>
-	/// <param name="getDependencies">Function to resolve the dependencies</param>
-	/// <param name="sorted">List with the sorted items</param>
-	/// <param name="visited">Dictionary with the visited items</param>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="item">当前访问的元素。</param>
+	/// <param name="getDependencies">解析依赖关系的函数。</param>
+	/// <param name="sorted">已排序的元素列表。</param>
+	/// <param name="visited">访问状态字典。</param>
 	private static void SortByDependenciesVisit<T>(T item, Func<T, IEnumerable<T>> getDependencies, IList<T> sorted, Dictionary<T, bool> visited)
 	{
 		var alreadyVisited = visited.TryGetValue(item, out var inProcess);
@@ -592,37 +593,36 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Concatenates the members of a constructed <see cref="IEnumerable{T}"/> collection of type System.String, using the specified separator between each member.
-	/// This is a shortcut for string.Join(...)
+	/// 使用指定分隔符连接字符串集合。这是 string.Join(...) 的快捷方式。
 	/// </summary>
-	/// <param name="source">A collection that contains the strings to concatenate.</param>
-	/// <param name="separator">The string to use as a separator. separator is included in the returned string only if values has more than one element.</param>
-	/// <returns>A string that consists of the members of values delimited by the separator string. If values has no members, the method returns System.String.Empty.</returns>
+	/// <param name="source">要连接的字符串集合。</param>
+	/// <param name="separator">分隔符。</param>
+	/// <returns>连接后的字符串。</returns>
 	public static string JoinAsString(this IEnumerable<string> source, string separator)
 	{
 		return string.Join(separator, source);
 	}
 
 	/// <summary>
-	/// Concatenates the members of a collection, using the specified separator between each member.
-	/// This is a shortcut for string.Join(...)
+	/// 使用指定分隔符连接集合元素。这是 string.Join(...) 的快捷方式。
 	/// </summary>
-	/// <param name="source">A collection that contains the objects to concatenate.</param>
-	/// <param name="separator">The string to use as a separator. separator is included in the returned string only if values has more than one element.</param>
-	/// <typeparam name="T">The type of the members of values.</typeparam>
-	/// <returns>A string that consists of the members of values delimited by the separator string. If values has no members, the method returns System.String.Empty.</returns>
+	/// <param name="source">要连接的集合。</param>
+	/// <param name="separator">分隔符。</param>
+	/// <typeparam name="T">集合元素类型。</typeparam>
+	/// <returns>连接后的字符串。</returns>
 	public static string JoinAsString<T>(this IEnumerable<T> source, string separator)
 	{
 		return string.Join(separator, source);
 	}
 
 	/// <summary>
-	/// Filters a <see cref="IEnumerable{T}"/> by given predicate if given condition is true.
+	/// 在给定条件为 true 时按谓词筛选序列。
 	/// </summary>
-	/// <param name="source">Enumerable to apply filtering</param>
-	/// <param name="condition">A boolean value</param>
-	/// <param name="predicate">Predicate to filter the enumerable</param>
-	/// <returns>Filtered or not filtered enumerable based on <paramref name="condition"/></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源序列。</param>
+	/// <param name="condition">条件。</param>
+	/// <param name="predicate">用于筛选的谓词。</param>
+	/// <returns>如果条件为 <c>true</c>，则返回筛选后的序列；否则返回原始序列。</returns>
 	public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> source, bool condition, Func<T, bool> predicate)
 	{
 		return condition
@@ -631,12 +631,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Filters a <see cref="IEnumerable{T}"/> by given predicate if given condition is true.
+	/// 在给定条件为 true 时按带索引的谓词筛选序列。
 	/// </summary>
-	/// <param name="source">Enumerable to apply filtering</param>
-	/// <param name="condition">A boolean value</param>
-	/// <param name="predicate">Predicate to filter the enumerable</param>
-	/// <returns>Filtered or not filtered enumerable based on <paramref name="condition"/></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源序列。</param>
+	/// <param name="condition">条件。</param>
+	/// <param name="predicate">用于筛选的带索引的谓词。</param>
+	/// <returns>如果条件为 <c>true</c>，则返回筛选后的序列；否则返回原始序列。</returns>
 	public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> source, bool condition, Func<T, int, bool> predicate)
 	{
 		return condition
@@ -645,13 +646,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// This method is used to try to get a value in a dictionary if it does exists.
+	/// 尝试从字典中获取值。
 	/// </summary>
-	/// <typeparam name="T">Type of the value</typeparam>
-	/// <param name="dictionary">The collection object</param>
-	/// <param name="key">Key</param>
-	/// <param name="value">Value of the key (or default value if key not exists)</param>
-	/// <returns>True if key does exists in the dictionary</returns>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <param name="value">输出参数，用于存储获取到的值。</param>
+	/// <returns>如果成功获取到值，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	internal static bool TryGetValue<T>(this IDictionary<string, object> dictionary, string key, out T value)
 	{
 		if (dictionary.TryGetValue(key, out var valueObj) && valueObj is T result)
@@ -665,66 +666,66 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从字典中获取指定键的值，如果找不到则返回默认值。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
 	{
-		return dictionary.TryGetValue(key, out var obj) ? obj : default;
+		return dictionary.GetValueOrDefault(key);
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从字典中获取指定键的值，如果找不到则返回默认值。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
 	{
 		return dictionary.TryGetValue(key, out var obj) ? obj : default;
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从只读字典中获取指定键的值，如果找不到则返回默认值。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue GetOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary, TKey key)
 	{
-		return dictionary.TryGetValue(key, out var obj) ? obj : default;
+		return dictionary.GetValueOrDefault(key);
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从并发字典中获取指定键的值，如果找不到则返回默认值。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue GetOrDefault<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key)
 	{
-		return dictionary.TryGetValue(key, out var obj) ? obj : default;
+		return dictionary.GetValueOrDefault(key);
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从字典中获取指定键的值，如果找不到则使用工厂方法创建并添加。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <param name="factory">A factory method used to create the value if not found in the dictionary</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <param name="factory">用于创建新值的工厂方法。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回工厂方法创建的新值。</returns>
 	public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Func<TKey, TValue> factory)
 	{
 		if (dictionary.TryGetValue(key, out var obj))
@@ -736,26 +737,26 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets a value from the dictionary with given key. Returns default value if can not find.
+	/// 从字典中获取指定键的值，如果找不到则使用工厂方法创建并添加。
 	/// </summary>
-	/// <param name="dictionary">Dictionary to check and get</param>
-	/// <param name="key">Key to find the value</param>
-	/// <param name="factory">A factory method used to create the value if not found in the dictionary</param>
-	/// <typeparam name="TKey">Type of the key</typeparam>
-	/// <typeparam name="TValue">Type of the value</typeparam>
-	/// <returns>Value if found, default if can not found.</returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">键。</param>
+	/// <param name="factory">用于创建新值的工厂方法。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回工厂方法创建的新值。</returns>
 	public static TValue GetOrAdd<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Func<TValue> factory)
 	{
 		return dictionary.GetOrAdd(key, _ => factory());
 	}
 
 	/// <summary>
-	/// Adds an item to the collection if it's not already in the collection.
+	/// 如果集合中尚未包含指定元素，则将其添加。
 	/// </summary>
-	/// <param name="source">The collection</param>
-	/// <param name="item">Item to check and add</param>
-	/// <typeparam name="T">Type of the items in the collection</typeparam>
-	/// <returns>Returns True if added, returns False if not.</returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="item">要添加的元素。</param>
+	/// <returns>如果元素已存在于集合中，则返回 false；否则返回 true。</returns>
 	public static bool AddIfNotContains<T>([NotNull] this ICollection<T> source, T item)
 	{
 		Check.EnsureNotNull(source, nameof(source));
@@ -770,12 +771,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Adds items to the collection which are not already in the collection.
+	/// 将集合中尚未包含的元素批量添加。
 	/// </summary>
-	/// <param name="source">The collection</param>
-	/// <param name="items">Item to check and add</param>
-	/// <typeparam name="T">Type of the items in the collection</typeparam>
-	/// <returns>Returns the added items.</returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="items">要添加的元素集合。</param>
+	/// <returns>返回实际添加到集合中的元素。</returns>
 	public static IEnumerable<T> AddIfNotContains<T>([NotNull] this ICollection<T> source, IEnumerable<T> items)
 	{
 		Check.EnsureNotNull(source, nameof(source));
@@ -797,13 +798,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Adds an item to the collection if it's not already in the collection based on the given <paramref name="predicate"/>.
+	/// 如果集合中不包含匹配指定条件的元素，则使用工厂方法创建并添加。
 	/// </summary>
-	/// <param name="source">The collection</param>
-	/// <param name="predicate">The condition to decide if the item is already in the collection</param>
-	/// <param name="itemFactory">A factory that returns the item</param>
-	/// <typeparam name="T">Type of the items in the collection</typeparam>
-	/// <returns>Returns True if added, returns False if not.</returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="predicate">用于检查元素是否存在的条件。</param>
+	/// <param name="itemFactory">用于创建新元素的工厂方法。</param>
+	/// <returns>如果元素已存在于集合中，则返回 false；否则返回 true。</returns>
 	public static bool AddIfNotContains<T>([NotNull] this ICollection<T> source, [NotNull] Func<T, bool> predicate, [NotNull] Func<T> itemFactory)
 	{
 		Check.EnsureNotNull(source, nameof(source));
@@ -820,12 +821,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Removes all items from the collection those satisfy the given <paramref name="predicate"/>.
+	/// 从集合中移除所有满足指定条件的元素。
 	/// </summary>
-	/// <typeparam name="T">Type of the items in the collection</typeparam>
-	/// <param name="source">The collection</param>
-	/// <param name="predicate">The condition to remove the items</param>
-	/// <returns>List of removed items</returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="predicate">用于筛选要移除的元素的条件。</param>
+	/// <returns>返回实际从集合中移除的元素。</returns>
 	public static IList<T> RemoveAll<T>([NotNull] this ICollection<T> source, Func<T, bool> predicate)
 	{
 		var items = source.Where(predicate).ToList();
@@ -839,14 +840,11 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Removes all items from the collection those satisfy the given <paramref>
-	///     <name>predicate</name>
-	/// </paramref>
-	/// .
+	/// 从集合中移除指定的所有元素。
 	/// </summary>
-	/// <typeparam name="T">Type of the items in the collection</typeparam>
-	/// <param name="source">The collection</param>
-	/// <param name="items">Items to be removed from the list</param>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="source">源集合。</param>
+	/// <param name="items">要移除的元素集合。</param>
 	public static void RemoveAll<T>([NotNull] this ICollection<T> source, IEnumerable<T> items)
 	{
 		foreach (var item in items)
@@ -856,14 +854,14 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 设置字典中指定键的值并返回字典本身，支持链式调用。
 	/// </summary>
-	/// <param name="dictionary"></param>
-	/// <param name="key"></param>
-	/// <param name="value"></param>
-	/// <typeparam name="TKey"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">要设置的键。</param>
+	/// <param name="value">要设置的值。</param>
+	/// <returns>返回字典本身，以支持链式调用。</returns>
 	public static IDictionary<TKey, TValue> Set<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
 	{
 		dictionary[key] = value;
@@ -871,14 +869,14 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 尝试从字典中获取值并转换为指定类型后执行回调。
 	/// </summary>
-	/// <param name="dictionary"></param>
-	/// <param name="key"></param>
-	/// <param name="func"></param>
-	/// <typeparam name="TKey"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <typeparam name="TRef"></typeparam>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <typeparam name="TRef">要转换为的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="func">获取到值后要执行的回调函数。</param>
 	public static void TryGetValue<TKey, TValue, TRef>(this IDictionary<TKey, TValue> dictionary, TKey key, Action<TRef> func)
 	{
 		if (!dictionary.TryGetValue(key, out var value))
@@ -891,13 +889,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 尝试从字典中获取 object 类型的值并执行回调。
 	/// </summary>
-	/// <param name="dictionary"></param>
-	/// <param name="key"></param>
-	/// <param name="func"></param>
-	/// <typeparam name="TKey"></typeparam>
-	/// <typeparam name="TRef"></typeparam>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TRef">要转换为的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="func">获取到值后要执行的回调函数。</param>
 	public static void TryGetValue<TKey, TRef>(this IDictionary<TKey, object> dictionary, TKey key, Action<TRef> func)
 	{
 		if (!dictionary.TryGetValue(key, out var value))
@@ -910,13 +908,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 尝试从字典中获取值并执行回调。
 	/// </summary>
-	/// <param name="dictionary"></param>
-	/// <param name="key"></param>
-	/// <param name="func"></param>
-	/// <typeparam name="TKey"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="func">获取到值后要执行的回调函数。</param>
 	public static void TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Action<TValue> func)
 	{
 		if (!dictionary.TryGetValue(key, out var value))
@@ -928,13 +926,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 使用指定的字符串比较方式从字典中获取值。
 	/// </summary>
-	/// <param name="dictionary"></param>
-	/// <param name="key"></param>
-	/// <param name="comparison"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="dictionary">字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="comparison">字符串比较方式。</param>
+	/// <returns>返回获取到的值，如果未找到则返回默认值。</returns>
 	public static TValue GetValue<TValue>(this IDictionary<string, TValue> dictionary, string key, StringComparison comparison)
 	{
 		var item = dictionary.FirstOrDefault(t => t.Key.Equals(key, comparison));
@@ -942,13 +940,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Try get value for specified key from dictionary.
+	/// 尝试从字典中获取指定键的值。
 	/// </summary>
-	/// <typeparam name="TKey">The key type.</typeparam>
-	/// <typeparam name="TValue">The value type.</typeparam>
-	/// <param name="source"></param>
-	/// <param name="key"></param>
-	/// <returns></returns>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="source">源字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key)
 	{
 		if (source == null)
@@ -960,15 +958,14 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Try get value for specified key from dictionary.
+	/// 尝试从字典中获取指定键的值，如果键不存在则返回默认值。
 	/// </summary>
-	/// <typeparam name="TKey">The key type.</typeparam>
-	/// <typeparam name="TValue">The value type.</typeparam>
-	/// <param name="source"></param>
-	/// <param name="key"></param>
-	/// <param name="defaultValue">The defaut value if key doesn't exists.</param>
-	/// <returns></returns>
-	/// <exception cref="NullReferenceException"></exception>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="source">源字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="defaultValue">键不存在时返回的默认值。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回 <paramref name="defaultValue"/>。</returns>
 	public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key, TValue defaultValue)
 	{
 		if (source == null)
@@ -980,14 +977,13 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Try get exists value for specified key or set value if not exists.
+	/// 尝试获取指定键的值，如果不存在则设置默认值并返回。
 	/// </summary>
-	/// <typeparam name="TKey">The type of the key.</typeparam>
-	/// <typeparam name="TValue">The type of the value.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="key">The key.</param>
-	/// <returns>The value.</returns>
-	/// <exception cref="NullReferenceException">Throws if <paramref name="source"/> is null.</exception>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="source">源字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
 	public static TValue TryGetOrSetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key)
 	{
 		if (source == null)
@@ -1000,20 +996,20 @@ public static partial class Extensions
 			return value;
 		}
 
+		value = default;
 		source.Add(key, value);
 		return source[key];
 	}
 
 	/// <summary>
-	/// 
+	/// 使用指定的字符串比较方式从字典中尝试获取值。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="key"></param>
-	/// <param name="defaultValue"></param>
-	/// <param name="comparison"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="NullReferenceException"></exception>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="source">源字典。</param>
+	/// <param name="key">要获取的键。</param>
+	/// <param name="defaultValue">键不存在时返回的默认值。</param>
+	/// <param name="comparison">字符串比较方式。</param>
+	/// <returns>如果找到键，则返回对应的值；否则返回 <paramref name="defaultValue"/>。</returns>
 	public static TValue TryGetValue<TValue>(this IDictionary<string, TValue> source, string key, TValue defaultValue, StringComparison comparison)
 	{
 		if (source == null)
@@ -1025,13 +1021,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets index of item.
+	/// 获取指定元素在集合中的索引。
 	/// </summary>
-	/// <param name="enumerable"></param>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="enumerable">源集合。</param>
+	/// <param name="item">要查找的元素。</param>
+	/// <returns>如果找到元素，则返回其索引；否则返回 -1。</returns>
 	public static int IndexOf<T>(this IEnumerable<T> enumerable, T item)
 	{
 		if (enumerable == null)
@@ -1052,12 +1047,12 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets index of item which matches the predicate.
+	/// 获取匹配条件的第一个元素在集合中的索引。
 	/// </summary>
-	/// <param name="enumerable"></param>
-	/// <param name="predicate"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">元素类型。</typeparam>
+	/// <param name="enumerable">源集合。</param>
+	/// <param name="predicate">用于匹配元素的条件。</param>
+	/// <returns>如果找到匹配条件的元素，则返回其索引；否则返回 -1。</returns>
 	public static int IndexOf<T>(this IEnumerable<T> enumerable, Func<T, bool> predicate)
 	{
 		var i = 0;

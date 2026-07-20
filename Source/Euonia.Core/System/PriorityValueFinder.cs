@@ -2,106 +2,105 @@
 namespace System;
 
 /// <summary>
-/// Provides helper methods to find a value produced by prioritized factory functions.
+/// 提供辅助方法，用于查找由带优先级的工厂函数生成的值。
 /// </summary>
 /// <remarks>
-/// The finder methods accept priority queues of factory functions (synchronous or asynchronous)
-/// and evaluate factories in the queue's dequeue order until a produced value satisfies the given predicate.
-/// If no value satisfies the predicate, the provided default value is returned (wrapped in a Task for async variants).
+/// 查找方法接受工厂函数（同步或异步）的优先级队列，并按照队列的出队顺序评估工厂函数，
+/// 直到生成的值满足给定的谓词条件。
+/// 如果没有任何值满足谓词条件，则返回提供的默认值（对于异步变体，包装在 Task 中）。
 /// </remarks>
 public static class PriorityValueFinder
 {
-	/// <summary>
-	/// Finds the first value produced by the prioritized factories that satisfies the specified predicate.
-	/// </summary>
-	/// <typeparam name="TValue">The type of value produced by the factories.</typeparam>
-	/// <param name="queue">A <see cref="PriorityQueue{TElement,TPriority}"/> containing factory functions returning <typeparamref name="TValue"/>.
-	/// Factories are evaluated in the queue's dequeue order.</param>
-	/// <param name="assert">A function used to test each produced value. The first value that returns <c>true</c> is returned.</param>
-	/// <param name="defaultValue">The value to return if no produced value satisfies <paramref name="assert"/>. Defaults to the default of <typeparamref name="TValue"/>.</param>
-	/// <returns>The first value that satisfies <paramref name="assert"/>, or <paramref name="defaultValue"/> if none do.</returns>
-	public static TValue Find<TValue>(PriorityQueue<Func<TValue>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
-	{
-		while (queue.Count > 0)
-		{
-			if (!queue.TryDequeue(out var factory, out _))
-			{
-				continue;
-			}
+    /// <summary>
+    /// 查找由带优先级的工厂函数生成的第一个满足指定谓词条件的值。
+    /// </summary>
+    /// <typeparam name="TValue">工厂函数生成的值的类型。</typeparam>
+    /// <param name="queue">包含返回 <typeparamref name="TValue"/> 的工厂函数的 <see cref="PriorityQueue{TElement,TPriority}"/>。
+    /// 工厂函数按队列的出队顺序评估。</param>
+    /// <param name="assert">用于测试每个生成值的函数。第一个返回 <c>true</c> 的值将被返回。</param>
+    /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。默认为 <typeparamref name="TValue"/> 的默认值。</param>
+    /// <returns>满足 <paramref name="assert"/> 的第一个值，如果没有则返回 <paramref name="defaultValue"/>。</returns>
+    public static TValue Find<TValue>(PriorityQueue<Func<TValue>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
+    {
+        while (queue.Count > 0)
+        {
+            if (!queue.TryDequeue(out var factory, out _))
+            {
+                continue;
+            }
 
-			var value = factory();
-			if (assert(value))
-			{
-				return value;
-			}
-		}
+            var value = factory();
+            if (assert(value))
+            {
+                return value;
+            }
+        }
 
-		return defaultValue;
-	}
+        return defaultValue;
+    }
 
-	/// <summary>
-	/// Creates a priority queue using the provided <paramref name="factory"/>, then finds the first produced value that satisfies <paramref name="assert"/>.
-	/// </summary>
-	/// <typeparam name="TValue">The type of value produced by the factories.</typeparam>
-	/// <param name="factory">An action that populates a <see cref="PriorityQueue{TElement,TPriority}"/> with factory functions returning <typeparamref name="TValue"/>.</param>
-	/// <param name="assert">A function used to test each produced value.</param>
-	/// <param name="defaultValue">The value to return if no produced value satisfies <paramref name="assert"/>.</param>
-	/// <returns>The first value that satisfies <paramref name="assert"/>, or <paramref name="defaultValue"/> if none do.</returns>
-	public static TValue Find<TValue>(Action<PriorityQueue<Func<TValue>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
-	{
-		var queue = new PriorityQueue<Func<TValue>, int>();
-		factory(queue);
-		var value = Find(queue, assert, defaultValue);
-		queue.Clear();
-		return value;
-	}
+    /// <summary>
+    /// 使用提供的 <paramref name="factory"/> 创建优先级队列，然后查找满足 <paramref name="assert"/> 的第一个值。
+    /// </summary>
+    /// <typeparam name="TValue">工厂函数生成的值的类型。</typeparam>
+    /// <param name="factory">用返回 <typeparamref name="TValue"/> 的工厂函数填充 <see cref="PriorityQueue{TElement,TPriority}"/> 的操作。</param>
+    /// <param name="assert">用于测试每个生成值的函数。</param>
+    /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。</param>
+    /// <returns>满足 <paramref name="assert"/> 的第一个值，如果没有则返回 <paramref name="defaultValue"/>。</returns>
+    public static TValue Find<TValue>(Action<PriorityQueue<Func<TValue>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
+    {
+        var queue = new PriorityQueue<Func<TValue>, int>();
+        factory(queue);
+        var value = Find(queue, assert, defaultValue);
+        queue.Clear();
+        return value;
+    }
 
-	/// <summary>
-	/// Finds the first value produced by the prioritized asynchronous factories that satisfies the specified predicate.
-	/// </summary>
-	/// <typeparam name="TValue">The type of value produced by the factories.</typeparam>
-	/// <param name="queue">A <see cref="PriorityQueue{TElement,TPriority}"/> containing factory functions returning <see cref="Task{TResult}"/> of <typeparamref name="TValue"/>.</param>
-	/// <param name="assert">A function used to test each produced value. The first value that returns <c>true</c> is returned.</param>
-	/// <param name="defaultValue">The value to return if no produced value satisfies <paramref name="assert"/>. Defaults to the default of <typeparamref name="TValue"/>.</param>
-	/// <returns>A completed <see cref="Task{TResult}"/> containing the first value that satisfies <paramref name="assert"/>, or <paramref name="defaultValue"/> if none do.</returns>
-	/// <remarks>
-	/// This method executes asynchronous factory functions synchronously by blocking on their returned tasks
-	/// using <c>GetAwaiter().GetResult()</c>. Consumers should be aware this may block the calling thread.
-	/// </remarks>
-	public static async Task<TValue> FindAsync<TValue>(PriorityQueue<Func<Task<TValue>>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
-	{
-		while (queue.Count > 0)
-		{
-			if (!queue.TryDequeue(out var factory, out _))
-			{
-				continue;
-			}
+    /// <summary>
+    /// 查找由带优先级的异步工厂函数生成的第一个满足指定谓词条件的值。
+    /// </summary>
+    /// <typeparam name="TValue">工厂函数生成的值的类型。</typeparam>
+    /// <param name="queue">包含返回 <see cref="Task{TResult}"/>（包装 <typeparamref name="TValue"/>）的工厂函数的 <see cref="PriorityQueue{TElement,TPriority}"/>。</param>
+    /// <param name="assert">用于测试每个生成值的函数。第一个返回 <c>true</c> 的值将被返回。</param>
+    /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。默认为 <typeparamref name="TValue"/> 的默认值。</param>
+    /// <returns>包含满足 <paramref name="assert"/> 的第一个值或 <paramref name="defaultValue"/>（如果没有）的已完成的 <see cref="Task{TResult}"/>。</returns>
+    /// <remarks>
+    /// 此方法通过 <c>GetAwaiter().GetResult()</c> 同步地执行异步工厂函数。调用者应注意这可能会阻塞调用线程。
+    /// </remarks>
+    public static async Task<TValue> FindAsync<TValue>(PriorityQueue<Func<Task<TValue>>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
+    {
+        while (queue.Count > 0)
+        {
+            if (!queue.TryDequeue(out var factory, out _))
+            {
+                continue;
+            }
 
-			var value = await factory();
-			if (assert(value))
-			{
-				return value;
-			}
-		}
+            var value = await factory();
+            if (assert(value))
+            {
+                return value;
+            }
+        }
 
-		return await Task.FromResult(defaultValue);
-	}
+        return await Task.FromResult(defaultValue);
+    }
 
-	/// <summary>
-	/// Creates a priority queue of asynchronous factories using the provided <paramref name="factory"/>, then finds the first produced value that satisfies <paramref name="assert"/>.
-	/// </summary>
-	/// <typeparam name="TValue">The type of value produced by the factories.</typeparam>
-	/// <param name="factory">An action that populates a <see cref="PriorityQueue{TElement,TPriority}"/> with factory functions returning <see cref="Task{TResult}"/> of <typeparamref name="TValue"/>.</param>
-	/// <param name="assert">A function used to test each produced value.</param>
-	/// <param name="defaultValue">The value to return if no produced value satisfies <paramref name="assert"/>.</param>
-	/// <returns>A completed <see cref="Task{TResult}"/> containing the first value that satisfies <paramref name="assert"/>, or <paramref name="defaultValue"/> if none do.</returns>
-	public static async Task<TValue> FindAsync<TValue>(Action<PriorityQueue<Func<Task<TValue>>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
-	{
-		var queue = new PriorityQueue<Func<Task<TValue>>, int>();
-		factory(queue);
-		var value = await FindAsync(queue, assert, defaultValue);
-		queue.Clear();
-		return value;
-	}
+    /// <summary>
+    /// 使用提供的 <paramref name="factory"/> 创建异步工厂的优先级队列，然后查找满足 <paramref name="assert"/> 的第一个值。
+    /// </summary>
+    /// <typeparam name="TValue">工厂函数生成的值的类型。</typeparam>
+    /// <param name="factory">用返回 <see cref="Task{TResult}"/>（包装 <typeparamref name="TValue"/>）的工厂函数填充 <see cref="PriorityQueue{TElement,TPriority}"/> 的操作。</param>
+    /// <param name="assert">用于测试每个生成值的函数。</param>
+    /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。</param>
+    /// <returns>包含满足 <paramref name="assert"/> 的第一个值或 <paramref name="defaultValue"/>（如果没有）的已完成的 <see cref="Task{TResult}"/>。</returns>
+    public static async Task<TValue> FindAsync<TValue>(Action<PriorityQueue<Func<Task<TValue>>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
+    {
+        var queue = new PriorityQueue<Func<Task<TValue>>, int>();
+        factory(queue);
+        var value = await FindAsync(queue, assert, defaultValue);
+        queue.Clear();
+        return value;
+    }
 }
 #endif

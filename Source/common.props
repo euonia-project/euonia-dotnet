@@ -5,7 +5,7 @@
         <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
         <RootNamespace>Nerosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
         <Description>Euonia development framework and toolkit library for .NET application/service. Powered by Nerosoft.</Description>
-        <PackageProjectUrl>https://github.com/NerosoftDev/Euonia/</PackageProjectUrl>
+        <PackageProjectUrl>https://github.com/euonia-project/euonia-dotnet/</PackageProjectUrl>
         <PackageTags>.net, asp.net, core, framework, ddd, distributed, architecture, EventBus, ServiceBug, EF, EFCore, Caching, Redis, Mapping, Mapper, ObjectMap, DistributedLock, OOP, RPC, Grpc, proto, Validate, Validation, FluentValidation</PackageTags>
         <Configurations>Debug;Release</Configurations>
         <DeployDependsOn> $(DeployDependsOn); PrepareForBuild; Build </DeployDependsOn>

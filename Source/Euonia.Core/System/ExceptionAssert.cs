@@ -1,16 +1,16 @@
 namespace System;
 
 /// <summary>
-/// Provides utility methods for asserting exceptions in code execution.
+/// 提供在代码执行中用于断言异常的实用方法。
 /// </summary>
 public static class ExceptionAssert
 {
 	/// <summary>
-	/// Throws an exception to the specified type if the given condition is true.
+	/// 如果给定条件为 true，则抛出指定类型的异常。
 	/// </summary>
-	/// <typeparam name="TException">The type of exception to throw.</typeparam>
-	/// <param name="condition">The condition to evaluate.</param>
-	/// <param name="message">The message to include in the exception.</param>
+	/// <typeparam name="TException">要抛出的异常类型。</typeparam>
+	/// <param name="condition">要评估的条件。</param>
+	/// <param name="message">异常中包含的消息。</param>
 	public static void ThrowIf<TException>(bool condition, string message)
 		where TException : Exception
 	{
@@ -18,12 +18,11 @@ public static class ExceptionAssert
 	}
 
 	/// <summary>
-	/// Throws an exception of the specified type if the given condition is true.
-	/// Uses a factory method to create the exception instance.
+	/// 如果给定条件为 true，则使用工厂方法创建并抛出指定类型的异常。
 	/// </summary>
-	/// <typeparam name="TException">The type of exception to throw.</typeparam>
-	/// <param name="condition">The condition to evaluate.</param>
-	/// <param name="exceptionFactory">A factory method to create the exception instance.</param>
+	/// <typeparam name="TException">要抛出的异常类型。</typeparam>
+	/// <param name="condition">要评估的条件。</param>
+	/// <param name="exceptionFactory">创建异常实例的工厂方法。</param>
 	public static void ThrowIf<TException>(bool condition, Func<TException> exceptionFactory)
 		where TException : Exception
 	{
@@ -37,11 +36,10 @@ public static class ExceptionAssert
 	}
 
 	/// <summary>
-	/// Throws an exception of the specified type if the given condition is true.
-	/// Assumes the exception has a parameterless constructor.
+	/// 如果给定条件为 true，则抛出指定类型的异常（假定该异常具有无参构造函数）。
 	/// </summary>
-	/// <typeparam name="TException">The type of exception to throw.</typeparam>
-	/// <param name="condition">The condition to evaluate.</param>
+	/// <typeparam name="TException">要抛出的异常类型。</typeparam>
+	/// <param name="condition">要评估的条件。</param>
 	public static void ThrowIf<TException>(bool condition)
 		where TException : Exception, new()
 	{

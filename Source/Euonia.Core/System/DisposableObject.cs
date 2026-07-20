@@ -1,17 +1,17 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Represents the base class of the objects that can be disposed.
+/// 表示可释放对象的基类。
 /// </summary>
 /// <remarks>
-/// This class provides the basic implementation of the disposable pattern in .NET.
+/// 此类提供 .NET 中可释放模式的基本实现。
 /// </remarks>
 public abstract class DisposableObject : IDisposable
 {
     private readonly WeakEventManager _events = new();
 
     /// <summary>
-    /// Occurs when current object has been disposed.
+    /// 当当前对象已被释放时发生。
     /// </summary>
     public event EventHandler<DisposedEventArgs> Disposed
     {
@@ -20,7 +20,7 @@ public abstract class DisposableObject : IDisposable
     }
 
     /// <summary>
-    /// Finalizes an instance of the <see cref="DisposableObject"/> class.
+    /// 终结 <see cref="DisposableObject"/> 类的实例。
     /// </summary>
     ~DisposableObject()
     {
@@ -29,7 +29,7 @@ public abstract class DisposableObject : IDisposable
     }
 
     /// <summary>
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+    /// 执行与释放、释放或重置非托管资源相关的应用程序定义任务。
     /// </summary>
     public void Dispose()
     {
@@ -39,16 +39,16 @@ public abstract class DisposableObject : IDisposable
     }
 
     /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
+    /// 释放非托管资源以及可选的托管资源。
     /// </summary>
-    /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+    /// <param name="disposing"><c>true</c> 表示释放托管和非托管资源；<c>false</c> 表示仅释放非托管资源。</param>
     protected abstract void Dispose(bool disposing);
 
     /// <summary>
-    /// 
+    /// 触发对象已释放事件。
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="args"></param>
+    /// <param name="sender">事件发送者。</param>
+    /// <param name="args">事件参数。</param>
     protected virtual void InvokeDisposedEvent(object sender, DisposedEventArgs args)
     {
         _events.HandleEvent(sender, args, nameof(Disposed));

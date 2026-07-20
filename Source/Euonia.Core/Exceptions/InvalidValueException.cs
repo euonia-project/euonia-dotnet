@@ -1,32 +1,32 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Represents the errors occurring when a value is invalid.
+/// 表示当值无效时发生的错误。
 /// </summary>
 [Serializable]
 public class InvalidValueException : Exception
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="InvalidValueException"/> class.
+	/// 初始化 <see cref="InvalidValueException"/> 类的新实例。
 	/// </summary>
 	public InvalidValueException()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="InvalidValueException"/> class with a specified error message.
+	/// 使用指定的错误消息初始化 <see cref="InvalidValueException"/> 类的新实例。
 	/// </summary>
-	/// <param name="message">The error message.</param>
+	/// <param name="message">错误消息。</param>
 	public InvalidValueException(string message)
 		: base(message)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="InvalidValueException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception.
+	/// 使用指定的错误消息和对导致此异常的内部异常的引用初始化 <see cref="InvalidValueException"/> 类的新实例。
 	/// </summary>
-	/// <param name="message">The error message.</param>
-	/// <param name="innerException">The inner exception that is the cause of this exception.</param>
+	/// <param name="message">错误消息。</param>
+	/// <param name="innerException">导致当前异常的内部异常。</param>
 	public InvalidValueException(string message, Exception innerException)
 		: base(message, innerException)
 	{
@@ -34,10 +34,10 @@ public class InvalidValueException : Exception
 
 #pragma warning disable SYSLIB0051
 	/// <summary>
-	/// Initializes a new instance of the <see cref="InvalidValueException"/> class with serialized data.
+	/// 使用序列化数据初始化 <see cref="InvalidValueException"/> 类的新实例。
 	/// </summary>
-	/// <param name="info">The exception data serialize information.</param>
-	/// <param name="context"></param>
+	/// <param name="info">异常数据的序列化信息。</param>
+	/// <param name="context">序列化流的上下文。</param>
 	public InvalidValueException(SerializationInfo info, StreamingContext context)
 		: base(info, context)
 	{

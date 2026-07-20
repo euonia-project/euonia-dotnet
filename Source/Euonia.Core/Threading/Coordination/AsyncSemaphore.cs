@@ -1,41 +1,41 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Nerosoft.Euonia.Disposing;
 using Nerosoft.Euonia.Threading.Interop;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible semaphore. Alternatively, you could use <c>SemaphoreSlim</c>.
+/// 一个异步兼容的信号量。或者，你也可以使用 <c>SemaphoreSlim</c>。
 /// </summary>
 [DebuggerDisplay("Id = {Id}, CurrentCount = {_count}")]
 [DebuggerTypeProxy(typeof(DebugView))]
 public sealed class AsyncSemaphore
 {
     /// <summary>
-    /// The queue of TCSs that other tasks are awaiting to acquire the semaphore.
+    /// 其他任务正在等待获取信号量的 TCS 队列。
     /// </summary>
     private readonly IAsyncWaitQueue<object> _queue;
 
     /// <summary>
-    /// The number of waits that will be immediately granted.
+    /// 将立即授予的等待次数。
     /// </summary>
     private long _count;
 
     /// <summary>
-    /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
+    /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
     /// </summary>
     private int _id;
 
     /// <summary>
-    /// The object used for mutual exclusion.
+    /// 用于互斥的对象。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// Creates a new async-compatible semaphore with the specified initial count.
+    /// 使用指定的初始计数创建一个新的异步兼容信号量。
     /// </summary>
-    /// <param name="initialCount">The initial count for this semaphore. This must be greater than or equal to zero.</param>
-    /// <param name="queue">The wait queue used to manage waiters. This may be <c>null</c> to use a default (FIFO) queue.</param>
+    /// <param name="initialCount">此信号量的初始计数。必须大于或等于零。</param>
+    /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
     internal AsyncSemaphore(long initialCount, IAsyncWaitQueue<object> queue)
     {
         _queue = queue ?? new DefaultAsyncWaitQueue<object>();
@@ -44,21 +44,21 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Creates a new async-compatible semaphore with the specified initial count.
+    /// 使用指定的初始计数创建一个新的异步兼容信号量。
     /// </summary>
-    /// <param name="initialCount">The initial count for this semaphore. This must be greater than or equal to zero.</param>
+    /// <param name="initialCount">此信号量的初始计数。必须大于或等于零。</param>
     public AsyncSemaphore(long initialCount)
         : this(initialCount, null)
     {
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous semaphore.
+    /// 获取此异步信号量的半唯一标识符。
     /// </summary>
     public int Id => IdentifierManager<AsyncSemaphore>.GetId(ref _id);
 
     /// <summary>
-    /// Gets the number of slots currently available on this semaphore. This member is seldom used; code using this member has a high possibility of race conditions.
+    /// 获取此信号量当前可用的槽位数。此成员很少使用；使用此成员的代码很可能存在竞态条件。
     /// </summary>
     public long CurrentCount
     {
@@ -66,15 +66,15 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Asynchronously waits for a slot in the semaphore to be available.
+    /// 异步等待信号量中的槽位变为可用。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this is already set, then this method will attempt to take the slot immediately (succeeding if a slot is currently available).</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果已设置，此方法将尝试立即获取槽位（如果当前有可用槽位则成功）。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
         Task ret;
         lock (_mutex)
         {
-            // If the semaphore is available, take it immediately and return.
+            // 如果信号量可用，立即获取并返回。
             if (_count != 0)
             {
                 --_count;
@@ -82,7 +82,7 @@ public sealed class AsyncSemaphore
             }
             else
             {
-                // Wait for the semaphore to become available or cancellation.
+                // 等待信号量变为可用或取消。
                 ret = _queue.Enqueue(_mutex, cancellationToken);
             }
         }
@@ -91,7 +91,7 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Asynchronously waits for a slot in the semaphore to be available.
+    /// 异步等待信号量中的槽位变为可用。
     /// </summary>
     public Task WaitAsync()
     {
@@ -99,16 +99,16 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Synchronously waits for a slot in the semaphore to be available. This method may block the calling thread.
+    /// 同步等待信号量中的槽位变为可用。此方法可能会阻塞调用线程。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this is already set, then this method will attempt to take the slot immediately (succeeding if a slot is currently available).</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果已设置，此方法将尝试立即获取槽位（如果当前有可用槽位则成功）。</param>
     public void Wait(CancellationToken cancellationToken)
     {
         WaitAsync(cancellationToken).WaitAndUnwrapException(cancellationToken);
     }
 
     /// <summary>
-    /// Synchronously waits for a slot in the semaphore to be available. This method may block the calling thread.
+    /// 同步等待信号量中的槽位变为可用。此方法可能会阻塞调用线程。
     /// </summary>
     public void Wait()
     {
@@ -116,8 +116,9 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Releases the semaphore.
+    /// 释放信号量。
     /// </summary>
+    /// <param name="releaseCount">要释放的次数。</param>
     public void Release(long releaseCount)
     {
         if (releaseCount == 0)
@@ -140,7 +141,7 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Releases the semaphore.
+    /// 释放信号量。
     /// </summary>
     public void Release()
     {
@@ -154,23 +155,23 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Asynchronously waits on the semaphore, and returns a disposable that releases the semaphore when disposed, thus treating this semaphore as a "multi-lock".
+    /// 异步等待信号量，并返回一个在释放时释放信号量的可释放对象，从而将此信号量视作"多锁"使用。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this is already set, then this method will attempt to take the slot immediately (succeeding if a slot is currently available).</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果已设置，此方法将尝试立即获取槽位（如果当前有可用槽位则成功）。</param>
     public AwaitableDisposable<IDisposable> LockAsync(CancellationToken cancellationToken)
     {
         return new AwaitableDisposable<IDisposable>(DoLockAsync(cancellationToken));
     }
 
     /// <summary>
-    /// Asynchronously waits on the semaphore, and returns a disposable that releases the semaphore when disposed, thus treating this semaphore as a "multi-lock".
+    /// 异步等待信号量，并返回一个在释放时释放信号量的可释放对象，从而将此信号量视作"多锁"使用。
     /// </summary>
     public AwaitableDisposable<IDisposable> LockAsync() => LockAsync(CancellationToken.None);
 
     /// <summary>
-    /// Synchronously waits on the semaphore, and returns a disposable that releases the semaphore when disposed, thus treating this semaphore as a "multi-lock".
+    /// 同步等待信号量，并返回一个在释放时释放信号量的可释放对象，从而将此信号量视作"多锁"使用。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this is already set, then this method will attempt to take the slot immediately (succeeding if a slot is currently available).</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果已设置，此方法将尝试立即获取槽位（如果当前有可用槽位则成功）。</param>
     public IDisposable Lock(CancellationToken cancellationToken)
     {
         Wait(cancellationToken);
@@ -178,7 +179,7 @@ public sealed class AsyncSemaphore
     }
 
     /// <summary>
-    /// Synchronously waits on the semaphore, and returns a disposable that releases the semaphore when disposed, thus treating this semaphore as a "multi-lock".
+    /// 同步等待信号量，并返回一个在释放时释放信号量的可释放对象，从而将此信号量视作"多锁"使用。
     /// </summary>
     public IDisposable Lock() => Lock(CancellationToken.None);
 

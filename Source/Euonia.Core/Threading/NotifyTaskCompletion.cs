@@ -1,17 +1,17 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Helper class to wrap around a Task to provide more information usable for UI data binding scenarios. As discussed in MSDN Magazine: https://msdn.microsoft.com/magazine/dn605875.
+/// 用于包装 <see cref="Task"/> 的帮助类，提供更多可用于 UI 数据绑定场景的信息。详见 MSDN Magazine：https://msdn.microsoft.com/magazine/dn605875。
 /// </summary>
-/// <typeparam name="TResult">Type of result returned by task.</typeparam>
+/// <typeparam name="TResult">任务返回结果的类型。</typeparam>
 public sealed class NotifyTaskCompletion<TResult> : INotifyPropertyChanged
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotifyTaskCompletion{TResult}"/> class.
+    /// 初始化 <see cref="NotifyTaskCompletion{TResult}"/> 类的新实例。
     /// </summary>
-    /// <param name="task">Task to wait on.</param>
+    /// <param name="task">要等待的任务。</param>
     public NotifyTaskCompletion(Task<TResult> task)
     {
         Task = task;
@@ -60,80 +60,80 @@ public sealed class NotifyTaskCompletion<TResult> : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Gets the task that is being waited on.
+    /// 获取正在等待的任务。
     /// </summary>
     public Task<TResult> Task { get; }
 
     /// <summary>
-    /// Gets the task wrapper task.
+    /// 获取任务包装器任务。
     /// </summary>
     public Task TaskCompletion { get; }
 
     /// <summary>
-    /// Gets the result of the given task.
+    /// 获取指定任务的结果。
     /// </summary>
     public TResult Result => Task.Status == TaskStatus.RanToCompletion ? Task.Result : default;
 
     /// <summary>
-    /// Gets the status of the task.
+    /// 获取任务的状态。
     /// </summary>
     public TaskStatus Status => Task.Status;
 
     /// <summary>
-    /// Gets a value indicating whether the task is completed.
+    /// 获取一个值，指示任务是否已完成。
     /// </summary>
     public bool IsCompleted => Task.IsCompleted;
 
     /// <summary>
-    /// Gets a value indicating whether the task is not completed.
+    /// 获取一个值，指示任务是否未完成。
     /// </summary>
     public bool IsNotCompleted => !Task.IsCompleted;
 
     /// <summary>
-    /// Gets a value indicating whether the task was successfully completed.
+    /// 获取一个值，指示任务是否已成功完成。
     /// </summary>
     public bool IsSuccessfullyCompleted => Task.Status == TaskStatus.RanToCompletion;
 
     /// <summary>
-    /// Gets a value indicating whether the task was cancelled.
+    /// 获取一个值，指示任务是否已被取消。
     /// </summary>
     public bool IsCanceled => Task.IsCanceled;
 
     /// <summary>
-    /// Gets a value indicating whether there was an error with the task.
+    /// 获取一个值，指示任务是否发生错误。
     /// </summary>
     public bool IsFaulted => Task.IsFaulted;
 
     /// <summary>
-    /// Gets the exception which occured on the task (if one occurred).
+    /// 获取任务上发生的异常（如果发生）。
     /// </summary>
     public AggregateException Exception => Task.Exception;
 
     /// <summary>
-    /// Gets the inner exception of the task.
+    /// 获取任务的内部异常。
     /// </summary>
     public Exception InnerException => Exception?.InnerException;
 
     /// <summary>
-    /// Gets the error message of the task.
+    /// 获取任务的错误消息。
     /// </summary>
     public string ErrorMessage => InnerException?.Message ?? Exception.Message;
 
     /// <summary>
-    /// PropertyChanged event.
+    /// 属性更改事件。
     /// </summary>
     public event PropertyChangedEventHandler PropertyChanged;
 }
 
 /// <summary>
-/// Helper class to wrap around a Task to provide more information usable for UI data binding scenarios. As discussed in MSDN Magazine: https://msdn.microsoft.com/magazine/dn605875.
+/// 用于包装 <see cref="Task"/> 的帮助类，提供更多可用于 UI 数据绑定场景的信息。详见 MSDN Magazine：https://msdn.microsoft.com/magazine/dn605875。
 /// </summary>
 public sealed class NotifyTaskCompletion : INotifyPropertyChanged
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="NotifyTaskCompletion"/> class.
+    /// 初始化 <see cref="NotifyTaskCompletion"/> 类的新实例。
     /// </summary>
-    /// <param name="task">Task to wait on.</param>
+    /// <param name="task">要等待的任务。</param>
     public NotifyTaskCompletion(Task task)
     {
         Task = task;
@@ -181,62 +181,62 @@ public sealed class NotifyTaskCompletion : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Gets the task that is being waited on.
+    /// 获取正在等待的任务。
     /// </summary>
     public Task Task { get; }
 
     /// <summary>
-    /// Gets the task wrapper task.
+    /// 获取任务包装器任务。
     /// </summary>
     public Task TaskCompletion { get; }
 
     /// <summary>
-    /// Gets the status of the task.
+    /// 获取任务的状态。
     /// </summary>
     public TaskStatus Status => Task.Status;
 
     /// <summary>
-    /// Gets a value indicating whether the task is completed.
+    /// 获取一个值，指示任务是否已完成。
     /// </summary>
     public bool IsCompleted => Task.IsCompleted;
 
     /// <summary>
-    /// Gets a value indicating whether the task is not completed.
+    /// 获取一个值，指示任务是否未完成。
     /// </summary>
     public bool IsNotCompleted => !Task.IsCompleted;
 
     /// <summary>
-    /// Gets a value indicating whether the task was successfully completed.
+    /// 获取一个值，指示任务是否已成功完成。
     /// </summary>
     public bool IsSuccessfullyCompleted => Task.Status == TaskStatus.RanToCompletion;
 
     /// <summary>
-    /// Gets a value indicating whether the task was cancelled.
+    /// 获取一个值，指示任务是否已被取消。
     /// </summary>
     public bool IsCanceled => Task.IsCanceled;
 
     /// <summary>
-    /// Gets a value indicating whether there was an error with the task.
+    /// 获取一个值，指示任务是否发生错误。
     /// </summary>
     public bool IsFaulted => Task.IsFaulted;
 
     /// <summary>
-    /// Gets the exception which occured on the task (if one occurred).
+    /// 获取任务上发生的异常（如果发生）。
     /// </summary>
     public AggregateException Exception => Task.Exception;
 
     /// <summary>
-    /// Gets the inner exception of the task.
+    /// 获取任务的内部异常。
     /// </summary>
     public Exception InnerException => Exception?.InnerException;
 
     /// <summary>
-    /// Gets the error message of the task.
+    /// 获取任务的错误消息。
     /// </summary>
     public string ErrorMessage => InnerException?.Message ?? Exception.Message;
 
     /// <summary>
-    /// PropertyChanged event.
+    /// 属性更改事件。
     /// </summary>
     public event PropertyChangedEventHandler PropertyChanged;
 }

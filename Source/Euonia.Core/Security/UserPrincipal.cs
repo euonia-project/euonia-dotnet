@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 
 // ReSharper disable UnusedMember.Global
 // ReSharper disable MemberCanBePrivate.Global
@@ -6,40 +6,40 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Represents a user's identity and provides typed accessors and helpers for common claim values.
+/// 表示用户身份，提供常见声明值的类型化访问器和辅助方法。
 /// </summary>
 /// <remarks>
-/// This is a light wrapper around <see cref="ClaimsPrincipal"/> that exposes common application-specific
-/// claim values (subject id, username, code, tenant, roles) and convenience methods for querying claims
-/// and roles. The wrapper does not modify the underlying <see cref="ClaimsPrincipal"/>.
+/// 这是围绕 <see cref="ClaimsPrincipal"/> 的轻量包装器，公开了常见的应用程序特定声明值
+///（Subject ID、用户名、Code、Tenant、角色）以及查询声明和角色的便捷方法。
+/// 该包装器不会修改底层的 <see cref="ClaimsPrincipal"/>。
 /// </remarks>
 public class UserPrincipal
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UserPrincipal"/> class with the supplied claims principal.
+	/// 使用提供的声明主体初始化 <see cref="UserPrincipal"/> 类的新实例。
 	/// </summary>
-	/// <param name="claims">The <see cref="ClaimsPrincipal"/> that contains the user's claims. May be <c>null</c>, in which
-	/// case most accessors will return <c>null</c> or <c>false</c> as appropriate.</param>
+	/// <param name="claims">包含用户声明的 <see cref="ClaimsPrincipal"/>。可以为 <c>null</c>，
+	/// 此时大多数访问器将相应地返回 <c>null</c> 或 <c>false</c>。</param>
 	public UserPrincipal(ClaimsPrincipal claims)
 	{
 		Claims = claims;
 	}
 
 	/// <summary>
-	/// Gets the underlying <see cref="ClaimsPrincipal"/> instance.
+	/// 获取底层的 <see cref="ClaimsPrincipal"/> 实例。
 	/// </summary>
 	public ClaimsPrincipal Claims { get; }
 
 	/// <summary>
-	/// Gets the user's identifier (subject).
+	/// 获取用户标识（Subject）。
 	/// </summary>
 	/// <remarks>
-	/// This property attempts to find a subject identifier in the following order:
+	/// 此属性按以下顺序尝试查找 Subject 标识：
 	/// <list type="bullet">
 	/// <item><description><see cref="UserClaimTypes.Subject"/></description></item>
 	/// <item><description><see cref="ClaimTypes.NameIdentifier"/></description></item>
 	/// </list>
-	/// If no matching claim is found, the property returns <c>null</c>.
+	/// 如果找不到匹配的声明，此属性返回 <c>null</c>。
 	/// </remarks>
 	public string UserId
 	{
@@ -48,11 +48,11 @@ public class UserPrincipal
 			return Claims?.Identity?.AuthenticationType switch
 			{
 				null or "Anonymous" => null,
-				// For JWT/Bearer, prefer the 'sub' claim
+				// 对于 JWT/Bearer，优先使用 'sub' 声明
 				"Jwt" or "Bearer" => Claims.FindFirst(UserClaimTypes.Subject)?.Value,
-				// For Windows auth, prefer the NameIdentifier claim
+				// 对于 Windows 身份验证，优先使用 NameIdentifier 声明
 				"Windows" => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-				// For Cookie auth, prefer the NameIdentifier claim
+				// 对于 Cookie 身份验证，优先使用 NameIdentifier 声明
 				"Cookies" or "Cookie" => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
 				_ => null
 			};
@@ -60,11 +60,10 @@ public class UserPrincipal
 	}
 
 	/// <summary>
-	/// Gets the user's display name.
+	/// 获取用户显示名称。
 	/// </summary>
 	/// <value>
-	/// The value of the claim identified by <see cref="UserClaimTypes.Name"/>, or <c>null</c> if the claim is missing
-	/// or if the underlying <see cref="ClaimsPrincipal"/> is <c>null</c>.
+	/// <see cref="UserClaimTypes.Name"/> 声明的值，如果声明缺失或底层 <see cref="ClaimsPrincipal"/> 为 <c>null</c> 则返回 <c>null</c>。
 	/// </value>
 	public string Username
 	{
@@ -73,11 +72,11 @@ public class UserPrincipal
 			return Claims.Identity?.AuthenticationType switch
 			{
 				null or "Anonymous" => null,
-				// For JWT/Bearer, prefer the 'name' claim
+				// 对于 JWT/Bearer，优先使用 'name' 声明
 				"Jwt" or "Bearer" => Claims?.FindFirst(UserClaimTypes.Name)?.Value,
-				// For Windows auth, prefer the Name claim
+				// 对于 Windows 身份验证，优先使用 Name 声明
 				"Windows" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
-				// For Cookie auth, prefer the Name claim
+				// 对于 Cookie 身份验证，优先使用 Name 声明
 				"Cookies" or "Cookie" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
 				_ => null
 			};
@@ -85,110 +84,95 @@ public class UserPrincipal
 	}
 
 	/// <summary>
-	/// Gets the user's code.
+	/// 获取用户编码。
 	/// </summary>
 	/// <value>
-	/// The value of the claim identified by <see cref="UserClaimTypes.Code"/>, or <c>null</c> if the claim is missing
-	/// or if the underlying <see cref="ClaimsPrincipal"/> is <c>null</c>.
+	/// <see cref="UserClaimTypes.Code"/> 声明的值，如果声明缺失或底层 <see cref="ClaimsPrincipal"/> 为 <c>null</c> 则返回 <c>null</c>。
 	/// </value>
 	public string Code => Claims?.FindFirst(UserClaimTypes.Code)?.Value;
 
 	/// <summary>
-	/// Gets the tenant identifier associated with the user.
+	/// 获取与用户关联的租户标识。
 	/// </summary>
 	/// <value>
-	/// The value of the claim identified by <see cref="UserClaimTypes.Tenant"/>. May be <c>null</c> if the claim or the
-	/// underlying <see cref="ClaimsPrincipal"/> is not present.
+	/// <see cref="UserClaimTypes.Tenant"/> 声明的值。如果声明或底层 <see cref="ClaimsPrincipal"/> 不存在则可能为 <c>null</c>。
 	/// </value>
 	public string Tenant => Claims.FindFirst(UserClaimTypes.Tenant)?.Value;
 
 	/// <summary>
-	/// Gets the user's roles as a sequence of role names.
+	/// 获取用户的角色名称序列。
 	/// </summary>
 	/// <remarks>
-	/// This property selects the values of all claims with type <see cref="UserClaimTypes.Role"/>.
-	/// The returned sequence may be <c>null</c> if the underlying <see cref="ClaimsPrincipal"/> is <c>null</c>.
-	/// Callers should tolerate an empty sequence or <c>null</c> depending on usage.
+	/// 此属性选择所有类型为 <see cref="UserClaimTypes.Role"/> 的声明的值。
+	/// 如果底层 <see cref="ClaimsPrincipal"/> 为 <c>null</c>，返回的序列可能为 <c>null</c>。
+	/// 调用方应视情况容忍空序列或 <c>null</c>。
 	/// </remarks>
-	/// <value>An <see cref="IEnumerable{T}"/> of role names (claim values) or <c>null</c>.</value>
+	/// <value>角色名称（声明值）的 <see cref="IEnumerable{T}"/> 或 <c>null</c>。</value>
 	public IEnumerable<string> Roles => Claims?.FindAll(UserClaimTypes.Role).Select(t => t.Value);
 
 	/// <summary>
-	/// Gets a value that indicates whether the user is authenticated.
+	/// 获取一个值，指示用户是否已通过身份验证。
 	/// </summary>
-	/// <value><c>true</c> when the underlying <see cref="ClaimsPrincipal"/>'s identity is authenticated; otherwise <c>false</c>.
-	/// If the underlying principal or identity is <c>null</c>, returns <c>false</c>.</value>
+	/// <value>当底层 <see cref="ClaimsPrincipal"/> 的身份已通过验证时为 <c>true</c>；否则为 <c>false</c>。
+	/// 如果底层主体或身份为 <c>null</c>，则返回 <c>false</c>。</value>
 	public bool IsAuthenticated => Claims?.Identity?.IsAuthenticated ?? false;
 
 	/// <summary>
-	/// Finds the first claim with the specified claim type.
+	/// 查找具有指定声明类型的第一个声明。
 	/// </summary>
-	/// <param name="claimType">The claim type to search for.</param>
-	/// <returns>
-	/// The first matching <see cref="Claim"/> if found; otherwise <c>null</c>.
-	/// </returns>
+	/// <param name="claimType">要搜索的声明类型。</param>
+	/// <returns>找到的第一个匹配 <see cref="Claim"/>；如果未找到则返回 <c>null</c>。</returns>
 	public Claim FindClaim(string claimType)
 	{
 		return Claims.FindFirst(claimType);
 	}
 
 	/// <summary>
-	/// Finds all claims that match the specified claim type.
+	/// 查找与指定声明类型匹配的所有声明。
 	/// </summary>
-	/// <param name="claimType">The claim type to search for.</param>
-	/// <returns>
-	/// An array containing all matching <see cref="Claim"/> instances. If no claims match, an empty array is returned.
-	/// </returns>
+	/// <param name="claimType">要搜索的声明类型。</param>
+	/// <returns>包含所有匹配 <see cref="Claim"/> 实例的数组。如果没有匹配的声明，则返回空数组。</returns>
 	public Claim[] FindClaims(string claimType)
 	{
 		return Claims.FindAll(claimType).ToArray();
 	}
 
 	/// <summary>
-	/// Returns all claims held by the underlying <see cref="ClaimsPrincipal"/>.
+	/// 返回底层 <see cref="ClaimsPrincipal"/> 持有的所有声明。
 	/// </summary>
-	/// <returns>
-	/// An array containing all <see cref="Claim"/> instances from the underlying principal. If the principal has no claims,
-	/// an empty array is returned.
-	/// </returns>
+	/// <returns>包含底层主体中所有 <see cref="Claim"/> 实例的数组。如果主体没有声明，则返回空数组。</returns>
 	public Claim[] GetAllClaims()
 	{
 		return Claims.Claims.ToArray();
 	}
 
 	/// <summary>
-	/// Determines whether the current user is in the specified role.
+	/// 确定当前用户是否属于指定角色。
 	/// </summary>
-	/// <param name="role">The role name to check.</param>
-	/// <returns>
-	/// <c>true</c> if the user is authenticated and is in the specified role; otherwise <c>false</c>.
-	/// </returns>
+	/// <param name="role">要检查的角色名称。</param>
+	/// <returns>如果用户已通过身份验证且属于指定角色，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool IsInRole(string role)
 	{
 		return IsAuthenticated && Claims.IsInRole(role);
 	}
 
 	/// <summary>
-	/// Determines whether the current user is in any of the specified roles.
+	/// 确定当前用户是否属于任一指定角色。
 	/// </summary>
-	/// <param name="roles">A sequence of role names to check.</param>
-	/// <returns>
-	/// <c>true</c> if the user is authenticated and is a member of at least one of the specified roles; otherwise <c>false</c>.
-	/// If <paramref name="roles"/> is <c>null</c> or empty, <c>false</c> is returned.
-	/// </returns>
+	/// <param name="roles">要检查的角色名称序列。</param>
+	/// <returns>如果用户已通过身份验证且至少属于一个指定角色，则为 <c>true</c>；否则为 <c>false</c>。
+	/// 如果 <paramref name="roles"/> 为 <c>null</c> 或空，则返回 <c>false</c>。</returns>
 	public bool IsInRoles(IEnumerable<string> roles)
 	{
 		return IsAuthenticated && roles.Any(IsInRole);
 	}
 
 	/// <summary>
-	/// Determines whether the current user is in any of the roles specified by a single delimited string.
+	/// 确定当前用户是否属于由分隔字符串指定的任一角色。
 	/// </summary>
-	/// <param name="role">A delimited string containing role names (for example: "Admin,User").</param>
-	/// <param name="separator">The string used to separate roles in <paramref name="role"/>. Defaults to <c>","</c>.</param>
-	/// <returns>
-	/// <c>true</c> if the user is authenticated and is a member of at least one parsed role; otherwise <c>false</c>.
-	/// </returns>
+	/// <param name="role">包含角色名称的分隔字符串（例如："Admin,User"）。</param>
+	/// <param name="separator">用于在 <paramref name="role"/> 中分隔角色的字符串。默认为 <c>","</c>。</param>
+	/// <returns>如果用户已通过身份验证且至少属于一个解析出的角色，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool IsInRoles(string role, string separator = ",")
 	{
 #if NET5_0_OR_GREATER

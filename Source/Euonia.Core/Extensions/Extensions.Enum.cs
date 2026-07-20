@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
@@ -7,11 +7,11 @@ using Nerosoft.Euonia.Reflection;
 public static partial class Extensions
 {
 	/// <summary>
-	/// Determines whether the specified enum is defined in the enum type.
+	/// 确定指定的枚举值是否已在枚举类型中定义。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <typeparam name="TEnum"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TEnum">枚举类型。</typeparam>
+	/// <param name="enum">要检查的枚举值。</param>
+	/// <returns>如果枚举值已定义，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	public static bool IsValid<TEnum>(this TEnum @enum)
 		where TEnum : Enum
 	{
@@ -19,22 +19,22 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets an attribute of <typeparamref name="T"/> on enum.
+	/// 获取枚举字段上指定类型的特性。
 	/// </summary>
-	/// <typeparam name="T">The type of attribute.</typeparam>
-	/// <param name="enum"></param>
-	/// <returns></returns>
+	/// <typeparam name="T">特性类型。</typeparam>
+	/// <param name="enum">要获取特性的枚举值。</param>
+	/// <returns>返回枚举字段上的指定特性，如果不存在则返回 <c>null</c>。</returns>
 	public static T GetAttribute<T>(this Enum @enum) where T : Attribute
 	{
 		return EnumHelper.GetCustomerAttribute<T>(@enum);
 	}
 
 	/// <summary>
-	/// Gets the enum field description text.
+	/// 获取枚举字段的描述文本。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <remarks>The field should add a <see cref="DescriptionAttribute"/>.</remarks>
-	/// <returns></returns>
+	/// <param name="enum">要获取描述的枚举值。</param>
+	/// <returns>返回枚举字段的描述文本，如果不存在则返回枚举值的字符串表示。</returns>
+	/// <remarks>字段应添加 <see cref="DescriptionAttribute"/>。</remarks>
 	public static string GetDescription(this Enum @enum)
 	{
 		var attribute = @enum.GetAttribute<DescriptionAttribute>();
@@ -42,33 +42,22 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets a localized description for the specified enum value.
+	/// 获取指定枚举值的本地化描述。
 	/// </summary>
-	/// <param name="enum">The enum value to retrieve the description for.</param>
-	/// <param name="resourceManager">
-	/// The <see cref="ResourceManager"/> used to look up localized strings.
-	/// The method will use the <see cref="DescriptionAttribute.Description"/> value as the resource key
-	/// when available; otherwise it will use the enum's <see cref="Enum.ToString()"/> value as the key.
-	/// </param>
-	/// <param name="resourceCulture">
-	/// The <see cref="CultureInfo"/> to use when looking up the resource string.
-	/// Pass <c>null</c> to use the resource manager's default culture behavior.
-	/// </param>
-	/// <returns>
-	/// The localized description string if the resource manager contains a matching entry;
-	/// otherwise the result of the resource lookup (which may be <c>null</c>).
-	/// </returns>
-	/// <exception cref="NullReferenceException">
-	/// Thrown when the field corresponding to the provided enum value cannot be found on its type.
-	/// </exception>
+	/// <param name="enum">要获取描述的枚举值。</param>
+	/// <param name="resourceManager">用于查找本地化字符串的 <see cref="ResourceManager"/>。</param>
+	/// <param name="resourceCulture">查找资源字符串时使用的 <see cref="CultureInfo"/>。传入 <c>null</c> 使用资源管理器的默认区域行为。</param>
+	/// <returns>本地化描述字符串。</returns>
+	/// <remarks>字段应添加 <see cref="DescriptionAttribute"/>，其 Description 属性应为资源键。</remarks>
+	/// <exception cref="NullReferenceException">如果枚举字段未定义，则抛出异常。</exception>
 	public static string GetDescription(this Enum @enum, ResourceManager resourceManager, CultureInfo resourceCulture = null)
 	{
-		resourceCulture = resourceCulture ?? CultureInfo.CurrentCulture;
+		resourceCulture ??= CultureInfo.CurrentCulture;
 
 		var field = @enum.GetType().GetField(@enum.ToString());
 		if (field == null)
 		{
-			throw new NullReferenceException($"Field ‘{@enum}’ not defined.");
+			throw new NullReferenceException($"Field '{@enum}' not defined.");
 		}
 
 		var attribute = field.GetCustomAttribute<DescriptionAttribute>();
@@ -78,15 +67,14 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 获取枚举值的所有标志位。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <typeparam name="TEnum"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TEnum">枚举类型。</typeparam>
+	/// <param name="enum">要获取标志位的枚举值。</param>
+	/// <returns>返回枚举值的所有标志位。</returns>
 	public static IEnumerable<TEnum> GetFlags<TEnum>(this Enum @enum)
 		where TEnum : Enum
 	{
-		// ReSharper disable once LoopCanBeConvertedToQuery
 		foreach (Enum item in Enum.GetValues(@enum.GetType()))
 		{
 			if (@enum.HasFlag(item))
@@ -97,26 +85,31 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 
+	/// 获取枚举值的所有标志位。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <returns></returns>
+	/// <param name="enum">要获取标志位的枚举值。</param>
+	/// <returns>返回枚举值的所有标志位。</returns>
 	public static IEnumerable<Enum> GetFlags(this Enum @enum)
 	{
 		return GetFlags(@enum, Enum.GetValues(@enum.GetType()).Cast<Enum>().ToArray());
 	}
 
 	/// <summary>
-	/// 
+	/// 获取枚举值的所有独立标志位。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <returns></returns>
+	/// <param name="enum">要获取独立标志位的枚举值。</param>
+	/// <returns>返回枚举值的所有独立标志位。</returns>
 	public static IEnumerable<Enum> GetIndividualFlags(this Enum @enum)
 	{
 		return GetFlags(@enum, GetFlagValues(@enum.GetType()).ToArray());
 	}
 
-	// ReSharper disable once SuggestBaseTypeForParameter
+	/// <summary>
+	/// 获取枚举值的所有标志位。
+	/// </summary>
+	/// <param name="enum">要获取标志位的枚举值。</param>
+	/// <param name="values">用于计算标志位的枚举值数组。</param>
+	/// <returns>返回枚举值的所有标志位。</returns>
 	private static IEnumerable<Enum> GetFlags(Enum @enum, Enum[] values)
 	{
 		var bits = System.Convert.ToUInt64(@enum);
@@ -156,6 +149,11 @@ public static partial class Extensions
 		return Enumerable.Empty<Enum>();
 	}
 
+	/// <summary>
+	/// 获取枚举类型的所有独立标志位。
+	/// </summary>
+	/// <param name="enumType">枚举类型。</param>
+	/// <returns>返回枚举类型的所有独立标志位。</returns>
 	private static IEnumerable<Enum> GetFlagValues(Type enumType)
 	{
 		ulong flag = 0x1;
@@ -164,7 +162,7 @@ public static partial class Extensions
 			var bits = System.Convert.ToUInt64(value);
 			if (bits == 0L)
 			{
-				continue; // skip the zero value
+				continue; // 跳过零值
 			}
 
 			while (flag < bits)
@@ -180,21 +178,21 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// Gets the abbreviated day name of <see cref="DayOfWeek"/> in current culture.
+	/// 获取当前区域中 <see cref="DayOfWeek"/> 的缩写名称。
 	/// </summary>
-	/// <param name="dayOfWeek"></param>
-	/// <returns></returns>
+	/// <param name="dayOfWeek">要获取缩写名称的 <see cref="DayOfWeek"/>。</param>
+	/// <returns>返回指定 <see cref="DayOfWeek"/> 的缩写名称。</returns>
 	public static string AbbreviatedDayName(this DayOfWeek dayOfWeek)
 	{
 		return dayOfWeek.AbbreviatedDayName(CultureInfo.CurrentCulture);
 	}
-
+	
 	/// <summary>
-	/// Gets the abbreviated day name of <see cref="DayOfWeek"/> in specified culture.
+	/// 获取指定区域中 <see cref="DayOfWeek"/> 的缩写名称。
 	/// </summary>
-	/// <param name="dayOfWeek"></param>
-	/// <param name="cultureInfo"></param>
-	/// <returns></returns>
+	/// <param name="dayOfWeek">要获取缩写名称的 <see cref="DayOfWeek"/>。</param>
+	/// <param name="cultureInfo">指定的区域信息。</param>
+	/// <returns>返回指定 <see cref="DayOfWeek"/> 的缩写名称。</returns>
 	public static string AbbreviatedDayName(this DayOfWeek dayOfWeek, CultureInfo cultureInfo)
 	{
 		return cultureInfo.DateTimeFormat.AbbreviatedDayNames[(int)dayOfWeek];

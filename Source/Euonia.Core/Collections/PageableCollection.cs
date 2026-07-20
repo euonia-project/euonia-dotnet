@@ -1,26 +1,26 @@
-﻿namespace Nerosoft.Euonia.Collections;
+namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
-/// Class PageableCollection.
-/// Implements the <see cref="List{T}" />
+/// 可分页集合类。
+/// 实现了 <see cref="List{T}" />
 /// </summary>
 /// <typeparam name="T"></typeparam>
 /// <seealso cref="List{T}" />
 public class PageableCollection<T> : List<T>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PageableCollection{T}"/> class.
+    /// 初始化 <see cref="PageableCollection{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="items">The items.</param>
+    /// <param name="items">集合元素。</param>
     public PageableCollection(IEnumerable<T> items)
     {
         AddRange(items);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PageableCollection{T}"/> class.
+    /// 初始化 <see cref="PageableCollection{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="items">The items.</param>
+    /// <param name="items">集合元素。</param>
     public PageableCollection(params T[] items)
     {
         AddRange(items);
@@ -29,28 +29,28 @@ public class PageableCollection<T> : List<T>
     #region IPageableCollection<T> Members
 
     /// <summary>
-    /// Gets or sets the page number.
+    /// 获取或设置页码。
     /// </summary>
-    /// <value>The page number.</value>
+    /// <value>页码。</value>
     public long PageNumber { get; set; }
 
     /// <summary>
-    /// Gets or sets the size of the page.
+    /// 获取或设置每页大小。
     /// </summary>
-    /// <value>The size of the page.</value>
+    /// <value>每页大小。</value>
     public long PageSize { get; set; }
 
     /// <summary>
-    /// Gets or sets the total count.
+    /// 获取或设置总记录数。
     /// </summary>
-    /// <value>The total count.</value>
+    /// <value>总记录数。</value>
     public long TotalCount { get; set; }
 
     /// <summary>
-    /// Gets the page count.
+    /// 获取总页数。
     /// </summary>
-    /// <value>The page count.</value>
-    /// <exception cref="InvalidOperationException"></exception>
+    /// <value>总页数。</value>
+    /// <exception cref="InvalidOperationException">当 <see cref="PageSize"/> 小于或等于 0 时抛出。</exception>
     public virtual long PageCount
     {
         get
@@ -65,15 +65,15 @@ public class PageableCollection<T> : List<T>
     }
 
     /// <summary>
-    /// Gets the start position.
+    /// 获取起始位置。
     /// </summary>
-    /// <value>The start position.</value>
+    /// <value>起始位置。</value>
     public virtual long StartPosition => (PageNumber - 1) * PageSize + 1;
 
     /// <summary>
-    /// Gets the end position.
+    /// 获取结束位置。
     /// </summary>
-    /// <value>The end position.</value>
+    /// <value>结束位置。</value>
     public virtual long EndPosition => PageNumber * PageSize > TotalCount ? TotalCount : PageNumber * PageSize;
 
     #endregion

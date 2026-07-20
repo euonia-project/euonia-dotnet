@@ -1,36 +1,36 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// Exception thrown when an account has expired and can no longer be used for authentication or access.
-/// Carries the identity of the expired account for diagnostics.
+/// 当账户已过期且不能继续用于身份验证或访问时抛出的异常。
+/// 携带已过期账户的标识信息以便诊断。
 /// </summary>
 public class AccountExpiredException : AccountException
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountExpiredException"/> class for the specified identity.
+	/// 使用指定的账户标识初始化 <see cref="AccountExpiredException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the expired account.</param>
+	/// <param name="identity">已过期账户的标识（例如用户名或账户 ID）。</param>
 	public AccountExpiredException(string identity)
 		: base(identity)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountExpiredException"/> class with a specified error message for the specified identity.
+	/// 使用指定的错误消息和账户标识初始化 <see cref="AccountExpiredException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the expired account.</param>
-	/// <param name="message">A message that describes the error.</param>
+	/// <param name="identity">已过期账户的标识（例如用户名或账户 ID）。</param>
+	/// <param name="message">描述错误的消息。</param>
 	public AccountExpiredException(string identity, string message)
 		: base(identity, message)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AccountExpiredException"/> class with a specified error message and a reference to the inner exception that is the cause of this exception, for the specified identity.
+	/// 使用指定的错误消息、账户标识和对导致此异常的内部异常的引用初始化 <see cref="AccountExpiredException"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity">The identity (e.g., username or account id) of the expired account.</param>
-	/// <param name="message">A message that describes the error.</param>
-	/// <param name="innerException">The exception that is the cause of the current exception, or <c>null</c> if no inner exception is specified.</param>
+	/// <param name="identity">已过期账户的标识（例如用户名或账户 ID）。</param>
+	/// <param name="message">描述错误的消息。</param>
+	/// <param name="innerException">导致当前异常的异常，如果没有内部异常则为 <c>null</c>。</param>
 	public AccountExpiredException(string identity, string message, Exception innerException)
 		: base(identity, message, innerException)
 	{

@@ -1,63 +1,63 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Nerosoft.Euonia.Collections;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A collection of cancelable <see cref="TaskCompletionSource{TResult}"/> instances. Implementations must assume the caller is holding a lock.
+/// 可取消的 <see cref="TaskCompletionSource{TResult}"/> 实例的集合。实现必须假定调用者持有锁。
 /// </summary>
-/// <typeparam name="T">The type of the results. If this isn't needed, use <see cref="object"/>.</typeparam>
+/// <typeparam name="T">结果的类型。如果不需要，请使用 <see cref="object"/>。</typeparam>
 internal interface IAsyncWaitQueue<T>
 {
     /// <summary>
-    /// Gets whether the queue is empty.
+    /// 获取队列是否为空。
     /// </summary>
     bool IsEmpty { get; }
 
     /// <summary>
-    /// Creates a new entry and queues it to this wait queue. The returned task must support both synchronous and asynchronous waits.
+    /// 创建一个新条目并将其排入此等待队列。返回的任务必须支持同步和异步等待。
     /// </summary>
-    /// <returns>The queued task.</returns>
+    /// <returns>已排队的任务。</returns>
     Task<T> Enqueue();
 
     /// <summary>
-    /// Removes a single entry in the wait queue and completes it. This method may only be called if <see cref="IsEmpty"/> is <c>false</c>. The task continuations for the completed task must be executed asynchronously.
+    /// 移除等待队列中的单个条目并完成它。此方法只能在 <see cref="IsEmpty"/> 为 <c>false</c> 时调用。已完成任务的任务继续必须异步执行。
     /// </summary>
-    /// <param name="result">The result used to complete the wait queue entry. If this isn't needed, use <c>default(T)</c>.</param>
+    /// <param name="result">用于完成等待队列条目的结果。如果不需要，请使用 <c>default(T)</c>。</param>
     void Dequeue(T result = default);
 
     /// <summary>
-    /// Removes all entries in the wait queue and completes them. The task continuations for the completed tasks must be executed asynchronously.
+    /// 移除等待队列中的所有条目并完成它们。已完成任务的任务继续必须异步执行。
     /// </summary>
-    /// <param name="result">The result used to complete the wait queue entries. If this isn't needed, use <c>default(T)</c>.</param>
+    /// <param name="result">用于完成等待队列条目的结果。如果不需要，请使用 <c>default(T)</c>。</param>
     void DequeueAll(T result = default);
 
     /// <summary>
-    /// Attempts to remove an entry from the wait queue and cancels it. The task continuations for the completed task must be executed asynchronously.
+    /// 尝试从等待队列中移除一个条目并取消它。已完成任务的任务继续必须异步执行。
     /// </summary>
-    /// <param name="task">The task to cancel.</param>
-    /// <param name="cancellationToken">The cancellation token to use to cancel the task.</param>
+    /// <param name="task">要取消的任务。</param>
+    /// <param name="cancellationToken">用于取消任务的取消令牌。</param>
     bool TryCancel(Task task, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Removes all entries from the wait queue and cancels them. The task continuations for the completed tasks must be executed asynchronously.
+    /// 从等待队列中移除所有条目并取消它们。已完成任务的任务继续必须异步执行。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token to use to cancel the tasks.</param>
+    /// <param name="cancellationToken">用于取消任务的取消令牌。</param>
     void CancelAll(CancellationToken cancellationToken);
 }
 
 /// <summary>
-/// Provides extension methods for wait queues.
+/// 提供等待队列的扩展方法。
 /// </summary>
 internal static class AsyncWaitQueueExtensions
 {
     /// <summary>
-    /// Creates a new entry and queues it to this wait queue. If the cancellation token is already canceled, this method immediately returns a canceled task without modifying the wait queue.
+    /// 创建一个新条目并将其排入此等待队列。如果取消令牌已被取消，此方法立即返回一个已取消的任务而不修改等待队列。
     /// </summary>
-    /// <param name="this">The wait queue.</param>
-    /// <param name="mutex">A synchronization object taken while cancelling the entry.</param>
-    /// <param name="token">The token used to cancel the wait.</param>
-    /// <returns>The queued task.</returns>
+    /// <param name="this">等待队列。</param>
+    /// <param name="mutex">取消条目时持有的同步对象。</param>
+    /// <param name="token">用于取消等待的令牌。</param>
+    /// <returns>已排队的任务。</returns>
     public static Task<T> Enqueue<T>(this IAsyncWaitQueue<T> @this, object mutex, CancellationToken token)
     {
         if (token.IsCancellationRequested)
@@ -78,9 +78,9 @@ internal static class AsyncWaitQueueExtensions
 }
 
 /// <summary>
-/// The default wait queue implementation, which uses a double-ended queue.
+/// 默认的等待队列实现，使用双端队列。
 /// </summary>
-/// <typeparam name="T">The type of the results. If this isn't needed, use <see cref="object"/>.</typeparam>
+/// <typeparam name="T">结果的类型。如果不需要，请使用 <see cref="object"/>。</typeparam>
 [DebuggerDisplay("Count = {Count}")]
 [DebuggerTypeProxy(typeof(DefaultAsyncWaitQueue<>.DebugView))]
 internal sealed class DefaultAsyncWaitQueue<T> : IAsyncWaitQueue<T>

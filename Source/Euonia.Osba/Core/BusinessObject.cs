@@ -42,7 +42,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
-		}
+		}	
 	}
 
 	/// <summary>

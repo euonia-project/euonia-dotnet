@@ -56,7 +56,7 @@ public class RuleContext : IRuleContext
         {
             _results.Add(new RuleResult(Rule.Name));
         }
-
+	
         _completeAction?.Invoke(this);
     }
 }

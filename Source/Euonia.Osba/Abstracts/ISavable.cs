@@ -11,16 +11,16 @@ public interface ISavable
     event EventHandler<SavedEventArgs> Saved;
 
     /// <summary>
-    /// 
+    /// Called when the save operation is complete.
     /// </summary>
-    /// <param name="newObject"></param>
+    /// <param name="newObject">The new object containing the saved values.</param>
     void SaveComplete(object newObject);
 
     /// <summary>
     /// Saves the object to the database.
     /// </summary>
     /// <param name="forceUpdate">true to force the save to be an update.</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
     /// <returns>A new object containing the saved values.</returns>
     Task<object> SaveAsync(bool forceUpdate = false, CancellationToken cancellationToken = default);
 }
