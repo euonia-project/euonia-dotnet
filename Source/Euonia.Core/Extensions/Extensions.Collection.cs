@@ -121,6 +121,8 @@ public static partial class Extensions
 	/// <param name="startIndex">起始索引。</param>
 	/// <param name="count">要连接的元素数量。</param>
 	/// <returns>连接后的字符串。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="values"/> 为 null 时抛出。</exception>
+	/// <exception cref="IndexOutOfRangeException">当 <paramref name="startIndex"/> 超出集合范围时抛出。</exception>
 	public static string Join<T>(this IEnumerable<T> values, string separator, int startIndex, int count)
 	{
 		if (values == null)
@@ -142,6 +144,7 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="source">源可分页集合。</param>
 	/// <returns>视图集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static ViewCollection<T> ToView<T>(this PageableCollection<T> source) where T : class, new()
 	{
 		if (source == null)
@@ -161,6 +164,7 @@ public static partial class Extensions
 	/// <param name="index">页码。</param>
 	/// <param name="size">每页大小。</param>
 	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Paginate<T>(this IList<T> source, long totalCount, int index, int size)
 	{
 		if (source == null)
@@ -179,6 +183,7 @@ public static partial class Extensions
 	/// <param name="index">页码。</param>
 	/// <param name="size">每页大小。</param>
 	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Convert<T>(this PageableCollection<T> source, int index, int size)
 	{
 		if (source == null)
@@ -195,8 +200,14 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="enumerable">要打乱的集合。</param>
 	/// <returns>打乱顺序后的集合。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="enumerable"/> 为 null 时抛出。</exception>
 	public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> enumerable)
 	{
+		if (enumerable == null)
+		{
+			throw new NullReferenceException(nameof(enumerable));
+		}
+
 		var buffer = enumerable.ToList();
 
 		for (var i = 0; i < buffer.Count; i++)
@@ -227,6 +238,7 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="source">源集合。</param>
 	/// <returns>包含 <paramref name="source"/> 所有元素的 <see cref="IReadOnlyCollection{T}"/>。</returns>
+	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static IReadOnlyCollection<T> Reify<T>(this IEnumerable<T> source)
 	{
 		return source switch
@@ -478,6 +490,7 @@ public static partial class Extensions
 	/// <param name="source">源列表。</param>
 	/// <param name="selector">用于匹配元素的条件。</param>
 	/// <param name="targetIndex">目标索引位置。</param>
+	/// <exception cref="IndexOutOfRangeException">当 <paramref name="targetIndex"/> 不在有效范围内时抛出。</exception>
 	public static void MoveItem<T>(this List<T> source, Predicate<T> selector, int targetIndex)
 	{
 		if (!targetIndex.IsBetween(0, source.Count - 1))
@@ -526,11 +539,11 @@ public static partial class Extensions
 	/// <param name="getDependencies">解析依赖关系的函数。</param>
 	/// <param name="comparer">依赖关系的相等比较器。</param>
 	/// <returns>按依赖关系排序的新列表。如果 A 依赖于 B，则 B 在结果列表中排在 A 之前。</returns>
-	public static List<T> SortByDependencies<T>(
-		this IEnumerable<T> source,
-		Func<T, IEnumerable<T>> getDependencies,
-		IEqualityComparer<T> comparer = null)
+	public static List<T> SortByDependencies<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> getDependencies, IEqualityComparer<T> comparer = null)
 	{
+		/* See: http://www.codeproject.com/Articles/869059/Topological-sorting-in-Csharp
+		 *      http://en.wikipedia.org/wiki/Topological_sorting
+		 */
 		var sorted = new List<T>();
 		var visited = new Dictionary<T, bool>(comparer);
 
@@ -584,6 +597,7 @@ public static partial class Extensions
 	/// </summary>
 	/// <param name="source">要连接的字符串集合。</param>
 	/// <param name="separator">分隔符。</param>
+	/// <returns>连接后的字符串。</returns>
 	public static string JoinAsString(this IEnumerable<string> source, string separator)
 	{
 		return string.Join(separator, source);
@@ -594,6 +608,8 @@ public static partial class Extensions
 	/// </summary>
 	/// <param name="source">要连接的集合。</param>
 	/// <param name="separator">分隔符。</param>
+	/// <typeparam name="T">集合元素类型。</typeparam>
+	/// <returns>连接后的字符串。</returns>
 	public static string JoinAsString<T>(this IEnumerable<T> source, string separator)
 	{
 		return string.Join(separator, source);
@@ -606,6 +622,7 @@ public static partial class Extensions
 	/// <param name="source">源序列。</param>
 	/// <param name="condition">条件。</param>
 	/// <param name="predicate">用于筛选的谓词。</param>
+	/// <returns>如果条件为 <c>true</c>，则返回筛选后的序列；否则返回原始序列。</returns>
 	public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> source, bool condition, Func<T, bool> predicate)
 	{
 		return condition
@@ -620,6 +637,7 @@ public static partial class Extensions
 	/// <param name="source">源序列。</param>
 	/// <param name="condition">条件。</param>
 	/// <param name="predicate">用于筛选的带索引的谓词。</param>
+	/// <returns>如果条件为 <c>true</c>，则返回筛选后的序列；否则返回原始序列。</returns>
 	public static IEnumerable<T> WhereIf<T>(this IEnumerable<T> source, bool condition, Func<T, int, bool> predicate)
 	{
 		return condition
@@ -634,7 +652,7 @@ public static partial class Extensions
 	/// <param name="dictionary">字典。</param>
 	/// <param name="key">键。</param>
 	/// <param name="value">输出参数，用于存储获取到的值。</param>
-	/// <returns>如果成功获取到值，则返回 true；否则返回 false。</returns>
+	/// <returns>如果成功获取到值，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	internal static bool TryGetValue<T>(this IDictionary<string, object> dictionary, string key, out T value)
 	{
 		if (dictionary.TryGetValue(key, out var valueObj) && valueObj is T result)
