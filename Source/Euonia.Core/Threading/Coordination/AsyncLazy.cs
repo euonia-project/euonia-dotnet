@@ -1,56 +1,56 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Nerosoft.Euonia.Threading.Interop;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Flags controlling the behavior of <see cref="AsyncLazy{T}"/>.
+/// 控制 <see cref="AsyncLazy{T}"/> 行为的标志。
 /// </summary>
 [Flags]
 public enum AsyncLazyFlags
 {
     /// <summary>
-    /// No special flags. The factory method is executed on a thread pool thread, and does not retry initialization on failures (failures are cached).
+    /// 无特殊标志。工厂方法在线程池线程上执行，并且在失败时不重试初始化（失败会被缓存）。
     /// </summary>
     None = 0x0,
 
     /// <summary>
-    /// Execute the factory method on the calling thread.
+    /// 在调用线程上执行工厂方法。
     /// </summary>
     ExecuteOnCallingThread = 0x1,
 
     /// <summary>
-    /// If the factory method fails, then re-run the factory method the next time instead of caching the failed task.
+    /// 如果工厂方法失败，则在下次调用时重新运行工厂方法，而不是缓存失败的任务。
     /// </summary>
     RetryOnFailure = 0x2,
 }
 
 /// <summary>
-/// Provides support for asynchronous lazy initialization. This type is fully threadsafe.
+/// 提供异步延迟初始化支持。此类型是完全线程安全的。
 /// </summary>
-/// <typeparam name="T">The type of object that is being asynchronously initialized.</typeparam>
+/// <typeparam name="T">正在异步初始化的对象类型。</typeparam>
 [DebuggerDisplay("Id = {Id}, State = {GetStateForDebugger}")]
 [DebuggerTypeProxy(typeof(AsyncLazy<>.DebugView))]
 public sealed class AsyncLazy<T>
 {
     /// <summary>
-    /// The synchronization object protecting <c>_instance</c>.
+    /// 保护 <c>_instance</c> 的同步对象。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// The factory method to call.
+    /// 要调用的工厂方法。
     /// </summary>
     private readonly Func<Task<T>> _factory;
 
     /// <summary>
-    /// The underlying lazy task.
+    /// 底层的延迟任务。
     /// </summary>
     private Lazy<Task<T>> _instance;
 
     /// <summary>
-    /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
+    /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
     /// </summary>
     private int _id;
 
@@ -68,10 +68,10 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AsyncLazy&lt;T&gt;"/> class.
+    /// 初始化 <see cref="AsyncLazy&lt;T&gt;"/> 类的新实例。
     /// </summary>
-    /// <param name="factory">The asynchronous delegate that is invoked to produce the value when it is needed. May not be <c>null</c>.</param>
-    /// <param name="flags">Flags to influence async lazy semantics.</param>
+    /// <param name="factory">在需要值时调用的异步委托，用于生成值。不能为 <c>null</c>。</param>
+    /// <param name="flags">影响异步延迟语义的标志。</param>
     public AsyncLazy(Func<Task<T>> factory, AsyncLazyFlags flags = AsyncLazyFlags.None)
     {
 		ArgumentAssert.ThrowIfNull(factory);
@@ -87,12 +87,12 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous lazy instance.
+    /// 获取此异步延迟实例的半唯一标识符。
     /// </summary>
     public int Id => IdentifierManager<AsyncLazy<object>>.GetId(ref _id);
 
     /// <summary>
-    /// Whether the asynchronous factory method has started. This is initially <c>false</c> and becomes <c>true</c> when this instance is awaited or after <see cref="Start"/> is called.
+    /// 异步工厂方法是否已启动。初始为 <c>false</c>，当此实例被等待或调用 <see cref="Start"/> 后变为 <c>true</c>。
     /// </summary>
     public bool IsStarted
     {
@@ -104,7 +104,7 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Starts the asynchronous factory method, if it has not already started, and returns the resulting task.
+    /// 启动异步工厂方法（如果尚未启动），并返回结果任务。
     /// </summary>
     public Task<T> Task
     {
@@ -141,7 +141,7 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Asynchronous infrastructure support. This method permits instances of <see cref="AsyncLazy&lt;T&gt;"/> to be await'ed.
+    /// 异步基础设施支持。此方法允许 <see cref="AsyncLazy&lt;T&gt;"/> 的实例被 await。
     /// </summary>
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public TaskAwaiter<T> GetAwaiter()
@@ -150,7 +150,7 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Asynchronous infrastructure support. This method permits instances of <see cref="AsyncLazy&lt;T&gt;"/> to be await'ed.
+    /// 异步基础设施支持。此方法允许 <see cref="AsyncLazy&lt;T&gt;"/> 的实例被 await。
     /// </summary>
     [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
     public ConfiguredTaskAwaitable<T> ConfigureAwait(bool continueOnCapturedContext)
@@ -159,7 +159,7 @@ public sealed class AsyncLazy<T>
     }
 
     /// <summary>
-    /// Starts the asynchronous initialization, if it has not already started.
+    /// 启动异步初始化（如果尚未启动）。
     /// </summary>
     public void Start()
     {

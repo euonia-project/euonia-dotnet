@@ -1,30 +1,30 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
-// Original idea by Stephen Toub: http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266930.aspx
+// 原始想法来自 Stephen Toub: http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266930.aspx
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible countdown event.
+/// 一个异步兼容的倒计时事件。
 /// </summary>
 [DebuggerDisplay("Id = {Id}, CurrentCount = {_count}")]
 [DebuggerTypeProxy(typeof(DebugView))]
 public sealed class AsyncCountdownEvent
 {
     /// <summary>
-    /// The underlying manual-reset event.
+    /// 底层的手动重置事件。
     /// </summary>
     private readonly AsyncManualResetEvent _mre;
 
     /// <summary>
-    /// The remaining count on this event.
+    /// 此事件的剩余次数。
     /// </summary>
     private long _count;
 
     /// <summary>
-    /// Creates an async-compatible countdown event.
+    /// 创建一个异步兼容的倒计时事件。
     /// </summary>
-    /// <param name="count">The number of signals this event will need before it becomes set.</param>
+    /// <param name="count">此事件在变为设置状态之前需要的信号数量。</param>
     public AsyncCountdownEvent(long count)
     {
         _mre = new AsyncManualResetEvent(count == 0);
@@ -32,12 +32,12 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous countdown event.
+    /// 获取此异步倒计时事件的半唯一标识符。
     /// </summary>
     public int Id => _mre.Id;
 
     /// <summary>
-    /// Gets the current number of remaining signals before this event becomes set. This member is seldom used; code using this member has a high possibility of race conditions.
+    /// 获取此事件变为设置状态之前的剩余信号次数。此成员很少使用；使用此成员的代码很可能存在竞态条件。
     /// </summary>
     public long CurrentCount
     {
@@ -49,7 +49,7 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Asynchronously waits for the count to reach zero.
+    /// 异步等待次数达到零。
     /// </summary>
     public Task WaitAsync()
     {
@@ -57,16 +57,16 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Synchronously waits for the count to reach zero. This method may block the calling thread.
+    /// 异步等待次数达到零。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this token is already canceled, this method will first check whether the event is set.</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果此令牌已被取消，此方法将首先检查事件是否已被设置。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
         return _mre.WaitAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Synchronously waits for the count to reach zero. This method may block the calling thread.
+    /// 同步等待次数达到零。此方法可能会阻塞调用线程。
     /// </summary>
     public void Wait()
     {
@@ -74,19 +74,19 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Synchronously waits for the count to reach zero. This method may block the calling thread.
+    /// 同步等待次数达到零。此方法可能会阻塞调用线程。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this token is already canceled, this method will first check whether the event is set.</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果此令牌已被取消，此方法将首先检查事件是否已被设置。</param>
     public void Wait(CancellationToken cancellationToken)
     {
         _mre.Wait(cancellationToken);
     }
 
     /// <summary>
-    /// Attempts to modify the current count by the specified amount.
+    /// 尝试按指定量修改当前次数。
     /// </summary>
-    /// <param name="difference">The amount to change the current count.</param>
-    /// <param name="add"><c>true</c> to add to the current count; <c>false</c> to subtract.</param>
+    /// <param name="difference">要更改当前次数的量。</param>
+    /// <param name="add"><c>true</c> 表示增加当前次数；<c>false</c> 表示减少。</param>
     private void ModifyCount(long difference, bool add)
     {
         if (difference == 0)
@@ -118,16 +118,16 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Adds the specified value to the current count.
+    /// 将指定值加到当前次数。
     /// </summary>
-    /// <param name="addCount">The amount to change the current count.</param>
+    /// <param name="addCount">要更改当前次数的量。</param>
     public void AddCount(long addCount)
     {
         ModifyCount(addCount, true);
     }
 
     /// <summary>
-    /// Adds one to the current count.
+    /// 将当前次数加一。
     /// </summary>
     public void AddCount()
     {
@@ -135,16 +135,16 @@ public sealed class AsyncCountdownEvent
     }
 
     /// <summary>
-    /// Subtracts the specified value from the current count.
+    /// 从当前次数中减去指定值。
     /// </summary>
-    /// <param name="signalCount">The amount to change the current count.</param>
+    /// <param name="signalCount">要更改当前次数的量。</param>
     public void Signal(long signalCount)
     {
         ModifyCount(signalCount, false);
     }
 
     /// <summary>
-    /// Subtracts one from the current count.
+    /// 将当前次数减一。
     /// </summary>
     public void Signal()
     {

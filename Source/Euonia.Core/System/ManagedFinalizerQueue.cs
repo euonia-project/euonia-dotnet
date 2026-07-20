@@ -1,51 +1,49 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace System;
 
 /// <summary>
-/// This class represents a collection of registrations of objects for finalization purposes. <see cref="IAsyncDisposable"/> registration finalizer methods are called when a registered object is garbage collected.
+/// 此类表示用于终结目的的对象注册集合。当已注册的对象被垃圾回收时，会调用 <see cref="IAsyncDisposable"/> 注册的终结器方法。
 /// </summary>
 public sealed class ManagedFinalizerQueue
 {
-    // 99% of the time, the finalizer will do nothing because people will dispose properly. The finalizer also must
-    // walk the full dictionary which in theory could be large if there is a lot of usage. Therefore, we don't want this to
-    // run too frequently. On the other hand, when something does go wrong we want to be able to recover in some reasonable period
-    // of time. 30s feels like is strikes a good balance here
+    // 99% 的情况下，终结器不会做任何事情，因为人们会正确释放资源。终结器还必须遍历整个字典，
+    // 理论上如果有大量使用，字典可能会很大。因此，我们不希望它运行得太频繁。另一方面，当出现问题时，
+    // 我们希望能够在一段合理的时间内恢复。30 秒感觉是一个很好的平衡点。
     internal static readonly TimeSpan FinalizerCadence = TimeSpan.FromSeconds(
 #if DEBUG
-        3 // to keep tests fast, use a much shorter cadence in debug
+        3 // 为了保持测试快速，在调试模式下使用更短的频率
 #else
         30
 #endif
     );
 
     /// <summary>
-    /// The default instance of <see cref="ManagedFinalizerQueue"/>.
+    /// <see cref="ManagedFinalizerQueue"/> 的默认实例。
     /// </summary>
     public static readonly ManagedFinalizerQueue Instance = new();
 
     private readonly ConcurrentDictionary<IAsyncDisposable, WeakReference> _items = new();
 
-    // The state of this class can be described by 3 bits:
-    // _count: >0 or ==0
-    // _finalizerTask: has cleared initializing bit or has not cleared it
-    // _initializing: 1 or 0
+    // 此类的状态可以由 3 个位来描述：
+    // _count: >0 或 ==0
+    // _finalizerTask: 已清除初始化位或未清除
+    // _initializing: 1 或 0
     //
-    // The following shows the possible states we could be in:
-    // _count   | _finalizerTask    | _initializing | nodes
-    // 0        | cleared           | 0             | Initial state / finalizer getting ready to exit state. Register() => (>0, cleared, 1)
-    // 0        | cleared           | 1             | If nothing changes, the finalizer will exit => (0, not cleared, 1). If something is registered => (>0, cleared, 1)
-    // 0        | not cleared       | 0             | ERROR should never happen
-    // 0        | not cleared       | 1             | Once our finalizer runs, it will => (0, cleared, 0). If something is registered => (>0, not cleared, 1)
-    // >0       | cleared           | 0             | Finalizer is running. If count drops to zero => (0, cleared, 0)
-    // >0       | cleared           | 1             | Means we dropped to 0 count but came back up before the finalizer exited. We now have a running finalizer and one queued
-    // >0       | not cleared       | 0             | ERROR should never happen
-    // >0       | not cleared       | 1             | Finalizer will run and transition to (>0, cleared, 0). Removal could transfer to (0, not cleared, 1)
+    // 以下显示了可能的状态：
+    // _count   | _finalizerTask    | _initializing | 节点
+    // 0        | 已清除            | 0             | 初始状态 / 终结器即将退出状态。Register() => (>0, 已清除, 1)
+    // 0        | 已清除            | 1             | 如果没有任何变化，终结器将退出 => (0, 未清除, 1)。如果有注册 => (>0, 已清除, 1)
+    // 0        | 未清除            | 0             | 错误，绝不应发生
+    // 0        | 未清除            | 1             | 终结器运行后 => (0, 已清除, 0)。如果有注册 => (>0, 未清除, 1)
+    // >0       | 已清除            | 0             | 终结器正在运行。如果计数降至零 => (0, 已清除, 0)
+    // >0       | 已清除            | 1             | 意味着计数降为零但在终结器退出之前又回升了。现在有一个正在运行的终结器和一个排队的
+    // >0       | 未清除            | 0             | 错误，绝不应发生
+    // >0       | 未清除            | 1             | 终结器将运行并转换到 (>0, 已清除, 0)。移除可能转换到 (0, 未清除, 1)
 
     /// <summary>
-    /// Tracked separately from the dictionary since (a) ConcurrentDictionary's count is slow and (b) we need to know exactly when we
-    /// add one item to empty or remove one item from empty. We use a long to guarantee that we can't ever overflow (if there were really
-    /// 2^63 items in the queue, we'd be out of memory)
+    /// 与字典分开跟踪，因为 (a) ConcurrentDictionary 的计数很慢，(b) 我们需要确切知道何时从空添加一项或从一项移除为空。
+    /// 使用 long 来保证永远不会有溢出（如果队列中真的有 2^63 个项目，内存早就耗尽了）。
     /// </summary>
     private long _count;
 
@@ -57,10 +55,9 @@ public sealed class ManagedFinalizerQueue
     }
 
     /// <summary>
-    /// If <paramref name="resource"/> is GC'd, <paramref name="finalizer"/> will be run.
-    /// <paramref name="finalizer"/> must be thread-safe. Disposing the returned <see cref="IDisposable"/>
-    /// revokes the registration. Note that, for this to work, <paramref name="finalizer"/> must not hold
-    /// a strong reference to <paramref name="resource"/>.
+    /// 如果 <paramref name="resource"/> 被 GC 回收，则运行 <paramref name="finalizer"/>。
+    /// <paramref name="finalizer"/> 必须是线程安全的。释放返回的 <see cref="IDisposable"/> 将撤销注册。
+    /// 注意，要使此机制生效，<paramref name="finalizer"/> 必须不能持有对 <paramref name="resource"/> 的强引用。
     /// </summary>
     public IDisposable Register(object resource, IAsyncDisposable finalizer)
     {
@@ -79,27 +76,25 @@ public sealed class ManagedFinalizerQueue
 
     private void StartFinalizerTask()
     {
-        // If we're frequently adding and then removing a single item (probably a common case
-        // since most of the time people will dispose things and won't do too much distributed locking),
-        // we could end up thrashing where we create new finalizer tasks over and over again. To avoid
-        // this, we set the initializing flag, but in the case that it was already set we know that there
-        // is a task that is still getting ready; in that case we can just let that task continue to be
-        // the finalizer task: there's no need to replace it
+        // 如果我们频繁地添加然后移除单个项目（可能是常见情况，因为大多数时候
+        // 人们会释放资源且不会有太多分布式锁定），我们可能会在反复创建新的终结器任务
+        // 时造成颠簸。为避免这种情况，我们设置初始化标志，但如果该标志已被设置，
+        // 我们知道有一个任务仍在准备中；这种情况下我们可以让该任务继续作为终结器
+        // 任务：没有必要替换它。
         if (Interlocked.Exchange(ref _finalizerTaskIsInitializing, 1) != 0)
         {
             return;
         }
 
-        // This lock is only barely necessary. The race condition this solves for is the continuation task
-        // starting to run the finalizer loop AND clearing the initialization bit before we've assigned 
-        // to this._finalizerTask. In that case, another thread could continue off the wrong task. The reason
-        // this is super unlikely is because the loop sleeps before clearing the bit, so things have to go horribly
-        // awry for this edge-case to occur.
-        lock (_items) // lock _items just because it's an object we own
+        // 此锁几乎不是必需的。它解决的是延续任务开始运行终结器循环并在我们赋值
+        // this._finalizerTask 之前清除初始化位的竞态条件。在那种情况下，另一个线程
+        // 可能会在错误的任务上继续。这种情况极不可能发生的原因是循环在清除位之前
+        // 会休眠，所以只有在极端异常的情况下才会发生这种边缘情况。
+        lock (_items) // 锁定 _items 仅因为它是我们拥有的对象
         {
-            // When we get here, the previous finalizer should exit on its next iteration but it hasn't
-            // necessarily exited yet (and may not for some time). Therefore, we queue a task to run as a
-            // continuation so that we only have one finalizer loop at a time
+            // 当我们到达这里时，先前的终结器应该在下一次迭代中退出，但它不一定已经退出
+            // （并且可能在一段时间内都不会退出）。因此，我们将一个任务作为延续排队，
+            // 以便一次只有一个终结器循环在运行。
             _finalizerTask = _finalizerTask.ContinueWith(
                                           (_, @this) => ((ManagedFinalizerQueue)@this).FinalizerLoop(),
                                           state: this,
@@ -111,19 +106,18 @@ public sealed class ManagedFinalizerQueue
 
     private async Task FinalizerLoop()
     {
-        // Any new finalizer loop delays before doing anything else. We start the loop when we just added
-        // something, so there's little chance of it having something to do right away
+        // 任何新的终结器循环在执行其他操作之前都会延迟。我们在刚添加内容时启动循环，
+        // 所以几乎没有需要立即处理的事情。
         await Task.Delay(FinalizerCadence).ConfigureAwait(false);
 
-        // Clear the initializing flag. By doing this, we allow another task to be queued on top of us
+        // 清除初始化标志。通过这样做，我们允许另一个任务在我们之上排队。
         var initializingFlag = Interlocked.Exchange(ref _finalizerTaskIsInitializing, 0);
         Invariant.Require(initializingFlag == 1);
 
-        // Loop until there is nothing more to do
+        // 循环直到没有更多事情要做
         while (Volatile.Read(ref _count) != 0)
         {
-            // the main finalizer does not wait for item finalization since we don't want that to ever
-            // block or fault the main loop
+            // 主终结器不会等待项目终结，因为我们不希望它阻塞或使主循环出错
             await FinalizeAsync(waitForItemFinalization: false).ConfigureAwait(false);
             await Task.Delay(FinalizerCadence).ConfigureAwait(false);
         }
@@ -133,8 +127,8 @@ public sealed class ManagedFinalizerQueue
     {
         List<Task> itemFinalizerTasks = null;
 
-        // ConcurrentDictionary enumerator is safe to use concurrently with writes and is very inexpensive
-        // (lock-free and does not generate a snapshot copy)
+        // ConcurrentDictionary 的枚举器可以安全地与写入操作并发使用，并且非常廉价
+        // （无锁且不会生成快照副本）
         foreach (var kvp in _items)
         {
             if (!kvp.Value.IsAlive)
@@ -151,7 +145,7 @@ public sealed class ManagedFinalizerQueue
     }
 
     /// <summary>
-    /// Forces finalization of anything that is eligible. Exposed for testing purposes only
+    /// 强制终结所有符合条件的项目。仅供测试使用。
     /// </summary>
     internal Task FinalizeAsync() => FinalizeAsync(waitForItemFinalization: true);
 
@@ -162,8 +156,8 @@ public sealed class ManagedFinalizerQueue
             Interlocked.Decrement(ref _count);
             if (disposeKey)
             {
-                // DisposeAsync could throw, hang, etc. This must not block the finalizer thread.
-                // Therefore, we offload to a background thread and swallow exceptions
+                // DisposeAsync 可能抛出异常、挂起等。这不能阻塞终结器线程。
+                // 因此，我们将工作卸载到后台线程并吞下异常。
                 return Task.Run(() => key.DisposeAsync().AsTask());
             }
         }
@@ -187,8 +181,8 @@ public sealed class ManagedFinalizerQueue
             var key = Interlocked.Exchange(ref _key, null);
             if (key != null)
             {
-                // If the registration gets disposed, we don't need to dispose the key
-                // because that means it got disposed normally
+                // 如果注册被释放，我们不需要释放 key，
+                // 因为这意味着它已经被正常释放了。
                 _queue.TryRemove(key, disposeKey: false);
             }
         }

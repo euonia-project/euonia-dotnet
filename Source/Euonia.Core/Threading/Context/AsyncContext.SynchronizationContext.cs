@@ -1,41 +1,41 @@
-﻿namespace Nerosoft.Euonia.Threading;
+namespace Nerosoft.Euonia.Threading;
 
 public sealed partial class AsyncContext
 {
 	/// <summary>
-	/// The <see cref="SynchronizationContext"/> implementation used by <see cref="AsyncContext"/>.
+	/// <see cref="AsyncContext"/> 使用的 <see cref="SynchronizationContext"/> 实现。
 	/// </summary>
 	private sealed class AsyncContextSynchronizationContext : SynchronizationContext
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="AsyncContextSynchronizationContext"/> class.
+		/// 初始化 <see cref="AsyncContextSynchronizationContext"/> 类的新实例。
 		/// </summary>
-		/// <param name="context">The async context.</param>
+		/// <param name="context">异步上下文。</param>
 		public AsyncContextSynchronizationContext(AsyncContext context)
 		{
 			Context = context;
 		}
 
 		/// <summary>
-		/// Gets the async context.
+		/// 获取异步上下文。
 		/// </summary>
 		public AsyncContext Context { get; }
 
 		/// <summary>
-		/// Dispatches an asynchronous message to the async context. If all tasks have been completed and the outstanding asynchronous operation count is zero, then this method has undefined behavior.
+		/// 将异步消息分发到异步上下文。如果所有任务已完成且未完成的异步操作计数为零，则此方法的行为是未定义的。
 		/// </summary>
-		/// <param name="d">The <see cref="T:System.Threading.SendOrPostCallback"/> delegate to call. May not be <c>null</c>.</param>
-		/// <param name="state">The object passed to the delegate.</param>
+		/// <param name="d">要调用的 <see cref="T:System.Threading.SendOrPostCallback"/> 委托。不能为 <c>null</c>。</param>
+		/// <param name="state">传递给委托的对象。</param>
 		public override void Post(SendOrPostCallback d, object state)
 		{
 			Context.Enqueue(Context._taskFactory.Run(() => d(state)), true);
 		}
 
 		/// <summary>
-		/// Dispatches an asynchronous message to the async context, and waits for it to complete.
+		/// 将异步消息分发到异步上下文，并等待其完成。
 		/// </summary>
-		/// <param name="d">The <see cref="T:System.Threading.SendOrPostCallback"/> delegate to call. May not be <c>null</c>.</param>
-		/// <param name="state">The object passed to the delegate.</param>
+		/// <param name="d">要调用的 <see cref="T:System.Threading.SendOrPostCallback"/> 委托。不能为 <c>null</c>。</param>
+		/// <param name="state">传递给委托的对象。</param>
 		public override void Send(SendOrPostCallback d, object state)
 		{
 			if (AsyncContext.Current == Context)
@@ -50,7 +50,7 @@ public sealed partial class AsyncContext
 		}
 
 		/// <summary>
-		/// Responds to the notification that an operation has started by incrementing the outstanding asynchronous operation count.
+		/// 通过增加未完成的异步操作计数来响应操作已启动的通知。
 		/// </summary>
 		public override void OperationStarted()
 		{
@@ -58,7 +58,7 @@ public sealed partial class AsyncContext
 		}
 
 		/// <summary>
-		/// Responds to the notification that an operation has completed by decrementing the outstanding asynchronous operation count.
+		/// 通过减少未完成的异步操作计数来响应操作已完成的通知。
 		/// </summary>
 		public override void OperationCompleted()
 		{
@@ -66,28 +66,28 @@ public sealed partial class AsyncContext
 		}
 
 		/// <summary>
-		/// Creates a copy of the synchronization context.
+		/// 创建同步上下文的副本。
 		/// </summary>
-		/// <returns>A new <see cref="T:System.Threading.SynchronizationContext"/> object.</returns>
+		/// <returns>一个新的 <see cref="T:System.Threading.SynchronizationContext"/> 对象。</returns>
 		public override SynchronizationContext CreateCopy()
 		{
 			return new AsyncContextSynchronizationContext(Context);
 		}
 
 		/// <summary>
-		/// Returns a hash code for this instance.
+		/// 返回此实例的哈希码。
 		/// </summary>
-		/// <returns>A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.</returns>
+		/// <returns>此实例的哈希码，适用于哈希算法和哈希表等数据结构。</returns>
 		public override int GetHashCode()
 		{
 			return Context.GetHashCode();
 		}
 
 		/// <summary>
-		/// Determines whether the specified <see cref="object"/> is equal to this instance. It is considered equal if it refers to the same underlying async context as this instance.
+		/// 确定指定的 <see cref="object"/> 是否等于此实例。如果它引用与此实例相同的底层异步上下文，则认为相等。
 		/// </summary>
-		/// <param name="obj">The <see cref="object"/> to compare with this instance.</param>
-		/// <returns><c>true</c> if the specified <see cref="object"/> is equal to this instance; otherwise, <c>false</c>.</returns>
+		/// <param name="obj">要与此实例比较的 <see cref="object"/>。</param>
+		/// <returns>如果指定的 <see cref="object"/> 等于此实例，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 		public override bool Equals(object obj)
 		{
 			if (obj is not AsyncContextSynchronizationContext other)

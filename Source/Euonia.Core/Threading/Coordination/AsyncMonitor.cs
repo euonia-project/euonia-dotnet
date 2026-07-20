@@ -1,28 +1,28 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible monitor.
+/// 一个异步兼容的监视器。
 /// </summary>
 [DebuggerDisplay("Id = {Id}, ConditionVariableId = {_conditionVariable.Id}")]
 public sealed class AsyncMonitor
 {
     /// <summary>
-    /// The lock.
+    /// 锁。
     /// </summary>
     private readonly AsyncLock _asyncLock;
 
     /// <summary>
-    /// The condition variable.
+    /// 条件变量。
     /// </summary>
     private readonly AsyncConditionVariable _conditionVariable;
 
     /// <summary>
-    /// Constructs a new monitor.
+    /// 构造一个新的监视器。
     /// </summary>
-    /// <param name="lockQueue">The wait queue used to manage waiters for the lock. This may be <c>null</c> to use a default (FIFO) queue.</param>
-    /// <param name="conditionVariableQueue">The wait queue used to manage waiters for the signal. This may be <c>null</c> to use a default (FIFO) queue.</param>
+    /// <param name="lockQueue">用于管理锁等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
+    /// <param name="conditionVariableQueue">用于管理信号等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
     internal AsyncMonitor(IAsyncWaitQueue<IDisposable> lockQueue, IAsyncWaitQueue<object> conditionVariableQueue)
     {
         _asyncLock = new AsyncLock(lockQueue);
@@ -30,7 +30,7 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Constructs a new monitor.
+    /// 构造一个新的监视器。
     /// </summary>
     public AsyncMonitor()
         : this(null, null)
@@ -38,40 +38,40 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this monitor.
+    /// 获取此监视器的半唯一标识符。
     /// </summary>
     public int Id => _asyncLock.Id;
 
     /// <summary>
-    /// Asynchronously enters the monitor. Returns a disposable that leaves the monitor when disposed.
+    /// 异步进入监视器。返回一个在释放时离开监视器的可释放对象。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the enter. If this is already set, then this method will attempt to enter the monitor immediately (succeeding if the monitor is currently available).</param>
-    /// <returns>A disposable that leaves the monitor when disposed.</returns>
+    /// <param name="cancellationToken">用于取消进入的取消令牌。如果已设置，此方法将尝试立即进入监视器（如果监视器当前可用则成功）。</param>
+    /// <returns>一个在释放时离开监视器的可释放对象。</returns>
     public AwaitableDisposable<IDisposable> EnterAsync(CancellationToken cancellationToken)
     {
         return _asyncLock.LockAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Asynchronously enters the monitor. Returns a disposable that leaves the monitor when disposed.
+    /// 异步进入监视器。返回一个在释放时离开监视器的可释放对象。
     /// </summary>
-    /// <returns>A disposable that leaves the monitor when disposed.</returns>
+    /// <returns>一个在释放时离开监视器的可释放对象。</returns>
     public AwaitableDisposable<IDisposable> EnterAsync()
     {
         return EnterAsync(CancellationToken.None);
     }
 
     /// <summary>
-    /// Synchronously enters the monitor. Returns a disposable that leaves the monitor when disposed. This method may block the calling thread.
+    /// 同步进入监视器。返回一个在释放时离开监视器的可释放对象。此方法可能会阻塞调用线程。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the enter. If this is already set, then this method will attempt to enter the monitor immediately (succeeding if the monitor is currently available).</param>
+    /// <param name="cancellationToken">用于取消进入的取消令牌。如果已设置，此方法将尝试立即进入监视器（如果监视器当前可用则成功）。</param>
     public IDisposable Enter(CancellationToken cancellationToken)
     {
         return _asyncLock.Lock(cancellationToken);
     }
 
     /// <summary>
-    /// Asynchronously enters the monitor. Returns a disposable that leaves the monitor when disposed. This method may block the calling thread.
+    /// 同步进入监视器。返回一个在释放时离开监视器的可释放对象。此方法可能会阻塞调用线程。
     /// </summary>
     public IDisposable Enter()
     {
@@ -79,16 +79,16 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Asynchronously waits for a pulse signal on this monitor. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns, even if the method is cancelled. This method internally will leave the monitor while waiting for a notification.
+    /// 异步等待此监视器上的脉冲信号。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态，即使该方法被取消。此方法在内部会在等待通知期间离开监视器。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation signal used to cancel this wait.</param>
+    /// <param name="cancellationToken">用于取消此等待的取消信号。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
         return _conditionVariable.WaitAsync(cancellationToken);
     }
 
     /// <summary>
-    /// Asynchronously waits for a pulse signal on this monitor. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns. This method internally will leave the monitor while waiting for a notification.
+    /// 异步等待此监视器上的脉冲信号。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态。此方法在内部会在等待通知期间离开监视器。
     /// </summary>
     public Task WaitAsync()
     {
@@ -96,16 +96,16 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Asynchronously waits for a pulse signal on this monitor. This method may block the calling thread. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns, even if the method is cancelled. This method internally will leave the monitor while waiting for a notification.
+    /// 同步等待此监视器上的脉冲信号。此方法可能会阻塞调用线程。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态，即使该方法被取消。此方法在内部会在等待通知期间离开监视器。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation signal used to cancel this wait.</param>
+    /// <param name="cancellationToken">用于取消此等待的取消信号。</param>
     public void Wait(CancellationToken cancellationToken)
     {
         _conditionVariable.Wait(cancellationToken);
     }
 
     /// <summary>
-    /// Asynchronously waits for a pulse signal on this monitor. This method may block the calling thread. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns. This method internally will leave the monitor while waiting for a notification.
+    /// 同步等待此监视器上的脉冲信号。此方法可能会阻塞调用线程。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态。此方法在内部会在等待通知期间离开监视器。
     /// </summary>
     public void Wait()
     {
@@ -113,7 +113,7 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Sends a signal to a single task waiting on this monitor. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns.
+    /// 向正在等待此监视器的单个任务发送信号。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态。
     /// </summary>
     public void Pulse()
     {
@@ -121,7 +121,7 @@ public sealed class AsyncMonitor
     }
 
     /// <summary>
-    /// Sends a signal to all tasks waiting on this monitor. The monitor MUST already be entered when calling this method, and it will still be entered when this method returns.
+    /// 向正在等待此监视器的所有任务发送信号。调用此方法时监视器必须已经进入，并且在此方法返回时监视器仍将处于进入状态。
     /// </summary>
     public void PulseAll()
     {

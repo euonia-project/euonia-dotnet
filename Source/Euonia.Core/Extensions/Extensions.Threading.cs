@@ -1,16 +1,16 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Nerosoft.Euonia.Threading;
 
 public static partial class Extensions
 {
     /// <summary>
-    /// Attempts to complete a <see cref="TaskCompletionSource{TResult}"/>, propagating the completion of <paramref name="task"/>.
+    /// 尝试完成 <see cref="TaskCompletionSource{TResult}"/>，传播 <paramref name="task"/> 的完成状态。
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the target asynchronous operation.</typeparam>
-    /// <typeparam name="TSourceResult">The type of the result of the source asynchronous operation.</typeparam>
-    /// <param name="this">The task completion source. May not be <c>null</c>.</param>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <returns><c>true</c> if this method completed the task completion source; <c>false</c> if it was already completed.</returns>
+    /// <typeparam name="TResult">目标异步操作结果的类型。</typeparam>
+    /// <typeparam name="TSourceResult">源异步操作结果的类型。</typeparam>
+    /// <param name="this">任务完成源。不能为 <c>null</c>。</param>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <returns>如果此方法完成了任务完成源，则为 <c>true</c>；如果已经完成，则为 <c>false</c>。</returns>
     public static bool TryCompleteFromCompletedTask<TResult, TSourceResult>(this TaskCompletionSource<TResult> @this, Task<TSourceResult> task) where TSourceResult : TResult
     {
 #if NETSTANDARD
@@ -22,7 +22,7 @@ public static partial class Extensions
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(task);
@@ -50,13 +50,13 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Attempts to complete a <see cref="TaskCompletionSource{TResult}"/>, propagating the completion of <paramref name="task"/> but using the result value from <paramref name="resultFunc"/> if the task completed successfully.
+    /// 尝试完成 <see cref="TaskCompletionSource{TResult}"/>，传播 <paramref name="task"/> 的完成状态，但如果任务成功完成，则使用 <paramref name="resultFunc"/> 的结果值。
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the target asynchronous operation.</typeparam>
-    /// <param name="this">The task completion source. May not be <c>null</c>.</param>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="resultFunc">A delegate that returns the result with which to complete the task completion source, if the task completed successfully. May not be <c>null</c>.</param>
-    /// <returns><c>true</c> if this method completed the task completion source; <c>false</c> if it was already completed.</returns>
+    /// <typeparam name="TResult">目标异步操作结果的类型。</typeparam>
+    /// <param name="this">任务完成源。不能为 <c>null</c>。</param>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <param name="resultFunc">如果任务成功完成，用于返回结果以完成任务完成源的委托。不能为 <c>null</c>。</param>
+    /// <returns>如果此方法完成了任务完成源，则为 <c>true</c>；如果已经完成，则为 <c>false</c>。</returns>
     public static bool TryCompleteFromCompletedTask<TResult>(this TaskCompletionSource<TResult> @this, Task task, Func<TResult> resultFunc)
     {
 #if NETSTANDARD
@@ -71,7 +71,7 @@ public static partial class Extensions
 		if (resultFunc == null)
 		{
 			throw new ArgumentNullException(nameof(resultFunc));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(task);
@@ -99,26 +99,26 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Creates a new TCS for use with async code, and which forces its continuations to execute asynchronously.
+    /// 创建一个用于异步代码的新 TCS，并强制其延续异步执行。
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the TCS.</typeparam>
+    /// <typeparam name="TResult">TCS 的结果类型。</typeparam>
     internal static TaskCompletionSource<TResult> CreateAsyncTaskSource<TResult>()
     {
         return new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
     }
 
     /// <summary>
-    /// Asynchronously waits for the task to complete, or for the cancellation token to be canceled.
+    /// 异步等待任务完成，或等待取消令牌被取消。
     /// </summary>
-    /// <param name="this">The task to wait for. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">The cancellation token that cancels the wait.</param>
+    /// <param name="this">要等待的任务。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task WaitAsync(this Task @this, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -145,18 +145,18 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for the task to complete, or for the cancellation token to be canceled.
+    /// 异步等待任务完成，或等待取消令牌被取消。
     /// </summary>
-    /// <typeparam name="TResult">The type of the task result.</typeparam>
-    /// <param name="this">The task to wait for. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">The cancellation token that cancels the wait.</param>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="this">要等待的任务。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<TResult> WaitAsync<TResult>(this Task<TResult> @this, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -183,10 +183,10 @@ public static partial class Extensions
 	}
 
     /// <summary>
-    /// Asynchronously waits for any of the source tasks to complete, or for the cancellation token to be canceled.
+    /// 异步等待任意一个源任务完成，或等待取消令牌被取消。
     /// </summary>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">The cancellation token that cancels the wait.</param>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<Task> WhenAny(this IEnumerable<Task> @this, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
@@ -202,16 +202,16 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for any of the source tasks to complete.
+    /// 异步等待任意一个源任务完成。
     /// </summary>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<Task> WhenAny(this IEnumerable<Task> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -220,18 +220,18 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for any of the source tasks to complete, or for the cancellation token to be canceled.
+    /// 异步等待任意一个源任务完成，或等待取消令牌被取消。
     /// </summary>
-    /// <typeparam name="TResult">The type of the task results.</typeparam>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">The cancellation token that cancels the wait.</param>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<Task<TResult>> WhenAny<TResult>(this IEnumerable<Task<TResult>> @this, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -240,17 +240,17 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for any of the source tasks to complete.
+    /// 异步等待任意一个源任务完成。
     /// </summary>
-    /// <typeparam name="TResult">The type of the task results.</typeparam>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<Task<TResult>> WhenAny<TResult>(this IEnumerable<Task<TResult>> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -259,16 +259,16 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for all of the source tasks to complete.
+    /// 异步等待所有源任务完成。
     /// </summary>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task WhenAll(this IEnumerable<Task> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -277,17 +277,17 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously waits for all of the source tasks to complete.
+    /// 异步等待所有源任务完成。
     /// </summary>
-    /// <typeparam name="TResult">The type of the task results.</typeparam>
-    /// <param name="this">The tasks to wait for. May not be <c>null</c>.</param>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<TResult[]> WhenAll<TResult>(this IEnumerable<Task<TResult>> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
@@ -296,9 +296,9 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// DANGEROUS! Ignores the completion of this task. Also ignores exceptions.
+    /// 危险！忽略此任务的完成。同时忽略异常。
     /// </summary>
-    /// <param name="this">The task to ignore.</param>
+    /// <param name="this">要忽略的任务。</param>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static async void Ignore(this Task @this)
     {
@@ -308,14 +308,14 @@ public static partial class Extensions
         }
         catch
         {
-            // ignored
+            // 忽略
         }
     }
 
     /// <summary>
-    /// DANGEROUS! Ignores the completion and results of this task. Also ignores exceptions.
+    /// 危险！忽略此任务的完成和结果。同时忽略异常。
     /// </summary>
-    /// <param name="this">The task to ignore.</param>
+    /// <param name="this">要忽略的任务。</param>
     [EditorBrowsable(EditorBrowsableState.Never)]
     public static async void Ignore<T>(this Task<T> @this)
     {
@@ -325,38 +325,38 @@ public static partial class Extensions
         }
         catch
         {
-            // ignored
+            // 忽略
         }
     }
 
     /// <summary>
-    /// Creates a new collection of tasks that complete in order.
+    /// 创建一个按完成顺序排列的新任务集合。
     /// </summary>
-    /// <typeparam name="T">The type of the results of the tasks.</typeparam>
-    /// <param name="this">The tasks to order by completion. May not be <c>null</c>.</param>
+    /// <typeparam name="T">任务结果的类型。</typeparam>
+    /// <param name="this">要按完成顺序排序的任务集合。不能为 <c>null</c>。</param>
     public static List<Task<T>> OrderByCompletion<T>(this IEnumerable<Task<T>> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
-		// This is a combination of Jon Skeet's approach and Stephen Toub's approach:
+		// 这是 Jon Skeet 的方法和 Stephen Toub 的方法的结合：
 		//  http://msmvps.com/blogs/jon_skeet/archive/2012/01/16/eduasync-part-19-ordering-by-completion-ahead-of-time.aspx
 		//  http://blogs.msdn.com/b/pfxteam/archive/2012/08/02/processing-tasks-as-they-complete.aspx
 
-		// Reify the source task sequence. TODO: better reification.
+		// 具体化源任务序列。TODO: 更好的具体化方式。
 		var taskArray = @this.ToArray();
 
-        // Allocate a TCS array and an array of the resulting tasks.
+        // 分配 TCS 数组和结果任务数组。
         var numTasks = taskArray.Length;
         var tcs = new TaskCompletionSource<T>[numTasks];
         var ret = new List<Task<T>>(numTasks);
 
-        // As each task completes, complete the next tcs.
+        // 每个任务完成时，完成下一个 tcs。
         var lastIndex = -1;
 		// ReSharper disable once ConvertToLocalFunction
 		void Continuation(Task<T> task)
@@ -365,7 +365,7 @@ public static partial class Extensions
 			tcs[index].TryCompleteFromCompletedTask(task);
 		}
 
-		// Fill out the arrays and attach the continuations.
+		// 填充数组并附加延续任务。
 		for (var i = 0; i != numTasks; ++i)
         {
             tcs[i] = new TaskCompletionSource<T>();
@@ -377,32 +377,32 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Creates a new collection of tasks that complete in order.
+    /// 创建一个按完成顺序排列的新任务集合。
     /// </summary>
-    /// <param name="this">The tasks to order by completion. May not be <c>null</c>.</param>
+    /// <param name="this">要按完成顺序排序的任务集合。不能为 <c>null</c>。</param>
     public static List<Task> OrderByCompletion(this IEnumerable<Task> @this)
     {
 #if NETSTANDARD
 		if (@this == null)
 		{
 			throw new ArgumentNullException(nameof(@this));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 #endif
-		// This is a combination of Jon Skeet's approach and Stephen Toub's approach:
+		// 这是 Jon Skeet 的方法和 Stephen Toub 的方法的结合：
 		//  http://msmvps.com/blogs/jon_skeet/archive/2012/01/16/eduasync-part-19-ordering-by-completion-ahead-of-time.aspx
 		//  http://blogs.msdn.com/b/pfxteam/archive/2012/08/02/processing-tasks-as-they-complete.aspx
 
-		// Reify the source task sequence. TODO: better reification.
+		// 具体化源任务序列。TODO: 更好的具体化方式。
 		var taskArray = @this.ToArray();
 
-        // Allocate a TCS array and an array of the resulting tasks.
+        // 分配 TCS 数组和结果任务数组。
         var numTasks = taskArray.Length;
         var tcs = new TaskCompletionSource<object>[numTasks];
         var ret = new List<Task>(numTasks);
 
-        // As each task completes, complete the next tcs.
+        // 每个任务完成时，完成下一个 tcs。
         var lastIndex = -1;
 		// ReSharper disable once ConvertToLocalFunction
 		void Continuation(Task task)
@@ -411,7 +411,7 @@ public static partial class Extensions
 			tcs[index].TryCompleteFromCompletedTask(task, NullResultFunc);
 		}
 
-		// Fill out the arrays and attach the continuations.
+		// 填充数组并附加延续任务。
 		for (var i = 0; i != numTasks; ++i)
         {
             tcs[i] = new TaskCompletionSource<object>();
@@ -423,16 +423,16 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// 等待任务完成，并展开任何异常。
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
     public static void WaitAndUnwrapException(this Task task)
     {
 #if NETSTANDARD
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(task);
 #endif
@@ -441,18 +441,18 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// 等待任务完成，并展开任何异常。
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed, or the <paramref name="task"/> raised an <see cref="OperationCanceledException"/>.</exception>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">等待任务完成时要观察的取消令牌。</param>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消，或 <paramref name="task"/> 引发了 <see cref="OperationCanceledException"/>。</exception>
     public static void WaitAndUnwrapException(this Task task, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(task);
 #endif
@@ -468,18 +468,18 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// 等待任务完成，并展开任何异常。
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <returns>The result of the task.</returns>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <returns>任务的结果。</returns>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task)
     {
 #if NETSTANDARD
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(task);
 #endif
@@ -488,20 +488,20 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, unwrapping any exceptions.
+    /// 等待任务完成，并展开任何异常。
     /// </summary>
-    /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <returns>The result of the task.</returns>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed, or the <paramref name="task"/> raised an <see cref="OperationCanceledException"/>.</exception>
+    /// <typeparam name="TResult">任务结果的类型。</typeparam>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">等待任务完成时要观察的取消令牌。</param>
+    /// <returns>任务的结果。</returns>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消，或 <paramref name="task"/> 引发了 <see cref="OperationCanceledException"/>。</exception>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(task);
 #endif
@@ -518,9 +518,9 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, but does not raise task exceptions. The task exception (if any) is unobserved.
+    /// 等待任务完成，但不引发任务异常。任务异常（如果存在）将不被观察。
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
     public static void WaitWithoutException(this Task task)
     {
 #if NETSTANDARD
@@ -542,18 +542,18 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Waits for the task to complete, but does not raise task exceptions. The task exception (if any) is unobserved.
+    /// 等待任务完成，但不引发任务异常。任务异常（如果存在）将不被观察。
     /// </summary>
-    /// <param name="task">The task. May not be <c>null</c>.</param>
-    /// <param name="cancellationToken">A cancellation token to observe while waiting for the task to complete.</param>
-    /// <exception cref="OperationCanceledException">The <paramref name="cancellationToken"/> was cancelled before the <paramref name="task"/> completed.</exception>
+    /// <param name="task">任务。不能为 <c>null</c>。</param>
+    /// <param name="cancellationToken">等待任务完成时要观察的取消令牌。</param>
+    /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消。</exception>
     public static void WaitWithoutException(this Task task, CancellationToken cancellationToken)
     {
 #if NETSTANDARD
 		if (task == null)
 		{
 			throw new ArgumentNullException(nameof(task));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(task);
 #endif
@@ -573,21 +573,21 @@ public static partial class Extensions
     #region SynchronizationContext
 
     /// <summary>
-    /// Synchronously executes a delegate on this synchronization context.
+    /// 在此同步上下文上同步执行委托。
     /// </summary>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static void Send(this SynchronizationContext context, Action action)
     {
         context.Send(state => ((Action)state!)(), action);
     }
 
     /// <summary>
-    /// Synchronously executes a delegate on this synchronization context and returns its result.
+    /// 在此同步上下文上同步执行委托并返回其结果。
     /// </summary>
-    /// <typeparam name="T">The type of the result.</typeparam>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <typeparam name="T">结果的类型。</typeparam>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static T Send<T>(this SynchronizationContext context, Func<T> action)
     {
         var result = default(T);
@@ -599,10 +599,10 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously executes a delegate on this synchronization context.
+    /// 在此同步上下文上异步执行委托。
     /// </summary>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static Task PostAsync(this SynchronizationContext context, Action action)
     {
         var taskCompletionSource = CreateAsyncTaskSource<object>();
@@ -626,11 +626,11 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously executes a delegate on this synchronization context and returns its result.
+    /// 在此同步上下文上异步执行委托并返回其结果。
     /// </summary>
-    /// <typeparam name="T">The type of the result.</typeparam>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <typeparam name="T">结果的类型。</typeparam>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static Task<T> PostAsync<T>(this SynchronizationContext context, Func<T> action)
     {
         var taskCompletionSource = CreateAsyncTaskSource<T>();
@@ -653,10 +653,10 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously executes an asynchronous delegate on this synchronization context.
+    /// 在此同步上下文上异步执行异步委托。
     /// </summary>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static Task PostAsync(this SynchronizationContext context, Func<Task> action)
     {
         var taskCompletionSource = CreateAsyncTaskSource<object>();
@@ -683,11 +683,11 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Asynchronously executes an asynchronous delegate on this synchronization context and returns its result.
+    /// 在此同步上下文上异步执行异步委托并返回其结果。
     /// </summary>
-    /// <typeparam name="T">The type of the result.</typeparam>
-    /// <param name="context">The synchronization context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <typeparam name="T">结果的类型。</typeparam>
+    /// <param name="context">同步上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static Task<T> PostAsync<T>(this SynchronizationContext context, Func<Task<T>> action)
     {
         var taskCompletionSource = CreateAsyncTaskSource<T>();
@@ -717,11 +717,11 @@ public static partial class Extensions
     #region TaskFactory
 
     /// <summary>
-    /// Queues work to the task factory and returns a <see cref="Task"/> representing that work. If the task factory does not specify a task scheduler, the thread pool task scheduler is used.
+    /// 将工作排队到任务工厂，并返回表示该工作的 <see cref="Task"/>。如果任务工厂未指定任务调度器，则使用线程池任务调度器。
     /// </summary>
-    /// <param name="this">The <see cref="TaskFactory"/>. May not be <c>null</c>.</param>
-    /// <param name="action">The action delegate to execute. May not be <c>null</c>.</param>
-    /// <returns>The started task.</returns>
+    /// <param name="this"><see cref="TaskFactory"/> 实例。不能为 <c>null</c>。</param>
+    /// <param name="action">要执行的操作委托。不能为 <c>null</c>。</param>
+    /// <returns>已启动的任务。</returns>
     public static Task Run(this TaskFactory @this, Action action)
     {
 #if NETSTANDARD
@@ -732,7 +732,7 @@ public static partial class Extensions
 		if (action == null)
 		{
 			throw new ArgumentNullException(nameof(action));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
@@ -742,11 +742,11 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Queues work to the task factory and returns a <see cref="Task{TResult}"/> representing that work. If the task factory does not specify a task scheduler, the thread pool task scheduler is used.
+    /// 将工作排队到任务工厂，并返回表示该工作的 <see cref="Task{TResult}"/>。如果任务工厂未指定任务调度器，则使用线程池任务调度器。
     /// </summary>
-    /// <param name="this">The <see cref="TaskFactory"/>. May not be <c>null</c>.</param>
-    /// <param name="action">The action delegate to execute. May not be <c>null</c>.</param>
-    /// <returns>The started task.</returns>
+    /// <param name="this"><see cref="TaskFactory"/> 实例。不能为 <c>null</c>。</param>
+    /// <param name="action">要执行的操作委托。不能为 <c>null</c>。</param>
+    /// <returns>已启动的任务。</returns>
     public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<TResult> action)
     {
 #if NETSTANDARD
@@ -758,7 +758,7 @@ public static partial class Extensions
 		if (action == null)
 		{
 			throw new ArgumentNullException(nameof(action));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
@@ -768,11 +768,11 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Queues work to the task factory and returns a proxy <see cref="Task"/> representing that work. If the task factory does not specify a task scheduler, the thread pool task scheduler is used.
+    /// 将工作排队到任务工厂，并返回表示该工作的代理 <see cref="Task"/>。如果任务工厂未指定任务调度器，则使用线程池任务调度器。
     /// </summary>
-    /// <param name="this">The <see cref="TaskFactory"/>. May not be <c>null</c>.</param>
-    /// <param name="action">The action delegate to execute. May not be <c>null</c>.</param>
-    /// <returns>The started task.</returns>
+    /// <param name="this"><see cref="TaskFactory"/> 实例。不能为 <c>null</c>。</param>
+    /// <param name="action">要执行的操作委托。不能为 <c>null</c>。</param>
+    /// <returns>已启动的任务。</returns>
     public static Task Run(this TaskFactory @this, Func<Task> action)
     {
 #if NETSTANDARD
@@ -784,7 +784,7 @@ public static partial class Extensions
 		if (action == null)
 		{
 			throw new ArgumentNullException(nameof(action));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
@@ -794,11 +794,11 @@ public static partial class Extensions
     }
 
     /// <summary>
-    /// Queues work to the task factory and returns a proxy <see cref="Task{TResult}"/> representing that work. If the task factory does not specify a task scheduler, the thread pool task scheduler is used.
+    /// 将工作排队到任务工厂，并返回表示该工作的代理 <see cref="Task{TResult}"/>。如果任务工厂未指定任务调度器，则使用线程池任务调度器。
     /// </summary>
-    /// <param name="this">The <see cref="TaskFactory"/>. May not be <c>null</c>.</param>
-    /// <param name="action">The action delegate to execute. May not be <c>null</c>.</param>
-    /// <returns>The started task.</returns>
+    /// <param name="this"><see cref="TaskFactory"/> 实例。不能为 <c>null</c>。</param>
+    /// <param name="action">要执行的操作委托。不能为 <c>null</c>。</param>
+    /// <returns>已启动的任务。</returns>
     public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<Task<TResult>> action)
     {
 #if NETSTANDARD
@@ -809,7 +809,7 @@ public static partial class Extensions
 		if (action == null)
 		{
 			throw new ArgumentNullException(nameof(action));
-		} 
+		}
 #else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
@@ -818,35 +818,35 @@ public static partial class Extensions
     }
 
     #endregion
-    
+
     /// <summary>
-    /// Converts a <see cref="Task"/> to a <see cref="ValueTask"/>.
+    /// 将 <see cref="ValueTask{TResult}"/> 转换为 <see cref="ValueTask"/>。
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="task"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">源 ValueTask 的结果类型。</typeparam>
+    /// <param name="task">要转换的 ValueTask。</param>
+    /// <returns>表示异步操作的 ValueTask。</returns>
     public static async ValueTask ConvertToVoid<TResult>(this ValueTask<TResult> task) => await task.ConfigureAwait(false);
 
     /// <summary>
-    /// Converts a <see cref="Task{T}"/> to a <see cref="ValueTask{T}"/>.
+    /// 将 <see cref="Task{T}"/> 转换为 <see cref="ValueTask{T}"/>。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="task"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">任务结果的类型。</typeparam>
+    /// <param name="task">要转换的 Task。</param>
+    /// <returns>表示异步操作的 ValueTask&lt;T&gt;。</returns>
     public static ValueTask<T> AsValueTask<T>(this Task<T> task) => new(task);
 
     /// <summary>
-    /// Converts a <see cref="Task"/> to a <see cref="ValueTask"/>.
+    /// 将 <see cref="Task"/> 转换为 <see cref="ValueTask"/>。
     /// </summary>
-    /// <param name="task"></param>
-    /// <returns></returns>
+    /// <param name="task">要转换的 Task。</param>
+    /// <returns>表示异步操作的 ValueTask。</returns>
     public static ValueTask AsValueTask(this Task task) => new(task);
 
     /// <summary>
-    /// Converts a value to a <see cref="ValueTask{T}"/>.
+    /// 将值包装为 <see cref="ValueTask{T}"/>。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <typeparam name="T">值的类型。</typeparam>
+    /// <param name="value">要包装的值。</param>
+    /// <returns>包含指定值的 ValueTask&lt;T&gt;。</returns>
     public static ValueTask<T> AsValueTask<T>(this T value) => new(value);
 }

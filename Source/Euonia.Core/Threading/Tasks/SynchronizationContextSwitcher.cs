@@ -1,21 +1,21 @@
-﻿using Nerosoft.Euonia.Disposing;
+using Nerosoft.Euonia.Disposing;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Utility class for temporarily switching <see cref="SynchronizationContext"/> implementations.
+/// 用于临时切换 <see cref="SynchronizationContext"/> 实现的工具类。
 /// </summary>
 public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
 {
     /// <summary>
-    /// The previous <see cref="SynchronizationContext"/>.
+    /// 之前的 <see cref="SynchronizationContext"/>。
     /// </summary>
     private readonly SynchronizationContext _oldContext;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="SynchronizationContextSwitcher"/> class, installing the new <see cref="SynchronizationContext"/>.
+    /// 初始化 <see cref="SynchronizationContextSwitcher"/> 类的新实例，并安装新的 <see cref="SynchronizationContext"/>。
     /// </summary>
-    /// <param name="newContext">The new <see cref="SynchronizationContext"/>. This can be <c>null</c> to remove an existing <see cref="SynchronizationContext"/>.</param>
+    /// <param name="newContext">新的 <see cref="SynchronizationContext"/>。可以为 <c>null</c> 以移除现有的 <see cref="SynchronizationContext"/>。</param>
     private SynchronizationContextSwitcher(SynchronizationContext newContext)
         : base(new object())
     {
@@ -24,7 +24,7 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     }
 
     /// <summary>
-    /// Restores the old <see cref="SynchronizationContext"/>.
+    /// 恢复旧的 <see cref="SynchronizationContext"/>。
     /// </summary>
     protected override void Dispose(object context)
     {
@@ -32,9 +32,9 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     }
 
     /// <summary>
-    /// Executes a synchronous delegate without the current <see cref="SynchronizationContext"/>. The current context is restored when this function returns.
+    /// 在没有当前 <see cref="SynchronizationContext"/> 的情况下执行同步委托。当前上下文在此函数返回时恢复。
     /// </summary>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="action">要执行的委托。</param>
     public static void NoContext(Action action)
     {
         using (new SynchronizationContextSwitcher(null))
@@ -42,9 +42,9 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     }
 
     /// <summary>
-    /// Executes a synchronous or asynchronous delegate without the current <see cref="SynchronizationContext"/>. The current context is restored when this function synchronously returns.
+    /// 在没有当前 <see cref="SynchronizationContext"/> 的情况下执行同步或异步委托。当前上下文在此函数同步返回时恢复。
     /// </summary>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="action">要执行的委托。</param>
     public static T NoContext<T>(Func<T> action)
     {
         using (new SynchronizationContextSwitcher(null))
@@ -52,10 +52,10 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     }
 
     /// <summary>
-    /// Executes a synchronous delegate with the specified <see cref="SynchronizationContext"/> as "current". The previous current context is restored when this function returns.
+    /// 使用指定的 <see cref="SynchronizationContext"/> 作为"当前"上下文执行同步委托。之前的当前上下文在此函数返回时恢复。
     /// </summary>
-    /// <param name="context">The context to treat as "current". May be <c>null</c> to indicate the thread pool context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="context">要视为"当前"的上下文。可以为 <c>null</c> 以指示线程池上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static void ApplyContext(SynchronizationContext context, Action action)
     {
         using (new SynchronizationContextSwitcher(context))
@@ -63,10 +63,10 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     }
 
     /// <summary>
-    /// Executes a synchronous or asynchronous delegate without the specified <see cref="SynchronizationContext"/> as "current". The previous current context is restored when this function synchronously returns.
+    /// 使用指定的 <see cref="SynchronizationContext"/> 作为"当前"上下文执行同步或异步委托。之前的当前上下文在此函数同步返回时恢复。
     /// </summary>
-    /// <param name="context">The context to treat as "current". May be <c>null</c> to indicate the thread pool context.</param>
-    /// <param name="action">The delegate to execute.</param>
+    /// <param name="context">要视为"当前"的上下文。可以为 <c>null</c> 以指示线程池上下文。</param>
+    /// <param name="action">要执行的委托。</param>
     public static T ApplyContext<T>(SynchronizationContext context, Func<T> action)
     {
         using (new SynchronizationContextSwitcher(context))

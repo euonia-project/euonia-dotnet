@@ -3,95 +3,95 @@ using System.Runtime.CompilerServices;
 namespace System;
 
 /// <summary>
-/// Represents a void type, since <see cref="System.Void"/> is not a valid return type in C#.
+/// 表示 void 类型，因为 <see cref="System.Void"/> 在 C# 中不是有效的返回类型。
 /// </summary>
 public readonly struct Unit : IEquatable<Unit>, IComparable<Unit>, IComparable
 {
-    private static readonly Unit _value = new();
+	private static readonly Unit _value = new();
 
-    /// <summary>
-    /// Default and only value of the <see cref="Unit"/> type.
-    /// </summary>
-    public static ref readonly Unit Value => ref _value;
+	/// <summary>
+	/// <see cref="Unit"/> 类型的默认且唯一的值。
+	/// </summary>
+	public static ref readonly Unit Value => ref _value;
 
-    /// <summary>
-    /// Task from a <see cref="Unit"/> type.
-    /// </summary>
-    public static Task<Unit> Task { get; } = System.Threading.Tasks.Task.FromResult(_value);
+	/// <summary>
+	/// 从 <see cref="Unit"/> 类型创建的 <see cref="Task"/>。
+	/// </summary>
+	public static Task<Unit> Task { get; } = System.Threading.Tasks.Task.FromResult(_value);
 
-    /// <summary>
-    /// Compares the current object with another object of the same type.
-    /// </summary>
-    /// <param name="other">An object to compare with this object.</param>
-    /// <returns>
-    /// A value that indicates the relative order of the objects being compared.
-    /// The return value has the following meanings:
-    ///  - Less than zero: This object is less than the <paramref name="other" /> parameter.
-    ///  - Zero: This object is equal to <paramref name="other" />.
-    ///  - Greater than zero: This object is greater than <paramref name="other" />.
-    /// </returns>
-    public int CompareTo(Unit other) => 0;
+	/// <summary>
+	/// 将当前对象与另一个同类型的对象进行比较。
+	/// </summary>
+	/// <param name="other">要与当前对象进行比较的对象。</param>
+	/// <returns>
+	/// 一个值，指示正在比较的对象的相对顺序。
+	/// 返回值的含义如下：
+	///  - 小于零：此对象小于 <paramref name="other" /> 参数。
+	///  - 零：此对象等于 <paramref name="other" />。
+	///  - 大于零：此对象大于 <paramref name="other" />。
+	/// </returns>
+	public int CompareTo(Unit other) => 0;
 
-    /// <summary>
-    /// Compares the current instance with another object of the same type and returns an integer that indicates whether the current instance precedes, follows, or occurs in the same position in the sort order as the other object.
-    /// </summary>
-    /// <param name="obj">An object to compare with this instance.</param>
-    /// <returns>
-    /// A value that indicates the relative order of the objects being compared.
-    /// The return value has these meanings:
-    ///  - Less than zero: This instance precedes <paramref name="obj" /> in the sort order.
-    ///  - Zero: This instance occurs in the same position in the sort order as <paramref name="obj" />.
-    ///  - Greater than zero: This instance follows <paramref name="obj" /> in the sort order.
-    /// </returns>
-    int IComparable.CompareTo(object obj) => 0;
+	/// <summary>
+	/// 将当前实例与另一个同类型的对象进行比较，并返回一个整数，指示当前实例在排序顺序中位于另一个对象之前、之后还是相同位置。
+	/// </summary>
+	/// <param name="obj">要与当前实例进行比较的对象。</param>
+	/// <returns>
+	/// 一个值，指示正在比较的对象的相对顺序。
+	/// 返回值的含义如下：
+	///  - 小于零：此实例在排序顺序中位于 <paramref name="obj" /> 之前。
+	///  - 零：此实例在排序顺序中与 <paramref name="obj" /> 处于相同位置。
+	///  - 大于零：此实例在排序顺序中位于 <paramref name="obj" /> 之后。
+	/// </returns>
+	int IComparable.CompareTo(object obj) => 0;
 
-    /// <summary>
-    /// Returns a hash code for this instance.
-    /// </summary>
-    /// <returns>
-    /// A hash code for this instance, suitable for use in hashing algorithms and data structures like a hash table.
-    /// </returns>
-    public override int GetHashCode() => 0;
+	/// <summary>
+	/// 返回此实例的哈希码。
+	/// </summary>
+	/// <returns>
+	/// 此实例的哈希码，适用于哈希算法和哈希表等数据结构。
+	/// </returns>
+	public override int GetHashCode() => 0;
 
-    /// <summary>
-    /// Determines whether the current object is equal to another object of the same type.
-    /// </summary>
-    /// <param name="other">An object to compare with this object.</param>
-    /// <returns>
-    /// <c>true</c> if the current object is equal to the <paramref name="other" /> parameter; otherwise, <c>false</c>.
-    /// </returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool Equals(Unit other) => true;
+	/// <summary>
+	/// 确定当前对象是否等于另一个同类型的对象。
+	/// </summary>
+	/// <param name="other">要与当前对象进行比较的对象。</param>
+	/// <returns>
+	/// 如果当前对象等于 <paramref name="other" /> 参数，则为 <c>true</c>；否则为 <c>false</c>。
+	/// </returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public bool Equals(Unit other) => true;
 
-    /// <summary>
-    /// Determines whether the specified <see cref="System.Object" /> is equal to this instance.
-    /// </summary>
-    /// <param name="obj">The object to compare with the current instance.</param>
-    /// <returns>
-    /// <c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.
-    /// </returns>
-    public override bool Equals(object obj) => obj is Unit;
+	/// <summary>
+	/// 确定指定的 <see cref="System.Object" /> 是否等于此实例。
+	/// </summary>
+	/// <param name="obj">要与当前实例进行比较的对象。</param>
+	/// <returns>
+	/// 如果指定的 <see cref="System.Object" /> 等于此实例，则为 <c>true</c>；否则为 <c>false</c>。
+	/// </returns>
+	public override bool Equals(object obj) => obj is Unit;
 
-    /// <summary>
-    /// Determines whether the <paramref name="first"/> object is equal to the <paramref name="second"/> object.
-    /// </summary>
-    /// <param name="first">The first object.</param>
-    /// <param name="second">The second object.</param>
-    /// <c>true</c> if the <paramref name="first"/> object is equal to the <paramref name="second" /> object; otherwise, <c>false</c>.
-    public static bool operator ==(Unit first, Unit second) => true;
+	/// <summary>
+	/// 确定 <paramref name="first"/> 对象是否等于 <paramref name="second"/> 对象。
+	/// </summary>
+	/// <param name="first">第一个对象。</param>
+	/// <param name="second">第二个对象。</param>
+	/// <returns><c>true</c> 如果 <paramref name="first"/> 对象等于 <paramref name="second" /> 对象；否则为 <c>false</c>。</returns>
+	public static bool operator ==(Unit first, Unit second) => true;
 
-    /// <summary>
-    /// Determines whether the <paramref name="first"/> object is not equal to the <paramref name="second"/> object.
-    /// </summary>
-    /// <param name="first">The first object.</param>
-    /// <param name="second">The second object.</param>
-    /// <c>true</c> if the <paramref name="first"/> object is not equal to the <paramref name="second" /> object; otherwise, <c>false</c>.
-    public static bool operator !=(Unit first, Unit second) => false;
+	/// <summary>
+	/// 确定 <paramref name="first"/> 对象是否不等于 <paramref name="second"/> 对象。
+	/// </summary>
+	/// <param name="first">第一个对象。</param>
+	/// <param name="second">第二个对象。</param>
+	/// <returns><c>true</c> 如果 <paramref name="first"/> 对象不等于 <paramref name="second" /> 对象；否则为 <c>false</c>。</returns>
+	public static bool operator !=(Unit first, Unit second) => false;
 
-    /// <summary>
-    /// Returns a <see cref="System.String" /> that represents this instance.
-    /// </summary>
-    /// <returns>A <see cref="System.String" /> that represents this instance.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public override string ToString() => "()";
+	/// <summary>
+	/// 返回表示此实例的 <see cref="System.String" />。
+	/// </summary>
+	/// <returns>表示此实例的 <see cref="System.String" />。</returns>
+	[MethodImpl(MethodImplOptions.AggressiveInlining)]
+	public override string ToString() => "()";
 }

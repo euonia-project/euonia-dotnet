@@ -1,30 +1,30 @@
-﻿namespace Nerosoft.Euonia.Threading;
+namespace Nerosoft.Euonia.Threading;
 
 public sealed partial class AsyncContext
 {
     /// <summary>
-    /// A task scheduler which schedules tasks to an async context.
+    /// 一个任务调度器，用于将任务调度到异步上下文。
     /// </summary>
     private sealed class AsyncContextTaskScheduler : TaskScheduler
     {
         /// <summary>
-        /// The async context for this task scheduler.
+        /// 此任务调度器的异步上下文。
         /// </summary>
         private readonly AsyncContext _context;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncContextTaskScheduler"/> class.
+        /// 初始化 <see cref="AsyncContextTaskScheduler"/> 类的新实例。
         /// </summary>
-        /// <param name="context">The async context for this task scheduler. May not be <c>null</c>.</param>
+        /// <param name="context">此任务调度器的异步上下文。不能为 <c>null</c>。</param>
         public AsyncContextTaskScheduler(AsyncContext context)
         {
             _context = context;
         }
 
         /// <summary>
-        /// Generates an enumerable of <see cref="T:System.Threading.Tasks.Task"/> instances currently queued to the scheduler waiting to be executed.
+        /// 生成当前排队等待调度器执行的 <see cref="T:System.Threading.Tasks.Task"/> 实例的枚举。
         /// </summary>
-        /// <returns>An enumerable that allows traversal of tasks currently queued to this scheduler.</returns>
+        /// <returns>允许遍历当前排队等待此调度器的任务的枚举。</returns>
         [System.Diagnostics.DebuggerNonUserCode]
         protected override IEnumerable<Task> GetScheduledTasks()
         {
@@ -32,28 +32,28 @@ public sealed partial class AsyncContext
         }
 
         /// <summary>
-        /// Queues a <see cref="T:System.Threading.Tasks.Task"/> to the scheduler. If all tasks have been completed and the outstanding asynchronous operation count is zero, then this method has undefined behavior.
+        /// 将 <see cref="T:System.Threading.Tasks.Task"/> 排队到调度器中。如果所有任务已完成且未完成的异步操作计数为零，则此方法的行为是未定义的。
         /// </summary>
-        /// <param name="task">The <see cref="T:System.Threading.Tasks.Task"/> to be queued.</param>
+        /// <param name="task">要排队的 <see cref="T:System.Threading.Tasks.Task"/>。</param>
         protected override void QueueTask(Task task)
         {
             _context.Enqueue(task, false);
         }
 
         /// <summary>
-        /// Determines whether the provided <see cref="T:System.Threading.Tasks.Task"/> can be executed synchronously in this call, and if it can, executes it.
+        /// 确定提供的 <see cref="T:System.Threading.Tasks.Task"/> 是否可以在此调用中同步执行，如果可以，则执行它。
         /// </summary>
-        /// <param name="task">The <see cref="T:System.Threading.Tasks.Task"/> to be executed.</param>
-        /// <param name="taskWasPreviouslyQueued">A Boolean denoting whether or not task has previously been queued. If this parameter is True, then the task may have been previously queued (scheduled); if False, then the task is known not to have been queued, and this call is being made in order to execute the task inline without queuing it.</param>
-        /// <returns>A Boolean value indicating whether the task was executed inline.</returns>
-        /// <exception cref="T:System.InvalidOperationException">The <paramref name="task"/> was already executed.</exception>
+        /// <param name="task">要执行的 <see cref="T:System.Threading.Tasks.Task"/>。</param>
+        /// <param name="taskWasPreviouslyQueued">一个布尔值，表示任务是否先前已排队。如果此参数为 True，则任务可能先前已排队（已调度）；如果为 False，则已知任务尚未排队，此调用是为了在不排队的情况下内联执行任务。</param>
+        /// <returns>一个布尔值，指示任务是否已内联执行。</returns>
+        /// <exception cref="T:System.InvalidOperationException"><paramref name="task"/> 已经被执行。</exception>
         protected override bool TryExecuteTaskInline(Task task, bool taskWasPreviouslyQueued)
         {
             return (AsyncContext.Current == _context) && TryExecuteTask(task);
         }
 
         /// <summary>
-        /// Indicates the maximum concurrency level this <see cref="T:System.Threading.Tasks.TaskScheduler"/> is able to support.
+        /// 指示此 <see cref="T:System.Threading.Tasks.TaskScheduler"/> 能够支持的最大并发级别。
         /// </summary>
         public override int MaximumConcurrencyLevel
         {
@@ -61,9 +61,9 @@ public sealed partial class AsyncContext
         }
 
         /// <summary>
-        /// Exposes the base <see cref="TaskScheduler.TryExecuteTask"/> method.
+        /// 公开基类的 <see cref="TaskScheduler.TryExecuteTask"/> 方法。
         /// </summary>
-        /// <param name="task">The task to attempt to execute.</param>
+        /// <param name="task">要尝试执行的任务。</param>
         public void DoTryExecuteTask(Task task)
         {
             TryExecuteTask(task);

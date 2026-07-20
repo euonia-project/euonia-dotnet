@@ -3,31 +3,31 @@ using System.Windows.Input;
 namespace Nerosoft.Euonia.Windows;
 
 /// <summary>
-/// Class DelegateCommand.
-/// Implements the <see cref="ICommand" />
-/// Implements the <see cref="System.Windows.Input.ICommand" />
+/// 委托命令类（泛型版本）。
+/// 实现 <see cref="ICommand" /> 接口
+/// 实现 <see cref="System.Windows.Input.ICommand" /> 接口
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">命令参数的类型。</typeparam>
 /// <seealso cref="System.Windows.Input.ICommand" />
 /// <seealso cref="ICommand" />
 public class DelegateCommand<T> : ICommand
 {
     /// <summary>
-    /// The can execute
+    /// 用于判断命令是否可以执行的回调函数。
     /// </summary>
     private readonly Func<T, bool> _canExecute;
 
     /// <summary>
-    /// The execute action
+    /// 命令执行时要调用的操作。
     /// </summary>
     private readonly Action<T> _executeAction;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DelegateCommand{T}" /> class.
+    /// 初始化 <see cref="DelegateCommand{T}" /> 类的新实例。
     /// </summary>
-    /// <param name="executeAction">The execute action.</param>
-    /// <param name="canExecute">The can execute.</param>
-    /// <exception cref="ArgumentNullException">executeAction</exception>
+    /// <param name="executeAction">命令执行时要调用的操作。</param>
+    /// <param name="canExecute">用于判断命令是否可以执行的回调函数。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="executeAction"/> 为 null 时抛出。</exception>
     public DelegateCommand(Action<T> executeAction, Func<T, bool> canExecute = null)
     {
         _executeAction = executeAction ?? throw new ArgumentNullException(nameof(executeAction));
@@ -35,10 +35,10 @@ public class DelegateCommand<T> : ICommand
     }
 
     /// <summary>
-    /// Defines the method that determines whether the command can execute in its current state.
+    /// 定义用于确定命令在其当前状态下是否可以执行的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
-    /// <returns>true if this command can be executed; otherwise, false.</returns>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
+    /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
     public bool CanExecute(object parameter)
     {
         var result = true;
@@ -52,13 +52,13 @@ public class DelegateCommand<T> : ICommand
     }
 
     /// <summary>
-    /// Occurs when changes occur that affect whether or not the command should execute.
+    /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>事件参数，包含与事件相关的数据。</returns>
     public event EventHandler CanExecuteChanged;
 
     /// <summary>
-    /// Raises the can execute changed.
+    /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
     /// </summary>
     public void RaiseCanExecuteChanged()
     {
@@ -66,9 +66,9 @@ public class DelegateCommand<T> : ICommand
     }
 
     /// <summary>
-    /// Defines the method to be called when the command is invoked.
+    /// 定义在调用命令时要调用的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     public void Execute(object parameter)
     {
         _executeAction((T)parameter);
@@ -76,30 +76,30 @@ public class DelegateCommand<T> : ICommand
 }
 
 /// <summary>
-/// Class DelegateCommand.
-/// Implements the <see cref="ICommand" />
-/// Implements the <see cref="System.Windows.Input.ICommand" />
+/// 委托命令类（非泛型版本）。
+/// 实现 <see cref="ICommand" /> 接口
+/// 实现 <see cref="System.Windows.Input.ICommand" /> 接口
 /// </summary>
 /// <seealso cref="System.Windows.Input.ICommand" />
 /// <seealso cref="ICommand" />
 public class DelegateCommand : ICommand
 {
     /// <summary>
-    /// The can execute
+    /// 用于判断命令是否可以执行的回调函数。
     /// </summary>
     private readonly Func<object, bool> _canExecute;
 
     /// <summary>
-    /// The execute action
+    /// 命令执行时要调用的操作。
     /// </summary>
     private readonly Action<object> _executeAction;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DelegateCommand" /> class.
+    /// 初始化 <see cref="DelegateCommand" /> 类的新实例。
     /// </summary>
-    /// <param name="executeAction">The execute action.</param>
-    /// <param name="canExecute">The can execute.</param>
-    /// <exception cref="ArgumentNullException">executeAction</exception>
+    /// <param name="executeAction">命令执行时要调用的操作。</param>
+    /// <param name="canExecute">用于判断命令是否可以执行的回调函数。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="executeAction"/> 为 null 时抛出。</exception>
     public DelegateCommand(Action<object> executeAction, Func<object, bool> canExecute = null)
     {
         _executeAction = executeAction ?? throw new ArgumentNullException(nameof(executeAction));
@@ -107,10 +107,10 @@ public class DelegateCommand : ICommand
     }
 
     /// <summary>
-    /// Defines the method that determines whether the command can execute in its current state.
+    /// 定义用于确定命令在其当前状态下是否可以执行的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
-    /// <returns>true if this command can be executed; otherwise, false.</returns>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
+    /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
     public bool CanExecute(object parameter)
     {
         var result = true;
@@ -124,13 +124,13 @@ public class DelegateCommand : ICommand
     }
 
     /// <summary>
-    /// Occurs when changes occur that affect whether or not the command should execute.
+    /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>事件参数，包含与事件相关的数据。</returns>
     public event EventHandler CanExecuteChanged;
 
     /// <summary>
-    /// Raises the can execute changed.
+    /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
     /// </summary>
     public void RaiseCanExecuteChanged()
     {
@@ -139,9 +139,9 @@ public class DelegateCommand : ICommand
     }
 
     /// <summary>
-    /// Defines the method to be called when the command is invoked.
+    /// 定义在调用命令时要调用的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     public void Execute(object parameter)
     {
         _executeAction(parameter);

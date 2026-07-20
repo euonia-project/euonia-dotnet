@@ -22,19 +22,19 @@ public static class Clock
     /// </summary>
     public const long UnixEpochSeconds = UnixEpochTicks / TimeSpan.TicksPerSecond;
 
-    // Number of days in a non-leap year
+    // 非闰年的天数
     private const int DAYS_PER_YEAR = 365;
 
-    // Number of days in 4 years
+    // 4 年的天数
     private const int DAYS_PER4_YEARS = DAYS_PER_YEAR * 4 + 1;       // 1461
 
-    // Number of days in 100 years
+    // 100 年的天数
     private const int DAYS_PER100_YEARS = DAYS_PER4_YEARS * 25 - 1;  // 36524
 
-    // Number of days in 400 years
+    // 400 年的天数
     private const int DAYS_PER400_YEARS = DAYS_PER100_YEARS * 4 + 1; // 146097
 
-    // Number of days from 1/1/0001 to 12/31/1969
+    // 从 0001年1月1日 到 1969年12月31日 的天数
     private const int DAYS_TO1970 = DAYS_PER400_YEARS * 4 + DAYS_PER100_YEARS * 3 + DAYS_PER4_YEARS * 17 + DAYS_PER_YEAR; // 719,162
 
     /// <summary>

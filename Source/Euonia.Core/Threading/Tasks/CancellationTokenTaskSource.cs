@@ -1,19 +1,19 @@
-﻿namespace Nerosoft.Euonia.Threading;
+namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Holds the task for a cancellation token, as well as the token registration. The registration is disposed when this instance is disposed.
+/// 持有取消令牌对应的任务以及令牌注册。当此实例被释放时，注册也会被释放。
 /// </summary>
 public sealed class CancellationTokenTaskSource<T> : IDisposable
 {
     /// <summary>
-    /// The cancellation token registration, if any. This is <c>null</c> if the registration was not necessary.
+    /// 取消令牌注册（如果存在）。如果不需要注册，则为 <c>null</c>。
     /// </summary>
     private readonly IDisposable _registration;
 
     /// <summary>
-    /// Creates a task for the specified cancellation token, registering with the token if necessary.
+    /// 为指定的取消令牌创建任务，并在必要时注册到令牌。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token to observe.</param>
+    /// <param name="cancellationToken">要观察的取消令牌。</param>
     public CancellationTokenTaskSource(CancellationToken cancellationToken)
     {
         if (cancellationToken.IsCancellationRequested)
@@ -27,12 +27,12 @@ public sealed class CancellationTokenTaskSource<T> : IDisposable
     }
 
     /// <summary>
-    /// Gets the task for the source cancellation token.
+    /// 获取源取消令牌对应的任务。
     /// </summary>
     public Task<T> Task { get; private set; }
 
     /// <summary>
-    /// Disposes the cancellation token registration, if any. Note that this may cause <see cref="Task"/> to never complete.
+    /// 释放取消令牌注册（如果存在）。请注意，这可能导致 <see cref="Task"/> 永远不会完成。
     /// </summary>
     public void Dispose()
     {

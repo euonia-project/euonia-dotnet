@@ -1,51 +1,51 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible producer/consumer collection.
+/// 一个异步兼容的生产者/消费者集合。
 /// </summary>
-/// <typeparam name="T">The type of elements contained in the collection.</typeparam>
+/// <typeparam name="T">集合中包含的元素类型。</typeparam>
 [DebuggerDisplay("Count = {_collection.Count}, MaxCount = {_maxCount}")]
 [DebuggerTypeProxy(typeof(AsyncCollection<>.DebugView))]
 public sealed class AsyncCollection<T>
 {
 	/// <summary>
-	/// The underlying collection.
+	/// 底层的集合。
 	/// </summary>
 	private readonly IProducerConsumerCollection<T> _collection;
 
 	/// <summary>
-	/// The maximum number of elements allowed in the collection.
+	/// 集合中允许的最大元素数量。
 	/// </summary>
 	private readonly int _maxCount;
 
 	/// <summary>
-	/// The mutual-exclusion lock protecting the collection.
+	/// 保护集合的互斥锁。
 	/// </summary>
 	private readonly AsyncLock _mutex;
 
 	/// <summary>
-	/// A condition variable that is signalled when the collection is completed or not full.
+	/// 当集合已完成添加或不处于满状态时发出信号的条件变量。
 	/// </summary>
 	private readonly AsyncConditionVariable _completedOrNotFull;
 
 	/// <summary>
-	/// A condition variable that is signalled when the collection is completed or not empty.
+	/// 当集合已完成添加或不处于空状态时发出信号的条件变量。
 	/// </summary>
 	private readonly AsyncConditionVariable _completedOrNotEmpty;
 
 	/// <summary>
-	/// Whether the collection has been marked completed for adding.
+	/// 集合是否已被标记为完成添加。
 	/// </summary>
 	private bool _completed;
 
 	/// <summary>
-	/// Creates a new async-compatible producer/consumer collection wrapping the specified collection and with a maximum element count.
+	/// 创建一个新的异步兼容的生产者/消费者集合，使用指定的集合包装并设置最大元素数量。
 	/// </summary>
-	/// <param name="collection">The collection to wrap.</param>
-	/// <param name="maxCount">The maximum element count. This must be greater than zero.</param>
+	/// <param name="collection">要包装的集合。</param>
+	/// <param name="maxCount">最大元素数量。必须大于零。</param>
 	public AsyncCollection(IProducerConsumerCollection<T> collection, int maxCount)
 	{
 		collection ??= new ConcurrentQueue<T>();
@@ -61,25 +61,25 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Creates a new async-compatible producer/consumer collection wrapping the specified collection.
+	/// 创建一个新的异步兼容的生产者/消费者集合，使用指定的集合包装。
 	/// </summary>
-	/// <param name="collection">The collection to wrap.</param>
+	/// <param name="collection">要包装的集合。</param>
 	public AsyncCollection(IProducerConsumerCollection<T> collection)
 		: this(collection, int.MaxValue)
 	{
 	}
 
 	/// <summary>
-	/// Creates a new async-compatible producer/consumer collection with a maximum element count.
+	/// 创建一个新的异步兼容的生产者/消费者集合，并设置最大元素数量。
 	/// </summary>
-	/// <param name="maxCount">The maximum element count. This must be greater than zero.</param>
+	/// <param name="maxCount">最大元素数量。必须大于零。</param>
 	public AsyncCollection(int maxCount)
 		: this(null, maxCount)
 	{
 	}
 
 	/// <summary>
-	/// Creates a new async-compatible producer/consumer collection.
+	/// 创建一个新的异步兼容的生产者/消费者集合。
 	/// </summary>
 	public AsyncCollection()
 		: this(null, int.MaxValue)
@@ -87,17 +87,17 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Whether the collection is empty.
+	/// 集合是否为空。
 	/// </summary>
 	private bool Empty => _collection.Count == 0;
 
 	/// <summary>
-	/// Whether the collection is full.
+	/// 集合是否已满。
 	/// </summary>
 	private bool Full => _collection.Count == _maxCount;
 
 	/// <summary>
-	/// Synchronously marks the producer/consumer collection as complete for adding.
+	/// 同步将生产者/消费者集合标记为完成添加。
 	/// </summary>
 	public void CompleteAdding()
 	{
@@ -110,16 +110,16 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Attempts to add an item.
+	/// 尝试添加一个项。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the add operation.</param>
-	/// <param name="sync">Whether to run this method synchronously.</param>
+	/// <param name="item">要添加的项。</param>
+	/// <param name="cancellationToken">可用于中止添加操作的取消令牌。</param>
+	/// <param name="sync">是否同步运行此方法。</param>
 	internal async Task DoAddAsync(T item, CancellationToken cancellationToken, bool sync)
 	{
 		using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
 		{
-			// Wait for the collection to be not full.
+			// 等待集合变为非满状态。
 			while (Full && !_completed)
 			{
 				if (sync)
@@ -128,7 +128,7 @@ public sealed class AsyncCollection<T>
 					await _completedOrNotFull.WaitAsync(cancellationToken).ConfigureAwait(false);
 			}
 
-			// If the queue has been marked complete, then abort.
+			// 如果队列已被标记为完成，则中止。
 			if (_completed)
 				throw new InvalidOperationException("Add failed; the producer/consumer collection has completed adding.");
 
@@ -140,36 +140,36 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Adds an item to the producer/consumer collection. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding or if the item was rejected by the underlying collection.
+	/// 向生产者/消费者集合中添加一个项。如果生产者/消费者集合已完成添加或底层集合拒绝了该项，则抛出 <see cref="InvalidOperationException"/>。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the add operation.</param>
+	/// <param name="item">要添加的项。</param>
+	/// <param name="cancellationToken">可用于中止添加操作的取消令牌。</param>
 	public Task AddAsync(T item, CancellationToken cancellationToken) => DoAddAsync(item, cancellationToken, sync: false);
 
 	/// <summary>
-	/// Adds an item to the producer/consumer collection. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding or if the item was rejected by the underlying collection. This method may block the calling thread.
+	/// 向生产者/消费者集合中添加一个项。如果生产者/消费者集合已完成添加或底层集合拒绝了该项，则抛出 <see cref="InvalidOperationException"/>。此方法可能会阻塞调用线程。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the add operation.</param>
+	/// <param name="item">要添加的项。</param>
+	/// <param name="cancellationToken">可用于中止添加操作的取消令牌。</param>
 	public void Add(T item, CancellationToken cancellationToken) => DoAddAsync(item, cancellationToken, sync: true).WaitAndUnwrapException(cancellationToken);
 
 	/// <summary>
-	/// Adds an item to the producer/consumer collection. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding or if the item was rejected by the underlying collection.
+	/// 向生产者/消费者集合中添加一个项。如果生产者/消费者集合已完成添加或底层集合拒绝了该项，则抛出 <see cref="InvalidOperationException"/>。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
+	/// <param name="item">要添加的项。</param>
 	public Task AddAsync(T item) => AddAsync(item, CancellationToken.None);
 
 	/// <summary>
-	/// Adds an item to the producer/consumer collection. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding or if the item was rejected by the underlying collection. This method may block the calling thread.
+	/// 向生产者/消费者集合中添加一个项。如果生产者/消费者集合已完成添加或底层集合拒绝了该项，则抛出 <see cref="InvalidOperationException"/>。此方法可能会阻塞调用线程。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
+	/// <param name="item">要添加的项。</param>
 	public void Add(T item) => Add(item, CancellationToken.None);
 
 	/// <summary>
-	/// Waits until an item is available to take. Returns <c>false</c> if the producer/consumer collection has completed adding and there are no more items.
+	/// 等待直到有项可供取出。如果生产者/消费者集合已完成添加且没有更多项，则返回 <c>false</c>。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the wait.</param>
-	/// <param name="sync">Whether to run this method synchronously.</param>
+	/// <param name="cancellationToken">可用于中止等待的取消令牌。</param>
+	/// <param name="sync">是否同步运行此方法。</param>
 	private async Task<bool> DoOutputAvailableAsync(CancellationToken cancellationToken, bool sync)
 	{
 		using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
@@ -187,31 +187,31 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Asynchronously waits until an item is available to take. Returns <c>false</c> if the producer/consumer collection has completed adding and there are no more items.
+	/// 异步等待直到有项可供取出。如果生产者/消费者集合已完成添加且没有更多项，则返回 <c>false</c>。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the asynchronous wait.</param>
+	/// <param name="cancellationToken">可用于中止异步等待的取消令牌。</param>
 	public Task<bool> OutputAvailableAsync(CancellationToken cancellationToken) => DoOutputAvailableAsync(cancellationToken, sync: false);
 
 	/// <summary>
-	/// Asynchronously waits until an item is available to take. Returns <c>false</c> if the producer/consumer collection has completed adding and there are no more items.
+	/// 异步等待直到有项可供取出。如果生产者/消费者集合已完成添加且没有更多项，则返回 <c>false</c>。
 	/// </summary>
 	public Task<bool> OutputAvailableAsync() => OutputAvailableAsync(CancellationToken.None);
 
 	/// <summary>
-	/// Synchronously waits until an item is available to take. Returns <c>false</c> if the producer/consumer collection has completed adding and there are no more items.
+	/// 同步等待直到有项可供取出。如果生产者/消费者集合已完成添加且没有更多项，则返回 <c>false</c>。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the wait.</param>
+	/// <param name="cancellationToken">可用于中止等待的取消令牌。</param>
 	public bool OutputAvailable(CancellationToken cancellationToken) => DoOutputAvailableAsync(cancellationToken, sync: true).WaitAndUnwrapException();
 
 	/// <summary>
-	/// Synchronously waits until an item is available to take. Returns <c>false</c> if the producer/consumer collection has completed adding and there are no more items.
+	/// 同步等待直到有项可供取出。如果生产者/消费者集合已完成添加且没有更多项，则返回 <c>false</c>。
 	/// </summary>
 	public bool OutputAvailable() => OutputAvailable(CancellationToken.None);
 
 	/// <summary>
-	/// Provides a (synchronous) consuming enumerable for items in the producer/consumer collection.
+	/// 提供生产者/消费者集合中项的（同步）消费可枚举序列。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the synchronous enumeration.</param>
+	/// <param name="cancellationToken">可用于中止同步枚举的取消令牌。</param>
 	public IEnumerable<T> GetConsumingEnumerable(CancellationToken cancellationToken)
 	{
 		while (true)
@@ -231,7 +231,7 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Provides a (synchronous) consuming enumerable for items in the producer/consumer queue.
+	/// 提供生产者/消费者集合中项的（同步）消费可枚举序列。
 	/// </summary>
 	public IEnumerable<T> GetConsumingEnumerable()
 	{
@@ -239,11 +239,11 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Attempts to take an item.
+	/// 尝试取出一个项。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the take operation.</param>
-	/// <param name="sync">Whether to run this method synchronously.</param>
-	/// <exception cref="InvalidOperationException">The collection has been marked complete for adding and is empty.</exception>
+	/// <param name="cancellationToken">可用于中止取出操作的取消令牌。</param>
+	/// <param name="sync">是否同步运行此方法。</param>
+	/// <exception cref="InvalidOperationException">集合已被标记为完成添加且为空。</exception>
 	private async Task<T> DoTakeAsync(CancellationToken cancellationToken, bool sync)
 	{
 		using (sync ? _mutex.Lock() : await _mutex.LockAsync().ConfigureAwait(false))
@@ -268,24 +268,24 @@ public sealed class AsyncCollection<T>
 	}
 
 	/// <summary>
-	/// Takes an item from the producer/consumer collection. Returns the item. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding and is empty, or if the take from the underlying collection failed.
+	/// 从生产者/消费者集合中取出一个项并返回。如果生产者/消费者集合已完成添加且为空，或底层集合的取出操作失败，则抛出 <see cref="InvalidOperationException"/>。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the take operation.</param>
+	/// <param name="cancellationToken">可用于中止取出操作的取消令牌。</param>
 	public Task<T> TakeAsync(CancellationToken cancellationToken) => DoTakeAsync(cancellationToken, sync: false);
 
 	/// <summary>
-	/// Takes an item from the producer/consumer collection. Returns the item. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding and is empty, or if the take from the underlying collection failed. This method may block the calling thread.
+	/// 从生产者/消费者集合中取出一个项并返回。如果生产者/消费者集合已完成添加且为空，或底层集合的取出操作失败，则抛出 <see cref="InvalidOperationException"/>。此方法可能会阻塞调用线程。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token that can be used to abort the take operation.</param>
+	/// <param name="cancellationToken">可用于中止取出操作的取消令牌。</param>
 	public T Take(CancellationToken cancellationToken) => DoTakeAsync(cancellationToken, sync: true).WaitAndUnwrapException();
 
 	/// <summary>
-	/// Takes an item from the producer/consumer collection. Returns the item. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding and is empty, or if the take from the underlying collection failed.
+	/// 从生产者/消费者集合中取出一个项并返回。如果生产者/消费者集合已完成添加且为空，或底层集合的取出操作失败，则抛出 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	public Task<T> TakeAsync() => TakeAsync(CancellationToken.None);
 
 	/// <summary>
-	/// Takes an item from the producer/consumer collection. Returns the item. Throws <see cref="InvalidOperationException"/> if the producer/consumer collection has completed adding and is empty, or if the take from the underlying collection failed. This method may block the calling thread.
+	/// 从生产者/消费者集合中取出一个项并返回。如果生产者/消费者集合已完成添加且为空，或底层集合的取出操作失败，则抛出 <see cref="InvalidOperationException"/>。此方法可能会阻塞调用线程。
 	/// </summary>
 	public T Take() => Take(CancellationToken.None);
 

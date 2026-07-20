@@ -1,15 +1,15 @@
-﻿namespace Nerosoft.Euonia.Threading;
+namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Represents a particular state
+/// 表示一个特定的状态。
 /// </summary>
-/// <seealso cref="StatefulMutex"/> 
+/// <seealso cref="StatefulMutex"/>
 public class State
 {
     private readonly int _stateNum;
 
     /// <summary>
-    /// Creates a new state
+    /// 创建一个新状态。
     /// </summary>
     public State()
         : this(0)
@@ -22,19 +22,19 @@ public class State
     }
 
     /// <summary>
-    /// Creates a new state that follows the current state
+    /// 创建一个跟随当前状态之后的新状态。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>表示下一状态的新 <see cref="State"/> 实例。</returns>
     public State GetNextState()
     {
         return new State(_stateNum + 1);
     }
 
     /// <summary>
-    /// Compares states by state number
+    /// 通过状态编号比较状态。
     /// </summary>
-    /// <param name="obj">The object to compare to</param>
-    /// <returns>True if they have the same state number, false otherwise</returns>
+    /// <param name="obj">要比较的对象。</param>
+    /// <returns>如果它们具有相同的状态编号则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
     public override bool Equals(object obj)
     {
         var otherState = obj as State;

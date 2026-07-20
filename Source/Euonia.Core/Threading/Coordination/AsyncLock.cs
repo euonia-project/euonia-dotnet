@@ -1,4 +1,4 @@
-﻿// Original idea from Stephen Toub: http://blogs.msdn.com/b/pfxteam/archive/2012/02/12/10266988.aspx
+// 原始想法来自 Stephen Toub: http://blogs.msdn.com/b/pfxteam/archive/2012/02/12/10266988.aspx
 
 using System.Diagnostics;
 using Nerosoft.Euonia.Disposing;
@@ -7,16 +7,16 @@ using Nerosoft.Euonia.Threading.Interop;
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A mutual exclusion lock that is compatible with async. Note that this lock is <b>not</b> recursive!
+/// 一个与异步兼容的互斥锁。请注意，此锁<b>不</b>可重入！
 /// </summary>
 /// <remarks>
-/// <para>This is the <c>async</c>-ready almost-equivalent of the <c>lock</c> keyword or the <see cref="Mutex"/> type, similar to <a href="http://blogs.msdn.com/b/pfxteam/archive/2012/02/12/10266988.aspx">Stephen Toub's AsyncLock</a>. It's only <i>almost</i> equivalent because the <c>lock</c> keyword permits reentrancy, which is not currently possible to do with an <c>async</c>-ready lock.</para>
-/// <para>An <see cref="AsyncLock"/> is either taken or not. The lock can be asynchronously acquired by calling <see autoUpgrade="true" cref="LockAsync()"/>, and it is released by disposing the result of that task. <see cref="LockAsync(CancellationToken)"/> takes an optional <see cref="CancellationToken"/>, which can be used to cancel the acquiring of the lock.</para>
-/// <para>The task returned from <see autoUpgrade="true" cref="LockAsync()"/> will enter the <c>Completed</c> state when it has acquired the <see cref="AsyncLock"/>. That same task will enter the <c>Canceled</c> state if the <see cref="CancellationToken"/> is signaled before the wait is satisfied; in that case, the <see cref="AsyncLock"/> is not taken by that task.</para>
-/// <para>You can call <see cref="Lock(CancellationToken)"/> or <see cref="LockAsync(CancellationToken)"/> with an already-cancelled <see cref="CancellationToken"/> to attempt to acquire the <see cref="AsyncLock"/> immediately without actually entering the wait queue.</para>
+/// <para>这是 <c>lock</c> 关键字或 <see cref="Mutex"/> 类型与 <c>async</c> 兼容的近似等价物，类似于 <a href="http://blogs.msdn.com/b/pfxteam/archive/2012/02/12/10266988.aspx">Stephen Toub 的 AsyncLock</a>。它之所以只是<i>近似</i>等价，是因为 <c>lock</c> 关键字允许重入，而目前无法用与 <c>async</c> 兼容的锁实现这一点。</para>
+/// <para><see cref="AsyncLock"/> 要么被持有，要么未持有。可以通过调用 <see autoUpgrade="true" cref="LockAsync()"/> 异步获取锁，并通过释放该任务的结果来释放锁。<see cref="LockAsync(CancellationToken)"/> 接受一个可选的 <see cref="CancellationToken"/>，可用于取消锁的获取。</para>
+/// <para>从 <see autoUpgrade="true" cref="LockAsync()"/> 返回的任务在获取到 <see cref="AsyncLock"/> 后将进入 <c>Completed</c> 状态。如果 <see cref="CancellationToken"/> 在等待完成之前被发出信号，同样的任务将进入 <c>Canceled</c> 状态；在这种情况下，该任务不会获取到 <see cref="AsyncLock"/>。</para>
+/// <para>你可以使用已取消的 <see cref="CancellationToken"/> 调用 <see cref="Lock(CancellationToken)"/> 或 <see cref="LockAsync(CancellationToken)"/>，以尝试在不进入等待队列的情况下立即获取 <see cref="AsyncLock"/>。</para>
 /// </remarks>
 /// <example>
-/// <para>The vast majority of use cases are to just replace a <c>lock</c> statement. That is, with the original code looking like this:</para>
+/// <para>绝大多数用例是直接替换 <c>lock</c> 语句。也就是说，原始代码如下所示：</para>
 /// <code>
 /// private readonly object _mutex = new object();
 /// public void DoStuff()
@@ -27,8 +27,8 @@ namespace Nerosoft.Euonia.Threading;
 ///     }
 /// }
 /// </code>
-/// <para>If we want to replace the blocking operation <c>Thread.Sleep</c> with an asynchronous equivalent, it's not directly possible because of the <c>lock</c> block. We cannot <c>await</c> inside of a <c>lock</c>.</para>
-/// <para>So, we use the <c>async</c>-compatible <see cref="AsyncLock"/> instead:</para>
+/// <para>如果我们想将阻塞操作 <c>Thread.Sleep</c> 替换为异步等效操作，由于 <c>lock</c> 块的存在，这不能直接实现。我们不能在 <c>lock</c> 内部 <c>await</c>。</para>
+/// <para>因此，我们改用与 <c>async</c> 兼容的 <see cref="AsyncLock"/>：</para>
 /// <code>
 /// private readonly AsyncLock _mutex = new AsyncLock();
 /// public async Task DoStuffAsync()
@@ -45,27 +45,27 @@ namespace Nerosoft.Euonia.Threading;
 public sealed class AsyncLock
 {
     /// <summary>
-    /// Whether the lock is taken by a task.
+    /// 锁是否被某个任务持有。
     /// </summary>
     private bool _taken;
 
     /// <summary>
-    /// The queue of TCSs that other tasks are awaiting to acquire the lock.
+    /// 其他任务正在等待获取锁的 TCS 队列。
     /// </summary>
     private readonly IAsyncWaitQueue<IDisposable> _queue;
 
     /// <summary>
-    /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
+    /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
     /// </summary>
     private int _id;
 
     /// <summary>
-    /// The object used for mutual exclusion.
+    /// 用于互斥的对象。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// Creates a new async-compatible mutual exclusion lock.
+    /// 创建一个新的异步兼容互斥锁。
     /// </summary>
     public AsyncLock()
         :this(null)
@@ -73,9 +73,9 @@ public sealed class AsyncLock
     }
 
     /// <summary>
-    /// Creates a new async-compatible mutual exclusion lock using the specified wait queue.
+    /// 使用指定的等待队列创建一个新的异步兼容互斥锁。
     /// </summary>
-    /// <param name="queue">The wait queue used to manage waiters. This may be <c>null</c> to use a default (FIFO) queue.</param>
+    /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
     internal AsyncLock(IAsyncWaitQueue<IDisposable> queue)
     {
         _queue = queue ?? new DefaultAsyncWaitQueue<IDisposable>();
@@ -83,63 +83,63 @@ public sealed class AsyncLock
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous lock.
+    /// 获取此异步锁的半唯一标识符。
     /// </summary>
     public int Id => IdentifierManager<AsyncLock>.GetId(ref _id);
 
     /// <summary>
-    /// Asynchronously acquires the lock. Returns a disposable that releases the lock when disposed.
+    /// 异步获取锁。返回一个在释放时解除锁定的可释放对象。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the lock. If this is already set, then this method will attempt to take the lock immediately (succeeding if the lock is currently available).</param>
-    /// <returns>A disposable that releases the lock when disposed.</returns>
+    /// <param name="cancellationToken">用于取消锁的取消令牌。如果已设置，此方法将尝试立即获取锁（如果锁当前可用则成功）。</param>
+    /// <returns>一个在释放时解除锁定的可释放对象。</returns>
     private Task<IDisposable> RequestLockAsync(CancellationToken cancellationToken)
     {
         lock (_mutex)
         {
             if (!_taken)
             {
-                // If the lock is available, take it immediately.
+                // 如果锁可用，立即获取。
                 _taken = true;
                 return Task.FromResult<IDisposable>(new Key(this));
             }
             else
             {
-                // Wait for the lock to become available or cancellation.
+                // 等待锁变为可用或取消。
                 return _queue.Enqueue(_mutex, cancellationToken);
             }
         }
     }
 
     /// <summary>
-    /// Asynchronously acquires the lock. Returns a disposable that releases the lock when disposed.
+    /// 异步获取锁。返回一个在释放时解除锁定的可释放对象。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the lock. If this is already set, then this method will attempt to take the lock immediately (succeeding if the lock is currently available).</param>
-    /// <returns>A disposable that releases the lock when disposed.</returns>
+    /// <param name="cancellationToken">用于取消锁的取消令牌。如果已设置，此方法将尝试立即获取锁（如果锁当前可用则成功）。</param>
+    /// <returns>一个在释放时解除锁定的可释放对象。</returns>
     public AwaitableDisposable<IDisposable> LockAsync(CancellationToken cancellationToken)
     {
         return new AwaitableDisposable<IDisposable>(RequestLockAsync(cancellationToken));
     }
 
     /// <summary>
-    /// Asynchronously acquires the lock. Returns a disposable that releases the lock when disposed.
+    /// 异步获取锁。返回一个在释放时解除锁定的可释放对象。
     /// </summary>
-    /// <returns>A disposable that releases the lock when disposed.</returns>
+    /// <returns>一个在释放时解除锁定的可释放对象。</returns>
     public AwaitableDisposable<IDisposable> LockAsync()
     {
         return LockAsync(CancellationToken.None);
     }
 
     /// <summary>
-    /// Synchronously acquires the lock. Returns a disposable that releases the lock when disposed. This method may block the calling thread.
+    /// 同步获取锁。返回一个在释放时解除锁定的可释放对象。此方法可能会阻塞调用线程。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the lock. If this is already set, then this method will attempt to take the lock immediately (succeeding if the lock is currently available).</param>
+    /// <param name="cancellationToken">用于取消锁的取消令牌。如果已设置，此方法将尝试立即获取锁（如果锁当前可用则成功）。</param>
     public IDisposable Lock(CancellationToken cancellationToken)
     {
         return RequestLockAsync(cancellationToken).WaitAndUnwrapException();
     }
 
     /// <summary>
-    /// Synchronously acquires the lock. Returns a disposable that releases the lock when disposed. This method may block the calling thread.
+    /// 同步获取锁。返回一个在释放时解除锁定的可释放对象。此方法可能会阻塞调用线程。
     /// </summary>
     public IDisposable Lock()
     {
@@ -147,7 +147,7 @@ public sealed class AsyncLock
     }
 
     /// <summary>
-    /// Releases the lock.
+    /// 释放锁。
     /// </summary>
     internal void ReleaseLock()
     {
@@ -161,14 +161,14 @@ public sealed class AsyncLock
     }
 
     /// <summary>
-    /// The disposable which releases the lock.
+    /// 释放锁的可释放对象。
     /// </summary>
     private sealed class Key : SingleDisposable<AsyncLock>
     {
         /// <summary>
-        /// Creates the key for a lock.
+        /// 为锁创建密钥。
         /// </summary>
-        /// <param name="asyncLock">The lock to release. May not be <c>null</c>.</param>
+        /// <param name="asyncLock">要释放的锁。不能为 <c>null</c>。</param>
         public Key(AsyncLock asyncLock)
             : base(asyncLock)
         {
