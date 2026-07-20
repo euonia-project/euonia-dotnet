@@ -1,26 +1,30 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 
 namespace System;
 
 /// <summary>
-/// The ULID (Universally Unique Lexicographically Sortable Identifier) generator.
+/// ULID（通用唯一字典排序标识符）生成器。
 /// </summary>
 /// <remarks>
-/// ULID is a 128-bit universally unique identifier that is lexicographically sortable and URL-safe.
+/// ULID 是 128 位通用唯一标识符，可按字典排序且 URL 安全。
 /// </remarks>
 internal static class UlidGenerator
 {
 	/// <summary>
-	/// ULID uses a specific 32-character encoding known as Crockford's Base32, which includes digits and upper-case letters but excludes letters like "I", "L", "O" to avoid confusion with digits.
+	/// ULID 使用称为 Crockford's Base32 的特定 32 字符编码，包含数字和大写字母，
+	/// 但排除 "I"、"L"、"O" 等字母以避免与数字混淆。
 	/// </summary>
-	private const string CROCKFORD_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; // Base32 alphabet used by ULID
+	private const string CROCKFORD_BASE32 = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
 	private static readonly RandomNumberGenerator _randomNumberGenerator = RandomNumberGenerator.Create();
 
+	/// <summary>
+	/// 生成新的 ULID 字符串。
+	/// </summary>
+	/// <returns>26 字符的 ULID 字符串。</returns>
 	public static string Generate()
 	{
-		var timestamp = GetTimestamp(); // 6 bytes timestamp (48 bits)
-		var randomBytes = GetRandomBytes(); // 10 bytes random data (80 bits)
-
+		var timestamp = GetTimestamp(); // 6 字节时间戳（48 位）
+		var randomBytes = GetRandomBytes(); // 10 字节随机数据（80 位）
 		return Encode(timestamp, randomBytes);
 	}
 
@@ -40,7 +44,7 @@ internal static class UlidGenerator
 
 	private static byte[] GetRandomBytes()
 	{
-		var randomBytes = new byte[10]; // ULID requires 10 bytes of random data (80 bits)
+		var randomBytes = new byte[10];
 		_randomNumberGenerator.GetBytes(randomBytes);
 		return randomBytes;
 	}
@@ -53,13 +57,11 @@ internal static class UlidGenerator
 		var ulidBytes = new byte[16]; // ULID is 16 bytes total
 		Array.Copy(timestamp, 0, ulidBytes, 0, 6);
 		Array.Copy(randomBytes, 0, ulidBytes, 6, 10);
-
 		foreach (int value in ulidBytes)
 		{
 			ulid.Append(CROCKFORD_BASE32[(value >> 3) & 0x1F]);
 			ulid.Append(CROCKFORD_BASE32[value & 0x1F]);
 		}
-
 		return ulid.ToString();
 	}
 }

@@ -1,39 +1,38 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Represents a weak reference to an object.
+/// 表示对对象的弱引用。
 /// </summary>
-/// <typeparam name="T">The type of the target object.</typeparam>
+/// <typeparam name="T">目标对象的类型。</typeparam>
 public class Weak<T>
 {
     /// <summary>
-    /// The target
+    /// 弱引用目标。
     /// </summary>
     private readonly WeakReference _target;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Weak{T}" /> class.
+    /// 初始化 <see cref="Weak{T}" /> 类的新实例。
     /// </summary>
-    /// <param name="target">The target.</param>
+    /// <param name="target">目标对象。</param>
     public Weak(T target)
     {
         _target = new WeakReference(target);
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Weak{T}" /> class.
+    /// 初始化 <see cref="Weak{T}" /> 类的新实例。
     /// </summary>
-    /// <param name="target">The target.</param>
-    /// <param name="trackResurrection">if set to <c>true</c> [track resurrection].</param>
+    /// <param name="target">目标对象。</param>
+    /// <param name="trackResurrection">是否跟踪对象复活。</param>
     public Weak(T target, bool trackResurrection)
     {
         _target = new WeakReference(target, trackResurrection);
     }
 
     /// <summary>
-    /// Gets or sets the target.
+    /// 获取或设置弱引用目标。
     /// </summary>
-    /// <value>The target.</value>
     public T Target
     {
         get => (T)_target.Target;

@@ -1,17 +1,17 @@
-﻿namespace Nerosoft.Euonia.Disposing;
+namespace Nerosoft.Euonia.Disposing;
 
 /// <summary>
-/// A disposable that executes a delegate when disposed.
+/// 在释放时执行委托的可释放对象。
 /// </summary>
 public sealed class AsyncAnonymousDisposable : AsyncSingleDisposable<Func<ValueTask>>
 {
     private readonly DisposeFlags _flags;
 
     /// <summary>
-    /// Creates a new disposable that executes <paramref name="dispose"/> when disposed.
+    /// 创建一个新的可释放对象，在释放时执行 <paramref name="dispose"/>。
     /// </summary>
-    /// <param name="dispose">The delegate to execute when disposed. If this is <c>null</c>, then this instance does nothing when it is disposed.</param>
-    /// <param name="flags">Flags that control how asynchronous disposal is handled.</param>
+    /// <param name="dispose">释放时要执行的委托。如果为 <c>null</c>，则此实例在释放时不执行任何操作。</param>
+    /// <param name="flags">控制异步释放处理方式的标志。</param>
     public AsyncAnonymousDisposable(Func<ValueTask> dispose, DisposeFlags flags = DisposeFlags.ExecuteConcurrently)
         : base(dispose)
     {
@@ -50,9 +50,9 @@ public sealed class AsyncAnonymousDisposable : AsyncSingleDisposable<Func<ValueT
     }
 
     /// <summary>
-    /// Adds a delegate to be executed when this instance is disposed. If this instance is already disposed or disposing, then <paramref name="dispose"/> is executed immediately.
+    /// 添加一个在此实例被释放时要执行的委托。如果此实例已经释放或正在释放，则立即执行 <paramref name="dispose"/>。
     /// </summary>
-    /// <param name="dispose">The delegate to add. May be <c>null</c> to indicate no additional action.</param>
+    /// <param name="dispose">要添加的委托。可以为 <c>null</c>，表示无额外操作。</param>
     public ValueTask AddAsync(Func<ValueTask> dispose)
     {
         if (dispose == null)
@@ -67,8 +67,8 @@ public sealed class AsyncAnonymousDisposable : AsyncSingleDisposable<Func<ValueT
     }
 
     /// <summary>
-    /// Creates a new disposable that executes <paramref name="dispose"/> when disposed.
+    /// 创建一个新的可释放对象，在释放时执行 <paramref name="dispose"/>。
     /// </summary>
-    /// <param name="dispose">The delegate to execute when disposed. May not be <c>null</c>.</param>
+    /// <param name="dispose">释放时要执行的委托，不能为 <c>null</c>。</param>
     public static AsyncAnonymousDisposable Create(Func<ValueTask> dispose) => new(dispose);
 }
