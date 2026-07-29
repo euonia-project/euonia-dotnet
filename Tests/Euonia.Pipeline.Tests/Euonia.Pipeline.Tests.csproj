@@ -1,0 +1,9 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Pipeline\Euonia.Pipeline.csproj" />
+    </ItemGroup>
+
+</Project>

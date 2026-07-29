@@ -4,7 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Nerosoft.Euonia.Bus.InMemory;
 using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Bus.Tests;
@@ -16,19 +15,23 @@ public class Startup
 	public void ConfigureHost(IHostBuilder hostBuilder)
 	{
 		hostBuilder.ConfigureAppConfiguration(builder =>
-		           {
-			           builder.AddJsonFile("appsettings.json");
-		           })
-		           .ConfigureServices((context, services) =>
-		           {
-			           services.TryAddScoped<DefaultRequestContextAccessor>();
-			           services.TryAddScoped<DelegateRequestContextAccessor>(_ =>
-			           {
-				           return () => new RequestContext();
-			           });
-			           services.AddModularityApplication<HostModule>(context.Configuration);
-			           // Register service here.
-		           });
+				   {
+					   builder.AddJsonFile("appsettings.json");
+				   })
+				   .ConfigureServices((context, services) =>
+				   {
+					   services.Configure<MessageBusOptions>(options =>
+					   {
+						   options.EnablePipelineBehaviors = true;
+					   });
+					   services.TryAddScoped<DefaultRequestContextAccessor>();
+					   services.TryAddScoped<DelegateRequestContextAccessor>(_ =>
+					   {
+						   return () => new RequestContext();
+					   });
+					   services.AddModularityApplication<HostModule>(context.Configuration);
+					   // Register service here.
+				   });
 	}
 
 	// ConfigureServices(IServiceCollection services)
@@ -36,23 +39,23 @@ public class Startup
 	// ConfigureServices(HostBuilderContext hostBuilderContext, IServiceCollection services)
 	public void ConfigureServices(IServiceCollection services, HostBuilderContext hostBuilderContext)
 	{
-		services.AddServiceBus(config =>
+		services.AddEuoniaBus(config =>
 		{
 			config.RegisterHandlers(Assembly.GetExecutingAssembly());
 			config.SetConventions(builder =>
-			      {
-				      builder.Add<DefaultMessageConvention>();
-				      builder.Add<AttributeMessageConvention>();
-				      builder.EvaluateUnicast(t => t.Name.EndsWith("Command"));
-				      builder.EvaluateMulticast(t => t.Name.EndsWith("Event"));
-				      builder.EvaluateRequest(t => t.Name.EndsWith("Request"));
-			      })
-			      .SetStrategy(typeof(InMemoryTransport), builder =>
-			      {
-				      builder.Add(new AttributeTransportStrategy(["inmemory"]));
-				      builder.EvaluateIncoming(type => type.Name.EndsWith("Command"));
-				      builder.EvaluateOutgoing(type => type.Name.EndsWith("Command"));
-			      });
+				  {
+					  builder.Add<DefaultMessageConvention>();
+					  builder.Add<AttributeMessageConvention>();
+					  builder.EvaluateUnicast(t => t.Name.EndsWith("Command"));
+					  builder.EvaluateMulticast(t => t.Name.EndsWith("Event"));
+					  builder.EvaluateRequest(t => t.Name.EndsWith("Request"));
+				  })
+				  .SetStrategy("InMemory", builder =>
+				  {
+					  builder.Add(new AttributeTransportStrategy(["InMemory"]));
+					  builder.EvaluateIncoming(type => type.Name.EndsWith("Command"));
+					  builder.EvaluateOutgoing(type => type.Name.EndsWith("Command"));
+				  });
 			// config.UseInMemory(options =>
 			// {
 			// 	options.IsDefaultTransport = true;

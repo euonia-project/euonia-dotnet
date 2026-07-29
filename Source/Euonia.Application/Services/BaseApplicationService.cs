@@ -1,6 +1,6 @@
 ﻿using Nerosoft.Euonia.Bus;
-using Nerosoft.Euonia.Claims;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application;
 

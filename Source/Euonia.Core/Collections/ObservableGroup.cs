@@ -1,30 +1,30 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 
 namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
-/// An observable group.
-/// It associates a <see cref="Key"/> to an <see cref="ObservableCollection{T}"/>.
+/// 可观察的分组集合。
+/// 它将 <see cref="Key"/> 与一个 <see cref="ObservableCollection{T}"/> 关联起来。
 /// </summary>
-/// <typeparam name="TKey">The type of the group key.</typeparam>
-/// <typeparam name="TValue">The type of the items in the collection.</typeparam>
+/// <typeparam name="TKey">分组键的类型。</typeparam>
+/// <typeparam name="TValue">集合中元素的类型。</typeparam>
 [DebuggerDisplay("Key = {Key}, Count = {Count}")]
 public sealed class ObservableGroup<TKey, TValue> : ObservableCollection<TValue>, IGrouping<TKey, TValue>, IReadOnlyObservableGroup
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObservableGroup{TKey, TValue}"/> class.
+    /// 初始化 <see cref="ObservableGroup{TKey, TValue}"/> 类的新实例。
     /// </summary>
-    /// <param name="key">The key for the group.</param>
+    /// <param name="key">分组的键。</param>
     public ObservableGroup(TKey key)
     {
         Key = key;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObservableGroup{TKey, TValue}"/> class.
+    /// 初始化 <see cref="ObservableGroup{TKey, TValue}"/> 类的新实例。
     /// </summary>
-    /// <param name="grouping">The grouping to fill the group.</param>
+    /// <param name="grouping">用于填充该分组的 <see cref="IGrouping{TKey, TValue}"/>。</param>
     public ObservableGroup(IGrouping<TKey, TValue> grouping)
         : base(grouping)
     {
@@ -32,10 +32,10 @@ public sealed class ObservableGroup<TKey, TValue> : ObservableCollection<TValue>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObservableGroup{TKey, TValue}"/> class.
+    /// 初始化 <see cref="ObservableGroup{TKey, TValue}"/> 类的新实例。
     /// </summary>
-    /// <param name="key">The key for the group.</param>
-    /// <param name="collection">The initial collection of data to add to the group.</param>
+    /// <param name="key">分组的键。</param>
+    /// <param name="collection">要添加到该分组的初始数据集合。</param>
     public ObservableGroup(TKey key, IEnumerable<TValue> collection)
         : base(collection)
     {
@@ -43,7 +43,7 @@ public sealed class ObservableGroup<TKey, TValue> : ObservableCollection<TValue>
     }
 
     /// <summary>
-    /// Gets the key of the group.
+    /// 获取分组的键。
     /// </summary>
     public TKey Key { get; }
 

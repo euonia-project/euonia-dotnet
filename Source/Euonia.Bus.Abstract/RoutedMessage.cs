@@ -1,4 +1,5 @@
 ﻿using System.Runtime.Serialization;
+using System.Security.Claims;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -72,6 +73,12 @@ public abstract class RoutedMessage
 	public virtual MessageMetadata Metadata { get; set; } = new();
 
 	/// <summary>
+	/// Gets or sets the user for this request.
+	/// </summary>
+	[DataMember]
+	public ClaimsPrincipal User { get; set; }
+
+	/// <summary>
 	/// Gets the .NET CLR assembly qualified name of the message.
 	/// </summary>
 	/// <returns>
@@ -105,6 +112,7 @@ public class RoutedMessage<TData> : RoutedMessage, IRoutedMessage
 		Data = data;
 		Channel = channel;
 	}
+
 
 	object IRoutedMessage.Data => Data;
 

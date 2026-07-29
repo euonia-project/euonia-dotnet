@@ -3,7 +3,7 @@ using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Bus.Tests;
 
-[DependsOn(typeof(RabbitMqBusModule))]
+//[DependsOn(typeof(RabbitMqBusModule))]
 public class HostModule : ModuleContextBase
 {
 }

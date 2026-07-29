@@ -36,16 +36,10 @@ public class Startup
 	// ConfigureServices(HostBuilderContext hostBuilderContext, IServiceCollection services)
 	public void ConfigureServices(IServiceCollection services, HostBuilderContext hostBuilderContext)
 	{
-		bool preventUnitTest;
-
-#if DEBUG
-		preventUnitTest = false;
-#else
-		preventUnitTest = hostBuilderContext.Configuration.GetValue<bool>("PreventRunTests");
-#endif
+		var preventUnitTest = hostBuilderContext.Configuration.GetValue<bool>("PreventRunTests");
 		if (!preventUnitTest)
 		{
-			services.AddServiceBus(config =>
+			services.AddEuoniaBus(config =>
 			{
 				config.RegisterHandlers(Assembly.GetExecutingAssembly());
 				config.SetConventions(builder =>
@@ -56,7 +50,7 @@ public class Startup
 					builder.EvaluateMulticast(t => t.Name.EndsWith("Event"));
 					builder.EvaluateRequest(t => t.Name.EndsWith("Request"));
 				});
-				config.SetStrategy(typeof(RabbitMqTransport), builder =>
+				config.SetStrategy("RabbitMq", builder =>
 				{
 					builder.EvaluateOutgoing(e => true);
 					builder.EvaluateIncoming(e => true);

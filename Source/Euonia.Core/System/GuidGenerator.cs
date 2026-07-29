@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 
 namespace System;
 
@@ -7,10 +7,10 @@ internal class GuidGenerator
     private static readonly RandomNumberGenerator _generator = RandomNumberGenerator.Create();
 
     /// <summary>
-    /// Create new <see cref="Guid"/> value use specified guid type.
+    /// 使用指定的 GUID 类型创建新的 <see cref="Guid"/> 值。
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">GUID 类型。</param>
+    /// <returns>生成的 <see cref="Guid"/> 值。</returns>
     public static Guid Generate(GuidType type)
     {
 
@@ -24,36 +24,28 @@ internal class GuidGenerator
             return Guid.NewGuid();
         }
 
-        // We start with 16 bytes of cryptographically strong random data.
+        // 我们从 16 字节的加密强随机数据开始。
         var randomBytes = new byte[10];
         _generator.GetBytes(randomBytes);
 
-        // An alternate method: use a normally-created GUID to get our initial
-        // random data:
+        // 另一种方法：使用正常创建的 GUID 获取初始随机数据：
         // byte[] randomBytes = Guid.NewGuid().ToByteArray();
-        // This is faster than using RNGCryptoServiceProvider, but I don't
-        // recommend it because the .NET Framework makes no guarantee of the
-        // randomness of GUID data, and future versions (or different
-        // implementations like Mono) might use a different method.
+        // 这比使用 RNGCryptoServiceProvider 更快，但我不推荐这样做，因为 .NET Framework
+        // 不保证 GUID 数据的随机性，未来版本（或不同的实现如 Mono）可能会使用不同的方法。
 
-        // Now we have the random basis for our GUID.  Next, we need to
-        // create the six-byte block which will be our timestamp.
+        // 现在我们有了 GUID 的随机基础。接下来，我们需要创建六字节块作为时间戳。
 
-        // We start with the number of milliseconds that have elapsed since
-        // DateTime.MinValue.  This will form the timestamp.  There's no use
-        // being more specific than milliseconds, since DateTime.Now has
-        // limited resolution.
+        // 我们从 DateTime.MinValue 以来经过的毫秒数开始。这将构成时间戳。
+        // 由于 DateTime.Now 的精度有限，没有必要比毫秒更精确。
 
-        // Using millisecond resolution for our 48-bit timestamp gives us
-        // about 5900 years before the timestamp overflows and cycles.
-        // Hopefully this should be sufficient for most purposes. :)
+        // 对 48 位时间戳使用毫秒精度，可以在时间戳溢出循环之前提供约 5900 年的时间。
+        // 希望这对大多数用途来说足够了。:)
         long timestamp = DateTime.UtcNow.Ticks / 10000L;
 
-        // Then get the bytes
+        // 然后获取字节
         byte[] timestampBytes = BitConverter.GetBytes(timestamp);
 
-        // Since we're converting from an Int64, we have to reverse on
-        // little-endian systems.
+        // 由于是从 Int64 转换，我们需要在小端系统上反转字节序。
         if (BitConverter.IsLittleEndian)
         {
             Array.Reverse(timestampBytes);
@@ -66,15 +58,13 @@ internal class GuidGenerator
             case GuidType.SequentialAsString:
             case GuidType.SequentialAsBinary:
 
-                // For string and byte-array version, we copy the timestamp first, followed
-                // by the random data.
+                // 对于字符串和字节数组版本，先复制时间戳，再复制随机数据。
                 Buffer.BlockCopy(timestampBytes, 2, guidBytes, 0, 6);
                 Buffer.BlockCopy(randomBytes, 0, guidBytes, 6, 10);
 
-                // If formatting as a string, we have to compensate for the fact
-                // that .NET regards the Data1 and Data2 block as an Int32 and an Int16,
-                // respectively.  That means that it switches the order on little-endian
-                // systems.  So again, we have to reverse.
+                // 如果格式化为字符串，我们需要补偿 .NET 将 Data1 和 Data2 块
+                // 分别视为 Int32 和 Int16 的事实。这意味着它会在小端系统上交换顺序。
+                // 所以我们需要再次反转。
                 if (type == GuidType.SequentialAsString && BitConverter.IsLittleEndian)
                 {
                     Array.Reverse(guidBytes, 0, 4);
@@ -85,8 +75,7 @@ internal class GuidGenerator
 
             case GuidType.SequentialAtEnd:
 
-                // For sequential-at-the-end versions, we copy the random data first,
-                // followed by the timestamp.
+                // 对于顺序部分在末尾的版本，先复制随机数据，再复制时间戳。
                 Buffer.BlockCopy(randomBytes, 0, guidBytes, 0, 10);
                 Buffer.BlockCopy(timestampBytes, 2, guidBytes, 10, 6);
                 break;

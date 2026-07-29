@@ -46,4 +46,9 @@ public interface IMessageContext : IDisposable
 	/// Gets the message request headers.
 	/// </summary>
 	IReadOnlyDictionary<string, string> Headers { get; }
+
+	/// <summary>
+	/// Gets or sets a <see cref="MessageMetadata"/> instance that contains the metadata information of the message.
+	/// </summary>
+	MessageMetadata Metadata { get; set; }
 }

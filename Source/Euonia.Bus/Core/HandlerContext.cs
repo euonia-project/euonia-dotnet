@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Bus;
 /// <summary>
 /// Default message handler context using Microsoft dependency injection.
 /// </summary>
-public class HandlerContext : IHandlerContext
+internal sealed class HandlerContext : IHandlerContext
 {
 	/// <summary>
 	/// Occurs when a message handler is subscribed.
@@ -30,7 +30,7 @@ public class HandlerContext : IHandlerContext
 	{
 		_provider = provider;
 		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<HandlerContext>() ?? new NullLogger<HandlerContext>();
-		_convention = provider.GetService<IMessageConvention>() ?? new MessageConvention();
+		_convention = provider.GetService<IMessageBusOptions>()?.Convention ?? new MessageConvention();
 	}
 
 	#region Handling register
@@ -41,7 +41,7 @@ public class HandlerContext : IHandlerContext
 	/// <typeparam name="TMessage">The message type to handle. Must be a reference type.</typeparam>
 	/// <typeparam name="TResponse"></typeparam>
 	/// <typeparam name="THandler">The handler type that implements <see cref="IHandler{TMessage}"/>.</typeparam>
-	internal virtual void Register<TMessage, TResponse, THandler>()
+	internal void Register<TMessage, TResponse, THandler>()
 		where TMessage : class
 		where THandler : IHandler<TMessage, TResponse>
 	{
@@ -87,7 +87,7 @@ public class HandlerContext : IHandlerContext
 	#region Handle message
 
 	/// <inheritdoc />
-	public virtual async Task HandleAsync(object message, MessageContext context, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
 		if (message == null)
 		{
@@ -99,7 +99,7 @@ public class HandlerContext : IHandlerContext
 	}
 
 	/// <inheritdoc />
-	public virtual async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
 		if (message == null)
 		{
@@ -209,12 +209,12 @@ public class HandlerContext : IHandlerContext
 				}
 				else
 				{
-					registry[key] = new List<TValue> { value };
+					registry[key] = [value];
 				}
 			}
 			else
 			{
-				registry.TryAdd(key, new List<TValue> { value });
+				registry.TryAdd(key, [value]);
 			}
 		}
 	}

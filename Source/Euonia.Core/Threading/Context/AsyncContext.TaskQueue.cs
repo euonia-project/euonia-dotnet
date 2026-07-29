@@ -1,21 +1,21 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace Nerosoft.Euonia.Threading;
 
 public sealed partial class AsyncContext
 {
     /// <summary>
-    /// A blocking queue.
+    /// 一个阻塞队列。
     /// </summary>
     private sealed class TaskQueue : IDisposable
     {
         /// <summary>
-        /// The underlying blocking collection.
+        /// 底层的阻塞集合。
         /// </summary>
         private readonly BlockingCollection<Tuple<Task, bool>> _queue;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="TaskQueue"/> class.
+        /// 初始化 <see cref="TaskQueue"/> 类的新实例。
         /// </summary>
         public TaskQueue()
         {
@@ -23,18 +23,18 @@ public sealed partial class AsyncContext
         }
 
         /// <summary>
-        /// Gets a blocking enumerable that removes items from the queue. This enumerable only completes after <see cref="CompleteAdding"/> has been called.
+        /// 获取一个阻塞枚举器，用于从队列中移除项。此枚举器仅在调用 <see cref="CompleteAdding"/> 之后才会完成。
         /// </summary>
-        /// <returns>A blocking enumerable that removes items from the queue.</returns>
+        /// <returns>一个阻塞枚举器，用于从队列中移除项。</returns>
         public IEnumerable<Tuple<Task, bool>> GetConsumingEnumerable()
         {
             return _queue.GetConsumingEnumerable();
         }
 
         /// <summary>
-        /// Generates an enumerable of <see cref="T:System.Threading.Tasks.Task"/> instances currently queued to the scheduler waiting to be executed.
+        /// 生成当前排队等待调度器执行的 <see cref="T:System.Threading.Tasks.Task"/> 实例的枚举。
         /// </summary>
-        /// <returns>An enumerable that allows traversal of tasks currently queued to this scheduler.</returns>
+        /// <returns>允许遍历当前排队等待此调度器的任务的枚举。</returns>
         [System.Diagnostics.DebuggerNonUserCode]
         internal IEnumerable<Task> GetScheduledTasks()
         {
@@ -43,10 +43,10 @@ public sealed partial class AsyncContext
         }
 
         /// <summary>
-        /// Attempts to add the item to the queue. If the queue has been marked as complete for adding, this method returns <c>false</c>.
+        /// 尝试将项添加到队列中。如果队列已被标记为已完成添加，则此方法返回 <c>false</c>。
         /// </summary>
-        /// <param name="item">The item to enqueue.</param>
-        /// <param name="propagateExceptions">A value indicating whether exceptions on this task should be propagated out of the main loop.</param>
+        /// <param name="item">要入队的项。</param>
+        /// <param name="propagateExceptions">一个值，指示此任务上的异常是否应传播到主循环之外。</param>
         public bool TryAdd(Task item, bool propagateExceptions)
         {
             try
@@ -55,13 +55,13 @@ public sealed partial class AsyncContext
             }
             catch (InvalidOperationException)
             {
-                // vexing exception
+                // 令人烦恼的异常
                 return false;
             }
         }
 
         /// <summary>
-        /// Marks the queue as complete for adding, allowing the enumerator returned from <see cref="GetConsumingEnumerable"/> to eventually complete. This method may be called several times.
+        /// 将队列标记为已完成添加，允许从 <see cref="GetConsumingEnumerable"/> 返回的枚举器最终完成。此方法可多次调用。
         /// </summary>
         public void CompleteAdding()
         {
@@ -69,7 +69,7 @@ public sealed partial class AsyncContext
         }
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// 执行与释放、释放或重置非托管资源相关的应用程序定义的任务。
         /// </summary>
         public void Dispose()
         {

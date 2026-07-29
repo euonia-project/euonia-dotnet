@@ -28,7 +28,6 @@
         <Project Path="Source/Euonia.Caching/Euonia.Caching.csproj" />
     </Folder>
     <Folder Name="/Source/Core/">
-        <Project Path="Source/Euonia.Business/Euonia.Business.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
         <Project Path="Source/Euonia.Grpc/Euonia.Grpc.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
@@ -37,6 +36,7 @@
         <Project Path="Source/Euonia.Pipeline/Euonia.Pipeline.csproj" />
         <Project Path="Source/Euonia.Quartz/Euonia.Quartz.csproj" />
         <Project Path="Source/Euonia.Validation/Euonia.Validation.csproj" />
+        <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
     </Folder>
     <Folder Name="/Source/Domain/">
         <Project Path="Source/Euonia.Application/Euonia.Application.csproj" />
@@ -44,6 +44,7 @@
         <Project Path="Source/Euonia.Repository.EfCore/Euonia.Repository.EfCore.csproj" />
         <Project Path="Source/Euonia.Repository.Mongo/Euonia.Repository.Mongo.csproj" />
         <Project Path="Source/Euonia.Repository/Euonia.Repository.csproj" />
+        <Project Path="Source/Euonia.Uow/Euonia.Uow.csproj" />
     </Folder>
     <Folder Name="/Source/Mapping/">
         <Project Path="Source/Euonia.Mapping/Euonia.Mapping.csproj" />
@@ -58,23 +59,30 @@
         <Project Path="Source/Euonia.Threading.ZooKeeper/Euonia.Threading.ZooKeeper.csproj" />
     </Folder>
     <Folder Name="/Tests/">
-        <Project Path="Tests/Euonia.Business.Tests/Euonia.Business.Tests.csproj" />
+		<File Path="Tests/common.props" />
         <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
-        <File Path="Tests/common.props" />
+        <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
+        <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Caching/">
-        <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj" Type="C#" />
+        <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj" Type="C#">
+            <Build Project="false" />
+        </Project>
         <Project Path="Tests/Euonia.Caching.Runtime.Tests/Euonia.Caching.Runtime.Tests.csproj" />
         <Project Path="Tests/Euonia.Caching.Default.Tests/Euonia.Caching.Default.Tests.csproj" />
         <Project Path="Tests/Euonia.Caching.Memory.Tests/Euonia.Caching.Memory.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Mapping/">
-        <Project Path="Tests/Euonia.Mapping.Tests.Shared/Euonia.Mapping.Tests.Shared.shproj" Type="C#" />
+        <Project Path="Tests/Euonia.Mapping.Tests.Shared/Euonia.Mapping.Tests.Shared.shproj" Type="C#">
+            <Build Project="false" />
+        </Project>
         <Project Path="Tests/Euonia.Mapping.Automapper.Tests/Euonia.Mapping.Automapper.Tests.csproj" />
         <Project Path="Tests/Euonia.Mapping.Mapster.Tests/Euonia.Mapping.Mapster.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Bus/">
-        <Project Path="Tests/Euonia.Bus.Tests.Shared/Euonia.Bus.Tests.Shared.shproj" Type="C#" />
+        <Project Path="Tests/Euonia.Bus.Tests.Shared/Euonia.Bus.Tests.Shared.shproj" Type="C#">
+            <Build Project="false" />
+        </Project>
         <Project Path="Tests/Euonia.Bus.Tests/Euonia.Bus.Tests.csproj" />
         <Project Path="Tests/Euonia.Bus.InMemory.Tests/Euonia.Bus.InMemory.Tests.csproj" />
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj" />

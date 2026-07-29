@@ -1,28 +1,28 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Nerosoft.Euonia.Threading.Interop;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// An async-compatible manual-reset event.
-/// <seealso href="http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx">Original idea by Stephen Toub</seealso>
+/// 一个异步兼容的手动重置事件。
+/// <seealso href="http://blogs.msdn.com/b/pfxteam/archive/2012/02/11/10266920.aspx">原始想法来自 Stephen Toub</seealso>
 /// </summary>
 [DebuggerDisplay("Id = {Id}, IsSet = {GetStateForDebugger}")]
 [DebuggerTypeProxy(typeof(DebugView))]
 public sealed class AsyncManualResetEvent
 {
     /// <summary>
-    /// The object used for synchronization.
+    /// 用于同步的对象。
     /// </summary>
     private readonly object _mutex;
 
     /// <summary>
-    /// The current state of the event.
+    /// 事件的当前状态。
     /// </summary>
     private TaskCompletionSource<object> _taskCompletionSource;
 
     /// <summary>
-    /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
+    /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
     /// </summary>
     private int _id;
 
@@ -39,9 +39,9 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Creates an async-compatible manual-reset event.
+    /// 创建一个异步兼容的手动重置事件。
     /// </summary>
-    /// <param name="set">Whether the manual-reset event is initially set or unset.</param>
+    /// <param name="set">手动重置事件初始是否处于设置状态。</param>
     public AsyncManualResetEvent(bool set)
     {
         _mutex = new object();
@@ -51,7 +51,7 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Creates an async-compatible manual-reset event that is initially unset.
+    /// 创建一个初始状态为未设置的异步兼容的手动重置事件。
     /// </summary>
     public AsyncManualResetEvent()
         : this(false)
@@ -59,12 +59,12 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Gets a semi-unique identifier for this asynchronous manual-reset event.
+    /// 获取此异步手动重置事件的半唯一标识符。
     /// </summary>
     public int Id => IdentifierManager<AsyncManualResetEvent>.GetId(ref _id);
 
     /// <summary>
-    /// Whether this event is currently set. This member is seldom used; code using this member has a high possibility of race conditions.
+    /// 此事件当前是否处于设置状态。此成员很少使用；使用此成员的代码很可能存在竞态条件。
     /// </summary>
     public bool IsSet
     {
@@ -78,7 +78,7 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Asynchronously waits for this event to be set.
+    /// 异步等待此事件被设置。
     /// </summary>
     public Task WaitAsync()
     {
@@ -89,9 +89,9 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Asynchronously waits for this event to be set or for the wait to be canceled.
+    /// 异步等待此事件被设置或等待被取消。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this token is already canceled, this method will first check whether the event is set.</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果此令牌已被取消，此方法将首先检查事件是否已被设置。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
         var waitTask = WaitAsync(cancellationToken);
@@ -99,7 +99,7 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Synchronously waits for this event to be set. This method may block the calling thread.
+    /// 同步等待此事件被设置。此方法可能会阻塞调用线程。
     /// </summary>
     public void Wait()
     {
@@ -107,9 +107,9 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Synchronously waits for this event to be set. This method may block the calling thread.
+    /// 同步等待此事件被设置。此方法可能会阻塞调用线程。
     /// </summary>
-    /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this token is already canceled, this method will first check whether the event is set.</param>
+    /// <param name="cancellationToken">用于取消等待的取消令牌。如果此令牌已被取消，此方法将首先检查事件是否已被设置。</param>
     public void Wait(CancellationToken cancellationToken)
     {
         var ret = WaitAsync(cancellationToken);
@@ -119,7 +119,7 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Sets the event, atomically completing every task returned by <see cref="O:Nito.AsyncEx.AsyncManualResetEvent.WaitAsync"/>. If the event is already set, this method does nothing.
+    /// 设置事件，原子性地完成 <see cref="O:Nito.AsyncEx.AsyncManualResetEvent.WaitAsync"/> 返回的每个任务。如果事件已经设置，此方法不执行任何操作。
     /// </summary>
     public void Set()
     {
@@ -130,7 +130,7 @@ public sealed class AsyncManualResetEvent
     }
 
     /// <summary>
-    /// Resets the event. If the event is already reset, this method does nothing.
+    /// 重置事件。如果事件已经重置，此方法不执行任何操作。
     /// </summary>
     public void Reset()
     {

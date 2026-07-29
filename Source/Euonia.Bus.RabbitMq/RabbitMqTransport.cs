@@ -1,5 +1,6 @@
 ﻿using System.Net.Sockets;
 using System.Reflection;
+using System.Reflection.Metadata;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
@@ -38,7 +39,7 @@ public class RabbitMqTransport : ITransport
 		_logger = logger.CreateLogger<RabbitMqTransport>();
 		_connection = connection;
 		_options = options.Value;
-		Name = _options.TransportName ?? nameof(RabbitMqTransport);
+		Name = _options.Name ?? nameof(RabbitMqTransport);
 	}
 
 	/// <inheritdoc />
@@ -64,11 +65,11 @@ public class RabbitMqTransport : ITransport
 		            {
 			            var messageBody = await SerializeAsync(message, cancellationToken);
 
-			            var exchangePrefix = string.Collapse(_options.ExchangeName, Constants.DefaultExchangeName);
+			            var exchangePrefix = string.Collapse(_options.ExchangeNamePrefix, Constants.DefaultExchangeNamePrefix);
 			            var exchangeName = $"{exchangePrefix}:{message.Channel}";
 
 			            await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
-			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@*", true, props, messageBody, cancellationToken: cancellationToken);
+			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Data, null));
 		            });
@@ -234,7 +235,7 @@ public class RabbitMqTransport : ITransport
 	private string GetQueueName(string channel)
 	{
 		var subscriptionId = string.Collapse(_options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var requestQueueName = $"{string.Collapse(_options.QueueName, Constants.DefaultQueueName)}:{channel}@{subscriptionId}";
+		var requestQueueName = $"{string.Collapse(_options.QueueNamePrefix, Constants.DefaultQueueNamePrefix)}:{channel}@{subscriptionId}";
 		return requestQueueName;
 	}
 
@@ -281,7 +282,8 @@ public class RabbitMqTransport : ITransport
 		{
 			await using var jsonWriter = new JsonTextWriter(writer);
 
-			JsonSerializer.CreateDefault().Serialize(jsonWriter, message);
+			JsonSerializer.CreateDefault(Constants.SerializerSettings)
+			              .Serialize(jsonWriter, message);
 
 			await jsonWriter.FlushAsync(cancellationToken);
 			await writer.FlushAsync(cancellationToken);

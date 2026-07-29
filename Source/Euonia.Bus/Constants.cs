@@ -14,4 +14,10 @@ internal class Constants
 	/// The maximum sequence value.
 	/// </summary>
 	public const long MaximumSequence = long.MaxValue;
+
+	public const string ConfigurationSection = "Euonia:Bus";
+
+	public const string DeadLetterTransport = "DeadLetter";
+
+	public const string DefaultTransportSection = $"{ConfigurationSection}:DefaultTransport";
 }

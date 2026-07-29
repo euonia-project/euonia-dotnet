@@ -1,4 +1,6 @@
-﻿namespace Nerosoft.Euonia.Bus;
+﻿using System.Security.Claims;
+
+namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
 /// Defines a message pack basic information contract.
@@ -14,6 +16,11 @@ public interface IRoutedMessage : IMessageEnvelope
 	/// Gets a <see cref="MessageMetadata"/> instance that contains the metadata information of the message.
 	/// </summary>
 	MessageMetadata Metadata { get; }
+
+	/// <summary>
+	/// Gets or sets the user for this request.
+	/// </summary>
+	ClaimsPrincipal User { get; }
 
 	/// <summary>
 	/// Gets the data of the message.

@@ -4,16 +4,26 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 internal class Constants
 {
-	public const string DefaultExchangeName = "$nerosoft.euonia.exchange";
-	public const string DefaultQueueName = "$nerosoft.euonia.queue";
+	public const string DefaultTransportName = "RabbitMq";
+
+	public const string ConfigurationSection = "Euonia:Bus:RabbitMq";
+
+	public const string DefaultExchangeNamePrefix = "$nerosoft.euonia.exchange";
+	public const string DefaultQueueNamePrefix = "$nerosoft.euonia.queue";
 	public const string DefaultTopicName = "$nerosoft.euonia.topic";
-	
+
 	public static readonly JsonSerializerSettings SerializerSettings = new()
 	{
 		ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
 		ConstructorHandling = ConstructorHandling.Default,
 		MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
-		TypeNameHandling = TypeNameHandling.Auto
+		TypeNameHandling = TypeNameHandling.Auto,
+		Converters =
+		[
+			new ClaimsPrincipalJsonConverter(),
+			new ClaimsIdentityJsonConverter(),
+			new ClaimJsonConverter()
+		]
 	};
 
 	public class MessageHeaders

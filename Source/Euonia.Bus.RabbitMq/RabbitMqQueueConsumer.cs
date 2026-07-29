@@ -11,7 +11,6 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// </summary>
 public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 {
-	private readonly IIdentityProvider _identity;
 	private readonly IHandlerContext _handler;
 	private readonly ILogger<RabbitMqQueueConsumer> _logger;
 
@@ -27,20 +26,6 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 	{
 		_handler = handler;
 		_logger = logger.CreateLogger<RabbitMqQueueConsumer>();
-	}
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqQueueConsumer"/> class.
-	/// </summary>
-	/// <param name="connection"></param>
-	/// <param name="handler"></param>
-	/// <param name="options"></param>
-	/// <param name="logger"></param>
-	/// <param name="identity"></param>
-	public RabbitMqQueueConsumer(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger, IIdentityProvider identity)
-		: this(connection, handler, options, logger)
-	{
-		_identity = identity;
 	}
 
 	/// <inheritdoc />
@@ -59,7 +44,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 	internal override async Task StartAsync(string channel)
 	{
 		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var queueName = $"{string.Collapse(Options.QueueName, Constants.DefaultQueueName)}:{channel}@{subscriptionId}";
+		var queueName = $"{string.Collapse(Options.QueueNamePrefix, Constants.DefaultQueueNamePrefix)}:{channel}@{subscriptionId}";
 
 		Channel = await Connection.CreateChannelAsync();
 
@@ -81,7 +66,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 
 		var props = args.BasicProperties;
 
-		var context = new MessageContext(message, authorization => _identity?.GetIdentity(authorization));
+		var context = new MessageContext(message);
 
 		OnMessageReceived(new MessageReceivedEventArgs(message.Data, context));
 
@@ -118,7 +103,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 			var replyProps = new BasicProperties();
 			replyProps.Headers ??= new Dictionary<string, object>();
 			replyProps.CorrelationId = props.CorrelationId;
-			replyProps.Type = reply.Result?.GetType()?.Name;
+			replyProps.Type = reply.Result?.GetType().Name;
 
 			var response = SerializeMessage(reply);
 			await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);

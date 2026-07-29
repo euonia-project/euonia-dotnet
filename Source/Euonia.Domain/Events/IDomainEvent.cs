@@ -16,7 +16,7 @@ public interface IDomainEvent : IEvent
 		where TKey : IEquatable<TKey>;
 
 	/// <summary>
-	/// 
+	/// Gets the event aggregate.
 	/// </summary>
 	/// <returns></returns>
 	EventAggregate GetEventAggregate();

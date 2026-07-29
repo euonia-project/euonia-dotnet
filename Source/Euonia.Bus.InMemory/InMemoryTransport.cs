@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus.InMemory;
@@ -17,21 +16,17 @@ public class InMemoryTransport : DisposableObject, ITransport
 	/// <inheritdoc />
 	public event EventHandler<MessageDeliveredEventArgs> Delivered;
 
-	private readonly IIdentityProvider _identity;
-
 	private readonly ILogger<InMemoryTransport> _logger;
 
 	/// <summary>
 	/// Initialize a new instance of <see cref="InMemoryTransport"/>
 	/// </summary>
-	/// <param name="provider"></param>
 	/// <param name="options"></param>
 	/// <param name="logger"></param>
-	public InMemoryTransport(IServiceProvider provider, IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
+	public InMemoryTransport(IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
 	{
 		var opts = options.Value;
-		Name = opts.TransportName ?? nameof(InMemoryTransport);
-		_identity = provider.GetService<IIdentityProvider>();
+		Name = opts.Name ?? nameof(InMemoryTransport);
 		_logger = logger.CreateLogger<InMemoryTransport>();
 	}
 
@@ -39,7 +34,7 @@ public class InMemoryTransport : DisposableObject, ITransport
 	public async Task PublishAsync<TMessage>(RoutedMessage<TMessage> message, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
-		var context = new MessageContext(message, authorization => _identity?.GetIdentity(authorization));
+		var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -53,7 +48,7 @@ public class InMemoryTransport : DisposableObject, ITransport
 	public async Task SendAsync<TMessage>(RoutedMessage<TMessage> message, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
-		var context = new MessageContext(message, authorization => _identity?.GetIdentity(authorization));
+		var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -87,7 +82,7 @@ public class InMemoryTransport : DisposableObject, ITransport
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(RoutedMessage<TMessage, TResponse> message, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
-		using var context = new MessageContext(message, authorization => _identity?.GetIdentity(authorization));
+		using var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken

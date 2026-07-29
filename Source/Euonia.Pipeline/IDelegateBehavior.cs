@@ -4,7 +4,7 @@
 /// Delegate behavior to surround the inner handler.
 /// </summary>
 /// <typeparam name="TRequest"></typeparam>
-public interface IDelegateBehavior<TRequest>
+public interface IDelegateBehavior<in TRequest>
 {
 	/// <summary>
 	/// Handle the request.

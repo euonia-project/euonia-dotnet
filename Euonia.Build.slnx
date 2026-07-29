@@ -1,19 +1,4 @@
 <Solution>
-    <Folder Name="/Samples/">
-        <Project Path="Samples/Euonia.Sample.Webapi/Euonia.Sample.Webapi.csproj" />
-        <File Path="Samples/common.props" />
-    </Folder>
-    <Folder Name="/Solution/">
-        <File Path=".editorconfig" />
-        <File Path="Directory.Packages.props" />
-        <File Path="NuGet.config" />
-        <File Path="README.md" />
-        <File Path="project.props" />
-    </Folder>
-    <Folder Name="/Source/">
-        <File Path="Source/common.props" />
-        <File Path="Source/resource.props" />
-    </Folder>
     <Folder Name="/Source/Bus/">
         <Project Path="Source/Euonia.Bus/Euonia.Bus.csproj" />
         <Project Path="Source/Euonia.Bus.Abstract/Euonia.Bus.Abstract.csproj" />
@@ -28,7 +13,7 @@
         <Project Path="Source/Euonia.Caching/Euonia.Caching.csproj" />
     </Folder>
     <Folder Name="/Source/Core/">
-        <Project Path="Source/Euonia.Business/Euonia.Business.csproj" />
+        <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
         <Project Path="Source/Euonia.Grpc/Euonia.Grpc.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
@@ -44,6 +29,7 @@
         <Project Path="Source/Euonia.Repository.EfCore/Euonia.Repository.EfCore.csproj" />
         <Project Path="Source/Euonia.Repository.Mongo/Euonia.Repository.Mongo.csproj" />
         <Project Path="Source/Euonia.Repository/Euonia.Repository.csproj" />
+        <Project Path="Source/Euonia.Uow/Euonia.Uow.csproj" />
     </Folder>
     <Folder Name="/Source/Mapping/">
         <Project Path="Source/Euonia.Mapping/Euonia.Mapping.csproj" />

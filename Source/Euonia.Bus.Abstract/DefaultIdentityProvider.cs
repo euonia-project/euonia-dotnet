@@ -14,8 +14,8 @@ internal class DefaultIdentityProvider : IIdentityProvider
 		_accessor = accessor;
 	}
 
-	public IPrincipal GetIdentity(string authorization)
+	public IPrincipal GetIdentity()
 	{
-		return _accessor(authorization);
+		return _accessor();
 	}
 }

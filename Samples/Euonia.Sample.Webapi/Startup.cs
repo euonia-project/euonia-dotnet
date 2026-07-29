@@ -43,7 +43,22 @@ public class Startup
         }
 
         app.InitializeApplication();
-        
+		app.UseExceptionHandler(new ExceptionHandlerOptions
+		{
+			ExceptionHandler = async context =>
+			{
+				var exceptionHandlerPathFeature = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerPathFeature>();
+				var exception = exceptionHandlerPathFeature?.Error;
+				context.Response.StatusCode = 500;
+				context.Response.ContentType = "application/json";
+				var response = new
+				{
+					Message = "An unexpected error occurred.",
+					Details = exception?.Message
+				};
+				await context.Response.WriteAsJsonAsync(response);
+			}
+		});
         app.UseHttpsRedirection();
 
         app.UseAuthentication();

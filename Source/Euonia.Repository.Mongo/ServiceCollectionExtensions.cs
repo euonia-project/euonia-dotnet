@@ -26,8 +26,6 @@ public static class ServiceCollectionExtensions
 		public IServiceCollection AddMongoRepository<TContext>(Action<MongoDbOptions> configure, ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 			where TContext : MongoDbContext, IRepositoryContext
 		{
-			services.AddContextProvider()
-			        .AddUnitOfWork();
 			services.AddMongoDbContext<TContext>(configure, contextLifeTime)
 			        .AddMongoRepository(contextLifeTime);
 
@@ -46,8 +44,6 @@ public static class ServiceCollectionExtensions
 			where TContextService : MongoDbContext, IRepositoryContext
 			where TContextImplementation : TContextService
 		{
-			services.AddContextProvider()
-			        .AddUnitOfWork();
 			services.AddMongoDbContext<TContextService, TContextImplementation>(configure, contextLifeTime)
 			        .AddMongoRepository(contextLifeTime);
 

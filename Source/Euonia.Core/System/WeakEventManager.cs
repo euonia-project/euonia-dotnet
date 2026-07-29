@@ -1,25 +1,25 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace System;
 
 /// <summary>
-/// From <c>https://github.com/xamarin/Xamarin.Forms/blob/main/Xamarin.Forms.Core/WeakEventManager.cs</c>
+/// 来自 <c>https://github.com/xamarin/Xamarin.Forms/blob/main/Xamarin.Forms.Core/WeakEventManager.cs</c>
 /// </summary>
 /// <remarks>
-/// Patch <c>https://github.com/jonathanpeppers/maui/blob/d7b45739b0ffa6fb393321fdddc9317ffdaa1696/src/Core/src/WeakEventManager.cs</c>
+/// 补丁来自 <c>https://github.com/jonathanpeppers/maui/blob/d7b45739b0ffa6fb393321fdddc9317ffdaa1696/src/Core/src/WeakEventManager.cs</c>
 /// </remarks>
 public sealed class WeakEventManager
 {
     private readonly Dictionary<string, List<Subscription>> _eventHandlers = new();
 
     /// <summary>
-    /// Add event handler
+    /// 添加事件处理器。
     /// </summary>
-    /// <param name="handler">The event handler</param>
-    /// <param name="eventName">The event name</param>
-    /// <typeparam name="TEventArgs">The type of event argument</typeparam>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void AddEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string eventName = null)
         where TEventArgs : EventArgs
     {
@@ -37,11 +37,11 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Add event handler
+    /// 添加事件处理器。
     /// </summary>
-    /// <param name="handler"></param>
-    /// <param name="eventName"></param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器委托。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void AddEventHandler(Delegate handler, [CallerMemberName] string eventName = "")
     {
         if (string.IsNullOrEmpty(eventName))
@@ -58,11 +58,11 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Raise up event.
+    /// 引发事件。
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="args"></param>
-    /// <param name="eventName"></param>
+    /// <param name="sender">事件发送者。</param>
+    /// <param name="args">事件参数。</param>
+    /// <param name="eventName">事件名称。</param>
     public void HandleEvent(object sender, object args, string eventName)
     {
         var handlers = GetEventHandler(eventName);
@@ -74,12 +74,12 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Remove event handler.
+    /// 移除事件处理器。
     /// </summary>
-    /// <param name="handler"></param>
-    /// <param name="eventName"></param>
-    /// <typeparam name="TEventArgs"></typeparam>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void RemoveEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string eventName = null)
         where TEventArgs : EventArgs
     {
@@ -97,11 +97,11 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Remove event handler.
+    /// 移除事件处理器。
     /// </summary>
-    /// <param name="handler"></param>
-    /// <param name="eventName"></param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器委托。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void RemoveEventHandler(Delegate handler, [CallerMemberName] string eventName = "")
     {
         if (string.IsNullOrEmpty(eventName))
@@ -127,7 +127,7 @@ public sealed class WeakEventManager
 
         if (handlerTarget == null)
         {
-            // This event handler is a static method
+            // 此事件处理器是一个静态方法
             targets.Add(new Subscription(null, methodInfo));
             return;
         }
@@ -148,14 +148,14 @@ public sealed class WeakEventManager
 
             if (current.Subscriber != null && !current.Subscriber.IsAlive)
             {
-                // If not alive, remove and continue
+                // 如果订阅者已不可用，移除并继续
                 subscriptions.RemoveAt(n);
                 continue;
             }
 
             if (current.Subscriber?.Target == handlerTarget && current.Handler.Name == methodInfo.Name)
             {
-                // Found the match, we can break
+                // 找到匹配项，可以中断
                 subscriptions.RemoveAt(n);
                 break;
             }
@@ -163,11 +163,11 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Add event handler
+    /// 添加事件处理器。
     /// </summary>
-    /// <param name="handler">The event handler</param>
-    /// <param name="eventName">The event name</param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void AddEventHandler(EventHandler handler, [CallerMemberName] string eventName = null)
     {
         if (string.IsNullOrEmpty(eventName))
@@ -183,13 +183,13 @@ public sealed class WeakEventManager
         AddEventHandler(eventName, handler.Target, handler.GetMethodInfo());
     }
 
-    #region Extends
+    #region 扩展
 
     /// <summary>
-    /// Gets event handler for specified event.
+    /// 获取指定事件的事件处理器。
     /// </summary>
-    /// <param name="eventName">The event name.</param>
-    /// <returns></returns>
+    /// <param name="eventName">事件名称。</param>
+    /// <returns>订阅者和处理器的列表。</returns>
     private List<(object subscriber, MethodInfo handler)> GetEventHandler(string eventName)
     {
         var toRaise = new List<(object subscriber, MethodInfo handler)>();
@@ -204,7 +204,7 @@ public sealed class WeakEventManager
                 var isStatic = subscription.Subscriber == null;
                 if (isStatic)
                 {
-                    // For a static method, we'll just pass null as the first parameter of MethodInfo.Invoke
+                    // 对于静态方法，我们只传递 null 作为 MethodInfo.Invoke 的第一个参数
                     toRaise.Add((null, subscription.Handler));
                     continue;
                 }
@@ -213,7 +213,7 @@ public sealed class WeakEventManager
 
                 if (subscriber == null)
                 {
-                    // The subscriber was collected, so there's no need to keep this subscription around
+                    // 订阅者已被回收，因此无需保留此订阅
                     toRemove.Add(subscription);
                 }
                 else
@@ -236,12 +236,12 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Raise up event.
+    /// 引发事件。
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="args"></param>
-    /// <param name="eventName"></param>
-    /// <typeparam name="TEventArgs"></typeparam>
+    /// <param name="sender">事件发送者。</param>
+    /// <param name="args">事件参数。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
     public void HandleEvent<TEventArgs>(object sender, TEventArgs args, string eventName)
         where TEventArgs : EventArgs
     {
@@ -254,12 +254,12 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Raise up event parallel.
+    /// 并行引发事件。
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="args"></param>
-    /// <param name="eventName"></param>
-    /// <typeparam name="TEventArgs"></typeparam>
+    /// <param name="sender">事件发送者。</param>
+    /// <param name="args">事件参数。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
     public void HandleEventParallel<TEventArgs>(object sender, TEventArgs args, string eventName)
         where TEventArgs : EventArgs
     {
@@ -273,18 +273,18 @@ public sealed class WeakEventManager
             }
             catch (Exception)
             {
-                //
+                // 忽略异常
             }
         });
     }
 
     /// <summary>
-    /// Raise up event and ignore exception.
+    /// 引发事件并忽略异常。
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="args"></param>
-    /// <param name="eventName"></param>
-    /// <typeparam name="TEventArgs"></typeparam>
+    /// <param name="sender">事件发送者。</param>
+    /// <param name="args">事件参数。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
     public void HandleEventSafely<TEventArgs>(object sender, TEventArgs args, string eventName)
         where TEventArgs : EventArgs
     {
@@ -298,17 +298,17 @@ public sealed class WeakEventManager
             }
             catch (Exception)
             {
-                //
+                // 忽略异常
             }
         }
     }
 
     /// <summary>
-    /// Remove event handler.
+    /// 移除事件处理器。
     /// </summary>
-    /// <param name="handler"></param>
-    /// <param name="eventName"></param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="handler">事件处理器。</param>
+    /// <param name="eventName">事件名称。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
     public void RemoveEventHandler(EventHandler handler, [CallerMemberName] string eventName = null)
     {
         if (string.IsNullOrEmpty(eventName))
@@ -325,7 +325,7 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Remove event handlers.
+    /// 移除所有事件处理器。
     /// </summary>
     public void RemoveEventHandlers()
     {
@@ -333,10 +333,10 @@ public sealed class WeakEventManager
     }
 
     /// <summary>
-    /// Remove event handlers for specified event.
+    /// 移除指定事件的所有事件处理器。
     /// </summary>
-    /// <param name="eventName"></param>
-    /// <exception cref="ArgumentNullException"></exception>
+    /// <param name="eventName">事件名称。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 为 null 或空时抛出。</exception>
     public void RemoveEventHandlers(string eventName)
     {
         if (string.IsNullOrEmpty(eventName))

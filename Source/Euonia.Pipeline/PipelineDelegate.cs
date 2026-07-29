@@ -12,7 +12,7 @@ public delegate Task PipelineDelegate(object context);
 /// </summary>
 /// <typeparam name="TRequest"></typeparam>
 /// <returns></returns>
-public delegate Task PipelineDelegate<TRequest>(TRequest request);
+public delegate Task PipelineDelegate<in TRequest>(TRequest request);
 
 /// <summary>
 /// PipelineDelegate
@@ -20,4 +20,4 @@ public delegate Task PipelineDelegate<TRequest>(TRequest request);
 /// <typeparam name="TRequest"></typeparam>
 /// <typeparam name="TResponse"></typeparam>
 /// <returns></returns>
-public delegate Task<TResponse> PipelineDelegate<TRequest, TResponse>(TRequest request);
+public delegate Task<TResponse> PipelineDelegate<in TRequest, TResponse>(TRequest request);

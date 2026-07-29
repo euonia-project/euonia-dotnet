@@ -3,33 +3,33 @@ using System.Windows.Input;
 namespace Nerosoft.Euonia.Windows;
 
 /// <summary>
-/// GenericCommand.
-/// Implements the <see cref="ICommand" />
-/// Implements the <see cref="System.Windows.Input.ICommand" />
+/// 通用命令类，通过回调属性来定义命令的执行逻辑。
+/// 实现 <see cref="ICommand" /> 接口
+/// 实现 <see cref="System.Windows.Input.ICommand" /> 接口
 /// </summary>
 /// <seealso cref="System.Windows.Input.ICommand" />
 /// <seealso cref="ICommand" />
 public sealed class GenericCommand : ICommand
 {
     /// <summary>
-    /// Gets or sets the can execute callback.
+    /// 获取或设置用于判断命令是否可以执行的回调函数。
     /// </summary>
-    /// <value>The can execute callback.</value>
+    /// <value>用于判断命令是否可以执行的回调函数。</value>
     public Func<object, bool> CanExecuteCallback { get; set; }
 
     /// <summary>
-    /// Gets or sets the execute callback.
+    /// 获取或设置命令执行时要调用的回调函数。
     /// </summary>
-    /// <value>The execute callback.</value>
+    /// <value>命令执行时要调用的回调函数。</value>
     public Action<object> ExecuteCallback { get; set; }
 
     #region ICommand Members
 
     /// <summary>
-    /// Defines the method that determines whether the command can execute in its current state.
+    /// 定义用于确定命令在其当前状态下是否可以执行的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
-    /// <returns>true if this command can be executed; otherwise, false.</returns>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
+    /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
     public bool CanExecute(object parameter)
     {
         if (CanExecuteCallback != null)
@@ -41,13 +41,13 @@ public sealed class GenericCommand : ICommand
     }
 
     /// <summary>
-    /// Occurs when changes occur that affect whether or not the command should execute.
+    /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>事件参数，包含与事件相关的数据。</returns>
     public event EventHandler CanExecuteChanged;
 
     /// <summary>
-    /// Raises the can execute changed.
+    /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
     /// </summary>
     public void RaiseCanExecuteChanged()
     {
@@ -56,9 +56,9 @@ public sealed class GenericCommand : ICommand
     }
 
     /// <summary>
-    /// Defines the method to be called when the command is invoked.
+    /// 定义在调用命令时要调用的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     public void Execute(object parameter)
     {
         ExecuteCallback?.Invoke(parameter);
@@ -68,43 +68,43 @@ public sealed class GenericCommand : ICommand
 }
 
 /// <summary>
-/// GenericCommand with specified parameter type.
+/// 通用命令类（泛型版本），通过回调属性来定义命令的执行逻辑。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">命令参数的类型。</typeparam>
 public sealed class GenericCommand<T> : ICommand
 {
     /// <summary>
-    /// Gets or sets the can execute callback.
+    /// 获取或设置用于判断命令是否可以执行的回调函数。
     /// </summary>
-    /// <value>The can execute callback.</value>
+    /// <value>用于判断命令是否可以执行的回调函数。</value>
     public Func<T, bool> CanExecuteCallback { get; set; }
 
     /// <summary>
-    /// Gets or sets the execute callback.
+    /// 获取或设置命令执行时要调用的回调函数。
     /// </summary>
-    /// <value>The execute callback.</value>
+    /// <value>命令执行时要调用的回调函数。</value>
     public Action<T> ExecuteCallback { get; set; }
 
     #region ICommand Members
 
     /// <summary>
-    /// Defines the method that determines whether the command can execute in its current state.
+    /// 定义用于确定命令在其当前状态下是否可以执行的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
-    /// <returns>true if this command can be executed; otherwise, false.</returns>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
+    /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
     public bool CanExecute(object parameter)
     {
         return CanExecuteCallback?.Invoke((T)parameter) ?? true;
     }
 
     /// <summary>
-    /// Occurs when changes occur that affect whether or not the command should execute.
+    /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>事件参数，包含与事件相关的数据。</returns>
     public event EventHandler CanExecuteChanged;
 
     /// <summary>
-    /// Raises the can execute changed.
+    /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
     /// </summary>
     public void RaiseCanExecuteChanged()
     {
@@ -113,9 +113,9 @@ public sealed class GenericCommand<T> : ICommand
     }
 
     /// <summary>
-    /// Defines the method to be called when the command is invoked.
+    /// 定义在调用命令时要调用的方法。
     /// </summary>
-    /// <param name="parameter">Data used by the command.  If the command does not require data to be passed, this object can be set to null.</param>
+    /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     public void Execute(object parameter)
     {
         ExecuteCallback?.Invoke((T)parameter);

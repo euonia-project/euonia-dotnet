@@ -11,7 +11,6 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// </summary>
 public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
 {
-	private readonly IIdentityProvider _identity;
 	private readonly IHandlerContext _handler;
 	private readonly ILogger<RabbitMqTopicSubscriber> _logger;
 
@@ -27,20 +26,6 @@ public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
 	{
 		_handler = handler;
 		_logger = logger.CreateLogger<RabbitMqTopicSubscriber>();
-	}
-
-	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqTopicSubscriber"/> class.
-	/// </summary>
-	/// <param name="connection"></param>
-	/// <param name="handler"></param>
-	/// <param name="options"></param>
-	/// <param name="logger"></param>
-	/// <param name="identity"></param>
-	public RabbitMqTopicSubscriber(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger, IIdentityProvider identity)
-		: this(connection, handler, options, logger)
-	{
-		_identity = identity;
 	}
 
 	/// <inheritdoc />
@@ -60,7 +45,7 @@ public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
 	{
 		Channel = await Connection.CreateChannelAsync();
 
-		var exchangePrefix = string.Collapse(Options.ExchangeName, Constants.DefaultExchangeName);
+		var exchangePrefix = string.Collapse(Options.ExchangeNamePrefix, Constants.DefaultExchangeNamePrefix);
 		var exchangeName = $"{exchangePrefix}:{channel}";
 
 		// Declare Fanout exchange and queue for topic subscriber.
@@ -87,7 +72,7 @@ public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
 
 		var message = DeserializeMessage(args.Body.ToArray(), type);
 
-		var context = new MessageContext(message, authorization => _identity?.GetIdentity(authorization));
+		var context = new MessageContext(message);
 
 		OnMessageReceived(new MessageReceivedEventArgs(message.Data, context));
 

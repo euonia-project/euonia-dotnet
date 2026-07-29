@@ -2,7 +2,7 @@
 using System.Security.Authentication;
 using Castle.DynamicProxy;
 using Microsoft.AspNetCore.Authorization;
-using Nerosoft.Euonia.Claims;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application;
 

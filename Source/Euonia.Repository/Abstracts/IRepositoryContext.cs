@@ -45,6 +45,13 @@ public interface IRepositoryContext : IDisposable
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// Commits the changes asynchronously.
+	/// </summary>
+	/// <param name="cancellationToken"></param>
+	/// <returns></returns>
+	Task CommitAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>
 	/// 
 	/// </summary>
 	/// <param name="cancellationToken"></param>

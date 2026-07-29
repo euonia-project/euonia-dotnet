@@ -1,4 +1,4 @@
-﻿namespace System;
+namespace System;
 
 internal class SnowflakeId
 {
@@ -14,7 +14,7 @@ internal class SnowflakeId
     private const long MAX_MACHINE_ID = -1L ^ -1L << (int)MACHINE_ID_BITS; //最大机器ID
     private const long MAX_DATACENTER_ID = -1L ^ (-1L << (int)DATACENTER_ID_BITS); //最大数据ID
 
-    private const long SEQUENCE_BITS = 12L; //计数器字节数，12个字节用来保存计数码        
+    private const long SEQUENCE_BITS = 12L; //计数器字节数，12个字节用来保存计数码
     private const long MACHINE_ID_SHIFT = SEQUENCE_BITS; //机器码数据左移位数，就是后面计数器占用的位数
     private const long DATACENTER_ID_SHIFT = SEQUENCE_BITS + MACHINE_ID_BITS;
     private const long TIMESTAMP_LEFT_SHIFT = SEQUENCE_BITS + MACHINE_ID_BITS + DATACENTER_ID_BITS; //时间戳左移动位数就是机器码+计数器总字节数+数据字节数
@@ -26,21 +26,21 @@ internal class SnowflakeId
     private static readonly Lazy<SnowflakeId> _instance = new();
 
     /// <summary>
-    /// 
+    /// 获取 <see cref="SnowflakeId"/> 的默认实例。
     /// </summary>
-    /// <returns></returns>
+    /// <returns><see cref="SnowflakeId"/> 实例。</returns>
     public static SnowflakeId GetInstance()
     {
         return _instance.Value;
     }
 
     /// <summary>
-    /// Gets the singleton instance of <see cref="SnowflakeId"/>.
+    /// 获取 <see cref="SnowflakeId"/> 的单例实例。
     /// </summary>
     public static SnowflakeId Instance => _instance.Value;
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="SnowflakeId"/> 类的新实例。
     /// </summary>
     public SnowflakeId()
     {
@@ -48,19 +48,19 @@ internal class SnowflakeId
     }
 
     /// <summary>
-    /// 
+    /// 使用指定的机器 ID 初始化 <see cref="SnowflakeId"/> 类的新实例。
     /// </summary>
-    /// <param name="machineId"></param>
+    /// <param name="machineId">机器 ID。</param>
     public SnowflakeId(long machineId)
     {
         Snowflakes(machineId, -1);
     }
 
     /// <summary>
-    /// 
+    /// 使用指定的机器 ID 和数据中心 ID 初始化 <see cref="SnowflakeId"/> 类的新实例。
     /// </summary>
-    /// <param name="machineId"></param>
-    /// <param name="datacenterId"></param>
+    /// <param name="machineId">机器 ID。</param>
+    /// <param name="datacenterId">数据中心 ID。</param>
     public SnowflakeId(long machineId, long datacenterId)
     {
         Snowflakes(machineId, datacenterId);
@@ -101,8 +101,8 @@ internal class SnowflakeId
     /// <summary>
     /// 获取下一微秒时间戳
     /// </summary>
-    /// <param name="lastTimestamp"></param>
-    /// <returns></returns>
+    /// <param name="lastTimestamp">上一个时间戳。</param>
+    /// <returns>下一个时间戳（毫秒）。</returns>
     private static long GetNextTimestamp(long lastTimestamp)
     {
         var timestamp = GetTimestamp();
@@ -117,7 +117,7 @@ internal class SnowflakeId
     /// <summary>
     /// 获取长整形的ID
     /// </summary>
-    /// <returns></returns>
+    /// <returns>生成的雪花 ID。</returns>
     public long Next()
     {
         lock (_lockObject)

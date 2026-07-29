@@ -1,22 +1,22 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
 using System.Globalization;
 
 /// <summary>
-/// Assertion utility class that provides methods for validating conditions and throwing exceptions when assertions fail.
+/// 断言工具类，提供验证条件并在断言失败时抛出异常的方法。
 /// </summary>
 [DebuggerStepThrough]
 public static class Check
 {
 	/// <summary>
-	/// Asserts that the given expression evaluates to true. If it evaluates to false, an InvalidOperationException is thrown with the provided message.
+	/// 断言给定的函数表达式计算结果为 true。如果为 false，则抛出带有指定消息的 <see cref="InvalidOperationException"/>。
 	/// </summary>
-	/// <param name="condition"></param>
-	/// <param name="message"></param>
-	/// <param name="args"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="condition">要评估的条件函数。</param>
+	/// <param name="message">断言失败时的错误消息。</param>
+	/// <param name="args">消息格式化参数。</param>
+	/// <returns>始终返回 true。</returns>
+	/// <exception cref="InvalidOperationException">当条件为 false 时抛出。</exception>
 	public static bool Ensure(Func<bool> condition, string message, params object[] args)
 	{
 		if (!condition())
@@ -28,13 +28,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Asserts that the given expression evaluates to true. If it evaluates to false, an InvalidOperationException is thrown with the provided message.
+	/// 断言给定的表达式计算结果为 true。如果为 false，则抛出带有指定消息的 <see cref="InvalidOperationException"/>。
 	/// </summary>
-	/// <param name="condition"></param>
-	/// <param name="message"></param>
-	/// <param name="args"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="condition">要评估的条件。</param>
+	/// <param name="message">断言失败时的错误消息。</param>
+	/// <param name="args">消息格式化参数。</param>
+	/// <returns>始终返回 true。</returns>
+	/// <exception cref="InvalidOperationException">当条件为 false 时抛出。</exception>
 	public static bool Ensure(bool condition, string message, params object[] args)
 	{
 		if (!condition)
@@ -46,14 +46,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is match the condition.
+	/// 确保给定值满足条件。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="action"></param>
-	/// <param name="message"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ValidationException"></exception>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="action">用于验证值的条件函数。</param>
+	/// <param name="message">验证失败时的错误消息。</param>
+	/// <returns>验证通过的值。</returns>
 	public static T Ensure<T>(T value, [NotNull] Func<T, bool> action, string message)
 	{
 		var result = action(value);
@@ -66,12 +65,12 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is match the condition.
+	/// 确保给定值满足条件，失败时执行回调。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="action"></param>
-	/// <param name="failsAction"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="action">用于验证值的条件函数。</param>
+	/// <param name="failsAction">验证失败时执行的操作。</param>
 	public static void Ensure<T>(T value, [NotNull] Func<T, bool> action, Action<T> failsAction)
 	{
 		var result = action(value);
@@ -84,12 +83,12 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is match the condition.
+	/// 确保给定值满足条件。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="action"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="action">用于验证值的条件函数。</param>
+	/// <returns>包含值和验证结果的 <see cref="CheckResult{T}"/>。</returns>
 	public static CheckResult<T> Ensure<T>(T value, [NotNull] Func<T, bool> action)
 	{
 		var result = action(value);
@@ -97,13 +96,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is not null.
+	/// 确保给定值不为 null。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="parameter"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <returns>非 null 的值。</returns>
+	/// <exception cref="ArgumentNullException">当值为 null 时抛出。</exception>
 	public static T EnsureNotNull<T>(T value, [NotNull] string parameter)
 	{
 		if (value == null)
@@ -115,14 +114,14 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is not null.
+	/// 确保给定值不为 null。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="parameter"></param>
-	/// <param name="message"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <param name="message">错误消息。</param>
+	/// <returns>非 null 的值。</returns>
+	/// <exception cref="ArgumentNullException">当值为 null 时抛出。</exception>
 	public static T EnsureNotNull<T>(T value, [NotNull] string parameter, string message)
 	{
 		if (value == null)
@@ -134,14 +133,14 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given string value is not null.
+	/// 确保给定字符串值不为 null，并验证长度范围。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="parameter"></param>
-	/// <param name="maxLength"></param>
-	/// <param name="minLength"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="value">要检查的字符串值。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <param name="maxLength">允许的最大长度。</param>
+	/// <param name="minLength">允许的最小长度。</param>
+	/// <returns>验证通过的字符串。</returns>
+	/// <exception cref="ArgumentException">当值为 null 或长度不符合要求时抛出。</exception>
 	public static string EnsureNotNull(string value, [NotNull] string parameter, int maxLength = int.MaxValue, int minLength = 0)
 	{
 		if (value == null)
@@ -163,12 +162,12 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given value is not null, empty, or consists only of white-space characters.
+	/// 确保给定值不为 null、空或仅由空白字符组成。
 	/// </summary>
-	/// <param name="value">The given string value.</param>
-	/// <param name="parameter"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="value">要检查的字符串值。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <returns>验证通过的字符串。</returns>
+	/// <exception cref="ArgumentException">当值为 null、空或仅由空白字符组成时抛出。</exception>
 	public static string EnsureNotNullOrWhiteSpace(string value, [NotNull] string parameter)
 	{
 		if (value.IsNullOrWhiteSpace())
@@ -180,11 +179,11 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensures the specified string value is not null, empty, or whitespace.
+	/// 确保指定字符串值不为 null、空或仅由空白字符组成，失败时执行回调。
 	/// </summary>
-	/// <param name="value">The string value to check.</param>
-	/// <param name="parameter">The name of the parameter being checked.</param>
-	/// <param name="failsAction">The action to perform if the check fails.</param>
+	/// <param name="value">要检查的字符串值。</param>
+	/// <param name="parameter">正在检查的参数名称。</param>
+	/// <param name="failsAction">检查失败时执行的操作。</param>
 	public static void EnsureNotNullOrWhiteSpace(string value, [NotNull] string parameter, Action<string> failsAction)
 	{
 		if (value.IsNullOrWhiteSpace())
@@ -194,12 +193,12 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensures that the specified string value is not null or empty.
+	/// 确保指定字符串值不为 null 或空。
 	/// </summary>
-	/// <param name="value">The value to check.</param>
-	/// <param name="parameter">The name of the parameter being checked.</param>
-	/// <returns>The same string value that was passed in if it is not null or empty.</returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="value">要检查的值。</param>
+	/// <param name="parameter">正在检查的参数名称。</param>
+	/// <returns>如果非 null 或空，则返回传入的相同字符串值。</returns>
+	/// <exception cref="ArgumentException">当字符串为 null 或空时抛出。</exception>
 	public static string EnsureNotNullOrEmpty(string value, [NotNull] string parameter)
 	{
 		if (value.IsNullOrEmpty())
@@ -211,12 +210,11 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Checks if the input string is null or empty and calls the failsAction delegate if it is.
+	/// 检查输入字符串是否为 null 或空，如果是则调用失败回调。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <param name="parameter"></param>
-	/// <param name="failsAction"></param>
-	/// <returns></returns>
+	/// <param name="value">要检查的字符串值。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <param name="failsAction">检查失败时执行的回调。</param>
 	public static void EnsureNotNullOrEmpty(string value, [NotNull] string parameter, Action<string> failsAction)
 	{
 		if (value.IsNullOrEmpty())
@@ -226,14 +224,14 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given string value is matched the regular expression pattern.
+	/// 确保给定字符串值匹配正则表达式模式。
 	/// </summary>
-	/// <param name="value">The input value.</param>
-	/// <param name="parameter">The parameter name of the given value.</param>
-	/// <param name="pattern">The regular expression pattern.</param>
-	/// <param name="options">The regular expression options.</param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="value">输入值。</param>
+	/// <param name="parameter">给定值的参数名称。</param>
+	/// <param name="pattern">正则表达式模式。</param>
+	/// <param name="options">正则表达式选项。</param>
+	/// <returns>匹配的字符串值。</returns>
+	/// <exception cref="ArgumentException">当值不匹配模式时抛出。</exception>
 	public static string EnsureIsMatch(string value, [NotNull] string parameter, string pattern, RegexOptions options = RegexOptions.None)
 	{
 		if (!Regex.IsMatch(value, pattern, options))
@@ -245,14 +243,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the given string value is matched the regular expression pattern.
+	/// 确保给定字符串值匹配正则表达式模式，失败时执行回调。
 	/// </summary>
-	/// <param name="value">The input value.</param>
-	/// <param name="parameter">The parameter name of the given value.</param>
-	/// <param name="pattern">The regular expression pattern.</param>
-	/// <param name="failsAction">Callback function while the given is not matches.</param>
-	/// <param name="options">The regular expression options.</param>
-	/// <returns></returns>
+	/// <param name="value">输入值。</param>
+	/// <param name="parameter">给定值的参数名称。</param>
+	/// <param name="pattern">正则表达式模式。</param>
+	/// <param name="failsAction">给定值不匹配时执行的回调函数。</param>
+	/// <param name="options">正则表达式选项。</param>
 	public static void EnsureIsMatch(string value, [NotNull] string parameter, string pattern, Action<string> failsAction, RegexOptions options = RegexOptions.None)
 	{
 		if (!Regex.IsMatch(value, pattern, options))
@@ -262,13 +259,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure the <paramref name="collection"/> is not null or empty.
+	/// 确保集合不为 null 或空。
 	/// </summary>
-	/// <param name="collection"></param>
-	/// <param name="parameter"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <typeparam name="T">集合元素类型。</typeparam>
+	/// <param name="collection">要检查的集合。</param>
+	/// <param name="parameter">参数名称。</param>
+	/// <returns>非 null 且非空的集合。</returns>
+	/// <exception cref="ArgumentException">当集合为 null 或空时抛出。</exception>
 	public static IEnumerable<T> EnsureNotNullOrEmpty<T>(IEnumerable<T> collection, [NotNull] string parameter)
 	{
 		if (collection.IsNullOrEmpty())
@@ -280,13 +277,13 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensure that the given type is assignable to a specified type base class.
+	/// 确保给定类型可赋值给指定的基类型。
 	/// </summary>
-	/// <typeparam name="TBaseType">The base type the given type should be assignable to.</typeparam>
-	/// <param name="type">The type to check if it is assignable to the specified base type.</param>
-	/// <param name="parameter">The name of the parameter passed to the method.</param>
-	/// <returns>The original input type, if it is assignable to TBaseType, or else throws an ArgumentException.</returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <typeparam name="TBaseType">给定类型应可赋值给的基类型。</typeparam>
+	/// <param name="type">要检查是否可赋值给指定基类型的类型。</param>
+	/// <param name="parameter">传递给方法的参数名称。</param>
+	/// <returns>如果可赋值给 TBaseType，则返回原始输入类型；否则抛出 <see cref="ArgumentException"/>。</returns>
+	/// <exception cref="ArgumentException">当类型不可赋值时抛出。</exception>
 	public static Type EnsureAssignableTo<TBaseType>(Type type, [NotNull] string parameter)
 	{
 		EnsureNotNull(type, parameter);
@@ -300,14 +297,14 @@ public static class Check
 	}
 
 	/// <summary>
-	/// Ensures that the length of the given input string is within the specified range.
+	/// 确保给定输入字符串的长度在指定范围内。
 	/// </summary>
-	/// <param name="value">The input string to check.</param>
-	/// <param name="parameter">The name of the parameter that corresponds to the input string.</param>
-	/// <param name="maxLength">The maximum length of the input string.</param>
-	/// <param name="minLength">The minimum length of the input string. Defaults to 0.</param>
-	/// <returns>The input string.</returns>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="value">要检查的输入字符串。</param>
+	/// <param name="parameter">与输入字符串对应的参数名称。</param>
+	/// <param name="maxLength">输入字符串的最大长度。</param>
+	/// <param name="minLength">输入字符串的最小长度，默认为 0。</param>
+	/// <returns>输入字符串。</returns>
+	/// <exception cref="ArgumentException">当长度不符合要求时抛出。</exception>
 	public static string EnsureLengthInRange(string value, [NotNull] string parameter, int maxLength, int minLength = 0)
 	{
 		if (minLength > 0)

@@ -1,30 +1,30 @@
-﻿namespace Nerosoft.Euonia.Disposing;
+namespace Nerosoft.Euonia.Disposing;
 
 /// <summary>
-/// A field containing a bound asynchronous action.
+/// 包含绑定的异步操作的字段。
 /// </summary>
-/// <typeparam name="T">The type of context for the action.</typeparam>
+/// <typeparam name="T">操作的上下文类型。</typeparam>
 public sealed class AsyncBoundActionField<T>
 {
     private BoundAction _field;
 
     /// <summary>
-    /// Initializes the field with the specified action and context.
+    /// 使用指定的操作和上下文初始化字段。
     /// </summary>
-    /// <param name="action">The action delegate.</param>
-    /// <param name="context">The context.</param>
+    /// <param name="action">操作委托。</param>
+    /// <param name="context">上下文。</param>
     public AsyncBoundActionField(Func<T, ValueTask> action, T context)
     {
         _field = new BoundAction(action, context);
     }
 
     /// <summary>
-    /// Whether the field is empty.
+    /// 获取字段是否为空。
     /// </summary>
     public bool IsEmpty => Interlocked.CompareExchange(ref _field, null, null) == null;
 
     /// <summary>
-    /// Atomically retrieves the bound action from the field and sets the field to <c>null</c>. May return <c>null</c>.
+    /// 原子地从字段中获取绑定的操作并将字段设置为 <c>null</c>。可能返回 <c>null</c>。
     /// </summary>
     public IBoundAction TryGetAndUnset()
     {
@@ -32,9 +32,9 @@ public sealed class AsyncBoundActionField<T>
     }
 
     /// <summary>
-    /// Attempts to update the context of the bound action stored in the field. Returns <c>false</c> if the field is <c>null</c>.
+    /// 尝试更新存储在字段中的绑定操作的上下文。如果字段为 <c>null</c>，则返回 <c>false</c>。
     /// </summary>
-    /// <param name="contextUpdater">The function used to update an existing context. This may be called more than once if more than one thread attempts to simultanously update the context.</param>
+    /// <param name="contextUpdater">用于更新现有上下文的函数。如果多个线程同时尝试更新上下文，此函数可能会被调用多次。</param>
     public bool TryUpdateContext(Func<T, T> contextUpdater)
     {
         while (true)
@@ -50,12 +50,12 @@ public sealed class AsyncBoundActionField<T>
     }
 
     /// <summary>
-    /// An action delegate bound with its context.
+    /// 与其上下文绑定的操作委托。
     /// </summary>
     public interface IBoundAction
     {
         /// <summary>
-        /// Executes the action. This should only be done after the bound action is retrieved from a field by <see cref="TryGetAndUnset"/>.
+        /// 执行操作。仅应在通过 <see cref="TryGetAndUnset"/> 从字段中获取绑定操作后调用。
         /// </summary>
         ValueTask InvokeAsync();
     }

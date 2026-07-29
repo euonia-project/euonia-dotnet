@@ -10,8 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Euonia.Domain\Euonia.Domain.csproj" />
+<!--        <ProjectReference Include="..\Euonia.Domain\Euonia.Domain.csproj" />-->
+        <ProjectReference Include="..\Euonia.Linq\Euonia.Linq.csproj" />
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
+        <ProjectReference Include="..\Euonia.Uow\Euonia.Uow.csproj" />
     </ItemGroup>
 
     <ItemGroup>

@@ -1,67 +1,65 @@
-﻿using System.Net;
+using System.Net;
 using System.Security.Claims;
 
 namespace System;
 
 /// <summary>
-/// Contains information about the current request.
+/// 包含有关当前请求的信息。
 /// </summary>
 public sealed class RequestContext
 {
 	/// <summary>
-	/// Gets or sets a unique identifier to represent the connection.
+	/// 获取或设置表示连接的唯一标识符。
 	/// </summary>
 	public string ConnectionId { get; set; }
 
 	/// <summary>
-	/// Gets or sets the IP address of the remote target. Can be null.
+	/// 获取或设置远程目标的 IP 地址，可以为 null。
 	/// </summary>
 	public IPAddress RemoteIpAddress { get; set; }
 
 	/// <summary>
-	/// Gets or sets the port of the remote target.
+	/// 获取或设置远程目标的端口。
 	/// </summary>
 	public int RemotePort { get; set; }
 
 	/// <summary>
-	/// Gets a value indicating whether the request is a WebSocket establishment request.
+	/// 获取一个值，指示请求是否为 WebSocket 建立请求。
 	/// </summary>
 	public bool IsWebSocketRequest { get; set; }
 
 	/// <summary>
-	/// Gets or sets the user for this request.
+	/// 获取或设置此请求的用户。
 	/// </summary>
 	public ClaimsPrincipal User { get; set; }
 
 	/// <summary>
-	/// Gets the request headers.
+	/// 获取请求头。
 	/// </summary>
-	/// <returns>The request headers.</returns>
 	public IDictionary<string, string> RequestHeaders { get; set; }
 
 	/// <summary>
-	/// Gets the Authorization HTTP header.
+	/// 获取 Authorization HTTP 头。
 	/// </summary>
 	public string Authorization => RequestHeaders?.TryGetValue(nameof(Authorization));
 
 	/// <summary>
-	/// Gets or sets the Request-Id HTTP header.
+	/// 获取 Request-Id HTTP 头。
 	/// </summary>
 	public string RequestId => RequestHeaders?.TryGetValue("Request-Id");
 
 	/// <summary>
-	/// Gets or sets the <see cref="IServiceProvider"/> that provides access to the request's service container.
+	/// 获取或设置提供对请求服务容器访问的 <see cref="IServiceProvider"/>。
 	/// </summary>
 	public IServiceProvider RequestServices { get; set; }
 
 	/// <summary>
-	/// Notifies when the connection underlying this request is aborted and thus request operations should be
-	/// cancelled.
+	/// 当此请求的底层连接被中止时通知，此时请求操作应被取消。
 	/// </summary>
 	public CancellationToken RequestAborted { get; set; }
 
 	/// <summary>
-	/// Gets or sets a unique identifier to represent this request in trace logs.
+	/// 获取或设置在跟踪日志中表示此请求的唯一标识符。
 	/// </summary>
 	public string TraceIdentifier { get; set; }
 }

@@ -13,27 +13,27 @@ public class PipelineMessage<TMessage, TResponse>
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="command"></param>
-	public PipelineMessage(TMessage command)
+	/// <param name="message"></param>
+	public PipelineMessage(TMessage message)
 	{
-		Command = command;
+		Message = message;
 	}
 
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="command"></param>
+	/// <param name="message"></param>
 	/// <param name="pipeline"></param>
-	public PipelineMessage(TMessage command, IPipeline<TMessage, TResponse> pipeline)
+	public PipelineMessage(TMessage message, IPipeline<TMessage, TResponse> pipeline)
 	{
-		Command = command;
+		Message = message;
 		Pipeline = pipeline;
 	}
 
 	/// <summary>
-	/// 
+	/// Gets the message.
 	/// </summary>
-	public TMessage Command { get; }
+	public TMessage Message { get; }
 
 	/// <summary>
 	/// 
@@ -63,6 +63,15 @@ public class PipelineMessage<TMessage, TResponse>
 		Pipeline = Pipeline.Use<TBehavior>();
 		return this;
 	}
+
+	/// <summary>
+	/// Executes the pipeline asynchronously.
+	/// </summary>
+	/// <returns></returns>
+	public Task<TResponse> ExecuteAsync()
+	{
+		return Pipeline.RunAsync(Message);
+	}
 }
 
 /// <summary>
@@ -75,27 +84,27 @@ public class PipelineMessage<TMessage>
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="command"></param>
-	public PipelineMessage(TMessage command)
+	/// <param name="message"></param>
+	public PipelineMessage(TMessage message)
 	{
-		Command = command;
+		Message = message;
 	}
 
 	/// <summary>
 	/// 
 	/// </summary>
-	/// <param name="command"></param>
+	/// <param name="message"></param>
 	/// <param name="pipeline"></param>
-	public PipelineMessage(TMessage command, IPipeline pipeline)
+	public PipelineMessage(TMessage message, IPipeline pipeline)
 	{
-		Command = command;
+		Message = message;
 		Pipeline = pipeline;
 	}
 
 	/// <summary>
 	/// 
 	/// </summary>
-	public TMessage Command { get; }
+	public TMessage Message { get; }
 
 	/// <summary>
 	/// 
@@ -124,5 +133,14 @@ public class PipelineMessage<TMessage>
 	{
 		Pipeline = Pipeline.Use<TBehavior>();
 		return this;
+	}
+
+	/// <summary>
+	/// Executes the pipeline asynchronously.
+	/// </summary>
+	/// <returns></returns>
+	public Task ExecuteAsync()
+	{
+		return Pipeline.RunAsync(Message);
 	}
 }

@@ -2,7 +2,7 @@
     <Import Project="..\project.props" />
 
     <PropertyGroup>
-        <TargetFramework>net9.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>Nerosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
 		<IsPackable>false</IsPackable>
     </PropertyGroup>
@@ -11,7 +11,7 @@
 		<PackageReference Include="Microsoft.Extensions.Hosting" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Moq" />
-		<PackageReference Include="xunit" />
+		<PackageReference Include="xunit.v3" />
 		<PackageReference Include="Xunit.DependencyInjection" />
         <PackageReference Include="Xunit.DependencyInjection.Logging" />
 		<PackageReference Include="xunit.runner.visualstudio">

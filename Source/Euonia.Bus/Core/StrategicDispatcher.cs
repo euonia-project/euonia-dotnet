@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -8,23 +7,16 @@ namespace Nerosoft.Euonia.Bus;
 /// </summary>
 internal class StrategicDispatcher : IDispatcher
 {
-	private readonly ConcurrentDictionary<Type, IReadOnlyList<Type>> _transportCache = new();
-
-	private readonly IMessageConvention _messageConvention;
-	private readonly IServiceProvider _serviceProvider;
-	private readonly IBusConfigurator _configurator;
+	private readonly ConcurrentDictionary<Type, IReadOnlyList<string>> _transportCache = new();
+	private readonly IMessageBusOptions _options;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="StrategicDispatcher"/> class.
 	/// </summary>
-	/// <param name="serviceProvider"></param>
-	/// <param name="messageConvention"></param>
-	/// <param name="configurator"></param>
-	public StrategicDispatcher(IServiceProvider serviceProvider, IMessageConvention messageConvention, IBusConfigurator configurator)
+	/// <param name="options"></param>
+	public StrategicDispatcher(IMessageBusOptions options)
 	{
-		_messageConvention = messageConvention;
-		_serviceProvider = serviceProvider;
-		_configurator = configurator;
+		_options = options;
 	}
 
 	/// <summary>
@@ -33,14 +25,14 @@ internal class StrategicDispatcher : IDispatcher
 	/// <param name="messageType"></param>
 	/// <returns></returns>
 	/// <exception cref="MessageTypeException"></exception>
-	public IEnumerable<Type> Determine(Type messageType)
+	public IEnumerable<string> Determine(Type messageType)
 	{
 		var transportTypes = _transportCache.GetOrAdd(messageType, _ =>
 		{
-			var list = new List<Type>();
-			foreach (var type in _configurator.StrategyAssignedTypes)
+			var list = new List<string>();
+			foreach (var type in _options.StrategyAssignedTypes)
 			{
-				var strategy = _serviceProvider.GetKeyedService<ITransportStrategy>(type);
+				var strategy = _options.GetStrategy(type);
 				if (strategy.Outgoing(messageType))
 				{
 					list.Add(type);
@@ -53,8 +45,15 @@ internal class StrategicDispatcher : IDispatcher
 		switch (transportTypes.Count)
 		{
 			case 0:
-				throw new MessageTypeException("No transport is configured for the message type.");
-			case > 1 when !_messageConvention.IsMulticastType(messageType):
+				if (string.IsNullOrEmpty(_options.DefaultTransport))
+				{
+					throw new MessageTypeException("No transport is configured for the message type.");
+				}
+
+				transportTypes = new List<string> { _options.DefaultTransport };
+				break;
+
+			case > 1 when !_options.Convention.IsMulticastType(messageType):
 				throw new MessageTypeException("Multiple transports are configured for a unicast message type.");
 		}
 

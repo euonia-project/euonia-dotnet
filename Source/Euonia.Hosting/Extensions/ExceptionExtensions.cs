@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Net;
 using System.Reflection;
 using System.Security.Authentication;
@@ -40,9 +41,21 @@ internal static class ExceptionExtensions
 					return null;
 				}
 
-				return validationException.Errors
-				                          .GroupBy(t => t.PropertyName ?? "_")
-				                          .ToDictionary(t => t.Key, t => t.Select(x => x.ErrorMessage).ToArray());
+				return validationException.ValidationResult
+				                          .MemberNames
+				                          .ToDictionary(t => t, _ => new[]
+				                          {
+					                          validationException.ValidationResult.ErrorMessage
+				                          });
+
+				// return validationException.ValidationResult.MemberNames
+				//                           .Distinct()
+				//                           .ToDictionary(
+				// 	                          t => t,
+				// 	                          t => validationException.ValidationResult.MemberNames
+				// 	                                                  .Where(x => (x ?? "_") == t)
+				// 	                                                  .Select(x => validationException.ValidationResult.ErrorMessage)
+				// 	                                                  .ToArray());
 			}
 		}
 

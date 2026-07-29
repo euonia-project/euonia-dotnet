@@ -1,26 +1,24 @@
-﻿#if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
 using System.Collections.Concurrent;
 using System.Runtime.Loader;
 
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// Provides common access to "AssemblyLoadContext" logic, which is used for "Plugins" concept of .NET 5+
+/// 提供对"AssemblyLoadContext"逻辑的通用访问，用于 .NET 5+ 的"插件"概念。
 /// </summary>
 public static class AssemblyLoadContextManager
 {
     /// <summary>
-    /// Simplified helper for "unloadable" cache item creation, linked to currently active "ContextualReflectionScope".
+    /// 用于创建"可卸载"缓存项的简化辅助方法，链接到当前活动的"ContextualReflectionScope"。
     /// </summary>
-    /// <param name="objectType">Caching item source.</param>
-    /// <param name="cachingItem">Caching item.</param>
-    /// <param name="unloadAction">Action which will be performed after "AssemblyLoadContext" unload.</param>
-    /// <param name="excludeNonCollectible">
-    /// Provides possibility to not cache items which are referenced to main application - "AssemblyLoadContext.Default".
-    /// </param>
-    /// <typeparam name="TValue">Type of caching item.</typeparam>
-    /// <returns>Tuple structure where "Item1" is name of active "AssemblyLoadContext" and "Item2" - caching item.</returns>
-    /// <exception cref="ArgumentNullException">Throws if nor object type, nor caching item, not unload action was provided.</exception>
+    /// <typeparam name="TValue">缓存项的类型。</typeparam>
+    /// <param name="objectType">缓存项的源类型。</param>
+    /// <param name="cachingItem">缓存项。</param>
+    /// <param name="unloadAction">在"AssemblyLoadContext"卸载后执行的操作。</param>
+    /// <param name="excludeNonCollectible">是否排除引用主应用程序（AssemblyLoadContext.Default）的缓存项。</param>
+    /// <returns>包含"Item1"为活动"AssemblyLoadContext"名称和"Item2"为缓存项的元组结构。</returns>
+    /// <exception cref="ArgumentNullException">当 objectType、cachingItem 或 unloadAction 为 null 时抛出。</exception>
     public static Tuple<string, TValue> CreateCacheInstance<TValue>(Type objectType, TValue cachingItem, Action<AssemblyLoadContext> unloadAction, bool excludeNonCollectible = false)
     {
         if (objectType == null)
@@ -53,17 +51,14 @@ public static class AssemblyLoadContextManager
     }
 
     /// <summary>
-    /// Provides possibility of partial cache flushing after unloading of certain "AssemblyLoadContext".
+    /// 在卸载特定"AssemblyLoadContext"后，提供部分缓存刷新的能力。
     /// </summary>
-    /// 
-    /// <param name="dictionary">Cached items dictionary.</param>
-    /// <param name="context">Unloading "AssemblyLoadContext".</param>
-    /// <param name="usingConcurrentDictionary">Guide method how cached item should be removed from dictionary.</param>
-    /// 
-    /// <typeparam name="TKey">Key of cached item from dictionary.</typeparam>
-    /// <typeparam name="TValue">Value of cached item from dictionary.</typeparam>
-    /// 
-    /// <exception cref="ArgumentNullException">Throws if cached items dictionary was not provided.</exception>
+    /// <typeparam name="TKey">字典中缓存项的键类型。</typeparam>
+    /// <typeparam name="TValue">字典中缓存项的值类型。</typeparam>
+    /// <param name="dictionary">缓存项字典。</param>
+    /// <param name="context">正在卸载的"AssemblyLoadContext"。</param>
+    /// <param name="usingConcurrentDictionary">指导如何从字典中移除缓存项的方法标志。</param>
+    /// <exception cref="ArgumentNullException">当缓存项字典为 null 时抛出。</exception>
     public static void RemoveFromCache<TKey, TValue>(IDictionary<TKey, Tuple<string, TValue>> dictionary, AssemblyLoadContext context, bool usingConcurrentDictionary = false)
     {
         if (dictionary == null)

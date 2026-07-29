@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
-using Nerosoft.Euonia.Claims;
+using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 

@@ -25,6 +25,7 @@ public sealed class MessageContext : IMessageContext
 	/// </summary>
 	/// <param name="message"></param>
 	public MessageContext(object message)
+		: this()
 	{
 		Message = message;
 	}
@@ -33,8 +34,7 @@ public sealed class MessageContext : IMessageContext
 	/// Initializes a new instance of the <see cref="MessageContext"/> class.
 	/// </summary>
 	/// <param name="pack"></param>
-	/// <param name="identity"></param>
-	public MessageContext(IRoutedMessage pack, IdentityAccessor identity = null)
+	public MessageContext(IRoutedMessage pack)
 		: this(pack.Data)
 	{
 		MessageId = pack.MessageId;
@@ -42,7 +42,8 @@ public sealed class MessageContext : IMessageContext
 		ConversationId = pack.ConversationId;
 		RequestTraceId = pack.RequestTraceId;
 		Authorization = pack.Authorization;
-		User = identity?.Invoke(pack.Authorization);
+		User = pack.User;
+		Metadata = pack.Metadata;
 	}
 
 	/// <summary>
@@ -78,35 +79,35 @@ public sealed class MessageContext : IMessageContext
 	/// <inheritdoc />
 	public string MessageId
 	{
-		get => _headers.TryGetValue(nameof(MessageId), out var value) ? value : null;
+		get => _headers.GetValueOrDefault(nameof(MessageId));
 		set => _headers[nameof(MessageId)] = value;
 	}
 
 	/// <inheritdoc />
 	public string CorrelationId
 	{
-		get => _headers.TryGetValue(nameof(CorrelationId), out var value) ? value : null;
+		get => _headers.GetValueOrDefault(nameof(CorrelationId));
 		set => _headers[nameof(CorrelationId)] = value;
 	}
 
 	/// <inheritdoc />
 	public string ConversationId
 	{
-		get => _headers.TryGetValue(nameof(ConversationId), out var value) ? value : null;
+		get => _headers.GetValueOrDefault(nameof(ConversationId));
 		set => _headers[nameof(ConversationId)] = value;
 	}
 
 	/// <inheritdoc />
 	public string RequestTraceId
 	{
-		get => _headers.TryGetValue(nameof(RequestTraceId), out var value) ? value : null;
+		get => _headers.GetValueOrDefault(nameof(RequestTraceId));
 		set => _headers[nameof(RequestTraceId)] = value;
 	}
 
 	/// <inheritdoc />
 	public string Authorization
 	{
-		get => _headers.TryGetValue(nameof(Authorization), out var value) ? value : null;
+		get => _headers.GetValueOrDefault(nameof(Authorization));
 		set => _headers[nameof(Authorization)] = value;
 	}
 
@@ -115,6 +116,11 @@ public sealed class MessageContext : IMessageContext
 
 	/// <inheritdoc />
 	public IReadOnlyDictionary<string, string> Headers => _headers;
+
+	/// <summary>
+	/// Gets or sets a <see cref="MessageMetadata"/> instance that contains the metadata information of the message.
+	/// </summary>
+	public MessageMetadata Metadata { get; set; }
 
 	/// <summary>
 	/// Replies message handling result to message dispatcher.

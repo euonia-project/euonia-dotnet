@@ -1,29 +1,29 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Contract used by <see cref="ObjectPool{T}"/> to define how to create and return instances to a pool.
+/// <see cref="ObjectPool{T}"/> 使用的约定，用于定义如何创建实例并将其归还到池中。
 /// </summary>
-/// <typeparam name="T">The type of objects of the pool.</typeparam>
+/// <typeparam name="T">池中对象的类型。</typeparam>
 public interface IObjectPoolPolicy<T>
 {
     /// <summary>
-    /// Creates a new instance of <typeparamref name="T"/>.
+    /// 创建 <typeparamref name="T"/> 的新实例。
     /// </summary>
-    /// <returns>The new instance.</returns>
+    /// <returns>新创建的实例。</returns>
     T CreateNew();
 
     /// <summary>
-    /// Checks if the instance can be returned and may reset the instance to a state which can be reused.
+    /// 检查实例是否可以归还，并可能将实例重置为可重用状态。
     /// </summary>
-    /// <param name="value">The instance which should be returned.</param>
-    /// <returns><c>True</c> if the instance can be returned, <c>False</c> otherwise.</returns>
+    /// <param name="value">要归还的实例。</param>
+    /// <returns>如果可以归还实例则为 <c>True</c>，否则为 <c>False</c>。</returns>
     bool Return(T value);
 }
 
 /// <summary>
-/// Simple policy based pool for objects.
+/// 基于策略的简单对象池。
 /// </summary>
-/// <typeparam name="T">The object type to pool.</typeparam>
+/// <typeparam name="T">要池化的对象类型。</typeparam>
 public class ObjectPool<T>
     where T : class
 {
@@ -31,10 +31,10 @@ public class ObjectPool<T>
     private readonly IObjectPoolPolicy<T> _policy;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObjectPool{T}"/> class.
+    /// 初始化 <see cref="ObjectPool{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="policy">The object pool policy.</param>
-    /// <param name="maxItems">Number of items to keep, defaults to number of processors * 2.</param>
+    /// <param name="policy">对象池策略。</param>
+    /// <param name="maxItems">保留的项目数，默认为处理器数量 * 2。</param>
     public ObjectPool(IObjectPoolPolicy<T> policy, int? maxItems = null)
     {
         if (maxItems == null || maxItems <= 0)
@@ -47,9 +47,9 @@ public class ObjectPool<T>
     }
 
     /// <summary>
-    /// Returns either a pooled or new instance of <typeparamref name="T"/>.
+    /// 返回 <typeparamref name="T"/> 的池化实例或新实例。
     /// </summary>
-    /// <returns>The pooled or new instance.</returns>
+    /// <returns>池化实例或新创建的实例。</returns>
     public T Lease()
     {
         for (var i = 0; i < _items.Length; i++)
@@ -65,9 +65,9 @@ public class ObjectPool<T>
     }
 
     /// <summary>
-    /// Returns the instance to the pool (if possible).
+    /// 将实例归还到池中（如果可能）。
     /// </summary>
-    /// <param name="value">The instance to return to the pool.</param>
+    /// <param name="value">要归还到池中的实例。</param>
     public void Return(T value)
     {
         if (!_policy.Return(value))

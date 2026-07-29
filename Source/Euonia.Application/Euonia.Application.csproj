@@ -14,6 +14,7 @@
         <ProjectReference Include="..\Euonia.Domain\Euonia.Domain.csproj" />
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
         <ProjectReference Include="..\Euonia.Pipeline\Euonia.Pipeline.csproj" />
+        <ProjectReference Include="..\Euonia.Uow\Euonia.Uow.csproj" />
         <ProjectReference Include="..\Euonia.Validation\Euonia.Validation.csproj" />
     </ItemGroup>
 

@@ -1,21 +1,21 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Nerosoft.Euonia.Disposing;
 
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A thread that executes actions within an <see cref="AsyncContext"/>.
+/// 在 <see cref="AsyncContext"/> 中执行操作的线程。
 /// </summary>
 [DebuggerTypeProxy(typeof(DebugView))]
 public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
 {
     /// <summary>
-    /// The child thread.
+    /// 子线程。
     /// </summary>
     private readonly Task _thread;
 
     /// <summary>
-    /// Creates a new <see cref="AsyncContext"/> and increments its operation count.
+    /// 创建一个新的 <see cref="AsyncContext"/> 并增加其操作计数。
     /// </summary>
     private static AsyncContext CreateAsyncContext()
     {
@@ -25,9 +25,9 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AsyncContextThread"/> class, creating a child thread waiting for commands.
+    /// 初始化 <see cref="AsyncContextThread"/> 类的新实例，创建一个等待命令的子线程。
     /// </summary>
-    /// <param name="context">The context for this thread.</param>
+    /// <param name="context">此线程的上下文。</param>
     private AsyncContextThread(AsyncContext context)
         : base(context)
     {
@@ -36,7 +36,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AsyncContextThread"/> class, creating a child thread waiting for commands.
+    /// 初始化 <see cref="AsyncContextThread"/> 类的新实例，创建一个等待命令的子线程。
     /// </summary>
     public AsyncContextThread()
         : this(CreateAsyncContext())
@@ -44,7 +44,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Gets the <see cref="AsyncContext"/> executed by this thread.
+    /// 获取由此线程执行的 <see cref="AsyncContext"/>。
     /// </summary>
     public AsyncContext Context { get; }
 
@@ -57,7 +57,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Permits the thread to exit, if we have not already done so.
+    /// 允许线程退出（如果尚未退出）。
     /// </summary>
     private void AllowThreadToExit()
     {
@@ -65,7 +65,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Requests the thread to exit and returns a task representing the exit of the thread. The thread will exit when all outstanding asynchronous operations complete.
+    /// 请求线程退出并返回一个表示线程退出的任务。线程将在所有未完成的异步操作完成后退出。
     /// </summary>
     public Task JoinAsync()
     {
@@ -74,7 +74,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Requests the thread to exit and blocks until the thread exits. The thread will exit when all outstanding asynchronous operations complete.
+    /// 请求线程退出并阻塞直到线程退出。线程将在所有未完成的异步操作完成后退出。
     /// </summary>
     public void Join()
     {
@@ -82,7 +82,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Requests the thread to exit.
+    /// 请求线程退出。
     /// </summary>
     protected override void Dispose(AsyncContext context)
     {
@@ -90,7 +90,7 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     }
 
     /// <summary>
-    /// Gets the <see cref="TaskFactory"/> for this thread, which can be used to schedule work to this thread.
+    /// 获取此线程的 <see cref="TaskFactory"/>，可用于将工作调度到此线程。
     /// </summary>
     public TaskFactory Factory => Context.Factory;
 

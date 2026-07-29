@@ -6,17 +6,17 @@ namespace Nerosoft.Euonia.Pipeline;
 [AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = true)]
 public sealed class PipelineBehaviorAttribute : Attribute
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    /// <param name="behaviorType"></param>
-    public PipelineBehaviorAttribute(Type behaviorType)
-    {
-        BehaviorType = behaviorType;
-    }
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="behaviorType"></param>
+	public PipelineBehaviorAttribute(Type behaviorType)
+	{
+		BehaviorType = behaviorType;
+	}
 
-    /// <summary>
-    /// 
-    /// </summary>
-    public Type BehaviorType { get; }
+	/// <summary>
+	/// Gets the behavior type.
+	/// </summary>
+	public Type BehaviorType { get; }
 }

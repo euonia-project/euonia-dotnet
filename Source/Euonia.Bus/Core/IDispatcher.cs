@@ -10,5 +10,5 @@ public interface IDispatcher
 	/// </summary>
 	/// <param name="messageType"></param>
 	/// <returns></returns>
-	IEnumerable<Type> Determine(Type messageType);
+	IEnumerable<string> Determine(Type messageType);
 }

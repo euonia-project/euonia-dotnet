@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Modularity;
 
@@ -14,7 +15,7 @@ public class InMemoryBusModule : ModuleContextBase
 	/// <param name="context"></param>
 	public override void AheadConfigureServices(ServiceConfigurationContext context)
 	{
-		context.Services.Configure<InMemoryBusOptions>(Configuration.GetSection("ServiceBus:InMemory"));
+		context.Services.Configure<InMemoryBusOptions>(Configuration.GetSection(Constants.ConfigurationSection));
 	}
 
 	/// <summary>
@@ -26,6 +27,7 @@ public class InMemoryBusModule : ModuleContextBase
 	/// </param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
-		context.Services.AddInMemoryBus();
+		var name = Configuration.GetValue<string>($"{Constants.ConfigurationSection}:{nameof(InMemoryBusOptions.Name)}") ?? Constants.DefaultTransportName;
+		context.Services.AddInMemoryBus(name, Configuration);
 	}
 }

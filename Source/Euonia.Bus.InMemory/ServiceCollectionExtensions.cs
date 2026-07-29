@@ -1,4 +1,6 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.InMemory;
 
@@ -15,9 +17,11 @@ public static class ServiceCollectionExtensions
 		/// <summary>
 		/// Adds the in-memory bus services to the service collection.
 		/// </summary>
+		/// <param name="name"></param>
+		/// <param name="configuration"></param>
 		/// <param name="configureOptions"></param>
 		/// <returns></returns>
-		public IServiceCollection AddInMemoryBus(Action<InMemoryBusOptions> configureOptions = null)
+		public IServiceCollection AddInMemoryBus(string name, IConfiguration configuration, Action<InMemoryBusOptions> configureOptions = null)
 		{
 			if (configureOptions != null)
 			{
@@ -33,23 +37,17 @@ public static class ServiceCollectionExtensions
 			// Registers the in-memory transport as a singleton service.
 			services.TryAddSingleton<InMemoryTransport>();
 
+			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransport) && descriptor.ServiceKey is string key && key == name))
+			{
+				services.AddKeyedSingleton<ITransport>(name, (provider, _) => provider.GetRequiredService<InMemoryTransport>());
+			}
+
 			// Registers the in-memory recipient registrar as a transient service
 			// implementing the IRecipientRegistrar interface.
-			services.AddTransient<IRecipientRegistrar, InMemoryRecipientRegistrar>();
-
-			return services;
-		}
-
-		/// <summary>
-		/// Adds an in-memory bus handle strategy to the service collection.
-		/// </summary>
-		/// <param name="configure"></param>
-		/// <returns></returns>
-		public IServiceCollection AddInMemoryBusStrategy(Action<TransportStrategyBuilder> configure)
-		{
-			var builder = new TransportStrategyBuilder();
-			configure(builder);
-			services.AddKeyedSingleton<ITransportStrategy>(typeof(InMemoryTransport), (_, _) => builder.Strategy);
+			if (!services.IsAddedImplementation<IRecipientRegistrar, InMemoryRecipientRegistrar>())
+			{
+				services.AddTransient<IRecipientRegistrar, InMemoryRecipientRegistrar>();
+			}
 			return services;
 		}
 	}

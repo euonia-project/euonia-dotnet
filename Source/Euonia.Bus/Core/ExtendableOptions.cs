@@ -36,4 +36,14 @@ public abstract class ExtendableOptions
 	/// Gets or sets the request trace id.
 	/// </summary>
 	public virtual string RequestTraceId { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether to enable pipeline behaviors.
+	/// </summary>
+	public bool? EnablePipelineBehaviors { get; set; }
+
+	/// <summary>
+	/// Gets or sets a value indicating whether to attach default pipeline behaviors.
+	/// </summary>
+	public bool AttachDefaultPipelineBehaviors { get; set; } = true;
 }

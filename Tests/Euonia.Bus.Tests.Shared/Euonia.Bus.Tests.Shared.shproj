@@ -8,6 +8,13 @@
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.Common.Default.props" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.Common.props" />
   <PropertyGroup />
+  <ItemGroup>
+    <Compile Include="Defines.cs" />
+    <Compile Include="ServiceBusTests.cs" />
+    <Compile Include="TestNotificationBucket.cs" />
+    <Compile Include="Commands\*.cs" />
+    <Compile Include="Handlers\*.cs" />
+  </ItemGroup>
   <Import Project="Euonia.Bus.Tests.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing\Microsoft.CodeSharing.CSharp.targets" />
 </Project>

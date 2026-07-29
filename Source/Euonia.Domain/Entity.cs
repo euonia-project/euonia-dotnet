@@ -17,7 +17,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// <inheritdoc/>
     public override object[] GetKeys()
     {
-        return new object[] { Id };
+        return [Id];
     }
 
     /// <inheritdoc />

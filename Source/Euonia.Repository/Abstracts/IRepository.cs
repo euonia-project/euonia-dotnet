@@ -1,5 +1,4 @@
 ﻿using System.Linq.Expressions;
-using Nerosoft.Euonia.Domain;
 using Nerosoft.Euonia.Linq;
 
 namespace Nerosoft.Euonia.Repository;
@@ -281,7 +280,7 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 	}
 
 	/// <summary>
-	/// Finds elemets in a sequence with the given primary key values asynchronously.
+	/// Finds elements in a sequence with the given primary key values asynchronously.
 	/// </summary>
 	/// <param name="keys"></param>
 	/// <param name="handle"></param>
@@ -294,7 +293,8 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 		{
 			return Task.FromResult(new List<TEntity>());
 		}
-		return FindAsync(PredicateBuilder.PropertyInRange<TEntity, TKey>(nameof(IEntity<TKey>.Id), keys.ToArray()), handle, cancellationToken);
+
+		return FindAsync(PredicateBuilder.PropertyInRange<TEntity, TKey>(nameof(IEntity<>.Id), keys.ToArray()), handle, cancellationToken);
 	}
 }
 

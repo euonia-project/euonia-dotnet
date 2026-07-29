@@ -12,7 +12,7 @@ public interface IHasDomainEvents
 	IEnumerable<DomainEvent> GetEvents();
 
 	/// <summary>
-	/// 
+	/// Raise up a new event.
 	/// </summary>
 	/// <param name="event"></param>
 	/// <typeparam name="TEvent"></typeparam>
@@ -20,7 +20,7 @@ public interface IHasDomainEvents
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// 
+	/// Apply the specific event.
 	/// </summary>
 	/// <typeparam name="TEvent"></typeparam>
 	/// <param name="event"></param>
@@ -28,12 +28,12 @@ public interface IHasDomainEvents
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// 
+	/// Clear events.
 	/// </summary>
 	void ClearEvents();
 
 	/// <summary>
-	/// 
+	/// Attach to events.
 	/// </summary>
 	void AttachToEvents();
 }

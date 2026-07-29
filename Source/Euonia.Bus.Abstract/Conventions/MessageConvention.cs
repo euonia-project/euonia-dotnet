@@ -31,7 +31,7 @@ public class MessageConvention : IMessageConvention
 	{
 		ArgumentNullException.ThrowIfNull(messageType);
 
-		return _multicastConventionCache.Apply(messageType, handle =>
+		return _unicastConventionCache.Apply(messageType, handle =>
 		{
 			var t = Type.GetTypeFromHandle(handle);
 			return _conventions.Any(x => x.IsUnicastType(t));
@@ -48,7 +48,7 @@ public class MessageConvention : IMessageConvention
 	{
 		ArgumentNullException.ThrowIfNull(messageType);
 
-		return _unicastConventionCache.Apply(messageType, handle =>
+		return _multicastConventionCache.Apply(messageType, handle =>
 		{
 			var t = Type.GetTypeFromHandle(handle);
 			return _conventions.Any(x => x.IsMulticastType(t));

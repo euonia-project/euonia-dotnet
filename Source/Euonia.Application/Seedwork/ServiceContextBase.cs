@@ -14,6 +14,11 @@ public abstract class ServiceContextBase : IServiceContext
     /// <inheritdoc />
     public virtual bool AutoRegisterApplicationService => true;
 
+    /// <summary>
+    /// Indicates whether to auto register pipeline behaviors.
+    /// </summary>
+    public virtual bool AutoRegisterPipelineBehaviors => true;
+    
     /// <inheritdoc />
     public virtual void ConfigureServices(IServiceCollection services)
     {

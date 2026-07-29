@@ -11,14 +11,9 @@ namespace Nerosoft.Euonia.Bus;
 /// Configures the message bus by registering handlers, setting conventions,
 /// assigning transport strategies and configuring identity providers.
 /// </summary>
-public class BusConfigurator : IBusConfigurator
+internal sealed class BusConfigurator : IBusConfigurator
 {
 	private readonly IServiceCollection _services;
-
-	/// <summary>
-	/// Holds discovered message handler registrations.
-	/// </summary>
-	private readonly List<MessageRegistration> _registrations = [];
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="BusConfigurator"/> class.
@@ -37,17 +32,7 @@ public class BusConfigurator : IBusConfigurator
 	/// <summary>
 	/// Builders for transport-specific strategies keyed by transport type.
 	/// </summary>
-	internal ConcurrentDictionary<Type, TransportStrategyBuilder> StrategyBuilders { get; } = new();
-
-	/// <summary>
-	/// Read-only list of registered message handler registrations.
-	/// </summary>
-	public IReadOnlyList<MessageRegistration> Registrations => _registrations;
-
-	/// <summary>
-	/// Types for which a transport strategy has been configured.
-	/// </summary>
-	public IReadOnlyList<Type> StrategyAssignedTypes => StrategyBuilders.Keys.ToList();
+	internal ConcurrentDictionary<string, TransportStrategyBuilder> StrategyBuilders { get; } = new();
 
 	/// <summary>
 	/// Scans the provided assemblies for handler types and registers them.
@@ -76,8 +61,7 @@ public class BusConfigurator : IBusConfigurator
 	/// <returns>The current <see cref="IBusConfigurator"/> for fluent configuration.</returns>
 	public IBusConfigurator RegisterHandlers(IEnumerable<Type> types)
 	{
-		var registrations = MessageHandlerFinder.Find(types).ToList();
-		_registrations.AddRange(registrations);
+		HandlerRegistrar.RegisterHandlers(types);
 		return this;
 	}
 
@@ -98,7 +82,7 @@ public class BusConfigurator : IBusConfigurator
 	/// <param name="transport">Transport type to configure.</param>
 	/// <param name="configure">Action that configures the <see cref="TransportStrategyBuilder"/> for the transport.</param>
 	/// <returns>The current <see cref="IBusConfigurator"/> for fluent configuration.</returns>
-	public IBusConfigurator SetStrategy(Type transport, Action<TransportStrategyBuilder> configure)
+	public IBusConfigurator SetStrategy(string transport, Action<TransportStrategyBuilder> configure)
 	{
 		if (configure != null)
 		{

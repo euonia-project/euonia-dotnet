@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace System;
 
 /// <summary>
-/// Defines a class for generating short unique IDs.
+/// 定义用于生成短唯一 ID 的类。
 /// </summary>
 public sealed class ShortUniqueId
 {
@@ -23,7 +23,7 @@ public sealed class ShortUniqueId
 	private readonly int _minHashLength;
 	private readonly int _minBufferSize;
 
-	// Creates the Regex in the first usage, speed up first use of non-hex methods
+	// 首次使用时创建 Regex，加速非十六进制方法的首次调用
 	private static readonly Lazy<Regex> _hexValidator = new(() => new Regex("^[0-9a-fA-F]+$", RegexOptions.Compiled));
 	private static readonly Lazy<Regex> _hexSplitter = new(() => new Regex(@"[\w\W]{1,12}", RegexOptions.Compiled));
 	private readonly StringBuilderPool _stringBuilderPool = new();
@@ -31,36 +31,36 @@ public sealed class ShortUniqueId
 	private static readonly Lazy<ShortUniqueId> _default = new(() => new ShortUniqueId(), isThreadSafe: true);
 
 	/// <summary>
-	/// Gets a default instance of <see cref="ShortUniqueId"/> with default parameters.
+	/// 获取带有默认参数的 <see cref="ShortUniqueId"/> 默认实例。
 	/// </summary>
 	/// <remarks>
-	///	This instance can be used when you don't need custom configuration.
+	/// 当您不需要自定义配置时，可以使用此实例。
 	/// </remarks>
 	public static ShortUniqueId Default => _default.Value;
 
 	/// <summary>
-	/// Instantiates a new Hashids encoder/decoder with defaults.
+	/// 使用默认参数实例化新的 Hashids 编码器/解码器。
 	/// </summary>
 	public ShortUniqueId()
 		: this(salt: string.Empty, minHashLength: 0, alphabet: DEFAULT_ALPHABET, seps: DEFAULT_SEPS)
 	{
-		// empty constructor with defaults needed to allow mocking of public methods
+		// 需要带有默认值的空构造函数，以允许对公共方法进行模拟
 	}
 
 	/// <summary>
-	/// Instantiates a new Hashids encoder/decoder.
-	/// All parameters are optional and will use defaults unless otherwise specified.
+	/// 实例化新的 Hashids 编码器/解码器。
+	/// 所有参数都是可选的，除非另有说明，否则将使用默认值。
 	/// </summary>
-	/// <param name="salt"></param>
-	/// <param name="minHashLength"></param>
-	/// <param name="alphabet"></param>
-	/// <param name="seps"></param>
+	/// <param name="salt">盐值。</param>
+	/// <param name="minHashLength">最小哈希长度。</param>
+	/// <param name="alphabet">字符集。</param>
+	/// <param name="seps">分隔符集合。</param>
 	public ShortUniqueId(string salt = "", int minHashLength = 0, string alphabet = DEFAULT_ALPHABET, string seps = DEFAULT_SEPS)
 	{
 		if (salt == null)
 			throw new ArgumentNullException(nameof(salt));
 		if (minHashLength < 0)
-			throw new ArgumentOutOfRangeException(nameof(minHashLength), "Value must be zero or greater.");
+			throw new ArgumentOutOfRangeException(nameof(minHashLength), "值必须为零或大于零。");
 		if (string.IsNullOrWhiteSpace(alphabet))
 			throw new ArgumentNullException(nameof(alphabet));
 		if (string.IsNullOrWhiteSpace(seps))
@@ -71,22 +71,22 @@ public sealed class ShortUniqueId
 		_alphabet = alphabet.ToCharArray().Distinct().ToArray();
 		_seps = seps.ToCharArray();
 
-		// use min buffer size of 20 which is 1 digit longer than the biggest 64-bit integer (long.MaxValue = 9223372036854775807)
+		// 使用最小缓冲区大小 20，比最大 64 位整数（long.MaxValue = 9223372036854775807）多 1 位
 		_minBufferSize = Math.Max(20, minHashLength);
 
 		if (_alphabet.Length < MIN_ALPHABET_LENGTH)
-			throw new ArgumentException($"Alphabet must contain at least {MIN_ALPHABET_LENGTH:N0} unique characters.", paramName: nameof(alphabet));
+			throw new ArgumentException($"字符集必须至少包含 {MIN_ALPHABET_LENGTH:N0} 个唯一字符。", paramName: nameof(alphabet));
 
-		// separator characters can only be chosen from the characters in the alphabet
+		// 分隔符只能从字符集中的字符中选择
 		if (_seps.Length > 0)
 			_seps = _seps.Intersect(_alphabet).ToArray();
 
-		// once separator characters are chosen, they must be removed from the alphabet available for hash generation
+		// 选定分隔符后，必须将它们从可用于哈希生成的字符集中移除
 		if (_seps.Length > 0)
 			_alphabet = _alphabet.Except(_seps).ToArray();
 
 		if (_alphabet.Length < (MIN_ALPHABET_LENGTH - 6))
-			throw new ArgumentException($"Alphabet must contain at least {MIN_ALPHABET_LENGTH:N0} unique characters that are also not present in .", paramName: nameof(alphabet));
+			throw new ArgumentException($"字符集必须至少包含 {MIN_ALPHABET_LENGTH:N0} 个不在分隔符中的唯一字符。", paramName: nameof(alphabet));
 
 		ConsistentShuffle(alphabet: _seps, salt: _salt);
 
@@ -127,37 +127,37 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// Encodes the provided number into a hashed string
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="number">the number</param>
-	/// <returns>the hashed string</returns>
+	/// <param name="number">要编码的数字。</param>
+	/// <returns>哈希字符串。</returns>
 	public string Encode(int number) => EncodeInt64(number);
 
 	/// <summary>
-	/// Encodes the provided numbers into a hash string.
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="numbers">List of integers.</param>
-	/// <returns>Encoded hash string.</returns>
+	/// <param name="numbers">整数列表。</param>
+	/// <returns>编码后的哈希字符串。</returns>
 	public string Encode(params int[] numbers)
 	{
 		return EncodeInt64(Array.ConvertAll(numbers, n => (long)n));
 	}
 
 	/// <summary>
-	/// Encodes the provided numbers into a hash string.
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="numbers">Enumerable list of integers.</param>
-	/// <returns>Encoded hash string.</returns>
+	/// <param name="numbers">可枚举的整数列表。</param>
+	/// <returns>编码后的哈希字符串。</returns>
 	public string Encode(IEnumerable<int> numbers)
 	{
 		return Encode(numbers.ToArray());
 	}
 
 	/// <summary>
-	/// Encodes the provided number into a hashed string
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="number">the number</param>
-	/// <returns>the hashed string</returns>
+	/// <param name="number">要编码的数字。</param>
+	/// <returns>哈希字符串。</returns>
 	public string EncodeInt64(long number)
 	{
 		var numberLength = _minBufferSize;
@@ -167,10 +167,10 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// Encodes the provided numbers into a hash string.
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="numbers">List of 64-bit integers.</param>
-	/// <returns>Encoded hash string.</returns>
+	/// <param name="numbers">64 位整数列表。</param>
+	/// <returns>编码后的哈希字符串。</returns>
 	public string EncodeInt64(params long[] numbers)
 	{
 		var numbersLength = _minBufferSize * numbers.Length;
@@ -180,50 +180,50 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// Encodes the provided numbers into a hash string.
+	/// 将提供的数字编码为哈希字符串。
 	/// </summary>
-	/// <param name="numbers">Enumerable list of 64-bit integers.</param>
-	/// <returns>Encoded hash string.</returns>
+	/// <param name="numbers">可枚举的 64 位整数列表。</param>
+	/// <returns>编码后的哈希字符串。</returns>
 	public string EncodeInt64(IEnumerable<long> numbers) => EncodeInt64([.. numbers]);
 
 	/// <summary>
-	/// Decodes the provided hash into numbers.
+	/// 将提供的哈希解码为整数数组。
 	/// </summary>
-	/// <param name="hash">Hash string to decode.</param>
-	/// <returns>Array of integers.</returns>
-	/// <exception cref="T:System.OverflowException">If the decoded number overflows integer.</exception>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <returns>整数数组。</returns>
+	/// <exception cref="T:System.OverflowException">如果解码的数字溢出整数范围。</exception>
 	public int[] Decode(string hash) => Array.ConvertAll(GetNumbersFrom(hash), n => (int)n);
 
 	/// <summary>
-	/// Decodes the provided hash into numbers.
+	/// 将提供的哈希解码为 64 位整数数组。
 	/// </summary>
-	/// <param name="hash">Hash string to decode.</param>
-	/// <returns>Array of 64-bit integers.</returns>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <returns>64 位整数数组。</returns>
 	public long[] DecodeInt64(string hash) => GetNumbersFrom(hash);
 
 	/// <summary>
-	/// 
+	/// 将提供的哈希解码为单个 64 位整数。
 	/// </summary>
-	/// <param name="hash"></param>
-	/// <returns></returns>
-	/// <exception cref="Exception"></exception>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <returns>解码后的 64 位整数。</returns>
+	/// <exception cref="Exception">当提供的哈希没有产生任何结果时抛出。</exception>
 	public long DecodeSingleInt64(string hash)
 	{
 		var number = GetNumberFrom(hash);
 
 		return number switch
 		{
-			-1 => throw new Exception("The hash provided yielded no result."),
+			-1 => throw new Exception("提供的哈希没有产生任何结果。"),
 			_ => number,
 		};
 	}
 
 	/// <summary>
-	/// 
+	/// 尝试将提供的哈希解码为单个 64 位整数。
 	/// </summary>
-	/// <param name="hash"></param>
-	/// <param name="id"></param>
-	/// <returns></returns>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <param name="id">解码成功时输出的 64 位整数。</param>
+	/// <returns>如果解码成功则为 true；否则为 false。</returns>
 	public bool TryDecodeSingleInt64(string hash, out long id)
 	{
 		var number = GetNumberFrom(hash);
@@ -239,28 +239,28 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// 
+	/// 将提供的哈希解码为单个整数。
 	/// </summary>
-	/// <param name="hash"></param>
-	/// <returns></returns>
-	/// <exception cref="Exception"></exception>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <returns>解码后的整数。</returns>
+	/// <exception cref="Exception">当提供的哈希没有产生任何结果时抛出。</exception>
 	public int DecodeSingle(string hash)
 	{
 		var number = GetNumberFrom(hash);
 
 		return number switch
 		{
-			-1 => throw new Exception("The hash provided yielded no result."),
+			-1 => throw new Exception("提供的哈希没有产生任何结果。"),
 			_ => (int)number,
 		};
 	}
 
 	/// <summary>
-	/// 
+	/// 尝试将提供的哈希解码为单个整数。
 	/// </summary>
-	/// <param name="hash"></param>
-	/// <param name="id"></param>
-	/// <returns></returns>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <param name="id">解码成功时输出的整数。</param>
+	/// <returns>如果解码成功则为 true；否则为 false。</returns>
 	public bool TryDecodeSingle(string hash, out int id)
 	{
 		var number = GetNumberFrom(hash);
@@ -276,10 +276,10 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// Encodes the provided hex-string into a hash string.
+	/// 将提供的十六进制字符串编码为哈希字符串。
 	/// </summary>
-	/// <param name="hex">Hex string to encode.</param>
-	/// <returns>Encoded hash string.</returns>
+	/// <param name="hex">要编码的十六进制字符串。</param>
+	/// <returns>编码后的哈希字符串。</returns>
 	public string EncodeHex(string hex)
 	{
 		if (string.IsNullOrWhiteSpace(hex) || !_hexValidator.Value.IsMatch(hex))
@@ -302,10 +302,10 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// Decodes the provided hash into a hex-string.
+	/// 将提供的哈希解码为十六进制字符串。
 	/// </summary>
-	/// <param name="hash">Hash string to decode.</param>
-	/// <returns>Decoded hex string.</returns>
+	/// <param name="hash">要解码的哈希字符串。</param>
+	/// <returns>解码后的十六进制字符串。</returns>
 	public string DecodeHex(string hash)
 	{
 		var builder = _stringBuilderPool.Get();
@@ -351,7 +351,7 @@ public sealed class ShortUniqueId
 		ConsistentShuffle(alphabet, shuffleBuffer);
 		var hashLength = BuildReversedHash(number, alphabet, hashBuffer);
 
-		// Reverse hashBuffer in a loop and insert into result
+		// 在循环中反转 hashBuffer 并插入到 result 中
 		for (var i = 0; i < hashLength; i++)
 			result[i + 1] = hashBuffer[hashLength - i - 1];
 
@@ -588,8 +588,8 @@ public sealed class ShortUniqueId
 		ConsistentShuffle(alphabet, buffer);
 		var result = Unhash(hashBuffer, alphabet);
 
-		// regenerate hash from numbers and compare to given hash to ensure the correct parameters were used
-		// ensure buffer is big enough based on what was generated
+		// 从数字重新生成哈希并与给定的哈希进行比较，以确保使用了正确的参数
+		// 确保缓冲区足够大，基于生成的内容
 		var bufferSize = Math.Max(_minBufferSize, guardedHash.Length);
 		Span<char> resultBuffer = stackalloc char[bufferSize];
 		var hashLength = GenerateHashFrom(result, ref resultBuffer);
@@ -613,7 +613,7 @@ public sealed class ShortUniqueId
 		}
 
 		ReadOnlySpan<char> rehash = hashBuffer[..hashLength];
-		// regenerate hash from numbers and compare to given hash to ensure the correct parameters were used
+		// 从数字重新生成哈希并与给定的哈希进行比较，以确保使用了正确的参数
 		if (hash.AsSpan().Equals(rehash, StringComparison.Ordinal))
 		{
 			return result;
@@ -644,7 +644,7 @@ public sealed class ShortUniqueId
 		ArrayPool<(int, int)>.Shared.Return(ranges);
 
 		var lottery = hashBreakdown[0];
-		if (lottery == '\0') // default(char) is '\0'
+		if (lottery == '\0') // default(char) 是 '\0'
 		{
 			return [];
 		}
@@ -683,7 +683,7 @@ public sealed class ShortUniqueId
 	}
 
 	/// <summary>
-	/// NOTE: This method mutates the <paramref name="alphabet"/> argument in-place.
+	/// 注意：此方法会就地修改 <paramref name="alphabet"/> 参数。
 	/// </summary>
 	private static void ConsistentShuffle(Span<char> alphabet, ReadOnlySpan<char> salt)
 	{
@@ -692,7 +692,7 @@ public sealed class ShortUniqueId
 			return;
 		}
 
-		// TODO: Document or rename these cryptically-named variables: i, v, p.
+		// TODO: 记录或重命名这些含义模糊的变量：i, v, p。
 		for (int i = alphabet.Length - 1, v = 0, p = 0; i > 0; i--, v++)
 		{
 			v %= salt.Length;
@@ -700,7 +700,7 @@ public sealed class ShortUniqueId
 			p += saltNum;
 			var j = (saltNum + v + p) % i;
 
-			// swap characters at positions i and j:
+			// 交换位置 i 和 j 的字符：
 			(alphabet[i], alphabet[j]) = (alphabet[j], alphabet[i]);
 		}
 	}

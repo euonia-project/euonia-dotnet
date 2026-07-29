@@ -1,7 +1,7 @@
-﻿namespace System;
+namespace System;
 
 /// <summary>
-/// Defines the <see cref="Empty" />.
+/// 表示一个空值单例。
 /// </summary>
 [Serializable]
 public sealed class Empty : ISerializable
@@ -11,11 +11,13 @@ public sealed class Empty : ISerializable
 	}
 
 	/// <summary>
-	/// Defines the Value.
+	/// 空值单例实例。
 	/// </summary>
 	public static readonly Empty Value = new();
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 返回空字符串表示。
+	/// </summary>
 	public override string ToString()
 	{
 		return string.Empty;

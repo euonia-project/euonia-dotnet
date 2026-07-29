@@ -4,6 +4,9 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
         <PackageReference Include="Serilog" />
         <PackageReference Include="Serilog.AspNetCore" />
         <PackageReference Include="Serilog.Enrichers.Environment" />
@@ -13,10 +16,20 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Application\Euonia.Application.csproj" />
-        <ProjectReference Include="..\..\Source\Euonia.Business\Euonia.Business.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Bus.InMemory\Euonia.Bus.InMemory.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Bus.RabbitMq\Euonia.Bus.RabbitMq.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Bus\Euonia.Bus.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Domain\Euonia.Domain.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Hosting\Euonia.Hosting.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Mapping.Automapper\Euonia.Mapping.Automapper.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Mapping.Mapster\Euonia.Mapping.Mapster.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Modularity\Euonia.Modularity.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Repository.EfCore\Euonia.Repository.EfCore.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Folder Include="Services\Domain\Actuators\" />
     </ItemGroup>
 
 </Project>

@@ -1,31 +1,33 @@
-﻿using System.Net;
+using System.Net;
 
 namespace System;
 
-/// <inheritdoc />
+/// <summary>
+/// 用于标记异常类对应的 HTTP 状态码的特性。
+/// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public class HttpStatusCodeAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpStatusCodeAttribute"/> class.
+    /// 初始化 <see cref="HttpStatusCodeAttribute"/> 类的新实例。
     /// </summary>
-    /// <param name="statusCode">The HTTP status code.</param>
+    /// <param name="statusCode">HTTP 状态码。</param>
     public HttpStatusCodeAttribute(HttpStatusCode statusCode)
     {
         StatusCode = statusCode;
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="HttpStatusCodeAttribute"/> class.
+    /// 初始化 <see cref="HttpStatusCodeAttribute"/> 类的新实例。
     /// </summary>
-    /// <param name="statusCode">The HTTP status code.</param>
+    /// <param name="statusCode">HTTP 状态码的整数值。</param>
     public HttpStatusCodeAttribute(int statusCode)
         : this((HttpStatusCode)statusCode)
     {
     }
 
     /// <summary>
-    /// Gets the HTTP status code.
+    /// 获取 HTTP 状态码。
     /// </summary>
     public HttpStatusCode StatusCode { get; }
 }

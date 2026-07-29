@@ -1,13 +1,13 @@
-﻿using System.Reflection;
+using System.Reflection;
 
 // ReSharper disable UnusedType.Global
 
 namespace Nerosoft.Euonia.Reflection;
 
 /// <summary>
-/// Methods to parse string value to enum type <typeparamref name="T"/>.
+/// 将字符串值解析为枚举类型 <typeparamref name="T"/> 的方法。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">要解析的枚举类型。</typeparam>
 public static class EnumParser<T>
 {
     private static readonly Dictionary<string, T> _dictionary = new();
@@ -30,21 +30,22 @@ public static class EnumParser<T>
     }
 
     /// <summary>
-    /// Try parse string value to enum type <typeparamref name="T"/>.
+    /// 尝试将字符串值解析为枚举类型 <typeparamref name="T"/>。
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
+    /// <param name="name">要解析的字符串名称。</param>
+    /// <param name="value">解析成功时输出枚举值。</param>
+    /// <returns>如果解析成功，则为 true；否则为 false。</returns>
     public static bool TryParse(string name, out T value)
     {
         return _dictionary.TryGetValue(name, out value);
     }
 
     /// <summary>
-    /// Parse string value to enum type <typeparamref name="T"/>.
+    /// 将字符串值解析为枚举类型 <typeparamref name="T"/>。
     /// </summary>
-    /// <param name="name"></param>
-    /// <returns></returns>
+    /// <param name="name">要解析的字符串名称。</param>
+    /// <returns>解析得到的枚举值。</returns>
+    /// <exception cref="KeyNotFoundException">当 <paramref name="name"/> 不是有效的枚举名称时抛出。</exception>
     public static T Parse(string name)
     {
         return _dictionary[name];

@@ -2,6 +2,8 @@
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Application;
+using Nerosoft.Euonia.Pipeline;
+using Nerosoft.Euonia.Reflection;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -10,90 +12,138 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-    /// <summary>
-    /// Register service context.
-    /// </summary>
-    /// <param name="services"></param>
-    /// <typeparam name="TService"></typeparam>
-    public static void Register<TService>(this IServiceCollection services)
-        where TService : class, IServiceContext, new()
-    {
-        var context = new TService();
-        context.ConfigureServices(services);
+	/// <param name="services"></param>
+	extension(IServiceCollection services)
+	{
+		/// <summary>
+		/// Register service context.
+		/// </summary>
+		/// <typeparam name="TService"></typeparam>
+		public void Register<TService>()
+			where TService : class, IServiceContext, new()
+		{
+			var context = new TService();
+			context.ConfigureServices(services);
 
-        if (context.AutoRegisterApplicationService)
-        {
-            var assembly = Assembly.GetAssembly(typeof(TService));
+			if (context.AutoRegisterPipelineBehaviors || context.AutoRegisterApplicationService)
+			{
+				var assembly = Assembly.GetAssembly(typeof(TService));
+				var definedTypes = assembly!.DefinedTypes.ToArray();
 
-            services.AddApplicationService(assembly);
-        }
+				if (context.AutoRegisterApplicationService)
+				{
+					services.AddApplicationService(definedTypes);
+				}
 
-        services.TryAddSingleton<IServiceContext>(_ => context);
-    }
+				if (context.AutoRegisterPipelineBehaviors)
+				{
+					services.AddPipelineBehaviors(definedTypes);
+				}
+			}
 
-    /// <summary>
-    /// Register application service of module to <see cref="IServiceCollection"/>.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> instance of current application.</param>
-    /// <param name="assembly">The assembly which contains application services.</param>
-    /// <returns></returns>
-    public static IServiceCollection AddApplicationService(this IServiceCollection services, Assembly assembly)
-    {
-        if (assembly == null)
-        {
-            return services;
-        }
+			services.TryAddSingleton<IServiceContext>(_ => context);
+		}
 
-        var definedTypes = assembly.DefinedTypes;
-        services.AddApplicationService(definedTypes);
-        return services;
-    }
+		/// <summary>
+		/// Register application service of module to <see cref="IServiceCollection"/>.
+		/// </summary>
+		/// <param name="assembly">The assembly which contains application services.</param>
+		/// <returns></returns>
+		public void AddApplicationService(Assembly assembly)
+		{
+			if (assembly == null)
+			{
+				return;
+			}
 
-    /// <summary>
-    /// Register application services of module to <see cref="IServiceCollection"/>.
-    /// </summary>
-    /// <param name="services">The <see cref="IServiceCollection"/> instance of current application.</param>
-    /// <param name="definedTypes">The application service types.</param>
-    /// <returns></returns>
-    /// <remarks>The application service type should inherit from <see cref="IApplicationService"/>.</remarks>
-    public static IServiceCollection AddApplicationService(this IServiceCollection services, IEnumerable<Type> definedTypes)
-    {
-        if (!definedTypes.Any())
-        {
-            return services;
-        }
+			var definedTypes = AssemblyHelper.GetDefinedTypes(assembly)
+			                                 .ToArray();
 
-        var types = definedTypes.Where(type => type.IsClass && !type.IsAbstract && typeof(IApplicationService).IsAssignableFrom(type));
+			services.AddApplicationService(definedTypes);
+		}
 
-        foreach (var implementationType in types)
-        {
-            services.AddTransient(implementationType);
+		/// <summary>
+		/// Register pipeline behaviors of module to <see cref="IServiceCollection"/>.
+		/// </summary>
+		/// <param name="assembly">The assembly which contains pipeline behaviors.</param>
+		public void AddPipelineBehaviors(Assembly assembly)
+		{
+			if (assembly == null)
+			{
+				return;
+			}
 
-            var interfaces = implementationType.GetInterfaces();
+			var definedTypes = assembly.DefinedTypes.ToArray();
+			services.AddPipelineBehaviors(definedTypes);
+		}
 
-            if (interfaces.Length == 0)
-            {
-                continue;
-            }
+		/// <summary>
+		/// Register application services of module to <see cref="IServiceCollection"/>.
+		/// </summary>
+		/// <param name="definedTypes">The application service types.</param>
+		/// <returns></returns>
+		/// <remarks>The application service type should inherit from <see cref="IApplicationService"/>.</remarks>
+		private void AddApplicationService(TypeInfo[] definedTypes)
+		{
+			if (!definedTypes.Any())
+			{
+				return;
+			}
 
-            foreach (var serviceType in interfaces)
-            {
-                services.TryAddTransient(serviceType, provider =>
-                {
-                    var instance = provider.GetRequiredService(implementationType);
-                    if (instance is IHasLazyServiceProvider service)
-                    {
-                        var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);
-                        service.LazyServiceProvider = lazyServiceProvider;
-                    }
+			var types = definedTypes.Where(type => type.IsClass && !type.IsAbstract && typeof(IApplicationService).IsAssignableFrom(type));
 
-                    var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
-                    var interceptors = provider.GetServices<IInterceptor>().ToArray();
-                    return proxyGenerator.CreateInterfaceProxyWithTarget(serviceType, instance, interceptors);
-                });
-            }
-        }
+			foreach (var implementationType in types)
+			{
+				services.AddTransient(implementationType);
 
-        return services;
-    }
+				var interfaces = implementationType.GetInterfaces();
+
+				if (interfaces.Length == 0)
+				{
+					continue;
+				}
+
+				foreach (var serviceType in interfaces)
+				{
+					services.TryAddTransient(serviceType, provider =>
+					{
+						var instance = provider.GetRequiredService(implementationType);
+						if (instance is IHasLazyServiceProvider service)
+						{
+							var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);
+							service.LazyServiceProvider = lazyServiceProvider;
+						}
+
+						var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
+						var interceptors = provider.GetServices<IInterceptor>().ToArray();
+						return proxyGenerator.CreateInterfaceProxyWithTarget(serviceType, instance, interceptors);
+					});
+				}
+			}
+		}
+
+		/// <summary>
+		/// Register pipeline behaviors to <see cref="IServiceCollection"/>.
+		/// </summary>
+		/// <param name="behaviorTypes"></param>
+		/// <returns></returns>
+		private void AddPipelineBehaviors(TypeInfo[] behaviorTypes)
+		{
+			foreach (var behaviorType in behaviorTypes)
+			{
+				var interfaces = behaviorType.GetInterfaces()
+				                             .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>))
+				                             .ToList();
+				foreach (var @interface in interfaces)
+				{
+					if (behaviorType.IsGenericType)
+					{
+						continue;
+					}
+
+					services.AddTransient(@interface, behaviorType);
+				}
+			}
+		}
+	}
 }

@@ -1,22 +1,22 @@
-﻿namespace Nerosoft.Euonia.Threading.Interop;
+namespace Nerosoft.Euonia.Threading.Interop;
 
 /// <summary>
-/// Creation methods for tasks wrapping events.
+/// 用于包装事件的 <see cref="Task"/> 的创建方法。
 /// </summary>
 public static class EventAsyncFactory
 {
 	/// <summary>
-	/// Returns a <see cref="Task"/> that completes when a specified event next fires. This overload is for events that are of any type.
+	/// 返回一个 <see cref="Task"/>，当指定的事件下一次触发时完成。此重载适用于任意类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArguments">A type containing all event arguments.</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="Action"/> and converts it to a <typeparamref name="TDelegate"/>. This is generally of the form <c>x => (...) => x(new TEventArguments(...))</c>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArguments">包含所有事件参数的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="Action"/> 并将其转换为 <typeparamref name="TDelegate"/>。通常形式为 <c>x => (...) => x(new TEventArguments(...))</c>。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static async Task<TEventArguments> FromAnyEvent<TDelegate, TEventArguments>(
 		Func<Action<TEventArguments>, TDelegate> convert,
@@ -41,16 +41,16 @@ public static class EventAsyncFactory
 	}
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of any type.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于任意类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArguments">A type containing all event arguments.</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="Action{TEventArguments}"/> and converts it to a <typeparamref name="TDelegate"/>. This is generally of the form <c>x => (...) => x(new TEventArguments(...))</c>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArguments">包含所有事件参数的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="Action{TEventArguments}"/> 并将其转换为 <typeparamref name="TDelegate"/>。通常形式为 <c>x => (...) => x(new TEventArguments(...))</c>。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<TEventArguments> FromAnyEvent<TDelegate, TEventArguments>(
 		Func<Action<TEventArguments>, TDelegate> convert,
@@ -58,15 +58,15 @@ public static class EventAsyncFactory
 		=> FromAnyEvent(convert, subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of any type.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于任意类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArguments">A type containing all event arguments.</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="Action{TEventArguments}"/> and converts it to a <typeparamref name="TDelegate"/>. This is generally of the form <c>x => (...) => x(new TEventArguments(...))</c>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArguments">包含所有事件参数的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="Action{TEventArguments}"/> 并将其转换为 <typeparamref name="TDelegate"/>。通常形式为 <c>x => (...) => x(new TEventArguments(...))</c>。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<TEventArguments> FromAnyEvent<TDelegate, TEventArguments>(
 		Func<Action<TEventArguments>, TDelegate> convert,
@@ -74,14 +74,14 @@ public static class EventAsyncFactory
 		=> FromAnyEvent(convert, subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="EventHandler"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe, CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
@@ -90,40 +90,40 @@ public static class EventAsyncFactory
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <see cref="EventHandler"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe, CancellationToken cancellationToken)
 		=> FromEvent(subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <see cref="EventHandler"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe)
 		=> FromEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler{TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler{TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler{TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="EventHandler{TEventArgs}"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe,
@@ -133,14 +133,14 @@ public static class EventAsyncFactory
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler{TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler{TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler{TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <see cref="EventHandler{TEventArgs}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe,
@@ -148,30 +148,30 @@ public static class EventAsyncFactory
 		=> FromEvent(subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="EventHandler{TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="EventHandler{TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes a <see cref="EventHandler{TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <see cref="EventHandler{TEventArgs}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="EventHandler{TEventArgs}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe)
 		=> FromEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that follow the standard <c>sender, eventArgs</c> pattern but with a custom delegate type.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于遵循标准 <c>sender, eventArgs</c> 模式但使用自定义委托类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="EventHandler{TEventArgs}"/> and converts it to a <typeparamref name="TDelegate"/>. If the type parameters are specified explicitly, this should be <c>x => x.Invoke</c>. If the type parameters are inferred, this should be <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c> with appropriate substitutions for <typeparamref name="TEventArgs"/> and <typeparamref name="TDelegate"/>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="EventHandler{TEventArgs}"/> 并将其转换为 <typeparamref name="TDelegate"/>。如果显式指定类型参数，则应使用 <c>x => x.Invoke</c>。如果类型参数是推断的，则应使用 <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c>，并对 <typeparamref name="TEventArgs"/> 和 <typeparamref name="TDelegate"/> 进行相应的替换。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
@@ -181,16 +181,16 @@ public static class EventAsyncFactory
 			cancellationToken, unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that follow the standard <c>sender, eventArgs</c> pattern but with a custom delegate type.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于遵循标准 <c>sender, eventArgs</c> 模式但使用自定义委托类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="EventHandler{TEventArgs}"/> and converts it to a <typeparamref name="TDelegate"/>. If the type parameters are specified explicitly, this should be <c>x => x.Invoke</c>. If the type parameters are inferred, this should be <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c> with appropriate substitutions for <typeparamref name="TEventArgs"/> and <typeparamref name="TDelegate"/>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="EventHandler{TEventArgs}"/> 并将其转换为 <typeparamref name="TDelegate"/>。如果显式指定类型参数，则应使用 <c>x => x.Invoke</c>。如果类型参数是推断的，则应使用 <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c>，并对 <typeparamref name="TEventArgs"/> 和 <typeparamref name="TDelegate"/> 进行相应的替换。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
@@ -198,15 +198,15 @@ public static class EventAsyncFactory
 		=> FromEvent(convert, subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that follow the standard <c>sender, eventArgs</c> pattern but with a custom delegate type.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于遵循标准 <c>sender, eventArgs</c> 模式但使用自定义委托类型的事件。
 	/// </summary>
-	/// <typeparam name="TDelegate">The type of the event delegate.</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="convert">A conversion delegate that takes an <see cref="EventHandler{TEventArgs}"/> and converts it to a <typeparamref name="TDelegate"/>. If the type parameters are specified explicitly, this should be <c>x => x.Invoke</c>. If the type parameters are inferred, this should be <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c> with appropriate substitutions for <typeparamref name="TEventArgs"/> and <typeparamref name="TDelegate"/>.</param>
-	/// <param name="subscribe">A method that takes a <typeparamref name="TDelegate"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes a <typeparamref name="TDelegate"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <typeparam name="TDelegate">事件委托的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="convert">一个转换委托，接收 <see cref="EventHandler{TEventArgs}"/> 并将其转换为 <typeparamref name="TDelegate"/>。如果显式指定类型参数，则应使用 <c>x => x.Invoke</c>。如果类型参数是推断的，则应使用 <c>(EventHandler&lt;TEventArgs&gt; x) => new TDelegate(x)</c>，并对 <typeparamref name="TEventArgs"/> 和 <typeparamref name="TDelegate"/> 进行相应的替换。</param>
+	/// <param name="subscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <typeparamref name="TDelegate"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
@@ -214,16 +214,16 @@ public static class EventAsyncFactory
 		=> FromEvent(convert, subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{TSender, TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{TSender, TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TSender">The type of the "sender" (the first event argument).</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <typeparam name="TSender">"发送者"（第一个事件参数）的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<TSender, TEventArgs>> FromActionEvent<TSender, TEventArgs>(
 		Action<Action<TSender, TEventArgs>> subscribe, Action<Action<TSender, TEventArgs>> unsubscribe,
@@ -233,15 +233,15 @@ public static class EventAsyncFactory
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{TSender, TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{TSender, TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TSender">The type of the "sender" (the first event argument).</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <typeparam name="TSender">"发送者"（第一个事件参数）的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<TSender, TEventArgs>> FromActionEvent<TSender, TEventArgs>(
 		Action<Action<TSender, TEventArgs>> subscribe, Action<Action<TSender, TEventArgs>> unsubscribe,
@@ -249,29 +249,29 @@ public static class EventAsyncFactory
 		=> FromActionEvent(subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{TSender, TEventArgs}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{TSender, TEventArgs}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TSender">The type of the "sender" (the first event argument).</typeparam>
-	/// <typeparam name="TEventArgs">The type of the "arguments" (the second event argument).</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{TSender, TEventArgs}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <typeparam name="TSender">"发送者"（第一个事件参数）的类型。</typeparam>
+	/// <typeparam name="TEventArgs">"参数"（第二个事件参数）的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{TSender, TEventArgs}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<EventArguments<TSender, TEventArgs>> FromActionEvent<TSender, TEventArgs>(
 		Action<Action<TSender, TEventArgs>> subscribe, Action<Action<TSender, TEventArgs>> unsubscribe)
 		=> FromActionEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{T}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{T}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the argument passed to the event handler and used to complete the task.</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{T}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{T}"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <typeparam name="TEventArgs">传递给事件处理程序并用于完成任务参数的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{T}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{T}"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<TEventArgs> FromActionEvent<TEventArgs>(Action<Action<TEventArgs>> subscribe,
 															   Action<Action<TEventArgs>> unsubscribe, CancellationToken cancellationToken,
@@ -280,41 +280,41 @@ public static class EventAsyncFactory
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{T}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{T}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the argument passed to the event handler and used to complete the task.</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{T}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{T}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <typeparam name="TEventArgs">传递给事件处理程序并用于完成任务的参数的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{T}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{T}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<TEventArgs> FromActionEvent<TEventArgs>(Action<Action<TEventArgs>> subscribe,
 															   Action<Action<TEventArgs>> unsubscribe, CancellationToken cancellationToken)
 		=> FromActionEvent(subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task{T}"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action{T}"/>.
+	/// 返回一个 <see cref="Task{T}"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action{T}"/> 的事件。
 	/// </summary>
-	/// <typeparam name="TEventArgs">The type of the argument passed to the event handler and used to complete the task.</typeparam>
-	/// <param name="subscribe">A method that takes an <see cref="Action{T}"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action{T}"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <typeparam name="TEventArgs">传递给事件处理程序并用于完成任务的参数的类型。</typeparam>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action{T}"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action{T}"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task<TEventArgs> FromActionEvent<TEventArgs>(Action<Action<TEventArgs>> subscribe,
 															   Action<Action<TEventArgs>> unsubscribe)
 		=> FromActionEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action"/>.
+	/// 返回一个 <see cref="Task"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes an <see cref="Action"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action"/> and unsubscribes it from the event. This method is invoked in a captured context if <paramref name="unsubscribeOnCapturedContext"/> is <c>true</c>.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
-	/// <param name="unsubscribeOnCapturedContext">Whether to invoke <paramref name="unsubscribe"/> on a captured context.</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action"/> 并将其从事件中取消订阅。当 <paramref name="unsubscribeOnCapturedContext"/> 为 <c>true</c> 时，此方法在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
+	/// <param name="unsubscribeOnCapturedContext">是否在捕获的上下文中调用 <paramref name="unsubscribe"/>。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task FromActionEvent(Action<Action> subscribe, Action<Action> unsubscribe,
 									   CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
@@ -322,36 +322,36 @@ public static class EventAsyncFactory
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
-	/// Returns a <see cref="Task"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action"/>.
+	/// 返回一个 <see cref="Task"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes an <see cref="Action"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
-	/// <param name="cancellationToken">A cancellation token that can be used to cancel the task (and unsubscribe from the event handler).</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
+	/// <param name="cancellationToken">可用于取消任务（并从事件处理程序中取消订阅）的取消令牌。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task FromActionEvent(Action<Action> subscribe, Action<Action> unsubscribe,
 									   CancellationToken cancellationToken)
 		=> FromActionEvent(subscribe, unsubscribe, cancellationToken, true);
 
 	/// <summary>
-	/// Returns a <see cref="Task"/> that completes when a specified event next fires. This overload is for events that are of type <see cref="Action"/>.
+	/// 返回一个 <see cref="Task"/>，当指定的事件下一次触发时完成。此重载适用于类型为 <see cref="Action"/> 的事件。
 	/// </summary>
-	/// <param name="subscribe">A method that takes an <see cref="Action"/> and subscribes it to the event.</param>
-	/// <param name="unsubscribe">A method that takes an <see cref="Action"/> and unsubscribes it from the event. This method is always invoked in a captured context.</param>
+	/// <param name="subscribe">一个方法，接收 <see cref="Action"/> 并将其订阅到事件。</param>
+	/// <param name="unsubscribe">一个方法，接收 <see cref="Action"/> 并将其从事件中取消订阅。此方法始终在捕获的上下文中调用。</param>
 	/// <remarks>
-	/// <para>Calling this method in a loop is often an anti-pattern, because the event is only subscribed to when this method is invoked, and is unsubscribed from when the task completes. From the time the task is completed until this method is called again, the event may fire and be "lost". If you find yourself needing a loop around this method, consider using Rx or TPL Dataflow instead.</para>
+	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
 	public static Task FromActionEvent(Action<Action> subscribe, Action<Action> unsubscribe)
 		=> FromActionEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
 	/// <summary>
-	/// Creates an <see cref="EventArguments{TSender,TEventArgs}"/> structure.
+	/// 创建一个 <see cref="EventArguments{TSender,TEventArgs}"/> 结构。
 	/// </summary>
-	/// <typeparam name="TSender">The type of the sender of the event.</typeparam>
-	/// <typeparam name="TEventArgs">The event arguments.</typeparam>
-	/// <param name="sender">The sender of the event.</param>
-	/// <param name="eventArgs">The event arguments.</param>
+	/// <typeparam name="TSender">事件发送者的类型。</typeparam>
+	/// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
+	/// <param name="sender">事件的发送者。</param>
+	/// <param name="eventArgs">事件参数。</param>
 	private static EventArguments<TSender, TEventArgs> CreateEventArguments<TSender, TEventArgs>(TSender sender,
 																								 TEventArgs eventArgs)
 		=> new()
