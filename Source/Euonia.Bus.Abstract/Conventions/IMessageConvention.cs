@@ -1,42 +1,42 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// A set of conventions for determining if a class represents a request, multicast, or unicast message.
+/// 定义一组用于判断类代表请求消息、多播消息还是单播消息的约定。
 /// </summary>
 public interface IMessageConvention
 {
 	/// <summary>
-	/// The name of the convention. Used for diagnostic purposes.
+	/// 获取约定的名称，用于诊断目的。
 	/// </summary>
 	string Name { get; }
 
 	/// <summary>
-	/// Determine if a type is a unicast type.
+	/// 判断指定的消息类型是否为单播消息。
 	/// </summary>
-	/// <param name="channel">The type to check.</param>.
-	/// <returns>true if <paramref name="channel"/> represents a unicast message.</returns>
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>如果 <paramref name="channel"/> 表示单播消息，则为 <c>true</c>。</returns>
 	/// <remarks>
-	///	The unicast message is delivered to a single recipient, typically using a queue-based mechanism.
+	/// 单播消息仅传递给单个接收者，通常使用基于队列的机制。
 	/// </remarks>
-	bool IsUnicastType(string channel);
+	bool IsUnicast(string channel);
 
 	/// <summary>
-	/// Determine if a type is a multicast type.
+	/// 判断指定的消息类型是否为多播消息。
 	/// </summary>
-	/// <param name="channel">The type to check.</param>.
-	/// <returns>true if <paramref name="channel"/> represents a topic message.</returns>
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>如果 <paramref name="channel"/> 表示多播消息，则为 <c>true</c>。</returns>
 	/// <remarks>
-	///	The multicast message is delivered to multiple recipients, typically using a topic-based mechanism.
+	/// 多播消息传递给多个接收者，通常使用基于主题的机制。
 	/// </remarks>
-	bool IsMulticastType(string channel);
+	bool IsMulticast(string channel);
 
 	/// <summary>
-	/// Determine if a type is a request type.
+	/// 判断指定的消息类型是否为请求消息。
 	/// </summary>
-	/// <param name="channel">The type to check.</param>
-	/// <returns>true if <paramref name="channel"/> represents a request message.</returns>
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>如果 <paramref name="channel"/> 表示请求消息，则为 <c>true</c>。</returns>
 	/// <remarks>
-	/// The request message is sent to a single recipient, expecting a response.
+	/// 请求消息发送给单个接收者，并期望收到响应。
 	/// </remarks>
-	bool IsRequestType(string channel);
+	bool IsRequest(string channel);
 }
