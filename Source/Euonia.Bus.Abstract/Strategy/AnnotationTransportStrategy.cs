@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Bus;
 /// <summary>
 /// Evaluate whether a type can be handled by attribute decoration on the type.
 /// </summary>
-public class AttributeTransportStrategy : ITransportStrategy
+public class AnnotationTransportStrategy : ITransportStrategy
 {
 	/// <summary>
 	/// The name of the strategy.
@@ -18,10 +18,10 @@ public class AttributeTransportStrategy : ITransportStrategy
 	private IEnumerable<string> Required { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AttributeTransportStrategy"/> class.
+	/// Initializes a new instance of the <see cref="AnnotationTransportStrategy"/> class.
 	/// </summary>
 	/// <param name="requiredTransports"></param>
-	public AttributeTransportStrategy(IEnumerable<string> requiredTransports)
+	public AnnotationTransportStrategy(IEnumerable<string> requiredTransports)
 	{
 		Required = requiredTransports;
 	}
