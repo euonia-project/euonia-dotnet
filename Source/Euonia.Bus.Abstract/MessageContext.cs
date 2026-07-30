@@ -65,36 +65,36 @@ public sealed class MessageContext : IMessageContext
 	/// <inheritdoc />
 	public string MessageId
 	{
-		get => _headers.GetValueOrDefault(nameof(MessageId));
-		set => _headers[nameof(MessageId)] = value;
+		get => _headers.GetValueOrDefault(MessageHeaders.MESSAGE_ID);
+		set => _headers[MessageHeaders.MESSAGE_ID] = value;
 	}
 
 	/// <inheritdoc />
 	public string CorrelationId
 	{
-		get => _headers.GetValueOrDefault(nameof(CorrelationId));
-		set => _headers[nameof(CorrelationId)] = value;
+		get => _headers.GetValueOrDefault(MessageHeaders.CORRELATION_ID);
+		set => _headers[MessageHeaders.CORRELATION_ID] = value;
 	}
 
 	/// <inheritdoc />
 	public string ConversationId
 	{
-		get => _headers.GetValueOrDefault(nameof(ConversationId));
-		set => _headers[nameof(ConversationId)] = value;
+		get => _headers.GetValueOrDefault(MessageHeaders.CONVERSATION_ID);
+		set => _headers[MessageHeaders.CONVERSATION_ID] = value;
 	}
 
 	/// <inheritdoc />
 	public string RequestTraceId
 	{
-		get => _headers.GetValueOrDefault(nameof(RequestTraceId));
-		set => _headers[nameof(RequestTraceId)] = value;
+		get => _headers.GetValueOrDefault(MessageHeaders.REQUEST_TRACE_ID);
+		set => _headers[MessageHeaders.REQUEST_TRACE_ID] = value;
 	}
 
 	/// <inheritdoc />
 	public string Authorization
 	{
-		get => _headers.GetValueOrDefault(nameof(Authorization));
-		set => _headers[nameof(Authorization)] = value;
+		get => _headers.GetValueOrDefault(MessageHeaders.AUTHORIZATION);
+		set => _headers[MessageHeaders.AUTHORIZATION] = value;
 	}
 
 	/// <inheritdoc/>
