@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The publish options.
+/// 发布（多播）消息的选项。
 /// </summary>
 public class PublishOptions : ExtendableOptions
 {

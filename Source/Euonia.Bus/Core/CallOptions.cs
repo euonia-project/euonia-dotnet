@@ -1,12 +1,12 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The call options.
+/// 调用（请求-响应）消息的选项。
 /// </summary>
 public class CallOptions : ExtendableOptions
 {
 	/// <summary>
-	/// Gets or sets the correlation identifier.
+	/// 获取或设置关联标识符。
 	/// </summary>
 	public string CorrelationId { get; set; }
 }

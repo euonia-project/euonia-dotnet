@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The options for send message.
+/// 发送（单播）消息的选项。
 /// </summary>
 public class SendOptions : ExtendableOptions
 {
 	/// <summary>
-	/// Gets or sets the correlation identifier.
+	/// 获取或设置关联标识符。
 	/// </summary>
 	public string CorrelationId { get; set; }
 }
