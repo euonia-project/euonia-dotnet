@@ -159,12 +159,12 @@ internal sealed class ChannelRegistrar
 		return this;
 	}
 
-	public ChannelRegistrar Register<T, R>(string channel, Func<T, IMessageContext, Task<R>> handler)
+	public ChannelRegistrar Register<TMessage, TResult>(string channel, Func<TMessage, IMessageContext, Task<TResult>> handler)
 	{
 		try
 		{
-			var method = typeof(LambdaHandler<T, R>).GetMethod(nameof(LambdaHandler<T, R>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
-			return Register(channel, typeof(T), new ChannelHandler(typeof(LambdaHandler<T, R>), method, new LambdaHandler<T, R>(handler)));
+			var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<TMessage, TResult>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage, TResult>), method, new LambdaHandler<TMessage, TResult>(handler)));
 		}
 		catch (Exception exception)
 		{
@@ -172,12 +172,12 @@ internal sealed class ChannelRegistrar
 		}
 	}
 
-	public ChannelRegistrar Register<T>(string channel, Func<T, IMessageContext, Task> handler)
+	public ChannelRegistrar Register<TMessage>(string channel, Func<TMessage, IMessageContext, Task> handler)
 	{
 		try
 		{
-			var method = typeof(LambdaHandler<T>).GetMethod(nameof(LambdaHandler<T>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
-			return Register(channel, typeof(T), new ChannelHandler(typeof(LambdaHandler<T>), method, new LambdaHandler<T>(handler)));
+			var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<TMessage>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage>), method, new LambdaHandler<TMessage>(handler)));
 		}
 		catch (Exception exception)
 		{
