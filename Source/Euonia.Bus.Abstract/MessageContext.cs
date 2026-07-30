@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The message context.
+/// 消息上下文。
 /// </summary>
 public sealed class MessageContext : IMessageContext
 {
@@ -14,40 +14,29 @@ public sealed class MessageContext : IMessageContext
 	private bool _disposedValue;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageContext"/> class.
+	/// 初始化 <see cref="MessageContext"/> 类的新实例。
 	/// </summary>
 	public MessageContext()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageContext"/> class.
+	/// 使用指定的消息信封初始化 <see cref="MessageContext"/> 类的新实例。
 	/// </summary>
-	/// <param name="message"></param>
-	public MessageContext(object message)
-		: this()
+	/// <param name="envelope">消息信封实例。</param>
+	public MessageContext(IMessageEnvelope envelope)
 	{
-		Message = message;
+		MessageId = envelope.MessageId;
+		CorrelationId = envelope.CorrelationId;
+		ConversationId = envelope.ConversationId;
+		RequestTraceId = envelope.RequestTraceId;
+		Authorization = envelope.Authorization;
+		User = envelope.User;
+		Metadata = envelope.Metadata;
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageContext"/> class.
-	/// </summary>
-	/// <param name="pack"></param>
-	public MessageContext(IRoutedMessage pack)
-		: this(pack.Data)
-	{
-		MessageId = pack.MessageId;
-		CorrelationId = pack.CorrelationId;
-		ConversationId = pack.ConversationId;
-		RequestTraceId = pack.RequestTraceId;
-		Authorization = pack.Authorization;
-		User = pack.User;
-		Metadata = pack.Metadata;
-	}
-
-	/// <summary>
-	/// Invoked while message was handled and replied to dispatcher.
+	/// 当消息处理完成并向分发器回复时触发。
 	/// </summary>
 	public event EventHandler<MessageRepliedEventArgs> Responded
 	{
@@ -56,7 +45,7 @@ public sealed class MessageContext : IMessageContext
 	}
 
 	/// <summary>
-	/// Invoke while message context disposed.
+	/// 当消息上下文释放时触发。
 	/// </summary>
 	public event EventHandler<MessageHandledEventArgs> Completed
 	{
@@ -65,16 +54,13 @@ public sealed class MessageContext : IMessageContext
 	}
 
 	/// <summary>
-	/// Invoked while message handling was failed.
+	/// 当消息处理失败时触发。
 	/// </summary>
 	public event EventHandler<Exception> Failed
 	{
 		add => _events.AddEventHandler(value);
 		remove => _events.RemoveEventHandler(value);
 	}
-
-	/// <inheritdoc />
-	public object Message { get; }
 
 	/// <inheritdoc />
 	public string MessageId
@@ -118,63 +104,61 @@ public sealed class MessageContext : IMessageContext
 	public IReadOnlyDictionary<string, string> Headers => _headers;
 
 	/// <summary>
-	/// Gets or sets a <see cref="MessageMetadata"/> instance that contains the metadata information of the message.
+	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
 	public MessageMetadata Metadata { get; set; }
 
 	/// <summary>
-	/// Replies message handling result to message dispatcher.
+	/// 向消息分发器回复消息处理结果。
 	/// </summary>
-	/// <param name="message">The message to reply.</param>
+	/// <param name="message">要回复的消息。</param>
 	public void Response(object message)
 	{
 		_events.HandleEvent(this, new MessageRepliedEventArgs(message), nameof(Responded));
 	}
 
 	/// <summary>
-	/// Replies message handling result to message dispatcher.
+	/// 向消息分发器回复消息处理结果。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of the message.</typeparam>
-	/// <param name="message">The message to reply.</param>
+	/// <typeparam name="TMessage">消息的类型。</typeparam>
+	/// <param name="message">要回复的消息。</param>
 	public void Response<TMessage>(TMessage message)
 	{
 		Response((object)message);
 	}
 
 	/// <summary>
-	/// Called after the message handling was failed.
+	/// 在消息处理失败后调用。
 	/// </summary>
-	/// <param name="exception"></param>
+	/// <param name="exception">处理过程中发生的异常。</param>
 	public void Failure(Exception exception)
 	{
 		_events.HandleEvent(this, exception, nameof(Failed));
 	}
 
 	/// <summary>
-	/// Called after the message has been handled.
-	/// This operate will raised up the <see cref="Completed"/> event.
+	/// 在消息处理完成后调用。此操作将触发 <see cref="Completed"/> 事件。
 	/// </summary>
-	/// <param name="message"></param>
-	public void Complete(object message)
+	/// <param name="messageId">已完成处理的消息标识符。</param>
+	public void Complete(string messageId)
 	{
-		_events.HandleEvent(this, new MessageHandledEventArgs(message), nameof(Completed));
+		_events.HandleEvent(this, new MessageHandledEventArgs(messageId), nameof(Completed));
 	}
 
 	/// <summary>
-	/// Called after the message has been handled.
-	/// This operate will raised up the <see cref="Completed"/> event.
+	/// 在消息处理完成后调用。此操作将触发 <see cref="Completed"/> 事件。
 	/// </summary>
-	/// <param name="message"></param>
-	/// <param name="handlerType"></param>
-	public void Complete(object message, Type handlerType)
+	/// <param name="messageId">已完成处理的消息标识符。</param>
+	/// <param name="handlerType">处理该消息的处理程序类型。</param>
+	public void Complete(string messageId, Type handlerType)
 	{
-		_events.HandleEvent(this, new MessageHandledEventArgs(message) { HandlerType = handlerType }, nameof(Completed));
+		_events.HandleEvent(this, new MessageHandledEventArgs(messageId) { HandlerType = handlerType }, nameof(Completed));
 	}
 
 	/// <summary>
-	/// Called after the message has been handled.
+	/// 释放当前实例所使用的资源。
 	/// </summary>
-	/// <param name="disposing"></param>
+	/// <param name="disposing">指示是否正在主动释放托管资源。</param>
 	private void Dispose(bool disposing)
 	{
 		if (_disposedValue)
@@ -184,7 +168,7 @@ public sealed class MessageContext : IMessageContext
 
 		if (disposing)
 		{
-			Complete(Message);
+			Complete(MessageId);
 		}
 
 		_events.RemoveEventHandlers();
@@ -192,7 +176,7 @@ public sealed class MessageContext : IMessageContext
 	}
 
 	/// <summary>
-	/// Finalizes the current instance of the <see cref="MessageContext"/> class.
+	/// 终止 <see cref="MessageContext"/> 类的当前实例。
 	/// </summary>
 	~MessageContext()
 	{
