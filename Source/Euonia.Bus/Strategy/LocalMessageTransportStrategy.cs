@@ -3,34 +3,44 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents a transport strategy that evaluates whether a type is marked as a local message.
+/// 表示一个传输策略，用于评估类型是否标记为本地消息。
 /// </summary>
 public class LocalMessageTransportStrategy : ITransportStrategy
 {
 	/// <summary>
-	/// Gets the name of the transport strategy.
+	/// 获取传输策略的名称。
 	/// </summary>
 	public string Name { get; } = "Local message transport strategy";
 
 	/// <summary>
-	/// Determines whether the specified message type is allowed for outgoing operations.
-	/// Checks if the type is marked with the <see cref="LocalMessageAttribute"/>.
+	/// 判断指定的消息通道是否允许用于传出操作。
+	/// 通过检查消息类型是否标记了 <see cref="LocalMessageAttribute"/> 特性来判断。
 	/// </summary>
-	/// <param name="messageType">The type of the message to evaluate.</param>
-	/// <returns><c>true</c> if the message type is marked with <see cref="LocalMessageAttribute"/>; otherwise, <c>false</c>.</returns>
-	public bool Outgoing(Type messageType)
+	/// <param name="channel">要评估的通道名称。</param>
+	/// <returns>如果消息类型标记了 <see cref="LocalMessageAttribute"/>，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Outgoing(string channel)
 	{
-		return messageType.GetCustomAttribute<LocalMessageAttribute>() != null;
+		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+
+		var registration = ChannelRegistrar.Get(channel)
+		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+
+		return registration.MessageType.GetCustomAttribute<LocalMessageAttribute>() != null;
 	}
 
 	/// <summary>
-	/// Determines whether the specified message type is allowed for incoming operations.
-	/// Checks if the type is marked with the <see cref="LocalMessageAttribute"/>.
+	/// 判断指定的消息通道是否允许用于传入操作。
+	/// 通过检查消息类型是否标记了 <see cref="LocalMessageAttribute"/> 特性来判断。
 	/// </summary>
-	/// <param name="messageType">The type of the message to evaluate.</param>
-	/// <returns><c>true</c> if the message type is marked with <see cref="LocalMessageAttribute"/>; otherwise, <c>false</c>.</returns>
-	public bool Incoming(Type messageType)
+	/// <param name="channel">要评估的通道名称。</param>
+	/// <returns>如果消息类型标记了 <see cref="LocalMessageAttribute"/>，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Incoming(string channel)
 	{
-		return messageType.GetCustomAttribute<LocalMessageAttribute>() != null;
+		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+
+		var registration = ChannelRegistrar.Get(channel)
+		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+
+		return registration.MessageType.GetCustomAttribute<LocalMessageAttribute>() != null;
 	}
 }

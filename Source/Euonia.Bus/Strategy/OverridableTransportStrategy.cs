@@ -1,84 +1,83 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents a transport strategy that allows overriding the behavior of an inner transport strategy
-/// for outgoing and incoming message evaluations.
+/// 表示一个可覆盖的传输策略，允许覆盖内部传输策略的传出和传入消息评估行为。
 /// </summary>
 internal class OverridableTransportStrategy : ITransportStrategy
 {
     private readonly ITransportStrategy _innerStrategy;
-    private Func<Type, bool> _outgoingEvaluator, _incomingEvaluator;
+    private Func<string, bool> _outgoingEvaluator, _incomingEvaluator;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="OverridableTransportStrategy"/> class.
+    /// 初始化 <see cref="OverridableTransportStrategy"/> 类的新实例。
     /// </summary>
-    /// <param name="innerStrategy">The inner transport strategy to be overridden.</param>
+    /// <param name="innerStrategy">要被覆盖的内部传输策略。</param>
     public OverridableTransportStrategy(ITransportStrategy innerStrategy)
     {
         _innerStrategy = innerStrategy;
     }
 
     /// <summary>
-    /// Gets the name of the transport strategy, including the name of the inner strategy.
+    /// 获取传输策略的名称，包含内部策略的名称。
     /// </summary>
     public string Name => $"Override with {_innerStrategy.Name}";
 
     /// <summary>
-    /// Determines whether the specified message type can be dispatched by the transport.
-    /// Delegates to the outgoing evaluator or the inner strategy if no evaluator is defined.
+    /// 判断指定的消息通道是否可以由此传输策略进行传出操作。
+    /// 委托给传出评估函数执行，如果未定义则使用内部策略的评估。
     /// </summary>
-    /// <param name="messageType">The type of the message to evaluate.</param>
-    /// <returns><c>true</c> if the message type is allowed for outgoing; otherwise, <c>false</c>.</returns>
-    bool ITransportStrategy.Outgoing(Type messageType)
+    /// <param name="channel">要评估的通道名称。</param>
+    /// <returns>如果消息通道允许传出，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+    bool ITransportStrategy.Outgoing(string channel)
     {
-        return Outgoing(messageType);
+        return Outgoing(channel);
     }
 
     /// <summary>
-    /// Determines whether the specified message type can be received by the transport.
-    /// Delegates to the incoming evaluator or the inner strategy if no evaluator is defined.
+    /// 判断指定的消息通道是否可以由此传输策略进行传入操作。
+    /// 委托给传入评估函数执行，如果未定义则使用内部策略的评估。
     /// </summary>
-    /// <param name="messageType">The type of the message to evaluate.</param>
-    /// <returns><c>true</c> if the message type is allowed for incoming; otherwise, <c>false</c>.</returns>
-    bool ITransportStrategy.Incoming(Type messageType)
+    /// <param name="channel">要评估的通道名称。</param>
+    /// <returns>如果消息通道允许传入，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+    bool ITransportStrategy.Incoming(string channel)
     {
-        return Incoming(messageType);
+        return Incoming(channel);
     }
 
     /// <summary>
-    /// Gets or sets the outgoing evaluator function, which determines if a message type is allowed for outgoing.
-    /// If not set, the inner strategy's outgoing evaluation is used.
+    /// 获取或设置传出评估函数，用于判断消息通道是否允许传出。
+    /// 若未设置，则回退到内部策略的传出评估。
     /// </summary>
-    public Func<Type, bool> Outgoing
+    public Func<string, bool> Outgoing
     {
         get => _outgoingEvaluator ?? _innerStrategy.Outgoing;
         set => _outgoingEvaluator = value;
     }
 
     /// <summary>
-    /// Gets or sets the incoming evaluator function, which determines if a message type is allowed for incoming.
-    /// If not set, the inner strategy's incoming evaluation is used.
+    /// 获取或设置传入评估函数，用于判断消息通道是否允许传入。
+    /// 若未设置，则回退到内部策略的传入评估。
     /// </summary>
-    public Func<Type, bool> Incoming
+    public Func<string, bool> Incoming
     {
         get => _incomingEvaluator ?? _innerStrategy.Incoming;
         set => _incomingEvaluator = value;
     }
 
     /// <summary>
-    /// Defines a custom strategy for evaluating outgoing message types.
+    /// 定义用于评估传出通道的自定义策略。
     /// </summary>
-    /// <param name="strategy">The function to evaluate outgoing message types.</param>
-    public void DefineOutgoingStrategy(Func<Type, bool> strategy)
+    /// <param name="strategy">用于评估传出通道的函数。</param>
+    public void DefineOutgoingStrategy(Func<string, bool> strategy)
     {
         _outgoingEvaluator = strategy;
     }
 
     /// <summary>
-    /// Defines a custom strategy for evaluating incoming message types.
+    /// 定义用于评估传入通道的自定义策略。
     /// </summary>
-    /// <param name="strategy">The function to evaluate incoming message types.</param>
-    public void DefineIncomingStrategy(Func<Type, bool> strategy)
+    /// <param name="strategy">用于评估传入通道的函数。</param>
+    public void DefineIncomingStrategy(Func<string, bool> strategy)
     {
         _incomingEvaluator = strategy;
     }

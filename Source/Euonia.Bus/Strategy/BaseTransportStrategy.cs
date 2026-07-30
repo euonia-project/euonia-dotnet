@@ -3,8 +3,7 @@ using System.Collections.Concurrent;
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents a composite transport strategy that combines multiple transport strategies
-/// and provides caching for outgoing and incoming message evaluations.
+/// 表示一个组合传输策略，将多个传输策略组合在一起，并为传出和传入消息的评估提供缓存支持。
 /// </summary>
 public class BaseTransportStrategy : ITransportStrategy
 {
@@ -14,8 +13,7 @@ public class BaseTransportStrategy : ITransportStrategy
 	private readonly StrategyCache _incomingCache = new();
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="BaseTransportStrategy"/> class.
-	/// Adds the default transport strategy to the list of strategies.
+	/// 初始化 <see cref="BaseTransportStrategy"/> 类的新实例，并将默认传输策略添加到策略列表中。
 	/// </summary>
 	public BaseTransportStrategy()
 	{
@@ -23,47 +21,45 @@ public class BaseTransportStrategy : ITransportStrategy
 	}
 
 	/// <summary>
-	/// Gets the name of the transport strategy.
+	/// 获取传输策略的名称。
 	/// </summary>
 	public string Name => "Composite transport strategy";
 
 	/// <summary>
-	/// Determines whether the specified message type can be dispatched by any of the transport strategies.
-	/// Uses a cache to optimize repeated evaluations.
+	/// 判断指定的通道是否可以通过任意传输策略进行传出操作。
+	/// 使用缓存来优化重复的评估。
 	/// </summary>
-	/// <param name="messageType">The type of the message to evaluate.</param>
-	/// <returns><c>true</c> if any strategy allows the message type for outgoing; otherwise, <c>false</c>.</returns>
-	public bool Outgoing(Type messageType)
+	/// <param name="channel">要评估的通道名称。</param>
+	/// <returns>如果有任意策略允许该通道传出，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Outgoing(string channel)
 	{
-		ArgumentNullException.ThrowIfNull(messageType);
-		return _outgoingCache.Apply(messageType, handle =>
+		ArgumentNullException.ThrowIfNull(channel);
+		return _outgoingCache.Apply(channel, key =>
 		{
-			var type = Type.GetTypeFromHandle(handle);
-			return _strategies.Any(strategy => strategy.Outgoing(type));
+			return _strategies.Any(strategy => strategy.Outgoing(key));
 		});
 	}
 
 	/// <summary>
-	/// Determines whether the specified message type can be received by any of the transport strategies.
-	/// Uses a cache to optimize repeated evaluations.
+	/// 判断指定的通道是否可以通过任意传输策略进行传入操作。
+	/// 使用缓存来优化重复的评估。
 	/// </summary>
-	/// <param name="messageType">The type of the message to evaluate.</param>
-	/// <returns><c>true</c> if any strategy allows the message type for incoming; otherwise, <c>false</c>.</returns>
-	public bool Incoming(Type messageType)
+	/// <param name="channel">要评估的通道名称。</param>
+	/// <returns>如果有任意策略允许该通道传入，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Incoming(string channel)
 	{
-		ArgumentNullException.ThrowIfNull(messageType);
-		return _incomingCache.Apply(messageType, handle =>
+		ArgumentNullException.ThrowIfNull(channel);
+		return _incomingCache.Apply(channel, key =>
 		{
-			var type = Type.GetTypeFromHandle(handle);
-			return _strategies.Any(strategy => strategy.Incoming(type));
+			return _strategies.Any(strategy => strategy.Incoming(key));
 		});
 	}
 
 	/// <summary>
-	/// Adds one or more transport strategies to the composite strategy.
+	/// 向组合策略中添加一个或多个传输策略。
 	/// </summary>
-	/// <param name="strategies">The transport strategies to add.</param>
-	/// <exception cref="ArgumentException">Thrown if no strategies are provided.</exception>
+	/// <param name="strategies">要添加的传输策略数组。</param>
+	/// <exception cref="ArgumentException">当未提供任何策略时抛出。</exception>
 	internal void Add(params ITransportStrategy[] strategies)
 	{
 		if (strategies == null || strategies.Length == 0)
@@ -75,11 +71,11 @@ public class BaseTransportStrategy : ITransportStrategy
 	}
 
 	/// <summary>
-	/// Defines a custom strategy for evaluating incoming message types.
+	/// 定义用于评估传入通道的自定义策略。
 	/// </summary>
-	/// <param name="strategy">The function to evaluate incoming message types.</param>
-	/// <exception cref="ArgumentNullException">Thrown if the strategy is null.</exception>
-	internal void DefineIncomingStrategy(Func<Type, bool> strategy)
+	/// <param name="strategy">用于评估传入通道的函数。</param>
+	/// <exception cref="ArgumentNullException">当策略函数为 <c>null</c> 时抛出。</exception>
+	internal void DefineIncomingStrategy(Func<string, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 
@@ -87,11 +83,11 @@ public class BaseTransportStrategy : ITransportStrategy
 	}
 
 	/// <summary>
-	/// Defines a custom strategy for evaluating outgoing message types.
+	/// 定义用于评估传出通道的自定义策略。
 	/// </summary>
-	/// <param name="strategy">The function to evaluate outgoing message types.</param>
-	/// <exception cref="ArgumentNullException">Thrown if the strategy is null.</exception>
-	internal void DefineOutgoingStrategy(Func<Type, bool> strategy)
+	/// <param name="strategy">用于评估传出通道的函数。</param>
+	/// <exception cref="ArgumentNullException">当策略函数为 <c>null</c> 时抛出。</exception>
+	internal void DefineOutgoingStrategy(Func<string, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 
@@ -99,7 +95,7 @@ public class BaseTransportStrategy : ITransportStrategy
 	}
 
 	/// <summary>
-	/// Resets the caches for outgoing and incoming message evaluations.
+	/// 重置传出和传入消息评估的缓存。
 	/// </summary>
 	internal void ResetCache()
 	{
@@ -108,25 +104,25 @@ public class BaseTransportStrategy : ITransportStrategy
 	}
 
 	/// <summary>
-	/// Represents a cache for storing the results of message type evaluations.
+	/// 表示用于存储消息通道评估结果的缓存。
 	/// </summary>
 	private class StrategyCache
 	{
-		private readonly ConcurrentDictionary<RuntimeTypeHandle, bool> _cache = new();
+		private readonly ConcurrentDictionary<string, bool> _cache = new();
 
 		/// <summary>
-		/// Applies the specified strategy to the given message type and caches the result.
+		/// 将指定的策略应用到给定的通道上，并缓存结果。
 		/// </summary>
-		/// <param name="messageType">The type of the message to evaluate.</param>
-		/// <param name="strategy">The strategy to apply.</param>
-		/// <returns>The cached or newly computed result of the strategy.</returns>
-		public bool Apply(Type messageType, Func<RuntimeTypeHandle, bool> strategy)
+		/// <param name="channel">要评估的通道名称。</param>
+		/// <param name="strategy">要应用的策略函数。</param>
+		/// <returns>缓存或新计算出的策略结果。</returns>
+		public bool Apply(string channel, Func<string, bool> strategy)
 		{
-			return _cache.GetOrAdd(messageType.TypeHandle, strategy);
+			return _cache.GetOrAdd(channel, strategy);
 		}
 
 		/// <summary>
-		/// Clears the cache.
+		/// 清空缓存。
 		/// </summary>
 		public void Reset()
 		{

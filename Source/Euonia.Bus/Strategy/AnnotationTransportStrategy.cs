@@ -3,49 +3,61 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Evaluate whether a type can be handled by attribute decoration on the type.
+/// 通过类型上修饰的特性来评估该类型是否可以被该策略处理。
 /// </summary>
 public class AnnotationTransportStrategy : ITransportStrategy
 {
 	/// <summary>
-	/// The name of the strategy.
+	/// 获取策略的名称。
 	/// </summary>
 	public string Name { get; } = "Attribute decoration handle strategy";
 
 	/// <summary>
-	/// The required transport names for a type to be handled by this strategy.
+	/// 获取类型要被此策略处理所需的传输名称集合。
 	/// </summary>
 	private IEnumerable<string> Required { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="AnnotationTransportStrategy"/> class.
+	/// 初始化 <see cref="AnnotationTransportStrategy"/> 类的新实例。
 	/// </summary>
-	/// <param name="requiredTransports"></param>
+	/// <param name="requiredTransports">所需的传输名称集合。</param>
 	public AnnotationTransportStrategy(IEnumerable<string> requiredTransports)
 	{
 		Required = requiredTransports;
 	}
 
 	/// <summary>
-	/// Determines whether the specified message type can be dispatched by the transport.
+	/// 判断指定的消息通道是否可以通过此传输策略进行传出（分发）。
+	/// 通过检查消息类型是否标记了 <see cref="DispatchInAttribute"/> 特性，且其传输名称与所需传输名称有交集来判断。
 	/// </summary>
-	/// <param name="messageType"></param>
-	/// <returns></returns>
-	public bool Outgoing(Type messageType)
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>如果通道允许传出，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Outgoing(string channel)
 	{
-		var attribute = messageType.GetCustomAttribute<DispatchInAttribute>();
+		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+
+		var registration = ChannelRegistrar.Get(channel)
+		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+
+		var attribute = registration.MessageType.GetCustomAttribute<DispatchInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}
 
 	/// <summary>
-	/// Determines whether the specified message type can be received by the transport.
+	/// 判断指定的消息通道是否可以通过此传输策略进行传入（接收）。
+	/// 通过检查消息类型是否标记了 <see cref="ReceiveInAttribute"/> 特性，且其传输名称与所需传输名称有交集来判断。
 	/// </summary>
-	/// <param name="messageType"></param>
-	/// <returns></returns>
-	public bool Incoming(Type messageType)
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>如果通道允许传入，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	public bool Incoming(string channel)
 	{
-		var attribute = messageType.GetCustomAttribute<ReceiveInAttribute>();
+		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+
+		var registration = ChannelRegistrar.Get(channel)
+		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+
+		var attribute = registration.MessageType.GetCustomAttribute<ReceiveInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}

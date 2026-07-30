@@ -1,34 +1,34 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the default implementation of the <see cref="ITransportStrategy"/> interface.
-/// This strategy does not allow any message types for outgoing or incoming operations.
+/// 表示 <see cref="ITransportStrategy"/> 接口的默认实现。
+/// 此策略不允许任何消息类型进行传出或传入操作。
 /// </summary>
 internal class DefaultTransportStrategy : ITransportStrategy
 {
 	/// <summary>
-	/// Gets the name of the transport strategy.
+	/// 获取传输策略的名称。
 	/// </summary>
 	public string Name { get; } = "Default Transport Strategy";
 
 	/// <summary>
-	/// Determines whether the specified message type is allowed for outgoing operations.
-	/// This implementation always returns <c>false</c>.
+	/// 判断指定的消息通道是否允许用于传出操作。
+	/// 此实现始终返回 <c>false</c>。
 	/// </summary>
-	/// <param name="messageType">The type of the message to check.</param>
-	/// <returns><c>false</c>, indicating that outgoing operations are not allowed.</returns>
-	public bool Outgoing(Type messageType)
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>始终返回 <c>false</c>，表示不允许传出操作。</returns>
+	public bool Outgoing(string channel)
 	{
 		return false;
 	}
 
 	/// <summary>
-	/// Determines whether the specified message type is allowed for incoming operations.
-	/// This implementation always returns <c>false</c>.
+	/// 判断指定的消息通道是否允许用于传入操作。
+	/// 此实现始终返回 <c>false</c>。
 	/// </summary>
-	/// <param name="messageType">The type of the message to check.</param>
-	/// <returns><c>false</c>, indicating that incoming operations are not allowed.</returns>
-	public bool Incoming(Type messageType)
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <returns>始终返回 <c>false</c>，表示不允许传入操作。</returns>
+	public bool Incoming(string channel)
 	{
 		return false;
 	}
