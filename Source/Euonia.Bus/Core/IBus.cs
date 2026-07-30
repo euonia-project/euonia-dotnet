@@ -1,25 +1,75 @@
 ﻿using System.Reactive.Subjects;
+using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Defines the core message bus interface for publishing, sending, and calling messages.
+/// 定义核心消息总线接口，用于发布、发送和调用消息。
 /// </summary>
 /// <remarks>
-/// This interface provides asynchronous methods for different message patterns:
-/// - Publish: Fire-and-forget messaging to multiple subscribers
-/// - Send: Point-to-point messaging with optional response
-/// - Call: Request-response pattern for retrieving results
+/// 此接口为不同的消息模式提供异步方法：
+/// - Publish（发布）：即发即忘的消息模式，将消息发送给所有订阅者
+/// - Send（发送）：点对点消息模式，可选响应
+/// - Call（调用）：请求-响应模式，用于获取返回结果
 /// </remarks>
 public interface IBus
 {
 	/// <summary>
-	/// Publishes a message to all subscribers with default options.
+	/// 创建一个用于流式配置发布消息的 <see cref="PublishBuilder{TMessage}"/> 构建器。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
+	/// <typeparam name="TMessage">要发布的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发布的消息实例。</param>
+	/// <returns>用于流式配置发布操作的 <see cref="PublishBuilder{TMessage}"/> 实例。</returns>
+	PublishBuilder<TMessage> Publish<TMessage>(TMessage message)
+		where TMessage : class
+	{
+		return new PublishBuilder<TMessage>(this, message, new PublishOptions());
+	}
+
+	/// <summary>
+	/// 创建一个用于流式配置发送消息并接收响应的 <see cref="SendBuilder{TMessage, TResult}"/> 构建器。
+	/// </summary>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <typeparam name="TResult">期望从处理程序返回的结果类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <returns>用于流式配置发送操作的 <see cref="SendBuilder{TMessage, TResult}"/> 实例。</returns>
+	SendBuilder<TMessage, TResult> Send<TMessage, TResult>(TMessage message)
+		where TMessage : class
+	{
+		return new SendBuilder<TMessage, TResult>(this, message, new SendOptions());
+	}
+
+	/// <summary>
+	/// 创建一个用于流式配置发送消息（无响应）的 <see cref="SendBuilder{TMessage, Unit}"/> 构建器。
+	/// </summary>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <returns>用于流式配置发送操作的 <see cref="SendBuilder{TMessage, Unit}"/> 实例。</returns>
+	SendBuilder<TMessage, Unit> Send<TMessage>(TMessage message)
+		where TMessage : class
+	{
+		return Send<TMessage, Unit>(message);
+	}
+
+	/// <summary>
+	/// 创建一个用于流式配置调用请求并返回结果的 <see cref="CallBuilder{TMessage, TResult}"/> 构建器。
+	/// </summary>
+	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <returns>用于流式配置调用操作的 <see cref="CallBuilder{TMessage, TResult}"/> 实例。</returns>
+	CallBuilder<TMessage, TResult> Call<TMessage, TResult>(TMessage message)
+	{
+		return new CallBuilder<TMessage, TResult>(this, message, new CallOptions());
+	}
+
+	/// <summary>
+	/// 使用默认选项将消息发布给所有订阅者。
+	/// </summary>
+	/// <typeparam name="TMessage">要发布的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发布的消息实例。</param>
+	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
+	/// <returns>表示异步发布操作的任务。</returns>
 	Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
@@ -27,200 +77,120 @@ public interface IBus
 	}
 
 	/// <summary>
-	/// Publishes a message to all subscribers with default options.
+	/// 使用默认选项将消息发布给所有订阅者，并允许配置管道行为。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="behavior">Action to configure the pipeline message before publishing.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
-	Task PublishAsync<TMessage>(TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, CancellationToken cancellationToken = default)
+	/// <typeparam name="TMessage">要发布的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发布的消息实例。</param>
+	/// <param name="behavior">用于在发布前配置管道消息的委托。</param>
+	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
+	/// <returns>表示异步发布操作的任务。</returns>
+	Task PublishAsync<TMessage>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
-		return PublishAsync(message, behavior, new PublishOptions(), null, cancellationToken);
+		return PublishAsync(message, new PublishOptions(), behavior, cancellationToken);
 	}
 
 	/// <summary>
-	/// Publishes a message to all subscribers with specified options and metadata.
+	/// 使用指定的选项和管道行为将消息发布给所有订阅者。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="behavior">Action to configure the pipeline message before publishing.</param>
-	/// <param name="options">Options to control the publishing behavior.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
-	Task PublishAsync<TMessage>(TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, PublishOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
+	/// <typeparam name="TMessage">要发布的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发布的消息实例。</param>
+	/// <param name="options">用于控制发布行为的选项。</param>
+	/// <param name="behavior">用于在发布前配置管道消息的委托。</param>
+	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
+	/// <returns>表示异步发布操作的任务。</returns>
+	Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
 		where TMessage : class;
 
 	/// <summary>
-	/// Publishes a message to a specific channel with default options.
+	/// 使用默认选项将消息发送给单个处理程序，不期望响应。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="channel">The channel name to publish the message to.</param>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
-	Task PublishAsync<TMessage>(string channel, TMessage message, CancellationToken cancellationToken = default)
-		where TMessage : class
-	{
-		return PublishAsync(channel, message, behavior: null, cancellationToken);
-	}
-
-	/// <summary>
-	/// Publishes a message to a specific channel with default options.
-	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="channel">The channel name to publish the message to.</param>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="behavior">Action to configure the pipeline message before publishing.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
-	Task PublishAsync<TMessage>(string channel, TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, CancellationToken cancellationToken = default)
-		where TMessage : class
-	{
-		return PublishAsync(channel, message, behavior, null, cancellationToken);
-	}
-
-	/// <summary>
-	/// Publishes a message to a specific channel with metadata configuration.
-	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish. Must be a reference type.</typeparam>
-	/// <param name="channel">The channel name to publish the message to.</param>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="behavior">Action to configure the pipeline message before publishing.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Token to cancel the publish operation.</param>
-	/// <returns>A task that represents the asynchronous publish operation.</returns>
-	Task PublishAsync<TMessage>(string channel, TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
-		where TMessage : class
-	{
-		return PublishAsync(message, behavior, new PublishOptions { Channel = channel }, metadataSetter, cancellationToken);
-	}
-
-	/// <summary>
-	/// Sends a message to a single handler with default options and no response expected.
-	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
 	Task SendAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
-		return SendAsync(message, behavior: null, cancellationToken);
+		return SendAsync(message, null, null, cancellationToken);
 	}
 
 	/// <summary>
-	/// Sends a message to a single handler with default options and no response expected.
+	/// 使用指定的选项和管道行为将消息发送给单个处理程序，不期望响应。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="behavior">Action to configure the pipeline message before sending.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
-	Task SendAsync<TMessage>(TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, CancellationToken cancellationToken = default)
-		where TMessage : class
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="behavior">用于在发送前配置管道消息的委托。</param>
+	/// <param name="options">用于控制发送行为的选项。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
+	Task SendAsync<TMessage>(TMessage message, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
 	{
-		return SendAsync(message, behavior, new SendOptions(), null, cancellationToken);
+		return SendAsync(message, null, options, behavior, cancellationToken);
 	}
 
 	/// <summary>
-	/// Sends a message to a single handler with specified options and metadata, with no response expected.
+	/// 使用默认选项将消息发送给单个处理程序，并通过回调处理响应结果。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="behavior">Action to configure the pipeline message before sending.</param>
-	/// <param name="options">Options to control the send behavior.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
-	Task SendAsync<TMessage>(TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, SendOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
-		where TMessage : class
-	{
-		return SendAsync(message, null, behavior, options, metadataSetter, cancellationToken);
-	}
-
-	/// <summary>
-	/// Sends a message to a single handler with default options and processes the response via callback.
-	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <typeparam name="TResult">The type of result expected from the handler.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="callback">Action to process the result received from the handler.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <typeparam name="TResult">期望从处理程序返回的结果类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="callback">用于处理从处理程序接收到的结果的 Subject 对象。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
 	Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
-		return SendAsync(message, callback, behavior: null, cancellationToken);
+		return SendAsync(message, callback, null, null, cancellationToken);
 	}
 
 	/// <summary>
-	/// Sends a message to a single handler with default options and processes the response via callback.
+	/// 使用指定的选项和管道行为将消息发送给单个处理程序，并通过回调处理响应结果。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <typeparam name="TResult">The type of result expected from the handler.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="callback">Action to process the result received from the handler.</param>
-	/// <param name="behavior">Action to configure the pipeline message before sending.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
-	Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, CancellationToken cancellationToken = default)
-		where TMessage : class
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <typeparam name="TResult">期望从处理程序返回的结果类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="callback">用于处理从处理程序接收到的结果的 Subject 对象。</param>
+	/// <param name="options">用于控制发送行为的选项。</param>
+	/// <param name="behavior">用于在发送前配置管道消息的委托。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
+	Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 使用默认选项调用请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CancellationToken cancellationToken = default)
 	{
-		return SendAsync(message, callback, behavior, new SendOptions(), null, cancellationToken);
+		return CallAsync<TMessage, TResult>(message, new CallOptions(), behavior: null, cancellationToken);
 	}
 
 	/// <summary>
-	/// Sends a message to a single handler with specified options and processes the response via callback.
+	/// 使用默认选项调用请求处理程序并返回结果，支持管道行为配置。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send. Must be a reference type.</typeparam>
-	/// <typeparam name="TResult">The type of result expected from the handler.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="callback">Action to process the result received from the handler.</param>
-	/// <param name="behavior">Action to configure the pipeline message before sending.</param>
-	/// <param name="options">Options to control the send behavior.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Token to cancel the send operation.</param>
-	/// <returns>A task that represents the asynchronous send operation.</returns>
-	Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, SendOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
-		where TMessage : class;
-
-	/// <summary>
-	/// Calls a request handler and returns the result with default options.
-	/// </summary>
-	/// <typeparam name="TResult">The type of result expected from the request handler.</typeparam>
-	/// <param name="message">The request message implementing <see cref="IRequest{TResult}"/>.</param>
-	/// <param name="cancellationToken">Token to cancel the call operation.</param>
-	/// <returns>A task that represents the asynchronous call operation, containing the result.</returns>
-	Task<TResult> CallAsync<TResult>(IRequest<TResult> message, CancellationToken cancellationToken = default)
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
-		return CallAsync(message, behavior: null, new CallOptions(), null, cancellationToken);
+		return CallAsync(message, new CallOptions(), behavior, cancellationToken);
 	}
 
 	/// <summary>
-	/// Calls a request handler and returns the result with default options.
+	/// 使用指定的选项和管道行为调用请求处理程序并返回结果。
 	/// </summary>
-	/// <typeparam name="TResult">The type of result expected from the request handler.</typeparam>
-	/// <param name="message">The request message implementing <see cref="IRequest{TResult}"/>.</param>
-	/// <param name="behavior">Action to configure the pipeline message before calling.</param>
-	/// <param name="cancellationToken">Token to cancel the call operation.</param>
-	/// <returns>A task that represents the asynchronous call operation, containing the result.</returns>
-	Task<TResult> CallAsync<TResult>(IRequest<TResult> message, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, CancellationToken cancellationToken = default)
-	{
-		return CallAsync(message, behavior, new CallOptions(), null, cancellationToken);
-	}
-
-	/// <summary>
-	/// Calls a request handler and returns the result with specified options and metadata.
-	/// </summary>
-	/// <typeparam name="TResult">The type of result expected from the request handler.</typeparam>
-	/// <param name="message">The request message implementing <see cref="IRequest{TResult}"/>.</param>
-	/// <param name="behavior">Action to configure the pipeline message before calling.</param>
-	/// <param name="options">Options to control the call behavior.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Token to cancel the call operation.</param>
-	/// <returns>A task that represents the asynchronous call operation, containing the result.</returns>
-	Task<TResult> CallAsync<TResult>(IRequest<TResult> message, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, CallOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default);
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
+	/// <param name="options">用于控制调用行为的选项。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default);
 }
