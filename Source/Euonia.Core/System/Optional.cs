@@ -4,14 +4,12 @@ namespace System;
 
 /// <summary>
 /// 一个可能包含或不包含非 null 值的容器对象。如果值存在，<see cref="HasValue"/> 返回 <see langword="true"/>，
-/// 否则返回 <see langword="false"/>。提供依赖于值存在与否的其他方法，例如 <see cref="Or"/> 和 <see cref="IfPresent(Action{T})"/>。
+/// 否则返回 <see langword="false"/>。提供依赖于值存在与否的其他方法，例如 <see cref="Or(T)"/> 和 <see cref="IfPresent(Action{T})"/>。
 /// </summary>
 /// <typeparam name="T">包含值的类型。</typeparam>
 public sealed class Optional<T>
 {
-    private static readonly Optional<T> _empty = new();
-
-    private readonly T _value;
+	private readonly T _value;
     private readonly bool _hasValue;
 
     /// <summary>
@@ -36,7 +34,7 @@ public sealed class Optional<T>
     /// <summary>
     /// 获取一个空的 <see cref="Optional{T}"/> 实例。
     /// </summary>
-    public static Optional<T> Empty => _empty;
+    public static Optional<T> Empty { get; } = new();
 
     /// <summary>
     /// 获取值（如果存在）。访问空 Optional 的值将抛出 <see cref="InvalidOperationException"/>。
@@ -84,7 +82,7 @@ public sealed class Optional<T>
     /// <returns>如果值非 null 则返回包含值的 <see cref="Optional{T}"/>，否则返回 <see cref="Empty"/>。</returns>
     public static Optional<T> OfNullable(T value)
     {
-        return value is null ? _empty : new Optional<T>(value);
+        return value is null ? Empty : new Optional<T>(value);
     }
 
     /// <summary>
@@ -101,7 +99,7 @@ public sealed class Optional<T>
             return this;
         }
 
-        return predicate(_value) ? this : _empty;
+        return predicate(_value) ? this : Empty;
     }
 
     /// <summary>
