@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the attributed method would handle a message.
+/// 表示被标记的方法将订阅并处理消息。
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
 public class SubscribeAttribute : Attribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="SubscribeAttribute"/> class.
+	/// 初始化 <see cref="SubscribeAttribute"/> 类的新实例。
 	/// </summary>
 	public SubscribeAttribute()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="SubscribeAttribute"/> class.
+	/// 使用指定的消息名称初始化 <see cref="SubscribeAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="name"></param>
+	/// <param name="name">消息名称。</param>
 	public SubscribeAttribute(string name)
 		: this()
 	{
@@ -24,12 +24,12 @@ public class SubscribeAttribute : Attribute
 	}
 
 	/// <summary>
-	/// Gets the name of the message.
+	/// 获取消息名称。
 	/// </summary>
 	public string Name { get; }
 
 	/// <summary>
-	/// Gets or sets the message group name.
+	/// 获取或设置消息分组名称。
 	/// </summary>
 	public string Group { get; set; }
 }

@@ -1,21 +1,21 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the attributed event has a specified name.
+/// 表示被标记的通道具有指定的名称。
 /// </summary>
-[AttributeUsage(AttributeTargets.Class)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Parameter, Inherited = false)]
 public class ChannelAttribute : Attribute
 {
 	/// <summary>
-	/// Gets the event name.
+	/// 获取通道名称。
 	/// </summary>
 	public string Name { get; }
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="ChannelAttribute"/>.
+	/// 初始化 <see cref="ChannelAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="name"></param>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <param name="name">通道名称。</param>
+	/// <exception cref="ArgumentNullException">当 <paramref name="name"/> 为 null 或空白时抛出。</exception>
 	public ChannelAttribute(string name)
 	{
 		if (string.IsNullOrWhiteSpace(name))

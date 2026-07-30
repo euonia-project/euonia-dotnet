@@ -1,22 +1,22 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents an attribute that specifies the transports in which messages are received.
+/// 表示一个特性，用于指定消息在哪些传输通道中接收。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ReceiveInAttribute : Attribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ReceiveInAttribute"/> class.
+	/// 初始化 <see cref="ReceiveInAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="transports"></param>
+	/// <param name="transports">接收消息的传输通道名称。</param>
 	public ReceiveInAttribute(params string[] transports)
 	{
 		Transports = transports;
 	}
 
 	/// <summary>
-	/// Gets the name of transports that receive messages.
+	/// 获取接收消息的传输通道名称。
 	/// </summary>
 	public IEnumerable<string> Transports { get; }
 }

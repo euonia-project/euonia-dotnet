@@ -1,9 +1,9 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the class is a command.
+/// 表示被标记的类是单播消息（命令）。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, Inherited = false)]
-public class CommandAttribute : Attribute
+public class UnicastAttribute : Attribute
 {
 }
