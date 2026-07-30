@@ -10,7 +10,7 @@ public sealed class MessagePack
 	/// </summary>
 	/// <param name="message"></param>
 	/// <param name="context"></param>
-	public MessagePack(IRoutedMessage message, MessageContext context)
+	public MessagePack(IMessageEnvelope message, MessageContext context)
 	{
 		Message = message;
 		Context = context;
@@ -19,7 +19,7 @@ public sealed class MessagePack
 	/// <summary>
 	/// Get the message.
 	/// </summary>
-	public IRoutedMessage Message { get; }
+	public IMessageEnvelope Message { get; }
 
 	/// <summary>
 	/// Get the message context.

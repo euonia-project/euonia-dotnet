@@ -29,17 +29,17 @@ public static class ServiceCollectionExtensions
 			}
 
 			// Registers the in-memory queue consumer as a transient service.
-			services.TryAddTransient<InMemoryQueueConsumer>();
+			services.TryAddTransient<InMemoryConsumer>();
 
 			// Registers the in-memory topic subscriber as a transient service.
-			services.TryAddTransient<InMemoryTopicSubscriber>();
+			services.TryAddTransient<InMemorySubscriber>();
 
 			// Registers the in-memory transport as a singleton service.
-			services.TryAddSingleton<InMemoryTransport>();
+			services.TryAddSingleton<InMemoryTransporter>();
 
-			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransport) && descriptor.ServiceKey is string key && key == name))
+			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransport>(name, (provider, _) => provider.GetRequiredService<InMemoryTransport>());
+				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<InMemoryTransporter>());
 			}
 
 			// Registers the in-memory recipient registrar as a transient service
