@@ -8,7 +8,7 @@ public class TransportStrategyBuilder
 	/// <summary>
 	/// The transport strategy being built.
 	/// </summary>
-	public TransportStrategy Strategy { get; } = new();
+	public BaseTransportStrategy Strategy { get; } = new();
 
 	/// <summary>
 	/// Adds a transport strategy that will be used to determine how messages are dispatched.

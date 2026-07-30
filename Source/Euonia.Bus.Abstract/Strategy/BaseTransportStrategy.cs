@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Bus;
 /// Represents a composite transport strategy that combines multiple transport strategies
 /// and provides caching for outgoing and incoming message evaluations.
 /// </summary>
-public class TransportStrategy : ITransportStrategy
+public class BaseTransportStrategy : ITransportStrategy
 {
 	private readonly OverridableTransportStrategy _defaultStrategy = new(new DefaultTransportStrategy());
 	private readonly List<ITransportStrategy> _strategies = [];
@@ -14,10 +14,10 @@ public class TransportStrategy : ITransportStrategy
 	private readonly StrategyCache _incomingCache = new();
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="TransportStrategy"/> class.
+	/// Initializes a new instance of the <see cref="BaseTransportStrategy"/> class.
 	/// Adds the default transport strategy to the list of strategies.
 	/// </summary>
-	public TransportStrategy()
+	public BaseTransportStrategy()
 	{
 		_strategies.Add(_defaultStrategy);
 	}
