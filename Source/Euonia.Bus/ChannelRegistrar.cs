@@ -55,9 +55,9 @@ internal sealed class ChannelRegistrar
 		ArgumentNullException.ThrowIfNull(handler);
 
 		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType == messageType)
+		if (registration.MessageType != messageType)
 		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered");
+			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
 		}
 
 		registration.AddHandler(handler);
@@ -82,9 +82,9 @@ internal sealed class ChannelRegistrar
 		ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
 
 		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType == messageType)
+		if (registration.MessageType != messageType)
 		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered");
+			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
 		}
 
 		registration.AddHandler(handlerType, methodName);
@@ -108,9 +108,9 @@ internal sealed class ChannelRegistrar
 		ArgumentNullException.ThrowIfNull(method);
 
 		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType == messageType)
+		if (registration.MessageType != messageType)
 		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered");
+			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
 		}
 
 		registration.AddHandler(new ChannelHandler(handlerType, method));

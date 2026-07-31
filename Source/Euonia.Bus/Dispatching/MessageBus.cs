@@ -47,6 +47,9 @@ internal sealed class MessageBus : IBus
 	/// </summary>
 	private readonly IServiceProvider _provider;
 
+	/// <summary>
+	/// 消息总线配置器，提供消息约定、注册信息和默认传输器配置。
+	/// </summary>
 	private readonly IConfigurator _configurator;
 
 	/// <summary>
@@ -243,6 +246,45 @@ internal sealed class MessageBus : IBus
 		var transportName = transports!.First();
 
 		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
+	}
+
+	/// <summary>
+	/// 使用指定的选项和管道行为调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
+	/// 与 <see cref="CallAsync{TRequest, TResponse}"/> 类似，但以强类型接口方式接受请求消息。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="options">调用选项，包括通道名称、消息标识符和关联 ID。</param>
+	/// <param name="behavior">用于为此调用操作配置管道行为的可选委托。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
+	/// <exception cref="MessageTypeException">当消息类型未归类为请求类型时抛出。</exception>
+	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
+	public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default)
+	{
+		options ??= new CallOptions();
+		var channel = GetChannel<IRequest<TResult>>(options);
+		if (!_configurator.Convention.IsRequest(channel))
+		{
+			throw new MessageTypeException("The message type is not a request type.");
+		}
+
+		var context = _requestAccessor?.Context;
+		var pack = new RoutedMessage<IRequest<TResult>>(request, channel)
+		{
+			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
+			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
+			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			Authorization = context?.Authorization,
+			User = context?.User,
+		};
+
+		options.MetadataSetter?.Invoke(pack.Metadata);
+
+		var transports = _dispatcher.Determine(channel);
+
+		var transportName = transports!.First();
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));
 	}
 
 	/// <summary>

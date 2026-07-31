@@ -72,7 +72,7 @@ public interface IBus
 	/// <returns>表示异步发布操作的任务。</returns>
 	Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
 	{
-		return PublishAsync(message, behavior: null, cancellationToken);
+		return PublishAsync(message, new PublishOptions(), behavior: null, cancellationToken);
 	}
 
 	/// <summary>
@@ -80,12 +80,12 @@ public interface IBus
 	/// </summary>
 	/// <typeparam name="TMessage">要发布的消息类型，必须是引用类型。</typeparam>
 	/// <param name="message">要发布的消息实例。</param>
-	/// <param name="behavior">用于在发布前配置管道消息的委托。</param>
+	/// <param name="options">用于控制发布行为的选项。</param>
 	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
 	/// <returns>表示异步发布操作的任务。</returns>
-	Task PublishAsync<TMessage>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
+	Task PublishAsync<TMessage>(TMessage message, PublishOptions options, CancellationToken cancellationToken = default)
 	{
-		return PublishAsync(message, new PublishOptions(), behavior, cancellationToken);
+		return PublishAsync(message, options, behavior: null, cancellationToken);
 	}
 
 	/// <summary>
@@ -109,6 +109,19 @@ public interface IBus
 	Task SendAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
 	{
 		return SendAsync(message, null, null, cancellationToken);
+	}
+
+	/// <summary>
+	/// 使用指定的选项和管道行为将消息发送给单个处理程序，不期望响应。
+	/// </summary>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="options">用于控制发送行为的选项。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
+	Task SendAsync<TMessage>(TMessage message, SendOptions options, CancellationToken cancellationToken = default)
+	{
+		return SendAsync(message, options, behavior: null, cancellationToken);
 	}
 
 	/// <summary>
@@ -140,6 +153,21 @@ public interface IBus
 	}
 
 	/// <summary>
+	/// 使用默认选项将消息发送给单个处理程序，并通过回调处理响应结果。
+	/// </summary>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="callback">用于处理从处理程序接收到的结果的 Subject 对象。</param>
+	/// <param name="options">用于控制发送行为的选项。</param>
+	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
+	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
+	/// <typeparam name="TResult">期望从处理程序返回的结果类型。</typeparam>
+	/// <returns>表示异步发送操作的任务。</returns>
+	Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, CancellationToken cancellationToken = default)
+	{
+		return SendAsync(message, callback, options, behavior: null, cancellationToken);
+	}
+
+	/// <summary>
 	/// 使用指定的选项和管道行为将消息发送给单个处理程序，并通过回调处理响应结果。
 	/// </summary>
 	/// <typeparam name="TMessage">要发送的消息类型，必须是引用类型。</typeparam>
@@ -166,17 +194,17 @@ public interface IBus
 	}
 
 	/// <summary>
-	/// 使用默认选项调用请求处理程序并返回结果，支持管道行为配置。
+	/// 使用指定的选项调用请求处理程序并返回结果，支持管道行为配置。
 	/// </summary>
 	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
 	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
 	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
-	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
+	/// <param name="options">用于控制调用行为的选项。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, CancellationToken cancellationToken = default)
 	{
-		return CallAsync(message, new CallOptions(), behavior, cancellationToken);
+		return CallAsync<TMessage, TResult>(message, options, behavior: null, cancellationToken);
 	}
 
 	/// <summary>
@@ -185,9 +213,45 @@ public interface IBus
 	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
 	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
 	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
-	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
 	/// <param name="options">用于控制调用行为的选项。</param>
+	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
 	Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 使用默认选项调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CancellationToken cancellationToken = default)
+	{
+		return CallAsync(request, new CallOptions(), behavior: null, cancellationToken);
+	}
+
+	/// <summary>
+	/// 使用指定的选项调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="options">用于控制调用行为的选项。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, CancellationToken cancellationToken = default)
+	{
+		return CallAsync(request, options, behavior: null, cancellationToken);
+	}
+
+	/// <summary>
+	/// 使用指定的选项和管道行为调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="options">用于控制调用行为的选项。</param>
+	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default);
 }

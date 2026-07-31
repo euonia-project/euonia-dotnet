@@ -91,6 +91,11 @@ internal static class MessageHandlerFinder
 
 				foreach (var channel in channels)
 				{
+					if (string.IsNullOrWhiteSpace(channel))
+					{
+						continue;
+					}
+
 					@delegate(channel, messageType, new ChannelHandler(handlerType, method));
 				}
 			}
