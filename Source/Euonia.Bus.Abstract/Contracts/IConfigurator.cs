@@ -41,7 +41,7 @@ public interface IConfigurator
 	/// </summary>
 	/// <param name="transport">传输名称。</param>
 	/// <returns>对应的 <see cref="ITransportStrategy"/> 实例。</returns>
-	ITransportStrategy Strategy(string transport)
+	ITransportStrategy GetStrategy(string transport)
 	{
 		return StrategyBuilders.TryGetValue(transport, out var builder) ? builder.Strategy : null;
 	}
