@@ -41,14 +41,14 @@ public class Startup
 		{
 			services.AddEuoniaBus(config =>
 			{
-				config.RegisterHandlers(Assembly.GetExecutingAssembly());
-				config.SetConventions(builder =>
+				config.RegisterChannel(Assembly.GetExecutingAssembly());
+				config.SetConvention(builder =>
 				{
 					builder.Add<DefaultMessageConvention>();
-					builder.Add<AttributeMessageConvention>();
-					builder.EvaluateUnicast(t => t.Name.EndsWith("Command"));
-					builder.EvaluateMulticast(t => t.Name.EndsWith("Event"));
-					builder.EvaluateRequest(t => t.Name.EndsWith("Request"));
+					builder.Add<AnnotationMessageConvention>();
+					builder.EvaluateUnicast(t => t.EndsWith("Command"));
+					builder.EvaluateMulticast(t => t.EndsWith("Event"));
+					builder.EvaluateRequest(t => t.EndsWith("Request"));
 				});
 				config.SetStrategy("RabbitMq", builder =>
 				{
