@@ -94,7 +94,6 @@ public abstract class RoutedMessage
 /// <typeparam name="T">消息负载的类型。</typeparam>
 [Serializable]
 public class RoutedMessage<T> : RoutedMessage, IMessageEnvelope<T>
-	where T : class
 {
 	/// <summary>
 	/// 使用指定的负载和通道初始化 <see cref="RoutedMessage{T}"/> 类的新实例。
@@ -143,7 +142,6 @@ public class RoutedMessage<T> : RoutedMessage, IMessageEnvelope<T>
 /// <typeparam name="TResponse">响应的类型。</typeparam>
 [Serializable]
 public class RoutedMessage<TData, TResponse> : RoutedMessage<TData>
-	where TData : class
 {
 	/// <summary>
 	/// 使用指定的负载和通道初始化 <see cref="RoutedMessage{TData, TResponse}"/> 类的新实例。

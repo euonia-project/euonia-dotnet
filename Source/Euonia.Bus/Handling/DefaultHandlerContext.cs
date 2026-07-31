@@ -3,17 +3,16 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Default message handler context using Microsoft dependency injection.
+/// 使用 Microsoft 依赖注入的默认消息处理程序上下文。
 /// </summary>
 internal sealed class DefaultHandlerContext : IHandlerContext
 {
 	/// <summary>
-	/// Occurs when a message handler is subscribed.
+	/// 当消息处理程序被订阅时触发。
 	/// </summary>
 	public event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
 
@@ -23,24 +22,25 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	private readonly IMessageConvention _convention;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="DefaultHandlerContext"/>.
+	/// 初始化 <see cref="DefaultHandlerContext"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The service provider used to resolve handlers, logger and other services.</param>
-	public DefaultHandlerContext(IServiceProvider provider)
+	/// <param name="provider">用于解析处理程序、日志记录器和其他服务的服务提供程序。</param>
+	/// <param name="logger">用于为此上下文创建日志记录器的日志工厂。</param>
+	public DefaultHandlerContext(IServiceProvider provider, ILoggerFactory logger)
 	{
 		_provider = provider;
-		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<DefaultHandlerContext>() ?? new NullLogger<DefaultHandlerContext>();
+		_logger = logger.CreateLogger<DefaultHandlerContext>();
 		_convention = provider.GetService<IConfigurator>()?.Convention ?? new BaseMessageConvention();
 	}
 
 	#region Handling register
 
 	/// <summary>
-	/// Register a message handler type for the message type <typeparamref name="TMessage"/>.
+	/// 为消息类型 <typeparamref name="TMessage"/> 注册一个消息处理程序类型。
 	/// </summary>
-	/// <typeparam name="TMessage">The message type to handle. Must be a reference type.</typeparam>
-	/// <typeparam name="TResponse"></typeparam>
-	/// <typeparam name="THandler">The handler type that implements <see cref="IHandler{TMessage}"/>.</typeparam>
+	/// <typeparam name="TMessage">要处理的消息类型，必须是引用类型。</typeparam>
+	/// <typeparam name="TResponse">处理程序返回的响应类型。</typeparam>
+	/// <typeparam name="THandler">实现了 <see cref="IHandler{TMessage}"/> 的处理程序类型。</typeparam>
 	internal void Register<TMessage, TResponse, THandler>(string channel)
 		where TMessage : class
 		where THandler : IHandler<TMessage, TResponse>
@@ -57,11 +57,11 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	}
 
 	/// <summary>
-	/// Register a handler described by a <see cref="MessageRegistration"/>.
-	/// The registration contains the handler type, the method to invoke and the channel name.
+	/// 注册由 <see cref="ChannelHandler"/> 描述的处理程序。
+	/// 注册信息包含处理程序类型、要调用的方法和通道名称。
 	/// </summary>
-	/// <param name="channel">The channel name.</param>
-	/// <param name="channelHandler">The <see cref="ChannelHandler"/> describing the handler to register.</param>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="channelHandler">描述要注册的处理程序的 <see cref="ChannelHandler"/> 实例。</param>
 	internal void Register(string channel, ChannelHandler channelHandler)
 	{
 		HandlerDelegate Handling(IServiceProvider provider)
@@ -85,7 +85,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 
 	#region Handle message
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 异步处理指定通道上的消息。根据消息约定（单播/多播）选择单个处理程序或并行执行所有处理程序。
+	/// </summary>
+	/// <param name="channel">消息通道。</param>
+	/// <param name="message">要处理的消息。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示消息处理异步操作的任务。</returns>
 	public async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
 		if (message == null)
@@ -97,73 +104,62 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 		{
 			if (!_handlerContainer.TryGetValue(channel, out var factories) || factories == null || factories.Count == 0)
 			{
-				_logger.LogWarning("No handler registered for message {Id} on channel {Channel}", context.MessageId, channel);
 				throw new InvalidOperationException($"No handler registered for message {context.MessageId} on channel {channel}");
 			}
 
-			// Get handler instance from service provider using Expression Tree
-			_logger?.LogInformation("Message {Id} is being handled", context.MessageId);
+			// 从服务提供程序获取处理程序实例
+			_logger.LogInformation("Message {Id} is being handled", context.MessageId);
 
-			if (factories.Count == 1)
+			if (!_convention.IsMulticast(channel))
 			{
-				var factory = factories.First();
-				await ExecuteHandler(scope, factory, cancellationToken)
-				      .AsTask()
-				      .ContinueWith(task =>
-				      {
-					      if (!task.IsCompletedSuccessfully)
-					      {
-						      switch (task.Exception)
-						      {
-							      case null:
-								      context.Failure(new InternalServerErrorException());
-								      break;
-							      case var aggEx when aggEx.InnerExceptions.Count == 1:
-								      context.Failure(aggEx.InnerExceptions[0]);
-								      break;
-							      default:
-								      context.Failure(task.Exception.GetBaseException());
-								      break;
-						      }
-					      }
-					      //else if (Reflect.TryGetPropertyValue(task, "Result", out var result))
-					      else if (task.Result is not Unit)
-					      {
-						      context.Response(task.Result);
-					      }
-				      }, cancellationToken);
+				var factory = factories[0];
+				await ExecuteHandler(scope, factory, cancellationToken).AsTask()
+				                                                       .ContinueWith(task =>
+				                                                       {
+					                                                       if (!task.IsCompletedSuccessfully)
+					                                                       {
+						                                                       // 对于请求/响应和队列消息，吞掉异常
+						                                                       switch (task.Exception)
+						                                                       {
+							                                                       case null:
+								                                                       context.Failure(new InternalServerErrorException());
+								                                                       break;
+							                                                       case var aggEx when aggEx.InnerExceptions.Count == 1:
+								                                                       context.Failure(aggEx.InnerExceptions[0]);
+								                                                       break;
+							                                                       default:
+								                                                       context.Failure(task.Exception.GetBaseException());
+								                                                       break;
+						                                                       }
+					                                                       }
+					                                                       //else if (Reflect.TryGetPropertyValue(task, "Result", out var result))
+					                                                       else if (task.Result is not Unit)
+					                                                       {
+						                                                       context.Response(task.Result);
+					                                                       }
+				                                                       }, cancellationToken);
 			}
 			else
 			{
 				await Parallel.ForEachAsync(factories, cancellationToken, async (factory, token) =>
 				{
-					await ExecuteHandler(scope, factory, token);
+					await ExecuteHandler(scope, factory, token).AsTask()
+					                                           .ContinueWith(_ =>
+					                                           {
+						                                           // 忽略多播处理程序中的错误
+					                                           }, token);
 				});
 			}
 
-			_logger!.LogInformation("Message {Id} was completed handled", context.MessageId);
+			_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
 		}
 
 		return;
 
 		async ValueTask<object> ExecuteHandler(IServiceScope scope, HandlerFactory factory, CancellationToken cancellation)
 		{
-			try
-			{
-				var handler = factory(scope.ServiceProvider);
-				return await handler(message, context, cancellation);
-			}
-			catch (Exception exception)
-			{
-				_logger.LogError(exception, "Error occurred while handling message {Id}", context.MessageId);
-				if (_convention.IsRequest(channel) || _convention.IsUnicast(channel))
-				{
-					// Swallow the exception for request/response and queue messages
-					throw;
-				}
-
-				return ValueTask.FromResult(exception);
-			}
+			var handler = factory(scope.ServiceProvider);
+			return await handler(message, context, cancellation);
 		}
 	}
 
@@ -172,15 +168,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	#region Supports
 
 	/// <summary>
-	/// Safely register a value into a concurrent dictionary whose values are lists.
-	/// This method uses a lock on the internal handler container to ensure that list
-	/// mutations (add/replace) are thread-safe for the combined key/value operations.
+	/// 安全地将值注册到值为列表的并发字典中。
+	/// 此方法使用内部处理程序容器上的锁，确保列表变更（添加/替换）在组合的键/值操作中保持线程安全。
 	/// </summary>
-	/// <typeparam name="TKey">The dictionary key type.</typeparam>
-	/// <typeparam name="TValue">The list element type.</typeparam>
-	/// <param name="key">The key to register the value under.</param>
-	/// <param name="value">The value to add to the list for the given key.</param>
-	/// <param name="registry">The concurrent dictionary that stores lists of values.</param>
+	/// <typeparam name="TKey">字典键的类型。</typeparam>
+	/// <typeparam name="TValue">列表元素的类型。</typeparam>
+	/// <param name="key">要注册到的键。</param>
+	/// <param name="value">要添加到给定键对应的列表中的值。</param>
+	/// <param name="registry">存储值列表的并发字典。</param>
 	private void ConcurrentDictionarySafeRegister<TKey, TValue>(TKey key, TValue value, ConcurrentDictionary<TKey, List<TValue>> registry)
 	{
 		lock (_handlerContainer)
@@ -207,19 +202,18 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	}
 
 	/// <summary>
-	/// Build an array of <see cref="Expression"/> arguments for invoking a handler method.
-	/// The method supports up to three parameters where parameter positions are resolved by type:
-	/// - a parameter matching <see cref="MessageContext"/> will receive the provided <paramref name="context"/> instance.
-	/// - a parameter matching <see cref="CancellationToken"/> will receive the provided <paramref name="cancellationToken"/>.
-	/// - any other parameter will receive the <paramref name="message"/> instance.
+	/// 构建用于调用处理程序方法的 <see cref="Expression"/> 参数数组。
+	/// 该方法最多支持三个参数，参数位置根据类型解析：
+	/// - 匹配 <see cref="MessageContext"/> 类型的参数将接收传入的 <paramref name="context"/> 实例。
+	/// - 匹配 <see cref="CancellationToken"/> 类型的参数将接收传入的 <paramref name="cancellationToken"/>。
+	/// - 其余任何参数将接收 <paramref name="message"/> 实例。
 	/// </summary>
-	/// <param name="method">The <see cref="MethodInfo"/> representing the handler method to invoke.</param>
-	/// <param name="message">The message object to be passed to the handler.</param>
-	/// <param name="context">The <see cref="MessageContext"/> to be passed to the handler when requested.</param>
-	/// <param name="cancellationToken">The <see cref="CancellationToken"/> to pass to the handler when requested.</param>
+	/// <param name="method">表示要调用的处理程序方法的 <see cref="MethodInfo"/>。</param>
+	/// <param name="message">要传递给处理程序的消息对象。</param>
+	/// <param name="context">当方法需要时传递给处理程序的 <see cref="MessageContext"/> 实例。</param>
+	/// <param name="cancellationToken">当方法需要时传递给处理程序的 <see cref="CancellationToken"/>。</param>
 	/// <returns>
-	/// An array of <see cref="Expression"/> corresponding to the method parameters, or <c>null</c>
-	/// when the method has more than three parameters (unsupported).
+	/// 与方法参数对应的 <see cref="Expression"/> 数组；当方法参数超过三个（不支持）时返回 <c>null</c>。
 	/// </returns>
 	private static Expression[] GetArguments(MethodInfo method, object message, IMessageContext context, CancellationToken cancellationToken)
 	{

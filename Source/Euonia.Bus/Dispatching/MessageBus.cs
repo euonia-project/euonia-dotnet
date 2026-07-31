@@ -1,78 +1,77 @@
-﻿using System.Collections.Concurrent;
-using System.Reactive.Subjects;
+﻿using System.Reactive.Subjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the core message bus implementation that handles message routing, dispatching, and pipeline processing.
+/// 核心消息总线的实现，负责消息路由、分发和管道处理。
 /// </summary>
 /// <remarks>
-/// The <see cref="MessageBus"/> class provides a centralized mechanism for publishing events, sending commands, 
-/// and making request-response calls. It supports multiple transport mechanisms, pipeline behaviors for cross-cutting 
-/// concerns, and message routing through dispatcher services.
+/// <see cref="MessageBus"/> 类提供了用于发布事件、发送命令和进行请求-响应调用的集中式机制。
+/// 支持多种传输机制、用于横切关注点的管道行为，以及通过分发器服务进行消息路由。
 /// <para>
-/// Key features:
+/// 主要功能：
 /// <list type="bullet">
-/// <item><description>Multicast message publishing (pub/sub pattern)</description></item>
-/// <item><description>Unicast message sending (command pattern)</description></item>
-/// <item><description>Request-response calls (RPC pattern)</description></item>
-/// <item><description>Configurable pipeline behaviors for message processing</description></item>
-/// <item><description>Support for multiple transport mechanisms</description></item>
-/// <item><description>Automatic message tracing and correlation</description></item>
+/// <item><description>多播消息发布（发布/订阅模式）</description></item>
+/// <item><description>单播消息发送（命令模式）</description></item>
+/// <item><description>请求-响应调用（RPC 模式）</description></item>
+/// <item><description>可配置的消息处理管道行为</description></item>
+/// <item><description>支持多种传输机制</description></item>
+/// <item><description>自动消息追踪和关联</description></item>
 /// </list>
 /// </para>
 /// </remarks>
 internal sealed class MessageBus : IBus
 {
 	/// <summary>
-	/// Logger instance for recording message bus operations and diagnostics.
+	/// 日志工厂实例
 	/// </summary>
-	private readonly ILogger<MessageBus> _logger;
+	private readonly ILoggerFactory _logger;
 
 	/// <summary>
-	/// Dispatcher responsible for determining which transports to use for a given message type.
+	/// 负责确定给定消息类型应使用哪些传输器的分发器。
 	/// </summary>
 	private readonly IDispatcher _dispatcher;
 
 	/// <summary>
-	/// Optional accessor for retrieving the current request context (e.g., HTTP request information).
+	/// 用于检索当前请求上下文（例如 HTTP 请求信息）的可选访问器。
 	/// </summary>
 	private readonly IRequestContextAccessor _requestAccessor;
 
 	/// <summary>
-	/// Service provider for resolving dependencies and transport implementations.
+	/// 用于解析依赖项和传输实现的服务提供程序。
 	/// </summary>
 	private readonly IServiceProvider _provider;
 
 	private readonly IConfigurator _configurator;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageBus"/> class.
+	/// 初始化 <see cref="MessageBus"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The service provider for dependency resolution.</param>
-	/// <param name="configurator">The configurator for message bus settings.</param>
-	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
-	/// <param name="logger">The logger factory for creating loggers.</param>
+	/// <param name="provider">用于依赖解析的服务提供程序。</param>
+	/// <param name="configurator">消息总线设置的配置器。</param>
+	/// <param name="dispatcher">用于确定消息传输的分发器。</param>
+	/// <param name="logger">用于创建日志记录器的日志工厂。</param>
 	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger)
 	{
-		_logger = logger.CreateLogger<MessageBus>();
+		_logger = logger;
 		_dispatcher = dispatcher;
 		_provider = provider;
 		_configurator = configurator;
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageBus"/> class with request context support.
+	/// 初始化 <see cref="MessageBus"/> 类的新实例，并支持请求上下文。
 	/// </summary>
-	/// <param name="provider">The service provider for dependency resolution.</param>
-	/// <param name="configurator">The configurator for message bus settings.</param>
-	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
-	/// <param name="logger">The logger factory for creating loggers.</param>
-	/// <param name="requestAccessor">The accessor for retrieving current request context.</param>
+	/// <param name="provider">用于依赖解析的服务提供程序。</param>
+	/// <param name="configurator">消息总线设置的配置器。</param>
+	/// <param name="dispatcher">用于确定消息传输的分发器。</param>
+	/// <param name="logger">用于创建日志记录器的日志工厂。</param>
+	/// <param name="requestAccessor">用于检索当前请求上下文的访问器。</param>
 	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger, IRequestContextAccessor requestAccessor)
 		: this(provider, configurator, dispatcher, logger)
 	{
@@ -80,29 +79,25 @@ internal sealed class MessageBus : IBus
 	}
 
 	/// <summary>
-	/// Publishes a multicast message to all registered subscribers through configured transports.
+	/// 通过已配置的传输器将多播消息发布给所有已注册的订阅者。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to publish.</typeparam>
-	/// <param name="message">The message instance to publish.</param>
-	/// <param name="behavior">Optional action to configure pipeline behaviors for this publish operation.</param>
-	/// <param name="options">Publishing options including channel name and message identifiers.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
-	/// <returns>A task representing the asynchronous publish operation.</returns>
-	/// <exception cref="MessageTypeException">Thrown when the message type is not classified as a multicast type.</exception>
-	/// <exception cref="MessageTransportException">Thrown when a configured transport is not registered.</exception>
+	/// <typeparam name="TMessage">要发布的消息类型。</typeparam>
+	/// <param name="message">要发布的消息实例。</param>
+	/// <param name="behavior">用于为此发布操作配置管道行为的可选委托。</param>
+	/// <param name="options">发布选项，包括通道名称和消息标识符。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步发布操作的任务。</returns>
+	/// <exception cref="MessageTypeException">当消息类型未归类为多播类型时抛出。</exception>
+	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
 	/// <remarks>
-	/// This method validates the message type, creates a routed message with tracking identifiers,
-	/// optionally processes the message through a pipeline, and publishes it to all determined transports in parallel.
+	/// 此方法验证消息类型，创建带有追踪标识符的路由消息，可选择性地通过管道处理消息，
+	/// 并将其并行发布到所有确定的传输器。
 	/// </remarks>
-	public async Task PublishAsync<TMessage>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, PublishOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
-		where TMessage : class
+	public Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new PublishOptions();
 
-		var messageType = message.GetType();
-
-		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+		var channel = GetChannel<TMessage>(options);
 
 		if (!_configurator.Convention.IsMulticast(channel))
 		{
@@ -120,81 +115,41 @@ internal sealed class MessageBus : IBus
 			User = context?.User,
 		};
 
-		metadataSetter?.Invoke(pack.Metadata);
-
-		if (CheckPipelineBehaviorEnabled(options))
-		{
-			var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, Unit>>();
-
-			//var pipelineMessage = new PipelineMessage<IRoutedMessage, Unit>(pack, pipeline);
-
-			if (options.AttachDefaultPipelineBehaviors)
-			{
-				pipelineMessage.Pipeline.UseOf(messageType, true);
-				var behaviorTypes = MessageBusPipelineBehaviorTypeCache.Instance.GetOrAdd<Unit>(_provider);
-
-				foreach (var behaviorType in behaviorTypes)
-				{
-					pipelineMessage.Pipeline.Use(behaviorType);
-				}
-			}
-
-			if (behavior != null)
-			{
-				behavior(pipelineMessage);
-			}
-
-			await pipelineMessage.ExecuteAsync();
-			pack = (RoutedMessage<TMessage, Unit>)pipelineMessage.Message;
-		}
+		options.MetadataSetter?.Invoke(pack.Metadata);
 
 		var transports = _dispatcher.Determine(channel);
 
-		var tasks = new List<Task>();
-
-		foreach (var name in transports)
+		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 		{
-			_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-				messageType.FullName, name, channel, pack.MessageId);
-			var transport = _provider.GetKeyedService<ITransporter>(name);
-			if (transport == null)
+			await RunWithPipelineAsync(name, pack, behavior, (transport, p) =>
 			{
-				throw new MessageTransportException($"The transport '{name}' is not registered.");
-			}
-
-			tasks.Add(transport.PublishAsync(pack, cancellationToken));
-		}
-
-		await Task.WhenAll(tasks);
+				return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
+			});
+		});
 	}
 
 	/// <summary>
-	/// Sends a unicast message or request to a single handler through the configured transport.
+	/// 通过已配置的传输器将单播消息或请求发送给单个处理程序。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TResult">The type of result expected from the message handler.</typeparam>
-	/// <param name="message">The message instance to send.</param>
-	/// <param name="callback">Optional reactive subject to receive the result or errors asynchronously.</param>
-	/// <param name="behavior">Optional action to configure pipeline behaviors for this send operation.</param>
-	/// <param name="options">Send options including channel name, message identifiers, and correlation ID.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
-	/// <returns>A task representing the asynchronous send operation.</returns>
-	/// <exception cref="MessageTypeException">Thrown when the message type is not classified as unicast or request type.</exception>
-	/// <exception cref="MessageTransportException">Thrown when the configured transport is not registered.</exception>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TResult">期望从消息处理程序返回的结果类型。</typeparam>
+	/// <param name="message">要发送的消息实例。</param>
+	/// <param name="callback">用于异步接收结果或错误的可选响应式 Subject。</param>
+	/// <param name="behavior">用于为此发送操作配置管道行为的可选委托。</param>
+	/// <param name="options">发送选项，包括通道名称、消息标识符和关联 ID。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步发送操作的任务。</returns>
+	/// <exception cref="MessageTypeException">当消息类型未归类为单播或请求类型时抛出。</exception>
+	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
 	/// <remarks>
-	/// This method validates the message type, creates a routed message with correlation tracking,
-	/// optionally processes the message through a pipeline, and sends it to the first determined transport.
-	/// Results or exceptions are propagated through the callback subject if provided.
+	/// 此方法验证消息类型，创建带有关联追踪的路由消息，可选择性地通过管道处理消息，
+	/// 并将其发送到第一个确定的传输器。结果或异常通过回调 Subject 进行传播（如果已提供）。
 	/// </remarks>
-	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, SendOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
-		where TMessage : class
+	public Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new SendOptions();
 
-		var messageType = message.GetType();
-
-		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+		var channel = GetChannel<TMessage>(options);
 
 		if (!_configurator.Convention.IsUnicast(channel))
 		{
@@ -202,7 +157,6 @@ internal sealed class MessageBus : IBus
 		}
 
 		var context = _requestAccessor?.Context;
-
 
 		var pack = new RoutedMessage<TMessage, TResult>(message, channel)
 		{
@@ -213,95 +167,58 @@ internal sealed class MessageBus : IBus
 			User = context?.User,
 		};
 
-		metadataSetter?.Invoke(pack.Metadata);
-
-		if (CheckPipelineBehaviorEnabled(options))
-		{
-			var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
-
-			if (options.AttachDefaultPipelineBehaviors)
-			{
-				pipelineMessage.Pipeline.UseOf(messageType, true);
-
-				var behaviorTypes = MessageBusPipelineBehaviorTypeCache.Instance.GetOrAdd<TResult>(_provider);
-
-				foreach (var behaviorType in behaviorTypes)
-				{
-					pipelineMessage.Pipeline.Use(behaviorType);
-				}
-			}
-
-			behavior?.Invoke(pipelineMessage);
-
-			await pipelineMessage.ExecuteAsync();
-			pack = (RoutedMessage<TMessage, TResult>)pipelineMessage.Message;
-		}
+		options.MetadataSetter?.Invoke(pack.Metadata);
 
 		var transports = _dispatcher.Determine(channel);
 
-		var transportName = transports!.First();
+		return RunWithPipelineAsync(transports.First(), pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
+			.ContinueWith(task =>
+			{
+				task.WaitAndUnwrapException();
+				if (task.IsFaulted)
+				{
+					if (callback != null)
+					{
+						callback.OnError(task.Exception.GetBaseException());
+					}
+					else
+					{
+						throw task.Exception;
+					}
+				}
+				else
+				{
+					callback?.OnNext(task.Result);
+				}
 
-		_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-			messageType.FullName, transportName, channel, pack.MessageId);
-
-		var transport = _provider.GetKeyedService<ITransporter>(transportName);
-
-		if (transport == null)
-		{
-			throw new MessageTransportException($"The transport '{transportName}' is not registered.");
-		}
-
-		await transport.SendAsync(pack, cancellationToken)
-		               .ContinueWith(task =>
-		               {
-			               task.WaitAndUnwrapException();
-			               if (task.IsFaulted)
-			               {
-				               if (callback != null)
-				               {
-					               callback.OnError(task.Exception.GetBaseException());
-				               }
-				               else
-				               {
-					               throw task.Exception;
-				               }
-			               }
-			               else
-			               {
-				               callback?.OnNext(task.Result);
-			               }
-
-			               if (task.IsCanceled)
-			               {
-				               callback?.OnCompleted();
-			               }
-		               }, cancellationToken);
+				if (task.IsCanceled)
+				{
+					callback?.OnCompleted();
+				}
+			}, cancellationToken);
 	}
 
 	/// <summary>
-	/// Executes a request-response call and returns the result directly.
+	/// 执行请求-响应调用并直接返回结果。
 	/// </summary>
-	/// <typeparam name="TResult">The type of result expected from the request handler.</typeparam>
-	/// <param name="message">The request message implementing <see cref="IRequest{TResult}"/>.</param>
-	/// <param name="behavior">Optional action to configure pipeline behaviors for this call operation.</param>
-	/// <param name="options">Call options including channel name, message identifiers, and correlation ID.</param>
-	/// <param name="metadataSetter">Optional action to configure message metadata.</param>
-	/// <param name="cancellationToken">Cancellation token to cancel the operation.</param>
-	/// <returns>A task representing the asynchronous operation with the result from the handler.</returns>
-	/// <exception cref="MessageTypeException">Thrown when the message type is not classified as a request type.</exception>
-	/// <exception cref="MessageTransportException">Thrown when the configured transport is not registered.</exception>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
+	/// <param name="behavior">用于为此调用操作配置管道行为的可选委托。</param>
+	/// <param name="options">调用选项，包括通道名称、消息标识符和关联 ID。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
+	/// <exception cref="MessageTypeException">当消息类型未归类为请求类型时抛出。</exception>
+	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
 	/// <remarks>
-	/// This method is similar to <see cref="SendAsync{TMessage, TResult}"/> but directly returns the result
-	/// instead of using a callback mechanism. It validates the request type, creates a routed message,
-	/// optionally processes it through a pipeline, and sends it to the first determined transport.
+	/// 此方法类似于 <see cref="SendAsync{TMessage, TResult}"/>，但直接返回结果而非使用回调机制。
+	/// 验证请求类型，创建路由消息，可选择性地通过管道处理，并将其发送到第一个确定的传输器。
 	/// </remarks>
-	public async Task<TResult> CallAsync<TResult>(IRequest<TResult> message, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CallOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
+	public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
 
-		var messageType = message.GetType();
-
-		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+		var channel = GetChannel<IRequest<TResult>>(options);
 
 		if (!_configurator.Convention.IsRequest(channel))
 		{
@@ -310,8 +227,7 @@ internal sealed class MessageBus : IBus
 
 		var context = _requestAccessor?.Context;
 
-
-		var pack = new RoutedMessage<IRequest<TResult>, TResult>(message, channel)
+		var pack = new RoutedMessage<TMessage>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
@@ -320,75 +236,60 @@ internal sealed class MessageBus : IBus
 			User = context?.User,
 		};
 
-		metadataSetter?.Invoke(pack.Metadata);
-
-		if (CheckPipelineBehaviorEnabled(options))
-		{
-			var pipeline = _provider.GetRequiredService<IPipeline<IRoutedMessage, TResult>>();
-
-			//var pipelineMessage = new PipelineMessage<IRoutedMessage, TResult>(pack, pipeline);
-
-			if (options.AttachDefaultPipelineBehaviors)
-			{
-				pipelineMessage.Pipeline.UseOf(messageType, true);
-				var behaviorTypes = MessageBusPipelineBehaviorTypeCache.Instance.GetOrAdd<TResult>(_provider);
-
-				foreach (var behaviorType in behaviorTypes)
-				{
-					pipelineMessage.Pipeline.Use(behaviorType);
-				}
-			}
-
-			if (behavior != null)
-			{
-				behavior(pipelineMessage);
-			}
-
-			await pipelineMessage.ExecuteAsync();
-			pack = (RoutedMessage<IRequest<TResult>, TResult>)pipelineMessage.Message;
-		}
+		options.MetadataSetter?.Invoke(pack.Metadata);
 
 		var transports = _dispatcher.Determine(channel);
 
 		var transportName = transports!.First();
 
-		_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-			messageType.FullName, transportName, channel, pack.MessageId);
-
-		var transport = _provider.GetKeyedService<ITransporter>(transportName);
-
-		if (transport == null)
-		{
-			throw new MessageTransportException($"The transport '{transportName}' is not registered.");
-		}
-
-		var result = await transport.SendAsync(pack, cancellationToken)
-		                            .ContinueWith(task =>
-		                            {
-			                            task.WaitAndUnwrapException();
-			                            return task.Result;
-		                            }, cancellationToken);
-		return result;
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TMessage, TResult>(p, cancellationToken));
 	}
-}
 
-/// <summary>
-/// Caches the types of pipeline behaviors for different response types to optimize retrieval.
-/// </summary>
-internal class MessageBusPipelineBehaviorTypeCache
-{
-	private readonly ConcurrentDictionary<Type, List<Type>> _cache = new();
-
-	public static MessageBusPipelineBehaviorTypeCache Instance => Singleton<MessageBusPipelineBehaviorTypeCache>.Get(() => new());
-
-	public List<Type> GetOrAdd<TResponse>(IServiceProvider provider)
+	/// <summary>
+	/// 通过管道执行消息处理流程：配置管道行为（日志记录和类型匹配），
+	/// 然后解析指定的传输器并调用后续委托完成实际的传输操作。
+	/// </summary>
+	/// <typeparam name="TMessage">消息类型。</typeparam>
+	/// <typeparam name="TResult">结果类型。</typeparam>
+	/// <param name="transportName">要使用的传输器名称。</param>
+	/// <param name="pack">路由消息包。</param>
+	/// <param name="behavior">用于配置管道的可选委托。</param>
+	/// <param name="next">执行实际传输操作的委托。</param>
+	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(string transportName, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next)
 	{
-		return _cache.GetOrAdd(typeof(TResponse), _ =>
+		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
+
+		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _logger);
+		pipeline.UseOf(pack.Payload.GetType(), true);
+
+		behavior?.Invoke(pipeline);
+
+		return pipeline.RunAsync(pack, async (message) =>
 		{
-			return provider.GetServices<IPipelineBehavior<IRoutedMessage, TResponse>>()
-			               .Select(b => b.GetType())
-			               .Distinct()
-			               .ToList();
+			var transport = _provider.GetKeyedService<ITransporter>(transportName);
+			if (transport == null)
+			{
+				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
+			}
+
+			return await next(transport, message);
 		});
+	}
+
+	/// <summary>
+	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
+	/// </summary>
+	/// <typeparam name="TMessage">消息类型。</typeparam>
+	/// <param name="options">消息选项。</param>
+	/// <returns>通道名称。</returns>
+	private static string GetChannel<TMessage>(ExtendableOptions options)
+	{
+		var channel = PriorityValueFinder.Find<string>(queue =>
+		{
+			queue.Enqueue(() => options.Channel, 0);
+			queue.Enqueue(() => MessageCache.Default.GetOrAddChannel<TMessage>(), 1);
+		}, string.IsNullOrWhiteSpace);
+		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");
 	}
 }

@@ -20,7 +20,6 @@ internal class MessageCache
 	/// <typeparam name="TMessage"></typeparam>
 	/// <returns></returns>
 	public string GetOrAddChannel<TMessage>()
-		where TMessage : class
 	{
 		return GetOrAddChannel(typeof(TMessage));
 	}
@@ -35,7 +34,12 @@ internal class MessageCache
 		return _channels.GetOrAdd(messageType, _ =>
 		{
 			var channelAttribute = messageType.GetCustomAttribute<ChannelAttribute>();
-			return channelAttribute != null ? channelAttribute.Name : messageType.FullName;
+			if (channelAttribute != null)
+			{
+				return channelAttribute.Name;
+			}
+
+			return messageType.IsSubclassOf(typeof(ITransportable)) ? messageType.FullName : null;
 		});
 	}
 }

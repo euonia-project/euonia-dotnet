@@ -71,7 +71,6 @@ public interface IBus
 	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
 	/// <returns>表示异步发布操作的任务。</returns>
 	Task PublishAsync<TMessage>(TMessage message, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
 		return PublishAsync(message, behavior: null, cancellationToken);
 	}
@@ -85,7 +84,6 @@ public interface IBus
 	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
 	/// <returns>表示异步发布操作的任务。</returns>
 	Task PublishAsync<TMessage>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
 		return PublishAsync(message, new PublishOptions(), behavior, cancellationToken);
 	}
@@ -99,8 +97,7 @@ public interface IBus
 	/// <param name="behavior">用于在发布前配置管道消息的委托。</param>
 	/// <param name="cancellationToken">用于取消发布操作的令牌。</param>
 	/// <returns>表示异步发布操作的任务。</returns>
-	Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
-		where TMessage : class;
+	Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 使用默认选项将消息发送给单个处理程序，不期望响应。
