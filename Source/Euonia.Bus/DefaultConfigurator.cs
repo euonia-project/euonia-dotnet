@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -9,16 +9,28 @@ namespace Nerosoft.Euonia.Bus;
 /// <summary>
 /// 默认的消息总线配置器，用于注册处理器、设置约定、分配传输策略和配置身份提供程序。
 /// </summary>
-internal sealed class DefaultConfigurator : IConfigurator
+public sealed class DefaultConfigurator : IConfigurator
 {
 	private readonly ConcurrentDictionary<string, ITransportStrategyBuilder> _strategyBuilders = new();
 	private readonly ConcurrentDictionary<string, ChannelRegistration> _registrations = new();
-	private Func<string> _defaultTransporterGetter;
+
+	/// <summary>
+	/// 初始化 <see cref="DefaultConfigurator"/> 类的新实例。
+	/// </summary>
+	/// <param name="options">用于配置消息总线的选项监视器。</param>
+	public DefaultConfigurator(IOptionsMonitor<MessageBusOptions> options)
+	{
+		DefaultTransporter = options.CurrentValue.DefaultTransporter;
+		options.OnChange(newOptions =>
+		{
+			DefaultTransporter = newOptions.DefaultTransporter;
+		});
+	}
 
 	/// <summary>
 	/// 获取默认传输器的名称。
 	/// </summary>
-	public string DefaultTransporter => _defaultTransporterGetter?.Invoke();
+	public string DefaultTransporter { get; private set; }
 
 	/// <summary>
 	/// 用于配置消息命名和发现约定的构建器。
@@ -131,18 +143,6 @@ internal sealed class DefaultConfigurator : IConfigurator
 	public DefaultConfigurator RegisterChannel(IEnumerable<Type> types)
 	{
 		ChannelRegistrar.Instance.Register(types);
-		return this;
-	}
-
-	/// <summary>
-	/// 设置用于获取默认传输器名称的工厂委托。
-	/// </summary>
-	/// <param name="transporterGetter">返回默认传输器名称的工厂委托。</param>
-	/// <returns>返回当前的 <see cref="DefaultConfigurator"/> 实例，以便进行链式调用。</returns>
-	public DefaultConfigurator SetDefaultTransporter(Func<string> transporterGetter)
-	{
-		ArgumentNullException.ThrowIfNull(transporterGetter);
-		_defaultTransporterGetter = transporterGetter;
 		return this;
 	}
 }

@@ -43,7 +43,7 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// <param name="provider">用于创建接收者并解析依赖项的服务提供程序。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 <see cref="InMemoryBusOptions"/> 配置。</param>
 	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
-	public InMemoryRecipientRegistrar(IMessageBusOptions configurator, IServiceProvider provider, IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
+	public InMemoryRecipientRegistrar(IConfigurator configurator, IServiceProvider provider, IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
 	{
 		_options = options.Value;
 		_convention = configurator.Convention;
