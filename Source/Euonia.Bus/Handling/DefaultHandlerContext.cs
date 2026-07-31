@@ -25,11 +25,10 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	/// 初始化 <see cref="DefaultHandlerContext"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析处理程序、日志记录器和其他服务的服务提供程序。</param>
-	/// <param name="logger">用于为此上下文创建日志记录器的日志工厂。</param>
-	public DefaultHandlerContext(IServiceProvider provider, ILoggerFactory logger)
+	public DefaultHandlerContext(IServiceProvider provider)
 	{
 		_provider = provider;
-		_logger = logger.CreateLogger<DefaultHandlerContext>();
+		_logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultHandlerContext>();
 		_convention = provider.GetService<IConfigurator>()?.Convention ?? new BaseMessageConvention();
 	}
 

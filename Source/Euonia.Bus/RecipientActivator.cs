@@ -11,6 +11,7 @@ public class RecipientActivator : BackgroundService
 {
 	private readonly IServiceProvider _provider;
 	private readonly string _defaultTransport;
+	private readonly IConfigurator _configurator;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="RecipientActivator"/> class.
@@ -21,13 +22,14 @@ public class RecipientActivator : BackgroundService
 	public RecipientActivator(IServiceProvider provider, IConfigurator configurator, IConfiguration configuration)
 	{
 		_provider = provider;
+		_configurator = configurator;
 		_defaultTransport = string.Collapse(configuration.GetValue<string>("Euonia:Bus:DefaultTransport"), configurator.DefaultTransporter);
 	}
 
 	/// <inheritdoc/>
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		var registrations = ChannelRegistrar.Registrations;
+		var registrations = _configurator.Registrations;
 
 		var registrars = _provider.GetServices<IRecipientRegistrar>();
 

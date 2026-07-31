@@ -25,6 +25,11 @@ public interface IConfigurator
 	IDictionary<string, ITransportStrategyBuilder> StrategyBuilders { get; }
 
 	/// <summary>
+	/// 
+	/// </summary>
+	IDictionary<string, ChannelRegistration> Registrations { get; }
+	
+	/// <summary>
 	/// 获取消息约定，可用于消息格式化和验证。
 	/// </summary>
 	/// <returns>已配置的 <see cref="IMessageConvention"/> 实例。</returns>

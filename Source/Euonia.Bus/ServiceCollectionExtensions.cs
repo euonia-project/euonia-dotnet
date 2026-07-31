@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus;
 
 namespace Microsoft.Extensions.DependencyInjection;
@@ -33,35 +32,38 @@ public static class ServiceCollectionExtensions
 
 			services.AddPipeline();
 
-			services.AddSingleton<IConfigurator, DefaultConfigurator>();
+			services.AddSingleton<IConfigurator>(provider =>
+			{
+				var configurator = ActivatorUtilities.GetServiceOrCreateInstance<DefaultConfigurator>(provider);
+				config?.Invoke(configurator);
+				return configurator;
+			});
 
 			services.TryAddSingleton<IHandlerContext>(provider =>
 			{
-				if (config != null)
-				{
-					var configurator = (DefaultConfigurator)provider.GetRequiredService<IConfigurator>();
-					config(configurator);
-				}
-
+				var configurator = provider.GetRequiredService<IConfigurator>();
 				var context = new DefaultHandlerContext(provider);
 
 				var registerMethod = typeof(DefaultHandlerContext).GetMethod(nameof(DefaultHandlerContext.Register), 3, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, []);
 
-				foreach (var registration in ChannelRegistrar.Registrations)
+				foreach (var (channel, registration) in configurator.Registrations)
 				{
-					Type responseType = null;
-					if (registration.Method.ReturnType.IsGenericType && registration.Method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+					foreach (var handler in registration.Handlers)
 					{
-						responseType = registration.Method.ReturnType.GenericTypeArguments[0];
-					}
+						Type responseType = null;
+						if (handler.Method.ReturnType.IsGenericType && handler.Method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+						{
+							responseType = handler.Method.ReturnType.GenericTypeArguments[0];
+						}
 
-					if (responseType != null && registration.HandlerType.IsAssignableTo(typeof(IHandler<,>).MakeGenericType(registration.MessageType, responseType)))
-					{
-						registerMethod?.MakeGenericMethod(registration.MessageType, responseType, registration.HandlerType).Invoke(context, null);
-					}
-					else
-					{
-						context.Register(registration);
+						if (responseType != null && handler.HandlerType.IsAssignableTo(typeof(IHandler<,>).MakeGenericType(registration.MessageType, responseType)))
+						{
+							registerMethod?.MakeGenericMethod(registration.MessageType, responseType, handler.HandlerType).Invoke(context, null);
+						}
+						else
+						{
+							context.Register(channel, handler);
+						}
 					}
 				}
 
@@ -73,7 +75,7 @@ public static class ServiceCollectionExtensions
 			// 	var options = provider.CreateScope().ServiceProvider.GetService<IOptionsSnapshot<MessageBusOptions>>();
 			// 	return options?.Value ?? new MessageBusOptions();
 			// });
-			services.TryAddTransient<IBus, MessageBus>();
+			services.TryAddSingleton<IBus, MessageBus>();
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
 			services.AddHostedService<RecipientActivator>();
 
