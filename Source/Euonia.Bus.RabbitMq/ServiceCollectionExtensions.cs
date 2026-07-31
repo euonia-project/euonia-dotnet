@@ -50,13 +50,14 @@ public static class ServiceCollectionExtensions
 			services.TryAddSingleton<IPersistentConnection, DefaultPersistentConnection>();
 
 			// Registers RabbitMQ transport-related services.
-			services.TryAddTransient<RabbitMqQueueConsumer>();
-			services.TryAddTransient<RabbitMqTopicSubscriber>();
-			services.TryAddSingleton<RabbitMqTransport>();
+			services.TryAddTransient<RabbitMqConsumer>();
+			services.TryAddTransient<RabbitMqSubscriber>();
+			services.TryAddTransient<RabbitMqExecutor>();
+			services.TryAddSingleton<RabbitMqTransporter>();
 
-			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransport) && descriptor.ServiceKey is string key && key == name))
+			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransport>(name, (provider, _) => provider.GetService<RabbitMqTransport>());
+				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetService<RabbitMqTransporter>());
 			}
 
 			if (!services.IsAddedImplementation<IRecipientRegistrar, RabbitMqRecipientRegistrar>())

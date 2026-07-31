@@ -33,3 +33,6 @@ resharper_convert_to_primary_constructor_highlighting = none;
 resharper_csharp_naming_rule.private_constants = AA_BB;
 resharper_csharp_naming_rule.constants = AaBb;
 resharper_csharp_naming_rule.private_static_readonly = _+aaBb;
+
+[*.{cs,vb}]
+dotnet_diagnostic.CA1873.severity = none

@@ -25,15 +25,6 @@ public interface ITransporter
 	Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// 发送（单播）指定的消息。
-	/// </summary>
-	/// <typeparam name="TMessage">消息负载的类型。</typeparam>
-	/// <param name="message">要发送的消息信封。</param>
-	/// <param name="cancellationToken">取消令牌。</param>
-	/// <returns>表示异步操作的任务。</returns>
-	Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default);
-
-	/// <summary>
 	/// 发送指定的消息并期望收到一个响应。
 	/// </summary>
 	/// <typeparam name="TMessage">消息负载的类型。</typeparam>

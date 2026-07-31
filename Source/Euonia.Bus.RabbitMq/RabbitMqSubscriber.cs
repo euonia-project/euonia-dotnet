@@ -9,27 +9,27 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <summary>
 /// 
 /// </summary>
-public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
+public class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 {
 	private readonly IHandlerContext _handler;
-	private readonly ILogger<RabbitMqTopicSubscriber> _logger;
+	private readonly ILogger<RabbitMqSubscriber> _logger;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqTopicSubscriber"/> class.
+	/// Initializes a new instance of the <see cref="RabbitMqSubscriber"/> class.
 	/// </summary>
 	/// <param name="connection"></param>
 	/// <param name="handler"></param>
 	/// <param name="options"></param>
 	/// <param name="logger"></param>
-	public RabbitMqTopicSubscriber(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+	public RabbitMqSubscriber(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
 		: base(connection, options)
 	{
 		_handler = handler;
-		_logger = logger.CreateLogger<RabbitMqTopicSubscriber>();
+		_logger = logger.CreateLogger<RabbitMqSubscriber>();
 	}
 
 	/// <inheritdoc />
-	public string Name => nameof(RabbitMqTopicSubscriber);
+	public string Name => nameof(RabbitMqSubscriber);
 
 	/// <summary>
 	/// Gets the RabbitMQ message channel.
@@ -74,16 +74,16 @@ public class RabbitMqTopicSubscriber : RabbitMqQueueRecipient, ITopicSubscriber
 
 		var context = new MessageContext(message);
 
-		OnMessageReceived(new MessageReceivedEventArgs(message.Data, context));
+		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
 
-		await HandleAsync(message.Channel, message.Data, context);
+		await HandleAsync(message.Channel, message.Payload, context);
 
 		if (!Options.AutoAck)
 		{
 			await Channel.BasicAckAsync(args.DeliveryTag, false);
 		}
 
-		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Data, context));
+		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
 	}
 
 	/// <inheritdoc />

@@ -7,29 +7,29 @@ using RabbitMQ.Client.Events;
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
-/// The RabbitMQ implementation of <see cref="IQueueConsumer"/>.
+/// The RabbitMQ implementation of <see cref="IConsumer"/>.
 /// </summary>
-public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
+public class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 {
 	private readonly IHandlerContext _handler;
-	private readonly ILogger<RabbitMqQueueConsumer> _logger;
+	private readonly ILogger<RabbitMqConsumer> _logger;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqQueueConsumer"/> class.
+	/// Initializes a new instance of the <see cref="RabbitMqConsumer"/> class.
 	/// </summary>
 	/// <param name="connection"></param>
 	/// <param name="handler"></param>
 	/// <param name="options"></param>
 	/// <param name="logger"></param>
-	public RabbitMqQueueConsumer(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+	public RabbitMqConsumer(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
 		: base(connection, options)
 	{
 		_handler = handler;
-		_logger = logger.CreateLogger<RabbitMqQueueConsumer>();
+		_logger = logger.CreateLogger<RabbitMqConsumer>();
 	}
 
 	/// <inheritdoc />
-	public string Name => nameof(RabbitMqQueueConsumer);
+	public string Name => nameof(RabbitMqConsumer);
 
 	/// <summary>
 	/// Gets the RabbitMQ message channel.
@@ -68,7 +68,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 
 		var context = new MessageContext(message);
 
-		OnMessageReceived(new MessageReceivedEventArgs(message.Data, context));
+		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
 
 		var taskCompletion = new TaskCompletionSource<object>();
 		context.Responded += (_, a) =>
@@ -86,7 +86,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 
 		RabbitMqReply<object> reply;
 
-		await HandleAsync(message.Channel, message.Data, context);
+		await HandleAsync(message.Channel, message.Payload, context);
 
 		try
 		{
@@ -111,7 +111,7 @@ public class RabbitMqQueueConsumer : RabbitMqQueueRecipient, IQueueConsumer
 
 		await Channel.BasicAckAsync(args.DeliveryTag, false);
 
-		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Data, context));
+		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
 	}
 
 	/// <inheritdoc/>
