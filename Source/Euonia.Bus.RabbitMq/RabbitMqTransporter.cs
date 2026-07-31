@@ -188,7 +188,7 @@ public class RabbitMqTransporter : ITransporter
 			ReplyTo = replyTo
 		};
 		props.Headers ??= new Dictionary<string, object>();
-		props.Headers[Constants.MessageHeaders.MessageType] = messageType;
+		props.Headers[MessageHeaders.MessageType] = messageType;
 		return props;
 	}
 

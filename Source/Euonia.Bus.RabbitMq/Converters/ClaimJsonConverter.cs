@@ -4,13 +4,23 @@ using Newtonsoft.Json.Linq;
 
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
+/// <summary>
+/// <see cref="Claim"/> 的 JSON 序列化/反序列化转换器。
+/// 支持将 <see cref="Claim"/> 对象序列化为包含 Type、Value、ValueType、Issuer、OriginalIssuer 字段的 JSON 对象，以及反向反序列化。
+/// </summary>
 internal class ClaimJsonConverter : JsonConverter
 {
+	/// <summary>
+	/// 判断是否可以转换指定的类型。
+	/// </summary>
+	/// <param name="objectType">要检查的类型。</param>
+	/// <returns>当类型为 <see cref="Claim"/> 时返回 <c>true</c>，否则返回 <c>false</c>。</returns>
 	public override bool CanConvert(Type objectType)
 	{
 		return (objectType == typeof(Claim));
 	}
 
+	/// <inheritdoc />
 	public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
 	{
 		if (value is not Claim claim)
@@ -29,6 +39,7 @@ internal class ClaimJsonConverter : JsonConverter
 		jsonObject.WriteTo(writer);
 	}
 
+	/// <inheritdoc />
 	public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
 	{
 		if (reader.TokenType == JsonToken.Null)
