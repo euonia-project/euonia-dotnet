@@ -16,12 +16,12 @@ public class RecipientActivator : BackgroundService
 	/// Initializes a new instance of the <see cref="RecipientActivator"/> class.
 	/// </summary>
 	/// <param name="provider"></param>
-	/// <param name="options"></param>
+	/// <param name="configurator"></param>
 	/// <param name="configuration"></param>
-	public RecipientActivator(IServiceProvider provider, IMessageBusOptions options, IConfiguration configuration)
+	public RecipientActivator(IServiceProvider provider, IConfigurator configurator, IConfiguration configuration)
 	{
 		_provider = provider;
-		_defaultTransport = string.Collapse(configuration.GetValue<string>("Euonia:Bus:DefaultTransport"), options.DefaultTransport);
+		_defaultTransport = string.Collapse(configuration.GetValue<string>("Euonia:Bus:DefaultTransport"), configurator.DefaultTransporter);
 	}
 
 	/// <inheritdoc/>
