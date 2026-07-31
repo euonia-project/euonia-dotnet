@@ -50,11 +50,11 @@ public class FacadeServiceModule : ModuleContextBase
 
 		context.Services.AddEuoniaBus(config =>
 		{
-			config.RegisterHandlers([typeof(FacadeServiceModule).Assembly])
-			      .SetConventions(builder =>
+			config.RegisterChannel([typeof(FacadeServiceModule).Assembly])
+			      .SetConvention(builder =>
 			      {
 				      builder.Add<DefaultMessageConvention>();
-				      builder.Add<AttributeMessageConvention>();
+				      builder.Add<AnnotationMessageConvention>();
 				      builder.Add<DomainMessageConvention>();
 			      })
 			      .SetStrategy("InMemory", builder =>
