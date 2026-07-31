@@ -40,7 +40,6 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示异步发布操作的任务。</returns>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
 		var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
@@ -61,7 +60,6 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示异步发送操作的任务。</returns>
 	public async Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
 		var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
@@ -103,7 +101,6 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>包含响应结果的任务。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
-		where TMessage : class
 	{
 		using var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)
@@ -159,7 +156,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <param name="message">请求消息信封。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>包含响应结果的任务。</returns>
-	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default) where TRequest : class where TResponse : class
+	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
 		using var context = new MessageContext(message);
 		var pack = new MessagePack(message, context)

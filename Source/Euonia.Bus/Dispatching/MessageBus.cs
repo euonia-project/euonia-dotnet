@@ -201,8 +201,8 @@ internal sealed class MessageBus : IBus
 	/// <summary>
 	/// 执行请求-响应调用并直接返回结果。
 	/// </summary>
-	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
-	/// <typeparam name="TMessage">请求消息的类型。</typeparam>
+	/// <typeparam name="TResponse">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <typeparam name="TRequest">请求消息的类型。</typeparam>
 	/// <param name="message">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
 	/// <param name="behavior">用于为此调用操作配置管道行为的可选委托。</param>
 	/// <param name="options">调用选项，包括通道名称、消息标识符和关联 ID。</param>
@@ -214,11 +214,11 @@ internal sealed class MessageBus : IBus
 	/// 此方法类似于 <see cref="SendAsync{TMessage, TResult}"/>，但直接返回结果而非使用回调机制。
 	/// 验证请求类型，创建路由消息，可选择性地通过管道处理，并将其发送到第一个确定的传输器。
 	/// </remarks>
-	public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+	public Task<TResponse> CallAsync<TRequest, TResponse>(TRequest message, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
 
-		var channel = GetChannel<IRequest<TResult>>(options);
+		var channel = GetChannel<TRequest>(options);
 
 		if (!_configurator.Convention.IsRequest(channel))
 		{
@@ -227,7 +227,7 @@ internal sealed class MessageBus : IBus
 
 		var context = _requestAccessor?.Context;
 
-		var pack = new RoutedMessage<TMessage>(message, channel)
+		var pack = new RoutedMessage<TRequest>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
@@ -242,7 +242,7 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TMessage, TResult>(p, cancellationToken));
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
 	}
 
 	/// <summary>
