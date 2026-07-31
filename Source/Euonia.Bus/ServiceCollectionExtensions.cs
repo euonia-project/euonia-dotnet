@@ -18,13 +18,10 @@ public static class ServiceCollectionExtensions
 		/// </summary>
 		/// <param name="config"></param>
 		/// <returns></returns>
-		public IServiceCollection AddEuoniaBus(Action<IBusConfigurator> config = null)
+		public IServiceCollection AddEuoniaBus(Action<DefaultConfigurator> config = null)
 		{
-			var configurator = Singleton<BusConfigurator>.Get(() => new BusConfigurator(services));
-
-			config?.Invoke(configurator);
-
-			var handlerTypes = HandlerRegistrar.Registrations
+			var handlerTypes = ChannelRegistrar.Registrations
+			                                   .SelectMany(t => t.Value.Handlers)
 			                                   .Select(t => t.HandlerType)
 			                                   .Distinct()
 			                                   .ToList();
@@ -36,15 +33,21 @@ public static class ServiceCollectionExtensions
 
 			services.AddPipeline();
 
-			services.AddSingleton<IBusConfigurator>(_ => configurator);
+			services.AddSingleton<IConfigurator, DefaultConfigurator>();
 
 			services.TryAddSingleton<IHandlerContext>(provider =>
 			{
-				var context = new HandlerContext(provider);
+				if (config != null)
+				{
+					var configurator = (DefaultConfigurator)provider.GetRequiredService<IConfigurator>();
+					config(configurator);
+				}
 
-				var registerMethod = typeof(HandlerContext).GetMethod(nameof(HandlerContext.Register), 3, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, []);
+				var context = new DefaultHandlerContext(provider);
 
-				foreach (var registration in HandlerRegistrar.Registrations)
+				var registerMethod = typeof(DefaultHandlerContext).GetMethod(nameof(DefaultHandlerContext.Register), 3, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, []);
+
+				foreach (var registration in ChannelRegistrar.Registrations)
 				{
 					Type responseType = null;
 					if (registration.Method.ReturnType.IsGenericType && registration.Method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
@@ -65,11 +68,11 @@ public static class ServiceCollectionExtensions
 				return context;
 			});
 
-			services.TryAddTransient<IMessageBusOptions>(provider =>
-			{
-				var options = provider.CreateScope().ServiceProvider.GetService<IOptionsSnapshot<MessageBusOptions>>();
-				return options?.Value ?? new MessageBusOptions();
-			});
+			// services.TryAddTransient<IMessageBusOptions>(provider =>
+			// {
+			// 	var options = provider.CreateScope().ServiceProvider.GetService<IOptionsSnapshot<MessageBusOptions>>();
+			// 	return options?.Value ?? new MessageBusOptions();
+			// });
 			services.TryAddTransient<IBus, MessageBus>();
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
 			services.AddHostedService<RecipientActivator>();

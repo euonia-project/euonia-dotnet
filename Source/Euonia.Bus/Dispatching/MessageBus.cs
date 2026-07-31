@@ -48,36 +48,33 @@ internal sealed class MessageBus : IBus
 	/// </summary>
 	private readonly IServiceProvider _provider;
 
-	/// <summary>
-	/// Configuration options for the message bus, including default transport and pipeline settings.
-	/// </summary>
-	private readonly IMessageBusOptions _options;
+	private readonly IConfigurator _configurator;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="MessageBus"/> class.
 	/// </summary>
-	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
 	/// <param name="provider">The service provider for dependency resolution.</param>
-	/// <param name="options">The message bus options.</param>
+	/// <param name="configurator">The configurator for message bus settings.</param>
+	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
 	/// <param name="logger">The logger factory for creating loggers.</param>
-	public MessageBus(IDispatcher dispatcher, IServiceProvider provider, IMessageBusOptions options, ILoggerFactory logger)
+	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger)
 	{
 		_logger = logger.CreateLogger<MessageBus>();
 		_dispatcher = dispatcher;
-		_options = options;
 		_provider = provider;
+		_configurator = configurator;
 	}
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="MessageBus"/> class with request context support.
 	/// </summary>
-	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
 	/// <param name="provider">The service provider for dependency resolution.</param>
-	/// <param name="options">The message convention for type classification.</param>
+	/// <param name="configurator">The configurator for message bus settings.</param>
+	/// <param name="dispatcher">The dispatcher for determining message transports.</param>
 	/// <param name="logger">The logger factory for creating loggers.</param>
 	/// <param name="requestAccessor">The accessor for retrieving current request context.</param>
-	public MessageBus(IDispatcher dispatcher, IServiceProvider provider, IMessageBusOptions options, ILoggerFactory logger, IRequestContextAccessor requestAccessor)
-		: this(dispatcher, provider, options, logger)
+	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger, IRequestContextAccessor requestAccessor)
+		: this(provider, configurator, dispatcher, logger)
 	{
 		_requestAccessor = requestAccessor;
 	}
@@ -98,22 +95,24 @@ internal sealed class MessageBus : IBus
 	/// This method validates the message type, creates a routed message with tracking identifiers,
 	/// optionally processes the message through a pipeline, and publishes it to all determined transports in parallel.
 	/// </remarks>
-	public async Task PublishAsync<TMessage>(TMessage message, Action<PipelineMessage<IRoutedMessage, Unit>> behavior, PublishOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
+	public async Task PublishAsync<TMessage>(TMessage message, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, PublishOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
 		options ??= new PublishOptions();
 
 		var messageType = message.GetType();
 
-		if (!_options.Convention.IsMulticastType(messageType))
+		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+
+		if (!_configurator.Convention.IsMulticast(channel))
 		{
-			throw new MessageTypeException("The message type is not an multicast type.");
+			throw new MessageTypeException("The message type is not a multicast type.");
 		}
 
 		var context = _requestAccessor?.Context;
 
-		var channelName = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
-		var pack = new RoutedMessage<TMessage, Unit>(message, channelName)
+
+		var pack = new RoutedMessage<TMessage, Unit>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
@@ -125,9 +124,9 @@ internal sealed class MessageBus : IBus
 
 		if (CheckPipelineBehaviorEnabled(options))
 		{
-			var pipeline = _provider.GetRequiredService<IPipeline<IRoutedMessage, Unit>>();
+			var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, Unit>>();
 
-			var pipelineMessage = new PipelineMessage<IRoutedMessage, Unit>(pack, pipeline);
+			//var pipelineMessage = new PipelineMessage<IRoutedMessage, Unit>(pack, pipeline);
 
 			if (options.AttachDefaultPipelineBehaviors)
 			{
@@ -149,15 +148,15 @@ internal sealed class MessageBus : IBus
 			pack = (RoutedMessage<TMessage, Unit>)pipelineMessage.Message;
 		}
 
-		var transports = _dispatcher.Determine(messageType);
+		var transports = _dispatcher.Determine(channel);
 
 		var tasks = new List<Task>();
 
 		foreach (var name in transports)
 		{
 			_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-				messageType.FullName, name, channelName, pack.MessageId);
-			var transport = _provider.GetKeyedService<ITransport>(name);
+				messageType.FullName, name, channel, pack.MessageId);
+			var transport = _provider.GetKeyedService<ITransporter>(name);
 			if (transport == null)
 			{
 				throw new MessageTransportException($"The transport '{name}' is not registered.");
@@ -188,22 +187,24 @@ internal sealed class MessageBus : IBus
 	/// optionally processes the message through a pipeline, and sends it to the first determined transport.
 	/// Results or exceptions are propagated through the callback subject if provided.
 	/// </remarks>
-	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, SendOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
+	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, SendOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
 		where TMessage : class
 	{
 		options ??= new SendOptions();
 
 		var messageType = message.GetType();
 
-		if (!_options.Convention.IsUnicastType(messageType))
+		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+
+		if (!_configurator.Convention.IsUnicast(channel))
 		{
 			throw new MessageTypeException("The message type is not a unicast type.");
 		}
 
 		var context = _requestAccessor?.Context;
 
-		var channelName = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
-		var pack = new RoutedMessage<TMessage, TResult>(message, channelName)
+
+		var pack = new RoutedMessage<TMessage, TResult>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
@@ -216,9 +217,7 @@ internal sealed class MessageBus : IBus
 
 		if (CheckPipelineBehaviorEnabled(options))
 		{
-			var pipeline = _provider.GetRequiredService<IPipeline<IRoutedMessage, TResult>>();
-
-			var pipelineMessage = new PipelineMessage<IRoutedMessage, TResult>(pack, pipeline);
+			var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
 			if (options.AttachDefaultPipelineBehaviors)
 			{
@@ -238,14 +237,14 @@ internal sealed class MessageBus : IBus
 			pack = (RoutedMessage<TMessage, TResult>)pipelineMessage.Message;
 		}
 
-		var transports = _dispatcher.Determine(messageType);
+		var transports = _dispatcher.Determine(channel);
 
 		var transportName = transports!.First();
 
 		_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-			messageType.FullName, transportName, channelName, pack.MessageId);
+			messageType.FullName, transportName, channel, pack.MessageId);
 
-		var transport = _provider.GetKeyedService<ITransport>(transportName);
+		var transport = _provider.GetKeyedService<ITransporter>(transportName);
 
 		if (transport == null)
 		{
@@ -296,21 +295,23 @@ internal sealed class MessageBus : IBus
 	/// instead of using a callback mechanism. It validates the request type, creates a routed message,
 	/// optionally processes it through a pipeline, and sends it to the first determined transport.
 	/// </remarks>
-	public async Task<TResult> CallAsync<TResult>(IRequest<TResult> message, Action<PipelineMessage<IRoutedMessage, TResult>> behavior, CallOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
+	public async Task<TResult> CallAsync<TResult>(IRequest<TResult> message, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CallOptions options, Action<MessageMetadata> metadataSetter = null, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
 
 		var messageType = message.GetType();
 
-		if (!_options.Convention.IsRequestType(messageType))
+		var channel = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
+
+		if (!_configurator.Convention.IsRequest(channel))
 		{
 			throw new MessageTypeException("The message type is not a request type.");
 		}
 
 		var context = _requestAccessor?.Context;
 
-		var channelName = options.Channel ?? MessageCache.Default.GetOrAddChannel(messageType);
-		var pack = new RoutedMessage<IRequest<TResult>, TResult>(message, channelName)
+
+		var pack = new RoutedMessage<IRequest<TResult>, TResult>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
@@ -325,7 +326,7 @@ internal sealed class MessageBus : IBus
 		{
 			var pipeline = _provider.GetRequiredService<IPipeline<IRoutedMessage, TResult>>();
 
-			var pipelineMessage = new PipelineMessage<IRoutedMessage, TResult>(pack, pipeline);
+			//var pipelineMessage = new PipelineMessage<IRoutedMessage, TResult>(pack, pipeline);
 
 			if (options.AttachDefaultPipelineBehaviors)
 			{
@@ -347,14 +348,14 @@ internal sealed class MessageBus : IBus
 			pack = (RoutedMessage<IRequest<TResult>, TResult>)pipelineMessage.Message;
 		}
 
-		var transports = _dispatcher.Determine(messageType);
+		var transports = _dispatcher.Determine(channel);
 
 		var transportName = transports!.First();
 
 		_logger.LogDebug("Publishing message of type {MessageType} to transport {TransportType} on channel {ChannelName} with MessageId {MessageId}.",
-			messageType.FullName, transportName, channelName, pack.MessageId);
+			messageType.FullName, transportName, channel, pack.MessageId);
 
-		var transport = _provider.GetKeyedService<ITransport>(transportName);
+		var transport = _provider.GetKeyedService<ITransporter>(transportName);
 
 		if (transport == null)
 		{
@@ -368,25 +369,6 @@ internal sealed class MessageBus : IBus
 			                            return task.Result;
 		                            }, cancellationToken);
 		return result;
-	}
-
-	/// <summary>
-	/// Determines whether pipeline behaviors should be enabled for the current operation.
-	/// </summary>
-	/// <param name="options">The operation-specific options that may override the global setting.</param>
-	/// <returns><c>true</c> if pipeline behaviors are enabled; otherwise, <c>false</c>.</returns>
-	/// <remarks>
-	/// This method checks if the operation-specific options have an explicit pipeline behavior setting.
-	/// If not specified, it falls back to the global message bus configuration.
-	/// </remarks>
-	private bool CheckPipelineBehaviorEnabled(ExtendableOptions options)
-	{
-		if (options.EnablePipelineBehaviors.HasValue)
-		{
-			return options.EnablePipelineBehaviors.Value;
-		}
-
-		return _options.EnablePipelineBehaviors;
 	}
 }
 

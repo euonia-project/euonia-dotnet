@@ -8,15 +8,15 @@ namespace Nerosoft.Euonia.Bus;
 internal class StrategicDispatcher : IDispatcher
 {
 	private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _transportCache = new();
-	private readonly IMessageBusOptions _options;
+	private readonly IConfigurator _configurator;
 
 	/// <summary>
 	/// 初始化 <see cref="StrategicDispatcher"/> 类的新实例。
 	/// </summary>
-	/// <param name="options">消息总线配置选项。</param>
-	public StrategicDispatcher(IMessageBusOptions options)
+	/// <param name="configurator">消息总线配置选项。</param>
+	public StrategicDispatcher(IConfigurator configurator)
 	{
-		_options = options;
+		_configurator = configurator;
 	}
 
 	/// <summary>
@@ -34,9 +34,9 @@ internal class StrategicDispatcher : IDispatcher
 		var transportTypes = _transportCache.GetOrAdd(channel, _ =>
 		{
 			var list = new List<string>();
-			foreach (var type in _options.StrategyAssignedTypes)
+			foreach (var type in _configurator.StrategyAssignedTypes)
 			{
-				var strategy = _options.GetStrategy(type);
+				var strategy = _configurator.GetStrategy(type);
 				if (strategy.Outgoing(channel))
 				{
 					list.Add(type);
@@ -49,15 +49,15 @@ internal class StrategicDispatcher : IDispatcher
 		switch (transportTypes.Count)
 		{
 			case 0:
-				if (string.IsNullOrEmpty(_options.DefaultTransporter))
+				if (string.IsNullOrEmpty(_configurator.DefaultTransporter))
 				{
 					throw new MessageTypeException("No transport is configured for the message type.");
 				}
 
-				transportTypes = new List<string> { _options.DefaultTransporter };
+				transportTypes = new List<string> { _configurator.DefaultTransporter };
 				break;
 
-			case > 1 when !_options.Convention.IsMulticast(channel):
+			case > 1 when !_configurator.Convention.IsMulticast(channel):
 				throw new MessageTypeException("Multiple transports are configured for a unicast message type.");
 		}
 
