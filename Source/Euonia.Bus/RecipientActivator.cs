@@ -27,7 +27,7 @@ public class RecipientActivator : BackgroundService
 	/// <inheritdoc/>
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		var registrations = HandlerRegistrar.Registrations;
+		var registrations = ChannelRegistrar.Registrations;
 
 		var registrars = _provider.GetServices<IRecipientRegistrar>();
 

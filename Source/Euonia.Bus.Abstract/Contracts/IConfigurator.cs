@@ -1,6 +1,4 @@
-﻿using System.Reflection;
-
-namespace Nerosoft.Euonia.Bus;
+﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
 /// <see cref="IConfigurator"/>是配置消息总线的主接口。
@@ -12,7 +10,7 @@ public interface IConfigurator
 	/// 获取默认传输策略名称，可用于消息路由和分类。
 	/// </summary>
 	/// <returns>默认传输策略名称。</returns>
-	string DefaultTransport { get; }
+	string DefaultTransporter { get; }
 	
 	/// <summary>
 	/// 获取已配置的 <see cref="IMessageConventionBuilder"/>。
@@ -24,7 +22,7 @@ public interface IConfigurator
 	/// 获取已配置的传输策略构建器映射。
 	/// </summary>
 	/// <returns>已配置的传输策略构建器映射。</returns>
-	IDictionary<string, TransportStrategyBuilder> StrategyBuilders { get; }
+	IDictionary<string, ITransportStrategyBuilder> StrategyBuilders { get; }
 
 	/// <summary>
 	/// 获取消息约定，可用于消息格式化和验证。
@@ -42,8 +40,8 @@ public interface IConfigurator
 	/// 获取指定传输名称对应的传输策略，可用于消息路由和分类。
 	/// </summary>
 	/// <param name="transport">传输名称。</param>
-	/// <returns>对应的 <see cref="TransportStrategy"/> 实例。</returns>
-	TransportStrategy Strategy(string transport)
+	/// <returns>对应的 <see cref="ITransportStrategy"/> 实例。</returns>
+	ITransportStrategy Strategy(string transport)
 	{
 		return StrategyBuilders.TryGetValue(transport, out var builder) ? builder.Strategy : null;
 	}

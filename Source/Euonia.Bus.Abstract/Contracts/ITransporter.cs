@@ -51,10 +51,10 @@ public interface ITransporter
 	/// </summary>
 	/// <typeparam name="TRequest">请求消息负载的类型。</typeparam>
 	/// <typeparam name="TResponse">响应的类型。</typeparam>
-	/// <param name="request">请求消息信封。</param>
+	/// <param name="message">请求消息信封。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>包含响应结果的任务。</returns>
-	Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> request, CancellationToken cancellationToken = default)
+	Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 		where TRequest : class
 		where TResponse : class;
 }
