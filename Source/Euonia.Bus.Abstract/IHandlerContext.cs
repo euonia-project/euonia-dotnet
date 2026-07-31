@@ -11,15 +11,6 @@ public interface IHandlerContext
 	event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
 
 	/// <summary>
-	/// 异步处理消息。
-	/// </summary>
-	/// <param name="message">要处理的消息。</param>
-	/// <param name="context">消息上下文。</param>
-	/// <param name="cancellationToken">取消令牌。</param>
-	/// <returns>表示异步操作的任务。</returns>
-	Task HandleAsync(object message, IMessageContext context, CancellationToken cancellationToken = default);
-
-	/// <summary>
 	/// 异步处理指定通道中的消息。
 	/// </summary>
 	/// <param name="channel">消息通道名称。</param>
@@ -27,5 +18,5 @@ public interface IHandlerContext
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示异步操作的任务。</returns>
-	Task HandleAsync(string channel, object message, IMessageContext context, CancellationToken cancellationToken = default);
+	Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default);
 }

@@ -10,27 +10,27 @@ namespace Nerosoft.Euonia.Bus;
 /// <summary>
 /// Default message handler context using Microsoft dependency injection.
 /// </summary>
-internal sealed class HandlerContext : IHandlerContext
+internal sealed class DefaultHandlerContext : IHandlerContext
 {
 	/// <summary>
 	/// Occurs when a message handler is subscribed.
 	/// </summary>
 	public event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
 
-	private readonly ConcurrentDictionary<string, List<MessageHandlerFactory>> _handlerContainer = new();
+	private readonly ConcurrentDictionary<string, List<HandlerFactory>> _handlerContainer = new();
 	private readonly IServiceProvider _provider;
-	private readonly ILogger<HandlerContext> _logger;
+	private readonly ILogger<DefaultHandlerContext> _logger;
 	private readonly IMessageConvention _convention;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="HandlerContext"/>.
+	/// Initialize a new instance of <see cref="DefaultHandlerContext"/>.
 	/// </summary>
 	/// <param name="provider">The service provider used to resolve handlers, logger and other services.</param>
-	public HandlerContext(IServiceProvider provider)
+	public DefaultHandlerContext(IServiceProvider provider)
 	{
 		_provider = provider;
-		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<HandlerContext>() ?? new NullLogger<HandlerContext>();
-		_convention = provider.GetService<IMessageBusOptions>()?.Convention ?? new MessageConvention();
+		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<DefaultHandlerContext>() ?? new NullLogger<DefaultHandlerContext>();
+		_convention = provider.GetService<IConfigurator>()?.Convention ?? new BaseMessageConvention();
 	}
 
 	#region Handling register
@@ -41,13 +41,11 @@ internal sealed class HandlerContext : IHandlerContext
 	/// <typeparam name="TMessage">The message type to handle. Must be a reference type.</typeparam>
 	/// <typeparam name="TResponse"></typeparam>
 	/// <typeparam name="THandler">The handler type that implements <see cref="IHandler{TMessage}"/>.</typeparam>
-	internal void Register<TMessage, TResponse, THandler>()
+	internal void Register<TMessage, TResponse, THandler>(string channel)
 		where TMessage : class
 		where THandler : IHandler<TMessage, TResponse>
 	{
-		var channel = MessageCache.Default.GetOrAddChannel<TMessage>();
-
-		MessageHandler Handling(IServiceProvider provider)
+		HandlerDelegate Handling(IServiceProvider provider)
 		{
 			var handler = provider.GetService<THandler>();
 			return (message, context, token) => handler.HandleAsync((TMessage)message, context, token)
@@ -62,41 +60,30 @@ internal sealed class HandlerContext : IHandlerContext
 	/// Register a handler described by a <see cref="MessageRegistration"/>.
 	/// The registration contains the handler type, the method to invoke and the channel name.
 	/// </summary>
-	/// <param name="registration">The <see cref="MessageRegistration"/> describing the handler to register.</param>
-	internal void Register(MessageRegistration registration)
+	/// <param name="channel">The channel name.</param>
+	/// <param name="channelHandler">The <see cref="ChannelHandler"/> describing the handler to register.</param>
+	internal void Register(string channel, ChannelHandler channelHandler)
 	{
-		MessageHandler Handling(IServiceProvider provider)
+		HandlerDelegate Handling(IServiceProvider provider)
 		{
-			var handler = ActivatorUtilities.GetServiceOrCreateInstance(provider, registration.HandlerType);
+			var instance = channelHandler.Instance ?? ActivatorUtilities.GetServiceOrCreateInstance(provider, channelHandler.HandlerType);
 
 			return (message, context, token) =>
 			{
-				var arguments = GetArguments(registration.Method, message, context, token);
-				var expression = MethodInvokerBuilder.BuildCallExpression(handler, registration.Method, arguments);
+				var arguments = GetArguments(channelHandler.Method, message, context, token);
+				var expression = MethodInvokerBuilder.BuildCallExpression(instance, channelHandler.Method, arguments);
 
 				return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
 			};
 		}
 
-		ConcurrentDictionarySafeRegister(registration.Channel, Handling, _handlerContainer);
-		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(registration.Channel, registration.MessageType, registration.HandlerType));
+		ConcurrentDictionarySafeRegister(channel, Handling, _handlerContainer);
+		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, channelHandler.HandlerType));
 	}
 
 	#endregion
 
 	#region Handle message
-
-	/// <inheritdoc />
-	public async Task HandleAsync(object message, MessageContext context, CancellationToken cancellationToken = default)
-	{
-		if (message == null)
-		{
-			return;
-		}
-
-		var name = MessageCache.Default.GetOrAddChannel(message.GetType());
-		await HandleAsync(name, message, context, cancellationToken);
-	}
 
 	/// <inheritdoc />
 	public async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
@@ -159,7 +146,7 @@ internal sealed class HandlerContext : IHandlerContext
 
 		return;
 
-		async ValueTask<object> ExecuteHandler(IServiceScope scope, MessageHandlerFactory factory, CancellationToken cancellation)
+		async ValueTask<object> ExecuteHandler(IServiceScope scope, HandlerFactory factory, CancellationToken cancellation)
 		{
 			try
 			{
@@ -169,7 +156,7 @@ internal sealed class HandlerContext : IHandlerContext
 			catch (Exception exception)
 			{
 				_logger.LogError(exception, "Error occurred while handling message {Id}", context.MessageId);
-				if (_convention.IsRequestType(message.GetType()) || _convention.IsUnicastType(message.GetType()))
+				if (_convention.IsRequest(channel) || _convention.IsUnicast(channel))
 				{
 					// Swallow the exception for request/response and queue messages
 					throw;
@@ -234,7 +221,7 @@ internal sealed class HandlerContext : IHandlerContext
 	/// An array of <see cref="Expression"/> corresponding to the method parameters, or <c>null</c>
 	/// when the method has more than three parameters (unsupported).
 	/// </returns>
-	private static Expression[] GetArguments(MethodInfo method, object message, MessageContext context, CancellationToken cancellationToken)
+	private static Expression[] GetArguments(MethodInfo method, object message, IMessageContext context, CancellationToken cancellationToken)
 	{
 		var parameterInfos = method.GetParameters();
 		var arguments = new Expression[parameterInfos.Length];
