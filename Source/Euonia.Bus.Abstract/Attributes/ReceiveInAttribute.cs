@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Bus;
 /// 表示一个特性，用于指定消息在哪些传输通道中接收。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public class ReceiveInAttribute : Attribute
+public sealed class ReceiveInAttribute : Attribute
 {
 	/// <summary>
 	/// 初始化 <see cref="ReceiveInAttribute"/> 类的新实例。

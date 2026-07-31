@@ -4,7 +4,7 @@
 /// 表示被标记的通道具有指定的名称。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Parameter, Inherited = false)]
-public class ChannelAttribute : Attribute
+public sealed class ChannelAttribute : Attribute
 {
 	/// <summary>
 	/// 获取通道名称。

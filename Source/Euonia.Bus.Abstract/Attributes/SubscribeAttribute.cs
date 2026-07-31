@@ -4,7 +4,7 @@
 /// 表示被标记的方法将订阅并处理消息。
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
-public class SubscribeAttribute : Attribute
+public sealed class SubscribeAttribute : Attribute
 {
 	/// <summary>
 	/// 初始化 <see cref="SubscribeAttribute"/> 类的新实例。
