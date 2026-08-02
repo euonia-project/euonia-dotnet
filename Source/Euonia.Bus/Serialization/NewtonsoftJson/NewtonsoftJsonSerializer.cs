@@ -32,6 +32,9 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 				_ => ReferenceLoopHandling.Error
 			},
 			ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+			ConstructorHandling = ConstructorHandling.Default,
+			MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
+			TypeNameHandling = TypeNameHandling.Auto,
 			Converters =
 			[
 				new ClaimsPrincipalJsonConverter(),
