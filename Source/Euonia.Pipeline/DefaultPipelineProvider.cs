@@ -180,7 +180,16 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 		{
 			return async context =>
 			{
-				var behavior = (IPipelineBehavior<TRequest, TResponse>)ActivatorUtilities.GetServiceOrCreateInstance(_provider, behaviorType); //(IPipelineBehavior)_provider.GetService(behaviorType);
+				IPipelineBehavior<TRequest, TResponse> behavior;
+				if (constructorArguments == null || constructorArguments.Length == 0)
+				{
+					behavior = (IPipelineBehavior<TRequest, TResponse>)ActivatorUtilities.GetServiceOrCreateInstance(_provider, behaviorType); //(IPipelineBehavior)_provider.GetService(behaviorType);
+				}
+				else
+				{
+					behavior = (IPipelineBehavior<TRequest, TResponse>)ActivatorUtilities.CreateInstance(_provider, behaviorType, constructorArguments);
+				}
+
 				if (behavior == null)
 				{
 					throw new NullReferenceException($"The type of {behaviorType} not injected.");
