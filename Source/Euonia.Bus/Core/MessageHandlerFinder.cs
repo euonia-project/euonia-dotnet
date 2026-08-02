@@ -134,7 +134,7 @@ internal static class MessageHandlerFinder
 					queue.Enqueue(() => attributes[0].Name, 0);
 					queue.Enqueue(() => parameters[0].GetCustomAttribute<ChannelAttribute>()?.Name, 1);
 					queue.Enqueue(() => parameters[0].ParameterType.GetCustomAttribute<ChannelAttribute>()?.Name, 2);
-				}, string.IsNullOrWhiteSpace);
+				}, value => !string.IsNullOrWhiteSpace(value));
 
 				if (string.IsNullOrWhiteSpace(channel))
 				{

@@ -44,7 +44,7 @@ internal class MessageCache
 					var attributes = messageType.GetCustomAttributes(false);
 					return attributes.Any(t => t is TransportableAttribute) ? messageType.FullName : null;
 				}, 4);
-			}, string.IsNullOrWhiteSpace);
+			}, value => !string.IsNullOrWhiteSpace(value));
 		});
 	}
 }
