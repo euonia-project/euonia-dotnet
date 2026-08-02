@@ -12,7 +12,6 @@ namespace Nerosoft.Euonia.Bus;
 public sealed class DefaultConfigurator : IConfigurator
 {
 	private readonly ConcurrentDictionary<string, ITransportStrategyBuilder> _strategyBuilders = new();
-	private readonly ConcurrentDictionary<string, ChannelRegistration> _registrations = new();
 
 	/// <summary>
 	/// 初始化 <see cref="DefaultConfigurator"/> 类的新实例。
@@ -45,7 +44,7 @@ public sealed class DefaultConfigurator : IConfigurator
 	/// <summary>
 	/// 获取已注册的通道注册信息字典。
 	/// </summary>
-	public IDictionary<string, ChannelRegistration> Registrations => _registrations;
+	public IDictionary<string, ChannelRegistration> Registrations => ChannelRegistrar.Registrations;
 
 	/// <summary>
 	/// 使用指定的委托配置消息约定。

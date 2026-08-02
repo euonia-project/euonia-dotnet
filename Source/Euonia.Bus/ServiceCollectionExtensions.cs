@@ -19,6 +19,13 @@ public static class ServiceCollectionExtensions
 		/// <returns></returns>
 		public IServiceCollection AddEuoniaBus(Action<DefaultConfigurator> config = null)
 		{
+			services.AddSingleton<IConfigurator>(provider =>
+			{
+				var configurator = ActivatorUtilities.GetServiceOrCreateInstance<DefaultConfigurator>(provider);
+				config?.Invoke(configurator);
+				return configurator;
+			});
+
 			var handlerTypes = ChannelRegistrar.Registrations
 			                                   .SelectMany(t => t.Value.Handlers)
 			                                   .Select(t => t.HandlerType)
@@ -32,19 +39,12 @@ public static class ServiceCollectionExtensions
 
 			services.AddPipeline();
 
-			services.AddSingleton<IConfigurator>(provider =>
-			{
-				var configurator = ActivatorUtilities.GetServiceOrCreateInstance<DefaultConfigurator>(provider);
-				config?.Invoke(configurator);
-				return configurator;
-			});
-
 			services.TryAddSingleton<IHandlerContext>(provider =>
 			{
 				var configurator = provider.GetRequiredService<IConfigurator>();
 				var context = new DefaultHandlerContext(provider);
 
-				var registerMethod = typeof(DefaultHandlerContext).GetMethod(nameof(DefaultHandlerContext.Register), 3, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, []);
+				var registerMethod = typeof(DefaultHandlerContext).GetMethod(nameof(DefaultHandlerContext.Register), 3, BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly, [typeof(string)]);
 
 				foreach (var (channel, registration) in configurator.Registrations)
 				{
@@ -58,7 +58,7 @@ public static class ServiceCollectionExtensions
 
 						if (responseType != null && handler.HandlerType.IsAssignableTo(typeof(IHandler<,>).MakeGenericType(registration.MessageType, responseType)))
 						{
-							registerMethod?.MakeGenericMethod(registration.MessageType, responseType, handler.HandlerType).Invoke(context, null);
+							registerMethod?.MakeGenericMethod(registration.MessageType, responseType, handler.HandlerType).Invoke(context, [channel]);
 						}
 						else
 						{
