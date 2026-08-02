@@ -54,7 +54,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	public async Task<byte[]> SerializeAsync<T>(T source, CancellationToken cancellationToken = default)
 	{
 		await using var stream = new MemoryStream();
-		await using var writer = new StreamWriter(stream, Encoding.UTF8, 1024, true);
+		await using var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true);
 		await using var jsonWriter = new JsonTextWriter(writer);
 
 		JsonSerializer.Create(_settings).Serialize(jsonWriter, source);
@@ -75,7 +75,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public Task<T> DeserializeAsync<T>(Stream source, CancellationToken cancellationToken = default)
 	{
-		using var reader = new StreamReader(source, Encoding.UTF8, false, 1024, true);
+		using var reader = new StreamReader(source, new UTF8Encoding(false), false, 1024, true);
 		using var jsonReader = new JsonTextReader(reader);
 
 		var value = JsonSerializer.Create(_settings).Deserialize<T>(jsonReader);
@@ -126,7 +126,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(Stream source)
 	{
-		using var reader = new StreamReader(source, Encoding.UTF8, false, 1024, true);
+		using var reader = new StreamReader(source, new UTF8Encoding(false), false, 1024, true);
 		using var jsonReader = new JsonTextReader(reader);
 
 		var value = JsonSerializer.Create(_settings).Deserialize<T>(jsonReader);

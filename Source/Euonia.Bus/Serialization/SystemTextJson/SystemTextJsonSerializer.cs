@@ -29,7 +29,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 				new ClaimsPrincipalJsonConverter(),
 				new ClaimsIdentityJsonConverter(),
 				new ClaimJsonConverter()
-			}
+			},
 		};
 		_options.ReferenceHandler = options.Value.ReferenceLoop switch
 		{
