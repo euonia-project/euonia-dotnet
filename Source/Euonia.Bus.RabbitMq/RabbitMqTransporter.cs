@@ -1,8 +1,8 @@
 ﻿using System.Net.Sockets;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
 using Polly;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -23,6 +23,7 @@ public class RabbitMqTransporter : ITransporter
 	private readonly RabbitMqBusOptions _options;
 	private readonly IPersistentConnection _connection;
 	private readonly ILogger<RabbitMqTransporter> _logger;
+	private readonly IMessageSerializer _serializer;
 
 	/// <summary>
 	/// 获取传输器名称。
@@ -32,11 +33,13 @@ public class RabbitMqTransporter : ITransporter
 	/// <summary>
 	/// 初始化 <see cref="RabbitMqTransporter"/> 的新实例。
 	/// </summary>
+	/// <param name="provider">用于解析依赖项的服务提供者。</param>
 	/// <param name="connection">用于与 RabbitMQ 建立和管理持久连接的工厂。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 RabbitMQ 总线配置选项。</param>
 	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
-	public RabbitMqTransporter(IPersistentConnection connection, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+	public RabbitMqTransporter(IServiceProvider provider, IPersistentConnection connection, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
 	{
+		_serializer = provider.GetKeyedService<IMessageSerializer>(options.Value.SerializerProvider);
 		_logger = logger.CreateLogger<RabbitMqTransporter>();
 		_connection = connection;
 		_options = options.Value;
@@ -67,13 +70,9 @@ public class RabbitMqTransporter : ITransporter
 		            })
 		            .ExecuteAsync(async () =>
 		            {
-			            var messageBody = await SerializeAsync(message, cancellationToken);
-
-			            var exchangePrefix = string.Collapse(_options.ExchangeNamePrefix, Constants.DefaultExchangeNamePrefix);
-			            var exchangeName = $"{exchangePrefix}:{message.Channel}";
-
-			            await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
-			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
+			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+			            await channel.ExchangeDeclareAsync(message.Channel, ExchangeType.Fanout, cancellationToken: cancellationToken);
+			            await channel.BasicPublishAsync(message.Channel, $"{message.Channel}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 		            });
@@ -114,7 +113,7 @@ public class RabbitMqTransporter : ITransporter
 		            })
 		            .ExecuteAsync(async () =>
 		            {
-			            var messageBody = await SerializeAsync(message, cancellationToken);
+			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
 			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
 
@@ -136,7 +135,7 @@ public class RabbitMqTransporter : ITransporter
 
 			if (typeof(TResponse).IsIn(typeof(Unit), typeof(Task), typeof(ValueTask), typeof(void)))
 			{
-				var response = JsonConvert.DeserializeObject<RabbitMqReply<object>>(Encoding.UTF8.GetString(body), Constants.SerializerSettings);
+				var response = _serializer.Deserialize<RabbitMqReply<object>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
 					task.SetResult(default);
@@ -148,7 +147,7 @@ public class RabbitMqTransporter : ITransporter
 			}
 			else
 			{
-				var response = JsonConvert.DeserializeObject<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body), Constants.SerializerSettings);
+				var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
 					task.SetResult(response.Result);
@@ -201,7 +200,7 @@ public class RabbitMqTransporter : ITransporter
 	private string GetQueueName(string channel)
 	{
 		var subscriptionId = string.Collapse(_options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var requestQueueName = $"{string.Collapse(_options.QueueNamePrefix, Constants.DefaultQueueNamePrefix)}:{channel}@{subscriptionId}";
+		var requestQueueName = $"{channel}@{subscriptionId}";
 		return requestQueueName;
 	}
 
@@ -232,36 +231,5 @@ public class RabbitMqTransporter : ITransporter
 		{
 			throw new MessageDeliverException("No consumer found for the channel.");
 		}
-	}
-
-	/// <summary>
-	/// 将消息信封序列化为 UTF-8 字节数组。
-	/// 使用不带 BOM 的 UTF-8 编码，避免 RabbitMQ 客户端反序列化失败。
-	/// </summary>
-	/// <typeparam name="TMessage">消息负载的类型。</typeparam>
-	/// <param name="message">要序列化的消息信封。</param>
-	/// <param name="cancellationToken">用于取消操作的令牌。</param>
-	/// <returns>序列化后的 UTF-8 字节数组；如果 <paramref name="message"/> 为 null，则返回空数组。</returns>
-	private static async Task<byte[]> SerializeAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
-	{
-		if (message == null)
-		{
-			return [];
-		}
-
-		await using var stream = new MemoryStream();
-		// 默认的 UTF8Encoding 会输出 BOM，将导致 RabbitMQ 客户端反序列化消息失败。
-		await using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
-		{
-			await using var jsonWriter = new JsonTextWriter(writer);
-
-			JsonSerializer.CreateDefault(Constants.SerializerSettings)
-			              .Serialize(jsonWriter, message);
-
-			await jsonWriter.FlushAsync(cancellationToken);
-			await writer.FlushAsync(cancellationToken);
-		}
-
-		return stream.ToArray();
 	}
 }
