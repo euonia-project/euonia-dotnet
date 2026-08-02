@@ -327,11 +327,7 @@ internal sealed class MessageBus : IBus
 	/// <returns>通道名称。</returns>
 	private static string GetChannel<TMessage>(ExtendableOptions options)
 	{
-		var channel = PriorityValueFinder.Find<string>(queue =>
-		{
-			queue.Enqueue(() => options.Channel, 0);
-			queue.Enqueue(() => MessageCache.Default.GetOrAddChannel<TMessage>(), 1);
-		}, string.IsNullOrWhiteSpace);
+		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel<TMessage>() : options.Channel;
 		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");
 	}
 }
