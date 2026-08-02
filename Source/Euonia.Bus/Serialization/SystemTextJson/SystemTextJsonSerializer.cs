@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Bus.SystemTextJson;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -23,6 +24,12 @@ public class SystemTextJsonSerializer : IMessageSerializer
 			DefaultIgnoreCondition = options.Value.IgnoreNullValues ? JsonIgnoreCondition.WhenWritingNull : JsonIgnoreCondition.Never,
 			PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
 			PropertyNameCaseInsensitive = true,
+			Converters =
+			{
+				new ClaimsPrincipalJsonConverter(),
+				new ClaimsIdentityJsonConverter(),
+				new ClaimJsonConverter()
+			}
 		};
 		_options.ReferenceHandler = options.Value.ReferenceLoop switch
 		{

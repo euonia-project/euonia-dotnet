@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Nerosoft.Euonia.Bus.RabbitMq;
+namespace Nerosoft.Euonia.Bus.NewtonsoftJson;
 
 /// <summary>
 /// <see cref="ClaimsPrincipal"/> 的 JSON 序列化/反序列化转换器。

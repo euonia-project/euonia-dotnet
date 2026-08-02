@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Bus.NewtonsoftJson;
 using Newtonsoft.Json;
 
 namespace Nerosoft.Euonia.Bus;
@@ -30,7 +31,13 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 				MessageSerializerOptions.ReferenceLoopStrategy.Preserve => ReferenceLoopHandling.Serialize, // Newtonsoft.Json 不支持 Preserve 策略，回退使用 Serialize
 				_ => ReferenceLoopHandling.Error
 			},
-			ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver()
+			ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+			Converters =
+			[
+				new ClaimsPrincipalJsonConverter(),
+				new ClaimsIdentityJsonConverter(),
+				new ClaimJsonConverter()
+			]
 		};
 	}
 

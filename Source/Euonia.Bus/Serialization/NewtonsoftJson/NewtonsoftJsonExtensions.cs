@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Nerosoft.Euonia.Bus.RabbitMq;
+namespace Nerosoft.Euonia.Bus.NewtonsoftJson;
 
 /// <summary>
 /// Newtonsoft.Json 相关的扩展方法。
