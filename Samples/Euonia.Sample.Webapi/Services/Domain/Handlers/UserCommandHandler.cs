@@ -11,7 +11,7 @@ internal sealed class UserCommandHandler(IUnitOfWorkManager unitOfWork, IObjectF
 	: CommandHandlerBase(unitOfWork, factory),
 	  IHandler<UserCreateCommand>
 {
-	public Task HandleAsync(UserCreateCommand message, MessageContext context, CancellationToken cancellationToken = default)
+	public Task HandleAsync(UserCreateCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		return ExecuteAsync(async () =>
 		{

@@ -46,4 +46,17 @@ public interface IMessageContext : IDisposable
 	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
 	MessageMetadata Metadata { get; }
+
+	/// <summary>
+	/// 向消息分发器回复消息处理结果。
+	/// </summary>
+	/// <typeparam name="TMessage">消息的类型。</typeparam>
+	/// <param name="message">要回复的消息。</param>
+	void Response<TMessage>(TMessage message);
+
+	/// <summary>
+	/// 在消息处理失败后调用。
+	/// </summary>
+	/// <param name="exception">处理过程中发生的异常。</param>
+	void Failure(Exception exception);
 }
