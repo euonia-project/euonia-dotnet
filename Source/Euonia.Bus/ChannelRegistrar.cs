@@ -159,6 +159,15 @@ internal sealed class ChannelRegistrar
 		return this;
 	}
 
+	/// <summary>
+	/// 注册一个通道处理器，通过 Lambda 委托指定处理方法，并支持返回结果。
+	/// 内部通过 <see cref="LambdaHandler{TMessage, TResult}"/> 将委托包装为处理器。
+	/// </summary>
+	/// <typeparam name="TMessage">消息类型。</typeparam>
+	/// <typeparam name="TResult">处理结果的类型。</typeparam>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="handler">处理消息的委托，接收消息和消息上下文，返回处理结果。</param>
+	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	public ChannelRegistrar Register<TMessage, TResult>(string channel, Func<TMessage, IMessageContext, Task<TResult>> handler)
 	{
 		try
@@ -166,12 +175,20 @@ internal sealed class ChannelRegistrar
 			var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<TMessage, TResult>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
 			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage, TResult>), method, new LambdaHandler<TMessage, TResult>(handler)));
 		}
-		catch (Exception exception)
+		catch (Exception)
 		{
 			return this;
 		}
 	}
 
+	/// <summary>
+	/// 注册一个通道处理器，通过 Lambda 委托指定处理方法，不返回结果。
+	/// 内部通过 <see cref="LambdaHandler{TMessage}"/> 将委托包装为处理器。
+	/// </summary>
+	/// <typeparam name="TMessage">消息类型。</typeparam>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="handler">处理消息的委托，接收消息和消息上下文。</param>
+	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	public ChannelRegistrar Register<TMessage>(string channel, Func<TMessage, IMessageContext, Task> handler)
 	{
 		try
@@ -179,7 +196,7 @@ internal sealed class ChannelRegistrar
 			var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<TMessage>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
 			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage>), method, new LambdaHandler<TMessage>(handler)));
 		}
-		catch (Exception exception)
+		catch (Exception)
 		{
 			return this;
 		}
