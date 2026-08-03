@@ -7,7 +7,7 @@
 internal class OverridableMessageConvention : IMessageConvention
 {
 	private readonly IMessageConvention _innerConvention;
-	private Func<string, bool> _isUnicast, _isMulticast, _isRequest;
+	private Func<string, Type, bool> _isUnicast, _isMulticast, _isRequest;
 
 	/// <summary>
 	/// 初始化 <see cref="OverridableMessageConvention"/> 类的新实例。
@@ -22,28 +22,28 @@ internal class OverridableMessageConvention : IMessageConvention
 	public string Name => $"Override with {_innerConvention.Name}";
 
 	/// <inheritdoc />
-	bool IMessageConvention.IsUnicast(string messageType)
+	bool IMessageConvention.IsUnicast(string channel, Type type)
 	{
-		return IsUnicast(messageType);
+		return IsUnicast(channel, type);
 	}
 
 	/// <inheritdoc />
-	bool IMessageConvention.IsMulticast(string messageType)
+	bool IMessageConvention.IsMulticast(string channel, Type type)
 	{
-		return IsMulticast(messageType);
+		return IsMulticast(channel, type);
 	}
 
 	/// <inheritdoc />
-	bool IMessageConvention.IsRequest(string messageType)
+	bool IMessageConvention.IsRequest(string channel, Type type)
 	{
-		return IsRequest(messageType);
+		return IsRequest(channel, type);
 	}
 
 	/// <summary>
 	/// 获取或设置用于判断消息类型是否为单播消息的函数。
 	/// 若未显式设置，则回退到内部约定的判断逻辑。
 	/// </summary>
-	public Func<string, bool> IsUnicast
+	public Func<string, Type, bool> IsUnicast
 	{
 		get => _isUnicast ?? _innerConvention.IsUnicast;
 		set => _isUnicast = value;
@@ -53,7 +53,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 获取或设置用于判断消息类型是否为多播消息的函数。
 	/// 若未显式设置，则回退到内部约定的判断逻辑。
 	/// </summary>
-	public Func<string, bool> IsMulticast
+	public Func<string, Type, bool> IsMulticast
 	{
 		get => _isMulticast ?? _innerConvention.IsMulticast;
 		set => _isMulticast = value;
@@ -63,7 +63,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 获取或设置用于判断消息类型是否为请求消息的函数。
 	/// 若未显式设置，则回退到内部约定的判断逻辑。
 	/// </summary>
-	public Func<string, bool> IsRequest
+	public Func<string, Type, bool> IsRequest
 	{
 		get => _isRequest ?? _innerConvention.IsRequest;
 		set => _isRequest = value;
@@ -73,7 +73,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 定义用于判断消息类型是否为单播消息的约定函数。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为单播消息的函数。</param>
-	public void DefineUnicast(Func<string, bool> convention)
+	public void DefineUnicast(Func<string, Type, bool> convention)
 	{
 		_isUnicast = convention;
 	}
@@ -82,7 +82,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 定义用于判断消息类型是否为多播消息的约定函数。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为多播消息的函数。</param>
-	public void DefineMulticast(Func<string, bool> convention)
+	public void DefineMulticast(Func<string, Type, bool> convention)
 	{
 		_isMulticast = convention;
 	}
@@ -91,7 +91,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 定义用于判断消息类型是否为请求消息的约定函数。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为请求消息的函数。</param>
-	public void DefineRequest(Func<string, bool> convention)
+	public void DefineRequest(Func<string, Type, bool> convention)
 	{
 		_isRequest = convention;
 	}

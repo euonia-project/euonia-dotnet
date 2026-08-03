@@ -109,7 +109,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 			// 从服务提供程序获取处理程序实例
 			_logger.LogInformation("Message {Id} is being handled", context.MessageId);
 
-			if (!_convention.IsMulticast(channel))
+			if (!_convention.IsMulticast(channel, message.GetType()))
 			{
 				var factory = factories[0];
 				await ExecuteHandler(scope, factory, cancellationToken).AsTask()

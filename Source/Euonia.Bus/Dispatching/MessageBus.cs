@@ -101,14 +101,14 @@ internal sealed class MessageBus : IBus
 		options ??= new PublishOptions();
 
 		var channel = GetChannel<TMessage>(options);
+		var messageType = typeof(TMessage);
 
-		if (!_configurator.Convention.IsMulticast(channel))
+		if (!_configurator.Convention.IsMulticast(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a multicast type.");
 		}
 
 		var context = _requestAccessor?.Context;
-
 
 		var pack = new RoutedMessage<TMessage, Unit>(message, channel)
 		{
@@ -120,7 +120,7 @@ internal sealed class MessageBus : IBus
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 
-		var transports = _dispatcher.Determine(channel);
+		var transports = _dispatcher.Determine(channel, messageType);
 
 		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 		{
@@ -153,8 +153,8 @@ internal sealed class MessageBus : IBus
 		options ??= new SendOptions();
 
 		var channel = GetChannel<TMessage>(options);
-
-		if (!_configurator.Convention.IsUnicast(channel))
+		var messageType = typeof(TMessage);
+		if (!_configurator.Convention.IsUnicast(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a unicast type.");
 		}
@@ -172,7 +172,7 @@ internal sealed class MessageBus : IBus
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 
-		var transports = _dispatcher.Determine(channel);
+		var transports = _dispatcher.Determine(channel, messageType);
 
 		return RunWithPipelineAsync(transports.First(), pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
 			.ContinueWith(task =>
@@ -222,8 +222,8 @@ internal sealed class MessageBus : IBus
 		options ??= new CallOptions();
 
 		var channel = GetChannel<TRequest>(options);
-
-		if (!_configurator.Convention.IsRequest(channel))
+		var messageType = typeof(TRequest);
+		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a request type.");
 		}
@@ -241,7 +241,7 @@ internal sealed class MessageBus : IBus
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 
-		var transports = _dispatcher.Determine(channel);
+		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
 
@@ -264,7 +264,8 @@ internal sealed class MessageBus : IBus
 	{
 		options ??= new CallOptions();
 		var channel = GetChannel<IRequest<TResult>>(options);
-		if (!_configurator.Convention.IsRequest(channel))
+		var messageType = request.GetType();
+		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a request type.");
 		}
@@ -281,7 +282,7 @@ internal sealed class MessageBus : IBus
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 
-		var transports = _dispatcher.Determine(channel);
+		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
 		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));

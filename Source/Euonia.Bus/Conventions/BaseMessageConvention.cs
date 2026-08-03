@@ -25,15 +25,16 @@ public class BaseMessageConvention : IMessageConvention
 	/// 判断指定的消息通道是否为单播消息。
 	/// </summary>
 	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果是单播消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/> 为 <c>null</c> 时抛出。</exception>
-	public bool IsUnicast(string channel)
+	public bool IsUnicast(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
 		return _unicastConventionCache.Apply(channel, handle =>
 		{
-			return _conventions.Any(x => x.IsUnicast(handle));
+			return _conventions.Any(x => x.IsUnicast(handle, type));
 		});
 	}
 
@@ -41,26 +42,27 @@ public class BaseMessageConvention : IMessageConvention
 	/// 判断指定的消息通道是否为多播消息。
 	/// </summary>
 	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果是多播消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/> 为 <c>null</c> 时抛出。</exception>
-	public bool IsMulticast(string channel)
+	public bool IsMulticast(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
 		return _multicastConventionCache.Apply(channel, handle =>
 		{
-			return _conventions.Any(x => x.IsMulticast(handle));
+			return _conventions.Any(x => x.IsMulticast(handle, type));
 		});
 	}
 
 	/// <inheritdoc />
-	public bool IsRequest(string channel)
+	public bool IsRequest(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
 		return _requestConventionCache.Apply(channel, handle =>
 		{
-			return _conventions.Any(x => x.IsRequest(handle));
+			return _conventions.Any(x => x.IsRequest(handle, type));
 		});
 	}
 
@@ -68,7 +70,7 @@ public class BaseMessageConvention : IMessageConvention
 	/// 定义单播消息类型的约定。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为单播消息的约定函数。</param>
-	internal void DefineUnicastTypeConvention(Func<string, bool> convention)
+	internal void DefineUnicastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineUnicast(convention);
 	}
@@ -77,7 +79,7 @@ public class BaseMessageConvention : IMessageConvention
 	/// 定义多播消息类型的约定。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为多播消息的约定函数。</param>
-	internal void DefineMulticastTypeConvention(Func<string, bool> convention)
+	internal void DefineMulticastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineMulticast(convention);
 	}
@@ -86,7 +88,7 @@ public class BaseMessageConvention : IMessageConvention
 	/// 定义请求消息类型的约定。
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为请求消息的约定函数。</param>
-	internal void DefineRequestTypeConvention(Func<string, bool> convention)
+	internal void DefineRequestTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineRequest(convention);
 	}
@@ -95,13 +97,13 @@ public class BaseMessageConvention : IMessageConvention
 	/// 定义消息类型约定，根据返回的 <see cref="MessageConventionType"/> 将消息分类为单播、多播或请求类型。
 	/// </summary>
 	/// <param name="convention">用于评估消息约定类型的函数。</param>
-	internal void DefineTypeConvention(Func<string, MessageConventionType> convention)
+	internal void DefineTypeConvention(Func<string, Type, MessageConventionType> convention)
 	{
 		ArgumentNullException.ThrowIfNull(convention);
 
-		DefineUnicastTypeConvention(type => convention(type) == MessageConventionType.Unicast);
-		DefineMulticastTypeConvention(type => convention(type) == MessageConventionType.Multicast);
-		DefineRequestTypeConvention(type => convention(type) == MessageConventionType.Request);
+		DefineUnicastTypeConvention((channel, type) => convention(channel, type) == MessageConventionType.Unicast);
+		DefineMulticastTypeConvention((channel, type) => convention(channel, type) == MessageConventionType.Multicast);
+		DefineRequestTypeConvention((channel, type) => convention(channel, type) == MessageConventionType.Request);
 	}
 
 	/// <summary>

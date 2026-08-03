@@ -24,22 +24,23 @@ internal class StrategicDispatcher : IDispatcher
 	/// 遍历所有已分配策略的传输类型，筛选出允许该通道传出的传输器，并对结果进行缓存。
 	/// </summary>
 	/// <param name="channel">通道名称。</param>
+	/// <param name="type">消息类型。</param>
 	/// <returns>负责分发该通道消息的传输器名称集合。</returns>
 	/// <exception cref="MessageTypeException">
 	/// 当无任何传输器匹配且未配置默认传输器时抛出；
 	/// 或当多个传输器匹配单播消息类型时抛出。
 	/// </exception>
-	public IEnumerable<string> Determine(string channel)
+	public IEnumerable<string> Determine(string channel, Type type)
 	{
 		var transportTypes = _transportCache.GetOrAdd(channel, _ =>
 		{
 			var list = new List<string>();
-			foreach (var type in _configurator.StrategyAssignedTypes)
+			foreach (var transport in _configurator.StrategyAssignedTypes)
 			{
-				var strategy = _configurator.GetStrategy(type);
+				var strategy = _configurator.GetStrategy(transport);
 				if (strategy.Outgoing(channel))
 				{
-					list.Add(type);
+					list.Add(transport);
 				}
 			}
 
@@ -57,7 +58,7 @@ internal class StrategicDispatcher : IDispatcher
 				transportTypes = new List<string> { _configurator.DefaultTransporter };
 				break;
 
-			case > 1 when !_configurator.Convention.IsMulticast(channel):
+			case > 1 when !_configurator.Convention.IsMulticast(channel, type):
 				throw new MessageTypeException("Multiple transports are configured for a unicast message type.");
 		}
 

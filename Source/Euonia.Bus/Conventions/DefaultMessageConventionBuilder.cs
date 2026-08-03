@@ -3,10 +3,10 @@
 /// <summary>
 /// 用于构建自定义消息约定的构建器，以替代默认的消息约定。
 /// </summary>
-public class DefaultMessageConventionBuilder: IMessageConventionBuilder
+public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 {
-	private readonly BaseMessageConvention _convention = new BaseMessageConvention();
-	
+	private readonly BaseMessageConvention _convention = new();
+
 	/// <summary>
 	/// 获取此构建器已构建的 <see cref="IMessageConvention"/> 实例。
 	/// </summary>
@@ -17,7 +17,7 @@ public class DefaultMessageConventionBuilder: IMessageConventionBuilder
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为单播消息的约定函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	public IMessageConventionBuilder EvaluateUnicast(Func<string, bool> convention)
+	public IMessageConventionBuilder EvaluateUnicast(Func<string, Type, bool> convention)
 	{
 		ArgumentAssert.ThrowIfNull(convention);
 		_convention.DefineUnicastTypeConvention(convention);
@@ -29,7 +29,7 @@ public class DefaultMessageConventionBuilder: IMessageConventionBuilder
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为多播消息的约定函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	public IMessageConventionBuilder EvaluateMulticast(Func<string, bool> convention)
+	public IMessageConventionBuilder EvaluateMulticast(Func<string, Type, bool> convention)
 	{
 		ArgumentAssert.ThrowIfNull(convention);
 		_convention.DefineMulticastTypeConvention(convention);
@@ -41,19 +41,19 @@ public class DefaultMessageConventionBuilder: IMessageConventionBuilder
 	/// </summary>
 	/// <param name="convention">用于判断消息是否为请求消息的约定函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	public IMessageConventionBuilder EvaluateRequest(Func<string, bool> convention)
+	public IMessageConventionBuilder EvaluateRequest(Func<string, Type, bool> convention)
 	{
 		ArgumentAssert.ThrowIfNull(convention);
 		_convention.DefineRequestTypeConvention(convention);
 		return this;
 	}
-	
+
 	/// <summary>
 	/// 定义消息类型约定，根据返回的 <see cref="MessageConventionType"/> 将消息分类为单播、多播或请求类型。
 	/// </summary>
 	/// <param name="convention">用于评估消息约定类型的函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	public IMessageConventionBuilder Evaluate(Func<string, MessageConventionType> convention)
+	public IMessageConventionBuilder Evaluate(Func<string, Type, MessageConventionType> convention)
 	{
 		ArgumentAssert.ThrowIfNull(convention);
 		_convention.DefineTypeConvention(convention);
