@@ -1,13 +1,15 @@
 ﻿namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Acts as a factory for <see cref="ILockProvider"/> instances of a certain type. This interface may be
-/// easier to use than <see cref="ILockProvider"/> in dependency injection scenarios.
+/// 充当特定类型 <see cref="ILockProvider"/> 实例的工厂。
+/// 在依赖注入场景中，此接口可能比 <see cref="ILockProvider"/> 更易于使用。
 /// </summary>
 public interface ILockFactory
 {
     /// <summary>
-    /// Constructs an <see cref="ILockProvider"/> instance with the given <paramref name="name"/>.
+    /// 使用给定的 <paramref name="name"/> 构造一个 <see cref="ILockProvider"/> 实例。
     /// </summary>
+    /// <param name="name">唯一标识该锁的名称。</param>
+    /// <returns>指定 <paramref name="name"/> 对应的 <see cref="ILockProvider"/> 实例。</returns>
     ILockProvider Create(string name);
 }

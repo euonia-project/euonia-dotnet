@@ -1,22 +1,22 @@
-﻿namespace Nerosoft.Euonia.Threading;
+namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A mutex synchronization primitive which can be used to coordinate access to a resource or critical region of code
-/// across processes or systems. The scope and capabilities of the lock are dependent on the particular implementation
+/// 一种互斥（mutex）同步原语，可用于跨进程或系统协调对资源或临界代码区的访问。
+/// 锁的作用范围和能力取决于具体的实现。
 /// </summary>
 public interface ILockProvider
 {
     /// <summary>
-    /// A name that uniquely identifies the lock
+    /// 唯一标识该锁的名称。
     /// </summary>
     string Name { get; }
 
     /// <summary>
-    /// Acquires the lock synchronously, failing with <see cref="TimeoutException"/> if the attempt times out.
+    /// 同步获取锁，如果尝试超时则抛出 <see cref="TimeoutException"/>。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to <see cref="Timeout.InfiniteTimeSpan"/></param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 <see cref="Timeout.InfiniteTimeSpan"/></param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>。</returns>
     /// <example>
     /// <code>
     ///     using (myLock.Acquire(...))
@@ -29,11 +29,11 @@ public interface ILockProvider
     ISynchronizationHandle Acquire(TimeSpan? timeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to acquire the lock synchronously.
+    /// 尝试同步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     using (var handle = myLock.TryAcquire(...))
@@ -46,11 +46,11 @@ public interface ILockProvider
     ISynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Acquires the lock asynchronously, failing with <see cref="TimeoutException"/> if the attempt times out.
+    /// 异步获取锁，如果尝试超时则抛出 <see cref="TimeoutException"/>。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to <see cref="Timeout.InfiniteTimeSpan"/></param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 <see cref="Timeout.InfiniteTimeSpan"/></param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>。</returns>
     /// <example>
     /// <code>
     ///     await using (await myLock.AcquireAsync(...))
@@ -63,11 +63,11 @@ public interface ILockProvider
     ValueTask<ISynchronizationHandle> AcquireAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to acquire the lock asynchronously.
+    /// 尝试异步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     await using (var handle = await myLock.TryAcquireAsync(...))
@@ -80,11 +80,11 @@ public interface ILockProvider
     ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Attempts to acquire the lock asynchronously.
+    /// 尝试异步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     await using (var handle = await myLock.TryAcquireAsync(...))
@@ -98,19 +98,19 @@ public interface ILockProvider
 }
 
 /// <summary>
-/// A mutex synchronization primitive which can be used to coordinate access to a resource or critical region of code
-/// across processes or systems. The scope and capabilities of the lock are dependent on the particular implementation
+/// 一种互斥（mutex）同步原语，可用于跨进程或系统协调对资源或临界代码区的访问。
+/// 锁的作用范围和能力取决于具体的实现。
 /// </summary>
 public interface ILockProvider<THandle> : ILockProvider
     where THandle : class, ISynchronizationHandle
 {
     
     /// <summary>
-    /// Acquires the lock synchronously, failing with <see cref="TimeoutException"/> if the attempt times out.
+    /// 同步获取锁，如果尝试超时则抛出 <see cref="TimeoutException"/>。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to <see cref="Timeout.InfiniteTimeSpan"/></param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 <see cref="Timeout.InfiniteTimeSpan"/></param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>。</returns>
     /// <example>
     /// <code>
     ///     using (myLock.Acquire(...))
@@ -123,11 +123,11 @@ public interface ILockProvider<THandle> : ILockProvider
     new THandle Acquire(TimeSpan? timeout = null, CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Acquires the lock asynchronously, failing with <see cref="TimeoutException"/> if the attempt times out.
+    /// 异步获取锁，如果尝试超时则抛出 <see cref="TimeoutException"/>。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to <see cref="Timeout.InfiniteTimeSpan"/></param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 <see cref="Timeout.InfiniteTimeSpan"/></param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>。</returns>
     /// <example>
     /// <code>
     ///     await using (await myLock.AcquireAsync(...))
@@ -140,11 +140,11 @@ public interface ILockProvider<THandle> : ILockProvider
     new THandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Attempts to acquire the lock asynchronously.
+    /// 尝试异步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     await using (var handle = await myLock.TryAcquireAsync(...))
@@ -157,11 +157,11 @@ public interface ILockProvider<THandle> : ILockProvider
     new ValueTask<THandle> AcquireAsync(TimeSpan? timeout = null, CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Attempts to acquire the lock asynchronously.
+    /// 尝试异步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     await using (var handle = await myLock.TryAcquireAsync(...))
@@ -174,11 +174,11 @@ public interface ILockProvider<THandle> : ILockProvider
     new ValueTask<THandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
-    /// Attempts to acquire the lock asynchronously.
+    /// 尝试异步获取锁。
     /// </summary>
-    /// <param name="timeout">How long to wait before giving up on the acquisition attempt. Defaults to 0</param>
-    /// <param name="cancellationToken">Specifies a token by which the wait can be canceled</param>
-    /// <returns>An <see cref="ISynchronizationHandle"/> which can be used to release the lock or null on failure</returns>
+    /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
+    /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
+    /// <returns>可用于释放锁的 <see cref="ISynchronizationHandle"/>，失败时返回 null。</returns>
     /// <example>
     /// <code>
     ///     await using (var handle = await myLock.TryAcquireAsync(...))

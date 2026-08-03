@@ -3,16 +3,34 @@
 namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Monitors the state of a lease and signals when it is lost.
+/// 监视租约（lease）的状态，并在租约丢失时发出信号。
 /// </summary>
 internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
 {
+    /// <summary>
+    /// 用于释放监控循环的取消令牌源，以及用于通知租约丢失的取消令牌源。
+    /// </summary>
     private readonly CancellationTokenSource _disposalSource = new(), _handleLostSource = new();
 
+    /// <summary>
+    /// 被监视的租约句柄。
+    /// </summary>
     private readonly ILeaseHandle _leaseHandle;
+
+    /// <summary>
+    /// 后台监控循环任务。
+    /// </summary>
     private readonly Task _monitoringTask;
+
+    /// <summary>
+    /// 当租约丢失时用于触发取消的后台任务。
+    /// </summary>
     private Task _cancellationTask;
 
+    /// <summary>
+    /// 初始化 <see cref="LeaseMonitor"/> 类的新实例并启动监控循环。
+    /// </summary>
+    /// <param name="leaseHandle">要监视的租约句柄。</param>
     public LeaseMonitor(ILeaseHandle leaseHandle)
     {
         Invariant.Require(leaseHandle.LeaseDuration.CompareTo(leaseHandle.MonitoringCadence) >= 0);
@@ -21,15 +39,25 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
         _monitoringTask = CreateMonitoringLoopTask(new WeakReference<LeaseMonitor>(this), leaseHandle.MonitoringCadence, _disposalSource.Token);
     }
 
+    /// <summary>
+    /// 获取一个令牌，当租约丢失时该令牌将被取消。
+    /// </summary>
     public CancellationToken HandleLostToken => _handleLostSource.Token;
 
+    /// <summary>
+    /// 同步释放监视器。
+    /// </summary>
     public void Dispose() => this.DisposeSyncViaAsync();
 
+    /// <summary>
+    /// 异步释放监视器，取消监控循环并释放资源。
+    /// </summary>
+    /// <returns>表示异步释放操作的任务。</returns>
     public async ValueTask DisposeAsync()
     {
         try
         {
-            if (!_disposalSource.IsCancellationRequested) // idempotent
+            if (!_disposalSource.IsCancellationRequested) // 幂等操作
             {
                 _disposalSource.Cancel();
             }
@@ -51,6 +79,13 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// 创建后台监控循环任务，按指定的监视节奏定期检查租约状态。
+    /// </summary>
+    /// <param name="weakMonitor">监视器的弱引用，用于避免循环引用。</param>
+    /// <param name="monitoringCadence">两次监视检查之间的间隔。</param>
+    /// <param name="disposalToken">用于停止监控循环的取消令牌。</param>
+    /// <returns>表示后台监控循环的任务。</returns>
     private static Task CreateMonitoringLoopTask(WeakReference<LeaseMonitor> weakMonitor, TimeoutValue monitoringCadence, CancellationToken disposalToken)
     {
         return Task.Run(MonitoringLoop, disposalToken);
@@ -60,22 +95,28 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
             var leaseLifetime = Stopwatch.StartNew();
             do
             {
-                // wait until the next monitoring check
+                // 等待下一次监视检查
                 await Task.Delay(monitoringCadence.InMilliseconds, disposalToken).TryAwait();
             }
             while (!disposalToken.IsCancellationRequested && await RunMonitoringLoopIterationAsync(weakMonitor, leaseLifetime).ConfigureAwait(false));
         }
     }
 
+    /// <summary>
+    /// 执行一轮监视检查，根据租约状态决定是否继续监控。
+    /// </summary>
+    /// <param name="weakMonitor">监视器的弱引用。</param>
+    /// <param name="leaseLifetime">记录租约剩余生命周期的计时器。</param>
+    /// <returns>如果应继续监控则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
     private static async Task<bool> RunMonitoringLoopIterationAsync(WeakReference<LeaseMonitor> weakMonitor, Stopwatch leaseLifetime)
     {
-        // if the monitor has been GC'd, just exit
+        // 如果监视器已被垃圾回收，则直接退出
         if (!weakMonitor.TryGetTarget(out var monitor))
         {
             return false;
         }
 
-        // lease expired
+        // 租约已过期
         if (monitor._leaseHandle.LeaseDuration.CompareTo(leaseLifetime.Elapsed) < 0)
         {
             OnHandleLost();
@@ -93,9 +134,8 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
                 leaseLifetime.Restart();
                 return true;
 
-            // If the lease is held but not renewed or if we don't know (e. g. due to transient failure),
-            // then just continue. We can't yet say that it is lost but it isn't renewed so we can't reset
-            // the lifetime either.
+            // 如果租约仍被持有但未续约，或状态未知（例如由于瞬时故障），
+            // 则继续监控。此时尚不能断定租约已丢失，但因其未续约也无法重置生命周期。
             case LeaseState.Held:
             case LeaseState.Unknown:
                 return true;
@@ -104,10 +144,14 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
                 throw new InvalidOperationException("should never get here");
         }
 
-        // offload cancel to a background thread to avoid hangs or errors
+        // 将取消操作卸载到后台线程，以避免挂起或错误
         void OnHandleLost() => monitor._cancellationTask = Task.Run(() => monitor._handleLostSource.Cancel());
     }
 
+    /// <summary>
+    /// 检查当前租约的状态。
+    /// </summary>
+    /// <returns>当前租约的 <see cref="LeaseState"/> 状态。</returns>
     private async Task<LeaseState> CheckLeaseAsync()
     {
         var renewOrValidateTask = Helpers.SafeCreateTask(state => state.leaseHandle.RenewOrValidateLeaseAsync(state.Token), (leaseHandle: _leaseHandle, _disposalSource.Token));
@@ -117,32 +161,51 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
             : renewOrValidateTask.Result;
     }
 
+    /// <summary>
+    /// 表示一个可被监视的租约句柄。
+    /// </summary>
     public interface ILeaseHandle
     {
+        /// <summary>
+        /// 获取租约的持续时间。
+        /// </summary>
         TimeoutValue LeaseDuration { get; }
+
+        /// <summary>
+        /// 获取监视节奏，即两次监视检查之间的间隔。
+        /// </summary>
         TimeoutValue MonitoringCadence { get; }
+
+        /// <summary>
+        /// 续约或验证租约。
+        /// </summary>
+        /// <param name="cancellationToken">用于取消操作的令牌。</param>
+        /// <returns>表示异步操作的任务，包含续约或验证后的租约状态。</returns>
         Task<LeaseState> RenewOrValidateLeaseAsync(CancellationToken cancellationToken);
     }
 
+    /// <summary>
+    /// 定义租约的状态。
+    /// </summary>
     public enum LeaseState
     {
         /// <summary>
-        /// The lease is known to be still held but was not renewed
+        /// 租约已知仍被持有，但尚未续约。
         /// </summary>
         Held,
 
         /// <summary>
-        /// The lease has been renewed for <see cref="ILeaseHandle.LeaseDuration"/>
+        /// 租约已按 <see cref="ILeaseHandle.LeaseDuration"/> 续约。
         /// </summary>
         Renewed,
 
         /// <summary>
-        /// The lease is known to no longer be held
+        /// 租约已知不再被持有。
         /// </summary>
         Lost,
 
         /// <summary>
-        /// The lease may or may not be held any longer
+        /// 租约是否仍被持有尚不确定。
         /// </summary>
         Unknown,
     }

@@ -1,25 +1,19 @@
 ﻿namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// A handle to a distributed lock or other synchronization primitive. To unlock/release,
-/// simply dispose the handle.
+/// 分布式锁或其他同步原语的句柄。要解锁/释放，只需释放（dispose）该句柄。
 /// </summary>
 public interface ISynchronizationHandle
     : IDisposable, IAsyncDisposable
 {
     /// <summary>
-    /// Gets a <see cref="CancellationToken"/> instance which may be used to 
-    /// monitor whether the handle to the lock is lost before the handle is
-    /// disposed. 
-    /// 
-    /// For example, this could happen if the lock is backed by a 
-    /// database and the connection to the database is disrupted.
-    /// 
-    /// Not all lock types support this; those that won't return <see cref="CancellationToken.None"/>
-    /// which can be detected by checking <see cref="CancellationToken.CanBeCanceled"/>.
-    /// 
-    /// For lock types that do support this, accessing this property may incur additional
-    /// costs, such as polling to detect connectivity loss.
+    /// 获取一个 <see cref="CancellationToken"/> 实例，可用于在句柄释放之前监视锁句柄是否丢失。
     /// </summary>
+    /// <remarks>
+    /// <para>例如，如果锁由数据库支持且与数据库的连接中断，就可能导致句柄丢失。</para>
+    /// <para>并非所有锁类型都支持此功能；不支持的锁类型将返回 <see cref="CancellationToken.None"/>，
+    /// 可通过检查 <see cref="CancellationToken.CanBeCanceled"/> 来检测。</para>
+    /// <para>对于支持此功能的锁类型，访问此属性可能会产生额外的开销，例如轮询以检测连接丢失。</para>
+    /// </remarks>
     CancellationToken HandleCancellationToken { get; }
 }

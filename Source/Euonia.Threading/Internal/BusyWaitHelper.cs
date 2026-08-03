@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Threading;
 
 /// <summary>
-/// Methods for waiting for a value to be available
+/// 提供等待某个值可用的方法。
 /// </summary>
 public static class BusyWaitHelper
 {
     /// <summary>
-    /// Waits asynchronously for a value to become available by repeatedly calling <paramref name="tryGetValue"/> until it returns a non-null result,
+    /// 通过重复调用 <paramref name="tryGetValue"/> 异步等待某个值变为可用，直到返回非 null 结果为止。
     /// </summary>
-    /// <param name="state"></param>
-    /// <param name="tryGetValue"></param>
-    /// <param name="timeout"></param>
-    /// <param name="minSleepTime"></param>
-    /// <param name="maxSleepTime"></param>
-    /// <param name="cancellationToken"></param>
-    /// <typeparam name="TState"></typeparam>
-    /// <typeparam name="TResult"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TState">传递给获取委托的状态类型。</typeparam>
+    /// <typeparam name="TResult">要等待的结果类型。</typeparam>
+    /// <param name="state">传递给 <paramref name="tryGetValue"/> 的状态对象。</param>
+    /// <param name="tryGetValue">尝试获取值的委托，返回非 null 结果表示值已可用。</param>
+    /// <param name="timeout">放弃等待之前的总超时时间。</param>
+    /// <param name="minSleepTime">两次尝试之间的最小休眠时间。</param>
+    /// <param name="maxSleepTime">两次尝试之间的最大休眠时间。</param>
+    /// <param name="cancellationToken">用于取消等待操作的令牌。</param>
+    /// <returns>获取到的结果；如果超时且最终尝试仍未成功，则返回 null。</returns>
     public static async ValueTask<TResult> WaitAsync<TState, TResult>(
         TState state,
         Func<TState, CancellationToken, ValueTask<TResult>> tryGetValue, 
@@ -48,7 +48,7 @@ public static class BusyWaitHelper
             }
             catch (OperationCanceledException) when (IsTimedOut())
             {
-                // if we time out while sleeping, always try one more time with just the regular token
+                // 如果在休眠期间超时，则使用常规令牌再尝试一次
                 return await tryGetValue(state, cancellationToken).ConfigureAwait(false);
             }
 
@@ -67,6 +67,14 @@ public static class BusyWaitHelper
             mergedCancellationToken.IsCancellationRequested && !cancellationToken.IsCancellationRequested;
     }
 
+    /// <summary>
+    /// 创建一个合并了超时与取消令牌的 <see cref="CancellationTokenSource"/>。
+    /// 当超时为无限时直接返回调用方提供的令牌；否则将超时合并到令牌源中。
+    /// </summary>
+    /// <param name="timeout">等待的总超时时间。</param>
+    /// <param name="cancellationToken">调用方提供的取消令牌。</param>
+    /// <param name="mergedCancellationToken">合并后的取消令牌。</param>
+    /// <returns>用于释放合并令牌源的 <see cref="IDisposable"/>；当超时为无限时返回 null。</returns>
     private static IDisposable CreateMergedCancellationTokenSource(TimeoutValue timeout, CancellationToken cancellationToken, out CancellationToken mergedCancellationToken)
     {
         if (timeout.IsInfinite)
