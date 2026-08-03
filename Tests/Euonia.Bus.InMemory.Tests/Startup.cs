@@ -46,9 +46,9 @@ public class Startup
 			      {
 				      builder.Add<DefaultMessageConvention>();
 				      builder.Add<AnnotationMessageConvention>();
-				      builder.EvaluateUnicast(t => t.EndsWith("Command"));
-				      builder.EvaluateMulticast(t => t.EndsWith("Event"));
-				      builder.EvaluateRequest(t => t.EndsWith("Request"));
+				      builder.EvaluateUnicast((c, t) => c.EndsWith("Command"));
+				      builder.EvaluateMulticast((c, t) => c.EndsWith("Event"));
+				      builder.EvaluateRequest((c, t) => c.EndsWith("Request"));
 			      })
 			      .SetStrategy("InMemory", builder =>
 			      {
