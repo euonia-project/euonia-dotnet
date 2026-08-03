@@ -2,150 +2,58 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
-/// The RabbitMQ implementation of <see cref="IConsumer"/>.
+/// <see cref="IConsumer"/> 的 RabbitMQ 实现。
+/// 负责从 RabbitMQ 队列中消费消息并交由处理器上下文进行处理。
 /// </summary>
 public class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 {
-	private readonly IHandlerContext _handler;
+	/// <summary>
+	/// 日志记录器实例。
+	/// </summary>
 	private readonly ILogger<RabbitMqConsumer> _logger;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqConsumer"/> class.
+	/// 初始化 <see cref="RabbitMqConsumer"/> 类的新实例。
 	/// </summary>
-	/// <param name="connection"></param>
-	/// <param name="handler"></param>
-	/// <param name="options"></param>
-	/// <param name="logger"></param>
-	public RabbitMqConsumer(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
-		: base(connection, options)
+	/// <param name="provider">用于解析依赖项的服务提供程序。</param>
+	/// <param name="connection">用于建立 RabbitMQ 连接的持久连接。</param>
+	/// <param name="handler">用于处理消息的处理器上下文。</param>
+	/// <param name="options">RabbitMQ 消息总线的配置选项。</param>
+	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
+	public RabbitMqConsumer(IServiceProvider provider, IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+		: base(provider, connection, handler, options)
 	{
-		_handler = handler;
 		_logger = logger.CreateLogger<RabbitMqConsumer>();
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 获取此消费者的名称。
+	/// </summary>
 	public string Name => nameof(RabbitMqConsumer);
 
 	/// <summary>
-	/// Gets the RabbitMQ message channel.
+	/// 指示此消费者需要向发送方回复响应。
 	/// </summary>
-	private IChannel Channel { get; set; }
+	protected override bool ReplyRequired => true;
 
 	/// <summary>
-	/// Gets the RabbitMQ consumer instance.
+	/// 启动消费者，在指定通道上声明队列并开始消费消息。
 	/// </summary>
-	private AsyncEventingBasicConsumer Consumer { get; set; }
-
+	/// <param name="channel">要监听的通道名称。</param>
 	internal override async Task StartAsync(string channel)
 	{
 		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var queueName = $"{string.Collapse(Options.QueueNamePrefix, Constants.DefaultQueueNamePrefix)}:{channel}@{subscriptionId}";
+		var queueName = $"{channel}@{subscriptionId}";
 
 		Channel = await Connection.CreateChannelAsync();
 
 		await Channel.QueueDeclareAsync(queueName, true, false, false);
 		await Channel.BasicQosAsync(0, 1, false);
 
-		Consumer = new AsyncEventingBasicConsumer(Channel);
-		Consumer.ReceivedAsync += HandleMessageReceivedAsync;
-
-		await Channel.BasicConsumeAsync(queueName, Options.AutoAck, Consumer);
-	}
-
-	/// <inheritdoc />
-	protected override async Task HandleMessageReceivedAsync(object sender, BasicDeliverEventArgs args)
-	{
-		var type = MessageTypeCache.GetMessageType(args.BasicProperties.Type);
-
-		var message = DeserializeMessage(args.Body.ToArray(), type);
-
-		var props = args.BasicProperties;
-
-		var context = new MessageContext(message);
-
-		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
-
-		var taskCompletion = new TaskCompletionSource<object>();
-		context.Responded += (_, a) =>
-		{
-			taskCompletion.TrySetResult(a.Result);
-		};
-		context.Failed += (_, exception) =>
-		{
-			taskCompletion.TrySetException(exception);
-		};
-		context.Completed += (_, _) =>
-		{
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
-		};
-
-		RabbitMqReply<object> reply;
-
-		await HandleAsync(message.Channel, message.Payload, context);
-
-		try
-		{
-			var result = await taskCompletion.Task;
-			reply = RabbitMqReply<object>.Success(result);
-		}
-		catch (Exception exception)
-		{
-			reply = RabbitMqReply<object>.Failure(exception);
-		}
-
-		if (!string.IsNullOrEmpty(props.CorrelationId) || !string.IsNullOrWhiteSpace(props.ReplyTo))
-		{
-			var replyProps = new BasicProperties();
-			replyProps.Headers ??= new Dictionary<string, object>();
-			replyProps.CorrelationId = props.CorrelationId;
-			replyProps.Type = reply.Result?.GetType().Name;
-
-			var response = SerializeMessage(reply);
-			await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);
-		}
-
-		await Channel.BasicAckAsync(args.DeliveryTag, false);
-
-		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
-	}
-
-	/// <inheritdoc/>
-	protected override async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			await _handler.HandleAsync(channel, message, context, cancellationToken);
-		}
-		catch (Exception exception)
-		{
-			_logger.LogError(exception, "Message '{Id}' Handle Error: {Message}", context.MessageId, exception.Message);
-			context.Failure(exception);
-		}
-		finally
-		{
-			context.Complete(null);
-		}
-	}
-
-	/// <inheritdoc />
-	protected override void Dispose(bool disposing)
-	{
-		if (!disposing)
-		{
-			return;
-		}
-
-		if (Consumer != null)
-		{
-			Consumer.ReceivedAsync -= HandleMessageReceivedAsync;
-		}
-
-		Channel?.Dispose();
-		Connection?.Dispose();
+		await Channel.BasicConsumeAsync(queueName, false, Consumer);
 	}
 }

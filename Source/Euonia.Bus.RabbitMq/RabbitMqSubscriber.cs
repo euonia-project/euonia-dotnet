@@ -2,112 +2,63 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
-/// 
+/// <see cref="ISubscriber"/> 的 RabbitMQ 实现。
+/// 负责订阅 RabbitMQ 主题（Fanout 交换机）并接收多播消息。
 /// </summary>
 public class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 {
-	private readonly IHandlerContext _handler;
+	/// <summary>
+	/// 日志记录器实例。
+	/// </summary>
 	private readonly ILogger<RabbitMqSubscriber> _logger;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RabbitMqSubscriber"/> class.
+	/// 初始化 <see cref="RabbitMqSubscriber"/> 类的新实例。
 	/// </summary>
-	/// <param name="connection"></param>
-	/// <param name="handler"></param>
-	/// <param name="options"></param>
-	/// <param name="logger"></param>
-	public RabbitMqSubscriber(IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
-		: base(connection, options)
+	/// <param name="provider">用于解析依赖项的服务提供程序。</param>
+	/// <param name="connection">用于建立 RabbitMQ 连接的持久连接。</param>
+	/// <param name="handler">用于处理消息的处理器上下文。</param>
+	/// <param name="options">RabbitMQ 消息总线的配置选项。</param>
+	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
+	public RabbitMqSubscriber(IServiceProvider provider, IPersistentConnection connection, IHandlerContext handler, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+		: base(provider, connection, handler, options)
 	{
-		_handler = handler;
 		_logger = logger.CreateLogger<RabbitMqSubscriber>();
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 获取此订阅者的名称。
+	/// </summary>
 	public string Name => nameof(RabbitMqSubscriber);
 
 	/// <summary>
-	/// Gets the RabbitMQ message channel.
+	/// 指示此订阅者不需要向发送方回复响应。
 	/// </summary>
-	private IChannel Channel { get; set; }
+	protected override bool ReplyRequired => false;
 
 	/// <summary>
-	/// Gets the RabbitMQ consumer instance.
+	/// 启动订阅者，声明 Fanout 交换机和队列，绑定路由键并开始消费消息。
 	/// </summary>
-	private AsyncEventingBasicConsumer Consumer { get; set; }
-
+	/// <param name="channel">要订阅的通道名称。</param>
 	internal override async Task StartAsync(string channel)
 	{
 		Channel = await Connection.CreateChannelAsync();
 
-		var exchangePrefix = string.Collapse(Options.ExchangeNamePrefix, Constants.DefaultExchangeNamePrefix);
-		var exchangeName = $"{exchangePrefix}:{channel}";
+		// 为主题订阅者声明 Fanout 交换机和队列。
+		// 发布到该交换机的所有消息都会路由到绑定该交换机的所有队列。
+		await Channel.ExchangeDeclareAsync(channel, ExchangeType.Fanout);
 
-		// Declare Fanout exchange and queue for topic subscriber.
-		// All messages published to the exchange will be routed to all queues bound to the exchange.
-		await Channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout);
-
-		// Each subscriber gets its own queue to receive messages,
-		// all instances of the same subscriber will share the same queue.
+		// 每个订阅者拥有自己的队列来接收消息，
+		// 同一订阅者的所有实例将共享同一个队列。
 		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var queueName = await Channel.QueueDeclareAsync($"{exchangeName}@{subscriptionId}", true, false, false)
+		var queueName = await Channel.QueueDeclareAsync($"{channel}@{subscriptionId}", true, false, false)
 		                             .ContinueWith(task => task.Result.QueueName);
-
-		Consumer = new AsyncEventingBasicConsumer(Channel);
-		Consumer.ReceivedAsync += HandleMessageReceivedAsync;
 
 		await Channel.QueueBindAsync(queueName, channel, Options.RoutingKey ?? "*");
 		await Channel.BasicConsumeAsync(string.Empty, Options.AutoAck, Consumer);
-	}
-
-	/// <inheritdoc />
-	protected override async Task HandleMessageReceivedAsync(object sender, BasicDeliverEventArgs args)
-	{
-		var type = MessageTypeCache.GetMessageType(args.BasicProperties.Type);
-
-		var message = DeserializeMessage(args.Body.ToArray(), type);
-
-		var context = new MessageContext(message);
-
-		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
-
-		await HandleAsync(message.Channel, message.Payload, context);
-
-		if (!Options.AutoAck)
-		{
-			await Channel.BasicAckAsync(args.DeliveryTag, false);
-		}
-
-		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
-	}
-
-	/// <inheritdoc />
-	protected override async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			await _handler.HandleAsync(channel, message, context, cancellationToken);
-		}
-		catch (Exception exception)
-		{
-			_logger.LogError(exception, "Message '{Id}' Handle Error: {Message}", context.MessageId, exception.Message);
-		}
-	}
-
-	/// <inheritdoc />
-	protected override void Dispose(bool disposing)
-	{
-		if (!disposing)
-		{
-			return;
-		}
-
-		Consumer.ReceivedAsync -= HandleMessageReceivedAsync;
-		Channel?.Dispose();
 	}
 }

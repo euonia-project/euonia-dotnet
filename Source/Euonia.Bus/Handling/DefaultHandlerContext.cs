@@ -136,6 +136,10 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 					                                                       {
 						                                                       context.Response(task.Result);
 					                                                       }
+					                                                       else
+					                                                       {
+						                                                       context.Complete(null);
+					                                                       }
 				                                                       }, cancellationToken);
 			}
 			else
@@ -148,6 +152,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 						                                           // 忽略多播处理程序中的错误
 					                                           }, token);
 				});
+				context.Complete(null);
 			}
 
 			_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
