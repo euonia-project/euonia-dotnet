@@ -5,6 +5,9 @@
 /// </summary>
 public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 {
+	/// <summary>
+	/// 内部用于累积构建结果的基础消息约定实例。
+	/// </summary>
 	private readonly BaseMessageConvention _convention = new();
 
 	/// <summary>
@@ -61,7 +64,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	}
 
 	/// <summary>
-	/// 添加一个消息约定实例，用于评估类型是消息、命令还是事件。
+	/// 添加一个消息约定实例，用于评估类型是单播（命令）、多播（事件）还是请求消息。
 	/// </summary>
 	/// <typeparam name="TConvention">消息约定的类型。</typeparam>
 	/// <param name="convention">消息约定实例。</param>
@@ -75,7 +78,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	}
 
 	/// <summary>
-	/// 添加一个消息约定类型，用于评估类型是消息、命令还是事件。
+	/// 添加一个消息约定类型，用于评估类型是单播（命令）、多播（事件）还是请求消息。
 	/// </summary>
 	/// <typeparam name="TConvention">实现 <see cref="IMessageConvention"/> 且具有无参构造函数的消息约定类型。</typeparam>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>

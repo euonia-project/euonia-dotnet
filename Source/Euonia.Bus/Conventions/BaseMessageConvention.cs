@@ -7,10 +7,29 @@ namespace Nerosoft.Euonia.Bus;
 /// </summary>
 public class BaseMessageConvention : IMessageConvention
 {
+	/// <summary>
+	/// 默认的消息约定实例，基于 <see cref="DefaultMessageConvention"/> 并支持覆盖。
+	/// </summary>
 	private readonly OverridableMessageConvention _defaultConvention = new(new DefaultMessageConvention());
+
+	/// <summary>
+	/// 已注册的消息约定实例列表。
+	/// </summary>
 	private readonly List<IMessageConvention> _conventions = [];
+
+	/// <summary>
+	/// 多播消息约定的判断结果缓存。
+	/// </summary>
 	private readonly ConventionCache _multicastConventionCache = new();
+
+	/// <summary>
+	/// 单播消息约定的判断结果缓存。
+	/// </summary>
 	private readonly ConventionCache _unicastConventionCache = new();
+
+	/// <summary>
+	/// 请求消息约定的判断结果缓存。
+	/// </summary>
 	private readonly ConventionCache _requestConventionCache = new();
 
 	/// <summary>
@@ -55,7 +74,13 @@ public class BaseMessageConvention : IMessageConvention
 		});
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 判断指定的消息通道是否为请求消息。
+	/// </summary>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
+	/// <returns>如果是请求消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/> 为 <c>null</c> 时抛出。</exception>
 	public bool IsRequest(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
@@ -126,7 +151,9 @@ public class BaseMessageConvention : IMessageConvention
 	/// </summary>
 	internal string[] RegisteredConventions => _conventions.Select(x => x.Name).ToArray();
 
-	/// <inheritdoc/>
+	/// <summary>
+	/// 获取消息约定的名称。
+	/// </summary>
 	public string Name => "Default";
 
 	/// <summary>

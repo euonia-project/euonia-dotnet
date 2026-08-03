@@ -6,7 +6,15 @@
 /// </summary>
 internal class OverridableMessageConvention : IMessageConvention
 {
+	/// <summary>
+	/// 内部消息约定实例，用于提供默认的判断逻辑。
+	/// </summary>
 	private readonly IMessageConvention _innerConvention;
+
+	/// <summary>
+	/// 单播、多播和请求消息类型的自定义判断函数。
+	/// 为 <c>null</c> 时表示未覆盖，将回退到内部约定的判断逻辑。
+	/// </summary>
 	private Func<string, Type, bool> _isUnicast, _isMulticast, _isRequest;
 
 	/// <summary>
@@ -18,22 +26,39 @@ internal class OverridableMessageConvention : IMessageConvention
 		_innerConvention = innerConvention;
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 获取消息约定的名称。
+	/// </summary>
 	public string Name => $"Override with {_innerConvention.Name}";
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 判断指定的消息类型是否为单播消息。
+	/// </summary>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
+	/// <returns>如果是单播消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	bool IMessageConvention.IsUnicast(string channel, Type type)
 	{
 		return IsUnicast(channel, type);
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 判断指定的消息类型是否为多播消息。
+	/// </summary>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
+	/// <returns>如果是多播消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	bool IMessageConvention.IsMulticast(string channel, Type type)
 	{
 		return IsMulticast(channel, type);
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 判断指定的消息类型是否为请求消息。
+	/// </summary>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
+	/// <returns>如果是请求消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	bool IMessageConvention.IsRequest(string channel, Type type)
 	{
 		return IsRequest(channel, type);

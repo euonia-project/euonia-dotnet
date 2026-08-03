@@ -55,7 +55,7 @@ internal static class MessageHandlerFinder
 	/// <param name="delegate">处理程序查找回调委托。</param>
 	/// <param name="handlerType">要解析的处理程序类型。</param>
 	/// <exception cref="MissingMethodException">当在类型中找不到处理方法时抛出。</exception>
-	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求或订阅特性未指定通道名称时抛出。</exception>
 	private static void Resolve(Delegate @delegate, Type handlerType)
 	{
 		if (!handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
@@ -63,7 +63,7 @@ internal static class MessageHandlerFinder
 			return;
 		}
 
-		// Extract IHandler<> interfaces from the handler type
+		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
 		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		                            .ToList();

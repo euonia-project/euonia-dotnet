@@ -11,7 +11,7 @@ public class StringMessageDataConverter : IMessageDataConverter<string>
 	/// <param name="stream"></param>
 	/// <param name="cancellationToken"></param>
 	/// <returns></returns>
-	public async Task<string> Convert(Stream stream, CancellationToken cancellationToken)
+	public async Task<string> ConvertAsync(Stream stream, CancellationToken cancellationToken)
 	{
 		using var ms = new MemoryStream();
 

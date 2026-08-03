@@ -1,15 +1,16 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Configuration options for the message bus.
+/// 消息总线的配置选项。
 /// </summary>
 public class MessageBusOptions
 {
 	/// <summary>
-	/// Gets the name of the default transport that will be used when no specific transport is assigned to a message type by strategy.
+	/// 获取或设置默认传输器的名称。
 	/// </summary>
-	/// <value>
-	/// The default transport name.
-	/// </value>
+	/// <remarks>
+	/// 当消息类型未通过传输策略分配特定传输器时，将使用此默认传输器。
+	/// </remarks>
+	/// <value>默认传输器的名称。</value>
 	public string DefaultTransporter { get; set; }
 }

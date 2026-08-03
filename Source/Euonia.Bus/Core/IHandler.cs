@@ -48,6 +48,14 @@ public interface IHandler<in TMessage> : IHandler<TMessage, Unit>
 	/// <returns>表示异步操作的任务。</returns>
 	new Task HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// 显式实现 <see cref="IHandler{TMessage,Unit}"/> 的 <c>HandleAsync</c> 方法，
+	/// 调用本接口的 <c>HandleAsync</c> 方法并将异步处理结果映射为 <see cref="Unit"/>。
+	/// </summary>
+	/// <param name="message">消息实例。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步操作的任务，完成后的结果为 <see cref="Unit.Value"/>。</returns>
 	Task<Unit> IHandler<TMessage, Unit>.HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken)
 	{
 		return HandleAsync(message, context, cancellationToken).ContinueWith(_ => Unit.Value, cancellationToken);
