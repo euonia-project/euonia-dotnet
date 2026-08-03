@@ -81,19 +81,19 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 				}
 			}
 
-			if (_convention.IsUnicast(channel))
+			if (_convention.IsUnicast(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemoryConsumer>();
 				StrongReferenceMessenger.Default.Register(recipient, channel);
 				_logger.LogInformation("[InMemoryRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
-			else if (_convention.IsMulticast(channel))
+			else if (_convention.IsMulticast(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemorySubscriber>();
 				WeakReferenceMessenger.Default.Register(recipient, channel);
 				_logger.LogInformation("[InMemoryRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
-			else if (_convention.IsRequest(channel))
+			else if (_convention.IsRequest(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemoryExecutor>();
 				StrongReferenceMessenger.Default.Register(recipient, channel);

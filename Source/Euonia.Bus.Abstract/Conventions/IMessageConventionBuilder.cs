@@ -19,28 +19,28 @@ public interface IMessageConventionBuilder
 	/// </summary>
 	/// <param name="predicate">用于评估通道是否为单播消息的断言函数。</param>
 	/// <returns>返回当前的<see cref="IMessageConventionBuilder"/>实例，以便进行链式调用。</returns>
-	IMessageConventionBuilder EvaluateUnicast(Func<string, bool> predicate);
+	IMessageConventionBuilder EvaluateUnicast(Func<string, Type, bool> predicate);
 
 	/// <summary>
 	/// 添加一个消息约定，用于评估给定通道是否为多播消息。
 	/// </summary>
 	/// <param name="predicate">用于评估通道是否为多播消息的断言函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	IMessageConventionBuilder EvaluateMulticast(Func<string, bool> predicate);
+	IMessageConventionBuilder EvaluateMulticast(Func<string, Type, bool> predicate);
 
 	/// <summary>
 	/// 添加一个消息约定，用于评估给定通道是否为请求消息。
 	/// </summary>
 	/// <param name="predicate">用于评估通道是否为请求消息的断言函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	IMessageConventionBuilder EvaluateRequest(Func<string, bool> predicate);
+	IMessageConventionBuilder EvaluateRequest(Func<string, Type, bool> predicate);
 
 	/// <summary>
 	/// 添加一个消息约定，使用函数评估给定通道是哪种类型。
 	/// </summary>
 	/// <param name="predicate">用于评估消息约定类型的函数。</param>
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
-	IMessageConventionBuilder Evaluate(Func<string, MessageConventionType> predicate);
+	IMessageConventionBuilder Evaluate(Func<string, Type, MessageConventionType> predicate);
 
 	/// <summary>
 	/// 添加一个自定义的消息约定实现类型。

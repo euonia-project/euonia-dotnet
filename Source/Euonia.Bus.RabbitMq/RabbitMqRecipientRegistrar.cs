@@ -81,17 +81,17 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 			}
 
 			RabbitMqRecipient recipient;
-			if (_convention.IsUnicast(channel))
+			if (_convention.IsUnicast(channel, registration.MessageType))
 			{
 				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqConsumer>(_provider);
 				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
-			else if (_convention.IsMulticast(channel))
+			else if (_convention.IsMulticast(channel, registration.MessageType))
 			{
 				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqSubscriber>(_provider);
 				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
-			else if (_convention.IsRequest(channel))
+			else if (_convention.IsRequest(channel, registration.MessageType))
 			{
 				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqExecutor>(_provider);
 				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as request type on channel {Channel}", registration.MessageType.FullName, channel);
@@ -101,6 +101,7 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 				throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.");
 			}
 
+			recipient.MessageType = registration.MessageType;
 			await recipient.StartAsync(channel);
 		}
 	}
