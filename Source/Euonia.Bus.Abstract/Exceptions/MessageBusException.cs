@@ -1,29 +1,31 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represent the exception was thrown by message bus.
-/// Implements the <see cref="Exception" />
+/// 表示由消息总线抛出的异常。
 /// </summary>
 /// <seealso cref="Exception" />
 [Serializable]
 public class MessageBusException : Exception
 {
+	/// <summary>
+	/// 与异常关联的消息上下文。
+	/// </summary>
 	private readonly object _message;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageBusException"/> class.
+	/// 初始化 <see cref="MessageBusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="messageContext">Type of the message.</param>
+	/// <param name="messageContext">与异常关联的消息上下文。</param>
 	public MessageBusException(object messageContext)
 	{
 		_message = messageContext;
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageBusException"/> class.
+	/// 初始化 <see cref="MessageBusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="messageContext">Type of the message.</param>
-	/// <param name="message">The message.</param>
+	/// <param name="messageContext">与异常关联的消息上下文。</param>
+	/// <param name="message">异常消息。</param>
 	public MessageBusException(object messageContext, string message)
 		: base(message)
 	{
@@ -31,11 +33,11 @@ public class MessageBusException : Exception
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageBusException"/> class.
+	/// 初始化 <see cref="MessageBusException"/> 类的新实例。
 	/// </summary>
-	/// <param name="messageContext">Type of the message.</param>
-	/// <param name="message">The message.</param>
-	/// <param name="innerException">The inner exception.</param>
+	/// <param name="messageContext">与异常关联的消息上下文。</param>
+	/// <param name="message">异常消息。</param>
+	/// <param name="innerException">导致当前异常的内部异常。</param>
 	public MessageBusException(object messageContext, string message, Exception innerException)
 		: base(message, innerException)
 	{
@@ -43,8 +45,8 @@ public class MessageBusException : Exception
 	}
 
 	/// <summary>
-	/// The type of the handled message.
+	/// 获取与异常关联的消息上下文。
 	/// </summary>
-	/// <value>The type of the message.</value>
+	/// <value>与异常关联的消息上下文。</value>
 	public virtual object MessageContext => _message;
 }

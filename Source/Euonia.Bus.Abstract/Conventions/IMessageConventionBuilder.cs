@@ -15,10 +15,10 @@ public interface IMessageConventionBuilder
 	IMessageConvention Convention { get; }
 
 	/// <summary>
-	/// 添加一个消息约定，用于评估给定通道是否为多播消息。
+	/// 添加一个消息约定，用于评估给定通道是否为单播消息。
 	/// </summary>
 	/// <param name="predicate">用于评估通道是否为单播消息的断言函数。</param>
-	/// <returns>返回当前的<see cref="IMessageConventionBuilder"/>实例，以便进行链式调用。</returns>
+	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	IMessageConventionBuilder EvaluateUnicast(Func<string, Type, bool> predicate);
 
 	/// <summary>
@@ -53,8 +53,9 @@ public interface IMessageConventionBuilder
 	/// <summary>
 	/// 添加一个自定义的消息约定实例。
 	/// </summary>
+	/// <typeparam name="TConvention">实现 <see cref="IMessageConvention"/> 的约定类型。</typeparam>
 	/// <param name="convention">要添加的消息约定实例。</param>
-	/// <returns>返回当前的<see cref="IMessageConventionBuilder"/>实例，以便进行链式调用。</returns>
+	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	IMessageConventionBuilder Add<TConvention>(TConvention convention) 
 		where TConvention : class, IMessageConvention;
 }

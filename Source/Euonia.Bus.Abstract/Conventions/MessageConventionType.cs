@@ -1,27 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Defines the message convention type.
+/// 定义消息约定的类型。
 /// </summary>
 public enum MessageConventionType
 {
 	/// <summary>
-	/// None
+	/// 未分类的消息类型。
 	/// </summary>
 	None,
 
 	/// <summary>
-	/// Unicast
+	/// 单播消息，仅传递给单个接收者。
 	/// </summary>
 	Unicast,
 
 	/// <summary>
-	/// Multicast
+	/// 多播消息，传递给多个接收者。
 	/// </summary>
 	Multicast,
 
 	/// <summary>
-	/// Request
+	/// 请求消息，发送给单个接收者并期望收到响应。
 	/// </summary>
 	Request,
 }
