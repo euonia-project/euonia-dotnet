@@ -4,41 +4,51 @@ using Nerosoft.Euonia.Threading;
 namespace Nerosoft.Euonia.Concurrency.Azure;
 
 /// <summary>
-/// Implements <see cref="ISynchronizationHandle"/>
+/// 实现 <see cref="ISynchronizationHandle"/>。
 /// </summary>
 public sealed class AzureSynchronizationHandle : ISynchronizationHandle
 {
+    /// <summary>
+    /// 内部租约句柄，持有实际的租约与 Blob 所有权信息。
+    /// </summary>
     private InternalHandle _internalHandle;
+
+    /// <summary>
+    /// 终结器队列注册，用于在句柄未被显式释放时执行清理。
+    /// </summary>
     private IDisposable _finalizerRegistration;
 
+    /// <summary>
+    /// 初始化 <see cref="AzureSynchronizationHandle"/> 类的新实例。
+    /// </summary>
+    /// <param name="internalHandle">内部租约句柄。</param>
     internal AzureSynchronizationHandle(InternalHandle internalHandle)
     {
         _internalHandle = internalHandle;
-        // Because this is a lease, managed finalization mostly won't be strictly necessary here. Where it comes in handy is:
-        // (1) Ensuring blob deletion if we own the blob
-        // (2) Helping release infinite-duration leases (rare case)
-        // (3) In testing, avoiding having to wait 15+ seconds for lease expiration
+        // 由于这是租约，托管终结在此处大多不是严格必需的。其价值在于：
+        // (1) 若我们拥有 Blob，确保 Blob 被删除
+        // (2) 帮助释放无限时长的租约（少见情况）
+        // (3) 在测试中，避免等待 15 秒以上的租约过期时间
         _finalizerRegistration = ManagedFinalizerQueue.Instance.Register(this, internalHandle);
     }
 
-    /// <summary>
-    /// Implements <see cref="ISynchronizationHandle.HandleCancellationToken"/>
-    /// </summary>
+    /// <inheritdoc />
     public CancellationToken HandleCancellationToken => (_internalHandle ?? throw this.ObjectDisposed()).HandleCancellationToken;
 
     /// <summary>
-    /// The underlying Azure lease ID
+    /// 底层的 Azure 租约 ID。
     /// </summary>
     public string LeaseId => (_internalHandle ?? throw this.ObjectDisposed()).LeaseId;
 
     /// <summary>
-    /// Releases the lock
+    /// 释放锁。
     /// </summary>
     public void Dispose() => this.DisposeSyncViaAsync();
 
     /// <summary>
-    /// Releases the lock asynchronously
+    /// 异步释放锁。
     /// </summary>
+    /// <returns>表示异步释放操作的任务。</returns>
     public ValueTask DisposeAsync()
     {
         Interlocked.Exchange(ref _finalizerRegistration, null)?.Dispose();

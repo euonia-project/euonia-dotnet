@@ -3,12 +3,15 @@ using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Concurrency.Azure;
 
+/// <summary>
+/// Azure 同步的模块标记，作为 <see cref="AzureLockModule"/> 的依赖项。
+/// </summary>
 internal class AzureSynchronizationModule : ModuleContextBase
 {
 }
 
 /// <summary>
-/// The <see cref="AzureLockModule"/> class contains methods used to configure the Azure lock.
+/// 用于配置 Azure 锁的模块。
 /// </summary>
 [DependsOn(typeof(AzureSynchronizationModule))]
 public class AzureLockModule : ModuleContextBase
