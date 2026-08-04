@@ -3,8 +3,8 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <EnablePackageVersionOverride>true</EnablePackageVersionOverride>
         <ExtensionsPackageVersion>10.0.10</ExtensionsPackageVersion>
-        <GrpcAspNetCoreVersion>2.80.0</GrpcAspNetCoreVersion>
-        <QuartzVersion>3.18.2</QuartzVersion>
+        <GrpcAspNetCoreVersion>2.83.0</GrpcAspNetCoreVersion>
+        <QuartzVersion>3.19.1</QuartzVersion>
     </PropertyGroup>
     <PropertyGroup>
         <EntityFrameworkCoreVersionPrevious>9.0.18</EntityFrameworkCoreVersionPrevious>
@@ -18,7 +18,7 @@
     </PropertyGroup>
     <ItemGroup>
         <PackageVersion Include="Apache.NMS.ActiveMQ" Version="2.2.0" />
-        <PackageVersion Include="Autofac" Version="9.3.1" />
+        <PackageVersion Include="Autofac" Version="9.3.2" />
         <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
         <PackageVersion Include="Autofac.Extras.DynamicProxy" Version="8.0.1" />
         <PackageVersion Include="AutoMapper" Version="16.2.0" />
@@ -47,14 +47,14 @@
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageVersion Include="StackExchange.Redis" Version="3.0.17" />
+        <PackageVersion Include="StackExchange.Redis" Version="3.1.3" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
         <PackageVersion Include="System.Collections.Immutable" Version="10.0.10" />
         <PackageVersion Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
         <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
         <PackageVersion Include="System.Interactive" Version="7.0.1" />
         <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="10.0.10" />
-        <PackageVersion Include="System.Reactive" Version="6.1.0" />
+        <PackageVersion Include="System.Reactive" Version="7.0.0" />
         <PackageVersion Include="System.Runtime.Caching" Version="10.0.10" />
         <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
         <PackageVersion Include="System.Text.Json" Version="10.0.10" />
