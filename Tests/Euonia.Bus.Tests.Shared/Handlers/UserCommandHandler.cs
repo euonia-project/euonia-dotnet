@@ -2,7 +2,7 @@
 
 namespace Nerosoft.Euonia.Bus.Tests.Handlers
 {
-	public class UserCommandHandler : IHandler<UserCreateCommand, int>, IHandler<UserUpdateCommand>
+	public class UserCommandHandler : IScopedDependency, IHandler<UserCreateCommand, int>, IHandler<UserUpdateCommand>
 	{
 		public bool CanHandle(Type messageType)
 		{
