@@ -120,7 +120,7 @@ internal static class MessageHandlerFinder
 					throw new InvalidOperationException("The first parameter of handler method must be message type");
 				case 2 when parameters[1].ParameterType != typeof(IMessageContext) && parameters[1].ParameterType != typeof(CancellationToken):
 					throw new InvalidOperationException("The second parameter of handler method must be MessageContext or CancellationToken if the method contains 2 parameters");
-				case 3 when parameters[1].ParameterType != typeof(IMessageContext) && parameters[2].ParameterType != typeof(CancellationToken):
+				case 3 when parameters[1].ParameterType != typeof(IMessageContext) || parameters[2].ParameterType != typeof(CancellationToken):
 					throw new InvalidOperationException("The second and third parameter of handler method must be MessageContext and CancellationToken if the method contains 3 parameters");
 			}
 
@@ -144,8 +144,9 @@ internal static class MessageHandlerFinder
 					}
 
 					channel = parameters[0].ParameterType.FullName;
-					@delegate(channel, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
 				}
+
+				@delegate(channel, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
 			}
 			else
 			{

@@ -19,8 +19,9 @@ public interface IHandler
 /// 定义处理特定类型消息并返回响应的协定。
 /// </summary>
 /// <typeparam name="TMessage">消息的类型。</typeparam>
-/// <typeparam name="TResponse">响应的类型。</typeparam>
-public interface IHandler<in TMessage, TResponse> : IHandler
+/// <typeparam name="TResult">响应的类型。</typeparam>
+public interface IHandler<in TMessage, TResult> : IHandler
+	where TMessage : class
 {
 	/// <summary>
 	/// 处理消息。
@@ -29,7 +30,7 @@ public interface IHandler<in TMessage, TResponse> : IHandler
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>包含响应结果的任务。</returns>
-	Task<TResponse> HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken = default);
+	Task<TResult> HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
