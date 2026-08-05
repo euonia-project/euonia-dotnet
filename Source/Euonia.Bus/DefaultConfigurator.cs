@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
-using Microsoft.Extensions.Options;
 
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -11,25 +10,10 @@ namespace Nerosoft.Euonia.Bus;
 /// </summary>
 public sealed class DefaultConfigurator : IConfigurator
 {
+	/// <summary>
+	/// 以传输类型为键的传输策略构建器的线程安全字典。
+	/// </summary>
 	private readonly ConcurrentDictionary<string, ITransportStrategyBuilder> _strategyBuilders = new();
-
-	/// <summary>
-	/// 初始化 <see cref="DefaultConfigurator"/> 类的新实例。
-	/// </summary>
-	/// <param name="options">用于配置消息总线的选项监视器。</param>
-	public DefaultConfigurator(IOptionsMonitor<MessageBusOptions> options)
-	{
-		DefaultTransporter = options.CurrentValue.DefaultTransporter;
-		options.OnChange(newOptions =>
-		{
-			DefaultTransporter = newOptions.DefaultTransporter;
-		});
-	}
-
-	/// <summary>
-	/// 获取默认传输器的名称。
-	/// </summary>
-	public string DefaultTransporter { get; private set; }
 
 	/// <summary>
 	/// 用于配置消息命名和发现约定的构建器。

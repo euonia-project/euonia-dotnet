@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -9,14 +10,17 @@ internal class StrategicDispatcher : IDispatcher
 {
 	private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _transportCache = new();
 	private readonly IConfigurator _configurator;
+	private readonly MessageBusOptions _options;
 
 	/// <summary>
 	/// 初始化 <see cref="StrategicDispatcher"/> 类的新实例。
 	/// </summary>
 	/// <param name="configurator">消息总线配置选项。</param>
-	public StrategicDispatcher(IConfigurator configurator)
+	/// <param name="options">消息总线配置选项。</param>
+	public StrategicDispatcher(IConfigurator configurator, IOptions<MessageBusOptions> options)
 	{
 		_configurator = configurator;
+		_options = options.Value;
 	}
 
 	/// <summary>
@@ -50,12 +54,12 @@ internal class StrategicDispatcher : IDispatcher
 		switch (transportTypes.Count)
 		{
 			case 0:
-				if (string.IsNullOrEmpty(_configurator.DefaultTransporter))
+				if (string.IsNullOrEmpty(_options.DefaultTransporter))
 				{
 					throw new MessageTypeException("No transport is configured for the message type.");
 				}
 
-				transportTypes = new List<string> { _configurator.DefaultTransporter };
+				transportTypes = new List<string> { _options.DefaultTransporter };
 				break;
 
 			case > 1 when !_configurator.Convention.IsMulticast(channel, type):

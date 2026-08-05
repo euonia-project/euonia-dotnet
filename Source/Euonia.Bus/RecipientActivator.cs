@@ -24,7 +24,7 @@ public class RecipientActivator : BackgroundService
 	{
 		_provider = provider;
 		_configurator = configurator;
-		_defaultTransporter = string.Collapse(configuration.GetValue<string>(Constants.DefaultTransporterSection), configurator.DefaultTransporter);
+		_defaultTransporter = configuration.GetValue<string>(Constants.DefaultTransporterSection);
 	}
 
 	/// <summary>

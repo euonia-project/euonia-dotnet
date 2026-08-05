@@ -22,20 +22,17 @@ public static class ServiceCollectionExtensions
 		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
 		public IServiceCollection AddEuoniaBus(Action<DefaultConfigurator> config = null)
 		{
+			var configurator = Singleton<DefaultConfigurator>.Get(() => new DefaultConfigurator());
+			config?.Invoke(configurator);
 			// 注册单例 IConfigurator，通过配置器实例执行用户配置委托
-			services.AddSingleton<IConfigurator>(provider =>
-			{
-				var configurator = ActivatorUtilities.GetServiceOrCreateInstance<DefaultConfigurator>(provider);
-				config?.Invoke(configurator);
-				return configurator;
-			});
+			services.AddSingleton<IConfigurator>(configurator);
 
 			// 收集所有已注册的通道处理器类型并去重
 			var handlerTypes = ChannelRegistrar.Registrations
-			                                   .SelectMany(t => t.Value.Handlers)
-			                                   .Select(t => t.HandlerType)
-			                                   .Distinct()
-			                                   .ToList();
+											   .SelectMany(t => t.Value.Handlers)
+											   .Select(t => t.HandlerType)
+											   .Distinct()
+											   .ToList();
 
 			// 将每个处理器类型注册为瞬态服务
 			foreach (var handlerType in handlerTypes)

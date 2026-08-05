@@ -29,4 +29,9 @@ internal static class Constants
 	/// 默认传输器的配置节点路径。
 	/// </summary>
 	public const string DefaultTransporterSection = $"{ConfigurationSection}:DefaultTransporter";
+
+	/// <summary>
+	/// 自动加载程序集的配置节点路径。
+	/// </summary>
+	public const string AutoLoadAssembliesSection = $"{ConfigurationSection}:AutoLoadAssemblies";
 }

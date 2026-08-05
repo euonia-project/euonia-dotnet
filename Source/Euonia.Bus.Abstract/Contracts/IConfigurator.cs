@@ -7,12 +7,6 @@
 public interface IConfigurator
 {
 	/// <summary>
-	/// 获取默认传输策略名称，可用于消息路由和分类。
-	/// </summary>
-	/// <returns>默认传输策略名称。</returns>
-	string DefaultTransporter { get; }
-	
-	/// <summary>
 	/// 获取已配置的 <see cref="IMessageConventionBuilder"/>。
 	/// </summary>
 	/// <returns>已配置的 <see cref="IMessageConventionBuilder"/> 实例。</returns>
