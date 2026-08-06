@@ -1,26 +1,11 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// 消息处理程序的协定。
-/// </summary>
-public interface IHandler
-{
-	/*
-	/// <summary>
-	/// 判断当前消息处理程序能否处理指定类型的消息。
-	/// </summary>
-	/// <param name="messageType">要检查的消息类型。</param>
-	/// <returns>如果当前消息处理程序可以处理指定类型的消息，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	bool CanHandle(Type messageType);
-	*/
-}
-
-/// <summary>
 /// 定义处理特定类型消息并返回响应的协定。
 /// </summary>
 /// <typeparam name="TMessage">消息的类型。</typeparam>
 /// <typeparam name="TResult">响应的类型。</typeparam>
-public interface IHandler<in TMessage, TResult> : IHandler
+public interface IHandler<in TMessage, TResult>
 	where TMessage : class
 {
 	/// <summary>
