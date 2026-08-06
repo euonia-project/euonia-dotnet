@@ -22,23 +22,10 @@ public static class ServiceCollectionExtensions
 		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
 		public IServiceCollection AddEuoniaBus(Action<DefaultConfigurator> config = null)
 		{
+			// 注册单例 IConfigurator，通过配置器实例执行用户配置委托
 			var configurator = Singleton<DefaultConfigurator>.Get(() => new DefaultConfigurator());
 			config?.Invoke(configurator);
-			// 注册单例 IConfigurator，通过配置器实例执行用户配置委托
 			services.AddSingleton<IConfigurator>(configurator);
-
-			// 收集所有已注册的通道处理器类型并去重
-			var handlerTypes = ChannelRegistrar.Registrations
-											   .SelectMany(t => t.Value.Handlers)
-											   .Select(t => t.HandlerType)
-											   .Distinct()
-											   .ToList();
-
-			// 将每个处理器类型注册为瞬态服务
-			foreach (var handlerType in handlerTypes)
-			{
-				services.TryAddTransient(handlerType);
-			}
 
 			// 启用管道（Pipeline）支持
 			services.AddPipeline();
@@ -57,15 +44,10 @@ public static class ServiceCollectionExtensions
 				{
 					foreach (var handler in registration.Handlers)
 					{
-						Type responseType = null;
-						if (handler.Method.ReturnType.IsGenericType && handler.Method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+						if (handler.HandlerType.IsInterface && handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 						{
-							responseType = handler.Method.ReturnType.GenericTypeArguments[0];
-						}
-
-						if (responseType != null && handler.HandlerType.IsAssignableTo(typeof(IHandler<,>).MakeGenericType(registration.MessageType, responseType)))
-						{
-							registerMethod?.MakeGenericMethod(registration.MessageType, responseType, handler.HandlerType).Invoke(context, [channel]);
+							var resultType = handler.HandlerType.GenericTypeArguments[1];
+							registerMethod?.MakeGenericMethod(registration.MessageType, resultType, handler.HandlerType).Invoke(context, [channel]);
 						}
 						else
 						{
@@ -80,6 +62,75 @@ public static class ServiceCollectionExtensions
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
 			services.AddHostedService<RecipientActivator>();
 
+			return services;
+		}
+
+		public IServiceCollection AddMessageHandler(ServiceLifetime lifetime, params Assembly[] assemblies)
+		{
+			if (assemblies == null || assemblies.Length == 0)
+			{
+				throw new ArgumentNullException(nameof(assemblies), "Assemblies cannot be null or empty.");
+			}
+
+			var handlerTypes = assemblies.SelectMany(t => t.GetTypes().Where(x => x.IsClass && !x.IsAbstract && x.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IHandler<,>))));
+
+			foreach (var handlerType in handlerTypes)
+			{
+				var interfaces = handlerType.GetInterfaces()
+						 .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+						 .ToList();
+
+				foreach (var @interface in interfaces)
+				{
+					services.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+				}
+			}
+
+			return services;
+		}
+
+		public IServiceCollection AddMessageHandler<THandler>(ServiceLifetime lifetime)
+			where THandler : class
+		{
+			var handlerType = typeof(THandler);
+			var interfaces = handlerType.GetInterfaces()
+									.Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+									.ToList();
+			if (!interfaces.Any())
+			{
+				throw new ArgumentException($"The type {handlerType.FullName} does not implement any IHandler<,> interface.");
+			}
+			foreach (var @interface in interfaces)
+			{
+				services.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+			}
+			return services;
+		}
+
+		public IServiceCollection AddMessageHandler(ServiceLifetime lifetime, params Type[] handlerTypes)
+		{
+			if (handlerTypes == null || handlerTypes.Length == 0)
+			{
+				throw new ArgumentNullException(nameof(handlerTypes), "Handler types cannot be null or empty.");
+			}
+			foreach (var handlerType in handlerTypes)
+			{
+				if (handlerType.IsPrimitive || !handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
+				{
+					throw new ArgumentException($"The type {handlerType.FullName} must be a non-abstract class.");
+				}
+				var interfaces = handlerType.GetInterfaces()
+							 .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+							 .ToList();
+				if (!interfaces.Any())
+				{
+					throw new ArgumentException($"The type {handlerType.FullName} does not implement any IHandler<,> interface.");
+				}
+				foreach (var @interface in interfaces)
+				{
+					services.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
+				}
+			}
 			return services;
 		}
 	}

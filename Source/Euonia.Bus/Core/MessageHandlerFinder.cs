@@ -58,52 +58,39 @@ internal static class MessageHandlerFinder
 	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求或订阅特性未指定通道名称时抛出。</exception>
 	private static void Resolve(Delegate @delegate, Type handlerType)
 	{
-		if (!handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
+		if (handlerType.IsPrimitive || !handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
 		{
 			return;
 		}
 
 		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
-		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
-		                            .ToList();
+									.Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+									.ToList();
 
+		var handlerInterfaceMethods = new HashSet<MethodInfo>();
 		if (interfaces.Count > 0)
 		{
 			foreach (var @interface in interfaces)
 			{
 				var messageType = @interface.GetGenericArguments()[0];
-				var method = handlerType.GetMethod(nameof(IHandler<,>.HandleAsync), BINDING_FLAGS, null, [messageType, typeof(IMessageContext), typeof(CancellationToken)], null);
+				var method = handlerType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)]);
 				if (method == null)
 				{
 					throw new MissingMethodException("The method doesn't exist.");
 				}
 
-				var channels = method.GetCustomAttributes<SubscribeAttribute>()
-				                     .Select(x => x.Name)
-				                     .Distinct()
-				                     .Where(x => !string.IsNullOrWhiteSpace(x))
-				                     .ToList();
-				if (channels.Count == 0)
-				{
-					channels.Add(MessageCache.Default.GetOrAddChannel(messageType));
-				}
+				handlerInterfaceMethods.Add(method);
 
-				foreach (var channel in channels)
-				{
-					if (string.IsNullOrWhiteSpace(channel))
-					{
-						continue;
-					}
+				var channel = MessageCache.Default.GetOrAddChannel(messageType);
 
-					@delegate(channel, messageType, new ChannelHandler(handlerType, method));
-				}
+				@delegate(channel, messageType, new ChannelHandler(@interface, null));
 			}
 		}
 
 		var methods = handlerType.GetMethods(BINDING_FLAGS)
-		                         .Where(t => t.GetCustomAttributes<SubscribeAttribute>().Any())
-		                         .ToList();
+								 .Where(t => t.GetCustomAttributes<SubscribeAttribute>(false).Any() && !handlerInterfaceMethods.Contains(t))
+								 .ToList();
 
 		foreach (var method in methods)
 		{
@@ -124,8 +111,8 @@ internal static class MessageHandlerFinder
 					throw new InvalidOperationException("The second and third parameter of handler method must be MessageContext and CancellationToken if the method contains 3 parameters");
 			}
 
-			var attributes = method.GetCustomAttributes<SubscribeAttribute>()
-			                       .ToList();
+			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
+								   .ToList();
 
 			if (attributes.Count == 1)
 			{
