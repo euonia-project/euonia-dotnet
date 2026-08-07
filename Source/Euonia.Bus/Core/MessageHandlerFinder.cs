@@ -65,8 +65,8 @@ internal static class MessageHandlerFinder
 
 		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
-									.Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
-									.ToList();
+		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		                            .ToList();
 
 		var handlerInterfaceMethods = new HashSet<MethodInfo>();
 		if (interfaces.Count > 0)
@@ -89,8 +89,8 @@ internal static class MessageHandlerFinder
 		}
 
 		var methods = handlerType.GetMethods(BINDING_FLAGS)
-								 .Where(t => t.GetCustomAttributes<SubscribeAttribute>(false).Any() && !handlerInterfaceMethods.Contains(t))
-								 .ToList();
+		                         .Where(t => t.GetCustomAttributes<SubscribeAttribute>(false).Any() && !handlerInterfaceMethods.Contains(t))
+		                         .ToList();
 
 		foreach (var method in methods)
 		{
@@ -112,7 +112,7 @@ internal static class MessageHandlerFinder
 			}
 
 			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
-								   .ToList();
+			                       .ToList();
 
 			if (attributes.Count == 1)
 			{

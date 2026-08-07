@@ -19,20 +19,38 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	private readonly ConcurrentDictionary<string, List<HandlerFactory>> _handlerContainer = new();
 	private readonly IServiceProvider _provider;
 	private readonly ILogger<DefaultHandlerContext> _logger;
-	private readonly IMessageConvention _convention;
+	private readonly IConfigurator _configurator;
+
+	private IMessageConvention Convention => field ??= new Lazy<IMessageConvention>(() => _configurator?.Convention ?? new BaseMessageConvention()).Value;
 
 	/// <summary>
 	/// 初始化 <see cref="DefaultHandlerContext"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析处理程序、日志记录器和其他服务的服务提供程序。</param>
-	public DefaultHandlerContext(IServiceProvider provider)
+	/// <param name="configurator">用于配置消息总线的配置器。</param>
+	public DefaultHandlerContext(IServiceProvider provider, IConfigurator configurator)
 	{
 		_provider = provider;
+		_configurator = configurator;
 		_logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultHandlerContext>();
-		_convention = provider.GetService<IConfigurator>()?.Convention ?? new BaseMessageConvention();
+		_configurator.ChannelRegistered += OnChannelRegistered;
 	}
 
 	#region Handling register
+
+	private void OnChannelRegistered(object sender, ChannelRegisteredEventArgs args)
+	{
+		if (args.Handler.HandlerType.IsInterface && args.Handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		{
+			typeof(DefaultHandlerContext).GetMethod(nameof(Register), 3, BindingFlags.Instance | BindingFlags.NonPublic, [typeof(string)])
+			                             ?.MakeGenericMethod(args.Type, args.Handler.HandlerType.GenericTypeArguments[1], args.Handler.HandlerType)
+			                             .Invoke(this, [args.Channel]);
+		}
+		else
+		{
+			Register(args.Channel, args.Handler.HandlerType, args.Handler.Instance, args.Handler.Method);
+		}
+	}
 
 	/// <summary>
 	/// 为消息类型 <typeparamref name="TMessage"/> 注册一个消息处理程序类型。
@@ -51,8 +69,27 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 			                                           .ContinueWith(task => (object)task.Result, token);
 		}
 
-		ConcurrentDictionarySafeRegister(channel, Handling, _handlerContainer);
+		_handlerContainer.GetOrAdd(channel, _ => []).Add(Handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, typeof(TMessage), typeof(THandler)));
+	}
+
+	private void Register(string channel, Type type, object instance, MethodInfo method)
+	{
+		HandlerDelegate Handling(IServiceProvider provider)
+		{
+			instance ??= ActivatorUtilities.GetServiceOrCreateInstance(provider, type);
+
+			return (message, context, token) =>
+			{
+				var arguments = GetArguments(method, message, context, token);
+				var expression = MethodInvokerBuilder.BuildCallExpression(instance, method, arguments);
+
+				return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
+			};
+		}
+
+		_handlerContainer.GetOrAdd(channel, _ => []).Add(Handling);
+		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, type));
 	}
 
 	/// <summary>
@@ -61,22 +98,54 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	/// </summary>
 	/// <param name="channel">通道名称。</param>
 	/// <param name="channelHandler">描述要注册的处理程序的 <see cref="ChannelHandler"/> 实例。</param>
-	internal void Register(string channel, ChannelHandler channelHandler)
+	private void Register(string channel, ChannelHandler channelHandler)
 	{
-		HandlerDelegate Handling(IServiceProvider provider)
+		HandlerFactory handling;
+
+		if (channelHandler.HandlerType.IsInterface && channelHandler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		{
-			var instance = channelHandler.Instance ?? ActivatorUtilities.GetServiceOrCreateInstance(provider, channelHandler.HandlerType);
+			var messageType = channelHandler.HandlerType.GenericTypeArguments[0];
+			var handleAsyncMethod = channelHandler.HandlerType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)])!;
 
-			return (message, context, token) =>
+			var handlerParam = Expression.Parameter(typeof(object), "handler");
+			var messageParam = Expression.Parameter(typeof(object), "message");
+			var contextParam = Expression.Parameter(typeof(IMessageContext), "context");
+			var tokenParam = Expression.Parameter(typeof(CancellationToken), "token");
+
+			var call = Expression.Call(
+				Expression.Convert(handlerParam, channelHandler.HandlerType),
+				handleAsyncMethod,
+				Expression.Convert(messageParam, messageType),
+				contextParam,
+				tokenParam);
+
+			var invoker = Expression.Lambda<Func<object, object, IMessageContext, CancellationToken, Task<object>>>(
+				MethodInvokerBuilder.WrapToTaskObject(call, handleAsyncMethod.ReturnType),
+				handlerParam, messageParam, contextParam, tokenParam).Compile();
+
+			handling = provider =>
 			{
-				var arguments = GetArguments(channelHandler.Method, message, context, token);
-				var expression = MethodInvokerBuilder.BuildCallExpression(instance, channelHandler.Method, arguments);
+				var handler = provider.GetRequiredService(channelHandler.HandlerType);
+				return (message, context, token) => invoker(handler, message, context, token);
+			};
+		}
+		else
+		{
+			handling = provider =>
+			{
+				var instance = channelHandler.Instance ?? ActivatorUtilities.GetServiceOrCreateInstance(provider, channelHandler.HandlerType);
 
-				return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
+				return (message, context, token) =>
+				{
+					var arguments = GetArguments(channelHandler.Method, message, context, token);
+					var expression = MethodInvokerBuilder.BuildCallExpression(instance, channelHandler.Method, arguments);
+
+					return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
+				};
 			};
 		}
 
-		ConcurrentDictionarySafeRegister(channel, Handling, _handlerContainer);
+		_handlerContainer.GetOrAdd(channel, _ => []).Add(handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, channelHandler.HandlerType));
 	}
 
@@ -109,7 +178,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 			// 从服务提供程序获取处理程序实例
 			_logger.LogInformation("Message {Id} is being handled", context.MessageId);
 
-			if (!_convention.IsMulticast(channel, message.GetType()))
+			if (!Convention.IsMulticast(channel, message.GetType()))
 			{
 				var factory = factories[0];
 				await ExecuteHandler(scope, factory, cancellationToken).AsTask()
@@ -172,40 +241,6 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	#region Supports
 
 	/// <summary>
-	/// 安全地将值注册到值为列表的并发字典中。
-	/// 此方法使用内部处理程序容器上的锁，确保列表变更（添加/替换）在组合的键/值操作中保持线程安全。
-	/// </summary>
-	/// <typeparam name="TKey">字典键的类型。</typeparam>
-	/// <typeparam name="TValue">列表元素的类型。</typeparam>
-	/// <param name="key">要注册到的键。</param>
-	/// <param name="value">要添加到给定键对应的列表中的值。</param>
-	/// <param name="registry">存储值列表的并发字典。</param>
-	private void ConcurrentDictionarySafeRegister<TKey, TValue>(TKey key, TValue value, ConcurrentDictionary<TKey, List<TValue>> registry)
-	{
-		lock (_handlerContainer)
-		{
-			if (registry.TryGetValue(key, out var handlers))
-			{
-				if (handlers != null)
-				{
-					if (!handlers.Contains(value))
-					{
-						registry[key].Add(value);
-					}
-				}
-				else
-				{
-					registry[key] = [value];
-				}
-			}
-			else
-			{
-				registry.TryAdd(key, [value]);
-			}
-		}
-	}
-
-	/// <summary>
 	/// 构建用于调用处理程序方法的 <see cref="Expression"/> 参数数组。
 	/// 该方法最多支持三个参数，参数位置根据类型解析：
 	/// - 匹配 <see cref="MessageContext"/> 类型的参数将接收传入的 <paramref name="context"/> 实例。
@@ -231,7 +266,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 			{
 				var parameterType = parameterInfos[0].ParameterType;
 
-				if (parameterType == typeof(MessageContext))
+				if (parameterType == typeof(IMessageContext))
 				{
 					arguments[0] = Expression.Constant(context);
 				}
@@ -252,7 +287,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 
 				for (var index = 1; index < parameterInfos.Length; index++)
 				{
-					if (parameterInfos[index].ParameterType == typeof(MessageContext))
+					if (parameterInfos[index].ParameterType == typeof(IMessageContext))
 					{
 						arguments[index] = Expression.Constant(context);
 					}

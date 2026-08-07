@@ -263,7 +263,7 @@ internal sealed class MessageBus : IBus
 	public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
-		var channel = GetChannel<IRequest<TResult>>(options);
+		var channel = GetChannel(request.GetType(), options);
 		var messageType = request.GetType();
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
@@ -328,7 +328,12 @@ internal sealed class MessageBus : IBus
 	/// <returns>通道名称。</returns>
 	private static string GetChannel<TMessage>(ExtendableOptions options)
 	{
-		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel<TMessage>() : options.Channel;
+		return GetChannel(typeof(TMessage), options);
+	}
+
+	private static string GetChannel(Type messageType, ExtendableOptions options)
+	{
+		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel(messageType) : options.Channel;
 		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");
 	}
 }

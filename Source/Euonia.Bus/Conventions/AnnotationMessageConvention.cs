@@ -22,17 +22,9 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsUnicast(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		if (type == null)
-		{
-			var registration = ChannelRegistrar.Get(channel)
-			                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
-			type = registration.MessageType;
-		}
+		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
 
-		{
-		}
-
-		return type.GetCustomAttribute<UnicastAttribute>(false) != null;
+		return type?.GetCustomAttribute<UnicastAttribute>(false) != null;
 	}
 
 	/// <summary>
@@ -45,16 +37,8 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsMulticast(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		if (type == null)
-		{
-			var registration = ChannelRegistrar.Get(channel)
-			                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
-			type = registration.MessageType;
-		}
-
-		{
-		}
-		return type.GetCustomAttribute<MulticastAttribute>(false) != null;
+		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
+		return type?.GetCustomAttribute<MulticastAttribute>(false) != null;
 	}
 
 	/// <summary>
@@ -67,15 +51,7 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsRequest(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		if (type == null)
-		{
-			var registration = ChannelRegistrar.Get(channel)
-			                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
-			type = registration.MessageType;
-		}
-
-		{
-		}
-		return type.GetCustomAttribute<RequestAttribute>(false) != null;
+		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
+		return type?.GetCustomAttribute<RequestAttribute>(false) != null;
 	}
 }

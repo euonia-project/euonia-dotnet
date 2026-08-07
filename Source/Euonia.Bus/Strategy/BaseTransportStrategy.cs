@@ -30,13 +30,14 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// 使用缓存来优化重复的评估。
 	/// </summary>
 	/// <param name="channel">要评估的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果有任意策略允许该通道传出，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool Outgoing(string channel)
+	public bool Outgoing(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
-		return _outgoingCache.Apply(channel, key =>
+		return _outgoingCache.Apply(channel, type, (key, t) =>
 		{
-			return _strategies.Any(strategy => strategy.Outgoing(key));
+			return _strategies.Any(strategy => strategy.Outgoing(key, t));
 		});
 	}
 
@@ -45,13 +46,14 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// 使用缓存来优化重复的评估。
 	/// </summary>
 	/// <param name="channel">要评估的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果有任意策略允许该通道传入，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool Incoming(string channel)
+	public bool Incoming(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
-		return _incomingCache.Apply(channel, key =>
+		return _incomingCache.Apply(channel, type, (key, t) =>
 		{
-			return _strategies.Any(strategy => strategy.Incoming(key));
+			return _strategies.Any(strategy => strategy.Incoming(key, t));
 		});
 	}
 
@@ -75,7 +77,7 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// </summary>
 	/// <param name="strategy">用于评估传入通道的函数。</param>
 	/// <exception cref="ArgumentNullException">当策略函数为 <c>null</c> 时抛出。</exception>
-	internal void DefineIncomingStrategy(Func<string, bool> strategy)
+	internal void DefineIncomingStrategy(Func<string, Type, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 
@@ -87,7 +89,7 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// </summary>
 	/// <param name="strategy">用于评估传出通道的函数。</param>
 	/// <exception cref="ArgumentNullException">当策略函数为 <c>null</c> 时抛出。</exception>
-	internal void DefineOutgoingStrategy(Func<string, bool> strategy)
+	internal void DefineOutgoingStrategy(Func<string, Type, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 
@@ -114,11 +116,12 @@ public class BaseTransportStrategy : ITransportStrategy
 		/// 将指定的策略应用到给定的通道上，并缓存结果。
 		/// </summary>
 		/// <param name="channel">要评估的通道名称。</param>
+		/// <param name="type">要检查的消息类型。</param>
 		/// <param name="strategy">要应用的策略函数。</param>
 		/// <returns>缓存或新计算出的策略结果。</returns>
-		public bool Apply(string channel, Func<string, bool> strategy)
+		public bool Apply(string channel, Type type, Func<string, Type, bool> strategy)
 		{
-			return _cache.GetOrAdd(channel, strategy);
+			return _cache.GetOrAdd(channel, key => strategy(key, type));
 		}
 
 		/// <summary>

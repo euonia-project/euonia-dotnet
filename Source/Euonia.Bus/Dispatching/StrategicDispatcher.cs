@@ -42,7 +42,7 @@ internal class StrategicDispatcher : IDispatcher
 			foreach (var transport in _configurator.StrategyAssignedTypes)
 			{
 				var strategy = _configurator.GetStrategy(transport);
-				if (strategy.Outgoing(channel))
+				if (strategy.Outgoing(channel, type))
 				{
 					list.Add(transport);
 				}

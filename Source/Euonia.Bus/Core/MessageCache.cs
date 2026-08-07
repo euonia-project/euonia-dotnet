@@ -54,7 +54,7 @@ internal class MessageCache
 			{
 				queue.Enqueue(() => name, 1);
 				queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 2);
-				queue.Enqueue(() => messageType.IsSubclassOf(typeof(ITransportable)) ? messageType.FullName : null, 3);
+				queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 3);
 				queue.Enqueue(() =>
 				{
 					var attributes = messageType.GetCustomAttributes(false);

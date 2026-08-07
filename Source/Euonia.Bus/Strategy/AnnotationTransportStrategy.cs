@@ -31,15 +31,15 @@ public class AnnotationTransportStrategy : ITransportStrategy
 	/// 通过检查消息类型是否标记了 <see cref="DispatchInAttribute"/> 特性，且其传输名称与所需传输名称有交集来判断。
 	/// </summary>
 	/// <param name="channel">要检查的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果通道允许传出，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool Outgoing(string channel)
+	public bool Outgoing(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
 
-		var registration = ChannelRegistrar.Get(channel)
-		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
 
-		var attribute = registration.MessageType.GetCustomAttribute<DispatchInAttribute>();
+		var attribute = type?.GetCustomAttribute<DispatchInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}
@@ -49,15 +49,15 @@ public class AnnotationTransportStrategy : ITransportStrategy
 	/// 通过检查消息类型是否标记了 <see cref="ReceiveInAttribute"/> 特性，且其传输名称与所需传输名称有交集来判断。
 	/// </summary>
 	/// <param name="channel">要检查的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>如果通道允许传入，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool Incoming(string channel)
+	public bool Incoming(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
 
-		var registration = ChannelRegistrar.Get(channel)
-		                                   .GetOrThrow(() => new ChannelNotRegisterException(channel));
+		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
 
-		var attribute = registration.MessageType.GetCustomAttribute<ReceiveInAttribute>();
+		var attribute = type?.GetCustomAttribute<ReceiveInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}

@@ -17,7 +17,7 @@ public class DefaultTransportStrategyBuilder : ITransportStrategyBuilder
 	/// </summary>
 	/// <param name="strategy">用于评估传出通道的策略函数。</param>
 	/// <returns>返回当前的 <see cref="ITransportStrategyBuilder"/> 实例，以便进行链式调用。</returns>
-	public ITransportStrategyBuilder EvaluateOutgoing(Func<string, bool> strategy)
+	public ITransportStrategyBuilder EvaluateOutgoing(Func<string, Type, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 
@@ -30,7 +30,7 @@ public class DefaultTransportStrategyBuilder : ITransportStrategyBuilder
 	/// </summary>
 	/// <param name="strategy">用于评估传入通道的策略函数。</param>
 	/// <returns>返回当前的 <see cref="ITransportStrategyBuilder"/> 实例，以便进行链式调用。</returns>
-	public ITransportStrategyBuilder EvaluateIncoming(Func<string, bool> strategy)
+	public ITransportStrategyBuilder EvaluateIncoming(Func<string, Type, bool> strategy)
 	{
 		ArgumentNullException.ThrowIfNull(strategy);
 

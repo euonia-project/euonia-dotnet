@@ -36,6 +36,10 @@ public class RecipientActivator : BackgroundService
 	/// <returns>表示所有接收器注册操作并行执行的任务。</returns>
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
+		var builder = _provider.GetService<ConfiguratorBuilder>();
+
+		builder?.Invoke(_configurator);
+
 		var registrations = _configurator.Registrations;
 
 		var registrars = _provider.GetServices<IRecipientRegistrar>();

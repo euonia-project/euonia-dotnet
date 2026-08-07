@@ -14,27 +14,37 @@ internal sealed class ChannelRegistrar
 {
 	private readonly ConcurrentDictionary<string, ChannelRegistration> _registrations = new();
 
-	private ChannelRegistrar()
+	private readonly Action<string, Type, ChannelHandler> _registerAction;
+
+	public ChannelRegistrar()
 	{
 	}
+
+	public ChannelRegistrar(Action<string, Type, ChannelHandler> registerAction)
+		: this()
+	{
+		_registerAction = registerAction;
+	}
+
+	public ChannelRegistration this[string channel] => _registrations.GetValueOrDefault(channel);
 
 	/// <summary>
 	/// 获取 <see cref="ChannelRegistrar"/> 的单例实例。
 	/// </summary>
-	public static ChannelRegistrar Instance => Singleton<ChannelRegistrar>.Get(() => new ChannelRegistrar());
+	//public static ChannelRegistrar Instance => Singleton<ChannelRegistrar>.Get(() => new ChannelRegistrar());
 
 	/// <summary>
 	/// 获取已注册的通道处理器列表。
 	/// </summary>
 	/// <returns>返回已注册的通道处理器列表</returns>
-	public static IDictionary<string, ChannelRegistration> Registrations => Instance._registrations.AsReadOnly();
+	public IDictionary<string, ChannelRegistration> Registrations => _registrations.AsReadOnly();
 
 	/// <summary>
 	/// 获取指定通道的注册信息。
 	/// </summary>
 	/// <param name="channel">通道名称</param>
 	/// <returns>返回指定通道的注册信息，如果通道未注册则返回空的 <see cref="Optional{T}"/></returns>
-	public static Optional<ChannelRegistration> Get(string channel)
+	public Optional<ChannelRegistration> Get(string channel)
 	{
 		var value = Registrations.TryGetValue(channel, out var registration) ? registration : null;
 		return Optional<ChannelRegistration>.OfNullable(value);
@@ -49,7 +59,7 @@ internal sealed class ChannelRegistrar
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/> 或 <paramref name="handler"/> 为 <c>null</c> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当指定的通道已注册时抛出。</exception>
-	public ChannelRegistrar Register(string channel, Type messageType, ChannelHandler handler)
+	public void Register(string channel, Type messageType, ChannelHandler handler)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 		ArgumentNullException.ThrowIfNull(handler);
@@ -61,7 +71,7 @@ internal sealed class ChannelRegistrar
 		}
 
 		registration.AddHandler(handler);
-		return this;
+		_registerAction?.Invoke(channel, messageType, handler);
 	}
 
 	/// <summary>
@@ -75,20 +85,18 @@ internal sealed class ChannelRegistrar
 	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/> 或 <paramref name="handlerType"/> 为 <c>null</c> 时抛出。</exception>
 	/// <exception cref="ArgumentException">当 <paramref name="methodName"/> 为 <c>null</c> 或空白时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当指定的通道已注册时抛出。</exception>
-	public ChannelRegistrar Register(string channel, Type messageType, Type handlerType, string methodName)
+	public void Register(string channel, Type messageType, Type handlerType, string methodName)
 	{
-		ArgumentNullException.ThrowIfNull(channel);
 		ArgumentNullException.ThrowIfNull(handlerType);
-		ArgumentException.ThrowIfNullOrWhiteSpace(methodName);
-
-		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType != messageType)
+		var method = PriorityValueFinder.Find<MethodInfo>(queue =>
 		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
-		}
+			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType, typeof(IMessageContent), typeof(CancellationToken)]), 1);
+			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType, typeof(IMessageContent)]), 2);
+			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType, typeof(CancellationToken)]), 3);
+			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType]), 4);
+		}, value => value != null);
 
-		registration.AddHandler(handlerType, methodName);
-		return this;
+		Register(channel, messageType, handlerType, method);
 	}
 
 	/// <summary>
@@ -101,20 +109,13 @@ internal sealed class ChannelRegistrar
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="channel"/>、<paramref name="handlerType"/> 或 <paramref name="method"/> 为 <c>null</c> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当指定的通道已注册时抛出。</exception>
-	public ChannelRegistrar Register(string channel, Type messageType, Type handlerType, MethodInfo method)
+	public void Register(string channel, Type messageType, Type handlerType, MethodInfo method)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 		ArgumentNullException.ThrowIfNull(handlerType);
 		ArgumentNullException.ThrowIfNull(method);
 
-		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType != messageType)
-		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
-		}
-
-		registration.AddHandler(new ChannelHandler(handlerType, method));
-		return this;
+		Register(channel, messageType, new ChannelHandler(handlerType, method));
 	}
 
 	/// <summary>
@@ -123,12 +124,11 @@ internal sealed class ChannelRegistrar
 	/// <param name="types">要扫描的类型数组。</param>
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="types"/> 为 <c>null</c> 时抛出。</exception>
-	public ChannelRegistrar Registrar(params Type[] types)
+	public void Register(params Type[] types)
 	{
 		ArgumentNullException.ThrowIfNull(types);
 
-		MessageHandlerFinder.Find((c, m, h) => Register(c, m, h), types);
-		return this;
+		MessageHandlerFinder.Find(Register, types);
 	}
 
 	/// <summary>
@@ -137,12 +137,11 @@ internal sealed class ChannelRegistrar
 	/// <param name="types">要扫描的类型集合。</param>
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="types"/> 为 <c>null</c> 时抛出。</exception>
-	public ChannelRegistrar Register(IEnumerable<Type> types)
+	public void Register(IEnumerable<Type> types)
 	{
 		ArgumentNullException.ThrowIfNull(types);
 
-		MessageHandlerFinder.Find((c, m, h) => Register(c, m, h), types);
-		return this;
+		MessageHandlerFinder.Find(Register, types);
 	}
 
 	/// <summary>
@@ -151,12 +150,11 @@ internal sealed class ChannelRegistrar
 	/// <param name="assemblies">要扫描的程序集数组。</param>
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="assemblies"/> 为 <c>null</c> 时抛出。</exception>
-	public ChannelRegistrar Register(params Assembly[] assemblies)
+	public void Register(params Assembly[] assemblies)
 	{
 		ArgumentNullException.ThrowIfNull(assemblies);
 
-		MessageHandlerFinder.Find((c, m, h) => Register(c, m, h), assemblies);
-		return this;
+		MessageHandlerFinder.Find(Register, assemblies);
 	}
 
 	/// <summary>
@@ -168,17 +166,10 @@ internal sealed class ChannelRegistrar
 	/// <param name="channel">通道名称。</param>
 	/// <param name="handler">处理消息的委托，接收消息和消息上下文，返回处理结果。</param>
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
-	public ChannelRegistrar Register<TMessage, TResult>(string channel, Func<TMessage, IMessageContext, Task<TResult>> handler)
+	public void Register<TMessage, TResult>(string channel, Func<TMessage, IMessageContext, Task<TResult>> handler)
 	{
-		try
-		{
-			var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<TMessage, TResult>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
-			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage, TResult>), method, new LambdaHandler<TMessage, TResult>(handler)));
-		}
-		catch (Exception)
-		{
-			return this;
-		}
+		var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<,>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+		Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage, TResult>), method, new LambdaHandler<TMessage, TResult>(handler)));
 	}
 
 	/// <summary>
@@ -189,16 +180,9 @@ internal sealed class ChannelRegistrar
 	/// <param name="channel">通道名称。</param>
 	/// <param name="handler">处理消息的委托，接收消息和消息上下文。</param>
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
-	public ChannelRegistrar Register<TMessage>(string channel, Func<TMessage, IMessageContext, Task> handler)
+	public void Register<TMessage>(string channel, Func<TMessage, IMessageContext, Task> handler)
 	{
-		try
-		{
-			var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<TMessage>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
-			return Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage>), method, new LambdaHandler<TMessage>(handler)));
-		}
-		catch (Exception)
-		{
-			return this;
-		}
+		var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+		Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage>), method, new LambdaHandler<TMessage>(handler)));
 	}
 }

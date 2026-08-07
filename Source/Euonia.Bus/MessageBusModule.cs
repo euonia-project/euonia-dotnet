@@ -15,8 +15,8 @@ public class MessageBusModule : ModuleContextBase
 	public override void AheadConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.AddOptions<MessageBusOptions>()
-						.BindConfiguration(Constants.ConfigurationSection)
-						.Validate(_ => true);
+		       .BindConfiguration(Constants.ConfigurationSection)
+		       .Validate(_ => true);
 	}
 
 	/// <summary>
@@ -34,5 +34,8 @@ public class MessageBusModule : ModuleContextBase
 	/// <param name="context">应用初始化上下文。</param>
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
 	{
+		// var configurator = context.ServiceProvider.GetService<IConfigurator>();
+		// var builder = context.ServiceProvider.GetService<ConfiguratorBuilder>();
+		// builder?.Invoke(configurator);
 	}
 }

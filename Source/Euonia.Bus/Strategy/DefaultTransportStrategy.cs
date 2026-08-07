@@ -16,8 +16,9 @@ internal class DefaultTransportStrategy : ITransportStrategy
 	/// 此实现始终返回 <c>false</c>。
 	/// </summary>
 	/// <param name="channel">要检查的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>始终返回 <c>false</c>，表示不允许传出操作。</returns>
-	public bool Outgoing(string channel)
+	public bool Outgoing(string channel, Type type)
 	{
 		return false;
 	}
@@ -27,8 +28,9 @@ internal class DefaultTransportStrategy : ITransportStrategy
 	/// 此实现始终返回 <c>false</c>。
 	/// </summary>
 	/// <param name="channel">要检查的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
 	/// <returns>始终返回 <c>false</c>，表示不允许传入操作。</returns>
-	public bool Incoming(string channel)
+	public bool Incoming(string channel, Type type)
 	{
 		return false;
 	}
