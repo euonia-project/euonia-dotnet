@@ -75,7 +75,7 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 		{
 			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
 			{
-				if (_strategy == null || !_strategy.Incoming(channel))
+				if (_strategy == null || !_strategy.Incoming(channel, registration.MessageType))
 				{
 					continue;
 				}

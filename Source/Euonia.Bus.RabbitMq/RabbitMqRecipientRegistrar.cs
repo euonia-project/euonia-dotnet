@@ -62,7 +62,7 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 	///   请求 -> <c>RabbitMqQueueConsumer</c>；
 	/// - 在注册的通道上启动接收器。
 	/// </summary>
-	/// <param name="registrations">待注册的 <see cref="MessageRegistration"/> 实例集合。</param>
+	/// <param name="registrations">待注册的 <see cref="ChannelRegistration"/> 实例集合。</param>
 	/// <param name="defaultTransporter">默认传输器名称；用于决定是否应用传输策略。</param>
 	/// <param name="cancellationToken">用于取消注册过程的令牌。</param>
 	/// <returns>表示异步注册操作的任务。</returns>
@@ -74,7 +74,7 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
 			{
 				// 检查策略是否允许对该消息类型进行入站处理
-				if (_strategy != null && !_strategy.Incoming(channel))
+				if (_strategy != null && !_strategy.Incoming(channel, registration.MessageType))
 				{
 					return;
 				}
