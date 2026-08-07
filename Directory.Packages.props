@@ -70,6 +70,7 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsPackageVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Http" Version="$(ExtensionsPackageVersion)" />
