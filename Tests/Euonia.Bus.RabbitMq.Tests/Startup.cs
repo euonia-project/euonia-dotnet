@@ -36,34 +36,63 @@ public class Startup
 	public void ConfigureServices(IServiceCollection services, HostBuilderContext hostBuilderContext)
 	{
 		var preventUnitTest = hostBuilderContext.Configuration.GetValue<bool>("PreventRunTests");
-		if (!preventUnitTest)
+		if (preventUnitTest)
 		{
-			services.AddEuoniaBus(config =>
+			return;
+		}
+
+		// services.AddEuoniaBus(config =>
+		// {
+		// 	config.RegisterChannel(Assembly.GetExecutingAssembly());
+		// 	config.SetConvention(builder =>
+		// 	{
+		// 		builder.Add<DefaultMessageConvention>();
+		// 		builder.Add<AnnotationMessageConvention>();
+		// 		builder.EvaluateUnicast((c, t) => c.EndsWith("Command"));
+		// 		builder.EvaluateMulticast((c, t) => c.EndsWith("Event"));
+		// 		builder.EvaluateRequest((c, t) => c.EndsWith("Request"));
+		// 	});
+		// 	config.SetStrategy("RabbitMq", builder =>
+		// 	{
+		// 		builder.EvaluateOutgoing(e => true);
+		// 		builder.EvaluateIncoming(e => true);
+		// 	});
+		// 	// config.UseRabbitMq(options =>
+		// 	// {
+		// 	// 	options.Connection = "amqp://127.0.0.1";
+		// 	// 	options.QueueName = "nerosoft.euonia.test.command";
+		// 	// 	options.TopicName = "nerosoft.euonia.test.event";
+		// 	// 	options.ExchangeName = $"nerosoft.euonia.test.exchange.{options.ExchangeType}";
+		// 	// 	options.RoutingKey = "*";
+		// 	// });
+		// });
+		services.AddMessageHandler(ServiceLifetime.Transient, Assembly.GetExecutingAssembly());
+		services.AddEuoniaBus();
+
+		services.AddSingleton<ConfiguratorBuilder>(_ =>
+		{
+			void Action(IConfigurator config)
 			{
 				config.RegisterChannel(Assembly.GetExecutingAssembly());
 				config.SetConvention(builder =>
-				{
-					builder.Add<DefaultMessageConvention>();
-					builder.Add<AnnotationMessageConvention>();
-					builder.EvaluateUnicast((c, t) => c.EndsWith("Command"));
-					builder.EvaluateMulticast((c, t) => c.EndsWith("Event"));
-					builder.EvaluateRequest((c, t) => c.EndsWith("Request"));
-				});
-				config.SetStrategy("RabbitMq", builder =>
-				{
-					builder.EvaluateOutgoing(e => true);
-					builder.EvaluateIncoming(e => true);
-				});
-				// config.UseRabbitMq(options =>
-				// {
-				// 	options.Connection = "amqp://127.0.0.1";
-				// 	options.QueueName = "nerosoft.euonia.test.command";
-				// 	options.TopicName = "nerosoft.euonia.test.event";
-				// 	options.ExchangeName = $"nerosoft.euonia.test.exchange.{options.ExchangeType}";
-				// 	options.RoutingKey = "*";
-				// });
-			});
-		}
+				      {
+					      builder.Add<DefaultMessageConvention>();
+					      builder.Add<AnnotationMessageConvention>();
+					      builder.EvaluateUnicast((c, t) => c.EndsWith("Command"));
+					      builder.EvaluateMulticast((c, t) => c.EndsWith("Event"));
+					      builder.EvaluateRequest((c, t) => c.EndsWith("Request"));
+				      })
+				      .SetStrategy("RabbitMq", builder =>
+				      {
+					      builder.Add(new AnnotationTransportStrategy(["RabbitMq"]));
+					      builder.EvaluateIncoming((c, t) => c.EndsWith("Command"));
+					      builder.EvaluateOutgoing((c, t) => c.EndsWith("Command"));
+				      })
+					;
+			}
+
+			return Action;
+		});
 	}
 
 	//public void Configure(IServiceProvider applicationServices, IIdGenerator idGenerator)
