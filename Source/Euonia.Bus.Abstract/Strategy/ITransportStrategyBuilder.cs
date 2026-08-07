@@ -13,16 +13,16 @@ public interface ITransportStrategyBuilder
 	/// <summary>
 	/// 定义用于评估消息是否应从当前传输器发送的传出策略。
 	/// </summary>
-	/// <param name="strategy">用于判断消息是否应通过当前传输器发送的断言函数，参数为通道名称。</param>
+	/// <param name="strategy">用于判断消息是否应通过当前传输器发送的断言函数，参数为通道名称和消息类型。</param>
 	/// <returns>返回当前的 <see cref="ITransportStrategyBuilder"/> 实例，以便进行链式调用。</returns>
-	ITransportStrategyBuilder EvaluateOutgoing(Func<string, bool> strategy);
+	ITransportStrategyBuilder EvaluateOutgoing(Func<string, Type, bool> strategy);
 
 	/// <summary>
 	/// 定义用于评估消息是否应由当前传输器接收的传入策略。
 	/// </summary>
-	/// <param name="strategy">用于判断消息是否应由当前传输器接收的断言函数，参数为通道名称。</param>
+	/// <param name="strategy">用于判断消息是否应由当前传输器接收的断言函数，参数为通道名称和消息类型。</param>
 	/// <returns>返回当前的 <see cref="ITransportStrategyBuilder"/> 实例，以便进行链式调用。</returns>
-	ITransportStrategyBuilder EvaluateIncoming(Func<string, bool> strategy);
+	ITransportStrategyBuilder EvaluateIncoming(Func<string, Type, bool> strategy);
 
 	/// <summary>
 	/// 添加一个传输策略实例。
