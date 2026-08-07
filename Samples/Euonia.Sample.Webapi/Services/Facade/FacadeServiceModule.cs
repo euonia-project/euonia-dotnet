@@ -34,7 +34,7 @@ namespace Nerosoft.Euonia.Sample.Facade;
 /// <seealso cref="ModuleContextBase"/>
 [DependsOn(typeof(ApplicationModule), typeof(UnitOfWorkModule))]
 [DependsOn(typeof(PersistServiceModule), typeof(BusinessServiceModule), typeof(DomainServiceModule))]
-[DependsOn(typeof(InMemoryBusModule), typeof(RabbitMqBusModule))]
+[DependsOn(typeof(MessageBusModule), typeof(InMemoryBusModule), typeof(RabbitMqBusModule))]
 public class FacadeServiceModule : ModuleContextBase
 {
 	public override void AheadConfigureServices(ServiceConfigurationContext context)
@@ -47,10 +47,9 @@ public class FacadeServiceModule : ModuleContextBase
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.Register<FacadeServiceContext>();
-
-		context.Services.AddEuoniaBus(config =>
+		context.Services.AddConfiguratorBuilder(config =>
 		{
-			config.RegisterChannel([typeof(FacadeServiceModule).Assembly])
+			config.RegisterChannel(typeof(FacadeServiceModule).Assembly)
 			      .SetConvention(builder =>
 			      {
 				      builder.Add<DefaultMessageConvention>();
@@ -60,8 +59,8 @@ public class FacadeServiceModule : ModuleContextBase
 			      .SetStrategy("InMemory", builder =>
 			      {
 				      builder.Add<LocalMessageTransportStrategy>();
-				      builder.EvaluateIncoming(_ => true);
-				      builder.EvaluateOutgoing(_ => true);
+				      builder.EvaluateIncoming((_, _) => true);
+				      builder.EvaluateOutgoing((_, _) => true);
 			      });
 		});
 	}
