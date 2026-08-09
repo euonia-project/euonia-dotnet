@@ -16,6 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Defines.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\FooCommandHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserCommandHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserRequestHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Requests\UserCountRequest.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)TestNotificationBucket.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ServiceBusTests.cs" />
