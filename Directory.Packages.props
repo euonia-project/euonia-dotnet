@@ -39,7 +39,7 @@
         <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
         <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="$(QuartzVersion)" />
         <PackageVersion Include="Quartz.Extensions.Hosting" Version="$(QuartzVersion)" />
-        <PackageVersion Include="RabbitMQ.Client" Version="7.2.1" />
+        <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
         <PackageVersion Include="Refit" Version="6.3.2" />
         <PackageVersion Include="Refit.HttpClientFactory" Version="6.3.2" />
         <PackageVersion Include="Refit.Newtonsoft.Json" Version="6.3.2" />
@@ -47,7 +47,7 @@
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageVersion Include="StackExchange.Redis" Version="3.1.3" />
+        <PackageVersion Include="StackExchange.Redis" Version="3.1.13" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
         <PackageVersion Include="System.Collections.Immutable" Version="10.0.10" />
         <PackageVersion Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
@@ -70,7 +70,7 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsPackageVersion)" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="$(ExtensionsPackageVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.8.0" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Http" Version="$(ExtensionsPackageVersion)" />
@@ -95,8 +95,8 @@
         <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="[$(EntityFrameworkCoreVersionPrevious),$(EntityFrameworkCoreVersionCurrent))" />
-        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="[$(EntityFrameworkCoreVersionPrevious),$(EntityFrameworkCoreVersionCurrent))" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.Sqlite" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
+        <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Tools" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

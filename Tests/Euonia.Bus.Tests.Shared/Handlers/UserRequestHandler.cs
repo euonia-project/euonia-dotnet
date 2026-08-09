@@ -1,11 +1,12 @@
 using Nerosoft.Euonia.Bus.Tests.Requests;
 
-namespace Nerosoft.Euonia.Bus.Tests.Handlers;
-
-public class UserRequestHandler : IHandler<UserCountRequest, int>
+namespace Nerosoft.Euonia.Bus.Tests.Handlers
 {
-	public async Task<int> HandleAsync(UserCountRequest message, IMessageContext context, CancellationToken cancellationToken = default)
+	public class UserRequestHandler : IHandler<UserCountRequest, int>
 	{
-		return 0;
+		public async Task<int> HandleAsync(UserCountRequest message, IMessageContext context, CancellationToken cancellationToken = default)
+		{
+			return 0;
+		}
 	}
 }

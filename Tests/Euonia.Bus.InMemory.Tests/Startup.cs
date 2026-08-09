@@ -4,8 +4,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
-using Nerosoft.Euonia.Bus.Tests.Commands;
-using Nerosoft.Euonia.Bus.Tests.Handlers;
 using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Bus.Tests;
