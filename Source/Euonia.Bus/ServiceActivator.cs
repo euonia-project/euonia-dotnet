@@ -8,19 +8,19 @@ namespace Nerosoft.Euonia.Bus;
 /// 用于激活消息接收器的后台服务。
 /// 在应用程序启动时，通过所有已注册的 <see cref="IRecipientRegistrar"/> 实例启动各传输器的消息接收器。
 /// </summary>
-public class RecipientActivator : BackgroundService
+public class ServiceActivator : BackgroundService
 {
 	private readonly IServiceProvider _provider;
 	private readonly string _defaultTransporter;
 	private readonly IConfigurator _configurator;
 
 	/// <summary>
-	/// 初始化 <see cref="RecipientActivator"/> 类的新实例。
+	/// 初始化 <see cref="ServiceActivator"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析 <see cref="IRecipientRegistrar"/> 实例的服务提供程序。</param>
 	/// <param name="configurator">消息总线配置器，提供消息注册信息和默认传输器。</param>
 	/// <param name="configuration">应用程序配置，用于读取 "Euonia:Bus:DefaultTransport" 配置项。</param>
-	public RecipientActivator(IServiceProvider provider, IConfigurator configurator, IConfiguration configuration)
+	public ServiceActivator(IServiceProvider provider, IConfigurator configurator, IConfiguration configuration)
 	{
 		_provider = provider;
 		_configurator = configurator;

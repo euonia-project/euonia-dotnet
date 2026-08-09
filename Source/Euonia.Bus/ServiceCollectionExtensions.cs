@@ -15,7 +15,7 @@ public static class ServiceCollectionExtensions
 		/// <summary>
 		/// 向服务集合添加消息总线。
 		/// 注册消息总线核心服务，包括配置器（<see cref="IConfigurator"/>）、处理器上下文（<see cref="IHandlerContext"/>）、
-		/// 总线（<see cref="IBus"/>）、分发器（<see cref="IDispatcher"/>）以及接收器激活后台服务（<see cref="RecipientActivator"/>），
+		/// 总线（<see cref="IBus"/>）、分发器（<see cref="IDispatcher"/>）以及接收器激活后台服务（<see cref="ServiceActivator"/>），
 		/// 并启用管道支持。
 		/// </summary>
 		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
@@ -29,7 +29,7 @@ public static class ServiceCollectionExtensions
 			services.TryAddActivatedSingleton<IHandlerContext, DefaultHandlerContext>();
 			services.TryAddSingleton<IBus, MessageBus>();
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
-			services.AddHostedService<RecipientActivator>();
+			services.AddHostedService<ServiceActivator>();
 
 			return services;
 		}
