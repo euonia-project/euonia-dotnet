@@ -1,22 +1,23 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents an attribute that specifies the transports in which messages are dispatched.
+/// 指定消息通过哪些传输器进行分发的特性。
+/// 将此特性应用于消息类型以限定该消息只能通过指定的传输器进行发送或发布。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
-public class DispatchInAttribute : Attribute
+public sealed class DispatchInAttribute : Attribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="DispatchInAttribute"/> class.
+	/// 初始化 <see cref="DispatchInAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="transports"></param>
+	/// <param name="transports">用于分发消息的传输器名称数组。</param>
 	public DispatchInAttribute(params string[] transports)
 	{
 		Transports = transports;
 	}
 
 	/// <summary>
-	/// Gets the name of transports that dispatch messagess.
+	/// 获取用于分发消息的传输器名称集合。
 	/// </summary>
 	public IEnumerable<string> Transports { get; }
 }

@@ -3,52 +3,60 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Interface IMessageContext
+/// 定义消息上下文的接口，提供消息处理过程中所需的元数据和身份信息。
 /// </summary>
 public interface IMessageContext : IDisposable
 {
 	/// <summary>
-	/// Gets or sets the message data.
+	/// 获取或设置消息的唯一标识符。
 	/// </summary>
-	object Message { get; }
+	string MessageId { get; }
 
 	/// <summary>
-	/// Gets or sets the message unique identifier.
+	/// 获取或设置关联标识符。
 	/// </summary>
-	string MessageId { get; set; }
+	string CorrelationId { get; }
 
 	/// <summary>
-	/// Gets or sets the correlation identifier.
+	/// 获取或设置会话标识符。
 	/// </summary>
-	string CorrelationId { get; set; }
+	string ConversationId { get; }
 
 	/// <summary>
-	/// Gets or sets the conversation identifier.
+	/// 获取或设置请求追踪标识符。
 	/// </summary>
-	string ConversationId { get; set; }
+	string RequestTraceId { get; }
 
 	/// <summary>
-	/// Gets or sets the request trace identifier.
+	/// 获取或设置授权信息。
 	/// </summary>
-	string RequestTraceId { get; set; }
+	string Authorization { get; }
 
 	/// <summary>
-	/// Gets or sets the authorization.
-	/// </summary>
-	string Authorization { get; set; }
-
-	/// <summary>
-	/// Gets the current user.
+	/// 获取当前用户。
 	/// </summary>
 	IPrincipal User { get; }
 
 	/// <summary>
-	/// Gets the message request headers.
+	/// 获取消息请求头。
 	/// </summary>
 	IReadOnlyDictionary<string, string> Headers { get; }
 
 	/// <summary>
-	/// Gets or sets a <see cref="MessageMetadata"/> instance that contains the metadata information of the message.
+	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
-	MessageMetadata Metadata { get; set; }
+	MessageMetadata Metadata { get; }
+
+	/// <summary>
+	/// 向消息分发器回复消息处理结果。
+	/// </summary>
+	/// <typeparam name="TMessage">消息的类型。</typeparam>
+	/// <param name="message">要回复的消息。</param>
+	void Response<TMessage>(TMessage message);
+
+	/// <summary>
+	/// 在消息处理失败后调用。
+	/// </summary>
+	/// <param name="exception">处理过程中发生的异常。</param>
+	void Failure(Exception exception);
 }

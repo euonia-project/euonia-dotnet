@@ -1,22 +1,25 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Represents the decorator for the request.
+/// 表示标记的类是请求消息
 /// </summary>
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public class RequestAttribute : Attribute
+/// <remarks>
+/// 此Attribute用于标记消息类为请求消息，表示该消息期望收到一个响应。使用此特性可以在消息总线中实现请求-响应通信模式，允许发送方发送请求消息并接收相应的响应。
+/// </remarks>
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
+public sealed class RequestAttribute : TransportableAttribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RequestAttribute"/> class.
+	/// 初始化 <see cref="RequestAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="responseType"></param>
+	/// <param name="responseType">请求所期望的响应类型。</param>
 	public RequestAttribute(Type responseType)
 	{
 		ResponseType = responseType;
 	}
 
 	/// <summary>
-	/// Gets the response type for the request.
+	/// 获取请求所期望的响应类型。
 	/// </summary>
 	public Type ResponseType { get; }
 }

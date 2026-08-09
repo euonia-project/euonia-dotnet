@@ -1,90 +1,83 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The message serializer interface.
+/// 消息序列化器接口。
+/// 定义消息对象的序列化与反序列化约定，以及消息信封的反序列化能力。
 /// </summary>
 public interface IMessageSerializer
 {
 	/// <summary>
-	/// 
+	/// 将对象异步序列化为 UTF-8 字节数组。
 	/// </summary>
-	/// <param name="message"></param>
-	/// <param name="cancellationToken"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	Task<byte[]> SerializeAsync<T>(T message, CancellationToken cancellationToken = default);
+	/// <typeparam name="T">要序列化的对象类型。</typeparam>
+	/// <param name="source">要序列化的对象。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>序列化后的 UTF-8 字节数组。</returns>
+	Task<byte[]> SerializeAsync<T>(T source, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Asynchronously reads a JSON value from the provided <see cref="Stream"/> and converts it to an instance of a type specified by a generic parameter.
+	/// 从流中异步反序列化为指定类型的对象。
 	/// </summary>
-	/// <param name="stream">The JSON data to parse.</param>
-	/// <param name="cancellationToken"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	Task<T> DeserializeAsync<T>(Stream stream, CancellationToken cancellationToken = default);
+	/// <typeparam name="T">目标反序列化类型。</typeparam>
+	/// <param name="source">包含 JSON 数据的流。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>反序列化后的对象。</returns>
+	Task<T> DeserializeAsync<T>(Stream source, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Asynchronously reads a JSON value from the provided <see cref="byte"/> array and converts it to an instance of a type specified by a generic parameter.
+	/// 从字节数组中异步反序列化为指定类型的对象。
 	/// </summary>
-	/// <param name="bytes"></param>
-	/// <param name="cancellationToken"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	Task<T> DeserializeAsync<T>(byte[] bytes, CancellationToken cancellationToken = default);
+	/// <typeparam name="T">目标反序列化类型。</typeparam>
+	/// <param name="source">包含 JSON 数据的字节数组。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>反序列化后的对象。</returns>
+	Task<T> DeserializeAsync<T>(byte[] source, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Deserializes the specified bytes.
+	/// 将指定类型的消息对象序列化为字符串。
 	/// </summary>
-	/// <param name="bytes"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	T Deserialize<T>(byte[] bytes);
+	/// <typeparam name="T">消息的类型。</typeparam>
+	/// <param name="source">要序列化的消息实例。</param>
+	/// <returns>序列化后的 JSON 字符串。</returns>
+	string Serialize<T>(T source);
 
 	/// <summary>
-	/// Deserializes json text to the specified type.
+	/// 从字节数组中同步反序列化为指定类型的对象。
 	/// </summary>
-	/// <param name="json"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	T Deserialize<T>(string json);
+	/// <typeparam name="T">目标反序列化类型。</typeparam>
+	/// <param name="source">包含 JSON 数据的字节数组。</param>
+	/// <returns>反序列化后的对象。</returns>
+	T Deserialize<T>(byte[] source);
 
 	/// <summary>
-	/// Deserializes the specified stream to the specified type.
+	/// 从流中同步反序列化为指定类型的对象。
 	/// </summary>
-	/// <param name="stream"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	T Deserialize<T>(Stream stream);
+	/// <typeparam name="T">目标反序列化类型。</typeparam>
+	/// <param name="source">包含 JSON 数据的流。</param>
+	/// <returns>反序列化后的对象。</returns>
+	T Deserialize<T>(Stream source);
 
 	/// <summary>
-	/// Serializes the specified object to a JSON string.
+	/// 将字符串反序列化为指定类型的消息对象。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	string Serialize<T>(T obj);
+	/// <typeparam name="T">目标消息类型。</typeparam>
+	/// <param name="source">要反序列化的字符串。</param>
+	/// <returns>反序列化后的消息对象。</returns>
+	T Deserialize<T>(string source);
 
 	/// <summary>
-	/// Serializes the specified object to a JSON byte array.
+	/// 从 JSON 字符串中同步反序列化为指定运行时类型的对象。
 	/// </summary>
-	/// <param name="obj"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
-	byte[] SerializeToByteArray<T>(T obj);
+	/// <param name="source">JSON 字符串。</param>
+	/// <param name="type">目标反序列化的运行时类型。</param>
+	/// <returns>反序列化后的对象。</returns>
+	object Deserialize(string source, Type type);
 
 	/// <summary>
-	/// Deserializes the json bytes to the specified type.
+	/// 将字符串反序列化为消息信封。
 	/// </summary>
-	/// <param name="bytes"></param>
-	/// <param name="type"></param>
-	/// <returns></returns>
-	object Deserialize(byte[] bytes, Type type) => Deserialize(Encoding.UTF8.GetString(bytes), type);
-
-	/// <summary>
-	/// Deserializes the json text to the specified type.
-	/// </summary>
-	/// <param name="json"></param>
-	/// <param name="type"></param>
-	/// <returns></returns>
-	object Deserialize(string json, Type type);
+	/// <param name="source">包含信封数据的字符串。</param>
+	/// <param name="payloadType">信封中负载的类型。</param>
+	/// <returns>反序列化后的 <see cref="IMessageEnvelope"/> 实例。</returns>
+	IMessageEnvelope DeserializeEnvelope(string source, Type payloadType);
 }

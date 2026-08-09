@@ -1,35 +1,35 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The abstract implement of <see cref="IHandler{TMessage}" />.
-/// Implements the <see cref="IHandler{TMessage}" />
+/// <see cref="IHandler{TMessage}" /> 的抽象实现。
 /// </summary>
-/// <typeparam name="TMessage">The type of the message to be handled.</typeparam>
+/// <typeparam name="TMessage">要处理的消息类型。</typeparam>
 /// <seealso cref="IHandler{TMessage}" />
 public abstract class HandlerBase<TMessage> : IHandler<TMessage>
 	where TMessage : class
 {
 	/// <summary>
-	/// Determines whether this instance can handle the specified message type.
+	/// 判断当前实例能否处理指定的消息类型。
 	/// </summary>
-	/// <param name="messageType">Type of the message.</param>
-	/// <returns><c>true</c> if this instance can handle the specified message type; otherwise, <c>false</c>.</returns>
+	/// <param name="messageType">要检查的消息类型。</param>
+	/// <returns>如果可以处理指定消息类型，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public virtual bool CanHandle(Type messageType)
 	{
 		return typeof(TMessage) == messageType;
 	}
 
-	Task IHandler<TMessage>.HandleAsync(TMessage message, MessageContext context, CancellationToken cancellationToken)
+	/// <inheritdoc />
+	Task IHandler<TMessage>.HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken)
 	{
 		return HandleAsync(message, context, cancellationToken);
 	}
 
 	/// <summary>
-	/// Handles the asynchronous.
+	/// 异步处理指定的消息。
 	/// </summary>
-	/// <param name="message">The message.</param>
-	/// <param name="messageContext">The message context.</param>
-	/// <param name="cancellationToken">The cancellation token.</param>
-	/// <returns></returns>
-	public abstract Task<Unit> HandleAsync(TMessage message, MessageContext messageContext, CancellationToken cancellationToken = default);
+	/// <param name="message">要处理的消息实例。</param>
+	/// <param name="messageContext">消息上下文，包含处理状态与结果。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步处理操作的任务，包含处理结果 <see cref="Unit" /> 实例。</returns>
+	public abstract Task<Unit> HandleAsync(TMessage message, IMessageContext messageContext, CancellationToken cancellationToken = default);
 }

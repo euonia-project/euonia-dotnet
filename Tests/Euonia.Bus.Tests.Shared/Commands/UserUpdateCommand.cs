@@ -1,6 +1,6 @@
 ﻿namespace Nerosoft.Euonia.Bus.Tests.Commands;
 
-[Command]
+[Unicast]
 public class UserUpdateCommand
 {
 }

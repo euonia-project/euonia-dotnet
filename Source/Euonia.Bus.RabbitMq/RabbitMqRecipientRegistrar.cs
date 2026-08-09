@@ -5,103 +5,104 @@ using Microsoft.Extensions.Options;
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
-/// The RabbitMQ recipient registrar.
-/// Responsible for creating and starting RabbitMQ recipients (queue consumers or topic subscribers)
-/// based on message registration metadata and the configured message conventions and transport strategy.
+/// RabbitMQ 接收器注册器。
+/// 负责根据消息注册元数据以及已配置的消息约定和传输策略，
+/// 创建并启动 RabbitMQ 接收器（队列消费者或主题订阅者）。
 /// </summary>
 public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 {
-    /// <summary>
-    /// The message naming and classification convention used to determine unicast/multicast/request types.
-    /// </summary>
-    private readonly IMessageConvention _convention;
+	/// <summary>
+	/// 用于判断单播/多播/请求类型的消息命名与分类约定。
+	/// </summary>
+	private readonly IMessageConvention _convention;
 
-    /// <summary>
-    /// The service provider used to resolve recipient implementations and other services.
-    /// </summary>
-    private readonly IServiceProvider _provider;
+	/// <summary>
+	/// 用于解析接收器实现及其他服务的服务提供程序。
+	/// </summary>
+	private readonly IServiceProvider _provider;
 
-    /// <summary>
-    /// The transport strategy that can enable/disable incoming handling for specific message types.
-    /// </summary>
-    private readonly ITransportStrategy _strategy;
+	/// <summary>
+	/// 可以对特定消息类型启用/禁用入站处理的传输策略。
+	/// </summary>
+	private readonly ITransportStrategy _strategy;
 
-    /// <summary>
-    /// The RabbitMQ bus options for the current registrar instance (includes the transport name).
-    /// </summary>
-    private readonly RabbitMqBusOptions _options;
+	/// <summary>
+	/// 当前注册器实例的 RabbitMQ 总线选项（含传输器名称）。
+	/// </summary>
+	private readonly RabbitMqBusOptions _options;
 
-    /// <summary>
-    /// Logger instance for this registrar.
-    /// </summary>
-    private readonly ILogger<RabbitMqRecipientRegistrar> _logger;
+	/// <summary>
+	/// 当前注册器的日志记录器实例。
+	/// </summary>
+	private readonly ILogger<RabbitMqRecipientRegistrar> _logger;
 
-    /// <summary>
-    /// Initialize a new instance of <see cref="RabbitMqRecipientRegistrar"/>.
-    /// </summary>
-    /// <param name="configurator">The message bus configurator that provides conventions and strategy resolution.</param>
-    /// <param name="provider">The service provider used to create recipients and resolve dependencies.</param>
-    /// <param name="options">The configured <see cref="RabbitMqBusOptions"/> wrapped in <see cref="IOptions{T}"/>.</param>
-    /// <param name="logger">The logger factory used to create a typed logger for this registrar.</param>
-    public RabbitMqRecipientRegistrar(IMessageBusOptions configurator, IServiceProvider provider, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
-    {
-        _convention = configurator.Convention;
-        _provider = provider;
-        _options = options.Value;
-        _strategy = configurator.GetStrategy(_options.Name);
-        _logger = logger.CreateLogger<RabbitMqRecipientRegistrar>();
-    }
+	/// <summary>
+	/// 初始化 <see cref="RabbitMqRecipientRegistrar"/> 的新实例。
+	/// </summary>
+	/// <param name="configurator">提供约定与策略解析的消息总线配置器。</param>
+	/// <param name="provider">用于创建接收器并解析依赖项的服务提供程序。</param>
+	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的已配置 <see cref="RabbitMqBusOptions"/>。</param>
+	/// <param name="logger">用于创建当前注册器类型化日志记录器的日志工厂。</param>
+	public RabbitMqRecipientRegistrar(IConfigurator configurator, IServiceProvider provider, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
+	{
+		_convention = configurator.Convention;
+		_provider = provider;
+		_options = options.Value;
+		_strategy = configurator.GetStrategy(_options.Name);
+		_logger = logger.CreateLogger<RabbitMqRecipientRegistrar>();
+	}
 
-    /// <summary>
-    /// Register message recipients for the provided message registrations and start them.
-    /// For each registration this method:
-    /// - Verifies transport strategy allows incoming handling (when the default transport differs).
-    /// - Resolves the appropriate recipient implementation based on message convention:
-    ///   unicast -> <c>RabbitMqQueueConsumer</c>,
-    ///   multicast -> <c>RabbitMqTopicSubscriber</c>,
-    ///   request -> <c>RabbitMqQueueConsumer</c>.
-    /// - Starts the recipient on the registration's channel.
-    /// </summary>
-    /// <param name="registrations">A collection of <see cref="MessageRegistration"/> instances to register.</param>
-    /// <param name="defaultTransport">The name of the default transport; used to decide whether to apply the transport strategy.</param>
-    /// <param name="cancellationToken">Token used to cancel the registration process.</param>
-    /// <returns>A task that represents the asynchronous registration operation.</returns>
-    /// <exception cref="MessageTypeException">Thrown when a message type does not match queue/topic/request conventions.</exception>
-    public async Task RegisterAsync(IEnumerable<MessageRegistration> registrations, string defaultTransport, CancellationToken cancellationToken = default)
-    {
-        foreach (var registration in registrations)
-        {
-            if (!string.Equals(defaultTransport, _options.Name, StringComparison.CurrentCultureIgnoreCase))
-            {
-                // Check if the strategy allows incoming handling for the message type
-                if (_strategy != null && !_strategy.Incoming(registration.MessageType))
-                {
-                    return;
-                }
-            }
+	/// <summary>
+	/// 为提供的消息注册信息注册消息接收器并启动它们。
+	/// 对每个注册项，本方法：
+	/// - 验证传输策略是否允许入站处理（当默认传输器不同时）；
+	/// - 根据消息约定解析合适的接收器实现：
+	///   单播 -> <c>RabbitMqQueueConsumer</c>，
+	///   多播 -> <c>RabbitMqTopicSubscriber</c>，
+	///   请求 -> <c>RabbitMqQueueConsumer</c>；
+	/// - 在注册的通道上启动接收器。
+	/// </summary>
+	/// <param name="registrations">待注册的 <see cref="ChannelRegistration"/> 实例集合。</param>
+	/// <param name="defaultTransporter">默认传输器名称；用于决定是否应用传输策略。</param>
+	/// <param name="cancellationToken">用于取消注册过程的令牌。</param>
+	/// <returns>表示异步注册操作的任务。</returns>
+	/// <exception cref="MessageTypeException">当消息类型不匹配队列/主题/请求约定时抛出。</exception>
+	public async Task RegisterAsync(IDictionary<string, ChannelRegistration> registrations, string defaultTransporter, CancellationToken cancellationToken = default)
+	{
+		foreach (var (channel, registration) in registrations)
+		{
+			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
+			{
+				// 检查策略是否允许对该消息类型进行入站处理
+				if (_strategy != null && !_strategy.Incoming(channel, registration.MessageType))
+				{
+					return;
+				}
+			}
 
-            RabbitMqQueueRecipient recipient;
-            if (_convention.IsUnicastType(registration.MessageType))
-            {
-                recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqQueueConsumer>(_provider);
-                _logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, registration.Channel);
-            }
-            else if (_convention.IsMulticastType(registration.MessageType))
-            {
-                recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqTopicSubscriber>(_provider);
-                _logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, registration.Channel);
-            }
-            else if (_convention.IsRequestType(registration.MessageType))
-            {
-                recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqQueueConsumer>(_provider);
-                _logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as request type on channel {Channel}", registration.MessageType.FullName, registration.Channel);
-            }
-            else
-            {
-                throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.");
-            }
+			RabbitMqRecipient recipient;
+			if (_convention.IsUnicast(channel, registration.MessageType))
+			{
+				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqConsumer>(_provider);
+				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, channel);
+			}
+			else if (_convention.IsMulticast(channel, registration.MessageType))
+			{
+				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqSubscriber>(_provider);
+				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, channel);
+			}
+			else if (_convention.IsRequest(channel, registration.MessageType))
+			{
+				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqExecutor>(_provider);
+				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as request type on channel {Channel}", registration.MessageType.FullName, channel);
+			}
+			else
+			{
+				throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.");
+			}
 
-            await recipient.StartAsync(registration.Channel);
-        }
-    }
+			recipient.MessageType = registration.MessageType;
+			await recipient.StartAsync(channel);
+		}
+	}
 }

@@ -1,17 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// 
+/// 直接返回消息数据流本身的转换器，适用于以流方式传递消息的场景。
 /// </summary>
 public class StreamMessageDataConverter : IMessageDataConverter<Stream>
 {
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="stream"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
-	public Task<Stream> Convert(Stream stream, CancellationToken cancellationToken)
+	/// <inheritdoc/>
+	public Task<Stream> ConvertAsync(Stream stream, CancellationToken cancellationToken)
 	{
 		return Task.FromResult(stream);
 	}
