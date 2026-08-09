@@ -22,5 +22,12 @@ jobs:
       run: dotnet build Euonia.Build.slnx --no-restore --configuration Release
     - name: Pack
       run: dotnet pack Euonia.Build.slnx -c Release -o artifacts/ 
+    - name: Check NUGET_API secret
+      run: |
+        if [ -z "${{ secrets.NUGET_API }}" ]; then
+          echo "Error: NUGET_API secret is not set. Create repository secret named NUGET_API with your NuGet API key."
+          exit 1
+        fi
+
     - name: Publish NuGet
-      run: dotnet nuget push artifacts/*.nupkg --api-key ${{secrets.NUGET_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
+      run: dotnet nuget push artifacts/*.nupkg --api-key ${{secrets.NUGET_API}} --source https://api.nuget.org/v3/index.json --skip-duplicate
