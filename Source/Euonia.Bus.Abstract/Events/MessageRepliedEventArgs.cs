@@ -1,24 +1,23 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Class MessageRepliedEventArgs.
-/// Implements the <see cref="EventArgs" />
+/// 消息被回复时触发的事件参数。
 /// </summary>
 /// <seealso cref="EventArgs" />
 public class MessageRepliedEventArgs : EventArgs
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="MessageRepliedEventArgs"/> class.
+    /// 初始化 <see cref="MessageRepliedEventArgs"/> 类的新实例。
     /// </summary>
-    /// <param name="result">The result.</param>
+    /// <param name="result">回复的结果。</param>
     public MessageRepliedEventArgs(object result)
     {
         Result = result;
     }
 
     /// <summary>
-    /// Gets the result.
+    /// 获取回复的结果。
     /// </summary>
-    /// <value>The result.</value>
+    /// <value>回复的结果。</value>
     public object Result { get; }
 }

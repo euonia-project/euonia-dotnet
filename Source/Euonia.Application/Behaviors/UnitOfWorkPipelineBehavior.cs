@@ -6,40 +6,42 @@ using Nerosoft.Euonia.Uow;
 namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Pipeline behavior that creates an <see cref="IServiceScope"/> and a unit of work for each message.
+/// 为每个消息创建 <see cref="IServiceScope"/> 和工作单元的管道行为。
 /// </summary>
-/// <typeparam name="TMessage">The routed message type handled by the pipeline.</typeparam>
-/// <typeparam name="TResponse">The response type produced by the pipeline.</typeparam>
+/// <typeparam name="TMessage">由管道处理的路由消息类型。</typeparam>
+/// <typeparam name="TResponse">管道返回的响应类型。</typeparam>
 /// <remarks>
-/// For each invocation the behavior:
-///  - creates a scoped dependency injection scope,
-///  - resolves <see cref="IUnitOfWorkManager"/>,
-///  - begins a unit of work (non-transactional),
-///  - invokes the next pipeline delegate,
-///  - completes the unit of work and disposes scope and unit of work.
+/// 每次调用时，该行为将：
+/// <list type="bullet">
+/// <item>创建作用域化的依赖注入作用域，</item>
+/// <item>解析 <see cref="IUnitOfWorkManager"/>，</item>
+/// <item>开启一个工作单元（非事务性），</item>
+/// <item>调用下一个管道委托，</item>
+/// <item>完成工作单元并释放作用域和工作单元。</item>
+/// </list>
 /// </remarks>
 public class UnitOfWorkPipelineBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
-	where TMessage : class, IRoutedMessage
+	where TMessage : class, IMessageEnvelope
 {
 	private readonly IServiceScopeFactory _factory;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UnitOfWorkPipelineBehavior{TMessage, TResponse}"/> class.
+	/// 初始化 <see cref="UnitOfWorkPipelineBehavior{TMessage, TResponse}"/> 类的新实例。
 	/// </summary>
-	/// <param name="factory">The service scope factory used to create a scoped <see cref="IServiceProvider"/> for each message.</param>
+	/// <param name="factory">用于为每个消息创建作用域化 <see cref="IServiceProvider"/> 的服务作用域工厂。</param>
 	public UnitOfWorkPipelineBehavior(IServiceScopeFactory factory)
 	{
 		_factory = factory;
 	}
 
 	/// <summary>
-	/// Handles the pipeline invocation by creating a scope and unit of work, invoking the next delegate, and completing the unit of work.
+	/// 通过创建作用域和工作单元、调用下一个委托并完成工作单元来处理管道调用。
 	/// </summary>
-	/// <param name="context">The routed message being processed.</param>
-	/// <param name="next">The next pipeline delegate to invoke.</param>
+	/// <param name="context">正在处理的路由消息。</param>
+	/// <param name="next">下一个要调用的管道委托。</param>
 	/// <returns>
-	/// A <see cref="Task{TResult}"/> that completes with the response produced by the pipeline.
-	/// The unit of work is completed before the task returns.
+	/// 一个 <see cref="Task{TResult}"/>，在管道产生的响应中完成。
+	/// 工作单元在任务返回之前完成。
 	/// </returns>
 	public async Task<TResponse> HandleAsync(TMessage context, PipelineDelegate<TMessage, TResponse> next)
 	{

@@ -1,18 +1,17 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Class MessageProcessedEventArgs.
-/// Implements the <see cref="EventArgs" />
+/// 消息被处理时触发的事件参数基类。
 /// </summary>
 /// <seealso cref="EventArgs" />
 public class MessageProcessedEventArgs : EventArgs
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageProcessedEventArgs"/> class.
+	/// 初始化 <see cref="MessageProcessedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="message">The message.</param>
-	/// <param name="context">The message context.</param>
-	/// <param name="processType">Type of the process.</param>
+	/// <param name="message">被处理的消息实例。</param>
+	/// <param name="context">消息上下文，包含消息的处理状态与结果。</param>
+	/// <param name="processType">消息的处理类型。</param>
 	public MessageProcessedEventArgs(object message, IMessageContext context, MessageProcessType processType)
 	{
 		Message = message;
@@ -21,20 +20,20 @@ public class MessageProcessedEventArgs : EventArgs
 	}
 
 	/// <summary>
-	/// Gets the message.
+	/// 获取被处理的消息实例。
 	/// </summary>
-	/// <value>The message.</value>
+	/// <value>被处理的消息实例。</value>
 	public object Message { get; }
 
 	/// <summary>
-	/// Gets the message id.
+	/// 获取消息上下文，包含消息的处理状态与结果。
 	/// </summary>
-	/// <value>The message id.</value>
+	/// <value>消息上下文。</value>
 	public IMessageContext Context { get; }
 
 	/// <summary>
-	/// Gets the type of the process.
+	/// 获取消息的处理类型。
 	/// </summary>
-	/// <value>The type of the process.</value>
+	/// <value>消息的处理类型。</value>
 	public MessageProcessType ProcessType { get; }
 }

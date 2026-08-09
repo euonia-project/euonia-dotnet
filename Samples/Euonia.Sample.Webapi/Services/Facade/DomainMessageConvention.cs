@@ -16,13 +16,14 @@ namespace Nerosoft.Euonia.Sample.Facade;
 internal class DomainMessageConvention : IMessageConvention
 {
 	/// <summary>
-	/// Determines whether the specified <paramref name="type"/> represents a command message type.
+	/// Determines whether the specified <paramref name="channel"/> represents a command message type.
 	/// </summary>
-	/// <param name="type">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
+	/// <param name="channel">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
+	/// <param name="type"></param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="type"/> is assignable to <see cref="ICommand"/>; otherwise <see langword="false"/>.
+	/// <see langword="true"/> if <paramref name="channel"/> is assignable to <see cref="ICommand"/>; otherwise <see langword="false"/>.
 	/// </returns>
-	public bool IsUnicastType(Type type)
+	public bool IsUnicast(string channel, Type type)
 	{
 		return type.IsAssignableTo(typeof(ICommand));
 	}
@@ -30,23 +31,25 @@ internal class DomainMessageConvention : IMessageConvention
 	/// <summary>
 	/// Determines whether the specified <paramref name="type"/> represents an event message type.
 	/// </summary>
+	/// <param name="channel">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
 	/// <param name="type">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="type"/> is assignable to <see cref="IEvent"/>; otherwise <see langword="false"/>.
+	/// <see langword="true"/> if <paramref name="channel"/> is assignable to <see cref="IEvent"/>; otherwise <see langword="false"/>.
 	/// </returns>
-	public bool IsMulticastType(Type type)
+	public bool IsMulticast(string channel, Type type)
 	{
 		return type.IsAssignableTo(typeof(IEvent));
 	}
 
 	/// <summary>
-	/// Determines whether the specified <paramref name="type"/> represents a request message type.
+	/// Determines whether the specified <paramref name="channel"/> represents a request message type.
 	/// </summary>
+	/// <param name="channel">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
 	/// <param name="type">The CLR <see cref="Type"/> to evaluate. Must not be <see langword="null"/>.</param>
 	/// <returns>
-	/// <see langword="true"/> if <paramref name="type"/> is assignable to the generic interface <c>IRequest{TResponse}</c>; otherwise <see langword="false"/>.
+	/// <see langword="true"/> if <paramref name="channel"/> is assignable to the generic interface <c>IRequest{TResponse}</c>; otherwise <see langword="false"/>.
 	/// </returns>
-	public bool IsRequestType(Type type)
+	public bool IsRequest(string channel, Type type)
 	{
 		return type.IsAssignableToGeneric(typeof(IRequest<>));
 	}

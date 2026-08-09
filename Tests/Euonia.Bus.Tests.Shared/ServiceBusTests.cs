@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Bus.Tests.Commands;
+using Nerosoft.Euonia.Bus.Tests.Requests;
 
 namespace Nerosoft.Euonia.Bus.Tests;
 
@@ -27,30 +28,30 @@ public class ServiceBusTests
 		}
 		else
 		{
-			await Task.Delay(1000);
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
 			var subject = new Subject<int>();
 			subject.Subscribe(result =>
 			{
 				ArgumentOutOfRangeException.ThrowIfNegative(result);
 				Assert.Equal(1, result);
 			});
-			await _bus.SendAsync(new UserCreateCommand(), subject, null);
+			await _bus.SendAsync(new UserCreateCommand(), subject, TestContext.Current.CancellationToken);
 		}
 	}
 
-	// [Fact]
-	// public async Task TestSendCommand_NoResponse()
-	// {
-	// 	if (_preventRunTests)
-	// 	{
-	// 		Assert.True(true);
-	// 	}
-	// 	else
-	// 	{
-	// 		await _provider.GetService<IBus>().SendAsync(new UserCreateCommand());
-	// 		Assert.True(true);
-	// 	}
-	// }
+	[Fact]
+	public async Task TestSendCommand_NoResponse()
+	{
+		if (_preventRunTests)
+		{
+			Assert.True(true);
+		}
+		else
+		{
+			await _provider.GetService<IBus>().SendAsync(new UserUpdateCommand(), TestContext.Current.CancellationToken);
+			Assert.True(true);
+		}
+	}
 
 	[Fact]
 	public async Task TestSendCommand_HasResponse_UseSubscribeAttribute()
@@ -61,14 +62,14 @@ public class ServiceBusTests
 		}
 		else
 		{
-			await Task.Delay(1000);
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
 			var subject = new Subject<int>();
 			subject.Subscribe(result =>
 			{
 				ArgumentOutOfRangeException.ThrowIfNegative(result);
 				Assert.Equal(1, result);
 			});
-			await _bus.SendAsync(new FooCreateCommand(), subject, null, new SendOptions { Channel = "foo.create" });
+			await _bus.SendAsync(new FooCreateCommand(), subject, new SendOptions { Channel = "foo.create" }, TestContext.Current.CancellationToken);
 		}
 	}
 
@@ -81,8 +82,8 @@ public class ServiceBusTests
 		}
 		else
 		{
-			await Task.Delay(1000);
-			var result = await _bus.CallAsync(new FooCreateCommand(), null, new CallOptions { Channel = "foo.create" });
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
+			var result = await _bus.CallAsync(new UserCountRequest(), null, cancellationToken: TestContext.Current.CancellationToken);
 			Assert.Equal(1, result);
 		}
 	}
@@ -96,10 +97,10 @@ public class ServiceBusTests
 		}
 		else
 		{
-			await Task.Delay(1000);
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
 			await Assert.ThrowsAnyAsync<MessageDeliverException>(async () =>
 			{
-				var _ = await _bus.CallAsync(new FooCreateCommand(), null);
+				var _ = await _bus.CallAsync(new UserCountRequest(), new CallOptions { Channel = "user.count" }, cancellationToken: TestContext.Current.CancellationToken);
 			});
 		}
 	}
@@ -113,10 +114,10 @@ public class ServiceBusTests
 		}
 		else
 		{
-			await Task.Delay(1000);
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
 			await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
 			{
-				await _bus.SendAsync(new FooDeleteCommand(), null);
+				await _bus.SendAsync(new FooDeleteCommand(), null, cancellationToken: TestContext.Current.CancellationToken);
 			});
 		}
 	}

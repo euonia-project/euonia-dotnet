@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Pipeline;
 namespace Nerosoft.Euonia.Sample.Facade.Behaviors;
 
 internal class RequestInfoBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
-	where TMessage : class, IRoutedMessage
+	where TMessage : class, IMessageEnvelope
 {
 	public Task<TResponse> HandleAsync(TMessage context, PipelineDelegate<TMessage, TResponse> next)
 	{

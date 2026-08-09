@@ -1,54 +1,48 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Contract of message handler.
+/// 定义处理特定类型消息并返回响应的协定。
 /// </summary>
-public interface IHandler
+/// <typeparam name="TMessage">消息的类型。</typeparam>
+/// <typeparam name="TResult">响应的类型。</typeparam>
+public interface IHandler<in TMessage, TResult>
+	where TMessage : class
 {
-	/*
 	/// <summary>
-	/// Determines whether the current message handler can handle the message with the specified message type.
+	/// 处理消息。
 	/// </summary>
-	/// <param name="messageType">Type of the message to be checked.</param>
-	/// <returns><c>true</c> if the current message handler can handle the message with the specified message type; otherwise, <c>false</c>.</returns>
-	bool CanHandle(Type messageType);
-	*/
+	/// <param name="message">消息实例。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>包含响应结果的任务。</returns>
+	Task<TResult> HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
-/// Defines a contract for handling messages of a specific type and returning a response.
+/// 消息处理程序的协定（无返回值）。
 /// </summary>
-/// <typeparam name="TMessage"></typeparam>
-/// <typeparam name="TResponse"></typeparam>
-public interface IHandler<in TMessage, TResponse> : IHandler
-{
-	/// <summary>
-	/// Handle message.
-	/// </summary>
-	/// <param name="message">The message.</param>
-	/// <param name="context">The message context.</param>
-	/// <param name="cancellationToken">The cancellation token.</param>
-	/// <returns></returns>
-	Task<TResponse> HandleAsync(TMessage message, MessageContext context, CancellationToken cancellationToken = default);
-}
-
-/// <summary>
-/// Contract of message handler.
-/// </summary>
-/// <typeparam name="TMessage">The type of the t message.</typeparam>
+/// <typeparam name="TMessage">消息的类型。</typeparam>
 public interface IHandler<in TMessage> : IHandler<TMessage, Unit>
 	where TMessage : class
 {
 	/// <summary>
-	/// Handle message.
+	/// 处理消息。
 	/// </summary>
-	/// <param name="message">The message.</param>
-	/// <param name="context">The message context.</param>
-	/// <param name="cancellationToken">The cancellation token.</param>
-	/// <returns></returns>
-	new Task HandleAsync(TMessage message, MessageContext context, CancellationToken cancellationToken = default);
+	/// <param name="message">消息实例。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步操作的任务。</returns>
+	new Task HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken = default);
 
-	Task<Unit> IHandler<TMessage, Unit>.HandleAsync(TMessage message, MessageContext context, CancellationToken cancellationToken)
+	/// <summary>
+	/// 显式实现 <see cref="IHandler{TMessage,Unit}"/> 的 <c>HandleAsync</c> 方法，
+	/// 调用本接口的 <c>HandleAsync</c> 方法并将异步处理结果映射为 <see cref="Unit"/>。
+	/// </summary>
+	/// <param name="message">消息实例。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步操作的任务，完成后的结果为 <see cref="Unit.Value"/>。</returns>
+	Task<Unit> IHandler<TMessage, Unit>.HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken)
 	{
 		return HandleAsync(message, context, cancellationToken).ContinueWith(_ => Unit.Value, cancellationToken);
 	}

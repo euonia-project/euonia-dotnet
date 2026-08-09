@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Enum MessageProcessType
+/// 定义消息处理类型的枚举。
 /// </summary>
 public enum MessageProcessType
 {
     /// <summary>
-    /// The send
+    /// 发送。
     /// </summary>
     Send,
 
     /// <summary>
-    /// The dispatch
+    /// 投递。
     /// </summary>
     Dispatch,
 
     /// <summary>
-    /// The receive
+    /// 接收。
     /// </summary>
     Receive
 }

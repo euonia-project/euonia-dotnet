@@ -9,15 +9,15 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 
 internal class UserRequestHandler(IUserRepository repository)
 	: IHandler<UserDetailQueryRequest, UserDetailDto>,
-	IHandler<UserListQueryRequest>
+	  IHandler<UserListQueryRequest>
 {
-	public async Task<UserDetailDto> HandleAsync(UserDetailQueryRequest message, MessageContext context, CancellationToken cancellationToken = default)
+	public async Task<UserDetailDto> HandleAsync(UserDetailQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var entity = await repository.GetAsync(message.Id, false, cancellationToken);
 		return TypeAdapter.ProjectedAs<UserDetailDto>(entity);
 	}
 
-	public Task HandleAsync(UserListQueryRequest message, MessageContext context, CancellationToken cancellationToken = default)
+	public Task HandleAsync(UserListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var specification = UserSpecification.All;
 
@@ -29,10 +29,10 @@ internal class UserRequestHandler(IUserRepository repository)
 		var predicate = specification.Satisfy();
 
 		return repository.FindAsync(predicate, [], message.Skip, message.Take, cancellationToken)
-			.ContinueWith(task =>
-			{
-				var dtos = TypeAdapter.ProjectedAs<List<UserListDto>>(task.Result);
-				context.Response(dtos);
-			}, cancellationToken);
+		                 .ContinueWith(task =>
+		                 {
+			                 var dtos = TypeAdapter.ProjectedAs<List<UserListDto>>(task.Result);
+			                 context.Response(dtos);
+		                 }, cancellationToken);
 	}
 }

@@ -62,7 +62,7 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 				};
 				foreach (var @event in events)
 				{
-					await _bus.PublishAsync(@event, null, options, null, cancellationToken);
+					await _bus.PublishAsync(@event, options, null, cancellationToken);
 				}
 			}
 		}
@@ -148,9 +148,9 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	{
 		base.ConfigureConventions(configurationBuilder);
 		configurationBuilder.Properties<DateTime>()
-							.HaveConversion<UniversalTimeConverter>();
+		                    .HaveConversion<UniversalTimeConverter>();
 		configurationBuilder.Properties<DateTime?>()
-							.HaveConversion<UniversalTimeConverter>();
+		                    .HaveConversion<UniversalTimeConverter>();
 	}
 
 	private List<DomainEvent> GetTrackedEvents()

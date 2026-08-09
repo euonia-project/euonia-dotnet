@@ -1,26 +1,26 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Occurs when message was handled.
+/// 当消息处理完成时触发的事件参数。
 /// </summary>
 public class MessageHandledEventArgs : EventArgs
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MessageHandledEventArgs"/> class.
+	/// 初始化 <see cref="MessageHandledEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="message"></param>
-	public MessageHandledEventArgs(object message)
+	/// <param name="messageId">已完成处理的消息标识符。</param>
+	public MessageHandledEventArgs(string messageId)
 	{
-		Message = message;
+		MessageId = messageId;
 	}
 
 	/// <summary>
-	/// Gets the handle message.
+	/// 获取已完成处理的消息标识符。
 	/// </summary>
-	public object Message { get; }
+	public string MessageId { get; }
 
 	/// <summary>
-	/// Gets the handler type.
+	/// 获取处理程序的类型。
 	/// </summary>
 	public Type HandlerType { get; internal set; }
 }

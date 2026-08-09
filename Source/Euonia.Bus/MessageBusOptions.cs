@@ -1,44 +1,25 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Configuration options for the message bus.
+/// 消息总线的配置选项。
 /// </summary>
-public class MessageBusOptions : IMessageBusOptions
+public class MessageBusOptions
 {
-	private readonly BusConfigurator _configurator = Singleton<BusConfigurator>.Instance;
+	/// <summary>
+	/// 获取或设置默认传输器的名称，可用于消息路由和分类。
+	/// </summary>
+	/// <remarks>
+	/// 当消息类型未通过传输策略分配特定传输器时，将使用此默认传输器。
+	/// <para>此选项通过<c>Euonia:Bus:DefaultTransporter</c>节点进行配置。</para>
+	/// </remarks>
+	/// <value>默认传输器的名称。</value>
+	public string DefaultTransporter { get; set; }
 
 	/// <summary>
-	/// Gets the name of the default transport that will be used when no specific transport is assigned to a message type by strategy.
+	/// 获取或设置需要自动加载的程序集名称列表。
 	/// </summary>
-	/// <value>
-	/// The default transport name.
-	/// </value>
-	public string DefaultTransport { get; set; }
-
-	/// <summary>
-	/// Indicates whether to enable pipeline behaviors for message processing.
-	/// </summary>
-	public bool EnablePipelineBehaviors { get; set; } = true;
-	
-	/// <summary>
-	/// Gets the message convention used for naming and discovering messages and handlers.
-	/// </summary>
-	public IMessageConvention Convention => _configurator.ConventionBuilder.Convention;
-
-	/// <summary>
-	/// Gets the list of types for which a transport strategy has been assigned.
-	/// </summary>
-	public IReadOnlyList<string> StrategyAssignedTypes => _configurator.StrategyBuilders.Keys.ToList();
-
-	/// <summary>
-	/// Gets the transport strategy associated with the specified transport name.
-	/// </summary>
-	/// <param name="transport">The name of the transport for which the strategy is to be retrieved.</param>
-	/// <returns>
-	/// An instance of <see cref="ITransportStrategy"/> representing the strategy associated with the specified transport name.
-	/// </returns>
-	public ITransportStrategy GetStrategy(string transport)
-	{
-		return _configurator.StrategyBuilders.GetOrDefault(transport)?.Strategy;
-	}
+	/// <remarks>
+	///	自动加载程序集的名称列表，用于在应用程序启动时扫描并注册消息处理器和传输器。
+	/// </remarks>
+	public string[] AutoLoadAssemblies { get; set; }
 }

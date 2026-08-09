@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Bus.Tests.Handlers;
 public class FooCommandHandler
 {
 	[Subscribe("foo.create")]
-	public Task<int> HandleAsync(FooCreateCommand message, MessageContext messageContext, CancellationToken cancellationToken = default)
+	public Task<int> HandleAsync(FooCreateCommand message, IMessageContext messageContext, CancellationToken cancellationToken = default)
 	{
 		Console.WriteLine("FooCreateCommand handled");
 		//messageContext.Response(1);
@@ -14,7 +14,7 @@ public class FooCommandHandler
 	}
 
 	[Subscribe]
-	public async Task HandleAsync(FooDeleteCommand message, MessageContext messageContext, CancellationToken cancellationToken = default)
+	public async Task HandleAsync(FooDeleteCommand message, IMessageContext messageContext, CancellationToken cancellationToken = default)
 	{
 		throw new NotFoundException();
 	}

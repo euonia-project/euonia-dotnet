@@ -2,21 +2,21 @@
 
 namespace Nerosoft.Euonia.Bus.Tests.Handlers
 {
-	public class UserCommandHandler : IHandler<UserCreateCommand, int>, IHandler<UserUpdateCommand>
+	public class UserCommandHandler : IScopedDependency, IHandler<UserCreateCommand, int>, IHandler<UserUpdateCommand>
 	{
 		public bool CanHandle(Type messageType)
 		{
 			return true;
 		}
 
-		public Task<int> HandleAsync(UserCreateCommand message, MessageContext messageContext, CancellationToken cancellationToken = default)
+		public Task<int> HandleAsync(UserCreateCommand message, IMessageContext messageContext, CancellationToken cancellationToken = default)
 		{
 			Console.WriteLine("UserCreateCommand handled");
 
 			return Task.FromResult(1);
 		}
 
-		public async Task HandleAsync(UserUpdateCommand message, MessageContext messageContext, CancellationToken cancellationToken = default)
+		public async Task HandleAsync(UserUpdateCommand message, IMessageContext messageContext, CancellationToken cancellationToken = default)
 		{
 			Console.WriteLine("UserUpdateCommand handled");
 			await Task.CompletedTask;
