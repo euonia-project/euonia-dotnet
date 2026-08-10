@@ -3,21 +3,19 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents an editable object that supports asynchronous save, update, and delete operations, while managing its
-/// state and validation.
+/// 表示支持异步保存、更新和删除操作，同时管理其状态和验证的可编辑对象。
 /// </summary>
 /// <remarks>
-/// This class implements the ISavable and ISavable{T} interfaces, providing event-based notifications
-/// when the object is saved. It includes extensible methods for creating, updating, and deleting the object, which can
-/// be overridden to customize persistence behavior. Validation is performed before saving, and a ValidationException is
-/// thrown if the object is not valid. Subscribers can handle the Saved event to respond to save completion.</remarks>
-/// <typeparam name="T">The type of the editable object, which must inherit from EditableObject{T}.
-/// </typeparam>
+/// 此类实现 ISavable 和 ISavable{T} 接口，在对象被保存时提供基于事件的通知。
+/// 它包含用于创建、更新和删除对象的可扩展方法，可以重写这些方法以自定义持久化行为。
+/// 保存前会执行验证，如果对象无效则抛出 ValidationException。
+/// 订阅者可以处理 Saved 事件以响应保存完成。</remarks>
+/// <typeparam name="T">可编辑对象的类型，必须继承自 EditableObject{T}。</typeparam>
 public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavable<T>
 	where T : EditableObject<T>
 {
 	/// <summary>
-	/// Event raised when the object has been saved.
+	/// 对象被保存后引发的事件。
 	/// </summary>
 	public event EventHandler<SavedEventArgs> Saved
 	{
@@ -26,11 +24,11 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	}
 
 	/// <summary>
-	/// Called when the object has been saved.
+	/// 当对象已被保存时调用。
 	/// </summary>
-	/// <param name="newObject">The newly saved object instance, or <see langword="null"/> if the save failed.</param>
-	/// <param name="error">The exception that occurred during the save operation, or <see langword="null"/> if successful.</param>
-	/// <param name="userState">Optional user-defined state information associated with the save operation.</param>
+	/// <param name="newObject">新保存的对象实例；如果保存失败则为 <see langword="null"/>。</param>
+	/// <param name="error">保存操作期间发生的异常；如果成功则为 <see langword="null"/>。</param>
+	/// <param name="userState">与保存操作关联的可选用户定义状态信息。</param>
 	protected virtual void OnSaved(T newObject, Exception error, object userState)
 	{
 		var args = new SavedEventArgs(newObject, error, userState);
@@ -38,33 +36,33 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	}
 
 	/// <summary>
-	/// Completes the save operation and raises the <see cref="Saved"/> event with the newly saved object.
+	/// 完成保存操作，并使用新保存的对象引发 <see cref="Saved"/> 事件。
 	/// </summary>
-	/// <param name="newObject">The newly saved object instance.</param>
+	/// <param name="newObject">新保存的对象实例。</param>
 	void ISavable<T>.SaveComplete(T newObject)
 	{
 		OnSaved(newObject, null, null);
 	}
 
 	/// <summary>
-	/// Completes the save operation and raises the <see cref="Saved"/> event with the newly saved object.
+	/// 完成保存操作，并使用新保存的对象引发 <see cref="Saved"/> 事件。
 	/// </summary>
-	/// <param name="newObject">The newly saved object instance.</param>
+	/// <param name="newObject">新保存的对象实例。</param>
 	void ISavable.SaveComplete(object newObject)
 	{
 		OnSaved((T)newObject, null, null);
 	}
 
 	/// <summary>
-	/// Saves the object asynchronously.
+	/// 异步保存对象。
 	/// </summary>
 	/// <param name="forceUpdate">
-	/// If <see langword="true"/>, marks the object as changed even if its state is <see cref="ObjectEditState.None"/>,
-	/// forcing an update operation; otherwise, no operation is performed if the object is unchanged.
+	/// 如果为 <see langword="true"/>，即使对象状态为 <see cref="ObjectEditState.None"/>，也会将对象标记为已更改，
+	/// 强制执行更新操作；否则，如果对象未更改，则不执行任何操作。
 	/// </param>
-	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
 	/// <returns>
-	/// A task that represents the asynchronous save operation. The task result contains the saved object instance.
+	/// 表示异步保存操作的任务。任务结果包含已保存的对象实例。
 	/// </returns>
 	public async Task<T> SaveAsync(bool forceUpdate = false, CancellationToken cancellationToken = default)
 	{
@@ -72,15 +70,15 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	}
 
 	/// <summary>
-	/// Saves the object asynchronously (explicit interface implementation).
+	/// 异步保存对象（显式接口实现）。
 	/// </summary>
 	/// <param name="forceUpdate">
-	/// If <see langword="true"/>, marks the object as changed even if its state is <see cref="ObjectEditState.None"/>,
-	/// forcing an update operation; otherwise, no operation is performed if the object is unchanged.
+	/// 如果为 <see langword="true"/>，即使对象状态为 <see cref="ObjectEditState.None"/>，也会将对象标记为已更改，
+	/// 强制执行更新操作；否则，如果对象未更改，则不执行任何操作。
 	/// </param>
-	/// <param name="cancellationToken">A token to monitor for cancellation requests.</param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
 	/// <returns>
-	/// A task that represents the asynchronous save operation. The task result contains the saved object instance.
+	/// 表示异步保存操作的任务。任务结果包含已保存的对象实例。
 	/// </returns>
 	async Task<object> ISavable.SaveAsync(bool forceUpdate, CancellationToken cancellationToken)
 	{
@@ -88,13 +86,13 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	}
 
 	/// <summary>
-	/// Save the object.
+	/// 保存对象。
 	/// </summary>
-	/// <param name="forceUpdate"></param>
-	/// <param name="userState"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
-	/// <exception cref="ValidationException"></exception>
+	/// <param name="forceUpdate">是否强制将保存作为更新操作执行。</param>
+	/// <param name="userState">与保存操作关联的用户定义状态信息。</param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
+	/// <returns>表示异步保存操作的任务，包含保存后的对象实例。</returns>
+	/// <exception cref="ValidationException">当对象无效且无法保存时抛出。</exception>
 	protected virtual async Task<T> SaveAsync(bool forceUpdate, object userState, CancellationToken cancellationToken = default)
 	{
 		if (State == ObjectEditState.None)
@@ -142,37 +140,40 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	}
 
 	/// <summary>
-	/// Create new editable object.
+	/// 创建新的可编辑对象。
 	/// </summary>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
+	/// <returns>表示异步创建操作的任务。</returns>
 	protected internal virtual Task CreateAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
 	/// <summary>
-	/// Indicates that the object has been saved.
+	/// 指示对象已被保存（插入）。
 	/// </summary>
-	/// <param name="cancellationToken"></param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
+	/// <returns>表示异步插入操作的任务。</returns>
 	protected internal virtual Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
 	/// <summary>
-	/// Update the object.
+	/// 更新对象。
 	/// </summary>
-	/// <param name="cancellationToken"></param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
+	/// <returns>表示异步更新操作的任务。</returns>
 	protected internal virtual Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
 	/// <summary>
-	/// Delete the object.
+	/// 删除对象。
 	/// </summary>
-	/// <param name="cancellationToken"></param>
+	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
 	protected internal virtual Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;

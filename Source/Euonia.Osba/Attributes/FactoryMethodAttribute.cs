@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represent the marked method could be invoked by <see cref="IObjectFactory"/>.
+/// 表示被标记的方法可由 <see cref="IObjectFactory"/> 调用。
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public abstract class FactoryMethodAttribute : Attribute

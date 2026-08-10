@@ -3,14 +3,14 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The read only object.
+/// 只读对象。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">只读对象的具体类型。</typeparam>
 public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperableProperty
 	where T : ReadOnlyObject<T>
 {
 	/// <summary>
-	/// Override the IsBypassingRuleChecks to prevent the PropertyChanged event raise up.
+	/// 重写 IsBypassingRuleChecks 以防止 PropertyChanged 事件被引发。
 	/// </summary>
 	protected override bool IsBypassingRuleChecks
 	{
@@ -20,13 +20,13 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	#region Get Properties
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="defaultValue"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <param name="defaultValue">默认值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -44,61 +44,61 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field)
 	{
 		return GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue);
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="defaultValue"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <param name="defaultValue">默认值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field, TValue defaultValue)
 	{
 		return GetProperty(propertyInfo.Name, field, defaultValue);
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TField field)
 	{
 		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue));
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo)
 	{
 		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo));
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo)
 	{
 		TValue result;
@@ -115,7 +115,7 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 		object result;
 		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
 		{
-			// call ReadProperty (may be overloaded in actual class)
+			// 调用 ReadProperty（可能在实际类中被重载）
 			result = ReadProperty(propertyInfo);
 		}
 		else
@@ -127,11 +127,11 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Gets the value of specified property.
+	/// 获取指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(IPropertyInfo propertyInfo)
 	{
 		return (TValue)GetProperty(propertyInfo);
@@ -142,37 +142,37 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	#region Set Properties
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
 	{
 		SetProperty(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
 	{
 		SetPropertyConvert(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -216,13 +216,13 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -273,12 +273,12 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
@@ -311,11 +311,11 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
@@ -369,11 +369,11 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	}
 
 	/// <summary>
-	/// Sets the value of specified property.
+	/// 设置指定属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected virtual void SetProperty<TValue>(IPropertyInfo propertyInfo, TValue newValue)
 	{
 		SetProperty(propertyInfo, (object)newValue);

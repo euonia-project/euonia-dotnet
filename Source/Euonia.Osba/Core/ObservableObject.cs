@@ -3,45 +3,43 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Provides a base class for business objects that support change tracking, state management, and property
-/// authorization. Enables marking objects as new, changed, or deleted, and manages busy and savable states for editing
-/// workflows.
+/// 为支持更改跟踪、状态管理和属性授权的业务对象提供基类。
+/// 支持将对象标记为新增、已更改或已删除，并管理编辑工作流中的繁忙和可保存状态。
 /// </summary>
-/// <remarks>This class implements interfaces for operable properties and editable objects, allowing for
-/// fine-grained control over object state and property changes. It raises events when the busy status changes and
-/// provides methods to check and update object state. Use this class as a foundation for objects that require tracking
-/// of editing, authorization, and validation in business applications.</remarks>
-/// <typeparam name="T">The type of the derived observable object. Must inherit from ObservableObject{T}.</typeparam>
+/// <remarks>此类实现可操作属性和可编辑对象的接口，允许对对象状态和属性更改进行细粒度控制。
+/// 当繁忙状态改变时引发事件，并提供检查和更新对象状态的方法。
+/// 将此类作为需要跟踪编辑、授权和验证的业务对象的基础。</remarks>
+/// <typeparam name="T">派生可观察对象的类型。必须继承自 ObservableObject{T}。</typeparam>
 public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty, IEditableObject
 	where T : ObservableObject<T>
 {
 	/// <summary>
-	/// Gets the current object state.
+	/// 获取当前的对象状态。
 	/// </summary>
 	public ObjectEditState State { get; private set; } = ObjectEditState.None;
 
 	/// <summary>
-	/// Gets a value indicating whether the object is new.
+	/// 获取一个值，指示对象是否为新增。
 	/// </summary>
 	public bool IsNew => State == ObjectEditState.New;
 
 	/// <summary>
-	/// Gets a value indicating whether the object has changed.
+	/// 获取一个值，指示对象是否已更改。
 	/// </summary>
 	public bool IsChanged => State == ObjectEditState.Changed;
 
 	/// <summary>
-	/// Gets a value indicating whether the object would be deleted.
+	/// 获取一个值，指示对象是否将被删除。
 	/// </summary>
 	public bool IsDeleted => State == ObjectEditState.Deleted;
 
 	/// <summary>
-	/// Gets or sets a value indicating whether to check object rules on delete.
+	/// 获取或设置一个值，指示删除时是否检查对象规则。
 	/// </summary>
 	public bool CheckObjectRulesOnDelete { get; private set; }
 
 	/// <summary>
-	/// Mark the object state as <see cref="ObjectEditState.New"/>.
+	/// 将对象状态标记为 <see cref="ObjectEditState.New"/>。
 	/// </summary>
 	public void MarkAsNew()
 	{
@@ -49,7 +47,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Mark the object state as <see cref="ObjectEditState.Changed"/>.
+	/// 将对象状态标记为 <see cref="ObjectEditState.Changed"/>。
 	/// </summary>
 	public void MarkAsChanged()
 	{
@@ -57,9 +55,9 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Mark the object state as <see cref="ObjectEditState.Deleted"/>.
+	/// 将对象状态标记为 <see cref="ObjectEditState.Deleted"/>。
 	/// </summary>
-	/// <param name="checkObjectRules"></param>
+	/// <param name="checkObjectRules">是否在删除时检查对象规则。</param>
 	public void MarkAsDeleted(bool checkObjectRules = false)
 	{
 		State = ObjectEditState.Deleted;
@@ -67,29 +65,29 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Counter to track busy state.
+	/// 用于跟踪繁忙状态的计数器。
 	/// </summary>
 	private int _isBusyCounter;
 
 	/// <summary>
-	/// Gets a value indicating whether the object is busy.
+	/// 获取一个值，指示对象是否繁忙。
 	/// </summary>
 	public virtual bool IsBusy => IsSelfBusy || (FieldManager != null && FieldManager.IsBusy());
 
 	/// <summary>
-	/// Gets a value indicating whether the object itself is busy.
+	/// 获取一个值，指示对象本身是否繁忙。
 	/// </summary>
 	public virtual bool IsSelfBusy => _isBusyCounter > 0 || Rules.HasRunningRules;
 
 	/// <summary>
-	/// Gets a value indicating whether the object is savable.
+	/// 获取一个值，指示对象是否可保存。
 	/// </summary>
 	public virtual bool IsSavable => IsValid && (HasChangedProperties || IsChanged) && !IsBusy;
 
 	private BusyChangedEventHandler _busyChanged;
 
 	/// <summary>
-	/// Event raised when the busy status changes.
+	/// 当繁忙状态改变时引发的事件。
 	/// </summary>
 	public event BusyChangedEventHandler BusyChanged
 	{
@@ -100,16 +98,16 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Raises the <see cref="BusyChanged"/> event.
+	/// 引发 <see cref="BusyChanged"/> 事件。
 	/// </summary>
-	/// <param name="args"></param>
+	/// <param name="args">事件参数。</param>
 	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
 	{
 		_busyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>
-	/// Marks the object as busy.
+	/// 将对象标记为繁忙。
 	/// </summary>
 	protected virtual void MarkAsBusy()
 	{
@@ -122,7 +120,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Marks the object as idle.
+	/// 将对象标记为空闲。
 	/// </summary>
 	protected virtual void MarkAsIdle()
 	{
@@ -141,13 +139,13 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	#region Get Properties
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="defaultValue"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <param name="defaultValue">默认值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -165,61 +163,61 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field)
 	{
 		return GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue);
 	}
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="defaultValue"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <param name="defaultValue">默认值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field, TValue defaultValue)
 	{
 		return GetProperty(propertyInfo.Name, field, defaultValue);
 	}
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">当前字段值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TField field)
 	{
 		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue));
 	}
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo)
 	{
 		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo));
 	}
 
 	/// <summary>
-	/// Gets a property's value, first checking authorization.
+	/// 获取属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo)
 	{
 		TValue result;
@@ -231,16 +229,16 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Gets value of <see cref="IPropertyInfo"/> property.
+	/// 获取 <see cref="IPropertyInfo"/> 属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <returns>属性值。</returns>
 	public object GetProperty(IPropertyInfo propertyInfo)
 	{
 		object result;
 		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
 		{
-			// call ReadProperty (maybe overloaded in actual class)
+			// 调用 ReadProperty（可能在实际类中被重载）
 			result = ReadProperty(propertyInfo);
 		}
 		else
@@ -252,11 +250,11 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Gets value of <see cref="IPropertyInfo"/> property.
+	/// 获取 <see cref="IPropertyInfo"/> 属性的值。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(IPropertyInfo propertyInfo)
 	{
 		return (TValue)GetProperty(propertyInfo);
@@ -267,37 +265,37 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	#region Set Properties
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
 	{
 		SetProperty(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
 	{
 		SetPropertyConvert(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -348,13 +346,13 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="field"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="field">字段引用。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
@@ -405,12 +403,12 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TField"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TField">字段的类型。</typeparam>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
@@ -443,11 +441,11 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
@@ -480,10 +478,10 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
 	public void SetProperty(IPropertyInfo propertyInfo, object newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
@@ -505,11 +503,11 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// Sets a property's value, first checking authorization.
+	/// 设置属性值，首先检查授权。
 	/// </summary>
-	/// <param name="propertyInfo"></param>
-	/// <param name="newValue"></param>
-	/// <typeparam name="TValue"></typeparam>
+	/// <param name="propertyInfo">属性信息。</param>
+	/// <param name="newValue">新值。</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected virtual void SetProperty<TValue>(IPropertyInfo propertyInfo, TValue newValue)
 	{
 		SetProperty(propertyInfo, (object)newValue);

@@ -1,44 +1,44 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents the event is triggered when an object is saved.
+/// 表示对象被保存时触发的事件。
 /// </summary>
 public class SavedEventArgs : EventArgs
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="SavedEventArgs"/> class.
+	/// 初始化 <see cref="SavedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="newObject"></param>
-    public SavedEventArgs(object newObject)
-    {
-        NewObject = newObject;
-    }
+	/// <param name="newObject">新保存的对象实例。</param>
+	public SavedEventArgs(object newObject)
+	{
+		NewObject = newObject;
+	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="SavedEventArgs"/> class.
+	/// 初始化 <see cref="SavedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="newObject"></param>
-	/// <param name="error"></param>
-	/// <param name="userState"></param>
-    public SavedEventArgs(object newObject, Exception error, object userState)
-        : this(newObject)
-    {
-        Error = error;
-        UserState = userState;
-    }
+	/// <param name="newObject">新保存的对象实例。</param>
+	/// <param name="error">保存操作期间发生的异常；如果成功则为 <c>null</c>。</param>
+	/// <param name="userState">与保存操作关联的用户定义状态信息。</param>
+	public SavedEventArgs(object newObject, Exception error, object userState)
+		: this(newObject)
+	{
+		Error = error;
+		UserState = userState;
+	}
 
 	/// <summary>
-	/// Gets the new object.
+	/// 获取新对象。
 	/// </summary>
-    public object NewObject { get; }
+	public object NewObject { get; }
 
 	/// <summary>
-	/// Gets the error.
+	/// 获取错误。
 	/// </summary>
-    public Exception Error { get; }
+	public Exception Error { get; }
 
 	/// <summary>
-	/// Gets the user state.
+	/// 获取用户状态。
 	/// </summary>
-    public object UserState { get; }
+	public object UserState { get; }
 }

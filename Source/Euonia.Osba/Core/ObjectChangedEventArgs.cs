@@ -4,22 +4,19 @@ using System.ComponentModel;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Provides data for events that are raised when an object or its properties change.
+/// 为对象或其属性更改时引发的事件提供数据。
 /// </summary>
 /// <remarks>
-/// This class consolidates multiple change notification types into a single event argument structure,
-/// supporting property changes, collection changes, and list changes. It is commonly used in
-/// scenarios where complex object graphs need to propagate change notifications up through
-/// parent-child relationships.
+/// 此类将多种更改通知类型整合到单个事件参数结构中，支持属性更改、集合更改和列表更改。
+/// 它通常用于需要将更改通知通过父子关系向上传播的复杂对象图场景。
 /// </remarks>
 public class ObjectChangedEventArgs : EventArgs
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ObjectChangedEventArgs"/> class with the specified
-	/// changed object and property change information.
+	/// 使用指定的更改对象和属性更改信息初始化 <see cref="ObjectChangedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="changedObject">The object that changed.</param>
-	/// <param name="propertyChangedArgs">The <see cref="PropertyChangedEventArgs"/> containing details about the property change.</param>
+	/// <param name="changedObject">发生更改的对象。</param>
+	/// <param name="propertyChangedArgs">包含属性更改详细信息的 <see cref="PropertyChangedEventArgs"/>。</param>
 	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs)
 	{
 		ChangedObject = changedObject;
@@ -27,12 +24,11 @@ public class ObjectChangedEventArgs : EventArgs
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ObjectChangedEventArgs"/> class with the specified
-	/// changed object, property change information, and collection change information.
+	/// 使用指定的更改对象、属性更改信息和集合更改信息初始化 <see cref="ObjectChangedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="changedObject">The object that changed.</param>
-	/// <param name="propertyChangedArgs">The <see cref="PropertyChangedEventArgs"/> containing details about the property change.</param>
-	/// <param name="collectionChangedArgs">The <see cref="NotifyCollectionChangedEventArgs"/> containing details about the collection change.</param>
+	/// <param name="changedObject">发生更改的对象。</param>
+	/// <param name="propertyChangedArgs">包含属性更改详细信息的 <see cref="PropertyChangedEventArgs"/>。</param>
+	/// <param name="collectionChangedArgs">包含集合更改详细信息的 <see cref="NotifyCollectionChangedEventArgs"/>。</param>
 	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs collectionChangedArgs)
 		: this(changedObject, propertyChangedArgs)
 	{
@@ -40,12 +36,11 @@ public class ObjectChangedEventArgs : EventArgs
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ObjectChangedEventArgs"/> class with the specified
-	/// changed object, property change information, and list change information.
+	/// 使用指定的更改对象、属性更改信息和列表更改信息初始化 <see cref="ObjectChangedEventArgs"/> 类的新实例。
 	/// </summary>
-	/// <param name="changedObject">The object that changed.</param>
-	/// <param name="propertyChangedArgs">The <see cref="PropertyChangedEventArgs"/> containing details about the property change.</param>
-	/// <param name="listChangedArgs">The <see cref="ListChangedEventArgs"/> containing details about the list change.</param>
+	/// <param name="changedObject">发生更改的对象。</param>
+	/// <param name="propertyChangedArgs">包含属性更改详细信息的 <see cref="PropertyChangedEventArgs"/>。</param>
+	/// <param name="listChangedArgs">包含列表更改详细信息的 <see cref="ListChangedEventArgs"/>。</param>
 	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, ListChangedEventArgs listChangedArgs)
 		: this(changedObject, propertyChangedArgs)
 	{
@@ -53,37 +48,37 @@ public class ObjectChangedEventArgs : EventArgs
 	}
 
 	/// <summary>
-	/// Gets the object that changed.
+	/// 获取发生更改的对象。
 	/// </summary>
 	/// <value>
-	/// The object instance that triggered the change notification.
+	/// 触发更改通知的对象实例。
 	/// </value>
 	public object ChangedObject { get; }
 
 	/// <summary>
-	/// Gets the property change event arguments.
+	/// 获取属性更改事件参数。
 	/// </summary>
 	/// <value>
-	/// A <see cref="PropertyChangedEventArgs"/> instance containing information about the property that changed,
-	/// or <see langword="null"/> if the change was not property-related.
+	/// 包含已更改属性信息的 <see cref="PropertyChangedEventArgs"/> 实例；
+	/// 如果更改与属性无关，则为 <see langword="null"/>。
 	/// </value>
 	public PropertyChangedEventArgs PropertyChangedArgs { get; }
 
 	/// <summary>
-	/// Gets the collection change event arguments.
+	/// 获取集合更改事件参数。
 	/// </summary>
 	/// <value>
-	/// A <see cref="NotifyCollectionChangedEventArgs"/> instance containing information about the collection change,
-	/// or <see langword="null"/> if the change was not collection-related.
+	/// 包含集合更改信息的 <see cref="NotifyCollectionChangedEventArgs"/> 实例；
+	/// 如果更改与集合无关，则为 <see langword="null"/>。
 	/// </value>
 	public NotifyCollectionChangedEventArgs CollectionChangedArgs { get; }
 
 	/// <summary>
-	/// Gets the list change event arguments.
+	/// 获取列表更改事件参数。
 	/// </summary>
 	/// <value>
-	/// A <see cref="ListChangedEventArgs"/> instance containing information about the list change,
-	/// or <see langword="null"/> if the change was not list-related.
+	/// 包含列表更改信息的 <see cref="ListChangedEventArgs"/> 实例；
+	/// 如果更改与列表无关，则为 <see langword="null"/>。
 	/// </value>
 	public ListChangedEventArgs ListChangedArgs { get; }
 }
