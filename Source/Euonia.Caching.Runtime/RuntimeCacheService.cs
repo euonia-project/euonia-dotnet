@@ -30,9 +30,15 @@ public class RuntimeCacheService : BaseCacheService, ICacheService
 	public bool TryGet<TValue>(string key, out TValue value)
 	{
 		key = RewriteKey(key);
-		var result = GetCacheManager<TValue>().TryGetOrAdd(key, _ => null, out var cache);
-		value = result ? cache.Value : default;
-		return result;
+		var item = GetCacheManager<TValue>().GetCacheItem(key);
+		if (item != null)
+		{
+			value = item.Value;
+			return true;
+		}
+
+		value = default;
+		return false;
 	}
 
 	/// <inheritdoc />
@@ -88,7 +94,8 @@ public class RuntimeCacheService : BaseCacheService, ICacheService
 	/// <inheritdoc />
 	public TValue AddOrUpdate<TValue>(CacheItem<TValue> item)
 	{
-		RewriteKey(item.Key);
+		// 应用键前缀（CacheItem 不可变，通过 WithKey 生成带前缀的新项）
+		item = item.WithKey(RewriteKey(item.Key));
 
 		return GetCacheManager<TValue>().AddOrUpdate(item, _ => item.Value);
 	}
@@ -101,28 +108,33 @@ public class RuntimeCacheService : BaseCacheService, ICacheService
 	}
 
 	/// <inheritdoc />
-	public async Task<Tuple<bool, TValue>> TryGetAsync<TValue>(string key, CancellationToken cancellationToken = default)
+	public Task<Tuple<bool, TValue>> TryGetAsync<TValue>(string key, CancellationToken cancellationToken = default)
 	{
-		return await Task.Run(() =>
-		{
-			key = RewriteKey(key);
-			var result = GetCacheManager<TValue>().TryGetOrAdd(key, _ => null, out var cache);
-			var value = result ? cache.Value : default;
-			return Tuple.Create(result, value);
-		}, cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
+
+		key = RewriteKey(key);
+		var item = GetCacheManager<TValue>().GetCacheItem(key);
+		var value = item != null ? item.Value : default;
+
+		return Task.FromResult(Tuple.Create(item != null, value));
 	}
 
 	/// <inheritdoc />
 	public async Task<TValue> GetOrAddAsync<TValue>(string key, Func<Task<TValue>> factory, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		key = RewriteKey(key);
-		if (TryGet<TValue>(key, out var value))
+		var manager = GetCacheManager<TValue>();
+
+		var existing = manager.GetCacheItem(key);
+		if (existing != null)
 		{
-			return value;
+			return existing.Value;
 		}
 
-		value = await factory();
-		var result = GetCacheManager<TValue>().GetOrAdd(key, _ => GetCacheItem(key, value, timeout));
+		var value = await factory();
+		var result = manager.GetOrAdd(key, _ => GetCacheItem(key, value, timeout));
 		return result.Value;
 	}
 
@@ -136,7 +148,9 @@ public class RuntimeCacheService : BaseCacheService, ICacheService
 	/// <inheritdoc />
 	public async Task<TValue> AddOrUpdateAsync<TValue>(string key, Func<Task<TValue>> factory, TimeSpan? timeout = null, CancellationToken cancellationToken = default)
 	{
-		key = RewriteKey(key);
+		cancellationToken.ThrowIfCancellationRequested();
+
+		// 不要在此处重写键：AddOrUpdate 内部会重写，避免双重前缀
 		var value = await factory();
 		return AddOrUpdate(key, value, timeout);
 	}
@@ -151,6 +165,8 @@ public class RuntimeCacheService : BaseCacheService, ICacheService
 	/// <inheritdoc />
 	public async Task<TValue> AddOrUpdateAsync<TValue>(Func<Task<CacheItem<TValue>>> factory, CancellationToken cancellationToken = default)
 	{
+		cancellationToken.ThrowIfCancellationRequested();
+
 		var item = await factory();
 		return AddOrUpdate(item);
 	}

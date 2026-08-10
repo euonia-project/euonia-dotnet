@@ -5,15 +5,15 @@ using Nerosoft.Euonia.Osba;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for setting up business object related services in an <see cref="IServiceCollection" />.
+/// 用于在 <see cref="IServiceCollection" /> 中设置业务对象相关服务的扩展方法。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Adds business object related services to the specified <see cref="IServiceCollection" />.
+    /// 向指定的 <see cref="IServiceCollection" /> 添加业务对象相关服务。
     /// </summary>
-    /// <param name="services"></param>
-    /// <param name="assemblies"></param>
+    /// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
+    /// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
     public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
     {
         services.TryAddScoped<BusinessContextAccessor>();

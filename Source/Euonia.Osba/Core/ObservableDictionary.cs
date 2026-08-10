@@ -1,32 +1,29 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents a dictionary that provides change notifications when items are added, removed, or updated, and supports
-/// suppression of change events during batch operations.
+/// 表示一个字典，当添加、移除或更新项时提供更改通知，并支持在批量操作期间抑制更改事件。
 /// </summary>
 /// <remarks>
-/// ObservableDictionary{TKey, TValue} extends the standard Dictionary{TKey, TValue} by raising events
-/// when its contents change, making it suitable for scenarios such as data binding or tracking changes in collections.
-/// Change notifications can be temporarily suppressed to optimize performance during bulk updates. The class also
-/// implements busy state notifications to indicate when long-running operations are in progress.
+/// ObservableDictionary{TKey, TValue} 扩展了标准 Dictionary{TKey, TValue}，在其内容更改时引发事件，
+/// 使其适用于数据绑定或跟踪集合更改等场景。在批量更新期间可以临时抑制更改通知以优化性能。
+/// 该类还实现繁忙状态通知，以指示长时间运行的操作正在进行中。
 /// </remarks>
-/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
-/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+/// <typeparam name="TKey">字典中键的类型。</typeparam>
+/// <typeparam name="TValue">字典中值的类型。</typeparam>
 public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INotifyBusy
 {
 	/// <summary>
-	/// Gets or sets a value indicating whether the ObservableDictionary should raise change notifications when child items are modified.
+	/// 获取或设置一个值，指示 ObservableDictionary 在子项被修改时是否应引发更改通知。
 	/// </summary>
 	public bool RaiseItemChangedEvents { get; set; } = true;
 
 	private DictionaryChangedEventHandler<TKey, TValue> _itemChanged;
 
 	/// <summary>
-	/// Occurs when a property value changes.
+	/// 当属性值更改时发生。
 	/// </summary>
-	/// <remarks>This event is typically raised by classes that implement the INotifyPropertyChanged interface to
-	/// notify clients, such as data-binding clients, that a property value has changed. Handlers attached to this event
-	/// receive the name of the property that changed in the PropertyChangedEventArgs parameter.</remarks>
+	/// <remarks>此事件通常由实现 INotifyPropertyChanged 接口的类引发，以通知客户端（例如数据绑定客户端）
+	/// 属性值已更改。附加到此事件的处理程序会在 PropertyChangedEventArgs 参数中接收已更改属性的名称。</remarks>
 	public event DictionaryChangedEventHandler<TKey, TValue> ItemChanged
 	{
 		add => _itemChanged = (DictionaryChangedEventHandler<TKey, TValue>)Delegate.Combine(_itemChanged, value);
@@ -48,8 +45,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	private BusyChangedEventHandler _busyChanged;
 
 	/// <summary>
-	/// Event indicating that the busy status of the
-	/// object has changed.
+	/// 指示对象繁忙状态已改变的事件。
 	/// </summary>
 	public event BusyChangedEventHandler BusyChanged
 	{
@@ -58,38 +54,35 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	}
 
 	/// <summary>
-	/// Override this method to be notified when the
-	/// IsBusy property has changed.
+	/// 重写此方法以在 IsBusy 属性改变时收到通知。
 	/// </summary>
-	/// <param name="args">Event arguments.</param>
+	/// <param name="args">事件参数。</param>
 	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
 	{
 		_busyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>
-	/// Raises the BusyChanged event for a specific property.
+	/// 为特定属性引发 BusyChanged 事件。
 	/// </summary>
-	/// <param name="propertyName">Name of the property.</param>
-	/// <param name="busy">New busy value.</param>
+	/// <param name="propertyName">属性名称。</param>
+	/// <param name="busy">新的繁忙值。</param>
 	protected void OnBusyChanged(string propertyName, bool busy)
 	{
 		OnBusyChanged(new BusyChangedEventArgs(propertyName, busy));
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether the instance is currently engaged in a long-running or background operation.
+	/// 获取一个值，指示实例当前是否正在执行长时间运行或后台操作。
 	/// </summary>
-	/// <remarks>Use this property to determine if the object is busy performing an operation. This can be useful
-	/// for managing user interface states, such as disabling controls or displaying progress indicators while work is in
-	/// progress.</remarks>
+	/// <remarks>使用此属性确定对象是否正在执行操作。这对于管理用户界面状态很有用，
+	/// 例如在操作进行中禁用控件或显示进度指示器。</remarks>
 	public virtual bool IsBusy => false;
 
 	/// <summary>
-	/// Gets a value indicating whether the current instance is busy processing tasks.
+	/// 获取一个值，指示当前实例是否正忙于处理任务。
 	/// </summary>
-	/// <remarks>This property reflects the state of the IsBusy property, providing a convenient way to check if the
-	/// instance is currently engaged in operations.</remarks>
+	/// <remarks>此属性反映 IsBusy 属性的状态，提供一种便捷的方式来检查实例当前是否正在执行操作。</remarks>
 	public virtual bool IsSelfBusy => IsBusy;
 
 	#endregion
@@ -97,12 +90,12 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	#region Overriding
 
 	/// <summary>
-	/// Gets or sets the value associated with the specified key.
+	/// 获取或设置与指定键关联的值。
 	/// </summary>
-	/// <remarks>Setting this property raises a change event if the value is added or updated and differs from the
-	/// existing value. If the key does not exist, a new entry is added.</remarks>
-	/// <param name="key">The key whose value to get or set.</param>
-	/// <returns>The value associated with the specified key.</returns>
+	/// <remarks>如果添加或更新的值不同于现有值，则设置此属性会引发更改事件。
+	/// 如果键不存在，则添加新条目。</remarks>
+	/// <param name="key">要获取或设置其值的键。</param>
+	/// <returns>与指定键关联的值。</returns>
 	public new TValue this[TKey key]
 	{
 		get => base[key];
@@ -133,12 +126,12 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	}
 
 	/// <summary>
-	/// Adds the specified key and value to the dictionary, raising item changed events if enabled.
+	/// 向字典中添加指定的键和值，如果启用则在添加后引发项更改事件。
 	/// </summary>
-	/// <remarks>If item changed events are enabled, this method raises an event after the item is added. If an
-	/// element with the same key already exists, an exception is thrown.</remarks>
-	/// <param name="key">The key of the element to add. Cannot be null.</param>
-	/// <param name="value">The value of the element to add. May be null if the dictionary allows null values.</param>
+	/// <remarks>如果启用了项更改事件，此方法在添加项后会引发事件。
+	/// 如果已存在相同键的元素，则抛出异常。</remarks>
+	/// <param name="key">要添加元素的键。不能为 <c>null</c>。</param>
+	/// <param name="value">要添加元素的值。如果字典允许 <c>null</c> 值，则可以为 <c>null</c>。</param>
 	public new void Add(TKey key, TValue value)
 	{
 		base.Add(key, value);
@@ -149,12 +142,12 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	}
 
 	/// <summary>
-	/// Removes the element with the specified key from the dictionary.
+	/// 从字典中移除具有指定键的元素。
 	/// </summary>
-	/// <remarks>If item change events are enabled, removing an item will raise an item changed event. The method
-	/// does not throw an exception if the key does not exist.</remarks>
-	/// <param name="key">The key of the element to remove.</param>
-	/// <returns>true if the element is successfully found and removed; otherwise, false.</returns>
+	/// <remarks>如果启用了项更改事件，移除项会引发项更改事件。
+	/// 如果键不存在，此方法不会抛出异常。</remarks>
+	/// <param name="key">要移除元素的键。</param>
+	/// <returns>如果成功找到并移除元素，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public new bool Remove(TKey key)
 	{
 		var result = base.Remove(key, out var value);
@@ -168,19 +161,18 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	#endregion
 
 	/// <summary>
-	/// Use this object to suppress ItemChangedEvents for an entire code block.
-	/// May be nested in multiple levels for the same object.
+	/// 使用此对象在整段代码块中抑制 ItemChangedEvents。
+	/// 可以针对同一对象进行多层级嵌套。
 	/// </summary>
 	public IDisposable SuppressItemChangedEvents => new SuppressItemChangedEventsClass(this);
 
 	/// <summary>
-	/// <![CDATA[Provides a mechanism to temporarily suppress change notifications for an ObservableDictionary<TKey, TValue> instance.]]>
+	/// <![CDATA[为 ObservableDictionary<TKey, TValue> 实例提供临时抑制更改通知的机制。]]>
 	/// </summary>
 	/// <remarks>
 	/// <![CDATA[
-	/// Use this class to prevent the ObservableDictionary<TKey, TValue> from raising change notifications while performing
-	/// multiple updates. Change notifications are automatically restored when the instance is disposed. This is useful for
-	/// improving performance and avoiding unnecessary updates to data-bound controls during batch operations.
+	/// 使用此类可防止 ObservableDictionary<TKey, TValue> 在执行多次更新时引发更改通知。
+	/// 当实例被释放时，更改通知会自动恢复。这对于在批量操作期间提高性能并避免对数据绑定控件进行不必要的更新很有用。
 	/// ]]>
 	/// </remarks>
 	private class SuppressItemChangedEventsClass : IDisposable

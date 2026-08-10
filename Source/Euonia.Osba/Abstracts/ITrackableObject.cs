@@ -1,32 +1,32 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents that the implemented classes is trackable.
+/// 表示实现此接口的类是可跟踪的。
 /// </summary>
 public interface ITrackableObject : INotifyBusy
 {
 	/// <summary>
-	/// Gets a value indicating whether the object is valid.
+	/// 获取一个值，指示对象是否有效。
 	/// </summary>
 	bool IsValid { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the object is changed.
+	/// 获取一个值，指示对象是否已更改。
 	/// </summary>
 	bool IsChanged { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the object is deleted.
+	/// 获取一个值，指示对象是否已删除。
 	/// </summary>
 	bool IsDeleted { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the object is new.
+	/// 获取一个值，指示对象是否为新对象。
 	/// </summary>
 	bool IsNew { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the object can be saved.
+	/// 获取一个值，指示对象是否可保存。
 	/// </summary>
 	bool IsSavable { get; }
 }

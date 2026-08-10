@@ -1,20 +1,20 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The extension methods for <see cref="Rules"/>.
+/// <see cref="Rules"/> 的扩展方法。
 /// </summary>
 public static class RulesExtensions
 {
-	/// <param name="rules"></param>
+	/// <param name="rules">要扩展的规则实例。</param>
 	extension(Rules rules)
 	{
 		/// <summary>
-		/// Add a lambda expression rule to business object.
+		/// 向业务对象添加 lambda 表达式规则。
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="property"></param>
-		/// <param name="handler"></param>
-		/// <param name="message"></param>
+		/// <typeparam name="T">业务对象的类型。</typeparam>
+		/// <param name="property">受规则影响的属性。</param>
+		/// <param name="handler">验证处理函数。</param>
+		/// <param name="message">规则的错误消息。</param>
 		public void AddRule<T>(IPropertyInfo property, Func<T, Task<bool>> handler, string message)
 			where T : BusinessObject
 		{
@@ -33,12 +33,12 @@ public static class RulesExtensions
 		}
 
 		/// <summary>
-		/// Add a lambda expression rule to business object.
+		/// 向业务对象添加 lambda 表达式规则。
 		/// </summary>
-		/// <typeparam name="T"></typeparam>
-		/// <param name="property"></param>
-		/// <param name="handler"></param>
-		/// <param name="message"></param>
+		/// <typeparam name="T">业务对象的类型。</typeparam>
+		/// <param name="property">受规则影响的属性。</param>
+		/// <param name="handler">验证处理函数。</param>
+		/// <param name="message">生成规则消息的委托。</param>
 		public void AddRule<T>(IPropertyInfo property, Func<T, Task<bool>> handler, Func<string> message)
 			where T : BusinessObject
 		{

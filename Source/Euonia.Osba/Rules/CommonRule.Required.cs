@@ -3,24 +3,24 @@
 public partial class CommonRule
 {
     /// <summary>
-    /// Provides property required validation.
+    /// 提供属性必填验证。
     /// </summary>
     public class Required : CommonRuleBase
     {
         /// <summary>
-        /// Initialize a new instance of <see cref="Required"/>.
+        /// 初始化 <see cref="Required"/> 的新实例。
         /// </summary>
-        /// <param name="property"></param>
-        /// <param name="message"></param>
+        /// <param name="property">要检查的属性。</param>
+        /// <param name="message">规则的错误消息。</param>
         public Required(IPropertyInfo property, string message)
             : base(property, message)
         { }
 
         /// <summary>
-        /// Initialize a new instance of <see cref="Required"/>.
+        /// 初始化 <see cref="Required"/> 的新实例。
         /// </summary>
-        /// <param name="property"></param>
-        /// <param name="messageFactory"></param>
+        /// <param name="property">要检查的属性。</param>
+        /// <param name="messageFactory">生成规则消息的委托。</param>
         public Required(IPropertyInfo property, Func<string> messageFactory)
             : base(property, messageFactory)
         {

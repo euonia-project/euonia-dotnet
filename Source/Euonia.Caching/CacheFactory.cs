@@ -3,24 +3,23 @@
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Helper class to instantiate new <see cref="ICacheManager{TCacheValue}"/> instances from configuration.
+/// 用于根据配置实例化新的 <see cref="ICacheManager{TCacheValue}"/> 实例的辅助类。
 /// </summary>
 public static class CacheFactory
 {
     /// <summary>
-    /// <para>Instantiates a cache manager using the inline configuration defined by <paramref name="settings"/>.</para>
-    /// <para>This Build method returns a <c>ICacheManager</c> with cache item type being <c>System.Object</c>.</para>
+    /// <para>使用 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。</para>
+    /// <para>此 Build 方法返回缓存项类型为 <c>System.Object</c> 的 <c>ICacheManager</c>。</para>
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build("myCacheName", settings =>
     /// {
-    ///    settings
-    ///        .WithUpdateMode(CacheUpdateMode.Up)
-    ///        .WithDictionaryHandle()
+    ///    settings.WithUpdateMode(CacheUpdateMode.Up)
+    ///            .WithDictionaryHandle()
     ///            .EnablePerformanceCounters()
     ///            .WithExpiration(ExpirationMode.Sliding, TimeSpan.FromSeconds(10));
     /// });
@@ -29,36 +28,35 @@ public static class CacheFactory
     /// ]]>
     /// </code>
     /// </example>
-    /// <param name="cacheName">The name of the cache manager instance.</param>
+    /// <param name="cacheName">缓存管理器实例的名称。</param>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <returns>The cache manager instance with cache item type being <c>System.Object</c>.</returns>
+    /// <returns>缓存项类型为 <c>System.Object</c> 的缓存管理器实例。</returns>
     /// <seealso cref="ICacheManager{TCacheValue}"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="cacheName"/> or <paramref name="settings"/> is null.
+    /// 当 <paramref name="cacheName"/> 或 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<object> Build(string cacheName, Action<ConfigurationBuilderCachePart> settings) =>
         Build<object>(cacheName, settings);
 
     /// <summary>
-    /// <para>Instantiates a cache manager using the inline configuration defined by <paramref name="settings"/>.</para>
-    /// <para>This Build method returns a <see cref="ICacheManager{TCacheValue}"/> with cache item type being <see cref="object"/>.</para>
+    /// <para>使用 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。</para>
+    /// <para>此 Build 方法返回缓存项类型为 <see cref="object"/> 的 <see cref="ICacheManager{TCacheValue}"/>。</para>
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build(settings =>
     /// {
-    ///    settings
-    ///        .WithUpdateMode(CacheUpdateMode.Up)
-    ///        .WithDictionaryHandle()
+    ///    settings.WithUpdateMode(CacheUpdateMode.Up)
+    ///            .WithDictionaryHandle()
     ///            .EnablePerformanceCounters()
     ///            .WithExpiration(ExpirationMode.Sliding, TimeSpan.FromSeconds(10));
     /// });
@@ -68,33 +66,32 @@ public static class CacheFactory
     /// </code>
     /// </example>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <returns>The cache manager instance.</returns>
+    /// <returns>缓存管理器实例。</returns>
     /// <seealso cref="ICacheManager{TCacheValue}"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="settings"/> is null.
+    /// 当 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<object> Build(Action<ConfigurationBuilderCachePart> settings) =>
         Build<object>(Guid.NewGuid().ToString("N"), settings);
 
     /// <summary>
-    /// <para>Instantiates a cache manager using the inline configuration defined by <paramref name="settings"/>.</para>
+    /// <para>使用 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。</para>
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build("myCacheName", settings =>
     /// {
-    ///    settings
-    ///        .WithUpdateMode(CacheUpdateMode.Up)
-    ///        .WithDictionaryHandle()
+    ///    settings.WithUpdateMode(CacheUpdateMode.Up)
+    ///            .WithDictionaryHandle()
     ///            .EnablePerformanceCounters()
     ///            .WithExpiration(ExpirationMode.Sliding, TimeSpan.FromSeconds(10));
     /// });
@@ -103,19 +100,19 @@ public static class CacheFactory
     /// ]]>
     /// </code>
     /// </example>
-    /// <param name="cacheName">The name of the cache manager instance.</param>
+    /// <param name="cacheName">缓存管理器实例的名称。</param>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <typeparam name="TCacheValue">The type of the cache item value.</typeparam>
-    /// <returns>The cache manager instance with cache item type being <c>TCacheValue</c>.</returns>
+    /// <typeparam name="TCacheValue">缓存项值的类型。</typeparam>
+    /// <returns>缓存项类型为 <c>TCacheValue</c> 的缓存管理器实例。</returns>
     /// <seealso cref="ICacheManager{TCacheValue}"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="cacheName"/> or <paramref name="settings"/> is null.
+    /// 当 <paramref name="cacheName"/> 或 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<TCacheValue> Build<TCacheValue>(string cacheName, Action<ConfigurationBuilderCachePart> settings)
     {
@@ -128,11 +125,11 @@ public static class CacheFactory
     }
 
     /// <summary>
-    /// <para>Instantiates a cache manager using the inline configuration defined by <paramref name="settings"/>.</para>
+    /// <para>使用 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。</para>
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build(settings =>
@@ -149,28 +146,28 @@ public static class CacheFactory
     /// </code>
     /// </example>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <typeparam name="TCacheValue">The type of the cache item value.</typeparam>
-    /// <returns>The cache manager instance with cache item type being <c>TCacheValue</c>.</returns>
+    /// <typeparam name="TCacheValue">缓存项值的类型。</typeparam>
+    /// <returns>缓存项类型为 <c>TCacheValue</c> 的缓存管理器实例。</returns>
     /// <seealso cref="ICacheManager{TCacheValue}"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="settings"/> is null.
+    /// 当 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<TCacheValue> Build<TCacheValue>(Action<ConfigurationBuilderCachePart> settings)
         => Build<TCacheValue>(Guid.NewGuid().ToString("N"), settings);
 
     /// <summary>
-    /// Instantiates a cache manager using the given type and the inline configuration defined by <paramref name="settings"/>.
-    /// Use this overload if you cannot invoke the generic method, for example in conjunction with dependency injection.
+    /// 使用给定的类型和 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。
+    /// 当无法调用泛型方法时使用此重载，例如与依赖注入结合使用时。
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build(typeof(string), "myCacheName", settings =>
@@ -185,18 +182,18 @@ public static class CacheFactory
     /// ]]>
     /// </code>
     /// </example>
-    /// <param name="cacheValueType">The type of the cache item value.</param>
-    /// <param name="cacheName">The name of the cache manager instance.</param>
+    /// <param name="cacheValueType">缓存项值的类型。</param>
+    /// <param name="cacheName">缓存管理器实例的名称。</param>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <returns>The cache manager instance.</returns>
+    /// <returns>缓存管理器实例。</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="cacheName"/> or <paramref name="settings"/> is null.
+    /// 当 <paramref name="cacheName"/> 或 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static object Build(Type cacheValueType, string cacheName, Action<ConfigurationBuilderCachePart> settings)
     {
@@ -205,23 +202,22 @@ public static class CacheFactory
         var factoryType = typeof(CacheFactory).GetTypeInfo();
         var buildMethod = factoryType.GetDeclaredMethods("Build").First(p => p.IsGenericMethod);
         var genericMethod = buildMethod.MakeGenericMethod(cacheValueType);
-        return genericMethod.Invoke(null, new object[] { cacheName, settings });
+        return genericMethod.Invoke(null, [cacheName, settings]);
     }
 
     /// <summary>
-    /// Instantiates a cache manager using the given type and the inline configuration defined by <paramref name="settings"/>.
-    /// Use this overload if you cannot invoke the generic method, for example in conjunction with dependency injection.
+    /// 使用给定的类型和 <paramref name="settings"/> 定义的内联配置实例化缓存管理器。
+    /// 当无法调用泛型方法时使用此重载，例如与依赖注入结合使用时。
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var cache = CacheFactory.Build(typeof(string), settings =>
     /// {
-    ///    settings
-    ///        .WithUpdateMode(CacheUpdateMode.Up)
-    ///        .WithDictionaryHandle()
+    ///    settings.WithUpdateMode(CacheUpdateMode.Up)
+    ///            .WithDictionaryHandle()
     ///            .EnablePerformanceCounters()
     ///            .WithExpiration(ExpirationMode.Sliding, TimeSpan.FromSeconds(10));
     /// });
@@ -229,36 +225,36 @@ public static class CacheFactory
     /// ]]>
     /// </code>
     /// </example>
-    /// <param name="cacheValueType">The type of the cache item value.</param>
+    /// <param name="cacheValueType">缓存项值的类型。</param>
     /// <param name="settings">
-    /// The configuration. Use the settings element to configure the cache manager instance, add
-    /// cache handles and also to configure the cache handles in a fluent way.
+    /// 配置。使用 settings 元素以流式方式配置缓存管理器实例、
+    /// 添加缓存句柄并配置缓存句柄。
     /// </param>
-    /// <returns>The cache manager instance.</returns>
+    /// <returns>缓存管理器实例。</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if <paramref name="settings"/> is null.
+    /// 当 <paramref name="settings"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static object Build(Type cacheValueType, Action<ConfigurationBuilderCachePart> settings)
         => Build(cacheValueType, Guid.NewGuid().ToString("N"), settings);
 
     /// <summary>
-    /// <para>Instantiates a cache manager using the given <paramref name="configuration"/>.</para>
+    /// <para>使用给定的 <paramref name="configuration"/> 实例化缓存管理器。</para>
     /// </summary>
-    /// <param name="cacheName">The name of the cache.</param>
+    /// <param name="cacheName">缓存的名称。</param>
     /// <param name="configuration">
-    /// The configured which will be used to configure the cache manager instance.
+    /// 将用于配置缓存管理器实例的配置。
     /// </param>
-    /// <typeparam name="TCacheValue">The type of the cache item value.</typeparam>
-    /// <returns>The cache manager instance.</returns>
+    /// <typeparam name="TCacheValue">缓存项值的类型。</typeparam>
+    /// <returns>缓存管理器实例。</returns>
     /// <see cref="ConfigurationBuilder"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="configuration"/> is null.
+    /// 当 <paramref name="configuration"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<TCacheValue> FromConfiguration<TCacheValue>(string cacheName, CacheManagerConfiguration configuration)
     {
@@ -269,17 +265,17 @@ public static class CacheFactory
     }
 
     /// <summary>
-    /// <para>Instantiates a cache manager using the given <paramref name="configuration"/>.</para>
+    /// <para>使用给定的 <paramref name="configuration"/> 实例化缓存管理器。</para>
     /// </summary>
     /// <example>
-    /// The following example show how to build a <c>CacheManagerConfiguration</c> and then
-    /// using the <c>CacheFactory</c> to create a new cache manager instance.
+    /// 以下示例展示了如何构建 <c>CacheManagerConfiguration</c>，然后
+    /// 使用 <c>CacheFactory</c> 创建新的缓存管理器实例。
     /// <code>
     /// <![CDATA[
     /// var managerConfiguration = ConfigurationBuilder.BuildConfiguration<object>(settings =>
     /// {
     ///     settings.WithUpdateMode(CacheUpdateMode.Up)
-    ///         .WithDictionaryCacheHandle<object>>()
+    ///             .WithDictionaryCacheHandle<object>>()
     ///             .EnablePerformanceCounters()
     ///             .WithExpiration(ExpirationMode.Sliding, TimeSpan.FromSeconds(10));
     /// });
@@ -290,37 +286,37 @@ public static class CacheFactory
     /// </code>
     /// </example>
     /// <param name="configuration">
-    /// The configured which will be used to configure the cache manager instance.
+    /// 将用于配置缓存管理器实例的配置。
     /// </param>
-    /// <typeparam name="TCacheValue">The type of the cache item value.</typeparam>
-    /// <returns>The cache manager instance.</returns>
+    /// <typeparam name="TCacheValue">缓存项值的类型。</typeparam>
+    /// <returns>缓存管理器实例。</returns>
     /// <see cref="ConfigurationBuilder"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="configuration"/> is null.
+    /// 当 <paramref name="configuration"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static ICacheManager<TCacheValue> FromConfiguration<TCacheValue>(CacheManagerConfiguration configuration)
         => FromConfiguration<TCacheValue>(Guid.NewGuid().ToString("N"), configuration);
 
     /// <summary>
-    /// Instantiates a cache manager using the given <paramref name="cacheValueType"/> and <paramref name="configuration"/>.
-    /// Use this overload only if you cannot use the generic overload. The return type will be <c>Object</c>.
-    /// This method can be used for example in conjunction with dependency injection frameworks.
+    /// 使用给定的 <paramref name="cacheValueType"/> 和 <paramref name="configuration"/> 实例化缓存管理器。
+    /// 仅在无法使用泛型重载时使用此重载。返回类型将为 <c>Object</c>。
+    /// 此方法可用于例如与依赖注入框架结合使用的场景。
     /// </summary>
-    /// <param name="cacheValueType">The type of the cache item value.</param>
-    /// <param name="cacheName">The name of the cache.</param>
+    /// <param name="cacheValueType">缓存项值的类型。</param>
+    /// <param name="cacheName">缓存的名称。</param>
     /// <param name="configuration">
-    /// The configured which will be used to configure the cache manager instance.
+    /// 将用于配置缓存管理器实例的配置。
     /// </param>
-    /// <returns>The cache manager instance.</returns>
+    /// <returns>缓存管理器实例。</returns>
     /// <see cref="ConfigurationBuilder"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <c>cacheValueType</c>, <c>cacheName</c> or <c>configuration</c> is null.
+    /// 当 <c>cacheValueType</c>、<c>cacheName</c> 或 <c>configuration</c> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static object FromConfiguration(Type cacheValueType, string cacheName, CacheManagerConfiguration configuration)
     {
@@ -330,26 +326,26 @@ public static class CacheFactory
         var cfg = configuration;
         cfg.Name = cacheName;
 
-        var type = typeof(BaseCacheManager<>).MakeGenericType(new[] { cacheValueType });
-        return Activator.CreateInstance(type, new object[] { cfg });
+        var type = typeof(BaseCacheManager<>).MakeGenericType(cacheValueType);
+        return Activator.CreateInstance(type, cfg);
     }
 
     /// <summary>
-    /// Instantiates a cache manager using the given <paramref name="cacheValueType"/> and <paramref name="configuration"/>.
-    /// Use this overload only if you cannot use the generic overload. The return type will be <c>Object</c>.
-    /// This method can be used for example in conjunction with dependency injection frameworks.
+    /// 使用给定的 <paramref name="cacheValueType"/> 和 <paramref name="configuration"/> 实例化缓存管理器。
+    /// 仅在无法使用泛型重载时使用此重载。返回类型将为 <c>Object</c>。
+    /// 此方法可用于例如与依赖注入框架结合使用的场景。
     /// </summary>
-    /// <param name="cacheValueType">The type of the cache item value.</param>
+    /// <param name="cacheValueType">缓存项值的类型。</param>
     /// <param name="configuration">
-    /// The configured which will be used to configure the cache manager instance.
+    /// 将用于配置缓存管理器实例的配置。
     /// </param>
-    /// <returns>The cache manager instance.</returns>
+    /// <returns>缓存管理器实例。</returns>
     /// <see cref="ConfigurationBuilder"/>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="cacheValueType"/> or <paramref name="configuration"/> are null.
+    /// 当 <paramref name="cacheValueType"/> 或 <paramref name="configuration"/> 为 <c>null</c> 时抛出。
     /// </exception>
     /// <exception cref="InvalidOperationException">
-    /// Thrown on certain configuration errors related to the cache handles.
+    /// 当缓存句柄相关的某些配置错误发生时抛出。
     /// </exception>
     public static object FromConfiguration(Type cacheValueType, CacheManagerConfiguration configuration)
         => FromConfiguration(cacheValueType, Guid.NewGuid().ToString("N"), configuration);

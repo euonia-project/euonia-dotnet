@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security;
@@ -11,27 +12,28 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Provides a base class for business objects, supporting property change notification, rule validation, and business
-/// context management.
+/// 为业务对象提供基类，支持属性更改通知、规则验证和业务上下文管理。
 /// </summary>
 /// <remarks>
-/// BusinessObject implements interfaces for property change notification (INotifyPropertyChanged,
-/// INotifyPropertyChanging), rule checking (IHasRuleCheck), and resource management (IDisposable). Derived classes
-/// should override relevant methods to implement custom business logic and validation rules. The class manages rule
-/// checking, tracks changed properties, and provides mechanisms to bypass rule checks when necessary. Thread safety and
-/// event handling are supported for property and validation changes.
+/// BusinessObject 实现了属性更改通知（INotifyPropertyChanged、INotifyPropertyChanging）、
+/// 规则检查（IHasRuleCheck）和资源管理（IDisposable）的接口。派生类应重写相关方法以
+/// 实现自定义业务逻辑和验证规则。该类管理规则检查、跟踪已更改的属性，并在必要时提供绕过
+/// 规则检查的机制。支持属性和验证更改的线程安全与事件处理。
 /// </remarks>
 public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposable
 {
+	/// <summary>
+	/// 已更改属性的列表。
+	/// </summary>
 	private readonly List<IPropertyInfo> _changedProperties = [];
 
 	/// <summary>
-	/// The events manager for business object.
+	/// 业务对象的事件管理器。
 	/// </summary>
 	protected readonly WeakEventManager Events = new();
 
 	/// <summary>
-	/// Gets or sets the business context.
+	/// 获取或设置业务上下文。
 	/// </summary>
 	public BusinessContext BusinessContext
 	{
@@ -46,21 +48,21 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Handles the event when the BusinessContext is set.
+	/// 当设置 BusinessContext 时处理该事件。
 	/// </summary>
 	protected virtual void OnBusinessContextSet()
 	{
 	}
 
 	/// <summary>
-	/// Initializes the business object.
+	/// 初始化业务对象。
 	/// </summary>
 	protected virtual void Initialize()
 	{
 	}
 
 	/// <summary>
-	/// Occurs when property rule checks completed.
+	/// 当属性规则检查完成时发生。
 	/// </summary>
 	public event EventHandler ValidationComplete
 	{
@@ -71,25 +73,25 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region IHasRuleCheck implements
 
 	/// <summary>
-	/// To be added.
+	/// 指示某个属性规则检查已完成。
 	/// </summary>
-	/// <param name="property"></param>
+	/// <param name="property">规则所针对的属性信息。</param>
 	public void RuleCheckComplete(IPropertyInfo property)
 	{
 		OnPropertyChanged(property);
 	}
 
 	/// <summary>
-	/// To be added.
+	/// 指示某个属性规则检查已完成。
 	/// </summary>
-	/// <param name="property"></param>
+	/// <param name="property">规则所针对的属性名称。</param>
 	public void RuleCheckComplete(string property)
 	{
 		OnPropertyChanged(property);
 	}
 
 	/// <summary>
-	/// Complete all business object rules
+	/// 完成所有业务对象规则。
 	/// </summary>
 	public void AllRulesComplete()
 	{
@@ -97,7 +99,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Suspends all rule checking, to be resumed later.
+	/// 恰挂起所有规则检查，稍后可恢复。
 	/// </summary>
 	public void SuspendRuleChecking()
 	{
@@ -105,7 +107,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Resumes rule checking.
+	/// 恢复规则检查。
 	/// </summary>
 	public void ResumeRuleChecking()
 	{
@@ -113,9 +115,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Returns a collection of broken rules for this object instance.
+	/// 返回此对象实例的违规规则集合。
 	/// </summary>
-	/// <returns>Collection of broken rules.</returns>
+	/// <returns>违规规则集合。</returns>
 	public BrokenRuleCollection GetBrokenRules()
 	{
 		return Rules.BrokenRules;
@@ -129,7 +131,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual bool IsValid => Rules.IsValid;
 
 	/// <summary>
-	/// Gets the rules object for this business object.
+	/// 获取此业务对象的规则对象。
 	/// </summary>
 	protected Rules Rules
 	{
@@ -149,10 +151,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Called when validation has completed
+	/// 当验证完成时调用。
 	/// </summary>
 	/// <remarks>
-	/// The ValidationComplete event will be raised up.
+	/// 将引发 ValidationComplete 事件。
 	/// </remarks>
 	protected virtual void OnValidationComplete()
 	{
@@ -160,11 +162,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Initializes the validation rules for the current type, ensuring that all required rules are set up before use.
+	/// 初始化当前类型的验证规则，确保在使用前设置好所有必需的规则。
 	/// </summary>
-	/// <remarks>This method is thread-safe and prevents concurrent initialization of rules for the same type. If an
-	/// error occurs during initialization, any partially initialized rules are cleaned up to maintain consistency. Call
-	/// this method before performing operations that depend on the type's validation rules.</remarks>
+	/// <remarks>此方法线程安全，可防止同一类型的规则被并发初始化。如果初始化期间发生错误，
+	/// 任何部分初始化的规则都会被清理以保持一致性。在依赖类型验证规则的操作之前调用此方法。</remarks>
 	private void InitializeRules()
 	{
 		var rules = RuleManager.GetRules(GetType());
@@ -195,30 +196,28 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Gets the registered property check rules for the business object.
+	/// 获取业务对象的已注册属性检查规则。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>规则管理器。</returns>
 	protected RuleManager GetRegisteredRules()
 	{
 		return Rules.RuleManager;
 	}
 
 	/// <summary>
-	/// Adds validation rules to the current context. Derived classes should override this method to specify custom
-	/// validation logic.
+	/// 向当前上下文添加验证规则。派生类应重写此方法以指定自定义验证逻辑。
 	/// </summary>
 	/// <remarks>
-	/// Implementations should ensure that all necessary rules are added to maintain data integrity. This
-	/// method is called during the initialization phase of the validation process.
+	/// 实现应确保添加所有必要的规则以保持数据完整性。此方法在验证过程的初始化阶段被调用。
 	/// </remarks>
 	protected virtual void AddRules()
 	{
 	}
 
 	/// <summary>
-	///  Checks the rules for the specified property and raises the OnPropertyChanged event for each property that has a rule violation.
+	/// 检查指定属性的规则，并为每个存在规则违规的属性引发 OnPropertyChanged 事件。
 	/// </summary>
-	/// <param name="property"></param>
+	/// <param name="property">要检查规则的属性信息。</param>
 	protected virtual void CheckPropertyRules(IPropertyInfo property)
 	{
 		var propertyNames = Rules.CheckRules(property);
@@ -233,7 +232,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region INotifyPropertyChanged/INotifyPropertyChanging
 
 	/// <summary>
-	/// Gets a value indicate if check rule will call on property changed.
+	/// 获取一个值，指示检查规则是否将调用属性更改。
 	/// </summary>
 	protected internal bool CheckRuleOnPropertyChanged { get; } = false;
 
@@ -244,58 +243,62 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public event PropertyChangingEventHandler PropertyChanging;
 
 	/// <summary>
-	/// Notifies that a property value has been changed.
+	/// 通知属性值已更改。
 	/// </summary>
-	/// <param name="propertyName">The name of the property that changed.</param>
+	/// <param name="propertyName">已更改属性的名称。</param>
 	protected virtual void OnPropertyChanged(string propertyName)
 	{
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 
 	/// <summary>
-	/// Notifies that a property value has been changed.
+	/// 通知属性值已更改。
 	/// </summary>
-	/// <param name="propertyInfo">The property that changed.</param>
+	/// <param name="propertyInfo">已更改的属性。</param>
 	protected virtual void OnPropertyChanged(IPropertyInfo propertyInfo)
 	{
 		OnPropertyChanged(propertyInfo.Name);
 	}
 
 	/// <summary>
-	/// Notifies that a property value is about to change.
+	/// 通知属性值即将更改。
 	/// </summary>
-	/// <param name="propertyName">The name of the property that is about to change.</param>
+	/// <param name="propertyName">即将更改的属性的名称。</param>
 	protected virtual void OnPropertyChanging(string propertyName)
 	{
 		PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
 	}
 
 	/// <summary>
-	/// Notifies that a property value is about to change.
+	/// 通知属性值即将更改。
 	/// </summary>
-	/// <param name="propertyInfo">The property that is about to change.</param>
+	/// <param name="propertyInfo">即将更改的属性。</param>
 	protected virtual void OnPropertyChanging(IPropertyInfo propertyInfo)
 	{
 		OnPropertyChanging(propertyInfo.Name);
 	}
 
 	/// <summary>
-	/// Raises the PropertyChanged event for the specified property and value.
+	/// 为指定属性和值引发 PropertyChanged 事件。
 	/// </summary>
-	/// <param name="name">The name of the property that changed.</param>
-	/// <param name="value">The new value of the property.</param>
+	/// <param name="name">已更改属性的名称。</param>
+	/// <param name="value">属性的新值。</param>
 	protected virtual void OnPropertyChanged(string name, object value)
 	{
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 	}
 
 	/// <summary>
-	/// Marks the specified property as being dirty, or changed.
+	/// 将指定属性标记为脏的或已更改。
 	/// </summary>
-	/// <param name="property"></param>
+	/// <param name="property">要标记的属性信息。</param>
 	protected virtual void PropertyHasChanged(IPropertyInfo property)
 	{
-		_changedProperties.Add(property);
+		if (!_changedProperties.Contains(property))
+		{
+			_changedProperties.Add(property);
+		}
+
 		if (CheckRuleOnPropertyChanged)
 		{
 			CheckPropertyRules(property);
@@ -307,21 +310,21 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Marks the specified property as being dirty, or changed.
+	/// 将指定属性标记为脏的或已更改。
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="propertyName">要标记的属性名称。</param>
 	protected void PropertyHasChanged(string propertyName)
 	{
 		PropertyHasChanged(FieldManager.GetRegisteredProperty(propertyName));
 	}
 
 	/// <summary>
-	/// Gets the list of changed properties.
+	/// 获取已更改属性的列表。
 	/// </summary>
 	public virtual IReadOnlyList<IPropertyInfo> ChangedProperties => _changedProperties;
 
 	/// <summary>
-	/// Checks if the object has changed properties.
+	/// 检查对象是否具有已更改的属性。
 	/// </summary>
 	public virtual bool HasChangedProperties => ChangedProperties.Count > 0;
 
@@ -330,23 +333,21 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Property Checks
 
 	/// <summary>
-	/// Gets or sets a value indicating whether the object should bypass property checks.
+	/// 获取或设置一个值，指示对象是否应绕过属性检查。
 	/// </summary>
 	protected virtual bool IsBypassingRuleChecks { get; set; }
 
 	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
 
 	/// <summary>
-	/// By wrapping this property inside Using block
-	/// you can set property values on current business object
-	/// without raising PropertyChanged events
-	/// and checking user rights.
+	/// 通过将此属性包裹在 Using 块中，可以在不引发 PropertyChanged 事件
+	/// 和不检查用户权限的情况下，为当前业务对象设置属性值。
 	/// </summary>
 	protected internal BypassRuleChecksObject BypassRuleChecks => BypassRuleChecksObject.GetManager(this);
 
 	/// <summary>
-	/// Used to create an object that bypasses rule checks, allowing certain values to be set even if they are not strictly valid. 
-	/// The object also allows developers to check whether certain rules are being bypassed at any given time.
+	/// 用于创建绕过规则检查的对象，允许设置某些即使不是严格有效的值。
+	/// 该对象还允许开发者在任何时候检查某些规则是否正在被绕过。
 	/// </summary>
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
@@ -362,7 +363,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		#region IDisposable Members
 
 		/// <summary>
-		/// Disposes the object.
+		/// 释放对象。
 		/// </summary>
 		public void Dispose()
 		{
@@ -371,19 +372,19 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 
 		/// <summary>
-		/// Disposes the object.
+		/// 释放对象。
 		/// </summary>
-		/// <param name="dispose">Dispose flag.</param>
+		/// <param name="dispose">释放标志。</param>
 		private void Dispose(bool dispose)
 		{
 			DeRef();
 		}
 
 		/// <summary>
-		/// Gets the BypassPropertyChecks object.
+		/// 获取 BypassPropertyChecks 对象。
 		/// </summary>
-		/// <param name="target">The business object.</param>
-		/// <returns></returns>
+		/// <param name="target">业务对象。</param>
+		/// <returns>绕过规则检查的管理器对象。</returns>
 		public static BypassRuleChecksObject GetManager(BusinessObject target)
 		{
 			lock (_lock)
@@ -401,8 +402,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		private int _refCount;
 
 		/// <summary>
-		/// Gets the current reference count for this
-		/// object.
+		/// 获取此对象的当前引用计数。
 		/// </summary>
 		public int RefCount => _refCount;
 
@@ -435,12 +435,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#endregion
 
 	/// <summary>
-	/// Registers a property on the business object.
+	/// 在业务对象上注册一个属性。
 	/// </summary>
-	/// <typeparam name="TValue"></typeparam>
-	/// <param name="objectType"></param>
-	/// <param name="info"></param>
-	/// <returns></returns>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="objectType">属性所属的对象类型。</param>
+	/// <param name="info">属性信息。</param>
+	/// <returns>注册的属性信息。</returns>
 	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Type objectType, PropertyInfo<TValue> info)
 	{
 		return PropertyInfoManager.RegisterProperty(objectType, info);
@@ -456,12 +456,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Read Properties
 
 	/// <summary>
-	/// Gets a property's value from the list of managed field values, converting the value to an appropriate type.
+	/// 从托管字段值列表中获取属性值，并将值转换为适当的类型。
 	/// </summary>
-	/// <param name="propertyInfo">PropertyInfo object containing property metadata.</param>
-	/// <typeparam name="TValue">Type of the field.</typeparam>
-	/// <typeparam name="TProperty">Type of the property.</typeparam>
-	/// <returns></returns>
+	/// <param name="propertyInfo">包含属性元数据的 PropertyInfo 对象。</param>
+	/// <typeparam name="TValue">字段的类型。</typeparam>
+	/// <typeparam name="TProperty">属性的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	protected TProperty ReadPropertyConvert<TValue, TProperty>(PropertyInfo<TValue> propertyInfo)
 	{
 		return TypeHelper.CoerceValue<TProperty>(typeof(TValue), ReadProperty(propertyInfo));
@@ -489,10 +489,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Gets a property's value.
+	/// 获取属性值。
 	/// </summary>
-	/// <param name="propertyInfo">PropertyInfo object containing property metadata.</param>
-	/// <returns></returns>
+	/// <param name="propertyInfo">包含属性元数据的 PropertyInfo 对象。</param>
+	/// <returns>属性的值。</returns>
 	public virtual object ReadProperty(IPropertyInfo propertyInfo)
 	{
 		object result;
@@ -511,11 +511,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Gets a property's value by property name.
+	/// 按属性名称获取属性值。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>属性的值。</returns>
+	/// <exception cref="InvalidOperationException">当属性未注册时抛出。</exception>
 	public virtual object ReadProperty(string propertyName)
 	{
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
@@ -528,13 +528,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Reads the value of the specified property by its name and returns it as the requested type.
+	/// 按名称读取指定属性的值，并将其作为请求的类型返回。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
-	/// <typeparam name="TValue">The type of the property value to be read.</typeparam>
-	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
+	/// <param name="propertyName">要读取的属性名称。必须表示可读属性。</param>
+	/// <typeparam name="TValue">要读取的属性值的类型。</typeparam>
+	/// <returns>指定属性的值，转换为 <typeparamref name="TValue"/> 指定的类型。</returns>
 	/// <exception cref="InvalidOperationException">
-	///	Thrown if the property name provided does not correspond to a valid property that can be read, or if the value cannot be cast to the specified type.
+	///	当提供的属性名称不对应于可读的有效属性，或值无法转换为指定类型时抛出。
 	/// </exception>
 	public virtual TValue ReadProperty<TValue>(string propertyName)
 	{
@@ -589,18 +589,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Loads a new value for the specified property and updates its state if the value has changed.
+	/// 为指定属性加载新值，并在值已更改时更新其状态。
 	/// </summary>
 	/// <remarks>
-	/// If the new value differs from the old value and <paramref name="markAsChanged"/> is <see
-	/// langword="true"/>, the method triggers property change notifications and updates the property's state accordingly.
-	/// Otherwise, the value is loaded without marking the property as changed.
+	/// 如果新值不同于旧值且 <paramref name="markAsChanged"/> 为 <see
+	/// langword="true"/>，此方法会触发属性更改通知并相应地更新属性状态。
+	/// 否则，加载值但不将属性标记为已更改。
 	/// </remarks>
-	/// <typeparam name="TValue">The type of the property's value.</typeparam>
-	/// <param name="propertyInfo">The metadata that identifies the property whose value is being loaded.</param>
-	/// <param name="oldValue">The previous value of the property before the update.</param>
-	/// <param name="newValue">The new value to assign to the property.</param>
-	/// <param name="markAsChanged">Indicates whether to mark the property as changed and trigger change notifications if the value has changed.</param>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="propertyInfo">标识要加载值的属性的元数据。</param>
+	/// <param name="oldValue">更新前属性的先前值。</param>
+	/// <param name="newValue">要赋给属性的新值。</param>
+	/// <param name="markAsChanged">指示是否将属性标记为已更改并在值已更改时触发更改通知。</param>
 	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged)
 	{
 		var valuesDiffer = ValuesDiffer(propertyInfo, newValue, oldValue);
@@ -626,7 +626,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual void LoadProperty(IPropertyInfo propertyInfo, object newValue)
 	{
 #if IOS
-        //manually call LoadProperty<T> if the type is nullable otherwise JIT error will occur
+        // 如果类型为可空类型，则手动调用 LoadProperty<T>，否则将发生 JIT 错误
         if (propertyInfo.Type == typeof(int?))
         {
             LoadProperty((PropertyInfo<int?>)propertyInfo, (int?)newValue);
@@ -685,41 +685,49 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Calls the generic LoadProperty method via reflection.
+	/// 缓存已构造的泛型 <see cref="LoadProperty{TValue}"/> 方法，避免重复反射查找。
 	/// </summary>
-	/// <param name="methodName">The LoadProperty method name to call via reflection.</param>
-	/// <param name="propertyInfo">PropertyInfo object containing property metadata.</param>
-	/// <param name="newValue">The new value for the property.</param>
-	/// <returns></returns>
-	/// <exception cref="MissingMethodException"></exception>
+	private static readonly ConcurrentDictionary<(Type DeclaringType, Type PropertyType), MethodInfo> _loadPropertyMethodCache = new();
+
+	/// <summary>
+	/// 通过反射调用泛型 LoadProperty 方法。
+	/// </summary>
+	/// <param name="methodName">要通过反射调用的 LoadProperty 方法名。</param>
+	/// <param name="propertyInfo">包含属性元数据的 PropertyInfo 对象。</param>
+	/// <param name="newValue">属性的新值。</param>
+	/// <returns>反射调用的返回值。</returns>
+	/// <exception cref="MissingMethodException">当找不到指定的泛型方法时抛出。</exception>
 	private object LoadPropertyByReflection(string methodName, IPropertyInfo propertyInfo, object newValue)
 	{
 		var type = GetType();
-		const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-		var method = type.GetMethods(flags).FirstOrDefault(c => c.Name == methodName && c.IsGenericMethod);
-		if (method == null)
+		var genericMethod = _loadPropertyMethodCache.GetOrAdd((type, propertyInfo.Type), _ =>
 		{
-			throw new MissingMethodException(type.FullName, methodName);
-		}
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+			var method = type.GetMethods(flags).FirstOrDefault(c => c.Name == methodName && c.IsGenericMethod);
+			if (method == null)
+			{
+				throw new MissingMethodException(type.FullName, methodName);
+			}
 
-		var genericMethod = method.MakeGenericMethod(propertyInfo.Type);
+			return method.MakeGenericMethod(propertyInfo.Type);
+		});
+
 		var parameters = new[] { propertyInfo, newValue };
 		return genericMethod.Invoke(this, parameters);
 	}
 
 	/// <summary>
-	/// Determines whether the specified new and old values for a property are different.
+	/// 确定属性的指定新旧值是否不同。
 	/// </summary>
 	/// <remarks>
-	/// For properties whose type implements IBusinessObject, this method uses reference equality to
-	/// determine if the values differ. For other types, value equality is used. Null values are handled
-	/// appropriately.
+	/// 对于类型实现 IBusinessObject 的属性，此方法使用引用相等性来确定值是否不同。
+	/// 对于其他类型，使用值相等性。null 值会被适当处理。
 	/// </remarks>
-	/// <typeparam name="TValue">The type of the values to compare.</typeparam>
-	/// <param name="propertyInfo">The property metadata used to determine the comparison strategy based on the property's type.</param>
-	/// <param name="newValue">The new value to compare. May be null.</param>
-	/// <param name="oldValue">The old value to compare. May be null.</param>
-	/// <returns>true if the new value differs from the old value; otherwise, false.</returns>
+	/// <typeparam name="TValue">要比较的值的类型。</typeparam>
+	/// <param name="propertyInfo">用于根据属性类型确定比较策略的属性元数据。</param>
+	/// <param name="newValue">要比较的新值。可以为 <c>null</c>。</param>
+	/// <param name="oldValue">要比较的旧值。可以为 <c>null</c>。</param>
+	/// <returns>如果新值不同于旧值，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	protected virtual bool ValuesDiffer<TValue>(IPropertyInfo propertyInfo, TValue newValue, TValue oldValue)
 	{
 		bool valuesDiffer;
@@ -729,7 +737,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 		else
 		{
-			// use reference equals for objects that inherit from base class
+			// 对继承自基类的对象使用引用相等比较
 			if (typeof(IBusinessObject).IsAssignableFrom(propertyInfo.Type))
 			{
 				valuesDiffer = !(ReferenceEquals(oldValue, newValue));
@@ -748,22 +756,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Authorization
 
 	/// <summary>
-	/// Determines whether the specified property can be read.
+	/// 确定是否可以读取指定属性。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
+	/// <param name="property">属性信息。</param>
+	/// <returns>如果可以读取，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public virtual bool CanReadProperty(IPropertyInfo property)
 	{
 		return true;
 	}
 
 	/// <summary>
-	/// Determines whether the specified property can be read.
+	/// 确定是否可以读取指定属性。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <param name="throwOnFalse"></param>
-	/// <returns></returns>
-	/// <exception cref="SecurityException"></exception>
+	/// <param name="property">属性信息。</param>
+	/// <param name="throwOnFalse">指示否定结果是否应导致异常。</param>
+	/// <returns>如果可以读取，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="SecurityException">当不允许读取且 <paramref name="throwOnFalse"/> 为 <c>true</c> 时抛出。</exception>
 	public bool CanReadProperty(IPropertyInfo property, bool throwOnFalse)
 	{
 		var result = CanReadProperty(property);
@@ -776,10 +784,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Determines whether the specified property can be read.
+	/// 确定是否可以读取指定属性。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <returns></returns>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>如果可以读取，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool CanReadProperty(string propertyName)
 	{
 		return CanReadProperty(propertyName, false);
@@ -787,7 +795,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 	private bool CanReadProperty(string propertyName, bool throwOnFalse)
 	{
-		var propertyInfo = FieldManager.GetRegisteredProperties().FirstOrDefault(p => p.Name == propertyName);
+		var propertyInfo = FieldManager.FindRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
 			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
@@ -800,22 +808,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Determines whether the specified property can be set.
+	/// 确定是否可以设置指定属性。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
+	/// <param name="property">属性信息。</param>
+	/// <returns>如果可以设置，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public virtual bool CanWriteProperty(IPropertyInfo property)
 	{
 		return true;
 	}
 
 	/// <summary>
-	/// Determines whether the specified property can be set.
+	/// 确定是否可以设置指定属性。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <param name="throwOnFalse"></param>
-	/// <returns></returns>
-	/// <exception cref="SecurityException"></exception>
+	/// <param name="property">属性信息。</param>
+	/// <param name="throwOnFalse">指示否定结果是否应导致异常。</param>
+	/// <returns>如果可以设置，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="SecurityException">当不允许设置且 <paramref name="throwOnFalse"/> 为 <c>true</c> 时抛出。</exception>
 	public bool CanWriteProperty(IPropertyInfo property, bool throwOnFalse)
 	{
 		var result = CanWriteProperty(property);
@@ -828,27 +836,27 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// Determines whether the specified property can be set.
+	/// 确定是否可以设置指定属性。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <returns></returns>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>如果可以设置，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool CanWriteProperty(string propertyName)
 	{
 		return CanWriteProperty(propertyName, false);
 	}
 
 	/// <summary>
-	/// Returns true if the user is allowed to write the specified property.
+	/// 如果允许用户写入指定属性，则返回 <c>true</c>。
 	/// </summary>
-	/// <param name="propertyName">Name of the property to write.</param>
-	/// <param name="throwOnFalse">Indicates whether a negative result should cause an exception.</param>
-	/// <returns><c>True</c> if the user is allowed to write property value, otherwise <c>False</c></returns>
+	/// <param name="propertyName">要写入的属性名称。</param>
+	/// <param name="throwOnFalse">指示否定结果是否应导致异常。</param>
+	/// <returns>如果允许用户写入属性值，则为 <c>True</c>；否则为 <c>False</c>。</returns>
 	private bool CanWriteProperty(string propertyName, bool throwOnFalse)
 	{
-		var propertyInfo = FieldManager.GetRegisteredProperties().FirstOrDefault(p => p.Name == propertyName);
+		var propertyInfo = FieldManager.FindRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
-			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
+			Trace.TraceError("CanWriteProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
 			return true;
 		}
 
@@ -862,9 +870,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private bool _disposedValue;
 
 	/// <summary>
-	/// Disposable pattern implementation.
+	/// 可释放模式的实现。
 	/// </summary>
-	/// <param name="disposing"></param>
+	/// <param name="disposing">指示是否正在释放托管资源。</param>
 	protected virtual void Dispose(bool disposing)
 	{
 		if (_disposedValue)
@@ -877,25 +885,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			// 释放托管状态(托管对象)
 		}
 
-		// 释放未托管的资源(未托管的对象)并重写终结器
-		// 将大型字段设置为 null
 		_disposedValue = true;
-	}
-
-	// Only override finalizer if 'Dispose(bool disposing)' has code to free unmanaged resources
-	/// <summary>
-	/// 
-	/// </summary>
-	~BusinessObject()
-	{
-		// 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		Dispose(disposing: false);
 	}
 
 	/// <inheritdoc/>
 	public void Dispose()
 	{
-		// 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
 		Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}

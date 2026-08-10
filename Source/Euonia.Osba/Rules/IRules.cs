@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Public interface for <see cref="IRules"/>
+/// <see cref="IRules"/> 的公共接口。
 /// </summary>
 public interface IRules
 {
     /// <summary>
-    /// Gets the target business object
+    /// 获取目标业务对象。
     /// </summary>
-    /// <value>The business object.</value>
+    /// <value>业务对象。</value>
     object Target { get; }
 }

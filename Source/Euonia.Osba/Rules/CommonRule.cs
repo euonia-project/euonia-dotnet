@@ -1,36 +1,39 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
+/// <summary>
+/// 提供通用规则创建的静态辅助类（分部类）。
+/// </summary>
 public partial class CommonRule
 {
 	/// <summary>
-	/// The common rule base.
+	/// 通用规则基类。
 	/// </summary>
 	public abstract class CommonRuleBase : RuleBase
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="CommonRuleBase"/> class.
+		/// 初始化 <see cref="CommonRuleBase"/> 类的新实例。
 		/// </summary>
-		/// <param name="property"></param>
+		/// <param name="property">受规则影响的属性。</param>
 		protected CommonRuleBase(IPropertyInfo property)
 			: base(property)
 		{
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="CommonRuleBase"/> class.
+		/// 初始化 <see cref="CommonRuleBase"/> 类的新实例。
 		/// </summary>
-		/// <param name="property"></param>
-		/// <param name="message"></param>
+		/// <param name="property">受规则影响的属性。</param>
+		/// <param name="message">规则的错误消息。</param>
 		protected CommonRuleBase(IPropertyInfo property, string message)
 			: this(property, () => message)
 		{
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="CommonRuleBase"/> class.
+		/// 初始化 <see cref="CommonRuleBase"/> 类的新实例。
 		/// </summary>
-		/// <param name="property"></param>
-		/// <param name="messageFactory"></param>
+		/// <param name="property">受规则影响的属性。</param>
+		/// <param name="messageFactory">生成规则消息的委托。</param>
 		protected CommonRuleBase(IPropertyInfo property, Func<string> messageFactory)
 			: this(property)
 		{
@@ -38,7 +41,7 @@ public partial class CommonRule
 		}
 
 		/// <summary>
-		/// Gets the message generate delegate.
+		/// 获取消息生成委托。
 		/// </summary>
 		protected virtual Func<string> MessageFactory { get; }
 	}

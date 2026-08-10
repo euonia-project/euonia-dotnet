@@ -1,22 +1,24 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Specifies the type of change that has occurred in a dictionary, such as adding, removing, or replacing items.
+/// 指定字典中已发生的更改类型，例如添加、移除或替换项。
 /// </summary>
-/// <remarks>Use this enumeration to determine the nature of a change when handling dictionary change
-/// notifications, such as in observable or event-driven dictionary implementations.</remarks>
+/// <remarks>处理字典更改通知（例如在可观察或事件驱动的字典实现中）时，
+/// 使用此枚举来确定更改的性质。</remarks>
 public enum DictionaryChangedAction
 {
 	/// <summary>
-	/// Indicates that an item was added to the dictionary. The event arguments will typically include the key and value of the added item.
+	/// 指示向字典中添加了一个项。事件参数通常包含所添加项的键和值。
 	/// </summary>
 	Add,
+
 	/// <summary>
-	/// Indicates that an item was removed from the dictionary. The event arguments will typically include the key and value of the removed item.
+	/// 指示从字典中移除了一个项。事件参数通常包含被移除项的键和值。
 	/// </summary>
 	Remove,
+
 	/// <summary>
-	/// Replaces all occurrences of a specified value with another value.
+	/// 将指定值的所有匹配项替换为另一个值。
 	/// </summary>
 	Update,
 }

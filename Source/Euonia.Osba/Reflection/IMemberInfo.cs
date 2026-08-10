@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Metadata of a business object member, usually a method or property.
+/// 业务对象成员的元数据，通常是一个方法或属性。
 /// </summary>
 public interface IMemberInfo
 {
     /// <summary>
-    /// Gets the member name value.
+    /// 获取成员名称值。
     /// </summary>
     string Name { get; }
 }

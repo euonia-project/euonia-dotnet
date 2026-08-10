@@ -1,42 +1,40 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Provides a base implementation for cache service classes that manage cache operations with key prefix support.
+/// 为管理带键前缀支持的缓存操作提供基础实现的缓存服务基类。
 /// </summary>
 /// <remarks>
-/// This abstract class serves as a foundation for cache service implementations, providing key rewriting functionality
-/// to ensure consistent key naming conventions across cache operations. Derived classes must implement the
-/// <see cref="GetCacheManager{T}"/> method to provide specific cache manager instances.
+/// 此抽象类作为缓存服务实现的基础，提供键重写功能以确保缓存操作中键命名约定的一致性。
+/// 派生类必须实现 <see cref="GetCacheManager{T}"/> 方法以提供具体的缓存管理器实例。
 /// </remarks>
 public abstract class BaseCacheService
 {
 	/// <summary>
-	/// Gets or sets the prefix that will be prepended to all cache keys.
+	/// 获取或设置将添加到所有缓存键前面的前缀。
 	/// </summary>
 	/// <value>
-	/// A string representing the key prefix. If <see langword="null"/> or empty, no prefix is applied to cache keys.
+	/// 表示键前缀的字符串。如果为 <see langword="null"/> 或空，则不向前缀添加任何内容。
 	/// </value>
 	public virtual string KeyPrefix { get; protected set; }
 
 	/// <summary>
-	/// Gets the cache manager instance for the specified type.
+	/// 获取指定类型的缓存管理器实例。
 	/// </summary>
-	/// <typeparam name="TValue">The type of data to be cached.</typeparam>
-	/// <returns>An <see cref="ICacheManager{T}"/> instance for managing cached items of type <typeparamref name="TValue"/>.</returns>
+	/// <typeparam name="TValue">要缓存的数据类型。</typeparam>
+	/// <returns>用于管理 <typeparamref name="TValue"/> 类型缓存项的 <see cref="ICacheManager{T}"/> 实例。</returns>
 	protected abstract ICacheManager<TValue> GetCacheManager<TValue>();
 
 	/// <summary>
-	/// Rewrites the specified cache key by prepending the configured key prefix.
+	/// 通过在键前添加配置的键前缀来重写指定的缓存键。
 	/// </summary>
-	/// <param name="key">The original cache key to be rewritten.</param>
+	/// <param name="key">要重写的原始缓存键。</param>
 	/// <returns>
-	/// The rewritten cache key with the format "{KeyPrefix}.Cache.{key}" if <see cref="KeyPrefix"/> is configured
-	/// and the key doesn't already start with this pattern; otherwise, returns the original key unchanged.
+	/// 重写后的缓存键，格式为 "{KeyPrefix}.Cache.{key}"；如果未配置 <see cref="KeyPrefix"/>
+	/// 或键已以此模式开头，则原样返回原始键。
 	/// </returns>
 	/// <remarks>
-	/// This method ensures that all cache keys follow a consistent naming convention. If the key already contains
-	/// the expected prefix pattern, it is returned as-is to prevent duplicate prefixing. The comparison is
-	/// case-insensitive.
+	/// 此方法确保所有缓存键遵循一致的命名约定。如果键已包含预期的前缀模式，则原样返回，
+	/// 以避免重复添加前缀。比较不区分大小写。
 	/// </remarks>
 	protected virtual string RewriteKey(string key)
 	{
@@ -49,22 +47,22 @@ public abstract class BaseCacheService
 	}
 
 	/// <summary>
-	/// Creates a <see cref="CacheItem{TValue}"/> instance with the specified key, value, and optional timeout.
+	/// 使用指定的键、值和可选的过期时间创建 <see cref="CacheItem{TValue}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TValue">The type of value to be cached.</typeparam>
-	/// <param name="key">The cache key identifier for the item.</param>
-	/// <param name="value">The value to be stored in the cache.</param>
+	/// <typeparam name="TValue">要缓存的值类型。</typeparam>
+	/// <param name="key">缓存项的键标识符。</param>
+	/// <param name="value">要存储在缓存中的值。</param>
 	/// <param name="timeout">
-	/// An optional <see cref="TimeSpan"/> specifying the absolute expiration time for the cache item.
-	/// If <see langword="null"/> or less than or equal to <see cref="TimeSpan.Zero"/>, the item is created without expiration.
+	/// 指定缓存项绝对过期时间的可选 <see cref="TimeSpan"/>。
+	/// 如果为 <see langword="null"/> 或小于等于 <see cref="TimeSpan.Zero"/>，则创建不带过期时间的缓存项。
 	/// </param>
 	/// <returns>
-	/// A <see cref="CacheItem{TValue}"/> configured with absolute expiration if <paramref name="timeout"/> is greater than
-	/// <see cref="TimeSpan.Zero"/>; otherwise, a cache item without expiration settings.
+	/// 如果 <paramref name="timeout"/> 大于 <see cref="TimeSpan.Zero"/>，则返回配置了绝对过期的
+	/// <see cref="CacheItem{TValue}"/>；否则返回不带过期设置的缓存项。
 	/// </returns>
 	/// <remarks>
-	/// This helper method standardizes the creation of cache items with consistent expiration behavior.
-	/// When a positive timeout is provided, the cache item uses <see cref="CacheExpirationMode.Absolute"/> expiration mode.
+	/// 此辅助方法统一了缓存项的创建，确保一致的过期行为。
+	/// 当提供了正数的过期时间时，缓存项使用 <see cref="CacheExpirationMode.Absolute"/> 过期模式。
 	/// </remarks>
 	protected virtual CacheItem<TValue> GetCacheItem<TValue>(string key, TValue value, TimeSpan? timeout)
 	{

@@ -1,43 +1,43 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Interface for field data.
+/// 字段数据的接口。
 /// </summary>
 public interface IFieldData : ITrackableObject
 {
 	/// <summary>
-	/// Gets the name of the field.
+	/// 获取字段的名称。
 	/// </summary>
 	string Name { get; }
 
 	/// <summary>
-	/// Gets or sets the field value.
+	/// 获取或设置字段值。
 	/// </summary>
-	/// <value>The value of the field.</value>
-	/// <returns>The value of the field.</returns>
+	/// <value>字段的值。</value>
+	/// <returns>字段的值。</returns>
 	object Value { get; set; }
 
 	/// <summary>
-	/// Marks the field as unchanged.
+	/// 将字段标记为未更改。
 	/// </summary>
 	void MarkAsUnchanged();
 
 	/// <summary>
-	/// Restore value to previous one.
+	/// 将值恢复到之前的值。
 	/// </summary>
 	void Undo();
 }
 
 /// <summary>
-/// Interface for field data of a specific type.
+/// 特定类型字段数据的接口。
 /// </summary>
-/// <typeparam name="T">The type of the field data.</typeparam>
+/// <typeparam name="T">字段数据的类型。</typeparam>
 public interface IFieldData<T> : IFieldData
 {
 	/// <summary>
-	/// Gets or sets the field value.
+	/// 获取或设置字段值。
 	/// </summary>
-	/// <value>The value of the field.</value>
-	/// <returns>The value of the field.</returns>
+	/// <value>字段的值。</value>
+	/// <returns>字段的值。</returns>
 	new T Value { get; set; }
 }

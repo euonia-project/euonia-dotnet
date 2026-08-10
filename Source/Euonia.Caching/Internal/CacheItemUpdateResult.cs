@@ -1,56 +1,51 @@
 ﻿namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// Helper class to create correct instances.
+/// 用于创建正确实例的辅助类。
 /// </summary>
 public static class CacheItemUpdateResult
 {
 	/// <summary>
-	/// Creates a new instance of the <see cref="CacheItemUpdateResult{TCacheValue}"/> class with
-	/// properties typical for the case where the cache item did not exist for an update operation.
+	/// 创建 <see cref="CacheItemUpdateResult{TCacheValue}"/> 类的新实例，其属性对应更新操作中缓存项不存在的情况。
 	/// </summary>
-	/// <typeparam name="TValue">The type of the cache value.</typeparam>
-	/// <returns>The item result.</returns>
+	/// <typeparam name="TValue">缓存值的类型。</typeparam>
+	/// <returns>项结果。</returns>
 	public static CacheItemUpdateResult<TValue> ForItemDidNotExist<TValue>() =>
 		new(null, CacheItemUpdateResultState.ItemDidNotExist, false, 1);
 
 	/// <summary>
-	/// Creates a new instance of the <see cref="CacheItemUpdateResult{TCacheValue}"/> indicating that the
-	/// cache value factory returned null instead of a valid value.
+	/// 创建 <see cref="CacheItemUpdateResult{TCacheValue}"/> 的新实例，指示缓存值工厂返回了 <c>null</c> 而非有效值。
 	/// </summary>
-	/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
-	/// <returns>The item result.</returns>
+	/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
+	/// <returns>项结果。</returns>
 	public static CacheItemUpdateResult<TCacheValue> ForFactoryReturnedNull<TCacheValue>() =>
 		new(null, CacheItemUpdateResultState.FactoryReturnedNull, false, 1);
 
 	/// <summary>
-	/// Creates a new instance of the <see cref="CacheItemUpdateResult{TCacheValue}"/> class with
-	/// properties typical for a successful update operation.
+	/// 创建 <see cref="CacheItemUpdateResult{TCacheValue}"/> 类的新实例，其属性对应成功的更新操作。
 	/// </summary>
-	/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
-	/// <param name="value">The value.</param>
-	/// <param name="conflictOccurred">Set to <c>true</c> if a conflict occurred.</param>
-	/// <param name="triesNeeded">The tries needed.</param>
-	/// <returns>The item result.</returns>
+	/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
+	/// <param name="value">值。</param>
+	/// <param name="conflictOccurred">如果发生冲突，则设为 <c>true</c>。</param>
+	/// <param name="triesNeeded">所需尝试次数。</param>
+	/// <returns>项结果。</returns>
 	public static CacheItemUpdateResult<TCacheValue> ForSuccess<TCacheValue>(CacheItem<TCacheValue> value, bool conflictOccurred = false, int triesNeeded = 1) =>
 		new(value, CacheItemUpdateResultState.Success, conflictOccurred, triesNeeded);
 
 	/// <summary>
-	/// Creates a new instance of the <see cref="CacheItemUpdateResult{TCacheValue}"/> class with
-	/// properties typical for an update operation which failed because it exceeded the limit of tries.
+	/// 创建 <see cref="CacheItemUpdateResult{TCacheValue}"/> 类的新实例，其属性对应因超过尝试次数上限而失败的更新操作。
 	/// </summary>
-	/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
-	/// <param name="triesNeeded">The tries needed.</param>
-	/// <returns>The item result.</returns>
+	/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
+	/// <param name="triesNeeded">所需尝试次数。</param>
+	/// <returns>项结果。</returns>
 	public static CacheItemUpdateResult<TCacheValue> ForTooManyRetries<TCacheValue>(int triesNeeded) =>
 		new(null, CacheItemUpdateResultState.TooManyRetries, true, triesNeeded);
 }
 
 /// <summary>
-/// Used by cache handle implementations to let the cache manager know what happened during an
-/// update operation.
+/// 由缓存句柄实现使用，用于让缓存管理器了解更新操作期间发生的情况。
 /// </summary>
-/// <typeparam name="TValue">The type of the cache value.</typeparam>
+/// <typeparam name="TValue">缓存值的类型。</typeparam>
 public class CacheItemUpdateResult<TValue>
 {
 	internal CacheItemUpdateResult(CacheItem<TValue> value, CacheItemUpdateResultState state, bool conflictOccurred, int triesNeeded)
@@ -67,26 +62,26 @@ public class CacheItemUpdateResult<TValue>
 	}
 
 	/// <summary>
-	/// Gets the number of tries the cache needed to update the item.
+	/// 获取缓存更新该项所需的尝试次数。
 	/// </summary>
-	/// <value>The number of retries needed.</value>
+	/// <value>所需重试次数。</value>
 	public int NumberOfTriesNeeded { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the update operation was successful or not.
+	/// 获取一个值，指示更新操作是否成功。
 	/// </summary>
-	/// <value>The current <see cref="CacheItemUpdateResultState"/>.</value>
+	/// <value>当前的 <see cref="CacheItemUpdateResultState"/>。</value>
 	public CacheItemUpdateResultState UpdateState { get; }
 
 	/// <summary>
-	/// Gets the updated value.
+	/// 获取更新后的值。
 	/// </summary>
-	/// <value>The updated value.</value>
+	/// <value>更新后的值。</value>
 	public CacheItem<TValue> Value { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether a version conflict occurred during an update operation.
+	/// 获取一个值，指示更新操作期间是否发生了版本冲突。
 	/// </summary>
-	/// <value><c>true</c> if a version conflict occurred; otherwise, <c>false</c>.</value>
+	/// <value>如果发生了版本冲突，则为 <c>true</c>；否则为 <c>false</c>。</value>
 	public bool VersionConflictOccurred { get; }
 }

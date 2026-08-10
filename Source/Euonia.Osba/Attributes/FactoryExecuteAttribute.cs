@@ -1,8 +1,8 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represent the marked method would execute a defined command.
-/// And the method could be invoked by <see cref="IObjectFactory"/>.
+/// 表示被标记的方法将执行一个已定义的命令。
+/// 该方法可由 <see cref="IObjectFactory"/> 调用。
 /// </summary>
 [AttributeUsage(AttributeTargets.Method, Inherited = false)]
 public class FactoryExecuteAttribute : FactoryMethodAttribute

@@ -1,20 +1,19 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Defines a type used to activate concrete business instances.
+/// 定义用于激活具体业务实例的类型。
 /// </summary>
 public interface IObjectActivator
 {
     /// <summary>
-    /// Initializes an existing business object instance.
+    /// 初始化现有的业务对象实例。
     /// </summary>
-    /// <param name="obj">Reference to the business object.</param>
+    /// <param name="obj">业务对象的引用。</param>
     void InitializeInstance(object obj);
 
     /// <summary>
-    /// Finalizes an existing business object instance. Called
-    /// after a data portal operation is complete.
+    /// 终结现有的业务对象实例。在数据门户操作完成后调用。
     /// </summary>
-    /// <param name="obj">Reference to the business object.</param>
+    /// <param name="obj">业务对象的引用。</param>
     void FinalizeInstance(object obj);
 }

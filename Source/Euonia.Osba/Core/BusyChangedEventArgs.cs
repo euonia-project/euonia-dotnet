@@ -1,15 +1,15 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Event arguments for the <see cref="EditableObject{T}.BusyChanged"/> event.
+/// <see cref="BusyChangedEventHandler"/> 事件的事件参数。
 /// </summary>
 public class BusyChangedEventArgs : EventArgs
 {
 	/// <summary>
-	/// Create a new instance of the <see cref="BusyChangedEventArgs"/> object.
+	/// 创建 <see cref="BusyChangedEventArgs"/> 对象的新实例。
 	/// </summary>
-	/// <param name="propertyName">The property for which the busy value has changed.</param>
-	/// <param name="isBusy">New busy value.</param>
+	/// <param name="propertyName">繁忙值已更改的属性。</param>
+	/// <param name="isBusy">新的繁忙值。</param>
 	public BusyChangedEventArgs(string propertyName,bool isBusy)
 	{
 		PropertyName = propertyName;
@@ -17,12 +17,12 @@ public class BusyChangedEventArgs : EventArgs
 	}
 	
 	/// <summary>
-	/// Gets a value indicating whether the property is busy.
+	/// 获取一个值，指示该属性是否繁忙。
 	/// </summary>
 	public bool IsBusy { get; protected set; }
 	
 	/// <summary>
-	/// Gets the name of the property for which the Busy value has changed.
+	/// 获取繁忙值已更改的属性名称。
 	/// </summary>
 	public string PropertyName { get; protected set; }
 }

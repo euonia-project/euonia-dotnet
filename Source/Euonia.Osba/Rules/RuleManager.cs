@@ -3,42 +3,48 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The rule manager.
+/// 规则管理器。
 /// </summary>
 public class RuleManager
 {
+    /// <summary>
+    /// 存储类型与其规则管理器映射的并发字典。
+    /// </summary>
     private static readonly Lazy<ConcurrentDictionary<Type, RuleManager>> _container = new();
 
+    /// <summary>
+    /// 初始化 <see cref="RuleManager"/> 类的新实例。
+    /// </summary>
     private RuleManager()
     {
         Rules = new List<IRuleBase>();
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether this <see cref="RuleManager"/> is initialized.
+    /// 获取或设置一个值，指示此 <see cref="RuleManager"/> 是否已初始化。
     /// </summary>
     public bool Initialized { get; set; }
 
     /// <summary>
-    /// Gets the rules.
+    /// 获取规则列表。
     /// </summary>
     public List<IRuleBase> Rules { get; }
 
     /// <summary>
-    /// Gets the rules of specified type.
+    /// 获取指定类型的规则。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="T">目标类型。</typeparam>
+    /// <returns>指定类型的规则管理器。</returns>
     public static RuleManager GetRules<T>()
     {
         return GetRules(typeof(T));
     }
 
     /// <summary>
-    /// Gets the rules of specified type.
+    /// 获取指定类型的规则。
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">目标类型。</param>
+    /// <returns>指定类型的规则管理器。</returns>
     public static RuleManager GetRules(Type type)
     {
 	    var result = _container.Value.GetOrAdd(type, _ => new RuleManager());
@@ -46,9 +52,9 @@ public class RuleManager
     }
 
     /// <summary>
-    /// Cleans the rules of specified type.
+    /// 清理指定类型的规则。
     /// </summary>
-    /// <param name="type"></param>
+    /// <param name="type">要清理规则的类型。</param>
     public static void CleanRules(Type type)
     {
         lock (_container)

@@ -1,28 +1,28 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The property info list.
+/// 属性信息列表。
 /// </summary>
 public class PropertyInfoList : List<IPropertyInfo>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="PropertyInfoList"/> class.
+    /// 初始化 <see cref="PropertyInfoList"/> 类的新实例。
     /// </summary>
     public PropertyInfoList()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="PropertyInfoList"/> class.
+    /// 初始化 <see cref="PropertyInfoList"/> 类的新实例。
     /// </summary>
-    /// <param name="collection"></param>
+    /// <param name="collection">要复制的属性信息集合。</param>
     public PropertyInfoList(IEnumerable<IPropertyInfo> collection)
         : base(collection)
     {
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether the current instance is locked for edit.
+    /// 获取或设置一个值，指示当前实例是否已锁定以禁止编辑。
     /// </summary>
     public bool IsLocked { get; set; }
 }

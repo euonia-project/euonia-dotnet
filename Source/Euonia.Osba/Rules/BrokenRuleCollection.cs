@@ -3,29 +3,32 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// A collection of currently broken rules.
+/// 当前违规规则的集合。
 /// </summary>
 public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 {
-    private static readonly object _lockObject = new();
+	/// <summary>
+	/// 用于保护集合访问的锁对象。
+	/// </summary>
+	private static readonly object _lockObject = new();
 
 	/// <summary>
-	/// Gets the number of broken rules in the collection that have a severity of Error.
+	/// 获取集合中严重级别为 Error 的违规规则数量。
 	/// </summary>
 	public int ErrorCount { get; private set; }
 
     /// <summary>
-    /// Gets the number of broken rules in the collection that have a severity of Warning.
+    /// 获取集合中严重级别为 Warning 的违规规则数量。
     /// </summary>
     public int WarningCount { get; private set; }
 
     /// <summary>
-    /// Gets the number of broken rules in the collection that have a severity of Information.
+    /// 获取集合中严重级别为 Information 的违规规则数量。
     /// </summary>
     public int InformationCount { get; private set; }
 
     /// <summary>
-    /// Remove all previous results.
+    /// 移除所有先前的结果。
     /// </summary>
     internal void ClearRules()
     {
@@ -37,18 +40,18 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     }
 	
 	/// <summary>
-	/// Remove the previous result for the given property.
+	/// 移除给定属性的先前结果。
 	/// </summary>
-	/// <param name="property"></param>
+	/// <param name="property">属性信息。</param>
     internal void ClearRules(IPropertyInfo property)
     {
         ClearRules(property?.Name);
     }
 	
 	/// <summary>
-	/// Remove the previous result for the given property name.
+	/// 移除给定属性名称的先前结果。
 	/// </summary>
-	/// <param name="propertyName"></param>
+	/// <param name="propertyName">属性名称。</param>
     private void ClearRules(string propertyName)
     {
         lock (_lockObject)
@@ -71,11 +74,11 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     }
 
 	/// <summary>
-	/// Adds the results to the collection for the given property name.
+	/// 将给定属性名称的结果添加到集合中。
 	/// </summary>
-	/// <param name="results"></param>
-	/// <param name="propertyName"></param>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <param name="results">规则结果集合。</param>
+	/// <param name="propertyName">属性名称。</param>
+	/// <exception cref="InvalidOperationException">当结果的描述为空时抛出。</exception>
     internal void Add(IEnumerable<RuleResult> results, string propertyName)
     {
         lock (_lockObject)
@@ -105,12 +108,20 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
         }
     }
 
+    /// <summary>
+    /// 向集合中添加违规规则，并更新对应严重级别的计数。
+    /// </summary>
+    /// <param name="item">要添加的违规规则。</param>
     private new void Add(BrokenRule item)
     {
         base.Add(item);
         CountOne(item.Severity, 1);
     }
 
+    /// <summary>
+    /// 从集合中移除指定索引处的项，并更新对应严重级别的计数。
+    /// </summary>
+    /// <param name="i">要移除的项的索引。</param>
     private new void RemoveItem(int i)
     {
         CountOne(this[i].Severity, -1);
@@ -118,6 +129,11 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
         base.RemoveItem(i);
     }
 
+    /// <summary>
+    /// 按严重级别更新计数。
+    /// </summary>
+    /// <param name="severity">严重级别。</param>
+    /// <param name="one">计数的增量（1 或 -1）。</param>
     private void CountOne(RuleSeverity severity, int one)
     {
         switch (severity)

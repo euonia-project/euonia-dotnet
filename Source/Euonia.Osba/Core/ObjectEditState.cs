@@ -1,27 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The object edit state enums.
+/// 对象编辑状态的枚举。
 /// </summary>
 public enum ObjectEditState
 {
 	/// <summary>
-	/// None
+	/// 无状态（对象未发生任何编辑）。
 	/// </summary>
-    None,
+	None,
 
-    /// <summary>
-    /// Insert
-    /// </summary>
-    New,
+	/// <summary>
+	/// 新增状态（对象为新插入）。
+	/// </summary>
+	New,
 
-    /// <summary>
-    /// Update
-    /// </summary>
-    Changed,
+	/// <summary>
+	/// 已更改状态（对象已更新）。
+	/// </summary>
+	Changed,
 
-    /// <summary>
-    /// Delete
-    /// </summary>
-    Deleted,
+	/// <summary>
+	/// 已删除状态（对象已删除）。
+	/// </summary>
+	Deleted,
 }

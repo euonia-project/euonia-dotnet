@@ -1,56 +1,55 @@
 ﻿namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// Defines the different counter types the cache manager supports.
+/// 定义缓存管理器支持的不同计数器类型。
 /// </summary>
 public enum CacheStatsCounterType
 {
     /// <summary>
-    /// The number of hits.
+    /// 命中次数。
     /// </summary>
     Hits,
 
     /// <summary>
-    /// The number of misses.
+    /// 未命中次数。
     /// </summary>
     Misses,
 
     /// <summary>
-    /// The total number of items.
+    /// 项的总数。
     /// <para>
-    /// This might not be accurate in distribute cache scenarios because we count only the items
-    /// added or removed locally.
+    /// 在分布式缓存场景中这可能不准确，因为只统计本地添加或移除的项。
     /// </para>
     /// </summary>
     Items,
 
     /// <summary>
-    /// The number of remove calls.
+    /// 移除调用的次数。
     /// </summary>
     RemoveCalls,
 
     /// <summary>
-    /// The number of add calls.
+    /// 添加调用的次数。
     /// </summary>
     AddCalls,
 
     /// <summary>
-    /// The number of put calls.
+    /// 更新调用的次数。
     /// </summary>
     PutCalls,
 
     /// <summary>
-    /// The number of get calls.
+    /// 获取调用的次数。
     /// </summary>
     GetCalls,
 
     /// <summary>
-    /// The number of clear calls.
+    /// 清空调用的次数。
     /// </summary>
     ClearCalls,
 
     /// <summary>
-    /// The number of clear region calls.
+    /// 清空区域调用的次数。
     /// </summary>
     ClearRegionCalls
 }

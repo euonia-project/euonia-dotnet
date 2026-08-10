@@ -1,55 +1,55 @@
 ﻿namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// Contract which exposes only the properties of the <see cref="CacheItem{T}"/> without T value.
+/// 仅公开 <see cref="CacheItem{T}"/> 的属性（不含 T 值）的契约。
 /// </summary>
 public interface ICacheItemProperties
 {
     /// <summary>
-    /// Gets the creation date of the cache item.
+    /// 获取缓存项的创建日期。
     /// </summary>
-    /// <value>The creation date.</value>
+    /// <value>创建日期。</value>
     DateTime CreatedUtc { get; }
 
     /// <summary>
-    /// Gets the expiration mode.
+    /// 获取过期模式。
     /// </summary>
-    /// <value>The expiration mode.</value>
+    /// <value>过期模式。</value>
     CacheExpirationMode ExpirationMode { get; }
 
     /// <summary>
-    /// Gets the expiration timeout.
+    /// 获取过期时间。
     /// </summary>
-    /// <value>The expiration timeout.</value>
+    /// <value>过期时间。</value>
     TimeSpan ExpirationTimeout { get; }
 
     /// <summary>
-    /// Gets the cache key.
+    /// 获取缓存键。
     /// </summary>
-    /// <value>The cache key.</value>
+    /// <value>缓存键。</value>
     string Key { get; }
 
     /// <summary>
-    /// Gets or sets the last accessed date of the cache item.
+    /// 获取或设置缓存项的最后访问日期。
     /// </summary>
-    /// <value>The last accessed date.</value>
+    /// <value>最后访问日期。</value>
     DateTime LastAccessedUtc { get; set; }
 
     /// <summary>
-    /// Gets the cache region.
+    /// 获取缓存区域。
     /// </summary>
-    /// <value>The cache region.</value>
+    /// <value>缓存区域。</value>
     string Region { get; }
 
     /// <summary>
-    /// Gets a value indicating whether the cache item uses the cache handle's configured expiration.
+    /// 获取一个值，指示缓存项是否使用缓存句柄配置的过期时间。
     /// </summary>
     bool UsesExpirationDefaults { get; }
 
     /// <summary>
-    /// Gets the type of the cache value.
-    /// <para>This might be used for serialization and deserialization.</para>
+    /// 获取缓存值的类型。
+    /// <para>此类型可能用于序列化和反序列化。</para>
     /// </summary>
-    /// <value>The type of the cache value.</value>
+    /// <value>缓存值的类型。</value>
     Type ValueType { get; }
 }

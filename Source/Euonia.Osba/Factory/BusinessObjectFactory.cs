@@ -5,7 +5,7 @@ using Nerosoft.Euonia.Threading;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The business object factory.
+/// 业务对象工厂。
 /// </summary>
 public class BusinessObjectFactory : IObjectFactory
 {
@@ -13,19 +13,19 @@ public class BusinessObjectFactory : IObjectFactory
 	private readonly IObjectActivator _activator;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="BusinessObjectFactory"/>.
+	/// 初始化 <see cref="BusinessObjectFactory"/> 的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
+	/// <param name="provider">服务提供程序。</param>
 	public BusinessObjectFactory(IServiceProvider provider)
 	{
 		_provider = provider;
 	}
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="BusinessObjectFactory"/>.
+	/// 初始化 <see cref="BusinessObjectFactory"/> 的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
-	/// <param name="activator"></param>
+	/// <param name="provider">服务提供程序。</param>
+	/// <param name="activator">对象激活器，用于在操作前后初始化/终结对象实例。</param>
 	public BusinessObjectFactory(IServiceProvider provider, IObjectActivator activator)
 	{
 		_provider = provider;
@@ -258,17 +258,17 @@ public class BusinessObjectFactory : IObjectFactory
 	}
 
 	/// <summary>
-	/// Get instance from <see cref="IServiceProvider"/> or create a new instance .
+	/// 从 <see cref="IServiceProvider"/> 获取实例，或创建新实例。
 	/// </summary>
-	/// <typeparam name="TTarget"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <returns>目标类型实例。</returns>
 	private TTarget GetObjectInstance<TTarget>()
 	{
 		var @object = ActivatorUtilities.GetServiceOrCreateInstance<TTarget>(_provider);
 
 		// ReSharper disable once ConvertIfStatementToSwitchStatement
 
-		// The object may be both IHasLazyServiceProvider and IUseBusinessContext
+		// 对象可能同时实现 IHasLazyServiceProvider 和 IUseBusinessContext
 
 		if (@object is IHasLazyServiceProvider lazy)
 		{
@@ -291,7 +291,7 @@ public class BusinessObjectFactory : IObjectFactory
 			}
 			else
 			{
-				// TODO: Optimize GetKeyedService
+				// TODO: 优化 GetKeyedService
 				var implement = serviceKey == null ? _provider.GetService(type) : ServiceProviderExtensions.GetKeyedService(_provider, type, serviceKey); // _provider.GetKeyedService(type, serviceKey);
 				property.SetValue(@object, implement);
 			}
