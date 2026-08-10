@@ -152,34 +152,32 @@ public class ObjectReflector
 			throw new MissingMethodException(typeof(TTarget).FullName, $"{methodNames}({paramsNames})");
 		}
 
+		var matchedMethod = matches[0];
+		if (matches.Count > 1)
 		{
-			var method = matches[0];
-			if (matches.Count > 1)
+			var maxScore = int.MinValue;
+			var maxCount = 0;
+			foreach (var item in matches)
 			{
-				var maxScore = int.MinValue;
-				var maxCount = 0;
-				foreach (var item in matches)
+				if (item.Item2 > maxScore)
 				{
-					if (item.Item2 > maxScore)
-					{
-						maxScore = item.Item2;
-						maxCount = 1;
-						method = item;
-					}
-					else if (item.Item2 == maxScore)
-					{
-						maxCount++;
-					}
+					maxScore = item.Item2;
+					maxCount = 1;
+					matchedMethod = item;
 				}
-
-				if (maxCount > 1)
+				else if (item.Item2 == maxScore)
 				{
-					throw new AmbiguousMatchException(Resources.IDS_MULTIPLE_METHOD_MATCHED);
+					maxCount++;
 				}
 			}
 
-			return method.Item1;
+			if (maxCount > 1)
+			{
+				throw new AmbiguousMatchException(Resources.IDS_MULTIPLE_METHOD_MATCHED);
+			}
 		}
+
+		return matchedMethod.Item1;
 	}
 
 	/// <summary>
@@ -253,8 +251,6 @@ public class ObjectReflector
 			result.AddRange(GetCandidateMethods(targetType.BaseType, attributeType, level));
 		}
 
-		{
-		}
 
 		return result;
 	}
@@ -329,9 +325,6 @@ public class ObjectReflector
 				}
 			}
 
-			{
-				// 防止代码检查警告。
-			}
 
 			throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
 		}
@@ -387,12 +380,12 @@ public class ObjectReflector
 
 		if (!type.IsGenericType)
 		{
-			return type.Name;
+			return type.FullName ?? type.Name;
 		}
 
 		var result = new StringBuilder();
 		var genericArguments = type.GetGenericArguments();
-		result.Append(type.Name);
+		result.Append(type.GetGenericTypeDefinition().FullName);
 		result.Append('<');
 
 		for (var index = 0; index < genericArguments.Length; index++)

@@ -1,7 +1,7 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// <see cref="EditableObject{T}.BusyChanged"/> 事件的事件参数。
+/// <see cref="BusyChangedEventHandler"/> 事件的事件参数。
 /// </summary>
 public class BusyChangedEventArgs : EventArgs
 {

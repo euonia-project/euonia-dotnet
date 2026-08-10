@@ -97,26 +97,6 @@ public class BusinessContext
 	}
 
 	/// <summary>
-	/// 尝试从当前服务提供程序解析指定 <paramref name="serviceType"/> 的服务。
-	/// 如果服务未注册，则返回 <c>null</c>。
-	/// </summary>
-	/// <param name="serviceType">要解析的服务类型。</param>
-	/// <returns>解析出的服务实例；如果未找到，则为 <c>null</c>。</returns>
-	/// <exception cref="NullReferenceException">当 <see cref="CurrentServiceProvider"/> 为 <c>null</c> 时抛出。</exception>
-	public object GetService(Type serviceType)
-	{
-		if (CurrentServiceProvider == null)
-		{
-			throw new NullReferenceException(nameof(CurrentServiceProvider));
-		}
-
-		{
-		}
-
-		return CurrentServiceProvider.GetService(serviceType);
-	}
-
-	/// <summary>
 	/// 解析使用提供的 <paramref name="key"/> 的 <typeparamref name="T"/> 类型的键服务。
 	/// 一些 DI 容器允许注册键服务；这会委托到一个扩展辅助。
 	/// </summary>

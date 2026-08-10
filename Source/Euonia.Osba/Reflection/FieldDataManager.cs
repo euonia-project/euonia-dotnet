@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Osba;
 public class FieldDataManager
 {
 	private const string RESOURCE_PROPERTY_NOT_REGISTERED = "Property not registered";
-	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property namd '{0}' not registered";
+	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property name '{0}' not registered";
 
 	/// <summary>
 	/// 存储字段数据的字典（以属性名称为键）。
@@ -86,13 +86,23 @@ public class FieldDataManager
 	/// <exception cref="ArgumentOutOfRangeException">当属性未注册时抛出。</exception>
 	public IPropertyInfo GetRegisteredProperty(string propertyName)
 	{
-		var result = GetRegisteredProperties().FirstOrDefault(c => c.Name == propertyName);
+		var result = _properties.FirstOrDefault(c => c.Name == propertyName);
 		if (result == null)
 		{
 			throw new ArgumentOutOfRangeException(string.Format(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, propertyName));
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// 查找具有指定名称的已注册属性，未找到时返回 <see langword="null"/>。
+	/// </summary>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>匹配的属性信息；如果未注册则为 <see langword="null"/>。</returns>
+	internal IPropertyInfo FindRegisteredProperty(string propertyName)
+	{
+		return _properties.FirstOrDefault(c => c.Name == propertyName);
 	}
 
 	#region Get/Set/Find fields
@@ -102,17 +112,9 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="property">属性信息。</param>
 	/// <returns>字段数据。</returns>
-	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public IFieldData GetFieldData(IPropertyInfo property)
 	{
-		try
-		{
-			return _fieldData.GetValueOrDefault(property.Name);
-		}
-		catch (IndexOutOfRangeException ex)
-		{
-			throw new InvalidOperationException(RESOURCE_PROPERTY_NOT_REGISTERED, ex);
-		}
+		return _fieldData.GetValueOrDefault(property.Name);
 	}
 
 	/// <summary>
@@ -120,17 +122,9 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
 	/// <returns>字段数据。</returns>
-	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public IFieldData GetFieldData(string propertyName)
 	{
-		try
-		{
-			return _fieldData.GetValueOrDefault(propertyName);
-		}
-		catch (IndexOutOfRangeException ex)
-		{
-			throw new InvalidOperationException(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, ex);
-		}
+		return _fieldData.GetValueOrDefault(propertyName);
 	}
 
 	/// <summary>
@@ -140,22 +134,15 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	private IFieldData GetOrCreateFieldData(IPropertyInfo property)
 	{
-		try
+		if (_fieldData.TryGetValue(property.Name, out var field))
 		{
-			if (_fieldData.TryGetValue(property.Name, out var field))
-			{
-				return field;
-			}
-
-			field = property.NewFieldData(property.Name);
-			_fieldData[property.Name] = field;
-
 			return field;
 		}
-		catch (IndexOutOfRangeException ex)
-		{
-			throw new InvalidOperationException(RESOURCE_PROPERTY_NOT_REGISTERED, ex);
-		}
+
+		field = property.NewFieldData(property.Name);
+		_fieldData[property.Name] = field;
+
+		return field;
 	}
 
 	/// <summary>
@@ -237,17 +224,10 @@ public class FieldDataManager
 	/// <param name="property">属性信息。</param>
 	internal void RemoveField(IPropertyInfo property)
 	{
-		try
+		var field = _fieldData.GetValueOrDefault(property.Name);
+		if (field != null)
 		{
-			var field = _fieldData[property.Name];
-			if (field != null)
-			{
-				field.Value = null;
-			}
-		}
-		catch (IndexOutOfRangeException ex)
-		{
-			throw new InvalidOperationException(RESOURCE_PROPERTY_NOT_REGISTERED, ex);
+			field.Value = null;
 		}
 	}
 
@@ -256,17 +236,9 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="property">属性信息。</param>
 	/// <returns>如果字段存在，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public bool FieldExists(IPropertyInfo property)
 	{
-		try
-		{
-			return _fieldData.TryGetValue(property.Name, out var _);
-		}
-		catch (IndexOutOfRangeException ex)
-		{
-			throw new InvalidOperationException(RESOURCE_PROPERTY_NOT_REGISTERED, ex);
-		}
+		return _fieldData.ContainsKey(property.Name);
 	}
 
 	#endregion

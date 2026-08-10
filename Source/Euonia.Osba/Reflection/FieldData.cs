@@ -18,10 +18,6 @@ public class FieldData<T> : IFieldData<T>
 	/// </summary>
 	public FieldData()
 	{
-		ObservableValue.Subscribe(value =>
-		{
-			_histories.Push(value);
-		});
 	}
 
 	/// <inheritdoc />
@@ -55,6 +51,8 @@ public class FieldData<T> : IFieldData<T>
 				return;
 			}
 
+			// 记录旧值以支持撤销操作
+			_histories.Push(_value);
 			_value = value;
 			_subject.OnNext(value);
 		}
@@ -69,9 +67,11 @@ public class FieldData<T> : IFieldData<T>
 	/// <inheritdoc />
 	public void Undo()
 	{
-		if (_histories.Count > 0 && _histories.TryPop(out var value))
+		if (_histories.TryPop(out var value))
 		{
-			Value = value;
+			// 直接恢复值，避免再次写入历史栈
+			_value = value;
+			_subject.OnNext(value);
 		}
 	}
 
@@ -156,10 +156,21 @@ public class FieldData<T> : IFieldData<T>
 	/// <summary>
 	/// 当繁忙状态改变时发生。
 	/// </summary>
+	private BusyChangedEventHandler _busyChanged;
+
 	event BusyChangedEventHandler INotifyBusy.BusyChanged
 	{
-		add => throw new NotImplementedException();
-		remove => throw new NotImplementedException();
+		add => _busyChanged = (BusyChangedEventHandler)Delegate.Combine(_busyChanged, value);
+		remove => _busyChanged = (BusyChangedEventHandler)Delegate.Remove(_busyChanged, value);
+	}
+
+	/// <summary>
+	/// 引发 <see cref="INotifyBusy.BusyChanged"/> 事件。
+	/// </summary>
+	/// <param name="args">事件参数。</param>
+	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
+	{
+		_busyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>

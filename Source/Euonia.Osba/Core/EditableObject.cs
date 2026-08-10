@@ -132,11 +132,17 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 		}
 
 		MarkAsBusy();
-		var result = await BusinessContext.GetRequiredService<IObjectFactory>().SaveAsync((T)this, cancellationToken);
-		result?.MarkAsIdle();
-		MarkAsIdle();
-		OnSaved(result, null, userState);
-		return result;
+		try
+		{
+			var result = await BusinessContext.GetRequiredService<IObjectFactory>().SaveAsync((T)this, cancellationToken);
+			result?.MarkAsIdle();
+			OnSaved(result, null, userState);
+			return result;
+		}
+		finally
+		{
+			MarkAsIdle();
+		}
 	}
 
 	/// <summary>

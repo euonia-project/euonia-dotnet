@@ -54,31 +54,45 @@ public class PropertyInfo<T> : IPropertyInfo
 	{
 		get
 		{
-			if (string.IsNullOrWhiteSpace(field))
+			if (field != null)
 			{
 				return field;
 			}
 
-			if (_propertyInfo != null)
-			{
-				var displayAttribute = _propertyInfo.GetCustomAttribute<DisplayAttribute>();
-				if (displayAttribute != null)
-				{
-					return displayAttribute.GetName() ?? Name;
-				}
-
-				var displayNameAttribute = _propertyInfo.GetCustomAttribute<DisplayNameAttribute>();
-				if (displayNameAttribute != null)
-				{
-					return displayNameAttribute.DisplayName;
-				}
-			}
-
-			{
-			}
-
-			return Name;
+			return _cachedFriendlyName ??= ResolveFriendlyName();
 		}
+	}
+
+	/// <summary>
+	/// 缓存的友好名称解析结果。
+	/// </summary>
+	private string _cachedFriendlyName;
+
+	/// <summary>
+	/// 从 <see cref="DisplayAttribute"/> 或 <see cref="DisplayNameAttribute"/> 解析友好名称，未找到时回退到属性名。
+	/// </summary>
+	/// <returns>解析后的友好名称。</returns>
+	private string ResolveFriendlyName()
+	{
+		if (_propertyInfo != null)
+		{
+			var displayAttribute = _propertyInfo.GetCustomAttribute<DisplayAttribute>();
+			if (displayAttribute != null)
+			{
+				return displayAttribute.GetName() ?? Name;
+			}
+
+			var displayNameAttribute = _propertyInfo.GetCustomAttribute<DisplayNameAttribute>();
+			if (displayNameAttribute != null)
+			{
+				return displayNameAttribute.DisplayName;
+			}
+		}
+
+		{
+		}
+
+		return Name;
 	}
 
 	/// <inheritdoc />

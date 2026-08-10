@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security;
@@ -98,7 +99,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 挂起所有规则检查，稍后可恢复。
+	/// 恰挂起所有规则检查，稍后可恢复。
 	/// </summary>
 	public void SuspendRuleChecking()
 	{
@@ -293,7 +294,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="property">要标记的属性信息。</param>
 	protected virtual void PropertyHasChanged(IPropertyInfo property)
 	{
-		_changedProperties.Add(property);
+		if (!_changedProperties.Contains(property))
+		{
+			_changedProperties.Add(property);
+		}
+
 		if (CheckRuleOnPropertyChanged)
 		{
 			CheckPropertyRules(property);
@@ -680,6 +685,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 缓存已构造的泛型 <see cref="LoadProperty{TValue}"/> 方法，避免重复反射查找。
+	/// </summary>
+	private static readonly ConcurrentDictionary<(Type DeclaringType, Type PropertyType), MethodInfo> _loadPropertyMethodCache = new();
+
+	/// <summary>
 	/// 通过反射调用泛型 LoadProperty 方法。
 	/// </summary>
 	/// <param name="methodName">要通过反射调用的 LoadProperty 方法名。</param>
@@ -690,14 +700,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private object LoadPropertyByReflection(string methodName, IPropertyInfo propertyInfo, object newValue)
 	{
 		var type = GetType();
-		const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-		var method = type.GetMethods(flags).FirstOrDefault(c => c.Name == methodName && c.IsGenericMethod);
-		if (method == null)
+		var genericMethod = _loadPropertyMethodCache.GetOrAdd((type, propertyInfo.Type), _ =>
 		{
-			throw new MissingMethodException(type.FullName, methodName);
-		}
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+			var method = type.GetMethods(flags).FirstOrDefault(c => c.Name == methodName && c.IsGenericMethod);
+			if (method == null)
+			{
+				throw new MissingMethodException(type.FullName, methodName);
+			}
 
-		var genericMethod = method.MakeGenericMethod(propertyInfo.Type);
+			return method.MakeGenericMethod(propertyInfo.Type);
+		});
+
 		var parameters = new[] { propertyInfo, newValue };
 		return genericMethod.Invoke(this, parameters);
 	}
@@ -781,7 +795,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 	private bool CanReadProperty(string propertyName, bool throwOnFalse)
 	{
-		var propertyInfo = FieldManager.GetRegisteredProperties().FirstOrDefault(p => p.Name == propertyName);
+		var propertyInfo = FieldManager.FindRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
 			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
@@ -839,10 +853,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>如果允许用户写入属性值，则为 <c>True</c>；否则为 <c>False</c>。</returns>
 	private bool CanWriteProperty(string propertyName, bool throwOnFalse)
 	{
-		var propertyInfo = FieldManager.GetRegisteredProperties().FirstOrDefault(p => p.Name == propertyName);
+		var propertyInfo = FieldManager.FindRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
-			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
+			Trace.TraceError("CanWriteProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
 			return true;
 		}
 
@@ -871,25 +885,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			// 释放托管状态(托管对象)
 		}
 
-		// 释放未托管的资源(未托管的对象)并重写终结器
-		// 将大型字段设置为 null
 		_disposedValue = true;
-	}
-
-	// 仅当 'Dispose(bool disposing)' 具有释放非托管资源的代码时才重写终结器
-	/// <summary>
-	/// 终结 <see cref="BusinessObject"/> 类的实例。
-	/// </summary>
-	~BusinessObject()
-	{
-		// 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
-		Dispose(disposing: false);
 	}
 
 	/// <inheritdoc/>
 	public void Dispose()
 	{
-		// 不要更改此代码。请将清理代码放入“Dispose(bool disposing)”方法中
 		Dispose(disposing: true);
 		GC.SuppressFinalize(this);
 	}
