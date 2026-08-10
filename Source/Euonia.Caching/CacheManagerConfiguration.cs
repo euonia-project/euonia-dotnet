@@ -1,91 +1,90 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// The basic cache manager configuration class.
+/// 基本的缓存管理器配置类。
 /// </summary>
 public sealed class CacheManagerConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheManagerConfiguration"/> class.
+    /// 初始化 <see cref="CacheManagerConfiguration"/> 类的新实例。
     /// </summary>
     public CacheManagerConfiguration()
     {
     }
 
     /// <summary>
-    /// Gets a <see cref="ConfigurationBuilder"/> for the current <see cref="CacheManagerConfiguration"/> instance
-    /// to manipulate the configuration fluently.
+    /// 获取当前 <see cref="CacheManagerConfiguration"/> 实例的 <see cref="ConfigurationBuilder"/>，
+    /// 以便以流式方式修改配置。
     /// </summary>
-    /// <returns>The <see cref="ConfigurationBuilder"/>.</returns>
+    /// <returns><see cref="ConfigurationBuilder"/> 实例。</returns>
     public ConfigurationBuilder Builder => new(this);
 
     /// <summary>
-    /// Gets or sets the name of the cache.
+    /// 获取或设置缓存的名称。
     /// </summary>
-    /// <value>The name of the cache.</value>
+    /// <value>缓存的名称。</value>
     public string Name { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
-    /// Gets or sets the <see cref="UpdateMode"/> for the cache manager instance.
+    /// 获取或设置缓存管理器实例的 <see cref="UpdateMode"/>。
     /// <para>
-    /// Drives the behavior of the cache manager how it should update the different cache
-    /// handles it manages.
+    /// 控制缓存管理器应如何更新其管理的各个缓存句柄的行为。
     /// </para>
     /// </summary>
-    /// <value>The cache update mode.</value>
+    /// <value>缓存更新模式。</value>
     /// <see cref="UpdateMode"/>
     public CacheUpdateMode UpdateMode { get; set; } = CacheUpdateMode.Up;
 
     /// <summary>
-    /// Gets or sets the limit of the number of retry operations per action.
-    /// <para>Default is 50.</para>
+    /// 获取或设置每个操作的重试次数上限。
+    /// <para>默认值为 50。</para>
     /// </summary>
-    /// <value>The maximum retries.</value>
+    /// <value>最大重试次数。</value>
     public int MaxRetries { get; set; } = 50;
 
     /// <summary>
-    /// Gets or sets the number of milliseconds the cache should wait before it will retry an action.
-    /// <para>Default is 100.</para>
+    /// 获取或设置缓存重试某个操作之前应等待的毫秒数。
+    /// <para>默认值为 100。</para>
     /// </summary>
-    /// <value>The retry timeout.</value>
+    /// <value>重试超时时间。</value>
     public int RetryTimeout { get; set; } = 100;
 
     /// <summary>
-    /// Gets or sets the configuration key the backplane might use.
+    /// 获取或设置背板可能使用的配置键。
     /// </summary>
-    /// <value>The key of the backplane configuration.</value>
+    /// <value>背板配置的键。</value>
     public string BackplaneConfigurationKey { get; set; }
 
     /// <summary>
-    /// Gets or sets the backplane channel name.
+    /// 获取或设置背板通道名称。
     /// </summary>
-    /// <value>The channel name.</value>
+    /// <value>通道名称。</value>
     public string BackplaneChannelName { get; set; }
 
     /// <summary>
-    /// Gets a value indicating whether this instance has a backplane defined.
+    /// 获取一个值，指示此实例是否定义了背板。
     /// </summary>
     /// <value>
-    /// <c>true</c> if this instance has cache backplane; otherwise, <c>false</c>.
+    /// 如果此实例有缓存背板，则为 <c>true</c>；否则为 <c>false</c>。
     /// </value>
     public bool HasBackplane => BackplaneType != null;
 
     /// <summary>
-    /// Gets or sets the factory method for a cache backplane.
+    /// 获取或设置缓存背板的工厂方法。
     /// </summary>
-    /// <value>The backplane activator.</value>
+    /// <value>背板激活器。</value>
     public Type BackplaneType { get; set; }
 
     /// <summary>
-    /// Gets or sets additional arguments which should be used instantiating the backplane.
+    /// 获取或设置实例化背板时应使用的附加参数。
     /// </summary>
-    /// <value>The list of arguments.</value>
+    /// <value>参数列表。</value>
     public object[] BackplaneTypeArguments { get; set; }
 
     /// <summary>
-    /// Gets the list of cache handle configurations.
+    /// 获取缓存句柄配置的列表。
     /// </summary>
-    /// <value>The list of cache handle configurations.</value>
+    /// <value>缓存句柄配置的列表。</value>
     public IList<CacheHandleConfiguration> CacheHandleConfigurations { get; } = new List<CacheHandleConfiguration>();
 
     /// <inheritdoc />

@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Defines all settings the cache handle should respect.
+/// 定义缓存句柄应遵守的所有设置。
 /// </summary>
 public sealed class CacheHandleConfiguration
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheHandleConfiguration"/> class.
+    /// 初始化 <see cref="CacheHandleConfiguration"/> 类的新实例。
     /// </summary>
     public CacheHandleConfiguration()
     {
@@ -14,10 +14,10 @@ public sealed class CacheHandleConfiguration
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheHandleConfiguration"/> class.
+    /// 初始化 <see cref="CacheHandleConfiguration"/> 类的新实例。
     /// </summary>
-    /// <param name="handleName">Name of the handle. This value will also be used for the <see cref="Key"/>.</param>
-    /// <exception cref="ArgumentNullException">If <paramref name="handleName"/> is null.</exception>
+    /// <param name="handleName">句柄的名称。此值也将用作 <see cref="Key"/>。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="handleName"/> 为 <c>null</c> 时抛出。</exception>
     public CacheHandleConfiguration(string handleName)
     {
         Check.EnsureNotNullOrWhiteSpace(handleName, nameof(handleName));
@@ -26,12 +26,12 @@ public sealed class CacheHandleConfiguration
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheHandleConfiguration"/> class.
+    /// 初始化 <see cref="CacheHandleConfiguration"/> 类的新实例。
     /// </summary>
-    /// <param name="handleName">Name of the handle.</param>
-    /// <param name="configurationKey">The key which can be used to identify another part of the configuration which the handle might need.</param>
+    /// <param name="handleName">句柄的名称。</param>
+    /// <param name="configurationKey">可用于标识句柄可能需要的配置另一部分的键。</param>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="handleName"/> or <paramref name="configurationKey"/> is null.
+    /// 当 <paramref name="handleName"/> 或 <paramref name="configurationKey"/> 为 <c>null</c> 时抛出。
     /// </exception>
     public CacheHandleConfiguration(string handleName, string configurationKey)
     {
@@ -43,54 +43,54 @@ public sealed class CacheHandleConfiguration
     }
 
     /// <summary>
-    /// Gets or sets a value indicating whether statistics should be enabled.
+    /// 获取或设置一个值，指示是否启用统计信息。
     /// </summary>
-    /// <value><c>true</c> if statistics should be enabled; otherwise, <c>false</c>.</value>
+    /// <value>如果应启用统计信息，则为 <c>true</c>；否则为 <c>false</c>。</value>
     public bool EnableStatistics { get; set; }
 
     /// <summary>
-    /// Gets or sets the expiration mode.
+    /// 获取或设置过期模式。
     /// </summary>
-    /// <value>The expiration mode.</value>
+    /// <value>过期模式。</value>
     public CacheExpirationMode ExpirationMode { get; set; }
 
     /// <summary>
-    /// Gets or sets the expiration timeout.
+    /// 获取或设置过期时间。
     /// </summary>
-    /// <value>The expiration timeout.</value>
+    /// <value>过期时间。</value>
     public TimeSpan ExpirationTimeout { get; set; }
 
     /// <summary>
-    /// Gets or sets the name for the cache handle which is also the identifier of the configuration.
+    /// 获取或设置缓存句柄的名称，该名称同时也是配置的标识符。
     /// </summary>
-    /// <value>The name of the handle.</value>
+    /// <value>句柄的名称。</value>
     public string Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the configuration key.
-    /// Some cache handles require to reference another part of the configuration by name.
-    /// If not specified, the <see cref="Name"/> will be used instead.
+    /// 获取或设置配置键。
+    /// 某些缓存句柄需要通过名称引用配置的另一部分。
+    /// 如果未指定，则将使用 <see cref="Name"/>。
     /// </summary>
     public string Key { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether this instance is backplane source.
+    /// 获取或设置一个值，指示此实例是否为背板源。
     /// <para>
-    /// Only one cache handle inside one cache manager can be backplane source. Usually this is
-    /// a distributed cache. It might not make any sense to define an in process cache as backplane source.
+    /// 一个缓存管理器中只能有一个缓存句柄作为背板源。通常这应是
+    /// 分布式缓存。将进程内缓存定义为背板源可能没有意义。
     /// </para>
-    /// <para>If no backplane is configured for the cache, this setting will have no effect.</para>
+    /// <para>如果未为缓存配置背板，则此设置将不起作用。</para>
     /// </summary>
-    /// <value><c>true</c> if this instance should be backplane source; otherwise, <c>false</c>.</value>
+    /// <value>如果此实例应为背板源，则为 <c>true</c>；否则为 <c>false</c>。</value>
     public bool IsBackplaneSource { get; set; }
 
     /// <summary>
-    /// Gets or sets the type of the handle.
+    /// 获取或设置句柄的类型。
     /// </summary>
-    /// <value>The type of the handle.</value>
+    /// <value>句柄的类型。</value>
     public Type HandleType { get; set; }
 
-    internal object[] ConfigurationTypes { get; set; } = Array.Empty<object>();
+    internal object[] ConfigurationTypes { get; set; } = [];
 
     /// <inheritdoc />
     public override string ToString()

@@ -3,65 +3,7 @@
 namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// Defines the possible actions of the backplane message.
-/// </summary>
-public enum BackplaneAction : byte
-{
-    /// <summary>
-    /// Default value is invalid to ensure we are not getting wrong results.
-    /// </summary>
-    Invalid = 0,
-
-    /// <summary>
-    /// The changed action.
-    /// <see cref="CacheItemChangedEventAction"/>
-    /// </summary>
-    Changed,
-
-    /// <summary>
-    /// The clear action.
-    /// </summary>
-    Clear,
-
-    /// <summary>
-    /// The clear region action.
-    /// </summary>
-    ClearRegion,
-
-    /// <summary>
-    /// If the cache item has been removed.
-    /// </summary>
-    Removed
-}
-
-/// <summary>
-/// The enum defines the actual operation used to change the value in the cache.
-/// </summary>
-public enum CacheItemChangedEventAction : byte
-{
-    /// <summary>
-    /// Default value is invalid to ensure we are not getting wrong results.
-    /// </summary>
-    Invalid = 0,
-
-    /// <summary>
-    /// If Put was used to change the value.
-    /// </summary>
-    Put,
-
-    /// <summary>
-    /// If Add was used to change the value.
-    /// </summary>
-    Add,
-
-    /// <summary>
-    /// If Update was used to change the value.
-    /// </summary>
-    Update
-}
-
-/// <summary>
-/// Implements a simple message which can be send as a string to the server.
+/// 实现一个可发送到服务器的简单消息。
 /// </summary>
 public sealed class BackplaneMessage
 {
@@ -102,31 +44,31 @@ public sealed class BackplaneMessage
     }
 
     /// <summary>
-    /// Gets or sets the action.
+    /// 获取或设置操作。
     /// </summary>
-    /// <value>The action.</value>
+    /// <value>操作。</value>
     public BackplaneAction Action { get; }
 
     /// <summary>
-    /// Gets or sets the key.
+    /// 获取或设置键。
     /// </summary>
-    /// <value>The key.</value>
+    /// <value>键。</value>
     public string Key { get; }
 
     /// <summary>
-    /// Gets or sets the owner identity.
+    /// 获取或设置所有者标识。
     /// </summary>
-    /// <value>The owner identity.</value>
+    /// <value>所有者标识。</value>
     public byte[] OwnerIdentity { get; }
 
     /// <summary>
-    /// Gets or sets the region.
+    /// 获取或设置区域。
     /// </summary>
-    /// <value>The region.</value>
+    /// <value>区域。</value>
     public string Region { get; private set; }
 
     /// <summary>
-    /// Gets or sets the cache action.
+    /// 获取或设置缓存操作。
     /// </summary>
     public CacheItemChangedEventAction ChangeAction { get; }
 
@@ -194,41 +136,41 @@ public sealed class BackplaneMessage
     }
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the changed action.
+    /// 为更改操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <param name="key">The key.</param>
-    /// <param name="changeAction">The cache change action.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
+    /// <param name="owner">所有者。</param>
+    /// <param name="key">键。</param>
+    /// <param name="changeAction">缓存更改操作。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
     public static BackplaneMessage ForChanged(byte[] owner, string key, CacheItemChangedEventAction changeAction) =>
         new(owner, Changed, key, changeAction);
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the changed action.
+    /// 为更改操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <param name="key">The key.</param>
-    /// <param name="region">The region.</param>
-    /// <param name="changeAction">The cache change action.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
+    /// <param name="owner">所有者。</param>
+    /// <param name="key">键。</param>
+    /// <param name="region">区域。</param>
+    /// <param name="changeAction">缓存更改操作。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
     public static BackplaneMessage ForChanged(byte[] owner, string key, string region, CacheItemChangedEventAction changeAction) =>
         new(owner, Changed, key, region, changeAction);
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the clear action.
+    /// 为清空操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
+    /// <param name="owner">所有者。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
     public static BackplaneMessage ForClear(byte[] owner) =>
         new(owner, Clear);
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the clear region action.
+    /// 为清空区域操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <param name="region">The region.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
-    /// <exception cref="ArgumentNullException">If region is null.</exception>
+    /// <param name="owner">所有者。</param>
+    /// <param name="region">区域。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <c>region</c> 为 <c>null</c> 时抛出。</exception>
     public static BackplaneMessage ForClearRegion(byte[] owner, string region)
     {
         Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
@@ -240,33 +182,33 @@ public sealed class BackplaneMessage
     }
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the removed action.
+    /// 为移除操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <param name="key">The key.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
+    /// <param name="owner">所有者。</param>
+    /// <param name="key">键。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
     public static BackplaneMessage ForRemoved(byte[] owner, string key) =>
         new(owner, Removed, key);
 
     /// <summary>
-    /// Creates a new <see cref="BackplaneMessage"/> for the removed action.
+    /// 为移除操作创建新的 <see cref="BackplaneMessage"/>。
     /// </summary>
-    /// <param name="owner">The owner.</param>
-    /// <param name="key">The key.</param>
-    /// <param name="region">The region.</param>
-    /// <returns>The new <see cref="BackplaneMessage"/> instance.</returns>
+    /// <param name="owner">所有者。</param>
+    /// <param name="key">键。</param>
+    /// <param name="region">区域。</param>
+    /// <returns>新的 <see cref="BackplaneMessage"/> 实例。</returns>
     public static BackplaneMessage ForRemoved(byte[] owner, string key, string region) =>
         new(owner, Removed, key, region);
 
     /// <summary>
-    /// Serializes this instance.
+    /// 序列化此实例。
     /// </summary>
-    /// <returns>The string representing this message.</returns>
+    /// <returns>表示此消息的字符串。</returns>
     public static byte[] Serialize(params BackplaneMessage[] messages)
     {
         Check.EnsureNotNullOrEmpty(messages, nameof(messages));
 
-        // calc size
+        // 计算大小
         var size = 0;
         for (var i = 0; i < messages.Length; i++)
         {
@@ -333,15 +275,15 @@ public sealed class BackplaneMessage
     }
 
     /// <summary>
-    /// Deserializes the <paramref name="message"/>.
+    /// 反序列化 <paramref name="message"/>。
     /// </summary>
-    /// <param name="message">The message.</param>
-    /// <param name="skipOwner">If specified, if the first received message has the same owner, all messages will be skipped.</param>
+    /// <param name="message">消息。</param>
+    /// <param name="skipOwner">如果指定，且接收到的第一条消息具有相同的所有者，则跳过所有消息。</param>
     /// <returns>
-    /// The new <see cref="BackplaneMessage" /> instance.
+    /// 新的 <see cref="BackplaneMessage" /> 实例。
     /// </returns>
-    /// <exception cref="ArgumentException">If <paramref name="message"/> is null.</exception>
-    /// <exception cref="ArgumentException">If the message is not valid.</exception>
+    /// <exception cref="ArgumentException">当 <paramref name="message"/> 为 <c>null</c> 时抛出。</exception>
+    /// <exception cref="ArgumentException">当消息无效时抛出。</exception>
     public static IEnumerable<BackplaneMessage> Deserialize(byte[] message, byte[] skipOwner = null)
     {
         Check.EnsureNotNull(message, nameof(message));
@@ -417,7 +359,7 @@ public sealed class BackplaneMessage
             _buffer = new byte[size + 4];
             _position = 4;
 
-            // header v2
+            // v2 头部
             _buffer[0] = 0;
             _buffer[1] = 118;
             _buffer[2] = 50;
@@ -460,8 +402,8 @@ public sealed class BackplaneMessage
 
         public static int GetEstimatedSize(BackplaneMessage msg, bool skipOwner)
         {
-            // this is only a rough size multiplied by two for getting a roughly sized buffer
-            int size = 2; // two enums
+            // 这只是粗略大小，乘以 2 以获得大致合适的缓冲区大小
+            int size = 2; // 两个枚举
             if (!skipOwner)
             {
                 size += msg.OwnerIdentity.Length * 4;
@@ -484,7 +426,7 @@ public sealed class BackplaneMessage
             _data = bytes;
             _position = 4;
 
-            // check v2 header
+            // 检查 v2 头部
             if (_data.Length < 4
              || _data[0] != 0 || _data[1] != 118 || _data[2] != 50 || _data[3] != 0)
             {
@@ -526,7 +468,7 @@ public sealed class BackplaneMessage
                 throw new IndexOutOfRangeException("Cannot read bytes, no additional bytes available.");
             }
 
-            // fix: length check before aloc
+            // 修复：在分配前进行长度检查
             var result = new byte[length];
             Buffer.BlockCopy(_data, pos - length, result, 0, length);
             return result;

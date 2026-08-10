@@ -10,6 +10,13 @@ public partial class BaseCacheManager<TValue>
 	public void Expire(string key, string region, CacheExpirationMode mode, TimeSpan timeout)
 		=> ExpireInternal(key, region, mode, timeout);
 
+	/// <summary>
+	/// 根据指定的过期模式更新缓存项的过期时间，并写回缓存。
+	/// </summary>
+	/// <param name="key">缓存键。</param>
+	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
+	/// <param name="mode">过期模式。</param>
+	/// <param name="timeout">过期时间值。</param>
 	private void ExpireInternal(string key, string region, CacheExpirationMode mode, TimeSpan timeout)
 	{
 		CheckDisposed();

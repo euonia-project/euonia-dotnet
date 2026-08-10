@@ -3,25 +3,24 @@
 namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// The BaseCache class implements the overall logic of this cache library and delegates the
-/// concrete implementation of how e.g. add, get or remove should work to a derived class.
+/// BaseCache 类实现了此缓存库的整体逻辑，并将添加、获取或移除等具体实现委托给派生类。
 /// <para>
-/// To use this base class simply override the abstract methods for Add, Get, Put and Remove.
-/// <br/> All other methods defined by <c>ICache</c> will be delegated to those methods.
+/// 要使用此基类，只需重写 Add、Get、Put 和 Remove 的抽象方法。
+/// <br/> <c>ICache</c> 定义的所有其他方法都将委托给这些方法。
 /// </para>
 /// </summary>
-/// <typeparam name="TValue">The type of the cache value.</typeparam>
+/// <typeparam name="TValue">缓存值的类型。</typeparam>
 public abstract class BaseCache<TValue> : ICache<TValue>
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="BaseCache{TCacheValue}"/> class.
+	/// 初始化 <see cref="BaseCache{TCacheValue}"/> 类的新实例。
 	/// </summary>
 	protected internal BaseCache()
 	{
 	}
 
 	/// <summary>
-	/// Finalizes an instance of the <see cref="BaseCache{TCacheValue}"/> class.
+	/// 终结 <see cref="BaseCache{TCacheValue}"/> 类的实例。
 	/// </summary>
 	~BaseCache()
 	{
@@ -29,24 +28,23 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets or sets a value indicating whether this <see cref="BaseCache{TCacheValue}"/> is disposed.
+	/// 获取或设置一个值，指示此 <see cref="BaseCache{TCacheValue}"/> 是否已释放。
 	/// </summary>
-	/// <value><c>true</c> if disposed; otherwise, <c>false</c>.</value>
+	/// <value>如果已释放，则为 <c>true</c>；否则为 <c>false</c>。</value>
 	protected bool Disposed { get; set; }
 
 	/// <summary>
-	/// Gets or sets a value indicating whether this <see cref="BaseCache{TCacheValue}"/> is disposing.
+	/// 获取或设置一个值，指示此 <see cref="BaseCache{TCacheValue}"/> 是否正在释放。
 	/// </summary>
-	/// <value><c>true</c> if disposing; otherwise, <c>false</c>.</value>
+	/// <value>如果正在释放，则为 <c>true</c>；否则为 <c>false</c>。</value>
 	protected bool Disposing { get; set; }
 
 	/// <summary>
-	/// Gets or sets a value for the specified key. The indexer is identical to the
-	/// corresponding <see cref="Put(string, TValue)"/> and <see cref="Get(string)"/> calls.
+	/// 获取或设置指定键的值。此索引器与对应的 <see cref="Put(string, TValue)"/> 和 <see cref="Get(string)"/> 调用相同。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The value being stored in the cache for the given <paramref name="key"/>.</returns>
-	/// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <returns>给定 <paramref name="key"/> 存储在缓存中的值。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	public virtual TValue this[string key]
 	{
 		get => Get(key);
@@ -54,20 +52,19 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets or sets a value for the specified key and region. The indexer is identical to the
-	/// corresponding <see cref="Put(string, TValue, string)"/> and
-	/// <see cref="Get(string, string)"/> calls.
+	/// 获取或设置指定键和区域的值。此索引器与对应的 <see cref="Put(string, TValue, string)"/> 和
+	/// <see cref="Get(string, string)"/> 调用相同。
 	/// <para>
-	/// With <paramref name="region"/> specified, the key will <b>not</b> be found in the global cache.
+	/// 指定 <paramref name="region"/> 后，该键将<b>不会</b>在全局缓存中找到。
 	/// </para>
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// The value being stored in the cache for the given <paramref name="key"/> and <paramref name="region"/>.
+	/// 给定 <paramref name="key"/> 和 <paramref name="region"/> 存储在缓存中的值。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual TValue this[string key, string region]
 	{
@@ -76,70 +73,66 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Adds a value for the specified key to the cache.
+	/// 向缓存中添加指定键的值。
 	/// <para>
-	/// The <c>Add</c> method will <b>not</b> be successful if the specified
-	/// <paramref name="key"/> already exists within the cache!
+	/// 如果指定的 <paramref name="key"/> 已存在于缓存中，则 <c>Add</c> 方法将<b>不会</b>成功！
 	/// </para>
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="value">The value which should be cached.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="value">应被缓存的值。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果该键尚未添加到缓存中，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="value"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="value"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual bool Add(string key, TValue value)
 	{
-		// null checks are done within ctor of the item
+		// 空值检查在项的构造函数中完成
 		var item = new CacheItem<TValue>(key, value);
 		return Add(item);
 	}
 
 	/// <summary>
-	/// Adds a value for the specified key and region to the cache.
+	/// 向缓存中添加指定键和区域的值。
 	/// <para>
-	/// The <c>Add</c> method will <b>not</b> be successful if the specified
-	/// <paramref name="key"/> already exists within the cache!
+	/// 如果指定的 <paramref name="key"/> 已存在于缓存中，则 <c>Add</c> 方法将<b>不会</b>成功！
 	/// </para>
 	/// <para>
-	/// With <paramref name="region"/> specified, the key will <b>not</b> be found in the global cache.
+	/// 指定 <paramref name="region"/> 后，该键将<b>不会</b>在全局缓存中找到。
 	/// </para>
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="value">The value which should be cached.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="value">应被缓存的值。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果该键尚未添加到缓存中，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/>, <paramref name="value"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/>、<paramref name="value"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual bool Add(string key, TValue value, string region)
 	{
-		// null checks are done within ctor of the item
+		// 空值检查在项的构造函数中完成
 		var item = new CacheItem<TValue>(key, region, value);
 		return Add(item);
 	}
 
 	/// <summary>
-	/// Adds the specified <c>CacheItem</c> to the cache.
+	/// 将指定的 <c>CacheItem</c> 添加到缓存中。
 	/// <para>
-	/// Use this overload to overrule the configured expiration settings of the cache and to
-	/// define a custom expiration for this <paramref name="item"/> only.
+	/// 使用此重载可以覆盖缓存配置的过期设置，仅为该 <paramref name="item"/> 定义自定义过期时间。
 	/// </para>
 	/// <para>
-	/// The <c>Add</c> method will <b>not</b> be successful if the specified
-	/// <paramref name="item"/> already exists within the cache!
+	/// 如果指定的 <paramref name="item"/> 已存在于缓存中，则 <c>Add</c> 方法将<b>不会</b>成功！
 	/// </para>
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存中的 <c>CacheItem</c>。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果该键尚未添加到缓存中，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="item"/> or the item's key or value is null.
+	/// 当 <paramref name="item"/> 或其键或值为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual bool Add(CacheItem<TValue> item)
 	{
@@ -149,20 +142,19 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Clears this cache, removing all items in the base cache and all regions.
+	/// 清空此缓存，移除基础缓存及所有区域中的所有项。
 	/// </summary>
 	public abstract void Clear();
 
 	/// <summary>
-	/// Clears the cache region, removing all items from the specified <paramref name="region"/> only.
+	/// 清空缓存区域，仅移除指定 <paramref name="region"/> 中的所有项。
 	/// </summary>
-	/// <param name="region">The cache region.</param>
-	/// <exception cref="ArgumentNullException">If the <paramref name="region"/> is null.</exception>
+	/// <param name="region">缓存区域。</param>
+	/// <exception cref="ArgumentNullException">当 <paramref name="region"/> 为 <c>null</c> 时抛出。</exception>
 	public abstract void ClearRegion(string region);
 
 	/// <summary>
-	/// Performs application-defined tasks associated with freeing, releasing, or resetting
-	/// unmanaged resources.
+	/// 执行与释放、重置非托管资源相关的应用程序定义任务。
 	/// </summary>
 	public void Dispose()
 	{
@@ -177,11 +169,11 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	public abstract bool Exists(string key, string region);
 
 	/// <summary>
-	/// Gets a value for the specified key.
+	/// 获取指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The value being stored in the cache for the given <paramref name="key"/>.</returns>
-	/// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <returns>给定 <paramref name="key"/> 存储在缓存中的值。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	public virtual TValue Get(string key)
 	{
 		var item = GetCacheItem(key);
@@ -195,15 +187,15 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets a value for the specified key and region.
+	/// 获取指定键和区域的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// The value being stored in the cache for the given <paramref name="key"/> and <paramref name="region"/>.
+	/// 给定 <paramref name="key"/> 和 <paramref name="region"/> 存储在缓存中的值。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual TValue Get(string key, string region)
 	{
@@ -218,14 +210,14 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets a value for the specified key and will cast it to the specified type.
+	/// 获取指定键的值，并将其转换为指定类型。
 	/// </summary>
-	/// <typeparam name="TOut">The type the value is converted and returned.</typeparam>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The value being stored in the cache for the given <paramref name="key"/>.</returns>
-	/// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
+	/// <typeparam name="TOut">值被转换并返回的类型。</typeparam>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <returns>给定 <paramref name="key"/> 存储在缓存中的值。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	/// <exception cref="InvalidCastException">
-	/// If no explicit cast is defined from <c>TCacheValue</c> to <c>TOut</c>.
+	/// 如果未定义从 <c>TCacheValue</c> 到 <c>TOut</c> 的显式转换。
 	/// </exception>
 	public virtual TOut Get<TOut>(string key)
 	{
@@ -234,19 +226,19 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets a value for the specified key and region and will cast it to the specified type.
+	/// 获取指定键和区域的值，并将其转换为指定类型。
 	/// </summary>
-	/// <typeparam name="TOut">The type the cached value should be converted to.</typeparam>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <typeparam name="TOut">缓存值应转换成的类型。</typeparam>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// The value being stored in the cache for the given <paramref name="key"/> and <paramref name="region"/>.
+	/// 给定 <paramref name="key"/> 和 <paramref name="region"/> 存储在缓存中的值。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	/// <exception cref="InvalidCastException">
-	/// If no explicit cast is defined from <c>TCacheValue</c> to <c>TOut</c>.
+	/// 如果未定义从 <c>TCacheValue</c> 到 <c>TOut</c> 的显式转换。
 	/// </exception>
 	public virtual TOut Get<TOut>(string key, string region)
 	{
@@ -255,11 +247,11 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets the <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
-	/// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <returns><c>CacheItem</c>。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	public virtual CacheItem<TValue> GetCacheItem(string key)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
@@ -268,13 +260,13 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets the <c>CacheItem</c> for the specified key and region.
+	/// 获取指定键和区域的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <returns><c>CacheItem</c>。</returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual CacheItem<TValue> GetCacheItem(string key, string region)
 	{
@@ -285,16 +277,15 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Puts a value for the specified key into the cache.
+	/// 将指定键的值放入缓存。
 	/// <para>
-	/// If the <paramref name="key"/> already exists within the cache, the existing value will
-	/// be replaced with the new <paramref name="value"/>.
+	/// 如果 <paramref name="key"/> 已存在于缓存中，则现有值将被新的 <paramref name="value"/> 替换。
 	/// </para>
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="value">The value which should be cached.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="value">应被缓存的值。</param>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="value"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="value"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual void Put(string key, TValue value)
 	{
@@ -303,20 +294,19 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Puts a value for the specified key and region into the cache.
+	/// 将指定键和区域的值放入缓存。
 	/// <para>
-	/// If the <paramref name="key"/> already exists within the cache, the existing value will
-	/// be replaced with the new <paramref name="value"/>.
+	/// 如果 <paramref name="key"/> 已存在于缓存中，则现有值将被新的 <paramref name="value"/> 替换。
 	/// </para>
 	/// <para>
-	/// With <paramref name="region"/> specified, the key will <b>not</b> be found in the global cache.
+	/// 指定 <paramref name="region"/> 后，该键将<b>不会</b>在全局缓存中找到。
 	/// </para>
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="value">The value which should be cached.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="value">应被缓存的值。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/>, <paramref name="value"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/>、<paramref name="value"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual void Put(string key, TValue value, string region)
 	{
@@ -325,19 +315,17 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Puts the specified <c>CacheItem</c> into the cache.
+	/// 将指定的 <c>CacheItem</c> 放入缓存。
 	/// <para>
-	/// If the <paramref name="item"/> already exists within the cache, the existing item will
-	/// be replaced with the new <paramref name="item"/>.
+	/// 如果 <paramref name="item"/> 已存在于缓存中，则现有项将被新的 <paramref name="item"/> 替换。
 	/// </para>
 	/// <para>
-	/// Use this overload to overrule the configured expiration settings of the cache and to
-	/// define a custom expiration for this <paramref name="item"/> only.
+	/// 使用此重载可以覆盖缓存配置的过期设置，仅为该 <paramref name="item"/> 定义自定义过期时间。
 	/// </para>
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be cached.</param>
+	/// <param name="item">要缓存的 <c>CacheItem</c>。</param>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="item"/> or the item's key or value is null.
+	/// 当 <paramref name="item"/> 或其键或值为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual void Put(CacheItem<TValue> item)
 	{
@@ -347,13 +335,13 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到并从缓存中移除了该键，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
-	/// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	public virtual bool Remove(string key)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
@@ -362,15 +350,15 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key and region.
+	/// 从缓存中移除指定键和区域的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到并从缓存中移除了该键，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
-	/// If the <paramref name="key"/> or <paramref name="region"/> is null.
+	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
 	public virtual bool Remove(string key, string region)
 	{
@@ -381,26 +369,25 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Adds a value to the cache.
+	/// 向缓存中添加值。
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存中的 <c>CacheItem</c>。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果该键尚未添加到缓存中，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
-	protected internal abstract bool AddInternal(CacheItem<TValue> item);
+	protected abstract bool AddInternal(CacheItem<TValue> item);
 
 	/// <summary>
-	/// Puts a value into the cache.
+	/// 将值放入缓存。
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
-	protected internal abstract void PutInternal(CacheItem<TValue> item);
+	/// <param name="item">要添加到缓存中的 <c>CacheItem</c>。</param>
+	protected abstract void PutInternal(CacheItem<TValue> item);
 
 	/// <summary>
-	/// Releases unmanaged and - optionally - managed resources.
+	/// 释放非托管资源，并可选择性地释放托管资源。
 	/// </summary>
 	/// <param name="disposeManaged">
-	/// <c>true</c> to release both managed and unmanaged resources; <c>false</c> to release
-	/// only unmanaged resources.
+	/// <c>true</c> 表示同时释放托管和非托管资源；<c>false</c> 表示仅释放非托管资源。
 	/// </param>
 	protected virtual void Dispose(bool disposeManaged)
 	{
@@ -409,7 +396,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 		{
 			if (disposeManaged)
 			{
-				// do not do anything
+				// 不执行任何操作
 			}
 
 			Disposed = true;
@@ -419,57 +406,61 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	}
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <returns><c>CacheItem</c>。</returns>
 	protected abstract CacheItem<TValue> GetCacheItemInternal(string key);
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key and region.
+	/// 获取指定键和区域的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <returns><c>CacheItem</c>。</returns>
 	protected abstract CacheItem<TValue> GetCacheItemInternal(string key, string region);
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到并从缓存中移除了该键，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	protected abstract bool RemoveInternal(string key);
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key and region.
+	/// 从缓存中移除指定键和区域的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于标识缓存中项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到并从缓存中移除了该键，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	protected abstract bool RemoveInternal(string key, string region);
 
 	/// <summary>
-	/// Checks if the instance is disposed.
+	/// 检查实例是否已释放。
 	/// </summary>
-	/// <exception cref="ObjectDisposedException">If the instance is disposed.</exception>
+	/// <exception cref="ObjectDisposedException">如果实例已释放。</exception>
 	protected void CheckDisposed()
 	{
-		if (Disposed)
+		#if NET8_0_OR_GREATER
+		ObjectDisposedException.ThrowIf(Disposed, this);
+		#else
+		if(Disposed)
 		{
-			throw new ObjectDisposedException(GetType().Name);
+			throw new ObjectDisposedException(GetType().FullName);
 		}
+		#endif
 	}
 
 	/// <summary>
-	/// Casts the value to <c>TOut</c>.
+	/// 将值转换为 <c>TOut</c>。
 	/// </summary>
-	/// <typeparam name="TOut">The type.</typeparam>
-	/// <param name="value">The value.</param>
-	/// <returns>The cast value.</returns>
+	/// <typeparam name="TOut">类型。</typeparam>
+	/// <param name="value">值。</param>
+	/// <returns>转换后的值。</returns>
 	protected static TOut GetCasted<TOut>(object value)
 	{
 		if (value == null)
@@ -480,7 +471,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 		try
 		{
 			var changed = Convert.ChangeType(value, typeof(TOut), CultureInfo.InvariantCulture);
-			return changed == null ? (TOut)value : (TOut)changed;
+			return (TOut)changed;
 		}
 		catch
 		{

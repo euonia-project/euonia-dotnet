@@ -4,31 +4,30 @@ using System.Runtime.Serialization;
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// The item which will be stored in the cache holding the cache value and additional
-/// information needed by the cache handles and manager.
+/// 将存储在缓存中的缓存项，包含缓存值以及缓存句柄和管理器所需的附加信息。
 /// </summary>
-/// <typeparam name="T">The type of the cache value.</typeparam>
+/// <typeparam name="T">缓存值的类型。</typeparam>
 [Serializable]
 public class CacheItem<T> : ISerializable, ICacheItemProperties
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="key">The cache key.</param>
-	/// <param name="value">The cache value.</param>
-	/// <exception cref="ArgumentNullException">If key or value are null.</exception>
+	/// <param name="key">缓存键。</param>
+	/// <param name="value">缓存值。</param>
+	/// <exception cref="ArgumentNullException">当 <c>key</c> 或 <c>value</c> 为 <c>null</c> 时抛出。</exception>
 	public CacheItem(string key, T value)
 		: this(key, null, value, null, null, null)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="key">The cache key.</param>
-	/// <param name="value">The cache value.</param>
-	/// <param name="region">The cache region.</param>
-	/// <exception cref="ArgumentNullException">If key, value or region are null.</exception>
+	/// <param name="key">缓存键。</param>
+	/// <param name="value">缓存值。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <exception cref="ArgumentNullException">当 <c>key</c>、<c>value</c> 或 <c>region</c> 为 <c>null</c> 时抛出。</exception>
 	public CacheItem(string key, string region, T value)
 		: this(key, region, value, null, null, null)
 	{
@@ -36,27 +35,27 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="key">The cache key.</param>
-	/// <param name="value">The cache value.</param>
-	/// <param name="expiration">The expiration mode.</param>
-	/// <param name="timeout">The expiration timeout.</param>
-	/// <exception cref="ArgumentNullException">If key or value are null.</exception>
+	/// <param name="key">缓存键。</param>
+	/// <param name="value">缓存值。</param>
+	/// <param name="expiration">过期模式。</param>
+	/// <param name="timeout">过期时间。</param>
+	/// <exception cref="ArgumentNullException">当 <c>key</c> 或 <c>value</c> 为 <c>null</c> 时抛出。</exception>
 	public CacheItem(string key, T value, CacheExpirationMode expiration, TimeSpan timeout)
 		: this(key, null, value, expiration, timeout, null, null, false)
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="key">The cache key.</param>
-	/// <param name="value">The cache value.</param>
-	/// <param name="region">The cache region.</param>
-	/// <param name="expiration">The expiration mode.</param>
-	/// <param name="timeout">The expiration timeout.</param>
-	/// <exception cref="ArgumentNullException">If key, value or region are null.</exception>
+	/// <param name="key">缓存键。</param>
+	/// <param name="value">缓存值。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <param name="expiration">过期模式。</param>
+	/// <param name="timeout">过期时间。</param>
+	/// <exception cref="ArgumentNullException">当 <c>key</c>、<c>value</c> 或 <c>region</c> 为 <c>null</c> 时抛出。</exception>
 	public CacheItem(string key, string region, T value, CacheExpirationMode expiration, TimeSpan timeout)
 		: this(key, region, value, expiration, timeout, null, null, false)
 	{
@@ -64,18 +63,18 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
 	protected CacheItem()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="CacheItem{T}"/> class.
+	/// 初始化 <see cref="CacheItem{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="info">The information.</param>
-	/// <param name="context">The context.</param>
-	/// <exception cref="ArgumentNullException">If info is null.</exception>
+	/// <param name="info">序列化信息。</param>
+	/// <param name="context">序列化上下文。</param>
+	/// <exception cref="ArgumentNullException">当 <c>info</c> 为 <c>null</c> 时抛出。</exception>
 	protected CacheItem(SerializationInfo info, StreamingContext context)
 	{
 		Check.EnsureNotNull(info, nameof(info));
@@ -104,8 +103,8 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 		ExpirationTimeout = ExpirationMode is CacheExpirationMode.None or CacheExpirationMode.Default ? TimeSpan.Zero : timeout ?? TimeSpan.Zero;
 		UsesExpirationDefaults = expirationDefaults;
 
-		// validation check for very high expiration time.
-		// Otherwise this will lead to all kinds of errors (e.g. adding time to sliding while using a TimeSpan with long.MaxValue ticks)
+		// 对过大的过期时间进行校验。
+		// 否则会导致各种错误（例如在使用 long.MaxValue ticks 的 TimeSpan 时向滑动过期添加时间）
 		if (ExpirationTimeout.TotalDays > 365)
 		{
 			throw new ArgumentOutOfRangeException(nameof(timeout), string.Format(Resources.IDS_EXPIRATION_TIMEOUT_MUST_BE_BETWEEN, "00:00:00 ", " 365:00:00:00"));
@@ -131,9 +130,8 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether the item is logically expired or not.
-	/// Depending on the cache vendor, the item might still live in the cache although
-	/// according to the expiration mode and timeout, the item is already expired.
+	/// 获取一个值，指示该项在逻辑上是否已过期。
+	/// 根据缓存供应商的不同，该项可能仍存在于缓存中，尽管根据过期模式和超时时间，该项已过期。
 	/// </summary>
 	public bool IsExpired
 	{
@@ -156,71 +154,69 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Gets the creation date of the cache item.
+	/// 获取缓存项的创建日期。
 	/// </summary>
-	/// <value>The creation date.</value>
+	/// <value>创建日期。</value>
 	public DateTime CreatedUtc { get; }
 
 	/// <summary>
-	/// Gets the expiration mode.
+	/// 获取过期模式。
 	/// </summary>
-	/// <value>The expiration mode.</value>
+	/// <value>过期模式。</value>
 	public CacheExpirationMode ExpirationMode { get; }
 
 	/// <summary>
-	/// Gets the expiration timeout.
+	/// 获取过期时间。
 	/// </summary>
-	/// <value>The expiration timeout.</value>
+	/// <value>过期时间。</value>
 	public TimeSpan ExpirationTimeout { get; }
 
 	/// <summary>
-	/// Gets the cache key.
+	/// 获取缓存键。
 	/// </summary>
-	/// <value>The cache key.</value>
+	/// <value>缓存键。</value>
 	public string Key { get; }
 
 	/// <summary>
-	/// Gets or sets the last accessed date of the cache item.
+	/// 获取或设置缓存项的最后访问日期。
 	/// </summary>
-	/// <value>The last accessed date.</value>
+	/// <value>最后访问日期。</value>
 	public DateTime LastAccessedUtc { get; set; }
 
 	/// <summary>
-	/// Gets the cache region.
+	/// 获取缓存区域。
 	/// </summary>
-	/// <value>The cache region.</value>
+	/// <value>缓存区域。</value>
 	public string Region { get; }
 
 	/// <summary>
-	/// Gets the cache value.
+	/// 获取缓存值。
 	/// </summary>
-	/// <value>The cache value.</value>
+	/// <value>缓存值。</value>
 	public T Value { get; }
 
 	/// <summary>
-	/// Gets the type of the cache value.
-	/// <para>This might be used for serialization and deserialization.</para>
+	/// 获取缓存值的类型。
+	/// <para>此类型可能用于序列化和反序列化。</para>
 	/// </summary>
-	/// <value>The type of the cache value.</value>
+	/// <value>缓存值的类型。</value>
 	public Type ValueType { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether the cache item uses the cache handle's configured expiration.
+	/// 获取一个值，指示缓存项是否使用缓存句柄配置的过期时间。
 	/// </summary>
 	public bool UsesExpirationDefaults { get; } = true;
 
 	/// <summary>
-	/// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data
-	/// needed to serialize the target object.
+	/// 使用序列化目标对象所需的数据填充 <see cref="T:System.Runtime.Serialization.SerializationInfo"/>。
 	/// </summary>
 	/// <param name="info">
-	/// The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data.
+	/// 要填充数据的 <see cref="T:System.Runtime.Serialization.SerializationInfo"/>。
 	/// </param>
 	/// <param name="context">
-	/// The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for
-	/// this serialization.
+	/// 此序列化的目标（参见 <see cref="T:System.Runtime.Serialization.StreamingContext"/>）。
 	/// </param>
-	/// <exception cref="ArgumentNullException">If info is null.</exception>
+	/// <exception cref="ArgumentNullException">当 <c>info</c> 为 <c>null</c> 时抛出。</exception>
 	public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
 	{
 		Check.EnsureNotNull(info, nameof(info));
@@ -248,12 +244,12 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 		new(Key, Region, Value, mode, timeout, mode == CacheExpirationMode.Absolute ? DateTime.UtcNow : CreatedUtc, LastAccessedUtc, usesHandleDefault);
 
 	/// <summary>
-	/// Creates a copy of the current cache item and sets a new absolute expiration date.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建当前缓存项的副本，并设置新的绝对过期时间。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <param name="absoluteExpiration">The absolute expiration date.</param>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="absoluteExpiration">绝对过期日期。</param>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithAbsoluteExpiration(DateTimeOffset absoluteExpiration)
 	{
 		var timeout = absoluteExpiration - DateTimeOffset.UtcNow;
@@ -266,12 +262,12 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Creates a copy of the current cache item and sets a new absolute expiration date.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建当前缓存项的副本，并设置新的绝对过期时间。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <param name="absoluteExpiration">The absolute expiration date.</param>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="absoluteExpiration">绝对过期日期。</param>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithAbsoluteExpiration(TimeSpan absoluteExpiration)
 	{
 		if (absoluteExpiration <= TimeSpan.Zero)
@@ -283,12 +279,12 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Creates a copy of the current cache item and sets a new sliding expiration value.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建当前缓存项的副本，并设置新的滑动过期时间。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <param name="slidingExpiration">The sliding expiration value.</param>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="slidingExpiration">滑动过期时间。</param>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithSlidingExpiration(TimeSpan slidingExpiration)
 	{
 		if (slidingExpiration <= TimeSpan.Zero)
@@ -300,41 +296,40 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	}
 
 	/// <summary>
-	/// Creates a copy of the current cache item without expiration. Can be used to update the cache
-	/// and remove any previously configured expiration of the item.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建不带过期时间的当前缓存项副本。可用于更新缓存并移除该项之前配置的任何过期时间。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithNoExpiration() =>
 		new(Key, Region, Value, CacheExpirationMode.None, TimeSpan.Zero, CreatedUtc, LastAccessedUtc, false);
 
 	/// <summary>
-	/// Creates a copy of the current cache item with no explicit expiration, instructing the cache to use the default defined in the cache handle configuration.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建不带显式过期时间的当前缓存项副本，指示缓存使用缓存句柄配置中定义的默认值。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithDefaultExpiration() =>
 		new(Key, Region, Value, CacheExpirationMode.Default, TimeSpan.Zero, CreatedUtc, LastAccessedUtc);
 
 	/// <summary>
-	/// Creates a copy of the current cache item with new value.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建带新值的当前缓存项副本。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <param name="value">The new value.</param>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="value">新值。</param>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithValue(T value) =>
 		new(Key, Region, value, ExpirationMode, ExpirationTimeout, CreatedUtc, LastAccessedUtc, UsesExpirationDefaults);
 
 	/// <summary>
-	/// Creates a copy of the current cache item with a given created date.
-	/// This method doesn't change the state of the item in the cache. Use <c>Put</c> or similar methods to update the cache with the returned copy of the item.
+	/// 创建带指定创建日期的当前缓存项副本。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
 	/// </summary>
-	/// <remarks>We do not clone the cache item or value.</remarks>
-	/// <param name="created">The new created date.</param>
-	/// <returns>The new instance of the cache item.</returns>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="created">新的创建日期。</param>
+	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithCreated(DateTime created) =>
 		new(Key, Region, Value, ExpirationMode, ExpirationTimeout, created, LastAccessedUtc, UsesExpirationDefaults);
 }

@@ -177,7 +177,7 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     /// <returns>
     /// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
     /// </returns>
-    protected internal override bool AddInternal(CacheItem<TCacheValue> item)
+    protected override bool AddInternal(CacheItem<TCacheValue> item)
     {
         CheckDisposed();
         item = GetItemExpiration(item);
@@ -189,7 +189,7 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     /// with the new value. If the item doesn't exist, the item will be added to the cache.
     /// </summary>
     /// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
-    protected internal override void PutInternal(CacheItem<TCacheValue> item)
+    protected override void PutInternal(CacheItem<TCacheValue> item)
     {
         CheckDisposed();
         item = GetItemExpiration(item);
