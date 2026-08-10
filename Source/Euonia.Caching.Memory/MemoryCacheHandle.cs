@@ -36,7 +36,11 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	/// <inheritdoc/>
 	public override void Clear()
 	{
+		var old = _cache;
 		_cache = new MemoryCache(Options);
+
+		// 释放旧实例，避免其内部定时器与订阅在 GC 前持续存活造成资源泄漏
+		old.Dispose();
 	}
 
 	/// <inheritdoc/>

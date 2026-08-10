@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using Nerosoft.Euonia.Caching.Internal;
 
 namespace Nerosoft.Euonia.Caching;
@@ -16,6 +17,11 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// 按顺序排列的缓存句柄数组，所有缓存操作都会委托给这些句柄。
 	/// </summary>
 	private readonly BaseCacheHandle<TValue>[] _cacheHandles;
+
+	/// <summary>
+	/// <see cref="CacheHandles"/> 的只读视图，构造时创建一次，避免每次访问都重新分配集合。
+	/// </summary>
+	private readonly ReadOnlyCollection<BaseCacheHandle<TValue>> _cacheHandlesCollection;
 
 	/// <summary>
 	/// 配置的缓存背板，用于跨进程同步缓存操作；未配置时为 <c>null</c>。
@@ -64,6 +70,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 		try
 		{
 			_cacheHandles = CacheReflectionHelper.CreateCacheHandles(this).ToArray();
+			_cacheHandlesCollection = Array.AsReadOnly(_cacheHandles);
 
 			var index = 0;
 			foreach (var handle in _cacheHandles)
@@ -93,7 +100,8 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 		}
 		catch (Exception ex)
 		{
-			throw ex.InnerException ?? ex;
+			// 保留原始异常堆栈，而非 throw ex.InnerException ?? ex 丢失堆栈信息
+			ExceptionDispatchInfo.Capture(ex.InnerException ?? ex).Throw();
 		}
 	}
 
@@ -126,9 +134,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 
 	/// <inheritdoc />
 	public IEnumerable<BaseCacheHandle<TValue>> CacheHandles
-		=> new ReadOnlyCollection<BaseCacheHandle<TValue>>(
-			new List<BaseCacheHandle<TValue>>(
-				_cacheHandles));
+		=> _cacheHandlesCollection;
 
 	/// <summary>
 	/// 获取配置的缓存背板。
@@ -461,12 +467,9 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 		}
 
 		// 更新列表中顺序更靠前的所有缓存句柄
-		for (var handleIndex = 0; handleIndex < _cacheHandles.Length; handleIndex++)
+		for (var handleIndex = 0; handleIndex < foundIndex; handleIndex++)
 		{
-			if (handleIndex < foundIndex)
-			{
-				_cacheHandles[handleIndex].Add(item);
-			}
+			_cacheHandles[handleIndex].Add(item);
 		}
 	}
 

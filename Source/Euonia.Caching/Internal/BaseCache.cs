@@ -468,6 +468,12 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 			return default;
 		}
 
+		// 快速路径：类型已匹配时直接转换，避免 Convert.ChangeType 的开销。
+		if (value is TOut direct)
+		{
+			return direct;
+		}
+
 		try
 		{
 			var changed = Convert.ChangeType(value, typeof(TOut), CultureInfo.InvariantCulture);

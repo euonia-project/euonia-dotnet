@@ -332,4 +332,18 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	/// <returns>缓存项的新实例。</returns>
 	public CacheItem<T> WithCreated(DateTime created) =>
 		new(Key, Region, Value, ExpirationMode, ExpirationTimeout, created, LastAccessedUtc, UsesExpirationDefaults);
+
+	/// <summary>
+	/// 创建带指定键的当前缓存项副本。
+	/// 此方法不会更改缓存中该项的状态。使用 <c>Put</c> 或类似方法，用返回的副本更新缓存。
+	/// </summary>
+	/// <remarks>我们不会克隆缓存项或值。</remarks>
+	/// <param name="key">新键。</param>
+	/// <returns>缓存项的新实例。</returns>
+	public CacheItem<T> WithKey(string key)
+	{
+		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+
+		return new(key, Region, Value, ExpirationMode, ExpirationTimeout, CreatedUtc, LastAccessedUtc, UsesExpirationDefaults);
+	}
 }

@@ -33,6 +33,10 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
         /// </summary>
         private readonly List<IVolatileToken> _taskTokens = new();
         /// <summary>
+        /// 保护 <see cref="_taskTokens"/> 的同步对象。
+        /// </summary>
+        private readonly object _lock = new();
+        /// <summary>
         /// The task exception
         /// </summary>
         private volatile Exception _taskException;
@@ -60,7 +64,13 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
             {
                 try
                 {
-                    _task(token => _taskTokens.Add(token));
+                    _task(token =>
+                    {
+                        lock (_lock)
+                        {
+                            _taskTokens.Add(token);
+                        }
+                    });
                 }
                 catch (Exception ex)
                 {
@@ -99,7 +109,19 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
                     return false;
                 }
 
-                return !_isTaskFinished || _taskTokens.All(t => t.IsCurrent);
+                if (_isTaskFinished)
+                {
+                    // 在锁内对集合做快照后再遍历，避免与后台写入并发导致异常
+                    IVolatileToken[] snapshot;
+                    lock (_lock)
+                    {
+                        snapshot = [.. _taskTokens];
+                    }
+
+                    return snapshot.All(t => t.IsCurrent);
+                }
+
+                return true;
             }
         }
     }

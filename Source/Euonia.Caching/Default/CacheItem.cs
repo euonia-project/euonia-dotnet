@@ -65,18 +65,29 @@ internal class CacheItem<TKey, TResult>
 
     public async Task<TResult> GetOrAddAsync(TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
-        if (!_entries.TryGetValue(key, out var entry))
+        if (_entries.TryGetValue(key, out var entry))
         {
-            entry = await CreateEntryAsync(key, acquire);
-            PropagateTokens(entry);
-            _entries.TryAdd(key, entry);
             return entry.Result;
         }
 
+        // 使用信号量对同一键的并发 miss 去重，避免惊群效应
+        var semaphoreSlim = GetSemaphoreSlim(key);
+        await semaphoreSlim.WaitAsync();
+        try
         {
-        }
+            if (!_entries.TryGetValue(key, out entry))
+            {
+                entry = await CreateEntryAsync(key, acquire);
+                PropagateTokens(entry);
+                _entries.TryAdd(key, entry);
+            }
 
-        return entry.Result;
+            return entry.Result;
+        }
+        finally
+        {
+            semaphoreSlim.Release();
+        }
     }
 
     /// <summary>
@@ -160,7 +171,8 @@ internal class CacheItem<TKey, TResult>
 
     private async Task<CacheEntry> UpdateEntryAsync(CacheEntry currentEntry, TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
-        var entry = currentEntry.Tokens.Any(t => t is { IsCurrent: false }) ? await CreateEntryAsync(key, acquire) : currentEntry;
+        // currentEntry 可能为 null（例如来自 AddOrUpdateAsync），此时必须新建条目
+        var entry = currentEntry == null || currentEntry.Tokens.Any(t => t is { IsCurrent: false }) ? await CreateEntryAsync(key, acquire) : currentEntry;
         PropagateTokens(entry);
         return entry;
     }

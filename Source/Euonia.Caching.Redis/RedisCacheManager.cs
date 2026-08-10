@@ -1,8 +1,10 @@
-﻿namespace Nerosoft.Euonia.Caching.Redis;
+﻿using System.Collections.Concurrent;
+
+namespace Nerosoft.Euonia.Caching.Redis;
 
 internal class RedisCacheManager
 {
-    private readonly IDictionary<Type, object> _instances = new Dictionary<Type, object>();
+    private readonly ConcurrentDictionary<Type, Lazy<object>> _instances = new();
 
     private readonly CacheManagerConfiguration _configuration;
 
@@ -33,6 +35,9 @@ internal class RedisCacheManager
     /// <returns></returns>
     public ICacheManager<T> Instance<T>()
     {
-        return (ICacheManager<T>)_instances.GetOrAdd(typeof(T), _ => CacheFactory.FromConfiguration<T>(_configuration));
+        // Lazy + ExecutionAndPublication 保证每个类型只会创建并共享一个缓存管理器实例
+        return (ICacheManager<T>)_instances.GetOrAdd(
+            typeof(T),
+            _ => new Lazy<object>(() => CacheFactory.FromConfiguration<T>(_configuration), LazyThreadSafetyMode.ExecutionAndPublication)).Value;
     }
 }

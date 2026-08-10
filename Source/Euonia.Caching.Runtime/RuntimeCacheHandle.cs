@@ -190,8 +190,12 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	protected override bool RemoveInternal(string key, string region)
 	{
 		var fullKey = GetItemKey(key, region);
-		_ = _cache.Remove(fullKey);
+		if (!_cache.Contains(fullKey))
+		{
+			return false;
+		}
 
+		_cache.Remove(fullKey);
 		return true;
 	}
 
