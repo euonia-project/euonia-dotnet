@@ -1,22 +1,22 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents that the implemented classes can notify busy status.
+/// 表示实现此接口的类可以通知繁忙状态。
 /// </summary>
 public interface INotifyBusy
 {
 	/// <summary>
-	/// Occurs when the object's busy status changes.
+	/// 当对象的繁忙状态改变时发生。
 	/// </summary>
 	event BusyChangedEventHandler BusyChanged;
 	
 	/// <summary>
-	/// Gets a value indicating whether the object, or any of its children, is busy.
+	/// 获取一个值，指示对象或其任何子对象是否繁忙。
 	/// </summary>
 	bool IsBusy { get; }
 	
 	/// <summary>
-	/// Gets a value indicating whether the object itself is busy.
+	/// 获取一个值，指示对象本身是否繁忙。
 	/// </summary>
 	bool IsSelfBusy { get; }
 }

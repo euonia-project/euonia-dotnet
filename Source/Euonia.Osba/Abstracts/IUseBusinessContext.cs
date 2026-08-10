@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// A contract represents the business object should use business context.
+/// 表示业务对象应使用业务上下文的契约。
 /// </summary>
 public interface IUseBusinessContext
 {
 	/// <summary>
-	/// Gets or sets the business context.
+	/// 获取或设置业务上下文。
 	/// </summary>
 	BusinessContext BusinessContext { get; set; }
 }

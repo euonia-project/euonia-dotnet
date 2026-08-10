@@ -1,32 +1,33 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents an object which can be edited.
+/// 表示一个可编辑的对象。
 /// </summary>
 public interface IEditableObject : IBusinessObject, ITrackableObject
 {
 	/// <summary>
-	/// Gets the current object state.
+	/// 获取当前的对象状态。
 	/// </summary>
 	ObjectEditState State { get; }
 
 	/// <summary>
-	/// Gets a value indicating whether to check object rules on delete.
+	/// 获取一个值，指示删除时是否检查对象规则。
 	/// </summary>
 	bool CheckObjectRulesOnDelete { get; }
 
 	/// <summary>
-	/// Marks the object as insert.
+	/// 将对象标记为新增。
 	/// </summary>
 	void MarkAsNew();
 
 	/// <summary>
-	/// Marks the object as updated.
+	/// 将对象标记为已更改。
 	/// </summary>
 	void MarkAsChanged();
 
 	/// <summary>
-	/// Marks the object as deleted.
+	/// 将对象标记为已删除。
 	/// </summary>
+	/// <param name="checkObjectRules">是否在删除时检查对象规则。</param>
 	void MarkAsDeleted(bool checkObjectRules = false);
 }

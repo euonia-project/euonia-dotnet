@@ -3,106 +3,95 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Defines the contract for business objects that interact with field data and support property change notifications.
+/// 定义与字段数据交互并支持属性更改通知的业务对象契约。
 /// </summary>
 /// <remarks>
-/// Implementing this interface allows a class to manage field data operations and respond to property
-/// changes, ensuring that the business logic is properly encapsulated and that data integrity is maintained.
+/// 实现此接口允许类管理字段数据操作并响应属性更改，确保业务逻辑被正确封装且数据完整性得以保持。
 /// </remarks>
 public interface IBusinessObject : IUseBusinessContext, INotifyPropertyChanged, INotifyPropertyChanging
 {
 	/// <summary>
-	/// Gets the instance of the manager responsible for field data operations.
+	/// 获取负责字段数据操作的管理器实例。
 	/// </summary>
 	/// <remarks>
-	/// Use this property to access field data for retrieval and storage operations. The returned manager
-	/// provides methods for interacting with field-related data and is essential for scenarios that require manipulation
-	/// or querying of fields.
+	/// 使用此属性访问字段数据以进行检索和存储操作。返回的管理器
+	/// 提供了与字段相关数据交互的方法，对于需要操作或查询字段的场景至关重要。
 	/// </remarks>
 	FieldDataManager FieldManager { get; }
 
 	/// <summary>
-	/// Determines whether the specified property exists within the current context.
+	/// 确定指定属性是否存在于当前上下文中。
 	/// </summary>
 	/// <remarks>
-	/// This method is useful for validating property existence before performing operations that depend on
-	/// the property being present.
+	/// 此方法用于在执行依赖属性存在的操作之前验证属性是否存在。
 	/// </remarks>
-	/// <param name="property">The property information to check for existence. This parameter cannot be null.</param>
-	/// <returns>Returns <see langword="true"/> if the property exists; otherwise, <see langword="false"/>.</returns>
+	/// <param name="property">要检查其是否存在的属性信息。此参数不能为 <c>null</c>。</param>
+	/// <returns>如果属性存在，则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	bool FieldExists(IPropertyInfo property);
 
 	/// <summary>
-	/// Retrieves the value of the property specified by the given property information.
+	/// 检索由给定属性信息指定的属性值。
 	/// </summary>
 	/// <remarks>
-	/// Use this method to access the current value of a property identified by an IPropertyInfo instance.
-	/// Ensure that the propertyInfo parameter refers to a valid property that can be read. This method does not set or
-	/// modify the property value.
+	/// 使用此方法访问由 IPropertyInfo 实例标识的属性的当前值。
+	/// 确保 propertyInfo 参数引用的是可读的有效属性。此方法不会设置或修改属性值。
 	/// </remarks>
-	/// <param name="propertyInfo">An object that provides metadata about the property to read. Must represent a readable property; otherwise, the
-	/// result may be null.</param>
-	/// <returns>The value of the specified property, or null if the property has not been set.</returns>
+	/// <param name="propertyInfo">提供要读取属性元数据的对象。必须表示可读属性；否则结果可能为 <c>null</c>。</param>
+	/// <returns>指定属性的值；如果属性尚未设置，则为 <c>null</c>。</returns>
 	object ReadProperty(IPropertyInfo propertyInfo);
 
 	/// <summary>
-	/// Retrieves the value of the property specified by its name.
+	/// 按名称检索指定属性的值。
 	/// </summary>
 	/// <remarks>
-	///	Use this method to access the current value of a property identified by its name.
-	/// Ensure that the property name provided corresponds to a valid property that can be read. This method does not set or modify the property value.
+	/// 使用此方法访问由名称标识的属性的当前值。
+	/// 确保提供的属性名称对应一个可读的有效属性。此方法不会设置或修改属性值。
 	/// </remarks>
-	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
-	/// <returns>The value of the specified property, or null if the property has not been set.</returns>
+	/// <param name="propertyName">要读取的属性名称。必须表示可读属性。</param>
+	/// <returns>指定属性的值；如果属性尚未设置，则为 <c>null</c>。</returns>
 	object ReadProperty(string propertyName);
 	
 	/// <summary>
-	/// Reads the value of the specified property and returns it as the requested type.
+	/// 读取指定属性的值，并将其作为请求的类型返回。
 	/// </summary>
 	/// <remarks>
-	/// Ensure that the property referenced by <paramref name="propertyInfo"/> is accessible and contains a
-	/// valid value before calling this method. An exception may be thrown if the property is not readable or if the value
-	/// cannot be cast to <typeparamref name="TValue"/>.
+	/// 在调用此方法之前，确保 <paramref name="propertyInfo"/> 引用的属性可访问且包含有效值。
+	/// 如果属性不可读或值无法转换为 <typeparamref name="TValue"/>，则可能抛出异常。
 	/// </remarks>
-	/// <typeparam name="TValue">The type of the property value to be read.</typeparam>
-	/// <param name="propertyInfo">An object that provides metadata about the property to read, including its type and access information. Cannot be
-	/// null.</param>
-	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
+	/// <typeparam name="TValue">要读取的属性值的类型。</typeparam>
+	/// <param name="propertyInfo">提供要读取属性元数据（包括其类型和访问信息）的对象。不能为 <c>null</c>。</param>
+	/// <returns>指定属性的值，转换为 <typeparamref name="TValue"/> 指定的类型。</returns>
 	TValue ReadProperty<TValue>(PropertyInfo<TValue> propertyInfo);
 	
 	/// <summary>
-	/// Reads the value of the specified property by its name and returns it as the requested type.
+	/// 按名称读取指定属性的值，并将其作为请求的类型返回。
 	/// </summary>
 	/// <remarks>
-	///	Ensure that the property name provided corresponds to a valid property that can be read and that the value can be cast to <typeparamref name="TValue"/>.
-	/// An exception may be thrown if the property is not readable or if the value cannot be cast to the specified type.
+	/// 确保提供的属性名称对应一个可读的有效属性，且值可以转换为 <typeparamref name="TValue"/>。
+	/// 如果属性不可读或值无法转换为指定类型，则可能抛出异常。
 	/// </remarks>
-	/// <param name="propertyName">The name of the property to read. Must represent a readable property.</param>
-	/// <typeparam name="TValue">The type of the property value to be read.</typeparam>
-	/// <returns>The value of the specified property, cast to the type specified by <typeparamref name="TValue"/>.</returns>
+	/// <param name="propertyName">要读取的属性名称。必须表示可读属性。</param>
+	/// <typeparam name="TValue">要读取的属性值的类型。</typeparam>
+	/// <returns>指定属性的值，转换为 <typeparamref name="TValue"/> 指定的类型。</returns>
 	TValue ReadProperty<TValue>(string propertyName);
 
 	/// <summary>
-	/// Loads the specified property with a new value, updating the property's value according to its metadata information.
+	/// 使用新值加载指定属性，根据其元数据信息更新属性值。
 	/// </summary>
-	/// <remarks>On certain platforms, such as iOS, this method handles nullable types explicitly to avoid runtime
-	/// errors. For other types, reflection is used to assign the value. Ensure that the new value matches the expected
-	/// type of the property to prevent exceptions.</remarks>
-	/// <param name="propertyInfo">The metadata information that identifies the property to be loaded. This parameter determines the property's type
-	/// and other characteristics.</param>
-	/// <param name="newValue">The new value to assign to the specified property. The value must be compatible with the property's type.</param>
+	/// <remarks>在某些平台（如 iOS）上，此方法显式处理可空类型以避免运行时错误。
+	/// 对于其他类型，使用反射来赋值。确保新值与属性的预期类型匹配，以避免异常。</remarks>
+	/// <param name="propertyInfo">标识要加载属性的元数据信息。此参数决定属性的类型和其他特征。</param>
+	/// <param name="newValue">要赋给指定属性的新值。该值必须与属性的类型兼容。</param>
 	void LoadProperty(IPropertyInfo propertyInfo, object newValue);
 
 	/// <summary>
-	/// Updates the specified property with a new value and adjusts its state accordingly.
+	/// 使用新值更新指定属性并相应地调整其状态。
 	/// </summary>
 	/// <remarks>
-	/// Ensure that the new value is valid for the property being updated. Supplying an invalid value may
-	/// result in exceptions or undefined behavior.
+	/// 确保新值对正在更新的属性有效。提供无效值可能导致异常或未定义行为。
 	/// </remarks>
-	/// <typeparam name="TValue">The type of the value to assign to the property.</typeparam>
-	/// <param name="propertyInfo">The metadata that identifies the property to be updated. This parameter defines the property's characteristics and
-	/// type.</param>
-	/// <param name="newValue">The new value to assign to the property. Must be compatible with the property's type.</param>
+	/// <typeparam name="TValue">要赋给属性的值的类型。</typeparam>
+	/// <param name="propertyInfo">标识要更新属性的元数据。此参数定义属性的特征和类型。</param>
+	/// <param name="newValue">要赋给属性的新值。必须与属性的类型兼容。</param>
 	void LoadProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue);
 }
