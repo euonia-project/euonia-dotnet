@@ -4,39 +4,51 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Manages fields and properties for a given business object.
+/// 管理给定业务对象的字段和属性。
 /// </summary>
 public class FieldDataManager
 {
 	private const string RESOURCE_PROPERTY_NOT_REGISTERED = "Property not registered";
 	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property namd '{0}' not registered";
 
+	/// <summary>
+	/// 存储字段数据的字典（以属性名称为键）。
+	/// </summary>
 	private readonly Dictionary<string, IFieldData> _fieldData = new();
+
+	/// <summary>
+	/// 合并后的属性列表。
+	/// </summary>
 	private readonly List<IPropertyInfo> _properties;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="FieldDataManager"/> class.
+	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
 	/// </summary>
 	public FieldDataManager()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="FieldDataManager"/> class.
+	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
 	/// </summary>
-	/// <param name="businessObjectType"></param>
+	/// <param name="businessObjectType">业务对象的类型。</param>
 	public FieldDataManager(Type businessObjectType)
 		: this()
 	{
 		_properties = CreateConsolidatedList(businessObjectType);
 	}
 
+	/// <summary>
+	/// 创建合并的属性列表，包含继承层次结构中所有已注册的属性。
+	/// </summary>
+	/// <param name="type">业务对象类型。</param>
+	/// <returns>合并的属性列表。</returns>
 	private static List<IPropertyInfo> CreateConsolidatedList(Type type)
 	{
 		ForceStaticFieldInit(type);
 		var result = new List<IPropertyInfo>();
 
-		// get inheritance hierarchy
+		// 获取继承层次结构
 		var current = type;
 		var hierarchy = new List<Type>();
 		do
@@ -46,7 +58,7 @@ public class FieldDataManager
 		}
 		while (current != null && !(current == typeof(BusinessObject)));
 
-		// walk from top to bottom to build consolidated list
+		// 从顶层到底层遍历，构建合并列表
 		for (var index = hierarchy.Count - 1; index >= 0; index--)
 		{
 			var source = PropertyInfoManager.GetPropertyListCache(hierarchy[index]);
@@ -58,20 +70,20 @@ public class FieldDataManager
 	}
 
 	/// <summary>
-	/// Gets registered properties of the business object.
+	/// 获取业务对象已注册的属性。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>已注册属性的列表。</returns>
 	public List<IPropertyInfo> GetRegisteredProperties()
 	{
 		return [.._properties];
 	}
 
 	/// <summary>
-	/// Gets registered property of the business object with specified name.
+	/// 获取业务对象中具有指定名称的已注册属性。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentOutOfRangeException"></exception>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>匹配的属性信息。</returns>
+	/// <exception cref="ArgumentOutOfRangeException">当属性未注册时抛出。</exception>
 	public IPropertyInfo GetRegisteredProperty(string propertyName)
 	{
 		var result = GetRegisteredProperties().FirstOrDefault(c => c.Name == propertyName);
@@ -86,11 +98,11 @@ public class FieldDataManager
 	#region Get/Set/Find fields
 
 	/// <summary>
-	/// Gets the field data for a property.
+	/// 获取属性的字段数据。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="property">属性信息。</param>
+	/// <returns>字段数据。</returns>
+	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public IFieldData GetFieldData(IPropertyInfo property)
 	{
 		try
@@ -104,11 +116,11 @@ public class FieldDataManager
 	}
 
 	/// <summary>
-	/// Gets the field data for a property with specified name.
+	/// 获取具有指定名称的属性的字段数据。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>字段数据。</returns>
+	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public IFieldData GetFieldData(string propertyName)
 	{
 		try
@@ -121,6 +133,11 @@ public class FieldDataManager
 		}
 	}
 
+	/// <summary>
+	/// 获取或创建属性的字段数据。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>字段数据。</returns>
 	private IFieldData GetOrCreateFieldData(IPropertyInfo property)
 	{
 		try
@@ -141,6 +158,11 @@ public class FieldDataManager
 		}
 	}
 
+	/// <summary>
+	/// 设置属性的字段数据值。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <param name="value">要设置的值。</param>
 	internal void SetFieldData(IPropertyInfo property, object value)
 	{
 		var valueType = value != null ? value.GetType() : property.Type;
@@ -150,6 +172,12 @@ public class FieldDataManager
 		field.Value = value;
 	}
 
+	/// <summary>
+	/// 设置属性的字段数据值（泛型版本）。
+	/// </summary>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <param name="value">要设置的值。</param>
 	internal void SetFieldData<TValue>(IPropertyInfo property, TValue value)
 	{
 		var field = GetOrCreateFieldData(property);
@@ -163,6 +191,12 @@ public class FieldDataManager
 		}
 	}
 
+	/// <summary>
+	/// 加载属性的字段数据值并标记为未更改。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <param name="value">要加载的值。</param>
+	/// <returns>字段数据。</returns>
 	internal IFieldData LoadFieldData(IPropertyInfo property, object value)
 	{
 		var valueType = value != null ? value.GetType() : property.Type;
@@ -174,6 +208,13 @@ public class FieldDataManager
 		return field;
 	}
 
+	/// <summary>
+	/// 加载属性的字段数据值并标记为未更改（泛型版本）。
+	/// </summary>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <param name="value">要加载的值。</param>
+	/// <returns>字段数据。</returns>
 	internal IFieldData LoadFieldData<TValue>(IPropertyInfo property, TValue value)
 	{
 		var field = GetOrCreateFieldData(property);
@@ -190,6 +231,10 @@ public class FieldDataManager
 		return field;
 	}
 
+	/// <summary>
+	/// 移除属性的字段数据。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
 	internal void RemoveField(IPropertyInfo property)
 	{
 		try
@@ -207,11 +252,11 @@ public class FieldDataManager
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether the field is existing.
+	/// 获取一个值，指示字段是否存在。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="property">属性信息。</param>
+	/// <returns>如果字段存在，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <exception cref="InvalidOperationException">当字段数据访问失败时抛出。</exception>
 	public bool FieldExists(IPropertyInfo property)
 	{
 		try
@@ -227,10 +272,9 @@ public class FieldDataManager
 	#endregion
 
 	/// <summary>
-	/// Forces initialization of the static fields declared
-	/// by a type, and any of its base class types.
+	/// 强制初始化类型及其所有基类类型声明的静态字段。
 	/// </summary>
-	/// <param name="type">Type of object to initialize.</param>
+	/// <param name="type">要初始化的对象类型。</param>
 	public static void ForceStaticFieldInit(Type type)
 	{
 		const BindingFlags attr = BindingFlags.Static |
@@ -250,6 +294,10 @@ public class FieldDataManager
 		}
 	}
 
+	/// <summary>
+	/// 检查字段数据中是否有任何项处于繁忙状态。
+	/// </summary>
+	/// <returns>如果有项繁忙，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	internal bool IsBusy()
 	{
 		return _fieldData.Any(t => t.Value.IsBusy);

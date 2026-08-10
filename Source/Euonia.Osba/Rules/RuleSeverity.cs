@@ -1,27 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Values for validation rule severities.
+/// 验证规则严重级别的值。
 /// </summary>
 public enum RuleSeverity
 {
     /// <summary>
-    /// Represents a serious business rule violation that should cause an object to be considered invalid.
+    /// 表示严重的业务规则违规，应导致对象被视为无效。
     /// </summary>
     Error,
 
     /// <summary>
-    /// Represents a business rule violation that should be displayed to the user, but which should not make an object be invalid.
+    /// 表示应显示给用户的业务规则违规，但不应对对象判定为无效。
     /// </summary>
     Warning,
 
     /// <summary>
-    /// Represents a business rule result that should be displayed to the user, but which is less severe than a warning.
+    /// 表示应显示给用户的业务规则结果，但严重级别低于警告。
     /// </summary>
     Information,
 
     /// <summary>
-    /// Represents a business rule result that should not be displayed to the user, and where the rule was successful.
+    /// 表示不应显示给用户的业务规则结果，且规则已成功。
     /// </summary>
     Success
 }

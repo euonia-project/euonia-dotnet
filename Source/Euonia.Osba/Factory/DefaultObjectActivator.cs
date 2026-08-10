@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The default object activator.
+/// 默认的对象激活器。
 /// </summary>
 public class DefaultObjectActivator : IObjectActivator
 {

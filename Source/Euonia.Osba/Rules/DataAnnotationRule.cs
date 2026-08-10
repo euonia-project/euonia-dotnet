@@ -5,20 +5,20 @@ using ValidationResult = System.ComponentModel.DataAnnotations.ValidationResult;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Represents a rule based on a <see cref="ValidationAttribute"/>.
+/// 表示基于 <see cref="ValidationAttribute"/> 的规则。
 /// </summary>
 public class DataAnnotationRule : RuleBase
 {
     /// <summary>
-    /// Gets the validation attribute.
+    /// 获取验证特性。
     /// </summary>
     public ValidationAttribute Attribute { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DataAnnotationRule"/> class.
+    /// 初始化 <see cref="DataAnnotationRule"/> 类的新实例。
     /// </summary>
-    /// <param name="property"></param>
-    /// <param name="attribute"></param>
+    /// <param name="property">受规则影响的属性。</param>
+    /// <param name="attribute">验证特性。</param>
     public DataAnnotationRule(IPropertyInfo property, ValidationAttribute attribute)
         : base(property, attribute.GetType())
     {
@@ -26,11 +26,11 @@ public class DataAnnotationRule : RuleBase
     }
 
     /// <summary>
-    /// Executes the rule check.
+    /// 执行规则检查。
     /// </summary>
-    /// <param name="context"></param>
-    /// <param name="cancellationToken"></param>
-    /// <returns></returns>
+    /// <param name="context">规则上下文。</param>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>表示异步规则执行操作的任务。</returns>
     public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
         try

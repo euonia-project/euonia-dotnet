@@ -5,9 +5,9 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The <see cref="PropertyInfo{T}"/> class provides a strongly-typed wrapper for a <see cref="PropertyInfo"/>.
+/// <see cref="PropertyInfo{T}"/> 类为 <see cref="PropertyInfo"/> 提供强类型包装。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">属性的类型。</typeparam>
 public class PropertyInfo<T> : IPropertyInfo
 {
 	/// <inheritdoc />
@@ -30,12 +30,12 @@ public class PropertyInfo<T> : IPropertyInfo
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="PropertyInfo{T}"/> class.
+	/// 初始化 <see cref="PropertyInfo{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="name"></param>
-	/// <param name="friendlyName"></param>
-	/// <param name="objectType"></param>
-	/// <param name="defaultValue"></param>
+	/// <param name="name">属性名称。</param>
+	/// <param name="friendlyName">属性的友好名称。</param>
+	/// <param name="objectType">属性所属的对象类型。</param>
+	/// <param name="defaultValue">属性的默认值。</param>
 	public PropertyInfo(string name, string friendlyName, Type objectType, T defaultValue)
 	{
 		Name = name;
@@ -48,7 +48,7 @@ public class PropertyInfo<T> : IPropertyInfo
 	public string Name { get; }
 
 	/// <summary>
-	/// Gets the friendly display name of the property.
+	/// 获取属性的友好显示名称。
 	/// </summary>
 	public string FriendlyName
 	{
@@ -91,14 +91,14 @@ public class PropertyInfo<T> : IPropertyInfo
 	public Type Type => typeof(T);
 
 	/// <summary>
-	/// Gets the default initial value for the property.
+	/// 获取属性的默认初始值。
 	/// </summary>
 	public virtual T DefaultValue { get; }
 
 	object IPropertyInfo.DefaultValue => DefaultValue;
 
 	/// <summary>
-	/// Gets a value indicating whether this property is a child object.
+	/// 获取一个值，指示此属性是否为子对象。
 	/// </summary>
 	public virtual bool IsChild => typeof(IBusinessObject).IsAssignableFrom(typeof(T));
 
@@ -108,12 +108,12 @@ public class PropertyInfo<T> : IPropertyInfo
 	public PropertyInfo GetPropertyInfo() => _propertyInfo;
 
 	/// <summary>
-	/// Gets the default initial value for the property.
+	/// 获取属性的默认初始值。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>默认值。</returns>
 	public static T GetDefaultValue()
 	{
-		// if T is string we need an empty string, not null, for data binding
+		// 如果 T 是 string，则需要空字符串而非 null，以支持数据绑定
 		if (typeof(T) == typeof(string))
 		{
 			return (T)(object)string.Empty;
@@ -128,10 +128,10 @@ public class PropertyInfo<T> : IPropertyInfo
 	}
 
 	/// <summary>
-	/// Gets a new <see cref="IFieldData"/> instance with specified name.
+	/// 获取一个具有指定名称的新 <see cref="IFieldData"/> 实例。
 	/// </summary>
-	/// <param name="name"></param>
-	/// <returns></returns>
+	/// <param name="name">字段名称。</param>
+	/// <returns>新的字段数据实例。</returns>
 	protected virtual IFieldData NewFieldData(string name)
 	{
 		return new FieldData<T>(name);

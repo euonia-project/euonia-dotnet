@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Implementation of <see cref="IRules"/> interface.
+/// <see cref="IRules"/> 接口的实现。
 /// </summary>
 public class Rules : IRules
 {
@@ -22,7 +22,7 @@ public class Rules : IRules
 	public object Target => _target;
 
 	/// <summary>
-	/// Gets the rule manager.
+	/// 获取规则管理器。
 	/// </summary>
 	internal RuleManager RuleManager
 	{
@@ -38,21 +38,21 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether there are any currently broken rules, which would mean the object is not valid.
+	/// 获取一个值，指示当前是否存在违规规则，存在则意味着对象无效。
 	/// </summary>
 	public bool IsValid => BrokenRules?.ErrorCount == 0;
 
 	internal BrokenRuleCollection BrokenRules { get; } = new();
 
 	/// <summary>
-	/// Gets or sets a value indicating whether to suppress rule checking.
+	/// 获取或设置一个值，指示是否抑制规则检查。
 	/// </summary>
 	public bool SuppressRuleChecking { get; set; }
 
 	private List<IRuleBase> RunningRules { get; } = new();
 
 	/// <summary>
-	/// Gets a value indicating whether there are any currently running rules.
+	/// 获取一个值，指示当前是否有正在运行的规则。
 	/// </summary>
 	public bool HasRunningRules { get; private set; }
 
@@ -62,18 +62,18 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Add rule to business rule manager.
+	/// 向业务规则管理器添加规则。
 	/// </summary>
-	/// <param name="rule"></param>
+	/// <param name="rule">要添加的规则。</param>
 	public void AddRule(IRuleBase rule)
 	{
 		RuleManager.Rules.Add(rule);
 	}
 
 	/// <summary>
-	/// Add rule to business rule manager.
+	/// 向业务规则管理器添加规则。
 	/// </summary>
-	/// <typeparam name="TRule"></typeparam>
+	/// <typeparam name="TRule">规则类型。</typeparam>
 	public void AddRule<TRule>()
 		where TRule : class, IRuleBase, new()
 	{
@@ -81,10 +81,10 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Add rule to business rule manager.
+	/// 向业务规则管理器添加规则。
 	/// </summary>
-	/// <param name="provider"></param>
-	/// <typeparam name="TRule"></typeparam>
+	/// <param name="provider">用于解析规则实例的服务提供程序。</param>
+	/// <typeparam name="TRule">规则类型。</typeparam>
 	public void AddRule<TRule>(IServiceProvider provider)
 		where TRule : class, IRuleBase
 	{
@@ -95,10 +95,10 @@ public class Rules : IRules
 	#region Rule check
 
 	/// <summary>
-	/// Check rule for current object.
+	/// 检查当前对象的规则。
 	/// </summary>
-	/// <param name="cascade"></param>
-	/// <returns></returns>
+	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	public List<string> CheckObjectRules(bool cascade)
 	{
 		if (SuppressRuleChecking)
@@ -119,11 +119,11 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// 
+	/// 异步检查当前对象的规则。
 	/// </summary>
-	/// <param name="cascade"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
+	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	public async Task<List<string>> CheckObjectRulesAsync(bool cascade, CancellationToken cancellationToken = default)
 	{
 		if (SuppressRuleChecking)
@@ -145,11 +145,11 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Check rule for specified property.
+	/// 检查指定属性的规则。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <param name="property">要检查规则的属性。</param>
+	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 <c>null</c> 时抛出。</exception>
 	public List<string> CheckRules(IPropertyInfo property)
 	{
 		if (property == null)
@@ -168,13 +168,13 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Execute all rules check logic for specified property.
+	/// 为指定属性执行所有规则检查逻辑。
 	/// </summary>
 	/// <param name="property">
-	/// The property to execute property rule check.
+	/// 要执行属性规则检查的属性。
 	/// </param>
-	/// <param name="cascade"></param>
-	/// <returns></returns>
+	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <returns>受影响的属性列表和规则任务列表。</returns>
 	private Tuple<List<string>, List<Task>> CheckRulesForProperty(IPropertyInfo property, bool cascade)
 	{
 		var rules = from rule in RuleManager.Rules
@@ -188,11 +188,11 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Run rule checks.
+	/// 运行规则检查。
 	/// </summary>
-	/// <param name="rules"></param>
-	/// <param name="cascade"></param>
-	/// <returns></returns>
+	/// <param name="rules">要运行的规则集合。</param>
+	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <returns>受影响的属性列表和规则任务列表。</returns>
 	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade)
 	{
 		var affectProperties = new List<string>();
@@ -275,11 +275,11 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// Run a async rule check job.
+	/// 运行异步规则检查任务。
 	/// </summary>
-	/// <param name="rule"></param>
-	/// <param name="context"></param>
-	/// <param name="cancellationToken"></param>
+	/// <param name="rule">要执行的规则。</param>
+	/// <param name="context">规则上下文。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	private static async Task RunAsync(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		try
@@ -301,7 +301,7 @@ public class Rules : IRules
 	#region DataAnnotations
 
 	/// <summary>
-	/// Add data annotations to business rule manager.
+	/// 向业务规则管理器添加数据注解规则。
 	/// </summary>
 	public void AddDataAnnotations()
 	{

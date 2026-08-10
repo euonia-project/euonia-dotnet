@@ -5,18 +5,18 @@ namespace Nerosoft.Euonia.Osba;
 public partial class CommonRule
 {
 	/// <summary>
-	/// Provides property validation using regular expression.
+	/// 使用正则表达式提供属性验证。
 	/// </summary>
 	public class Regular : CommonRuleBase
 	{
 		private readonly Regex _regex;
 
 		/// <summary>
-		/// Initialize a new instance of <see cref="Regular"/>.
+		/// 初始化 <see cref="Regular"/> 的新实例。
 		/// </summary>
-		/// <param name="property">The property to check.</param>
-		/// <param name="expression">The regular expression pattern to match.</param>
-		/// <param name="message"></param>
+		/// <param name="property">要检查的属性。</param>
+		/// <param name="expression">要匹配的正则表达式模式。</param>
+		/// <param name="message">规则的错误消息。</param>
 		public Regular(IPropertyInfo property, string expression, string message)
 			: base(property, message)
 		{
@@ -25,11 +25,11 @@ public partial class CommonRule
 		}
 
 		/// <summary>
-		/// Initialize a new instance of <see cref="Regular"/>.
+		/// 初始化 <see cref="Regular"/> 的新实例。
 		/// </summary>
-		/// <param name="property"></param>
-		/// <param name="expression">The regular expression pattern to match.</param>
-		/// <param name="messageFactory"></param>
+		/// <param name="property">要检查的属性。</param>
+		/// <param name="expression">要匹配的正则表达式模式。</param>
+		/// <param name="messageFactory">生成规则消息的委托。</param>
 		public Regular(IPropertyInfo property, string expression, Func<string> messageFactory)
 			: base(property, messageFactory)
 		{
@@ -38,12 +38,12 @@ public partial class CommonRule
 		}
 
 		/// <summary>
-		/// Gets the regular expression pattern to match property value.
+		/// 获取用于匹配属性值的正则表达式模式。
 		/// </summary>
 		public string Expression { get; }
 
 		/// <summary>
-		/// Gets or sets a value indicating whether the null value should be ignored.
+		/// 获取或设置一个值，指示是否应忽略 <c>null</c> 值。
 		/// </summary>
 		public bool IgnoreNullValue { get; set; } = true;
 

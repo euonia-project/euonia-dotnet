@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Provides common rule set to validate a property.
+/// 提供通用规则集以验证属性。
 /// </summary>
 public partial class CommonRule
 {
 	/// <summary>
-	/// Provides property validation using a lambda expression.
+	/// 使用 lambda 表达式提供属性验证。
 	/// </summary>
 	public class Lambda : CommonRuleBase
 	{
@@ -25,7 +25,7 @@ public partial class CommonRule
 		}
 
 		/// <summary>
-		/// Gets the handler function.
+		/// 获取处理函数。
 		/// </summary>
 		private Func<object, IRuleContext, Task<bool>> Handler { get; }
 
@@ -51,9 +51,9 @@ public partial class CommonRule
 	}
 
 	/// <summary>
-	/// Provides property validation using a lambda expression.
+	/// 使用强类型 lambda 表达式提供属性验证。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">属性值的类型。</typeparam>
 	public class Lambda<T> : CommonRuleBase
 	{
 		/// <inheritdoc />
@@ -71,7 +71,7 @@ public partial class CommonRule
 		}
 
 		/// <summary>
-		/// Gets the handler function.
+		/// 获取处理函数。
 		/// </summary>
 		private Func<T, IRuleContext, bool> Handler { get; }
 

@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// The object reflector.
+/// 对象反射器。
 /// </summary>
 public class ObjectReflector
 {
@@ -133,7 +133,7 @@ public class ObjectReflector
 
 		if (matches.Count == 0)
 		{
-			// look for params array
+			// 查找 params 数组
 			foreach (var (method, score) in candidates)
 			{
 				var lastParam = method.GetParameters().LastOrDefault();
@@ -183,14 +183,14 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// Find matched method.
+	/// 查找匹配的方法。
 	/// </summary>
-	/// <param name="attributeType"></param>
-	/// <param name="parameterTypes"></param>
-	/// <typeparam name="TTarget"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="MissingMethodException"></exception>
-	/// <exception cref="AmbiguousMatchException"></exception>
+	/// <param name="attributeType">方法应具有的特性类型。</param>
+	/// <param name="parameterTypes">方法的参数类型列表。</param>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <returns>匹配的 <see cref="MethodInfo"/>。</returns>
+	/// <exception cref="MissingMethodException">当未找到匹配的方法时抛出。</exception>
+	/// <exception cref="AmbiguousMatchException">当找到多个匹配的方法时抛出。</exception>
 	public static MethodInfo FindMatchedMethod<TTarget>(Type attributeType, IReadOnlyList<Type> parameterTypes)
 	{
 		var methods = typeof(TTarget).GetRuntimeMethods()
@@ -260,14 +260,14 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// Find injected service type for property type.
+	/// 为属性类型查找注入的服务类型。
 	/// </summary>
-	/// <param name="name">The property name.</param>
-	/// <param name="type">The property type.</param>
-	/// <param name="multiple">If the service has mutiple implements.</param>
-	/// <returns></returns>
-	/// <exception cref="NotSupportedException"></exception>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="name">属性名称。</param>
+	/// <param name="type">属性类型。</param>
+	/// <param name="multiple">服务是否有多个实现。</param>
+	/// <returns>包含服务类型和是否为多实现的元组。</returns>
+	/// <exception cref="NotSupportedException">当属性类型不受支持时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当属性类型无效时抛出。</exception>
 	private static Tuple<Type, bool> FindServiceType(string name, Type type, bool? multiple = null)
 	{
 		while (true)
@@ -330,7 +330,7 @@ public class ObjectReflector
 			}
 
 			{
-				// Prevent code inspection warning.
+				// 防止代码检查警告。
 			}
 
 			throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
@@ -350,10 +350,10 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// 
+	/// 获取条件数组的参数类型名称列表。
 	/// </summary>
-	/// <param name="criteria"></param>
-	/// <returns></returns>
+	/// <param name="criteria">条件数组。</param>
+	/// <returns>以逗号连接的类型名称字符串。</returns>
 	private static string GetParameterTypeNames(object[] criteria)
 	{
 		if (criteria == null)
@@ -411,7 +411,7 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// Calculate parameter match score.
+	/// 计算参数匹配分数。
 	/// </summary>
 	private static int CalculateParameterMatchScore(ParameterInfo parameter, object criteria)
 	{
@@ -474,10 +474,10 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// Get conventional method names.
+	/// 获取约定的方法名称。
 	/// </summary>
-	/// <param name="attributeType"></param>
-	/// <returns></returns>
+	/// <param name="attributeType">特性类型。</param>
+	/// <returns>约定的方法名称数组。</returns>
 	private static string[] GetConventionalMethodNames(Type attributeType)
 	{
 		var validNames = new[]

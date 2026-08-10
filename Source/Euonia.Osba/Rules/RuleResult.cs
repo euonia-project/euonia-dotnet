@@ -1,14 +1,14 @@
 ﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Contains information about the result of a rule.
+/// 包含规则结果的信息。
 /// </summary>
 public class RuleResult
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RuleResult"/> class.
+    /// 初始化 <see cref="RuleResult"/> 类的新实例。
     /// </summary>
-    /// <param name="ruleName"></param>
+    /// <param name="ruleName">规则名称。</param>
     public RuleResult(string ruleName)
     {
         RuleName = ruleName;
@@ -16,11 +16,11 @@ public class RuleResult
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RuleResult"/> class.
+    /// 初始化 <see cref="RuleResult"/> 类的新实例。
     /// </summary>
-    /// <param name="ruleName"></param>
-    /// <param name="description"></param>
-    /// <param name="severity"></param>
+    /// <param name="ruleName">规则名称。</param>
+    /// <param name="description">规则失败的描述。</param>
+    /// <param name="severity">规则的严重级别。</param>
     public RuleResult(string ruleName, string description, RuleSeverity severity)
     {
         RuleName = ruleName;
@@ -30,29 +30,27 @@ public class RuleResult
     }
 
     /// <summary>
-    /// Gets a value indicating whether the rule was successful.
+    /// 获取一个值，指示规则是否成功。
     /// </summary>
     public bool Success { get; private set; }
 
     /// <summary>
-    /// Gets a human-readable description of why the rule failed.
+    /// 获取规则失败原因的人类可读描述。
     /// </summary>
     public string Description { get; private set; }
 
     /// <summary>
-    /// Gets or sets the severity of a failed rule.
+    /// 获取或设置失败规则的严重级别。
     /// </summary>
     public RuleSeverity Severity { get; set; }
 
     /// <summary>
-    /// <para>Gets the unique name of the rule.</para>
-    /// <para>获取规则唯一名称</para>
+    /// 获取规则的唯一名称。
     /// </summary>
     public string RuleName { get; private set; }
 
     /// <summary>
-    /// <para>Gets or sets a list of properties that were affected by the rule.</para>
-    /// <para>获取或设置受规则影响的属性列表</para>
+    /// 获取或设置受规则影响的属性列表。
     /// </summary>
     public IList<IPropertyInfo> Properties { get; set; }
 }
