@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
 /// 基于内存的队列消费者实现，用于接收和处理单播消息。
-/// 处理完成后会调用 <see cref="MessageContext.Complete"/>，异常时调用 <see cref="MessageContext.Failure"/>。
+/// 处理完成后会调用 <see cref="MessageContext.Complete(string)"/>，异常时调用 <see cref="MessageContext.Failure"/>。
 /// </summary>
 public class InMemoryConsumer : InMemoryRecipient<InMemoryConsumer>, IConsumer
 {
@@ -26,8 +26,8 @@ public class InMemoryConsumer : InMemoryRecipient<InMemoryConsumer>, IConsumer
 
 	
 	/// <summary>
-	/// 处理接收到的消息，委托给 <see cref="Handler"/> 执行业务逻辑。
-	/// 异常时会记录错误日志并通知 <see cref="MessageContext.Failure"/>，最终总是调用 <see cref="MessageContext.Complete"/>。
+	/// 处理接收到的消息，委托给 <see cref="IHandlerContext"/> 执行业务逻辑。
+	/// 异常时会记录错误日志并通知 <see cref="MessageContext.Failure"/>，最终总是调用 <see cref="MessageContext.Complete(string)"/>。
 	/// </summary>
 	/// <param name="channel">消息通道。</param>
 	/// <param name="message">消息负载。</param>

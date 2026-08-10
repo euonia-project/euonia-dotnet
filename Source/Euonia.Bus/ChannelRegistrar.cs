@@ -26,12 +26,11 @@ internal sealed class ChannelRegistrar
 		_registerAction = registerAction;
 	}
 
-	public ChannelRegistration this[string channel] => _registrations.GetValueOrDefault(channel);
-
 	/// <summary>
-	/// 获取 <see cref="ChannelRegistrar"/> 的单例实例。
+	/// 
 	/// </summary>
-	//public static ChannelRegistrar Instance => Singleton<ChannelRegistrar>.Get(() => new ChannelRegistrar());
+	/// <param name="channel"></param>
+	public ChannelRegistration this[string channel] => _registrations.GetValueOrDefault(channel);
 
 	/// <summary>
 	/// 获取已注册的通道处理器列表。
