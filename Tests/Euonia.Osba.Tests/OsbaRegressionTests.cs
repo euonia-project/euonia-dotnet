@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
 namespace Nerosoft.Euonia.Core.Tests;
@@ -129,6 +130,62 @@ public class OsbaRegressionTests
 		var obj = new DefaultValueBusinessObject();
 
 		Assert.Equal(0, obj.Number);
+	}
+
+	[Fact]
+	public async Task BusinessContextAccessor_ShouldFlowProviderAcrossAsyncBoundary()
+	{
+		var provider = new ServiceCollection()
+		               .AddScoped<BusinessContextAccessor>()
+		               .BuildServiceProvider();
+		using var scope = provider.CreateScope();
+		var scopedProvider = scope.ServiceProvider;
+
+		// 作用域内首次解析访问器会将该作用域的 provider 写入当前异步流
+		_ = scopedProvider.GetRequiredService<BusinessContextAccessor>();
+
+		// 派生任务通过 ExecutionContext 继承当前异步流的 provider
+		var flowed = await Task.Run(() => BusinessContextAccessor.Current);
+
+		Assert.Same(scopedProvider, flowed);
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task BusinessContextAccessor_ShouldIsolateBetweenParallelFlows()
+	{
+		var providerA = new ServiceCollection().BuildServiceProvider();
+		var providerB = new ServiceCollection().BuildServiceProvider();
+
+		var taskA = Task.Run(() =>
+		{
+			BusinessContextAccessor.SetCurrent(providerA);
+			return BusinessContextAccessor.Current;
+		});
+
+		var taskB = Task.Run(() =>
+		{
+			BusinessContextAccessor.SetCurrent(providerB);
+			return BusinessContextAccessor.Current;
+		});
+
+		var results = await Task.WhenAll(taskA, taskB);
+
+		// 不同异步流之间互不泄漏
+		Assert.Same(providerA, results[0]);
+		Assert.Same(providerB, results[1]);
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void BusinessContextAccessor_Clear_ShouldResetCurrentProvider()
+	{
+		var provider = new ServiceCollection().BuildServiceProvider();
+		BusinessContextAccessor.SetCurrent(provider);
+
+		BusinessContextAccessor.Clear();
+
+		Assert.Null(BusinessContextAccessor.Current);
 	}
 }
 
