@@ -8,7 +8,6 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 public class FieldDataManager
 {
-	private const string RESOURCE_PROPERTY_NOT_REGISTERED = "Property not registered";
 	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property name '{0}' not registered";
 
 	/// <summary>
@@ -89,7 +88,7 @@ public class FieldDataManager
 		var result = _properties.FirstOrDefault(c => c.Name == propertyName);
 		if (result == null)
 		{
-			throw new ArgumentOutOfRangeException(string.Format(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, propertyName));
+			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, propertyName));
 		}
 
 		return result;
