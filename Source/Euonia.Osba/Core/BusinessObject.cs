@@ -567,6 +567,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
 		}
+		
+		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
+		}
 
 		return ReadProperty(property);
 	}
@@ -819,6 +823,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return true;
 		}
 
+		// 空块：用于阻止 IDE 代码分析建议（勿删除）
+		{
+		}
 		return CanReadProperty(propertyInfo, throwOnFalse);
 	}
 

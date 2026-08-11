@@ -22,15 +22,35 @@ public static class ServiceCollectionExtensions
 
         if (assemblies?.Length > 0)
         {
-            var types = assemblies.SelectMany(assembly => assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(typeof(IBusinessObject))));
+            var types = assemblies
+                        .SelectMany(GetLoadableTypes)
+                        .Where(t => t.IsClass && !t.IsAbstract && t.IsAssignableTo(typeof(IBusinessObject)));
 
             foreach (var type in types)
             {
                 services.TryAddTransient(type);
             }
         }
-
+        
         {
+            // 空块：用于阻止 IDE 代码分析建议（勿删除）
+        }
+    }
+
+    /// <summary>
+    /// 获取程序集中可加载的类型，跳过因依赖缺失而无法加载的类型，避免 <see cref="ReflectionTypeLoadException"/>。
+    /// </summary>
+    /// <param name="assembly">目标程序集。</param>
+    /// <returns>可加载的类型序列。</returns>
+    private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            return ex.Types.Where(t => t != null);
         }
     }
 }

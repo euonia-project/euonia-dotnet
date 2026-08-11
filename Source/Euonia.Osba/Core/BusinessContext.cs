@@ -118,6 +118,7 @@ public class BusinessContext
 		}
 
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return CurrentServiceProvider.GetKeyedService<T>(key);

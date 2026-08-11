@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Collections.Concurrent;
+using System.Reflection;
 using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Osba;
@@ -13,7 +14,7 @@ public class FieldDataManager
 	/// <summary>
 	/// 存储字段数据的字典（以属性名称为键）。
 	/// </summary>
-	private readonly Dictionary<string, IFieldData> _fieldData = new();
+	private readonly ConcurrentDictionary<string, IFieldData> _fieldData = new();
 
 	/// <summary>
 	/// 合并后的属性列表。
@@ -113,7 +114,7 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	public IFieldData GetFieldData(IPropertyInfo property)
 	{
-		return _fieldData.GetValueOrDefault(property.Name);
+		return _fieldData.TryGetValue(property.Name, out var field) ? field : null;
 	}
 
 	/// <summary>
@@ -123,7 +124,7 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	public IFieldData GetFieldData(string propertyName)
 	{
-		return _fieldData.GetValueOrDefault(propertyName);
+		return _fieldData.TryGetValue(propertyName, out var field) ? field : null;
 	}
 
 	/// <summary>
@@ -133,15 +134,8 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	private IFieldData GetOrCreateFieldData(IPropertyInfo property)
 	{
-		if (_fieldData.TryGetValue(property.Name, out var field))
-		{
-			return field;
-		}
-
-		field = property.NewFieldData(property.Name);
-		_fieldData[property.Name] = field;
-
-		return field;
+		// NewFieldData 是幂等操作（创建独立实例），即使 valueFactory 被并发调用多次也只会保留一个实例
+		return _fieldData.GetOrAdd(property.Name, _ => property.NewFieldData(property.Name));
 	}
 
 	/// <summary>
@@ -223,8 +217,7 @@ public class FieldDataManager
 	/// <param name="property">属性信息。</param>
 	internal void RemoveField(IPropertyInfo property)
 	{
-		var field = _fieldData.GetValueOrDefault(property.Name);
-		if (field != null)
+		if (_fieldData.TryGetValue(property.Name, out var field))
 		{
 			field.Value = null;
 		}
@@ -271,6 +264,6 @@ public class FieldDataManager
 	/// <returns>如果有项繁忙，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	internal bool IsBusy()
 	{
-		return _fieldData.Any(t => t.Value.IsBusy);
+		return _fieldData.Values.Any(t => t.IsBusy);
 	}
 }

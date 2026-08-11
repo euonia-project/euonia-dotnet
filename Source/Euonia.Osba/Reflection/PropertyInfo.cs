@@ -115,6 +115,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 		}
 
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return Name;
