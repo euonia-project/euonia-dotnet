@@ -9,7 +9,7 @@ public interface IHasDomainEvents
 	/// 获取已附加的领域事件。
 	/// </summary>
 	/// <returns>已附加的领域事件集合。</returns>
-	IEnumerable<DomainEvent> GetEvents();
+	IReadOnlyList<DomainEvent> GetEvents();
 
 	/// <summary>
 	/// 引发一个新事件。

@@ -15,12 +15,12 @@ public abstract class Aggregate<TKey> : Entity<TKey>, IAggregateRoot<TKey>, IHas
 	/// <summary>
 	/// 存储聚合引发的事件列表。
 	/// </summary>
-	private readonly List<DomainEvent> _events = new();
+	private readonly List<DomainEvent> _events = [];
 
 	/// <summary>
 	/// 获取事件集合。
 	/// </summary>
-	public virtual IEnumerable<DomainEvent> GetEvents() => _events?.AsReadOnly();
+	public virtual IReadOnlyList<DomainEvent> GetEvents() => _events?.AsReadOnly();
 
 	/// <summary>
 	/// 为特定事件类型注册处理器。
@@ -43,6 +43,7 @@ public abstract class Aggregate<TKey> : Entity<TKey>, IAggregateRoot<TKey>, IHas
 		{
 			handler(@event);
 		}
+
 		_events.Add(@event);
 	}
 
