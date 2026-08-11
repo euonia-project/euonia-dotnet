@@ -5,10 +5,6 @@ using System.Reflection;
 using System.Security;
 using Nerosoft.Euonia.Reflection;
 
-// ReSharper disable MemberCanBeProtected.Global
-
-// ReSharper disable MemberCanBePrivate.Global
-
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
@@ -28,6 +24,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private readonly List<IPropertyInfo> _changedProperties = [];
 
 	/// <summary>
+	/// 保护 <see cref="_changedProperties"/> 并发访问的同步锁。
+	/// </summary>
+	private readonly Lock _changedPropertiesLock = new();
+
+	/// <summary>
 	/// 业务对象的事件管理器。
 	/// </summary>
 	protected readonly WeakEventManager Events = new();
@@ -44,7 +45,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
-		}	
+		}
 	}
 
 	/// <summary>
@@ -294,9 +295,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="property">要标记的属性信息。</param>
 	protected virtual void PropertyHasChanged(IPropertyInfo property)
 	{
-		if (!_changedProperties.Contains(property))
+		lock (_changedPropertiesLock)
 		{
-			_changedProperties.Add(property);
+			if (!_changedProperties.Contains(property))
+			{
+				_changedProperties.Add(property);
+			}
 		}
 
 		if (CheckRuleOnPropertyChanged)
@@ -319,14 +323,32 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 获取已更改属性的列表。
+	/// 获取已更改属性的列表快照，可安全跨线程读取。
 	/// </summary>
-	public virtual IReadOnlyList<IPropertyInfo> ChangedProperties => _changedProperties;
+	public virtual IReadOnlyList<IPropertyInfo> ChangedProperties
+	{
+		get
+		{
+			lock (_changedPropertiesLock)
+			{
+				return [.. _changedProperties];
+			}
+		}
+	}
 
 	/// <summary>
 	/// 检查对象是否具有已更改的属性。
 	/// </summary>
-	public virtual bool HasChangedProperties => ChangedProperties.Count > 0;
+	public virtual bool HasChangedProperties
+	{
+		get
+		{
+			lock (_changedPropertiesLock)
+			{
+				return _changedProperties.Count > 0;
+			}
+		}
+	}
 
 	#endregion
 
@@ -367,16 +389,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		/// </summary>
 		public void Dispose()
 		{
-			Dispose(true);
-			GC.SuppressFinalize(this);
-		}
-
-		/// <summary>
-		/// 释放对象。
-		/// </summary>
-		/// <param name="dispose">释放标志。</param>
-		private void Dispose(bool dispose)
-		{
 			DeRef();
 		}
 
@@ -415,6 +427,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			lock (_lock)
 			{
+				if (_refCount == 0)
+				{
+					// 已经释放，防止重复释放导致引用计数为负或空引用
+					return;
+				}
+
 				_refCount -= 1;
 				if (_refCount != 0)
 				{
@@ -539,7 +557,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual TValue ReadProperty<TValue>(string propertyName)
 	{
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
-		
+
 		if (propertyInfo == null)
 		{
 			throw new InvalidOperationException($"Property {propertyName} is not registered.");
@@ -547,10 +565,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 		if (propertyInfo is not PropertyInfo<TValue> property)
 		{
-			throw new InvalidOperationException("The property type does not match the expected type.");
+			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
 		}
-
+		
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return ReadProperty(property);
@@ -575,7 +594,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			case null:
 				oldValue = propertyInfo.DefaultValue;
-				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
+				_ = FieldManager.LoadFieldData(propertyInfo, oldValue);
 				break;
 			case IFieldData<TValue> fd:
 				oldValue = fd.Value;
@@ -601,7 +620,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="oldValue">更新前属性的先前值。</param>
 	/// <param name="newValue">要赋给属性的新值。</param>
 	/// <param name="markAsChanged">指示是否将属性标记为已更改并在值已更改时触发更改通知。</param>
-	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged)
+	/// <param name="onChanged">值更改时的回调操作。</param>
+	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged, Action<IPropertyInfo, TValue, TValue> onChanged = null)
 	{
 		var valuesDiffer = ValuesDiffer(propertyInfo, newValue, oldValue);
 
@@ -615,6 +635,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnPropertyChanging(propertyInfo);
 			FieldManager.SetFieldData(propertyInfo, newValue);
 			PropertyHasChanged(propertyInfo);
+			onChanged?.Invoke(propertyInfo, oldValue, newValue);
 		}
 		else
 		{
@@ -802,6 +823,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return true;
 		}
 
+		// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		{
 		}
 		return CanReadProperty(propertyInfo, throwOnFalse);
@@ -880,11 +902,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return;
 		}
 
-		if (disposing)
-		{
-			// 释放托管状态(托管对象)
-		}
-
+		// 当前无托管/非托管资源需要释放，保留该重写方法供派生类扩展
 		_disposedValue = true;
 	}
 
@@ -892,7 +910,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public void Dispose()
 	{
 		Dispose(disposing: true);
-		GC.SuppressFinalize(this);
 	}
 
 	#endregion

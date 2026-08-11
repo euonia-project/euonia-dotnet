@@ -1,27 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Specifies the contract for entity.
+/// 指定实体的契约。
 /// </summary>
 public interface IEntity
 {
     /// <summary>
-    /// Returns an array of ordered keys for this entity.
+    /// 返回此实体的有序键数组。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>实体的有序键数组。</returns>
     object[] GetKeys();
 }
 
 /// <summary>
-/// Specifies the contract for entity with key of type <typeparamref name="TKey"/> .
+/// 指定带有 <typeparamref name="TKey"/> 类型键的实体的契约。
 /// </summary>
-/// <typeparam name="TKey">The identifier type.</typeparam>
+/// <typeparam name="TKey">标识符类型。</typeparam>
 public interface IEntity<TKey> : IEntity
     where TKey : IEquatable<TKey>
 {
     /// <summary>
-    /// Gets or sets the identifier.
+    /// 获取或设置标识符。
     /// </summary>
-    /// <value>The identifier.</value>
+    /// <value>标识符。</value>
     TKey Id { get; set; }
 }

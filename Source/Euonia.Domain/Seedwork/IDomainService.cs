@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represents the base interface for domain service.
+/// 表示领域服务的基础接口。
 /// </summary>
 public interface IDomainService : IDisposable
 {

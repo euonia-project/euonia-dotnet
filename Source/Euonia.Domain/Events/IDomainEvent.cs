@@ -1,23 +1,23 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Interface IDomainEvent
-/// Implements the <see cref="IEvent" />
+/// 表示领域事件的接口。
+/// 继承自 <see cref="IEvent"/>。
 /// </summary>
 /// <seealso cref="IEvent" />
 public interface IDomainEvent : IEvent
 {
 	/// <summary>
-	/// Attaches the current event to the specified event.
+	/// 将当前事件附加到指定的事件聚合根上。
 	/// </summary>
-	/// <param name="aggregate"></param>
-	/// <typeparam name="TKey"></typeparam>
+	/// <param name="aggregate">要附加到的聚合根。</param>
+	/// <typeparam name="TKey">聚合根标识符的类型。</typeparam>
 	void Attach<TKey>(IAggregateRoot<TKey> aggregate)
 		where TKey : IEquatable<TKey>;
 
 	/// <summary>
-	/// Gets the event aggregate.
+	/// 获取事件聚合。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>事件聚合实例。</returns>
 	EventAggregate GetEventAggregate();
 }

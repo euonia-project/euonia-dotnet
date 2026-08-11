@@ -291,8 +291,7 @@ public class BusinessObjectFactory : IObjectFactory
 			}
 			else
 			{
-				// TODO: 优化 GetKeyedService
-				var implement = serviceKey == null ? _provider.GetService(type) : ServiceProviderExtensions.GetKeyedService(_provider, type, serviceKey); // _provider.GetKeyedService(type, serviceKey);
+				var implement = serviceKey == null ? _provider.GetService(type) : ((IKeyedServiceProvider)_provider).GetKeyedService(type, serviceKey);
 				property.SetValue(@object, implement);
 			}
 		}

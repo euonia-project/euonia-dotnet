@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// The auditing options.
+/// 审计选项。
 /// </summary>
 public class AuditingOptions
 {

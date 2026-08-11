@@ -146,13 +146,9 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <param name="defaultValue">默认值。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	/// <returns>属性值。</returns>
-	protected TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
+	protected virtual TValue GetProperty<TValue>(string propertyName, TValue field, TValue defaultValue)
 	{
-		#region Check to see if the property is marked with RelationshipTypes.PrivateField
-
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
-
-		#endregion
 
 		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, true))
 		{
@@ -265,44 +261,48 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	#region Set Properties
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
+	/// <remarks>
+	///	此重载将属性赋值操作委托给按属性名称设置的重载。
+	/// 设置前会检查写入权限，并在值发生变化时触发属性更改通知。
+	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="field">字段引用。</param>
 	/// <param name="newValue">新值。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
+	protected virtual void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
 	{
 		SetProperty(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="field">字段引用。</param>
 	/// <param name="newValue">新值。</param>
 	/// <typeparam name="TField">字段的类型。</typeparam>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
+	protected virtual void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
 	{
 		SetPropertyConvert(propertyInfo.Name, ref field, newValue);
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
+	/// <remarks>
+	///	此方法按属性名称执行属性赋值：先检查写入权限，再比较新旧值。
+	/// 仅在值发生变化时触发属性更改通知；当规则检查被忽略（IsBypassingRuleChecks）时不触发任何通知。
+	/// </remarks>
 	/// <param name="propertyName">属性名称。</param>
 	/// <param name="field">字段引用。</param>
 	/// <param name="newValue">新值。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
+	protected virtual void SetProperty<TValue>(string propertyName, ref TValue field, TValue newValue)
 	{
-		#region Check to see if the property is marked with RelationshipTypes.PrivateField
-
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
-
-		#endregion
 
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -312,10 +312,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 		var doChange = false;
 		if (field == null)
 		{
-			if (newValue != null)
-			{
-				doChange = true;
-			}
+			doChange = newValue != null;
 		}
 		else
 		{
@@ -330,30 +327,32 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			}
 		}
 
-		if (doChange)
+		if (!doChange)
 		{
-			if (!IsBypassingRuleChecks)
-			{
-				OnPropertyChanging(propertyName);
-			}
+			return;
+		}
 
-			field = newValue;
-			if (!IsBypassingRuleChecks)
-			{
-				PropertyHasChanged(propertyName);
-			}
+		if (!IsBypassingRuleChecks)
+		{
+			OnPropertyChanging(propertyName);
+		}
+
+		field = newValue;
+		if (!IsBypassingRuleChecks)
+		{
+			PropertyHasChanged(propertyName);
 		}
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
 	/// <param name="field">字段引用。</param>
 	/// <param name="newValue">新值。</param>
 	/// <typeparam name="TField">字段的类型。</typeparam>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
+	protected virtual void SetPropertyConvert<TField, TValue>(string propertyName, ref TField field, TValue newValue)
 	{
 		#region Check to see if the property is marked with RelationshipTypes.PrivateField
 
@@ -403,13 +402,14 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
+	/// <param name="onChanged">值更改时的回调操作。</param>
 	/// <typeparam name="TField">字段的类型。</typeparam>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue)
+	protected virtual void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue, Action<IPropertyInfo, TField, TField> onChanged = null)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -437,16 +437,21 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks);
+		LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks, onChanged);
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
+	/// <remarks>
+	///	此方法在设置属性值之前会检查是否有写入权限。
+	/// 在不忽略规则检查的情况下，调用此方法会对新值进行规则检查，并在值更改时触发回调操作。
+	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
+	/// <param name="onChanged">值更改时的回调操作。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
+	protected virtual void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue, Action<IPropertyInfo, TValue, TValue> onChanged = null)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -474,12 +479,16 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks);
+		LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks, onChanged);
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
+	/// <remarks>
+	///	这是 IOperableProperty 接口的实现入口。设置前检查写入权限；
+	/// 在规则检查未被忽略时，先触发 OnPropertyChanging，写入字段数据后再触发属性更改通知。
+	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
 	public void SetProperty(IPropertyInfo propertyInfo, object newValue)
@@ -503,8 +512,12 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
-	/// 设置属性值，首先检查授权。
+	/// 设置属性值。
 	/// </summary>
+	/// <remarks>
+	///	此强类型重载将赋值委托给非泛型重载 SetProperty(IPropertyInfo, object)。
+	/// 设置前会检查写入权限，并在规则检查未被忽略时触发属性更改通知。
+	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>

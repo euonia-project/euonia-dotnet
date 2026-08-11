@@ -3,14 +3,14 @@
 namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// The abstract class implements <see cref="IEvent"/>.
+/// 实现 <see cref="IEvent"/> 的抽象类。
 /// </summary>
 public abstract class Event : IEvent
 {
 	private const string PROPERTY_ID = "nerosoft.euonia.internal.event.id";
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="Event"/> class.
+	/// 初始化 <see cref="Event"/> 类的新实例，并设置事件意图与唯一标识符。
 	/// </summary>
 	protected Event()
 	{
@@ -20,14 +20,14 @@ public abstract class Event : IEvent
 	}
 
 	/// <summary>
-	/// Gets the extended properties of command.
+	/// 获取事件的扩展属性。
 	/// </summary>
 	public IDictionary<string, string> Properties { get; set; } = new Dictionary<string, string>();
 
 	/// <summary>
-	/// Gets or sets the command property with specified name.
+	/// 获取或设置具有指定名称的事件属性。
 	/// </summary>
-	/// <param name="name"></param>
+	/// <param name="name">属性名称。</param>
 	public string this[string name]
 	{
 		get => Properties.TryGetValue(name, out var value) ? value : default;
@@ -35,18 +35,18 @@ public abstract class Event : IEvent
 	}
 
 	/// <summary>
-	/// Gets value of property <paramref name="name"/>.
+	/// 获取指定名称 <paramref name="name"/> 的属性值。
 	/// </summary>
-	/// <param name="name"></param>
-	/// <typeparam name="T"></typeparam>
-	/// <returns></returns>
+	/// <param name="name">属性名称。</param>
+	/// <typeparam name="T">属性值的类型。</typeparam>
+	/// <returns>转换后的属性值。</returns>
 	public virtual T GetProperty<T>(string name)
 	{
 		return TypeHelper.CoerceValue<T, string>(this[name]);
 	}
 
 	/// <summary>
-	/// Gets or sets the event identifier.
+	/// 获取或设置事件标识符。
 	/// </summary>
 	public string EventId
 	{
@@ -55,25 +55,25 @@ public abstract class Event : IEvent
 	}
 
 	/// <summary>
-	/// Gets or sets the sequence of the current event.
+	/// 获取或设置当前事件的序号。
 	/// </summary>
 	public long Sequence { get; set; } = DateTime.UtcNow.Ticks;
 
 	/// <summary>
-	/// Gets the intent of the event.
+	/// 获取事件意图。
 	/// </summary>
-	/// <returns>The intent of the event.</returns>
+	/// <returns>事件的意图。</returns>
 	public virtual string EventIntent { get; set; }
 
 	/// <summary>
-	/// Gets the .NET CLR type of the originator of the event.
+	/// 获取事件发起方的 .NET CLR 类型。
 	/// </summary>
-	/// <returns>The .NET CLR type of the originator of the event.</returns>
+	/// <returns>事件发起方的 .NET CLR 类型。</returns>
 	public virtual string OriginatorType { get; set; }
 
 	/// <summary>
-	/// Gets the originator identifier.
+	/// 获取发起方标识符。
 	/// </summary>
-	/// <returns>The originator identifier.</returns>
+	/// <returns>发起方标识符。</returns>
 	public virtual string OriginatorId { get; set; }
 }

@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represents that the decorated class should be audited.
+/// 表示被修饰的类、方法或属性应被审计。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property)]
 public class AuditedAttribute : Attribute

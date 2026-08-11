@@ -3,17 +3,17 @@
 internal static class Constants
 {
     /// <summary>
-    /// The event intent metadata key
+    /// 事件意图元数据键。
     /// </summary>
     public const string EventIntentMetadataKey = "$nerosoft.euonia.event.intent";
 
     /// <summary>
-    /// The event originator type key
+    /// 事件发起方类型键。
     /// </summary>
     public const string EventOriginTypeKey = "$nerosoft.euonia.event.originator.type";
 
     /// <summary>
-    /// The event originator identifier
+    /// 事件发起方标识符键。
     /// </summary>
     public const string EventOriginatorId = "$nerosoft.euonia.event.originator.id";
 }

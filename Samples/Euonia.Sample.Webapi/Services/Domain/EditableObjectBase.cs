@@ -27,7 +27,7 @@ public abstract class EditableObjectBase<TTarget, TKey> : EditableObject<TTarget
 	/// <summary>
 	/// The events.
 	/// </summary>
-	public virtual IEnumerable<DomainEvent> GetEvents() => _events?.AsReadOnly();
+	public virtual IReadOnlyList<DomainEvent> GetEvents() => _events?.AsReadOnly();
 
 	/// <summary>
 	/// Register a handler for the specific event type.

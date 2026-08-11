@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
 namespace Nerosoft.Euonia.Core.Tests;
@@ -85,5 +86,161 @@ public class OsbaRegressionTests
 		// 事件订阅本身不应抛出 NotImplementedException
 		Assert.Null(raised);
 	}
+
+	[Fact]
+	public void RegisterProperty_WithMutableDefault_ShouldNotShareInstanceAcrossObjects()
+	{
+		var first = new DefaultValueBusinessObject();
+		var second = new DefaultValueBusinessObject();
+
+		first.Tags.Add("shared?");
+
+		// 修改第一个对象的集合不应影响第二个对象
+		Assert.Empty(second.Tags);
+	}
+
+	[Fact]
+	public void RegisterProperty_WithFactory_ShouldCreateIndependentInstancePerObject()
+	{
+		var first = new DefaultValueBusinessObject();
+		var second = new DefaultValueBusinessObject();
+
+		Assert.NotSame(first.FactoryTags, second.FactoryTags);
+
+		first.FactoryTags.Add("x");
+
+		Assert.Empty(second.FactoryTags);
+	}
+
+	[Fact]
+	public void RegisterProperty_WithCloneableDefault_ShouldCreateIndependentInstancePerObject()
+	{
+		var first = new DefaultValueBusinessObject();
+		var second = new DefaultValueBusinessObject();
+
+		Assert.NotSame(first.Child, second.Child);
+
+		first.Child.Name = "changed";
+		Assert.Equal("initial", second.Child.Name);
+	}
+
+	[Fact]
+	public void RegisterProperty_WithValueTypeDefault_ShouldReturnDefaultValue()
+	{
+		var obj = new DefaultValueBusinessObject();
+
+		Assert.Equal(0, obj.Number);
+	}
+
+	[Fact]
+	public async Task BusinessContextAccessor_ShouldFlowProviderAcrossAsyncBoundary()
+	{
+		var provider = new ServiceCollection()
+		               .AddScoped<BusinessContextAccessor>()
+		               .BuildServiceProvider();
+		using var scope = provider.CreateScope();
+		var scopedProvider = scope.ServiceProvider;
+
+		// 作用域内首次解析访问器会将该作用域的 provider 写入当前异步流
+		_ = scopedProvider.GetRequiredService<BusinessContextAccessor>();
+
+		// 派生任务通过 ExecutionContext 继承当前异步流的 provider
+		var flowed = await Task.Run(() => BusinessContextAccessor.Current);
+
+		Assert.Same(scopedProvider, flowed);
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task BusinessContextAccessor_ShouldIsolateBetweenParallelFlows()
+	{
+		var providerA = new ServiceCollection().BuildServiceProvider();
+		var providerB = new ServiceCollection().BuildServiceProvider();
+
+		var taskA = Task.Run(() =>
+		{
+			BusinessContextAccessor.SetCurrent(providerA);
+			return BusinessContextAccessor.Current;
+		});
+
+		var taskB = Task.Run(() =>
+		{
+			BusinessContextAccessor.SetCurrent(providerB);
+			return BusinessContextAccessor.Current;
+		});
+
+		var results = await Task.WhenAll(taskA, taskB);
+
+		// 不同异步流之间互不泄漏
+		Assert.Same(providerA, results[0]);
+		Assert.Same(providerB, results[1]);
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void BusinessContextAccessor_Clear_ShouldResetCurrentProvider()
+	{
+		var provider = new ServiceCollection().BuildServiceProvider();
+		BusinessContextAccessor.SetCurrent(provider);
+
+		BusinessContextAccessor.Clear();
+
+		Assert.Null(BusinessContextAccessor.Current);
+	}
 }
 
+/// <summary>
+/// 用于验证默认值隔离的测试业务对象。
+/// </summary>
+public class DefaultValueBusinessObject : BusinessObject<DefaultValueBusinessObject>
+{
+	/// <summary>
+	/// 使用可变引用类型（集合）作为静态默认值注册的属性。
+	/// </summary>
+	public static readonly PropertyInfo<List<string>> TagsProperty =
+		RegisterProperty<List<string>>(nameof(Tags), null, new List<string>());
+
+	/// <summary>
+	/// 使用工厂生成默认值的属性。
+	/// </summary>
+	public static readonly PropertyInfo<List<string>> FactoryTagsProperty =
+		RegisterProperty<List<string>>(nameof(FactoryTags), null, () => new List<string>());
+
+	/// <summary>
+	/// 使用实现了 <see cref="ICloneable"/> 的引用类型默认值注册的属性。
+	/// </summary>
+	public static readonly PropertyInfo<DefaultValueChild> ChildProperty =
+		RegisterProperty<DefaultValueChild>(nameof(Child), null, new DefaultValueChild("initial"));
+
+	/// <summary>
+	/// 使用值类型默认值注册的属性。
+	/// </summary>
+	public static readonly PropertyInfo<int> NumberProperty =
+		RegisterProperty<int>(nameof(Number));
+
+	public List<string> Tags => ReadProperty(TagsProperty);
+
+	public List<string> FactoryTags => ReadProperty(FactoryTagsProperty);
+
+	public DefaultValueChild Child => ReadProperty(ChildProperty);
+
+	public int Number => ReadProperty(NumberProperty);
+}
+
+/// <summary>
+/// 可克隆的测试子对象。
+/// </summary>
+public class DefaultValueChild : ICloneable
+{
+	public DefaultValueChild(string name)
+	{
+		Name = name;
+	}
+
+	public string Name { get; set; }
+
+	public object Clone()
+	{
+		return new DefaultValueChild(Name);
+	}
+}
