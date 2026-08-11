@@ -1,17 +1,17 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represents a command message.
+/// 表示命令消息。
 /// </summary>
 public interface ICommand : IMessage
 {
 	/// <summary>
-	/// Gets the command identifier.
+	/// 获取命令标识符。
 	/// </summary>
 	string CommandId { get; }
 
 	/// <summary>
-	/// Override the message identifier.
+	/// 覆盖消息标识符，使其与命令标识符保持一致。
 	/// </summary>
 	string IMessage.MessageId => CommandId;
 }

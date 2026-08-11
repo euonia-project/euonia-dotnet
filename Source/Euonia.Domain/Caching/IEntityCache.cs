@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represents the entity can be cached.
+/// 表示实体可以被缓存。
 /// </summary>
 public interface IEntityCache
 {

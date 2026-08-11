@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// The event aggregate root.
+/// 事件聚合根。
 /// </summary>
 public class EventAggregate : IAggregateRoot<string>
 {
@@ -12,53 +12,53 @@ public class EventAggregate : IAggregateRoot<string>
     }
 
     /// <summary>
-    /// Gets or sets the identifier of current instance.
+    /// 获取或设置当前实例的标识符。
     /// </summary>
     public string Id { get; set; }
 
 	/// <summary>
-	/// Gets or sets then event identifier.
+	/// 获取或设置事件标识符。
 	/// </summary>
 	public string EventId { get; set; }
 
 	/// <summary>
-	/// Gets or sets the timestamp.
+	/// 获取或设置时间戳。
 	/// </summary>
 	public DateTime Timestamp { get; set; }
 
 	/// <summary>
-	/// Gets or sets the type name.
+	/// 获取或设置类型名称。
 	/// </summary>
 	public string TypeName { get; set; }
 
 	/// <summary>
-	/// Gets or sets the event intent.
+	/// 获取或设置事件意图。
 	/// </summary>
 	public string EventIntent { get; set; }
 
 	/// <summary>
-	/// Gets or sets the originator type.
+	/// 获取或设置发起方类型。
 	/// </summary>
 	public string OriginatorType { get; set; }
 
 	/// <summary>
-	/// Gets or sets the originator identifier.
+	/// 获取或设置发起方标识符。
 	/// </summary>
 	public string OriginatorId { get; set; }
 
 	/// <summary>
-	/// Gets or sets the event payload.
+	/// 获取或设置事件负载。
 	/// </summary>
 	public object EventPayload { get; set; }
 
 	/// <summary>
-	/// Gets or sets the event sequence.
+	/// 获取或设置事件序号。
 	/// </summary>
 	public long EventSequence { get; set; }
 
 	/// <summary>
-	/// Returns a <see cref="string" /> that represents this instance.
+	/// 返回表示此实例的 <see cref="string" />。
 	/// </summary>
-	/// <returns>A <see cref="string" /> that represents this instance.</returns>
+	/// <returns>表示此实例的 <see cref="string" />。</returns>
 	public override string ToString() => EventIntent;
 }

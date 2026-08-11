@@ -1,16 +1,15 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Class Entity.
-/// Implements the <see cref="IEntity{TKey}" />
+/// 实现 <see cref="IEntity{TKey}"/> 的抽象实体基类。
 /// </summary>
-/// <typeparam name="TKey">The type of the t key.</typeparam>
+/// <typeparam name="TKey">键的类型。</typeparam>
 /// <seealso cref="IEntity{TKey}" />
 public abstract class Entity<TKey> : Entity, IEntity<TKey>
     where TKey : IEquatable<TKey>
 {
     /// <summary>
-    /// Get or set the entity identifier.
+    /// 获取或设置实体标识符。
     /// </summary>
     public virtual TKey Id { get; set; }
 
@@ -28,7 +27,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
 }
 
 /// <summary>
-/// 
+/// 实体的抽象基类。
 /// </summary>
 public abstract class Entity : IEntity
 {

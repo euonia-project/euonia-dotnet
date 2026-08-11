@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represent the event was raised by application service.
+/// 表示由应用程序服务引发的事件。
 /// </summary>
 public interface IApplicationEvent : IEvent
 {

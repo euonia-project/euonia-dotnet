@@ -1,39 +1,39 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Represents the object has domain events.
+/// 表示对象具有领域事件。
 /// </summary>
 public interface IHasDomainEvents
 {
 	/// <summary>
-	/// Gets the attached domain events.
+	/// 获取已附加的领域事件。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>已附加的领域事件集合。</returns>
 	IEnumerable<DomainEvent> GetEvents();
 
 	/// <summary>
-	/// Raise up a new event.
+	/// 引发一个新事件。
 	/// </summary>
-	/// <param name="event"></param>
-	/// <typeparam name="TEvent"></typeparam>
+	/// <param name="event">要引发的事件。</param>
+	/// <typeparam name="TEvent">事件的类型。</typeparam>
 	void RaiseEvent<TEvent>(TEvent @event)
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// Apply the specific event.
+	/// 应用指定的事件。
 	/// </summary>
-	/// <typeparam name="TEvent"></typeparam>
-	/// <param name="event"></param>
+	/// <typeparam name="TEvent">事件的类型。</typeparam>
+	/// <param name="event">要应用的事件。</param>
 	void Apply<TEvent>(TEvent @event)
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// Clear events.
+	/// 清除事件。
 	/// </summary>
 	void ClearEvents();
 
 	/// <summary>
-	/// Attach to events.
+	/// 附加到事件。
 	/// </summary>
 	void AttachToEvents();
 }

@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// The command execution status definition.
+/// 命令执行状态的定义。
 /// </summary>
 public enum CommandStatus
 {
 	/// <summary>
-	/// Represents the command was successfully executed.
+	/// 表示命令已成功执行。
 	/// </summary>
 	Succeed,
 
 	/// <summary>
-	/// Represents the command execution was failed.
+	/// 表示命令执行失败。
 	/// </summary>
 	Failure,
 
 	/// <summary>
-	/// Represents the command execution was canceled.
+	/// 表示命令执行被取消。
 	/// </summary>
 	Canceled,
 }

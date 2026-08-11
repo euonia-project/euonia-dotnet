@@ -1,19 +1,19 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// The value object contract.
+/// 值对象契约。
 /// </summary>
-/// <typeparam name="TValueObject"></typeparam>
+/// <typeparam name="TValueObject">值对象的类型。</typeparam>
 public class ValueObject<TValueObject> : IEquatable<TValueObject>
 	where TValueObject : ValueObject<TValueObject>
 {
 	#region IEquatable and Override Equals operators
 
 	/// <summary>
-	/// Determine whether this value object is equals to other.
+	/// 判断此值对象是否与其他值对象相等。
 	/// </summary>
-	/// <param name="other">The target object to compare.</param>
-	/// <returns><c>true</c> if equals; otherwise <c>false</c></returns>
+	/// <param name="other">要比较的目标对象。</param>
+	/// <returns>如果相等则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool Equals(TValueObject other)
 	{
 		if (other == null)
@@ -26,7 +26,7 @@ public class ValueObject<TValueObject> : IEquatable<TValueObject>
 			return true;
 		}
 
-		//compare all public properties
+		// 比较所有公共属性
 		var publicProperties = GetType().GetProperties();
 
 		if (publicProperties.Length > 0)
@@ -49,10 +49,8 @@ public class ValueObject<TValueObject> : IEquatable<TValueObject>
 	}
 
 	/// <inheritdoc/>
-	/// <summary>
-	/// </summary>
-	/// <param name="obj"></param>
-	/// <returns></returns>
+	/// <param name="obj">要比较的对象。</param>
+	/// <returns>如果相等则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public override bool Equals(object obj)
 	{
 		if (obj == null)
@@ -69,16 +67,16 @@ public class ValueObject<TValueObject> : IEquatable<TValueObject>
 	}
 
 	/// <summary>
-	/// Get hash code of this value object.
+	/// 获取此值对象的哈希码。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>此值对象的哈希码。</returns>
 	public override int GetHashCode()
 	{
 		var hashCode = 31;
 		var changeMultiplier = false;
 		const int index = 1;
 
-		//compare all public properties
+		// 比较所有公共属性
 		var publicProperties = GetType().GetProperties();
 
 		if (publicProperties.Length == 0)
@@ -98,7 +96,7 @@ public class ValueObject<TValueObject> : IEquatable<TValueObject>
 			}
 			else
 			{
-				hashCode ^= index * 13; //only for support {"a",null,null,"a"} <> {null,"a","a",null}
+				hashCode ^= index * 13; // 仅用于支持 {"a",null,null,"a"} 与 {null,"a","a",null} 的区分
 			}
 		}
 
@@ -106,22 +104,22 @@ public class ValueObject<TValueObject> : IEquatable<TValueObject>
 	}
 
 	/// <summary>
-	/// Implements the == operator.
+	/// 实现 == 运算符。
 	/// </summary>
-	/// <param name="left">The left.</param>
-	/// <param name="right">The right.</param>
-	/// <returns>The result of the operator.</returns>
+	/// <param name="left">左侧操作数。</param>
+	/// <param name="right">右侧操作数。</param>
+	/// <returns>运算符的结果。</returns>
 	public static bool operator ==(ValueObject<TValueObject> left, ValueObject<TValueObject> right)
 	{
 		return left?.Equals(right) ?? Equals(right, null);
 	}
 
 	/// <summary>
-	/// Implements the != operator.
+	/// 实现 != 运算符。
 	/// </summary>
-	/// <param name="left">The left.</param>
-	/// <param name="right">The right.</param>
-	/// <returns>The result of the operator.</returns>
+	/// <param name="left">左侧操作数。</param>
+	/// <param name="right">右侧操作数。</param>
+	/// <returns>运算符的结果。</returns>
 	public static bool operator !=(ValueObject<TValueObject> left, ValueObject<TValueObject> right)
 	{
 		return !(left == right);

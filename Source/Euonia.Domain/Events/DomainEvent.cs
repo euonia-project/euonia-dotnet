@@ -1,19 +1,18 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// To be added.
-/// Implements the <see cref="Event" />
-/// Implements the <see cref="IDomainEvent" />
+/// 表示领域事件的抽象基类。
+/// 继承自 <see cref="Event"/> 并实现 <see cref="IDomainEvent"/>。
 /// </summary>
 /// <seealso cref="Event" />
 /// <seealso cref="IDomainEvent" />
 public abstract class DomainEvent : Event, IDomainEvent
 {
 	/// <summary>
-	/// Attaches the current event to the specified event.
+	/// 将当前事件附加到指定的事件聚合根上。
 	/// </summary>
-	/// <typeparam name="TKey"></typeparam>
-	/// <param name="aggregate"></param>
+	/// <typeparam name="TKey">聚合根标识符的类型。</typeparam>
+	/// <param name="aggregate">要附加到的聚合根。</param>
 	public void Attach<TKey>(IAggregateRoot<TKey> aggregate)
 		where TKey : IEquatable<TKey>
 	{
@@ -23,9 +22,9 @@ public abstract class DomainEvent : Event, IDomainEvent
 	}
 
 	/// <summary>
-	/// Gets the event aggregate.
+	/// 获取事件聚合。
 	/// </summary>
-	/// <returns>EventAggregate.</returns>
+	/// <returns>事件聚合实例。</returns>
 	public virtual EventAggregate GetEventAggregate()
 	{
 		return new EventAggregate
@@ -42,16 +41,16 @@ public abstract class DomainEvent : Event, IDomainEvent
 	}
 
 	/// <summary>
-	/// Gets or sets the aggregate payload.
+	/// 获取或设置聚合负载。
 	/// </summary>
-	/// <value>The aggregate payload.</value>
+	/// <value>聚合负载。</value>
 	public virtual object AggregatePayload { get; set; }
 
 	/// <summary>
-	/// Gets attached aggregate root object.
+	/// 获取已附加的聚合根对象。
 	/// </summary>
-	/// <typeparam name="TAggregate"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TAggregate">聚合根的类型。</typeparam>
+	/// <returns>附加的聚合根实例；若不存在或类型不匹配则返回默认值。</returns>
 	public virtual TAggregate GetAggregate<TAggregate>()
 		where TAggregate : IAggregateRoot
 	{

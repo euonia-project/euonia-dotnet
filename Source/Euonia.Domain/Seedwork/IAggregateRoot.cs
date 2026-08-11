@@ -1,16 +1,16 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
 /// <summary>
-/// Specifies the contract for aggregate root.
+/// 指定聚合根的契约。
 /// </summary>
 public interface IAggregateRoot : IEntity
 {
 }
 
 /// <summary>
-/// Specifies the contract for aggregate root.
+/// 指定聚合根的契约。
 /// </summary>
-/// <typeparam name="TKey">The identifier type.</typeparam>
+/// <typeparam name="TKey">标识符类型。</typeparam>
 public interface IAggregateRoot<TKey> : IAggregateRoot, IEntity<TKey>
     where TKey : IEquatable<TKey>
 {
