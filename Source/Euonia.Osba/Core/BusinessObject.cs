@@ -5,10 +5,6 @@ using System.Reflection;
 using System.Security;
 using Nerosoft.Euonia.Reflection;
 
-// ReSharper disable MemberCanBeProtected.Global
-
-// ReSharper disable MemberCanBePrivate.Global
-
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
