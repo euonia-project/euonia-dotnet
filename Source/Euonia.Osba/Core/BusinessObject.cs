@@ -44,7 +44,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
-		}	
+		}
 	}
 
 	/// <summary>
@@ -539,7 +539,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual TValue ReadProperty<TValue>(string propertyName)
 	{
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
-		
+
 		if (propertyInfo == null)
 		{
 			throw new InvalidOperationException($"Property {propertyName} is not registered.");
@@ -601,7 +601,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="oldValue">更新前属性的先前值。</param>
 	/// <param name="newValue">要赋给属性的新值。</param>
 	/// <param name="markAsChanged">指示是否将属性标记为已更改并在值已更改时触发更改通知。</param>
-	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged)
+	/// <param name="onChanged">值更改时的回调操作。</param>
+	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged, Action<IPropertyInfo, TValue, TValue> onChanged = null)
 	{
 		var valuesDiffer = ValuesDiffer(propertyInfo, newValue, oldValue);
 
@@ -615,6 +616,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnPropertyChanging(propertyInfo);
 			FieldManager.SetFieldData(propertyInfo, newValue);
 			PropertyHasChanged(propertyInfo);
+			onChanged?.Invoke(propertyInfo, oldValue, newValue);
 		}
 		else
 		{
