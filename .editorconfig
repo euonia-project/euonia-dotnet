@@ -34,5 +34,19 @@ resharper_csharp_naming_rule.private_constants = AA_BB;
 resharper_csharp_naming_rule.constants = AaBb;
 resharper_csharp_naming_rule.private_static_readonly = _+aaBb;
 
+# Osba 属性键注册模式（public static readonly PropertyInfo<T>）是公共元数据契约。
+# 仅在该模式适用的目录关闭"成员可见性"建议，其余代码保持完整检查，避免误伤。
+[Source/Euonia.Osba/**/*.cs]
+resharper_member_can_be_private_global_highlighting = none;
+resharper_member_can_be_protected_global_highlighting = none;
+
+[Samples/**/*.cs]
+resharper_member_can_be_private_global_highlighting = none;
+resharper_member_can_be_protected_global_highlighting = none;
+
+[Tests/Euonia.Osba.Tests/**/*.cs]
+resharper_member_can_be_private_global_highlighting = none;
+resharper_member_can_be_protected_global_highlighting = none;
+
 [*.{cs,vb}]
 dotnet_diagnostic.CA1873.severity = none
