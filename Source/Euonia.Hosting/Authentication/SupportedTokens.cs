@@ -1,22 +1,22 @@
 namespace Microsoft.AspNetCore.Authentication;
 
 /// <summary>
-/// Supported token types
+/// 支持的令牌类型。
 /// </summary>
 public enum SupportedTokens
 {
     /// <summary>
-    /// JWTs and reference tokens
+    /// 同时支持 JWT 和引用令牌。
     /// </summary>
     Both,
 
     /// <summary>
-    /// JWTs only
+    /// 仅支持 JWT。
     /// </summary>
     Jwt,
 
     /// <summary>
-    /// Reference tokens only
+    /// 仅支持引用令牌。
     /// </summary>
     Reference
 }

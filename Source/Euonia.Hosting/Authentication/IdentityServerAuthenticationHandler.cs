@@ -5,19 +5,27 @@ using Microsoft.Extensions.Options;
 namespace Microsoft.AspNetCore.Authentication;
 
 /// <summary>
-/// Authentication handler for validating both JWT and reference tokens
+/// 用于验证 JWT 和引用令牌（reference token）的认证处理程序。
 /// </summary>
 public class IdentityServerAuthenticationHandler : AuthenticationHandler<IdentityServerAuthenticationOptions>
 {
+	/// <summary>
+	/// 日志记录器实例。
+	/// </summary>
 	private readonly ILogger _logger;
 
 #pragma warning disable CS0618 // 类型或成员已过时
-	/// <inheritdoc />
+	/// <summary>
+	/// 初始化 <see cref="IdentityServerAuthenticationHandler"/> 的新实例。
+	/// </summary>
+	/// <param name="options">IdentityServer 认证选项监视器。</param>
+	/// <param name="logger">日志工厂。</param>
+	/// <param name="encoder">URL 编码器。</param>
+	/// <param name="clock">系统时钟。</param>
 	public IdentityServerAuthenticationHandler(IOptionsMonitor<IdentityServerAuthenticationOptions> options,
-											   ILoggerFactory logger,
-											   UrlEncoder encoder,
-											   ISystemClock clock)
-
+	                                           ILoggerFactory logger,
+	                                           UrlEncoder encoder,
+	                                           ISystemClock clock)
 		: base(options, logger, encoder, clock)
 	{
 		_logger = logger.CreateLogger<IdentityServerAuthenticationHandler>();
@@ -25,9 +33,9 @@ public class IdentityServerAuthenticationHandler : AuthenticationHandler<Identit
 #pragma warning restore CS0618 // 类型或成员已过时
 
 	/// <summary>
-	/// Tries to validate a token on the current request
+	/// 尝试验证当前请求中的令牌。根据令牌格式（JWT 或引用令牌）选择对应的子方案进行认证。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>认证结果。</returns>
 	protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
 	{
 		_logger.LogTrace("HandleAuthenticateAsync called");
@@ -47,7 +55,7 @@ public class IdentityServerAuthenticationHandler : AuthenticationHandler<Identit
 				removeToken = true;
 				Context.Items.Add(IdentityServerAuthenticationDefaults.TokenItemsKey, token);
 
-				// seems to be a JWT
+				// 似乎是 JWT
 				if (token.Contains('.') && Options.SupportsJwt)
 				{
 					_logger.LogTrace("Token is a JWT and is supported");
@@ -72,7 +80,7 @@ public class IdentityServerAuthenticationHandler : AuthenticationHandler<Identit
 				}
 			}
 
-			// set the default challenge handler to JwtBearer if supported
+			// 如果支持 JWT，则将默认质询处理程序设置为 JwtBearer
 			if (Options.SupportsJwt)
 			{
 				Context.Items.Add(IdentityServerAuthenticationDefaults.EffectiveSchemeKey + Scheme.Name, jwtScheme);
@@ -95,14 +103,10 @@ public class IdentityServerAuthenticationHandler : AuthenticationHandler<Identit
 	}
 
 	/// <summary>
-	/// Override this method to deal with 401 challenge concerns, if an authentication scheme in question
-	/// deals an authentication interaction as part of it's request flow. (like adding a response header, or
-	/// changing the 401 result to 302 of a login page or external sign-in location.)
+	/// 处理 401 质询。若存在有效的生效方案，则将质询转发到该方案；否则调用基类默认行为。
 	/// </summary>
-	/// <param name="properties"></param>
-	/// <returns>
-	/// A Task.
-	/// </returns>
+	/// <param name="properties">认证属性。</param>
+	/// <returns>表示异步质询处理的任务。</returns>
 	protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
 	{
 		if (Context.Items.TryGetValue(IdentityServerAuthenticationDefaults.EffectiveSchemeKey + Scheme.Name, out object value))
