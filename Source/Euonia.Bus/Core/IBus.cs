@@ -254,4 +254,26 @@ public interface IBus
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
 	Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 使用指定的处理程序调用请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TResult>(Func<IServiceProvider, CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 使用指定的处理程序调用请求处理程序并返回结果。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	Task<TResult> CallAsync<TResult>(Func<CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+		return handler(cancellationToken);
+	}
 }

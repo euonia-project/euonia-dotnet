@@ -124,10 +124,10 @@ internal sealed class MessageBus : IBus
 
 		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 		{
-			await RunWithPipelineAsync(name, pack, behavior, (transport, p) =>
+			await RunWithPipelineAsync(pack, behavior, (transport, p) =>
 			{
 				return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
-			});
+			}, name);
 		});
 	}
 
@@ -174,7 +174,9 @@ internal sealed class MessageBus : IBus
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
-		return RunWithPipelineAsync(transports.First(), pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
+		var transportName = transports!.First();
+
+		return RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName)
 			.ContinueWith(task =>
 			{
 				task.WaitAndUnwrapException();
@@ -245,12 +247,11 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
 	}
 
 	/// <summary>
 	/// 使用指定的选项和管道行为调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
-	/// 与 <see cref="CallAsync{TRequest, TResponse}"/> 类似，但以强类型接口方式接受请求消息。
 	/// </summary>
 	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
 	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
@@ -285,21 +286,35 @@ internal sealed class MessageBus : IBus
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken), transportName);
 	}
 
 	/// <summary>
-	/// 通过管道执行消息处理流程：配置管道行为（日志记录和类型匹配），
-	/// 然后解析指定的传输器并调用后续委托完成实际的传输操作。
+	/// 直接调用指定的处理程序委托，并传入服务提供程序和取消令牌。
 	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		return handler(_provider, cancellationToken);
+	}
+
+	/// <summary>
+	/// 通过管道执行消息处理流程
+	/// </summary>
+	/// <remarks>
+	/// 配置管道行为（日志记录和类型匹配），然后解析指定的传输器并调用后续委托完成实际的传输操作。
+	/// </remarks>
 	/// <typeparam name="TMessage">消息类型。</typeparam>
 	/// <typeparam name="TResult">结果类型。</typeparam>
-	/// <param name="transportName">要使用的传输器名称。</param>
 	/// <param name="pack">路由消息包。</param>
 	/// <param name="behavior">用于配置管道的可选委托。</param>
 	/// <param name="next">执行实际传输操作的委托。</param>
+	/// <param name="transportName">要使用的传输器名称。</param>
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
-	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(string transportName, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next)
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName)
 	{
 		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
@@ -331,6 +346,12 @@ internal sealed class MessageBus : IBus
 		return GetChannel(typeof(TMessage), options);
 	}
 
+	/// <summary>
+	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
+	/// </summary>
+	/// <param name="messageType">消息类型。</param>
+	/// <param name="options">消息选项。</param>
+	/// <returns>通道名称。</returns>
 	private static string GetChannel(Type messageType, ExtendableOptions options)
 	{
 		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel(messageType) : options.Channel;

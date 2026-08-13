@@ -7,50 +7,50 @@ using Microsoft.Extensions.Options;
 namespace Microsoft.AspNetCore.Authentication;
 
 /// <summary>
-/// Extensions for registering the IdentityServer authentication handler
+/// 用于注册 IdentityServer 认证处理程序的扩展方法。
 /// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public static class IdentityServerAuthenticationExtensions
 {
     /// <summary>
-    /// Registers the IdentityServer authentication handler.
+    /// 使用默认认证方案注册 IdentityServer 认证处理程序。
     /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <returns></returns>
+    /// <param name="builder">认证构建器。</param>
+    /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
     public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder)
     {
         return builder.AddIdentityServerAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme);
     }
 
     /// <summary>
-    /// Registers the IdentityServer authentication handler.
+    /// 使用指定的认证方案注册 IdentityServer 认证处理程序。
     /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <param name="authenticationScheme">The authentication scheme.</param>
-    /// <returns></returns>
+    /// <param name="builder">认证构建器。</param>
+    /// <param name="authenticationScheme">认证方案名称。</param>
+    /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
     public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, string authenticationScheme)
     {
         return builder.AddIdentityServerAuthentication(authenticationScheme, configureOptions: null);
     }
 
     /// <summary>
-    /// Registers the IdentityServer authentication handler.
+    /// 使用默认认证方案和指定的选项配置注册 IdentityServer 认证处理程序。
     /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <param name="configureOptions">The configure options.</param>
-    /// <returns></returns>
+    /// <param name="builder">认证构建器。</param>
+    /// <param name="configureOptions">用于配置 <see cref="IdentityServerAuthenticationOptions"/> 的委托。</param>
+    /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
     public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, Action<IdentityServerAuthenticationOptions> configureOptions)
     {
         return builder.AddIdentityServerAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme, configureOptions);
     }
 
     /// <summary>
-    /// Registers the IdentityServer authentication handler.
+    /// 使用指定的认证方案和选项配置注册 IdentityServer 认证处理程序。同时注册 JWT Bearer 与 OAuth2 内省子方案及其内部选项配置器。
     /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <param name="authenticationScheme">The authentication scheme.</param>
-    /// <param name="configureOptions">The configure options.</param>
-    /// <returns></returns>
+    /// <param name="builder">认证构建器。</param>
+    /// <param name="authenticationScheme">认证方案名称。</param>
+    /// <param name="configureOptions">用于配置 <see cref="IdentityServerAuthenticationOptions"/> 的委托。</param>
+    /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
     public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, string authenticationScheme, Action<IdentityServerAuthenticationOptions> configureOptions)
     {
         builder.AddJwtBearer(authenticationScheme + IdentityServerAuthenticationDefaults.JwtAuthenticationScheme, configureOptions: null!);
@@ -72,13 +72,13 @@ public static class IdentityServerAuthenticationExtensions
     }
 
     /// <summary>
-    /// Registers the IdentityServer authentication handler.
+    /// 使用指定的认证方案注册 IdentityServer 认证处理程序，并直接配置 JWT Bearer 与 OAuth2 内省选项。
     /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <param name="authenticationScheme">The authentication scheme.</param>
-    /// <param name="jwtBearerOptions">The JWT bearer options.</param>
-    /// <param name="introspectionOptions">The introspection options.</param>
-    /// <returns></returns>
+    /// <param name="builder">认证构建器。</param>
+    /// <param name="authenticationScheme">认证方案名称。</param>
+    /// <param name="jwtBearerOptions">用于配置 JWT Bearer 选项的委托；为 <c>null</c> 时不注册 JWT Bearer 方案。</param>
+    /// <param name="introspectionOptions">用于配置 OAuth2 内省选项的委托；为 <c>null</c> 时不注册内省方案。</param>
+    /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
     public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, string authenticationScheme, Action<JwtBearerOptions> jwtBearerOptions, Action<OAuth2IntrospectionOptions> introspectionOptions)
     {
         if (jwtBearerOptions != null)
