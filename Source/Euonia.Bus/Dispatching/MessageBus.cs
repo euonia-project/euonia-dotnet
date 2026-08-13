@@ -176,11 +176,7 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(pack, behavior, (proider, p) =>
-		{
-			var transport = proider.GetKeyedService<ITransporter>(transportName);
-			return transport.SendAsync<TMessage, TResult>(p, cancellationToken);
-		})
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
 			.ContinueWith(task =>
 			{
 				task.WaitAndUnwrapException();
@@ -251,20 +247,11 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(pack, behavior, (provider, p) =>
-		{
-			var transport = provider.GetKeyedService<ITransporter>(transportName);
-			if (transport == null)
-			{
-				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
-			}
-			return transport.CallAsync<TRequest, TResponse>(p, cancellationToken);
-		}, transportName);
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
 	}
 
 	/// <summary>
 	/// 使用指定的选项和管道行为调用实现了 <see cref="IRequest{TResult}"/> 的请求处理程序并返回结果。
-	/// 与 <see cref="CallAsync{TRequest, TResponse}"/> 类似，但以强类型接口方式接受请求消息。
 	/// </summary>
 	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
 	/// <param name="request">实现了 <see cref="IRequest{TResult}"/> 的请求消息。</param>
@@ -299,15 +286,7 @@ internal sealed class MessageBus : IBus
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
-		return RunWithPipelineAsync(pack, behavior, (provider, p) =>
-		{
-			var transport = provider.GetKeyedService<ITransporter>(transportName);
-			if (transport == null)
-			{
-				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
-			}
-			return transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken);
-		}, transportName);
+		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));
 	}
 
 	/// <summary>
@@ -378,6 +357,7 @@ internal sealed class MessageBus : IBus
 		{
 			pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _logger);
 		}
+
 		pipeline.UseOf(pack.Payload.GetType(), true);
 
 		behavior?.Invoke(pipeline);
