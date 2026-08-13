@@ -174,7 +174,13 @@ internal sealed class MessageBus : IBus
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
-		return RunWithPipelineAsync(transports.First(), pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
+		var transportName = transports!.First();
+
+		return RunWithPipelineAsync(pack, behavior, (proider, p) =>
+		{
+			var transport = proider.GetKeyedService<ITransporter>(transportName);
+			return transport.SendAsync<TMessage, TResult>(p, cancellationToken);
+		})
 			.ContinueWith(task =>
 			{
 				task.WaitAndUnwrapException();
@@ -245,7 +251,15 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (provider, p) =>
+		{
+			var transport = provider.GetKeyedService<ITransporter>(transportName);
+			if (transport == null)
+			{
+				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
+			}
+			return transport.CallAsync<TRequest, TResponse>(p, cancellationToken);
+		}, transportName);
 	}
 
 	/// <summary>
@@ -285,7 +299,43 @@ internal sealed class MessageBus : IBus
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (provider, p) =>
+		{
+			var transport = provider.GetKeyedService<ITransporter>(transportName);
+			if (transport == null)
+			{
+				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
+			}
+			return transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken);
+		}, transportName);
+	}
+
+	/// <summary>
+	/// 直接调用指定的处理程序委托，并传入服务提供程序和取消令牌。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		return handler(_provider);
+	}
+
+	/// <summary>
+	/// 直接调用指定的处理程序委托，并传入消息和服务提供程序。
+	/// </summary>
+	/// <typeparam name="TMessage">消息类型。</typeparam>
+	/// <typeparam name="TResult">结果类型。</typeparam>
+	/// <param name="message">要发送的消息。</param>
+	/// <param name="options">用于控制调用行为的选项。</param>
+	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<TMessage, IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		return handler(message, _provider);
 	}
 
 	/// <summary>
@@ -320,6 +370,21 @@ internal sealed class MessageBus : IBus
 		});
 	}
 
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<IServiceProvider, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName = null)
+	{
+		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
+
+		if (!string.IsNullOrWhiteSpace(transportName))
+		{
+			pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _logger);
+		}
+		pipeline.UseOf(pack.Payload.GetType(), true);
+
+		behavior?.Invoke(pipeline);
+
+		return pipeline.RunAsync(pack, (message) => next(_provider, message));
+	}
+
 	/// <summary>
 	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
 	/// </summary>
@@ -331,6 +396,12 @@ internal sealed class MessageBus : IBus
 		return GetChannel(typeof(TMessage), options);
 	}
 
+	/// <summary>
+	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
+	/// </summary>
+	/// <param name="messageType">消息类型。</param>
+	/// <param name="options">消息选项。</param>
+	/// <returns>通道名称。</returns>
 	private static string GetChannel(Type messageType, ExtendableOptions options)
 	{
 		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel(messageType) : options.Channel;
