@@ -124,10 +124,10 @@ internal sealed class MessageBus : IBus
 
 		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 		{
-			await RunWithPipelineAsync(name, pack, behavior, (transport, p) =>
+			await RunWithPipelineAsync(pack, behavior, (transport, p) =>
 			{
 				return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
-			});
+			}, name);
 		});
 	}
 
@@ -176,7 +176,7 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.SendAsync<TMessage, TResult>(p, cancellationToken))
+		return RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName)
 			.ContinueWith(task =>
 			{
 				task.WaitAndUnwrapException();
@@ -247,7 +247,7 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
 	}
 
 	/// <summary>
@@ -286,7 +286,7 @@ internal sealed class MessageBus : IBus
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
-		return RunWithPipelineAsync(transportName, pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken));
+		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken), transportName);
 	}
 
 	/// <summary>
@@ -296,39 +296,25 @@ internal sealed class MessageBus : IBus
 	/// <param name="handler">用于处理请求的委托。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
-		return handler(_provider);
+		return handler(_provider, cancellationToken);
 	}
 
 	/// <summary>
-	/// 直接调用指定的处理程序委托，并传入消息和服务提供程序。
+	/// 通过管道执行消息处理流程
 	/// </summary>
+	/// <remarks>
+	/// 配置管道行为（日志记录和类型匹配），然后解析指定的传输器并调用后续委托完成实际的传输操作。
+	/// </remarks>
 	/// <typeparam name="TMessage">消息类型。</typeparam>
 	/// <typeparam name="TResult">结果类型。</typeparam>
-	/// <param name="message">要发送的消息。</param>
-	/// <param name="options">用于控制调用行为的选项。</param>
-	/// <param name="behavior">用于在调用前配置管道消息的委托。</param>
-	/// <param name="handler">用于处理请求的委托。</param>
-	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
-	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<TMessage, IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
-	{
-		return handler(message, _provider);
-	}
-
-	/// <summary>
-	/// 通过管道执行消息处理流程：配置管道行为（日志记录和类型匹配），
-	/// 然后解析指定的传输器并调用后续委托完成实际的传输操作。
-	/// </summary>
-	/// <typeparam name="TMessage">消息类型。</typeparam>
-	/// <typeparam name="TResult">结果类型。</typeparam>
-	/// <param name="transportName">要使用的传输器名称。</param>
 	/// <param name="pack">路由消息包。</param>
 	/// <param name="behavior">用于配置管道的可选委托。</param>
 	/// <param name="next">执行实际传输操作的委托。</param>
+	/// <param name="transportName">要使用的传输器名称。</param>
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
-	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(string transportName, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next)
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName)
 	{
 		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
@@ -347,22 +333,6 @@ internal sealed class MessageBus : IBus
 
 			return await next(transport, message);
 		});
-	}
-
-	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<IServiceProvider, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName = null)
-	{
-		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
-
-		if (!string.IsNullOrWhiteSpace(transportName))
-		{
-			pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _logger);
-		}
-
-		pipeline.UseOf(pack.Payload.GetType(), true);
-
-		behavior?.Invoke(pipeline);
-
-		return pipeline.RunAsync(pack, (message) => next(_provider, message));
 	}
 
 	/// <summary>
