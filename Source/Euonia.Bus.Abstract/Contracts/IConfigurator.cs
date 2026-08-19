@@ -114,4 +114,15 @@ public interface IConfigurator
 	/// <param name="types">要注册的处理器类型集合。</param>
 	/// <returns>返回当前的 <see cref="IConfigurator"/> 实例，以便进行链式调用。</returns>
 	IConfigurator RegisterChannel(IEnumerable<Type> types);
+
+	/// <summary>
+	/// 查找指定消息类型对应的通道名称。
+	/// </summary>
+	/// <param name="type">消息类型。</param>
+	/// <returns>通道名称。</returns>
+	IList<string> FindChannel(Type type)
+	{
+		return Registrations?.Where(x => x.Value.MessageType == type)
+		                    .Select(t => t.Key).ToList();
+	}
 }

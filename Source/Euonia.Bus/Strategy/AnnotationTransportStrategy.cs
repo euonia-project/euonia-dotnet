@@ -37,9 +37,9 @@ public class AnnotationTransportStrategy : ITransportStrategy
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
 
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
+		ArgumentNullException.ThrowIfNull(type);
 
-		var attribute = type?.GetCustomAttribute<DispatchInAttribute>();
+		var attribute = type.GetCustomAttribute<DispatchInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}
@@ -54,10 +54,9 @@ public class AnnotationTransportStrategy : ITransportStrategy
 	public bool Incoming(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
+		ArgumentNullException.ThrowIfNull(type);
 
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-
-		var attribute = type?.GetCustomAttribute<ReceiveInAttribute>();
+		var attribute = type.GetCustomAttribute<ReceiveInAttribute>();
 
 		return attribute != null && Required.Intersect(attribute.Transports).Any();
 	}
