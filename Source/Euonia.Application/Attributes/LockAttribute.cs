@@ -31,24 +31,22 @@ public abstract class LockAttribute : Attribute
 	/// </summary>
 	public string Token { get; }
 
-	private int _timeout = 30000;
-
 	/// <summary>
 	/// 获取或设置锁超时时间（毫秒）。默认值为 30000（30 秒）。
 	/// </summary>
 	/// <exception cref="InvalidOperationException">当赋值为小于或等于零的值时抛出。</exception>
 	public int Timeout
 	{
-		get => _timeout;
-		set
+		get;
+		init
 		{
 			Check.Ensure(value > 0, nameof(Timeout), "Timeout must be greater than zero.");
-			_timeout = value;
+			field = value;
 		}
-	}
+	} = 30000;
 
 	/// <summary>
 	/// 获取允许的最大并发访问数。默认值为 1。
 	/// </summary>
-	public int MaximumCount { get; } = 1;
+	public int MaximumCount { get; }
 }

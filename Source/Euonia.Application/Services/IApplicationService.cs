@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Represents that the implemented classes are application services.
+/// 标记接口，表示实现该接口的类为应用服务。
 /// </summary>
 public interface IApplicationService : IHasLazyServiceProvider
 {

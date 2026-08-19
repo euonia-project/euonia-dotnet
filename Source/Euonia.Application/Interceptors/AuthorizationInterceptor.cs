@@ -8,7 +8,16 @@ using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application;
 
-/// <inheritdoc />
+/// <summary>
+/// 方法拦截器，在方法调用前基于 <see cref="AuthorizeAttribute"/> 执行用户身份与角色授权检查。
+/// </summary>
+/// <remarks>
+/// 基于 Castle DynamicProxy 实现，按以下顺序执行授权：
+/// <para>1. 通过 <see cref="IServiceScopeFactory"/> 创建作用域并解析 scoped 的 <see cref="UserPrincipal"/>；</para>
+/// <para>2. 用户未通过身份验证时抛出 <see cref="AuthenticationException"/>；</para>
+/// <para>3. 特性声明了角色（以逗号分隔）且用户不属于任一角色时抛出 <see cref="UnauthorizedAccessException"/>。</para>
+/// 方法上未标注 <see cref="AuthorizeAttribute"/> 时不执行任何检查，直接放行。
+/// </remarks>
 public class AuthorizationInterceptor : IInterceptor
 {
 	// 缓存每个方法上的授权特性，避免每次拦截调用都执行反射特性查找。
@@ -29,7 +38,12 @@ public class AuthorizationInterceptor : IInterceptor
 		_scopeFactory = scopeFactory;
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 在方法调用前依据方法上的 <see cref="AuthorizeAttribute"/> 执行授权检查，随后继续执行被拦截的方法。
+	/// </summary>
+	/// <param name="invocation">被拦截的方法调用，提供目标方法、实参以及继续执行的入口。</param>
+	/// <exception cref="AuthenticationException">用户未通过身份验证时抛出。</exception>
+	/// <exception cref="UnauthorizedAccessException">用户不属于特性声明的任一角色时抛出。</exception>
 	public void Intercept(IInvocation invocation)
 	{
 		var method = invocation.MethodInvocationTarget ?? invocation.Method;
@@ -47,6 +61,12 @@ public class AuthorizationInterceptor : IInterceptor
 		invocation.Proceed();
 	}
 
+	/// <summary>
+	/// 执行授权检查：验证用户是否已通过身份验证，并在特性声明角色时验证用户是否属于其中任一角色。
+	/// </summary>
+	/// <param name="attribute">方法上声明的授权特性。</param>
+	/// <exception cref="AuthenticationException">无法解析 <see cref="UserPrincipal"/> 或用户未通过身份验证时抛出。</exception>
+	/// <exception cref="UnauthorizedAccessException">用户不属于 <see cref="AuthorizeAttribute.Roles"/> 中的任一角色时抛出。</exception>
 	private void Authorize(AuthorizeAttribute attribute)
 	{
 		using var scope = _scopeFactory.CreateScope();
