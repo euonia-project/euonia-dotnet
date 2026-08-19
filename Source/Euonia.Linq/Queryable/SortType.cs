@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Represents the sort order in a sorted query.
+/// 表示排序查询中的排序顺序。
 /// </summary>
 public enum SortType
 {
     /// <summary>
-    /// Indicates that the sort is unspecified.
+    /// 表示未指定排序方式。
     /// </summary>
     Unspecified = 0,
 
     /// <summary>
-    /// Indicates an ascending sort.
+    /// 表示升序排序。
     /// </summary>
     Ascending = -1,
 
     /// <summary>
-    /// Indicates a descending sort.
+    /// 表示降序排序。
     /// </summary>
     Descending = 1
 }

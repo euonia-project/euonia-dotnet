@@ -4,14 +4,14 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Methods to perform lambda expression operations.
+/// 提供执行 Lambda 表达式操作的方法。
 /// </summary>
 public static class Lambda
 {
     /// <summary>
-    /// Gets the menber of the expression.
+    /// 获取表达式的成员信息。
     /// </summary>
-    /// <param name="expression">The lambda expression.</param>
+    /// <param name="expression">Lambda 表达式。</param>
     public static MemberInfo GetMember(Expression expression)
     {
         var memberExpression = GetMemberExpression(expression);
@@ -19,9 +19,9 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Gets the member expression.
+    /// 获取成员访问表达式。
     /// </summary>
-    /// <param name="expression">The lambda expression.</param>
+    /// <param name="expression">Lambda 表达式。</param>
     public static MemberExpression GetMemberExpression(Expression expression)
     {
         if (expression == null)
@@ -38,10 +38,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Gets the member name of expression.
+    /// 获取表达式的成员名称。
     /// </summary>
-    /// <param name="expression">The lambda expression.</param>
-    /// <remarks>expression: t => t.Name == "A"，returns: Name</remarks>
+    /// <param name="expression">Lambda 表达式。</param>
+    /// <remarks>表达式：t =&gt; t.Name == "A"，返回：Name</remarks>
     public static string GetName(Expression expression)
     {
         var memberExpression = GetMemberExpression(expression);
@@ -49,8 +49,9 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Gets the member name of <paramref name="memberExpression"/>
+    /// 获取 <paramref name="memberExpression"/> 的成员名称。
     /// </summary>
+    /// <param name="memberExpression">成员访问表达式。</param>
     public static string GetMemberName(MemberExpression memberExpression)
     {
         if (memberExpression == null)
@@ -63,10 +64,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Gets names of multiple element expression.
+    /// 获取多个元素表达式的名称列表。
     /// </summary>
-    /// <typeparam name="T">The element type.</typeparam>
-    /// <param name="expression">The expression of properties. e.g t => new object[]{t.A,t.B}</param>
+    /// <typeparam name="T">元素类型。</typeparam>
+    /// <param name="expression">属性表达式，例如 t =&gt; new object[]{t.A,t.B}。</param>
     public static List<string> GetNames<T>(Expression<Func<T, object[]>> expression)
     {
         var result = new List<string>();
@@ -86,7 +87,7 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Adds expression name to list.
+    /// 将表达式名称添加到列表。
     /// </summary>
     private static void AddName(List<string> result, Expression expression)
     {
@@ -99,10 +100,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// Gets the expression argument value.
+    /// 获取表达式参数的值。
     /// </summary>
-    /// <param name="expression">The lambda expression.</param>
-    /// <example>expression: t => t.Name == "A", returns: "A"</example>
+    /// <param name="expression">Lambda 表达式。</param>
+    /// <example>表达式：t =&gt; t.Name == "A"，返回："A"</example>
     public static object GetValue(Expression expression)
     {
         if (expression == null)
@@ -136,7 +137,7 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取方法调用表达式的值
+    /// 获取方法调用表达式的值。
     /// </summary>
     private static object GetMethodCallExpressionValue(Expression expression)
     {
@@ -150,7 +151,7 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取属性表达式的值
+    /// 获取属性表达式的值。
     /// </summary>
     private static object GetMemberValue(MemberExpression expression)
     {
@@ -175,7 +176,7 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取常量表达式的值
+    /// 获取常量表达式的值。
     /// </summary>
     private static object GetConstantExpressionValue(Expression expression)
     {
@@ -184,9 +185,9 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取参数，范例：t.Name,返回 t
+    /// 获取参数，范例：t.Name，返回 t。
     /// </summary>
-    /// <param name="expression">表达式，范例：t.Name</param>
+    /// <param name="expression">表达式，范例：t.Name。</param>
     public static ParameterExpression GetParameter(Expression expression)
     {
         if (expression == null)
@@ -220,10 +221,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取查询条件个数
+    /// 获取查询条件个数。
     /// </summary>
-    /// <param name="expression">谓词表达式,范例1：t => t.Name == "A" ，结果1。
-    /// 范例2：t => t.Name == "A" &amp;&amp; t.Age =1 ，结果2。</param>
+    /// <param name="expression">谓词表达式，范例1：t =&gt; t.Name == "A"，结果1。
+    /// 范例2：t =&gt; t.Name == "A" &amp;&amp; t.Age =1，结果2。</param>
     public static int GetConditionCount(LambdaExpression expression)
     {
         if (expression == null)
@@ -233,10 +234,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取特性
+    /// 获取特性。
     /// </summary>
-    /// <typeparam name="TAttribute">特性类型</typeparam>
-    /// <param name="expression">属性表达式</param>
+    /// <typeparam name="TAttribute">特性类型。</typeparam>
+    /// <param name="expression">属性表达式。</param>
     public static TAttribute GetAttribute<TAttribute>(Expression expression) where TAttribute : Attribute
     {
         var memberInfo = GetMember(expression);
@@ -244,35 +245,35 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取特性
+    /// 获取特性。
     /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <typeparam name="TProperty">属性类型</typeparam>
-    /// <typeparam name="TAttribute">特性类型</typeparam>
-    /// <param name="propertyExpression">属性表达式</param>
+    /// <typeparam name="TEntity">实体类型。</typeparam>
+    /// <typeparam name="TProperty">属性类型。</typeparam>
+    /// <typeparam name="TAttribute">特性类型。</typeparam>
+    /// <param name="propertyExpression">属性表达式。</param>
     public static TAttribute GetAttribute<TEntity, TProperty, TAttribute>(Expression<Func<TEntity, TProperty>> propertyExpression) where TAttribute : Attribute
     {
         return GetAttribute<TAttribute>(propertyExpression);
     }
 
     /// <summary>
-    /// 获取特性
+    /// 获取特性。
     /// </summary>
-    /// <typeparam name="TProperty">属性类型</typeparam>
-    /// <typeparam name="TAttribute">特性类型</typeparam>
-    /// <param name="propertyExpression">属性表达式</param>
+    /// <typeparam name="TProperty">属性类型。</typeparam>
+    /// <typeparam name="TAttribute">特性类型。</typeparam>
+    /// <param name="propertyExpression">属性表达式。</param>
     public static TAttribute GetAttribute<TProperty, TAttribute>(Expression<Func<TProperty>> propertyExpression) where TAttribute : Attribute
     {
         return GetAttribute<TAttribute>(propertyExpression);
     }
 
     /// <summary>
-    /// 获取特性列表
+    /// 获取特性列表。
     /// </summary>
-    /// <typeparam name="TEntity">实体类型</typeparam>
-    /// <typeparam name="TProperty">属性类型</typeparam>
-    /// <typeparam name="TAttribute">特性类型</typeparam>
-    /// <param name="propertyExpression">属性表达式</param>
+    /// <typeparam name="TEntity">实体类型。</typeparam>
+    /// <typeparam name="TProperty">属性类型。</typeparam>
+    /// <typeparam name="TAttribute">特性类型。</typeparam>
+    /// <param name="propertyExpression">属性表达式。</param>
     public static IEnumerable<TAttribute> GetAttributes<TEntity, TProperty, TAttribute>(Expression<Func<TEntity, TProperty>> propertyExpression) where TAttribute : Attribute
     {
         var memberInfo = GetMember(propertyExpression);
@@ -280,10 +281,10 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 获取常量表达式
+    /// 获取常量表达式。
     /// </summary>
-    /// <param name="expression">表达式</param>
-    /// <param name="value">值</param>
+    /// <param name="expression">表达式。</param>
+    /// <param name="value">值。</param>
     public static ConstantExpression Constant(Expression expression, object value)
     {
         if (expression is not MemberExpression memberExpression)
@@ -294,11 +295,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建等于运算lambda表达式
+    /// 创建等于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Equal<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -308,7 +309,7 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建参数
+    /// 创建参数。
     /// </summary>
     private static ParameterExpression CreateParameter<T>()
     {
@@ -316,11 +317,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建不等于运算lambda表达式
+    /// 创建不等于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> NotEqual<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -330,11 +331,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建大于运算lambda表达式
+    /// 创建大于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Greater<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -344,11 +345,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建大于等于运算lambda表达式
+    /// 创建大于等于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> GreaterEqual<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -358,11 +359,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建小于运算lambda表达式
+    /// 创建小于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Less<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -372,11 +373,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 创建小于等于运算lambda表达式
+    /// 创建小于等于运算 Lambda 表达式。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> LessEqual<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -386,11 +387,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 调用StartsWith方法
+    /// 调用 StartsWith 方法。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Starts<T>(string propertyName, string value)
     {
         var parameter = CreateParameter<T>();
@@ -400,11 +401,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 调用EndsWith方法
+    /// 调用 EndsWith 方法。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Ends<T>(string propertyName, string value)
     {
         var parameter = CreateParameter<T>();
@@ -414,11 +415,11 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 调用Contains方法
+    /// 调用 Contains 方法。
     /// </summary>
-    /// <typeparam name="T">对象类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
+    /// <typeparam name="T">对象类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
     public static Expression<Func<T, bool>> Contains<T>(string propertyName, object value)
     {
         var parameter = CreateParameter<T>();
@@ -428,12 +429,12 @@ public static class Lambda
     }
 
     /// <summary>
-    /// 解析为谓词表达式
+    /// 解析为谓词表达式。
     /// </summary>
-    /// <typeparam name="T">实体类型</typeparam>
-    /// <param name="propertyName">属性名</param>
-    /// <param name="value">值</param>
-    /// <param name="operator">运算符</param>
+    /// <typeparam name="T">实体类型。</typeparam>
+    /// <param name="propertyName">属性名。</param>
+    /// <param name="value">值。</param>
+    /// <param name="operator">运算符。</param>
     public static Expression<Func<T, bool>> ParsePredicate<T>(string propertyName, object value, QueryOperator @operator)
     {
         var parameter = Expression.Parameter(typeof(T), "t");

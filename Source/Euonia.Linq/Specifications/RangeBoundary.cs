@@ -1,27 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// The specification parameter boundary.
+/// 规约参数的边界指示。
 /// </summary>
 public enum RangeBoundary
 {
     /// <summary>
-    /// Include the left side only.
+    /// 仅包含左侧边界。
     /// </summary>
     Left,
 
     /// <summary>
-    /// Include the right side only.
+    /// 仅包含右侧边界。
     /// </summary>
     Right,
 
     /// <summary>
-    ///  
+    /// 包含左右两侧边界。
     /// </summary>
     Both,
 
     /// <summary>
-    /// 
+    /// 左右两侧边界均不包含。
     /// </summary>
     Neither
 }

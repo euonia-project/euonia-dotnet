@@ -1,17 +1,17 @@
 ﻿namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// The expression conditional operation type.
+/// 表达式条件运算类型。
 /// </summary>
 public enum PredicateOperator
 {
     /// <summary>
-    /// Represents a conditional AND operation that evaluates the second operand only if the first operand evaluates to true.
+    /// 表示条件 AND 运算：仅当第一个操作数计算结果为 true 时才计算第二个操作数。
     /// </summary>
     AndAlso,
 
     /// <summary>
-    /// Represents a conditional OR operation that evaluates the second operand only if the first operand evaluates to false.
+    /// 表示条件 OR 运算：仅当第一个操作数计算结果为 false 时才计算第二个操作数。
     /// </summary>
     OrElse
 }

@@ -3,9 +3,9 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Handles queries for the specified entity type.
+/// 处理指定实体类型的查询。
 /// </summary>
-/// <typeparam name="TEntity"></typeparam>
+/// <typeparam name="TEntity">实体类型。</typeparam>
 public class QueryHandler<TEntity>
 {
     private readonly List<Expression<Func<TEntity, bool>>> _predicates;
@@ -16,9 +16,9 @@ public class QueryHandler<TEntity>
     private int _size = int.MaxValue;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="QueryHandler{TEntity}"/> class.
+    /// 初始化 <see cref="QueryHandler{TEntity}"/> 类的新实例。
     /// </summary>
-    /// <param name="query"></param>
+    /// <param name="query">要处理的查询。</param>
     public QueryHandler(IQueryable<TEntity> query)
     {
         _predicates = new List<Expression<Func<TEntity, bool>>>();
@@ -26,10 +26,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Adds a predicate to the query.
+    /// 向查询添加一个谓词。
     /// </summary>
-    /// <param name="predicate"></param>
-    /// <returns></returns>
+    /// <param name="predicate">要添加的谓词表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> AddCriteria(Expression<Func<TEntity, bool>> predicate)
     {
         _predicates.Add(predicate);
@@ -37,9 +37,9 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Gets elements from the sequence.
+    /// 从序列中获取元素。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>符合条件并按当前分页与排序设置返回的元素列表。</returns>
     public IList<TEntity> Query()
     {
 	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
@@ -52,9 +52,9 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Gets number of elements in the sequence.
+    /// 获取序列中的元素个数。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>符合当前查询条件的元素个数。</returns>
     public int GetCount()
     {
         var predicate = _predicates.Compose();
@@ -70,10 +70,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Gets elements from the sequence.
+    /// 从序列中获取元素。
     /// </summary>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <param name="action">用于对查询执行异步操作并返回结果列表的委托。</param>
+    /// <returns>符合条件并按当前分页与排序设置返回的元素列表。</returns>
     public async Task<IList<TEntity>> QueryAsync(Func<IQueryable<TEntity>, Task<IList<TEntity>>> action)
     {
 	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
@@ -85,9 +85,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Gets number of elements in the sequence.
+    /// 获取序列中的元素个数。
     /// </summary>
-    /// <returns></returns>
+    /// <param name="action">用于对查询执行异步计数操作的委托。</param>
+    /// <returns>符合当前查询条件的元素个数。</returns>
     public async Task<int> GetCountAsync(Func<IQueryable<TEntity>, Task<int>> action)
     {
         var predicate = _predicates.Compose();
@@ -96,10 +97,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the non-zero based page number.
+    /// 设置从 1 开始的页码。
     /// </summary>
-    /// <param name="page"></param>
-    /// <returns></returns>
+    /// <param name="page">页码。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetPage(int page)
     {
         _page = page;
@@ -107,10 +108,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the size of the page.
+    /// 设置每页大小。
     /// </summary>
-    /// <param name="size"></param>
-    /// <returns></returns>
+    /// <param name="size">每页大小。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetSize(int size)
     {
         _size = size;
@@ -118,11 +119,11 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sorts the elements of a sequence in ascending order according to a key.
+    /// 按指定的键对序列中的元素进行升序排序。
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="keySelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">排序键的类型。</typeparam>
+    /// <param name="keySelector">用于提取排序键的表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> OrderByAscending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
         _query = _query.OrderBy(keySelector);
@@ -131,11 +132,11 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sorts the query in descending order by using the specified key.
+    /// 按指定的键对查询进行降序排序。
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="keySelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">排序键的类型。</typeparam>
+    /// <param name="keySelector">用于提取排序键的表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> OrderByDescending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
         _query = _query.OrderByDescending(keySelector);
@@ -143,10 +144,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the collator.
+    /// 设置排序器。
     /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
+    /// <param name="order">用于配置排序的委托。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetCollator(Action<Orderable<TEntity>> order)
     {
         var orderable = new Orderable<TEntity>(_query);
@@ -156,10 +157,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the collator.
+    /// 设置排序器。
     /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
+    /// <param name="order">用于对查询进行排序并返回有序查询的委托。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetCollator(Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> order)
     {
         var orderable = new Orderable<TEntity>(_query);

@@ -2,38 +2,41 @@
 
 namespace Nerosoft.Euonia.Linq;
 
+/// <summary>
+/// 表示一个用于替换表达式中参数的访问器。
+/// </summary>
 internal class ParameterRebinder : ExpressionVisitor
 {
     /// <summary>
-    /// The ParameterExpression map
+    /// <see cref="ParameterExpression"/> 映射表。
     /// </summary>
     readonly Dictionary<ParameterExpression, ParameterExpression> _map;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ParameterRebinder"/> class.
+    /// 初始化 <see cref="ParameterRebinder"/> 类的新实例。
     /// </summary>
-    /// <param name="map">The map.</param>
-    ParameterRebinder(Dictionary<ParameterExpression, ParameterExpression> map)
+    /// <param name="map">参数映射表。</param>
+    private ParameterRebinder(Dictionary<ParameterExpression, ParameterExpression> map)
     {
         _map = map ?? new Dictionary<ParameterExpression, ParameterExpression>();
     }
 
     /// <summary>
-    /// Replaces the parameters.
+    /// 替换表达式中的参数。
     /// </summary>
-    /// <param name="map">The map.</param>
-    /// <param name="exp">The exp.</param>
-    /// <returns>Expression</returns>
+    /// <param name="map">参数映射表。</param>
+    /// <param name="exp">表达式。</param>
+    /// <returns>替换后的表达式。</returns>
     public static Expression ReplaceParameters(Dictionary<ParameterExpression, ParameterExpression> map, Expression exp)
     {
         return new ParameterRebinder(map).Visit(exp);
     }
 
     /// <summary>
-    /// Visits the parameter.
+    /// 访问参数节点。
     /// </summary>
-    /// <param name="node">The p.</param>
-    /// <returns>Expression</returns>
+    /// <param name="node">参数节点。</param>
+    /// <returns>替换后的表达式。</returns>
     protected override Expression VisitParameter(ParameterExpression node)
     {
 

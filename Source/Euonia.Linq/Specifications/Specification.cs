@@ -3,25 +3,24 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Represent a Expression Specification
-/// <remarks>
-/// Specification overload operators for create AND,OR or NOT specifications.
-/// Additionally overload AND and OR operators with the same sense of ( binary And and binary Or ).
-/// C# couldn't overload the AND and OR operators directly since the framework doesn't allow such craziness. But
-/// with overloading false and true operators this is posiable. For explain this behavior please read
-/// http://msdn.microsoft.com/en-us/library/aa691312(VS.71).aspx
-/// </remarks>
+/// 表示一个表达式规约（Specification）。
 /// </summary>
-/// <typeparam name="TEntity">Type of item in the criteria</typeparam>
+/// <remarks>
+/// 规约重载运算符以创建 AND、OR 或 NOT 规约。
+/// 此外，以二元 And 与二元 Or 的相同语义重载了 AND 和 OR 运算符。
+/// C# 无法直接重载 AND 与 OR 运算符，因为框架不允许这样做。但通过重载 false 与 true 运算符可以实现该行为。
+/// 相关说明请阅读 http://msdn.microsoft.com/en-us/library/aa691312(VS.71).aspx
+/// </remarks>
+/// <typeparam name="TEntity">条件中的项类型。</typeparam>
 public abstract class Specification<TEntity> : ISpecification<TEntity>
      where TEntity : class
 {
     #region ISpecification<TEntity> Members
 
     /// <summary>
-    /// IsSatisFied Specification pattern method,
+    /// 规约模式的 IsSatisfied 方法。
     /// </summary>
-    /// <returns>Expression that satisfy this specification</returns>
+    /// <returns>满足此规约的表达式。</returns>
     public abstract Expression<Func<TEntity, bool>> Satisfy();
 
     #endregion
@@ -29,52 +28,52 @@ public abstract class Specification<TEntity> : ISpecification<TEntity>
     #region Override Operators
 
     /// <summary>
-    ///  And operator
+    /// AND 运算符。
     /// </summary>
-    /// <param name="leftSideSpecification">left operand in this AND operation</param>
-    /// <param name="rightSideSpecification">right operand in this AND operation</param>
-    /// <returns>New specification</returns>
+    /// <param name="leftSideSpecification">AND 运算的左操作数。</param>
+    /// <param name="rightSideSpecification">AND 运算的右操作数。</param>
+    /// <returns>新的规约。</returns>
     public static Specification<TEntity> operator &(Specification<TEntity> leftSideSpecification, Specification<TEntity> rightSideSpecification)
     {
         return new AndSpecification<TEntity>(leftSideSpecification, rightSideSpecification);
     }
 
     /// <summary>
-    /// Or operator
+    /// OR 运算符。
     /// </summary>
-    /// <param name="leftSideSpecification">left operand in this OR operation</param>
-    /// <param name="rightSideSpecification">left operand in this OR operation</param>
-    /// <returns>New specification </returns>
+    /// <param name="leftSideSpecification">OR 运算的左操作数。</param>
+    /// <param name="rightSideSpecification">OR 运算的右操作数。</param>
+    /// <returns>新的规约。</returns>
     public static Specification<TEntity> operator |(Specification<TEntity> leftSideSpecification, Specification<TEntity> rightSideSpecification)
     {
         return new OrSpecification<TEntity>(leftSideSpecification, rightSideSpecification);
     }
 
     /// <summary>
-    /// Not specification
+    /// NOT 运算符。
     /// </summary>
-    /// <param name="specification">Specification to negate</param>
-    /// <returns>New specification</returns>
+    /// <param name="specification">要取反的规约。</param>
+    /// <returns>新的规约。</returns>
     public static Specification<TEntity> operator !(Specification<TEntity> specification)
     {
         return new NotSpecification<TEntity>(specification);
     }
 
     /// <summary>
-    /// Override operator false, only for support AND OR operators
+    /// 重载 false 运算符，仅用于支持 AND、OR 运算符。
     /// </summary>
-    /// <param name="specification">Specification instance</param>
-    /// <returns>See False operator in C#</returns>
+    /// <param name="specification">规约实例。</param>
+    /// <returns>参见 C# 中的 false 运算符。</returns>
     public static bool operator false(Specification<TEntity> specification)
     {
         return false;
     }
 
     /// <summary>
-    /// Override operator True, only for support AND OR operators
+    /// 重载 true 运算符，仅用于支持 AND、OR 运算符。
     /// </summary>
-    /// <param name="specification">Specification instance</param>
-    /// <returns>See True operator in C#</returns>
+    /// <param name="specification">规约实例。</param>
+    /// <returns>参见 C# 中的 true 运算符。</returns>
     public static bool operator true(Specification<TEntity> specification)
     {
         return false;

@@ -5,15 +5,15 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Enables the efficient, dynamic composition of query predicates.
+/// 支持高效、动态地组合查询谓词。
 /// </summary>
 /// <remarks>
-/// See http://petemontgomery.wordpress.com/2011/02/10/a-universal-predicatebuilder/
+/// 参见 http://petemontgomery.wordpress.com/2011/02/10/a-universal-predicatebuilder/
 /// </remarks>
 public static class PredicateBuilder
 {
 	/// <summary>
-	/// Creates a predicate that evaluates to true.
+	/// 创建一个计算结果为 true 的谓词。
 	/// </summary>
 	public static Expression<Func<T, bool>> True<T>()
 	{
@@ -21,7 +21,7 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Creates a predicate that evaluates to false.
+	/// 创建一个计算结果为 false 的谓词。
 	/// </summary>
 	public static Expression<Func<T, bool>> False<T>()
 	{
@@ -29,24 +29,27 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Creates a predicate expression from the specified lambda expression.
+	/// 根据指定的 Lambda 表达式创建谓词表达式。
 	/// </summary>
+	/// <typeparam name="T">谓词参数的类型。</typeparam>
+	/// <param name="predicate">要包装的 Lambda 表达式。</param>
+	/// <returns>返回传入的谓词表达式本身。</returns>
 	public static Expression<Func<T, bool>> Create<T>(Expression<Func<T, bool>> predicate)
 	{
 		return predicate;
 	}
 
 	/// <summary>
-	/// Gets the compare condition.
+	/// 获取比较条件表达式。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <typeparam name="TValue">The type of the t value.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="propertyName">Name of the property.</param>
-	/// <param name="value">The value.</param>
-	/// <param name="operator">Type of the compare.</param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <typeparam name="T">源对象类型。</typeparam>
+	/// <typeparam name="TValue">值类型。</typeparam>
+	/// <param name="source">源对象。</param>
+	/// <param name="propertyName">属性名，支持使用点号表示嵌套属性。</param>
+	/// <param name="value">用于比较的值。</param>
+	/// <param name="operator">比较运算符。</param>
+	/// <returns>表示比较条件的谓词表达式。</returns>
+	/// <exception cref="InvalidOperationException"><paramref name="operator"/> 不是支持的关系运算符时抛出。</exception>
 	public static Expression<Func<T, bool>> GetCompareCondition<T, TValue>(T source, string propertyName, TValue value, QueryOperator @operator)
 	{
 		var param = Expression.Parameter(typeof(T), "p");
@@ -68,14 +71,15 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Gets the contains condition.
+	/// 获取包含（Contains）条件表达式。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <typeparam name="TValue">The type of the t value.</typeparam>
-	/// <param name="source">The source.</param>
-	/// <param name="propertyName">Name of the property.</param>
-	/// <param name="value">The value.</param>
-	/// <returns></returns>
+	/// <typeparam name="T">源对象类型。</typeparam>
+	/// <typeparam name="TValue">值类型。</typeparam>
+	/// <param name="source">源对象。</param>
+	/// <param name="propertyName">属性名，支持使用点号表示嵌套属性。</param>
+	/// <param name="value">要判断是否包含的值列表。</param>
+	/// <returns>表示包含条件的谓词表达式。</returns>
+	/// <exception cref="MissingMethodException">未找到 <see cref="List{T}"/> 的 Contains 方法时抛出。</exception>
 	public static Expression<Func<T, bool>> GetContainsCondition<T, TValue>(T source, string propertyName, List<TValue> value)
 	{
 		var param = Expression.Parameter(typeof(T), "p");
@@ -94,11 +98,11 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Searches the member.
+	/// 按属性名列表依次查找成员表达式。
 	/// </summary>
-	/// <param name="expression">The expression.</param>
-	/// <param name="propertiesName">Name of the properties.</param>
-	/// <returns>MemberExpression.</returns>
+	/// <param name="expression">起始表达式。</param>
+	/// <param name="propertiesName">属性名列表。</param>
+	/// <returns>最终得到的成员访问表达式。</returns>
 	private static MemberExpression SearchMember(Expression expression, IList<string> propertiesName)
 	{
 		while (true)
@@ -116,13 +120,13 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Get property value from source.
+	/// 从源对象获取指定属性的值。
 	/// </summary>
-	/// <param name="source"></param>
-	/// <param name="propertyName"></param>
-	/// <typeparam name="TObject"></typeparam>
-	/// <typeparam name="TProperty"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TObject">源对象类型。</typeparam>
+	/// <typeparam name="TProperty">属性类型。</typeparam>
+	/// <param name="source">源对象。</param>
+	/// <param name="propertyName">属性名。</param>
+	/// <returns>属性值。</returns>
 	public static TProperty GetProperty<TObject, TProperty>(TObject source, string propertyName)
 	{
 		var property = Expression.PropertyOrField(Expression.Constant(source), propertyName);
@@ -131,12 +135,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property equal expression.
+	/// 构建属性等于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id == value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyEqual<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -153,12 +157,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property not equal expression.
+	/// 构建属性不等于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id != value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyNotEqual<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -170,12 +174,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property greater than expression.
+	/// 构建属性大于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id &gt; value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyGreaterThan<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -187,12 +191,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property greater than or equal expression.
+	/// 构建属性大于或等于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id &gt;= value)</returns>
 	public static Expression<Func<TObject, bool>> GreaterThanOrEqual<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -204,12 +208,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property less than expression.
+	/// 构建属性小于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id &lt; value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyLessThan<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -221,12 +225,12 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property less than or equal expression.
+	/// 构建属性小于或等于指定值的表达式。
 	/// </summary>
-	/// <param name="propertyName">The name of the property to compare.</param>
-	/// <param name="value">The value to compare with property.</param>
-	/// <typeparam name="TObject">The type of the object with property to be compared.</typeparam>
-	/// <typeparam name="TValue">The type of the give value.</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">与属性比较的值。</param>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
 	/// <returns>source =&gt; (source.Id &lt;= value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyLessThanOrEqual<TObject, TValue>(string propertyName, TValue value)
 	{
@@ -238,14 +242,14 @@ public static class PredicateBuilder
 	}
 
 	/// <summary>
-	/// Build property in range expression.
+	/// 构建属性值在给定范围内的表达式。
 	/// </summary>
-	/// <param name="propertyName"></param>
-	/// <param name="value"></param>
-	/// <typeparam name="TObject"></typeparam>
-	/// <typeparam name="TValue"></typeparam>
-	/// <returns></returns>
-	/// <exception cref="MissingMethodException"></exception>
+	/// <typeparam name="TObject">包含待比较属性的对象类型。</typeparam>
+	/// <typeparam name="TValue">给定值的类型。</typeparam>
+	/// <param name="propertyName">要比较的属性名。</param>
+	/// <param name="value">值的集合。</param>
+	/// <returns>source =&gt; value.Contains(source.Id)</returns>
+	/// <exception cref="MissingMethodException">未找到 <see cref="Enumerable.Contains{TSource}(IEnumerable{TSource}, TSource)"/> 方法时抛出。</exception>
 	public static Expression<Func<TObject, bool>> PropertyInRange<TObject, TValue>(string propertyName, params TValue[] value)
 	{
 		var method = Reflect.FindMethod(nameof(Enumerable.Contains), typeof(Enumerable), typeof(IEnumerable<TValue>), typeof(TValue))
