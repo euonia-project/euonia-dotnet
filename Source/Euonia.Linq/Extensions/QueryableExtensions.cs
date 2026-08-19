@@ -38,13 +38,15 @@ public static class QueryableExtensions
     /// <param name="predicate">查询条件。</param>
     /// <param name="condition">为 <see langword="true"/> 时应用条件，为 <see langword="false"/> 时忽略。</param>
     /// <returns>应用了查询条件的查询。</returns>
-    /// <exception cref="ArgumentNullException"><paramref name="source"/> 为 <see langword="null"/>。</exception>
+    /// <exception cref="ArgumentNullException"><paramref name="source"/> 或 <paramref name="predicate"/> 为 <see langword="null"/>。</exception>
     public static IQueryable<TEntity> WhereIf<TEntity>(this IQueryable<TEntity> source, Expression<Func<TEntity, bool>> predicate, bool condition) where TEntity : class
     {
         if (source == null)
             throw new ArgumentNullException(nameof(source));
         if (condition == false)
             return source;
+        if (predicate == null)
+            throw new ArgumentNullException(nameof(predicate));
         return source.Where(predicate);
     }
 
@@ -172,7 +174,7 @@ public static class QueryableExtensions
         }
         if (Lambda.GetConditionCount(predicate) > 1)
         {
-            throw new InvalidOperationException(string.Format("Ony one predicate is allowed: {0}", predicate));
+            throw new InvalidOperationException($"Only one predicate is allowed: {predicate}");
         }
         var value = predicate.Value();
         if (string.IsNullOrWhiteSpace(value?.ToString()))
@@ -286,7 +288,7 @@ public static class QueryableExtensions
         object value;
         try
         {
-            value = Convert.ChangeType(propertyValue, memberExpression.ReturnType);
+            value = ConvertValue(propertyValue, memberExpression.ReturnType);
         }
         catch (InvalidCastException)
         {
@@ -327,5 +329,22 @@ public static class QueryableExtensions
             return function.Method;
         }
         // ReSharper restore UnusedParameter.Local
+    }
+
+    /// <summary>
+    /// 将值转换为目标类型，并正确处理可空值类型（如 <see langword="int?"/>）。
+    /// </summary>
+    /// <param name="value">值。</param>
+    /// <param name="type">目标类型。</param>
+    /// <returns>转换后的值；可空值类型会装箱为可空实例。</returns>
+    private static object ConvertValue(object value, Type type)
+    {
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType != null)
+        {
+            return Activator.CreateInstance(type, Convert.ChangeType(value, underlyingType));
+        }
+
+        return Convert.ChangeType(value, type);
     }
 }

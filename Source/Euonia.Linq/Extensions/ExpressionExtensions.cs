@@ -105,10 +105,25 @@ public static class ExpressionExtensions
     /// <param name="expression">源表达式。</param>
     /// <param name="propertyName">属性名，支持点号分隔的多级属性，例如：Name、Customer.Name。</param>
     /// <returns>表示属性访问的表达式。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="expression"/> 为 <see langword="null"/>。</exception>
+    /// <exception cref="ArgumentException"><paramref name="propertyName"/> 为空或空白。</exception>
     public static Expression Property(this Expression expression, string propertyName)
     {
-        if (propertyName.All(t => t != '.'))
+        if (expression == null)
+        {
+            throw new ArgumentNullException(nameof(expression));
+        }
+
+        if (string.IsNullOrWhiteSpace(propertyName))
+        {
+            throw new ArgumentException("Property name can not be empty.");
+        }
+
+        if (!propertyName.Contains('.'))
+        {
             return Expression.Property(expression, propertyName);
+        }
+
         var propertyNameList = propertyName.Split('.');
         Expression result = null;
         for (var i = 0; i < propertyNameList.Length; i++)
@@ -146,9 +161,17 @@ public static class ExpressionExtensions
     /// <param name="first">第一个谓词。</param>
     /// <param name="second">第二个谓词。</param>
     /// <typeparam name="T">谓词参数的类型。</typeparam>
-    /// <returns>组合后的谓词表达式。</returns>
+    /// <returns>组合后的谓词表达式；若 <paramref name="first"/> 为 null 则返回 <paramref name="second"/>，若 <paramref name="second"/> 为 null 则返回 <paramref name="first"/>。</returns>
     public static Expression<Func<T, bool>> And<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
+        if (first == null)
+        {
+            return second;
+        }
+        if (second == null)
+        {
+            return first;
+        }
         return first.Compose(second, Expression.AndAlso);
     }
 
@@ -178,7 +201,7 @@ public static class ExpressionExtensions
     /// <param name="first">第一个谓词。</param>
     /// <param name="second">第二个谓词。</param>
     /// <typeparam name="T">谓词参数的类型。</typeparam>
-    /// <returns>组合后的谓词表达式；若 <paramref name="first"/> 为 null 则返回 <paramref name="second"/>，若 <paramref name="second"/> 为 null 则返回 <paramref name="first"/>。</returns>
+    /// <returns>组合后的谓词表达式。</returns>
     public static Expression<Func<T, bool>> Or<T>(this Expression<Func<T, bool>> first, Expression<Func<T, bool>> second)
     {
         if (first == null)
@@ -429,9 +452,10 @@ public static class ExpressionExtensions
     /// </summary>
     /// <param name="left">左操作数。</param>
     /// <param name="operator">查询运算符。</param>
-    /// <param name="value">比较值。</param>
+    /// <param name="value">比较值；<see cref="QueryOperator.Is"/> 使用该值进行空值判断。</param>
     /// <returns>组合后的比较表达式。</returns>
-    /// <exception cref="NotImplementedException">当 <paramref name="operator"/> 尚未实现（如 NotContains、Like、NotLike、Is）时抛出。</exception>
+    /// <exception cref="NotImplementedException">当 <paramref name="operator"/> 尚未实现（如 Like、NotLike）时抛出。</exception>
+    /// <exception cref="ArgumentException"><see cref="QueryOperator.Is"/> 应用于非引用类型且非可空值类型时抛出。</exception>
     public static Expression Operation(this Expression left, QueryOperator @operator, object value)
     {
         return @operator switch
@@ -445,11 +469,11 @@ public static class ExpressionExtensions
             QueryOperator.StartsWith => left.StartsWith(value),
             QueryOperator.EndsWith => left.EndsWith(value),
             QueryOperator.Contains => left.Contains(value),
-            QueryOperator.NotContains => throw new NotImplementedException(),
-            QueryOperator.Like => throw new NotImplementedException(),
-            QueryOperator.NotLike => throw new NotImplementedException(),
-            QueryOperator.Is => throw new NotImplementedException(),
-            _ => throw new NotImplementedException()
+            QueryOperator.NotContains => Expression.Not(left.Contains(value)),
+            QueryOperator.Is => Expression.Equal(left, Expression.Constant(null, left.Type)),
+            QueryOperator.Like => throw new NotImplementedException("The LIKE operator requires support from the query provider."),
+            QueryOperator.NotLike => throw new NotImplementedException("The NOT LIKE operator requires support from the query provider."),
+            _ => throw new NotImplementedException($"Unsupported query operator: {@operator}")
         };
     }
 
@@ -463,9 +487,12 @@ public static class ExpressionExtensions
     /// <param name="instance">实例表达式。</param>
     /// <param name="methodName">方法名。</param>
     /// <param name="values">方法参数表达式。</param>
+    /// <remarks>
+    /// 按参数个数解析重载方法，避免存在多个重载时抛出 <see cref="AmbiguousMatchException"/>。
+    /// </remarks>
     /// <returns>表示方法调用的表达式。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="instance"/> 为 null 时抛出。</exception>
-    /// <exception cref="NullReferenceException">当 <paramref name="instance"/> 的类型上不存在名为 <paramref name="methodName"/> 的方法时抛出。</exception>
+    /// <exception cref="NullReferenceException">当 <paramref name="instance"/> 的类型上不存在参数个数匹配的名为 <paramref name="methodName"/> 的方法时抛出。</exception>
     public static Expression Call(this Expression instance, string methodName, params Expression[] values)
     {
         if (instance == null)
@@ -473,7 +500,9 @@ public static class ExpressionExtensions
             throw new ArgumentNullException(nameof(instance));
         }
 
-        var method = instance.Type.GetTypeInfo().GetMethod(methodName);
+        var method = instance.Type.GetTypeInfo()
+                                  .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                                  .FirstOrDefault(t => t.Name == methodName && t.GetParameters().Length == values.Length);
 
         if (method == null)
         {
@@ -489,9 +518,12 @@ public static class ExpressionExtensions
     /// <param name="instance">实例表达式。</param>
     /// <param name="methodName">方法名。</param>
     /// <param name="values">方法参数值，将转换为常量表达式。</param>
+    /// <remarks>
+    /// 按参数个数解析重载方法，避免存在多个重载时抛出 <see cref="AmbiguousMatchException"/>。
+    /// </remarks>
     /// <returns>表示方法调用的表达式。</returns>
     /// <exception cref="ArgumentNullException">当 <paramref name="instance"/> 为 null 时抛出。</exception>
-    /// <exception cref="NullReferenceException">当 <paramref name="instance"/> 的类型上不存在名为 <paramref name="methodName"/> 的方法时抛出。</exception>
+    /// <exception cref="NullReferenceException">当 <paramref name="instance"/> 的类型上不存在参数个数匹配的名为 <paramref name="methodName"/> 的方法时抛出。</exception>
     public static Expression Call(this Expression instance, string methodName, params object[] values)
     {
         if (instance == null)
@@ -499,7 +531,9 @@ public static class ExpressionExtensions
             throw new ArgumentNullException(nameof(instance));
         }
 
-        var method = instance.Type.GetTypeInfo().GetMethod(methodName);
+        var method = instance.Type.GetTypeInfo()
+                                  .GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                                  .FirstOrDefault(t => t.Name == methodName && t.GetParameters().Length == (values?.Length ?? 0));
 
         if (method == null)
         {

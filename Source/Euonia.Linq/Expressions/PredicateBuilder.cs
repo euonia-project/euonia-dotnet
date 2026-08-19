@@ -53,17 +53,16 @@ public static class PredicateBuilder
 	public static Expression<Func<T, bool>> GetCompareCondition<T, TValue>(T source, string propertyName, TValue value, QueryOperator @operator)
 	{
 		var param = Expression.Parameter(typeof(T), "p");
-		var exp = Expression.Constant(value);
 		var structure = propertyName.Split('.').ToList();
 		MemberExpression member = SearchMember(param, structure);
 		Expression condition = @operator switch
 		{
-			QueryOperator.Equal => Expression.Equal(member, exp),
-			QueryOperator.NotEqual => Expression.NotEqual(member, exp),
-			QueryOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(member, exp),
-			QueryOperator.LessThanOrEqual => Expression.LessThanOrEqual(member, exp),
-			QueryOperator.GreaterThan => Expression.GreaterThan(member, exp),
-			QueryOperator.LessThan => Expression.LessThan(member, exp),
+			QueryOperator.Equal => Expression.Equal(member, Lambda.ToConstant(value, member.Type)),
+			QueryOperator.NotEqual => Expression.NotEqual(member, Lambda.ToConstant(value, member.Type)),
+			QueryOperator.GreaterThanOrEqual => Expression.GreaterThanOrEqual(member, Lambda.ToConstant(value, member.Type)),
+			QueryOperator.LessThanOrEqual => Expression.LessThanOrEqual(member, Lambda.ToConstant(value, member.Type)),
+			QueryOperator.GreaterThan => Expression.GreaterThan(member, Lambda.ToConstant(value, member.Type)),
+			QueryOperator.LessThan => Expression.LessThan(member, Lambda.ToConstant(value, member.Type)),
 			_ => throw new InvalidOperationException(),
 		};
 		var lambda = Expression.Lambda<Func<T, bool>>(condition, param);
@@ -144,14 +143,9 @@ public static class PredicateBuilder
 	/// <returns>source =&gt; (source.Id == value)</returns>
 	public static Expression<Func<TObject, bool>> PropertyEqual<TObject, TValue>(string propertyName, TValue value)
 	{
-		// var parameter = Expression.Parameter(typeof(TEntity), "source");
-		// var member = Expression.PropertyOrField(parameter, "Id");
-		// var expression = Expression.Call(typeof(object), nameof(Equals), new[] { member.Type }, member, Expression.Constant(id));
-		// return Expression.Lambda<Func<TEntity, bool>>(expression, parameter);
-
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.Equal(member, Expression.Constant(value, member.Type));
+		var expression = Expression.Equal(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -168,7 +162,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.NotEqual(member, Expression.Constant(value, member.Type));
+		var expression = Expression.NotEqual(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -185,7 +179,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.GreaterThan(member, Expression.Constant(value, member.Type));
+		var expression = Expression.GreaterThan(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -202,7 +196,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.GreaterThanOrEqual(member, Expression.Constant(value, member.Type));
+		var expression = Expression.GreaterThanOrEqual(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -219,7 +213,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.LessThan(member, Expression.Constant(value, member.Type));
+		var expression = Expression.LessThan(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -236,7 +230,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.LessThanOrEqual(member, Expression.Constant(value, member.Type));
+		var expression = Expression.LessThanOrEqual(member, Lambda.ToConstant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
@@ -252,14 +246,15 @@ public static class PredicateBuilder
 	/// <exception cref="MissingMethodException">未找到 <see cref="Enumerable.Contains{TSource}(IEnumerable{TSource}, TSource)"/> 方法时抛出。</exception>
 	public static Expression<Func<TObject, bool>> PropertyInRange<TObject, TValue>(string propertyName, params TValue[] value)
 	{
-		var method = Reflect.FindMethod(nameof(Enumerable.Contains), typeof(Enumerable), typeof(IEnumerable<TValue>), typeof(TValue))
-		                    .MakeGenericMethod(typeof(TValue));
+		var method = Reflect.FindMethod(nameof(Enumerable.Contains), typeof(Enumerable), typeof(IEnumerable<TValue>), typeof(TValue));
 
 		if (method == null)
 		{
 			throw new MissingMethodException("The method of 'Contains' not found.");
 		}
-		
+
+		method = method.MakeGenericMethod(typeof(TValue));
+
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
 		var expression = Expression.Call(method, Expression.Constant(value, typeof(IEnumerable<TValue>)), member);

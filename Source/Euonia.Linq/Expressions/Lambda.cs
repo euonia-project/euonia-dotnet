@@ -156,12 +156,25 @@ public static class Lambda
     private static object GetMemberValue(MemberExpression expression)
     {
         if (expression == null)
+        {
             return null;
+        }
+
         var field = expression.Member as FieldInfo;
         if (field != null)
         {
-            var constValue = GetConstantExpressionValue(expression.Expression);
-            return field.GetValue(constValue);
+            if (expression.Expression == null)
+            {
+                // 静态字段
+                return field.GetValue(null);
+            }
+
+            if (expression.Expression is not ConstantExpression constantExpression)
+            {
+                return null;
+            }
+
+            return field.GetValue(constantExpression.Value);
         }
 
         var property = expression.Member as PropertyInfo;
@@ -225,12 +238,42 @@ public static class Lambda
     /// </summary>
     /// <param name="expression">谓词表达式，范例1：t =&gt; t.Name == "A"，结果1。
     /// 范例2：t =&gt; t.Name == "A" &amp;&amp; t.Age =1，结果2。</param>
+    /// <remarks>
+    /// 通过遍历表达式树统计 AndAlso/OrElse 节点，而非对表达式文本进行字符串解析，
+    /// 因此字符串字面量中包含 "AndAlso"/"OrElse" 不会被误计数。
+    /// </remarks>
     public static int GetConditionCount(LambdaExpression expression)
     {
         if (expression == null)
+        {
             return 0;
-        var result = expression.ToString().Replace("AndAlso", "|").Replace("OrElse", "|");
-        return result.Split('|').Length;
+        }
+
+        var visitor = new ConditionCountVisitor();
+        visitor.Visit(expression);
+        return visitor.Count + 1;
+    }
+
+    /// <summary>
+    /// 统计表达式树中逻辑二元运算节点个数的访问器。
+    /// </summary>
+    private sealed class ConditionCountVisitor : ExpressionVisitor
+    {
+        /// <summary>
+        /// AndAlso/OrElse 节点的个数。
+        /// </summary>
+        public int Count { get; private set; }
+
+        /// <inheritdoc />
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            if (node.NodeType is ExpressionType.AndAlso or ExpressionType.OrElse)
+            {
+                Count++;
+            }
+
+            return base.VisitBinary(node);
+        }
     }
 
     /// <summary>
@@ -285,13 +328,40 @@ public static class Lambda
     /// </summary>
     /// <param name="expression">表达式。</param>
     /// <param name="value">值。</param>
+    /// <remarks>
+    /// 当 <paramref name="expression"/> 为成员访问表达式时，常量会使用成员类型进行类型化，
+    /// 以支持可空值类型（如 <see langword="int?"/>）的比较。
+    /// </remarks>
     public static ConstantExpression Constant(Expression expression, object value)
     {
         if (expression is not MemberExpression memberExpression)
         {
             return Expression.Constant(value);
         }
-        return Expression.Constant(value, memberExpression.Type);
+        return ToConstant(value, memberExpression.Type);
+    }
+
+    /// <summary>
+    /// 将值转换为与指定类型匹配的类型化常量表达式。
+    /// </summary>
+    /// <param name="value">值。</param>
+    /// <param name="type">目标类型。</param>
+    /// <returns>类型化常量表达式。</returns>
+    internal static ConstantExpression ToConstant(object value, Type type)
+    {
+        if (value == null)
+        {
+            return Expression.Constant(null, type);
+        }
+
+        var underlyingType = Nullable.GetUnderlyingType(type);
+        if (underlyingType != null)
+        {
+            var converted = Convert.ChangeType(value, underlyingType);
+            return Expression.Constant(Activator.CreateInstance(type, converted), type);
+        }
+
+        return Expression.Constant(Convert.ChangeType(value, type), type);
     }
 
     /// <summary>

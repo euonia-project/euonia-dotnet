@@ -39,49 +39,41 @@ public class QueryHandler<TEntity>
     /// <summary>
     /// 从序列中获取元素。
     /// </summary>
-    /// <returns>符合条件并按当前分页与排序设置返回的元素列表。</returns>
+    /// <remarks>
+    /// 每次调用都会基于原始查询重新构建，重复调用不会叠加过滤条件。
+    /// </remarks>
+    /// <returns>符合条件并按当前分页设置返回的元素列表。</returns>
     public IList<TEntity> Query()
     {
-	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
-
-        _query = _query.Where(predication);
-
-        _query = _query.Skip((_page - 1) * _size).Take(_size);
-
-        return _query.ToList();
+        return BuildQuery()
+               .Skip(GetSkipCount())
+               .Take(_size)
+               .ToList();
     }
 
     /// <summary>
     /// 获取序列中的元素个数。
     /// </summary>
+    /// <remarks>
+    /// 基于未分页的查询计算总数，不受 <see cref="SetPage"/> 与 <see cref="SetSize"/> 影响。
+    /// </remarks>
     /// <returns>符合当前查询条件的元素个数。</returns>
     public int GetCount()
     {
-        var predicate = _predicates.Compose();
-
-        // foreach (var criterion in _predicates)
-        // {
-        //     _query = _query.Where(criterion);
-        // }
-
-        _query = _query.Where(predicate);
-
-        return _query.Count();
+        return BuildQuery().Count();
     }
 
     /// <summary>
     /// 从序列中获取元素。
     /// </summary>
     /// <param name="action">用于对查询执行异步操作并返回结果列表的委托。</param>
-    /// <returns>符合条件并按当前分页与排序设置返回的元素列表。</returns>
+    /// <returns>符合条件并按当前分页设置返回的元素列表。</returns>
     public async Task<IList<TEntity>> QueryAsync(Func<IQueryable<TEntity>, Task<IList<TEntity>>> action)
     {
-	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
-
-        _query = _query.Where(predication);
-
-        _query = _query.Skip((_page - 1) * _size).Take(_size);
-        return await action(_query);
+        var query = BuildQuery()
+                    .Skip(GetSkipCount())
+                    .Take(_size);
+        return await action(query);
     }
 
     /// <summary>
@@ -91,18 +83,44 @@ public class QueryHandler<TEntity>
     /// <returns>符合当前查询条件的元素个数。</returns>
     public async Task<int> GetCountAsync(Func<IQueryable<TEntity>, Task<int>> action)
     {
-        var predicate = _predicates.Compose();
-        _query = _query.Where(predicate);
-        return await action(_query);
+        return await action(BuildQuery());
+    }
+
+    /// <summary>
+    /// 构建应用了全部查询条件的查询。
+    /// </summary>
+    /// <returns>未分页、未排序的查询。</returns>
+    private IQueryable<TEntity> BuildQuery()
+    {
+        if (_predicates.Count == 0)
+        {
+            return _query;
+        }
+
+        return _query.Where(_predicates.Compose());
+    }
+
+    /// <summary>
+    /// 计算基于 1 的页码对应的跳过数量，避免乘法溢出。
+    /// </summary>
+    private int GetSkipCount()
+    {
+        return (int)Math.Min(int.MaxValue, (long)(_page - 1) * _size);
     }
 
     /// <summary>
     /// 设置从 1 开始的页码。
     /// </summary>
-    /// <param name="page">页码。</param>
+    /// <param name="page">页码，必须大于等于 1。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="page"/> 小于 1。</exception>
     public QueryHandler<TEntity> SetPage(int page)
     {
+        if (page < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(page), "Page number must be greater than or equal to 1.");
+        }
+
         _page = page;
         return this;
     }
@@ -110,10 +128,16 @@ public class QueryHandler<TEntity>
     /// <summary>
     /// 设置每页大小。
     /// </summary>
-    /// <param name="size">每页大小。</param>
+    /// <param name="size">每页大小，必须大于等于 0。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="size"/> 小于 0。</exception>
     public QueryHandler<TEntity> SetSize(int size)
     {
+        if (size < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(size), "Page size must be greater than or equal to 0.");
+        }
+
         _size = size;
         return this;
     }

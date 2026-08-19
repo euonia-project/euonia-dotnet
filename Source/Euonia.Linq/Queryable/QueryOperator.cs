@@ -41,7 +41,7 @@ public enum QueryOperator
     NotLike,
 
     /// <summary>
-    /// 表示判断是否为指定值（IS value）。
+    /// 表示判断是否为 null（IS NULL）。
     /// </summary>
     Is,
 

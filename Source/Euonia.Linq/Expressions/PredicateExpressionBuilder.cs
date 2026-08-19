@@ -59,8 +59,9 @@ public class PredicateExpressionBuilder<TEntity>
     /// <summary>
     /// 转换为 Lambda 表达式。
     /// </summary>
+    /// <returns>生成的谓词表达式；未添加任何条件时返回恒真表达式。</returns>
     public Expression<Func<TEntity, bool>> ToLambda()
     {
-        return _result.ToLambda<Func<TEntity, bool>>(_parameter);
+        return _result == null ? PredicateBuilder.True<TEntity>() : _result.ToLambda<Func<TEntity, bool>>(_parameter);
     }
 }
