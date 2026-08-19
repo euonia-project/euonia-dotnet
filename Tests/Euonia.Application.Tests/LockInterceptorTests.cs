@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+[Collection("AppTests")]
 public class LockInterceptorTests
 {
 	[Fact]

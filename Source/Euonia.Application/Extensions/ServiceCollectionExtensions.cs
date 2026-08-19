@@ -24,6 +24,25 @@ public static class ServiceCollectionExtensions
 		typeof(IApplicationService),
 	};
 
+	/// <summary>
+	/// 原始目标实例的按类型持有者，用于让接口代理与实现类代理共享同一个作用域实例。
+	/// </summary>
+	private interface IAppServiceTarget
+	{
+		object Instance { get; }
+	}
+
+	private sealed class AppServiceTarget<T> : IAppServiceTarget
+		where T : class
+	{
+		public AppServiceTarget(T instance)
+		{
+			Instance = instance;
+		}
+
+		public object Instance { get; }
+	}
+
 	/// <param name="services"></param>
 	extension(IServiceCollection services)
 	{
@@ -111,14 +130,22 @@ public static class ServiceCollectionExtensions
 
 			foreach (var implementationType in types)
 			{
-				// 注册为 Scoped：同一作用域（请求/消息）内，通过任意接口解析都共享同一个实现实例，
-				// 避免同一实现类的多个接口视图各自创建独立实例、状态互相不可见。
-				services.AddScoped(implementationType);
+				// 原始实例的按类型持有者（Scoped）：同一作用域（请求/消息）内，
+				// 接口代理与实现类代理共享同一个目标实例，避免状态分裂。
+				var holderType = typeof(AppServiceTarget<>).MakeGenericType(implementationType);
+				services.AddScoped(holderType, provider =>
+				{
+					var instance = ActivatorUtilities.CreateInstance(provider, implementationType);
+					return Activator.CreateInstance(holderType, instance);
+				});
 
+				// 实现类直接解析也走代理（类代理），避免绕过拦截器；
 				// 仅注册业务接口；IDisposable、IHasLazyServiceProvider 等框架接口不创建代理。
 				var interfaces = implementationType.GetInterfaces()
 				                                   .Where(interfaceType => !_frameworkInterfaces.Contains(interfaceType))
 				                                   .ToArray();
+
+				services.AddScoped(implementationType, provider => CreateImplementationProxy(provider, implementationType, holderType));
 
 				if (interfaces.Length == 0)
 				{
@@ -127,21 +154,57 @@ public static class ServiceCollectionExtensions
 
 				foreach (var serviceType in interfaces)
 				{
-					services.TryAddScoped(serviceType, provider =>
-					{
-						var instance = provider.GetRequiredService(implementationType);
-						if (instance is IHasLazyServiceProvider service)
-						{
-							var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);
-							service.LazyServiceProvider = lazyServiceProvider;
-						}
-
-						var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
-						var interceptors = provider.GetServices<IInterceptor>().ToArray();
-						return proxyGenerator.CreateInterfaceProxyWithTarget(serviceType, instance, interceptors);
-					});
+					services.TryAddScoped(serviceType, provider => CreateInterfaceProxy(provider, holderType, serviceType));
 				}
 			}
+		}
+
+		/// <summary>
+		/// 创建实现类的类代理，使直接解析实现类型时拦截器同样生效。
+		/// </summary>
+		/// <remarks>
+		/// Castle 的类代理通过生成子类覆写目标方法实现拦截，因此仅对 <c>virtual</c> 成员生效，
+		/// 且要求目标类型存在默认构造函数（生成的代理子类需调用 <c>base()</c>）；
+		/// 不满足条件时回退为裸实例（接口路径的拦截不受影响）。
+		/// </remarks>
+		private static object CreateImplementationProxy(IServiceProvider provider, Type implementationType, Type holderType)
+		{
+			var holder = (IAppServiceTarget)provider.GetRequiredService(holderType);
+			var instance = holder.Instance;
+
+			if (instance is IHasLazyServiceProvider service)
+			{
+				var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);
+				service.LazyServiceProvider = lazyServiceProvider;
+			}
+
+			if (implementationType.GetConstructor(Type.EmptyTypes) == null)
+			{
+				return instance;
+			}
+
+			var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
+			var interceptors = provider.GetServices<IInterceptor>().ToArray();
+			return proxyGenerator.CreateClassProxyWithTarget(implementationType, instance, interceptors);
+		}
+
+		/// <summary>
+		/// 创建接口代理，拦截接口上声明的全部方法。
+		/// </summary>
+		private static object CreateInterfaceProxy(IServiceProvider provider, Type holderType, Type serviceType)
+		{
+			var holder = (IAppServiceTarget)provider.GetRequiredService(holderType);
+			var instance = holder.Instance;
+
+			if (instance is IHasLazyServiceProvider service)
+			{
+				var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);
+				service.LazyServiceProvider = lazyServiceProvider;
+			}
+
+			var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
+			var interceptors = provider.GetServices<IInterceptor>().ToArray();
+			return proxyGenerator.CreateInterfaceProxyWithTarget(serviceType, instance, interceptors);
 		}
 
 		/// <summary>

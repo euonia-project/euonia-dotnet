@@ -47,6 +47,7 @@ public class UowTestService : BaseApplicationService, IUowTestService
 	}
 }
 
+[Collection("AppTests")]
 public class UnitOfWorkInterceptorTests
 {
 	private sealed class Harness

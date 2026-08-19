@@ -6,6 +6,7 @@ using Nerosoft.Euonia.Validation;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+[Collection("AppTests")]
 public class ValidationBehaviorTests
 {
 	private sealed class Payload
