@@ -10,6 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Euonia.Concurrency\Euonia.Concurrency.csproj" />
         <ProjectReference Include="..\Euonia.Bus\Euonia.Bus.csproj" />
         <ProjectReference Include="..\Euonia.Domain\Euonia.Domain.csproj" />
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />

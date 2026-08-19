@@ -3,11 +3,11 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Represents a specification which can be used to filter a collection of objects.
+/// 表示一个可用于过滤对象集合的规约。
 /// </summary>
-/// <typeparam name="TTarget"></typeparam>
-/// <typeparam name="TProperty"></typeparam>
-/// <typeparam name="TValue"></typeparam>
+/// <typeparam name="TTarget">要过滤的目标类型。</typeparam>
+/// <typeparam name="TProperty">属性类型。</typeparam>
+/// <typeparam name="TValue">属性值的类型。</typeparam>
 public class SegmentSpecification<TTarget, TProperty, TValue> : ISpecification<TTarget>
 	where TTarget : class
 	where TValue : struct, IComparable<TValue>
@@ -19,14 +19,14 @@ public class SegmentSpecification<TTarget, TProperty, TValue> : ISpecification<T
 	private readonly RangeBoundary _boundary;
 
 	/// <summary>
-	/// Initialize a new instance which inherited <see cref="SegmentSpecification{TTarget, TProperty, TValue}"/>
+	/// 初始化继承自 <see cref="SegmentSpecification{TTarget, TProperty, TValue}"/> 的新实例。
 	/// </summary>
-	/// <param name="property"></param>
-	/// <param name="min"></param>
-	/// <param name="max"></param>
-	/// <param name="boundary"></param>
-	/// <exception cref="ArgumentNullException"></exception>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="property">属性表达式。</param>
+	/// <param name="min">最小边界值。</param>
+	/// <param name="max">最大边界值。</param>
+	/// <param name="boundary">指示边界值是否包含在内。</param>
+	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 <see langword="null"/>，或 <paramref name="min"/> 与 <paramref name="max"/> 均为 <see langword="null"/>。</exception>
+	/// <exception cref="ArgumentException">最小值大于最大值时抛出。</exception>
 	protected SegmentSpecification(Expression<Func<TTarget, TProperty>> property, TValue? min, TValue? max, RangeBoundary boundary)
 	{
 		_builder = new PredicateExpressionBuilder<TTarget>();
@@ -48,21 +48,21 @@ public class SegmentSpecification<TTarget, TProperty, TValue> : ISpecification<T
 	}
 
 	/// <summary>
-	/// Gets the maximum value.
+	/// 获取最大值。
 	/// </summary>
 	protected TValue? MaximumValue { get; }
 
 	/// <summary>
-	/// Gets the minium value.
+	/// 获取最小值。
 	/// </summary>
 	protected TValue? MinimumValue { get; }
 
 	/// <summary>
-	/// Check whether the Min value is greater than the Max value or not.
+	/// 检查最小值是否大于最大值。
 	/// </summary>
-	/// <param name="min"></param>
-	/// <param name="max"></param>
-	/// <returns></returns>
+	/// <param name="min">最小值。</param>
+	/// <param name="max">最大值。</param>
+	/// <returns>最小值大于最大值时为 <see langword="true"/>；任一值为 <see langword="null"/> 时为 <see langword="false"/>。</returns>
 	protected virtual bool IsMinGreaterThanMax(TValue? min, TValue? max)
 	{
 		if (min == null || max == null)
@@ -74,20 +74,20 @@ public class SegmentSpecification<TTarget, TProperty, TValue> : ISpecification<T
 	}
 
 	/// <summary>
-	/// Gets the value.
+	/// 获取值。
 	/// </summary>
-	/// <param name="value"></param>
-	/// <returns></returns>
+	/// <param name="value">值。</param>
+	/// <returns>返回传入的值。</returns>
 	protected virtual TValue? GetValue(TValue? value)
 	{
 		return value;
 	}
 
 	/// <summary>
-	/// Gets the query operator for min value.
+	/// 获取用于最小值的查询运算符。
 	/// </summary>
-	/// <param name="boundary"></param>
-	/// <returns></returns>
+	/// <param name="boundary">边界指示。</param>
+	/// <returns>边界包含左侧时返回 <see cref="QueryOperator.GreaterThanOrEqual"/>，否则返回 <see cref="QueryOperator.GreaterThan"/>。</returns>
 	protected virtual QueryOperator GetMinValueOperator(RangeBoundary boundary)
 	{
 #pragma warning disable IDE0066 // 将 switch 语句转换为表达式
@@ -103,10 +103,10 @@ public class SegmentSpecification<TTarget, TProperty, TValue> : ISpecification<T
 	}
 
 	/// <summary>
-	/// Gets the query operator for max value.
+	/// 获取用于最大值的查询运算符。
 	/// </summary>
-	/// <param name="boundary"></param>
-	/// <returns></returns>
+	/// <param name="boundary">边界指示。</param>
+	/// <returns>边界包含右侧时返回 <see cref="QueryOperator.LessThanOrEqual"/>，否则返回 <see cref="QueryOperator.LessThan"/>。</returns>
 	protected virtual QueryOperator GetMaxValueOperator(RangeBoundary boundary)
 	{
 #pragma warning disable IDE0066

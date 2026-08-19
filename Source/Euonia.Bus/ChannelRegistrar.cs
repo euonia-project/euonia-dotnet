@@ -16,7 +16,7 @@ internal sealed class ChannelRegistrar
 
 	private readonly Action<string, Type, ChannelHandler> _registerAction;
 
-	public ChannelRegistrar()
+	private ChannelRegistrar()
 	{
 	}
 

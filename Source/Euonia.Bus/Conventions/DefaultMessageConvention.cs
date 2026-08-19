@@ -20,8 +20,8 @@ public class DefaultMessageConvention : IMessageConvention
 	public bool IsUnicast(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type != null && type.IsAssignableTo(typeof(IUnicast)) && type != typeof(IUnicast);
+		ArgumentNullException.ThrowIfNull(type);
+		return type.IsAssignableTo(typeof(IUnicast)) && type != typeof(IUnicast);
 	}
 
 	/// <summary>
@@ -34,8 +34,8 @@ public class DefaultMessageConvention : IMessageConvention
 	public bool IsMulticast(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type != null && type.IsAssignableTo(typeof(IMulticast)) && type != typeof(IMulticast);
+		ArgumentNullException.ThrowIfNull(type);
+		return type.IsAssignableTo(typeof(IMulticast)) && type != typeof(IMulticast);
 	}
 
 	/// <summary>
@@ -48,7 +48,7 @@ public class DefaultMessageConvention : IMessageConvention
 	public bool IsRequest(string channel, Type type)
 	{
 		ArgumentNullException.ThrowIfNull(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type != null && type.IsAssignableToGeneric(typeof(IRequest<>));
+		ArgumentNullException.ThrowIfNull(type);
+		return type.IsAssignableToGeneric(typeof(IRequest<>));
 	}
 }

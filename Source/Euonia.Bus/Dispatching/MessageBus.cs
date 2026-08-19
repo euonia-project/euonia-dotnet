@@ -341,7 +341,7 @@ internal sealed class MessageBus : IBus
 	/// <typeparam name="TMessage">消息类型。</typeparam>
 	/// <param name="options">消息选项。</param>
 	/// <returns>通道名称。</returns>
-	private static string GetChannel<TMessage>(ExtendableOptions options)
+	private string GetChannel<TMessage>(ExtendableOptions options)
 	{
 		return GetChannel(typeof(TMessage), options);
 	}
@@ -352,9 +352,25 @@ internal sealed class MessageBus : IBus
 	/// <param name="messageType">消息类型。</param>
 	/// <param name="options">消息选项。</param>
 	/// <returns>通道名称。</returns>
-	private static string GetChannel(Type messageType, ExtendableOptions options)
+	private string GetChannel(Type messageType, ExtendableOptions options)
 	{
-		var channel = string.IsNullOrWhiteSpace(options.Channel) ? MessageCache.Default.GetOrAddChannel(messageType) : options.Channel;
+		string channel;
+		if (!string.IsNullOrWhiteSpace(options.Channel))
+		{
+			channel = options.Channel;
+		}
+		else
+		{
+			var channels = _configurator.FindChannel(messageType);
+			channel = channels.Count switch
+			{
+				0 => throw new MessageTypeException($"No channel found for message type '{messageType.FullName}'."),
+				> 1 => throw new MessageTypeException($"Multiple channels found for message type '{messageType.FullName}': {string.Join(", ", channels)}. Please specify a channel in the options."),
+				_ => channels[0]
+			};
+		}
+
+		//var channel = !string.IsNullOrWhiteSpace(options.Channel) ? options.Channel : _configurator.FindChannel(messageType);
 		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");
 	}
 }

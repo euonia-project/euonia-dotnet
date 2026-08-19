@@ -3,10 +3,9 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// NotEspecification convert a original
-/// specification with NOT logic operator
+/// 使用逻辑 NOT 运算符将原始规约取反。
 /// </summary>
-/// <typeparam name="TEntity">Type of element for this specificaiton</typeparam>
+/// <typeparam name="TEntity">此规约的元素类型。</typeparam>
 public sealed class NotSpecification<TEntity> : Specification<TEntity>
     where TEntity : class
 {
@@ -19,9 +18,10 @@ public sealed class NotSpecification<TEntity> : Specification<TEntity>
     #region Constructor
 
     /// <summary>
-    /// Constructor for NotSpecificaiton
+    /// NotSpecification 的构造函数。
     /// </summary>
-    /// <param name="originalSpecification">Original specification</param>
+    /// <param name="originalSpecification">原始规约。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="originalSpecification"/> 为 <see langword="null"/>。</exception>
     public NotSpecification(ISpecification<TEntity> originalSpecification)
     {
 
@@ -34,9 +34,10 @@ public sealed class NotSpecification<TEntity> : Specification<TEntity>
     }
 
     /// <summary>
-    /// Constructor for NotSpecification
+    /// NotSpecification 的构造函数。
     /// </summary>
-    /// <param name="originalSpecification">Original specificaiton</param>
+    /// <param name="originalSpecification">原始谓词表达式。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="originalSpecification"/> 为 <see langword="null"/>。</exception>
     public NotSpecification(Expression<Func<TEntity, bool>> originalSpecification)
     {
         _predicate = originalSpecification ?? throw new ArgumentNullException(nameof(originalSpecification));
@@ -46,10 +47,8 @@ public sealed class NotSpecification<TEntity> : Specification<TEntity>
 
     #region Override Specification methods
 
-    /// <summary>
-    /// <see cref="ISpecification{TEntity}"/>
-    /// </summary>
-    /// <returns><see cref="ISpecification{TEntity}"/></returns>
+    /// <inheritdoc />
+    /// <returns>原始表达式取逻辑非后的谓词表达式。</returns>
     public override Expression<Func<TEntity, bool>> Satisfy()
     {
         return Expression.Lambda<Func<TEntity, bool>>(Expression.Not(_predicate.Body),

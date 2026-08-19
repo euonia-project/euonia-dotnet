@@ -63,6 +63,7 @@
         <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
         <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
+        <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Caching/">
         <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj" Type="C#">

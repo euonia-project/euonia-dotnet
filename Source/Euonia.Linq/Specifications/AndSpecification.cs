@@ -3,9 +3,9 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// A logic AND Specification
+/// 逻辑 AND 规约。
 /// </summary>
-/// <typeparam name="T">Type of entity that check this specification</typeparam>
+/// <typeparam name="T">检查此规约的实体类型。</typeparam>
 public sealed class AndSpecification<T> : Specification<T>
    where T : class
 {
@@ -19,10 +19,11 @@ public sealed class AndSpecification<T> : Specification<T>
     #region Public Constructor
 
     /// <summary>
-    /// Default constructor for AndSpecification
+    /// AndSpecification 的默认构造函数。
     /// </summary>
-    /// <param name="leftSide">Left side specification</param>
-    /// <param name="rightSide">Right side specification</param>
+    /// <param name="leftSide">左侧规约。</param>
+    /// <param name="rightSide">右侧规约。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="leftSide"/> 或 <paramref name="rightSide"/> 为 <see langword="null"/>。</exception>
     public AndSpecification(ISpecification<T> leftSide, ISpecification<T> rightSide)
     {
         _leftSideSpecification = leftSide ?? throw new ArgumentNullException(nameof(leftSide));
@@ -34,19 +35,17 @@ public sealed class AndSpecification<T> : Specification<T>
     #region Composite Specification overrides
 
     /// <summary>
-    /// Left side specification for this composite element
+    /// 此复合元素的左侧规约。
     /// </summary>
     public ISpecification<T> Left => _leftSideSpecification;
 
     /// <summary>
-    /// Right side specification for this composite element
+    /// 此复合元素的右侧规约。
     /// </summary>
     public ISpecification<T> Right => _rightSideSpecification;
 
-    /// <summary>
-    /// <see cref="ISpecification{T}"/>
-    /// </summary>
-    /// <returns><see cref="ISpecification{T}"/></returns>
+    /// <inheritdoc />
+    /// <returns>左右规约取逻辑与后的谓词表达式。</returns>
     public override Expression<Func<T, bool>> Satisfy()
     {
         var left = _leftSideSpecification.Satisfy();

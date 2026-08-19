@@ -3,9 +3,9 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Handles queries for the specified entity type.
+/// 处理指定实体类型的查询。
 /// </summary>
-/// <typeparam name="TEntity"></typeparam>
+/// <typeparam name="TEntity">实体类型。</typeparam>
 public class QueryHandler<TEntity>
 {
     private readonly List<Expression<Func<TEntity, bool>>> _predicates;
@@ -16,9 +16,9 @@ public class QueryHandler<TEntity>
     private int _size = int.MaxValue;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="QueryHandler{TEntity}"/> class.
+    /// 初始化 <see cref="QueryHandler{TEntity}"/> 类的新实例。
     /// </summary>
-    /// <param name="query"></param>
+    /// <param name="query">要处理的查询。</param>
     public QueryHandler(IQueryable<TEntity> query)
     {
         _predicates = new List<Expression<Func<TEntity, bool>>>();
@@ -26,10 +26,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Adds a predicate to the query.
+    /// 向查询添加一个谓词。
     /// </summary>
-    /// <param name="predicate"></param>
-    /// <returns></returns>
+    /// <param name="predicate">要添加的谓词表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> AddCriteria(Expression<Func<TEntity, bool>> predicate)
     {
         _predicates.Add(predicate);
@@ -37,92 +37,117 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Gets elements from the sequence.
+    /// 从序列中获取元素。
     /// </summary>
-    /// <returns></returns>
+    /// <remarks>
+    /// 每次调用都会基于原始查询重新构建，重复调用不会叠加过滤条件。
+    /// </remarks>
+    /// <returns>符合条件并按当前分页设置返回的元素列表。</returns>
     public IList<TEntity> Query()
     {
-	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
-
-        _query = _query.Where(predication);
-
-        _query = _query.Skip((_page - 1) * _size).Take(_size);
-
-        return _query.ToList();
+        return BuildQuery()
+               .Skip(GetSkipCount())
+               .Take(_size)
+               .ToList();
     }
 
     /// <summary>
-    /// Gets number of elements in the sequence.
+    /// 获取序列中的元素个数。
     /// </summary>
-    /// <returns></returns>
+    /// <remarks>
+    /// 基于未分页的查询计算总数，不受 <see cref="SetPage"/> 与 <see cref="SetSize"/> 影响。
+    /// </remarks>
+    /// <returns>符合当前查询条件的元素个数。</returns>
     public int GetCount()
     {
-        var predicate = _predicates.Compose();
-
-        // foreach (var criterion in _predicates)
-        // {
-        //     _query = _query.Where(criterion);
-        // }
-
-        _query = _query.Where(predicate);
-
-        return _query.Count();
+        return BuildQuery().Count();
     }
 
     /// <summary>
-    /// Gets elements from the sequence.
+    /// 从序列中获取元素。
     /// </summary>
-    /// <param name="action"></param>
-    /// <returns></returns>
+    /// <param name="action">用于对查询执行异步操作并返回结果列表的委托。</param>
+    /// <returns>符合条件并按当前分页设置返回的元素列表。</returns>
     public async Task<IList<TEntity>> QueryAsync(Func<IQueryable<TEntity>, Task<IList<TEntity>>> action)
     {
-	    var predication = _predicates.Compose();//.Aggregate<Expression<Func<TEntity, bool>>, Expression<Func<TEntity, bool>>>(null, (current, predicate) => (current == null ? predicate : current.And(predicate)));
-
-        _query = _query.Where(predication);
-
-        _query = _query.Skip((_page - 1) * _size).Take(_size);
-        return await action(_query);
+        var query = BuildQuery()
+                    .Skip(GetSkipCount())
+                    .Take(_size);
+        return await action(query);
     }
 
     /// <summary>
-    /// Gets number of elements in the sequence.
+    /// 获取序列中的元素个数。
     /// </summary>
-    /// <returns></returns>
+    /// <param name="action">用于对查询执行异步计数操作的委托。</param>
+    /// <returns>符合当前查询条件的元素个数。</returns>
     public async Task<int> GetCountAsync(Func<IQueryable<TEntity>, Task<int>> action)
     {
-        var predicate = _predicates.Compose();
-        _query = _query.Where(predicate);
-        return await action(_query);
+        return await action(BuildQuery());
     }
 
     /// <summary>
-    /// Sets the non-zero based page number.
+    /// 构建应用了全部查询条件的查询。
     /// </summary>
-    /// <param name="page"></param>
-    /// <returns></returns>
+    /// <returns>未分页、未排序的查询。</returns>
+    private IQueryable<TEntity> BuildQuery()
+    {
+        if (_predicates.Count == 0)
+        {
+            return _query;
+        }
+
+        return _query.Where(_predicates.Compose());
+    }
+
+    /// <summary>
+    /// 计算基于 1 的页码对应的跳过数量，避免乘法溢出。
+    /// </summary>
+    private int GetSkipCount()
+    {
+        return (int)Math.Min(int.MaxValue, (long)(_page - 1) * _size);
+    }
+
+    /// <summary>
+    /// 设置从 1 开始的页码。
+    /// </summary>
+    /// <param name="page">页码，必须大于等于 1。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="page"/> 小于 1。</exception>
     public QueryHandler<TEntity> SetPage(int page)
     {
+        if (page < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(page), "Page number must be greater than or equal to 1.");
+        }
+
         _page = page;
         return this;
     }
 
     /// <summary>
-    /// Sets the size of the page.
+    /// 设置每页大小。
     /// </summary>
-    /// <param name="size"></param>
-    /// <returns></returns>
+    /// <param name="size">每页大小，必须大于等于 0。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="size"/> 小于 0。</exception>
     public QueryHandler<TEntity> SetSize(int size)
     {
+        if (size < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(size), "Page size must be greater than or equal to 0.");
+        }
+
         _size = size;
         return this;
     }
 
     /// <summary>
-    /// Sorts the elements of a sequence in ascending order according to a key.
+    /// 按指定的键对序列中的元素进行升序排序。
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="keySelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">排序键的类型。</typeparam>
+    /// <param name="keySelector">用于提取排序键的表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> OrderByAscending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
         _query = _query.OrderBy(keySelector);
@@ -131,11 +156,11 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sorts the query in descending order by using the specified key.
+    /// 按指定的键对查询进行降序排序。
     /// </summary>
-    /// <typeparam name="TResult"></typeparam>
-    /// <param name="keySelector"></param>
-    /// <returns></returns>
+    /// <typeparam name="TResult">排序键的类型。</typeparam>
+    /// <param name="keySelector">用于提取排序键的表达式。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> OrderByDescending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
         _query = _query.OrderByDescending(keySelector);
@@ -143,10 +168,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the collator.
+    /// 设置排序器。
     /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
+    /// <param name="order">用于配置排序的委托。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetCollator(Action<Orderable<TEntity>> order)
     {
         var orderable = new Orderable<TEntity>(_query);
@@ -156,10 +181,10 @@ public class QueryHandler<TEntity>
     }
 
     /// <summary>
-    /// Sets the collator.
+    /// 设置排序器。
     /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
+    /// <param name="order">用于对查询进行排序并返回有序查询的委托。</param>
+    /// <returns>当前实例，以便继续链式调用。</returns>
     public QueryHandler<TEntity> SetCollator(Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> order)
     {
         var orderable = new Orderable<TEntity>(_query);

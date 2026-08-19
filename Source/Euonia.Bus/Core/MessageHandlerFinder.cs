@@ -84,6 +84,7 @@ internal static class MessageHandlerFinder
 
 				var channel = MessageCache.Default.GetOrAddChannel(messageType);
 
+				channel ??= messageType.FullName;
 				@delegate(channel, messageType, new ChannelHandler(@interface, null));
 			}
 		}
@@ -112,40 +113,16 @@ internal static class MessageHandlerFinder
 			}
 
 			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
+			                       .DistinctBy(t => t.Name)
 			                       .ToList();
-
-			if (attributes.Count == 1)
+			if (attributes.Any(a => string.IsNullOrWhiteSpace(a.Name)))
 			{
-				var channel = PriorityValueFinder.Find<string>(queue =>
-				{
-					queue.Enqueue(() => attributes[0].Name, 0);
-					queue.Enqueue(() => parameters[0].GetCustomAttribute<ChannelAttribute>()?.Name, 1);
-					queue.Enqueue(() => parameters[0].ParameterType.GetCustomAttribute<ChannelAttribute>()?.Name, 2);
-				}, value => !string.IsNullOrWhiteSpace(value));
-
-				if (string.IsNullOrWhiteSpace(channel))
-				{
-					if (parameters[0].ParameterType.IsPrimitiveType())
-					{
-						throw new InvalidOperationException("The first parameter of handler method should not be a primitive type, unless you specify a channel name");
-					}
-
-					channel = parameters[0].ParameterType.FullName;
-				}
-
-				@delegate(channel, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
+				throw new InvalidOperationException("The handler method must not have any SubscribeAttribute with an empty name");
 			}
-			else
-			{
-				foreach (var attribute in attributes)
-				{
-					if (string.IsNullOrWhiteSpace(attribute.Name))
-					{
-						throw new InvalidOperationException();
-					}
 
-					@delegate(attribute.Name, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
-				}
+			foreach (var attribute in attributes)
+			{
+				@delegate(attribute.Name, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
 			}
 		}
 	}

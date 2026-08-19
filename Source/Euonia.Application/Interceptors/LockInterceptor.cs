@@ -1,73 +1,418 @@
+using System.Collections.Concurrent;
+using System.Globalization;
 using System.Reflection;
 using Castle.DynamicProxy;
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Concurrency;
+using Nerosoft.Euonia.Disposing;
 
 namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Specifies a lock interceptor.
+/// 拦截带有 <see cref="LockAttribute"/> 特性的方法调用，并在方法执行期间持有对应的锁。
 /// </summary>
+/// <remarks>
+/// 根据方法上的特性类型选择锁策略：
+/// <see cref="SemaphoreLockAttribute"/> 使用进程内的 <see cref="SemaphoreSlim"/> 实现本地锁；
+/// <see cref="DistributedLockAttribute"/> 通过 <see cref="ILockFactory"/> 获取分布式锁。
+/// 同时支持同步方法、返回 <see cref="Task"/> 的异步方法以及返回 <see cref="Task{TResult}"/> 的泛型异步方法，
+/// 并在整个方法执行期间保持锁不被释放。
+/// </remarks>
 public class LockInterceptor : IInterceptor
 {
+	// 缓存 WrapAsync 方法的 MethodInfo，避免每次拦截都通过反射重新查找。
+	private static readonly MethodInfo _wrapAsyncMethod = typeof(LockInterceptor).GetMethod(nameof(WrapAsync), BindingFlags.Instance | BindingFlags.NonPublic);
+
+	// 缓存每个方法上的锁特性，避免每次拦截调用都执行反射特性查找。
+	private static readonly ConcurrentDictionary<(MethodInfo Target, MethodInfo Interface), LockAttribute> _attributeCache = new();
+
+	// 缓存 WrapAsync 的闭包泛型 MethodInfo（按结果类型），避免每次调用 MakeGenericMethod。
+	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapAsyncMethods = new();
+
+	private readonly IServiceProvider _serviceProvider;
+
+	/// <summary>
+	/// 初始化 <see cref="LockInterceptor"/> 类的新实例。
+	/// </summary>
+	/// <param name="serviceProvider">用于解析分布式锁工厂（<see cref="ILockFactory"/>）的服务提供程序。</param>
+	public LockInterceptor(IServiceProvider serviceProvider)
+	{
+		_serviceProvider = serviceProvider;
+	}
+
 	/// <inheritdoc />
 	public void Intercept(IInvocation invocation)
 	{
-		var type = invocation.Method.GetCustomAttribute<LockAttribute>()
-		           ?? invocation.Method.DeclaringType?.GetCustomAttribute<LockAttribute>();
-
-		if (type != null)
+		var method = invocation.MethodInvocationTarget ?? invocation.Method;
+		// 代理基于接口创建时，invocation.Method 是接口方法；特性可能标注在接口方法或实现类方法上，
+		// 两种位置都查找，避免实现类上的特性被静默忽略。
+		var attribute = _attributeCache.GetOrAdd((method, invocation.Method),
+			key => key.Target.GetCustomAttribute<LockAttribute>()
+			       ?? key.Interface.GetCustomAttribute<LockAttribute>());
+		if (attribute == null)
 		{
-			var token = type.Token;
-			var maximumCount = type.MaximumCount;
-			if (string.IsNullOrEmpty(token))
-			{
-				token = $"{invocation.Method.DeclaringType?.FullName}.{invocation.Method.Name}";
-			}
+			invocation.Proceed();
+			return;
+		}
 
-			var semaphoreSlim = LockInterceptorSemaphoreSlim.GetOrCreateLock(token, maximumCount);
+		var token = ResolveToken(attribute.Token, invocation);
 
-			semaphoreSlim.Wait(type.Timeout);
-			try
+		if (IsTaskMethod(method, out var resultType))
+		{
+			// 必须在拦截器链展开前同步捕获 Proceed 信息：Castle 的拦截器索引在链展开后会复位，
+			// 若在异步续延中直接调用 invocation.Proceed()，会重新派发整个拦截器链，
+			// 导致已持有锁的方法再次进入本拦截器（自锁死等）。
+			var proceedInfo = invocation.CaptureProceedInfo();
+
+			if (resultType == null)
 			{
-				invocation.Proceed();
+				invocation.ReturnValue = InterceptAsync(invocation, proceedInfo, attribute, token);
 			}
-			finally
+			else
 			{
-				semaphoreSlim.Release();
+				invocation.ReturnValue = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
+					.Invoke(this, new object[] { invocation, proceedInfo, attribute, token });
 			}
 		}
 		else
 		{
+			using var lease = Acquire(attribute, token);
 			invocation.Proceed();
 		}
+	}
+
+	/// <summary>
+	/// 以异步方式获取锁并等待被拦截方法返回的 <see cref="Task"/> 完成，期间保持锁不被释放。
+	/// </summary>
+	/// <param name="invocation">当前拦截调用，用于读取目标方法返回的任务。</param>
+	/// <param name="proceedInfo">在拦截器链展开前捕获的继续执行信息，用于在获取锁后直接调用目标方法。</param>
+	/// <param name="attribute">目标方法上的锁特性。</param>
+	/// <param name="token">解析后的锁令牌。</param>
+	private async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, LockAttribute attribute, string token)
+	{
+		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
+		proceedInfo.Invoke();
+		await (Task)invocation.ReturnValue;
+	}
+
+	/// <summary>
+	/// 以异步方式获取锁并等待被拦截方法返回的 <see cref="Task{TResult}"/> 完成，期间保持锁不被释放。
+	/// </summary>
+	/// <typeparam name="T">异步方法返回的结果类型。</typeparam>
+	/// <param name="invocation">当前拦截调用，用于读取目标方法返回的任务。</param>
+	/// <param name="proceedInfo">在拦截器链展开前捕获的继续执行信息，用于在获取锁后直接调用目标方法。</param>
+	/// <param name="attribute">目标方法上的锁特性。</param>
+	/// <param name="token">解析后的锁令牌。</param>
+	/// <returns>被拦截方法的执行结果。</returns>
+	private async Task<T> WrapAsync<T>(IInvocation invocation, IInvocationProceedInfo proceedInfo, LockAttribute attribute, string token)
+	{
+		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
+		proceedInfo.Invoke();
+		return await (Task<T>)invocation.ReturnValue;
+	}
+
+	/// <summary>
+	/// 根据特性类型同步获取锁。
+	/// </summary>
+	/// <param name="attribute">目标方法上的锁特性。</param>
+	/// <param name="token">解析后的锁令牌。</param>
+	/// <returns>表示锁租约的可释放对象；释放该对象即释放锁。</returns>
+	/// <exception cref="TimeoutException">在 <see cref="LockAttribute.Timeout"/> 指定的时间内未能获取本地信号量锁时抛出。</exception>
+	/// <exception cref="NotSupportedException">当特性类型不受支持时抛出。</exception>
+	private IDisposable Acquire(LockAttribute attribute, string token)
+	{
+		switch (attribute)
+		{
+			case SemaphoreLockAttribute local:
+				return SemaphoreLockStore.Acquire(token, local.MaximumCount, TimeSpan.FromMilliseconds(local.Timeout));
+			case DistributedLockAttribute distributed:
+			{
+				var factory = GetLockFactory();
+				return factory.Create(token).Acquire(TimeSpan.FromMilliseconds(distributed.Timeout));
+			}
+			default:
+				throw new NotSupportedException($"Unsupported lock attribute '{attribute.GetType().Name}'.");
+		}
+	}
+
+	/// <summary>
+	/// 根据特性类型异步获取锁。
+	/// </summary>
+	/// <param name="attribute">目标方法上的锁特性。</param>
+	/// <param name="token">解析后的锁令牌。</param>
+	/// <returns>表示锁租约的可释放对象；释放该对象即释放锁。</returns>
+	/// <exception cref="TimeoutException">在 <see cref="LockAttribute.Timeout"/> 指定的时间内未能获取本地信号量锁时抛出。</exception>
+	/// <exception cref="NotSupportedException">当特性类型不受支持时抛出。</exception>
+	private async Task<IDisposable> AcquireAsync(LockAttribute attribute, string token)
+	{
+		switch (attribute)
+		{
+			case SemaphoreLockAttribute local:
+				return await SemaphoreLockStore.AcquireAsync(token, local.MaximumCount, TimeSpan.FromMilliseconds(local.Timeout)).ConfigureAwait(false);
+			case DistributedLockAttribute distributed:
+			{
+				var factory = GetLockFactory();
+				return await factory.Create(token).AcquireAsync(TimeSpan.FromMilliseconds(distributed.Timeout)).ConfigureAwait(false);
+			}
+			default:
+				throw new NotSupportedException($"Unsupported lock attribute '{attribute.GetType().Name}'.");
+		}
+	}
+
+	/// <summary>
+	/// 从服务提供程序解析 <see cref="ILockFactory"/> 实例。
+	/// </summary>
+	/// <returns>已注册的分布式锁工厂。</returns>
+	/// <exception cref="InvalidOperationException">当服务提供程序中未注册 <see cref="ILockFactory"/> 时抛出。</exception>
+	private ILockFactory GetLockFactory()
+	{
+		var factory = _serviceProvider.GetService<ILockFactory>();
+		if (factory == null)
+		{
+			throw new InvalidOperationException(
+				$"No {nameof(ILockFactory)} is registered. Register a distributed lock module (e.g. Nerosoft.Euonia.Concurrency.Redis.RedisLockModule) to enable distributed locking.");
+		}
+
+		return factory;
+	}
+
+	/// <summary>
+	/// 判断方法是否返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/>。
+	/// </summary>
+	/// <param name="method">要检查的方法。</param>
+	/// <param name="resultType">当方法返回 <see cref="Task{TResult}"/> 时输出其结果类型；返回 <see cref="Task"/> 时为 <c>null</c>。</param>
+	/// <returns>若方法返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/> 则为 <c>true</c>，否则为 <c>false</c>。</returns>
+	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
+	{
+		if (method.ReturnType == typeof(Task))
+		{
+			resultType = null;
+			return true;
+		}
+
+		if (method.ReturnType.IsGenericType
+		    && !method.ReturnType.IsGenericTypeDefinition
+		    && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+		{
+			resultType = method.ReturnType.GetGenericArguments()[0];
+			return true;
+		}
+
+		resultType = null;
+		return false;
+	}
+
+	/// <summary>
+	/// 将令牌中的 <c>{parameterName}</c> 与 <c>{parameterName.PropertyName}</c> 占位符替换为被拦截方法对应的实参值。
+	/// </summary>
+	/// <param name="token">可能包含占位符的锁令牌。</param>
+	/// <param name="invocation">当前拦截调用，用于获取方法参数与实参。</param>
+	/// <returns>完成占位符替换后的锁令牌。</returns>
+	private static string ResolveToken(string token, IInvocation invocation)
+	{
+		if (!token.Contains('{'))
+		{
+			return token;
+		}
+
+		var method = invocation.MethodInvocationTarget ?? invocation.Method;
+		var parameters = method.GetParameters();
+		var arguments = invocation.Arguments;
+
+		for (var i = 0; i < parameters.Length; i++)
+		{
+			var parameterName = parameters[i].Name;
+			var argument = arguments[i];
+
+			var placeholder = $"{{{parameterName}}}";
+			if (token.Contains(placeholder, StringComparison.Ordinal))
+			{
+				token = token.Replace(placeholder, Convert.ToString(argument, CultureInfo.InvariantCulture), StringComparison.Ordinal);
+			}
+
+			// 嵌套属性占位符，例如 {user.Id} 或 {user.Address.City}。
+			var prefix = $"{{{parameterName}.";
+			var start = 0;
+			while ((start = token.IndexOf(prefix, start, StringComparison.Ordinal)) >= 0)
+			{
+				var end = token.IndexOf('}', start);
+				if (end < 0)
+				{
+					break;
+				}
+
+				var propertyPath = token.Substring(start + prefix.Length, end - start - prefix.Length);
+				var value = ResolvePropertyPath(argument, propertyPath, parameterName);
+				token = token.Remove(start, end - start + 1).Insert(start, value);
+				start += value.Length;
+			}
+		}
+
+		return token;
+	}
+
+	/// <summary>
+	/// 解析实参上以点分隔的属性路径（例如 <c>Address.City</c>）。
+	/// </summary>
+	/// <param name="argument">占位符对应的实参对象。</param>
+	/// <param name="propertyPath">以点分隔的属性路径。</param>
+	/// <param name="parameterName">占位符中的参数名，用于错误消息。</param>
+	/// <returns>属性路径对应的值；当路径中间遇到 <c>null</c> 对象时返回空字符串。</returns>
+	/// <exception cref="InvalidOperationException">当属性路径中的某个属性在对应类型上不存在时抛出。</exception>
+	private static string ResolvePropertyPath(object argument, string propertyPath, string parameterName)
+	{
+		object current = argument;
+		foreach (var part in propertyPath.Split('.'))
+		{
+			if (current == null)
+			{
+				// 路径中间的 null 对象无法继续向下解析。
+				return string.Empty;
+			}
+
+			var property = GetProperty(current.GetType(), part);
+			if (property == null)
+			{
+				throw new InvalidOperationException(
+					$"Property '{part}' was not found on type '{current.GetType().FullName}' while resolving the lock token placeholder '{{{parameterName}.{propertyPath}}}'.");
+			}
+
+			current = property.GetValue(current);
+		}
+
+		return Convert.ToString(current, CultureInfo.InvariantCulture);
+	}
+
+	private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _propertyCache = new();
+
+	private static PropertyInfo GetProperty(Type type, string name)
+	{
+		return _propertyCache.GetOrAdd(type, t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+			                                  .ToDictionary(p => p.Name, StringComparer.Ordinal))
+			.GetValueOrDefault(name);
 	}
 }
 
 /// <summary>
-/// The lock interceptor using SemaphoreSlim.
+/// 使用 <see cref="SemaphoreSlim"/> 实现的进程内本地锁存储。
 /// </summary>
-internal static class LockInterceptorSemaphoreSlim
+/// <remarks>
+/// 线程安全，以键值对形式维护信号量实例，供 <see cref="LockInterceptor"/> 为同一键复用同一个锁。
+/// 每个条目跟踪当前持有或等待该锁的线程数；当计数归零（没有任何线程再使用该锁）时，
+/// 条目会从字典中移除，避免高基数字符串（如 <c>{user.Id}</c>）导致的无界内存增长。
+/// </remarks>
+internal static class SemaphoreLockStore
 {
-	private static readonly Dictionary<string, SemaphoreSlim> _locks = new();
+	private sealed class LockEntry
+	{
+		public LockEntry(int maximumCount)
+		{
+			Semaphore = new SemaphoreSlim(maximumCount, maximumCount);
+		}
+
+		public SemaphoreSlim Semaphore { get; }
+
+		/// <summary>
+		/// 当前持有或等待该锁的线程数。仅在 <see cref="SyncRoot"/> 下访问。
+		/// </summary>
+		public int UseCount;
+
+		/// <summary>
+		/// 保护 <see cref="UseCount"/> 增减与条目移除的原子性。
+		/// </summary>
+		public readonly object SyncRoot = new();
+	}
+
+	private static readonly ConcurrentDictionary<string, LockEntry> _locks = new();
 
 	/// <summary>
-	/// Gets the lock associated with the specified key.
+	/// 同步获取与指定键关联的信号量锁。
 	/// </summary>
-	/// <param name="key"></param>
-	/// <param name="maximumCount"></param>
-	/// <returns></returns>
-	public static SemaphoreSlim GetOrCreateLock(string key, int maximumCount = 1)
+	/// <param name="key">锁的唯一键。</param>
+	/// <param name="maximumCount">信号量允许的最大并发访问数。</param>
+	/// <param name="timeout">获取锁的超时时间。</param>
+	/// <returns>释放锁的可释放对象。</returns>
+	/// <exception cref="TimeoutException">在 <paramref name="timeout"/> 内未获取到锁时抛出。</exception>
+	public static IDisposable Acquire(string key, int maximumCount, TimeSpan timeout)
 	{
-		lock (_locks)
+		var entry = AcquireEntry(key, maximumCount);
+		if (!entry.Semaphore.Wait(timeout))
 		{
-			if (_locks.TryGetValue(key, out var semaphoreSlim))
+			Release(entry, key, releaseSemaphore: false);
+			throw new TimeoutException($"Failed to acquire the local lock '{key}' within {timeout.TotalMilliseconds} milliseconds.");
+		}
+
+		return AnonymousDisposable.Create(() => Release(entry, key, releaseSemaphore: true));
+	}
+
+	/// <summary>
+	/// 异步获取与指定键关联的信号量锁。
+	/// </summary>
+	/// <param name="key">锁的唯一键。</param>
+	/// <param name="maximumCount">信号量允许的最大并发访问数。</param>
+	/// <param name="timeout">获取锁的超时时间。</param>
+	/// <returns>释放锁的可释放对象。</returns>
+	/// <exception cref="TimeoutException">在 <paramref name="timeout"/> 内未获取到锁时抛出。</exception>
+	public static async Task<IDisposable> AcquireAsync(string key, int maximumCount, TimeSpan timeout)
+	{
+		var entry = AcquireEntry(key, maximumCount);
+
+		bool acquired;
+		try
+		{
+			acquired = await entry.Semaphore.WaitAsync(timeout).ConfigureAwait(false);
+		}
+		catch
+		{
+			Release(entry, key, releaseSemaphore: false);
+			throw;
+		}
+
+		if (!acquired)
+		{
+			Release(entry, key, releaseSemaphore: false);
+			throw new TimeoutException($"Failed to acquire the local lock '{key}' within {timeout.TotalMilliseconds} milliseconds.");
+		}
+
+		return AnonymousDisposable.Create(() => Release(entry, key, releaseSemaphore: true));
+	}
+
+	private static LockEntry AcquireEntry(string key, int maximumCount)
+	{
+		while (true)
+		{
+			var entry = _locks.GetOrAdd(key, _ => new LockEntry(maximumCount));
+			lock (entry.SyncRoot)
 			{
-				return semaphoreSlim;
+				// 条目可能在上一个持有者释放后被移除了，重试获取新条目。
+				if (!ReferenceEquals(_locks.GetValueOrDefault(key), entry))
+				{
+					continue;
+				}
+
+				entry.UseCount++;
+				return entry;
+			}
+		}
+	}
+
+	private static void Release(LockEntry entry, string key, bool releaseSemaphore)
+	{
+		lock (entry.SyncRoot)
+		{
+			if (releaseSemaphore)
+			{
+				entry.Semaphore.Release();
 			}
 
-			semaphoreSlim = new SemaphoreSlim(maximumCount, maximumCount);
-			_locks[key] = semaphoreSlim;
+			entry.UseCount--;
 
-			return semaphoreSlim;
+			// 仅当没有任何线程持有或等待该锁时才移除条目；
+			// 否则移除后并发获取方会拿到"孤儿"信号量，导致互斥失效。
+			if (entry.UseCount == 0 && ReferenceEquals(_locks.GetValueOrDefault(key), entry))
+			{
+				_locks.TryRemove(key, out _);
+			}
 		}
 	}
 }

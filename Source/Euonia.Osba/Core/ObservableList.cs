@@ -13,11 +13,13 @@ namespace Nerosoft.Euonia.Osba;
 /// 这使得它适用于 UI 元素需要与底层数据保持同步并感知长时间运行操作的数据绑定场景。
 /// 该集合可以在批量更新期间抑制更改通知，以提高性能并避免不必要的 UI 刷新。
 /// 它还传播子项的属性和繁忙状态更改，实现更细粒度的更改跟踪。
+/// 元素的插入、移除、替换和清空都会正确地附加或分离子项的事件钩子，
+/// 确保被移出集合的元素不再引发通知，也不会泄漏对集合的引用。
 /// </remarks>
 /// <typeparam name="TItem">可观察列表中包含的元素类型。</typeparam>
 public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 {
-	private EventHandler<ObjectChangedEventArgs> _childChanged = null;
+	private EventHandler<ObjectChangedEventArgs> _childChanged;
 
 	/// <summary>
 	/// 当集合中的子对象被更改时发生，通过事件参数提供有关更改的详细信息。
@@ -112,6 +114,37 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	}
 
 	/// <summary>
+	/// 替换集合中指定索引处的项，将事件钩子从旧项转移到新项。
+	/// </summary>
+	/// <remarks>此方法重写基础实现，以确保在替换项时先分离旧项的事件钩子，
+	/// 再向新项附加事件钩子。旧项被移出集合后不再引发通知，也不会泄漏对集合的引用。
+	/// 如果旧项和新项是同一个实例，钩子会被重新附加，保持订阅一次。</remarks>
+	/// <param name="index">要替换项的从零开始的索引。</param>
+	/// <param name="item">指定索引处的新值。</param>
+	protected override void SetItem(int index, TItem item)
+	{
+		RemoveEventHooks(this[index]);
+		base.SetItem(index, item);
+		AddEventHooks(item);
+	}
+
+	/// <summary>
+	/// 移除集合中的所有项，并分离所有已附加的事件处理程序。
+	/// </summary>
+	/// <remarks>此方法重写基础实现，因为基类 ClearItems 会直接清空内部列表，
+	/// 不会逐个调用 RemoveItem。若不在此处分离钩子，被移除的元素将泄漏对集合的引用，
+	/// 且其后续变化仍会误触发 ChildChanged 事件。</remarks>
+	protected override void ClearItems()
+	{
+		foreach (var item in Items)
+		{
+			RemoveEventHooks(item);
+		}
+
+		base.ClearItems();
+	}
+
+	/// <summary>
 	/// 在集合被修改时引发集合更改事件（如果启用了列表更改通知）。
 	/// </summary>
 	/// <remarks>重写基础实现，根据 RaiseListChangedEvents 属性的值有条件地引发集合更改通知。
@@ -122,6 +155,20 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		if (RaiseListChangedEvents)
 		{
 			base.OnCollectionChanged(e);
+		}
+	}
+
+	/// <summary>
+	/// 在集合的 Count 或 Item[] 属性值更改时引发 PropertyChanged 事件（如果启用了列表更改通知）。
+	/// </summary>
+	/// <remarks>重写基础实现，根据 RaiseListChangedEvents 属性的值有条件地引发属性更改通知，
+	/// 与 OnCollectionChanged 保持一致。这使得抑制期间（例如批量更新）不会触发任何数据绑定刷新。</remarks>
+	/// <param name="e">包含属性更改信息的对象。</param>
+	protected override void OnPropertyChanged(PropertyChangedEventArgs e)
+	{
+		if (RaiseListChangedEvents)
+		{
+			base.OnPropertyChanged(e);
 		}
 	}
 

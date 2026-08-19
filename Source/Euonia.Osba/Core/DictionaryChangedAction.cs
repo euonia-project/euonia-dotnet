@@ -21,4 +21,9 @@ public enum DictionaryChangedAction
 	/// 将指定值的所有匹配项替换为另一个值。
 	/// </summary>
 	Update,
+
+	/// <summary>
+	/// 指示字典中的所有项已被移除。事件参数的 Key、OldValue 和 NewValue 均为默认值。
+	/// </summary>
+	Clear,
 }

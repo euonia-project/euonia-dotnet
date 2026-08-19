@@ -22,9 +22,8 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsUnicast(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-
-		return type?.GetCustomAttribute<UnicastAttribute>(false) != null;
+		ArgumentNullException.ThrowIfNull(type);
+		return type.GetCustomAttribute<UnicastAttribute>(false) != null;
 	}
 
 	/// <summary>
@@ -37,8 +36,8 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsMulticast(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type?.GetCustomAttribute<MulticastAttribute>(false) != null;
+		ArgumentNullException.ThrowIfNull(type);
+		return type.GetCustomAttribute<MulticastAttribute>(false) != null;
 	}
 
 	/// <summary>
@@ -51,7 +50,7 @@ public class AnnotationMessageConvention : IMessageConvention
 	public bool IsRequest(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type?.GetCustomAttribute<RequestAttribute>(false) != null;
+		ArgumentNullException.ThrowIfNull(type);
+		return type.GetCustomAttribute<RequestAttribute>(false) != null;
 	}
 }

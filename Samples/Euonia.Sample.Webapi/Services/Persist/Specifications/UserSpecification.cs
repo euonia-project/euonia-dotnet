@@ -102,7 +102,7 @@ internal static class UserSpecification
 			PhoneContains(keyword)
 		];
 
-		return new CompositeSpecification<UserEntity>(PredicateOperator.OrElse, specifications);
+		return new CompositeSpecification<UserEntity>(PredicateOperator.OrElse).With(specifications);
 	}
 
 	public static Specification<UserEntity> HasRole(string name)

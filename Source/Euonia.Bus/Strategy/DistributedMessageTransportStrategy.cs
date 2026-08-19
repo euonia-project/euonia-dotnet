@@ -22,8 +22,8 @@ public class DistributedMessageTransportStrategy : ITransportStrategy
 	public bool Outgoing(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type?.GetCustomAttribute<DistributedMessageAttribute>() != null;
+		ArgumentNullException.ThrowIfNull(type);
+		return type.GetCustomAttribute<DistributedMessageAttribute>() != null;
 	}
 
 	/// <summary>
@@ -36,7 +36,7 @@ public class DistributedMessageTransportStrategy : ITransportStrategy
 	public bool Incoming(string channel, Type type)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(channel);
-		type ??= DefaultConfigurator.Instance.Registrations.TryGetValue(channel)?.MessageType;
-		return type?.GetCustomAttribute<DistributedMessageAttribute>() != null;
+		ArgumentNullException.ThrowIfNull(type);
+		return type.GetCustomAttribute<DistributedMessageAttribute>() != null;
 	}
 }

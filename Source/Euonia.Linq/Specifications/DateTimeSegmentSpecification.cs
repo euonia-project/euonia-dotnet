@@ -3,20 +3,20 @@
 namespace Nerosoft.Euonia.Linq;
 
 /// <summary>
-/// Represents a specification that can be used to filter a collection of objects that the <see cref="DateTime"/> property value is in speficied range.
+/// 表示一个可用于过滤对象集合的规约，要求 <see cref="DateTime"/> 属性值位于指定的区间内。
 /// </summary>
-/// <typeparam name="TTarget"></typeparam>
-/// <typeparam name="TProperty"></typeparam>
+/// <typeparam name="TTarget">要过滤的目标类型。</typeparam>
+/// <typeparam name="TProperty">属性类型。</typeparam>
 public sealed class DateTimeSegmentSpecification<TTarget, TProperty> : SegmentSpecification<TTarget, TProperty, DateTime>
     where TTarget : class
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="DateTimeSegmentSpecification{TTarget, TProperty}"/> class.
+    /// 初始化 <see cref="DateTimeSegmentSpecification{TTarget, TProperty}"/> 类的新实例。
     /// </summary>
-    /// <param name="property"></param>
-    /// <param name="min"></param>
-    /// <param name="max"></param>
-    /// <param name="boundary"></param>
+    /// <param name="property">属性表达式。</param>
+    /// <param name="min">最小边界值。</param>
+    /// <param name="max">最大边界值。</param>
+    /// <param name="boundary">指示边界值是否包含在内。</param>
     public DateTimeSegmentSpecification(Expression<Func<TTarget, TProperty>> property, DateTime? min, DateTime? max, RangeBoundary boundary)
         : base(property, min, max, boundary)
     {
