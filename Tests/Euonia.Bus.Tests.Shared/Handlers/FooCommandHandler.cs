@@ -13,7 +13,7 @@ public class FooCommandHandler
 		return Task.FromResult(1);
 	}
 
-	[Subscribe]
+	[Subscribe("foo.delete")]
 	public async Task HandleAsync(FooDeleteCommand message, IMessageContext messageContext, CancellationToken cancellationToken = default)
 	{
 		throw new NotFoundException();
