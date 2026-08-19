@@ -13,7 +13,9 @@ namespace Nerosoft.Euonia.Application;
 public abstract class ServiceContextBase : IServiceContext
 {
     /// <inheritdoc />
-    public Assembly Assembly => Assembly.GetExecutingAssembly();
+    // 使用运行时实际类型所在程序集而非 GetExecutingAssembly，
+    // 避免派生上下文类与基类位于不同程序集时扫描到错误的程序集。
+    public Assembly Assembly => GetType().Assembly;
 
     /// <inheritdoc />
     public virtual bool AutoRegisterApplicationService => true;

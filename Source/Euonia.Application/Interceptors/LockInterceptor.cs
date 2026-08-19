@@ -29,8 +29,6 @@ public class LockInterceptor : IInterceptor
 	// 缓存 WrapAsync 的闭包泛型 MethodInfo（按结果类型），避免每次调用 MakeGenericMethod。
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapAsyncMethods = new();
 
-	private static int _enterCount;
-
 	private readonly IServiceProvider _serviceProvider;
 
 	/// <summary>
@@ -61,14 +59,19 @@ public class LockInterceptor : IInterceptor
 
 		if (IsTaskMethod(method, out var resultType))
 		{
+			// 必须在拦截器链展开前同步捕获 Proceed 信息：Castle 的拦截器索引在链展开后会复位，
+			// 若在异步续延中直接调用 invocation.Proceed()，会重新派发整个拦截器链，
+			// 导致已持有锁的方法再次进入本拦截器（自锁死等）。
+			var proceedInfo = invocation.CaptureProceedInfo();
+
 			if (resultType == null)
 			{
-				invocation.ReturnValue = InterceptAsync(invocation, attribute, token);
+				invocation.ReturnValue = InterceptAsync(invocation, proceedInfo, attribute, token);
 			}
 			else
 			{
 				invocation.ReturnValue = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
-					.Invoke(this, new object[] { invocation, attribute, token });
+					.Invoke(this, new object[] { invocation, proceedInfo, attribute, token });
 			}
 		}
 		else
@@ -81,13 +84,14 @@ public class LockInterceptor : IInterceptor
 	/// <summary>
 	/// 以异步方式获取锁并等待被拦截方法返回的 <see cref="Task"/> 完成，期间保持锁不被释放。
 	/// </summary>
-	/// <param name="invocation">当前拦截调用。</param>
+	/// <param name="invocation">当前拦截调用，用于读取目标方法返回的任务。</param>
+	/// <param name="proceedInfo">在拦截器链展开前捕获的继续执行信息，用于在获取锁后直接调用目标方法。</param>
 	/// <param name="attribute">目标方法上的锁特性。</param>
 	/// <param name="token">解析后的锁令牌。</param>
-	private async Task InterceptAsync(IInvocation invocation, LockAttribute attribute, string token)
+	private async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, LockAttribute attribute, string token)
 	{
 		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
-		invocation.Proceed();
+		proceedInfo.Invoke();
 		await (Task)invocation.ReturnValue;
 	}
 
@@ -95,26 +99,16 @@ public class LockInterceptor : IInterceptor
 	/// 以异步方式获取锁并等待被拦截方法返回的 <see cref="Task{TResult}"/> 完成，期间保持锁不被释放。
 	/// </summary>
 	/// <typeparam name="T">异步方法返回的结果类型。</typeparam>
-	/// <param name="invocation">当前拦截调用。</param>
+	/// <param name="invocation">当前拦截调用，用于读取目标方法返回的任务。</param>
+	/// <param name="proceedInfo">在拦截器链展开前捕获的继续执行信息，用于在获取锁后直接调用目标方法。</param>
 	/// <param name="attribute">目标方法上的锁特性。</param>
 	/// <param name="token">解析后的锁令牌。</param>
 	/// <returns>被拦截方法的执行结果。</returns>
-	private async Task<T> WrapAsync<T>(IInvocation invocation, LockAttribute attribute, string token)
+	private async Task<T> WrapAsync<T>(IInvocation invocation, IInvocationProceedInfo proceedInfo, LockAttribute attribute, string token)
 	{
-		Console.Error.WriteLine($"[LOCK] WrapAsync enter: key={token} invocationTarget={invocation.InvocationTarget?.GetType().FullName} thread={Environment.CurrentManagedThreadId}");
-		if (token == "test:counter")
-		{
-			Interlocked.Increment(ref _enterCount);
-			Console.Error.WriteLine($"[LOCK] enter #{_enterCount} stack:\n{Environment.StackTrace}");
-		}
 		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
-		Console.Error.WriteLine($"[LOCK] WrapAsync acquired: key={token} invocation={invocation.GetType().FullName} invTarget={invocation.InvocationTarget?.GetType().FullName}");
-		invocation.Proceed();
-		Console.Error.WriteLine($"[LOCK] WrapAsync afterProceed: key={token} returnValue={invocation.ReturnValue?.GetType().FullName}");
-		Console.Error.WriteLine($"[LOCK] WrapAsync proceeded: key={token}");
-		var result = await (Task<T>)invocation.ReturnValue;
-		Console.Error.WriteLine($"[LOCK] WrapAsync done: key={token}");
-		return result;
+		proceedInfo.Invoke();
+		return await (Task<T>)invocation.ReturnValue;
 	}
 
 	/// <summary>
@@ -383,11 +377,6 @@ internal static class SemaphoreLockStore
 		return AnonymousDisposable.Create(() => Release(entry, key, releaseSemaphore: true));
 	}
 
-	// TEMP DEBUG
-	internal static int AcquireCount;
-	internal static int ReleaseCount;
-	internal static int RemoveCount;
-
 	private static LockEntry AcquireEntry(string key, int maximumCount)
 	{
 		while (true)
@@ -423,13 +412,7 @@ internal static class SemaphoreLockStore
 			if (entry.UseCount == 0 && ReferenceEquals(_locks.GetValueOrDefault(key), entry))
 			{
 				_locks.TryRemove(key, out _);
-				Interlocked.Increment(ref RemoveCount);
 			}
-
-			Interlocked.Increment(ref ReleaseCount);
 		}
 	}
-
-	// TEMP DEBUG
-	internal static int GetEntryCount() => _locks.Count;
 }

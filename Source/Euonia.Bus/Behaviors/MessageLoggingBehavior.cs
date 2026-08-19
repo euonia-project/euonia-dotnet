@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
-using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Pipeline;
 
-namespace Nerosoft.Euonia.Application;
+namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
 /// 记录路由消息的日志管道行为。

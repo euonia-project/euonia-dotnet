@@ -13,8 +13,6 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-	private static int _factoryCount;
-
 	/// <summary>
 	/// 不需要注册为服务契约的框架接口，避免为它们创建无意义的代理。
 	/// </summary>
@@ -41,17 +39,22 @@ public static class ServiceCollectionExtensions
 
 			if (context.AutoRegisterPipelineBehaviors || context.AutoRegisterApplicationService)
 			{
-				var assembly = Assembly.GetAssembly(typeof(TService));
-				var definedTypes = assembly!.DefinedTypes.ToArray();
-
-				if (context.AutoRegisterApplicationService)
+				// 使用上下文的 Assembly（默认为上下文类型所在程序集，可覆写指向其他程序集），
+				// 扫描并注册应用服务与管道行为。
+				var assembly = context.Assembly;
+				if (assembly != null)
 				{
-					services.AddApplicationService(definedTypes);
-				}
+					var definedTypes = assembly.DefinedTypes.ToArray();
 
-				if (context.AutoRegisterPipelineBehaviors)
-				{
-					services.AddPipelineBehaviors(definedTypes);
+					if (context.AutoRegisterApplicationService)
+					{
+						services.AddApplicationService(definedTypes);
+					}
+
+					if (context.AutoRegisterPipelineBehaviors)
+					{
+						services.AddPipelineBehaviors(definedTypes);
+					}
 				}
 			}
 
@@ -127,7 +130,6 @@ public static class ServiceCollectionExtensions
 					services.TryAddScoped(serviceType, provider =>
 					{
 						var instance = provider.GetRequiredService(implementationType);
-						Console.Error.WriteLine($"[DI] factory #{Interlocked.Increment(ref _factoryCount)}: serviceType={serviceType.Name} instanceType={instance.GetType().FullName} scope={provider.GetHashCode()}");
 						if (instance is IHasLazyServiceProvider service)
 						{
 							var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -25,7 +26,10 @@ public class MessageBusModule : ModuleContextBase
 	/// <param name="context">服务配置上下文。</param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
-		context.Services.AddEuoniaBus();
+		// 消息日志行为随总线模块注册（与 OutgoingLoggingBehavior 同属总线基础设施）。
+		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(MessageLoggingBehavior<,>));
+
+		context.Services.AddEuoniaBus();		
 	}
 
 	/// <summary>

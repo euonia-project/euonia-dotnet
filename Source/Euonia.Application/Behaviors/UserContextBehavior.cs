@@ -7,17 +7,21 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// 负责将用户主体信息添加到消息元数据中的管道行为。
+/// 负责将当前请求的认证信息与用户上下文挂载到消息元数据中，供跨服务传递。
 /// </summary>
 /// <typeparam name="TMessage">由管道处理的消息类型。必须是实现了 <see cref="IMessageEnvelope"/> 接口的类。</typeparam>
 /// <typeparam name="TResponse">管道返回的响应类型。</typeparam>
-public class AuthorizationBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
+/// <remarks>
+/// 将请求头中的 Bearer Token（<c>Authorization</c>）与已认证用户的身份信息
+/// （名称、ID、Code、租户）写入消息元数据，下游服务解析元数据即可恢复用户上下文。
+/// </remarks>
+public class UserContextBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
 	where TMessage : class, IMessageEnvelope
 {
 	private readonly IServiceScopeFactory _scopeFactory;
 
 	/// <summary>
-	/// 初始化 <see cref="AuthorizationBehavior{TMessage, TResponse}"/> 类的新实例。
+	/// 初始化 <see cref="UserContextBehavior{TMessage, TResponse}"/> 类的新实例。
 	/// </summary>
 	/// <param name="scopeFactory">用于在每次处理时创建作用域以解析 scoped 的 <see cref="UserPrincipal"/> 和 <see cref="IRequestContextAccessor"/>。</param>
 	/// <remarks>
@@ -25,7 +29,7 @@ public class AuthorizationBehavior<TMessage, TResponse> : IPipelineBehavior<TMes
 	/// 若在构造函数中从注入的 <see cref="IServiceProvider"/> 直接解析（行为从根容器解析时），
 	/// 将得到空值，用户信息会静默丢失；因此改为在 <see cref="HandleAsync"/> 内按作用域解析。
 	/// </remarks>
-	public AuthorizationBehavior(IServiceScopeFactory scopeFactory)
+	public UserContextBehavior(IServiceScopeFactory scopeFactory)
 	{
 		_scopeFactory = scopeFactory;
 	}
