@@ -2,6 +2,7 @@
 	<Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
     <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
 	<Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
+    <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     <Folder Name="/Bus/">
         <Project Path="Tests/Euonia.Bus.InMemory.Tests/Euonia.Bus.InMemory.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj"/>

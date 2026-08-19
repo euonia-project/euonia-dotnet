@@ -17,23 +17,28 @@ public sealed class CompositeSpecification<TEntity> : Specification<TEntity>
     /// Initialize a new instance of <see cref="CompositeSpecification{T}"/>.
     /// </summary>
     /// <param name="composeType">The compose type.</param>
-    /// <param name="specifications">The given specifications.</param>
     /// <exception cref="ArgumentException"></exception>
-    public CompositeSpecification(PredicateOperator composeType, params ISpecification<TEntity>[] specifications)
+    public CompositeSpecification(PredicateOperator composeType)
     {
-        if (specifications == null || specifications.Length < 2)
-        {
-            throw new ArgumentException("At least 2 specifications.");
-        }
-
         _composeType = composeType;
-        if (specifications != null)
-        {
-            _specifications.AddRange(specifications);
-        }
     }
 
     /// <summary>
+    /// Add a specification to composite.
+    /// </summary>
+    /// <param name="specifications">The specifications to add.</param>
+    /// <returns>The composite specification itself.</returns>
+    public CompositeSpecification<TEntity> With(params ISpecification<TEntity>[] specifications)
+	{
+		if (specifications == null || specifications.Length == 0)
+		{
+			throw new ArgumentException("At least 1 specification.");
+		}
+		_specifications.AddRange(specifications);
+		return this;
+	}
+
+	/// <summary>
     /// Add a specification to composite.
     /// </summary>
     /// <param name="specification"></param>

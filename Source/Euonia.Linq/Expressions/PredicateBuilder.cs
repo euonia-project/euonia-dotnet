@@ -215,7 +215,7 @@ public static class PredicateBuilder
 	{
 		var parameter = Expression.Parameter(typeof(TObject), "source");
 		var member = Expression.PropertyOrField(parameter, propertyName);
-		var expression = Expression.LessThanOrEqual(member, Expression.Constant(value, member.Type));
+		var expression = Expression.LessThan(member, Expression.Constant(value, member.Type));
 		var predicate = Expression.Lambda<Func<TObject, bool>>(expression, parameter);
 		return predicate;
 	}
