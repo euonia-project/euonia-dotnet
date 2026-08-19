@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Pipeline;
 
@@ -17,10 +17,10 @@ public sealed class MessageLoggingBehavior<TMessage, TResponse> : IPipelineBehav
 	/// <summary>
 	/// 初始化 <see cref="MessageLoggingBehavior{TMessage, TResponse}"/> 类的新实例。
 	/// </summary>
-	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
-	public MessageLoggingBehavior(ILoggerFactory logger)
+	/// <param name="logger">类型化日志记录器。</param>
+	public MessageLoggingBehavior(ILogger<MessageLoggingBehavior<TMessage, TResponse>> logger)
 	{
-		_logger = logger.CreateLogger<MessageLoggingBehavior<TMessage, TResponse>>();
+		_logger = logger;
 	}
 
 	/// <summary>
@@ -31,7 +31,9 @@ public sealed class MessageLoggingBehavior<TMessage, TResponse> : IPipelineBehav
 	/// <returns>包含管道响应结果的任务。</returns>
 	public async Task<TResponse> HandleAsync(TMessage context, PipelineDelegate<TMessage, TResponse> next)
 	{
-		_logger.LogInformation("Message {Id} - {FullName}: {Context}", context.MessageId, context.GetType().FullName, context);
+		// Debug 级别记录，避免默认日志级别下每条消息都输出日志；
+		// 不记录消息体，防止敏感数据（PII）进入日志。
+		_logger.LogDebug("Message {Id} - {FullName}", context.MessageId, context.GetType().FullName);
 		return await next(context);
 	}
 }

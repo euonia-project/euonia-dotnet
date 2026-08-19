@@ -32,7 +32,8 @@ public class TracingInterceptor : IInterceptor
 	/// <inheritdoc />
 	public void Intercept(IInvocation invocation)
 	{
-		if (_contextAccessor != null)
+		// 构建 StackTrace（含文件名与行号解析）开销较大，仅在实际输出 Debug 日志时才执行。
+		if (_contextAccessor != null && _logger.IsEnabled(LogLevel.Debug))
 		{
 			var traceInfoBuilder = new StringBuilder();
 			var trace = new StackTrace();

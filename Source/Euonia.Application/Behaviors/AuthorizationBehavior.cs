@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
@@ -14,17 +14,20 @@ namespace Nerosoft.Euonia.Application;
 public class AuthorizationBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
 	where TMessage : class, IMessageEnvelope
 {
-	private readonly UserPrincipal _user;
-	private readonly IRequestContextAccessor _contextAccessor;
+	private readonly IServiceScopeFactory _scopeFactory;
 
 	/// <summary>
 	/// 初始化 <see cref="AuthorizationBehavior{TMessage, TResponse}"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">服务提供程序，用于解析 <see cref="UserPrincipal"/> 和 <see cref="IRequestContextAccessor"/>。</param>
-	public AuthorizationBehavior(IServiceProvider provider)
+	/// <param name="scopeFactory">用于在每次处理时创建作用域以解析 scoped 的 <see cref="UserPrincipal"/> 和 <see cref="IRequestContextAccessor"/>。</param>
+	/// <remarks>
+	/// <see cref="UserPrincipal"/> 与 <see cref="IRequestContextAccessor"/> 均注册为 scoped 服务，
+	/// 若在构造函数中从注入的 <see cref="IServiceProvider"/> 直接解析（行为从根容器解析时），
+	/// 将得到空值，用户信息会静默丢失；因此改为在 <see cref="HandleAsync"/> 内按作用域解析。
+	/// </remarks>
+	public AuthorizationBehavior(IServiceScopeFactory scopeFactory)
 	{
-		_user = provider.GetService<UserPrincipal>();
-		_contextAccessor = provider.GetService<IRequestContextAccessor>();
+		_scopeFactory = scopeFactory;
 	}
 
 	/// <summary>
@@ -35,7 +38,12 @@ public class AuthorizationBehavior<TMessage, TResponse> : IPipelineBehavior<TMes
 	/// <returns>包含管道响应结果的任务。</returns>
 	public async Task<TResponse> HandleAsync(TMessage context, PipelineDelegate<TMessage, TResponse> next)
 	{
-		if (_contextAccessor?.Context?.RequestHeaders.TryGetValue("Authorization", out var value) == true)
+		using var scope = _scopeFactory.CreateScope();
+		var provider = scope.ServiceProvider;
+		var contextAccessor = provider.GetService<IRequestContextAccessor>();
+		var user = provider.GetService<UserPrincipal>();
+
+		if (contextAccessor?.Context?.RequestHeaders.TryGetValue("Authorization", out var value) == true)
 		{
 			if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("Bearer") && !value.Equals("Bearer null", StringComparison.OrdinalIgnoreCase))
 			{
@@ -43,14 +51,13 @@ public class AuthorizationBehavior<TMessage, TResponse> : IPipelineBehavior<TMes
 			}
 		}
 
-		if (_user is { IsAuthenticated: true })
+		if (user is { IsAuthenticated: true })
 		{
-			context.Metadata.Set("$nerosoft:user.name", _user.Username);
-			context.Metadata.Set("$nerosoft:user.id", _user.UserId);
-			context.Metadata.Set("$nerosoft:user.code", _user.Code);
-			context.Metadata.Set("$nerosoft:user.tenant", _user.Tenant);
+			context.Metadata.Set("$nerosoft:user.name", user.Username);
+			context.Metadata.Set("$nerosoft:user.id", user.UserId);
+			context.Metadata.Set("$nerosoft:user.code", user.Code);
+			context.Metadata.Set("$nerosoft:user.tenant", user.Tenant);
 		}
-
 
 		return await next(context);
 	}

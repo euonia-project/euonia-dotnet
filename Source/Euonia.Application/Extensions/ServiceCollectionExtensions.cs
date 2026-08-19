@@ -2,6 +2,7 @@
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Application;
+using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
 using Nerosoft.Euonia.Reflection;
 
@@ -12,6 +13,19 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
+	private static int _factoryCount;
+
+	/// <summary>
+	/// 不需要注册为服务契约的框架接口，避免为它们创建无意义的代理。
+	/// </summary>
+	private static readonly HashSet<Type> _frameworkInterfaces = new()
+	{
+		typeof(IDisposable),
+		typeof(IAsyncDisposable),
+		typeof(IHasLazyServiceProvider),
+		typeof(IApplicationService),
+	};
+
 	/// <param name="services"></param>
 	extension(IServiceCollection services)
 	{
@@ -94,9 +108,14 @@ public static class ServiceCollectionExtensions
 
 			foreach (var implementationType in types)
 			{
-				services.AddTransient(implementationType);
+				// 注册为 Scoped：同一作用域（请求/消息）内，通过任意接口解析都共享同一个实现实例，
+				// 避免同一实现类的多个接口视图各自创建独立实例、状态互相不可见。
+				services.AddScoped(implementationType);
 
-				var interfaces = implementationType.GetInterfaces();
+				// 仅注册业务接口；IDisposable、IHasLazyServiceProvider 等框架接口不创建代理。
+				var interfaces = implementationType.GetInterfaces()
+				                                   .Where(interfaceType => !_frameworkInterfaces.Contains(interfaceType))
+				                                   .ToArray();
 
 				if (interfaces.Length == 0)
 				{
@@ -105,9 +124,10 @@ public static class ServiceCollectionExtensions
 
 				foreach (var serviceType in interfaces)
 				{
-					services.TryAddTransient(serviceType, provider =>
+					services.TryAddScoped(serviceType, provider =>
 					{
 						var instance = provider.GetRequiredService(implementationType);
+						Console.Error.WriteLine($"[DI] factory #{Interlocked.Increment(ref _factoryCount)}: serviceType={serviceType.Name} instanceType={instance.GetType().FullName} scope={provider.GetHashCode()}");
 						if (instance is IHasLazyServiceProvider service)
 						{
 							var lazyServiceProvider = provider.GetService<ILazyServiceProvider>() ?? new LazyServiceProvider(provider);

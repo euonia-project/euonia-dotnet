@@ -30,8 +30,8 @@ public interface IUseCase<in TInput, TOutput> : IUseCase
 	Task<TOutput> ExecuteAsync(TInput input, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
-	Task<object> IUseCase.ExecuteAsync(object input, CancellationToken cancellationToken)
-		=> ExecuteAsync((TInput)input, cancellationToken).ContinueWith(t => (object)t.Result, cancellationToken);
+	async Task<object> IUseCase.ExecuteAsync(object input, CancellationToken cancellationToken)
+		=> await ExecuteAsync((TInput)input, cancellationToken);
 }
 
 /// <summary>
@@ -49,8 +49,11 @@ public interface INonOutputUseCase<in TInput> : IUseCase<TInput, EmptyUseCaseOut
 	new Task ExecuteAsync(TInput input, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
-	Task<EmptyUseCaseOutput> IUseCase<TInput, EmptyUseCaseOutput>.ExecuteAsync(TInput input, CancellationToken cancellationToken)
-		=> ExecuteAsync(input, cancellationToken).ContinueWith(_ => EmptyUseCaseOutput.Instance, cancellationToken);
+	async Task<EmptyUseCaseOutput> IUseCase<TInput, EmptyUseCaseOutput>.ExecuteAsync(TInput input, CancellationToken cancellationToken)
+	{
+		await ExecuteAsync(input, cancellationToken);
+		return EmptyUseCaseOutput.Instance;
+	}
 }
 
 /// <summary>
@@ -84,6 +87,9 @@ public interface IParameterlessUseCase : IUseCase<EmptyUseCaseInput, EmptyUseCas
 	Task ExecuteAsync(CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
-	Task<EmptyUseCaseOutput> IUseCase<EmptyUseCaseInput, EmptyUseCaseOutput>.ExecuteAsync(EmptyUseCaseInput _, CancellationToken cancellationToken)
-		=> ExecuteAsync(cancellationToken).ContinueWith(_ => EmptyUseCaseOutput.Instance, cancellationToken);
+	async Task<EmptyUseCaseOutput> IUseCase<EmptyUseCaseInput, EmptyUseCaseOutput>.ExecuteAsync(EmptyUseCaseInput _, CancellationToken cancellationToken)
+	{
+		await ExecuteAsync(cancellationToken);
+		return EmptyUseCaseOutput.Instance;
+	}
 }
