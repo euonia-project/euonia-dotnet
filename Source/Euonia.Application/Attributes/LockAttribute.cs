@@ -1,15 +1,15 @@
 namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Represents a lock attribute that can be applied to methods or classes to ensure thread-safe execution.
+/// Represents the base class for lock attributes that can be applied to methods or classes to ensure safe execution.
 /// </summary>
-[AttributeUsage(AttributeTargets.Method | AttributeTargets.Class, Inherited = true)]
-public class LockAttribute : Attribute
+[AttributeUsage(AttributeTargets.Method, Inherited = true, AllowMultiple = false)]
+public abstract class LockAttribute : Attribute
 {
 	/// <summary>
 	/// Initializes a new instance of the <see cref="LockAttribute"/> class.
 	/// </summary>
-	public LockAttribute()
+	protected LockAttribute()
 	{
 	}
 
@@ -18,7 +18,7 @@ public class LockAttribute : Attribute
 	/// </summary>
 	/// <param name="token">Specifies the lock token</param>
 	/// <param name="maximumCount">Specifies the max count of concurrent accesses allowed.</param>
-	public LockAttribute(string token, int maximumCount = 1)
+	protected LockAttribute(string token, int maximumCount = 1)
 		: this()
 	{
 		Token = token;
@@ -27,7 +27,8 @@ public class LockAttribute : Attribute
 	}
 
 	/// <summary>
-	/// Gets the lock token.
+	/// Gets the lock token. The token may contain placeholders in the form <c>{parameterName}</c>,
+	/// which are replaced with the corresponding argument values of the intercepted method at runtime.
 	/// </summary>
 	public string Token { get; }
 
