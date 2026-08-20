@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         dotnet-version: [ '10.0.x' ]
-        configuration: [Debug, Release]
+        configuration: [Release]
 
     steps:
     - name: Checkout
