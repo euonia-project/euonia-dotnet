@@ -12,10 +12,12 @@
     <Compile Include="$(MSBuildThisFileDirectory)Commands\FooCreateCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\FooDeleteCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\UserCreateCommand.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Commands\UserExceptionCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\UserUpdateCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Defines.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\FooCommandHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserCommandHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserExceptionCommandHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserExceptionRequestHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserRequestHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Requests\UserCountRequest.cs" />
