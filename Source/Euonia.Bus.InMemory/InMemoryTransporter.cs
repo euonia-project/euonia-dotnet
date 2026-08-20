@@ -115,18 +115,24 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
 		}
 
-		context.Responded += OnResponded;
-		context.Failed += OnFailed;
-		context.Completed += OnCompleted;
+		try
+		{
+			context.Responded += OnResponded;
+			context.Failed += OnFailed;
+			context.Completed += OnCompleted;
 
-		StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+			StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
-		var result = await taskCompletion.Task;
-		context.Responded -= OnResponded;
-		context.Failed -= OnFailed;
-		context.Completed -= OnCompleted;
-		return result;
+			var result = await taskCompletion.Task;
+			return result;
+		}
+		finally
+		{
+			context.Responded -= OnResponded;
+			context.Failed -= OnFailed;
+			context.Completed -= OnCompleted;
+		}
 
 		void OnResponded(object sender, MessageRepliedEventArgs args)
 		{

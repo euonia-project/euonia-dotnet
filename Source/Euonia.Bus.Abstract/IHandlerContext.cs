@@ -18,5 +18,5 @@ public interface IHandlerContext
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示异步操作的任务。</returns>
-	Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default);
+	Task<object> HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default);
 }

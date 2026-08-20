@@ -23,31 +23,4 @@ public class InMemoryConsumer : InMemoryRecipient<InMemoryConsumer>, IConsumer
 	/// 获取接收者的名称。
 	/// </summary>
 	public override string Name => nameof(InMemoryConsumer);
-
-	
-	/// <summary>
-	/// 处理接收到的消息，委托给 <see cref="IHandlerContext"/> 执行业务逻辑。
-	/// 异常时会记录错误日志并通知 <see cref="MessageContext.Failure"/>，最终总是调用 <see cref="MessageContext.Complete(string)"/>。
-	/// </summary>
-	/// <param name="channel">消息通道。</param>
-	/// <param name="message">消息负载。</param>
-	/// <param name="context">消息上下文。</param>
-	/// <param name="cancellationToken">取消令牌。</param>
-	/// <returns>表示消息处理异步操作的任务。</returns>
-	protected override async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			await Handler.HandleAsync(channel, message, context, cancellationToken);
-		}
-		catch (Exception exception)
-		{
-			Logger.LogError(exception, "Message '{Id}' Handle Error: {Message}", context.MessageId, exception.Message);
-			context.Failure(exception);
-		}
-		finally
-		{
-			context.Complete(null);
-		}
-	}
 }
