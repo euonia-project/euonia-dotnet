@@ -121,4 +121,52 @@ public class ServiceBusTests
 			});
 		}
 	}
+
+	[Fact]
+	public async Task TestSendCommand_HasResponse_ThrowExceptionInHandler_ErrorDeliveredToCallback()
+	{
+		if (_preventRunTests)
+		{
+			Assert.True(true);
+		}
+		else
+		{
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
+
+			var errorSource = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
+			var subject = new Subject<int>();
+			subject.Subscribe(
+				_ => { },
+				exception => errorSource.TrySetResult(exception),
+				() => errorSource.TrySetException(new InvalidOperationException("The subject completed without receiving the exception.")));
+
+			// Handler 抛出异常时，调用端应该通过回调 Subject 收到 OnError 通知。
+			await _bus.SendAsync(new FooDeleteCommand(), subject, cancellationToken: TestContext.Current.CancellationToken);
+
+			var exception = await errorSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+			var notFound = Assert.IsType<NotFoundException>(exception);
+			Assert.Equal("Not Found", notFound.Message);
+		}
+	}
+
+	[Fact]
+	public async Task TestCallAsync_ThrowExceptionInHandler_ErrorPropagatesToCaller()
+	{
+		if (_preventRunTests)
+		{
+			Assert.True(true);
+		}
+		else
+		{
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
+
+			// Handler 抛出异常时，调用端应该收到原始异常及错误信息。
+			var exception = await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
+			{
+				await _bus.CallAsync(new UserExceptionRequest(), null, cancellationToken: TestContext.Current.CancellationToken);
+			});
+
+			Assert.Equal("User not found", exception.Message);
+		}
+	}
 }

@@ -65,8 +65,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 		HandlerDelegate Handling(IServiceProvider provider)
 		{
 			var handler = provider.GetRequiredService<THandler>();
-			return (message, context, token) => handler.HandleAsync((TMessage)message, context, token)
-			                                           .ContinueWith(task => (object)task.Result, token);
+			return async (message, context, token) => await handler.HandleAsync((TMessage)message, context, token);
 		}
 
 		_handlerContainer.GetOrAdd(channel, _ => []).Add(Handling);
