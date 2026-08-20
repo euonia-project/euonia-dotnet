@@ -160,79 +160,42 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示消息处理异步操作的任务。</returns>
-	public async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
+	public async Task<object> HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
-		if (message == null)
+		ArgumentNullException.ThrowIfNull(message);
+
+		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+		if (!_handlerContainer.TryGetValue(channel, out var factories) || factories == null || factories.Count == 0)
 		{
-			return;
+			throw new InvalidOperationException($"No handler registered for message {context.MessageId} on channel {channel}");
 		}
 
-		using (var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope())
+		// 从服务提供程序获取处理程序实例
+		_logger.LogInformation("Message {Id} is being handled", context.MessageId);
+
+		object result;
+
+		var handlers = factories.Select(factory => factory(scope.ServiceProvider)).ToList();
+
+		if (!Convention.IsMulticast(channel, message.GetType()))
 		{
-			if (!_handlerContainer.TryGetValue(channel, out var factories) || factories == null || factories.Count == 0)
+			var handler = handlers[0];
+			result = await handler(message, context, cancellationToken);
+		}
+		else
+		{
+			result = await Parallel.ForEachAsync(handlers, cancellationToken, async (handler, token) =>
 			{
-				throw new InvalidOperationException($"No handler registered for message {context.MessageId} on channel {channel}");
-			}
-
-			// 从服务提供程序获取处理程序实例
-			_logger.LogInformation("Message {Id} is being handled", context.MessageId);
-
-			if (!Convention.IsMulticast(channel, message.GetType()))
-			{
-				var factory = factories[0];
-				await ExecuteHandler(scope, factory, cancellationToken).AsTask()
-				                                                       .ContinueWith(task =>
-				                                                       {
-					                                                       if (!task.IsCompletedSuccessfully)
-					                                                       {
-						                                                       // 对于请求/响应和队列消息，吞掉异常
-						                                                       switch (task.Exception)
-						                                                       {
-							                                                       case null:
-								                                                       context.Failure(new InternalServerErrorException());
-								                                                       break;
-							                                                       case var aggEx when aggEx.InnerExceptions.Count == 1:
-								                                                       context.Failure(aggEx.InnerExceptions[0]);
-								                                                       break;
-							                                                       default:
-								                                                       context.Failure(task.Exception.GetBaseException());
-								                                                       break;
-						                                                       }
-					                                                       }
-					                                                       //else if (Reflect.TryGetPropertyValue(task, "Result", out var result))
-					                                                       else if (task.Result is not Unit)
-					                                                       {
-						                                                       context.Response(task.Result);
-					                                                       }
-					                                                       else
-					                                                       {
-						                                                       context.Complete(null);
-					                                                       }
-				                                                       }, cancellationToken);
-			}
-			else
-			{
-				await Parallel.ForEachAsync(factories, cancellationToken, async (factory, token) =>
+				await handler(message, context, token).ContinueWith(_ =>
 				{
-					await ExecuteHandler(scope, factory, token).AsTask()
-					                                           .ContinueWith(_ =>
-					                                           {
-						                                           // 忽略多播处理程序中的错误
-					                                           }, token);
-				});
-				context.Complete(null);
-			}
-
-			_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
+					// 忽略多播处理程序中的错误
+				}, token);
+			}).ContinueWith(_ => Unit.Value, cancellationToken);
 		}
 
-		return;
+		_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
 
-		async ValueTask<object> ExecuteHandler(IServiceScope scope, HandlerFactory factory, CancellationToken cancellation)
-		{
-			var handler = factory(scope.ServiceProvider);
-			return await handler(message, context, cancellation);
-		}
+		return result;
 	}
 
 	#endregion

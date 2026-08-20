@@ -148,7 +148,7 @@ internal sealed class MessageBus : IBus
 	/// 此方法验证消息类型，创建带有关联追踪的路由消息，可选择性地通过管道处理消息，
 	/// 并将其发送到第一个确定的传输器。结果或异常通过回调 Subject 进行传播（如果已提供）。
 	/// </remarks>
-	public Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new SendOptions();
 
@@ -176,31 +176,26 @@ internal sealed class MessageBus : IBus
 
 		var transportName = transports!.First();
 
-		return RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName)
-			.ContinueWith(task =>
+		try
+		{
+			var result = await RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName);
+			callback?.OnNext(result);
+		}
+		catch (Exception exception)
+		{
+			if (callback != null)
 			{
-				if (task.IsFaulted)
-				{
-					var exception = task.Exception!.GetBaseException();
-					if (callback != null)
-					{
-						callback.OnError(exception);
-					}
-					else
-					{
-						throw exception;
-					}
-				}
-				else if (!task.IsCanceled)
-				{
-					callback?.OnNext(task.Result);
-				}
-
-				if (task.IsCanceled)
-				{
-					callback?.OnCompleted();
-				}
-			}, cancellationToken);
+				callback.OnError(exception);
+			}
+			else
+			{
+				throw;
+			}
+		}
+		finally
+		{
+			callback?.OnCompleted();
+		}
 	}
 
 	/// <summary>
