@@ -63,16 +63,9 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 	/// <exception cref="MessageProcessingException">当消息处理过程中发生错误时抛出。</exception>
 	public void Receive(MessagePack pack)
 	{
-		try
-		{
-			MessageReceived?.Invoke(this, new MessageReceivedEventArgs(pack.Message, pack.Context));
-			AsyncContext.Run(() => HandleAsync(pack.Message.Channel, pack.Message.Payload, pack.Context, pack.Aborted));
-			MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
-		}
-		catch (Exception e)
-		{
-			throw new MessageProcessingException(pack.Message.MessageId, "消息处理过程中发生错误", e);
-		}
+		MessageReceived?.Invoke(this, new MessageReceivedEventArgs(pack.Message, pack.Context));
+		AsyncContext.Run(() => HandleAsync(pack.Message.Channel, pack.Message.Payload, pack.Context, pack.Aborted));
+		MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
 	}
 
 	/// <summary>
