@@ -6,7 +6,7 @@
 /// <typeparam name="TTarget">可编辑对象的具体类型，必须继承自 <see cref="EditableObject{T}"/>。</typeparam>
 /// <remarks>
 /// 派生类通过 <see cref="ActuatorBase{TTarget}(ActuatorBuilder{TTarget}, Func{Task{TTarget}})"/> 构造函数接收
-/// 构建器配置与对象工厂委托，并通过 <see cref="HandleAsync(Func{TTarget, Task})"/> 或
+/// 构建器配置与对象工厂委托，并通过 <see cref="Handle(System.Func{TTarget,System.Threading.Tasks.Task})"/> 或
 /// <see cref="Handle(Action{TTarget})"/> 注册处理逻辑；调用 <see cref="ExecuteAsync(CancellationToken)"/> 触发完整流程。
 /// 领域事件的发布逻辑当前已停用（见 <see cref="ExecuteAsync(CancellationToken)"/> 中的注释代码）。
 /// </remarks>
@@ -53,7 +53,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// 注册的处理逻辑将在 <see cref="ExecuteAsync(CancellationToken)"/> 执行流程中、保存目标对象之前被调用。
 	/// </remarks>
-	public ActuatorBase<TTarget> HandleAsync(Func<TTarget, Task> action)
+	public ActuatorBase<TTarget> Handle(Func<TTarget, Task> action)
 	{
 		Builder.Pipeline.Use(async (target, next) =>
 		{
