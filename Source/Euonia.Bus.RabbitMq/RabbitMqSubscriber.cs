@@ -38,7 +38,7 @@ public class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 	/// <summary>
 	/// 指示此订阅者不需要向发送方回复响应。
 	/// </summary>
-	protected override bool ReplyRequired => false;
+	protected virtual bool ReplyRequired => false;
 
 	/// <summary>
 	/// 启动订阅者，声明 Fanout 交换机和队列，绑定路由键并开始消费消息。

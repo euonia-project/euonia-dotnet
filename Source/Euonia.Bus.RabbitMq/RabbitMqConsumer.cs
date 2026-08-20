@@ -38,7 +38,7 @@ public class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 	/// <summary>
 	/// 指示此消费者需要向发送方回复响应。
 	/// </summary>
-	protected override bool ReplyRequired => true;
+	protected virtual bool ReplyRequired => true;
 
 	/// <summary>
 	/// 启动消费者，在指定通道上声明队列并开始消费消息。

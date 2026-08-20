@@ -169,4 +169,27 @@ public class ServiceBusTests
 			Assert.Equal("User not found", exception.Message);
 		}
 	}
+
+	[Fact]
+	public async Task TestSendCommand_NoResponse_ThrowExceptionInHandler_ErrorPropagatesToCaller()
+	{
+		if (_preventRunTests)
+		{
+			Assert.True(true);
+		}
+		else
+		{
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
+
+			// IHandler<TMessage>（Unit 响应）路径：处理程序抛出异常时，调用端应收到原始异常。
+			// 回归测试：修复前 IHandler<TMessage> 显式接口实现使用 ContinueWith(_ => Unit.Value)
+			// 会静默吞掉处理程序异常，导致调用方无法捕获。
+			var exception = await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
+			{
+				await _bus.SendAsync(new UserExceptionCommand(), null, cancellationToken: TestContext.Current.CancellationToken);
+			});
+
+			Assert.Equal("User not found", exception.Message);
+		}
+	}
 }

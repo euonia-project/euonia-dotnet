@@ -38,7 +38,7 @@ public sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
 	/// <summary>
 	/// 指示此执行器需要向请求方回复响应。
 	/// </summary>
-	protected override bool ReplyRequired => true;
+	protected bool ReplyRequired => true;
 
 	/// <summary>
 	/// 启动执行器，声明带有死信配置的队列，设置预取策略并开始消费请求消息。

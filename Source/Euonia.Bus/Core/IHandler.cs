@@ -42,8 +42,12 @@ public interface IHandler<in TMessage> : IHandler<TMessage, Unit>
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示异步操作的任务，完成后的结果为 <see cref="Unit.Value"/>。</returns>
-	Task<Unit> IHandler<TMessage, Unit>.HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken)
+	/// <remarks>
+	/// 通过 <c>await</c> 等待处理结果，确保处理程序中的异常能够正常传播到调用方。
+	/// </remarks>
+	async Task<Unit> IHandler<TMessage, Unit>.HandleAsync(TMessage message, IMessageContext context, CancellationToken cancellationToken)
 	{
-		return HandleAsync(message, context, cancellationToken).ContinueWith(_ => Unit.Value, cancellationToken);
+		await HandleAsync(message, context, cancellationToken).ConfigureAwait(false);
+		return Unit.Value;
 	}
 }

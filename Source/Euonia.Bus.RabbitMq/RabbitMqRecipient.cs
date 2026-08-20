@@ -66,11 +66,6 @@ public abstract class RabbitMqRecipient : DisposableObject
 	protected virtual IChannel Channel { get; set; }
 
 	/// <summary>
-	/// 获取或设置一个值，指示此接收器是否需要向发送方回复响应。
-	/// </summary>
-	protected abstract bool ReplyRequired { get; }
-
-	/// <summary>
 	/// 获取 RabbitMQ 消费者实例。
 	/// </summary>
 	/// <exception cref="InvalidOperationException">当 RabbitMQ 通道尚未初始化时抛出。</exception>
@@ -97,25 +92,21 @@ public abstract class RabbitMqRecipient : DisposableObject
 	/// <param name="context">消息上下文，用于跟踪处理状态与结果。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步消息处理操作的任务。</returns>
-	protected virtual Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
+	protected virtual async Task HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
-		return Handler.HandleAsync(channel, message, context, cancellationToken)
-		              .ContinueWith(task =>
-		              {
-			              if (task.IsFaulted)
-			              {
-				              // Handle the faulted task
-			              }
-		              }, cancellationToken);
-
-		// try
-		// {
-		// 	await _handler.HandleAsync(channel, message, context, cancellationToken);
-		// }
-		// catch (Exception exception)
-		// {
-		// 	_logger.LogError(exception, "Message '{Id}' Handle Error: {Message}", context.MessageId, exception.Message);
-		// }
+		try
+		{
+			var result = await Handler.HandleAsync(channel, message, context, cancellationToken);
+			context.Response(result);
+		}
+		catch (Exception exception)
+		{
+			context.Failure(exception);
+		}
+		finally
+		{
+			context.Complete(null);
+		}
 	}
 
 	// protected virtual void AcknowledgeMessage(ulong deliveryTag)
@@ -148,25 +139,21 @@ public abstract class RabbitMqRecipient : DisposableObject
 		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
 
 		var taskCompletion = new TaskCompletionSource<object>();
-		context.Responded += (_, a) =>
+		if (args.CancellationToken != CancellationToken.None)
 		{
-			taskCompletion.TrySetResult(a.Result);
-		};
-		context.Failed += (_, exception) =>
-		{
-			taskCompletion.TrySetException(exception);
-		};
-		context.Completed += (_, _) =>
-		{
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
-		};
+			args.CancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
+		}
 
 		RabbitMqReply<object> reply;
 
-		await HandleAsync(message.Channel, message.Payload, context);
-
 		try
 		{
+			context.Responded += OnResponded;
+			context.Failed += OnFailed;
+			context.Completed += OnCompleted;
+
+			await HandleAsync(message.Channel, message.Payload, context);
+
 			var result = await taskCompletion.Task;
 			reply = RabbitMqReply<object>.Success(result);
 		}
@@ -175,7 +162,7 @@ public abstract class RabbitMqRecipient : DisposableObject
 			reply = RabbitMqReply<object>.Failure(exception);
 		}
 
-		if (ReplyRequired && (!string.IsNullOrEmpty(props.CorrelationId) || !string.IsNullOrWhiteSpace(props.ReplyTo)))
+		if (!string.IsNullOrEmpty(props.CorrelationId) || !string.IsNullOrWhiteSpace(props.ReplyTo))
 		{
 			var replyProps = new BasicProperties();
 			replyProps.Headers ??= new Dictionary<string, object>();
@@ -189,6 +176,26 @@ public abstract class RabbitMqRecipient : DisposableObject
 		await Channel.BasicAckAsync(args.DeliveryTag, false);
 
 		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
+
+		void OnResponded(object s, MessageRepliedEventArgs e)
+		{
+			if (string.IsNullOrWhiteSpace(props.ReplyTo) && string.IsNullOrWhiteSpace(props.CorrelationId))
+			{
+				return;
+			}
+
+			taskCompletion.TrySetResult(e.Result);
+		}
+
+		void OnFailed(object s, Exception exception)
+		{
+			taskCompletion.TrySetException(exception);
+		}
+
+		void OnCompleted(object s, MessageHandledEventArgs e)
+		{
+			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
+		}
 	}
 
 	/// <summary>
