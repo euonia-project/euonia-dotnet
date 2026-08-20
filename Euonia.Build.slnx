@@ -37,10 +37,10 @@
         <Project Path="Source/Euonia.Mapping.Mapster/Euonia.Mapping.Mapster.csproj" />
     </Folder>
     <Folder Name="/Source/Threading/">
-        <Project Path="Source/Euonia.Threading/Euonia.Threading.csproj" />
-        <Project Path="Source/Euonia.Threading.Azure/Euonia.Threading.Azure.csproj" />
-        <Project Path="Source/Euonia.Threading.FileSystem/Euonia.Threading.FileSystem.csproj" />
-        <Project Path="Source/Euonia.Threading.Redis/Euonia.Threading.Redis.csproj" />
-        <Project Path="Source/Euonia.Threading.ZooKeeper/Euonia.Threading.ZooKeeper.csproj" />
+        <Project Path="Source/Euonia.Concurrency/Euonia.Concurrency.csproj" />
+        <Project Path="Source/Euonia.Concurrency.Azure/Euonia.Concurrency.Azure.csproj" />
+        <Project Path="Source/Euonia.Concurrency.FileSystem/Euonia.Concurrency.FileSystem.csproj" />
+        <Project Path="Source/Euonia.Concurrency.Redis/Euonia.Concurrency.Redis.csproj" />
+        <Project Path="Source/Euonia.Concurrency.ZooKeeper/Euonia.Concurrency.ZooKeeper.csproj" />
     </Folder>
 </Solution>
