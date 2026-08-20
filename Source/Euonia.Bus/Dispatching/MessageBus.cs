@@ -179,19 +179,19 @@ internal sealed class MessageBus : IBus
 		return RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName)
 			.ContinueWith(task =>
 			{
-				task.WaitAndUnwrapException();
 				if (task.IsFaulted)
 				{
+					var exception = task.Exception!.GetBaseException();
 					if (callback != null)
 					{
-						callback.OnError(task.Exception.GetBaseException());
+						callback.OnError(exception);
 					}
 					else
 					{
-						throw task.Exception;
+						throw exception;
 					}
 				}
-				else
+				else if (!task.IsCanceled)
 				{
 					callback?.OnNext(task.Result);
 				}
