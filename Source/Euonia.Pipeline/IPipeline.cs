@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Pipeline;
 public interface IPipeline
 {
 	/// <summary>
-	/// 获取管道中注册的组件列表。
+	/// 获取管道中注册的组件列表，按执行顺序排列（优先级小的在前，同优先级按注册顺序）。
 	/// </summary>
 	IReadOnlyList<PipelineDelegateComponent> Components { get; }
 
@@ -111,7 +111,7 @@ public interface IPipeline
 public interface IPipeline<TRequest, TResponse>
 {
 	/// <summary>
-	/// 获取管道中注册的组件列表。
+	/// 获取管道中注册的组件列表，按执行顺序排列（优先级小的在前，同优先级按注册顺序）。
 	/// </summary>
 	IReadOnlyList<PipelineDelegateComponent<TRequest, TResponse>> Components { get; }
 

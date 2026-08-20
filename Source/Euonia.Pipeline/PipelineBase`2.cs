@@ -111,7 +111,7 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>返回当前的 <see cref="IPipeline{TRequest, TResponse}"/> 实例，以便进行链式调用。</returns>
 	public virtual IPipeline<TRequest, TResponse> Use(Type type, int priority, params object[] args)
 	{
-		return Use(next => GetNext(next, type, args), priority);
+		return AddComponent(next => GetNext(next, type, args), priority);
 	}
 
 	/// <summary>
@@ -148,16 +148,15 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>返回当前的 <see cref="IPipeline{TRequest, TResponse}"/> 实例，以便进行链式调用。</returns>
 	public virtual IPipeline<TRequest, TResponse> UseOf(Type contextType, bool useAheadOfOthers = false)
 	{
-		IPipeline<TRequest, TResponse> pipeline = this;
 		var attributes = contextType.GetCustomAttributes<PipelineBehaviorAttribute>(true).ToList();
 		foreach (var attribute in attributes)
 		{
 			// 置于最前：使用最小优先级，保证最先执行；否则使用特性声明的优先级。
 			var priority = useAheadOfOthers ? int.MinValue : attribute.Priority;
-			pipeline = Use(next => GetNext(next, attribute.BehaviorType), priority);
+			Use(next => GetNext(next, attribute.BehaviorType), priority);
 		}
 
-		return pipeline;
+		return this;
 	}
 
 	/// <summary>
@@ -177,8 +176,12 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 			// 因此只能从最内层的终结点（app）开始、按执行顺序的逆序逐层向外包装：
 			// 优先级最高（最后执行）的组件最先被包装，成为最内层；
 			// 优先级最低（最先执行）的组件最后被包装，成为最外层。
-			return Components.Reverse()
-			                 .Aggregate(app, (current, component) => component(current));
+			// 直接按 (优先级, 注册序号) 降序聚合即可得到该包装顺序，
+			// 避免经 Components 属性重复排序并再经 Reverse 缓冲一次。
+			return _components
+				.OrderByDescending(c => c.Priority)
+				.ThenByDescending(c => c.Sequence)
+				.Aggregate(app, (current, c) => c.Component(current));
 		}
 		finally
 		{
