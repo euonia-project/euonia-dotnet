@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Mapping;
 
 /// <summary>
-/// The converter used to convert <see cref="byte"/> array to <see cref="long"/>.
+/// 用于将 <see cref="byte"/> 数组转换为 <see cref="long"/> 的映射注册。
 /// </summary>
 public class ByteArrayToInt64Converter : IRegister
 {

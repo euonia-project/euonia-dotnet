@@ -3,16 +3,16 @@
 namespace Nerosoft.Euonia.Mapping;
 
 /// <summary>
-/// The <see cref="ITypeAdapterFactory"/> implementation use Mapster.
+/// 使用 Mapster 实现 <see cref="ITypeAdapterFactory"/>。
 /// </summary>
 public class MapsterTypeAdapterFactory : ITypeAdapterFactory
 {
     private readonly IMapper _mapper;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="MapsterTypeAdapterFactory"/> class.
+    /// 初始化 <see cref="MapsterTypeAdapterFactory"/> 的新实例。
     /// </summary>
-    /// <param name="mapper"></param>
+    /// <param name="mapper">用于创建类型适配器的 Mapster 映射器。</param>
     public MapsterTypeAdapterFactory(IMapper mapper)
     {
         _mapper = mapper;

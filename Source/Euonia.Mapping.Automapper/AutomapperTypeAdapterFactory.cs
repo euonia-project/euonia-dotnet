@@ -3,16 +3,16 @@
 namespace Nerosoft.Euonia.Mapping;
 
 /// <summary>
-/// The <see cref="ITypeAdapterFactory"/> implementation use automapper.
+/// 使用 AutoMapper 实现 <see cref="ITypeAdapterFactory"/>。
 /// </summary>
 public class AutomapperTypeAdapterFactory : ITypeAdapterFactory
 {
     private readonly IMapper _mapper;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="AutomapperTypeAdapterFactory"/> class.
+    /// 初始化 <see cref="AutomapperTypeAdapterFactory"/> 的新实例。
     /// </summary>
-    /// <param name="mapper"></param>
+    /// <param name="mapper">用于创建类型适配器的 AutoMapper 映射器。</param>
     public AutomapperTypeAdapterFactory(IMapper mapper)
     {
         _mapper = mapper;
