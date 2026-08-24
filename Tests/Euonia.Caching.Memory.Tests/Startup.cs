@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Nerosoft.Euonia.Caching.Memory;
 
 namespace Nerosoft.Euonia.Caching.Tests;
 
@@ -17,7 +18,12 @@ public class Startup
                    })
                    .ConfigureServices((_, services) =>
                    {
-                       services.AddDefaultCacheManager<Startup>();
+                       services.AddOptions<MemoryCacheOptions>()
+                               .Configure(options =>
+                               {
+                                   options.InstanceName = "memory-tests";
+                               });
+                       services.AddSingleton<ICacheService, MemoryCacheService>();
                    });
     }
 
