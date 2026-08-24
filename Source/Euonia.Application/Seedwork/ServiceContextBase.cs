@@ -23,8 +23,13 @@ public abstract class ServiceContextBase : IServiceContext
     /// <inheritdoc />
     public virtual bool AutoRegisterPipelineBehaviors => true;
 
-    /// <inheritdoc />
-    public virtual void ConfigureServices(IServiceCollection services)
+	/// <summary>
+	/// 获取应用服务的生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。
+	/// </summary>
+	public virtual ServiceLifetime ApplicationServiceLifetime => ServiceLifetime.Scoped;
+
+	/// <inheritdoc />
+	public virtual void ConfigureServices(IServiceCollection services)
     {
     }
 }
