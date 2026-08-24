@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Mapping;
 
 /// <summary>
-/// Base contract for adapter factory
+/// 类型适配器工厂的基础契约。
 /// </summary>
 public interface ITypeAdapterFactory
 {
     /// <summary>
-    /// Create a type adapter
+    /// 创建一个类型适配器。
     /// </summary>
-    /// <returns>The created <see cref="ITypeAdapter"/></returns>
+    /// <returns>所创建的 <see cref="ITypeAdapter"/>。</returns>
     ITypeAdapter Create();
 }

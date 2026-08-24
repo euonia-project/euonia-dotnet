@@ -34,4 +34,4 @@ jobs:
       run: dotnet build Euonia.Test.slnx --configuration Release --no-restore
       
     - name: Test
-      run: dotnet test Euonia.Test.slnx --no-restore --verbosity normal
+      run: dotnet test --solution Euonia.Test.slnx --no-restore --verbosity normal

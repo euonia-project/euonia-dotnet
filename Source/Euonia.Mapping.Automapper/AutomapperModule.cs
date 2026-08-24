@@ -5,8 +5,12 @@ using Nerosoft.Euonia.Modularity;
 namespace Nerosoft.Euonia.Mapping;
 
 /// <summary>
-/// The module used to configure automapper services.
+/// 用于配置 AutoMapper 服务的模块。
 /// </summary>
+/// <remarks>
+/// 注册 AutoMapper 映射服务，并以键为 <c>"automapper"</c> 的单例形式
+/// 注册 <see cref="ITypeAdapterFactory"/>；应用初始化时将当前工厂设置为 <see cref="TypeAdapterFactory"/> 的当前工厂。
+/// </remarks>
 public class AutomapperModule : ModuleContextBase
 {
 	private const string SERVICE_KEY = "automapper";
