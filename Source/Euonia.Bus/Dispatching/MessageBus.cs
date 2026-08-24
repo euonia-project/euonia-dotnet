@@ -291,9 +291,9 @@ internal sealed class MessageBus : IBus
 	/// <param name="handler">用于处理请求的委托。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
-		return handler(_provider, cancellationToken);
+		return handler(_provider);
 	}
 
 	/// <summary>

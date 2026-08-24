@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Subjects;
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
@@ -262,7 +263,7 @@ public interface IBus
 	/// <param name="handler">用于处理请求的委托。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	Task<TResult> CallAsync<TResult>(Func<IServiceProvider, CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default);
+	Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 使用指定的处理程序调用请求处理程序并返回结果。
@@ -271,9 +272,24 @@ public interface IBus
 	/// <param name="handler">用于处理请求的委托。</param>
 	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	Task<TResult> CallAsync<TResult>(Func<CancellationToken, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	Task<TResult> CallAsync<TResult>(Func<Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
-		return handler(cancellationToken);
+		return handler();
+	}
+
+	/// <summary>
+	/// 使用指定的处理程序调用请求处理程序并返回结果。
+	/// </summary>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <typeparam name="TService">请求处理程序所依赖的服务类型。</typeparam>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	/// <exception cref="ArgumentNullException"></exception>
+	Task<TResult> CallAsync<TService, TResult>(Func<TService, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+		return CallAsync(provider => handler(provider.GetRequiredService<TService>()), cancellationToken);
 	}
 }
