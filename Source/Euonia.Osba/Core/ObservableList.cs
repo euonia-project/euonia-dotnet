@@ -19,6 +19,26 @@ namespace Nerosoft.Euonia.Osba;
 /// <typeparam name="TItem">可观察列表中包含的元素类型。</typeparam>
 public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 {
+	/// <summary>
+	/// 初始化 ObservableList 的新实例，该实例为空且具有默认的初始容量。
+	/// </summary>
+	public ObservableList()
+	{
+	}
+
+	/// <summary>
+	/// 使用指定的集合初始化 ObservableList 的新实例，并为每个项附加事件处理程序以监视其更改。
+	/// </summary>
+	/// <param name="collection">用于初始化列表的集合。</param>
+	public ObservableList(IEnumerable<TItem> collection)
+		: base(collection)
+	{
+		foreach (var item in collection)
+		{
+			AddEventHooks(item);
+		}
+	}
+
 	private EventHandler<ObjectChangedEventArgs> _childChanged;
 
 	/// <summary>
