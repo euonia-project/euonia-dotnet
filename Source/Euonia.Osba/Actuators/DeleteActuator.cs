@@ -8,7 +8,7 @@
 /// 在基类执行流程的后续处理阶段，将目标对象标记为已删除（<see cref="ObjectEditState.Deleted"/>），
 /// 从而确保在 <see cref="ActuatorBase{TTarget}.ExecuteAsync(CancellationToken)"/> 保存阶段按删除语义持久化。
 /// </remarks>
-public class DeleteActuator<TTarget> : ActuatorBase<TTarget>
+public class DeleteActuator<TTarget> : EditableActuator<TTarget>
 	where TTarget : EditableObject<TTarget>
 {
 	/// <summary>

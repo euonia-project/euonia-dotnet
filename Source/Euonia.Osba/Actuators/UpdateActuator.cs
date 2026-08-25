@@ -9,7 +9,7 @@
 /// 但其属性已发生变更，则自动将其标记为已更改（<see cref="ObjectEditState.Changed"/>），
 /// 从而确保在 <see cref="ActuatorBase{TTarget}.ExecuteAsync(CancellationToken)"/> 保存阶段能被持久化。
 /// </remarks>
-public class UpdateActuator<TTarget> : ActuatorBase<TTarget>
+public class UpdateActuator<TTarget> : EditableActuator<TTarget>
 	where TTarget : EditableObject<TTarget>
 {
 	/// <summary>

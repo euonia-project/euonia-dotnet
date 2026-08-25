@@ -8,7 +8,7 @@
 /// 在基类执行流程的后续处理阶段，将目标对象标记为新增（<see cref="ObjectEditState.New"/>），
 /// 从而确保在 <see cref="ActuatorBase{TTarget}.ExecuteAsync(CancellationToken)"/> 保存阶段按插入语义持久化。
 /// </remarks>
-public class CreateActuator<TTarget> : ActuatorBase<TTarget>
+public class CreateActuator<TTarget> : EditableActuator<TTarget>
 	where TTarget : EditableObject<TTarget>
 {
 	/// <summary>
