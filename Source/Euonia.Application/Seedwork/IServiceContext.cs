@@ -24,6 +24,11 @@ public interface IServiceContext
 	bool AutoRegisterPipelineBehaviors { get; }
 
 	/// <summary>
+	/// 获取应用服务的生命周期。
+	/// </summary>
+	ServiceLifetime ApplicationServiceLifetime { get; }
+
+	/// <summary>
 	/// 配置应用所需的服务。
 	/// </summary>
 	/// <param name="services">用于注册应用服务的服务集合。</param>

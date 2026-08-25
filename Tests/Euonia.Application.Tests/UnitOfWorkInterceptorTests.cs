@@ -68,7 +68,7 @@ public class UnitOfWorkInterceptorTests
 			services.AddSingleton<ProxyGenerator>();
 			services.AddTransient<ILazyServiceProvider, LazyServiceProvider>();
 			services.AddTransient<IInterceptor, UnitOfWorkInterceptor>();
-			services.AddApplicationService(typeof(UowTestService).Assembly);
+			services.AddApplicationService(typeof(UowTestService).Assembly, ServiceLifetime.Scoped);
 
 			Provider = services.BuildServiceProvider();
 		}

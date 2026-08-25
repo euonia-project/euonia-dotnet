@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
 
 					if (context.AutoRegisterApplicationService)
 					{
-						services.AddApplicationService(definedTypes);
+						services.AddApplicationService(definedTypes, context.ApplicationServiceLifetime);
 					}
 
 					if (context.AutoRegisterPipelineBehaviors)
@@ -109,10 +109,11 @@ public static class ServiceCollectionExtensions
 		/// 扫描指定程序集中的应用服务并注册到 <see cref="IServiceCollection"/>。
 		/// </summary>
 		/// <param name="assembly">包含应用服务的程序集；为 <c>null</c> 时直接返回。</param>
+		/// <param name="lifetime">应用服务的生命周期。</param>
 		/// <remarks>
 		/// 仅注册继承自 <see cref="IApplicationService"/> 的非抽象类。
 		/// </remarks>
-		public void AddApplicationService(Assembly assembly)
+		public void AddApplicationService(Assembly assembly, ServiceLifetime lifetime)
 		{
 			if (assembly == null)
 			{
@@ -120,9 +121,9 @@ public static class ServiceCollectionExtensions
 			}
 
 			var definedTypes = AssemblyHelper.GetDefinedTypes(assembly)
-			                                 .ToArray();
+											 .ToArray();
 
-			services.AddApplicationService(definedTypes);
+			services.AddApplicationService(definedTypes, lifetime);
 		}
 
 		/// <summary>
@@ -147,12 +148,13 @@ public static class ServiceCollectionExtensions
 		/// 将给定类型中继承自 <see cref="IApplicationService"/> 的非抽象类注册为应用服务。
 		/// </summary>
 		/// <param name="definedTypes">待扫描的类型集合。</param>
+		/// <param name="lifetime">应用服务的生命周期。</param>
 		/// <remarks>
 		/// 每个实现类型都会注册：原始实例持有者（Scoped）、实现类代理（Scoped）以及全部业务接口代理（Scoped）。
 		/// 业务接口为排除 <see cref="_frameworkInterfaces"/> 之后由实现类公开的接口；
 		/// 接口代理与类代理在同一个作用域内共享同一个目标实例。
 		/// </remarks>
-		private void AddApplicationService(TypeInfo[] definedTypes)
+		private void AddApplicationService(TypeInfo[] definedTypes, ServiceLifetime lifetime)
 		{
 			if (!definedTypes.Any())
 			{
@@ -175,10 +177,21 @@ public static class ServiceCollectionExtensions
 				// 实现类直接解析也走代理（类代理），避免绕过拦截器；
 				// 仅注册业务接口；IDisposable、IHasLazyServiceProvider 等框架接口不创建代理。
 				var interfaces = implementationType.GetInterfaces()
-				                                   .Where(interfaceType => !_frameworkInterfaces.Contains(interfaceType))
-				                                   .ToArray();
+												   .Where(interfaceType => !_frameworkInterfaces.Contains(interfaceType))
+												   .ToArray();
 
-				services.AddScoped(implementationType, provider => CreateImplementationProxy(provider, implementationType, holderType));
+				switch (lifetime)
+				{
+					case ServiceLifetime.Singleton:
+						services.AddSingleton(implementationType, provider => CreateImplementationProxy(provider, implementationType, holderType));
+						break;
+					case ServiceLifetime.Scoped:
+						services.AddScoped(implementationType, provider => CreateImplementationProxy(provider, implementationType, holderType));
+						break;
+					case ServiceLifetime.Transient:
+						services.AddTransient(implementationType, provider => CreateImplementationProxy(provider, implementationType, holderType));
+						break;
+				}
 
 				if (interfaces.Length == 0)
 				{
@@ -187,7 +200,18 @@ public static class ServiceCollectionExtensions
 
 				foreach (var serviceType in interfaces)
 				{
-					services.TryAddScoped(serviceType, provider => CreateInterfaceProxy(provider, holderType, serviceType));
+					switch (lifetime)
+					{
+						case ServiceLifetime.Singleton:
+							services.TryAddSingleton(serviceType, provider => CreateInterfaceProxy(provider, holderType, serviceType));
+							break;
+						case ServiceLifetime.Scoped:
+							services.TryAddScoped(serviceType, provider => CreateInterfaceProxy(provider, holderType, serviceType));
+							break;
+						case ServiceLifetime.Transient:
+							services.TryAddTransient(serviceType, provider => CreateInterfaceProxy(provider, holderType, serviceType));
+							break;
+					}
 				}
 			}
 		}
@@ -260,8 +284,8 @@ public static class ServiceCollectionExtensions
 			foreach (var behaviorType in behaviorTypes)
 			{
 				var interfaces = behaviorType.GetInterfaces()
-				                             .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>))
-				                             .ToList();
+											 .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IPipelineBehavior<,>))
+											 .ToList();
 				foreach (var @interface in interfaces)
 				{
 					if (behaviorType.IsGenericType)

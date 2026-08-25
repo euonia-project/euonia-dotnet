@@ -8,7 +8,7 @@
 /// 在基类执行流程的后续处理阶段，将目标对象标记为已删除（<see cref="ObjectEditState.Deleted"/>），
 /// 从而确保在 <see cref="ActuatorBase{TTarget}.ExecuteAsync(CancellationToken)"/> 保存阶段按删除语义持久化。
 /// </remarks>
-public class DeleteActuator<TTarget> : ActuatorBase<TTarget>
+public class DeleteActuator<TTarget> : EditableActuator<TTarget>
 	where TTarget : EditableObject<TTarget>
 {
 	/// <summary>
@@ -28,7 +28,7 @@ public class DeleteActuator<TTarget> : ActuatorBase<TTarget>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>表示异步操作的 <see cref="Task"/>。</returns>
 	/// <remarks>
-	/// 无条件调用 <see cref="EditableObject{T}.MarkAsDeleted"/> 将目标对象的状态标记为
+	/// 无条件调用 <see cref="ObservableObject{T}.MarkAsDeleted"/> 将目标对象的状态标记为
 	/// <see cref="ObjectEditState.Deleted"/>，随后委托给基类实现。
 	/// </remarks>
 	protected override Task ContinueHandleAsync(TTarget target, CancellationToken cancellationToken = default)
