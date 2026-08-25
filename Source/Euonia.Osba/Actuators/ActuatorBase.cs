@@ -86,7 +86,7 @@ public abstract class ActuatorBase<TTarget>
 	/// </summary>
 	/// <remarks>
 	/// 整个流程通过 <see cref="ActuatorBuilder{TTarget}"/> 的执行管道运行；若构建器启用了工作单元，
-	/// 处理逻辑将在事务边界内执行，且仅在对象状态发生变更（<see cref="EditableObject{T}.IsChanged"/>）时才保存。
+	/// 处理逻辑将在事务边界内执行，且仅在对象状态发生变更（<see cref="ObservableObject{T}.IsChanged"/>）时才保存。
 	/// 领域事件的自动发布逻辑当前已注释停用。
 	/// </remarks>
 	/// <param name="cancellationToken">取消操作的令牌。</param>

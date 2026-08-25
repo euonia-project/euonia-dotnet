@@ -29,8 +29,8 @@ public class UpdateActuator<TTarget> : ActuatorBase<TTarget>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>表示异步操作的 <see cref="Task"/>。</returns>
 	/// <remarks>
-	/// 仅当目标对象的 <see cref="EditableObject{T}.State"/> 为 <see cref="ObjectEditState.None"/> 且
-	/// <see cref="EditableObject{T}.HasChangedProperties"/> 为 <c>true</c> 时，调用 <see cref="EditableObject{T}.MarkAsChanged"/> 更新其状态；
+	/// 仅当目标对象的 <see cref="ObservableObject{T}.State"/> 为 <see cref="ObjectEditState.None"/> 且
+	/// <see cref="BusinessObject.HasChangedProperties"/> 为 <c>true</c> 时，调用 <see cref="ObservableObject{T}.MarkAsChanged"/> 更新其状态；
 	/// 否则原样保留对象状态，随后委托给基类实现。
 	/// </remarks>
 	protected override Task ContinueHandleAsync(TTarget target, CancellationToken cancellationToken = default)
