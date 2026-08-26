@@ -28,7 +28,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
 	{
 		var opts = options.Value;
-		Name = opts.Name ?? nameof(InMemoryTransporter);
+		Name = opts.Name ?? Constants.DefaultTransportName;
 		_logger = logger.CreateLogger<InMemoryTransporter>();
 	}
 

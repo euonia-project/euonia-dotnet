@@ -47,6 +47,7 @@ public class FacadeServiceModule : ModuleContextBase
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.Register<FacadeServiceContext>();
+		context.Services.AddMessageHandler(ServiceLifetime.Scoped, typeof(FacadeServiceModule).Assembly);
 		context.Services.AddConfiguratorBuilder(config =>
 		{
 			config.RegisterChannel(typeof(FacadeServiceModule).Assembly)

@@ -5,13 +5,13 @@ namespace Nerosoft.Euonia.Bus.Behaviors;
 
 internal sealed class OutgoingLoggingBehavior<TMessage, TResult> : IPipelineBehavior<IMessageEnvelope<TMessage>, TResult>
 {
-	private readonly ILogger<OutgoingLoggingBehavior<TMessage, TResult>> _logger;
+	private readonly ILogger _logger;
 	private readonly string _transport;
 
-	public OutgoingLoggingBehavior(string transport, ILoggerFactory logger)
+	public OutgoingLoggingBehavior(string transport, ILogger logger)
 	{
 		_transport = transport;
-		_logger = logger.CreateLogger<OutgoingLoggingBehavior<TMessage, TResult>>();
+		_logger = logger;
 	}
 
 	public Task<TResult> HandleAsync(IMessageEnvelope<TMessage> context, PipelineDelegate<IMessageEnvelope<TMessage>, TResult> next)

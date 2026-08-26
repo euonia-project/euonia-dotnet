@@ -43,7 +43,7 @@ public class RabbitMqTransporter : ITransporter
 		_logger = logger.CreateLogger<RabbitMqTransporter>();
 		_connection = connection;
 		_options = options.Value;
-		Name = _options.Name ?? nameof(RabbitMqTransporter);
+		Name = _options.Name ?? Constants.DefaultTransportName;
 	}
 
 	/// <summary>

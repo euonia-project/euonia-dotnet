@@ -13,7 +13,7 @@ public class RabbitMqBusOptions
 	/// <summary>
 	/// 获取或设置传输器名称。
 	/// </summary>
-	public string Name { get; set; } = "rabbitmq";
+	public string Name { get; set; } = Constants.DefaultTransportName;
 
 	/// <summary>
 	/// 获取或设置 RabbitMQ 连接字符串。
