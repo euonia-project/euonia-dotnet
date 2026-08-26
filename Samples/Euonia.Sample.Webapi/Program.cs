@@ -11,6 +11,7 @@ public class Program
 		static void HostBuilderOptionsAction(HostBuilderOptions options)
 		{
 			options.EnableHttp2 = true;
+			options.UseAutofac = false;
 			//options.ConfigureWebHostBuilder = WebHostBuilderAction;
 			options.ConfigureHostBuilder = builder =>
 			{

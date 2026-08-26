@@ -8,9 +8,9 @@ namespace Nerosoft.Euonia.Sample.Business.Handlers;
 
 internal sealed class UserCommandHandler(IObjectFactory factory, IActuator actuator)
 	: CommandHandlerBase(factory, actuator),
-	  IHandler<UserCreateCommand>
+	  IHandler<UserCreateCommand,string>
 {
-	public Task HandleAsync(UserCreateCommand message, IMessageContext context, CancellationToken cancellationToken = default)
+	public Task<string> HandleAsync(UserCreateCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		return Actuator.For<User>()
 		               .Create(message.Username, cancellationToken)
@@ -22,6 +22,7 @@ internal sealed class UserCommandHandler(IObjectFactory factory, IActuator actua
 			               business.SetPassword(message.Password);
 		               })
 		               .ExecuteAsync(cancellationToken)
-		               .NextAsync(context.Response);
+		               .ReturnAsync(target => target.Id);
+		//.NextAsync(context.Response);
 	}
 }

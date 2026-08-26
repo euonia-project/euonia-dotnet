@@ -1,5 +1,5 @@
-﻿using System.Reactive.Subjects;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System.Collections.Concurrent;
+using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Modularity;
@@ -28,11 +28,6 @@ namespace Nerosoft.Euonia.Bus;
 internal sealed class MessageBus : IBus
 {
 	/// <summary>
-	/// 日志工厂实例
-	/// </summary>
-	private readonly ILoggerFactory _logger;
-
-	/// <summary>
 	/// 负责确定给定消息类型应使用哪些传输器的分发器。
 	/// </summary>
 	private readonly IDispatcher _dispatcher;
@@ -43,9 +38,9 @@ internal sealed class MessageBus : IBus
 	private readonly IRequestContextAccessor _requestAccessor;
 
 	/// <summary>
-	/// 用于解析依赖项和传输实现的服务提供程序。
+	/// 用于依赖解析的服务访问器，提供对服务提供程序的访问。
 	/// </summary>
-	private readonly IServiceProvider _provider;
+	private readonly IServiceAccessor _accessor;
 
 	/// <summary>
 	/// 消息总线配置器，提供消息约定、注册信息和默认传输器配置。
@@ -53,31 +48,22 @@ internal sealed class MessageBus : IBus
 	private readonly IConfigurator _configurator;
 
 	/// <summary>
-	/// 初始化 <see cref="MessageBus"/> 类的新实例。
+	/// 已注册的传输器集合，按名称索引，用于实际的消息传输操作。
 	/// </summary>
-	/// <param name="provider">用于依赖解析的服务提供程序。</param>
-	/// <param name="configurator">消息总线设置的配置器。</param>
-	/// <param name="dispatcher">用于确定消息传输的分发器。</param>
-	/// <param name="logger">用于创建日志记录器的日志工厂。</param>
-	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger)
-	{
-		_logger = logger;
-		_dispatcher = dispatcher;
-		_provider = provider;
-		_configurator = configurator;
-	}
+	private readonly ConcurrentDictionary<string, ITransporter> _transporters = new();
 
 	/// <summary>
 	/// 初始化 <see cref="MessageBus"/> 类的新实例，并支持请求上下文。
 	/// </summary>
-	/// <param name="provider">用于依赖解析的服务提供程序。</param>
+	/// <param name="accessor">用于依赖解析的服务访问器。</param>
 	/// <param name="configurator">消息总线设置的配置器。</param>
 	/// <param name="dispatcher">用于确定消息传输的分发器。</param>
-	/// <param name="logger">用于创建日志记录器的日志工厂。</param>
 	/// <param name="requestAccessor">用于检索当前请求上下文的访问器。</param>
-	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, ILoggerFactory logger, IRequestContextAccessor requestAccessor)
-		: this(provider, configurator, dispatcher, logger)
+	public MessageBus(IServiceAccessor accessor, IConfigurator configurator, IDispatcher dispatcher, IRequestContextAccessor requestAccessor)
 	{
+		_dispatcher = dispatcher;
+		_accessor = accessor;
+		_configurator = configurator;
 		_requestAccessor = requestAccessor;
 	}
 
@@ -293,7 +279,7 @@ internal sealed class MessageBus : IBus
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
 	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
-		return handler(_provider);
+		return handler(_accessor.ServiceProvider);
 	}
 
 	/// <summary>
@@ -311,21 +297,20 @@ internal sealed class MessageBus : IBus
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
 	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName)
 	{
-		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
+		var pipeline = _accessor.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
-		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _logger);
+		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _accessor.GetService<ILogger<MessageBus>>());
 		pipeline.UseOf(pack.Payload.GetType(), true);
 
 		behavior?.Invoke(pipeline);
 
 		return pipeline.RunAsync(pack, async (message) =>
 		{
-			var transport = _provider.GetKeyedService<ITransporter>(transportName);
-			if (transport == null)
+			var transport = _transporters.GetOrAdd(transportName, name =>
 			{
-				throw new MessageTransportException($"The transport '{transportName}' is not registered.");
-			}
-
+				var service = _accessor.GetKeyedService<ITransporter>(name);
+				return service ?? throw new MessageTransportException($"The transport '{name}' is not registered.");
+			});
 			return await next(transport, message);
 		});
 	}

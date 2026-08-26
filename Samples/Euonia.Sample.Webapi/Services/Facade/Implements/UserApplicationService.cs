@@ -28,12 +28,7 @@ internal class UserApplicationService : BaseApplicationService, IUserApplication
 		var tcs = new TaskCompletionSource<string>();
 
 		var subject = new Subject<string>();
-		subject.Subscribe
-		(
-			id => tcs.SetResult(id),
-			ex => tcs.SetException(ex),
-			() => tcs.TrySetResult(null)
-		);
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;

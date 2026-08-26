@@ -1,4 +1,3 @@
-
 using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Modularity;
@@ -8,21 +7,18 @@ namespace Nerosoft.Euonia.Modularity;
 /// </summary>
 public class RequestContextAccessor : IRequestContextAccessor
 {
-	private readonly DefaultRequestContextAccessor _defaultAccessor;
-	private readonly DelegateRequestContextAccessor _delegateAccessor;
 	private readonly RequestContextAccessorOptions _options;
+	private readonly IServiceAccessor _service;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="RequestContextAccessor"/> class.
 	/// </summary>
 	/// <param name="options"></param>
-	/// <param name="defaultAccessor"></param>
-	/// <param name="delegateAccessor"></param>
-	public RequestContextAccessor(IOptions<RequestContextAccessorOptions> options, DefaultRequestContextAccessor defaultAccessor, DelegateRequestContextAccessor delegateAccessor)
+	/// <param name="service"></param>
+	public RequestContextAccessor(IOptions<RequestContextAccessorOptions> options, IServiceAccessor service)
 	{
 		_options = options.Value;
-		_defaultAccessor = defaultAccessor;
-		_delegateAccessor = delegateAccessor;
+		_service = service;
 	}
 
 	/// <summary>
@@ -32,13 +28,13 @@ public class RequestContextAccessor : IRequestContextAccessor
 	{
 		get
 		{
-			if(_options.UseDefaultAccessor)
+			if (_options.UseDefaultAccessor)
 			{
-				return _defaultAccessor?.Context;
+				return _service.GetService<DefaultRequestContextAccessor>().Context;
 			}
 			else
 			{
-				return _delegateAccessor();
+				return _service.GetService<DelegateRequestContextAccessor>().Invoke();
 			}
 		}
 	}

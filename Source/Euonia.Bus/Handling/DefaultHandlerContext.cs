@@ -17,7 +17,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	public event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
 
 	private readonly ConcurrentDictionary<string, List<HandlerFactory>> _handlerContainer = new();
-	private readonly IServiceProvider _provider;
+	private readonly IServiceAccessor _provider;
 	private readonly ILogger<DefaultHandlerContext> _logger;
 	private readonly IConfigurator _configurator;
 
@@ -26,9 +26,9 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	/// <summary>
 	/// 初始化 <see cref="DefaultHandlerContext"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">用于解析处理程序、日志记录器和其他服务的服务提供程序。</param>
+	/// <param name="provider">用于解析处理程序、日志记录器和其他服务的服务访问器。</param>
 	/// <param name="configurator">用于配置消息总线的配置器。</param>
-	public DefaultHandlerContext(IServiceProvider provider, IConfigurator configurator)
+	public DefaultHandlerContext(IServiceAccessor provider, IConfigurator configurator)
 	{
 		_provider = provider;
 		_configurator = configurator;
@@ -164,7 +164,6 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	{
 		ArgumentNullException.ThrowIfNull(message);
 
-		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
 		if (!_handlerContainer.TryGetValue(channel, out var factories) || factories == null || factories.Count == 0)
 		{
 			throw new InvalidOperationException($"No handler registered for message {context.MessageId} on channel {channel}");
@@ -175,7 +174,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 
 		object result;
 
-		var handlers = factories.Select(factory => factory(scope.ServiceProvider)).ToList();
+		var handlers = factories.Select(factory => factory(_provider.ServiceProvider)).ToList();
 
 		if (!Convention.IsMulticast(channel, message.GetType()))
 		{
