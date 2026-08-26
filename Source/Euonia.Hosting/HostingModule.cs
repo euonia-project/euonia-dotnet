@@ -47,14 +47,11 @@ public class HostingModule : ModuleContextBase
 
 		// 为 IServiceAccessor 设置 ServiceProvider。
 		app.Use((httpContext, next) =>
-		{
-			var accessor = httpContext.RequestServices.GetService<IServiceAccessor>();
-			if (accessor != null)
-			{
-				accessor.ServiceProvider = httpContext.RequestServices;
-			}
-
-			return next();
-		});
+		   {
+			   var accessor = httpContext.RequestServices.GetService<IServiceAccessor>();
+			   accessor?.ServiceProvider = httpContext.RequestServices;
+			   return next();
+		   })
+		   .UseDefaultRequestContextAccessor();
 	}
 }

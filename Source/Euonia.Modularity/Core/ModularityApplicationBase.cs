@@ -23,7 +23,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
         services.AddSingleton<IModularityApplication>(this);
         services.AddSingleton<IModuleContainer>(this);
         services.TryAddSingleton<IServiceAccessor, ServiceAccessor>();
-        services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
+        services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
         services.AddCoreServices();
         services.AddCoreServices(this, options);
 

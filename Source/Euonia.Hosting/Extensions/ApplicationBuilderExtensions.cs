@@ -111,15 +111,9 @@ public static class ApplicationBuilderExtensions
 			var application = app.ApplicationServices.GetRequiredService<IApplicationWithServiceProvider>();
 			var applicationLifetime = app.ApplicationServices.GetRequiredService<IHostApplicationLifetime>();
 
-			applicationLifetime.ApplicationStopping.Register(() =>
-			{
-				application.Shutdown();
-			});
+			applicationLifetime.ApplicationStopping.Register(application.Shutdown);
 
-			applicationLifetime.ApplicationStopped.Register(() =>
-			{
-				application.Dispose();
-			});
+			applicationLifetime.ApplicationStopped.Register(application.Dispose);
 
 			application.Initialize(app.ApplicationServices);
 		}
