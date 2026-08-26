@@ -50,7 +50,7 @@ public interface IServiceAccessor : ISingletonDependency
 	/// <param name="key">用于标识服务注册的键名。</param>
 	/// <typeparam name="T">要解析的服务类型。</typeparam>
 	/// <returns>与指定键关联的服务实例；如果未注册该类型，则返回 <c>null</c>。</returns>
-	T GetKeyedService<T>(object key) => ServiceProvider.GetKeyedService<T>(key);
+	T GetKeyedService<T>(object key);
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中按指定键解析必需的服务实例。
@@ -61,7 +61,7 @@ public interface IServiceAccessor : ISingletonDependency
 	/// <exception cref="InvalidOperationException">
 	/// 当请求的服务类型与指定键的组合未在 IoC 容器中注册时抛出。
 	/// </exception>
-	T GetRequiredKeyedService<T>(object name) => ServiceProvider.GetRequiredKeyedService<T>(name);
+	T GetRequiredKeyedService<T>(object name);
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中按 <see cref="Type"/> 解析服务实例。

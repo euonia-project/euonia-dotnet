@@ -18,7 +18,7 @@ namespace System;
 /// </para>
 /// </remarks>
 /// <seealso cref="IServiceAccessor"/>
-public class ServiceAccessor : IServiceAccessor
+public class ServiceAccessor(IServiceScopeFactory factory) : IServiceAccessor
 {
 	/// <summary>
 	/// 使用 <see cref="AsyncLocal{T}"/> 存储当前异步执行流中的 <see cref="IServiceProvider"/> 实例。
@@ -35,18 +35,30 @@ public class ServiceAccessor : IServiceAccessor
 	/// <inheritdoc/>
 	public T GetService<T>()
 	{
-		return ServiceProvider.GetService<T>();
+		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetService<T>();
 	}
 
 	/// <inheritdoc />
 	public T GetRequiredService<T>()
 	{
-		return ServiceProvider.GetRequiredService<T>();
+		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetRequiredService<T>();
+	}
+
+	/// <inheritdoc />
+	public T GetKeyedService<T>(object key)
+	{
+		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetKeyedService<T>(key);
+	}
+
+	/// <inheritdoc />
+	public T GetRequiredKeyedService<T>(object name)
+	{
+		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetRequiredKeyedService<T>(name);
 	}
 
 	/// <inheritdoc/>
 	public object GetService(Type type)
 	{
-		return _provider.Value?.GetService(type);
+		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetService(type);
 	}
 }
