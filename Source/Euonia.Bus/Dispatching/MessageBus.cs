@@ -86,9 +86,8 @@ internal sealed class MessageBus : IBus
 	{
 		options ??= new PublishOptions();
 
-		var channel = GetChannel<TMessage>(options);
-		var messageType = typeof(TMessage);
-
+		var messageType = message.GetType();
+		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsMulticast(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a multicast type.");
@@ -138,8 +137,8 @@ internal sealed class MessageBus : IBus
 	{
 		options ??= new SendOptions();
 
-		var channel = GetChannel<TMessage>(options);
-		var messageType = typeof(TMessage);
+		var messageType = message.GetType();
+		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsUnicast(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a unicast type.");
@@ -204,8 +203,8 @@ internal sealed class MessageBus : IBus
 	{
 		options ??= new CallOptions();
 
-		var channel = GetChannel<TRequest>(options);
-		var messageType = typeof(TRequest);
+		var messageType = message.GetType();
+		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a request type.");
@@ -245,8 +244,8 @@ internal sealed class MessageBus : IBus
 	public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
-		var channel = GetChannel(request.GetType(), options);
 		var messageType = request.GetType();
+		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
 			throw new MessageTypeException("The message type is not a request type.");
@@ -318,30 +317,18 @@ internal sealed class MessageBus : IBus
 	/// <summary>
 	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
 	/// </summary>
-	/// <typeparam name="TMessage">消息类型。</typeparam>
-	/// <param name="options">消息选项。</param>
-	/// <returns>通道名称。</returns>
-	private string GetChannel<TMessage>(ExtendableOptions options)
-	{
-		return GetChannel(typeof(TMessage), options);
-	}
-
-	/// <summary>
-	/// 根据选项和消息类型获取通道名称，优先使用选项中指定的通道，否则使用默认消息通道。
-	/// </summary>
 	/// <param name="messageType">消息类型。</param>
 	/// <param name="options">消息选项。</param>
 	/// <returns>通道名称。</returns>
-	private string GetChannel(Type messageType, ExtendableOptions options)
+	private static string GetChannel(Type messageType, ExtendableOptions options)
 	{
 		if (!string.IsNullOrEmpty(options.Channel))
 		{
 			return options.Channel;
 		}
 
-		string channel = MessageCache.Default.GetOrAddChannel(messageType);
+		var channel = MessageCache.Default.GetOrAddChannel(messageType);
 
-		//var channel = !string.IsNullOrWhiteSpace(options.Channel) ? options.Channel : _configurator.FindChannel(messageType);
-		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");
+		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException($"The channel name for message type '{messageType.FullName}' cannot be null or empty. Please specify a channel in the options or configure a default channel for this message type.");
 	}
 }
