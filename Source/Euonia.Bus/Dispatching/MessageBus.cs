@@ -334,7 +334,12 @@ internal sealed class MessageBus : IBus
 	/// <returns>通道名称。</returns>
 	private string GetChannel(Type messageType, ExtendableOptions options)
 	{
-		string channel = MessageCache.Default.GetOrAddChannel(messageType, options.Channel);
+		if (!string.IsNullOrEmpty(options.Channel))
+		{
+			return options.Channel;
+		}
+
+		string channel = MessageCache.Default.GetOrAddChannel(messageType);
 
 		//var channel = !string.IsNullOrWhiteSpace(options.Channel) ? options.Channel : _configurator.FindChannel(messageType);
 		return Check.EnsureNotNullOrWhiteSpace(channel, "The channel name cannot be null or empty.");

@@ -21,14 +21,13 @@ internal class MessageCache
 	/// 获取或创建指定消息类型对应的通道名称。
 	/// </summary>
 	/// <remarks>
-	/// 若未显式指定 <paramref name="name"/>，则按优先级从 <see cref="ChannelAttribute"/> 特性或消息类型标记中解析通道名称。
+	/// 通道名称按优先级从 <see cref="ChannelAttribute"/> 特性或消息类型标记中解析。
 	/// </remarks>
 	/// <typeparam name="TMessage">消息类型。</typeparam>
-	/// <param name="name">可选的显式通道名称；为 <c>null</c> 或空白时自动解析。</param>
 	/// <returns>消息类型对应的通道名称。</returns>
-	public string GetOrAddChannel<TMessage>(string name = null)
+	public string GetOrAddChannel<TMessage>()
 	{
-		return GetOrAddChannel(typeof(TMessage), name);
+		return GetOrAddChannel(typeof(TMessage));
 	}
 
 	/// <summary>
@@ -37,7 +36,6 @@ internal class MessageCache
 	/// <remarks>
 	/// 通道名称按以下优先级解析，首个非空值即作为结果：
 	/// <list type="number">
-	/// <item><description>显式指定的 <paramref name="name"/>。</description></item>
 	/// <item><description><see cref="ChannelAttribute"/> 特性中声明的名称。</description></item>
 	/// <item><description>实现 <see cref="ITransportable"/> 时使用消息类型的全名。</description></item>
 	/// <item><description>标记了 <see cref="TransportableAttribute"/> 特性时使用消息类型的全名。</description></item>
@@ -45,23 +43,21 @@ internal class MessageCache
 	/// </list>
 	/// </remarks>
 	/// <param name="messageType">消息类型。</param>
-	/// <param name="name">可选的显式通道名称；为 <c>null</c> 或空白时自动解析。</param>
 	/// <returns>消息类型对应的通道名称。</returns>
-	public string GetOrAddChannel(Type messageType, string name = null)
+	public string GetOrAddChannel(Type messageType)
 	{
 		return _channels.GetOrAdd(messageType, _ =>
 		{
 			return PriorityValueFinder.Find<string>(queue =>
 			{
-				queue.Enqueue(() => name, 1);
-				queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 2);
-				queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 3);
+				queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 1);
+				queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 2);
 				queue.Enqueue(() =>
 				{
 					var attributes = messageType.GetCustomAttributes(false);
 					return attributes.Any(t => t is TransportableAttribute) ? messageType.FullName : null;
-				}, 4);
-				queue.Enqueue(() => messageType.IsClass && !messageType.IsPrimitive && !messageType.IsAbstract ? messageType.FullName : null, 5);
+				}, 3);
+				queue.Enqueue(() => messageType.IsClass && !messageType.IsPrimitive && !messageType.IsAbstract ? messageType.FullName : null, 4);
 			}, value => !string.IsNullOrWhiteSpace(value));
 		});
 	}
