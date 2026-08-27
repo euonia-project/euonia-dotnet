@@ -117,7 +117,7 @@ public class ServiceBusTests
 			await Task.Delay(1000, TestContext.Current.CancellationToken);
 			await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
 			{
-				await _bus.SendAsync(new FooDeleteCommand(), null, cancellationToken: TestContext.Current.CancellationToken);
+				await _bus.SendAsync(new FooDeleteCommand(), new SendOptions { Channel = "foo.delete" }, cancellationToken: TestContext.Current.CancellationToken);
 			});
 		}
 	}
@@ -141,7 +141,7 @@ public class ServiceBusTests
 				() => errorSource.TrySetException(new InvalidOperationException("The subject completed without receiving the exception.")));
 
 			// Handler 抛出异常时，调用端应该通过回调 Subject 收到 OnError 通知。
-			await _bus.SendAsync(new FooDeleteCommand(), subject, cancellationToken: TestContext.Current.CancellationToken);
+			await _bus.SendAsync(new FooDeleteCommand(), subject, new SendOptions { Channel = "foo.delete" }, cancellationToken: TestContext.Current.CancellationToken);
 
 			var exception = await errorSource.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
 			var notFound = Assert.IsType<NotFoundException>(exception);
