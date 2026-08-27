@@ -60,6 +60,7 @@ internal class MessageCache
 					var attributes = messageType.GetCustomAttributes(false);
 					return attributes.Any(t => t is TransportableAttribute) ? messageType.FullName : null;
 				}, 4);
+				queue.Enqueue(() => messageType.IsClass && !messageType.IsPrimitive && !messageType.IsAbstract ? messageType.FullName : null, 5);
 			}, value => !string.IsNullOrWhiteSpace(value));
 		});
 	}
