@@ -28,37 +28,37 @@ public class ServiceAccessor(IServiceScopeFactory factory) : IServiceAccessor
 	/// <inheritdoc/>
 	public IServiceProvider ServiceProvider
 	{
-		get => _provider.Value;
+		get => _provider.Value ?? factory.CreateScope().ServiceProvider;
 		set => _provider.Value = value;
 	}
 
 	/// <inheritdoc/>
 	public T GetService<T>()
 	{
-		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetService<T>();
+		return ServiceProvider.GetService<T>();
 	}
 
 	/// <inheritdoc />
 	public T GetRequiredService<T>()
 	{
-		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetRequiredService<T>();
+		return ServiceProvider.GetRequiredService<T>();
 	}
 
 	/// <inheritdoc />
 	public T GetKeyedService<T>(object key)
 	{
-		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetKeyedService<T>(key);
+		return ServiceProvider.GetKeyedService<T>(key);
 	}
 
 	/// <inheritdoc />
 	public T GetRequiredKeyedService<T>(object name)
 	{
-		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetRequiredKeyedService<T>(name);
+		return ServiceProvider.GetRequiredKeyedService<T>(name);
 	}
 
 	/// <inheritdoc/>
 	public object GetService(Type type)
 	{
-		return (ServiceProvider ?? factory.CreateScope().ServiceProvider).GetService(type);
+		return ServiceProvider.GetService(type);
 	}
 }
