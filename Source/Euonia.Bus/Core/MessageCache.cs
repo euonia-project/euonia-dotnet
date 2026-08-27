@@ -41,6 +41,7 @@ internal class MessageCache
 	/// <item><description><see cref="ChannelAttribute"/> 特性中声明的名称。</description></item>
 	/// <item><description>实现 <see cref="ITransportable"/> 时使用消息类型的全名。</description></item>
 	/// <item><description>标记了 <see cref="TransportableAttribute"/> 特性时使用消息类型的全名。</description></item>
+	/// <item><description>消息类型为类且非原始类型且非抽象类型时使用消息类型的全名。</description></item>
 	/// </list>
 	/// </remarks>
 	/// <param name="messageType">消息类型。</param>
