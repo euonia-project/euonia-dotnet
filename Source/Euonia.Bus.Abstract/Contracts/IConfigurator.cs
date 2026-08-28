@@ -47,7 +47,7 @@ public interface IConfigurator
 	/// 获取指定传输名称对应的传输策略，可用于消息路由和分类。
 	/// </summary>
 	/// <param name="transport">传输名称。</param>
-	/// <returns>对应的 <see cref="ITransportStrategy"/> 实例。</returns>
+	/// <returns>对应的 <see cref="ITransportStrategy"/> 实例；若未找到对应配置，则返回 <c>null</c>。</returns>
 	ITransportStrategy GetStrategy(string transport)
 	{
 		return StrategyBuilders.TryGetValue(transport, out var builder) ? builder.Strategy : null;
@@ -114,4 +114,20 @@ public interface IConfigurator
 	/// <param name="types">要注册的处理器类型集合。</param>
 	/// <returns>返回当前的 <see cref="IConfigurator"/> 实例，以便进行链式调用。</returns>
 	IConfigurator RegisterChannel(IEnumerable<Type> types);
+
+	/// <summary>
+	/// 获取当前用于解析消息通道名称的委托。
+	/// </summary>
+	/// <remarks>
+	/// 该委托通常用于根据消息类型推导默认通道名称；其返回值可能为空或空白，调用方应在缓存或注册前进行校验。
+	/// </remarks>
+	Func<Type, string> ChannelResolver { get; }
+
+	/// <summary>
+	/// 设置消息类型到通道名称的解析器。
+	/// </summary>
+	/// <param name="channelResolver">根据消息类型返回通道名称的委托。</param>
+	/// <param name="replaceDefault">是否替换默认解析逻辑；为 <c>true</c> 时，以该委托覆盖默认解析器。</param>
+	/// <returns>返回当前的 <see cref="IConfigurator"/> 实例，以便进行链式调用。</returns>
+	IConfigurator SetChannelResolver(Func<Type, string> channelResolver, bool replaceDefault = false);
 }
