@@ -61,6 +61,27 @@ internal sealed class DefaultConfigurator : IConfigurator
 	}
 
 	/// <summary>
+	/// 获取用于选择通道的委托函数。默认情况下，它使用 <see cref="MessageChannelResolver.GetOrAddChannel"/> 方法来解析消息类型对应的通道名称。
+	/// </summary>
+	public Func<Type, string> ChannelResolver { get; private set; } = MessageChannelResolver.Default.GetOrAddChannel;
+
+	/// <summary>
+	/// 设置用于选择通道的委托函数。可以选择替换默认的通道解析逻辑，或者在默认逻辑之后使用自定义逻辑。
+	/// </summary>
+	/// <param name="channelResolver">用于选择通道的委托函数。</param>
+	/// <param name="replaceDefault">是否替换默认的通道解析逻辑；为 <c>true</c> 时，以该委托覆盖默认解析器。</param>
+	/// <returns>返回当前的 <see cref="IConfigurator"/> 实例，以便进行链式调用。</returns>
+	/// <exception cref="ArgumentNullException"></exception>
+	public IConfigurator SetChannelResolver(Func<Type, string> channelResolver, bool replaceDefault = false)
+	{
+		ArgumentNullException.ThrowIfNull(channelResolver);
+		ChannelResolver = replaceDefault ? channelResolver : type => MessageChannelResolver.Default.GetOrAddChannel(type) ?? channelResolver(type);
+
+		return this;
+	}
+
+
+	/// <summary>
 	/// 获取 <see cref="DefaultConfigurator"/> 的单例实例。
 	/// </summary>
 	public static IConfigurator Instance => Singleton<DefaultConfigurator>.Get(() => new DefaultConfigurator());

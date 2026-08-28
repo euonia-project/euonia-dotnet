@@ -82,7 +82,7 @@ internal static class MessageHandlerFinder
 
 				handlerInterfaceMethods.Add(method);
 
-				var channel = MessageCache.Default.GetOrAddChannel(messageType);
+				var channel = MessageChannelResolver.Default.GetOrAddChannel(messageType);
 
 				channel ??= messageType.FullName;
 				@delegate(channel, messageType, new ChannelHandler(@interface, null));

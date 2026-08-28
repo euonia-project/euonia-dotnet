@@ -320,14 +320,16 @@ internal sealed class MessageBus : IBus
 	/// <param name="messageType">消息类型。</param>
 	/// <param name="options">消息选项。</param>
 	/// <returns>通道名称。</returns>
-	private static string GetChannel(Type messageType, ExtendableOptions options)
+	private string GetChannel(Type messageType, ExtendableOptions options)
 	{
 		if (!string.IsNullOrEmpty(options.Channel))
 		{
 			return options.Channel;
 		}
 
-		var channel = MessageCache.Default.GetOrAddChannel(messageType);
+		var selector = _configurator.ChannelResolver ?? MessageChannelResolver.Default.GetOrAddChannel;
+
+		var channel = selector(messageType);
 
 		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException($"The channel name for message type '{messageType.FullName}' cannot be null or empty. Please specify a channel in the options or configure a default channel for this message type.");
 	}

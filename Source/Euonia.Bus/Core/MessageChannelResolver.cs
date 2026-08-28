@@ -6,16 +6,16 @@ namespace Nerosoft.Euonia.Bus;
 /// <summary>
 /// 消息缓存，用于缓存消息类型与消息通道名称之间的映射。
 /// </summary>
-internal class MessageCache
+internal class MessageChannelResolver
 {
-	private static readonly Lazy<MessageCache> _instance = new(() => new MessageCache());
+	private static readonly Lazy<MessageChannelResolver> _instance = new(() => new MessageChannelResolver());
 
-	private readonly ConcurrentDictionary<Type, string> _channels = new();
+	private readonly ConcurrentDictionary<Type, Lazy<string>> _channels = new();
 
 	/// <summary>
-	/// 获取 <see cref="MessageCache"/> 的单例实例。
+	/// 获取 <see cref="MessageChannelResolver"/> 的单例实例。
 	/// </summary>
-	public static MessageCache Default => _instance.Value;
+	public static MessageChannelResolver Default => _instance.Value;
 
 	/// <summary>
 	/// 获取或创建指定消息类型对应的通道名称。
@@ -46,19 +46,39 @@ internal class MessageCache
 	/// <returns>消息类型对应的通道名称。</returns>
 	public string GetOrAddChannel(Type messageType)
 	{
-		return _channels.GetOrAdd(messageType, _ =>
+		var lazyChannel = _channels.GetOrAdd(messageType, static type => new Lazy<string>(
+			() => ResolveChannel(type),
+			LazyThreadSafetyMode.ExecutionAndPublication));
+
+		try
 		{
-			return PriorityValueFinder.Find<string>(queue =>
+			var channel = lazyChannel.Value;
+			if (string.IsNullOrWhiteSpace(channel))
 			{
-				queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 1);
-				queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 2);
-				queue.Enqueue(() =>
-				{
-					var attributes = messageType.GetCustomAttributes(false);
-					return attributes.Any(t => t is TransportableAttribute) ? messageType.FullName : null;
-				}, 3);
-				queue.Enqueue(() => messageType.IsClass && !messageType.IsPrimitive && !messageType.IsAbstract ? messageType.FullName : null, 4);
-			}, value => !string.IsNullOrWhiteSpace(value));
-		});
+				_channels.TryRemove(messageType, out _);
+			}
+
+			return channel;
+		}
+		catch
+		{
+			_channels.TryRemove(messageType, out _);
+			throw;
+		}
+	}
+
+	private static string ResolveChannel(Type messageType)
+	{
+		return PriorityValueFinder.Find<string>(queue =>
+		{
+			queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 1);
+			queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 2);
+			queue.Enqueue(() =>
+			{
+				var attributes = messageType.GetCustomAttributes(false);
+				return attributes.Any(t => t is TransportableAttribute) ? messageType.FullName : null;
+			}, 3);
+			queue.Enqueue(() => messageType.IsClass && !messageType.IsPrimitive && !messageType.IsAbstract ? messageType.FullName : null, 4);
+		}, value => !string.IsNullOrWhiteSpace(value));
 	}
 }
