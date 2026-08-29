@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -16,14 +17,22 @@ internal sealed class ChannelRegistrar
 
 	private readonly Action<string, Type, ChannelHandler> _registerAction;
 
+	private readonly ILogger<ChannelRegistrar> _logger;
+
 	private ChannelRegistrar()
 	{
 	}
 
-	public ChannelRegistrar(Action<string, Type, ChannelHandler> registerAction)
+	/// <summary>
+	/// 初始化 <see cref="ChannelRegistrar"/> 的新实例。
+	/// </summary>
+	/// <param name="registerAction">用于注册通道处理器的回调方法。</param>
+	/// <param name="logger">用于创建当前注册器类型化日志记录器的日志工厂。</param>
+	public ChannelRegistrar(Action<string, Type, ChannelHandler> registerAction, ILoggerFactory logger)
 		: this()
 	{
 		_registerAction = registerAction;
+		_logger = logger.CreateLogger<ChannelRegistrar>();
 	}
 
 	/// <summary>
@@ -68,6 +77,8 @@ internal sealed class ChannelRegistrar
 		{
 			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
 		}
+
+		_logger.LogInformation("[ChannelRegistrar] Registering handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
 
 		registration.AddHandler(handler);
 		_registerAction?.Invoke(channel, messageType, handler);

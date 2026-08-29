@@ -71,12 +71,13 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 	{
 		foreach (var (channel, registration) in registrations)
 		{
+			_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} on channel {Channel}", registration.MessageType.FullName, channel);
 			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
 			{
 				// 检查策略是否允许对该消息类型进行入站处理
-				if (_strategy != null && !_strategy.Incoming(channel, registration.MessageType))
+				if (_strategy == null || !_strategy.Incoming(channel, registration.MessageType))
 				{
-					return;
+					continue;
 				}
 			}
 
