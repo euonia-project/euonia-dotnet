@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 
 // ReSharper disable MemberCanBePrivate.Global
 
@@ -26,14 +27,15 @@ internal sealed class DefaultConfigurator : IConfigurator
 	private readonly ChannelRegistrar _registrar;
 
 	/// <summary>
-	/// 私有构造函数，阻止外部直接实例化，强制使用 <see cref="Instance"/> 单例模式。
+	/// 初始化 <see cref="DefaultConfigurator"/> 的新实例。
 	/// </summary>
-	public DefaultConfigurator()
+	/// <param name="logger">用于创建当前配置器类型化日志记录器的日志工厂。</param>
+	public DefaultConfigurator(ILoggerFactory logger)
 	{
 		_registrar = new ChannelRegistrar((channel, type, handler) =>
 		{
 			_events.HandleEvent(this, new ChannelRegisteredEventArgs(channel, type, handler), nameof(ChannelRegistered));
-		});
+		}, logger);
 	}
 
 	/// <summary>
@@ -79,12 +81,6 @@ internal sealed class DefaultConfigurator : IConfigurator
 
 		return this;
 	}
-
-
-	/// <summary>
-	/// 获取 <see cref="DefaultConfigurator"/> 的单例实例。
-	/// </summary>
-	public static IConfigurator Instance => Singleton<DefaultConfigurator>.Get(() => new DefaultConfigurator());
 
 	/// <summary>
 	/// 使用指定的委托配置消息约定。
