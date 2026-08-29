@@ -28,7 +28,8 @@ public class MessageBusModule : ModuleContextBase
 	{
 		// 消息日志行为随总线模块注册（与 OutgoingLoggingBehavior 同属总线基础设施）。
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(MessageLoggingBehavior<,>));
-
+		context.Services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
+		context.Services.AddKeyedSingleton<IMessageSerializer, NewtonsoftJsonSerializer>("NewtonsoftJson");
 		context.Services.AddEuoniaBus();		
 	}
 
