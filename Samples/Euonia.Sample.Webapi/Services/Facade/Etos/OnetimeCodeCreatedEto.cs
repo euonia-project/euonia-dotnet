@@ -1,4 +1,4 @@
-namespace Nerosoft.Euonia.Sample.Domain.Dtos;
+namespace Nerosoft.Euonia.Sample.Domain.Etos;
 
 public class OnetimeCodeCreatedEto
 {

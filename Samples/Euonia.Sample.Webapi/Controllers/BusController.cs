@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Nerosoft.Euonia.Bus;
-using Nerosoft.Euonia.Sample.Domain.Dtos;
+using Nerosoft.Euonia.Sample.Domain.Etos;
 
 namespace Nerosoft.Euonia.Sample.Controllers;
 

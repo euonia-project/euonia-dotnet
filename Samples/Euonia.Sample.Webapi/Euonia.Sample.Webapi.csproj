@@ -28,8 +28,4 @@
         <ProjectReference Include="..\..\Source\Euonia.Repository.EfCore\Euonia.Repository.EfCore.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Services\Facade\Etos\" />
-    </ItemGroup>
-
 </Project>
