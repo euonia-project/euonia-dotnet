@@ -70,6 +70,7 @@ public class RabbitMqTransporter : ITransporter
 		            })
 		            .ExecuteAsync(async () =>
 		            {
+			            _logger.LogDebug("Publishing message to channel '{Channel}' with routing key '{RoutingKey}'", message.Channel, $"{message.Channel}@{_options.RoutingKey}");
 			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 			            await channel.ExchangeDeclareAsync(message.Channel, ExchangeType.Fanout, cancellationToken: cancellationToken);
 			            await channel.BasicPublishAsync(message.Channel, $"{message.Channel}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
@@ -113,6 +114,7 @@ public class RabbitMqTransporter : ITransporter
 		            })
 		            .ExecuteAsync(async () =>
 		            {
+			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
 			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
 			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);

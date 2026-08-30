@@ -47,6 +47,8 @@ public class FacadeServiceModule : ModuleContextBase
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.Register<FacadeServiceContext>();
+		context.Services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
+		context.Services.AddKeyedSingleton<IMessageSerializer, NewtonsoftJsonSerializer>("NewtonsoftJson");
 		context.Services.AddMessageHandler(ServiceLifetime.Scoped, typeof(FacadeServiceModule).Assembly);
 		context.Services.AddConfiguratorBuilder(config =>
 		{
@@ -56,12 +58,20 @@ public class FacadeServiceModule : ModuleContextBase
 				      builder.Add<DefaultMessageConvention>();
 				      builder.Add<AnnotationMessageConvention>();
 				      builder.Add<DomainMessageConvention>();
+				      builder.EvaluateMulticast((_, type) => type.Name.EndsWith("Eto"));
 			      })
 			      .SetStrategy("InMemory", builder =>
 			      {
 				      builder.Add<LocalMessageTransportStrategy>();
 				      builder.EvaluateIncoming((_, _) => true);
 				      builder.EvaluateOutgoing((_, _) => true);
+			      })
+			      .SetStrategy("RabbitMq", builder =>
+			      {
+				      builder.Add<DistributedMessageTransportStrategy>();
+				      builder.Add(new AnnotationTransportStrategy(["RabbitMq"]));
+				      builder.EvaluateIncoming((_, type) => type.FullName!.EndsWith("Eto"));
+				      builder.EvaluateOutgoing((_, type) => type.FullName!.EndsWith("Eto"));
 			      });
 		});
 	}

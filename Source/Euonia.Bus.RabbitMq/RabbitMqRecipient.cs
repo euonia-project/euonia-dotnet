@@ -10,6 +10,11 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// </summary>
 public abstract class RabbitMqRecipient : DisposableObject
 {
+	// Backing field for the consumer instance. Use a dedicated lock to ensure
+	// the consumer is created and event handlers are attached only once.
+	private readonly Lock _consumerLock = new();
+	private volatile AsyncEventingBasicConsumer _consumer;
+
 	/// <summary>
 	/// 当消息被接收时触发。
 	/// </summary>
@@ -29,7 +34,7 @@ public abstract class RabbitMqRecipient : DisposableObject
 	/// 初始化 <see cref="RabbitMqRecipient"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析服务（如消息序列化器）的服务提供程序。</param>
-	/// <param name="factory">用于建立和管理 RabbitMQ 连接的持久连接工厂。</param>
+	/// <param name="factory">用于建立和管����� RabbitMQ 连接的持久连接工厂。</param>
 	/// <param name="handler">用于处理消息的处理器上下文。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 <see cref="RabbitMqBusOptions"/> 配置。</param>
 	protected RabbitMqRecipient(IServiceProvider provider, IPersistentConnection factory, IHandlerContext handler, IOptions<RabbitMqBusOptions> options)
@@ -78,11 +83,34 @@ public abstract class RabbitMqRecipient : DisposableObject
 				throw new InvalidOperationException("The RabbitMQ channel is not initialized.");
 			}
 
-			field ??= new AsyncEventingBasicConsumer(Channel);
-			field.ReceivedAsync += HandleMessageReceivedAsync;
-			return field;
+			var consumer = _consumer;
+			if (consumer != null)
+			{
+				return consumer;
+			}
+
+			lock (_consumerLock)
+			{
+				consumer = _consumer;
+				if (consumer == null)
+				{
+					consumer = new AsyncEventingBasicConsumer(Channel);
+					// Attach the handler only once when the consumer is created.
+					consumer.ReceivedAsync += HandleMessageReceivedAsync;
+					_consumer = consumer;
+				}
+			}
+
+			return consumer;
 		}
 	}
+
+	/// <summary>
+	/// 获取一个值，指示消息是否由 RabbitMQ 服务端自动确认（auto-ack）。
+	/// 当启用自动确认时，不应再对投递标签调用 <see cref="IChannel.BasicAckAsync"/>，否则会触发 PRECONDITION_FAILED 错误。
+	/// 默认返回 <c>false</c>（手动确认）；使用自动确认的派生类应重写此属性。
+	/// </summary>
+	protected virtual bool AutoAck => false;
 
 	/// <summary>
 	/// 执行具体的消息处理逻辑。调用处理器上下文处理消息。
@@ -173,7 +201,12 @@ public abstract class RabbitMqRecipient : DisposableObject
 			await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);
 		}
 
-		await Channel.BasicAckAsync(args.DeliveryTag, false);
+		// When auto-ack is enabled the broker has already acknowledged the message,
+		// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
+		if (!AutoAck)
+		{
+			await Channel.BasicAckAsync(args.DeliveryTag, false);
+		}
 
 		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
 
@@ -196,6 +229,12 @@ public abstract class RabbitMqRecipient : DisposableObject
 		{
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
 		}
+
+		// Unsubscribe to avoid potential memory leaks or repeated calls in long-running
+		// scenarios. The context is per-message, but being defensive is useful.
+		context.Responded -= OnResponded;
+		context.Failed -= OnFailed;
+		context.Completed -= OnCompleted;
 	}
 
 	/// <summary>
@@ -312,11 +351,21 @@ public abstract class RabbitMqRecipient : DisposableObject
 			return;
 		}
 
-		if (Consumer != null)
+		// Do not access the Consumer property here (it may throw if Channel is null).
+		if (_consumer != null)
 		{
-			Consumer.ReceivedAsync -= HandleMessageReceivedAsync;
+			_consumer.ReceivedAsync -= HandleMessageReceivedAsync;
+			_consumer = null;
 		}
 
-		Channel?.Dispose();
+		// Dispose the channel if it exists.
+		try
+		{
+			Channel?.Dispose();
+		}
+		catch
+		{
+			// Swallow exceptions during dispose to avoid throwing in finalizers.
+		}
 	}
 }

@@ -27,6 +27,9 @@ public class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 	/// </summary>
 	public string Name => nameof(RabbitMqSubscriber);
 
+	/// <inheritdoc />
+	protected override bool AutoAck => Options.AutoAck;
+
 	/// <summary>
 	/// 启动订阅者，声明 Fanout 交换机和队列，绑定路由键并开始消费消息。
 	/// </summary>
@@ -46,6 +49,7 @@ public class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 		                             .ContinueWith(task => task.Result.QueueName);
 
 		await Channel.QueueBindAsync(queueName, channel, Options.RoutingKey ?? "*");
-		await Channel.BasicConsumeAsync(string.Empty, Options.AutoAck, Consumer);
+		// Consume from the declared queue (use the generated queueName) instead of an empty name.
+		await Channel.BasicConsumeAsync(queueName, Options.AutoAck, Consumer);
 	}
 }
