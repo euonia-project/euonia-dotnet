@@ -36,18 +36,78 @@ public sealed class RequestContext
 	/// <summary>
 	/// 获取请求头。
 	/// </summary>
-	public IDictionary<string, string> RequestHeaders { get; set; }
+	public IDictionary<string, string> Headers { get; set; }
+
+	/// <summary>
+	/// 获取或设置请求方法。
+	/// </summary>
+	public string Method { get; set; }
+
+	/// <summary>
+	/// 获取或设置请求的 URI 模式。
+	/// </summary>
+	public string Scheme { get; set; }
+
+	/// <summary>
+	/// 获取或设置请求的主机名。
+	/// </summary>
+	public string Host { get; set; }
+
+	/// <summary>
+	/// 获取或设置请求的路径。
+	/// </summary>
+	public string Protocol { get; set; }
+
+	/// <summary>
+	/// 获取或设置请求的路径。
+	/// </summary>
+	public string Path { get; set; }
 
 	/// <summary>
 	/// 获取 Authorization HTTP 头。
 	/// </summary>
-	public string Authorization => RequestHeaders?.TryGetValue(nameof(Authorization));
+	public string Authorization => Headers?.TryGetValue(nameof(Authorization));
 
 	/// <summary>
 	/// 获取 Request-Id HTTP 头。
 	/// </summary>
-	public string RequestId => RequestHeaders?.TryGetValue("Request-Id");
+	public string RequestId => Headers?.TryGetValue("Request-Id");
 
+	/// <summary>
+	/// 获取 Referer HTTP 头。
+	/// </summary>
+	public string Referer => Headers?.TryGetValue("Referer");
+
+	/// <summary>
+	/// 获取 Origin HTTP 头。
+	/// </summary>
+	public string Origin => Headers?.TryGetValue("Origin");
+
+	/// <summary>
+	/// 获取 Location HTTP 头。
+	/// </summary>
+	public string Location => Headers?.TryGetValue("Location");
+
+	/// <summary>
+	/// 获取 Cookie HTTP 头。
+	/// </summary>
+	public string Cookie => Headers?.TryGetValue("Cookie");
+
+	/// <summary>
+	/// 获取 User-Agent HTTP 头。
+	/// </summary>
+	public string UserAgent => Headers?.TryGetValue("User-Agent");
+	
+	/// <summary>
+	/// 获取 Server HTTP 头。
+	/// </summary>
+	public string Server => Headers?.TryGetValue("Server");
+	
+	/// <summary>
+	/// 获取 From HTTP 头。
+	/// </summary>
+	public string From => Headers?.TryGetValue("From");
+	
 	/// <summary>
 	/// 获取或设置提供对请求服务容器访问的 <see cref="IServiceProvider"/>。
 	/// </summary>
