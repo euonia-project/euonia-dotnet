@@ -12,17 +12,20 @@ using Nerosoft.Euonia.Modularity;
 namespace Microsoft.AspNetCore.Builder;
 
 /// <summary>
-/// Extension methods for <see cref="IApplicationBuilder"/>.
+/// 为 <see cref="IApplicationBuilder"/> 提供 Euonia Hosting 相关的中间件与应用初始化扩展。
 /// </summary>
 public static class ApplicationBuilderExtensions
 {
-	/// <param name="app"></param>
+	/// <summary>
+	/// 定义基于 <see cref="IApplicationBuilder"/> 的扩展成员块。
+	/// </summary>
+	/// <param name="app">当前应用构建器实例。</param>
 	extension(IApplicationBuilder app)
 	{
 		/// <summary>
-		/// Set current thread culture from Accept-Language header
+		/// 根据请求头 <c>Accept-Language</c> 设置当前线程的区域性。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>当前 <see cref="IApplicationBuilder"/> 实例，用于链式调用。</returns>
 		public IApplicationBuilder UseCulture()
 		{
 			app.Use(async (context, next) =>
@@ -38,9 +41,12 @@ public static class ApplicationBuilderExtensions
 		}
 
 		/// <summary>
-		/// Use JWT token from Authorization header to set HttpContext.User
+		/// 从请求头中的 Bearer Token 读取声明，并直接设置到 <see cref="Microsoft.AspNetCore.Http.HttpContext.User"/>。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>当前 <see cref="IApplicationBuilder"/> 实例，用于链式调用。</returns>
+		/// <remarks>
+		/// 该方法仅解析 JWT 中的声明，不执行签名、过期时间或颁发者等校验。
+		/// </remarks>
 		// ReSharper disable once UnusedMember.Local
 		private IApplicationBuilder UseJwtToken()
 		{
@@ -67,10 +73,10 @@ public static class ApplicationBuilderExtensions
 		}
 
 		/// <summary>
-		/// Use JWT authentication middleware
+		/// 使用指定认证方案对当前请求执行认证，并在成功后设置 <see cref="Microsoft.AspNetCore.Http.HttpContext.User"/>。
 		/// </summary>
-		/// <param name="schema"></param>
-		/// <returns></returns>
+		/// <param name="schema">要使用的认证方案名称，默认使用 JWT Bearer 方案。</param>
+		/// <returns>当前 <see cref="IApplicationBuilder"/> 实例，用于链式调用。</returns>
 		public IApplicationBuilder UseJwt(string schema = JwtBearerDefaults.AuthenticationScheme)
 		{
 			return app.Use(async (context, next) =>
@@ -89,9 +95,9 @@ public static class ApplicationBuilderExtensions
 		}
 
 		/// <summary>
-		/// Use DefaultRequestContextAccessor to set RequestContext for each request.
+		/// 为每个请求创建并设置默认的请求上下文访问器内容。
 		/// </summary>
-		/// <returns></returns>
+		/// <returns>当前 <see cref="IApplicationBuilder"/> 实例，用于链式调用。</returns>
 		public IApplicationBuilder UseDefaultRequestContextAccessor()
 		{
 			return app.Use((httpContext, next) =>
@@ -103,7 +109,7 @@ public static class ApplicationBuilderExtensions
 		}
 
 		/// <summary>
-		/// Initialize the application.
+		/// 初始化 Euonia 应用，并注册应用生命周期回调。
 		/// </summary>
 		public void InitializeApplication()
 		{

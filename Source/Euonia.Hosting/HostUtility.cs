@@ -1,5 +1,4 @@
-﻿using Autofac.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Hosting;
+﻿using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Hosting;
 
 namespace Nerosoft.Euonia.Hosting;
@@ -104,14 +103,6 @@ public static class HostUtility
 		{
 			Environment.SetEnvironmentVariable(HostBuilderOptions.ApplicationNameVariable, context.HostingEnvironment.ApplicationName);
 		});
-
-		if (options.UseAutofac)
-		{
-			host = host.UseServiceProviderFactory(new AutofacServiceProviderFactory(builder =>
-			{
-				options.ConfigureContainerBuilder?.Invoke(builder);
-			}));
-		}
 
 		host = host.ConfigureWebHostDefaults(builder =>
 		{

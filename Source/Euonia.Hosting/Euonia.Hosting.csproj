@@ -8,9 +8,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Autofac" />
-        <PackageReference Include="Autofac.Extensions.DependencyInjection" />
-        <PackageReference Include="Autofac.Extras.DynamicProxy" />
         <PackageReference Include="Duende.IdentityModel" />
         <PackageReference Include="Duende.AspNetCore.Authentication.OAuth2Introspection" />
         <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
