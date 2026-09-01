@@ -163,6 +163,13 @@ public abstract class RabbitMqRecipient : DisposableObject
 		var props = args.BasicProperties;
 
 		var context = new MessageContext(message);
+		// {
+		// 	MessageId = props.MessageId,
+		// 	ConversationId = props.Headers?.GetValueOrDefault(MessageHeaders.ConversationId) as string,
+		// 	CorrelationId = props.CorrelationId,
+		// 	RequestTraceId = props.Headers?.GetValueOrDefault(MessageHeaders.RequestTraceId) as string,
+		// 	Authorization = props.Headers?.GetValueOrDefault(MessageHeaders.Authorization) as string,
+		// };
 
 		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
 

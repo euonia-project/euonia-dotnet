@@ -59,7 +59,7 @@ public class RabbitMqTransporter : ITransporter
 	{
 		await using var channel = await _connection.CreateChannelAsync();
 
-		var props = BuildProperties(message.TypeName);
+		var props = BuildProperties(message);
 
 		await Policy.Handle<SocketException>()
 		            .Or<TimeoutException>()
@@ -103,7 +103,7 @@ public class RabbitMqTransporter : ITransporter
 
 		consumer.ReceivedAsync += OnReceivedAsync;
 
-		var props = BuildProperties(message.TypeName, message.CorrelationId, responseQueueName);
+		var props = BuildProperties(message, responseQueueName);
 
 		await Policy.Handle<SocketException>()
 		            .Or<TimeoutException>()
@@ -178,18 +178,22 @@ public class RabbitMqTransporter : ITransporter
 		throw new NotImplementedException();
 	}
 
-	private static BasicProperties BuildProperties(string messageType, string correlationId = null, string replyTo = null)
+	private static BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
 	{
 		var props = new BasicProperties
 		{
-			CorrelationId = correlationId,
+			CorrelationId = message.CorrelationId,
 			ContentEncoding = "utf-8",
 			ContentType = "application/json",
-			Type = messageType,
-			ReplyTo = replyTo
+			Type = message.TypeName,
+			ReplyTo = replyTo,
+			MessageId = message.MessageId,
+			UserId = message.User?.Identity?.Name,
 		};
 		props.Headers ??= new Dictionary<string, object>();
-		props.Headers[MessageHeaders.MessageType] = messageType;
+		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
+		props.Headers[MessageHeaders.RequestTraceId] = message.RequestTraceId;
+		props.Headers[MessageHeaders.Authorization] = message.Authorization;
 		return props;
 	}
 
