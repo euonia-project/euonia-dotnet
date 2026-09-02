@@ -137,20 +137,26 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		context.Failed += OnFailed;
 		context.Completed += OnCompleted;
 
+		ActiveMqReply<object> reply;
+
 		try
 		{
 			await HandleAsync(ChannelName, envelope.Payload, context, cancellationToken);
 
 			var result = await taskCompletion.Task;
+			reply = ActiveMqReply<object>.Success(result);
 		}
 		catch (Exception exception)
 		{
+			reply = ActiveMqReply<object>.Failure(exception);
 		}
 
 		if (message.NMSReplyTo != null)
 		{
+			var response = _serializer.Serialize(reply);
+
 			using var responder = await Session.CreateProducerAsync(message.NMSReplyTo);
-			var responseMessage = await Session.CreateTextMessageAsync("这是我的业务处理回复结果");
+			var responseMessage = await Session.CreateTextMessageAsync(response);
 
 			// 建立关联 ID，使请求方能够将回复与原始请求消息进行对应。
 			responseMessage.NMSCorrelationID = message.NMSCorrelationID;
