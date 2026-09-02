@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-namespace Nerosoft.Euonia.Bus.RabbitMq;
+﻿namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
 /// RabbitMQ 消息总线相关的常量定义。

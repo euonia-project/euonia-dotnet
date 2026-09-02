@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <summary>
 /// RabbitMQ 消息接收器的基类。
 /// </summary>
-public abstract class RabbitMqRecipient : DisposableObject
+internal abstract class RabbitMqRecipient : DisposableObject
 {
 	// Backing field for the consumer instance. Use a dedicated lock to ensure
 	// the consumer is created and event handlers are attached only once.

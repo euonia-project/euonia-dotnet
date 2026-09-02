@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <see cref="IExecutor"/> 的 RabbitMQ 实现。
 /// 负责在 RabbitMQ 队列上执行请求-响应（RPC）模式的消息处理。
 /// </summary>
-public sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
+internal sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
 {
 	/// <summary>
 	/// 初始化 <see cref="RabbitMqExecutor"/> 类的新实例。

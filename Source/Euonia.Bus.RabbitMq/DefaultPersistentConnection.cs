@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <see cref="IPersistentConnection"/> 的默认实现。
 /// 负责建立、维护和自动重连 RabbitMQ 持久连接，并在连接事件（关闭、异常、阻塞）发生时自动尝试重新连接。
 /// </summary>
-public class DefaultPersistentConnection : DisposableObject, IPersistentConnection
+internal class DefaultPersistentConnection : DisposableObject, IPersistentConnection
 {
 	/// <summary>
 	/// 用于同步连接操作的异步锁。
