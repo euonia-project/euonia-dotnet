@@ -69,7 +69,7 @@ public abstract class RabbitMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置此接收器处理的消息类型。
 	/// </summary>
-	protected Type MessageType { get; set; }
+	protected Type MessageType { get; }
 
 	/// <summary>
 	/// 获取或设置此接收器监听的消息通道名称。
