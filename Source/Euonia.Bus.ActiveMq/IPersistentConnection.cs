@@ -8,19 +8,19 @@ namespace Nerosoft.Euonia.Bus.ActiveMq;
 public interface IPersistentConnection : IDisposable
 {
 	/// <summary>
-	/// Gets a value indicating whether the connection is connected.
+	/// 获取一个值，指示连接是否已建立。
 	/// </summary>
 	bool IsConnected { get; }
 
 	/// <summary>
-	/// Attempts to establish a connection to the message broker asynchronously.
+	/// 尝试异步建立与消息代理的连接。
 	/// </summary>
-	/// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether the connection was successful.</returns>
+	/// <returns>表示异步操作的任务。</returns>
 	Task TryConnectAsync();
 
 	/// <summary>
-	/// Creates a session asynchronously.
+	/// 异步创建一个会话。
 	/// </summary>
-	/// <returns>The created session.</returns>
+	/// <returns>表示异步操作的任务，任务结果包含创建的会话。</returns>
 	Task<ISession> CreateSessionAsync();
 }
