@@ -50,7 +50,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置当前接收器处理的消息类型。
 	/// </summary>
-	protected Type MessageType { get; set; }
+	protected Type MessageType { get; }
 
 	/// <summary>
 	/// 获取当前接收器监听的消息通道名称。
@@ -76,35 +76,6 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// 获取或设置当前接收器关联的消息消费者。
 	/// </summary>
 	protected IMessageConsumer Consumer { get; set; }
-	// {
-	// 	get
-	// 	{
-	// 		if (Session == null)
-	// 		{
-	// 			throw new InvalidOperationException("Session is not initialized.");
-	// 		}
-	//
-	// 		var consumer = _consumer;
-	// 		if (consumer != null)
-	// 		{
-	// 			return consumer;
-	// 		}
-	//
-	// 		lock (_consumerLock)
-	// 		{
-	// 			consumer = _consumer;
-	// 			if (consumer == null)
-	// 			{
-	// 				var destination = Session.GetQueue($"queue://Consumer.{SubscriptionId}.VirtualTopic.{ChannelName}");
-	// 				consumer = Session.CreateConsumer(destination);
-	// 				consumer.Listener += HandleMessageReceived;
-	// 				_consumer = consumer;
-	// 			}
-	// 		}
-	//
-	// 		return _consumer;
-	// 	}
-	// }
 
 	/// <summary>
 	/// 处理接收到的消息。
