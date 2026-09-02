@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <summary>
 /// 基于 RabbitMQ 的 <see cref="ITransporter"/> 实现。
 /// </summary>
-public class RabbitMqTransporter : ITransporter
+internal class RabbitMqTransporter : ITransporter
 {
 	/// <summary>
 	/// 当消息成功投递到 RabbitMQ 时触发。
@@ -59,7 +59,7 @@ public class RabbitMqTransporter : ITransporter
 	{
 		await using var channel = await _connection.CreateChannelAsync();
 
-		var props = BuildProperties(message.TypeName);
+		var props = BuildProperties(message);
 
 		await Policy.Handle<SocketException>()
 		            .Or<TimeoutException>()
@@ -92,6 +92,11 @@ public class RabbitMqTransporter : ITransporter
 	{
 		var task = new TaskCompletionSource<TResponse>();
 
+		if (cancellationToken != CancellationToken.None)
+		{
+			cancellationToken.Register(() => task.TrySetCanceled());
+		}
+
 		var requestQueueName = GetQueueName(message.Channel);
 
 		await using var channel = await _connection.CreateChannelAsync();
@@ -103,7 +108,7 @@ public class RabbitMqTransporter : ITransporter
 
 		consumer.ReceivedAsync += OnReceivedAsync;
 
-		var props = BuildProperties(message.TypeName, message.CorrelationId, responseQueueName);
+		var props = BuildProperties(message, responseQueueName);
 
 		await Policy.Handle<SocketException>()
 		            .Or<TimeoutException>()
@@ -173,23 +178,89 @@ public class RabbitMqTransporter : ITransporter
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步调用操作并返回响应的任务。</returns>
 	/// <exception cref="NotImplementedException">始终抛出，此方法当前未实现。</exception>
-	public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
+	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		throw new NotImplementedException();
+		var task = new TaskCompletionSource<TResponse>();
+
+		if (cancellationToken != CancellationToken.None)
+		{
+			cancellationToken.Register(() => task.TrySetCanceled());
+		}
+
+		var requestQueueName = GetQueueName(message.Channel);
+
+		await using var channel = await _connection.CreateChannelAsync();
+
+		await CheckQueueAsync(channel, requestQueueName);
+
+		var responseQueueName = (await channel.QueueDeclareAsync(cancellationToken: cancellationToken)).QueueName;
+		var consumer = new AsyncEventingBasicConsumer(channel);
+
+		consumer.ReceivedAsync += OnReceivedAsync;
+
+		var props = BuildProperties(message, responseQueueName);
+
+		await Policy.Handle<SocketException>()
+		            .Or<TimeoutException>()
+		            .Or<BrokerUnreachableException>()
+		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+		            {
+			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+		            })
+		            .ExecuteAsync(async () =>
+		            {
+			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
+			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+
+			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+		            });
+
+		var result = await task.Task;
+		consumer.ReceivedAsync -= OnReceivedAsync;
+		return result;
+
+		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
+		{
+			if (args.BasicProperties.CorrelationId != message.CorrelationId)
+			{
+				return;
+			}
+
+			var body = args.Body.ToArray();
+
+			var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
+			if (response.IsSuccess)
+			{
+				task.SetResult(response.Result);
+			}
+			else
+			{
+				task.SetException(response.Error);
+			}
+
+			await Task.CompletedTask;
+		}
 	}
 
-	private static BasicProperties BuildProperties(string messageType, string correlationId = null, string replyTo = null)
+	private static BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
 	{
 		var props = new BasicProperties
 		{
-			CorrelationId = correlationId,
+			CorrelationId = message.CorrelationId,
 			ContentEncoding = "utf-8",
 			ContentType = "application/json",
-			Type = messageType,
-			ReplyTo = replyTo
+			Type = message.TypeName,
+			ReplyTo = replyTo,
+			MessageId = message.MessageId,
+			UserId = message.User?.Identity?.Name,
 		};
 		props.Headers ??= new Dictionary<string, object>();
-		props.Headers[MessageHeaders.MessageType] = messageType;
+		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
+		props.Headers[MessageHeaders.RequestTraceId] = message.RequestTraceId;
+		props.Headers[MessageHeaders.Authorization] = message.Authorization;
+		props.Headers[MessageHeaders.Channel] = message.Channel;
 		return props;
 	}
 

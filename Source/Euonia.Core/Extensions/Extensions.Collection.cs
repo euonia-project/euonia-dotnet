@@ -854,51 +854,16 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 设置字典中指定键的值并返回字典本身，支持链式调用。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="dictionary">字典。</param>
-	/// <param name="key">要设置的键。</param>
-	/// <param name="value">要设置的值。</param>
-	/// <returns>返回字典本身，以支持链式调用。</returns>
-	public static IDictionary<TKey, TValue> Set<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, TValue value)
-	{
-		dictionary[key] = value;
-		return dictionary;
-	}
-
-	/// <summary>
-	/// 尝试从字典中获取值并转换为指定类型后执行回调。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <typeparam name="TRef">要转换为的类型。</typeparam>
-	/// <param name="dictionary">字典。</param>
-	/// <param name="key">要获取的键。</param>
-	/// <param name="func">获取到值后要执行的回调函数。</param>
-	public static void TryGetValue<TKey, TValue, TRef>(this IDictionary<TKey, TValue> dictionary, TKey key, Action<TRef> func)
-	{
-		if (!dictionary.TryGetValue(key, out var value))
-		{
-			return;
-		}
-
-		var refValue = (TRef)System.Convert.ChangeType(value, typeof(TRef));
-		func(refValue);
-	}
-
-	/// <summary>
 	/// 尝试从字典中获取 object 类型的值并执行回调。
 	/// </summary>
 	/// <typeparam name="TKey">键的类型。</typeparam>
 	/// <typeparam name="TRef">要转换为的类型。</typeparam>
-	/// <param name="dictionary">字典。</param>
+	/// <param name="source">字典。</param>
 	/// <param name="key">要获取的键。</param>
 	/// <param name="func">获取到值后要执行的回调函数。</param>
-	public static void TryGetValue<TKey, TRef>(this IDictionary<TKey, object> dictionary, TKey key, Action<TRef> func)
+	public static void TryGetValue<TKey, TRef>(this IDictionary<TKey, object> source, TKey key, Action<TRef> func)
 	{
-		if (!dictionary.TryGetValue(key, out var value))
+		if (!source.TryGetValue(key, out var value))
 		{
 			return;
 		}
@@ -908,97 +873,17 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 尝试从字典中获取值并执行回调。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="dictionary">字典。</param>
-	/// <param name="key">要获取的键。</param>
-	/// <param name="func">获取到值后要执行的回调函数。</param>
-	public static void TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key, Action<TValue> func)
-	{
-		if (!dictionary.TryGetValue(key, out var value))
-		{
-			return;
-		}
-
-		func(value);
-	}
-
-	/// <summary>
 	/// 使用指定的字符串比较方式从字典中获取值。
 	/// </summary>
 	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="dictionary">字典。</param>
+	/// <param name="source">字典。</param>
 	/// <param name="key">要获取的键。</param>
 	/// <param name="comparison">字符串比较方式。</param>
 	/// <returns>返回获取到的值，如果未找到则返回默认值。</returns>
-	public static TValue GetValue<TValue>(this IDictionary<string, TValue> dictionary, string key, StringComparison comparison)
+	public static TValue GetValue<TValue>(this IDictionary<string, TValue> source, string key, StringComparison comparison)
 	{
-		var item = dictionary.FirstOrDefault(t => t.Key.Equals(key, comparison));
+		var item = source.FirstOrDefault(t => t.Key.Equals(key, comparison));
 		return item.Value;
-	}
-
-	/// <summary>
-	/// 尝试从字典中获取指定键的值。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="source">源字典。</param>
-	/// <param name="key">要获取的键。</param>
-	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
-	public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key)
-	{
-		if (source == null)
-		{
-			throw new NullReferenceException();
-		}
-
-		return source.TryGetValue(key, out var value) ? value : default;
-	}
-
-	/// <summary>
-	/// 尝试从字典中获取指定键的值，如果键不存在则返回默认值。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="source">源字典。</param>
-	/// <param name="key">要获取的键。</param>
-	/// <param name="defaultValue">键不存在时返回的默认值。</param>
-	/// <returns>如果找到键，则返回对应的值；否则返回 <paramref name="defaultValue"/>。</returns>
-	public static TValue TryGetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key, TValue defaultValue)
-	{
-		if (source == null)
-		{
-			throw new NullReferenceException();
-		}
-
-		return source.TryGetValue(key, out var value) ? value : defaultValue;
-	}
-
-	/// <summary>
-	/// 尝试获取指定键的值，如果不存在则设置默认值并返回。
-	/// </summary>
-	/// <typeparam name="TKey">键的类型。</typeparam>
-	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="source">源字典。</param>
-	/// <param name="key">要获取的键。</param>
-	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
-	public static TValue TryGetOrSetValue<TKey, TValue>(this IDictionary<TKey, TValue> source, TKey key)
-	{
-		if (source == null)
-		{
-			throw new NullReferenceException();
-		}
-
-		if (source.TryGetValue(key, out var value))
-		{
-			return value;
-		}
-
-		value = default;
-		source.Add(key, value);
-		return source[key];
 	}
 
 	/// <summary>
@@ -1019,6 +904,120 @@ public static partial class Extensions
 
 		return source.Keys.Contains(key, comparison) ? source.FirstOrDefault(t => t.Key.Equals(key, comparison)).Value : defaultValue;
 	}
+
+	/// <param name="source">字典。</param>
+	/// <typeparam name="TKey">键的类型。</typeparam>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	extension<TKey, TValue>(IDictionary<TKey, TValue> source)
+	{
+		/// <summary>
+		/// 尝试从字典中获取值并执行回调。
+		/// </summary>
+		/// <param name="key">要获取的键。</param>
+		/// <param name="func">获取到值后要执行的回调函数。</param>
+		public void TryGetValue(TKey key, Action<TValue> func)
+		{
+			if (!source.TryGetValue(key, out var value))
+			{
+				return;
+			}
+
+			func(value);
+		}
+
+		/// <summary>
+		/// 设置字典中指定键的值并返回字典本身，支持链式调用。
+		/// </summary>
+		/// <param name="key">要设置的键。</param>
+		/// <param name="value">要设置的值。</param>
+		/// <returns>返回字典本身，以支持链式调用。</returns>
+		public IDictionary<TKey, TValue> Set(TKey key, TValue value)
+		{
+			source[key] = value;
+			return source;
+		}
+
+		/// <summary>
+		/// 尝试从字典中获取值并转换为指定类型后执行回调。
+		/// </summary>
+		/// <typeparam name="TRef">要转换为的类型。</typeparam>
+		/// <param name="key">要获取的键。</param>
+		/// <param name="func">获取到值后要执行的回调函数。</param>
+		public void TryGetValue<TRef>(TKey key, Action<TRef> func)
+		{
+			if (!source.TryGetValue(key, out var value))
+			{
+				return;
+			}
+
+			var refValue = (TRef)System.Convert.ChangeType(value, typeof(TRef));
+			func(refValue);
+		}
+
+		/// <summary>
+		/// 尝试从字典中获取指定键的值。
+		/// </summary>
+		/// <param name="key">要获取的键。</param>
+		/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+		public TValue TryGetValue(TKey key)
+		{
+			if (source == null)
+			{
+				throw new NullReferenceException();
+			}
+
+			return source.TryGetValue(key, out var value) ? value : default;
+		}
+
+		/// <summary>
+		/// 尝试从字典中获取指定键的值，如果键不存在则返回默认值。
+		/// </summary>
+		/// <param name="key">要获取的键。</param>
+		/// <param name="defaultValue">键不存在时返回的默认值。</param>
+		/// <returns>如果找到键，则返回对应的值；否则返回 <paramref name="defaultValue"/>。</returns>
+		public TValue TryGetValue(TKey key, TValue defaultValue)
+		{
+			if (source == null)
+			{
+				throw new NullReferenceException();
+			}
+
+			return source.TryGetValue(key, out var value) ? value : defaultValue;
+		}
+
+		/// <summary>
+		/// 尝试获取指定键的值，如果不存在则设置默认值并返回。
+		/// </summary>
+		/// <param name="key">要获取的键。</param>
+		/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+		public TValue TryGetOrSetValue(TKey key)
+		{
+			if (source == null)
+			{
+				throw new NullReferenceException();
+			}
+
+			if (source.TryGetValue(key, out var value))
+			{
+				return value;
+			}
+
+			value = default;
+			source.Add(key, value);
+			return source[key];
+		}
+
+		/// <summary>
+		/// 尝试从字典中获取指定键的值，如果找不到则返回默认值。
+		/// </summary>
+		/// <param name="key">要获取的键。</param>
+		/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+		public TValue GetValueOrDefault(TKey key)
+		{
+			return source.TryGetValue(key, out var value) ? value : default;
+		}
+	}
+
 
 	/// <summary>
 	/// 获取指定元素在集合中的索引。

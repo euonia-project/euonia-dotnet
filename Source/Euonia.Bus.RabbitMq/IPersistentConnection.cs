@@ -16,7 +16,7 @@ public interface IPersistentConnection : IDisposable
 	/// Tries to connect to RabbitMQ.
 	/// </summary>
 	/// <returns></returns>
-	Task<bool> TryConnectAsync();
+	Task TryConnectAsync();
 
 	/// <summary>
 	/// Creates a channel.

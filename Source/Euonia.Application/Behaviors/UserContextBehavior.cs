@@ -47,11 +47,13 @@ public class UserContextBehavior<TMessage, TResponse> : IPipelineBehavior<TMessa
 		var contextAccessor = provider.GetService<IRequestContextAccessor>();
 		var user = provider.GetService<UserPrincipal>();
 
-		if (contextAccessor?.Context?.RequestHeaders.TryGetValue("Authorization", out var value) == true)
+		var token = contextAccessor?.Context?.Authorization ?? string.Empty;
+
+		if (!string.IsNullOrEmpty(token))
 		{
-			if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("Bearer") && !value.Equals("Bearer null", StringComparison.OrdinalIgnoreCase))
+			if (token.StartsWith("Bearer") && !token.Equals("Bearer null", StringComparison.OrdinalIgnoreCase))
 			{
-				context.Metadata.Set("Authorization", value);
+				context.Metadata.Set("Authorization", token);
 			}
 		}
 
@@ -63,6 +65,9 @@ public class UserContextBehavior<TMessage, TResponse> : IPipelineBehavior<TMessa
 			context.Metadata.Set("$nerosoft:user.tenant", user.Tenant);
 		}
 
+		{
+			// prevent code analysis
+		}
 		return await next(context);
 	}
 }

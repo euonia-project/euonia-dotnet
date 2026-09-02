@@ -15,10 +15,11 @@
         <PackageReference Include="Newtonsoft.Json"/>
         <PackageReference Include="Polly"/>
     </ItemGroup>
-    
+
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Bus.Abstract\Euonia.Bus.Abstract.csproj"/>
         <ProjectReference Include="..\Euonia.Core\Euonia.Core.csproj"/>
+        <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
     </ItemGroup>
     
     <ItemGroup>

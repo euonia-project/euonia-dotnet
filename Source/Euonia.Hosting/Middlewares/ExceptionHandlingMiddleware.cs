@@ -1,6 +1,4 @@
 ﻿using System.Net;
-using System.Reflection;
-using System.Security.Authentication;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;

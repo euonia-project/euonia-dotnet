@@ -16,15 +16,20 @@ internal static class RequestContextExtensions
 		{
 			return new RequestContext
 			{
-				RequestHeaders = context.Request?.Headers?.ToDictionary(t => t.Key, t => t.Value.ToString()),
-				ConnectionId = context.Connection?.Id,
+				Headers = context.Request.Headers.ToDictionary(t => t.Key, t => t.Value.ToString()),
+				ConnectionId = context.Connection.Id,
 				User = new ClaimsPrincipal(context.User),
-				RemotePort = context.Connection?.RemotePort ?? 0,
-				RemoteIpAddress = context.Connection?.RemoteIpAddress,
+				RemotePort = context.Connection.RemotePort,
+				RemoteIpAddress = context.Connection.RemoteIpAddress,
 				RequestAborted = context.RequestAborted,
-				IsWebSocketRequest = context.WebSockets?.IsWebSocketRequest ?? false,
+				IsWebSocketRequest = context.WebSockets.IsWebSocketRequest,
 				TraceIdentifier = context.TraceIdentifier,
-				RequestServices = context.RequestServices
+				RequestServices = context.RequestServices,
+				Method = context.Request.Method,
+				Scheme = context.Request.Scheme,
+				Host = context.Request.Host.ToString(),
+				Path = context.Request.Path.ToString(),
+				Protocol = context.Request.Protocol
 			};
 		}
 	}

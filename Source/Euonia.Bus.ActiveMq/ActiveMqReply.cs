@@ -1,10 +1,10 @@
-﻿namespace Nerosoft.Euonia.Bus.RabbitMq;
+﻿namespace Nerosoft.Euonia.Bus.ActiveMq;
 
 /// <summary>
-/// 表示 RabbitMQ 消息的回复结果。
+/// 表示 ActiveMQ 消息的回复结果。
 /// </summary>
 /// <typeparam name="TResult">表示回复结果的类型。</typeparam>
-internal class RabbitMqReply<TResult>
+internal class ActiveMqReply<TResult>
 {
 	/// <summary>
 	/// 获取或设置回复结果。
@@ -26,9 +26,9 @@ internal class RabbitMqReply<TResult>
 	/// </summary>
 	/// <param name="result">表示成功的回复结果。</param>
 	/// <returns>表示成功的回复结果。</returns>
-	public static RabbitMqReply<TResult> Success(TResult result)
+	public static ActiveMqReply<TResult> Success(TResult result)
 	{
-		return new RabbitMqReply<TResult>
+		return new ActiveMqReply<TResult>
 		{
 			Result = result
 		};
@@ -39,9 +39,9 @@ internal class RabbitMqReply<TResult>
 	/// </summary>
 	/// <param name="error">表示错误信息。</param>
 	/// <returns>表示失败的回复结果。</returns>
-	public static RabbitMqReply<TResult> Failure(Exception error)
+	public static ActiveMqReply<TResult> Failure(Exception error)
 	{
-		return new RabbitMqReply<TResult>
+		return new ActiveMqReply<TResult>
 		{
 			Error = error
 		};
