@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus.RabbitMq;
@@ -9,7 +8,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// 负责根据消息注册元数据以及已配置的消息约定和传输策略，
 /// 创建并启动 RabbitMQ 接收器（队列消费者或主题订阅者）。
 /// </summary>
-public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
+internal sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 {
 	/// <summary>
 	/// 用于判断单播/多播/请求类型的消息命名与分类约定。
@@ -81,29 +80,18 @@ public sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 				}
 			}
 
-			RabbitMqRecipient recipient;
-			if (_convention.IsUnicast(channel, registration.MessageType))
-			{
-				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqConsumer>(_provider);
-				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, channel);
-			}
-			else if (_convention.IsMulticast(channel, registration.MessageType))
-			{
-				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqSubscriber>(_provider);
-				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, channel);
-			}
-			else if (_convention.IsRequest(channel, registration.MessageType))
-			{
-				recipient = ActivatorUtilities.GetServiceOrCreateInstance<RabbitMqExecutor>(_provider);
-				_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} as request type on channel {Channel}", registration.MessageType.FullName, channel);
-			}
-			else
-			{
-				throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.");
-			}
+			var conventionType = _convention.Detect(channel, registration.MessageType);
 
-			recipient.MessageType = registration.MessageType;
-			await recipient.StartAsync(channel);
+			RabbitMqRecipient recipient = conventionType switch
+			{
+				MessageConventionType.Unicast => new RabbitMqConsumer(_provider, channel, registration.MessageType),
+				MessageConventionType.Multicast => new RabbitMqSubscriber(_provider, channel, registration.MessageType),
+				MessageConventionType.Request => new RabbitMqExecutor(_provider, channel, registration.MessageType),
+				MessageConventionType.None => throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type."),
+				_ => throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.")
+			};
+			
+			await recipient.StartAsync(cancellationToken);
 		}
 	}
 }

@@ -23,6 +23,17 @@ public sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
 	}
 
 	/// <summary>
+	/// 初始化 <see cref="RabbitMqExecutor"/> 类的新实例。
+	/// </summary>
+	/// <param name="provider">用于解析依赖项的服务提供程序。</param>
+	/// <param name="channelName">要订阅的通道名称。</param>
+	/// <param name="messageType">要处理的消息类型。</param>
+	public RabbitMqExecutor(IServiceProvider provider, string channelName, Type messageType)
+		: base(provider, channelName, messageType)
+	{
+	}
+
+	/// <summary>
 	/// 获取此执行器的名称。
 	/// </summary>
 	public string Name => nameof(RabbitMqExecutor);
@@ -30,19 +41,19 @@ public sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
 	/// <summary>
 	/// 启动执行器，声明带有死信配置的队列，设置预取策略并开始消费请求消息。
 	/// </summary>
-	/// <param name="channel">要监听的通道名称。</param>
-	internal override async Task StartAsync(string channel)
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	internal override async Task StartAsync(CancellationToken cancellationToken = default)
 	{
-		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
+		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, ChannelName);
 
-		var queueName = $"{channel}@{subscriptionId}";
+		var queueName = $"{ChannelName}@{subscriptionId}";
 
 		Channel = await Connection.CreateChannelAsync();
 
 		var dlxArguments = await DeclareDeadLetterAsync(Channel, queueName);
-		await Channel.QueueDeclareAsync(queueName, true, false, false, dlxArguments);
-		await Channel.BasicQosAsync((uint)Options.PrefetchSize, (ushort)Options.PrefetchCount, false);
+		await Channel.QueueDeclareAsync(queueName, true, false, false, dlxArguments, cancellationToken: cancellationToken);
+		await Channel.BasicQosAsync((uint)Options.PrefetchSize, (ushort)Options.PrefetchCount, false, cancellationToken);
 
-		await Channel.BasicConsumeAsync(queueName, false, Consumer);
+		await Channel.BasicConsumeAsync(queueName, false, Consumer, cancellationToken: cancellationToken);
 	}
 }

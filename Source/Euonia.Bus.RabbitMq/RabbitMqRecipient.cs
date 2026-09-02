@@ -46,6 +46,22 @@ public abstract class RabbitMqRecipient : DisposableObject
 	}
 
 	/// <summary>
+	/// 初始化 <see cref="RabbitMqRecipient"/> 类的新实例。
+	/// </summary>
+	/// <param name="provider">用于解析服务（如消息序列化器）的服务提供程序。</param>
+	/// <param name="channelName">消息通道名称。</param>
+	/// <param name="messageType">消息类型。</param>
+	protected RabbitMqRecipient(IServiceProvider provider, string channelName, Type messageType)
+	{
+		Handler = provider.GetRequiredService<IHandlerContext>();
+		Options = provider.GetRequiredService<IOptions<RabbitMqBusOptions>>().Value;
+		Connection = provider.GetRequiredService<IPersistentConnection>();
+		ChannelName = channelName;
+		MessageType = messageType;
+		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider);
+	}
+
+	/// <summary>
 	/// 消息处理器上下文，用于执行具体的消息处理逻辑。
 	/// </summary>
 	protected virtual IHandlerContext Handler { get; }
@@ -53,7 +69,12 @@ public abstract class RabbitMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置此接收器处理的消息类型。
 	/// </summary>
-	internal Type MessageType { get; set; }
+	protected Type MessageType { get; set; }
+
+	/// <summary>
+	/// 获取或设置此接收器监听的消息通道名称。
+	/// </summary>
+	protected string ChannelName { get; }
 
 	/// <summary>
 	/// 获取用于与 RabbitMQ 进行通信的持久连接。
@@ -145,8 +166,8 @@ public abstract class RabbitMqRecipient : DisposableObject
 	/// <summary>
 	/// 启动接收器，开始监听指定通道的消息。
 	/// </summary>
-	/// <param name="channel">要监听的通道名称。</param>
-	internal abstract Task StartAsync(string channel);
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	internal abstract Task StartAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 处理来自 RabbitMQ 的原始消息投递事件。
@@ -181,13 +202,13 @@ public abstract class RabbitMqRecipient : DisposableObject
 
 		RabbitMqReply<object> reply;
 
+		context.Responded += OnResponded;
+		context.Failed += OnFailed;
+		context.Completed += OnCompleted;
+
 		try
 		{
-			context.Responded += OnResponded;
-			context.Failed += OnFailed;
-			context.Completed += OnCompleted;
-
-			await HandleAsync(message.Channel, message.Payload, context);
+			await HandleAsync(ChannelName, message.Payload, context, args.CancellationToken);
 
 			var result = await taskCompletion.Task;
 			reply = RabbitMqReply<object>.Success(result);

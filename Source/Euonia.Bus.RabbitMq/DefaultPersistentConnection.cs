@@ -23,7 +23,7 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 	/// <summary>
 	/// RabbitMQ 连接工厂，用于创建实际的连接实例。
 	/// </summary>
-	private readonly IConnectionFactory _connectionFactory;
+	private readonly IConnectionFactory _factory;
 
 	/// <summary>
 	/// 日志记录器实例。
@@ -48,12 +48,12 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 	/// <summary>
 	/// 初始化 <see cref="DefaultPersistentConnection"/> 类的新实例。
 	/// </summary>
-	/// <param name="connectionFactory">用于创建 RabbitMQ 连接的连接工厂。</param>
+	/// <param name="factory">用于创建 RabbitMQ 连接的连接工厂。</param>
 	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
 	/// <param name="options">RabbitMQ 消息总线的配置选项，用于获取最大重试次数。</param>
-	public DefaultPersistentConnection(IConnectionFactory connectionFactory, ILoggerFactory logger, IOptions<RabbitMqBusOptions> options)
+	public DefaultPersistentConnection(IConnectionFactory factory, ILoggerFactory logger, IOptions<RabbitMqBusOptions> options)
 	{
-		_connectionFactory = connectionFactory;
+		_factory = factory;
 		_logger = logger.CreateLogger<DefaultPersistentConnection>();
 		_retryCount = options.Value.MaxFailureRetries;
 	}
@@ -69,23 +69,32 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 	/// 连接成功后订阅连接关闭、回调和阻塞等事件。
 	/// </summary>
 	/// <returns>连接成功返回 <c>true</c>，否则返回 <c>false</c>。</returns>
-	public async Task<bool> TryConnectAsync()
+	public async Task TryConnectAsync()
 	{
 		using (await _mutex.LockAsync())
 		{
 			if (IsConnected)
 			{
-				return true;
+				return;
+			}
+
+			if (_connection != null)
+			{
+				_connection.ConnectionShutdownAsync -= OnConnectionShutdownAsync;
+				_connection.CallbackExceptionAsync -= OnCallbackExceptionAsync;
+				_connection.ConnectionBlockedAsync -= OnConnectionBlockedAsync;
+				_connection.Dispose();
+				_connection = null;
 			}
 
 			_logger.LogInformation("RabbitMQ Client is trying to connect");
-			_connection = await Policy.Handle<SocketException>()
-			                          .Or<BrokerUnreachableException>()
-			                          .WaitAndRetryAsync(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
-			                          {
-				                          _logger.LogWarning(ex, "RabbitMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
-			                          })
-			                          .ExecuteAsync(() => _connectionFactory.CreateConnectionAsync());
+			_connection ??= await Policy.Handle<SocketException>()
+			                            .Or<BrokerUnreachableException>()
+			                            .WaitAndRetryAsync(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+			                            {
+				                            _logger.LogWarning(ex, "RabbitMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
+			                            })
+			                            .ExecuteAsync(() => _factory.CreateConnectionAsync());
 
 			if (IsConnected)
 			{
@@ -94,14 +103,10 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 				_connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
 
 				_logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.Endpoint.HostName);
-
-				return true;
 			}
 			else
 			{
 				_logger.LogCritical("Fatal error: RabbitMQ connections could not be created and opened");
-
-				return false;
 			}
 		}
 	}
@@ -113,7 +118,7 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 	/// <returns>表示异步操作的任务，包含创建的 <see cref="IChannel"/> 实例。</returns>
 	public async Task<IChannel> CreateChannelAsync()
 	{
-		if (!IsConnected)
+		while (!IsConnected)
 		{
 			await TryConnectAsync();
 			// 在连接失败时抛出异常，提示当前没有可用的 RabbitMQ 连接来执行此操作

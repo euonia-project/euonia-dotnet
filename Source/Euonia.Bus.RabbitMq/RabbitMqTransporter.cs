@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// <summary>
 /// 基于 RabbitMQ 的 <see cref="ITransporter"/> 实现。
 /// </summary>
-public class RabbitMqTransporter : ITransporter
+internal class RabbitMqTransporter : ITransporter
 {
 	/// <summary>
 	/// 当消息成功投递到 RabbitMQ 时触发。
@@ -194,6 +194,7 @@ public class RabbitMqTransporter : ITransporter
 		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
 		props.Headers[MessageHeaders.RequestTraceId] = message.RequestTraceId;
 		props.Headers[MessageHeaders.Authorization] = message.Authorization;
+		props.Headers[MessageHeaders.Channel] = message.Channel;
 		return props;
 	}
 
