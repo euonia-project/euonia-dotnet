@@ -42,4 +42,38 @@ public interface IMessageConvention
 	/// 请求消息发送给单个接收者，并期望收到响应。
 	/// </remarks>
 	bool IsRequest(string channel, Type type);
+
+	/// <summary>
+	/// 根据通道名称和消息类型检测消息约定类型。
+	/// </summary>
+	/// <param name="channel">要检查的通道名称。</param>
+	/// <param name="type">要检查的消息类型。</param>
+	/// <returns>返回检测到的消息约定类型。</returns>
+	MessageConventionType Detect(string channel, Type type)
+	{
+		var flag = 0;
+
+		if (IsMulticast(channel, type))
+		{
+			flag |= 1;
+		}
+
+		if (IsUnicast(channel, type))
+		{
+			flag |= 2;
+		}
+
+		if (IsRequest(channel, type))
+		{
+			flag |= 4;
+		}
+
+		return flag switch
+		{
+			1 => MessageConventionType.Multicast,
+			2 => MessageConventionType.Unicast,
+			4 => MessageConventionType.Request,
+			_ => throw new MessageTypeException($"The message type {type.AssemblyQualifiedName} is not a queue/topic/request type.")
+		};
+	}
 }

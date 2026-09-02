@@ -84,4 +84,9 @@ public static class MessageHeaders
 	 * 路由键
 	 */
 	public const string RoutingKey = "x-routing-key";
+	
+	/// <summary>
+	/// 消息通道
+	/// </summary>
+	public const string Channel = "x-channel";
 }
