@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Bus.ActiveMq;
 /// <summary>
 /// <see cref="IPersistentConnection"/> 的默认实现。
 /// </summary>
-public class DefaultPersistentConnection : DisposableObject, IPersistentConnection
+internal class DefaultPersistentConnection : DisposableObject, IPersistentConnection
 {
 	/// <summary>
 	/// 用于同步连接操作的异步锁。
@@ -33,7 +33,7 @@ public class DefaultPersistentConnection : DisposableObject, IPersistentConnecti
 	private readonly int _retryCount;
 
 	/// <summary>
-	/// 当前的 RabbitMQ 连接实例。
+	/// 当前的 ActiveMQ 连接实例。
 	/// </summary>
 	private IConnection _connection;
 

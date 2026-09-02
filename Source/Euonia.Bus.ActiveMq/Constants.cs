@@ -9,4 +9,9 @@ internal class Constants
 	/// 获取默认的传输器名称。
 	/// </summary>
 	public const string DefaultTransportName = "ActiveMq";
+	
+	/// <summary>
+	/// ActiveMQ 消息总线的配置节点路径。
+	/// </summary>
+	public const string ConfigurationSection = "Euonia:Bus:ActiveMq";
 }
