@@ -3,47 +3,50 @@
 namespace Nerosoft.Euonia.Uow;
 
 /// <summary>
-/// The attribute used to mark a class or method to use UOW pattern.
+/// 用于标注类、方法或接口以启用工作单元模式。
 /// </summary>
+/// <remarks>
+/// 该特性可标注在类或方法上（见 <see cref="UnitOfWorkInterceptor"/>）；当标注在方法上时优先于类上的配置，
+/// 方法或类上将 <see cref="IsDisabled"/> 设为 <c>true</c> 可针对该范围禁用工作单元。
+/// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Interface)]
 public class UnitOfWorkAttribute : Attribute
 {
 	/// <summary>
-	/// Gets or sets a value to indicates whether this UOW is transactional or not.
-	/// Uses default value if not supplied.
+	/// 获取或设置一个值，指示该工作单元是否事务化。
 	/// </summary>
+	/// <value>为 <c>null</c> 时使用默认配置（<see cref="UnitOfWorkOptions"/> 中的设置）。</value>
 	public bool? IsTransactional { get; set; }
 
 	/// <summary>
-	/// Gets or sets the timeout value of this UOW.
-	/// Uses default value if not supplied.
+	/// 获取或设置该工作单元的超时时长。
 	/// </summary>
+	/// <value>为 <c>null</c> 时使用默认配置（<see cref="UnitOfWorkOptions"/> 中的设置）。</value>
 	public TimeSpan? Timeout { get; set; }
 
 	/// <summary>
-	/// If this UOW is transactional, this option indicated the isolation level of the transaction.
-	/// Uses default value if not supplied.
+	/// 获取或设置事务的隔离级别（仅在工作单元事务化时生效）。
 	/// </summary>
+	/// <value>为 <c>null</c> 时使用默认配置（<see cref="UnitOfWorkOptions"/> 中的设置）。</value>
 	public IsolationLevel? IsolationLevel { get; set; }
 
 	/// <summary>
-	/// Used to prevent starting a unit of work for the method.
-	/// If there is already a started unit of work, this property is ignored.
-	/// Default: false.
+	/// 获取或设置一个值，用于阻止为该成员开启新的工作单元。
 	/// </summary>
+	/// <value>默认值为 <c>false</c>。若已存在处于活动状态的工作单元，则该设置被忽略。</value>
 	public bool IsDisabled { get; set; }
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="UnitOfWorkAttribute"/> class.
+	/// 初始化 <see cref="UnitOfWorkAttribute"/> 类的新实例。
 	/// </summary>
 	public UnitOfWorkAttribute()
 	{
 	}
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="UnitOfWorkAttribute"/> class.
+	/// 使用是否事务化初始化 <see cref="UnitOfWorkAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="isTransactional"></param>
+	/// <param name="isTransactional">指示工作单元是否事务化；为 <c>null</c> 时使用默认配置。</param>
 	public UnitOfWorkAttribute(bool? isTransactional)
 		: this()
 	{
@@ -51,10 +54,10 @@ public class UnitOfWorkAttribute : Attribute
 	}
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="UnitOfWorkAttribute"/> class.
+	/// 使用是否事务化与事务隔离级别初始化 <see cref="UnitOfWorkAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="isTransactional"></param>
-	/// <param name="isolationLevel"></param>
+	/// <param name="isTransactional">指示工作单元是否事务化；为 <c>null</c> 时使用默认配置。</param>
+	/// <param name="isolationLevel">事务隔离级别；为 <c>null</c> 时使用默认配置。</param>
 	public UnitOfWorkAttribute(bool? isTransactional, IsolationLevel? isolationLevel)
 		: this(isTransactional)
 	{
@@ -62,11 +65,11 @@ public class UnitOfWorkAttribute : Attribute
 	}
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="UnitOfWorkAttribute"/> class.
+	/// 使用是否事务化、事务隔离级别与超时初始化 <see cref="UnitOfWorkAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="isTransactional"></param>
-	/// <param name="isolationLevel"></param>
-	/// <param name="timeout"></param>
+	/// <param name="isTransactional">指示工作单元是否事务化；为 <c>null</c> 时使用默认配置。</param>
+	/// <param name="isolationLevel">事务隔离级别；为 <c>null</c> 时使用默认配置。</param>
+	/// <param name="timeout">工作单元的超时时长；为 <c>null</c> 时使用默认配置。</param>
 	public UnitOfWorkAttribute(bool? isTransactional, IsolationLevel? isolationLevel, TimeSpan? timeout)
 		: this(isTransactional, isolationLevel)
 	{

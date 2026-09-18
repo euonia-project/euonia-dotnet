@@ -1,13 +1,11 @@
 namespace Nerosoft.Euonia.Uow;
 
 /// <summary>
-/// Marker interface that indicates a type participates in a unit of work.
+/// 标记接口，指示某类型参与工作单元。
 /// </summary>
 /// <remarks>
-/// Implement this interface on classes that should be managed within a unit-of-work scope
-/// by the application's infrastructure (for example, repositories or services that need
-/// transactional boundaries). The interface is intentionally empty; it acts purely as a marker
-/// for identification by DI containers or middleware.
+/// 需要在工作单元范围内受应用基础设施管理的类（例如需要事务边界的仓储或服务）可实现该接口。
+/// 该接口刻意保持为空，仅作为标记，供依赖注入容器或中间件按约定识别。
 /// </remarks>
 public interface IUnitOfWorkEnabled
 {

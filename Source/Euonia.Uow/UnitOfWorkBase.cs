@@ -3,24 +3,22 @@
 namespace Nerosoft.Euonia.Uow;
 
 /// <summary>
-/// Base class providing common unit-of-work helpers such as scoped service resolution
-/// and disposable behavior for concrete unit-of-work implementations.
+/// 工作单元实现的基类，提供作用域内服务解析与可释放行为的通用实现。
 /// </summary>
+/// <inheritdoc cref="DisposableObject" />
 public abstract class UnitOfWorkBase : DisposableObject
 {
     /// <summary>
-    /// Gets the <see cref="IServiceProvider"/> scoped to the current unit of work.
-    /// Implementations must provide the service provider used for resolving services
-    /// within the unit of work's lifetime.
+    /// 获取限定于当前工作单元作用域的 <see cref="IServiceProvider"/>。
     /// </summary>
+    /// <value>用于在工作单元生命周期内解析服务的服务提供程序。</value>
     public abstract IServiceProvider ServiceProvider { get; }
 
     /// <summary>
-    /// Resolves a service of type <typeparamref name="TService"/> from the unit of work's scope.
-    /// Returns null if the service is not registered.
+    /// 从工作单元作用域中解析指定类型的服务。
     /// </summary>
-    /// <typeparam name="TService">The type of the service to resolve.</typeparam>
-    /// <returns>An instance of <typeparamref name="TService"/> or <c>null</c> if not registered.</returns>
+    /// <typeparam name="TService">要解析的服务类型。</typeparam>
+    /// <returns>服务实例；若未注册则返回 <c>null</c>。</returns>
     public TService GetService<TService>()
         where TService : class
     {
@@ -28,10 +26,10 @@ public abstract class UnitOfWorkBase : DisposableObject
     }
 
     /// <summary>
-    /// Resolves all registered services of type <typeparamref name="TService"/> from the unit of work's scope.
+    /// 从工作单元作用域中解析指定类型的所有已注册服务。
     /// </summary>
-    /// <typeparam name="TService">The type of the services to resolve.</typeparam>
-    /// <returns>An <see cref="IEnumerable{TService}"/> containing all resolved services; empty if none registered.</returns>
+    /// <typeparam name="TService">要解析的服务类型。</typeparam>
+    /// <returns>包含所有已解析服务的序列；若未注册则为空序列。</returns>
     public IEnumerable<TService> GetServices<TService>()
         where TService : class
     {
@@ -39,21 +37,20 @@ public abstract class UnitOfWorkBase : DisposableObject
     }
 
     /// <summary>
-    /// Resolves a service of the specified <paramref name="serviceType"/> from the unit of work's scope.
-    /// Returns null if the service is not registered.
+    /// 从工作单元作用域中解析指定 <paramref name="serviceType"/> 的服务。
     /// </summary>
-    /// <param name="serviceType">The type of the service to resolve.</param>
-    /// <returns>An instance of the requested service or <c>null</c> if not registered.</returns>
+    /// <param name="serviceType">要解析的服务类型。</param>
+    /// <returns>服务实例；若未注册则返回 <c>null</c>。</returns>
     public object GetService(Type serviceType)
     {
         return ServiceProvider.GetService(serviceType);
     }
 
     /// <summary>
-    /// Resolves all registered services of the specified <paramref name="serviceType"/> from the unit of work's scope.
+    /// 从工作单元作用域中解析指定 <paramref name="serviceType"/> 的所有已注册服务。
     /// </summary>
-    /// <param name="serviceType">The type of the services to resolve.</param>
-    /// <returns>An <see cref="IEnumerable{Object}"/> containing all resolved services; empty if none registered.</returns>
+    /// <param name="serviceType">要解析的服务类型。</param>
+    /// <returns>包含所有已解析服务的序列；若未注册则为空序列。</returns>
     public IEnumerable<object> GetServices(Type serviceType)
     {
         return ServiceProvider.GetServices(serviceType);
