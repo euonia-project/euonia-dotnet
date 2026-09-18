@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Nerosoft.Euonia.Repository;
 using Nerosoft.Euonia.Repository.EfCore;
-using Nerosoft.Euonia.Sample.Domain;
 
 namespace Nerosoft.Euonia.Sample.Persist;
 
@@ -40,18 +39,18 @@ internal static class EntityTypeBuilderExtensions
 			   .IsRequired()
 			   .IsUnicode();
 
-		builder.Property(t => t.IsDeleted)
-			   .HasColumnName("is_deleted")
-			   .HasDefaultValue(false)
-			   .IsRequired();
-
-		builder.Property(t => t.DeletedAt)
-			   .HasColumnName("deleted_at");
-
-		builder.Property(t => t.DeletedBy)
-			   .HasColumnName("deleted_by")
-			   .HasMaxLength(64)
-			   .IsUnicode();
+		// builder.Property(t => t.IsDeleted)
+		// 	   .HasColumnName("is_deleted")
+		// 	   .HasDefaultValue(false)
+		// 	   .IsRequired();
+		//
+		// builder.Property(t => t.DeletedAt)
+		// 	   .HasColumnName("deleted_at");
+		//
+		// builder.Property(t => t.DeletedBy)
+		// 	   .HasColumnName("deleted_by")
+		// 	   .HasMaxLength(64)
+		// 	   .IsUnicode();
 	}
 
 	/// <summary>
