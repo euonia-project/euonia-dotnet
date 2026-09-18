@@ -350,6 +350,24 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 	}
 
+	/// <summary>
+	/// 提交当前更改：清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
+	/// 将字段当前值作为新的基线，令 <see cref="HasChangedProperties"/> 和字段的
+	/// <see cref="FieldData{T}.IsChanged"/> 返回 <see langword="false"/>。
+	/// </summary>
+	/// <remarks>
+	/// 通常在对象被成功保存或加载后调用，使对象恢复"干净"状态。
+	/// </remarks>
+	public virtual void AcceptChanges()
+	{
+		lock (_changedPropertiesLock)
+		{
+			_changedProperties.Clear();
+		}
+
+		FieldManager.MarkAllAsUnchanged();
+	}
+
 	#endregion
 
 	#region Property Checks

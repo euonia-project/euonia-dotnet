@@ -81,13 +81,17 @@ public class ObjectReflector
 		{
 			foreach (var candidate in candidates)
 			{
-				var score = 0;
 				var methodParameters = candidate.Item1.GetParameters();
-				if (methodParameters.Length != parameterCount)
+
+				// 目标方法的参数数量可以多于传入条件，多出的参数必须带默认值（可选参数）
+				var optionalCount = methodParameters.Length - parameterCount;
+				if (optionalCount < 0 || (optionalCount > 0 && methodParameters.Skip(parameterCount).Any(t => !t.HasDefaultValue)))
 				{
 					continue;
 				}
 
+				// 可选参数匹配降低优先级，使长度精确匹配的重载优先
+				var score = -Math.Max(optionalCount, 0);
 				var index = 0;
 
 				if (criteria!.GetType() == typeof(object[]))
@@ -124,9 +128,11 @@ public class ObjectReflector
 		{
 			foreach (var (method, score) in candidates)
 			{
-				if (method.GetParameters().Length == 0)
+				var methodParameters = method.GetParameters();
+				if (methodParameters.Length == 0 || methodParameters.All(t => t.HasDefaultValue))
 				{
-					matches.Add(Tuple.Create(method, score));
+					// 无参数方法优先于全为可选参数的方法
+					matches.Add(Tuple.Create(method, score - methodParameters.Length));
 				}
 			}
 		}

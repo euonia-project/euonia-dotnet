@@ -30,13 +30,33 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// 使用指定的集合初始化 ObservableList 的新实例，并为每个项附加事件处理程序以监视其更改。
 	/// </summary>
 	/// <param name="collection">用于初始化列表的集合。</param>
+	/// <remarks>
+	/// 集合只会被枚举一次：先物化为列表再填充基类，随后为列表中的每个项附加事件钩子，
+	/// 避免对一次性/惰性枚举集合重复枚举导致子项钩子丢失。
+	/// </remarks>
 	public ObservableList(IEnumerable<TItem> collection)
-		: base(collection)
+		: base(Materialize(collection))
 	{
-		foreach (var item in collection)
+		foreach (var item in Items)
 		{
 			AddEventHooks(item);
 		}
+	}
+
+	/// <summary>
+	/// 记录已经附加过事件钩子的项，防止同一实例被重复订阅。
+	/// </summary>
+	private readonly HashSet<TItem> _hookedItems = new(new ReferenceEqualityComparer<TItem>());
+
+	/// <summary>
+	/// 将集合物化为列表，确保只枚举一次。
+	/// </summary>
+	/// <param name="collection">要物化的集合。</param>
+	/// <returns>物化后的列表。</returns>
+	private static List<TItem> Materialize(IEnumerable<TItem> collection)
+	{
+		ArgumentNullException.ThrowIfNull(collection);
+		return collection.ToList();
 	}
 
 	private EventHandler<ObjectChangedEventArgs> _childChanged;
@@ -203,6 +223,11 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 			return;
 		}
 
+		if (!_hookedItems.Remove(item))
+		{
+			return;
+		}
+
 		if (item is INotifyBusy busy)
 		{
 			busy.BusyChanged -= OnItemBusyChanged;
@@ -218,11 +243,17 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// 向指定项添加事件处理程序，以监视其繁忙状态和属性值的更改。
 	/// </summary>
 	/// <remarks>如果项实现 INotifyBusy，此方法订阅 BusyChanged 事件；如果项实现 INotifyPropertyChanged，
-	/// 则订阅 PropertyChanged 事件。这些订阅使系统能够响应项状态或属性的更改。</remarks>
+	/// 则订阅 PropertyChanged 事件。这些订阅使系统能够响应项状态或属性的更改。
+	/// 同一实例的重复添加只订阅一次钩子。</remarks>
 	/// <param name="item">要添加事件处理程序的项。此参数不能为 <c>null</c>；如果为 <c>null</c>，则不附加任何处理程序。</param>
 	protected virtual void AddEventHooks(TItem item)
 	{
 		if (item == null)
+		{
+			return;
+		}
+
+		if (!_hookedItems.Add(item))
 		{
 			return;
 		}
@@ -236,6 +267,33 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		{
 			notifyPropertyChanged.PropertyChanged += OnItemPropertyChanged;
 		}
+	}
+
+	/// <summary>
+	/// 向集合添加一系列项，并在添加完成后引发一次
+	/// <see cref="System.Collections.Specialized.NotifyCollectionChangedAction.Reset"/> 通知。
+	/// </summary>
+	/// <remarks>
+	/// 添加过程中会抑制单个项的更改通知，全部添加完成后统一引发一次 Reset
+	/// 及 Count/Item[] 属性更改，避免为每个项触发一次通知。
+	/// </remarks>
+	/// <param name="items">要添加的项。</param>
+	/// <exception cref="ArgumentNullException">当 <paramref name="items"/> 为 <c>null</c> 时抛出。</exception>
+	public void AddRange(IEnumerable<TItem> items)
+	{
+		ArgumentNullException.ThrowIfNull(items);
+
+		using (SuppressListChangedEvents)
+		{
+			foreach (var item in items)
+			{
+				Add(item);
+			}
+		}
+
+		OnCollectionChanged(new NotifyCollectionChangedEventArgs(NotifyCollectionChangedAction.Reset));
+		OnPropertyChanged(new PropertyChangedEventArgs("Count"));
+		OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
 	}
 
 	private void RaiseChildChanged(object childObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs collectionChangedArgs)
@@ -300,6 +358,22 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		public void Dispose()
 		{
 			_listObject.RaiseListChangedEvents = _initialRaiseListChangedEvents;
+		}
+	}
+
+	/// <summary>
+	/// 基于引用相等性的比较器，用于按对象身份去重已经挂接事件钩子的项。
+	/// </summary>
+	private sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
+	{
+		public bool Equals(T x, T y)
+		{
+			return ReferenceEquals(x, y);
+		}
+
+		public int GetHashCode(T obj)
+		{
+			return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(obj);
 		}
 	}
 }

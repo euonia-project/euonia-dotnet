@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 public class Rules : IRules
 {
-	private static readonly object _lockObject = new();
+	private readonly object _lockObject = new();
 
 	internal Rules(IHasRuleCheck @object)
 	{
@@ -54,7 +54,16 @@ public class Rules : IRules
 	/// <summary>
 	/// 获取一个值，指示当前是否有正在运行的规则。
 	/// </summary>
-	public bool HasRunningRules { get; private set; }
+	public bool HasRunningRules
+	{
+		get
+		{
+			lock (_lockObject)
+			{
+				return RunningRules.Count > 0;
+			}
+		}
+	}
 
 	internal void SetTarget(IHasRuleCheck target)
 	{
@@ -107,14 +116,17 @@ public class Rules : IRules
 		}
 
 		var currentRunningState = HasRunningRules;
-		HasRunningRules = true;
 		var rules = RuleManager.Rules
 		                       .Where(t => t.Property == null)
 		                       .OrderBy(t => t.Priority);
 		BrokenRules.ClearRules(null);
 		var (properties, tasks) = RunRules(rules, cascade);
 		Task.WaitAll(tasks.ToArray());
-		HasRunningRules = currentRunningState;
+		if (tasks.Count > 0 && !currentRunningState)
+		{
+			_target.AllRulesComplete();
+		}
+
 		return properties.Distinct().ToList();
 	}
 
@@ -132,15 +144,17 @@ public class Rules : IRules
 		}
 
 		var currentRunningState = HasRunningRules;
-		HasRunningRules = true;
 		var rules = RuleManager.Rules
 		                       .Where(t => t.Property == null)
 		                       .OrderBy(t => t.Priority);
 		BrokenRules.ClearRules(null);
-		var (properties, tasks) = RunRules(rules, cascade);
+		var (properties, tasks) = RunRules(rules, cascade, cancellationToken);
 		await Task.WhenAll(tasks);
+		if (tasks.Count > 0 && !currentRunningState)
+		{
+			_target.AllRulesComplete();
+		}
 
-		HasRunningRules = currentRunningState;
 		return properties.Distinct().ToList();
 	}
 
@@ -174,8 +188,9 @@ public class Rules : IRules
 	/// 要执行属性规则检查的属性。
 	/// </param>
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
-	private Tuple<List<string>, List<Task>> CheckRulesForProperty(IPropertyInfo property, bool cascade)
+	private Tuple<List<string>, List<Task>> CheckRulesForProperty(IPropertyInfo property, bool cascade, CancellationToken cancellationToken = default)
 	{
 		var rules = from rule in RuleManager.Rules
 		            where ReferenceEquals(rule.Property, property) // || rule.RelatedProperties.Contains(property)
@@ -184,7 +199,7 @@ public class Rules : IRules
 
 		BrokenRules.ClearRules(property);
 
-		return RunRules(rules, cascade);
+		return RunRules(rules, cascade, cancellationToken);
 	}
 
 	/// <summary>
@@ -192,8 +207,9 @@ public class Rules : IRules
 	/// </summary>
 	/// <param name="rules">要运行的规则集合。</param>
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
-	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade)
+	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade, CancellationToken cancellationToken = default)
 	{
 		var affectProperties = new List<string>();
 		var tasks = new List<Task>();
@@ -233,11 +249,6 @@ public class Rules : IRules
 							_target.RuleCheckComplete(property);
 						}
 					}
-
-					if (!HasRunningRules)
-					{
-						_target.AllRulesComplete();
-					}
 				}
 			})
 			{
@@ -252,23 +263,19 @@ public class Rules : IRules
 				{
 					foreach (var property in rule.RelatedProperties)
 					{
-						var (properties, cascadeTasks) = CheckRulesForProperty(property, false);
+						var (properties, cascadeTasks) = CheckRulesForProperty(property, false, cancellationToken);
 						affectProperties.AddRange(properties);
 						tasks.AddRange(cascadeTasks);
 					}
 				}
 			}
 
-			try
+			lock (_lockObject)
 			{
 				RunningRules.Add(rule);
-				tasks.Add(RunAsync(rule, context));
 			}
-			catch (Exception ex)
-			{
-				context.AddErrorResult($"{rule.Name}: {ex.Message}");
-				context.Complete();
-			}
+
+			tasks.Add(RunAsync(rule, context, cancellationToken));
 		}
 
 		return Tuple.Create(affectProperties, tasks);

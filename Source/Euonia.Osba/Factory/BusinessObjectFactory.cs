@@ -46,13 +46,14 @@ public class BusinessObjectFactory : IObjectFactory
 		try
 		{
 			_activator?.InitializeInstance(target);
+			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
 			}
 			else
 			{
-				method.Invoke(target, parameters: criteria);
+				method.Invoke(target, parameters: parameters);
 			}
 			return target;
 		}
@@ -71,13 +72,14 @@ public class BusinessObjectFactory : IObjectFactory
 		try
 		{
 			_activator?.InitializeInstance(target);
+			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
 			}
 			else
 			{
-				method.Invoke(target, parameters: criteria);
+				method.Invoke(target, parameters: parameters);
 			}
 			return target;
 		}
@@ -247,14 +249,33 @@ public class BusinessObjectFactory : IObjectFactory
 
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
 	{
+		var normalized = NormalizeParameters(method, parameters);
 		if (method.IsAsync())
 		{
-			await ((Task)method.Invoke(target, parameters: parameters))!;
+			await ((Task)method.Invoke(target, parameters: normalized))!;
 		}
 		else
 		{
-			method.Invoke(target, parameters: parameters);
+			method.Invoke(target, parameters: normalized);
 		}
+	}
+
+	/// <summary>
+	/// 将调用参数补齐到目标方法的参数数量；未提供的尾随可选参数使用 <see cref="Type.Missing"/>
+	/// 填充，使反射调用应用其默认值。
+	/// </summary>
+	/// <param name="method">目标方法。</param>
+	/// <param name="parameters">已提供的调用参数。</param>
+	/// <returns>补齐后的参数数组。</returns>
+	private static object[] NormalizeParameters(MethodInfo method, object[] parameters)
+	{
+		var methodParameters = method.GetParameters();
+		if (methodParameters.Length <= parameters.Length)
+		{
+			return parameters;
+		}
+
+		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];
 	}
 
 	/// <summary>
