@@ -4,30 +4,26 @@ using Microsoft.EntityFrameworkCore.ValueGeneration;
 namespace Nerosoft.Euonia.Repository.EfCore;
 
 /// <summary>
-/// Generates compact, short unique string identifiers for EF Core entities.
+/// 为 EF Core 实体生成紧凑、短小的唯一字符串标识。
 /// </summary>
 /// <remarks>
-/// This value generator produces a short, URL-friendly identifier by:
+/// 该生成器通过以下步骤生成短小且对 URL 友好的标识：
 /// <list type="bullet">
-/// <item>1) Generating a Snowflake-style 64-bit value via <c>ObjectId.NewSnowflake()</c>.</item>
-/// <item>2) Encoding that 64-bit value to a compact string using <c>ShortUniqueId.Default.EncodeInt64</c>.</item>
+/// <item>1）通过 <c>ObjectId.NewSnowflake()</c> 生成雪花算法风格的 64 位值。</item>
+/// <item>2）使用 <c>ShortUniqueId.Default.EncodeInt64</c> 将该 64 位值编码为紧凑字符串。</item>
 /// </list>
-/// The generator returns permanent values (not temporary) suitable for use as stable primary keys
-/// or unique business identifiers within the application's persistence layer.
+/// 生成器返回永久值（非临时值），适合作为稳定的主键或应用持久层中的唯一业务标识。
 /// </remarks>
 public class ShortUniqueIdValueGenerator : ValueGenerator<string>
 {
 	/// <summary>
-	/// Generates the next short unique identifier for the given entity entry.
+	/// 为给定实体条目生成下一个短唯一标识。
 	/// </summary>
 	/// <param name="entry">
-	/// The <see cref="EntityEntry"/> for which the value is being generated.
-	/// The entry can be inspected if generation needs to consider entity state or properties.
+	/// 需要生成值的 <see cref="EntityEntry"/>。若生成过程需考虑实体状态或属性，可从该条目中读取。
 	/// </param>
 	/// <returns>
-	/// A compact string representation of a newly generated 64-bit Snowflake identifier.
-	/// The returned string is produced by encoding the Snowflake value using
-	/// <c>ShortUniqueId.Default.EncodeInt64</c>.
+	/// 新生成的 64 位雪花标识经过 <c>ShortUniqueId.Default.EncodeInt64</c> 编码后的紧凑字符串表示。
 	/// </returns>
 	public override string Next(EntityEntry entry)
 	{
@@ -36,10 +32,10 @@ public class ShortUniqueIdValueGenerator : ValueGenerator<string>
 	}
 
 	/// <summary>
-	/// Indicates whether the values generated are temporary.
+	/// 指示生成的值是否为临时值。
 	/// </summary>
 	/// <value>
-	/// <c>false</c> because this generator produces permanent identifiers intended for storage.
+	/// 始终为 <c>false</c>，因为该生成器产生用于持久化的永久标识。
 	/// </value>
 	public override bool GeneratesTemporaryValues => false;
 }

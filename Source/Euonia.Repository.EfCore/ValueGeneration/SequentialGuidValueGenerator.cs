@@ -4,8 +4,11 @@ using Microsoft.EntityFrameworkCore.ValueGeneration;
 namespace Nerosoft.Euonia.Repository.EfCore;
 
 /// <summary>
-/// The sequential guid value generator.
+/// 顺序 GUID（Sequential GUID）值生成器。
 /// </summary>
+/// <remarks>
+/// 生成按字符串形式排序递增的 GUID，使主键在数据库索引中近似有序，从而降低索引碎片。
+/// </remarks>
 public class SequentialGuidValueGenerator : ValueGenerator<Guid>
 {
     /// <inheritdoc />

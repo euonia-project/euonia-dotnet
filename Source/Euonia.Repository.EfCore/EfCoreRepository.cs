@@ -10,9 +10,9 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	where TContext : DbContext, IRepositoryContext
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> class.
+	/// 初始化 <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The repository context.</param>
+	/// <param name="provider">用于获取仓储上下文的上下文提供程序。</param>
 	public EfCoreRepository(IContextProvider provider)
 		: base(provider)
 	{
@@ -45,6 +45,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 		{
 			query = handle(query);
 		}
+
 		return query.Where(predicate);
 	}
 
@@ -52,7 +53,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	public override async Task<TEntity> GetAsync(TKey key, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(key);
-		return await Context.FindAsync<TEntity>(key);
+		return await Context.FindAsync<TEntity>([key], cancellationToken);
 	}
 
 	/// <inheritdoc />
