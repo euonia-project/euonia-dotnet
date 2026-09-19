@@ -165,4 +165,10 @@ public static class UserClaimTypes
 
 	/// <summary>方案。</summary>
 	public const string Scheme = "scheme";
+
+/// <summary>用户拥有的操作权限，可包含通配符（例如 order:*）。</summary>
+	public const string Permission = "perm";
+
+	/// <summary>范围声明类型前缀，完整的范围声明类型为 "scope:{维度名}"，值为该维度的不透明值（通常是数据库标识）。同一维度可存在多个同类型声明表示多值；值为 "*" 表示该维度通配；维度为 "*" 且值为 "*" 表示全局通配。</summary>
+	public const string ScopePrefix = "scope:";
 }

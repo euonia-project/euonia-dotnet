@@ -903,6 +903,131 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		return CanWriteProperty(propertyInfo, throwOnFalse);
 	}
 
+	/// <summary>
+	/// 确定是否允许当前用户读取此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	/// <remarks>
+	/// 基类默认根据类型与方法上的 <see cref="PermissionRequirementAttribute"/> 要求委托给权限检查器；
+	/// 派生类可重写以实现自定义操作权限逻辑。
+	/// </remarks>
+	public virtual bool CanReadObject()
+	{
+		return IsOperationGranted(BusinessOperation.Read, typeof(FactoryFetchAttribute));
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户创建此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanCreateObject()
+	{
+		return IsOperationGranted(BusinessOperation.Create, typeof(FactoryCreateAttribute), typeof(FactoryInsertAttribute));
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户更新此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanUpdateObject()
+	{
+		return IsOperationGranted(BusinessOperation.Update, typeof(FactoryUpdateAttribute));
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户删除此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanDeleteObject()
+	{
+		return IsOperationGranted(BusinessOperation.Delete, typeof(FactoryDeleteAttribute));
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户执行此命令对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanExecuteObject()
+	{
+		return IsOperationGranted(BusinessOperation.Execute, typeof(FactoryExecuteAttribute));
+	}
+
+	/// <summary>
+	/// 判断当前用户是否拥有指定的权限。
+	/// </summary>
+	/// <param name="permission">权限名称，支持以 <c>*</c> 结尾的前缀通配符匹配。</param>
+	/// <returns>拥有该权限则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
+	protected bool HasPermission(string permission)
+	{
+		var checker = ResolvePermissionChecker();
+		return checker == null || checker.IsGranted(permission);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否属于指定的角色。
+	/// </summary>
+	/// <param name="role">角色名称。</param>
+	/// <returns>属于该角色则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
+	protected bool HasRole(string role)
+	{
+		var checker = ResolvePermissionChecker();
+		return checker == null || checker.IsInRole(role);
+	}
+
+	/// <summary>
+	/// 依据类型级与方法级 <see cref="PermissionRequirementAttribute"/> 要求判断是否放行指定操作。
+	/// </summary>
+	/// <param name="operation">当前操作。</param>
+	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型（一个操作可能对应多个）。</param>
+	/// <returns>无要求或要求全部满足时返回 <c>true</c>。</returns>
+	private bool IsOperationGranted(BusinessOperation operation, params Type[] factoryAttributeTypes)
+	{
+		var requirements = GetPermissionRequirements(factoryAttributeTypes);
+		if (requirements.Count == 0)
+		{
+			return true;
+		}
+
+		var checker = ResolvePermissionChecker();
+		if (checker == null)
+		{
+			return true;
+		}
+
+		return requirements.All(requirement => checker.IsRequirementSatisfied(requirement.Permission, requirement.Roles));
+	}
+
+	/// <summary>
+	/// 收集类型级与指定工厂方法特性标记方法上的权限要求。
+	/// </summary>
+	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型。</param>
+	/// <returns>权限要求列表。</returns>
+	private List<PermissionRequirementAttribute> GetPermissionRequirements(params Type[] factoryAttributeTypes)
+	{
+		var requirements = new List<PermissionRequirementAttribute>();
+		requirements.AddRange(GetType().GetCustomAttributes(typeof(PermissionRequirementAttribute), true).Cast<PermissionRequirementAttribute>());
+		foreach (var method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+		{
+			if (!factoryAttributeTypes.Any(factoryAttributeType => method.IsDefined(factoryAttributeType, true)))
+			{
+				continue;
+			}
+
+			requirements.AddRange(method.GetCustomAttributes(typeof(PermissionRequirementAttribute), true).Cast<PermissionRequirementAttribute>());
+		}
+
+		return requirements;
+	}
+
+	/// <summary>
+	/// 从当前业务上下文解析权限检查器。
+	/// </summary>
+	/// <returns>权限检查器实例；上下文缺失或服务未注册时返回 <c>null</c>。</returns>
+	private IPermissionChecker ResolvePermissionChecker()
+	{
+		return BusinessContext?.GetService<IPermissionChecker>();
+	}
+
 	#endregion
 
 	#region IDisposable

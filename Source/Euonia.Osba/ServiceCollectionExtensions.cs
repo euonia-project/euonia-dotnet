@@ -14,12 +14,19 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
 	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
+	/// <remarks>
+	/// 数据权限（<see cref="IDataScopeService" />）依赖 <see cref="IUserScopeProvider" />：
+	/// 授权范围值必须从应用数据运行期解析，请另行注册基于授权数据的实现；
+	/// 框架不注册任何默认提供者，以防把值固化。
+	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
 		services.TryAddScoped<IActuator, Actuator>();
 		services.TryAddScoped<BusinessContextAccessor>();
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
+		services.TryAddScoped<IPermissionChecker, ClaimPermissionChecker>();
+		services.TryAddScoped<IDataScopeService, DataScopeService>();
 
 		if (assemblies?.Length > 0)
 		{

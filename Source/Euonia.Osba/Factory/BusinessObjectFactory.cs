@@ -45,6 +45,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
@@ -71,6 +72,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
 			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
@@ -102,6 +104,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 			return target;
@@ -120,6 +123,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 			return target;
@@ -138,6 +142,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 			return target;
@@ -156,6 +161,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Update);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 			return target;
@@ -169,20 +175,22 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public async Task<TTarget> SaveAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
 	{
-		var method = target switch
+		var (method, operation) = target switch
 		{
 			IEditableObject editableObject => editableObject.State switch
 			{
-				ObjectEditState.New => ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]),
-				ObjectEditState.Changed => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]),
-				ObjectEditState.Deleted => ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]),
+				ObjectEditState.New => (ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]), BusinessOperation.Create),
+				ObjectEditState.Changed => (ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]), BusinessOperation.Update),
+				ObjectEditState.Deleted => (ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]), BusinessOperation.Delete),
 				ObjectEditState.None => throw new InvalidOperationException(),
 				_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 			},
-			ICommandObject => ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]),
+			ICommandObject => (ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]), BusinessOperation.Execute),
 			IReadOnlyObject => throw new InvalidOperationException("The operation can not apply for ReadOnlyObject."),
-			_ => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken])
+			_ => (ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]), BusinessOperation.Update)
 		};
+
+		ObjectAuthorization.EnsureAuthorized(target, operation);
 
 		await InvokeAsync(method, target, [cancellationToken]);
 
@@ -197,6 +205,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, [cancellationToken]);
 			return target;
@@ -217,6 +226,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 			return target;
@@ -236,6 +246,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Delete);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 		}
