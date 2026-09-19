@@ -13,11 +13,17 @@ public static class ServiceCollectionExtensions
 	/// 向指定的 <see cref="IServiceCollection" /> 添加业务对象相关服务。
 	/// </summary>
 	/// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
-	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
+	/// <param name="assemblies">要扫描业务对象类型与数据权限模型的程序集数组。</param>
 	/// <remarks>
-	/// 数据权限（<see cref="IDataScopeService" />）依赖 <see cref="IUserScopeProvider" />：
-	/// 授权范围值必须从应用数据运行期解析，请另行注册基于授权数据的实现；
-	/// 框架不注册任何默认提供者，以防把值固化。
+	/// <para>
+	/// 数据权限需要应用提供 <see cref="IScopeSubjectResolver" />：授权值必须从应用数据运行期解析，
+	/// 框架不提供任何默认实现，以防把值固化。仅当扫描到 <see cref="IScopeModel{T}" /> 声明时才需要它，
+	/// 且缺失会在首次判定时以明确错误暴露，不会静默放行。
+	/// </para>
+	/// <para>
+	/// 权限模型在<b>注册期</b>完成校验（重复声明、未映射维度、恒不放行等），因此配置错误会在启动时失败，
+	/// 而不是等到运行期。
+	/// </para>
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
@@ -26,7 +32,16 @@ public static class ServiceCollectionExtensions
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
 		services.TryAddScoped<IPermissionChecker, ClaimPermissionChecker>();
-		services.TryAddScoped<IDataScopeService, DataScopeService>();
+
+		// 权限模型注册表是实例而非进程级静态状态，容器与测试之间天然隔离。
+		// 校验不依赖容器，因此可以在这里（注册期）立即完成。
+		services.TryAddSingleton(ScopeModelRegistry.Create(assemblies));
+
+		// IScopeSubjectResolver 允许缺席：只有真正声明了模型并发生判定时才会要求它。
+		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
+			provider.GetRequiredService<BusinessContext>(),
+			provider.GetRequiredService<ScopeModelRegistry>(),
+			provider.GetService<IScopeSubjectResolver>()));
 
 		if (assemblies?.Length > 0)
 		{

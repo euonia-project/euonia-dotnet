@@ -56,6 +56,9 @@ public class BusinessObjectFactory : IObjectFactory
 			{
 				method.Invoke(target, parameters: parameters);
 			}
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
 			return target;
 		}
 		finally
@@ -83,6 +86,9 @@ public class BusinessObjectFactory : IObjectFactory
 			{
 				method.Invoke(target, parameters: parameters);
 			}
+
+			// 目标由工厂方法填充：加载完成后才谈得上数据范围
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
 			return target;
 		}
 		finally
@@ -107,6 +113,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
 			return target;
 		}
 		finally
@@ -126,6 +135,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：加载完成后才谈得上数据范围
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
 			return target;
 		}
 		finally
@@ -145,6 +157,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
 			return target;
 		}
 		finally
@@ -164,6 +179,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Update);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Update);
 			return target;
 		}
 		finally
@@ -192,10 +210,16 @@ public class BusinessObjectFactory : IObjectFactory
 
 		ObjectAuthorization.EnsureAuthorized(target, operation);
 
+		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
+		ScopeAuthorization.EnsureAuthorizedBefore(target, operation);
+
 		try
 		{
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, [cancellationToken]);
+
+			// 保存后再次判定：业务方法可能改动了范围列
+			ScopeAuthorization.EnsureAuthorizedAfter(target, operation);
 			return target;
 		}
 		finally
@@ -213,6 +237,9 @@ public class BusinessObjectFactory : IObjectFactory
 		try
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
+
+			// 目标由调用方提供：可以前置判定
+			ScopeAuthorization.EnsureAuthorizedBefore(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, [cancellationToken]);
 			return target;
@@ -236,6 +263,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Execute);
 			return target;
 		}
 		finally
@@ -256,6 +286,9 @@ public class BusinessObjectFactory : IObjectFactory
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Delete);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Delete);
 		}
 		finally
 		{

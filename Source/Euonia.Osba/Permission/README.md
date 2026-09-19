@@ -5,10 +5,10 @@
 | | 操作权限（Operation Permission） | 数据权限（Data Permission） |
 |---|---|---|
 | 回答的问题 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
-| 作用对象 | 操作 × 对象类型（类级/方法级） | 数据行（实现 `IDataScoped` 的类型） |
-| 判定依据 | 权限声明（或角色），一般来自用户声明 | 行所属范围 × 用户从**授权数据**实时解析出的范围 |
-| 强制执行点 | `BusinessObjectFactory` 调用边界 | 查询过滤 + `DataScopeRule`（写入前） |
-| 失败形态 | 抛 `System.Security.SecurityException` | 排除该行 / 规则失败 |
+| 作用对象 | 操作 × 对象类型（类级/方法级） | 声明了 `ScopeModel<T>` 的资源类型 |
+| 判定依据 | 权限声明（或角色），一般来自用户声明 | 资源属性 × 用户从**授权数据**实时解析出的主体集合 |
+| 强制执行点 | `BusinessObjectFactory` 调用边界 | `IScopeGuard.Apply(IQueryable)` + 工厂保存边界 |
+| 失败形态 | 抛 `System.Security.SecurityException` | 查询排除该行 / 保存抛 `SecurityException` |
 
 > **核心原则：能预定义的进代码，不能预定义的走数据。**
 > 操作类型、维度、判定语义可以预定义；而"用户属于哪些团队、能访问哪些仓库"这类授权值
@@ -31,9 +31,10 @@ services.AddBusinessObject(typeof(Order).Assembly);
 - `BusinessContext` / `BusinessContextAccessor` / `IActuator`
 - `IObjectFactory` → `BusinessObjectFactory`
 - `IPermissionChecker` → `ClaimPermissionChecker`（基于权限声明）
-- `IDataScopeService` → `DataScopeService`（数据范围判定引擎）
+- `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）
+- `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）
 
-若使用数据权限，还必须**由应用注册一个 `IUserScopeProvider`**（见 [4 数据权限](#4-数据权限)），
+若使用数据权限，还必须**由应用注册一个 `IScopeSubjectResolver`**（见 [3.2](#32-用户侧授权值从数据实时解析)），
 框架不提供默认实现，以免把授权值固化。
 
 使用时机说明：`BusinessContext` 在构造时会捕获当前用户
@@ -155,211 +156,321 @@ public class Order : EditableObject<Order>
 
 ## 3. 数据权限
 
-### 3.1 模型
+### 3.1 核心不变式：单一真值来源
 
-```csharp
-// 一个"维度-值"对，值通常为数据库标识，框架不解读
-public record ScopeTag(string Dimension, string Value);
+数据权限的判定**只有一处实现**。策略被编译成一对表达式：
 
-// 数据行自身声明归属：OwnerId + 范围标签
-public interface IDataScoped
-{
-    string OwnerId { get; }
-    IReadOnlyList<ScopeTag> ScopeTags { get; }
-}
+```
+Allows(resource) ≡ Allow(resource) && !Deny(resource)
+query            ≡ source.Where(Allow).Where(!Deny)
 ```
 
-行范围值应**直接来自该行自身的数据列**，是数据而非固化标签，例如：
+用户被授予的主体集合在编译时**烘进表达式**（例如 `deptIds.Contains(x.DeptId)`），
+因此「查询过滤掉了哪些行」与「单行判定放行哪些行」共用同一棵表达式树，
+**在数学上不可能得出不同结论**。
 
 ```csharp
-public class Repo : EditableObject<Repo>, IDataScoped
-{
-    public string OwnerId { get; set; }
-    public string TeamId { get; set; }   // 仓库的团队列
+IScopeGuard guard = ...;
 
-    public IReadOnlyList<ScopeTag> ScopeTags => [new ScopeTag("team", TeamId)];
-}
+// 读侧：下推到数据库（生成的仍是表达式，由 EF/提供程序翻译成 WHERE）
+IQueryable<Order> visible = guard.Apply(dbContext.Orders);
+
+// 单行判定：编译同一对表达式后求值
+bool allowed = guard.Allows(order);
+
+// 审计：为什么可访问 / 为什么被拒绝
+ScopeDecision decision = guard.Explain(order);
+Console.WriteLine(decision);   // 判定：拒绝；成立的允许条件：Grant(dept)；成立的拒绝条件：Where(x => x.Level == "secret")
 ```
+
+> **不要**把 `Allow`/`Deny` 塞进 EF 的全局查询过滤器（`HasQueryFilter` / `SetQueryFilter`）。
+> EF 的模型（含全局过滤器）**按 DbContext 类型缓存**，而这两个表达式捕获了「每个用户不同」的集合常量，
+> 一旦被烘进缓存模型就会被跨请求、跨用户复用——**这是数据泄漏**。
+> 本仓 `DataContextExtensions.SetTombstoneQueryFilter` 之所以安全，只是因为它过滤的是常量 `!IsDeleted`。
+> 正确做法是**逐查询应用**（`guard.Apply(query)`）；若必须用全局过滤器，表达式只能引用 DbContext 实例成员，
+> 绝不能烘入用户相关的常量。
 
 ### 3.2 用户侧：授权值从数据实时解析
 
-值来源由 `IUserScopeProvider` 提供，**必须由应用实现**。典型实现是查询授权关系表：
-
 ```csharp
-public class TeamScopeProvider : IUserScopeProvider
+public sealed class TeamScopeResolver : IScopeSubjectResolver
 {
-    private readonly TeamMemberRepository _members;
-    public TeamScopeProvider(TeamMemberRepository members) => _members = members;
+    private readonly ITeamMemberRepository _members;
+    private readonly IOrgTree _org;
 
-    public IReadOnlyList<ScopeTag> ResolveScopes(UserPrincipal user)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
     {
-        // 每次判定实时查询：Dev 被加入/移出团队，立即生效
-        return _members.Query(user.UserId)
-                       .Select(m => new ScopeTag("team", m.TeamId))
-                       .ToArray();
+        var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
+        if (userId == null)
+        {
+            return ScopeSubjectSet.Empty;   // 无用户 / 匿名 → 空集合（fail-closed）
+        }
+
+        var deptIds = await _org.ExpandWithDescendantsAsync(await _members.GetDeptAsync(userId, ct), ct);
+
+        return ScopeSubjectSet.CreateBuilder()
+                              .AddSelf(userId)                                  // 「本人」= owner 维度的一个授予
+                              .AddRange(ScopeDimensions.Dept, deptIds)          // 层级在解析期展开为扁平集合
+                              .Add(ScopeDimensions.Region, await _members.GetRegionAsync(userId, ct))
+                              .Build();
     }
 }
-
-services.AddSingleton<IUserScopeProvider, TeamScopeProvider>();
 ```
 
-> 警告：框架自带一个 `ClaimsUserScopeProvider`（从 `scope:{维度}` 声明解析）仅供特殊场景参考。
-> 声明固定在 Token 里，无法反映数据变化，**不要**把它当作数据权限的默认来源。
+要点：
 
-### 3.3 判定引擎：`IDataScopeService`
+- **层级在解析期展开**。框架只看到扁平集合，因此判定与下推永远只是集合成员判断（数据库侧即 `IN (...)`），
+  框架不需要理解任何层级语义。
+- **`Self()` 并不特殊**：它等价于 `Grant(owner)`。要让它成立，解析器必须调用 `AddSelf(userId)`。
+  这是有意为之——所有者关系因此**可撤销**（不授予即不可访问本人数据）。
+- 未认证用户返回空集合即自然 fail-closed，不需要额外的特判接口。
+
+注册：
 
 ```csharp
-// 单行判定
-bool can = service.CanAccess(repo);
-
-// 列表过滤（查询层）
-IEnumerable<Repo> visible = service.Filter(repos);
-
-// 获取谓词，直接交给查询
-Func<Repo, bool> predicate = service.CreateScopePredicate<Repo>();
-IEnumerable<Repo> visible2 = repos.Where(predicate);
-
-// 解析用户当前范围（用于自己拼 DB 过滤，如 TeamId IN (解析结果)）
-IReadOnlyList<ScopeTag> granted = service.ResolveScopes();
-
-// 单个标签判断
-bool granted3 = service.IsGranted(new ScopeTag("team", "TeamA"));
+services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 ```
 
-**解析时机**：单行判定（`CanAccess`）每次调用都重新解析用户范围，保证授权变更立即生效；
-批量接口（`Filter` / `CreateScopePredicate`）则在**创建时解析一次**，之后对该批每一行复用同一份
-快照。谓词会被查询层逐行调用，若逐行解析，一次列表查询就会对授权数据发起与行数相同次数的查询
-（N+1）。因此：同一批过滤共享同一份授权快照，跨批次则是新的快照。
+### 3.3 资源侧：模型即声明
 
-### 3.4 匹配语义
+模型与策略写在**同一个类型**里，因此结构上不可能出现「声明了模型却忘了写策略」。
 
-- **跨维度 AND**：行声明 `region` 与 `team` 两个维度时，两个维度都必须满足
-- **同维度 OR**：用户同维度多值、或行同维度多标签，满足任意一个即可
-- **本人快速路径**：`OwnerId == 当前用户 UserId`（忽略大小写）→ 直接放行
-- **通配**：值 `"*"` 匹配该维度任意值；`ScopeTag.Any`（`"*"/"*"`）全局通配
-- **大小写**：维度名（`team`/`region`，代码约定的概念）忽略大小写；
-  标签值是数据库标识，按大小写敏感精确比较
-- **边界**：`CanAccess(null)` → 拒绝；`IsGranted(null)` → 拒绝；
-  行无标签且无所有者 → 放行；行无标签但有所有者 → 仅本人
+```csharp
+public sealed class OrderScope : ScopeModel<Order>
+{
+    public override void Define(ScopeModelBuilder<Order> builder)
+    {
+        builder.Map(ScopeDimensions.Owner, x => x.OwnerId)     // 维度 → 属性表达式（可翻译）
+               .Map(ScopeDimensions.Dept, x => x.DeptId)
+               .Map(ScopeDimensions.Region, x => x.RegionCode)
+               .Classify("level", x => x.Level);               // 分类属性：不参与授权
+    }
 
-### 3.4.1 用户身份与放行规则
+    public override ScopePolicy<Order> Policy =>
+        ScopePolicy<Order>.All(
+            ScopePolicy<Order>.Any(
+                ScopePolicy<Order>.Self(),
+                ScopePolicy<Order>.Grant(ScopeDimensions.Dept)),
+            ScopePolicy<Order>.Deny(
+                ScopePolicy<Order>.Where(x => x.Level == "secret")));
+}
+```
+
+映射必须是**表达式**（`Expression<Func<T,string>>`）而不是委托——这是能够下推到数据库的前提。
+映射的值应当是资源的**自身数据列**，列值一变归属立即变化。
+
+> 维度选择器的值类型目前固定为 `string`。若列是 `Guid`/`long`，请在模型里提供一个字符串投影
+> （例如把 `TeamId` 声明为字符串列，或映射到一个 `string` 形式的属性）。
+
+### 3.4 匹配语义与允许/拒绝代数
+
+策略编译为 `(Allow, Deny)` 一对表达式，最终判定恒为 `Allow && !Deny`：
+
+| 策略 | Allow | Deny | 是否提供允许条件 |
+|---|---|---|---|
+| `Grant(d)` | `用户在该维度被授予的值.Contains(x.D)` | `false` | 是 |
+| `Self()` | 等价于 `Grant(owner)` | `false` | 是 |
+| `Where(p)` | `p` | `false` | 是 |
+| `Deny(p)` | — | `p` 的成立条件 | **否** |
+| `All(p…)` | 各分支允许条件的「与」 | 各分支拒绝条件的「或」 | 任一分支提供 |
+| `Any(p…)` | 各分支允许条件的「或」 | 各分支拒绝条件的「或」 | 任一分支提供 |
+
+**两条必须记住的语义**：
+
+1. **`Deny` 是「否决」，不是布尔取反。** 它压过一切允许条件。需要真正的取反请用 `Where(x => !...)`。
+   因此 `Deny(Deny(p))` 无意义，框架会直接抛异常拒绝这种写法。
+2. **`Deny` 一律上浮（拒绝优先）。** 策略树中任意位置的 `Deny` 都作用于整个策略，
+   包括写在 `Any` 某个分支里的。例如 `Any(Grant("dept"), Deny(x => x.Banned))` 的语义是
+   「我部门的行，且任何 Banned 行都不可见」，**不是**「我部门的行 ∪ 非 Banned 的行」。
+   这是有意的保守选择（防火墙式 deny 优先）。
+
+其它规则：
+
+- `All` / `Any` 至少需要一个子策略；「无约束」必须显式写成 `Where(_ => true)`。
+- `Any` 之下若**全是**拒绝条件，结果是拒绝一切；这种策略会在启动期被拒绝，避免误配。
+- 用户在某维度上没有任何授予时，生成的是**恒假常量**，不会生成空 `IN ()`。
+- **没有通配符 `*`**：值空间保持纯净（不再有"数据库标识恰好等于 `*` 就全局放行"的隐患）。
+  「全部放行」由 `Where(_ => true)` 或解析器返回全集显式表达。
+
+### 3.5 用户身份与放行规则
 
 | 当前用户 | 判定 |
 |---|---|
-| 未接入用户上下文（`BusinessContext.User == null`，如后台任务） | 无授权值可依据，**不做限制** |
-| **匿名用户**（已接入 `UserPrincipal` 但未通过认证） | **默认拒绝**，仅放行实现了 `IAnonymousAccessible` 的数据行 |
-| 已认证用户 | 按本人快速路径 + 范围标签判定 |
+| 未接入用户上下文（`BusinessContext.User == null`，如后台任务） | 不做限制（无从判定） |
+| 匿名用户（已接入 `UserPrincipal` 但未认证） | 解析器通常返回空集合 ⇒ `Grant` 一律不成立 ⇒ 默认拒绝 |
+| 已认证用户 | 按策略判定 |
 
-匿名默认拒绝是必要的有意设计：数据权限的判定依据是"用户被授予的范围"，而匿名用户没有任何
-授权值——若默认放行，等同于向未认证请求暴露整张表。注册、密码重置、用户提交等确实需要匿名的
-场景，由数据行**逐个类型显式实现** `IAnonymousAccessible` 来声明：
+匿名可访问的数据（注册、密码重置等）由策略显式表达，不再需要专门的特例接口：
 
 ```csharp
-public class RegistrationRow : EditableObject<RegistrationRow>, IDataScoped, IAnonymousAccessible
-{
-    // 未认证用户可访问本行；其余数据行不受影响
-}
+public override ScopePolicy<Registration> Policy =>
+    ScopePolicy<Registration>.Any(
+        ScopePolicy<Registration>.Where(x => x.IsPublic),   // 显式公开
+        ScopePolicy<Registration>.Self());
 ```
 
-> 该接口只作用于**数据权限**。**操作权限**是否允许匿名，取决于操作有没有声明 `[Permission]`：
-> 未声明权限要求的操作不校验权限，匿名用户即可执行。
+### 3.6 缓存契约
 
-### 3.5 写入前拦截：`DataScopeRule`
+`IScopeGuard` 按请求（Scoped）注册，**每个请求只解析一次**用户主体集合，
+并按类型缓存已编译的策略，读写路径共享同一份快照。因此：
 
-把数据权限融入规则体系：保存前校验目标行是否在当前用户范围内，越权数据使规则失败、阻止落库。
+- 同一请求内的多次判定结论必然一致；
+- 一次列表查询不会对授权数据发起与行数相同次数的查询（N+1 的根治点）。
+
+若在长生命周期作用域（后台 worker、单例）中使用，授权数据变化后需显式失效：
 
 ```csharp
-public class Repo : EditableObject<Repo>, IDataScoped
-{
-    // ...
-    protected override void AddRules()
-    {
-        Rules.AddRule(new DataScopeRule());
-        // 可与其它业务规则并存
-    }
-}
+guard.Refresh();                              // 同步：清空缓存，下次访问重新解析
+await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新解析
 ```
 
-- 对象未实现 `IDataScoped` → 规则自动放行（该数据行不受数据权限约束）
-- **无法判定时规则失败，不放行**：未注册 `IDataScopeService`、未注册其依赖
-  `IUserScopeProvider`、或对象未接入 `BusinessContext` 时，规则失败并给出可操作的提示。
-  这是 fail-closed：避免出现"看似启用了数据权限、实际没有生效"的情况
-- 该规则与查询过滤互补：查询时排除越权行，写入时阻止越权数据
+### 3.7 启动期校验
+
+`AddBusinessObject` 会在**注册期**扫描权限模型并完成校验，配置错误一律在启动时暴露，
+不会等到运行期才变成「看似启用了数据权限、实际没有生效」：
+
+- 同一资源类型存在多个权限模型 → 失败
+- 模型未声明任何维度 → 失败
+- **策略引用了模型中未映射的维度** → 失败（这是「策略写了却没映射 ⇒ 静默放行」的根治点）
+- 策略结构性恒不放行（`Any` 之下全是拒绝条件）→ 失败
+- `All`/`Any` 无子策略、`Deny` 嵌套 `Deny`、`Deny(null)` → 在**构造策略时**即失败
+
+校验只在「声明了模型」时生效：没有任何 `ScopeModel<T>` 的应用照常启动，只是全部资源都不受数据权限约束。
+
+未注册 `IScopeSubjectResolver` 但存在模型时，会在**首次判定**以明确错误抛出，绝不静默放行。
 
 ---
 
-## 4. 场景示例：Dev / TeamA / TeamB / Repo
+## 4. 写侧强制与已知边界
 
-需求：`Dev` 属于 `TeamA`、`TeamB`，可访问两团队下的仓库；不在 `TeamC`，无法访问其仓库；
-仓库的操作类型（read / push / create_branch / create_pr）代码预定义，但"哪些仓库可访问"是数据。
+数据权限在 `BusinessObjectFactory` 的边界上与操作权限并列强制执行，失败抛 `SecurityException`。
 
-### 4.1 数据行
+**判定时机分为前置与后置**，依据是「目标对象在调用业务方法之前是否已经承载数据」：
+
+| 入口 | 判定时机 | 原因 |
+|---|---|---|
+| `SaveAsync(target)`（New/Changed/Deleted） | **前置 + 后置** | 目标是调用方提供且已填充，可前置拒绝（无副作用）；保存后再判一次以覆盖业务方法改动范围列的情况 |
+| `ExecuteAsync(target)` | **前置** | 目标是调用方提供 |
+| `Create` / `CreateAsync` / `InsertAsync` | **后置** | 目标是工厂新建的空对象，范围列由业务方法填充 |
+| `Fetch` / `FetchAsync` | **后置** | 加载完成后才谈得上数据范围 |
+| `UpdateAsync` / `DeleteAsync` / `ExecuteAsync`(criteria) | **后置** | 同上 |
+
+> **后置检查发生在业务方法返回之后。** 若业务方法内部已经落库，它阻止的是「越权对象返回给调用方」，
+> 而不是「越权数据写入」。真正的预提交强制应由持久化层（例如 EF 的 `SaveChanges` 拦截器）
+> 或数据库约束保证，`Euonia.Osba` 不提供这一层。
+>
+> **范围列的"搬迁"不受保护**：业务方法可以把 `TeamId` 改到用户不属于的团队，
+> 后置检查能发现并抛出，但无法阻止已经发生的写入。
+
+未声明 `ScopeModel<T>` 的资源类型不受数据权限约束。
+
+---
+
+## 5. 场景示例：Dev / TeamA / TeamB / Repo
+
+需求：`Dev` 属于 `TeamA`、`TeamB`（含其下级部门），可访问两团队下的仓库；
+不在 `TeamC`，无法访问其仓库；机密仓库任何人都不可见；本人创建的仓库始终可访问。
 
 ```csharp
-public class Repo : EditableObject<Repo>, IDataScoped
+// 资源
+public class Repo : EditableObject<Repo>
 {
     public string OwnerId { get; set; }
-    public string TeamId { get; set; }
-
-    public IReadOnlyList<ScopeTag> ScopeTags => [new ScopeTag("team", TeamId)];
+    public string TeamId { get; set; }      // 仓库所属团队，取自本行数据列
+    public string Level { get; set; }
 
     [FactoryInsert]
-    [Permission("repo:create")]
-    protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+    protected override async Task InsertAsync(CancellationToken cancellationToken = default) { }
+
+    [FactoryUpdate]
+    protected override async Task UpdateAsync(CancellationToken cancellationToken = default) { }
+
+    [FactoryDelete]
+    protected override async Task DeleteAsync(CancellationToken cancellationToken = default) { }
+}
+
+// 模型 + 策略（同一工件）
+public sealed class RepoScope : ScopeModel<Repo>
+{
+    public override void Define(ScopeModelBuilder<Repo> builder)
     {
-        // 写入前规则校验：Dev 不能把仓库建到 TeamC
+        builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
+               .Map(ScopeDimensions.Dept, x => x.TeamId)
+               .Classify("level", x => x.Level);
     }
 
-    protected override void AddRules()
+    public override ScopePolicy<Repo> Policy =>
+        ScopePolicy<Repo>.All(
+            ScopePolicy<Repo>.Any(
+                ScopePolicy<Repo>.Self(),
+                ScopePolicy<Repo>.Grant(ScopeDimensions.Dept)),
+            ScopePolicy<Repo>.Deny(
+                ScopePolicy<Repo>.Where(x => x.Level == "confidential")));
+}
+
+// 授权值来源：查成员关系表，部门树在解析期展开
+public sealed class TeamScopeResolver : IScopeSubjectResolver
+{
+    private readonly AppDb _db;
+    private readonly IOrgTree _org;
+
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
     {
-        Rules.AddRule(new DataScopeRule());
+        var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
+        if (userId == null)
+        {
+            return ScopeSubjectSet.Empty;
+        }
+
+        var depts = await _org.ExpandAsync(_db.Memberships.Where(m => m.UserId == userId).Select(m => m.TeamId), ct);
+
+        return ScopeSubjectSet.CreateBuilder().AddSelf(userId).AddRange(ScopeDimensions.Dept, depts).Build();
     }
 }
 ```
 
-### 4.2 数据权限值来源（查成员关系表）
+调用：
 
 ```csharp
-public class TeamScopeProvider : IUserScopeProvider
-{
-    private readonly ITeamMemberRepository _members;
-    public TeamScopeProvider(ITeamMemberRepository members) => _members = members;
+services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 
-    public IReadOnlyList<ScopeTag> ResolveScopes(UserPrincipal user)
-    {
-        return _members.GetTeams(user.UserId).Select(t => new ScopeTag("team", t)).ToArray();
-    }
-}
+// 组织 DI + 用户后：
+var guard = provider.GetRequiredService<IScopeGuard>();
+
+// 1. 查询过滤：只返回可访问的仓库（下推到数据库）
+var visible = await guard.Apply(dbContext.Repos).ToListAsync();
+
+// 2. 单行判定
+guard.Allows(repo);                       // 或 guard.Explain(repo) 看原因
+
+// 3. 保存：越权数据在工厂边界被拒绝
+var stealing = new Repo { TeamId = "TeamC", Level = "normal" };
+stealing.BusinessContext = provider.GetRequiredService<BusinessContext>();
+stealing.MarkAsNew();
+await stealing.SaveAsync();               // TeamC 不在授予范围内 → SecurityException
+
+// 4. 授权变更立即生效：只改成员关系数据
+db.Memberships.Add(new Membership("dev", "TeamC"));
+guard.Refresh();                          // 请求级缓存需显式失效（新请求自动是新快照）
+guard.Allows(repoInTeamC);                // → true
 ```
-
-`Dev` 的解析结果即为 `[("team", TeamA), ("team", TeamB)]`。此时：
-
-- `CanAccess(repo(TeamA))`、`CanAccess(repo(TeamB))` → `true`
-- `CanAccess(repo(TeamC))` → `false`
-- 把 `Dev` 加入 `TeamC`（只改数据表）→ **下一次判定立即** `true`，无需改 Token、无需改代码
-- `Repo.TeamId` 改到 `TeamC`（只改数据列）→ 立即拒访
-
-仓库级 ACL（`RepoA1 = full`、`RepoA2 = push + create_branch + create_pr`）同样是数据：
-把"操作类型（代码预定义）"绑定到"具体仓库 ID（数据）"，由应用在授权数据里维护，
-在操作判定时组合使用，与上述机制无关。
 
 ---
 
-## 5. 最佳实践
+## 6. 最佳实践
 
 1. **值别进 Token/代码**：所有可能变化的授权值（团队、仓库、区域……）都从数据解析。
-2. **`IUserScopeProvider` 保持实时**：单行判定每次查询（或使用可失效缓存），不要长缓存；
-   批量查询用 `Filter` / `CreateScopePredicate`，它们一次解析、整批复用，天然避免 N+1。
-3. **组合判定**：操作权限管"能不能做这个操作"，数据权限管"能碰到哪些行"，
-   `DataScopeRule` 保证落库前再次拦截，二者分工明确，不要互相替代。
-4. **维度命名约定**：同一维度（如 `team`、`region`）在行数据与用户侧解析中保持一致。
-5. **未注册 `IUserScopeProvider` 时**：`IDataScopeService` 依赖注入激活会失败，
-   `DataScopeRule` 也会因此失败并阻止落库——这是有意的 fail-fast/fail-closed，
-   防止"看似开了数据权限、实际没生效"。
-6. **匿名不等于放行**：需要匿名访问的数据必须显式实现 `IAnonymousAccessible`，
-   不要为了让匿名请求"能跑通"而放宽整体判定。
+2. **层级在解析期展开**：部门树、组织树展开成扁平集合，保住 `IN` 下推能力。
+3. **组合判定**：操作权限管「能不能做这个操作」，数据权限管「能碰到哪些行」，二者不可互相替代。
+4. **读侧一律走 `guard.Apply(query)`**：不要手动拼 `IN`，也不要塞进 EF 全局查询过滤器。
+5. **`Deny` 是拒绝优先，不是取反**：需要取反用 `Where(x => !...)`。
+6. **写侧后置检查不是预提交校验**：关键路径请配合持久化层拦截器或数据库约束。
+7. **只在需要时才声明模型**：未声明模型的资源不受约束，这是当前的边界。
 
-## 6. 类型速查
+---
+
+## 7. 类型速查
 
 | 类型 | 位置 | 用途 |
 |---|---|---|
@@ -367,287 +478,45 @@ public class TeamScopeProvider : IUserScopeProvider
 | `PermissionAttribute` | `Permission/` | 声明操作权限点（类级/方法级） |
 | `IPermissionChecker` | `Permission/` | 权限判断抽象 |
 | `ClaimPermissionChecker` | `Permission/` | 默认实现（读 `"perm"` 声明，支持 `*` 前缀通配） |
-| `ScopeTag` | `Permission/` | 维度-值范围标签 |
-| `IDataScoped` | `Permission/` | 数据行声明归属 |
-| `IAnonymousAccessible` | `Permission/` | 数据行声明允许匿名访问（唯一的匿名放行出口） |
-| `IUserScopeProvider` | `Permission/` | 用户范围值来源（应用实现，数据实时解析） |
-| `IDataScopeService` | `Permission/` | 数据范围判定引擎 |
-| `DataScopeService` | `Permission/` | `IDataScopeService` 默认实现 |
-| `DataScopeRule` | `Permission/` | 数据权限的规则化（写入前拦截） |
-| `ClaimsUserScopeProvider` | `Permission/` | 可选：从声明解析范围（避免使用） |
-| `UserClaimTypes.Permission` | `Euonia.Core` | 权限声明类型（`"perm"`） |
-| `UserClaimTypes.ScopePrefix` | `Euonia.Core` | 范围声明前缀（`"scope:"`，供 `ClaimsUserScopeProvider` 使用） |
+| `ScopeDimensions` | `Permission/Scope/` | 维度名常量（`Owner`/`Dept`/`Region`/`Project`）与校验入口 |
+| `ScopeSubject` / `ScopeSubjectSet` | `Permission/Scope/` | 用户被授予的主体及集合（维度名大小写不敏感，值精确比较） |
+| `ScopeSubjectSetBuilder` | `Permission/Scope/` | 解析器构造主体集合（`Add`/`AddRange`/`AddSelf`） |
+| `IScopeSubjectResolver` | `Permission/Scope/` | 授权值来源（应用实现，实时解析） |
+| `ScopeModel<T>` / `IScopeModel<T>` | `Permission/Scope/` | 资源模型 + 策略的声明基类 |
+| `ScopeModelBuilder<T>` | `Permission/Scope/` | `Map` 维度、`Classify` 分类属性 |
+| `ScopePolicy<T>` | `Permission/Scope/` | 策略组合子（`Self`/`Grant`/`All`/`Any`/`Deny`/`Where`） |
+| `CompiledScopePolicy<T>` | `Permission/Scope/` | 编译结果：`Allow`/`Deny` 一对表达式 |
+| `ScopePolicyCompiler` | `Permission/Scope/` | 唯一编译出口 |
+| `ScopeFilter` | `Permission/Scope/` | `Apply`（下推）/ `Allows`（单行）/ `Explain`（审计） |
+| `ScopeDecision` | `Permission/Scope/` | 判定结果与命中路径 |
+| `IScopeGuard` / `ScopeGuard` | `Permission/Scope/` | 按请求缓存的统一入口 |
+| `ScopeModelRegistry` | `Permission/Scope/` | 模型注册表与启动期校验 |
+| `UserClaimTypes.Permission` | `Euonia.Core` | 操作权限声明类型（`"perm"`） |
 
 ---
 
-## 7. 完整示例
+## 8. 从旧数据权限迁移
 
-一个自包含的"团队仓库"应用：操作权限 + 数据权限 + 规则融为一体。各代码块按依赖顺序排列，
-可整体放入一个控制台项目直接运行（`Program.cs` 之外的类型放在独立文件中）。
+旧的一套（`ScopeTag` / `IDataScoped` / `IUserScopeProvider` / `IDataScopeService` / `DataScopeRule` /
+`ClaimsUserScopeProvider` / `IAnonymousAccessible`）已被**整体替换**，不再提供。对照关系：
 
-### 7.1 领域模型
+| 旧 | 新 |
+|---|---|
+| `IDataScoped.ScopeTags` 运行时拼标签 | `ScopeModel<T>.Define` 声明维度 → 属性**表达式**（可下推） |
+| `IDataScoped.OwnerId` 硬编码特例 | `ScopeDimensions.Owner` 普通维度；`Self()` 是其语法糖，可撤销 |
+| `IUserScopeProvider.ResolveScopes(user)` | `IScopeSubjectResolver.ResolveAsync(claims, ct)`（异步、可取消） |
+| `IDataScopeService.CanAccess(row)` | `IScopeGuard.Allows(row)` |
+| `IDataScopeService.CreateScopePredicate<T>()` / `Filter<T>()`（仅内存） | `IScopeGuard.Apply(IQueryable<T>)`（下推）+ `ScopeFilter.Filter`（内存） |
+| 固定「跨维度 AND / 同维度 OR」 | `All` / `Any` 任意嵌套 + `Deny` |
+| 无 deny | `Deny` 一等公民，拒绝优先 |
+| `DataScopeRule`（需手工 `AddRule` 注册） | 工厂边界**自动**强制（`SaveAsync` 前置+后置） |
+| `IAnonymousAccessible` 特例接口 | 策略里的 `Where(x => x.IsPublic)`（显式、可审计） |
+| `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
+| `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
 
-```csharp
-// Repo.cs —— 仓库：既是业务对象，也是受数据权限约束的数据行
-public class Repo : EditableObject<Repo>, IDataScoped
-{
-    public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+**迁移检查项**：
 
-    public string Name
-    {
-        get => GetProperty(NameProperty);
-        set => SetProperty(NameProperty, value);
-    }
-
-    // 数据权限：行自身声明归属
-    public string OwnerId { get; set; }
-    public string TeamId { get; set; }   // 仓库所属团队：范围值来自本行数据列
-
-    public IReadOnlyList<ScopeTag> ScopeTags
-        => string.IsNullOrWhiteSpace(TeamId) ? Array.Empty<ScopeTag>() : [new ScopeTag("team", TeamId)];
-
-    // 操作权限：保存（创建/更新/删除）各需要对应权限；声明支持 * 前缀通配（如 repo:*）
-    [FactoryInsert]
-    [Permission("repo:create")]
-    protected override async Task InsertAsync(CancellationToken cancellationToken = default)
-    {
-        // 此处写入库逻辑（EF/ADO 等）
-        await Task.CompletedTask;
-    }
-
-    [FactoryUpdate]
-    [Permission("repo:update")]
-    protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
-    {
-        await Task.CompletedTask;
-    }
-
-    [FactoryDelete]
-    [Permission("repo:delete")]
-    protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
-    {
-        await Task.CompletedTask;
-    }
-
-    // 数据权限融入规则体系：越权数据保存前失败
-    protected override void AddRules()
-    {
-        Rules.AddRule(new DataScopeRule());
-    }
-}
-```
-
-```csharp
-// PushCommand.cs —— 命令对象：演示 Execute 操作权限
-public class PushCommand : CommandObject<PushCommand>
-{
-    public string RepoId { get; set; }
-    public bool Pushed { get; private set; }
-
-    [FactoryExecute]
-    [Permission("repo:push")]
-    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        Pushed = true;
-        await Task.CompletedTask;
-    }
-}
-```
-
-### 7.2 授权数据（表结构与存储）
-
-```csharp
-// Team.cs / Membership.cs —— 企业数据（非权限框架概念）
-public sealed record Team(string Id, string Name);
-public sealed record Membership(string UserId, string TeamId);
-
-// 查询返回的行也要能提供归属信息，才能参与数据范围判定
-public sealed record RepoRecord(string Id, string Name, string TeamId, string OwnerId) : IDataScoped
-{
-    public IReadOnlyList<ScopeTag> ScopeTags
-        => string.IsNullOrWhiteSpace(TeamId) ? Array.Empty<ScopeTag>() : [new ScopeTag("team", TeamId)];
-}
-```
-
-```csharp
-// AppDb.cs —— 内存"数据库"，模拟成员关系表与仓库表
-public class AppDb
-{
-    public List<Team> Teams { get; } = [];
-    public List<Membership> Memberships { get; } = [];
-    public List<RepoRecord> Repos { get; } = [];
-
-    public AppDb()
-    {
-        Teams.AddRange(new Team("TeamA", "团队A"), new Team("TeamB", "团队B"), new Team("TeamC", "团队C"));
-        Repos.Add(new RepoRecord("RepA1", "pay-web", "TeamA", null));
-        Repos.Add(new RepoRecord("RepA2", "pay-app", "TeamA", null));
-        Repos.Add(new RepoRecord("RepB1", "billing-svc", "TeamB", null));
-        Repos.Add(new RepoRecord("RepC1", "pay-admin", "TeamC", null));
-
-        // 注意：RepC2 的 OwnerId 设为 dev，用于演示"本人快速路径"
-        Repos.Add(new RepoRecord("RepC2", "dev-notes", "TeamC", "dev"));
-    }
-
-    public void Join(string userId, string teamId) => Memberships.Add(new Membership(userId, teamId));
-}
-```
-
-### 7.3 数据权限值来源（`IUserScopeProvider`）
-
-```csharp
-// TeamScopeProvider.cs —— 每次判定实时查成员关系表；改表立即生效，不碰 Token
-public class TeamScopeProvider : IUserScopeProvider
-{
-    private readonly AppDb _db;
-
-    public TeamScopeProvider(AppDb db) => _db = db;
-
-    public IReadOnlyList<ScopeTag> ResolveScopes(UserPrincipal user)
-    {
-        if (user == null || !user.IsAuthenticated)
-        {
-            return Array.Empty<ScopeTag>();
-        }
-
-        return _db.Memberships
-                  .Where(m => m.UserId == user.UserId)
-                  .Select(m => new ScopeTag("team", m.TeamId))
-                  .ToArray();
-    }
-}
-```
-
-### 7.4 依赖注入注册
-
-```csharp
-// AppSetup.cs —— 组装 DI 容器。注意当前用户也要注册（BusinessContext 构造时读取）。
-static IServiceProvider BuildApp(UserPrincipal currentUser, AppDb db)
-{
-    var services = new ServiceCollection();
-    services.AddBusinessObject(typeof(Repo).Assembly);          // 工厂、权限检查器、数据范围服务等
-    services.AddSingleton(db);                                  // 业务数据
-    services.AddSingleton(currentUser);                         // 当前用户
-    services.AddSingleton<IUserScopeProvider, TeamScopeProvider>();  // 数据权限值来源（必须）
-    return services.BuildServiceProvider();
-}
-```
-
-### 7.5 组装当前用户
-
-```csharp
-// Auth.cs —— 构造认证用户。"perm" 声明只负责操作权限，与数据权限无关。
-static UserPrincipal Dev(params string[] permissions)
-{
-    var claims = new List<Claim>
-    {
-        new(UserClaimTypes.Subject, "dev"),     // UserPrincipal.UserId 读取 sub 声明
-    };
-    claims.AddRange(permissions.Select(p => new Claim(UserClaimTypes.Permission, p)));
-
-    return new UserPrincipal(
-        new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer", ClaimTypes.Name, UserClaimTypes.Role)));
-}
-```
-
-### 7.6 调用流程
-
-```csharp
-static async Task Main()
-{
-    var db = new AppDb();                       // 种子仓库 + 成员关系
-    db.Join("dev", "TeamA");
-    db.Join("dev", "TeamB");
-
-    // Dev 的"团队归属"来自 AppDb（数据）；"维护权限"来自声明（操作权限）
-    var dev = Dev("repo:create", "repo:update", "repo:push");
-    await RunAsDevAsync(BuildApp(dev, db), db);
-}
-
-static async Task RunAsDevAsync(IServiceProvider provider, AppDb db)
-{
-    await using var scope = provider.CreateAsyncScope();
-    var services = scope.ServiceProvider;       // 作用域内已含 Dev（UserPrincipal）
-
-    var scopes = services.GetRequiredService<IDataScopeService>();
-    var factory = services.GetRequiredService<IObjectFactory>();
-    var ctx = services.GetRequiredService<BusinessContext>();
-
-    // ---- 1. 查询过滤：只返回当前用户可访问的仓库 ----
-    IEnumerable<RepoRecord> visible = db.Repos.Where(scopes.CreateScopePredicate<RepoRecord>());
-    //   Dev ∈ {TeamA, TeamB}         → RepA1、RepA2、RepB1 可见
-    //   RepC1（TeamC，无授权）        → 排除
-    //   RepC2（OwnerId=dev）          → "本人快速路径"保留
-    Console.WriteLine(string.Join(", ", visible.Select(r => r.Name)));   // RepA1, RepA2, RepB1, RepC2
-
-    // ---- 2. 单行判定 ----
-    Console.WriteLine(scopes.CanAccess(db.Repos[0]));   // True  （TeamA）
-    Console.WriteLine(scopes.CanAccess(db.Repos[3]));   // False （TeamA ≠ TeamC）
-    Console.WriteLine(scopes.CanAccess(db.Repos[4]));   // True  （RepC2：本人为 Owner，直接放行）
-
-    // ---- 3. 授权变化立即生效：只改数据，不碰 Token/代码 ----
-    db.Join("dev", "TeamC");                           // 成员关系表新增一行
-    Console.WriteLine(scopes.CanAccess(db.Repos[3]));  // True  —— 无需重新登录或刷新 Token
-
-    // ---- 4. 操作权限：Execute ----
-    var push = new PushCommand { BusinessContext = ctx, RepoId = "RepA1" };
-    await factory.ExecuteAsync(push);                  // 拥有 repo:push → 放行
-    Console.WriteLine(push.Pushed);                    // True
-
-    // ---- 5. 越权写入被 DataScopeRule 拦截（数据权限的写入侧） ----
-    var stealing = new Repo
-    {
-        BusinessContext = ctx,
-        Name = "pay-hack",
-        TeamId = "TeamC",                              // 把仓库建到无权团队
-    };
-    stealing.MarkAsNew();
-    try
-    {
-        await stealing.SaveAsync();                    // 操作权限通过，但数据范围规则失败
-    }
-    catch (ValidationException ex)                     // Nerosoft.Euonia.Validation
-    {
-        Console.WriteLine($"写入被拦截：{ex.Message}");
-        // "当前用户无权访问该数据（已在数据范围之外）。"
-    }
-
-    // ---- 6. 无操作权限：拒绝即抛 SecurityException（操作权限的拒绝形态） ----
-    var steve = Dev();                                 // 无任何权限声明
-    await using var steveScope = BuildApp(steve, db).CreateAsyncScope();
-    var steveServices = steveScope.ServiceProvider;
-    var steveFactory = steveServices.GetRequiredService<IObjectFactory>();
-    var stevePush = new PushCommand
-    {
-        BusinessContext = steveServices.GetRequiredService<BusinessContext>(),
-        RepoId = "RepA1",
-    };
-    try
-    {
-        await steveFactory.ExecuteAsync(stevePush);    // steve 没有 repo:push
-    }
-    catch (SecurityException)
-    {
-        Console.WriteLine("操作权限拒绝：SecurityException");
-    }
-}
-```
-
-运行输出：
-
-```
-RepA1, RepA2, RepB1, RepC2
-True
-False
-True
-True
-True
-写入被拦截：当前用户无权访问该数据（已在数据范围之外）。
-操作权限拒绝：SecurityException
-```
-
-> `ScopedOrder` 示例逻辑与上述一致：Dev 属于 `TeamA`/`TeamB` 时，
-> 通过 `DataScopeRule` 对 `ScopedOrder` 的保存也会同样拦截越权数据。
-> 实际应用中请让查询层（EF/ADO 的 `IQueryable<T>`）基于
-> `scopes.ResolveScopes()` 把判定下推到数据库，而不是把所有行拉出来再过滤
-> （`CreateScopePredicate<T>` 用于内存过滤，两者按数据量取舍）。
+- 旧实现里「实现 `IAnonymousAccessible` 即可匿名读取」的类型，在新体系下若没有显式的
+  `Where(...)` 允许条件，将对匿名用户**完全不可见**——必须补上。
+- 旧的「所有者快速路径」无条件放行，新体系下需要解析器 `AddSelf(userId)` 才成立；漏了会导致
+  「本人数据也不可见」（fail-closed，不会反向放行）。
