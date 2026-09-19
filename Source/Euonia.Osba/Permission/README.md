@@ -331,3 +331,277 @@ public class TeamScopeProvider : IUserScopeProvider
 | `ClaimsUserScopeProvider` | `Permission/` | 可选：从声明解析范围（避免使用） |
 | `UserClaimTypes.Permission` | `Euonia.Core` | 权限声明类型（`"perm"`） |
 | `UserClaimTypes.ScopePrefix` | `Euonia.Core` | 范围声明前缀（`"scope:"`，供 `ClaimsUserScopeProvider` 使用） |
+
+---
+
+## 7. 完整示例
+
+一个自包含的"团队仓库"应用：操作权限 + 数据权限 + 规则融为一体。各代码块按依赖顺序排列，
+可整体放入一个控制台项目直接运行（`Program.cs` 之外的类型放在独立文件中）。
+
+### 7.1 领域模型
+
+```csharp
+// Repo.cs —— 仓库：既是业务对象，也是受数据权限约束的数据行
+public class Repo : EditableObject<Repo>, IDataScoped
+{
+    public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+
+    public string Name
+    {
+        get => GetProperty(NameProperty);
+        set => SetProperty(NameProperty, value);
+    }
+
+    // 数据权限：行自身声明归属
+    public string OwnerId { get; set; }
+    public string TeamId { get; set; }   // 仓库所属团队：范围值来自本行数据列
+
+    public IReadOnlyList<ScopeTag> ScopeTags
+        => string.IsNullOrWhiteSpace(TeamId) ? Array.Empty<ScopeTag>() : [new ScopeTag("team", TeamId)];
+
+    // 操作权限：保存（创建/更新/删除）各需要对应权限；声明支持 * 前缀通配（如 repo:*）
+    [FactoryInsert]
+    [PermissionRequirement("repo:create")]
+    protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+    {
+        // 此处写入库逻辑（EF/ADO 等）
+        await Task.CompletedTask;
+    }
+
+    [FactoryUpdate]
+    [PermissionRequirement("repo:update")]
+    protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+    }
+
+    [FactoryDelete]
+    [PermissionRequirement("repo:delete")]
+    protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+    {
+        await Task.CompletedTask;
+    }
+
+    // 数据权限融入规则体系：越权数据保存前失败
+    protected override void AddRules()
+    {
+        Rules.AddRule(new DataScopeRule());
+    }
+}
+```
+
+```csharp
+// PushCommand.cs —— 命令对象：演示 Execute 操作权限
+public class PushCommand : CommandObject<PushCommand>
+{
+    public string RepoId { get; set; }
+    public bool Pushed { get; private set; }
+
+    [FactoryExecute]
+    [PermissionRequirement("repo:push")]
+    protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        Pushed = true;
+        await Task.CompletedTask;
+    }
+}
+```
+
+### 7.2 授权数据（表结构与存储）
+
+```csharp
+// Team.cs / Membership.cs —— 企业数据（非权限框架概念）
+public sealed record Team(string Id, string Name);
+public sealed record Membership(string UserId, string TeamId);
+
+// 查询返回的行也要能提供归属信息，才能参与数据范围判定
+public sealed record RepoRecord(string Id, string Name, string TeamId, string OwnerId) : IDataScoped
+{
+    public IReadOnlyList<ScopeTag> ScopeTags
+        => string.IsNullOrWhiteSpace(TeamId) ? Array.Empty<ScopeTag>() : [new ScopeTag("team", TeamId)];
+}
+```
+
+```csharp
+// AppDb.cs —— 内存"数据库"，模拟成员关系表与仓库表
+public class AppDb
+{
+    public List<Team> Teams { get; } = [];
+    public List<Membership> Memberships { get; } = [];
+    public List<RepoRecord> Repos { get; } = [];
+
+    public AppDb()
+    {
+        Teams.AddRange(new Team("TeamA", "团队A"), new Team("TeamB", "团队B"), new Team("TeamC", "团队C"));
+        Repos.Add(new RepoRecord("RepA1", "pay-web", "TeamA", null));
+        Repos.Add(new RepoRecord("RepA2", "pay-app", "TeamA", null));
+        Repos.Add(new RepoRecord("RepB1", "billing-svc", "TeamB", null));
+        Repos.Add(new RepoRecord("RepC1", "pay-admin", "TeamC", null));
+
+        // 注意：RepC2 的 OwnerId 设为 dev，用于演示"本人快速路径"
+        Repos.Add(new RepoRecord("RepC2", "dev-notes", "TeamC", "dev"));
+    }
+
+    public void Join(string userId, string teamId) => Memberships.Add(new Membership(userId, teamId));
+}
+```
+
+### 7.3 数据权限值来源（`IUserScopeProvider`）
+
+```csharp
+// TeamScopeProvider.cs —— 每次判定实时查成员关系表；改表立即生效，不碰 Token
+public class TeamScopeProvider : IUserScopeProvider
+{
+    private readonly AppDb _db;
+
+    public TeamScopeProvider(AppDb db) => _db = db;
+
+    public IReadOnlyList<ScopeTag> ResolveScopes(UserPrincipal user)
+    {
+        if (user == null || !user.IsAuthenticated)
+        {
+            return Array.Empty<ScopeTag>();
+        }
+
+        return _db.Memberships
+                  .Where(m => m.UserId == user.UserId)
+                  .Select(m => new ScopeTag("team", m.TeamId))
+                  .ToArray();
+    }
+}
+```
+
+### 7.4 依赖注入注册
+
+```csharp
+// AppSetup.cs —— 组装 DI 容器。注意当前用户也要注册（BusinessContext 构造时读取）。
+static IServiceProvider BuildApp(UserPrincipal currentUser, AppDb db)
+{
+    var services = new ServiceCollection();
+    services.AddBusinessObject(typeof(Repo).Assembly);          // 工厂、权限检查器、数据范围服务等
+    services.AddSingleton(db);                                  // 业务数据
+    services.AddSingleton(currentUser);                         // 当前用户
+    services.AddSingleton<IUserScopeProvider, TeamScopeProvider>();  // 数据权限值来源（必须）
+    return services.BuildServiceProvider();
+}
+```
+
+### 7.5 组装当前用户
+
+```csharp
+// Auth.cs —— 构造认证用户。"perm" 声明只负责操作权限，与数据权限无关。
+static UserPrincipal Dev(params string[] permissions)
+{
+    var claims = new List<Claim>
+    {
+        new(UserClaimTypes.Subject, "dev"),     // UserPrincipal.UserId 读取 sub 声明
+    };
+    claims.AddRange(permissions.Select(p => new Claim(UserClaimTypes.Permission, p)));
+
+    return new UserPrincipal(
+        new ClaimsPrincipal(new ClaimsIdentity(claims, "Bearer", ClaimTypes.Name, UserClaimTypes.Role)));
+}
+```
+
+### 7.6 调用流程
+
+```csharp
+static async Task Main()
+{
+    var db = new AppDb();                       // 种子仓库 + 成员关系
+    db.Join("dev", "TeamA");
+    db.Join("dev", "TeamB");
+
+    // Dev 的"团队归属"来自 AppDb（数据）；"维护权限"来自声明（操作权限）
+    var dev = Dev("repo:create", "repo:update", "repo:push");
+    await RunAsDevAsync(BuildApp(dev, db), db);
+}
+
+static async Task RunAsDevAsync(IServiceProvider provider, AppDb db)
+{
+    await using var scope = provider.CreateAsyncScope();
+    var services = scope.ServiceProvider;       // 作用域内已含 Dev（UserPrincipal）
+
+    var scopes = services.GetRequiredService<IDataScopeService>();
+    var factory = services.GetRequiredService<IObjectFactory>();
+    var ctx = services.GetRequiredService<BusinessContext>();
+
+    // ---- 1. 查询过滤：只返回当前用户可访问的仓库 ----
+    IEnumerable<RepoRecord> visible = db.Repos.Where(scopes.CreateScopePredicate<RepoRecord>());
+    //   Dev ∈ {TeamA, TeamB}         → RepA1、RepA2、RepB1 可见
+    //   RepC1（TeamC，无授权）        → 排除
+    //   RepC2（OwnerId=dev）          → "本人快速路径"保留
+    Console.WriteLine(string.Join(", ", visible.Select(r => r.Name)));   // RepA1, RepA2, RepB1, RepC2
+
+    // ---- 2. 单行判定 ----
+    Console.WriteLine(scopes.CanAccess(db.Repos[0]));   // True  （TeamA）
+    Console.WriteLine(scopes.CanAccess(db.Repos[3]));   // False （TeamA ≠ TeamC）
+    Console.WriteLine(scopes.CanAccess(db.Repos[4]));   // True  （RepC2：本人为 Owner，直接放行）
+
+    // ---- 3. 授权变化立即生效：只改数据，不碰 Token/代码 ----
+    db.Join("dev", "TeamC");                           // 成员关系表新增一行
+    Console.WriteLine(scopes.CanAccess(db.Repos[3]));  // True  —— 无需重新登录或刷新 Token
+
+    // ---- 4. 操作权限：Execute ----
+    var push = new PushCommand { BusinessContext = ctx, RepoId = "RepA1" };
+    await factory.ExecuteAsync(push);                  // 拥有 repo:push → 放行
+    Console.WriteLine(push.Pushed);                    // True
+
+    // ---- 5. 越权写入被 DataScopeRule 拦截（数据权限的写入侧） ----
+    var stealing = new Repo
+    {
+        BusinessContext = ctx,
+        Name = "pay-hack",
+        TeamId = "TeamC",                              // 把仓库建到无权团队
+    };
+    stealing.MarkAsNew();
+    try
+    {
+        await stealing.SaveAsync();                    // 操作权限通过，但数据范围规则失败
+    }
+    catch (ValidationException ex)                     // Nerosoft.Euonia.Validation
+    {
+        Console.WriteLine($"写入被拦截：{ex.Message}");
+        // "当前用户无权访问该数据（已在数据范围之外）。"
+    }
+
+    // ---- 6. 无操作权限：拒绝即抛 SecurityException（操作权限的拒绝形态） ----
+    var steve = Dev();                                 // 无任何权限声明
+    await using var steveScope = BuildApp(steve, db).CreateAsyncScope();
+    var steveServices = steveScope.ServiceProvider;
+    var steveFactory = steveServices.GetRequiredService<IObjectFactory>();
+    var stevePush = new PushCommand
+    {
+        BusinessContext = steveServices.GetRequiredService<BusinessContext>(),
+        RepoId = "RepA1",
+    };
+    try
+    {
+        await steveFactory.ExecuteAsync(stevePush);    // steve 没有 repo:push
+    }
+    catch (SecurityException)
+    {
+        Console.WriteLine("操作权限拒绝：SecurityException");
+    }
+}
+```
+
+运行输出：
+
+```
+RepA1, RepA2, RepB1, RepC2
+True
+False
+True
+True
+True
+写入被拦截：当前用户无权访问该数据（已在数据范围之外）。
+操作权限拒绝：SecurityException
+```
+
+> `ScopedOrder` 示例逻辑与上述一致：Dev 属于 `TeamA`/`TeamB` 时，
+> 通过 `DataScopeRule` 对 `ScopedOrder` 的保存也会同样拦截越权数据。
+> 实际应用中请让查询层（EF/ADO 的 `IQueryable<T>`）基于
+> `scopes.ResolveScopes()` 把判定下推到数据库，而不是把所有行拉出来再过滤
+> （`CreateScopePredicate<T>` 用于内存过滤，两者按数据量取舍）。
