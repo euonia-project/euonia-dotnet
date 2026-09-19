@@ -563,6 +563,233 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	[Fact]
+	public async Task DataScopeRule_MissingScopeProvider_ShouldFailClosed()
+	{
+		// 未注册 IUserScopeProvider：数据权限形同虚设，必须暴露而不是静默放行。
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var provider, null);
+
+		var obj = new ScopedOrder
+		{
+			BusinessContext = provider.GetRequiredService<BusinessContext>(),
+			OwnerId = "u9"
+		};
+		obj.AddScope(new ScopeTag("team", "TeamC"));
+
+		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
+
+		Assert.False(obj.IsValid);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task DataScopeRule_WithoutBusinessContext_ShouldFailClosed()
+	{
+		// 未接入业务上下文时无从解析数据范围服务：规则必须失败，而不是静默放行。
+		var obj = new ScopedOrder { OwnerId = "u9" };
+		obj.AddScope(new ScopeTag("team", "TeamC"));
+		obj.PublicRules.AddRule(new DataScopeRule());
+
+		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
+
+		Assert.False(obj.IsValid);
+	}
+
+	[Fact]
+	public void Filter_ShouldResolveScopesOnceForWholeSequence()
+	{
+		// 谓词被查询层逐行调用；逐行解析授权数据会造成 N+1 查询。
+		var provider = new CountingUserScopeProvider();
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var serviceProvider, provider);
+		var dataScope = serviceProvider.GetRequiredService<IDataScopeService>();
+
+		var rows = Enumerable.Range(0, 100).Select(_ => new RepoRow { TeamId = "TeamA" }).ToArray();
+
+		Assert.Equal(100, dataScope.Filter(rows).Count());
+		Assert.Equal(1, provider.CallCount);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void CreateScopePredicate_ShouldResolveScopesOnceForWholeSequence()
+	{
+		var provider = new CountingUserScopeProvider();
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var serviceProvider, provider);
+		var dataScope = serviceProvider.GetRequiredService<IDataScopeService>();
+
+		var predicate = dataScope.CreateScopePredicate<RepoRow>();
+		var rows = Enumerable.Range(0, 50).Select(_ => new RepoRow { TeamId = "TeamA" }).ToArray();
+
+		Assert.Equal(50, rows.Count(predicate));
+		Assert.Equal(1, provider.CallCount);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void CanAccess_AnonymousUser_ShouldBeDenied()
+	{
+		// 匿名用户没有任何授权值：默认拒绝，而不是放行全部数据。
+		var anonymous = new UserPrincipal(new ClaimsPrincipal(new ClaimsIdentity()));
+		Assert.False(anonymous.IsAuthenticated);
+
+		using var scope = CreatePermissionScope(anonymous, out var provider, new CountingUserScopeProvider());
+		var dataScope = provider.GetRequiredService<IDataScopeService>();
+
+		Assert.False(dataScope.CanAccess(new RepoRow { TeamId = "TeamA" }));
+		Assert.False(dataScope.CanAccess(new RepoRow()));
+		Assert.False(dataScope.IsGranted(new ScopeTag("team", "TeamA")));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void CanAccess_AnonymousUser_OnAnonymousAccessibleData_ShouldBeAllowed()
+	{
+		// 注册、密码重置等场景：数据行显式声明可匿名访问。
+		var anonymous = new UserPrincipal(new ClaimsPrincipal(new ClaimsIdentity()));
+
+		using var scope = CreatePermissionScope(anonymous, out var provider, new CountingUserScopeProvider());
+		var dataScope = provider.GetRequiredService<IDataScopeService>();
+
+		Assert.True(dataScope.CanAccess(new RegistrationRow()));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void CanAccess_WithoutUserContext_ShouldBeAllowed()
+	{
+		// 未注册 UserPrincipal（后台任务、系统上下文）：数据权限无从判定，不做限制。
+		using var scope = CreatePermissionScope(null, out var provider, new CountingUserScopeProvider());
+		var dataScope = provider.GetRequiredService<IDataScopeService>();
+
+		Assert.True(dataScope.CanAccess(new RepoRow { TeamId = "TeamC" }));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void IsGranted_NullTag_ShouldDeny()
+	{
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var provider, new CountingUserScopeProvider());
+		var dataScope = provider.GetRequiredService<IDataScopeService>();
+
+		Assert.False(dataScope.IsGranted(null));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void Dimension_ShouldBeComparedCaseInsensitively_ValueCaseSensitively()
+	{
+		var store = new MemoryScopeStore();
+		store.Grant("dev", new ScopeTag("Team", "TeamA"));
+
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var provider, new FakeUserScopeProvider(store));
+		var dataScope = provider.GetRequiredService<IDataScopeService>();
+
+		// 维度是代码约定的概念：大小写不敏感
+		Assert.True(dataScope.IsGranted(new ScopeTag("team", "TeamA")));
+
+		// 值是数据库标识：大小写敏感
+		Assert.False(dataScope.IsGranted(new ScopeTag("team", "teama")));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	#endregion
+
+	#region 操作权限：工厂方法发现与权限要求收集一致
+
+	[Fact]
+	public async Task SaveAsync_ConventionNamedFactoryMethod_ShouldEnforcePermission()
+	{
+		// 工厂方法按命名约定（FactoryUpdateAsync）发现；其上的 [Permission] 必须同样生效，
+		// 否则会出现"方法能被调用、权限却被忽略"的越权路径。
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var provider, new CountingUserScopeProvider());
+
+		var obj = new ConventionSecuredObject
+		{
+			BusinessContext = provider.GetRequiredService<BusinessContext>()
+		};
+		obj.MarkAsChanged();
+
+		await Assert.ThrowsAsync<SecurityException>(() => obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_PlainConventionNamedMethod_ShouldEnforcePermission()
+	{
+		// 同样按命名约定发现，但用的是文档中的 UpdateAsync（不带 Factory 前缀）写法。
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Subject, "dev")), out var provider, new CountingUserScopeProvider());
+
+		var obj = new PlainNamedSecuredObject
+		{
+			BusinessContext = provider.GetRequiredService<BusinessContext>()
+		};
+		obj.MarkAsChanged();
+
+		await Assert.ThrowsAsync<SecurityException>(() => obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_ConventionNamedFactoryMethod_WithPermission_ShouldSucceed()
+	{
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:update")), out var provider, new CountingUserScopeProvider());
+
+		var obj = new ConventionSecuredObject
+		{
+			BusinessContext = provider.GetRequiredService<BusinessContext>()
+		};
+		obj.MarkAsChanged();
+
+		var result = await obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+		Assert.Equal(ObjectEditState.None, result.State);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_ShouldInvokeActivator()
+	{
+		var activator = new RecordingObjectActivator();
+		var services = new ServiceCollection();
+		services.AddScoped<BusinessContextAccessor>();
+		services.AddScoped<BusinessContext>();
+		services.AddSingleton<IObjectActivator>(activator);
+		services.AddScoped<IObjectFactory, BusinessObjectFactory>();
+		services.AddScoped<IPermissionChecker, ClaimPermissionChecker>();
+		services.AddScoped<IDataScopeService, DataScopeService>();
+		services.AddSingleton<IUserScopeProvider>(new CountingUserScopeProvider());
+		services.AddSingleton(UserWith((UserClaimTypes.Permission, "order:update")));
+
+		var built = services.BuildServiceProvider();
+		using var scope = built.CreateScope();
+		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+
+		var obj = new SecuredEditableObject
+		{
+			BusinessContext = scope.ServiceProvider.GetRequiredService<BusinessContext>()
+		};
+		obj.MarkAsChanged();
+
+		await obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+		// 与其它工厂入口一致：保存也应初始化/终结实例
+		Assert.Equal(1, activator.InitializeCount);
+		Assert.Equal(1, activator.FinalizeCount);
+
+		BusinessContextAccessor.Clear();
+	}
+
 	#endregion
 
 	#region Helpers
@@ -651,6 +878,39 @@ public class AdminEditableObject : EditableObject<AdminEditableObject>
 
 	[FactoryDelete]
 	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	{
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 按命名约定（而非工厂方法特性）声明更新方法的可编辑业务对象，用于验证
+/// "工厂方法的发现方式"与"权限要求的收集方式"保持一致。
+/// </summary>
+public class ConventionSecuredObject : EditableObject<ConventionSecuredObject>
+{
+	/// <summary>
+	/// 按命名约定被识别为更新工厂方法，方法级权限要求必须同样生效。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	[Permission("order:update")]
+	protected internal async Task FactoryUpdateAsync(CancellationToken cancellationToken = default)
+	{
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 按命名约定（文档中的 <c>UpdateAsync</c> 写法，不带 Factory 前缀）声明更新方法的可编辑业务对象。
+/// </summary>
+public class PlainNamedSecuredObject : EditableObject<PlainNamedSecuredObject>
+{
+	/// <summary>
+	/// 按命名约定被识别为更新工厂方法，方法级权限要求必须同样生效。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	[Permission("order:update")]
+	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -788,6 +1048,58 @@ public class MemoryScopeStore
 	{
 		return _scopes.TryGetValue(userId, out var list) ? list : Array.Empty<ScopeTag>();
 	}
+}
+
+/// <summary>
+/// 允许匿名访问的数据行（注册、密码重置等场景）。
+/// </summary>
+public class RegistrationRow : IDataScoped, IAnonymousAccessible
+{
+	/// <inheritdoc />
+	public string OwnerId => null;
+
+	/// <inheritdoc />
+	public IReadOnlyList<ScopeTag> ScopeTags => Array.Empty<ScopeTag>();
+}
+
+/// <summary>
+/// 记录调用次数的范围提供者，用于验证一次过滤只解析一次授权数据。
+/// </summary>
+public class CountingUserScopeProvider : IUserScopeProvider
+{
+	/// <summary>
+	/// 获取 <see cref="ResolveScopes"/> 被调用的次数。
+	/// </summary>
+	public int CallCount { get; private set; }
+
+	/// <inheritdoc />
+	public IReadOnlyList<ScopeTag> ResolveScopes(UserPrincipal user)
+	{
+		CallCount++;
+		return [new ScopeTag("team", "TeamA")];
+	}
+}
+
+/// <summary>
+/// 记录初始化/终结调用次数的对象激活器。
+/// </summary>
+public class RecordingObjectActivator : IObjectActivator
+{
+	/// <summary>
+	/// 获取 <see cref="InitializeInstance"/> 被调用的次数。
+	/// </summary>
+	public int InitializeCount { get; private set; }
+
+	/// <summary>
+	/// 获取 <see cref="FinalizeInstance"/> 被调用的次数。
+	/// </summary>
+	public int FinalizeCount { get; private set; }
+
+	/// <inheritdoc />
+	public void InitializeInstance(object obj) => InitializeCount++;
+
+	/// <inheritdoc />
+	public void FinalizeInstance(object obj) => FinalizeCount++;
 }
 
 /// <summary>

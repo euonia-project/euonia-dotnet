@@ -26,6 +26,11 @@ public interface IDataScopeService
 	/// </summary>
 	/// <param name="resource">待判定的数据行，不能为 <see langword="null"/>。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <remarks>
+	/// 用于单行判定，每次调用都会重新解析用户范围以保证授权变更立即生效。
+	/// 批量过滤请使用 <see cref="Filter{T}(IEnumerable{T})"/> 或 <see cref="CreateScopePredicate{T}"/>，
+	/// 它们只在开始时解析一次范围，避免逐行查询授权数据。
+	/// </remarks>
 	bool CanAccess(IDataScoped resource);
 
 	/// <summary>
@@ -39,6 +44,10 @@ public interface IDataScopeService
 	/// </summary>
 	/// <typeparam name="T">数据项的类型。</typeparam>
 	/// <returns>当前用户的数据范围谓词。</returns>
+	/// <remarks>
+	/// 调用本方法时解析一次用户范围，之后对该谓词的所有调用复用同一份快照，
+	/// 以保证一次查询只访问一次授权数据。
+	/// </remarks>
 	Func<T, bool> CreateScopePredicate<T>()
 		where T : IDataScoped;
 

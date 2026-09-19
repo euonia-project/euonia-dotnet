@@ -69,12 +69,21 @@ public class Order : EditableObject<Order>
 }
 
 // 类级：全部操作都要求 admin
-[Requirement("admin")]
+[Permission("admin")]
 public class AdminSettings : EditableObject<AdminSettings>
 {
     // ...
 }
 ```
+
+方法级要求的收集范围与工厂方法的查找范围**完全一致**（同一套判定规则），无论用哪种方式声明
+工厂方法，方法上的 `[Permission]` 都会生效：
+
+- 标记了 `[FactoryXxx]` 的方法：**不限定方法名**
+- 未标记的方法：**严格按约定名称匹配**（大小写敏感），即
+  `Update`、`UpdateAsync`、`FactoryUpdate`、`FactoryUpdateAsync` 之一
+
+因此，若方法名不属于上述任何一种写法，它既不会被工厂调用，其上的 `[Permission]` 也不会被收集。
 
 工厂方法特性与 `BusinessOperation` 的对应关系：
 
@@ -217,14 +226,43 @@ IReadOnlyList<ScopeTag> granted = service.ResolveScopes();
 bool granted3 = service.IsGranted(new ScopeTag("team", "TeamA"));
 ```
 
+**解析时机**：单行判定（`CanAccess`）每次调用都重新解析用户范围，保证授权变更立即生效；
+批量接口（`Filter` / `CreateScopePredicate`）则在**创建时解析一次**，之后对该批每一行复用同一份
+快照。谓词会被查询层逐行调用，若逐行解析，一次列表查询就会对授权数据发起与行数相同次数的查询
+（N+1）。因此：同一批过滤共享同一份授权快照，跨批次则是新的快照。
+
 ### 3.4 匹配语义
 
 - **跨维度 AND**：行声明 `region` 与 `team` 两个维度时，两个维度都必须满足
 - **同维度 OR**：用户同维度多值、或行同维度多标签，满足任意一个即可
 - **本人快速路径**：`OwnerId == 当前用户 UserId`（忽略大小写）→ 直接放行
 - **通配**：值 `"*"` 匹配该维度任意值；`ScopeTag.Any`（`"*"/"*"`）全局通配
-- **边界**：`CanAccess(null)` → 拒绝；未认证用户 → 全放行；
+- **大小写**：维度名（`team`/`region`，代码约定的概念）忽略大小写；
+  标签值是数据库标识，按大小写敏感精确比较
+- **边界**：`CanAccess(null)` → 拒绝；`IsGranted(null)` → 拒绝；
   行无标签且无所有者 → 放行；行无标签但有所有者 → 仅本人
+
+### 3.4.1 用户身份与放行规则
+
+| 当前用户 | 判定 |
+|---|---|
+| 未接入用户上下文（`BusinessContext.User == null`，如后台任务） | 无授权值可依据，**不做限制** |
+| **匿名用户**（已接入 `UserPrincipal` 但未通过认证） | **默认拒绝**，仅放行实现了 `IAnonymousAccessible` 的数据行 |
+| 已认证用户 | 按本人快速路径 + 范围标签判定 |
+
+匿名默认拒绝是必要的有意设计：数据权限的判定依据是"用户被授予的范围"，而匿名用户没有任何
+授权值——若默认放行，等同于向未认证请求暴露整张表。注册、密码重置、用户提交等确实需要匿名的
+场景，由数据行**逐个类型显式实现** `IAnonymousAccessible` 来声明：
+
+```csharp
+public class RegistrationRow : EditableObject<RegistrationRow>, IDataScoped, IAnonymousAccessible
+{
+    // 未认证用户可访问本行；其余数据行不受影响
+}
+```
+
+> 该接口只作用于**数据权限**。**操作权限**是否允许匿名，取决于操作有没有声明 `[Permission]`：
+> 未声明权限要求的操作不校验权限，匿名用户即可执行。
 
 ### 3.5 写入前拦截：`DataScopeRule`
 
@@ -242,7 +280,10 @@ public class Repo : EditableObject<Repo>, IDataScoped
 }
 ```
 
-- 对象未实现 `IDataScoped`、或数据范围服务不可用 → 规则自动放行
+- 对象未实现 `IDataScoped` → 规则自动放行（该数据行不受数据权限约束）
+- **无法判定时规则失败，不放行**：未注册 `IDataScopeService`、未注册其依赖
+  `IUserScopeProvider`、或对象未接入 `BusinessContext` 时，规则失败并给出可操作的提示。
+  这是 fail-closed：避免出现"看似启用了数据权限、实际没有生效"的情况
 - 该规则与查询过滤互补：查询时排除越权行，写入时阻止越权数据
 
 ---
@@ -307,12 +348,16 @@ public class TeamScopeProvider : IUserScopeProvider
 ## 5. 最佳实践
 
 1. **值别进 Token/代码**：所有可能变化的授权值（团队、仓库、区域……）都从数据解析。
-2. **`IUserScopeProvider` 保持实时**：每次判定查询（或使用可失效缓存），不要长缓存。
+2. **`IUserScopeProvider` 保持实时**：单行判定每次查询（或使用可失效缓存），不要长缓存；
+   批量查询用 `Filter` / `CreateScopePredicate`，它们一次解析、整批复用，天然避免 N+1。
 3. **组合判定**：操作权限管"能不能做这个操作"，数据权限管"能碰到哪些行"，
    `DataScopeRule` 保证落库前再次拦截，二者分工明确，不要互相替代。
 4. **维度命名约定**：同一维度（如 `team`、`region`）在行数据与用户侧解析中保持一致。
-5. **未注册 `IUserScopeProvider` 时**：`IDataScopeService` 依赖注入激活会失败——
-   这是有意的 fail-fast，防止"看似开了数据权限、实际没生效"。
+5. **未注册 `IUserScopeProvider` 时**：`IDataScopeService` 依赖注入激活会失败，
+   `DataScopeRule` 也会因此失败并阻止落库——这是有意的 fail-fast/fail-closed，
+   防止"看似开了数据权限、实际没生效"。
+6. **匿名不等于放行**：需要匿名访问的数据必须显式实现 `IAnonymousAccessible`，
+   不要为了让匿名请求"能跑通"而放宽整体判定。
 
 ## 6. 类型速查
 
@@ -324,6 +369,7 @@ public class TeamScopeProvider : IUserScopeProvider
 | `ClaimPermissionChecker` | `Permission/` | 默认实现（读 `"perm"` 声明，支持 `*` 前缀通配） |
 | `ScopeTag` | `Permission/` | 维度-值范围标签 |
 | `IDataScoped` | `Permission/` | 数据行声明归属 |
+| `IAnonymousAccessible` | `Permission/` | 数据行声明允许匿名访问（唯一的匿名放行出口） |
 | `IUserScopeProvider` | `Permission/` | 用户范围值来源（应用实现，数据实时解析） |
 | `IDataScopeService` | `Permission/` | 数据范围判定引擎 |
 | `DataScopeService` | `Permission/` | `IDataScopeService` 默认实现 |

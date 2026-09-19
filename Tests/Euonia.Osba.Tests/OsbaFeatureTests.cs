@@ -351,6 +351,44 @@ public class OsbaFeatureTests
 
 	#endregion
 
+	#region Factory method discovery convention
+
+	[Fact]
+	public async Task CreateAsync_AttributeMarkedMethod_ShouldIgnoreMethodName()
+	{
+		// 有 [FactoryXxx] 标记的方法：名称与约定无关，仍应被发现
+		using var scope = CreateScope(out var provider);
+		var factory = provider.GetRequiredService<IObjectFactory>();
+
+		var obj = await factory.CreateAsync<AttributeNamedObject>("abc");
+
+		Assert.Equal("abc", obj.Code);
+	}
+
+	[Fact]
+	public async Task CreateAsync_ConventionallyNamedMethod_ShouldBeDiscovered()
+	{
+		// 无标记的方法：严格按名称搜索（Create / CreateAsync / FactoryCreate / FactoryCreateAsync）
+		using var scope = CreateScope(out var provider);
+		var factory = provider.GetRequiredService<IObjectFactory>();
+
+		var obj = await factory.CreateAsync<ConventionallyNamedObject>("abc");
+
+		Assert.Equal("abc", obj.Code);
+	}
+
+	[Fact]
+	public async Task CreateAsync_MisspelledMethodName_ShouldNotBeAccepted()
+	{
+		// 无标记且名称不符约定：不得被当作该操作的工厂方法
+		using var scope = CreateScope(out var provider);
+		var factory = provider.GetRequiredService<IObjectFactory>();
+
+		await Assert.ThrowsAsync<MissingMethodException>(() => factory.CreateAsync<MisspelledMethodObject>("abc"));
+	}
+
+	#endregion
+
 	#region Helpers
 
 	private static IServiceScope BeginRuleScope<T>(out T obj)
@@ -485,6 +523,61 @@ public class OptionalCriteriaObject : BusinessObject<OptionalCriteriaObject>
 
 	[FactoryCreate]
 	public async Task CreateAsync(string code, CancellationToken cancellationToken = default)
+	{
+		Code = code;
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 带 [FactoryCreate] 标记、但方法名不符合任何约定的对象。
+/// </summary>
+public class AttributeNamedObject : BusinessObject<AttributeNamedObject>
+{
+	public string Code { get; private set; }
+
+	/// <summary>
+	/// 名称与约定无关，仅靠特性被识别为创建工厂方法。
+	/// </summary>
+	/// <param name="code">创建条件。</param>
+	[FactoryCreate]
+	public async Task BuildItUp(string code)
+	{
+		Code = code;
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 无 factory 特性、仅按约定名称（<c>CreateAsync</c>）声明的对象。
+/// </summary>
+public class ConventionallyNamedObject : BusinessObject<ConventionallyNamedObject>
+{
+	public string Code { get; private set; }
+
+	/// <summary>
+	/// 无特性，按约定名称被识别为创建工厂方法。
+	/// </summary>
+	/// <param name="code">创建条件。</param>
+	public async Task CreateAsync(string code)
+	{
+		Code = code;
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 方法名拼错且无 factory 特性的对象。
+/// </summary>
+public class MisspelledMethodObject : BusinessObject<MisspelledMethodObject>
+{
+	public string Code { get; private set; }
+
+	/// <summary>
+	/// 名称拼错（<c>CreateAsnyc</c>）且无特性，不应被识别为创建工厂方法。
+	/// </summary>
+	/// <param name="code">创建条件。</param>
+	public async Task CreateAsnyc(string code)
 	{
 		Code = code;
 		await Task.CompletedTask;

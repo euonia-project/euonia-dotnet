@@ -21,6 +21,16 @@ namespace Nerosoft.Euonia.Osba;
 /// <para>
 /// 匹配语义：数据行声明的各维度按交集（AND）判定（每个维度都要被满足），
 /// 同一维度内的多个标签或用户的多个值按并集（OR）判定（满足任意一个即可）。
+/// 维度名按大小写不敏感比较（维度是代码约定的概念），标签值为不透明标识，按大小写敏感精确比较。
+/// </para>
+/// <para>
+/// 用户与数据行的三种关系：
+/// <list type="bullet">
+/// <item><description>未接入用户上下文（<see cref="BusinessContext.User"/> 为 <c>null</c>，如后台任务）：无从判定，不做限制；</description></item>
+/// <item><description>匿名用户（已接入 <see cref="UserPrincipal"/> 但未通过认证）：默认拒绝，仅放行实现了
+/// <see cref="IAnonymousAccessible"/> 的数据行（注册、密码重置等场景）；</description></item>
+/// <item><description>已认证用户：按所有者快速路径与范围标签判定。</description></item>
+/// </list>
 /// </para>
 /// </remarks>
 public class DataScopeService : IDataScopeService
@@ -54,6 +64,11 @@ public class DataScopeService : IDataScopeService
 	/// <inheritdoc />
 	public bool IsGranted(ScopeTag required)
 	{
+		if (required == null)
+		{
+			return false;
+		}
+
 		return IsGrantedCore(required, ResolveScopes());
 	}
 
@@ -65,10 +80,59 @@ public class DataScopeService : IDataScopeService
 			return false;
 		}
 
+		return CanAccessCore(resource, _context.User, ResolveScopes());
+	}
+
+	/// <inheritdoc />
+	/// <remarks>
+	/// 用户范围在创建谓词时解析一次并在后续所有行上复用。谓词会被查询层对每一行调用，
+	/// 若逐行解析，一次列表过滤就会对授权数据发起与行数相同次数的查询。
+	/// 因此谓词持有的是创建时刻的范围快照：同一批过滤使用同一份授权数据。
+	/// </remarks>
+	public Func<T, bool> CreateScopePredicate<T>()
+		where T : IDataScoped
+	{
 		var user = _context.User;
-		if (user == null || !user.IsAuthenticated)
+		var scopes = ResolveScopes();
+
+		return item => CanAccessCore(item, user, scopes);
+	}
+
+	/// <inheritdoc />
+	public IEnumerable<T> Filter<T>(IEnumerable<T> source)
+		where T : IDataScoped
+	{
+		ArgumentNullException.ThrowIfNull(source);
+
+		// CreateScopePredicate 在调用时即解析用户范围，故整个序列共用一份快照。
+		return source.Where(CreateScopePredicate<T>());
+	}
+
+	/// <summary>
+	/// 依据已解析的用户范围判断是否可访问指定数据行。
+	/// </summary>
+	/// <param name="resource">待判定的数据行。</param>
+	/// <param name="user">当前用户；未接入用户上下文时为 <see langword="null"/>。</param>
+	/// <param name="scopes">当前用户已解析的范围快照。</param>
+	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	private static bool CanAccessCore(IDataScoped resource, UserPrincipal user, IReadOnlyList<ScopeTag> scopes)
+	{
+		if (resource == null)
 		{
+			return false;
+		}
+
+		if (user == null)
+		{
+			// 未接入用户上下文（后台任务、系统上下文等）：数据权限无从判定，不做限制。
 			return true;
+		}
+
+		if (!user.IsAuthenticated)
+		{
+			// 已接入认证但请求未通过认证（匿名用户）：默认拒绝，
+			// 仅放行显式声明可匿名访问的数据（注册、密码重置等场景）。
+			return resource is IAnonymousAccessible;
 		}
 
 		var ownerId = resource.OwnerId;
@@ -85,46 +149,36 @@ public class DataScopeService : IDataScopeService
 			return string.IsNullOrWhiteSpace(ownerId);
 		}
 
-		var scopes = ResolveScopes();
-		return tags.GroupBy(tag => tag.Dimension)
+		return tags.Where(tag => tag != null)
+		           .GroupBy(tag => tag.Dimension, StringComparer.OrdinalIgnoreCase)
 		           .All(group => group.Any(tag => IsGrantedCore(tag, scopes)));
-	}
-
-	/// <inheritdoc />
-	public Func<T, bool> CreateScopePredicate<T>()
-		where T : IDataScoped
-	{
-		return item => CanAccess(item);
-	}
-
-	/// <inheritdoc />
-	public IEnumerable<T> Filter<T>(IEnumerable<T> source)
-		where T : IDataScoped
-	{
-		ArgumentNullException.ThrowIfNull(source);
-		return source.Where(CreateScopePredicate<T>());
 	}
 
 	private static bool IsGrantedCore(ScopeTag required, IReadOnlyList<ScopeTag> scopes)
 	{
-		if (scopes.Count == 0)
+		if (required == null || scopes == null || scopes.Count == 0)
 		{
 			return false;
 		}
 
 		foreach (var granted in scopes)
 		{
-			if (Equals(granted.Dimension, "*") && Equals(granted.Value, "*"))
-			{
-				return true;
-			}
-
-			if (!Equals(granted.Dimension, required.Dimension))
+			if (granted == null)
 			{
 				continue;
 			}
 
-			if (Equals(granted.Value, "*") || Equals(granted.Value, required.Value))
+			if (IsWildcard(granted.Dimension) && IsWildcard(granted.Value))
+			{
+				return true;
+			}
+
+			if (!Matches(granted.Dimension, required.Dimension, StringComparison.OrdinalIgnoreCase))
+			{
+				continue;
+			}
+
+			if (IsWildcard(granted.Value) || Matches(granted.Value, required.Value, StringComparison.Ordinal))
 			{
 				return true;
 			}
@@ -133,8 +187,13 @@ public class DataScopeService : IDataScopeService
 		return false;
 	}
 
-	private static bool Equals(string left, string right)
+	private static bool IsWildcard(string value)
 	{
-		return string.Equals(left ?? string.Empty, right ?? string.Empty, StringComparison.Ordinal);
+		return value == "*";
+	}
+
+	private static bool Matches(string left, string right, StringComparison comparison)
+	{
+		return string.Equals(left ?? string.Empty, right ?? string.Empty, comparison);
 	}
 }

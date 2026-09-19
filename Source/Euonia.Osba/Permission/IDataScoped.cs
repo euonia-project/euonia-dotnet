@@ -13,6 +13,10 @@ namespace Nerosoft.Euonia.Osba;
 /// 是运行期数据而非固化标签：行数据一变，其归属范围立即变化。
 /// 用户的授权范围值则由 <see cref="IUserScopeProvider"/> 从应用数据实时解析。
 /// </para>
+/// <para>
+/// 实现本接口的数据行默认不对匿名用户开放；确需匿名访问的场景（注册、密码重置等），
+/// 额外实现 <see cref="IAnonymousAccessible"/> 显式声明。
+/// </para>
 /// </remarks>
 public interface IDataScoped
 {

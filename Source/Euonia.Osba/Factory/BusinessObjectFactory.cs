@@ -192,9 +192,16 @@ public class BusinessObjectFactory : IObjectFactory
 
 		ObjectAuthorization.EnsureAuthorized(target, operation);
 
-		await InvokeAsync(method, target, [cancellationToken]);
-
-		return target;
+		try
+		{
+			_activator?.InitializeInstance(target);
+			await InvokeAsync(method, target, [cancellationToken]);
+			return target;
+		}
+		finally
+		{
+			_activator?.FinalizeInstance(target);
+		}
 	}
 
 	/// <inheritdoc/>

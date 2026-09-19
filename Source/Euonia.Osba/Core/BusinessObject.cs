@@ -19,6 +19,12 @@ namespace Nerosoft.Euonia.Osba;
 public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposable
 {
 	/// <summary>
+	/// 权限要求缓存：键为（业务对象类型，操作）。权限要求由特性静态决定，
+	/// 无需每次判定都重新反射扫描，避免在授权热路径上反复分配。
+	/// </summary>
+	private static readonly ConcurrentDictionary<(Type Type, BusinessOperation Operation), PermissionAttribute[]> _permissionRequirementCache = new();
+
+	/// <summary>
 	/// 已更改属性的列表。
 	/// </summary>
 	private readonly List<IPropertyInfo> _changedProperties = [];
@@ -913,7 +919,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </remarks>
 	public virtual bool CanReadObject()
 	{
-		return IsOperationGranted(BusinessOperation.Read, typeof(FactoryFetchAttribute));
+		return IsOperationGranted(BusinessOperation.Read);
 	}
 
 	/// <summary>
@@ -922,7 +928,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	public virtual bool CanCreateObject()
 	{
-		return IsOperationGranted(BusinessOperation.Create, typeof(FactoryCreateAttribute), typeof(FactoryInsertAttribute));
+		return IsOperationGranted(BusinessOperation.Create);
 	}
 
 	/// <summary>
@@ -931,7 +937,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	public virtual bool CanUpdateObject()
 	{
-		return IsOperationGranted(BusinessOperation.Update, typeof(FactoryUpdateAttribute));
+		return IsOperationGranted(BusinessOperation.Update);
 	}
 
 	/// <summary>
@@ -940,7 +946,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	public virtual bool CanDeleteObject()
 	{
-		return IsOperationGranted(BusinessOperation.Delete, typeof(FactoryDeleteAttribute));
+		return IsOperationGranted(BusinessOperation.Delete);
 	}
 
 	/// <summary>
@@ -949,7 +955,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	public virtual bool CanExecuteObject()
 	{
-		return IsOperationGranted(BusinessOperation.Execute, typeof(FactoryExecuteAttribute));
+		return IsOperationGranted(BusinessOperation.Execute);
 	}
 
 	/// <summary>
@@ -978,11 +984,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 依据类型级与方法级 <see cref="PermissionAttribute"/> 要求判断是否放行指定操作。
 	/// </summary>
 	/// <param name="operation">当前操作。</param>
-	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型（一个操作可能对应多个）。</param>
 	/// <returns>无要求或要求全部满足时返回 <c>true</c>。</returns>
-	private bool IsOperationGranted(BusinessOperation operation, params Type[] factoryAttributeTypes)
+	private bool IsOperationGranted(BusinessOperation operation)
 	{
-		var requirements = GetPermissionRequirements(factoryAttributeTypes);
+		var requirements = GetPermissionRequirements(operation);
 		if (requirements.Count == 0)
 		{
 			return true;
@@ -998,25 +1003,56 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 收集类型级与指定工厂方法特性标记方法上的权限要求。
+	/// 收集类型级与执行指定操作的工厂方法上的权限要求。
 	/// </summary>
-	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型。</param>
-	/// <returns>权限要求列表。</returns>
-	private List<PermissionAttribute> GetPermissionRequirements(params Type[] factoryAttributeTypes)
+	/// <param name="operation">当前操作。</param>
+	/// <returns>权限要求数组；结果按（类型，操作）缓存。</returns>
+	/// <remarks>
+	/// 方法级要求的收集范围与工厂方法的查找范围一致（<see cref="ObjectReflector.IsFactoryMethod"/>）：
+	/// 既包含标记了工厂方法特性的方法，也包含符合命名约定的方法。若只按特性收集，
+	/// 以命名约定声明的工厂方法上的 <see cref="PermissionAttribute"/> 会被静默忽略，导致权限形同虚设。
+	/// </remarks>
+	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(BusinessOperation operation)
 	{
-		var requirements = new List<PermissionAttribute>();
-		requirements.AddRange(GetType().GetCustomAttributes(typeof(PermissionAttribute), true).Cast<PermissionAttribute>());
-		foreach (var method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+		return _permissionRequirementCache.GetOrAdd((GetType(), operation), static key =>
 		{
-			if (!factoryAttributeTypes.Any(factoryAttributeType => method.IsDefined(factoryAttributeType, true)))
+			var (type, operation) = key;
+			var factoryAttributeTypes = GetFactoryAttributeTypes(operation);
+			var requirements = new List<PermissionAttribute>();
+
+			requirements.AddRange(type.GetCustomAttributes<PermissionAttribute>(true));
+
+			if (factoryAttributeTypes.Length > 0)
 			{
-				continue;
+				foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+				{
+					if (factoryAttributeTypes.Any(factoryAttributeType => ObjectReflector.IsFactoryMethod(method, factoryAttributeType)))
+					{
+						requirements.AddRange(method.GetCustomAttributes<PermissionAttribute>(true));
+					}
+				}
 			}
 
-			requirements.AddRange(method.GetCustomAttributes(typeof(PermissionAttribute), true).Cast<PermissionAttribute>());
-		}
+			return requirements.ToArray();
+		});
+	}
 
-		return requirements;
+	/// <summary>
+	/// 获取指定操作对应的工厂方法特性类型（一个操作可能对应多个特性）。
+	/// </summary>
+	/// <param name="operation">当前操作。</param>
+	/// <returns>工厂方法特性类型数组。</returns>
+	private static Type[] GetFactoryAttributeTypes(BusinessOperation operation)
+	{
+		return operation switch
+		{
+			BusinessOperation.Read => [typeof(FactoryFetchAttribute)],
+			BusinessOperation.Create => [typeof(FactoryCreateAttribute), typeof(FactoryInsertAttribute)],
+			BusinessOperation.Update => [typeof(FactoryUpdateAttribute)],
+			BusinessOperation.Delete => [typeof(FactoryDeleteAttribute)],
+			BusinessOperation.Execute => [typeof(FactoryExecuteAttribute)],
+			_ => []
+		};
 	}
 
 	/// <summary>

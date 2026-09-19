@@ -15,7 +15,10 @@ namespace Nerosoft.Euonia.Osba;
 /// 从应用数据实时解析，不固化在声明或代码里。
 /// </para>
 /// <para>
-/// 目标对象未实现 <see cref="IDataScoped"/>，或数据范围服务不可用时，规则自动放行。
+/// 目标对象未实现 <see cref="IDataScoped"/> 时规则自动放行。但<b>无法判定</b>时一律失败，
+/// 不静默放行：数据范围服务不可用（未注册 <see cref="IDataScopeService"/>、或未注册其依赖
+/// <see cref="IUserScopeProvider"/>）属配置错误，规则失败以暴露问题，避免出现
+/// "看似启用了数据权限、实际没有生效"的情况。
 /// </para>
 /// </remarks>
 public class DataScopeRule : RuleBase
@@ -32,32 +35,20 @@ public class DataScopeRule : RuleBase
 	{
 		if (context.Target is IBusinessObject businessObject && context.Target is IDataScoped scoped)
 		{
-			var service = ResolveDataScopeService(businessObject);
-			if (service != null && !service.CanAccess(scoped))
+			// 注意：此处不捕获 IDataScopeService 解析异常。数据范围服务或其依赖
+			// （IUserScopeProvider）缺失属配置错误，应向上暴露：规则引擎会把异常
+			// 转换为规则错误，从而阻止落库（fail-closed），而不是静默放行。
+			var service = businessObject.BusinessContext?.GetService<IDataScopeService>();
+			if (service == null)
+			{
+				context.AddErrorResult("数据范围服务不可用，无法校验数据权限（请确认已注册 IDataScopeService 及其依赖 IUserScopeProvider）。");
+			}
+			else if (!service.CanAccess(scoped))
 			{
 				context.AddErrorResult("当前用户无权访问该数据（已在数据范围之外）。");
 			}
 		}
 
 		await Task.CompletedTask;
-	}
-
-	/// <summary>
-	/// 解析数据范围服务；数据范围服务或其依赖不可用时返回 <see langword="null"/> 并自动放行。
-	/// </summary>
-	/// <param name="businessObject">目标业务对象。</param>
-	/// <returns>数据范围服务；不可用时返回 <see langword="null"/>。</returns>
-	private static IDataScopeService ResolveDataScopeService(IBusinessObject businessObject)
-	{
-		try
-		{
-			return businessObject.BusinessContext?.GetService<IDataScopeService>();
-		}
-		catch
-		{
-			// 数据范围服务已注册但其依赖（例如 IUserScopeProvider）未配置时，
-			// DI 激活会抛异常：视作数据范围不可用，规则放行。
-			return null;
-		}
 	}
 }
