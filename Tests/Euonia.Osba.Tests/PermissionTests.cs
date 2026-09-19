@@ -610,21 +610,21 @@ public class PermissionTests
 public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 {
 	[FactoryInsert]
-	[PermissionRequirement("order:create")]
+	[Permission("order:create")]
 	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	[PermissionRequirement("order:update")]
+	[Permission("order:update")]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	[PermissionRequirement("order:delete")]
+	[Permission("order:delete")]
 	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
@@ -634,7 +634,7 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 /// <summary>
 /// 类型级权限要求的可编辑业务对象，该要求适用于全部操作。
 /// </summary>
-[PermissionRequirement("admin")]
+[Permission("admin")]
 public class AdminEditableObject : EditableObject<AdminEditableObject>
 {
 	[FactoryInsert]
@@ -667,7 +667,7 @@ public class SecuredCommand : CommandObject<SecuredCommand>
 	public bool Executed { get; private set; }
 
 	[FactoryExecute]
-	[PermissionRequirement("report:export")]
+	[Permission("report:export")]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = true;

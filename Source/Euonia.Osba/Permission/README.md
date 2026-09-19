@@ -46,7 +46,7 @@ services.AddBusinessObject(typeof(Order).Assembly);
 
 ### 2.1 声明权限点
 
-通过 `[PermissionRequirement]` 声明，可打在**类型**（适用于全部操作）或**工厂方法**上
+通过 `[Permission]` 声明，可打在**类型**（适用于全部操作）或**工厂方法**上
 （仅对应操作生效），两者取并集；可用多次（多权限 = AND，多角色 = OR）。
 
 ```csharp
@@ -54,14 +54,14 @@ services.AddBusinessObject(typeof(Order).Assembly);
 public class Order : EditableObject<Order>
 {
     [FactoryInsert]
-    [PermissionRequirement("order:create")]
+    [Permission("order:create")]
     protected override async Task InsertAsync(CancellationToken cancellationToken = default)
     {
         // ...
     }
 
     [FactoryUpdate]
-    [PermissionRequirement("order:update")]
+    [Permission("order:update")]
     protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
         // ...
@@ -69,7 +69,7 @@ public class Order : EditableObject<Order>
 }
 
 // 类级：全部操作都要求 admin
-[PermissionRequirement("admin")]
+[Requirement("admin")]
 public class AdminSettings : EditableObject<AdminSettings>
 {
     // ...
@@ -118,7 +118,7 @@ var user = new UserPrincipal(new ClaimsPrincipal(identity));
 `SaveAsync` 会根据对象状态映射操作（New→`Create`、Changed→`Update`、Deleted→`Delete`，
 命令对象→`Execute`）。行为约定：
 
-- 没有任何 `[PermissionRequirement]` → 放行
+- 没有任何 `[Permission]` → 放行
 - 未注册 `IPermissionChecker` → 放行
 - 有要求但未认证/未授权 → 拒绝（抛异常）
 
@@ -263,7 +263,7 @@ public class Repo : EditableObject<Repo>, IDataScoped
     public IReadOnlyList<ScopeTag> ScopeTags => [new ScopeTag("team", TeamId)];
 
     [FactoryInsert]
-    [PermissionRequirement("repo:create")]
+    [Permission("repo:create")]
     protected override async Task InsertAsync(CancellationToken cancellationToken = default)
     {
         // 写入前规则校验：Dev 不能把仓库建到 TeamC
@@ -319,7 +319,7 @@ public class TeamScopeProvider : IUserScopeProvider
 | 类型 | 位置 | 用途 |
 |---|---|---|
 | `BusinessOperation` | `Permission/` | 操作类型枚举（Read/Create/Update/Delete/Execute） |
-| `PermissionRequirementAttribute` | `Permission/` | 声明操作权限点（类级/方法级） |
+| `PermissionAttribute` | `Permission/` | 声明操作权限点（类级/方法级） |
 | `IPermissionChecker` | `Permission/` | 权限判断抽象 |
 | `ClaimPermissionChecker` | `Permission/` | 默认实现（读 `"perm"` 声明，支持 `*` 前缀通配） |
 | `ScopeTag` | `Permission/` | 维度-值范围标签 |
@@ -362,7 +362,7 @@ public class Repo : EditableObject<Repo>, IDataScoped
 
     // 操作权限：保存（创建/更新/删除）各需要对应权限；声明支持 * 前缀通配（如 repo:*）
     [FactoryInsert]
-    [PermissionRequirement("repo:create")]
+    [Permission("repo:create")]
     protected override async Task InsertAsync(CancellationToken cancellationToken = default)
     {
         // 此处写入库逻辑（EF/ADO 等）
@@ -370,14 +370,14 @@ public class Repo : EditableObject<Repo>, IDataScoped
     }
 
     [FactoryUpdate]
-    [PermissionRequirement("repo:update")]
+    [Permission("repo:update")]
     protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
     }
 
     [FactoryDelete]
-    [PermissionRequirement("repo:delete")]
+    [Permission("repo:delete")]
     protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
     {
         await Task.CompletedTask;
@@ -399,7 +399,7 @@ public class PushCommand : CommandObject<PushCommand>
     public bool Pushed { get; private set; }
 
     [FactoryExecute]
-    [PermissionRequirement("repo:push")]
+    [Permission("repo:push")]
     protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         Pushed = true;

@@ -8,23 +8,23 @@ namespace Nerosoft.Euonia.Osba;
 /// 未指定 <see cref="Permission"/> 时仅校验角色，未指定角色时仅校验权限；两者均未指定则视为放行。
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true, Inherited = true)]
-public sealed class PermissionRequirementAttribute : Attribute
+public sealed class PermissionAttribute : Attribute
 {
 	/// <summary>
-	/// 使用指定的权限名称初始化 <see cref="PermissionRequirementAttribute"/> 的新实例。
+	/// 使用指定的权限名称初始化 <see cref="PermissionAttribute"/> 的新实例。
 	/// </summary>
 	/// <param name="permission">执行操作所需的权限名称，支持以 <c>*</c> 结尾的前缀通配符匹配。</param>
-	public PermissionRequirementAttribute(string permission)
+	public PermissionAttribute(string permission)
 		: this(permission, Array.Empty<string>())
 	{
 	}
 
 	/// <summary>
-	/// 使用指定的权限名称和角色初始化 <see cref="PermissionRequirementAttribute"/> 的新实例。
+	/// 使用指定的权限名称和角色初始化 <see cref="PermissionAttribute"/> 的新实例。
 	/// </summary>
 	/// <param name="permission">执行操作所需的权限名称，支持以 <c>*</c> 结尾的前缀通配符匹配。可以为 <see langword="null"/> 或空字符串。</param>
 	/// <param name="roles">允许执行操作的角色名称数组，满足任意一个角色即可。</param>
-	public PermissionRequirementAttribute(string permission, params string[] roles)
+	public PermissionAttribute(string permission, params string[] roles)
 	{
 		Permission = permission;
 		Roles = roles ?? Array.Empty<string>();

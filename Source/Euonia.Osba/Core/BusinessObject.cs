@@ -908,7 +908,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </summary>
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	/// <remarks>
-	/// 基类默认根据类型与方法上的 <see cref="PermissionRequirementAttribute"/> 要求委托给权限检查器；
+	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给权限检查器；
 	/// 派生类可重写以实现自定义操作权限逻辑。
 	/// </remarks>
 	public virtual bool CanReadObject()
@@ -975,7 +975,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 依据类型级与方法级 <see cref="PermissionRequirementAttribute"/> 要求判断是否放行指定操作。
+	/// 依据类型级与方法级 <see cref="PermissionAttribute"/> 要求判断是否放行指定操作。
 	/// </summary>
 	/// <param name="operation">当前操作。</param>
 	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型（一个操作可能对应多个）。</param>
@@ -1002,10 +1002,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </summary>
 	/// <param name="factoryAttributeTypes">与操作对应的工厂方法特性类型。</param>
 	/// <returns>权限要求列表。</returns>
-	private List<PermissionRequirementAttribute> GetPermissionRequirements(params Type[] factoryAttributeTypes)
+	private List<PermissionAttribute> GetPermissionRequirements(params Type[] factoryAttributeTypes)
 	{
-		var requirements = new List<PermissionRequirementAttribute>();
-		requirements.AddRange(GetType().GetCustomAttributes(typeof(PermissionRequirementAttribute), true).Cast<PermissionRequirementAttribute>());
+		var requirements = new List<PermissionAttribute>();
+		requirements.AddRange(GetType().GetCustomAttributes(typeof(PermissionAttribute), true).Cast<PermissionAttribute>());
 		foreach (var method in GetType().GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 		{
 			if (!factoryAttributeTypes.Any(factoryAttributeType => method.IsDefined(factoryAttributeType, true)))
@@ -1013,7 +1013,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				continue;
 			}
 
-			requirements.AddRange(method.GetCustomAttributes(typeof(PermissionRequirementAttribute), true).Cast<PermissionRequirementAttribute>());
+			requirements.AddRange(method.GetCustomAttributes(typeof(PermissionAttribute), true).Cast<PermissionAttribute>());
 		}
 
 		return requirements;
