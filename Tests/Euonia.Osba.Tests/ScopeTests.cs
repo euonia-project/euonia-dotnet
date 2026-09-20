@@ -343,6 +343,47 @@ public class ScopeTests
 	#region 写侧强制
 
 	[Fact]
+	public async Task CreateAsync_ShouldNotBeScopeChecked_BeforeCallerPopulates()
+	{
+		// Create 只构造对象、不落库，且按设计由调用方随后填充字段（框架自带示例 User.CreateAsync
+		// 也只填 Username）。此时若做数据范围判定，正常流程会被误杀，而它又保护不了任何东西。
+		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+
+		var repo = await factory.CreateAsync<ScopedRepo>();
+
+		Assert.NotNull(repo);
+		Assert.Equal(ObjectEditState.New, repo.State);
+
+		// 调用方填充完成后再保存 —— 此时才做判定
+		repo.TeamId = "team-a";
+		await repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task CreateAsync_ThenSaveOutOfScope_ShouldStillBeDenied()
+	{
+		// 上一条不是「Create 路径没有权限」：落库那一刻仍会被拦下
+		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var repo = await factory.CreateAsync<ScopedRepo>();
+
+		repo.TeamId = "team-c";      // 不在授予范围内
+
+		// 落库前被拦下（新增路径：自动注入的范围规则先命中，故为验证错误）
+		var exception = await Assert.ThrowsAsync<ValidationException>(
+			() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
 	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithValidationException()
 	{
 		// 框架对已声明模型的类型自动注入范围规则，越权「更新」在规则阶段即以验证错误暴露。

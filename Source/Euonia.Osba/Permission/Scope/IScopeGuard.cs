@@ -68,8 +68,9 @@ public interface IScopeGuard
 	/// </summary>
 	/// <typeparam name="T">资源类型。</typeparam>
 	/// <param name="resource">待判定的资源。</param>
-	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
+	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按该资源当前的操作解析（见 <see cref="AllowsObject"/>）。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <remarks>与 <see cref="AllowsObject"/> 使用同一套键解析，对同一对象必然给出同一答案。</remarks>
 	bool Allows<T>(T resource, string scopeKey = null)
 		where T : class;
 
@@ -78,7 +79,7 @@ public interface IScopeGuard
 	/// </summary>
 	/// <typeparam name="T">资源类型。</typeparam>
 	/// <param name="resource">待判定的资源。</param>
-	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
+	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按该资源当前的操作解析。</param>
 	/// <returns>判定结果与命中路径。</returns>
 	ScopeDecision Explain<T>(T resource, string scopeKey = null)
 		where T : class;

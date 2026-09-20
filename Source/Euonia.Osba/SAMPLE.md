@@ -558,10 +558,8 @@ public sealed class RepoScope : ScopeModel<Repo>
     // 按权限码声明行级策略
     public override void Declare(ScopePolicySet<Repo> policies)
     {
-        // 新建行还没有既有归属，用「既有行的范围」去约束它没有意义；
-        // 「能不能创建」由类型级的 [Permission("repo:create")] 负责。
-        policies.For(BusinessOperation.Create, ScopePolicy<Repo>.Where(_ => true));
-
+        // 注意：Create 不需要单独声明。保存新行时默认策略一样适用，而且此时字段已由调用方填完，
+        // 于是「本人创建的、或建在自己团队下的」才允许落库——这正是想要的效果。
         policies.For("repo:push", ScopePolicy<Repo>.Grant("repo"));
         policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));
     }
@@ -689,8 +687,9 @@ async Task<Repo> CreateAsync(string name, string teamId, string ownerId)
 var a1 = await CreateAsync("repo-a1", "TeamA", "dev");
 var a2 = await CreateAsync("repo-a2", "TeamA", "dev");
 
-// 别的团队的仓库：dev 既不是所有者、也不在授予的团队里
-var b1 = await CreateAsync("repo-b1", "TeamB", "someone");
+// 别的团队、别人拥有的仓库：直接种入存储，代表「早就存在的行」
+// （dev 建不出它——创建时默认策略就要求「本人所有」或「建在自己团队下」）
+store.Repos["repo-b1"] = new RepoRecord("repo-b1", "repo-b1", "TeamB", "someone", "normal", false);
 
 // 2. 写入行级授权：两个都能 push，只有 a1 能 delete
 acl.Entries.Add((a1.Id, "dev", "repo:push"));
@@ -795,9 +794,10 @@ BusinessContextAccessor.Clear();
 36. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
 37. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
 38. 越权新增/更新抛 `ValidationException`，越权删除抛 `SecurityException`（删除默认跳过对象级规则）。
-39. **`factory.CreateAsync<T>(...)` 会立刻做数据范围判定**，而那时 `[FactoryCreate]` 方法刚填充完字段。
-    若默认策略依赖行数据（如「本人或本团队」），创建会失败。
-    正确做法是**为 `Create` 操作显式声明策略**（新建行没有既有归属，用既有行的范围约束它没有意义）。
+39. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
+    （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
+    `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，
+    不需要为 `Create` 另写策略。
 40. 未声明 `ScopeModel<T>` 的类型不受数据权限约束——**读模型也要单独声明**。
 41. 不要把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——EF 按 DbContext 类型缓存模型，
     会把每用户不同的常量烘进缓存，导致**跨用户数据泄漏**。逐查询用 `guard.Apply(query)`。

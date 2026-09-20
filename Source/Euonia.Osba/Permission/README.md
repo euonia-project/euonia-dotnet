@@ -32,7 +32,7 @@ services.AddBusinessObject(typeof(Order).Assembly);
 
 - `BusinessContext` / `BusinessContextAccessor` / `IActuator`
 - `IObjectFactory` → `BusinessObjectFactory`
-- `IPermissionChecker` → `ClaimPermissionChecker`（基于权限声明）
+- `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）
 - `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）
 - `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）
 
@@ -421,7 +421,8 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 |---|---|---|
 | `SaveAsync(target)`（New/Changed/Deleted） | **前置 + 后置** | 目标是调用方提供且已填充，可前置拒绝（无副作用）；保存后再判一次以覆盖业务方法改动范围列的情况 |
 | `ExecuteAsync(target)` | **前置** | 目标是调用方提供 |
-| `Create` / `CreateAsync` / `InsertAsync` | **后置** | 目标是工厂新建的空对象，范围列由业务方法填充 |
+| `Create` / `CreateAsync` | **不判定** | 只构造对象、不落库，且按设计由调用方随后填充字段；此时判定会误杀正常流程，且保护不了任何东西 |
+| `InsertAsync` | **后置** | 会落库；工厂方法填充完成后判定 |
 | `Fetch` / `FetchAsync` | **后置** | 加载完成后才谈得上数据范围 |
 | `UpdateAsync` / `DeleteAsync` / `ExecuteAsync`(criteria) | **后置** | 同上 |
 

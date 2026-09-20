@@ -127,6 +127,32 @@ public class ScopeRowPermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	[Fact]
+	public void GenericAndNonGenericEntries_ShouldAgreeOnSameObject()
+	{
+		// guard.Allows<T>(row) 与 guard.AllowsObject(row) 必须给出同一答案：
+		// 二者都用「对象当前操作」解析策略键，否则同一对象会有两套结论。
+		using var scope = CreateScope(new AclResolver(), out var provider);
+		var guard = provider.GetRequiredService<IScopeGuard>();
+
+		// 无未决操作 → 回落到默认键
+		var idle = Repo("A2");
+		Assert.Equal(guard.Allows(idle), guard.AllowsObject(idle));
+
+		// 有未决操作 → 按该操作解析：A2 可 push（Update）但不可 delete
+		var pushable = Repo("A2");
+		pushable.MarkAsChanged();
+		Assert.Equal(guard.Allows(pushable), guard.AllowsObject(pushable));
+		Assert.True(guard.Allows(pushable));
+
+		var deletable = Repo("A2");
+		deletable.MarkAsDeleted();
+		Assert.Equal(guard.Allows(deletable), guard.AllowsObject(deletable));
+		Assert.False(guard.Allows(deletable));
+
+		BusinessContextAccessor.Clear();
+	}
+
 	#endregion
 
 	#region 写侧：行级操作权限在工厂边界生效
@@ -534,8 +560,8 @@ public sealed class GrantRepoModel : ScopeModel<GrantRepo>
 
 	public override void Declare(ScopePolicySet<GrantRepo> policies)
 	{
-		// 新建行不受既有行的 ACL 约束
-		policies.For(BusinessOperation.Create, ScopePolicy<GrantRepo>.Where(_ => true));
+		// 只为行级操作权限声明策略；Create 会落到默认策略（Grant("repo")）——
+		// 保存新行时字段已填完，判定才有意义。
 		policies.For(BusinessOperation.Read, ScopePolicy<GrantRepo>.Grant("repo"));
 
 		// 行级操作权限：各自的行范围由解析器按码给出

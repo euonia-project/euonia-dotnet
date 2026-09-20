@@ -112,7 +112,9 @@ internal sealed class ScopeGuard : IScopeGuard
 	public bool Allows<T>(T resource, string scopeKey = null)
 		where T : class
 	{
-		var policy = GetPolicy<T>(scopeKey);
+		// 与 AllowsObject 走同一套键解析：对「有未决变更的对象」按当前操作取键，
+		// 否则回落到默认键。两个入口对同一对象必须给出同一答案。
+		var policy = GetPolicy<T>(ResolveScopeKey(resource, scopeKey));
 
 		return policy == null || ScopeFilter.Allows(resource, policy);
 	}
@@ -121,7 +123,7 @@ internal sealed class ScopeGuard : IScopeGuard
 	public ScopeDecision Explain<T>(T resource, string scopeKey = null)
 		where T : class
 	{
-		return ExplainCore(resource, scopeKey ?? ScopeKeys.Default);
+		return ExplainCore(resource, ResolveScopeKey(resource, scopeKey));
 	}
 
 	/// <inheritdoc />

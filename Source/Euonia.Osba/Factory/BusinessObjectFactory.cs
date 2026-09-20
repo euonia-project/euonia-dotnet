@@ -57,8 +57,9 @@ public class BusinessObjectFactory : IObjectFactory
 				method.Invoke(target, parameters: parameters);
 			}
 
-			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
+			// 此处刻意不做数据范围判定：Create 只构造对象、不落库，且按设计由调用方在之后
+			// 填充字段（见框架自带示例 User.CreateAsync）。在字段尚不完整时判定会误杀正常流程，
+			// 而它又保护不了任何东西——真正需要拦截的落库发生在 SaveAsync/InsertAsync。
 			return target;
 		}
 		finally
@@ -114,8 +115,7 @@ public class BusinessObjectFactory : IObjectFactory
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
-			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
+			// 同 Create：只构造不落库，不做数据范围判定
 			return target;
 		}
 		finally
@@ -158,7 +158,7 @@ public class BusinessObjectFactory : IObjectFactory
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
-			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
 			return target;
 		}
