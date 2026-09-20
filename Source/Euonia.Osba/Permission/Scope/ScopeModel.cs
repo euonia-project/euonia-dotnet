@@ -35,6 +35,11 @@ namespace Nerosoft.Euonia.Osba;
 public abstract class ScopeModel<T> : IScopeModel<T>
 	where T : class
 {
+	/// <summary>
+	/// 按权限码声明的策略集合，首次访问时构建。
+	/// </summary>
+	private ScopePolicySet<T> _policies;
+
 	/// <inheritdoc />
 	public Type ResourceType => typeof(T);
 
@@ -55,4 +60,43 @@ public abstract class ScopeModel<T> : IScopeModel<T>
 
 	/// <inheritdoc />
 	public abstract ScopePolicy<T> Policy { get; }
+
+	/// <summary>
+	/// 按权限码声明行级策略（可选）。未声明的码一律使用 <see cref="Policy"/>。
+	/// </summary>
+	/// <param name="policies">策略集合。</param>
+	/// <remarks>
+	/// 用于表达「同一用户、同一类型、不同行权限不同」：把资源标识也作为一个维度映射，
+	/// 再为不同权限码声明不同的行范围。
+	/// </remarks>
+	public virtual void Declare(ScopePolicySet<T> policies)
+	{
+	}
+
+	#region IScopeModel 显式实现
+
+	/// <inheritdoc />
+	object IScopeModel.PolicyFor(string code)
+	{
+		return GetPolicySet().TryGet(code, out var policy) ? policy : null;
+	}
+
+	/// <inheritdoc />
+	IReadOnlyCollection<string> IScopeModel.DeclaredCodes => GetPolicySet().Codes;
+
+	/// <summary>
+	/// 延迟构建并缓存按码声明的策略集合。
+	/// </summary>
+	private ScopePolicySet<T> GetPolicySet()
+	{
+		if (_policies == null)
+		{
+			_policies = new ScopePolicySet<T>();
+			Declare(_policies);
+		}
+
+		return _policies;
+	}
+
+	#endregion
 }

@@ -19,12 +19,6 @@ namespace Nerosoft.Euonia.Osba;
 public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposable
 {
 	/// <summary>
-	/// 权限要求缓存：键为（业务对象类型，操作）。权限要求由特性静态决定，
-	/// 无需每次判定都重新反射扫描，避免在授权热路径上反复分配。
-	/// </summary>
-	private static readonly ConcurrentDictionary<(Type Type, BusinessOperation Operation), PermissionAttribute[]> _permissionRequirementCache = new();
-
-	/// <summary>
 	/// 已更改属性的列表。
 	/// </summary>
 	private readonly List<IPropertyInfo> _changedProperties = [];
@@ -192,6 +186,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			{
 				Rules.AddDataAnnotations();
 				AddRules();
+				InjectScopePolicyRule(rules);
 				rules.Initialized = true;
 			}
 			catch (Exception)
@@ -199,6 +194,48 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				RuleManager.CleanRules(GetType());
 				throw;
 			}
+		}
+	}
+
+	/// <summary>
+	/// 若本类型声明了数据权限模型，则自动注入 <see cref="ScopePolicyRule"/>。
+	/// </summary>
+	/// <param name="rules">本类型的规则管理器。</param>
+	/// <remarks>
+	/// <para>
+	/// 注入使越权保存在保存前以验证错误暴露，无需使用方手工 <c>AddRule</c>，
+	/// 从而消除「漏加规则 = 静默无保护」。
+	/// </para>
+	/// <para>
+	/// <b>本方法绝不抛异常</b>：注册表缺失、环境态未建立、类型未声明模型等情况一律静默跳过。
+	/// 规则是补充信号而非强制点，让它在属性 setter 上抛出会把配置问题伪装成难以定位的异常。
+	/// </para>
+	/// <para>
+	/// 注入的规则是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据——
+	/// 这是必需的，因为规则集合是进程级共享的，而注册表是按容器的。
+	/// </para>
+	/// </remarks>
+	private void InjectScopePolicyRule(RuleManager rules)
+	{
+		try
+		{
+			var registry = BusinessContext?.GetService<ScopeModelRegistry>();
+
+			if (registry == null || !registry.IsDeclared(GetType()))
+			{
+				return;
+			}
+
+			if (rules.Rules.OfType<ScopePolicyRule>().Any())
+			{
+				return;
+			}
+
+			Rules.AddRule(new ScopePolicyRule());
+		}
+		catch
+		{
+			// 环境态未建立时 GetService 会抛：静默跳过，规则不是强制点
 		}
 	}
 
@@ -981,6 +1018,58 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 判断当前用户是否可访问<b>本对象这一行</b>（行级数据权限）。
+	/// </summary>
+	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
+	/// <returns>可访问则返回 <c>true</c>；本类型未声明权限模型时返回 <c>true</c>。</returns>
+	/// <remarks>
+	/// 供业务方法内部做条件分支使用（例如「本人可编辑，他人只读」）。
+	/// 本方法不抛异常——真正的越权拦截发生在工厂边界。
+	/// </remarks>
+	protected bool CanAccessRow(string scopeKey = null)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		return guard == null || guard.AllowsObject(this, scopeKey);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否可访问本对象这一行，并返回判定说明。
+	/// </summary>
+	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
+	/// <returns>判定说明；未注册数据权限时返回未受约束的结论。</returns>
+	protected string ExplainRowAccess(string scopeKey = null)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		return guard == null ? "未启用数据权限" : guard.ExplainObject(this, scopeKey);
+	}
+
+	/// <summary>
+	/// 异步判断当前用户是否被授予指定权限码。
+	/// </summary>
+	/// <param name="permission">权限码。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>被授予则返回 <c>true</c>；未注册权限检查器时返回 <c>true</c>。</returns>
+	/// <remarks>
+	/// 权限码来自授权数据（按请求缓存），首次访问可能触发一次异步查询。
+	/// 与 <see cref="HasPermission"/> 等价，异步版本避免在同步路径上阻塞线程。
+	/// </remarks>
+	protected async ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken cancellationToken = default)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		if (guard == null)
+		{
+			return true;
+		}
+
+		await guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+
+		return guard.GetSubjects().HoldsPermission(permission);
+	}
+
+	/// <summary>
 	/// 依据类型级与方法级 <see cref="PermissionAttribute"/> 要求判断是否放行指定操作。
 	/// </summary>
 	/// <param name="operation">当前操作。</param>
@@ -1006,53 +1095,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 收集类型级与执行指定操作的工厂方法上的权限要求。
 	/// </summary>
 	/// <param name="operation">当前操作。</param>
-	/// <returns>权限要求数组；结果按（类型，操作）缓存。</returns>
+	/// <returns>权限要求列表；结果按（类型，操作）缓存。</returns>
 	/// <remarks>
-	/// 方法级要求的收集范围与工厂方法的查找范围一致（<see cref="ObjectReflector.IsFactoryMethod"/>）：
-	/// 既包含标记了工厂方法特性的方法，也包含符合命名约定的方法。若只按特性收集，
-	/// 以命名约定声明的工厂方法上的 <see cref="PermissionAttribute"/> 会被静默忽略，导致权限形同虚设。
+	/// 委托给 <see cref="PermissionRequirements"/>：运行期判定与启动期校验共用同一实现，
+	/// 确保两处对「某个操作声明了哪些权限码」不会得出不同答案。
 	/// </remarks>
 	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(BusinessOperation operation)
 	{
-		return _permissionRequirementCache.GetOrAdd((GetType(), operation), static key =>
-		{
-			var (type, operation) = key;
-			var factoryAttributeTypes = GetFactoryAttributeTypes(operation);
-			var requirements = new List<PermissionAttribute>();
-
-			requirements.AddRange(type.GetCustomAttributes<PermissionAttribute>(true));
-
-			if (factoryAttributeTypes.Length > 0)
-			{
-				foreach (var method in type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
-				{
-					if (factoryAttributeTypes.Any(factoryAttributeType => ObjectReflector.IsFactoryMethod(method, factoryAttributeType)))
-					{
-						requirements.AddRange(method.GetCustomAttributes<PermissionAttribute>(true));
-					}
-				}
-			}
-
-			return requirements.ToArray();
-		});
-	}
-
-	/// <summary>
-	/// 获取指定操作对应的工厂方法特性类型（一个操作可能对应多个特性）。
-	/// </summary>
-	/// <param name="operation">当前操作。</param>
-	/// <returns>工厂方法特性类型数组。</returns>
-	private static Type[] GetFactoryAttributeTypes(BusinessOperation operation)
-	{
-		return operation switch
-		{
-			BusinessOperation.Read => [typeof(FactoryFetchAttribute)],
-			BusinessOperation.Create => [typeof(FactoryCreateAttribute), typeof(FactoryInsertAttribute)],
-			BusinessOperation.Update => [typeof(FactoryUpdateAttribute)],
-			BusinessOperation.Delete => [typeof(FactoryDeleteAttribute)],
-			BusinessOperation.Execute => [typeof(FactoryExecuteAttribute)],
-			_ => []
-		};
+		return PermissionRequirements.For(GetType(), operation);
 	}
 
 	/// <summary>

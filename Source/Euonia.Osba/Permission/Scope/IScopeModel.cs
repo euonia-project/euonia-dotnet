@@ -20,9 +20,21 @@ public interface IScopeModel
 	void Define(IScopeModelBuilder builder);
 
 	/// <summary>
-	/// 获取访问策略（实际类型为 <see cref="ScopePolicy{T}"/>，T 为 <see cref="ResourceType"/>）。
+	/// 获取默认访问策略（实际类型为 <see cref="ScopePolicy{T}"/>，T 为 <see cref="ResourceType"/>）。
 	/// </summary>
 	object PolicyObject { get; }
+
+	/// <summary>
+	/// 获取指定权限码上的行级策略（实际类型为 <see cref="ScopePolicy{T}"/>）。
+	/// </summary>
+	/// <param name="code">权限码。</param>
+	/// <returns>该码上显式声明的策略；未声明时返回 <see langword="null"/>（调用方回落到默认策略）。</returns>
+	object PolicyFor(string code);
+
+	/// <summary>
+	/// 获取已显式声明行级策略的权限码集合。
+	/// </summary>
+	IReadOnlyCollection<string> DeclaredCodes { get; }
 }
 
 /// <summary>

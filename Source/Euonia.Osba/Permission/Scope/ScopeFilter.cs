@@ -91,18 +91,20 @@ public static class ScopeFilter
 	/// <param name="policy">策略（未经编译的原始策略，用于逐条给出命中路径）。</param>
 	/// <param name="model">资源模型描述。</param>
 	/// <param name="subjects">用户被授予的主体集合。</param>
+	/// <param name="scopeKey">权限码（策略键）；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
 	/// <returns>判定结果与命中的条件说明。</returns>
 	/// <exception cref="ArgumentNullException">当任一参数为 <see langword="null"/> 时抛出。</exception>
 	/// <remarks>
-	/// 供审计与排障使用：逐叶子求值，列出成立的条件。这是诊断路径，不用于热路径判定。
+	/// 供审计与排障使用：逐叶子求值，列出成立的条件，并在结果中带上策略键。这是诊断路径，不用于热路径判定。
 	/// </remarks>
-	public static ScopeDecision Explain<T>(T resource, ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects)
+	public static ScopeDecision Explain<T>(T resource, ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey = null)
 		where T : class
 	{
 		Check.EnsureNotNull(policy, nameof(policy));
 		Check.EnsureNotNull(model, nameof(model));
 
-		var compiled = ScopePolicyCompiler.Compile(policy, model, subjects);
+		var key = string.IsNullOrWhiteSpace(scopeKey) ? ScopeKeys.Default : scopeKey;
+		var compiled = ScopePolicyCompiler.Compile(policy, model, subjects, key);
 		var allowed = compiled.Evaluate(resource);
 
 		var matchedAllows = new List<string>();
@@ -110,7 +112,7 @@ public static class ScopeFilter
 
 		if (resource != null)
 		{
-			foreach (var leaf in ScopePolicyCompiler.CollectLeaves(policy, model, subjects))
+			foreach (var leaf in ScopePolicyCompiler.CollectLeaves(policy, model, subjects, key))
 			{
 				if (!leaf.Condition.Compile()(resource))
 				{
@@ -128,6 +130,6 @@ public static class ScopeFilter
 			}
 		}
 
-		return new ScopeDecision(allowed, matchedAllows, matchedDenies);
+		return new ScopeDecision(allowed, key, matchedAllows, matchedDenies);
 	}
 }

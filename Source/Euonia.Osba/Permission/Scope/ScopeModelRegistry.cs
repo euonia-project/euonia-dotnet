@@ -91,9 +91,27 @@ public sealed class ScopeModelRegistry
 				"权限模型 '{0}' 未提供策略。策略与模型必须写在同一个声明类型里，缺少任何一个都无法通过校验。",
 				modelType.Name);
 
-			ValidatePolicy(modelType, descriptor, policy);
+			ValidatePolicy(modelType, descriptor, policy, ScopeKeys.Default);
 
-			registrations[descriptor.ResourceType] = new ScopeModelRegistration(descriptor, policy);
+			// 逐码校验行级策略：未映射维度、恒不放行等问题都要在启动期暴露
+			foreach (var code in modelObject.DeclaredCodes)
+			{
+				var scopedPolicy = modelObject.PolicyFor(code);
+
+				Check.Ensure(
+					scopedPolicy != null,
+					"权限模型 '{0}' 声明了权限码 '{1}' 但未提供策略。",
+					modelType.Name,
+					code);
+
+				ValidatePolicy(modelType, descriptor, scopedPolicy, code);
+			}
+
+			var registration = new ScopeModelRegistration(descriptor, modelObject);
+
+			ValidateKeyResolution(modelType, registration);
+
+			registrations[descriptor.ResourceType] = registration;
 		}
 
 		return registrations.Count == 0 ? Empty : new ScopeModelRegistry(registrations);
@@ -194,7 +212,26 @@ public sealed class ScopeModelRegistry
 	/// 从而把「本维度未被授予」误判成「策略结构性恒不放行」。
 	/// 这里给每个已声明维度都填一个哨兵值，使策略结构被真实地走一遍。
 	/// </remarks>
-	private static void ValidatePolicy(Type modelType, ScopeModelDescriptor descriptor, object policy)
+	/// <summary>
+	/// 校验每个操作都能解析出唯一的策略键。
+	/// </summary>
+	/// <remarks>
+	/// 同一操作若解析出多个「声明了行级策略」的权限码，属配置歧义——不允许「实际生效的是哪一个」靠猜，
+	/// 因此在启动期直接失败。
+	/// </remarks>
+	private static void ValidateKeyResolution(Type modelType, ScopeModelRegistration registration)
+	{
+		foreach (var operation in PermissionRequirements.AllOperations)
+		{
+			// 解析失败会抛 InvalidOperationException，消息里带类型、操作与冲突的码
+			ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);
+		}
+	}
+
+	/// <summary>
+	/// 用探针主体集试编译策略。
+	/// </summary>
+	private static void ValidatePolicy(Type modelType, ScopeModelDescriptor descriptor, object policy, string scopeKey)
 	{
 		var probe = ScopeSubjectSet.CreateBuilder();
 		foreach (var dimension in descriptor.Dimensions)
@@ -208,7 +245,7 @@ public sealed class ScopeModelRegistry
 
 		try
 		{
-			var compiled = compile.Invoke(null, [policy, descriptor, probe.Build()]);
+			var compiled = compile.Invoke(null, [policy, descriptor, probe.Build(), scopeKey]);
 
 			// 注意：只拒绝「恒不放行」的策略。只有拒绝条件的策略（All(Deny(...))）是合法的
 			// 拒绝清单语义——其 Allow 恒真，不应被误报。

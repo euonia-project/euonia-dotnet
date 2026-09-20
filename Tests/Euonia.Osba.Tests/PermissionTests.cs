@@ -32,7 +32,7 @@ public class PermissionTests
 	[Fact]
 	public async Task SaveAsync_Insert_WithPermission_ShouldSucceed()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:create")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "order:create");
 
 		var obj = new SecuredEditableObject();
 		obj.BusinessContext = provider.GetRequiredService<BusinessContext>();
@@ -49,7 +49,7 @@ public class PermissionTests
 	[Fact]
 	public async Task SaveAsync_Update_WithoutPermission_ShouldThrowSecurityException()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:create")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "order:create");
 
 		var obj = new SecuredEditableObject();
 		obj.BusinessContext = provider.GetRequiredService<BusinessContext>();
@@ -63,7 +63,7 @@ public class PermissionTests
 	[Fact]
 	public async Task SaveAsync_Update_WithWildcardPermission_ShouldSucceed()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:*")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "order:*");
 
 		var obj = new SecuredEditableObject();
 		obj.BusinessContext = provider.GetRequiredService<BusinessContext>();
@@ -79,7 +79,7 @@ public class PermissionTests
 	[Fact]
 	public async Task SaveAsync_Delete_WithoutPermission_ShouldThrowSecurityException()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:update")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "order:update");
 
 		var obj = new SecuredEditableObject();
 		obj.BusinessContext = provider.GetRequiredService<BusinessContext>();
@@ -106,7 +106,7 @@ public class PermissionTests
 	[Fact]
 	public async Task ExecuteAsync_WithPermission_ShouldSucceed()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "report:export")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "report:export");
 		var factory = provider.GetRequiredService<IObjectFactory>();
 
 		var command = new SecuredCommand { BusinessContext = provider.GetRequiredService<BusinessContext>() };
@@ -139,7 +139,7 @@ public class PermissionTests
 	[Fact]
 	public void ClassLevelRequirement_ShouldAllowAllOperations_WithPermission()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "admin")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "admin");
 
 		var obj = new AdminEditableObject
 		{
@@ -171,9 +171,7 @@ public class PermissionTests
 	[Fact]
 	public void HasPermission_HasRole_ShouldReflectClaims()
 	{
-		using var scope = CreatePermissionScope(UserWith(
-			(UserClaimTypes.Permission, "order:create"),
-			(UserClaimTypes.Role, "operator")), out var provider);
+		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Role, "operator")), out var provider, "order:create");
 
 		var obj = new ProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
 
@@ -228,7 +226,7 @@ public class PermissionTests
 	[Fact]
 	public async Task SaveAsync_ConventionNamedFactoryMethod_WithPermission_ShouldSucceed()
 	{
-		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Permission, "order:update")), out var provider);
+		using var scope = CreatePermissionScope(UserWith(), out var provider, "order:update");
 
 		var obj = new ConventionSecuredObject
 		{
@@ -248,12 +246,10 @@ public class PermissionTests
 	{
 		var activator = new RecordingObjectActivator();
 		var services = new ServiceCollection();
-		services.AddScoped<BusinessContextAccessor>();
-		services.AddScoped<BusinessContext>();
+		services.AddBusinessObject(typeof(PermissionTests).Assembly);
 		services.AddSingleton<IObjectActivator>(activator);
-		services.AddScoped<IObjectFactory, BusinessObjectFactory>();
-		services.AddScoped<IPermissionChecker, ClaimPermissionChecker>();
-		services.AddSingleton(UserWith((UserClaimTypes.Permission, "order:update")));
+		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver("order:update"));
+		services.AddSingleton(UserWith());
 
 		var built = services.BuildServiceProvider();
 		using var scope = built.CreateScope();
@@ -278,13 +274,15 @@ public class PermissionTests
 
 	#region Helpers
 
-	private static IServiceScope CreatePermissionScope(UserPrincipal user, out IServiceProvider provider)
+	private static IServiceScope CreatePermissionScope(UserPrincipal user, out IServiceProvider provider, params string[] permissions)
 	{
 		var services = new ServiceCollection();
-		services.AddScoped<BusinessContextAccessor>();
-		services.AddScoped<BusinessContext>();
-		services.AddScoped<IObjectFactory, BusinessObjectFactory>();
-		services.AddScoped<IPermissionChecker, ClaimPermissionChecker>();
+
+		// 走真实的注册路径：权限检查器、数据权限守卫与模型注册表都由 AddBusinessObject 装配
+		services.AddBusinessObject(typeof(PermissionTests).Assembly);
+
+		// 权限码来自授权数据（解析器），而不是令牌声明
+		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver(permissions));
 		if (user != null)
 		{
 			services.AddSingleton(user);
@@ -455,4 +453,27 @@ public class RecordingObjectActivator : IObjectActivator
 
 	/// <inheritdoc />
 	public void FinalizeInstance(object obj) => FinalizeCount++;
+}
+
+/// <summary>
+/// 测试用授权数据解析器：权限码由测试直接给定，不经过令牌声明。
+/// </summary>
+public class TestSubjectResolver : IScopeSubjectResolver
+{
+	private readonly string[] _permissions;
+
+	/// <summary>
+	/// 初始化 <see cref="TestSubjectResolver"/> 的新实例。
+	/// </summary>
+	/// <param name="permissions">用户持有的权限码。</param>
+	public TestSubjectResolver(params string[] permissions)
+	{
+		_permissions = permissions ?? [];
+	}
+
+	/// <inheritdoc />
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	{
+		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder().AddCodes(_permissions).Build());
+	}
 }

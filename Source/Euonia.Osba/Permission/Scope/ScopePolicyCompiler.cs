@@ -24,19 +24,20 @@ public static class ScopePolicyCompiler
 	/// <param name="policy">策略。</param>
 	/// <param name="model">资源模型描述。</param>
 	/// <param name="subjects">用户被授予的主体集合。</param>
+	/// <param name="scopeKey">权限码（策略键）；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
 	/// <returns>编译结果。</returns>
 	/// <exception cref="ArgumentNullException">当任一参数为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当策略引用了模型中未映射的维度时抛出。</exception>
-	public static CompiledScopePolicy<T> Compile<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects)
+	public static CompiledScopePolicy<T> Compile<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey = null)
 		where T : class
 	{
 		Check.EnsureNotNull(policy, nameof(policy));
 		Check.EnsureNotNull(model, nameof(model));
 
-		var context = new ScopeCompileContext<T>(model, subjects ?? ScopeSubjectSet.Empty);
+		var context = new ScopeCompileContext<T>(model, subjects ?? ScopeSubjectSet.Empty, scopeKey);
 		var node = policy.Reduce(context);
 
-		return new CompiledScopePolicy<T>(context.Lambda(node.Allow), context.Lambda(node.Deny), node.HasAllow);
+		return new CompiledScopePolicy<T>(context.Lambda(node.Allow), context.Lambda(node.Deny), node.HasAllow, context.ScopeKey);
 	}
 
 	/// <summary>
@@ -46,11 +47,12 @@ public static class ScopePolicyCompiler
 	/// <param name="policy">策略。</param>
 	/// <param name="model">资源模型描述。</param>
 	/// <param name="subjects">用户被授予的主体集合。</param>
+	/// <param name="scopeKey">权限码（策略键）。</param>
 	/// <returns>叶子条件列表。</returns>
-	internal static IReadOnlyList<ScopePolicyLeaf<T>> CollectLeaves<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects)
+	internal static IReadOnlyList<ScopePolicyLeaf<T>> CollectLeaves<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey)
 		where T : class
 	{
-		var context = new ScopeCompileContext<T>(model, subjects);
+		var context = new ScopeCompileContext<T>(model, subjects, scopeKey);
 		var traces = new List<ScopePolicyLeaf<T>>();
 
 		policy.CollectLeaves(context, false, traces);

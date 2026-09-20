@@ -22,16 +22,23 @@ public sealed class CompiledScopePolicy<T>
 	private readonly Lazy<Func<T, bool>> _allow;
 	private readonly Lazy<Func<T, bool>> _deny;
 
-	internal CompiledScopePolicy(Expression<Func<T, bool>> allow, Expression<Func<T, bool>> deny, bool hasAllow)
+	internal CompiledScopePolicy(Expression<Func<T, bool>> allow, Expression<Func<T, bool>> deny, bool hasAllow, string scopeKey)
 	{
 		Allow = allow;
 		Deny = deny;
 		HasAllow = hasAllow;
+		ScopeKey = scopeKey;
 
 		// 委托按需编译并缓存：下推路径根本不求值，不应付出编译开销
 		_allow = new Lazy<Func<T, bool>>(() => Allow.Compile());
 		_deny = new Lazy<Func<T, bool>>(() => Deny.Compile());
 	}
+
+	/// <summary>
+	/// 获取本次编译使用的权限码（策略键）。
+	/// </summary>
+	/// <remarks>仅用于审计与排障；它<b>不会</b>出现在 <see cref="Allow"/> / <see cref="Deny"/> 中。</remarks>
+	public string ScopeKey { get; }
 
 	/// <summary>
 	/// 获取允许条件。

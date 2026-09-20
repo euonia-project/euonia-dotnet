@@ -3,11 +3,19 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 基于当前用户声明的默认权限检查器，从 <see cref="UserClaimTypes.Permission"/> 声明中读取权限。
+/// 基于当前用户声明的权限检查器，从 <see cref="UserClaimTypes.Permission"/> 声明中读取权限。
 /// </summary>
 /// <remarks>
+/// <para>
 /// 权限值支持以 <c>*</c> 结尾的前缀通配符匹配，例如用户拥有 <c>order:*</c> 可匹配 <c>order:create</c>。
+/// </para>
+/// <para>
+/// <b>不建议使用</b>：本实现把权限码固化在令牌里，权限码多时会撑爆令牌，
+/// 且<b>取消授权后旧令牌在过期前仍然有效</b>。它已不是默认实现，
+/// 仅为显式回退保留；新代码请使用 <see cref="SubjectPermissionChecker"/>（从授权数据实时解析）。
+/// </para>
 /// </remarks>
+[Obsolete("权限码不应固化在令牌中：取消授权后旧令牌仍然有效。请改用 SubjectPermissionChecker（从授权数据实时解析）。")]
 public class ClaimPermissionChecker : IPermissionChecker
 {
 	private readonly BusinessContext _context;

@@ -193,19 +193,16 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public async Task<TTarget> SaveAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
 	{
-		var (method, operation) = target switch
+		// 操作只由 ScopeOperationMap 这一条映射决定（见该类型的备注：三处各写一遍必然漂移）
+		var operation = ScopeOperationMap.Resolve(target);
+
+		var method = operation switch
 		{
-			IEditableObject editableObject => editableObject.State switch
-			{
-				ObjectEditState.New => (ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]), BusinessOperation.Create),
-				ObjectEditState.Changed => (ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]), BusinessOperation.Update),
-				ObjectEditState.Deleted => (ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]), BusinessOperation.Delete),
-				ObjectEditState.None => throw new InvalidOperationException(),
-				_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
-			},
-			ICommandObject => (ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]), BusinessOperation.Execute),
-			IReadOnlyObject => throw new InvalidOperationException("The operation can not apply for ReadOnlyObject."),
-			_ => (ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]), BusinessOperation.Update)
+			BusinessOperation.Create => ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]),
+			BusinessOperation.Update => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]),
+			BusinessOperation.Delete => ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]),
+			BusinessOperation.Execute => ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]),
+			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
 		ObjectAuthorization.EnsureAuthorized(target, operation);

@@ -166,9 +166,11 @@ public static class UserClaimTypes
 	/// <summary>方案。</summary>
 	public const string Scheme = "scheme";
 
-/// <summary>用户拥有的操作权限，可包含通配符（例如 order:*）。</summary>
+	/// <summary>用户拥有的操作权限，可包含通配符（例如 order:*）。</summary>
+	/// <remarks>
+	/// <b>不建议使用</b>：把权限码放进声明（令牌）会导致权限码数量大时撑爆令牌，
+	/// 且取消授权后旧令牌在过期前仍然有效。Euonia.Osba 的默认权限检查器已改为从授权数据实时解析，
+	/// 本声明类型仅供显式回退的历史实现使用。
+	/// </remarks>
 	public const string Permission = "perm";
-
-	/// <summary>范围声明类型前缀，完整的范围声明类型为 "scope:{维度名}"，值为该维度的不透明值（通常是数据库标识）。同一维度可存在多个同类型声明表示多值；值为 "*" 表示该维度通配；维度为 "*" 且值为 "*" 表示全局通配。</summary>
-	public const string ScopePrefix = "scope:";
 }

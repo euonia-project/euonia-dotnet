@@ -23,10 +23,11 @@ internal sealed class ScopeCompileContext<T>
 	private readonly ScopeModelDescriptor _descriptor;
 	private readonly ScopeSubjectSet _subjects;
 
-	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects)
+	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string scopeKey)
 	{
 		_descriptor = descriptor;
 		_subjects = subjects;
+		ScopeKey = string.IsNullOrWhiteSpace(scopeKey) ? ScopeKeys.Default : scopeKey;
 		Parameter = Expression.Parameter(typeof(T), "x");
 	}
 
@@ -34,6 +35,15 @@ internal sealed class ScopeCompileContext<T>
 	/// 获取本次编译共用的规范参数。
 	/// </summary>
 	internal ParameterExpression Parameter { get; }
+
+	/// <summary>
+	/// 获取本次编译使用的权限码（策略键）。
+	/// </summary>
+	/// <remarks>
+	/// <c>Grant(dimension)</c> 取的是「用户<b>在该码下</b>于该维度被授予的值」。
+	/// 该值只影响取值来源，不会出现在编译出的表达式里。
+	/// </remarks>
+	internal string ScopeKey { get; }
 
 	/// <summary>
 	/// 生成「资源在指定维度上的值，属于用户在该维度上被授予的集合」这一条件。
@@ -46,7 +56,8 @@ internal sealed class ScopeCompileContext<T>
 		// 先取映射：即便用户在该维度上没有任何授予，未映射的维度也必须暴露为错误
 		var selector = _descriptor.GetDimensionSelector(dimension);
 
-		var values = _subjects.ValuesOf(dimension);
+		// 只按「当前码 → 默认键」取值，绝不做权限码通配回落（见 ScopeSubjectSet 的查找规则）
+		var values = _subjects.ValuesOf(ScopeKey, dimension);
 		if (values.Count == 0)
 		{
 			// 用户在该维度上未被授予任何值：直接产出恒假。

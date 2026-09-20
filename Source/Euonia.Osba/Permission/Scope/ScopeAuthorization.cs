@@ -92,10 +92,16 @@ internal static class ScopeAuthorization
 			rowType.FullName,
 			nameof(IScopeGuard));
 
-		if (!guard.AllowsObject(target))
+		// 按操作解析策略键（声明了权限码且模型为该码声明了策略时用该码，否则用操作默认键）。
+		// 与规则共用 ScopeKeyResolver，两处不可能对「当前是哪个键」得出不同答案。
+		registry.TryGetInherited(rowType, out var registration);
+
+		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);
+
+		if (!guard.AllowsObject(target, scopeKey))
 		{
 			throw new SecurityException(
-				$"Data scope denied. {operation} ({stage}): {rowType.Name}. {guard.ExplainObject(target)}");
+				$"Data scope denied. {operation} ({stage}): {rowType.Name}. {guard.ExplainObject(target, scopeKey)}");
 		}
 	}
 }

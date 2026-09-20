@@ -4,6 +4,7 @@ using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
+using Nerosoft.Euonia.Validation;
 
 namespace Nerosoft.Euonia.Core.Tests;
 
@@ -342,17 +343,38 @@ public class ScopeTests
 	#region 写侧强制
 
 	[Fact]
-	public async Task SaveAsync_OutOfScope_ShouldThrowSecurityException()
+	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithValidationException()
 	{
+		// 框架对已声明模型的类型自动注入范围规则，越权「更新」在规则阶段即以验证错误暴露。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var repo = Repo("team-c");
 		repo.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		repo.MarkAsChanged();
 
+		var exception = await Assert.ThrowsAsync<ValidationException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+
+		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException()
+	{
+		// 不对称是既有事实：EditableObject 在 IsDeleted 时默认跳过对象级规则，
+		// 因此越权「删除」由工厂边界兜住，抛的是 SecurityException。
+		// 这条断言把该行为钉住——若哪天规则覆盖了删除，这里会红，提醒同步更新文档。
+		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
+
+		var repo = Repo("team-c");
+		repo.BusinessContext = provider.GetRequiredService<BusinessContext>();
+		repo.MarkAsDeleted();
+
 		var exception = await Assert.ThrowsAsync<SecurityException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
 		Assert.Contains("Data scope denied", exception.Message);
+		Assert.Contains("code=", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
