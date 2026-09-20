@@ -65,6 +65,45 @@ public class CorrelationIdBehaviorTests
 	}
 
 	[Fact]
+	public async Task HandleAsync_WithCorrelationHeader_ShouldUseXCorrelationHeader()
+	{
+		var accessor = new StubRequestContextAccessor
+		{
+			Context = new RequestContext
+			{
+				Headers = new Dictionary<string, string> { ["X-Correlation-ID"] = "corr-web" }
+			}
+		};
+		var behavior = new CorrelationIdBehavior<RoutedMessage<string>, bool>(accessor);
+		var context = new RoutedMessage<string>("payload", "channel");
+
+		await behavior.HandleAsync(context, _ => Task.FromResult(true));
+
+		Assert.Equal("corr-web", context.Metadata[MessageHeaders.CorrelationId]);
+		Assert.Empty(context.Metadata[MessageHeaders.RequestTraceId] as string ?? string.Empty);
+	}
+
+	[Fact]
+	public async Task HandleAsync_TraceIdentifier_ShouldWinOverCorrelationHeader()
+	{
+		var accessor = new StubRequestContextAccessor
+		{
+			Context = new RequestContext
+			{
+				TraceIdentifier = "trace-1",
+				Headers = new Dictionary<string, string> { ["X-Correlation-ID"] = "corr-web" }
+			}
+		};
+		var behavior = new CorrelationIdBehavior<RoutedMessage<string>, bool>(accessor);
+		var context = new RoutedMessage<string>("payload", "channel");
+
+		await behavior.HandleAsync(context, _ => Task.FromResult(true));
+
+		Assert.Equal("trace-1", context.Metadata[MessageHeaders.CorrelationId]);
+		Assert.Equal("trace-1", context.Metadata[MessageHeaders.RequestTraceId]);
+	}
+
+	[Fact]
 	public async Task HandleAsync_ShouldInvokeNext()
 	{
 		var behavior = CreateBehavior("trace-1", null);

@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using Castle.DynamicProxy;
 using Nerosoft.Euonia.Caching;
+using Nerosoft.Euonia.Concurrency;
 using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Application;
@@ -14,7 +15,8 @@ namespace Nerosoft.Euonia.Application;
 /// <remarks>
 /// 行为：
 /// <list type="bullet">
-/// <item><description>调用前按幂等指纹加锁（进程内信号量），串行化同指纹调用，避免并发重复执行；</description></item>
+/// <item><description>调用前按幂等指纹加锁串行化同指纹调用，避免并发重复执行；
+/// 容器中注册了 <see cref="ILockFactory"/> 时使用分布式锁（多节点共享），否则回退到进程内信号量；</description></item>
 /// <item><description>指纹确定方式：优先 <see cref="IdempotentAttribute.Key"/> 模板，其次请求头 <c>Idempotency-Key</c>
 /// （当 <see cref="IdempotentAttribute.UseRequestKey"/> 为 true），否则回退到 <c>{service}.{method}:args</c>；</description></item>
 /// <item><description>窗口内重复调用：有返回值的方法直接返回首次缓存的结果，<c>void</c>/<see cref="Task"/> 方法跳过执行；</description></item>
@@ -99,7 +101,7 @@ public class IdempotentInterceptor : IInterceptor
 			return;
 		}
 
-		using var lease = SemaphoreLockStore.Acquire(key, 1, lockWait);
+		using var lease = AcquireLock(key, lockWait);
 
 		if (invocation.Method.ReturnType == typeof(void))
 		{
@@ -126,7 +128,7 @@ public class IdempotentInterceptor : IInterceptor
 
 	private async Task InterceptTaskAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, ICacheService cache, string key, TimeSpan? timeout, TimeSpan lockWait)
 	{
-		using var lease = await SemaphoreLockStore.AcquireAsync(key, 1, lockWait).ConfigureAwait(false);
+		using var lease = await AcquireLockAsync(key, lockWait).ConfigureAwait(false);
 		if (cache.TryGet(key, out byte _))
 		{
 			return;
@@ -139,7 +141,7 @@ public class IdempotentInterceptor : IInterceptor
 
 	private async Task<T> InterceptTypedAsync<T>(IInvocation invocation, IInvocationProceedInfo proceedInfo, ICacheService cache, string key, TimeSpan? timeout, TimeSpan lockWait)
 	{
-		using var lease = await SemaphoreLockStore.AcquireAsync(key, 1, lockWait).ConfigureAwait(false);
+		using var lease = await AcquireLockAsync(key, lockWait).ConfigureAwait(false);
 		if (cache.TryGet(key, out T value))
 		{
 			return value;
@@ -164,6 +166,28 @@ public class IdempotentInterceptor : IInterceptor
 		}
 
 		return false;
+	}
+
+	private IDisposable AcquireLock(string key, TimeSpan lockWait)
+	{
+		var factory = _serviceProvider.GetService(typeof(ILockFactory)) as ILockFactory;
+		if (factory != null)
+		{
+			return factory.Create(key).Acquire(lockWait);
+		}
+
+		return SemaphoreLockStore.Acquire(key, 1, lockWait);
+	}
+
+	private async ValueTask<IDisposable> AcquireLockAsync(string key, TimeSpan lockWait)
+	{
+		var factory = _serviceProvider.GetService(typeof(ILockFactory)) as ILockFactory;
+		if (factory != null)
+		{
+			return await factory.Create(key).AcquireAsync(lockWait).ConfigureAwait(false);
+		}
+
+		return await SemaphoreLockStore.AcquireAsync(key, 1, lockWait).ConfigureAwait(false);
 	}
 
 	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, TimeSpan? timeout)

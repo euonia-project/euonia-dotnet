@@ -504,3 +504,35 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 
 - **分布式环境幂等**：`[Idempotent]` 的并发串行化基于进程内信号量，仅保证单节点语义；多节点部署时需换用 `ILockFactory`（Red Lock 等）持有的共享锁 + 共享存储中的指纹条目。
 - **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+# 第九部分 实用功能增强（八）
+
+## 三十九、幂等并发锁走分布式 `ILockFactory`（落地遗留项）
+
+`IdempotentInterceptor` 的并发串行化由「仅进程内 `SemaphoreLockStore`」升级为「容器中注册 `ILockFactory` 时优先使用分布式锁，缺失时回退进程内信号量」：
+
+- 新增 `AcquireLock` / `AcquireLockAsync`：经 `IServiceProvider` 解析 `ILockFactory`（`factory.Create(key).Acquire/AcquireAsync`），未注册则走 `SemaphoreLockStore`。
+- 锁键即幂等指纹（模板 / 请求键 / 方法+实参），多节点部署下由同一共享锁互斥，配合共享缓存中的指纹条目实现跨节点去重（指纹存储仍走 `ICacheService`）。
+- 同步与 `Task`/`Task<T>` 三条路径统一接入，锁在方法体执行完成（含异步补写缓存/印记）前不释放。
+
+测试（`IdempotentInterceptorTests.cs`，2 新增）：注册内存 `ILockFactory`（`SemaphoreSlim` 语义桩）后，异步与同步路径均经工厂创建锁且去重生效；并发相同指纹调用经工厂锁合并为单次执行。
+
+## 四十、关联标识头映射：`X-Correlation-ID`（落地遗留项）
+
+`CorrelationIdBehavior` 新增关联标识来源：优先 `RequestContext.TraceIdentifier`（或 `Request-Id` 请求头），其次请求头 `X-Correlation-ID`，再次消息元数据 / 信封，最后自动生成。不再要求必须由 Web 中间件先完成头名映射才能透传。
+
+测试（`CorrelationIdBehaviorTests.cs`，2 新增）：仅有 `X-Correlation-ID` 头时作为关联标识写入元数据（不写 `RequestTraceId`）；同时存在 `TraceIdentifier` 与 `X-Correlation-ID` 时以 `TraceIdentifier` 优先。
+
+## 四十一、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **138/138**（134 → 138，新增 4：幂等分布式锁 2 + 关联头映射 2） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十二、遗留观察（未改动，供后续决策）
+
+- **分布式幂等的生产实施**：`[Idempotent]` 的指纹读取 / 写回走 `ICacheService`，多节点去重依赖共享缓存（如 Redis）实现；锁已支持 `ILockFactory`，生产建议接入 `Euonia.Concurrency.Redis` / `ZooKeeper` 等分布式锁模块，并在 `TimeoutSeconds` 内不短于方法最坏执行时长。
+- **响应头回写**：入站 `X-Correlation-ID` 已接入管道元数据，但把关联标识写回响应头 / 跨服务日志聚合仍属 Web 中间件职责，本仓库无 Web 层包，未进一步处理。
