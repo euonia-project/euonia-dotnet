@@ -248,24 +248,7 @@ internal sealed class MessageBus : IBus, IDisposable
 			throw new MessageTypeException("The message type is not a request type.");
 		}
 
-		var context = _requestAccessor?.Context;
-
-		var pack = new RoutedMessage<TRequest>(message, channel)
-		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
-			Authorization = context?.Authorization,
-			User = context?.User,
-		};
-
-		options.MetadataSetter?.Invoke(pack.Metadata);
-
-		var transports = _dispatcher.Determine(channel, messageType);
-
-		var transportName = transports!.First();
-
-		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
+		return CallAsyncCore(message, channel, messageType, options, behavior, cancellationToken);
 	}
 
 	/// <summary>
@@ -289,8 +272,42 @@ internal sealed class MessageBus : IBus, IDisposable
 			throw new MessageTypeException("The message type is not a request type.");
 		}
 
+		return CallAsyncCore<IRequest<TResult>, TResult>(request, channel, messageType, options, behavior, cancellationToken);
+	}
+
+	/// <summary>
+	/// 直接调用指定的处理程序委托，并传入服务提供程序和取消令牌。
+	/// </summary>
+	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
+	/// <param name="handler">用于处理请求的委托。</param>
+	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
+	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
+	/// <exception cref="OperationCanceledException">当 <paramref name="cancellationToken"/> 被取消时抛出。</exception>
+	public async Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(handler);
+		return await handler(_accessor.ServiceProvider).WaitAsync(cancellationToken).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// 请求-响应调用的共享内部实现：构造路由消息、确定传输器并通过管道执行调用，
+	/// 最后应用 <see cref="ExtendableOptions.Timeout"/> 指定的超时约束。
+	/// </summary>
+	/// <typeparam name="TRequest">请求消息的类型。</typeparam>
+	/// <typeparam name="TResponse">响应的类型。</typeparam>
+	/// <param name="message">请求消息。</param>
+	/// <param name="channel">目标通道名称。</param>
+	/// <param name="messageType">请求消息的运行时类型。</param>
+	/// <param name="options">调用选项。</param>
+	/// <param name="behavior">用于为此调用操作配置管道行为的可选委托。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
+	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
+	private Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken)
+	{
 		var context = _requestAccessor?.Context;
-		var pack = new RoutedMessage<IRequest<TResult>>(request, channel)
+
+		var pack = new RoutedMessage<TRequest>(message, channel)
 		{
 			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
 			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
@@ -304,19 +321,42 @@ internal sealed class MessageBus : IBus, IDisposable
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		var transportName = transports!.First();
-		return RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<IRequest<TResult>, TResult>(p, cancellationToken), transportName);
+
+		var result = RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
+
+		return ApplyTimeoutAsync(result, options.Timeout, cancellationToken);
 	}
 
 	/// <summary>
-	/// 直接调用指定的处理程序委托，并传入服务提供程序和取消令牌。
+	/// 为调用结果应用超时约束。
 	/// </summary>
-	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
-	/// <param name="handler">用于处理请求的委托。</param>
-	/// <param name="cancellationToken">用于取消调用操作的令牌。</param>
-	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
+	/// <remarks>
+	/// 当 <paramref name="timeout"/>（毫秒）大于 0 时，通过链接的取消令牌实现超时控制：
+	/// 限时内未完成则抛出 <see cref="TimeoutException"/>；由调用方取消产生的取消操作会原样保留。
+	/// </remarks>
+	/// <typeparam name="TResponse">响应的类型。</typeparam>
+	/// <param name="task">调用任务。</param>
+	/// <param name="timeout">超时时间（毫秒），小于等于 0 表示不启用超时。</param>
+	/// <param name="cancellationToken">调用方提供的取消令牌。</param>
+	/// <returns>包含调用结果的任务。</returns>
+	/// <exception cref="TimeoutException">当调用在限定时间内未完成时抛出。</exception>
+	private async Task<TResponse> ApplyTimeoutAsync<TResponse>(Task<TResponse> task, long timeout, CancellationToken cancellationToken)
 	{
-		return handler(_accessor.ServiceProvider);
+		if (timeout <= 0)
+		{
+			return await task.ConfigureAwait(false);
+		}
+
+		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+		cts.CancelAfter(TimeSpan.FromMilliseconds(timeout));
+		try
+		{
+			return await task.WaitAsync(cts.Token).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+		{
+			throw new TimeoutException($"The call did not complete within the configured timeout ({timeout} ms).");
+		}
 	}
 
 	/// <summary>

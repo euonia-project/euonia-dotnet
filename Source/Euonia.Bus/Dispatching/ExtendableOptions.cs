@@ -45,6 +45,11 @@ public abstract class ExtendableOptions
 	/// <summary>
 	/// 获取或设置消息处理的超时时间（毫秒）。
 	/// </summary>
+	/// <remarks>
+	/// 请求-响应调用（<see cref="IBus"/> 的 <c>CallAsync</c> 系列方法）会应用该值：
+	/// 限时内未完成则抛出 <see cref="TimeoutException"/>。小于等于 0 表示不启用超时。
+	/// 发送与发布目前不消费此值。
+	/// </remarks>
 	public virtual long Timeout { get; set; }
 
 	/// <summary>
