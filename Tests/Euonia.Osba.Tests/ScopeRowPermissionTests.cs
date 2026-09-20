@@ -265,7 +265,9 @@ public class ScopeRowPermissionTests
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
-		var obj = new RuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
+		// 规则按类型共享（进程级静态存储）：每个测试必须使用独立的对象类型，
+		// 否则上一个测试注册的规则会泄漏到本测试的规则检查里（GitHub Actions 顺序不定即因此失败）。
+		var obj = new MissingRuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
 		obj.PublicRules.AddRule(new PermissionRule("repo:force-push"));
 
 		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
@@ -280,7 +282,7 @@ public class ScopeRowPermissionTests
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
-		var obj = new RuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
+		var obj = new GrantedRuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
 		obj.PublicRules.AddRule(new PermissionRule("repo:push"));
 
 		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
@@ -585,9 +587,20 @@ public class GrantRepoProbe : GrantRepo
 }
 
 /// <summary>
-/// 用于手工注册规则的测试对象。
+/// 用于手工注册规则、断言「缺少权限」的测试对象（独立类型，避免规则跨测试泄漏）。
 /// </summary>
-public class RuleProbeObject : ObservableObject<RuleProbeObject>
+public class MissingRuleProbeObject : ObservableObject<MissingRuleProbeObject>
+{
+	/// <summary>
+	/// 公开规则集合以便测试调用。
+	/// </summary>
+	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
+}
+
+/// <summary>
+/// 用于手工注册规则、断言「权限已授予」的测试对象（独立类型，避免规则跨测试泄漏）。
+/// </summary>
+public class GrantedRuleProbeObject : ObservableObject<GrantedRuleProbeObject>
 {
 	/// <summary>
 	/// 公开规则集合以便测试调用。
