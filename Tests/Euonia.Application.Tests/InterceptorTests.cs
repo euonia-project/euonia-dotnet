@@ -84,6 +84,9 @@ public class InterceptedTarget : BaseApplicationService
 	[Timing(ThresholdMs = 1000000000)]
 	public virtual string EchoOverThreshold(string value) => value;
 
+	[Timing(ThresholdMs = 0, WarningThresholdMs = 0)]
+	public virtual string EchoTimedWarning(string value) => value;
+
 	[Timing(ThresholdMs = 0)]
 	public virtual async Task<string> EchoTimedAsync(string value)
 	{
@@ -333,6 +336,22 @@ public class InterceptorTests
 		proxy.EchoOverThreshold("hi");
 
 		Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("Timing:"));
+	}
+
+	[Fact]
+	public void TimingInterceptor_ExceedsWarningThreshold_ShouldLogWarning()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new TimingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoTimedWarning("hi");
+
+		Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Warning
+			&& entry.Message.Contains("Timing:")
+			&& entry.Message.Contains("EchoTimedWarning"));
 	}
 
 	[Fact]

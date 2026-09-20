@@ -11,7 +11,8 @@ namespace Nerosoft.Euonia.Application;
 /// <remarks>
 /// 同步方法与 <c>void</c> 在 <see cref="IInvocation.Proceed"/> 返回后度量；异步方法（返回 <see cref="Task"/>、
 /// <see cref="Task{TResult}"/>、<see cref="ValueTask"/>、<see cref="ValueTask{TResult}"/>）以任务完成时刻度量。
-/// 耗时大于等于 <see cref="TimingAttribute.ThresholdMs"/> 时以 Information 级别记录，否则不输出。
+/// 耗时大于等于 <see cref="TimingAttribute.ThresholdMs"/> 时以 Information 级别记录，
+/// 大于等于 <see cref="TimingAttribute.WarningThresholdMs"/> 时升级为 Warning 级别，否则不输出。
 /// </remarks>
 public class TimingInterceptor : IInterceptor
 {
@@ -85,11 +86,25 @@ public class TimingInterceptor : IInterceptor
 		}
 
 		var className = invocation.Method.DeclaringType?.FullName;
-		_logger.LogInformation(
-			"Timing: {Method} took {ElapsedMs:F3} ms (threshold {ThresholdMs} ms)",
-			$"{className}.{invocation.Method.Name}",
-			elapsed.TotalMilliseconds,
-			attribute.ThresholdMs);
+		var message = "Timing: {Method} took {ElapsedMs:F3} ms (threshold {ThresholdMs} ms, warning {WarningThresholdMs} ms)";
+		if (elapsed.TotalMilliseconds >= attribute.WarningThresholdMs)
+		{
+			_logger.LogWarning(
+				message,
+				$"{className}.{invocation.Method.Name}",
+				elapsed.TotalMilliseconds,
+				attribute.ThresholdMs,
+				attribute.WarningThresholdMs);
+		}
+		else
+		{
+			_logger.LogInformation(
+				message,
+				$"{className}.{invocation.Method.Name}",
+				elapsed.TotalMilliseconds,
+				attribute.ThresholdMs,
+				attribute.WarningThresholdMs);
+		}
 	}
 
 	private static TimingAttribute ResolveAttribute(IInvocation invocation)

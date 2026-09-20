@@ -469,3 +469,38 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **幂等控制**：暂无 `[Idempotent]` 之类基于分布式锁 + 请求指纹的幂等拦截设施；如需可在 `LockInterceptor` / `Euonia.Concurrency` 之上实现。
 - **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
 - **`TimingInterceptor` 日志级别固定为 Information**：如需区分「慢」与「极慢」可扩展为按多个阈值输出不同级别。
+
+# 第八部分 实用功能增强（七）
+
+## 三十五、幂等控制：`[Idempotent]` + `IdempotentInterceptor`（落地遗留项）
+
+新增 `[Idempotent]` 方法特性与 `IdempotentInterceptor`，在幂等窗口内对相同指纹的重复调用只执行一次：
+
+- **指纹确定**：优先 `IdempotentAttribute.Key` 模板（占位符 {service}/{method}/{0...}）；其次在 `UseRequestKey`（默认 true）且请求上下文存在 `Idempotency-Key` 请求头时使用「方法名 + 请求键」（与实参无关）；否则回退 `{service}.{method}:args`。
+- **去重语义**：窗口内重复调用——有返回值的方法直接返回首次缓存的结果；`void`/`Task` 方法跳过执行（写 `byte` 印记），避免重复提交副作用叠加。
+- **并发合并**：同指纹调用先经进程内信号量（复用 `SemaphoreLockStore`）串行化再检查，避免并发窗口内双双执行（并发合并击穿）；锁等待时长由 `TimeoutSeconds`（毫秒换算）决定。
+- **存储与超时**：经容器的 `ICacheService` 解析；有返回值写「方法结果」、无返回值写印记，均按 `TimeoutSeconds` 失效；返回 `null` 的结果不写缓存（与缓存行为一致）；未注册缓存服务时退化为直接执行。
+- **异步**：`Task`/`Task<T>` 经 `CaptureProceedInfo` 捕获后异步续延，锁在任务完成前不释放（模式同 `LockInterceptor`）；同步 `void`/普通返回值方法同步路径处理。
+- `ApplicationModule` 已注册 `IdempotentInterceptor`。
+
+测试（`IdempotentInterceptorTests.cs`，8 新增）：同步命令窗口内去重、窗口过期后重新执行（`FakeCacheService.Advance`）、`Task<T>` 重复返回首结果、不同实参各执行一次、请求头 `Idempotency-Key` 作用域（不同实参同键视为重复 + 换键重新执行）、自定义键模板、`Task` 方法重复跳过、未注册缓存服务时始终执行。
+
+## 三十六、耗时日志分级：`[Timing]` 的 Warning 阈值（落地遗留项）
+
+`TimingAttribute` 新增 `WarningThresholdMs`（默认 5000）：`TimingInterceptor.LogIfSlow` 在耗时大于等于 `WarningThresholdMs` 时以 **Warning** 级别记录，否则（大于等于 `ThresholdMs`）为 Information，便于区分「慢」与「极慢」。
+
+测试（`InterceptorTests.cs`，1 新增）：`[Timing(ThresholdMs = 0, WarningThresholdMs = 0)]` 的方法输出 Warning 条目；原有信息级别测试不受影响。
+
+## 三十七、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **134/134**（125 → 134，新增 9：幂等 8 + Timing 分级 1） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 三十八、遗留观察（未改动，供后续决策）
+
+- **分布式环境幂等**：`[Idempotent]` 的并发串行化基于进程内信号量，仅保证单节点语义；多节点部署时需换用 `ILockFactory`（Red Lock 等）持有的共享锁 + 共享存储中的指纹条目。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
