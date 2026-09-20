@@ -23,13 +23,73 @@ public abstract class Aggregate<TKey> : Entity<TKey>, IAggregateRoot<TKey>, IHas
 	public virtual IReadOnlyList<DomainEvent> GetEvents() => _events?.AsReadOnly();
 
 	/// <summary>
+	/// 获取指定类型的待处理事件集合。
+	/// </summary>
+	/// <typeparam name="TEvent">事件的类型。</typeparam>
+	/// <returns>满足类型的事件集合。</returns>
+	public virtual IReadOnlyList<TEvent> GetEvents<TEvent>()
+		where TEvent : DomainEvent
+	{
+		return _events.OfType<TEvent>().ToList().AsReadOnly();
+	}
+
+	/// <summary>
+	/// 获取一个值，指示聚合是否还有未处理的事件。
+	/// </summary>
+	public virtual bool HasEvents => _events.Count > 0;
+
+	/// <summary>
+	/// 获取尚未处理的事件数量。
+	/// </summary>
+	public virtual int EventsCount => _events.Count;
+
+	/// <summary>
+	/// 取出所有待处理事件并清空本地队列（常用于工作单元收集事件后统一分发）。
+	/// </summary>
+	/// <returns>待处理事件的快照。</returns>
+	public virtual IReadOnlyList<DomainEvent> GetAndClearEvents()
+	{
+		var events = _events.ToList();
+		_events.Clear();
+		return events;
+	}
+
+	/// <summary>
+	/// 从事件历史中重放事件，仅调用已注册的处理器，不对其重新入队。
+	/// </summary>
+	/// <param name="events">要重放的事件序列。</param>
+	public virtual void LoadFromHistory(IEnumerable<DomainEvent> events)
+	{
+		if (events == null)
+		{
+			return;
+		}
+
+		foreach (var @event in events)
+		{
+			if (@event == null)
+			{
+				continue;
+			}
+
+			if (_handlers.TryGetValue(@event.GetType(), out var handler))
+			{
+				handler(@event);
+			}
+		}
+	}
+
+	/// <summary>
 	/// 为特定事件类型注册处理器。
 	/// </summary>
+	/// <remarks>
+	/// 幂等：重复为同一事件类型注册时，后注册的处理器将覆盖先前的处理器。
+	/// </remarks>
 	/// <typeparam name="T">事件的类型。</typeparam>
 	/// <param name="when">处理事件的委托。</param>
 	protected virtual void Register<T>(Action<T> when)
 	{
-		_handlers.Add(typeof(T), @event => when((T)@event));
+		_handlers[typeof(T)] = @event => when((T)@event);
 	}
 
 	/// <summary>

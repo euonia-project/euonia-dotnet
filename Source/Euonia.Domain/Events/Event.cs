@@ -9,6 +9,8 @@ public abstract class Event : IEvent
 {
 	private const string PROPERTY_ID = "nerosoft.euonia.internal.event.id";
 
+	private const string PROPERTY_CORRELATION_ID = "nerosoft.euonia.internal.event.correlation";
+
 	/// <summary>
 	/// 初始化 <see cref="Event"/> 类的新实例，并设置事件意图与唯一标识符。
 	/// </summary>
@@ -17,6 +19,7 @@ public abstract class Event : IEvent
 		var type = GetType();
 		EventIntent = type.Name;
 		Properties[PROPERTY_ID] = ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		Properties[PROPERTY_CORRELATION_ID] = Properties[PROPERTY_ID];
 	}
 
 	/// <summary>
@@ -52,6 +55,15 @@ public abstract class Event : IEvent
 	{
 		get => this[PROPERTY_ID];
 		set => this[PROPERTY_ID] = value;
+	}
+
+	/// <summary>
+	/// 获取或设置关联标识符。默认与 <see cref="EventId"/> 相同，可用于跨实例/跨过程的因果追踪。
+	/// </summary>
+	public string CorrelationId
+	{
+		get => this[PROPERTY_CORRELATION_ID];
+		set => this[PROPERTY_CORRELATION_ID] = value;
 	}
 
 	/// <summary>

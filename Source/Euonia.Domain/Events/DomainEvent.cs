@@ -36,7 +36,8 @@ public abstract class DomainEvent : Event, IDomainEvent
 			OriginatorId = OriginatorId,
 			OriginatorType = OriginatorType,
 			EventSequence = Sequence,
-			EventPayload = this
+			EventPayload = this,
+			CorrelationId = CorrelationId,
 		};
 	}
 

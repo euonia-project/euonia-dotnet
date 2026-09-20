@@ -22,6 +22,11 @@ public class EventAggregate : IAggregateRoot<string>
 	public string EventId { get; set; }
 
 	/// <summary>
+	/// 获取或设置关联标识符，用于跨实例/跨过程的因果追踪。
+	/// </summary>
+	public string CorrelationId { get; set; }
+
+	/// <summary>
 	/// 获取或设置时间戳。
 	/// </summary>
 	public DateTime Timestamp { get; set; }
