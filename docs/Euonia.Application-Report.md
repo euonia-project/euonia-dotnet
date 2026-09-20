@@ -1,4 +1,4 @@
-# Euonia.Application 报告（修复补全 + 实用功能增强）
+# Euonia.Application 报告（修复补全 + 实用功能增强 一/二/三）
 
 ## 第一部分 修复与测试补全
 
@@ -220,5 +220,119 @@ key.Target.GetCustomAttribute<AuthorizeAttribute>()
 ## 九、遗留观察（未改动，供后续决策）
 
 - **类级 `[Authorize]` 与缓存键**：`_attributeCache` 以 `(MethodInfo Target, MethodInfo Interface)` 为键，类级查找按目标方法声明类型进行；若同一实现类被多个接口代理，仍逐方法命中缓存，性能无虞。
-- **`UseCaseExecutor` 仅执行实例分发，不含 DI 自动解析**：若需要「按接口类型从容器解析用例并执行」，可作为后续增强（当前保持"应用层无容器依赖"的职责边界）。
-- **`TracingInterceptor` 依赖 `IRequestContextAccessor` 判定是否启用**；若未来需要基于链路 ID 关联多个请求，可引入 `CorrelationId` 处理（与 Domain 轮 `Event.CorrelationId` 呼应），留待后续。
+- **`UseCaseExecutor` 的容器解析重载**：`ExecuteAsync<TUseCase,...>` 直接以类型参数从 `IServiceProvider` `GetRequiredService`，注册备用类型；若需要更细粒度的作用域/生命周期控制，可经 `IServiceScopeFactory` 每次新建作用域，留待后续。
+- **`TracingInterceptor` 依赖 `IRequestContextAccessor` 判定是否启用**；`CorrelationIdBehavior` 已补上链路标识透传，若需将 CorrelationId 一并写入日志条目或 `TraceInfo`，可作为后续增强。
+
+---
+
+# 第三部分 实用功能增强（二）
+
+对 Euonia.Application 追加第二批实用功能：日志脱敏、用户上下文重建、UseCase 容器解析、关联 ID 透传。全程先补测试后实现，全仓无回归。
+
+## 十、日志脱敏：`SensitiveDataAttribute` + `LoggingInterceptor` 掩码
+
+新增 `Attributes/SensitiveDataAttribute.cs`（`AttributeTargets.Parameter`，自带可配置 `Mask`，默认 `***`）。`LoggingInterceptor` 在记录参数前按以下规则掩码：
+
+1. 参数名命中内置敏感关键字（`password`/`passwd`/`pwd`/`secret`/`token`/`accessToken`/`refreshToken`/`apikey`/`apiKey`/`key`/`authorization`/`credential`/`cookie`/`connectionString`，`OrdinalIgnoreCase`）；
+2. 参数标注 `[SensitiveData]`。
+
+每个方法的敏感性数组经 `ConcurrentDictionary<MethodInfo,bool[]>` 缓存，避免每次调用反射枚举；掩码替换为 `***` 后仍以 Debug 级 JSON 序列化记录。异常分支行为不变（Error 级日志后原样重抛）。
+
+测试（`InterceptorTests.cs`，3 新增）：关键字命中掩码、`[SensitiveData]` 特性掩码、普通参数原值记录。
+
+## 十一、用户上下文重建：`UserContextExtensions`
+
+与 `UserContextBehavior` 写入互为镜像，新增 `Extensions/UserContextExtensions.cs`：
+
+- `GetAuthorizationToken()`：读取 `Authorization` 元数据键；
+- `GetUserPrincipal()`：读取 `UserName`/`UserId`/`UserCode`/`UserTenant` 四键，任一存在即以 `Bearer` 身份类型构造 `ClaimsPrincipal` 重建 `UserPrincipal`；全部缺失返回 `null`。
+
+测试（`UserContextBehaviorTests.cs`，5 新增）：写入→读取全字段往返一致、无用户键返回 null、部分键仅重建可用声明、令牌读取、无令牌返回 null。
+
+## 十二、UseCase 容器解析：`IUseCaseExecutor` 重载
+
+`UseCaseExecutor` 注入 `IServiceProvider`，新增 4 个按类型参数的解析重载（类型参数约束与四类用例家族一一对应）：
+
+```csharp
+ExecuteAsync<TUseCase, TInput, TOutput>(input, presenter, ...)     // where TUseCase : IUseCase<,>
+ExecuteAsync<TUseCase, TInput>(input, presenter, ...)              // where TUseCase : INonOutputUseCase<>
+ExecuteAsync<TUseCase, TOutput>(presenter, ...)                    // where TUseCase : INonInputUseCase<>
+ExecuteAsync<TUseCase>(presenter, ...)                             // where TUseCase : IParameterlessUseCase
+```
+
+用例经 `GetRequiredService<TUseCase>()` 解析后走既有 `ExecuteCoreAsync` 分发路径。测试改造：既有用例测试改用 `CreateExecutor` 辅助（注入 `IServiceProvider`）。
+
+测试（`UseCaseTests.cs`，5 新增）：四个解析重载正常执行、未注册用例分发错误。
+
+## 十三、关联 ID 透传：`CorrelationIdBehavior`
+
+新增 `Behaviors/CorrelationIdBehavior.cs`，在管道中按优先级回填 `MessageHeaders.CorrelationId` / `RequestTraceId` 到消息元数据：
+
+1. 请求上下文 `TraceIdentifier` / `Request-Id` 请求头；
+2. 消息元数据既有 `RequestTraceId` / `CorrelationId`；
+3. 信封自身 `CorrelationId`；
+4. 全部缺失时生成 `GuidType.SequentialAsString`。
+
+已注册到 `ApplicationModule.cs`（顺序在 `ValidationBehavior`、`UserContextBehavior` 之后，链接口标识与用户上下文一并透传）。
+
+测试（`CorrelationIdBehaviorTests.cs`，6 用例）：TraceIdentifier 回填两键、Request-Id 请求头、无请求上下文时沿信封既有值、既有元数据复用、全缺失时生成新值、委托回调。
+
+## 十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **86/86**（67 → 86，新增 19） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 十五、遗留观察（未改动，供后续决策）
+
+- **脱敏覆盖范围**：现仅按参数名/特性掩码，未对复杂对象内部敏感属性（如输入 DTO 里的 `Password` 属性）逐字段脱敏；如需可加「类型级敏感属性声明」支持。
+- **`UseCaseExecutor` 生命周期**：容器解析重载使用注入的根 `IServiceProvider`，scoped 用例的解析范围取决于执行器自身的作用域；若需每个请求独立作用域可注入 `IServiceScopeFactory`。
+- **`CorrelationIdBehavior` 与 Web 层联动**：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第四部分 实用功能增强（三）
+
+对 Euonia.Application 追加第三批实用功能：对象图脱敏、UseCase 容器 scoped 解析、`BaseApplicationService` 执行器便捷属性。全程先补测试后实现，全仓无回归。
+
+## 十六、对象图脱敏：`SensitiveDataMasker` 落地遗留项
+
+上批遗留的「DTO 内部敏感属性逐字段脱敏」在本批实现。`SensitiveDataAttribute` 目标扩展为 参数/属性/字段/类（`Attributes/SensitiveDataAttribute.cs`）；新增 `Interceptors/SensitiveDataMasker.cs` 提供递归脱敏：
+
+- **成员级**：属性/字段标注 `[SensitiveData]` 时替换为掩码（尊重成员自定义 `Mask`）；
+- **类型级**：类型自身标注时整体掩码；`System`/`Microsoft`/`Newtonsoft`/`Castle` 等命名空间视为不透明，不递归展开（避免运行时结构炸日志）；
+- **集合/字典**：枚举成员逐项脱敏；循环引用经 `ReferenceEqualityComparer` + 深度上限（8）防护；返回脱敏副本（字典/列表），不修改原对象。
+
+`LoggingInterceptor.GetArguments` 现对每个非关键字命中的参数调用 `SensitiveDataMasker.Mask`，即复杂 DTO 里的敏感成员在序列化前即被替换（`Interceptors/LoggingInterceptor.cs:113`）。
+
+测试：`SensitiveDataMaskerTests.cs`（6 用例：null / 标量透传 / 敏感属性掩码 / 嵌套递归 / 集合逐项 / 循环引用不爆栈）+ `InterceptorTests.cs`（2 用例：DTO 内部掩码、自定义掩码文本）。
+
+## 十七、UseCase 容器 scoped 解析：`IServiceScopeFactory`
+
+上批遗留的「scoped 用例作用域」复核发现：默认 MS DI 容器解析 scoped 服务需经 `IServiceScopeFactory` 每次新建作用域，否则从根容器解析会抛异常或得到错误实例。`UseCaseExecutor` 改为持有 `IServiceScopeFactory`，容器解析重载在**每次执行新建作用域**内 `GetRequiredService<TUseCase>()`，scoped 注册的用例及其依赖每次执行获得独立实例（`UseCase/UseCaseExecutor.cs:23`）。
+
+测试（`UseCaseTests.cs`，2 新增）：scoped 用例每次执行新建实例（`InstancesCreated == 2`）、scoped 依赖正确注入（`ScopedCounter` 非空）。
+
+## 十八、`BaseApplicationService.Executor` 便捷属性
+
+`BaseApplicationService` 新增 `Executor`（懒加载 `IUseCaseExecutor`），派生应用服务可直接调用用例执行（`Services/BaseApplicationService.cs:56`）。
+
+测试（`ServiceRegistrationFeatureTests.cs`，1 新增）：`IExecutorProbeService` 解析到非空执行器；`CreateLoggingProvider` 补注册 `IUseCaseExecutor`。
+
+## 十九、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **97/97**（86 → 97，新增 11） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十、遗留观察（未改动，供后续决策）
+
+- **掩码性能**：`SensitiveDataMasker` 每次调用全量反射读取属性值（示例对象图较小）；若用于高吞吐入参日志，可缓存成员反射信息或以表达式树编译属性读取器。
+- **不透明命名空间策略**：`System`/`Microsoft` 等整类掩码可能吞掉有诊断价值的框架类型；如需细粒度可从掩码改为「类型名 + 掩码」占位。
+- **`TracingInterceptor` 链路 ID 集成**：`CorrelationIdBehavior` 已把标识写入元数据，但追踪日志（`TraceInfo`）尚未携带 CorrelationId；如需按链路聚合可让 `TracingInterceptor` 读取当前请求/元数据后一并输出。

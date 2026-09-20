@@ -64,6 +64,12 @@ public class InterceptedTarget : BaseApplicationService
 
 	public virtual void DoNothing() => System.Threading.Thread.Sleep(1);
 
+	public virtual string EchoWithPassword(string password) => password;
+
+	public virtual string EchoWithSensitiveData([SensitiveData] string credential) => credential;
+
+	public virtual string EchoWithDto(LoginCommand command) => command.Username;
+
 	public virtual async Task<string> EchoAsync(string value)
 	{
 		await Task.Yield();
@@ -134,7 +140,7 @@ public class InterceptorTests
 	{
 		using var container = CreateCapturingProvider(out var logger);
 		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
-		var accessor = new Nerosoft.Euonia.Application.Tests.StubRequestContextAccessor();
+		var accessor = new StubRequestContextAccessor();
 		var interceptor = new TracingInterceptor(loggerFactory, accessor);
 		var generator = new ProxyGenerator();
 		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
@@ -157,4 +163,94 @@ public class InterceptorTests
 
 		Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("TraceInfo"));
 	}
+
+	[Fact]
+	public void LoggingInterceptor_SensitiveKeyword_ShouldMaskArgument()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new LoggingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoWithPassword("plain-password");
+
+		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("EchoWithPassword"));
+		Assert.DoesNotContain("plain-password", entry.Message);
+		Assert.Contains("\"***\"", entry.Message);
+	}
+
+	[Fact]
+	public void LoggingInterceptor_SensitiveDataAttribute_ShouldMaskArgument()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new LoggingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoWithSensitiveData("secret-credential");
+
+		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("EchoWithSensitiveData"));
+		Assert.DoesNotContain("secret-credential", entry.Message);
+		Assert.Contains("\"***\"", entry.Message);
+	}
+
+	[Fact]
+	public void LoggingInterceptor_NormalArgument_ShouldKeepOriginalValue()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new LoggingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.Echo("hello");
+
+		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("Echo"));
+		Assert.Contains("hello", entry.Message);
+	}
+
+	[Fact]
+	public void LoggingInterceptor_DtoWithSensitiveProperty_ShouldMaskInnerProperty()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new LoggingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoWithDto(new LoginCommand { Username = "alice", Password = "plain-password" });
+
+		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("EchoWithDto"));
+		Assert.DoesNotContain("plain-password", entry.Message);
+		Assert.Contains("alice", entry.Message);
+		Assert.Contains("\"###\"", entry.Message);
+	}
+
+	[Fact]
+	public void LoggingInterceptor_DtoWithCustomMask_ShouldUseCustomMaskText()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new LoggingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoWithDto(new LoginCommand { Username = "alice", Password = "plain-password" });
+
+		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("EchoWithDto"));
+		Assert.Contains("\"###\"", entry.Message);
+	}
+}
+
+/// <summary>
+/// 含敏感属性的登录命令 DTO。
+/// </summary>
+public class LoginCommand
+{
+	public string Username { get; set; }
+
+	[SensitiveData(Mask = "###")]
+	public string Password { get; set; }
 }

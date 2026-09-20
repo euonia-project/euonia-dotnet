@@ -49,4 +49,9 @@ public abstract class BaseApplicationService : IApplicationService
 	/// 获取以当前服务类型为类别的日志记录器。
 	/// </summary>
 	protected virtual ILogger Logger => LazyServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(GetType()) ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
+
+	/// <summary>
+	/// 获取用例执行器，用于执行用例并分发结果到 presenter。
+	/// </summary>
+	protected virtual IUseCaseExecutor Executor => LazyServiceProvider.GetService<IUseCaseExecutor>();
 }

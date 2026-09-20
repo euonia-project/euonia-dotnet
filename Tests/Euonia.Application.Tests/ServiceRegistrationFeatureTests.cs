@@ -25,20 +25,30 @@ public sealed class BetaService : BaseApplicationService, IBetaService
 }
 
 public interface ILoggerProbeService : IApplicationService
-{
-	ILogger Logger { get; }
-	RequestContext RequestContext { get; }
-	CancellationToken RequestAborted { get; }
-}
+	{
+		ILogger Logger { get; }
+		RequestContext RequestContext { get; }
+		CancellationToken RequestAborted { get; }
+	}
 
-public sealed class LoggerProbeService : BaseApplicationService, ILoggerProbeService
-{
-	ILogger ILoggerProbeService.Logger => Logger;
+	public interface IExecutorProbeService : IApplicationService
+	{
+		IUseCaseExecutor Executor { get; }
+	}
 
-	RequestContext ILoggerProbeService.RequestContext => RequestContext;
+	public sealed class LoggerProbeService : BaseApplicationService, ILoggerProbeService
+	{
+		ILogger ILoggerProbeService.Logger => Logger;
 
-	CancellationToken ILoggerProbeService.RequestAborted => RequestAborted;
-}
+		RequestContext ILoggerProbeService.RequestContext => RequestContext;
+
+		CancellationToken ILoggerProbeService.RequestAborted => RequestAborted;
+	}
+
+	public sealed class ExecutorProbeService : BaseApplicationService, IExecutorProbeService
+	{
+		IUseCaseExecutor IExecutorProbeService.Executor => Executor;
+	}
 
 public class ServiceRegistrationFeatureTests
 {
@@ -123,12 +133,23 @@ public class ServiceRegistrationFeatureTests
 		Assert.Equal(CancellationToken.None, svc.RequestAborted);
 	}
 
+	[Fact]
+	public void BaseApplicationService_Executor_ShouldBeResolvable()
+	{
+		using var provider = CreateLoggingProvider();
+		using var scope = provider.CreateScope();
+		var svc = scope.ServiceProvider.GetRequiredService<IExecutorProbeService>();
+
+		Assert.NotNull(svc.Executor);
+	}
+
 	private static ServiceProvider CreateLoggingProvider()
 	{
 		var services = new ServiceCollection();
 		services.AddLogging(builder => builder.SetMinimumLevel(LogLevel.Warning));
 		services.AddSingleton<ProxyGenerator>();
 		services.AddSingleton<ILazyServiceProvider, LazyServiceProvider>();
+		services.AddTransient<IUseCaseExecutor, UseCaseExecutor>();
 		services.AddApplicationService(typeof(LoggerProbeService).Assembly, ServiceLifetime.Scoped);
 		return services.BuildServiceProvider();
 	}

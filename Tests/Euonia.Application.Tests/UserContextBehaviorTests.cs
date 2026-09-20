@@ -85,6 +85,63 @@ public class UserContextBehaviorTests
 		Assert.True(invoked);
 	}
 
+	[Fact]
+	public async Task UserContextExtensions_WriteThenRead_ShouldRoundTripUserPrincipal()
+	{
+		var behavior = CreateBehavior(new Dictionary<string, string> { [nameof(RequestContext.Authorization)] = "Bearer abc" }, CreateAuthenticatedUser());
+		var context = new TestMessage();
+
+		await behavior.HandleAsync(context, _ => Task.FromResult(true));
+
+		var user = context.Metadata.GetUserPrincipal();
+		Assert.NotNull(user);
+		Assert.True(user.IsAuthenticated);
+		Assert.Equal("Alice", user.Username);
+		Assert.Equal("user-1", user.UserId);
+		Assert.Equal("U001", user.Code);
+		Assert.Equal("TENANT1", user.Tenant);
+	}
+
+	[Fact]
+	public void UserContextExtensions_NoUserKeys_ShouldReturnNull()
+	{
+		var metadata = new MessageMetadata();
+
+		Assert.Null(metadata.GetUserPrincipal());
+	}
+
+	[Fact]
+	public void UserContextExtensions_PartialUserKeys_ShouldRebuildAvailableClaims()
+	{
+		var metadata = new MessageMetadata();
+		metadata.Set(UserContextMetadataKeys.UserName, "Bob");
+
+		var user = metadata.GetUserPrincipal();
+
+		Assert.NotNull(user);
+		Assert.Equal("Bob", user.Username);
+		Assert.Null(user.UserId);
+		Assert.Null(user.Code);
+		Assert.Null(user.Tenant);
+	}
+
+	[Fact]
+	public void UserContextExtensions_AuthorizationToken_ShouldReadToken()
+	{
+		var metadata = new MessageMetadata();
+		metadata.Set(UserContextMetadataKeys.Authorization, "Bearer token-1");
+
+		Assert.Equal("Bearer token-1", metadata.GetAuthorizationToken());
+	}
+
+	[Fact]
+	public void UserContextExtensions_NoAuthorizationKey_ShouldReturnNull()
+	{
+		var metadata = new MessageMetadata();
+
+		Assert.Null(metadata.GetAuthorizationToken());
+	}
+
 	private static UserContextBehavior<TestMessage, bool> CreateBehavior(IDictionary<string, string> headers, UserPrincipal user)
 	{
 		var services = new ServiceCollection();
