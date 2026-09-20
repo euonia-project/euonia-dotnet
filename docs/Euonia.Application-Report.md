@@ -421,3 +421,51 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **组索引的内存增长**：`CacheGroupManager` 的键—组索引只增不减（键随缓存过期后索引仍残留）；如需可增加 TTL 同步清理或在读取命中时惰性剔除。
 - **失效时序语义**：`CacheEvict` 的异步失效发生在方法任务成功后；对「先失效再执行」的 write-through 语义未做支持，可按需增加执行前失效模式。
 - **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第七部分 实用功能增强（六）
+
+对 Euonia.Application 追加第六批实用功能：缓存失效时序、组索引惰性剔除、方法耗时日志。全程先补测试后实现，全仓无回归。
+
+## 三十、缓存失效时序：`CacheEvict` 的 `Mode`（落地遗留项）
+
+新增 `CacheEvictionMode` 枚举（`Attributes/CacheEvictionMode.cs`），`CacheEvictAttribute` 增加 `Mode` 属性（默认 `After`）：
+
+- **`After`（默认）**：方法执行成功后失效；异步方法在任务成功完成后经 continuation 失效，失败不误删；
+- **`Before`**：方法执行前先失效（write-through，方法自身负责写回新值）；失效发生在 `Proceed` 之前，即使方法随后抛异常，旧缓存也已被清空（`Interceptors/CacheEvictionInterceptor.cs:40`）。
+
+测试（`CacheEvictionInterceptorTests.cs`，2 新增）：`Mode=Before` 的方法先失效再执行并抛异常 → 组索引已清空；默认 `After` 的方法抛异常 → 组索引保持完好。
+
+## 三十一、组索引惰性剔除（落地遗留项）
+
+`ICacheGroupManager` 新增 `Remove(string key)`（`Caching/ICacheGroupManager.cs`）；`CacheGroupManager` 实现为从全部组桶中移除该键（不删除缓存本身，仅清理索引，`Caching/CacheGroupManager.cs:60`）。
+
+`CacheInterceptor` 在「未写回」时联动剔除：方法返回 `null`（不缓存、避免缓存击穿占位）或异步失败时，调用 `manager.Remove(key)`，防止组索引残留指向已过期/不在缓存中的键（`Interceptors/CacheInterceptor.cs` 的 `WriteBackSync`/`WriteBackAsync` continuation 的 else 分支）。
+
+测试：`CacheInterceptorTests.cs` 1 新增（绝对到期后重新执行且本次返回 `null` → 组索引残留键被清理）；`CacheEvictionInterceptorTests.cs` 1 新增（`Remove` 把键从全部组同时移除）。
+
+## 三十二、方法耗时日志：`[Timing]` + `TimingInterceptor`
+
+新增 `Attributes/TimingAttribute.cs`（`AttributeTargets.Method|Class`，`ThresholdMs` 默认 1000ms）与 `Interceptors/TimingInterceptor.cs`：用 `Stopwatch` 度量方法耗时，**大于等于阈值**时以 Information 输出（含方法全名、耗时与阈值），低于阈值不输出，适合慢调用监控，避免日志噪音。
+
+- 同步/`void`：`Proceed` 返回后度量；
+- 异步：`Task`/`Task<T>`（`Task<T>` 直接以 `Task` 引用挂 continuation）、`ValueTask`/`ValueTask<T>`（`ValueTask<T>` 经 `MakeGenericMethod` 分发）以任务完成时刻度量，失败同样记录耗时；
+- 特性支持类级（作用于方法）+ 方法级，`ApplicationModule` 已注册为拦截器。
+
+测试（`InterceptorTests.cs`，4 新增）：同步低于阈值输出、超过阈值不输出、异步完成后输出（轮询等待日志落盘）、无 `[Timing]` 的方法不输出。
+
+## 三十三、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **125/125**（117 → 125，新增 8） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 三十四、遗留观察（未改动，供后续决策）
+
+- **幂等控制**：暂无 `[Idempotent]` 之类基于分布式锁 + 请求指纹的幂等拦截设施；如需可在 `LockInterceptor` / `Euonia.Concurrency` 之上实现。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+- **`TimingInterceptor` 日志级别固定为 Information**：如需区分「慢」与「极慢」可扩展为按多个阈值输出不同级别。

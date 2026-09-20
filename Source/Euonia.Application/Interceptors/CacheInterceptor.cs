@@ -139,6 +139,11 @@ public class CacheInterceptor : IInterceptor
 			{
 				WriteToCache(cache, key, completed.Result, expirations, manager, groups);
 			}
+			else
+			{
+				// 未写回（失败或 null 结果，避免缓存占位）：同步清理组索引，防止残留过期键。
+				manager?.Remove(key);
+			}
 		}, TaskScheduler.Default);
 	}
 
@@ -147,6 +152,10 @@ public class CacheInterceptor : IInterceptor
 		if (rawReturnValue != null)
 		{
 			WriteToCache(cache, key, (T)rawReturnValue, expirations, manager, groups);
+		}
+		else
+		{
+			manager?.Remove(key);
 		}
 	}
 

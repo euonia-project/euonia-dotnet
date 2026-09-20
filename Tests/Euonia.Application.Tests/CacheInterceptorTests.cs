@@ -154,6 +154,26 @@ public class CacheInterceptorTests
 		Assert.Contains(manager.GetKeys("cart"), key => key.StartsWith(typeof(CachedProbe).FullName + ".GetGrouped", StringComparison.Ordinal));
 	}
 
+	[Fact]
+	public void Cache_NullResult_ShouldRemoveStaleGroupEntry()
+	{
+		var probe = new CachedProbe();
+		var manager = new CacheGroupManager(new ServiceProviderStub(new FakeCacheService()));
+		var proxy = CreateProxy(probe, out var cache, manager);
+
+		_ = proxy.GetGroupedNullable(1);
+		Assert.Contains(manager.GetKeys("cart"), key => key.Contains("GetGroupedNullable"));
+
+		// 绝对到期后重新执行，但本次返回 null（不写回缓存）→ 组索引中的残留键应被清理。
+		probe.ReturnNull = true;
+		cache.Advance(TimeSpan.FromHours(2));
+
+		_ = proxy.GetGroupedNullable(1);
+
+		Assert.Equal(2, probe.SyncCalls);
+		Assert.Empty(manager.GetKeys("cart"));
+	}
+
 	private static ICachedProbe CreateProxy(CachedProbe probe, out FakeCacheService cache, ICacheGroupManager manager = null)
 	{
 		cache = new FakeCacheService();
@@ -179,6 +199,8 @@ public class CacheInterceptorTests
 		decimal GetAbsoluteLocal(int id);
 
 		string GetGrouped(int id);
+
+		string GetGroupedNullable(int id);
 	}
 
 	public class CachedProbe : ICachedProbe
@@ -186,6 +208,8 @@ public class CacheInterceptorTests
 		public int AsyncCalls;
 
 		public int SyncCalls;
+
+		public bool ReturnNull;
 
 		[Cache(TimeoutSeconds = 60)]
 		public virtual async Task<decimal> GetPriceAsync(int id)
@@ -234,6 +258,13 @@ public class CacheInterceptorTests
 		{
 			SyncCalls++;
 			return "grouped-" + id;
+		}
+
+		[Cache(Groups = ["cart"], AbsoluteExpirationSeconds = 3600)]
+		public virtual string GetGroupedNullable(int id)
+		{
+			SyncCalls++;
+			return ReturnNull ? null : "v-" + id;
 		}
 	}
 

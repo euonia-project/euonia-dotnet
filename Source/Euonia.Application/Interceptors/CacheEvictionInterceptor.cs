@@ -41,6 +41,15 @@ public class CacheEvictionInterceptor : IInterceptor
 		}
 
 		var groups = attribute.Groups;
+
+		// 执行前失效（write-through）：先清旧值再执行，方法本身负责写回新缓存。
+		if (attribute.Mode == CacheEvictionMode.Before)
+		{
+			Evict(groups);
+			invocation.Proceed();
+			return;
+		}
+
 		var returnType = invocation.Method.ReturnType;
 
 		if (returnType == typeof(void))

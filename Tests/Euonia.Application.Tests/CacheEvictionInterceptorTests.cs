@@ -76,6 +76,51 @@ public class CacheEvictionInterceptorTests
 	}
 
 	[Fact]
+	public void GroupManager_Remove_ShouldDropKeyFromAllGroups()
+	{
+		var manager = new CacheGroupManager(new StubProvider(null));
+
+		manager.Register("cart:a", ["cart", "orders"]);
+
+		manager.Remove("cart:a");
+
+		Assert.Empty(manager.GetKeys("cart"));
+		Assert.Empty(manager.GetKeys("orders"));
+	}
+
+	[Fact]
+	public void Evict_WithModeBefore_ShouldEvictEvenIfMethodThrows()
+	{
+		var probe = new EvictionProbe();
+		var cache = new FakeCacheService();
+		var (manager, proxy) = CreateProxy(probe, cache);
+
+		_ = proxy.GetGrouped(1); // 写回并登记到组
+		Assert.Contains(manager.GetKeys("cart"), key => key.Contains("GetGrouped"));
+
+		// Before 模式：执行前先失效，方法抛异常也不影响已完成的失效。
+		Assert.Throws<InvalidOperationException>(() => proxy.SaveBefore());
+
+		Assert.Empty(manager.GetKeys("cart"));
+	}
+
+	[Fact]
+	public void Evict_DefaultAfter_ShouldNotEvictWhenMethodThrows()
+	{
+		var probe = new EvictionProbe();
+		var cache = new FakeCacheService();
+		var (manager, proxy) = CreateProxy(probe, cache);
+
+		_ = proxy.GetGrouped(1); // 写回并登记到组
+		Assert.Contains(manager.GetKeys("cart"), key => key.Contains("GetGrouped"));
+
+		// After 模式：失败不失效 → 组索引保持完好。
+		Assert.Throws<InvalidOperationException>(() => proxy.SaveAfterThrow());
+
+		Assert.Contains(manager.GetKeys("cart"), key => key.Contains("GetGrouped"));
+	}
+
+	[Fact]
 	public void GroupManager_EvictWithoutCacheService_ShouldClearIndexOnly()
 	{
 		var manager = new CacheGroupManager(new StubProvider(null));
@@ -147,6 +192,10 @@ public class CacheEvictionInterceptorTests
 		Task SaveAsync();
 
 		Task PlainAsync();
+
+		void SaveBefore();
+
+		void SaveAfterThrow();
 	}
 
 	public class EvictionProbe : IEvictionProbe
@@ -179,6 +228,18 @@ public class CacheEvictionInterceptorTests
 		public virtual Task SaveAsync()
 		{
 			return Task.CompletedTask;
+		}
+
+		[CacheEvict("cart", Mode = CacheEvictionMode.Before)]
+		public virtual void SaveBefore()
+		{
+			throw new InvalidOperationException("boom");
+		}
+
+		[CacheEvict("cart")]
+		public virtual void SaveAfterThrow()
+		{
+			throw new InvalidOperationException("boom");
 		}
 
 		public virtual Task PlainAsync() => Task.CompletedTask;

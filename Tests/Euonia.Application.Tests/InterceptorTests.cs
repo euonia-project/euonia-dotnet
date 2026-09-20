@@ -77,6 +77,19 @@ public class InterceptedTarget : BaseApplicationService
 	}
 
 	public virtual int Divide(int a, int b) => a / b;
+
+	[Timing(ThresholdMs = 0)]
+	public virtual string EchoTimed(string value) => value;
+
+	[Timing(ThresholdMs = 1000000000)]
+	public virtual string EchoOverThreshold(string value) => value;
+
+	[Timing(ThresholdMs = 0)]
+	public virtual async Task<string> EchoTimedAsync(string value)
+	{
+		await Task.Yield();
+		return value;
+	}
 }
 
 public class InterceptorTests
@@ -289,6 +302,80 @@ public class InterceptorTests
 
 		var entry = Assert.Single(logger.Entries, entry => entry.Level == LogLevel.Debug && entry.Message.Contains("EchoWithDto"));
 		Assert.Contains("\"###\"", entry.Message);
+	}
+
+	[Fact]
+	public void TimingInterceptor_SyncBelowThreshold_ShouldLogElapsed()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new TimingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoTimed("hi");
+
+		Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Information
+			&& entry.Message.Contains("Timing:")
+			&& entry.Message.Contains("EchoTimed")
+			&& entry.Message.Contains("ms"));
+	}
+
+	[Fact]
+	public void TimingInterceptor_OverThreshold_ShouldNotLog()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new TimingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.EchoOverThreshold("hi");
+
+		Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("Timing:"));
+	}
+
+	[Fact]
+	public async Task TimingInterceptor_Async_ShouldLogElapsedOnCompletion()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new TimingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		_ = await proxy.EchoTimedAsync("hi");
+		await WaitUntilLoggedAsync(logger, "Timing:");
+	}
+
+	[Fact]
+	public void TimingInterceptor_WithoutAttribute_ShouldNotLog()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var interceptor = new TimingInterceptor(loggerFactory);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.Echo("hi");
+
+		Assert.DoesNotContain(logger.Entries, entry => entry.Message.Contains("Timing:"));
+	}
+
+	private static async Task WaitUntilLoggedAsync(InMemoryLoggerProvider logger, string fragment)
+	{
+		var deadline = DateTime.UtcNow.AddSeconds(5);
+		while (DateTime.UtcNow < deadline)
+		{
+			if (logger.Entries.Any(entry => entry.Message.Contains(fragment, StringComparison.Ordinal)))
+			{
+				return;
+			}
+
+			await Task.Delay(10);
+		}
+
+		Assert.Fail("Timing log entry was not written within the timeout.");
 	}
 }
 

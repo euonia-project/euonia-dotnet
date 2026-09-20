@@ -47,6 +47,20 @@ public class CacheGroupManager : ICacheGroupManager
 	}
 
 	/// <inheritdoc />
+	public void Remove(string key)
+	{
+		if (string.IsNullOrEmpty(key))
+		{
+			return;
+		}
+
+		foreach (var bucket in _index.Values)
+		{
+			bucket.TryRemove(key, out _);
+		}
+	}
+
+	/// <inheritdoc />
 	public int Evict(IEnumerable<string> groups)
 	{
 		if (groups == null)

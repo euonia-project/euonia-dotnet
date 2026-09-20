@@ -24,6 +24,12 @@ public interface ICacheGroupManager
 	IReadOnlyCollection<string> GetKeys(string group);
 
 	/// <summary>
+	/// 从全部组的索引中移除指定缓存键（不删除缓存本身，仅清理索引）。
+	/// </summary>
+	/// <param name="key">缓存键。</param>
+	void Remove(string key);
+
+	/// <summary>
 	/// 失效指定缓存组：删除组内全部缓存键，并清空组索引。
 	/// </summary>
 	/// <param name="groups">需失效的缓存组。</param>
