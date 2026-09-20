@@ -273,9 +273,19 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 
 	/// <summary>
 	/// 释放非托管资源，并可选择性地释放托管资源。
+	/// <para>
+	/// 显式释放时必须停止 <see cref="_timer"/>，否则基类的 <c>Dispose()</c> 会调用
+	/// <see cref="GC.SuppressFinalize"/>，导致终结器不再执行、定时器继续周期性扫描并永久持有本实例。
+	/// </para>
 	/// </summary>
-	~DictionaryCacheHandle()
+	/// <param name="disposeManaged">指示是否释放托管资源。</param>
+	protected override void Dispose(bool disposeManaged)
 	{
-		_timer.Dispose();
+		if (disposeManaged)
+		{
+			_timer.Dispose();
+		}
+
+		base.Dispose(disposeManaged);
 	}
 }

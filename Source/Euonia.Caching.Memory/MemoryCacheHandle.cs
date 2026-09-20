@@ -34,6 +34,17 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	internal MemoryCacheOptions Options { get; }
 
 	/// <inheritdoc/>
+	protected override void Dispose(bool disposeManaged)
+	{
+		if (disposeManaged)
+		{
+			_cache.Dispose();
+		}
+
+		base.Dispose(disposeManaged);
+	}
+
+	/// <inheritdoc/>
 	public override void Clear()
 	{
 		var old = _cache;

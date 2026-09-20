@@ -20,6 +20,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	private volatile MemoryCache _cache;
 	private string _instanceKey;
 	private int _instanceKeyLength;
+	private readonly bool _isDefaultCache;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="RuntimeCacheHandle{TCacheValue}"/> class.
@@ -39,6 +40,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 			//we can't change default cache configuration by code, can we?
 			Check.Ensure(options == null, "MemoryCache Default instance can only be configured through app/web.config.");
 
+			_isDefaultCache = true;
 			_cache = MemoryCache.Default;
 		}
 		else
@@ -58,11 +60,26 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <value>The cache settings.</value>
 	public NameValueCollection CacheSettings => GetSettings(_cache);
 
-	/// <summary>
-	/// Gets the number of items the cache handle currently maintains.
-	/// </summary>
-	/// <value>The count.</value>
-	public override int Count => (int)_cache.GetCount();
+/// <summary>
+    /// Gets the number of items the cache handle currently maintains.
+    /// </summary>
+    /// <value>The count.</value>
+    public override int Count => (int)_cache.GetCount();
+
+    /// <summary>
+    /// 释放非托管资源，并可选择性地释放托管的缓存实例。
+    /// <para>仅释放实例自行创建的 <see cref="MemoryCache"/>，全局共享的 <see cref="MemoryCache.Default"/> 不在此列。</para>
+    /// </summary>
+    /// <param name="disposeManaged">指示是否释放托管资源。</param>
+    protected override void Dispose(bool disposeManaged)
+    {
+        if (disposeManaged && !_isDefaultCache)
+        {
+            _cache.Dispose();
+        }
+
+        base.Dispose(disposeManaged);
+    }
 
 	/// <summary>
 	/// Clears this cache, removing all items in the base cache and all regions.

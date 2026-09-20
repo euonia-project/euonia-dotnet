@@ -39,7 +39,7 @@ public class DefaultCacheManagerTest
             return "test";
         });
 
-        await Task.Delay(3000);
+        await Task.Delay(3000, TestContext.Current.CancellationToken);
 
         var result = _manager.Get<string, string>(key);
 
@@ -58,7 +58,7 @@ public class DefaultCacheManagerTest
             return "test";
         });
 
-        await Task.Delay(8000);
+        await Task.Delay(8000, TestContext.Current.CancellationToken);
 
         var result = _manager.Get<string, string>(key);
 
