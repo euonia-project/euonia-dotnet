@@ -208,29 +208,113 @@ BusinessObject<T>              — Core: rules, context, property management
 | **`PropertyInfo<T>`** | Typed property metadata: name, type, friendly name, default value, field reference |
 | **`FieldDataManager`** | Per-instance reflection-based field value management with undo history |
 | **Rule System** | Async rule validation with `RuleManager` (per-type singleton) & `Rules` (per-instance executor) |
+| **Permission System** | Operation permissions (type-level + row-level) and data permissions; grants resolved live from application data |
 | **`ObjectEditState`** | Lifecycle state machine: `None → New → Changed → Deleted` |
 | **`IObjectFactory`** | Reflection-driven CRUD factory: `[FactoryCreate]`, `[FactoryFetch]`, `[FactoryInsert]`, `[FactoryUpdate]`, `[FactoryDelete]`, `[FactoryExecute]` |
 
 #### Rule System
 
+Rules come in two kinds: **object-level** (`Property == null`, evaluated on save) and
+**property-level** (bound to a property registered via `RegisterProperty<T>`, matched by reference equality).
+
 ```csharp
 protected override void AddRules()
 {
-    Rules.AddRule<RequiredRule>(Property);
-    Rules.AddRule<RegularRule>(Email, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-    Rules.AddLambdaRule(Age, (v, ctx) => v >= 18, "Must be 18+");
+    // Object-level: parameterless ctor ⇒ Property == null
+    Rules.AddRule<PasswordStrengthRule>();
+
+    // Property-level: pass the registered PropertyInfo<T>
+    Rules.AddRule(new UsernameCheckRule(NameProperty));
+    Rules.AddRule<CommonRule.Required>(NameProperty);
+    Rules.AddRule(new CommonRule.Regular(EmailProperty, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"));
+
+    // Convenience lambda overloads (RulesExtensions)
+    Rules.AddRule<MyObject>(AgeProperty, o => o.Age >= 18, "Must be 18+");
 }
 ```
 
 | Type | Description |
 |------|-------------|
-| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), priority, and related properties |
-| `CommonRule.Lambda<T>` | Lambda-based: `(value, context) → boolean` |
+| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), `Priority`, and `RelatedProperties` |
 | `CommonRule.Required` | Non-null property validation |
 | `CommonRule.Regular` | Regex-based string validation |
-| `DataAnnotationRule` | Wraps `System.ComponentModel.DataAnnotations.ValidationAttribute` |
-| `BrokenRule` / `BrokenRuleCollection` | Validation result with severity (Error, Warning, Information) |
-| `RuleSeverity` | enum: `Error`, `Warning`, `Information`, `Success` |
+| `CommonRule.Lambda<T>` | Lambda-based property rule |
+| `DataAnnotationRule` | Wraps `System.ComponentModel.DataAnnotations.ValidationAttribute` (auto-registered by `AddDataAnnotations()`) |
+| `ExecuteOnStateAttribute` | Restricts a rule to specific `ObjectEditState` values |
+| `BrokenRule` / `BrokenRuleCollection` | Validation result with severity |
+| `RuleSeverity` | enum: `Error`, `Warning`, `Information`, `Success` — **only `Error` invalidates the object** |
+
+> Rule instances are **per-type shared singletons** (held by `RuleManager`), so rules must not hold
+> per-instance or per-request state — read everything from `context.Target → BusinessContext`.
+
+#### Permission System
+
+`Euonia.Osba` ships two complementary permission layers. **Grants are always resolved live from
+application data — never baked into tokens.**
+
+| | Operation Permission | Data Permission |
+|---|---|---|
+| Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
+| Granularity | Type-level `[Permission]` + **row-level** (per permission code) | Row-level |
+| Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
+| Failure | `SecurityException` / `ValidationException` at the rule stage | Row excluded / same |
+
+Data permission has **exactly one implementation**: a policy compiles to a single
+`Allow`/`Deny` expression pair shared by query pushdown and single-row checks.
+
+```csharp
+// 1) Grant source (implemented by the app; resolved live, cached per request)
+public sealed class MySubjectResolver : IScopeSubjectResolver
+{
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
+        => ScopeSubjectSet.CreateBuilder()
+                          .AddCodes(await GetPermissionCodesAsync(user, ct))   // permission codes
+                          .AddSelf(userId)                                     // the user themself
+                          .AddGrant("repo:delete", "repo", await GetDeletableReposAsync(user, ct))  // row-level
+                          .Build();
+}
+
+// 2) Resource declaration: model + policy in one place
+public sealed class RepoScope : ScopeModel<Repo>
+{
+    public override void Define(ScopeModelBuilder<Repo> builder)
+        => builder.Map("repo", x => x.RepoId).Map(ScopeDimensions.Dept, x => x.TeamId);
+
+    public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
+
+    public override void Declare(ScopePolicySet<Repo> policies)
+        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // row-level operation permission
+}
+
+// 3) Enforcement
+services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
+var provider = services.BuildServiceProvider();
+provider.ValidatePermissionSetup();          // fails at startup when the resolver is missing
+
+var guard = provider.GetRequiredService<IScopeGuard>();
+var visible = guard.Apply(dbContext.Repos);  // pushed down to the database
+guard.Allows(repo, "repo:delete");           // single-row check
+guard.Explain(repo, "repo:delete");          // audit: which policy matched
+```
+
+**Key design points**:
+
+- **Permission codes come from data, not tokens** — a large code set never bloats the token, and
+  **revocation takes effect immediately** without reissuing tokens.
+- **Row-level operation permissions**: map the resource identity as a dimension and declare a
+  different row range per permission code, so "A1 allows push+delete, A2 allows push only" is
+  directly expressible.
+- **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
+  (deny wins).
+- **Rule system integration**: types with a declared model get a scope rule injected
+  automatically, surfacing violations as `ValidationException`; manual registration via
+  `Rules.AddRule(new PermissionRule("repo:push"))` is also supported.
+
+Full usage, troubleshooting, and performance notes:
+[`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md).
+Design rationale and trade-offs:
+[`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md).
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
 > Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.
@@ -667,9 +751,12 @@ public class Order : EditableObject<Order>
 
     protected override void AddRules()
     {
-        Rules.AddRequiredRule(ProductNameProperty);
-        Rules.AddLambdaRule(ProductNameProperty,
-            (v, ctx) => v?.Length >= 3, "Product name must be at least 3 characters");
+        // Property-level rule: pass the PropertyInfo<T> returned by RegisterProperty (matched by reference)
+        Rules.AddRule<CommonRule.Required>(ProductNameProperty);
+
+        // Convenience lambda overload (RulesExtensions): the handler receives the business object itself
+        Rules.AddRule<Order>(ProductNameProperty,
+            order => order.ProductName?.Length >= 3, "Product name must be at least 3 characters");
     }
 }
 

@@ -208,29 +208,104 @@ BusinessObject<T>              —— 核心：规则、上下文、属性管理
 | **`PropertyInfo<T>`** | 强类型属性元数据：名称、类型、友好名、默认值、字段引用 |
 | **`FieldDataManager`** | 实例级反射字段值管理，支持撤销历史 |
 | **规则系统** | 异步规则校验，基于 `RuleManager`（类型级单例）与 `Rules`（实例级执行器） |
+| **权限体系** | 操作权限（类型级 + 行级）与数据权限，授权值从应用数据实时解析 |
 | **`ObjectEditState`** | 生命周期状态机：`None → New → Changed → Deleted` |
 | **`IObjectFactory`** | 反射驱动 CRUD 工厂：`[FactoryCreate]`、`[FactoryFetch]`、`[FactoryInsert]`、`[FactoryUpdate]`、`[FactoryDelete]`、`[FactoryExecute]` |
 
 #### 规则系统
 
+规则分**对象级**（`Property == null`，保存时执行）与**属性级**（绑定到 `RegisterProperty<T>` 注册的属性）两种。
+
 ```csharp
 protected override void AddRules()
 {
-    Rules.AddRule<RequiredRule>(Property);
-    Rules.AddRule<RegularRule>(Email, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-    Rules.AddLambdaRule(Age, (v, ctx) => v >= 18, "Must be 18+");
+    // 对象级：无参构造 ⇒ Property == null
+    Rules.AddRule<PasswordStrengthRule>();
+
+    // 属性级：传入注册过的 PropertyInfo<T>（按引用相等匹配）
+    Rules.AddRule(new UsernameCheckRule(NameProperty));
+    Rules.AddRule<CommonRule.Required>(NameProperty);
+    Rules.AddRule(new CommonRule.Regular(EmailProperty, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"));
+
+    // 便捷 Lambda 重载（RulesExtensions）
+    Rules.AddRule<MyObject>(AgeProperty, o => o.Age >= 18, "Must be 18+");
 }
 ```
 
 | 类型 | 说明 |
 |------|-------------|
-| `RuleBase` | 抽象规则，含 URI 风格名称（`rule://type/...`）、优先级及相关属性 |
-| `CommonRule.Lambda<T>` | 基于 Lambda：`(value, context) → boolean` |
+| `RuleBase` | 抽象规则基类，含 URI 风格名称（`rule://type/...`）、`Priority` 与 `RelatedProperties` |
 | `CommonRule.Required` | 非空属性校验 |
 | `CommonRule.Regular` | 基于正则的字符串校验 |
-| `DataAnnotationRule` | 包装 `System.ComponentModel.DataAnnotations.ValidationAttribute` |
-| `BrokenRule` / `BrokenRuleCollection` | 校验结果集合，含严重级别（Error、Warning、Information） |
-| `RuleSeverity` | 枚举：`Error`、`Warning`、`Information`、`Success` |
+| `CommonRule.Lambda<T>` | 基于 Lambda 的属性规则 |
+| `DataAnnotationRule` | 包装 `System.ComponentModel.DataAnnotations.ValidationAttribute`（由 `AddDataAnnotations()` 自动注册） |
+| `ExecuteOnStateAttribute` | 限定规则只在指定 `ObjectEditState` 下执行 |
+| `BrokenRule` / `BrokenRuleCollection` | 校验结果集合，含严重级别 |
+| `RuleSeverity` | 枚举：`Error`、`Warning`、`Information`、`Success`；**只有 `Error` 会让对象无效** |
+
+> 规则实例是**类型级共享的单例**（存于 `RuleManager`），因此规则不能持有实例/请求状态，
+> 一切从 `context.Target → BusinessContext` 取。
+
+#### 权限体系
+
+`Euonia.Osba` 提供两套相辅相成的权限控制，**授权值一律从应用数据实时解析，不固化在令牌里**：
+
+| | 操作权限 | 数据权限 |
+|---|---|---|
+| 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
+| 粒度 | 类型级 `[Permission]` + **行级**（按权限码的策略） | 行级 |
+| 强制点 | `BusinessObjectFactory` 调用边界 | 查询下推 + 工厂保存边界 |
+| 失败形态 | `SecurityException`／规则阶段为 `ValidationException` | 排除该行／同上 |
+
+数据权限的判定**只有一处实现**：策略编译成 `Allow`/`Deny` 一对表达式，读侧下推与单行判定共用它。
+
+```csharp
+// 1) 授权数据来源（应用实现，实时解析、按请求缓存）
+public sealed class MySubjectResolver : IScopeSubjectResolver
+{
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
+        => ScopeSubjectSet.CreateBuilder()
+                          .AddCodes(await GetPermissionCodesAsync(user, ct))   // 权限码（类型级）
+                          .AddSelf(userId)                                     // 本人
+                          .AddGrant("repo:delete", "repo", await GetDeletableReposAsync(user, ct))  // 行级
+                          .Build();
+}
+
+// 2) 资源声明：模型 + 策略写在同一处
+public sealed class RepoScope : ScopeModel<Repo>
+{
+    public override void Define(ScopeModelBuilder<Repo> builder)
+        => builder.Map("repo", x => x.RepoId).Map(ScopeDimensions.Dept, x => x.TeamId);
+
+    public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
+
+    public override void Declare(ScopePolicySet<Repo> policies)
+        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // 行级操作权限
+}
+
+// 3) 判定
+services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
+var provider = services.BuildServiceProvider();
+provider.ValidatePermissionSetup();          // 缺解析器即启动失败
+
+var guard = provider.GetRequiredService<IScopeGuard>();
+var visible = guard.Apply(dbContext.Repos);  // 下推到数据库
+guard.Allows(repo, "repo:delete");           // 单行判定
+guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
+```
+
+**关键设计**：
+
+- **权限码来自数据而非令牌**——权限码多时不撑爆 Token，且**取消授权立即生效**（无需重签令牌）。
+- **行级操作权限**：把资源标识也映射为维度，按权限码声明不同的行范围，
+  于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
+- **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
+- **与规则体系互通**：已声明模型的类型自动注入范围规则，越权以 `ValidationException` 暴露；
+  也可手工 `Rules.AddRule(new PermissionRule("repo:push"))`。
+
+完整用法、故障排查与性能注意事项见 [`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md)，
+设计动因与取舍见 [`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md)。
 
 ### Bus Abstract（Euonia.Bus.Abstract）
 > 消息总线抽象契约层：定义消息信封、上下文、约定、传输策略、注解、抽象传输接口与事件体系。所有总线模块的扩展基础。
@@ -667,9 +742,12 @@ public class Order : EditableObject<Order>
 
     protected override void AddRules()
     {
-        Rules.AddRequiredRule(ProductNameProperty);
-        Rules.AddLambdaRule(ProductNameProperty,
-            (v, ctx) => v?.Length >= 3, "产品名称至少需要3个字符");
+        // 属性级规则：传入 RegisterProperty 得到的 PropertyInfo<T>（按引用相等匹配）
+        Rules.AddRule<CommonRule.Required>(ProductNameProperty);
+
+        // 便捷 Lambda 重载（RulesExtensions）：收到的是业务对象本身
+        Rules.AddRule<Order>(ProductNameProperty,
+            order => order.ProductName?.Length >= 3, "产品名称至少需要3个字符");
     }
 }
 
