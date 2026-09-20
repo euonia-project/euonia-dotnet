@@ -73,7 +73,7 @@ internal class ActiveMqTransporter : ITransporter
 	/// <returns>表示异步操作的任务，任务结果为回复的消息。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		if (cancellationToken != CancellationToken.None)
 		{
@@ -93,28 +93,38 @@ internal class ActiveMqTransporter : ITransporter
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
-		var request = await BuildRequestAsync(session, message);
+		var request = await BuildRequestAsync(session, message, replyQueue);
 
-		await Policy.Handle<Exception>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            }).ExecuteAsync(async () =>
-		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+		try
+		{
+			await Policy.Handle<Exception>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            }).ExecuteAsync(async () =>
+			            {
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		replyConsumer.Listener -= OnReceived;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			replyConsumer.Listener -= OnReceived;
+		}
 
 		void OnReceived(IMessage replyMessage)
 		{
 			if (replyMessage is not ITextMessage reply)
 			{
-				task.SetException(new InvalidOperationException("Received message is not a text message."));
+				task.TrySetException(new InvalidOperationException("Received message is not a text message."));
+				return;
+			}
+
+			if (reply.NMSCorrelationID != message.CorrelationId)
+			{
 				return;
 			}
 
@@ -123,11 +133,11 @@ internal class ActiveMqTransporter : ITransporter
 				var response = _serializer.Deserialize<ActiveMqReply<object>>(reply.Text);
 				if (response.IsSuccess)
 				{
-					task.SetResult(default);
+					task.TrySetResult(default);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 			else
@@ -135,11 +145,11 @@ internal class ActiveMqTransporter : ITransporter
 				var response = _serializer.Deserialize<ActiveMqReply<TResponse>>(reply.Text);
 				if (response.IsSuccess)
 				{
-					task.SetResult(response.Result);
+					task.TrySetResult(response.Result);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 		}
@@ -155,7 +165,7 @@ internal class ActiveMqTransporter : ITransporter
 	/// <returns>表示异步操作的任务，任务结果为回复的消息。</returns>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		if (cancellationToken != CancellationToken.None)
 		{
@@ -175,39 +185,49 @@ internal class ActiveMqTransporter : ITransporter
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
-		var request = await BuildRequestAsync(session, message);
+		var request = await BuildRequestAsync(session, message, replyQueue);
 
-		await Policy.Handle<Exception>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            }).ExecuteAsync(async () =>
-		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+		try
+		{
+			await Policy.Handle<Exception>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            }).ExecuteAsync(async () =>
+			            {
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		replyConsumer.Listener -= OnReceived;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			replyConsumer.Listener -= OnReceived;
+		}
 
 		void OnReceived(IMessage replyMessage)
 		{
 			if (replyMessage is not ITextMessage reply)
 			{
-				task.SetException(new InvalidOperationException("Received message is not a text message."));
+				task.TrySetException(new InvalidOperationException("Received message is not a text message."));
+				return;
+			}
+
+			if (reply.NMSCorrelationID != message.CorrelationId)
+			{
 				return;
 			}
 
 			var response = _serializer.Deserialize<ActiveMqReply<TResponse>>(reply.Text);
 			if (response.IsSuccess)
 			{
-				task.SetResult(response.Result);
+				task.TrySetResult(response.Result);
 			}
 			else
 			{
-				task.SetException(response.Error);
+				task.TrySetException(response.Error);
 			}
 		}
 	}
@@ -223,7 +243,7 @@ internal class ActiveMqTransporter : ITransporter
 		request.Properties[MessageHeaders.RequestTraceId] = message.RequestTraceId;
 		request.Properties[MessageHeaders.Authorization] = message.Authorization;
 		request.Properties[MessageHeaders.Channel] = message.Channel;
-		request.Properties[MessageHeaders.UserId] = message.User.Identity?.Name;
+		request.Properties[MessageHeaders.UserId] = message.User?.Identity?.Name;
 		request.Properties[MessageHeaders.MessageType] = message.TypeName;
 		return request;
 	}

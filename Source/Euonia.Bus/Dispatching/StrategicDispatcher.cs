@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Bus;
 /// </summary>
 internal class StrategicDispatcher : IDispatcher
 {
-	private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _transportCache = new();
+	private readonly ConcurrentDictionary<(string Channel, Type Type), IReadOnlyList<string>> _transportCache = new();
 	private readonly IConfigurator _configurator;
 	private readonly MessageBusOptions _options;
 
@@ -36,13 +36,13 @@ internal class StrategicDispatcher : IDispatcher
 	/// </exception>
 	public IEnumerable<string> Determine(string channel, Type type)
 	{
-		var transportTypes = _transportCache.GetOrAdd(channel, _ =>
+		var transportTypes = _transportCache.GetOrAdd((channel, type), _ =>
 		{
 			var list = new List<string>();
 			foreach (var transport in _configurator.StrategyAssignedTypes)
 			{
 				var strategy = _configurator.GetStrategy(transport);
-				if (strategy.Outgoing(channel, type))
+				if (strategy.Outgoing(_.Item1, _.Item2))
 				{
 					list.Add(transport);
 				}

@@ -40,7 +40,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 
 	private void OnChannelRegistered(object sender, ChannelRegisteredEventArgs args)
 	{
-		if (args.Handler.HandlerType.IsInterface && args.Handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		if (args.Handler.HandlerType.IsInterface && args.Handler.HandlerType.IsGenericType && args.Handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		{
 			typeof(DefaultHandlerContext).GetMethod(nameof(Register), 3, BindingFlags.Instance | BindingFlags.NonPublic, [typeof(string)])
 			                             ?.MakeGenericMethod(args.Type, args.Handler.HandlerType.GenericTypeArguments[1], args.Handler.HandlerType)
@@ -74,17 +74,18 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 
 	private void Register(string channel, Type type, object instance, MethodInfo method)
 	{
+		var invoker = BuildHandlerInvoker(method);
+		if (invoker == null)
+		{
+			_logger.LogWarning("Handler method {Method} on channel {Channel} has more than three parameters and cannot be registered", method.Name, channel);
+			return;
+		}
+
 		HandlerDelegate Handling(IServiceProvider provider)
 		{
-			instance ??= ActivatorUtilities.GetServiceOrCreateInstance(provider, type);
+			var handler = instance ?? ActivatorUtilities.GetServiceOrCreateInstance(provider, type);
 
-			return (message, context, token) =>
-			{
-				var arguments = GetArguments(method, message, context, token);
-				var expression = MethodInvokerBuilder.BuildCallExpression(instance, method, arguments);
-
-				return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
-			};
+			return (message, context, token) => invoker(handler, message, context, token);
 		}
 
 		_handlerContainer.GetOrAdd(channel, _ => []).Add(Handling);
@@ -101,7 +102,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	{
 		HandlerFactory handling;
 
-		if (channelHandler.HandlerType.IsInterface && channelHandler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		if (channelHandler.HandlerType.IsInterface && channelHandler.HandlerType.IsGenericType && channelHandler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		{
 			var messageType = channelHandler.HandlerType.GenericTypeArguments[0];
 			var handleAsyncMethod = channelHandler.HandlerType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)])!;
@@ -130,17 +131,18 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 		}
 		else
 		{
+			var invoker = BuildHandlerInvoker(channelHandler.Method);
+			if (invoker == null)
+			{
+				_logger.LogWarning("Handler method {Method} on channel {Channel} has more than three parameters and cannot be registered", channelHandler.Method.Name, channel);
+				return;
+			}
+
 			handling = provider =>
 			{
 				var instance = channelHandler.Instance ?? ActivatorUtilities.GetServiceOrCreateInstance(provider, channelHandler.HandlerType);
 
-				return (message, context, token) =>
-				{
-					var arguments = GetArguments(channelHandler.Method, message, context, token);
-					var expression = MethodInvokerBuilder.BuildCallExpression(instance, channelHandler.Method, arguments);
-
-					return Expression.Lambda<Func<Task<object>>>(expression).Compile()();
-				};
+				return (message, context, token) => invoker(instance, message, context, token);
 			};
 		}
 
@@ -203,66 +205,73 @@ internal sealed class DefaultHandlerContext : IHandlerContext
 	#region Supports
 
 	/// <summary>
+	/// 为指定的处理程序方法构建一次性编译的调用器。
+	/// </summary>
+	/// <param name="method">要调用的处理程序方法。</param>
+	/// <returns>
+	/// 返回可复用的 <c>Func&lt;object, object, IMessageContext, CancellationToken, Task&lt;object&gt;&gt;</c> 委托；
+	/// 当方法参数超过三个（不支持）时返回 <c>null</c>。
+	/// </returns>
+	private static Func<object, object, IMessageContext, CancellationToken, Task<object>> BuildHandlerInvoker(MethodInfo method)
+	{
+		var instanceParam = Expression.Parameter(typeof(object), "instance");
+		var messageParam = Expression.Parameter(typeof(object), "message");
+		var contextParam = Expression.Parameter(typeof(IMessageContext), "context");
+		var tokenParam = Expression.Parameter(typeof(CancellationToken), "token");
+
+		var arguments = GetArguments(method, messageParam, contextParam, tokenParam);
+		if (arguments == null)
+		{
+			return null;
+		}
+
+		var call = MethodInvokerBuilder.BuildCallExpression(instanceParam, method, arguments);
+		return Expression.Lambda<Func<object, object, IMessageContext, CancellationToken, Task<object>>>(
+			call, instanceParam, messageParam, contextParam, tokenParam).Compile();
+	}
+
+	/// <summary>
 	/// 构建用于调用处理程序方法的 <see cref="Expression"/> 参数数组。
 	/// 该方法最多支持三个参数，参数位置根据类型解析：
-	/// - 匹配 <see cref="MessageContext"/> 类型的参数将接收传入的 <paramref name="context"/> 实例。
-	/// - 匹配 <see cref="CancellationToken"/> 类型的参数将接收传入的 <paramref name="cancellationToken"/>。
-	/// - 其余任何参数将接收 <paramref name="message"/> 实例。
+	/// - 匹配 <see cref="CancellationToken"/> 类型的参数将接收传入的 <paramref name="token"/> 表达式。
+	/// - 匹配 <see cref="IMessageContext"/>（或其具体类型）的参数将接收传入的 <paramref name="context"/> 表达式。
+	/// - 其余任何参数将接收 <paramref name="message"/> 表达式。
 	/// </summary>
 	/// <param name="method">表示要调用的处理程序方法的 <see cref="MethodInfo"/>。</param>
-	/// <param name="message">要传递给处理程序的消息对象。</param>
-	/// <param name="context">当方法需要时传递给处理程序的 <see cref="MessageContext"/> 实例。</param>
-	/// <param name="cancellationToken">当方法需要时传递给处理程序的 <see cref="CancellationToken"/>。</param>
+	/// <param name="message">表示要传递给处理程序的消息对象的表达式。</param>
+	/// <param name="context">表示要传递给处理程序的 <see cref="IMessageContext"/> 的表达式。</param>
+	/// <param name="token">表示要传递给处理程序的 <see cref="CancellationToken"/> 的表达式。</param>
 	/// <returns>
 	/// 与方法参数对应的 <see cref="Expression"/> 数组；当方法参数超过三个（不支持）时返回 <c>null</c>。
 	/// </returns>
-	private static Expression[] GetArguments(MethodInfo method, object message, IMessageContext context, CancellationToken cancellationToken)
+	private static Expression[] GetArguments(MethodInfo method, Expression message, Expression context, Expression token)
 	{
 		var parameterInfos = method.GetParameters();
-		var arguments = new Expression[parameterInfos.Length];
-		switch (parameterInfos.Length)
+		if (parameterInfos.Length > 3)
 		{
-			case 0:
-				break;
-			case 1:
+			return null;
+		}
+
+		var arguments = new Expression[parameterInfos.Length];
+		for (var index = 0; index < parameterInfos.Length; index++)
+		{
+			var parameterType = parameterInfos[index].ParameterType;
+
+			Expression argument;
+			if (parameterType == typeof(CancellationToken))
 			{
-				var parameterType = parameterInfos[0].ParameterType;
-
-				if (parameterType == typeof(IMessageContext))
-				{
-					arguments[0] = Expression.Constant(context);
-				}
-				else if (parameterType == typeof(CancellationToken))
-				{
-					arguments[0] = Expression.Constant(cancellationToken);
-				}
-				else
-				{
-					arguments[0] = Expression.Constant(message);
-				}
+				argument = token;
 			}
-				break;
-			case 2:
-			case 3:
+			else if (parameterType == typeof(IMessageContext) || context.Type.IsAssignableFrom(parameterType))
 			{
-				arguments[0] ??= Expression.Constant(message);
-
-				for (var index = 1; index < parameterInfos.Length; index++)
-				{
-					if (parameterInfos[index].ParameterType == typeof(IMessageContext))
-					{
-						arguments[index] = Expression.Constant(context);
-					}
-
-					if (parameterInfos[index].ParameterType == typeof(CancellationToken))
-					{
-						arguments[index] = Expression.Constant(cancellationToken);
-					}
-				}
+				argument = context;
 			}
-				break;
-			default:
-				return null;
+			else
+			{
+				argument = message;
+			}
+
+			arguments[index] = argument.Type != parameterType ? Expression.Convert(argument, parameterType) : argument;
 		}
 
 		return arguments;

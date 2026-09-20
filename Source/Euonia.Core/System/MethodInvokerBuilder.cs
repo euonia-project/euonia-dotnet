@@ -68,6 +68,22 @@ public static class MethodInvokerBuilder
     }
 
     /// <summary>
+    /// 为指定的目标和方向构建调用表达式。
+    /// </summary>
+    /// <param name="target">调用方法的目标对象表达式。</param>
+    /// <param name="method">要调用的方法。</param>
+    /// <param name="arguments">传递给方法的参数表达式。</param>
+    /// <returns>返回一个表示调用的表达式。</returns>
+    public static Expression BuildCallExpression(Expression target, MethodInfo method, params Expression[] arguments)
+    {
+        Expression callExp = method.IsStatic
+            ? Expression.Call(method, arguments)
+            : Expression.Call(Expression.Convert(target, method.DeclaringType!), method, arguments);
+
+        return WrapToTaskObject(callExp, method.ReturnType);
+    }
+
+    /// <summary>
     /// 将调用表达式包装为返回 Task&lt;object&gt; 的形式。
     /// </summary>
     /// <param name="callExp">要包装的调用表达式。</param>

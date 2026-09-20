@@ -100,15 +100,20 @@ public static partial class Extensions
 	/// <returns>返回枚举值的显示名称。</returns>
 	public static string GetDisplayName(this Enum @enum)
 	{
-		var name = PriorityValueFinder.Find(queue =>
+		var name = @enum.GetAttribute<DisplayAttribute>()?.GetName();
+		if (!string.IsNullOrWhiteSpace(name))
 		{
-			queue.Enqueue(() => @enum.GetAttribute<DisplayAttribute>()?.GetName(), 1);
-			queue.Enqueue(() => @enum.GetAttribute<DisplayNameAttribute>()?.DisplayName, 2);
-			queue.Enqueue(() => @enum.GetAttribute<DescriptionAttribute>()?.Description, 3);
-		}, value => !string.IsNullOrWhiteSpace(value), @enum.ToString());
+			return name;
+		}
 
-		var attribute = @enum.GetAttribute<DisplayNameAttribute>();
-		return attribute?.DisplayName ?? @enum.ToString();
+		name = @enum.GetAttribute<DisplayNameAttribute>()?.DisplayName;
+		if (!string.IsNullOrWhiteSpace(name))
+		{
+			return name;
+		}
+
+		name = @enum.GetAttribute<DescriptionAttribute>()?.Description;
+		return string.IsNullOrWhiteSpace(name) ? @enum.ToString() : name;
 	}
 
 	/// <summary>

@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Bus.Tests.Commands;
+using Nerosoft.Euonia.Bus.Tests.Events;
+using Nerosoft.Euonia.Bus.Tests.Handlers;
 using Nerosoft.Euonia.Bus.Tests.Requests;
 
 namespace Nerosoft.Euonia.Bus.Tests;
@@ -190,6 +192,29 @@ public class ServiceBusTests
 			});
 
 			Assert.Equal("User not found", exception.Message);
+		}
+	}
+
+	[Fact]
+	public async Task TestPublishMulticast_EventDeliveredToSubscribers()
+	{
+		if (_preventRunTests)
+		{
+			Assert.True(true);
+		}
+		else
+		{
+			await Task.Delay(1000, TestContext.Current.CancellationToken);
+
+			UserEventListener.Received.Clear();
+
+			var @event = new UserCreatedEvent { UserId = "u-1" };
+			await _bus.PublishAsync(@event, new PublishOptions { Channel = "user.created" }, TestContext.Current.CancellationToken);
+
+			// 多播订阅者通过弱引用信使接收消息，注册器必须持有订阅者实例，
+			// 否则订阅者会因仅被弱引用而立即被回收，导致发布的消息永远无法送达。
+			await Task.Delay(200, TestContext.Current.CancellationToken);
+			Assert.Contains(@event, UserEventListener.Received);
 		}
 	}
 }

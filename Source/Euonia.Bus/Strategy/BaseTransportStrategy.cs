@@ -110,10 +110,10 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// </summary>
 	private class StrategyCache
 	{
-		private readonly ConcurrentDictionary<string, bool> _cache = new();
+		private readonly ConcurrentDictionary<(string Channel, Type Type), bool> _cache = new();
 
 		/// <summary>
-		/// 将指定的策略应用到给定的通道上，并缓存结果。
+		/// 将指定的策略应用到给定的通道和消息类型上，并缓存结果。
 		/// </summary>
 		/// <param name="channel">要评估的通道名称。</param>
 		/// <param name="type">要检查的消息类型。</param>
@@ -121,7 +121,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		/// <returns>缓存或新计算出的策略结果。</returns>
 		public bool Apply(string channel, Type type, Func<string, Type, bool> strategy)
 		{
-			return _cache.GetOrAdd(channel, key => strategy(key, type));
+			return _cache.GetOrAdd((channel, type), key => strategy(key.Item1, key.Item2));
 		}
 
 		/// <summary>

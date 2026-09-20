@@ -90,7 +90,7 @@ internal class RabbitMqTransporter : ITransporter
 	/// <returns>表示异步发送操作并返回强类型响应的任务。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		if (cancellationToken != CancellationToken.None)
 		{
@@ -110,26 +110,31 @@ internal class RabbitMqTransporter : ITransporter
 
 		var props = BuildProperties(message, responseQueueName);
 
-		await Policy.Handle<SocketException>()
-		            .Or<TimeoutException>()
-		            .Or<BrokerUnreachableException>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            })
-		            .ExecuteAsync(async () =>
-		            {
-			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+		try
+		{
+			await Policy.Handle<SocketException>()
+			            .Or<TimeoutException>()
+			            .Or<BrokerUnreachableException>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            })
+			            .ExecuteAsync(async () =>
+			            {
+				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
+				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		consumer.ReceivedAsync -= OnReceivedAsync;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			consumer.ReceivedAsync -= OnReceivedAsync;
+		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
 		{
@@ -145,11 +150,11 @@ internal class RabbitMqTransporter : ITransporter
 				var response = _serializer.Deserialize<RabbitMqReply<object>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
-					task.SetResult(default);
+					task.TrySetResult(default);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 			else
@@ -157,11 +162,11 @@ internal class RabbitMqTransporter : ITransporter
 				var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
-					task.SetResult(response.Result);
+					task.TrySetResult(response.Result);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 
@@ -180,7 +185,7 @@ internal class RabbitMqTransporter : ITransporter
 	/// <exception cref="NotImplementedException">始终抛出，此方法当前未实现。</exception>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		if (cancellationToken != CancellationToken.None)
 		{
@@ -200,26 +205,31 @@ internal class RabbitMqTransporter : ITransporter
 
 		var props = BuildProperties(message, responseQueueName);
 
-		await Policy.Handle<SocketException>()
-		            .Or<TimeoutException>()
-		            .Or<BrokerUnreachableException>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            })
-		            .ExecuteAsync(async () =>
-		            {
-			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+		try
+		{
+			await Policy.Handle<SocketException>()
+			            .Or<TimeoutException>()
+			            .Or<BrokerUnreachableException>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            })
+			            .ExecuteAsync(async () =>
+			            {
+				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
+				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		consumer.ReceivedAsync -= OnReceivedAsync;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			consumer.ReceivedAsync -= OnReceivedAsync;
+		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
 		{
@@ -233,11 +243,11 @@ internal class RabbitMqTransporter : ITransporter
 			var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
 			if (response.IsSuccess)
 			{
-				task.SetResult(response.Result);
+				task.TrySetResult(response.Result);
 			}
 			else
 			{
-				task.SetException(response.Error);
+				task.TrySetException(response.Error);
 			}
 
 			await Task.CompletedTask;

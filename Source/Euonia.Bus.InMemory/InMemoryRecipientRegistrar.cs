@@ -37,6 +37,16 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	private readonly ILogger<InMemoryRecipientRegistrar> _logger;
 
 	/// <summary>
+	/// 按接收者类型复用的接收者实例（当 <see cref="InMemoryBusOptions.MultipleSubscriberInstance"/> 为 <c>false</c> 时）。
+	/// </summary>
+	private readonly ConcurrentDictionary<Type, object> _recipients = new();
+
+	/// <summary>
+	/// 持有所有已创建的接收者实例，防止多播订阅者因仅被弱引用信使引用而被提前回收。
+	/// </summary>
+	private readonly ConcurrentQueue<object> _aliveRecipients = new();
+
+	/// <summary>
 	/// 初始化 <see cref="InMemoryRecipientRegistrar"/> 类的新实例。
 	/// </summary>
 	/// <param name="configurator">提供约定和策略解析的消息总线配置器。</param>
@@ -69,12 +79,10 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// <exception cref="MessageTypeException">当消息类型不符合队列/主题/请求约定时抛出。</exception>
 	public async Task RegisterAsync(IDictionary<string, ChannelRegistration> registrations, string defaultTransporter, CancellationToken cancellationToken = default)
 	{
-		var recipients = new ConcurrentDictionary<Type, object>();
-
 		foreach (var (channel, registration) in registrations)
 		{
 			_logger.LogDebug("[InMemoryRecipientRegistrar] Registering {MessageType} on channel {Channel}", registration.MessageType.FullName, channel);
-			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
+			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.OrdinalIgnoreCase))
 			{
 				if (_strategy == null || !_strategy.Incoming(channel, registration.MessageType))
 				{
@@ -108,19 +116,17 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 
 		// 解析或复用接收者实例的辅助方法。
 		// 如果允许每个订阅者创建多个实例（_options.MultipleSubscriberInstance == true），
-		// 则每次都从服务提供程序返回新实例。否则按接收者类型在本地 ConcurrentDictionary 中
-		// 存储单例并复用。
+		// 则每次都从服务提供程序返回新实例。否则按接收者类型在本注册器的 ConcurrentDictionary 中
+		// 存储单例并复用。所有已创建的实例都会被强引用持有，防止多播订阅者被提前回收。
 		TRecipient GetRecipient<TRecipient>()
 			where TRecipient : InMemoryRecipient<TRecipient>, IRecipient
 		{
-			if (_options.MultipleSubscriberInstance)
-			{
-				return _provider.GetService<TRecipient>();
-			}
-			else
-			{
-				return (TRecipient)recipients.GetOrAdd(typeof(TRecipient), _ => _provider.GetService<TRecipient>());
-			}
+			var recipient = _options.MultipleSubscriberInstance
+				? _provider.GetRequiredService<TRecipient>()
+				: (TRecipient)_recipients.GetOrAdd(typeof(TRecipient), _ => _provider.GetRequiredService<TRecipient>());
+
+			_aliveRecipients.Enqueue(recipient);
+			return recipient;
 		}
 
 		await Task.CompletedTask;

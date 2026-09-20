@@ -67,11 +67,12 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			Aborted = cancellationToken
 		};
 
-		var taskCompletion = new TaskCompletionSource();
+		var taskCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.SetCanceled(cancellationToken));
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken));
 		}
 
 		context.Failed += (_, exception) =>
@@ -88,7 +89,14 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
-		await taskCompletion.Task;
+		try
+		{
+			await taskCompletion.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+		}
 	}
 
 	/// <summary>
@@ -109,10 +117,11 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		};
 
 		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
-		var taskCompletion = new TaskCompletionSource<TResponse>();
+		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken), false);
 		}
 
 		try
@@ -129,6 +138,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			context.Responded -= OnResponded;
 			context.Failed -= OnFailed;
 			context.Completed -= OnCompleted;
@@ -171,24 +181,31 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		};
 
 		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
-		var taskCompletion = new TaskCompletionSource<TResponse>();
+		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken), false);
 		}
 
 		context.Responded += OnResponded;
 		context.Failed += OnFailed;
 		context.Completed += OnCompleted;
 
-		StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+		try
+		{
+			StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
-		var result = await taskCompletion.Task;
-		context.Responded -= OnResponded;
-		context.Failed -= OnFailed;
-		context.Completed -= OnCompleted;
-		return result;
+			return await taskCompletion.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			context.Responded -= OnResponded;
+			context.Failed -= OnFailed;
+			context.Completed -= OnCompleted;
+		}
 
 		void OnResponded(object sender, MessageRepliedEventArgs args)
 		{
