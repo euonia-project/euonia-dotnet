@@ -76,11 +76,51 @@ public class SensitiveDataMaskerTests
 		Assert.NotNull(result[nameof(CyclicNode.Child)]);
 	}
 
+	[Fact]
+	public void Mask_Opaque_FrameworkType_ShouldUseTypeNamePlaceholder()
+	{
+		var outer = new OuterCommand { Name = "outer" };
+		outer.InnerRef = new Uri("https://example.com/plain");
+
+		var result = SensitiveDataMasker.Mask(outer) as IDictionary<string, object>;
+
+		Assert.NotNull(result);
+		var placeholder = Assert.IsAssignableFrom<string>(result[nameof(OuterCommand.InnerRef)]);
+		Assert.Contains("Uri", placeholder);
+		Assert.DoesNotContain("plain", placeholder);
+	}
+
+	[Fact]
+	public void Mask_SensitiveClass_ShouldMaskWholeObject()
+	{
+		var secret = new WholeSensitiveCommand { PublicName = "x" };
+
+		var result = SensitiveDataMasker.Mask(secret);
+
+		Assert.Equal("***", result);
+	}
+
+	[Fact]
+	public void Mask_RepeatedCalls_ShouldBeStable()
+	{
+		var command = new LoginCommand { Username = "alice", Password = "plain" };
+
+		var first = SensitiveDataMasker.Mask(command) as IDictionary<string, object>;
+		var second = SensitiveDataMasker.Mask(command) as IDictionary<string, object>;
+
+		Assert.NotNull(first);
+		Assert.NotNull(second);
+		Assert.Equal(first[nameof(LoginCommand.Username)], second[nameof(LoginCommand.Username)]);
+		Assert.Equal(first[nameof(LoginCommand.Password)], second[nameof(LoginCommand.Password)]);
+	}
+
 	private sealed class OuterCommand
 	{
 		public string Name { get; set; }
 
 		public InnerCommand Inner { get; set; }
+
+		public object InnerRef { get; set; }
 	}
 
 	private sealed class InnerCommand
@@ -89,6 +129,12 @@ public class SensitiveDataMaskerTests
 
 		[SensitiveData(Mask = "###")]
 		public string Secret { get; set; }
+	}
+
+	[SensitiveData]
+	private sealed class WholeSensitiveCommand
+	{
+		public string PublicName { get; set; }
 	}
 
 	private sealed class CyclicNode

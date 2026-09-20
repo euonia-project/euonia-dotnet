@@ -336,3 +336,51 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **掩码性能**：`SensitiveDataMasker` 每次调用全量反射读取属性值（示例对象图较小）；若用于高吞吐入参日志，可缓存成员反射信息或以表达式树编译属性读取器。
 - **不透明命名空间策略**：`System`/`Microsoft` 等整类掩码可能吞掉有诊断价值的框架类型；如需细粒度可从掩码改为「类型名 + 掩码」占位。
 - **`TracingInterceptor` 链路 ID 集成**：`CorrelationIdBehavior` 已把标识写入元数据，但追踪日志（`TraceInfo`）尚未携带 CorrelationId；如需按链路聚合可让 `TracingInterceptor` 读取当前请求/元数据后一并输出。
+
+---
+
+# 第五部分 实用功能增强（四）
+
+对 Euonia.Application 追加第四批实用功能：方法结果缓存拦截器、追踪日志链路 ID 集成、脱敏器不透明类型占位 + 反射缓存。全程先补测试后实现，全仓无回归。
+
+## 二十一、方法结果缓存：`[Cache]` + `CacheInterceptor`（落地遗留项）
+
+新增 `Attributes/CacheAttribute.cs`（`AttributeTargets.Method`）与 `Interceptors/CacheInterceptor.cs`，基于 `Euonia.Caching` 的 `ICacheService` 实现方法级结果缓存（`Euonia.Application.csproj` 新增对 `Euonia.Caching` 的 `ProjectReference`；Caching 仅依赖 `Euonia.Core`，无循环依赖）：
+
+- **缓存键**：`Key` 模板支持 `{service}`（服务类型全名）、`{method}`（方法名）与 `{0}`、`{1}`…（按序参数；复杂参数经 `JsonSerializer.Serialize`）；未设置时默认 `{service}.{method}:arg1|arg2`；
+- **过期**：`TimeoutSeconds` 大于 0 时写 TTL，否则不设有效期；`IsUtc` 保留以兼容扩展；
+- **命中路径**：`TryServeFromCache<T>` 命中直接把缓存值写回 `invocation.ReturnValue`，且**不再执行方法体**：`Task<T>` 返回 `Task.FromResult`、`ValueTask<T>` 返回已完成 `ValueTask`、同步返回原值；
+- **写回**：同步方法直接 `AddOrUpdate`；异步方法经 `WriteBackAsync<T>` 在任务 `ContinueWith`（`TaskScheduler.Default`）成功完成后回写，避免阻塞调用线程；
+- **退化**：未注册 `ICacheService`、`void`/非泛型 `Task`/`ValueTask` 方法、`null` 结果一律跳过（`null` 不缓存，防止缓存击穿占位）。
+
+测试（新增 `CacheInterceptorTests.cs`，7 用例）：同步/异步命中第 2 次不再执行方法体、不同实参产生不同键、自定义 Key 模板、`{service}.{method}` 占位替换、未注册缓存服务退化为直接执行、`void` 方法不缓存不抛（写回为异步 continuation，测试经轮询等待缓存落盘后再断言）。`FakeCacheService` 为测试项目内最小内存实现，仅覆盖同步成员。
+
+## 二十二、追踪日志链路 ID 集成（落地遗留项）
+
+`TracingInterceptor`（`Interceptors/TracingInterceptor.cs`）在输出 `TraceInfo` 时先读取 `IRequestContextAccessor.Context` 中的 `RequestTraceId`（`X-Request-Trace-Id` 头，缺省回退 `TraceIdentifier`）与 `CorrelationId`（`X-Correlation-ID` 头），拼入 Debug 日志，使同一链路的日志可按标识聚合。
+
+测试（`InterceptorTests.cs`，2 新增）：带 `X-Request-Trace-Id` + `X-Correlation-ID` 时同时输出两个标识；仅 `TraceIdentifier` 时只输出 TraceId。
+
+## 二十三、脱敏器增强：不透明类型占位 + 反射缓存（落地遗留项）
+
+`SensitiveDataMasker`（`Interceptors/SensitiveDataMasker.cs`）两项增强：
+
+- **不透明类型占位**：`System`/`Microsoft`/`Newtonsoft`/`Castle` 等命名空间的类型不再整类替换为 `***`，改为 `类型名:掩码`（如 `Uri:***`），既避免展开庞大的运行时结构，又保留可辨识来源（诊断价值不丢失）；
+- **反射缓存**：按类型缓存成员描述符（属性/字段名 + getter + 敏感标识），避免每次掩码全量反射（`ConcurrentDictionary<Type, MemberDescriptor[]>`）。
+
+测试（`SensitiveDataMaskerTests.cs`，3 新增）：框架类型（`System.Uri`）输出类型名占位且不含明文、类型级 `[SensitiveData]` 整体掩码、重复调用结果稳定（缓存路径一致）。原掩码语义（敏感属性/字段、循环引用、深度上限）回归不变。
+
+## 二十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **109/109**（97 → 109，新增 12） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十五、遗留观察（未改动，供后续决策）
+
+- **缓存失效策略**：`CacheInterceptor` 仅支持按 TTL 过期，暂无主动删除/缓存版号失效；若需可在 `ICacheService` 之上提供版本化键或事件驱动失效。
+- **`CacheAttribute` 的 `IsUtc` 字段**：当前仅面向相对 TTL 语义保留，绝对时钟过期（如 `DateTime` 形式）尚未接线。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。

@@ -48,6 +48,25 @@ public class TracingInterceptor : IInterceptor
 		if (_contextAccessor != null && _logger.IsEnabled(LogLevel.Debug))
 		{
 			var traceInfoBuilder = new StringBuilder();
+
+			// 携带链路标识，便于跨服务聚合追踪日志。
+			var requestContext = _contextAccessor.Context;
+			if (requestContext != null)
+			{
+				var traceId = requestContext.Headers?.TryGetValue("X-Request-Trace-Id") ?? requestContext.TraceIdentifier;
+				var correlationId = requestContext.Headers?.TryGetValue("X-Correlation-ID");
+
+				if (!string.IsNullOrEmpty(traceId))
+				{
+					traceInfoBuilder.AppendLine($"RequestTraceId: {traceId}");
+				}
+
+				if (!string.IsNullOrEmpty(correlationId))
+				{
+					traceInfoBuilder.AppendLine($"CorrelationId: {correlationId}");
+				}
+			}
+
 			var trace = new StackTrace();
 			var frames = trace.GetFrames();
 			foreach (var frame in frames)

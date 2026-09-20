@@ -16,6 +16,7 @@ public class ApplicationModule : ModuleContextBase
 		context.Services.AddTransient<IInterceptor, ValidationInterceptor>();
 		context.Services.AddTransient<IInterceptor, TracingInterceptor>();
 		context.Services.AddTransient<IInterceptor, LockInterceptor>();
+		context.Services.AddTransient<IInterceptor, CacheInterceptor>();
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UserContextBehavior<,>));
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(CorrelationIdBehavior<,>));

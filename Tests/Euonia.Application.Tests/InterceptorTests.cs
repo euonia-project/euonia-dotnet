@@ -165,6 +165,54 @@ public class InterceptorTests
 	}
 
 	[Fact]
+	public void TracingInterceptor_WithCorrelationId_ShouldLogTraceMetadata()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var accessor = new StubRequestContextAccessor
+		{
+			Context = new RequestContext
+			{
+				Headers = new Dictionary<string, string>
+				{
+					["X-Request-Trace-Id"] = "trace-9",
+					["X-Correlation-ID"] = "corr-9"
+				}
+			}
+		};
+		var interceptor = new TracingInterceptor(loggerFactory, accessor);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.Echo("hello");
+
+		Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Debug
+			&& entry.Message.Contains("TraceInfo")
+			&& entry.Message.Contains("trace-9")
+			&& entry.Message.Contains("corr-9"));
+	}
+
+	[Fact]
+	public void TracingInterceptor_WithTraceIdentifierButNoCorrelation_ShouldLogTraceIdOnly()
+	{
+		using var container = CreateCapturingProvider(out var logger);
+		var loggerFactory = container.GetRequiredService<ILoggerFactory>();
+		var accessor = new StubRequestContextAccessor
+		{
+			Context = new RequestContext { TraceIdentifier = "trace-42" }
+		};
+		var interceptor = new TracingInterceptor(loggerFactory, accessor);
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateClassProxy<InterceptedTarget>(interceptor);
+
+		proxy.Echo("hello");
+
+		Assert.Contains(logger.Entries, entry => entry.Level == LogLevel.Debug
+			&& entry.Message.Contains("TraceInfo")
+			&& entry.Message.Contains("trace-42"));
+	}
+
+	[Fact]
 	public void LoggingInterceptor_SensitiveKeyword_ShouldMaskArgument()
 	{
 		using var container = CreateCapturingProvider(out var logger);
