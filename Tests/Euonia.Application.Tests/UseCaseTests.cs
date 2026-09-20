@@ -1,0 +1,191 @@
+using Nerosoft.Euonia.Application;
+
+namespace Nerosoft.Euonia.Application.Tests;
+
+public record GreetingInput(string Name);
+
+public record GreetingOutput(string Text);
+
+/// <summary>
+/// 有输入有输出的用例。
+/// </summary>
+public class GreetingUseCase : IUseCase<GreetingInput, GreetingOutput>
+{
+	public Task<GreetingOutput> ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
+	{
+		return Task.FromResult(new GreetingOutput($"Hello {input.Name}"));
+	}
+}
+
+/// <summary>
+/// 无输出（只执行）的用例。
+/// </summary>
+public class FlagUseCase : INonOutputUseCase<GreetingInput>
+{
+	public static int Calls;
+
+	public Task ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
+	{
+		Interlocked.Increment(ref Calls);
+		return Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 无输入、有输出的用例。
+/// </summary>
+public class ClockUseCase : INonInputUseCase<GreetingOutput>
+{
+	public Task<GreetingOutput> ExecuteAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.FromResult(new GreetingOutput("now"));
+	}
+}
+
+/// <summary>
+/// 无输入无输出的用例。
+/// </summary>
+public class NoopUseCase : IParameterlessUseCase
+{
+	public static int Calls;
+
+	public Task ExecuteAsync(CancellationToken cancellationToken = default)
+	{
+		Interlocked.Increment(ref Calls);
+		return Task.CompletedTask;
+	}
+}
+
+public class UseCaseTests
+{
+	[Fact]
+	public async Task TypedUseCase_ShouldReturnOutput()
+	{
+		var useCase = new GreetingUseCase();
+
+		var output = await useCase.ExecuteAsync(new GreetingInput("Alice"), TestContext.Current.CancellationToken);
+
+		Assert.Equal("Hello Alice", output.Text);
+	}
+
+	[Fact]
+	public async Task NonGenericEntry_ShouldRouteToTypedUseCase()
+	{
+		var useCase = new GreetingUseCase();
+		var nonGeneric = (IUseCase)useCase;
+
+		var result = await nonGeneric.ExecuteAsync(new GreetingInput("Bob"), TestContext.Current.CancellationToken);
+
+		Assert.IsType<GreetingOutput>(result);
+		Assert.Equal("Hello Bob", ((GreetingOutput)result).Text);
+	}
+
+	[Fact]
+	public async Task NonOutputUseCase_ShouldReturnEmptyOutput()
+	{
+		FlagUseCase.Calls = 0;
+		var useCase = new FlagUseCase();
+
+		await useCase.ExecuteAsync(new GreetingInput("Eve"), TestContext.Current.CancellationToken);
+
+		Assert.Equal(1, FlagUseCase.Calls);
+
+		// 非泛型入口返回 EmptyUseCaseOutput（INonOutputUseCase 适配）。
+		var nonGeneric = (IUseCase)useCase;
+		var result = await nonGeneric.ExecuteAsync(new GreetingInput("Eve"), TestContext.Current.CancellationToken);
+		Assert.IsType<EmptyUseCaseOutput>(result);
+	}
+
+	[Fact]
+	public async Task NonInputUseCase_ShouldIgnoreEmptyInput()
+	{
+		var useCase = new ClockUseCase();
+
+		var output = await useCase.ExecuteAsync(TestContext.Current.CancellationToken);
+
+		Assert.Equal("now", output.Text);
+	}
+
+	[Fact]
+	public async Task ParameterlessUseCase_ShouldReturnEmptyInputAndOutput()
+	{
+		NoopUseCase.Calls = 0;
+		var useCase = new NoopUseCase();
+
+		await useCase.ExecuteAsync(TestContext.Current.CancellationToken);
+
+		Assert.Equal(1, NoopUseCase.Calls);
+
+		// 通过非泛型入口调用应能得到 EmptyUseCaseOutput。
+		var nonGeneric = (IUseCase)useCase;
+		var result = await nonGeneric.ExecuteAsync(new EmptyUseCaseInput(), TestContext.Current.CancellationToken);
+		Assert.IsType<EmptyUseCaseOutput>(result);
+	}
+}
+
+[Collection("AppTests")]
+public class DefaultUseCasePresenterTests
+{
+	[Fact]
+	public void Ok_ShouldSetOutputAndRaiseOnSucceed()
+	{
+		var presenter = new DefaultUseCasePresenter<string>();
+		var raised = false;
+		presenter.OnSucceed += (_, output) =>
+		{
+			raised = output == "result";
+		};
+
+		presenter.Ok("result");
+
+		Assert.True(raised);
+		Assert.Equal("result", presenter.Output);
+	}
+
+	[Fact]
+	public void Error_OrdinaryException_ShouldRaiseOnFailed()
+	{
+		var presenter = new DefaultUseCasePresenter<string>();
+		var raised = false;
+		presenter.OnFailed += (_, _) => raised = true;
+
+		presenter.Error(new InvalidOperationException("boom"));
+
+		Assert.True(raised);
+	}
+
+	[Fact]
+	public void Error_CancellationException_ShouldRaiseOnCanceled()
+	{
+		var presenter = new DefaultUseCasePresenter<string>();
+		var raised = false;
+		presenter.OnCanceled += (_, _) => raised = true;
+
+		presenter.Error(new OperationCanceledException());
+
+		Assert.True(raised);
+	}
+
+	[Fact]
+	public void Dispose_ShouldDetachAllEventHandlers()
+	{
+		var presenter = new DefaultUseCasePresenter<string>();
+		var raised = false;
+		presenter.OnSucceed += (_, _) => raised = true;
+
+		presenter.Dispose();
+		presenter.Ok("result");
+
+		Assert.False(raised);
+	}
+
+	[Fact]
+	public void Ok_WithoutSubscribers_ShouldNotThrow()
+	{
+		var presenter = new DefaultUseCasePresenter<string>();
+
+		presenter.Ok("result");
+		presenter.Error(new InvalidOperationException());
+		presenter.Error(new OperationCanceledException());
+	}
+}
