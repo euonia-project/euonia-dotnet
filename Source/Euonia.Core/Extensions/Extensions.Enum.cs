@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Reflection;
 using System.Resources;
@@ -64,6 +65,50 @@ public static partial class Extensions
 		var key = attribute?.Description ?? @enum.ToString();
 		var value = resourceManager.GetString(key, resourceCulture);
 		return value;
+	}
+
+	/// <summary>
+	/// 获取指定枚举值的本地化描述。
+	/// </summary>
+	/// <param name="enum"></param>
+	/// <param name="resourceType"></param>
+	/// <returns></returns>
+	/// <exception cref="NullReferenceException"></exception>
+	public static string GetDescription(this Enum @enum, Type resourceType)
+	{
+		var field = @enum.GetType().GetField(@enum.ToString());
+		if (field == null)
+		{
+			throw new NullReferenceException($"Field '{@enum}' not defined.");
+		}
+
+		var attribute = field.GetCustomAttribute<DescriptionAttribute>();
+		var key = attribute?.Description ?? @enum.ToString();
+		var property = resourceType.GetProperty(key, BindingFlags.Public | BindingFlags.Static);
+		if (property == null)
+		{
+			throw new NullReferenceException($"Property '{key}' not defined in resource type '{resourceType.FullName}'.");
+		}
+
+		return property.GetValue(null)?.ToString();
+	}
+
+	/// <summary>
+	/// 获取枚举值的显示名称。
+	/// </summary>
+	/// <param name="enum">要获取显示名称的枚举值。</param>
+	/// <returns>返回枚举值的显示名称。</returns>
+	public static string GetDisplayName(this Enum @enum)
+	{
+		var name = PriorityValueFinder.Find(queue =>
+		{
+			queue.Enqueue(() => @enum.GetAttribute<DisplayAttribute>()?.GetName(), 1);
+			queue.Enqueue(() => @enum.GetAttribute<DisplayNameAttribute>()?.DisplayName, 2);
+			queue.Enqueue(() => @enum.GetAttribute<DescriptionAttribute>()?.Description, 3);
+		}, value => !string.IsNullOrWhiteSpace(value), @enum.ToString());
+
+		var attribute = @enum.GetAttribute<DisplayNameAttribute>();
+		return attribute?.DisplayName ?? @enum.ToString();
 	}
 
 	/// <summary>
@@ -186,7 +231,7 @@ public static partial class Extensions
 	{
 		return dayOfWeek.AbbreviatedDayName(CultureInfo.CurrentCulture);
 	}
-	
+
 	/// <summary>
 	/// 获取指定区域中 <see cref="DayOfWeek"/> 的缩写名称。
 	/// </summary>
