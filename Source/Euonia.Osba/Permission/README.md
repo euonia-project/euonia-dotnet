@@ -148,9 +148,11 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 `SaveAsync` 会根据对象状态映射操作（New→`Create`、Changed→`Update`、Deleted→`Delete`，
 命令对象→`Execute`）。行为约定：
 
-- 没有任何 `[Permission]` → 放行
-- 未注册 `IPermissionChecker` → 放行
-- 有要求但未认证/未授权 → 拒绝（抛异常）
+- 没有任何 `[Permission]` → 放行（也不会强制要求对象接线）
+- **有要求却无法判定** → 抛 `InvalidOperationException`：目标未接入 `BusinessContext`，
+  或容器里没注册 `IPermissionChecker`。**「判定不了」不等于「没有要求」**，静默放行会让
+  「忘记给对象接上下文」变成一条无声的越权通道。
+- 有要求且判定得出，但未认证/未授权 → 拒绝（抛 `SecurityException`）
 
 除工厂边界外，框架还会对**已声明权限模型的类型**自动注入数据范围规则（见 [4.5](#45-与-rule-体系的适配)），
 使越权在保存前以验证错误暴露。两者分工：**工厂边界是权威强制点，规则是前置的、UI 友好的补充信号**。
@@ -730,6 +732,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | 异常 | 含义 |
 |---|---|
 | `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验被跳过，首次判定时兜底暴露 |
+| `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext` |
 | `ValidationException` | 自动注入的范围规则判定越权（新增/更新路径） |
 | `SecurityException` | 工厂边界判定越权（criteria 入口、删除路径、或规则被跳过时） |
 

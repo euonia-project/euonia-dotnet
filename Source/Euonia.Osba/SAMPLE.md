@@ -799,5 +799,7 @@ BusinessContextAccessor.Clear();
     `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，
     不需要为 `Create` 另写策略。
 40. 未声明 `ScopeModel<T>` 的类型不受数据权限约束——**读模型也要单独声明**。
-41. 不要把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——EF 按 DbContext 类型缓存模型，
+41. **忘给对象接 `BusinessContext` 不会静默放行**：声明了 `[Permission]` 或 `ScopeModel<T>` 的类型，若目标对象没接入上下文，工厂会在强制点抛 `InvalidOperationException` 并指明缺少 `BusinessContext`。
+    这是有意的——「判定不了」不等于「没有要求」。通过工厂创建/读取对象时会自动接线；手工 `new` 的对象必须自己设。
+42. 不要把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——EF 按 DbContext 类型缓存模型，
     会把每用户不同的常量烘进缓存，导致**跨用户数据泄漏**。逐查询用 `guard.Apply(query)`。

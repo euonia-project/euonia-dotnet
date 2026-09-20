@@ -63,14 +63,12 @@ internal static class ScopeAuthorization
 			return;
 		}
 
-		// 未接入业务上下文时无从判定（与操作权限保持一致）
+		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」。
+		// 这一步只用于诊断，不能用于判定——对象自己没接线就取不到 IScopeGuard。
 		var context = businessObject.BusinessContext;
-		if (context == null)
-		{
-			return;
-		}
+		var registry = context?.GetService<ScopeModelRegistry>()
+		               ?? BusinessContextAccessor.Current?.GetService<ScopeModelRegistry>();
 
-		var registry = context.GetService<ScopeModelRegistry>();
 		if (registry == null || !registry.HasDeclarations)
 		{
 			return;
@@ -82,6 +80,14 @@ internal static class ScopeAuthorization
 		{
 			return;
 		}
+
+		// 已声明模型却拿不到上下文：无法判定，属配置错误（多半是忘了接线），不能静默放行
+		Check.Ensure(
+			context != null,
+			"资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。"
+			+ "请通过工厂创建/读取对象，或在调用前设置 BusinessContext。",
+			rowType.Name,
+			operation);
 
 		var guard = context.GetService<IScopeGuard>();
 

@@ -482,6 +482,47 @@ public class ScopeTests
 
 	#endregion
 
+	#region 无法判定时必须失败，不能静默放行
+
+	[Fact]
+	public async Task SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing()
+	{
+		// 类型已声明数据权限模型，但目标对象没接入 BusinessContext —— 判定不了。
+		// 这是配置错误（多半是忘了接线），必须暴露而不是静默放行。
+		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var repo = Repo("team-a");              // 刻意不设 BusinessContext
+		repo.MarkAsChanged();
+
+		var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+			() => factory.SaveAsync(repo, TestContext.Current.CancellationToken));
+
+		Assert.Contains("BusinessContext", exception.Message);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_UnmodeledTypeWithoutBusinessContext_ShouldNotBeBlocked()
+	{
+		// 反向护栏：未声明模型的类型不受数据权限约束，这条新约束不适用于它
+		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var other = new ScopedRepoOther { TeamId = "whatever" };
+		other.BusinessContext = provider.GetRequiredService<BusinessContext>();
+		other.MarkAsChanged();
+
+		var result = await factory.SaveAsync(other, TestContext.Current.CancellationToken);
+
+		Assert.Same(other, result);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	#endregion
+
 	#region Helpers
 
 	private static ScopePolicy<ScopedRepo> Policy()

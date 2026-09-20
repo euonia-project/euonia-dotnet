@@ -272,6 +272,50 @@ public class PermissionTests
 
 	#endregion
 
+	#region 无法判定时必须失败，不能静默放行
+
+	[Fact]
+	public async Task SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing()
+	{
+		// 目标声明了权限要求，却没接入 BusinessContext —— 此时解析不到权限检查器。
+		// 这是配置错误（多半是调用方 new 出对象后忘了接线），必须暴露而不是静默放行。
+		using var scope = CreatePermissionScope(UserWith(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var obj = new SecuredEditableObject();      // 刻意不设 BusinessContext
+		obj.MarkAsChanged();
+
+		var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+			() => factory.SaveAsync(obj, TestContext.Current.CancellationToken));
+
+		Assert.Contains("BusinessContext", exception.Message);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public async Task SaveAsync_WithoutRequirements_ShouldNotForceWiring()
+	{
+		// 反向护栏：没有任何权限要求的类型不受影响，不强制要求接线
+		using var scope = CreatePermissionScope(UserWith(), out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var obj = new UnsecuredEditableObject
+		{
+			BusinessContext = provider.GetRequiredService<BusinessContext>()
+		};
+		obj.MarkAsChanged();
+
+		// 不抛异常即为通过（状态复位由 EditableObject.SaveAsync 负责，工厂不做）
+		var result = await factory.SaveAsync(obj, TestContext.Current.CancellationToken);
+
+		Assert.Same(obj, result);
+
+		BusinessContextAccessor.Clear();
+	}
+
+	#endregion
+
 	#region Helpers
 
 	private static IServiceScope CreatePermissionScope(UserPrincipal user, out IServiceProvider provider, params string[] permissions)
@@ -475,5 +519,17 @@ public class TestSubjectResolver : IScopeSubjectResolver
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder().AddCodes(_permissions).Build());
+	}
+}
+
+/// <summary>
+/// 不带任何权限要求的可编辑业务对象，用于验证「无要求时不强制接线」。
+/// </summary>
+public class UnsecuredEditableObject : EditableObject<UnsecuredEditableObject>
+{
+	[FactoryUpdate]
+	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	{
+		await Task.CompletedTask;
 	}
 }

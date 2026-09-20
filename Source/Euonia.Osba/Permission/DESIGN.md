@@ -136,7 +136,25 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 同一操作若解析出多个「声明了策略」的权限码 → 启动期失败，不允许靠猜。
 
-### 1.8 规则是补充信号，不是强制点
+### 1.8 无法判定时必须失败
+
+**问题**：目标声明了权限要求，却取不到 `BusinessContext` 时，解析不出 `IPermissionChecker`。
+早期实现此时返回「放行」，理由是「没有检查器就当没有权限体系」。后果是：
+调用方 `new` 出对象、忘了设 `BusinessContext`，`factory.SaveAsync(obj)` 会**静默跳过整条授权链**——
+用户哪怕一个权限码都没有也能保存成功。这不是「配置缺失」，而是「忘了接线」，
+比配置缺失更隐蔽，因为代码看起来是对的。
+
+**决策**：在强制点（`ObjectAuthorization` / `ScopeAuthorization`）改为**抛
+`InvalidOperationException`**，消息指明缺的是 `BusinessContext`。原则与其它几处一致：
+`DataScopeRule` 无法判定即失败、缺解析器即抛、启动期校验缺失即失败。
+
+**边界**：只对**声明了要求**的类型生效——没有任何 `[Permission]`、也没有 `ScopeModel<T>` 的类型
+不强制接线，避免给不关心权限的应用加无谓约束。
+
+**注意**：`BusinessObject.CanUpdateObject()` 之类的虚方法**仍是查询**（无从判定时返回
+`true`，不抛异常）；闸门在强制点。这与数据权限侧的分工相同。
+
+### 1.9 规则是补充信号，不是强制点
 
 **问题**：需要一个「以表单错误形式呈现」的通道，而不是让每个越权都变成异常。
 
@@ -248,5 +266,6 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
 | `AutoInjectedScopeRule_ShouldFailUpdateWithValidationError` + `SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException` | §2.2 删除路径不对称 |
 | `ValidatePermissionSetup_ShouldFailWhenResolverMissing` | §3 启动期校验 |
+| `SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing` + `SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing` | §1.8 无法判定即失败 |
 | `PolicySet_ShouldRejectReservedPermissionCode` / `PolicySet_ShouldAllowFrameworkDefaultKeys` | §1.6 保留命名空间 |
 | `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
