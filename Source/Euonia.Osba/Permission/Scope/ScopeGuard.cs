@@ -21,6 +21,12 @@ internal sealed class ScopeGuard : IScopeGuard
 	private readonly Dictionary<(Type Type, string ScopeKey), Func<object, bool>> _evaluators = [];
 	private readonly Lock _sync = new();
 
+	/// <summary>串行化授权数据解析，兑现「每请求只解析一次」。</summary>
+	private readonly SemaphoreSlim _resolveGate = new(1, 1);
+
+	/// <summary>失效代数：在途解析若发现代数已变，说明结果已过期，必须丢弃重来。</summary>
+	private int _version;
+
 	private ScopeSubjectSet _subjects;
 	private bool _resolved;
 
@@ -48,7 +54,7 @@ internal sealed class ScopeGuard : IScopeGuard
 			}
 		}
 
-		await RefreshAsync(cancellationToken).ConfigureAwait(false);
+		await ResolveAsync(force: false, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <inheritdoc />
@@ -62,7 +68,7 @@ internal sealed class ScopeGuard : IScopeGuard
 			}
 		}
 
-		return AsyncContext.Run(() => RefreshAsync(CancellationToken.None).AsTask());
+		return AsyncContext.Run(() => ResolveAsync(force: false, CancellationToken.None).AsTask());
 	}
 
 	/// <inheritdoc />
@@ -151,37 +157,90 @@ internal sealed class ScopeGuard : IScopeGuard
 	{
 		lock (_sync)
 		{
-			_resolved = false;
-			_subjects = null;
-			_compiledPolicies.Clear();
-			_evaluators.Clear();
+			Invalidate();
 		}
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<ScopeSubjectSet> RefreshAsync(CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> RefreshAsync(CancellationToken cancellationToken = default)
+	{
+		return ResolveAsync(force: true, cancellationToken);
+	}
+
+	/// <summary>
+	/// 使已解析的授权数据与已编译策略失效。
+	/// </summary>
+	/// <remarks>必须在持有 <see cref="_sync"/> 时调用。自增 <see cref="_version"/> 会让在途的解析结果作废。</remarks>
+	private void Invalidate()
+	{
+		_version++;
+		_resolved = false;
+		_subjects = null;
+		_compiledPolicies.Clear();
+		_evaluators.Clear();
+	}
+
+	/// <summary>
+	/// 解析授权数据。
+	/// </summary>
+	/// <param name="force">是否强制重新解析（<see langword="false"/> 时已解析则直接复用）。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>授权数据。</returns>
+	/// <remarks>
+	/// <para>
+	/// 用闸门串行化解析：并发的首次访问只会真正解析一次，兑现「每请求只解析一次」的承诺。
+	/// </para>
+	/// <para>
+	/// 用版本号防止「失效被陈旧结果覆盖」：解析期间若有 <see cref="Refresh"/>（或并发的重新解析），
+	/// 版本会变化，本次结果直接丢弃并重来。否则一次撤销可能被在途的旧快照回滚——
+	/// 那是一条真实的安全缺口。
+	/// </para>
+	/// </remarks>
+	private async ValueTask<ScopeSubjectSet> ResolveAsync(bool force, CancellationToken cancellationToken)
 	{
 		Check.Ensure(
 			_resolver != null,
 			"权限体系已启用（存在权限模型或 [Permission] 声明），但未注册 IScopeSubjectResolver。请在服务注册中提供一个基于授权数据的实现。");
 
-		// 先清缓存再解析：解析期间并发访问会各自重新解析，但不会读到过期快照
-		lock (_sync)
+		while (true)
 		{
-			_resolved = false;
-			_subjects = null;
-			_compiledPolicies.Clear();
+			await _resolveGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+			try
+			{
+				int version;
+
+				lock (_sync)
+				{
+					// 排队期间已被别的调用解析好，直接复用
+					if (!force && _resolved && _subjects != null)
+					{
+						return _subjects;
+					}
+
+					Invalidate();
+					version = _version;
+				}
+
+				var subjects = await _resolver.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty;
+
+				lock (_sync)
+				{
+					if (version == _version)
+					{
+						_subjects = subjects;
+						_resolved = true;
+						return subjects;
+					}
+				}
+			}
+			finally
+			{
+				_resolveGate.Release();
+			}
+
+			// 解析期间被失效过：本次结果已过期，重来
 		}
-
-		var subjects = await _resolver.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty;
-
-		lock (_sync)
-		{
-			_subjects = subjects;
-			_resolved = true;
-		}
-
-		return subjects;
 	}
 
 	/// <summary>

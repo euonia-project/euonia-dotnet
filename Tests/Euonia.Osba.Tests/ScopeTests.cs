@@ -521,6 +521,31 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+
+	[Fact]
+	public async Task Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot()
+	{
+		// 竞态：解析在途时发生撤销 + Refresh。若陈旧快照仍被发布，撤销就被回滚了。
+		var resolver = new GatedScopeResolver();
+		using var scope = CreateScope(User("dev"), resolver, out var provider);
+		var guard = provider.GetRequiredService<IScopeGuard>();
+
+		// 首次解析在 resolver 里阻塞（已读到「撤销前」的授权数据）
+		var pending = guard.EnsureResolvedAsync(TestContext.Current.CancellationToken).AsTask();
+
+		// 数据侧撤销，并显式失效
+		resolver.Revoked = true;
+		guard.Refresh();
+
+		// 放行：在途结果不得覆盖那次失效
+		resolver.Release();
+		await pending;
+
+		Assert.False(guard.Allows(Repo("team-a")));
+
+		BusinessContextAccessor.Clear();
+	}
+
 	#endregion
 
 	#region Helpers
@@ -761,4 +786,40 @@ public sealed class ScopedTaskModel : ScopeModel<ScopedTask>
 	}
 
 	public override ScopePolicy<ScopedTask> Policy => ScopePolicy<ScopedTask>.Grant(ScopeDimensions.Dept);
+}
+
+/// <summary>
+/// 可精确控制解析时机的测试解析器：用于构造「解析在途时发生撤销」的竞态。
+/// </summary>
+public sealed class GatedScopeResolver : IScopeSubjectResolver
+{
+	private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	/// <summary>
+	/// 获取或设置是否已撤销（模拟数据侧的授权变更）。
+	/// </summary>
+	public bool Revoked { get; set; }
+
+	/// <summary>
+	/// 放行被阻塞的解析。
+	/// </summary>
+	public void Release() => _release.TrySetResult();
+
+	/// <inheritdoc />
+	public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	{
+		// 在阻塞之前取值：模拟「读到的仍是撤销前的数据」
+		var revoked = Revoked;
+
+		await _release.Task.ConfigureAwait(false);
+
+		var builder = ScopeSubjectSet.CreateBuilder().AddSelf("dev");
+
+		if (!revoked)
+		{
+			builder.Add(ScopeDimensions.Dept, "team-a");
+		}
+
+		return builder.Build();
+	}
 }

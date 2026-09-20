@@ -154,7 +154,21 @@ query            ≡ source.Where(Allow).Where(!Deny)
 **注意**：`BusinessObject.CanUpdateObject()` 之类的虚方法**仍是查询**（无从判定时返回
 `true`，不抛异常）；闸门在强制点。这与数据权限侧的分工相同。
 
-### 1.9 规则是补充信号，不是强制点
+### 1.9 缓存失效不可被在途解析回滚
+
+**问题**：授权数据按请求缓存（`ScopeGuard`），解析是异步查库。若「解析进行中」时发生
+`Refresh()`（典型场景：刚撤销完授权，显式失效），而在途的那次解析读到的是**撤销前**的数据，
+它返回后若无条件发布，就会把刚做的失效覆盖掉——**一次撤销被静默回滚**。这是一条真实的安全缺口，
+且只在竞态下出现，靠常规测试发现不了。
+
+**决策**：引入失效代数（`_version`）。每次失效自增；解析开始时记下代数，发布前比对，
+不一致就丢弃结果并重来。另用 `SemaphoreSlim` 串行化解析，使并发的首次访问只真正解析一次，
+兑现「每请求只解析一次」的承诺。
+
+**回归护栏**：`Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` 用可控时机的
+解析器精确构造该竞态——**关掉版本校验它就会转红**（已验证）。
+
+### 1.10 规则是补充信号，不是强制点
 
 **问题**：需要一个「以表单错误形式呈现」的通道，而不是让每个越权都变成异常。
 
@@ -266,6 +280,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
 | `AutoInjectedScopeRule_ShouldFailUpdateWithValidationError` + `SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException` | §2.2 删除路径不对称 |
 | `ValidatePermissionSetup_ShouldFailWhenResolverMissing` | §3 启动期校验 |
+| `Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` | §1.9 缓存失效不可被回滚 |
 | `SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing` + `SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing` | §1.8 无法判定即失败 |
 | `PolicySet_ShouldRejectReservedPermissionCode` / `PolicySet_ShouldAllowFrameworkDefaultKeys` | §1.6 保留命名空间 |
 | `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
