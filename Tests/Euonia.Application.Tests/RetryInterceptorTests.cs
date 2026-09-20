@@ -120,6 +120,59 @@ public class RetryInterceptorTests
 		Assert.Equal(1, probe.Calls);
 	}
 
+	[Fact]
+	public async Task ValueTask_FailsThenSucceeds_ShouldRetry()
+	{
+		var probe = new RetryProbe();
+		var proxy = CreateProxy(probe);
+
+		var result = await proxy.EchoFlakyValueTask("ok");
+
+		Assert.Equal("ok", result);
+		Assert.Equal(2, probe.Calls);
+	}
+
+	[Fact]
+	public async Task ValueTask_Untyped_FailsThenSucceeds_ShouldRetry()
+	{
+		var probe = new RetryProbe();
+		var proxy = CreateProxy(probe);
+
+		await proxy.DoFlakyValueTask();
+
+		Assert.Equal(2, probe.Calls);
+	}
+
+	[Fact]
+	public void Retry_WithJitter_ShouldStillSucceed()
+	{
+		var probe = new RetryProbe();
+		var proxy = CreateProxy(probe);
+
+		proxy.DoDelayedJitter();
+
+		Assert.Equal(3, probe.Calls);
+	}
+
+	[Fact]
+	public async Task Retry_CombinedWithCache_ShouldRetryThenServeFromCache()
+	{
+		var probe = new RetryProbe();
+		var cache = new FakeCacheService();
+		var cacheInterceptor = new CacheInterceptor(new CacheStubProvider(cache));
+		var retryInterceptor = new RetryInterceptor();
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(IRetryProbe), probe, cacheInterceptor, retryInterceptor) as IRetryProbe;
+
+		var first = await proxy!.GetFlakyAndCached();
+		var second = await proxy.GetFlakyAndCached();
+
+		Assert.Equal("v", first);
+		Assert.Equal("v", second);
+		// 首次调用先重试成功（2 次执行），第二次调用命中缓存不再执行。
+		Assert.Equal(2, probe.Calls);
+	}
+
 	private static IRetryProbe CreateProxy(RetryProbe probe)
 	{
 		var interceptor = new RetryInterceptor();
@@ -147,7 +200,15 @@ public class RetryInterceptorTests
 
 		void DoDelayed();
 
+		void DoDelayedJitter();
+
 		void DoExponential();
+
+		ValueTask<string> EchoFlakyValueTask(string value);
+
+		ValueTask DoFlakyValueTask();
+
+		Task<string> GetFlakyAndCached();
 	}
 
 	public class RetryProbe : IRetryProbe
@@ -251,5 +312,69 @@ public class RetryInterceptorTests
 				throw new InvalidOperationException("transient");
 			}
 		}
+
+		[Retry(MaxRetries = 2, DelayMs = 120, Jitter = true)]
+		public virtual void DoDelayedJitter()
+		{
+			Calls++;
+			if (Calls < 3)
+			{
+				throw new InvalidOperationException("transient");
+			}
+		}
+
+		[Retry(MaxRetries = 3)]
+		public virtual async ValueTask<string> EchoFlakyValueTask(string value)
+		{
+			Calls++;
+			if (Calls < 2)
+			{
+				await Task.Yield();
+				throw new InvalidOperationException("transient");
+			}
+
+			await Task.Yield();
+			return value;
+		}
+
+		[Retry(MaxRetries = 3)]
+		public virtual async ValueTask DoFlakyValueTask()
+		{
+			Calls++;
+			if (Calls < 2)
+			{
+				await Task.Yield();
+				throw new InvalidOperationException("transient");
+			}
+
+			await Task.Yield();
+		}
+
+		[Cache(TimeoutSeconds = 60)]
+		[Retry(MaxRetries = 3)]
+		public virtual async Task<string> GetFlakyAndCached()
+		{
+			Calls++;
+			if (Calls < 2)
+			{
+				await Task.Yield();
+				throw new InvalidOperationException("transient");
+			}
+
+			await Task.Yield();
+			return "v";
+		}
+	}
+
+	private sealed class CacheStubProvider : IServiceProvider
+	{
+		private readonly Nerosoft.Euonia.Caching.ICacheService _cache;
+
+		public CacheStubProvider(Nerosoft.Euonia.Caching.ICacheService cache)
+		{
+			_cache = cache;
+		}
+
+		public object GetService(Type serviceType) => serviceType == typeof(Nerosoft.Euonia.Caching.ICacheService) ? _cache : null;
 	}
 }

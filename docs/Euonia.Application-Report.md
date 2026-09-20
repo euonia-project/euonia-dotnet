@@ -566,3 +566,30 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **`ValueTask` 重试**：返回 `ValueTask`/`ValueTask{TResult}` 的方法当前 `[Retry]` 不生效；如需支持可参考 `CacheInterceptor` 的 `AsTask` + `MakeGenericMethod` 包装模式改造。
 - **退避抖动（jitter）**：固定/线性/指数退避在同一节点高并发触发重试时可能同步唤醒（惊群）；如需可在 `ComputeDelay` 中混入随机抖动。
 - **拦截器组合验证**：`[Retry]` 与 `[Cache]`/`[Idempotent]`/`[Lock]` 的组合按注册顺序包裹，顺序对语义的影响（如缓存命中前是否重试）尚未做组合测试。
+
+# 第十一部分 实用功能增强（十）
+
+## 四十六、重试能力补齐：`ValueTask` 支持、退避抖动、组合验证（落地遗留项）
+
+对第十部分的 `RetryInterceptor` 补齐以下三处（对应四十五遗留观察）：
+
+- **`ValueTask`/`ValueTask{TResult}` 重试**：移除「不重试」限制。未类型化 `ValueTask` 以 `new ValueTask(RetryAsync(..., isValueTask: true))` 包装；`ValueTask{TResult}` 复用泛型 `RetryTypedAsync<T>`（内部按 `(ValueTask<T>).AsTask()` 取任务），再经静态泛型 `WrapValueTask<T>` 反射包装回 `ValueTask<T>` 赋回 `ReturnValue`（模式同 `CacheInterceptor`）。
+- **退避抖动（jitter）**：`RetryAttribute` 新增 `Jitter`（默认 false）；启用后 `ComputeDelay` 在实际间隔 `[0, 计算值]` 内经 `Random.Shared` 随机化（计算值 > 0 时），避免多节点在同一时刻同步唤醒造成惊群。
+- **组合验证**：新增 `[Cache]` + `[Retry]` 组合测试（缓存拦截器在前、重试在后）：首次调用缓存未命中 → 重试 1 次成功并写回缓存；第二次调用命中缓存不再执行。验证了失败冒泡不会污染缓存条目。
+
+测试（`RetryInterceptorTests.cs`，4 新增）：`ValueTask{T}` 失败后重试成功、未类型化 `ValueTask` 失败后重试成功、启用抖动时重试仍成功（Calls 为 3）、`[Cache]`+`[Retry]` 组合先重试再命中缓存。
+
+## 四十七、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **152/152**（148 → 152，新增 4） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十八、遗留观察（未改动，供后续决策）
+
+- **重试与幂等/锁组合**：`[Retry]` 与 `[Idempotent]`/`[Lock]` 的组合尚缺测试；生产注意 `[Idempotent]` 只在成功时写印记，失败走 `[Retry]` 重试多次（各自窗口/次数独立）。
+- **熔断（circuit breaker）**：`[Retry]` 只做有限的即时重试，不具备连续失败后的熔断/半开探测能力；如需可按方法或类维度引入基于 `ICacheService` 计数的断路器设施。
+- **`[Cache]` + 高故障率方法**：重试成功后写回缓存是成功的，但若重试期间每次失败都尝试写回（当前只有成功后写、失败不写）不存在污染；组合路径的失效时序（`CacheEvict` 与重试并发）未覆盖。
