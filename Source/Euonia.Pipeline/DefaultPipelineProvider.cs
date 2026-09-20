@@ -120,7 +120,8 @@ public class DefaultPipelineProvider : PipelineBase
 		var instanceArg = Expression.Parameter(typeof(T), "instance");
 
 		var methodArguments = new Expression[parameters.Length];
-		methodArguments[0] = contextArg;
+		var firstParameterType = parameters[0].ParameterType;
+		methodArguments[0] = firstParameterType == typeof(object) ? contextArg : Expression.Convert(contextArg, firstParameterType);
 
 		for (var index = 1; index < parameters.Length; index++)
 		{
@@ -176,7 +177,7 @@ public class DefaultPipelineProvider : PipelineBase
 	/// <summary>
 	/// 由编译的表达式树所使用的 <see cref="GetService"/> 方法的 <see cref="MethodInfo"/>。
 	/// </summary>
-	private static readonly MethodInfo GetServiceInfo = typeof(PipelineBase).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static);
+	private static readonly MethodInfo GetServiceInfo = typeof(DefaultPipelineProvider).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static);
 }
 
 /// <summary>
@@ -301,12 +302,13 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 	/// <exception cref="NotSupportedException">当处理方法包含按引用传递的参数，或声明了 <see cref="CancellationToken"/> 参数时抛出。</exception>
 	private static Func<T, TRequest, IServiceProvider, Task<TResponse>> Compile<T>(MethodInfo methodInfo, ParameterInfo[] parameters)
 	{
-		var contextArg = Expression.Parameter(typeof(object), "context");
+		var contextArg = Expression.Parameter(typeof(TRequest), "context");
 		var providerArg = Expression.Parameter(typeof(IServiceProvider), "provider");
 		var instanceArg = Expression.Parameter(typeof(T), "instance");
 
 		var methodArguments = new Expression[parameters.Length];
-		methodArguments[0] = contextArg;
+		var firstParameterType = parameters[0].ParameterType;
+		methodArguments[0] = firstParameterType == typeof(TRequest) ? contextArg : Expression.Convert(contextArg, firstParameterType);
 
 		for (var index = 1; index < parameters.Length; index++)
 		{
@@ -362,5 +364,5 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 	/// <summary>
 	/// 由编译的表达式树所使用的 <see cref="GetService"/> 方法的 <see cref="MethodInfo"/>。
 	/// </summary>
-	private static readonly MethodInfo GetServiceInfo = typeof(PipelineBase<,>).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static);
+	private static readonly MethodInfo GetServiceInfo = typeof(DefaultPipelineProvider<TRequest, TResponse>).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static);
 }
