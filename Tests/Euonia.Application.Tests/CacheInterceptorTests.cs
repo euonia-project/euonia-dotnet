@@ -110,10 +110,54 @@ public class CacheInterceptorTests
 		Assert.Empty(cache.GetKeys());
 	}
 
-	private static ICachedProbe CreateProxy(CachedProbe probe, out FakeCacheService cache)
+	[Fact]
+	public async Task Cache_AbsoluteExpiration_ShouldReexecuteAfterDeadline()
+	{
+		var probe = new CachedProbe();
+		var proxy = CreateProxy(probe, out var cache);
+
+		await proxy.GetAbsoluteAsync(1);
+		Assert.Equal(1, probe.AsyncCalls);
+
+		// 前进到绝对到期之后：缓存项应已过期 → 第 2 次调用重新执行方法体。
+		cache.Advance(TimeSpan.FromHours(2));
+
+		_ = await proxy.GetAbsoluteAsync(1);
+		Assert.Equal(2, probe.AsyncCalls);
+	}
+
+	[Fact]
+	public void Cache_AbsoluteExpiration_WithIsUtcFalse_ShouldReexecuteAfterDeadline()
+	{
+		var probe = new CachedProbe();
+		var proxy = CreateProxy(probe, out var cache);
+
+		_ = proxy.GetAbsoluteLocal(1);
+		Assert.Equal(1, probe.SyncCalls);
+
+		cache.Advance(TimeSpan.FromHours(2));
+
+		_ = proxy.GetAbsoluteLocal(1);
+		Assert.Equal(2, probe.SyncCalls);
+	}
+
+	[Fact]
+	public async Task Cache_WithGroups_ShouldRegisterKeysInGroup()
+	{
+		var probe = new CachedProbe();
+		var manager = new CacheGroupManager(new ServiceProviderStub(new FakeCacheService()));
+		var proxy = CreateProxy(probe, out _, manager);
+
+		_ = proxy.GetGrouped(1);
+
+		Assert.NotNull(manager.GetKeys("cart"));
+		Assert.Contains(manager.GetKeys("cart"), key => key.StartsWith(typeof(CachedProbe).FullName + ".GetGrouped", StringComparison.Ordinal));
+	}
+
+	private static ICachedProbe CreateProxy(CachedProbe probe, out FakeCacheService cache, ICacheGroupManager manager = null)
 	{
 		cache = new FakeCacheService();
-		var interceptor = new CacheInterceptor(new ServiceProviderStub(cache));
+		var interceptor = new CacheInterceptor(new ServiceProviderStub(cache, manager));
 		var generator = new ProxyGenerator();
 		return generator.CreateInterfaceProxyWithTarget(typeof(ICachedProbe), probe, interceptor) as ICachedProbe;
 	}
@@ -129,6 +173,12 @@ public class CacheInterceptorTests
 		string GetNameTemplate();
 
 		void DoWork(int id);
+
+		Task<decimal> GetAbsoluteAsync(int id);
+
+		decimal GetAbsoluteLocal(int id);
+
+		string GetGrouped(int id);
 	}
 
 	public class CachedProbe : ICachedProbe
@@ -163,20 +213,50 @@ public class CacheInterceptorTests
 		{
 			SyncCalls++;
 		}
+
+		[Cache(AbsoluteExpirationSeconds = 3600)]
+		public virtual async Task<decimal> GetAbsoluteAsync(int id)
+		{
+			AsyncCalls++;
+			await Task.Yield();
+			return 20m;
+		}
+
+		[Cache(AbsoluteExpirationSeconds = 3600, IsUtc = false)]
+		public virtual decimal GetAbsoluteLocal(int id)
+		{
+			SyncCalls++;
+			return 30m;
+		}
+
+		[Cache(Groups = ["cart"])]
+		public virtual string GetGrouped(int id)
+		{
+			SyncCalls++;
+			return "grouped-" + id;
+		}
 	}
 
 	private sealed class ServiceProviderStub : IServiceProvider
 	{
 		private readonly ICacheService _cache;
 
-		public ServiceProviderStub(ICacheService cache)
+		private readonly ICacheGroupManager _manager;
+
+		public ServiceProviderStub(ICacheService cache, ICacheGroupManager manager = null)
 		{
 			_cache = cache;
+			_manager = manager;
 		}
 
 		public object GetService(Type serviceType)
 		{
-			return serviceType == typeof(ICacheService) ? _cache : null;
+			if (serviceType == typeof(ICacheService))
+			{
+				return _cache;
+			}
+
+			return serviceType == typeof(ICacheGroupManager) ? _manager : null;
 		}
 	}
 

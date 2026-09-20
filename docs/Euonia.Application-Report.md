@@ -384,3 +384,40 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **缓存失效策略**：`CacheInterceptor` 仅支持按 TTL 过期，暂无主动删除/缓存版号失效；若需可在 `ICacheService` 之上提供版本化键或事件驱动失效。
 - **`CacheAttribute` 的 `IsUtc` 字段**：当前仅面向相对 TTL 语义保留，绝对时钟过期（如 `DateTime` 形式）尚未接线。
 - **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第六部分 实用功能增强（五）
+
+对 Euonia.Application 追加第五批实用功能：缓存绝对过期接线与缓存组失效。全程先补测试后实现，全仓无回归。
+
+## 二十六、缓存绝对过期接线（落地遗留项）
+
+`CacheAttribute` 新增 `AbsoluteExpirationSeconds`（double，自写入时刻起算）+ 复用 `IsUtc`（`Attributes/CacheAttribute.cs`）。`CacheInterceptor` 据此计算绝对到期时间：`AbsoluteExpirationSeconds` 大于 0 时以「写入时刻 + 该秒数」为绝对到期时间调用 `ICacheService.AddOrUpdate(key, value, DateTime, bool)`（`IsUtc=true` 按 `UtcNow` 起算，否则 `Now`），并优先于 `TimeoutSeconds`；否则回落相对 TTL/无 TTL 路径（`Interceptors/CacheInterceptor.cs` 的 `CacheExpirations`）。
+
+测试（`CacheInterceptorTests.cs`，2 新增）：绝对到期（未来 1h）第 1 次执行、把测试缓存时钟前拨 2h 后第 2 次重新执行（`FakeCacheService` 增加可调时钟 `NowUtc`/`Advance`）；`IsUtc=false` 同一断言。
+
+## 二十七、缓存组失效：`[Cache(Groups)]` + `[CacheEvict]`
+
+为缓存位安全失效补齐主动失效：数据变更后按组删除整组缓存键。
+
+- **`CacheAttribute.Groups`**：缓存写回时把键登记到组（`CacheInterceptor.WriteToCache` 在写回前 `Register`，异步路径在 continuation 内注册）；
+- **`ICacheGroupManager` / `CacheGroupManager`**（新增 `Caching/`）：内存键—组索引（`ConcurrentDictionary`），`Evict(groups)` 枚举组键经 `ICacheService.Remove<object>` 逐个删除并清空索引；`ICacheService` 经容器惰性解析，未注册时仅清索引不报错；ApplicationModule 注册单例；
+- **`[CacheEvict(groups)]`**（新增 `Attributes/CacheEvictAttribute.cs`）+ `CacheEvictionInterceptor`（新增 `Interceptors/`）：同步方法 `Proceed` 后立即失效；`Task`/`ValueTask` 在成功完成后经 continuation 失效（失败不误删）；泛型 `Task<T>`/`ValueTask<T>` 经 `MakeGenericMethod` 分发同路径；未标注或未注册组管理器时退化为直接执行。ApplicationModule 注册为拦截器。
+
+测试（新增 `CacheEvictionInterceptorTests.cs`，5 用例）：同步写→`void` 失效→组空→重读重新执行；异步写→`Task` 失效→轮询组空→重读重新执行；无特性方法不动缓存；`CacheGroupManager` 注册/失效并删除缓存键；无缓存服务时仅清索引。`CacheInterceptorTests.cs` 另新增 1 用例：`[Cache(Groups)]` 写回后键已入组。
+
+## 二十八、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **117/117**（109 → 117，新增 8） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十九、遗留观察（未改动，供后续决策）
+
+- **组索引的内存增长**：`CacheGroupManager` 的键—组索引只增不减（键随缓存过期后索引仍残留）；如需可增加 TTL 同步清理或在读取命中时惰性剔除。
+- **失效时序语义**：`CacheEvict` 的异步失效发生在方法任务成功后；对「先失效再执行」的 write-through 语义未做支持，可按需增加执行前失效模式。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。

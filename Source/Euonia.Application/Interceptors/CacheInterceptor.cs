@@ -31,6 +31,15 @@ public class CacheInterceptor : IInterceptor
 
 	private readonly IServiceProvider _serviceProvider;
 
+	private readonly struct CacheExpirations
+	{
+		public TimeSpan? Timeout { get; init; }
+
+		public DateTime? Absolute { get; init; }
+
+		public bool IsUtc { get; init; }
+	}
+
 	/// <summary>
 	/// 初始化 <see cref="CacheInterceptor"/> 类的新实例。
 	/// </summary>
@@ -73,7 +82,16 @@ public class CacheInterceptor : IInterceptor
 		var isAsync = returnType != valueType;
 
 		var key = BuildKey(invocation, attribute);
-		var timeout = attribute.TimeoutSeconds > 0 ? (TimeSpan?)TimeSpan.FromSeconds(attribute.TimeoutSeconds) : null;
+		var expirations = new CacheExpirations
+		{
+			Timeout = attribute.TimeoutSeconds > 0 ? (TimeSpan?)TimeSpan.FromSeconds(attribute.TimeoutSeconds) : null,
+			Absolute = attribute.AbsoluteExpirationSeconds > 0
+				? (attribute.IsUtc ? DateTime.UtcNow.AddSeconds(attribute.AbsoluteExpirationSeconds) : DateTime.Now.AddSeconds(attribute.AbsoluteExpirationSeconds))
+				: null,
+			IsUtc = attribute.IsUtc,
+		};
+		var groups = attribute.Groups ?? [];
+		var manager = _serviceProvider.GetService(typeof(ICacheGroupManager)) as ICacheGroupManager;
 
 		var cached = (bool)_tryServeMethod.MakeGenericMethod(valueType)
 		                                   .Invoke(null, new object[] { invocation, cache, key, isAsync, isValueTask })!;
@@ -87,12 +105,12 @@ public class CacheInterceptor : IInterceptor
 		if (isAsync)
 		{
 			_writeAsyncMethod.MakeGenericMethod(valueType)
-			                 .Invoke(null, new object[] { invocation.ReturnValue, cache, key, timeout, isValueTask });
+			                 .Invoke(null, new object[] { invocation.ReturnValue, cache, key, expirations, isValueTask, manager, groups });
 		}
 		else
 		{
 			_writeSyncMethod.MakeGenericMethod(valueType)
-			                .Invoke(null, new object[] { invocation.ReturnValue, cache, key, timeout });
+			                .Invoke(null, new object[] { invocation.ReturnValue, cache, key, expirations, manager, groups });
 		}
 	}
 
@@ -109,7 +127,7 @@ public class CacheInterceptor : IInterceptor
 		return false;
 	}
 
-	private static void WriteBackAsync<T>(object rawReturnValue, ICacheService cache, string key, TimeSpan? timeout, bool isValueTask)
+	private static void WriteBackAsync<T>(object rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, bool isValueTask, ICacheGroupManager manager, string[] groups)
 	{
 		var task = isValueTask
 			? ((ValueTask<T>)rawReturnValue).AsTask()
@@ -119,22 +137,34 @@ public class CacheInterceptor : IInterceptor
 		{
 			if (completed.IsCompletedSuccessfully && completed.Result != null)
 			{
-				WriteToCache(cache, key, completed.Result, timeout);
+				WriteToCache(cache, key, completed.Result, expirations, manager, groups);
 			}
 		}, TaskScheduler.Default);
 	}
 
-	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, TimeSpan? timeout)
+	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager manager, string[] groups)
 	{
 		if (rawReturnValue != null)
 		{
-			WriteToCache(cache, key, (T)rawReturnValue, timeout);
+			WriteToCache(cache, key, (T)rawReturnValue, expirations, manager, groups);
 		}
 	}
 
-	private static void WriteToCache<TValue>(ICacheService cache, string key, TValue value, TimeSpan? timeout)
+	private static void WriteToCache<TValue>(ICacheService cache, string key, TValue value, CacheExpirations expirations, ICacheGroupManager manager, string[] groups)
 	{
-		cache.AddOrUpdate(key, value, timeout);
+		if (groups.Length > 0)
+		{
+			manager?.Register(key, groups);
+		}
+
+		if (expirations.Absolute.HasValue)
+		{
+			cache.AddOrUpdate(key, value, expirations.Absolute.Value, expirations.IsUtc);
+		}
+		else
+		{
+			cache.AddOrUpdate(key, value, expirations.Timeout);
+		}
 	}
 
 	private static bool TryUnwrapAsync(Type returnType, out bool isValueTask)

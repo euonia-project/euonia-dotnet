@@ -21,12 +21,26 @@ public sealed class CacheAttribute : Attribute
 	public string Key { get; set; }
 
 	/// <summary>
-	/// 获取或设置缓存过期秒数；不大于 0 表示不设置 TTL。
+	/// 获取或设置缓存过期秒数；不大于 0 表示不设置相对 TTL。
 	/// </summary>
 	public int TimeoutSeconds { get; set; }
 
 	/// <summary>
-	/// 获取或设置是否使用 UTC 时间解释绝对过期时间（当前仅对相对 TTL 生效，保留以兼容扩展）。
+	/// 获取或设置绝对过期秒数（自写入时刻起算）；不大于 0 表示不用绝对过期。
+	/// </summary>
+	/// <remarks>
+	/// 大于 0 时以「写入时刻 + 该秒数」作为绝对到期时间写入缓存（优先于 <see cref="TimeoutSeconds"/>），
+	/// 到期时间据 <see cref="IsUtc"/> 决定使用 UTC 或本地时间起算。
+	/// </remarks>
+	public double AbsoluteExpirationSeconds { get; set; }
+
+	/// <summary>
+	/// 获取或设置是否使用 UTC 时间起算绝对过期时间（默认 true）。
 	/// </summary>
 	public bool IsUtc { get; set; } = true;
+
+	/// <summary>
+	/// 获取或设置缓存组名称；写回时按组登记键，供 <see cref="CacheEvictAttribute"/> 按组失效。
+	/// </summary>
+	public string[] Groups { get; set; }
 }

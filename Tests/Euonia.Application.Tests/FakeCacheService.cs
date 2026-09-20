@@ -9,6 +9,13 @@ internal sealed class FakeCacheService : ICacheService
 {
 	private readonly Dictionary<string, (object Value, DateTime? ExpiresAt)> _store = new();
 
+	public DateTime NowUtc { get; set; } = DateTime.UtcNow;
+
+	public void Advance(TimeSpan step)
+	{
+		NowUtc = NowUtc.Add(step);
+	}
+
 	public TValue Get<TValue>(string key)
 	{
 		return TryGet(key, out TValue value)
@@ -64,7 +71,7 @@ internal sealed class FakeCacheService : ICacheService
 	{
 		lock (_store)
 		{
-			_store[key] = (value!, timeout.HasValue ? DateTime.UtcNow.Add(timeout.Value) : null);
+			_store[key] = (value!, timeout.HasValue ? NowUtc.Add(timeout.Value) : null);
 		}
 
 		return value;
@@ -114,14 +121,14 @@ internal sealed class FakeCacheService : ICacheService
 	public Task<TValue> AddOrUpdateAsync<TValue>(Func<Task<CacheItem<TValue>>> factory, CancellationToken cancellationToken = default)
 		=> throw new NotSupportedException();
 
-	private static bool IsExpired(DateTime? expiresAt)
+	private bool IsExpired(DateTime? expiresAt)
 	{
-		return expiresAt.HasValue && expiresAt.Value <= DateTime.UtcNow;
+		return expiresAt.HasValue && expiresAt.Value <= NowUtc;
 	}
 
-	private static TimeSpan? ToTimespan(DateTime timeout, bool isUtcTime)
+	private TimeSpan? ToTimespan(DateTime timeout, bool isUtcTime)
 	{
-		var now = isUtcTime ? DateTime.UtcNow : DateTime.Now;
+		var now = isUtcTime ? NowUtc : DateTime.Now;
 		return timeout > now ? timeout - now : TimeSpan.Zero;
 	}
 }
