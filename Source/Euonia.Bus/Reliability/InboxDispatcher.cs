@@ -61,60 +61,77 @@ internal sealed class InboxDispatcher : IDisposable
 		_ = Task.Run(RetryAllAsync);
 	}
 
-	/// <summary>
-	/// 重试所有执行失败的处理记录。
-	/// </summary>
-	public async Task RetryAllAsync()
+/// <summary>
+/// 重试所有执行失败的处理记录。
+/// </summary>
+public async Task RetryAllAsync()
+{
+	try
 	{
-		try
+		var items = _store?.GetFailedMessages();
+		if (items == null || items.Count == 0)
 		{
-			foreach (var item in _store.GetFailedMessages())
+			return;
+		}
+
+		var tasks = new List<Task>(items.Count);
+		foreach (var item in items)
+		{
+			var entry = _store.GetAndCache(item.MessageId);
+			if (entry == null)
 			{
-				var entry = _store.GetAndCache(item.MessageId);
-				if (entry == null)
-				{
-					continue;
-				}
-
-				if (!_container.TryGetValue(entry.Channel, out var registrations) || registrations is not { Count: > 0 })
-				{
-					_logger?.LogWarning("Inbox message {MessageId} has no handler registered on channel {Channel} and will be skipped.", item.MessageId, entry.Channel);
-					continue;
-				}
-
-				var registration = registrations.FirstOrDefault(r => string.Equals(r.Name, item.Name, StringComparison.Ordinal));
-				if (registration == null)
-				{
-					_logger?.LogWarning("Inbox message {MessageId} has no handler named {Handler} on channel {Channel} and will be skipped.", item.MessageId, item.Name, entry.Channel);
-					continue;
-				}
-
-				if (!CanRetry(item))
-				{
-					_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts and will be skipped.", item.MessageId, item.Name);
-					continue;
-				}
-
-				try
-				{
-					await ExecuteAsync(registration, entry);
-				}
-				catch (Exception exception)
-				{
-					_logger?.LogWarning(exception, "Failed to redeliver inbox message {MessageId} for handler {Handler}.", item.MessageId, item.Name);
-				}
+				continue;
 			}
+
+			if (!_container.TryGetValue(entry.Channel, out var registrations) || registrations is not { Count: > 0 })
+			{
+				_logger?.LogWarning("Inbox message {MessageId} has no handler registered on channel {Channel} and will be skipped.", item.MessageId, entry.Channel);
+				continue;
+			}
+
+			var registration = registrations.FirstOrDefault(r => string.Equals(r.Name, item.Name, StringComparison.Ordinal));
+			if (registration == null)
+			{
+				_logger?.LogWarning("Inbox message {MessageId} has no handler named {Handler} on channel {Channel} and will be skipped.", item.MessageId, item.Name, entry.Channel);
+				continue;
+			}
+
+			if (!CanRetry(item))
+			{
+				_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts and will be skipped.", item.MessageId, item.Name);
+				continue;
+			}
+
+			tasks.Add(ExecuteSafeAsync(registration, entry, item));
 		}
-		catch (Exception exception)
+
+		if (tasks.Count > 0)
 		{
-			_logger?.LogError(exception, "Inbox retry failed: {Error}", exception.Message);
-		}
-		finally
-		{
-			_store.ClearCache();
-			Interlocked.Exchange(ref _running, 0);
+			await Task.WhenAll(tasks);
 		}
 	}
+	catch (Exception exception)
+	{
+		_logger?.LogError(exception, "Inbox retry failed: {Error}", exception.Message);
+	}
+	finally
+	{
+		_store?.ClearCache();
+		Interlocked.Exchange(ref _running, 0);
+	}
+}
+
+private async Task ExecuteSafeAsync(HandlerRegistration registration, InboxEntry entry, InboxHandler item)
+{
+	try
+	{
+		await ExecuteAsync(registration, entry);
+	}
+	catch (Exception exception)
+	{
+		_logger?.LogWarning(exception, "Failed to redeliver inbox message {MessageId} for handler {Handler}.", item.MessageId, item.Name);
+	}
+}
 
 	private bool CanRetry(InboxHandler item)
 	{

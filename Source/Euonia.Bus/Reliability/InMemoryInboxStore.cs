@@ -52,7 +52,7 @@ public class InMemoryInboxStore : IInboxStore
 	{
 		return _entries.Values
 		               .SelectMany(entry => entry.Handlers)
-		               .Where(handler => handler.Status != InboxHandlerStatus.Success)
+		               .Where(handler => handler.Status == InboxHandlerStatus.Failed)
 		               .ToList();
 	}
 }

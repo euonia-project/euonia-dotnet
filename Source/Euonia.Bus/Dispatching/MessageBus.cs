@@ -131,12 +131,12 @@ internal sealed class MessageBus : IBus, IDisposable
 		var transports = _dispatcher.Determine(channel, messageType);
 
 		// 当全局开关启用（或单条消息显式指定）发件箱时，先将消息写入发件箱存储，再分发到各传输通道。
-		var useOutbox = options.UseOutbox ?? (_outboxOptions.Enabled && _outboxStore != null);
+		var useOutbox = options.UseOutbox ?? _outboxOptions.Enabled;
 		if (useOutbox)
 		{
 			if (_outboxStore == null)
 			{
-				throw new MessagePersistentException($"The outbox store is not registered, but the message '{message.GetType().FullName}' requires outbox persistence.");
+				throw new MessagePersistentException($"The outbox store is not registered, but the message '{message.GetType().FullName}' requires outbox persistence. Please register an IOutboxStore implementation (e.g. services.AddInMemoryOutbox()).");
 			}
 
 			if (!_outboxStore.Insert(pack, transports.ToArray()))

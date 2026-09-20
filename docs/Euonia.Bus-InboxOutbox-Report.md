@@ -9,7 +9,7 @@
 - **接线**：`MessageBus.PublishAsync` 走 Outbox，`DefaultHandlerContext.HandleAsync` 走 Inbox；
 - **后台重试**：`MessageBus` / `DefaultHandlerContext` 各自内嵌 Timer 驱动的派发器（`OutboxDispatcher` / `InboxDispatcher`），失败条目自动重投，超限进入死信日志。
 
-验证：`Euonia.slnx` 0 错误 0 警告；`Euonia.Bus.Tests` **47/47**、`Euonia.Bus.InMemory.Tests` **10/10** 通过。
+验证：`Euonia.slnx` 0 错误 0 警告；`Euonia.Bus.Tests` **56/56**、`Euonia.Bus.InMemory.Tests` **10/10** 通过。
 
 ---
 
@@ -168,10 +168,46 @@ services.AddSingleton<IInboxStore, SqlInboxStore>();
 | --- | --- |
 | `dotnet build Euonia.slnx` | 0 错误，0 警告 |
 | `dotnet build Euonia.Test.slnx` | 0 错误，0 警告 |
-| `Euonia.Bus.Tests` | 47/47 通过（含 16 例 Outbox、15 例 Inbox、16 例存储/行为/集成） |
+| `Euonia.Bus.Tests` | 56/56 通过（含 16 例 Outbox、15 例 Inbox、25 例存储/行为/集成/注册/快速失败） |
 | `Euonia.Bus.InMemory.Tests` | 10/10 通过（真实 InMemory 传输端到端回归） |
 
 **环境说明**：本机 `dotnet test <csproj>` 经 MTP 适配器偶发报“Zero tests ran / exit 5”（与代码无关），可靠验证路径为直接运行 `./Tests/<Proj>/bin/Debug/net10.0/<Proj>`。
+
+## 九、优化与查缺补漏（第二轮）
+
+本轮针对实现中的正确性风险与便利性缺口进行加固，全部随上述验证通过。
+
+### 1. 修复「在途消息被重复投递/重复执行」竞态（P0 正确性缺陷）
+**问题**：`InMemoryOutboxStore` / `InMemoryInboxStore` 的 `GetFailedMessages()` 原实现过滤条件为 `Status != Success`，会把 `Pending`（已入库、仍在初次投递/执行中）的记录一并返回；而两个后台调度器对 `GetFailedMessages()` 的条目**立即重投**。若轮询定时器恰好在「插入条目 → 传输完成并标记」之间触发，就会对仍在途的消息重复投递（Outbox）或重复执行破坏去重（Inbox）。
+
+**修复**：`GetFailedMessages()` 过滤收紧为 `Status == Failed`，仅返回真正失败、等待调度的记录；同步修正 `IOutboxStore` / `IInboxStore` 接口文档（由「待发送或发送失败」改为「投递/执行失败且等待重试」）。内存实现进程内重启即清空，`Pending` 天然不可能跨重启残留，因此不会产生“卡死 Pending 永不重试”问题。
+> 若引入持久化存储，需自行处理“崩溃时处于 Pending 的条目”：可在 `GetFailedMessages()` 中按 `CreatedAt` 阈值把超时 Pending 视为失败返回。
+
+### 2. 配置缺失快速失败（避免静默退化）
+**问题**：全局开关启用但存储未注册时，原逻辑静默回退到无 Outbox/Inbox 路径——启用可靠性却悄悄失效。
+
+**修复**：
+- `MessageBus.PublishAsync`：`useOutbox = options.UseOutbox ?? _outboxOptions.Enabled`；若为真但 `_outboxStore == null` → `MessagePersistentException`（含注册指引，如 `services.AddInMemoryOutbox()`）。
+- `DefaultHandlerContext.HandleAsync`：`useInbox = _inboxOptions.Enabled`，启用但无存储时同样抛 `MessagePersistentException`。单播/多播路径统一到入口处校验，不再有 `_inboxStore.Insert` 空引用风险。
+
+### 3. 调度器并行化与微优化
+- **并行重投**：`OutboxDispatcher` / `InboxDispatcher` 的 `RetryAllAsync` 从串行逐个变为收集任务后 `Task.WhenAll` 并行执行（对齐 Java 版 `CompletableFuture.allOf`），失败记录较多时缩短恢复窗口；逐条目异常仍各自吞掉并记日志，不整体中断轮询。
+- **反射缓存**：`RedeliverAsync` 的 `MakeGenericMethod` 由每次调用计算改为按 `Type` 缓存的 `ConcurrentDictionary<Type, MethodInfo>`。
+- **空安全**：`finally` 中 `_store?.ClearCache()`（防御空存储）。
+- 空失败集提前 `return`，避免无谓创建任务列表。
+
+### 4. 便利注册扩展
+默认不注册存储（见第五节）的基础上，新增一行式显式注册扩展（`TryAddSingleton`，可被自定义实现覆盖）：
+```csharp
+services.AddInMemoryOutbox();   // TryAddSingleton<IOutboxStore, InMemoryOutboxStore>
+services.AddInMemoryInbox();    // TryAddSingleton<IInboxStore, InMemoryInboxStore>
+```
+
+### 5. 新增测试（本轮 +9）
+- `GetFailedMessages_ExcludesPendingInFlight*`（Outbox/Inbox 存储）：Pending 不入待重试列表。
+- `OutboxDispatcher_RetryAllAsync_DoesNotRedeliverPendingInFlightMessages`、`InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers`：调度器对在途记录零动作（防竞态回归）。
+- `PublishAsync_WithOutboxEnabled_WithoutStore_ThrowsMessagePersistentException`、`HandleAsync_WithInboxEnabled_WithoutStore_ThrowsMessagePersistentException`：配置缺失快速失败。
+- `StoreRegistrationTests`：`AddInMemoryOutbox` / `AddInMemoryInbox` 注册成功，且 `TryAddSingleton` 不覆盖已注册自定义实现。
 
 ## 遗留 / 说明
 - **内存实现为参考实现**：不自动注册、不保证重启持久化；需显式 `AddSingleton<IOutboxStore, InMemoryOutboxStore>()`（及 Inbox）启用开发环境，生产建议以 `IOutboxStore`/`IInboxStore` 实现为 SQL/EF 存储（契约已含 `FlushAsync` 持久化点）。

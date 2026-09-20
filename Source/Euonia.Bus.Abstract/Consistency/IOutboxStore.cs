@@ -109,7 +109,7 @@ public interface IOutboxStore
 	}
 
 	/// <summary>
-	/// 获取所有尚未成功投递（待发送或发送失败）的传输记录，供后台调度器重试。
+	/// 获取所有投递失败且等待重试的传输记录，供后台调度器重试。
 	/// </summary>
 	/// <returns>失败的传输记录集合。</returns>
 	IReadOnlyList<OutboxTransport> GetFailedMessages();

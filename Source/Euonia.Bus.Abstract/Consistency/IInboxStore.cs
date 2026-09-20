@@ -110,7 +110,7 @@ public interface IInboxStore
 	}
 
 	/// <summary>
-	/// 获取所有尚未成功执行（待处理或处理失败）的处理程序记录，供后台调度器重试。
+	/// 获取所有执行失败且等待重试的处理程序记录，供后台调度器重试。
 	/// </summary>
 	/// <returns>失败的处理程序记录集合。</returns>
 	IReadOnlyList<InboxHandler> GetFailedMessages();

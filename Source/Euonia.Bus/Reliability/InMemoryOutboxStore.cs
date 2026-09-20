@@ -51,7 +51,7 @@ public class InMemoryOutboxStore : IOutboxStore
 	{
 		return _entries.Values
 		               .SelectMany(entry => entry.Transports)
-		               .Where(transport => transport.Status != OutboxTransportStatus.Success)
+		               .Where(transport => transport.Status == OutboxTransportStatus.Failed)
 		               .ToList();
 	}
 }

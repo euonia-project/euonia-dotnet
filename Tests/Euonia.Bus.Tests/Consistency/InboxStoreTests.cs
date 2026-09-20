@@ -62,7 +62,19 @@ public class InboxStoreTests
 		Assert.Equal(InboxHandlerStatus.Success, handlerA.Status);
 		Assert.Equal(InboxHandlerStatus.Pending, handlerB.Status);
 		Assert.DoesNotContain(handlerA, store.GetFailedMessages());
-		Assert.Contains(handlerB, store.GetFailedMessages());
+		Assert.DoesNotContain(handlerB, store.GetFailedMessages());
+	}
+
+	[Fact]
+	public void GetFailedMessages_ExcludesPendingInFlightHandlers()
+	{
+		IInboxStore store = new InMemoryInboxStore();
+		var message = CreateEnvelope("inflight-1");
+
+		store.Insert("test.events", message, ["handler-a"]);
+
+		// 尚未标记失败（仍在执行中/未被调度器接管）的记录不应被返回，避免重复执行破坏去重。
+		Assert.Empty(store.GetFailedMessages());
 	}
 
 	[Fact]

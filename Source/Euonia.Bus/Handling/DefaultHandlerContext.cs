@@ -187,7 +187,12 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		// 从服务提供程序获取处理程序实例
 		_logger.LogInformation("Message {Id} is being handled", context.MessageId);
 
-		var useInbox = _inboxOptions.Enabled && _inboxStore != null;
+		// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
+		var useInbox = _inboxOptions.Enabled;
+		if (useInbox && _inboxStore == null)
+		{
+			throw new MessagePersistentException($"The inbox store is not registered, but inbox is enabled. Please register an IInboxStore implementation (e.g. services.AddInMemoryInbox()).");
+		}
 
 		object result;
 

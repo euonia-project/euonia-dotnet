@@ -188,6 +188,61 @@ public class InboxOutboxIntegrationTests
 		Assert.Equal(2, handled);
 	}
 
+	[Fact]
+	public async Task PublishAsync_WithOutboxEnabled_WithoutStore_ThrowsMessagePersistentException()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddSingleton<DefaultRequestContextAccessor>();
+		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.Configure<MessageBusOptions>(options =>
+		{
+			options.DefaultTransporter = "test";
+			options.Outbox.Enabled = true;
+		});
+		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddEuoniaBus();
+		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter([]));
+
+		await using var provider = services.BuildServiceProvider();
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
+
+		var bus = provider.GetRequiredService<IBus>();
+
+		await Assert.ThrowsAsync<MessagePersistentException>(() => bus.PublishAsync(
+			new TestMessages.OrderPlacedEvent { OrderId = "orders/missing-store" },
+			new PublishOptions { Channel = "test.events", MessageId = "publish-nostore-1" },
+			null, TestContext.Current.CancellationToken));
+	}
+
+	[Fact]
+	public async Task HandleAsync_WithInboxEnabled_WithoutStore_ThrowsMessagePersistentException()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.Configure<MessageBusOptions>(options => options.Inbox.Enabled = true);
+		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddEuoniaBus();
+
+		await using var provider = services.BuildServiceProvider();
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
+
+		var handlerContext = provider.GetRequiredService<IHandlerContext>();
+		configurator.RegisterChannel<TestMessages.OrderPlacedEvent>("test.events", (message, context) => Task.CompletedTask);
+
+		await Assert.ThrowsAsync<MessagePersistentException>(() => handlerContext.HandleAsync(
+			"test.events",
+			new TestMessages.OrderPlacedEvent { OrderId = "orders/missing-store" },
+			new MessageContext { MessageId = "inbox-nostore-1" },
+			TestContext.Current.CancellationToken));
+	}
+
 	/// <summary>
 	/// 记录已投递消息标识符的测试传输器。
 	/// </summary>

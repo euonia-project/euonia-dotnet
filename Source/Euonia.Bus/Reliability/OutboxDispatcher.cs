@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Bus.Behaviors;
@@ -11,9 +12,12 @@ namespace Nerosoft.Euonia.Bus;
 /// <remarks>
 /// 调度器由 <see cref="MessageBus"/> 在构造时创建并启动；依赖 <see cref="System.Threading.Timer"/> 定时轮询
 /// <see cref="IOutboxStore.GetFailedMessages"/>，使用互斥锁保证同一时刻只有一个扫描周期在运行。
+/// 同一批失败记录彼此独立，采用并行重投递以缩短恢复时间。
 /// </remarks>
 internal sealed class OutboxDispatcher : IDisposable
 {
+	private static readonly ConcurrentDictionary<Type, MethodInfo> _redeliverMethods = new();
+
 	private readonly IServiceAccessor _accessor;
 	private readonly IOutboxStore _store;
 	private readonly OutboxOptions _options;
@@ -66,7 +70,14 @@ internal sealed class OutboxDispatcher : IDisposable
 	{
 		try
 		{
-			foreach (var item in _store.GetFailedMessages())
+			var items = _store?.GetFailedMessages();
+			if (items == null || items.Count == 0)
+			{
+				return;
+			}
+
+			var tasks = new List<Task>(items.Count);
+			foreach (var item in items)
 			{
 				var entry = _store.GetAndCache(item.MessageId);
 				if (entry == null)
@@ -80,14 +91,12 @@ internal sealed class OutboxDispatcher : IDisposable
 					continue;
 				}
 
-				try
-				{
-					await RedeliverAsync(entry.Content, item.Name);
-				}
-				catch (Exception exception)
-				{
-					_logger?.LogWarning(exception, "Failed to redeliver outbox message {MessageId} on transport {Transport}.", item.MessageId, item.Name);
-				}
+				tasks.Add(RedeliverSafeAsync(entry.Content, item));
+			}
+
+			if (tasks.Count > 0)
+			{
+				await Task.WhenAll(tasks);
 			}
 		}
 		catch (Exception exception)
@@ -96,8 +105,20 @@ internal sealed class OutboxDispatcher : IDisposable
 		}
 		finally
 		{
-			_store.ClearCache();
+			_store?.ClearCache();
 			Interlocked.Exchange(ref _running, 0);
+		}
+	}
+
+	private async Task RedeliverSafeAsync(IMessageEnvelope envelope, OutboxTransport item)
+	{
+		try
+		{
+			await RedeliverAsync(envelope, item.Name);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to redeliver outbox message {MessageId} on transport {Transport}.", item.MessageId, item.Name);
 		}
 	}
 
@@ -106,11 +127,11 @@ internal sealed class OutboxDispatcher : IDisposable
 		return _options.MaxRetryAttempts <= 0 || item.RetryAttempts <= _options.MaxRetryAttempts;
 	}
 
-	private async Task RedeliverAsync(IMessageEnvelope envelope, string transportName)
+	private Task RedeliverAsync(IMessageEnvelope envelope, string transportName)
 	{
 		var payloadType = envelope.Payload?.GetType() ?? typeof(object);
-		var method = typeof(OutboxDispatcher).GetMethod(nameof(RedeliverCoreAsync), BindingFlags.Instance | BindingFlags.NonPublic)!.MakeGenericMethod(payloadType);
-		await (Task)method.Invoke(this, [envelope, transportName])!;
+		var method = _redeliverMethods.GetOrAdd(payloadType, type => typeof(OutboxDispatcher).GetMethod(nameof(RedeliverCoreAsync), BindingFlags.Instance | BindingFlags.NonPublic)!.MakeGenericMethod(type));
+		return (Task)method.Invoke(this, [envelope, transportName])!;
 	}
 
 	private async Task RedeliverCoreAsync<TMessage>(IMessageEnvelope envelope, string transportName)

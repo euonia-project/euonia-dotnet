@@ -109,6 +109,57 @@ public class InboxOutboxRetryTests
 		Assert.Equal(2, transport.RetryAttempts);
 	}
 
+	[Fact]
+	public async Task OutboxDispatcher_RetryAllAsync_DoesNotRedeliverPendingInFlightMessages()
+	{
+		var delivered = new List<string>();
+		await using var provider = BuildOutboxProvider(delivered);
+		var accessor = provider.GetRequiredService<IServiceAccessor>();
+
+		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-inflight-1");
+		IOutboxStore store = new InMemoryOutboxStore();
+		store.Insert(envelope, ["test"]);
+
+		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions());
+		await dispatcher.RetryAllAsync();
+
+		Assert.Empty(delivered);
+		var transport = store.Get("outbox-inflight-1").GetTransport("test");
+		Assert.Equal(OutboxTransportStatus.Pending, transport.Status);
+		Assert.Empty(store.GetFailedMessages());
+	}
+
+	[Fact]
+	public async Task InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers()
+	{
+		var handled = 0;
+		var services = new ServiceCollection();
+		services.AddLogging();
+		await using var provider = services.BuildServiceProvider();
+
+		var container = new ConcurrentDictionary<string, List<HandlerRegistration>>
+		{
+			["test.events"] =
+			[
+				new HandlerRegistration("MyHandler", _ => (message, context, token) =>
+				{
+					handled++;
+					return Task.FromResult<object>(null);
+				})
+			]
+		};
+
+		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "inbox-inflight-1");
+		IInboxStore store = new InMemoryInboxStore();
+		store.Insert("test.events", envelope, ["MyHandler"]);
+
+		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true }, container);
+		await dispatcher.RetryAllAsync();
+
+		Assert.Equal(0, handled);
+		Assert.Empty(store.GetFailedMessages());
+	}
+
 	/// <summary>
 	/// 记录已投递消息标识符的测试传输器。
 	/// </summary>

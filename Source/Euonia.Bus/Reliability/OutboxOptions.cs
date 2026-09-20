@@ -5,8 +5,8 @@ namespace Nerosoft.Euonia.Bus;
 /// </summary>
 /// <remarks>
 /// 发件箱模式通过在发送方业务事务中原子性地记录待发送消息，
-	/// 保证发布操作至少会被投递一次（at-least-once）。开启后，发布（<see cref="IBus"/>.PublishAsync）的消息
-	/// 会先写入发件箱存储，再由后台调度器投递给各传输通道。
+/// 保证发布操作至少会被投递一次（at-least-once）。开启后，发布（<see cref="IBus"/>.PublishAsync）的消息
+/// 会先写入发件箱存储，再由后台调度器投递给各传输通道。
 /// </remarks>
 public class OutboxOptions
 {

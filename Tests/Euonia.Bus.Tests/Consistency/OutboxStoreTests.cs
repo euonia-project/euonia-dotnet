@@ -62,7 +62,19 @@ public class OutboxStoreTests
 		Assert.Equal(OutboxTransportStatus.Success, transportA.Status);
 		Assert.Equal(OutboxTransportStatus.Pending, transportB.Status);
 		Assert.DoesNotContain(transportA, store.GetFailedMessages());
-		Assert.Contains(transportB, store.GetFailedMessages());
+		Assert.DoesNotContain(transportB, store.GetFailedMessages());
+	}
+
+	[Fact]
+	public void GetFailedMessages_ExcludesPendingInFlightTransports()
+	{
+		IOutboxStore store = new InMemoryOutboxStore();
+		var message = CreateEnvelope("inflight-1");
+
+		store.Insert(message, ["transport-a"]);
+
+		// 尚未标记失败（仍在投递中/未被调度器接管）的条目不应被返回，避免重复投递。
+		Assert.Empty(store.GetFailedMessages());
 	}
 
 	[Fact]

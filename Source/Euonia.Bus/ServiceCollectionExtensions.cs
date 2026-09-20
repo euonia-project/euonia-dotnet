@@ -35,6 +35,32 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
+		/// 注册内存版发件箱（Outbox）存储（<see cref="InMemoryOutboxStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 发件箱默认不注册任何实现，需显式调用本方法或注册自定义 <see cref="IOutboxStore"/> 实现后方可启用。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryOutbox()
+		{
+			services.TryAddSingleton<IOutboxStore, InMemoryOutboxStore>();
+			return services;
+		}
+
+		/// <summary>
+		/// 注册内存版收件箱（Inbox）存储（<see cref="InMemoryInboxStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 收件箱默认不注册任何实现，需显式调用本方法或注册自定义 <see cref="IInboxStore"/> 实现后方可启用。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryInbox()
+		{
+			services.TryAddSingleton<IInboxStore, InMemoryInboxStore>();
+			return services;
+		}
+
+		/// <summary>
 		/// 注册一个用于配置消息总线的 <see cref="ConfiguratorBuilder"/> 委托。
 		/// 配置委托将在消息总线启动前被执行，用于设置消息约定、传输策略和处理器注册。
 		/// </summary>
