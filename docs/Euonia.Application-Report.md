@@ -630,3 +630,40 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **熔断与缓存/重试组合时序**：`[Cache]`/`[Idempotent]` 在前、`[CircuitBreaker]` 在后时，打开/快速失败发生在缓存命中之后；按注册顺序的语义差异（熔断快速失败是否应先于缓存命中）尚未做组合测试。
 - **`CacheEvict` 与重试并发时序**：熔断/重试期间若并发触发组失效，是否有竞态（写回与新失效交错）未覆盖。
 - **熔断参数校验**：`MaxFailures`/`ResetTimeoutSeconds`/`SuccessThreshold` 均校验 > 0；打开时的内置复位计时依赖真实时间，长周期场景可考虑持久化 `OpenedAtUtc`。
+
+# 第十三部分 实用功能增强（十二）
+
+## 五十三、熔断半开「单飞」探测（落地遗留项）
+
+对应五十二遗留「`HalfOpen` 允许并发探测」，强化 `CircuitState` 状态机：
+
+- **在途探测配额**：`TryGetPermission` 在半开（`HalfOpen`）下除「未达 `SuccessThreshold`」外，还要求当前无在途探测（`_inFlightProbes == 0`）才放行；超时转入半开时即预留配额（`_inFlightProbes = 1`），保证同一时刻对下游只放行一个探测请求。
+- **配额释放**：`OnSuccess`/`OnFailure` 均释放并复位在途计数；探测失败重新打开或成功关闭后并发请求回到正常判定。
+- 并发探测被拒绝时走既有快速失败路径（同步抛 / 异步故障任务），不执行目标方法。
+
+测试（`CircuitBreakerInterceptorTests.cs`，新增 1）：半开期间用后台线程阻塞首个探测（`ManualResetEventSlim`），主线程并发探测被 `CircuitBreakerOpenException` 拒绝且不执行（Calls 不变）；放行后探测成功关闭熔断，后续调用照常执行。
+
+## 五十四、组合时序：熔断 × 重试（两种注册顺序）
+
+新增强化组合测试（`CircuitBreakerInterceptorTests.cs`，新增 3），并在受控时钟下验证 `SuccessThreshold > 1` 的顺序关闭语义：
+
+- **`[CircuitBreaker]` 外层 + `[Retry]` 内层——只计「冒泡」失败**：每次调用重试内部消耗 2 次执行后耗尽并冒泡原始异常，熔断对每次「冒泡」计 1 次失败；`MaxFailures = 2` 时第 1、2 次调用各执行 2 次（共 Calls=4）后打开，第 3 次快速失败不再执行。
+- **`[Retry]` 外层 + `[CircuitBreaker]` 内层——首次尝试即打开**：第 1 次尝试失败即打开熔断；后续每次重试都被快速失败拦截（不执行），耗尽重试后抛出 `CircuitBreakerOpenException`，全程只执行 1 次。
+- **半开顺序成功达阈值关闭**：`SuccessThreshold = 2` 时，超时转半开后第 1 个探测成功仍保持半开（累计 1/2），第 2 个连续探测成功才关闭（经 `GetStateKind` 断言中间态）。
+- `HalfOpen` 中间态断言依赖上批新增的 `GetStateKind` 测试辅助与 `InternalsVisibleTo`。
+
+## 五十五、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **167/167**（163 → 167，新增 4） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 47 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 五十六、遗留观察（未改动，供后续决策）
+
+- **分布式熔断**：状态仍为进程本地，多实例部署各节点独立计数；可让 `CircuitStateStore` 接入 `IDistributedCache`/分布式锁（或在 `ICacheService` 上按计数原子化）实现跨实例共享。单机语义已验证（单飞、阈值、超时复位）。
+- **熔断与缓存/幂等组合时序**：`[Cache]`/`[Idempotent]` 在前、`[CircuitBreaker]` 在后时，打开/快速失败发生在缓存命中之后；按注册顺序的语义差异（熔断快速失败是否应先于缓存命中）尚未做组合测试。
+- **`CacheEvict` 与重试并发时序**：熔断/重试期间若并发触发组失效，是否有竞态（写回与新失效交错）未覆盖。
+- **熔断参数校验**：属性均校验 > 0；打开时的内置复位计时依赖真实时间，长周期场景可考虑持久化 `OpenedAtUtc` 并支持自定义复位策略。

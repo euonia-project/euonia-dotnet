@@ -231,6 +231,7 @@ internal sealed class CircuitState
 	private CircuitStateKind _kind = CircuitStateKind.Closed;
 	private int _failureCount;
 	private int _successCount;
+	private int _inFlightProbes;
 	private DateTime _openedAtUtc;
 
 	/// <summary>
@@ -264,9 +265,10 @@ internal sealed class CircuitState
 			{
 				if (now - _openedAtUtc >= TimeSpan.FromSeconds(attribute.ResetTimeoutSeconds))
 				{
-					// 超时转入半开，放行首个探测请求并重置成功计数。
+					// 超时转入半开，放行首个探测请求并重置成功计数（单飞：预留探测配额）。
 					_kind = CircuitStateKind.HalfOpen;
 					_successCount = 0;
+					_inFlightProbes = 1;
 					halfOpenProbe = true;
 					return true;
 				}
@@ -275,14 +277,21 @@ internal sealed class CircuitState
 				return false;
 			}
 
-			// HalfOpen：仅放行未达关闭阈值的探测请求。
+			// HalfOpen：仅放行未达关闭阈值的探测请求，且同一时刻只允许一个在途探测（单飞）。
+			halfOpenProbe = false;
+			if (_successCount >= attribute.SuccessThreshold || _inFlightProbes > 0)
+			{
+				return false;
+			}
+
+			_inFlightProbes++;
 			halfOpenProbe = true;
-			return _successCount < attribute.SuccessThreshold;
+			return true;
 		}
 	}
 
 	/// <summary>
-	/// 记录一次成功。半开状态下连续成功达到阈值即关闭熔断。
+	/// 记录一次成功，并释放半开探测的在途配额。半开状态下连续成功达到阈值即关闭熔断。
 	/// </summary>
 	public void OnSuccess(CircuitBreakerAttribute attribute, DateTime now)
 	{
@@ -297,6 +306,7 @@ internal sealed class CircuitState
 			if (_kind == CircuitStateKind.HalfOpen)
 			{
 				_successCount++;
+				_inFlightProbes--;
 				if (_successCount >= attribute.SuccessThreshold)
 				{
 					_kind = CircuitStateKind.Closed;
@@ -308,7 +318,7 @@ internal sealed class CircuitState
 	}
 
 	/// <summary>
-	/// 记录一次失败。半开状态下任意失败立即重新打开；关闭状态下连续失败达到阈值即打开。
+	/// 记录一次失败，并释放半开探测的在途配额。半开状态下任意失败立即重新打开；关闭状态下连续失败达到阈值即打开。
 	/// </summary>
 	public void OnFailure(CircuitBreakerAttribute attribute, DateTime now)
 	{
@@ -319,6 +329,7 @@ internal sealed class CircuitState
 				_kind = CircuitStateKind.Open;
 				_openedAtUtc = now;
 				_successCount = 0;
+				_inFlightProbes = 0;
 				return;
 			}
 
@@ -330,6 +341,7 @@ internal sealed class CircuitState
 					_kind = CircuitStateKind.Open;
 					_openedAtUtc = now;
 					_successCount = 0;
+					_inFlightProbes = 0;
 				}
 			}
 		}
