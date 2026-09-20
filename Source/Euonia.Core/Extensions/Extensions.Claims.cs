@@ -79,7 +79,7 @@ public static partial class Extensions
     /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
     public static void EnsureAuthenticated(this UserPrincipal user)
     {
-        if (!user.IsAuthenticated && !string.IsNullOrWhiteSpace(user.Username) && !string.IsNullOrWhiteSpace(user.UserId))
+        if (!user.IsAuthenticated)
         {
             throw new AuthenticationException();
         }

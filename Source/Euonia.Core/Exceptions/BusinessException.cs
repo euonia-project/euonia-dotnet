@@ -25,6 +25,7 @@ public class BusinessException : Exception
 	/// </summary>
 	/// <param name="code">错误代码。</param>
 	public BusinessException(string code)
+		: base(code)
 	{
 		_code = code;
 	}

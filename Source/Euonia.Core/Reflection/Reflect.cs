@@ -58,16 +58,12 @@ public static class Reflect
 	{
 		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
 
-		PropertyInfo result;
-
-		if (expression.Body.NodeType == ExpressionType.Convert)
+		var result = expression.Body switch
 		{
-			result = ((MemberExpression)((UnaryExpression)expression.Body).Operand).Member as PropertyInfo;
-		}
-		else
-		{
-			result = ((MemberExpression)expression.Body).Member as PropertyInfo;
-		}
+			MemberExpression member => member.Member as PropertyInfo,
+			UnaryExpression { NodeType: ExpressionType.Convert } unary => (unary.Operand as MemberExpression)?.Member as PropertyInfo,
+			_ => null
+		};
 
 		if (result != null)
 		{
@@ -338,9 +334,9 @@ public static class Reflect
 		var currentType = objectType;
 		var objectPath = currentType.FullName;
 		var absolutePropertyPath = propertyPath;
-		if (objectPath != null && absolutePropertyPath.StartsWith(objectPath))
+		if (objectPath != null && absolutePropertyPath.StartsWith(objectPath, StringComparison.Ordinal))
 		{
-			absolutePropertyPath = absolutePropertyPath.Replace(objectPath + ".", "");
+			absolutePropertyPath = absolutePropertyPath.Substring(objectPath.Length + 1);
 		}
 
 		foreach (var propertyName in absolutePropertyPath.Split('.'))
@@ -379,9 +375,9 @@ public static class Reflect
 		PropertyInfo property;
 		var objectPath = currentType.FullName;
 		var absolutePropertyPath = propertyPath;
-		if (absolutePropertyPath.StartsWith(objectPath!))
+		if (objectPath != null && absolutePropertyPath.StartsWith(objectPath, StringComparison.Ordinal))
 		{
-			absolutePropertyPath = absolutePropertyPath.Replace(objectPath + ".", "");
+			absolutePropertyPath = absolutePropertyPath.Substring(objectPath.Length + 1);
 		}
 
 		var properties = absolutePropertyPath.Split('.');

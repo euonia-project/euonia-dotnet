@@ -31,7 +31,7 @@ public sealed class DeferralManager
     /// <summary>
     /// 底层的倒计时事件。如果从未请求过延迟，则可能为 <c>null</c>。
     /// </summary>
-    private AsyncCountdownEvent _countdownEvent = new(1);
+    private AsyncCountdownEvent _countdownEvent;
 
     /// <summary>
     /// 创建一个新的延迟管理器。

@@ -68,14 +68,31 @@ internal static class UlidGenerator
 	{
 		var ulid = new StringBuilder(26);
 
-		// 将 48 位时间戳（6 字节）转换为 Base32
-		var ulidBytes = new byte[16]; // ULID 总共是 16 字节
+		// 将 48 位时间戳（6 字节）和 80 位随机数据（10 字节）合并为 16 字节，
+		// 多分配 1 个字节用于容纳跨越字节边界、且已超出第 16 字节的低位补零位。
+		var ulidBytes = new byte[17]; // ULID 总共是 16 字节 + 1 字节补零
 		Array.Copy(timestamp, 0, ulidBytes, 0, 6);
 		Array.Copy(randomBytes, 0, ulidBytes, 6, 10);
-		foreach (int value in ulidBytes)
+
+		// 将 128 位数据按每 5 位一组进行编码，共 26 个字符。
+		for (var bitIndex = 0; bitIndex < 128; bitIndex += 5)
 		{
-			ulid.Append(CROCKFORD_BASE32[(value >> 3) & 0x1F]);
-			ulid.Append(CROCKFORD_BASE32[value & 0x1F]);
+			var byteIndex = bitIndex >> 3;
+			var bitOffset = bitIndex & 0x7;
+			int index;
+			if (bitOffset <= 3)
+			{
+				// 5 位全部落在当前字节内。
+				index = (ulidBytes[byteIndex] >> (3 - bitOffset)) & 0x1F;
+			}
+			else
+			{
+				// 5 位跨越当前字节与下一个字节（高位优先）。
+				index = ((ulidBytes[byteIndex] >> bitOffset) << (bitOffset - 3))
+				        | (ulidBytes[byteIndex + 1] >> (11 - bitOffset));
+			}
+
+			ulid.Append(CROCKFORD_BASE32[index]);
 		}
 
 		return ulid.ToString();

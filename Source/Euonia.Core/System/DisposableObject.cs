@@ -22,10 +22,13 @@ public abstract class DisposableObject : IDisposable
     /// <summary>
     /// 终结 <see cref="DisposableObject"/> 类的实例。
     /// </summary>
+    /// <remarks>
+    /// 终结器仅在非托管资源上执行释放。它不会引发 <see cref="Disposed"/> 事件，
+    /// 因为该事件操作托管资源，在终结器线程上引发可能引发不可预知的副作用（乃至导致对象存活复活）。
+    /// </remarks>
     ~DisposableObject()
     {
         Dispose(false);
-        InvokeDisposedEvent(this, new DisposedEventArgs());
     }
 
     /// <summary>

@@ -13,6 +13,8 @@ public sealed class WeakEventManager
 {
     private readonly Dictionary<string, List<Subscription>> _eventHandlers = new();
 
+    private readonly object _lock = new();
+
     /// <summary>
     /// 添加事件处理器。
     /// </summary>
@@ -119,47 +121,63 @@ public sealed class WeakEventManager
 
     private void AddEventHandler(string eventName, object handlerTarget, MethodInfo methodInfo)
     {
-        if (!_eventHandlers.TryGetValue(eventName, out var targets))
+        lock (_lock)
         {
-            targets = new List<Subscription>();
-            _eventHandlers.Add(eventName, targets);
-        }
+            if (!_eventHandlers.TryGetValue(eventName, out var targets))
+            {
+                targets = new List<Subscription>();
+                _eventHandlers.Add(eventName, targets);
+            }
 
-        if (handlerTarget == null)
-        {
-            // 此事件处理器是一个静态方法
-            targets.Add(new Subscription(null, methodInfo));
-            return;
-        }
+            if (handlerTarget == null)
+            {
+                // 此事件处理器是一个静态方法
+                targets.Add(new Subscription(null, methodInfo));
+                return;
+            }
 
-        targets.Add(new Subscription(new WeakReference(handlerTarget), methodInfo));
+            targets.Add(new Subscription(new WeakReference(handlerTarget), methodInfo));
+        }
     }
 
     private void RemoveEventHandler(string eventName, object handlerTarget, MemberInfo methodInfo)
     {
-        if (!_eventHandlers.TryGetValue(eventName, out var subscriptions))
+        lock (_lock)
         {
-            return;
-        }
-
-        for (var n = subscriptions.Count - 1; n >= 0; n--)
-        {
-            var current = subscriptions[n];
-
-            if (current.Subscriber != null && !current.Subscriber.IsAlive)
+            if (!_eventHandlers.TryGetValue(eventName, out var subscriptions))
             {
-                // 如果订阅者已不可用，移除并继续
-                subscriptions.RemoveAt(n);
-                continue;
+                return;
             }
 
-            if (current.Subscriber?.Target == handlerTarget && current.Handler.Name == methodInfo.Name)
+            for (var n = subscriptions.Count - 1; n >= 0; n--)
             {
-                // 找到匹配项，可以中断
-                subscriptions.RemoveAt(n);
-                break;
+                var current = subscriptions[n];
+
+                if (current.Subscriber != null && !current.Subscriber.IsAlive)
+                {
+                    // 如果订阅者已不可用，移除并继续
+                    subscriptions.RemoveAt(n);
+                    continue;
+                }
+
+                if (SubscriberEquals(current.Subscriber, handlerTarget) && current.Handler.Name == methodInfo.Name)
+                {
+                    // 找到匹配项，可以中断
+                    subscriptions.RemoveAt(n);
+                    break;
+                }
             }
         }
+    }
+
+    private static bool SubscriberEquals(WeakReference subscriber, object handlerTarget)
+    {
+        if (subscriber == null)
+        {
+            return handlerTarget == null;
+        }
+
+        return ReferenceEquals(subscriber.Target, handlerTarget);
     }
 
     /// <summary>
@@ -195,43 +213,44 @@ public sealed class WeakEventManager
         var toRaise = new List<(object subscriber, MethodInfo handler)>();
         var toRemove = new List<Subscription>();
 
-        if (_eventHandlers.TryGetValue(eventName, out var target))
+        lock (_lock)
         {
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < target.Count; i++)
+            if (_eventHandlers.TryGetValue(eventName, out var target))
             {
-                var subscription = target[i];
-                var isStatic = subscription.Subscriber == null;
-                if (isStatic)
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < target.Count; i++)
                 {
-                    // 对于静态方法，我们只传递 null 作为 MethodInfo.Invoke 的第一个参数
-                    toRaise.Add((null, subscription.Handler));
-                    continue;
+                    var subscription = target[i];
+                    var isStatic = subscription.Subscriber == null;
+                    if (isStatic)
+                    {
+                        // 对于静态方法，我们只传递 null 作为 MethodInfo.Invoke 的第一个参数
+                        toRaise.Add((null, subscription.Handler));
+                        continue;
+                    }
+
+                    var subscriber = subscription.Subscriber.Target;
+
+                    if (subscriber == null)
+                    {
+                        // 订阅者已被回收，因此无需保留此订阅
+                        toRemove.Add(subscription);
+                    }
+                    else
+                    {
+                        toRaise.Add((subscriber, subscription.Handler));
+                    }
                 }
 
-                var subscriber = subscription.Subscriber.Target;
-
-                if (subscriber == null)
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (var i = 0; i < toRemove.Count; i++)
                 {
-                    // 订阅者已被回收，因此无需保留此订阅
-                    toRemove.Add(subscription);
+                    var subscription = toRemove[i];
+                    target.Remove(subscription);
                 }
-                else
-                {
-                    toRaise.Add((subscriber, subscription.Handler));
-                }
-            }
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < toRemove.Count; i++)
-            {
-                var subscription = toRemove[i];
-                target.Remove(subscription);
             }
         }
 
-        {
-        }
         return toRaise;
     }
 
@@ -329,7 +348,10 @@ public sealed class WeakEventManager
     /// </summary>
     public void RemoveEventHandlers()
     {
-        _eventHandlers.Clear();
+        lock (_lock)
+        {
+            _eventHandlers.Clear();
+        }
     }
 
     /// <summary>
@@ -344,7 +366,10 @@ public sealed class WeakEventManager
             throw new ArgumentNullException(nameof(eventName));
         }
 
-        _eventHandlers.Remove(eventName);
+        lock (_lock)
+        {
+            _eventHandlers.Remove(eventName);
+        }
     }
 
     #endregion
@@ -364,6 +389,6 @@ public sealed class WeakEventManager
 
         public override bool Equals(object obj) => obj is Subscription other && Equals(other);
 
-        public override int GetHashCode() => Subscriber?.GetHashCode() ?? 0 ^ Handler.GetHashCode();
+        public override int GetHashCode() => (Subscriber?.GetHashCode() ?? 0) ^ Handler.GetHashCode();
     }
 }

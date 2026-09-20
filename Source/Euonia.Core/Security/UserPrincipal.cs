@@ -105,7 +105,7 @@ public class UserPrincipal
 	/// <value>
 	/// <see cref="UserClaimTypes.Tenant"/> 声明的值。如果声明或底层 <see cref="ClaimsPrincipal"/> 不存在则可能为 <c>null</c>。
 	/// </value>
-	public string Tenant => Claims.FindFirst(UserClaimTypes.Tenant)?.Value;
+	public string Tenant => Claims?.FindFirst(UserClaimTypes.Tenant)?.Value;
 
 	/// <summary>
 	/// 获取用户的角色名称序列。
@@ -132,7 +132,7 @@ public class UserPrincipal
 	/// <returns>找到的第一个匹配 <see cref="Claim"/>；如果未找到则返回 <c>null</c>。</returns>
 	public Claim FindClaim(string claimType)
 	{
-		return Claims.FindFirst(claimType);
+		return Claims?.FindFirst(claimType);
 	}
 
 	/// <summary>
@@ -142,7 +142,7 @@ public class UserPrincipal
 	/// <returns>包含所有匹配 <see cref="Claim"/> 实例的数组。如果没有匹配的声明，则返回空数组。</returns>
 	public Claim[] FindClaims(string claimType)
 	{
-		return Claims.FindAll(claimType).ToArray();
+		return Claims?.FindAll(claimType).ToArray() ?? Array.Empty<Claim>();
 	}
 
 	/// <summary>
@@ -151,7 +151,7 @@ public class UserPrincipal
 	/// <returns>包含底层主体中所有 <see cref="Claim"/> 实例的数组。如果主体没有声明，则返回空数组。</returns>
 	public Claim[] GetAllClaims()
 	{
-		return Claims.Claims.ToArray();
+		return Claims?.Claims.ToArray() ?? Array.Empty<Claim>();
 	}
 
 	/// <summary>
@@ -161,7 +161,7 @@ public class UserPrincipal
 	/// <returns>如果用户已通过身份验证且属于指定角色，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool IsInRole(string role)
 	{
-		return IsAuthenticated && Claims.IsInRole(role);
+		return IsAuthenticated && Claims != null && FindRoleClaims().Any(t => t.Value == role);
 	}
 
 	/// <summary>
@@ -172,7 +172,7 @@ public class UserPrincipal
 	/// 如果 <paramref name="roles"/> 为 <c>null</c> 或空，则返回 <c>false</c>。</returns>
 	public bool IsInRoles(IEnumerable<string> roles)
 	{
-		return IsAuthenticated && roles.Any(IsInRole);
+		return roles != null && roles.Any(IsInRole);
 	}
 
 	/// <summary>
@@ -189,7 +189,27 @@ public class UserPrincipal
 		ArgumentAssert.ThrowIfNull(role, nameof(role));
 #endif
 
-		var roles = role.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+		var roles = role.Split(separator, StringSplitOptions.RemoveEmptyEntries)
+		                .Select(t => t.Trim())
+		                .Where(t => t.Length > 0);
 		return IsInRoles(roles);
+	}
+
+	/// <summary>
+	/// 收集所有角色声明：既包括 <see cref="UserClaimTypes.Role"/>（"role"），
+	/// 也包括各身份所配置的 <see cref="ClaimsIdentity.RoleClaimType"/>（通常为标准的角色 URI）。
+	/// </summary>
+	private IEnumerable<Claim> FindRoleClaims()
+	{
+		var claims = new List<Claim>(Claims.FindAll(UserClaimTypes.Role));
+		foreach (var identity in Claims.Identities)
+		{
+			if (!string.IsNullOrEmpty(identity.RoleClaimType))
+			{
+				claims.AddRange(identity.FindAll(identity.RoleClaimType));
+			}
+		}
+
+		return claims;
 	}
 }

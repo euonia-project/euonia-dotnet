@@ -1,3 +1,6 @@
+using System;
+using System.Globalization;
+
 /// <summary>
 /// 对象标识符。
 /// </summary>
@@ -50,7 +53,7 @@ public readonly struct ObjectId
 	/// <param name="id1">第一个对象标识符。</param>
 	/// <param name="id2">第二个对象标识符。</param>
 	/// <returns>如果值相等则为 true；否则为 false。</returns>
-	public static bool operator ==(ObjectId id1, ObjectId id2) => EqualityComparer<object>.Default.Equals(id1.Value, id2.Value);
+	public static bool operator ==(ObjectId id1, ObjectId id2) => ValueEquals(id1.Value, id2.Value);
 
 	/// <summary>
 	/// 返回一个值，指示两个指定的 <see cref="ObjectId"/> 值是否不相等。
@@ -58,7 +61,48 @@ public readonly struct ObjectId
 	/// <param name="id1">第一个对象标识符。</param>
 	/// <param name="id2">第二个对象标识符。</param>
 	/// <returns>如果值不相等则为 true；否则为 false。</returns>
-	public static bool operator !=(ObjectId id1, ObjectId id2) => !EqualityComparer<object>.Default.Equals(id1.Value, id2.Value);
+	public static bool operator !=(ObjectId id1, ObjectId id2) => !ValueEquals(id1.Value, id2.Value);
+
+	/// <summary>
+	/// 比较两个原始值的相等性，对数值类型进行规范化（例如 <see cref="int"/> 5 与 <see cref="long"/> 5 视为相等）。
+	/// </summary>
+	private static bool ValueEquals(object left, object right)
+	{
+		if (ReferenceEquals(left, right))
+		{
+			return true;
+		}
+
+		if (left == null || right == null)
+		{
+			return false;
+		}
+
+		if (left.Equals(right))
+		{
+			return true;
+		}
+
+		if (IsNumeric(left) && IsNumeric(right))
+		{
+			try
+			{
+				return Convert.ToDecimal(left, CultureInfo.InvariantCulture)
+				       == Convert.ToDecimal(right, CultureInfo.InvariantCulture);
+			}
+			catch (Exception)
+			{
+				return false;
+			}
+		}
+
+		return false;
+	}
+
+	private static bool IsNumeric(object value)
+	{
+		return value is byte or sbyte or short or ushort or int or uint or long or ulong or float or double or decimal;
+	}
 
 	/// <summary>
 	/// 定义将 <see cref="long"/> 隐式转换为 <see cref="ObjectId"/>。
@@ -77,7 +121,7 @@ public readonly struct ObjectId
 	/// <returns>转换后的长整数值。</returns>
 	public static implicit operator long(ObjectId id)
 	{
-		return (long)id.Value;
+		return Convert.ToInt64(id.Value, CultureInfo.InvariantCulture);
 	}
 
 	/// <summary>
@@ -97,7 +141,7 @@ public readonly struct ObjectId
 	/// <returns>转换后的整数值。</returns>
 	public static implicit operator int(ObjectId id)
 	{
-		return (int)id.Value;
+		return Convert.ToInt32(id.Value, CultureInfo.InvariantCulture);
 	}
 
 	/// <summary>
@@ -218,7 +262,14 @@ public readonly struct ObjectId
 	/// <inheritdoc/>
 	public override int GetHashCode()
 	{
-		return HashCode.Combine(Value);
+		if (Value == null)
+		{
+			return 0;
+		}
+
+		return IsNumeric(Value)
+			       ? Convert.ToDecimal(Value, CultureInfo.InvariantCulture).GetHashCode()
+			       : Value.GetHashCode();
 	}
 
 	/// <inheritdoc/>
@@ -229,7 +280,7 @@ public readonly struct ObjectId
 			return false;
 		}
 
-		return id.Value.Equals(Value);
+		return ValueEquals(id.Value, Value);
 	}
 }
 

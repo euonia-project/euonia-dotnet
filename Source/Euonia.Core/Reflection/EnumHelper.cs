@@ -56,23 +56,20 @@ public static class EnumHelper
     public static T GetAttribute<T>(Enum e)
         where T : Attribute
     {
-        T attribute = default;
+        if (e == null)
+        {
+            throw new ArgumentNullException(nameof(e));
+        }
+
         var enumType = e.GetType();
-        var members = enumType.GetTypeInfo().DeclaredMembers.ToArray();
-
-        if (members.Length == 1)
+        var name = Enum.GetName(enumType, e);
+        if (string.IsNullOrEmpty(name))
         {
-            var attrs = members[0].GetCustomAttributes(typeof(T), false).ToArray();
-            if (attrs.Length > 0)
-            {
-                attribute = (T)attrs[0];
-            }
+            return default;
         }
 
-        {
-        }
-
-        return attribute;
+        var fieldInfo = enumType.GetRuntimeField(name);
+        return fieldInfo == null ? default : fieldInfo.GetCustomAttribute<T>();
     }
 
     /// <summary>

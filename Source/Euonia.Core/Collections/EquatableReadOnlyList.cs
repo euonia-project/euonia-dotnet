@@ -18,15 +18,15 @@ public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<E
     }
 
     /// <inheritdoc />
-    public T this[int index] => _array[index];
+    public T this[int index] => Items[index];
 
     /// <summary>
     /// 获取列表的元素数量。
     /// </summary>
-    public int Count => _array.Length;
+    public int Count => Items.Length;
 
     /// <inheritdoc />
-    public bool Equals(EquatableReadOnlyList<T> other) => _array.SequenceEqual(other._array);
+    public bool Equals(EquatableReadOnlyList<T> other) => Items.SequenceEqual(other.Items);
 
     /// <inheritdoc />
     public override bool Equals(object obj) => obj is EquatableReadOnlyList<T> that && Equals(that);
@@ -34,17 +34,28 @@ public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<E
     /// <inheritdoc />
     public override int GetHashCode()
     {
-        return _array.Aggregate(0, (current, item) => (current, item).GetHashCode());
+        var hashCode = 17;
+        foreach (var item in Items)
+        {
+            hashCode = unchecked(hashCode * 31 + (item?.GetHashCode() ?? 0));
+        }
+
+        return hashCode;
     }
 
     /// <summary>
     /// 返回一个循环访问集合的枚举器。
     /// </summary>
     /// <returns>可用于循环访问集合的 <see cref="IEnumerator{T}"/>。</returns>
-    public IEnumerator<T> GetEnumerator() => _array.As<IEnumerable<T>>().GetEnumerator();
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)Items).GetEnumerator();
 
     /// <inheritdoc />
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    /// <summary>
+    /// 返回底层数组，空数组处理为不再为 null（支持默认构造的实例）。
+    /// </summary>
+    private T[] Items => _array ?? Array.Empty<T>();
 
     /// <summary>
     /// 确定两个指定的 <see cref="EquatableReadOnlyList{T}"/> 是否具有相同的值。

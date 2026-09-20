@@ -25,6 +25,7 @@ public class GuidAttribute : ValidationAttribute
 		return value switch
 		{
 			null => ValidationResult.Success,
+			Guid guid when guid != Guid.Empty => ValidationResult.Success,
 			string str when Guid.TryParse(str, out _) => ValidationResult.Success,
 			_ => new ValidationResult(
 				ErrorMessage ?? $"{validationContext.MemberName} must be a valid GUID.",

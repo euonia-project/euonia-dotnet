@@ -5,7 +5,9 @@ using Nerosoft.Euonia.Collections;
 
 public static partial class Extensions
 {
-	private static readonly Random _random = new();
+	[ThreadStatic] private static Random _random;
+
+	private static Random RandomInstance => _random ??= new Random();
 
 	/// <summary>
 	/// 对 <see cref="IEnumerable{T}"/> 的每个元素执行指定操作。
@@ -13,13 +15,12 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="source">源集合。</param>
 	/// <param name="action">对每个元素执行的委托。</param>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
-	/// <exception cref="ArgumentNullException">当 action 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 或 <paramref name="action"/> 为 null 时抛出。</exception>
 	public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(source));
 		}
 
 		ArgumentAssert.ThrowIfNull(action, nameof(action));
@@ -37,15 +38,15 @@ public static partial class Extensions
 	/// <param name="value">要查找的值。</param>
 	/// <param name="comparison">字符串比较类型。</param>
 	/// <returns>如果包含指定值，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static bool Contains(this IEnumerable<string> source, string value, StringComparison comparison)
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(source));
 		}
 
-		return source.Any(t => t.Equals(value, comparison));
+		return source.Any(t => string.Equals(t, value, comparison));
 	}
 
 	/// <summary>
@@ -75,24 +76,42 @@ public static partial class Extensions
 	}
 
 	/// <summary>
-	/// 确定指定集合是否等于另一个集合。
+	/// 确定指定集合是否等于另一个集合（忽略顺序，但尊重元素重复次数）。
 	/// </summary>
 	/// <typeparam name="T">集合元素类型。</typeparam>
 	/// <param name="source">源集合。</param>
 	/// <param name="dest">目标集合。</param>
 	/// <returns>如果集合相等，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
-	/// <exception cref="ArgumentNullException">当 <paramref name="dest"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 或 <paramref name="dest"/> 为 null 时抛出。</exception>
 	public static bool Equals<T>(this IEnumerable<T> source, IEnumerable<T> dest) where T : IComparable
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(source));
 		}
 
 		ArgumentAssert.ThrowIfNull(dest, nameof(dest));
 
-		return dest.Count() == source.Count() && source.All(dest.Contains);
+		var sourceList = source.ToList();
+		var destList = dest.ToList();
+
+		if (sourceList.Count != destList.Count)
+		{
+			return false;
+		}
+
+		sourceList.Sort();
+		destList.Sort();
+
+		for (var i = 0; i < sourceList.Count; i++)
+		{
+			if (Comparer<T>.Default.Compare(sourceList[i], destList[i]) != 0)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 
 	/// <summary>
@@ -106,7 +125,7 @@ public static partial class Extensions
 	{
 		if (values == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(values));
 		}
 
 		return string.Join(separator, values);
@@ -121,13 +140,13 @@ public static partial class Extensions
 	/// <param name="startIndex">起始索引。</param>
 	/// <param name="count">要连接的元素数量。</param>
 	/// <returns>连接后的字符串。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="values"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="values"/> 为 null 时抛出。</exception>
 	/// <exception cref="IndexOutOfRangeException">当 <paramref name="startIndex"/> 超出集合范围时抛出。</exception>
 	public static string Join<T>(this IEnumerable<T> values, string separator, int startIndex, int count)
 	{
 		if (values == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(values));
 		}
 
 		if (startIndex >= values.Count())
@@ -144,12 +163,12 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="source">源可分页集合。</param>
 	/// <returns>视图集合。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static ViewCollection<T> ToView<T>(this PageableCollection<T> source) where T : class, new()
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(source));
 		}
 
 		return new ViewCollection<T>(source.ToArray(), source.TotalCount);
@@ -164,12 +183,12 @@ public static partial class Extensions
 	/// <param name="index">页码。</param>
 	/// <param name="size">每页大小。</param>
 	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Paginate<T>(this IList<T> source, long totalCount, int index, int size)
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException();
+			throw new ArgumentNullException(nameof(source));
 		}
 
 		return new PageableCollection<T>(source) { TotalCount = totalCount, PageNumber = index, PageSize = size };
@@ -183,12 +202,12 @@ public static partial class Extensions
 	/// <param name="index">页码。</param>
 	/// <param name="size">每页大小。</param>
 	/// <returns>包含 <paramref name="source"/> 所有元素的新可分页集合。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="source"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="source"/> 为 null 时抛出。</exception>
 	public static PageableCollection<T> Convert<T>(this PageableCollection<T> source, int index, int size)
 	{
 		if (source == null)
 		{
-			throw new NullReferenceException(nameof(source));
+			throw new ArgumentNullException(nameof(source));
 		}
 
 		return new PageableCollection<T>(source) { TotalCount = source.TotalCount, PageNumber = index, PageSize = size };
@@ -200,19 +219,20 @@ public static partial class Extensions
 	/// <typeparam name="T">元素类型。</typeparam>
 	/// <param name="enumerable">要打乱的集合。</param>
 	/// <returns>打乱顺序后的集合。</returns>
-	/// <exception cref="NullReferenceException">当 <paramref name="enumerable"/> 为 null 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="enumerable"/> 为 null 时抛出。</exception>
 	public static IEnumerable<T> Shuffle<T>(this IEnumerable<T> enumerable)
 	{
 		if (enumerable == null)
 		{
-			throw new NullReferenceException(nameof(enumerable));
+			throw new ArgumentNullException(nameof(enumerable));
 		}
 
 		var buffer = enumerable.ToList();
+		var random = RandomInstance;
 
 		for (var i = 0; i < buffer.Count; i++)
 		{
-			var j = _random.Next(i, buffer.Count);
+			var j = random.Next(i, buffer.Count);
 
 			yield return buffer[j];
 

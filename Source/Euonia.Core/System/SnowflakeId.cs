@@ -2,9 +2,9 @@ namespace System;
 
 internal class SnowflakeId
 {
-    private static long _machineId; //机器ID
-    private static long _datacenterId; //数据ID
-    private static long _sequence; //计数从零开始
+    private long _machineId; //机器ID
+    private long _datacenterId; //数据ID
+    private long _sequence; //计数从零开始
 
     // ReSharper disable once IdentifierTypo
     private const long TWEPOCH = 687888001020L; //唯一时间随机量
@@ -19,9 +19,9 @@ internal class SnowflakeId
     private const long DATACENTER_ID_SHIFT = SEQUENCE_BITS + MACHINE_ID_BITS;
     private const long TIMESTAMP_LEFT_SHIFT = SEQUENCE_BITS + MACHINE_ID_BITS + DATACENTER_ID_BITS; //时间戳左移动位数就是机器码+计数器总字节数+数据字节数
     private const long SEQUENCE_MASK = -1L ^ -1L << (int)SEQUENCE_BITS; //一微秒内可以产生计数，如果达到该值则等到下一微妙在进行生成
-    private static long _lastTimestamp = -1L; //最后时间戳
+    private long _lastTimestamp = -1L; //最后时间戳
 
-    private static readonly object _lockObject = new(); //加锁对象
+    private readonly object _lockObject = new(); //加锁对象
 
     private static readonly Lazy<SnowflakeId> _instance = new();
 
@@ -66,7 +66,7 @@ internal class SnowflakeId
         Snowflakes(machineId, datacenterId);
     }
 
-    private static void Snowflakes(long machineId, long datacenterId)
+    private void Snowflakes(long machineId, long datacenterId)
     {
         if (machineId >= 0)
         {
@@ -99,15 +99,16 @@ internal class SnowflakeId
     }
 
     /// <summary>
-    /// 获取下一微秒时间戳
+    /// 获取严格大于上一个时间戳的时间戳
     /// </summary>
     /// <param name="lastTimestamp">上一个时间戳。</param>
     /// <returns>下一个时间戳（毫秒）。</returns>
     private static long GetNextTimestamp(long lastTimestamp)
     {
         var timestamp = GetTimestamp();
-        if (timestamp <= lastTimestamp)
+        while (timestamp <= lastTimestamp)
         {
+            Thread.Sleep(1);
             timestamp = GetTimestamp();
         }
 

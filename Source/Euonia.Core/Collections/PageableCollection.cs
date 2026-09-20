@@ -60,7 +60,12 @@ public class PageableCollection<T> : List<T>
                 throw new InvalidOperationException();
             }
 
-            return (int)Math.Ceiling((double)TotalCount / PageSize);
+            if (TotalCount <= 0)
+            {
+                return 0;
+            }
+
+            return (TotalCount / PageSize) + (TotalCount % PageSize == 0 ? 0 : 1);
         }
     }
 
@@ -68,13 +73,53 @@ public class PageableCollection<T> : List<T>
     /// 获取起始位置。
     /// </summary>
     /// <value>起始位置。</value>
-    public virtual long StartPosition => (PageNumber - 1) * PageSize + 1;
+    /// <exception cref="InvalidOperationException">当 <see cref="PageSize"/> 小于或等于 0、或 <see cref="PageNumber"/> 小于 1 时抛出。</exception>
+    public virtual long StartPosition
+    {
+        get
+        {
+            if (PageSize <= 0)
+            {
+                throw new InvalidOperationException();
+            }
+
+            if (PageNumber < 1)
+            {
+                throw new InvalidOperationException();
+            }
+
+            return (PageNumber - 1) * PageSize + 1;
+        }
+    }
 
     /// <summary>
     /// 获取结束位置。
     /// </summary>
     /// <value>结束位置。</value>
-    public virtual long EndPosition => PageNumber * PageSize > TotalCount ? TotalCount : PageNumber * PageSize;
+    /// <exception cref="InvalidOperationException">当 <see cref="PageSize"/> 小于或等于 0、或 <see cref="PageNumber"/> 小于 1 时抛出。</exception>
+    public virtual long EndPosition
+    {
+        get
+        {
+            if (PageSize <= 0)
+            {
+                throw new InvalidOperationException();
+            }
+
+            if (PageNumber < 1)
+            {
+                throw new InvalidOperationException();
+            }
+
+            if (TotalCount <= 0)
+            {
+                return 0;
+            }
+
+            var end = PageNumber * PageSize;
+            return end > TotalCount ? TotalCount : end;
+        }
+    }
 
     #endregion
 }
