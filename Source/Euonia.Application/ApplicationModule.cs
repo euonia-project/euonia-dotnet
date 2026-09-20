@@ -20,6 +20,7 @@ public class ApplicationModule : ModuleContextBase
 		context.Services.AddTransient<IInterceptor, CacheInterceptor>();
 		context.Services.AddTransient<IInterceptor, CacheEvictionInterceptor>();
 		context.Services.AddTransient<IInterceptor, IdempotentInterceptor>();
+		context.Services.AddTransient<IInterceptor, RetryInterceptor>();
 		context.Services.AddSingleton<ICacheGroupManager, CacheGroupManager>();
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UserContextBehavior<,>));

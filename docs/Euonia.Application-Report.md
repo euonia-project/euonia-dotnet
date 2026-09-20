@@ -536,3 +536,33 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 
 - **分布式幂等的生产实施**：`[Idempotent]` 的指纹读取 / 写回走 `ICacheService`，多节点去重依赖共享缓存（如 Redis）实现；锁已支持 `ILockFactory`，生产建议接入 `Euonia.Concurrency.Redis` / `ZooKeeper` 等分布式锁模块，并在 `TimeoutSeconds` 内不短于方法最坏执行时长。
 - **响应头回写**：入站 `X-Correlation-ID` 已接入管道元数据，但把关联标识写回响应头 / 跨服务日志聚合仍属 Web 中间件职责，本仓库无 Web 层包，未进一步处理。
+
+# 第十部分 实用功能增强（九）
+
+## 四十三、故障重试：`[Retry]` + `RetryInterceptor`
+
+新增 `RetryAttribute`（可标注方法或类）与 `RetryBackoffMode` 枚举（Fixed / Linear / Exponential）及 `RetryInterceptor`：
+
+- **重试判定**：异步方法（`Task`/`Task{TResult}`）以任务失败时刻判定，同步方法在 `Proceed` 抛出异常时判定；异常链中任意节点可赋值给 `RetryableExceptions` 所列类型（未指定则任意异常）且未超过 `MaxRetries`（默认 3，不含首次）时重试。
+- **多次尝试复用捕获的继续执行信息**：进入前 `invocation.CaptureProceedInfo()`，每次尝试 `proceedInfo.Invoke()` 重新触发后续拦截器链与目标方法（Castle 的 `IInvocationProceedInfo` 支持重复调用，专为重试场景设计）。
+- **退避**：`DelayMs` 基础间隔（默认 0 立即重试）；`Linear` 线性递增（n×DelayMs）、`Exponential` 指数递增（2^(n-1)×DelayMs，指数上界避免溢出）；同步路径 `Thread.Sleep`、异步路径 `Task.Delay`。
+- **异常保持**：耗尽重试次数或异常不可重试时以 `throw;` 重新抛出原始异常；失败重试后成功即正常返回。
+- 返回 `ValueTask`/`ValueTask{TResult}` 的方法不重试（直接继续执行，避免类型包装复杂度），已在特性文档注明。
+- `ApplicationModule` 已注册 `RetryInterceptor`。
+
+测试（`RetryInterceptorTests.cs`，10 新增）：同步成功前失败重试、耗尽重试抛出原异常、不可重试异常不重试、`Task{T}` 与 `Task` 异步失败重试（含失败两次后成功）、异步耗尽抛异常、异步不可重试不重试、Fixed 间隔的延迟实测（≥ 两次间隔和）、Exponential 间隔递增实测、无特性方法只执行一次。
+
+## 四十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **148/148**（138 → 148，新增 10） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十五、遗留观察（未改动，供后续决策）
+
+- **`ValueTask` 重试**：返回 `ValueTask`/`ValueTask{TResult}` 的方法当前 `[Retry]` 不生效；如需支持可参考 `CacheInterceptor` 的 `AsTask` + `MakeGenericMethod` 包装模式改造。
+- **退避抖动（jitter）**：固定/线性/指数退避在同一节点高并发触发重试时可能同步唤醒（惊群）；如需可在 `ComputeDelay` 中混入随机抖动。
+- **拦截器组合验证**：`[Retry]` 与 `[Cache]`/`[Idempotent]`/`[Lock]` 的组合按注册顺序包裹，顺序对语义的影响（如缓存命中前是否重试）尚未做组合测试。
