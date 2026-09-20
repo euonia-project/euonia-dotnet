@@ -173,6 +173,39 @@ public class RetryInterceptorTests
 		Assert.Equal(2, probe.Calls);
 	}
 
+	[Fact]
+	public void Retry_CombinedWithIdempotent_ShouldRetryThenDedup()
+	{
+		var probe = new RetryProbe();
+		var cache = new FakeCacheService();
+		var idempotentInterceptor = new IdempotentInterceptor(new CacheStubProvider(cache));
+		var retryInterceptor = new RetryInterceptor();
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(IRetryProbe), probe, idempotentInterceptor, retryInterceptor) as IRetryProbe;
+
+		proxy!.SubmitFlakyOrder();
+		proxy.SubmitFlakyOrder();
+
+		// 首次调用重试成功（执行 2 次）并写入幂等印记，第二次调用被幂等拦截跳过。
+		Assert.Equal(2, probe.Calls);
+	}
+
+	[Fact]
+	public void Retry_CombinedWithLock_ShouldRetryWhileHoldingLock()
+	{
+		var probe = new RetryProbe();
+		var lockInterceptor = new LockInterceptor(new EmptyServiceProvider());
+		var retryInterceptor = new RetryInterceptor();
+		var generator = new ProxyGenerator();
+		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(IRetryProbe), probe, lockInterceptor, retryInterceptor) as IRetryProbe;
+
+		proxy!.SubmitLockedFlaky();
+		proxy.SubmitLockedFlaky();
+
+		// 首次调用在锁内先失败后重试成功（执行 2 次）；第二次调用重新获取锁执行 1 次。
+		Assert.Equal(3, probe.Calls);
+	}
+
 	private static IRetryProbe CreateProxy(RetryProbe probe)
 	{
 		var interceptor = new RetryInterceptor();
@@ -209,6 +242,10 @@ public class RetryInterceptorTests
 		ValueTask DoFlakyValueTask();
 
 		Task<string> GetFlakyAndCached();
+
+		void SubmitFlakyOrder();
+
+		void SubmitLockedFlaky();
 	}
 
 	public class RetryProbe : IRetryProbe
@@ -364,6 +401,28 @@ public class RetryInterceptorTests
 			await Task.Yield();
 			return "v";
 		}
+
+		[Idempotent(TimeoutSeconds = 60)]
+		[Retry(MaxRetries = 3)]
+		public virtual void SubmitFlakyOrder()
+		{
+			Calls++;
+			if (Calls < 2)
+			{
+				throw new InvalidOperationException("transient");
+			}
+		}
+
+		[SemaphoreLock("flaky-lock", Timeout = 2000)]
+		[Retry(MaxRetries = 3)]
+		public virtual void SubmitLockedFlaky()
+		{
+			Calls++;
+			if (Calls < 2)
+			{
+				throw new InvalidOperationException("transient");
+			}
+		}
 	}
 
 	private sealed class CacheStubProvider : IServiceProvider
@@ -376,5 +435,10 @@ public class RetryInterceptorTests
 		}
 
 		public object GetService(Type serviceType) => serviceType == typeof(Nerosoft.Euonia.Caching.ICacheService) ? _cache : null;
+	}
+
+	private sealed class EmptyServiceProvider : IServiceProvider
+	{
+		public object GetService(Type serviceType) => null;
 	}
 }

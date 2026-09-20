@@ -593,3 +593,40 @@ ExecuteAsync<TUseCase>(presenter, ...)                             // where TUse
 - **重试与幂等/锁组合**：`[Retry]` 与 `[Idempotent]`/`[Lock]` 的组合尚缺测试；生产注意 `[Idempotent]` 只在成功时写印记，失败走 `[Retry]` 重试多次（各自窗口/次数独立）。
 - **熔断（circuit breaker）**：`[Retry]` 只做有限的即时重试，不具备连续失败后的熔断/半开探测能力；如需可按方法或类维度引入基于 `ICacheService` 计数的断路器设施。
 - **`[Cache]` + 高故障率方法**：重试成功后写回缓存是成功的，但若重试期间每次失败都尝试写回（当前只有成功后写、失败不写）不存在污染；组合路径的失效时序（`CacheEvict` 与重试并发）未覆盖。
+
+# 第十二部分 实用功能增强（十一）
+
+## 四十九、熔断器：`[CircuitBreaker]` + `CircuitBreakerInterceptor`（落地遗留项）
+
+新增 `CircuitBreakerAttribute`（可标注方法或类）、公开异常 `CircuitBreakerOpenException` 及 `CircuitBreakerInterceptor`：
+
+- **状态机**：Closed（关闭）多数调用照常执行，逐次失败计数、成功即清零；连续失败达到 `MaxFailures`（默认 5）转为 Open；Open 经过 `ResetTimeoutSeconds`（默认 30）秒后转入 HalfOpen 放行探测请求；HalfOpen 连续成功达到 `SuccessThreshold`（默认 1）关闭熔断，任意探测失败立即重新 Open。
+- **快速失败**：Open（未到探测时机）不执行目标方法——同步方法抛 `CircuitBreakerOpenException`；`Task`/`Task{T}` 返回 `Task.FromException` 故障任务、`ValueTask`/`ValueTask{T}` 等价故障值（泛型经 `MakeGenericMethod` + `WrapValueTask<T>` 反射包装，模式同重试）。允许时正常 `Proceed`。
+- **计数更新**：同步方法在 try/catch 就地更新；异步方法（`Task`/`Task{T}`/`ValueTask`/`ValueTask{T}`）经 `AsTask` 取任务后 `ContinueWith` 按完成结果更新（`TaskScheduler.Default`）。状态迁移在 `CircuitState` 内以锁串行化，进程本地。
+- **按方法隔离**：键为 `{service}.{method}`（`InvocationTarget` 具体类型 + 方法名）；`CircuitStateStore` 静态持有多键状态。为测试提供时钟注入（`UtcNowProvider`，默认 `DateTime.UtcNow`）、`Clear()` 与 `GetStateKind`，并新增 `[InternalsVisibleTo("Euonia.Application.Tests")]`。
+- `ApplicationModule` 已注册 `CircuitBreakerInterceptor`。
+
+测试（`CircuitBreakerInterceptorTests.cs`，9 新增）：关闭无失败照常执行、失败低于阈值继续执行、达到阈值抛 `CircuitBreakerOpenException` 且不再执行、受控时钟下超时后探测成功关闭、半开探测失败重新打开、失败后成功重置计数不打开、`Task{T}` 打开后返回故障任务不执行、未类型化 `ValueTask` 打开后失败快速、无特性方法照常执行。
+
+## 五十、拦截器组合验证：`[Retry]` + `[Idempotent]` / `[Lock]`（落地遗留项）
+
+对应四十八遗留断言，新增两个组合测试（`RetryInterceptorTests.cs`）：
+
+- **`[Idempotent]` + `[Retry]`**（幂等外层、重试内层，代理顺序注入）：方法先在幂等锁与缓存窗口内执行，首次调用内部先失败 1 次、重试成功并在成功时才写幂等印记；第二次调用命中印记直接跳过、不再执行——验证失败冒泡不会写入印记。
+- **`[SemaphoreLock]` + `[Retry]`**（锁外层、重试内层）：同步锁持有覆盖整个重试过程（`SemaphoreLockStore` 本地信号量，`Timeout = 2000` 毫秒作死锁兜底）；首次调用在锁内失败后重试成功，第二次调用重新获取锁执行——验证重试期间不释放锁、无自锁死。
+
+## 五十一、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **163/163**（152 → 163，新增 11） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 五十二、遗留观察（未改动，供后续决策）
+
+- **分布式熔断**：当前熔断状态为进程本地，多实例部署时各节点独立计数；如需跨实例共享可让 `CircuitStateStore` 接入 `IDistributedCache`/分布式锁（或在 `ICacheService` 上按计数原子化）。此外 `HalfOpen` 的 `SuccessThreshold` 允许并发探测（未达阈值前可同时放行多个），高并发场景可加「单飞」限制。
+- **熔断与缓存/重试组合时序**：`[Cache]`/`[Idempotent]` 在前、`[CircuitBreaker]` 在后时，打开/快速失败发生在缓存命中之后；按注册顺序的语义差异（熔断快速失败是否应先于缓存命中）尚未做组合测试。
+- **`CacheEvict` 与重试并发时序**：熔断/重试期间若并发触发组失效，是否有竞态（写回与新失效交错）未覆盖。
+- **熔断参数校验**：`MaxFailures`/`ResetTimeoutSeconds`/`SuccessThreshold` 均校验 > 0；打开时的内置复位计时依赖真实时间，长周期场景可考虑持久化 `OpenedAtUtc`。
