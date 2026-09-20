@@ -205,6 +205,47 @@ public sealed class ScopeModelRegistry
 	}
 
 	/// <summary>
+	/// 校验每个操作都能解析出唯一的策略键。
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// 同一操作若解析出多个「声明了行级策略」的权限码，属配置歧义——不允许「实际生效的是哪一个」靠猜，
+	/// 因此在启动期直接失败。
+	/// </para>
+	/// <para>
+	/// 同时检出「死策略」：声明了策略却没有任何操作会解析到该码。多半是 <c>Declare</c> 里的码与方法上
+	/// <c>[Permission]</c> 的码对不上——那样行级策略会静默失效并回落到默认策略，很可能比作者本意更宽松。
+	/// </para>
+	/// </remarks>
+	private static void ValidateKeyResolution(Type modelType, ScopeModelRegistration registration)
+	{
+		var resolved = new HashSet<string>(StringComparer.Ordinal);
+
+		foreach (var operation in PermissionRequirements.AllOperations)
+		{
+			// 解析失败会抛 InvalidOperationException，消息里带类型、操作与冲突的码
+			resolved.Add(ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation));
+		}
+
+		foreach (var code in registration.DeclaredCodes)
+		{
+			// 框架保留键（@read/@create/…）由操作直接解析，不需要声明方匹配
+			if (ScopeKeys.IsReserved(code))
+			{
+				continue;
+			}
+
+			Check.Ensure(
+				resolved.Contains(code),
+				"权限模型 '{0}' 为权限码 '{1}' 声明了行级策略，但没有任何操作会解析到该码"
+				+ "（请核对方法上 [Permission] 的码与 Declare 里的码是否一致）。已解析到的码：{2}。",
+				modelType.Name,
+				code,
+				resolved.Count == 0 ? "（无）" : string.Join(", ", resolved));
+		}
+	}
+
+	/// <summary>
 	/// 用探针主体集试编译策略，借此暴露「策略引用了未映射维度」等配置错误。
 	/// </summary>
 	/// <remarks>
@@ -212,25 +253,6 @@ public sealed class ScopeModelRegistry
 	/// 从而把「本维度未被授予」误判成「策略结构性恒不放行」。
 	/// 这里给每个已声明维度都填一个哨兵值，使策略结构被真实地走一遍。
 	/// </remarks>
-	/// <summary>
-	/// 校验每个操作都能解析出唯一的策略键。
-	/// </summary>
-	/// <remarks>
-	/// 同一操作若解析出多个「声明了行级策略」的权限码，属配置歧义——不允许「实际生效的是哪一个」靠猜，
-	/// 因此在启动期直接失败。
-	/// </remarks>
-	private static void ValidateKeyResolution(Type modelType, ScopeModelRegistration registration)
-	{
-		foreach (var operation in PermissionRequirements.AllOperations)
-		{
-			// 解析失败会抛 InvalidOperationException，消息里带类型、操作与冲突的码
-			ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);
-		}
-	}
-
-	/// <summary>
-	/// 用探针主体集试编译策略。
-	/// </summary>
 	private static void ValidatePolicy(Type modelType, ScopeModelDescriptor descriptor, object policy, string scopeKey)
 	{
 		var probe = ScopeSubjectSet.CreateBuilder();
