@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
@@ -25,7 +26,7 @@ namespace Nerosoft.Euonia.Bus;
 /// </list>
 /// </para>
 /// </remarks>
-internal sealed class MessageBus : IBus
+internal sealed class MessageBus : IBus, IDisposable
 {
 	/// <summary>
 	/// 负责确定给定消息类型应使用哪些传输器的分发器。
@@ -53,6 +54,23 @@ internal sealed class MessageBus : IBus
 	private readonly ConcurrentDictionary<string, ITransporter> _transporters = new();
 
 	/// <summary>
+	/// 发件箱（Outbox）存储，未注册时为 <c>null</c>。
+	/// </summary>
+	private readonly IOutboxStore _outboxStore;
+
+	/// <summary>
+	/// 发件箱（Outbox）配置选项。
+	/// </summary>
+	private readonly OutboxOptions _outboxOptions;
+
+	/// <summary>
+	/// 发件箱（Outbox）后台调度器，负责重试发送失败的消息。
+	/// </summary>
+	private readonly OutboxDispatcher _outboxDispatcher;
+
+	private bool _disposed;
+
+	/// <summary>
 	/// 初始化 <see cref="MessageBus"/> 类的新实例，并支持请求上下文。
 	/// </summary>
 	/// <param name="accessor">用于依赖解析的服务访问器。</param>
@@ -65,6 +83,11 @@ internal sealed class MessageBus : IBus
 		_accessor = accessor;
 		_configurator = configurator;
 		_requestAccessor = requestAccessor;
+
+		_outboxStore = _accessor.GetService<IOutboxStore>();
+		_outboxOptions = _accessor.GetService<IOptions<MessageBusOptions>>()?.Value?.Outbox ?? new OutboxOptions();
+		_outboxDispatcher = new OutboxDispatcher(_accessor, _outboxStore, _outboxOptions);
+		_outboxDispatcher.Start();
 	}
 
 	/// <summary>
@@ -107,12 +130,27 @@ internal sealed class MessageBus : IBus
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
+		// 当全局开关启用（或单条消息显式指定）发件箱时，先将消息写入发件箱存储，再分发到各传输通道。
+		var useOutbox = options.UseOutbox ?? (_outboxOptions.Enabled && _outboxStore != null);
+		if (useOutbox)
+		{
+			if (_outboxStore == null)
+			{
+				throw new MessagePersistentException($"The outbox store is not registered, but the message '{message.GetType().FullName}' requires outbox persistence.");
+			}
+
+			if (!_outboxStore.Insert(pack, transports.ToArray()))
+			{
+				throw new MessagePersistentException($"The outbox message with id '{pack.MessageId}' already exists.");
+			}
+		}
+
 		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 		{
 			await RunWithPipelineAsync(pack, behavior, (transport, p) =>
 			{
 				return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
-			}, name);
+			}, name, useOutbox);
 		});
 	}
 
@@ -293,12 +331,19 @@ internal sealed class MessageBus : IBus
 	/// <param name="behavior">用于配置管道的可选委托。</param>
 	/// <param name="next">执行实际传输操作的委托。</param>
 	/// <param name="transportName">要使用的传输器名称。</param>
+	/// <param name="useOutbox">是否对当前传输应用发件箱（Outbox）行为。</param>
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
-	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName)
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName, bool useOutbox = false)
 	{
 		var pipeline = _accessor.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
 		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _accessor.GetService<ILogger<MessageBus>>());
+
+		if (useOutbox)
+		{
+			pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, TResult>), transportName);
+		}
+
 		pipeline.UseOf(pack.Payload.GetType(), true);
 
 		behavior?.Invoke(pipeline);
@@ -332,5 +377,18 @@ internal sealed class MessageBus : IBus
 		var channel = selector(messageType);
 
 		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException($"The channel name for message type '{messageType.FullName}' cannot be null or empty. Please specify a channel in the options or configure a default channel for this message type.");
+	}
+
+	/// <inheritdoc/>
+	public void Dispose()
+	{
+		if (_disposed)
+		{
+			return;
+		}
+
+		_disposed = true;
+		_outboxDispatcher?.Dispose();
+		GC.SuppressFinalize(this);
 	}
 }

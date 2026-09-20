@@ -51,4 +51,27 @@ public abstract class ExtendableOptions
 	/// 获取或设置用于自定义消息元数据的委托。
 	/// </summary>
 	public virtual Action<MessageMetadata> MetadataSetter { get; set; }
+
+	/// <summary>
+	/// 获取或设置是否为当前消息启用发件箱（Outbox）记录。
+	/// </summary>
+	/// <remarks>
+	/// 单条消息级别的开关，优先级高于全局开关 <see cref="OutboxOptions.Enabled"/>：
+	/// <list type="bullet">
+	/// <item><description><c>true</c>：强制为当前消息启用发件箱；</description></item>
+	/// <item><description><c>false</c>：强制跳过发件箱；</description></item>
+	/// <item><description><c>null</c>（默认）：遵循全局开关。</description></item>
+	/// </list>
+	/// </remarks>
+	public virtual bool? UseOutbox { get; set; }
+
+	/// <summary>
+	/// 获取或设置是否为当前消息启用收件箱（Inbox）去重记录。
+	/// </summary>
+	/// <remarks>
+	/// 收件箱去重发生在消费端（接收方），由全局开关 <see cref="InboxOptions.Enabled"/> 与
+	/// 收件箱存储的注册情况决定。该属性仅为发送侧的单条消息开关，供能够将选项
+	/// 透传至消费端的传输器使用；内置传输器目前不消费该值。
+	/// </remarks>
+	public virtual bool? UseInbox { get; set; }
 }

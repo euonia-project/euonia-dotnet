@@ -22,4 +22,20 @@ public class MessageBusOptions
 	///	自动加载程序集的名称列表，用于在应用程序启动时扫描并注册消息处理器和传输器。
 	/// </remarks>
 	public string[] AutoLoadAssemblies { get; set; }
+
+	/// <summary>
+	/// 获取或设置发件箱（Outbox）模式的配置选项。
+	/// </summary>
+	/// <remarks>
+	/// 通过 <c>Euonia:Bus:Outbox</c> 配置节点进行绑定。
+	/// </remarks>
+	public OutboxOptions Outbox { get; set; } = new();
+
+	/// <summary>
+	/// 获取或设置收件箱（Inbox）模式的配置选项。
+	/// </summary>
+	/// <remarks>
+	/// 通过 <c>Euonia:Bus:Inbox</c> 配置节点进行绑定。
+	/// </remarks>
+	public InboxOptions Inbox { get; set; } = new();
 }
