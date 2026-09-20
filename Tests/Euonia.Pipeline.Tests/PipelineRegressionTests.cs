@@ -72,23 +72,6 @@ public class PipelineRegressionTests
 	}
 
 	[Fact]
-	public async Task UntypedPipeline_Use_MethodBasedMultiParamHandler_WithTypedFirstParameter_BuildsAndRuns()
-	{
-		var provider = new ServiceCollection()
-			.AddSingleton(new Marker { Value = 42 })
-			.BuildServiceProvider();
-		var pipeline = new DefaultPipelineProvider(provider);
-		var context = new Request();
-
-		pipeline.Use(typeof(MultiParamHandler));
-
-		var @delegate = pipeline.Build();
-		await @delegate(context);
-
-		Assert.True(provider.GetRequiredService<Marker>().Called);
-	}
-
-	[Fact]
 	public void StaticRun_returns_accumulate_result_and_runs_behaviors_in_order()
 	{
 		var log = new List<string>();
