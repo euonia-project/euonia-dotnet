@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Application;
 
 namespace Nerosoft.Euonia.Application.Tests;
@@ -187,5 +188,105 @@ public class DefaultUseCasePresenterTests
 		presenter.Ok("result");
 		presenter.Error(new InvalidOperationException());
 		presenter.Error(new OperationCanceledException());
+	}
+}
+
+[Collection("AppTests")]
+public class UseCaseExecutorTests
+{
+	[Fact]
+	public async Task TypedUseCase_Success_ShouldDistributeToPresenter()
+	{
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<GreetingOutput>();
+
+		await executor.ExecuteAsync(new GreetingUseCase(), new GreetingInput("Alice"), presenter, TestContext.Current.CancellationToken);
+
+		Assert.Equal("Hello Alice", presenter.Output.Text);
+	}
+
+	[Fact]
+	public async Task TypedUseCase_Throws_ShouldDistributeError()
+	{
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<string>();
+		var failed = false;
+		presenter.OnFailed += (_, _) => failed = true;
+
+		await executor.ExecuteAsync(new ThrowingUseCase(), new GreetingInput("x"), presenter, TestContext.Current.CancellationToken);
+
+		Assert.True(failed);
+	}
+
+	[Fact]
+	public async Task NonOutputUseCase_ShouldDistributeEmptyOutput()
+	{
+		FlagUseCase.Calls = 0;
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<EmptyUseCaseOutput>();
+
+		await executor.ExecuteAsync(new FlagUseCase(), new GreetingInput("Eve"), presenter, TestContext.Current.CancellationToken);
+
+		Assert.Equal(1, FlagUseCase.Calls);
+		Assert.Same(EmptyUseCaseOutput.Instance, presenter.Output);
+	}
+
+	[Fact]
+	public async Task NonInputUseCase_ShouldDistributeOutput()
+	{
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<GreetingOutput>();
+
+		await executor.ExecuteAsync(new ClockUseCase(), presenter, TestContext.Current.CancellationToken);
+
+		Assert.Equal("now", presenter.Output.Text);
+	}
+
+	[Fact]
+	public async Task ParameterlessUseCase_ShouldDistributeEmptyOutput()
+	{
+		NoopUseCase.Calls = 0;
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<EmptyUseCaseOutput>();
+
+		await executor.ExecuteAsync(new NoopUseCase(), presenter, TestContext.Current.CancellationToken);
+
+		Assert.Equal(1, NoopUseCase.Calls);
+		Assert.Same(EmptyUseCaseOutput.Instance, presenter.Output);
+	}
+
+	[Fact]
+	public async Task UseCase_Canceled_ShouldDistributeCanceledToPresenter()
+	{
+		var executor = new UseCaseExecutor();
+		var presenter = new DefaultUseCasePresenter<string>();
+		var canceled = false;
+		presenter.OnCanceled += (_, _) => canceled = true;
+
+		await executor.ExecuteAsync(new CancelingUseCase(), new GreetingInput("x"), presenter, TestContext.Current.CancellationToken);
+
+		Assert.True(canceled);
+	}
+
+	[Fact]
+	public async Task Executor_FromContainer_ShouldBeResolvable()
+	{
+		using var provider = TestContainer.CreateProvider();
+
+		var executor = provider.GetRequiredService<Nerosoft.Euonia.Application.IUseCaseExecutor>();
+
+		Assert.IsType<Nerosoft.Euonia.Application.UseCaseExecutor>(executor);
+	}
+
+	private sealed class ThrowingUseCase : IUseCase<GreetingInput, string>
+	{
+		public Task<string> ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
+			=> throw new InvalidOperationException("boom");
+	}
+
+	private sealed class CancelingUseCase : IUseCase<GreetingInput, string>
+	{
+		public Task<string> ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
+			=> throw new OperationCanceledException();
 	}
 }

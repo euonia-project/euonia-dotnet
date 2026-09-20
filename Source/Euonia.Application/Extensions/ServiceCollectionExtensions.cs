@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
 
 					if (context.AutoRegisterApplicationService)
 					{
-						services.AddApplicationService(definedTypes, context.ApplicationServiceLifetime);
+						services.AddApplicationService(definedTypes, context.ApplicationServiceLifetime, context.ApplicationServiceTypeFilter);
 					}
 
 					if (context.AutoRegisterPipelineBehaviors)
@@ -123,7 +123,29 @@ public static class ServiceCollectionExtensions
 			var definedTypes = AssemblyHelper.GetDefinedTypes(assembly)
 											 .ToArray();
 
-			services.AddApplicationService(definedTypes, lifetime);
+			services.AddApplicationService(definedTypes, lifetime, null);
+		}
+
+		/// <summary>
+		/// 扫描指定程序集中的应用服务并注册到 <see cref="IServiceCollection"/>，支持类型筛选。
+		/// </summary>
+		/// <param name="assembly">包含应用服务的程序集；为 <c>null</c> 时直接返回。</param>
+		/// <param name="lifetime">应用服务的生命周期。</param>
+		/// <param name="filter">可选的类型筛选器；仅当筛选器返回 <c>true</c>（或未指定）时才注册该类型。</param>
+		/// <remarks>
+		/// 仅注册继承自 <see cref="IApplicationService"/> 的非抽象类。
+		/// </remarks>
+		public void AddApplicationService(Assembly assembly, ServiceLifetime lifetime, Func<Type, bool> filter)
+		{
+			if (assembly == null)
+			{
+				return;
+			}
+
+			var definedTypes = AssemblyHelper.GetDefinedTypes(assembly)
+											 .ToArray();
+
+			services.AddApplicationService(definedTypes, lifetime, filter);
 		}
 
 		/// <summary>
@@ -149,19 +171,28 @@ public static class ServiceCollectionExtensions
 		/// </summary>
 		/// <param name="definedTypes">待扫描的类型集合。</param>
 		/// <param name="lifetime">应用服务的生命周期。</param>
+		/// <param name="filter">可选的类型筛选器；仅当筛选器返回 <c>true</c>（或未指定）时才注册该类型。</param>
 		/// <remarks>
 		/// 每个实现类型都会注册：原始实例持有者（Scoped）、实现类代理（Scoped）以及全部业务接口代理（Scoped）。
 		/// 业务接口为排除 <see cref="_frameworkInterfaces"/> 之后由实现类公开的接口；
 		/// 接口代理与类代理在同一个作用域内共享同一个目标实例。
 		/// </remarks>
-		private void AddApplicationService(TypeInfo[] definedTypes, ServiceLifetime lifetime)
+		private void AddApplicationService(TypeInfo[] definedTypes, ServiceLifetime lifetime, Func<Type, bool> filter)
 		{
 			if (!definedTypes.Any())
 			{
 				return;
 			}
 
-			var types = definedTypes.Where(type => type.IsClass && !type.IsAbstract && typeof(IApplicationService).IsAssignableFrom(type));
+			var types = definedTypes.Where(type =>
+			{
+				if (!type.IsClass || type.IsAbstract || !typeof(IApplicationService).IsAssignableFrom(type))
+				{
+					return false;
+				}
+
+				return filter?.Invoke(type) ?? true;
+			});
 
 			foreach (var implementationType in types)
 			{

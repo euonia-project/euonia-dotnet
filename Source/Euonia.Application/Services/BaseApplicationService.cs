@@ -1,4 +1,5 @@
-﻿using Nerosoft.Euonia.Bus;
+﻿using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Security;
 
@@ -8,8 +9,9 @@ namespace Nerosoft.Euonia.Application;
 /// 应用服务的基础类型。
 /// </summary>
 /// <remarks>
-/// 通过 <see cref="LazyServiceProvider"/> 懒加载解析常用服务（消息总线、当前用户、请求上下文），
-/// 派生应用服务可直接使用 <see cref="Bus"/>、<see cref="User"/> 与 <see cref="HttpRequestAccessor"/>。
+/// 通过 <see cref="LazyServiceProvider"/> 懒加载解析常用服务（消息总线、当前用户、请求上下文、日志），
+/// 派生应用服务可直接使用 <see cref="Bus"/>、<see cref="User"/>、<see cref="HttpRequestAccessor"/>、
+/// <see cref="RequestContext"/> 与 <see cref="Logger"/>。
 /// </remarks>
 public abstract class BaseApplicationService : IApplicationService
 {
@@ -32,4 +34,19 @@ public abstract class BaseApplicationService : IApplicationService
 	/// 获取当前请求上下文访问器。
 	/// </summary>
 	protected virtual IRequestContextAccessor HttpRequestAccessor => LazyServiceProvider.GetService<IRequestContextAccessor>();
+
+	/// <summary>
+	/// 获取当前请求上下文；请求上下文访问器缺失或当前不在请求流内时返回 <see langword="null"/>。
+	/// </summary>
+	protected virtual RequestContext RequestContext => HttpRequestAccessor?.Context;
+
+	/// <summary>
+	/// 获取当前请求的取消令牌；不在请求流内时返回 <see cref="CancellationToken.None"/>。
+	/// </summary>
+	protected virtual CancellationToken RequestAborted => RequestContext?.RequestAborted ?? CancellationToken.None;
+
+	/// <summary>
+	/// 获取以当前服务类型为类别的日志记录器。
+	/// </summary>
+	protected virtual ILogger Logger => LazyServiceProvider.GetService<ILoggerFactory>()?.CreateLogger(GetType()) ?? Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance;
 }

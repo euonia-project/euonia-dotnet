@@ -19,5 +19,6 @@ public class ApplicationModule : ModuleContextBase
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 		context.Services.AddTransient(typeof(IPipelineBehavior<,>), typeof(UserContextBehavior<,>));
 		context.Services.AddTransient(typeof(IUseCasePresenter<>), typeof(DefaultUseCasePresenter<>));
+		context.Services.AddTransient<IUseCaseExecutor, UseCaseExecutor>();
 	}
 }
