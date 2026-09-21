@@ -227,12 +227,18 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	}
 
 	/// <summary>
-	/// 释放资源时重置强引用和弱引用信使的状态。
+	/// 释放传输器自身持有的资源。
 	/// </summary>
 	/// <param name="disposing">指示是否正在主动释放资源。</param>
+	/// <remarks>
+	/// 本类型不持有需要释放的资源。此前这里会调用
+	/// <c>StrongReferenceMessenger.Default.Reset()</c> 与 <c>WeakReferenceMessenger.Default.Reset()</c>：
+	/// 这两个信使是进程级单例，因此释放任意一个传输器实例都会清空进程内所有内存总线的注册，
+	/// 且因为忽略了 <paramref name="disposing"/>，终结器线程同样会触发该副作用。
+	/// 接收者的注销由创建它们的 <see cref="InMemoryRecipientRegistrar"/> 在释放时负责，
+	/// 不会影响其他传输器实例。
+	/// </remarks>
 	protected override void Dispose(bool disposing)
 	{
-		StrongReferenceMessenger.Default.Reset();
-		WeakReferenceMessenger.Default.Reset();
 	}
 }

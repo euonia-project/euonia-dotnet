@@ -39,7 +39,12 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// <summary>
 	/// 按接收者类型复用的接收者实例（当 <see cref="InMemoryBusOptions.MultipleSubscriberInstance"/> 为 <c>false</c> 时）。
 	/// </summary>
-	private readonly ConcurrentDictionary<Type, object> _recipients = new();
+	/// <remarks>
+	/// 以 <see cref="Lazy{T}"/> 包装：<see cref="ConcurrentDictionary{TKey,TValue}.GetOrAdd(TKey, Func{TKey,TValue})"/>
+	/// 不保证工厂只执行一次，直接在其中创建接收者会在并发注册时产生多个实例并全部注册到同一通道，
+	/// 导致单播消息被重复处理。
+	/// </remarks>
+	private readonly ConcurrentDictionary<Type, Lazy<object>> _recipients = new();
 
 	/// <summary>
 	/// 持有所有已创建的接收者实例，防止多播订阅者因仅被弱引用信使引用而被提前回收。
@@ -123,12 +128,30 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 		{
 			var recipient = _options.MultipleSubscriberInstance
 				? _provider.GetRequiredService<TRecipient>()
-				: (TRecipient)_recipients.GetOrAdd(typeof(TRecipient), _ => _provider.GetRequiredService<TRecipient>());
+				: (TRecipient)_recipients.GetOrAdd(typeof(TRecipient), type => new Lazy<object>(() => _provider.GetRequiredService(type))).Value;
 
 			_aliveRecipients.Enqueue(recipient);
 			return recipient;
 		}
 
 		await Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// 注销本注册器创建的接收者，解除其对信使的订阅。
+	/// </summary>
+	/// <remarks>
+	/// 只影响本注册器创建的接收者，不会像此前的进程级 <c>Reset()</c> 那样清空其他内存总线实例的注册。
+	/// </remarks>
+	public ValueTask DisposeAsync()
+	{
+		while (_aliveRecipients.TryDequeue(out var recipient))
+		{
+			StrongReferenceMessenger.Default.UnregisterAll(recipient);
+			WeakReferenceMessenger.Default.UnregisterAll(recipient);
+		}
+
+		_recipients.Clear();
+		return ValueTask.CompletedTask;
 	}
 }
