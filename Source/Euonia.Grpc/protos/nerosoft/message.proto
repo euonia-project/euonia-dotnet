@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+import "nerosoft/request.proto";
+import "nerosoft/response.proto";
+
+package nerorsoft.bus;
+
+service ReplierService
+{
+  rpc Call(google.protobuf.GrpcRequest) returns (google.protobuf.GrpcResponse);
+}

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Grpc.AspNetCore" />
+        <PackageReference Include="Grpc.Core" />
+        <PackageReference Include="Grpc.Net.Client" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Bus\Euonia.Bus.csproj" />
+        <ProjectReference Include="..\Euonia.Grpc\Euonia.Grpc.csproj" />
+    </ItemGroup>
+
+</Project>
