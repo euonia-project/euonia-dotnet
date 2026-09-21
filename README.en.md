@@ -32,8 +32,6 @@ graph TD
         BusActiveMq --> BusAbstract
         BusHttp --> Bus
         BusGrpc --> Bus
-        BusGrpc --> EuoniaGrpc
-        EuoniaGrpc["gRPC"]
         Repository --> DDD
         Repository --> Modularity
         RepositoryEfCore --> Repository
@@ -76,7 +74,6 @@ graph TD
     style BusActiveMq fill:#8E44AD,color:#fff
     style BusHttp fill:#1ABC9C,color:#fff
     style BusGrpc fill:#16A085,color:#fff
-    style EuoniaGrpc fill:#16A085,color:#fff
     style Sample fill:#9B59B6,color:#fff
 ```
 
@@ -503,7 +500,7 @@ app.MapBusEndpoint();   // POST /bus/call
 Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
 
 ### Bus gRPC (`Euonia.Bus.Grpc`)
-> gRPC remote-transport adapter. Built on the new `ReplierService.Call` unary service (`nerorsoft.bus` package; the `Euonia.Grpc` project emits the server base class and client). The client calls the remote via `GrpcTransporter`; the server processes messages in `RemoteMessageService`. Also reuses the `RemoteReply<TResult>` protocol.
+> gRPC remote-transport adapter. Built on the new `ReplierService.Call` unary service (`nerorsoft.bus` package). The client calls the remote via `GrpcTransporter`; the server processes messages in `RemoteMessageService`. Also reuses the `RemoteReply<TResult>` protocol. Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were consolidated into this project (the former `Euonia.Grpc` project was removed).
 
 | Type | Kind | Purpose |
 |------|------|---------|
@@ -693,8 +690,8 @@ app.MapGrpcBusService();
 | `[DailyTimeIntervalSchedule]` | attribute | Daily time interval trigger |
 | `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
 
-### gRPC (`Euonia.Grpc`)
-> gRPC integration with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
+### gRPC (consolidated into `Euonia.Bus.Grpc`)
+> gRPC integration (the former `Euonia.Grpc` project was consolidated into `Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
 
 | Type | Kind | Purpose |
 |------|------|---------|

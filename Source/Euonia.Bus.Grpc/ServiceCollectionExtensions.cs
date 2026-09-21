@@ -1,6 +1,8 @@
+using Grpc.AspNetCore.Server;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
+using Nerosoft.Euonia.Grpc;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -55,5 +57,31 @@ public static class ServiceCollectionExtensions
 			services.TryAddSingleton<RemoteMessageService>();
 			return services;
 		}
+	}
+}
+
+/// <summary>
+/// The gRPC service collection extensions.
+/// </summary>
+public static class GrpcServiceCollectionExtensions
+{
+	/// <summary>
+	/// Add gRPC service to specified <see cref="IServiceCollection"/>.
+	/// </summary>
+	/// <param name="services"></param>
+	/// <param name="configureOptions"></param>
+	/// <returns></returns>
+	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions> configureOptions = null)
+	{
+		services.AddGrpc(options =>
+		{
+			options.MaxReceiveMessageSize = null;
+			options.EnableDetailedErrors = true;
+			options.Interceptors.Add<ExceptionHandlingInterceptor>();
+			options.Interceptors.Add<RequestTraceInterceptor>();
+			configureOptions?.Invoke(options);
+		});
+		services.AddGrpcReflection();
+		return services;
 	}
 }

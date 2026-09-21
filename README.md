@@ -32,8 +32,6 @@ graph TD
         BusActiveMq --> BusAbstract
         BusHttp --> Bus
         BusGrpc --> Bus
-        BusGrpc --> EuoniaGrpc
-        EuoniaGrpc["gRPC"]
         Repository --> DDD
         Repository --> Modularity
         RepositoryEfCore --> Repository
@@ -76,7 +74,6 @@ graph TD
     style BusActiveMq fill:#8E44AD,color:#fff
     style BusHttp fill:#1ABC9C,color:#fff
     style BusGrpc fill:#16A085,color:#fff
-    style EuoniaGrpc fill:#16A085,color:#fff
     style Sample fill:#9B59B6,color:#fff
 ```
 
@@ -494,7 +491,7 @@ app.MapBusEndpoint();   // POST /bus/call
 详细实现与测试见 [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md)。
 
 ### Bus gRPC（Euonia.Bus.Grpc）
-> gRPC 远程传输适配器。基于新增的 `ReplierService.Call` unary 服务（`nerorsoft.bus` 包，`Euonia.Grpc` 项目生成服务端基类与客户端），客户端经 `GrpcTransporter` 调用远端，服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。
+> gRPC 远程传输适配器。基于新增的 `ReplierService.Call` unary 服务（`nerorsoft.bus` 包），客户端经 `GrpcTransporter` 调用远端，服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。协议定义与通用 gRPC 工具（拦截器等）已并入本项目（原 `Euonia.Grpc` 项目已移除）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
@@ -684,8 +681,8 @@ app.MapGrpcBusService();
 | `[DailyTimeIntervalSchedule]` | 特性 | 每日时间间隔触发器 |
 | `BackgroundBuildOptions` | 类 | 流式 Job 与调度器配置 |
 
-### gRPC（Euonia.Grpc）
-> gRPC 集成，含拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
+### gRPC（并入 Euonia.Bus.Grpc）
+> gRPC 集成（原 `Euonia.Grpc` 项目已并入 `Euonia.Bus.Grpc`）：拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|

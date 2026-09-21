@@ -54,9 +54,17 @@ CorrelationId/ConversationId/RequestTraceId/MessageId/Authorization）。
 
 ---
 
-## 三、gRPC 传输（`Source/Euonia.Grpc` + `Source/Euonia.Bus.Grpc`）
+## 三、gRPC 传输（`Source/Euonia.Bus.Grpc`，含并入的原 `Euonia.Grpc`）
 
-### 服务定义（`Euonia.Grpc/protos/nerosoft/message.proto`，新增）
+> 后续整改：原 `Euonia.Grpc` 项目**整体并入 `Euonia.Bus.Grpc` 并移除**（`Euonia.slnx` 同步删除）。
+> 便携内容：`protos/nerosoft/*.proto`（含新增的 `message.proto`）、`Interceptors/*`、
+> `ApplicationBuilderExtensions.cs`（`MapGrpcServices`/`UseGrpcEndpoints`）、`GrpcExtensions.cs`
+> （`GetResult<T>`/`SetResult<T>`）、`HealthService.cs`、`IExceptionHandler.cs`、
+> `AddGrpcService()`（并入 `ServiceCollectionExtensions.cs` 的 `GrpcServiceCollectionExtensions`）。
+> 顺带清除了无引用的 `.resx` 资源模板、`resource.props` 强类型资源机制与
+> `build/Euonia.Grpc.targets`（JSON transcoding 样板死代码）。
+
+### 服务定义（`Euonia.Bus.Grpc/protos/nerosoft/message.proto`，新增）
 ```proto
 syntax = "proto3";
 package nerorsoft.bus;
@@ -67,8 +75,8 @@ service ReplierService {
 ```
 - `GrpcRequest`/`GrpcResponse` 含 `RequestId`、`Data` 与 `map<string, string> Property`；
   生成命名空间 `Nerorsoft.Bus`。
-- `Euonia.Grpc.csproj` 的 Protobuf 项由 `GrpcServices="None"` 改为
-  `GrpcServices="Server,Client"`（同时产出 Base 服务端基类与客户端）。
+- `Euonia.Bus.Grpc.csproj` 的 Protobuf 项 `GrpcServices="Server,Client"`（同时产出
+  `ReplierServiceBase` 服务端基类与客户端）。
 - `Directory.Packages.props` 新增 `Grpc.Net.Client`（`$(GrpcAspNetCoreVersion)` = 2.83.0）。已验证：
   protobuf 3.36 将 `google.protobuf.StringValue` 映射为原生 `string`，`Data` 直接承载 JSON 文本。
 
@@ -89,20 +97,23 @@ service ReplierService {
 
 ## 四、测试
 
-### `Tests/Euonia.Bus.Http.Tests`（10 例，全部通过）
+### `Tests/Euonia.Bus.Http.Tests`（11 例，全部通过）
 - 桩服务器端 `FakeBusServerHandler`/`FailureBusServerHandler` + `StubHandlerContext`
   模拟远端（返回结果 / 抛 `InvalidOperationException` / 延迟），`HttpTestFactory` 组装传输器；
 - 协议用例：结果 42 往返、远端异常还原为原始类型、`x-*` 消息头断言、非 2xx → `MessageDeliverException`、
   `Send/Publish` → `NotSupportedException`、`typeName` 缺失 → 失败响应、取消穿透；
 - 端到端用例：真实 `WebApplication` + `MapBusEndpoint` + 完整 `IBus` 调用栈，
-  验证成功路径与处理异常上抛（宿主启动前需先解析 `IHandlerContext`，
-  `DefaultHandlerContext` 构造时才订阅信道注册事件，注册委托才会生效）。
+  验证成功路径与处理异常上抛（`MapBusEndpoint` 已提前构造 `IHandlerContext`，启动阶段注册渠道即可生效）；
+- 新增 `AddHttpBus_SelfRegistersCoreServices`：仅调用 `AddHttpBus` 即可解析序列化器、
+  `IConfigurator`、`IHandlerContext` 与 keyed `ITransporter`。
 
-### `Tests/Euonia.Bus.Grpc.Tests`（7 例，全部通过）
+### `Tests/Euonia.Bus.Grpc.Tests`（9 例，全部通过）
 - `GrpcServerHarness`：`WebApplication` + `UseKestrel(Listen(Loopback, 0, Http2))`（明文 h2c，
   端口 0 运行时绑定）+ `AddGrpc`/`AddGrpcBusServer`/`MapGrpcBusService` + 信道注册；
 - 用例：传输器往返、异常还原、`IBus` 端到端（成功 + 抛错）、空 `Data` → `InvalidArgument`、
-  `Send/Publish` → `NotSupportedException`。
+  `Send/Publish` → `NotSupportedException`；
+- 新增 `AddGrpcBus_SelfRegistersCoreServices` / `AddGrpcBusServer_SelfRegistersCoreServices`：
+  仅调用 `AddGrpcBus`/`AddGrpcBusServer` 即可自足解析核心服务与 `RemoteMessageService`。
 
 > 关键经验：Kestrel 明文 gRPC 必须显式启用 `HttpProtocols.Http2`（`UseUrls` 默认 HTTP/1.1，
 > 否则客户端收到 `HTTP_1_1_REQUIRED`）。
@@ -130,6 +141,11 @@ service ReplierService {
      `DefaultRequestContextAccessor` / `DelegateRequestContextAccessor` / `IServiceAccessor` / `IRequestContextAccessor`），
      与其余 Euonia 传输一致，不在传输注册内隐式提供。
 
+3. **并入 `Euonia.Grpc`**：原 `Euonia.Grpc` 项目整体并入 `Euonia.Bus.Grpc` 并移除
+   （protos、拦截器、健康检查、`MapGrpcServices`/`AddGrpcService` 等全部迁入），
+   同步清理无引用的 `.resx` 资源模板、`resource.props` 强类型资源机制与
+   `build/Euonia.Grpc.targets`（JSON transcoding 样板死代码）。
+
 ---
 
 ## 六、验证结果
@@ -143,4 +159,4 @@ service ReplierService {
 | `Euonia.Bus.RabbitMq.Tests` | 10/10（回归） |
 | `Euonia.Bus.Http.Tests` | 11/11（新增 3：自我注册） |
 | `Euonia.Bus.Grpc.Tests` | 9/9（新增 4：自我注册） |
-| 新增项目 | `Euonia.Bus.Http`、`Euonia.Bus.Grpc`（同时纳入 `Euonia.slnx` 与 `Euonia.Test.slnx`） |
+| 新增项目 | `Euonia.Bus.Http`、`Euonia.Bus.Grpc`（同时纳入 `Euonia.slnx` 与 `Euonia.Test.slnx`）；原 `Euonia.Grpc` 已并入 `Euonia.Bus.Grpc` 并从方案移除 |
