@@ -30,6 +30,10 @@ graph TD
         BusRabbitMq --> BusAbstract
         BusRabbitMq --> Core
         BusActiveMq --> BusAbstract
+        BusHttp --> Bus
+        BusGrpc --> Bus
+        BusGrpc --> EuoniaGrpc
+        EuoniaGrpc["gRPC"]
         Repository --> DDD
         Repository --> Modularity
         RepositoryEfCore --> Repository
@@ -70,6 +74,9 @@ graph TD
     style BusInMemory fill:#D35400,color:#fff
     style BusRabbitMq fill:#C0392B,color:#fff
     style BusActiveMq fill:#8E44AD,color:#fff
+    style BusHttp fill:#1ABC9C,color:#fff
+    style BusGrpc fill:#16A085,color:#fff
+    style EuoniaGrpc fill:#16A085,color:#fff
     style Sample fill:#9B59B6,color:#fff
 ```
 
@@ -464,6 +471,60 @@ Design rationale and trade-offs:
 
 **Mapping rules:** `IQueue` → `RabbitMqQueueConsumer`; `ITopic` → `RabbitMqTopicSubscriber`; `IRequest<>` → `RabbitMqQueueConsumer`.
 
+### Bus HTTP (`Euonia.Bus.Http`)
+> HTTP remote-transport adapter. The client invokes a remote `MapBusEndpoint` endpoint over HTTP POST to complete request-response calls (`CallAsync`); the server receives messages through `RemoteReceiver`, executes handlers, and returns the result. Shares the same wire protocol (`RemoteReply<TResult>`) with the gRPC transport.
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `HttpTransporter` | class (internal) | `ITransporter` implementation: `CallAsync` → HTTP POST (propagates `x-*` headers), parses `RemoteReply<T>` and rehydrates exceptions; `Send`/`Publish` → `NotSupportedException` |
+| `HttpBusOptions` | class | Options: `Endpoint`, `Route` (default `/bus/call`), `SerializerProvider` (default `SystemTestJson`), `RequestTimeout`, `MessageHandlerFactory` |
+| `AddHttpBus(name, configure)` | extension | Registers Options + `HttpTransporter` singleton + named keyed `ITransporter` |
+| `MapBusEndpoint()` | extension | Maps the server endpoint: resolves the serializer and `IHandlerContext`, invokes `RemoteReceiver`, writes the JSON reply |
+
+**Wire protocol** (`Source/Euonia.Bus/Remote/`):
+
+| Type | Purpose |
+|------|---------|
+| `RemoteReply<TResult>` | `{ IsSuccess, Result, Error }` — result or failure details |
+| `RemoteError` | `{ Type, Message, StackTrace }` — `ToException()` rehydrates the original exception type on the client, falling back to `MessageDeliverException` |
+| `RemoteReceiver` | Server receiver: `DeserializeEnvelope` → `MessageContext` (subscribes Responded/Failed/Completed) → `IHandlerContext.HandleAsync` → returns result/exception |
+
+**Usage:**
+
+```csharp
+// Client: register the HTTP transport and set it as default
+services.Configure<MessageBusOptions>(o => o.DefaultTransporter = "http");
+services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
+
+// Server: map the request endpoint (inside an ASP.NET Core app)
+app.MapBusEndpoint();   // POST /bus/call
+```
+
+Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
+
+### Bus gRPC (`Euonia.Bus.Grpc`)
+> gRPC remote-transport adapter. Built on the new `ReplierService.Call` unary service (`nerorsoft.bus` package; the `Euonia.Grpc` project emits the server base class and client). The client calls the remote via `GrpcTransporter`; the server processes messages in `RemoteMessageService`. Also reuses the `RemoteReply<TResult>` protocol.
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.ForAddress` + `ReplierServiceClient`; `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
+| `RemoteMessageService` | class | `ReplierService.ReplierServiceBase`: validates the payload (empty → `InvalidArgument`) → `RemoteReceiver` → returns `GrpcResponse` |
+| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider` |
+| `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | extension | Client keyed `ITransporter` registration; server `RemoteMessageService` registration |
+| `MapGrpcBusService()` | extension | Maps `MapGrpcService<RemoteMessageService>()` on the server |
+
+**Usage:**
+
+```csharp
+// Client
+services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
+
+// Server (HTTP/2 must be enabled; configure HttpProtocols.Http2 for cleartext)
+services.AddGrpc();
+services.AddGrpcBusServer();
+app.MapGrpcBusService();
+```
+
 ### Bus ActiveMQ (`Euonia.Bus.ActiveMq`)
 > Placeholder for ActiveMQ transport adapter — currently a stub project with no implementation.
 
@@ -633,11 +694,12 @@ Design rationale and trade-offs:
 | `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
 
 ### gRPC (`Euonia.Grpc`)
-> gRPC integration with interceptors, health checks, and auto-discovery.
+> gRPC integration with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
 
 | Type | Kind | Purpose |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | class (partial) | Protobuf extensions with JSON serialization and typed data accessors |
+| `ReplierService` | service (proto) | New unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
 | `ExceptionHandlingInterceptor` | class | Maps .NET exceptions to gRPC status codes |
 | `RequestTraceInterceptor` | class | Propagates `x-request-trace-id` in gRPC calls |
 | `MapGrpcServices()` | extension | Auto-discovers and maps all gRPC services from the entry assembly |
@@ -711,6 +773,10 @@ The `Samples/Euonia.Sample.Webapi` project demonstrates **full Euonia integratio
 <!-- Message Bus (transports) -->
 <PackageReference Include="Euonia.Bus.InMemory" Version="10.0.0" />
 <PackageReference Include="Euonia.Bus.RabbitMq" Version="10.0.0" />
+
+<!-- Message Bus (remote calls) -->
+<PackageReference Include="Euonia.Bus.Http" Version="10.0.0" />
+<PackageReference Include="Euonia.Bus.Grpc" Version="10.0.0" />
 
 <!-- Repository -->
 <PackageReference Include="Euonia.Repository" Version="10.0.0" />

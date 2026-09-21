@@ -30,6 +30,10 @@ graph TD
         BusRabbitMq --> BusAbstract
         BusRabbitMq --> Core
         BusActiveMq --> BusAbstract
+        BusHttp --> Bus
+        BusGrpc --> Bus
+        BusGrpc --> EuoniaGrpc
+        EuoniaGrpc["gRPC"]
         Repository --> DDD
         Repository --> Modularity
         RepositoryEfCore --> Repository
@@ -70,6 +74,9 @@ graph TD
     style BusInMemory fill:#D35400,color:#fff
     style BusRabbitMq fill:#C0392B,color:#fff
     style BusActiveMq fill:#8E44AD,color:#fff
+    style BusHttp fill:#1ABC9C,color:#fff
+    style BusGrpc fill:#16A085,color:#fff
+    style EuoniaGrpc fill:#16A085,color:#fff
     style Sample fill:#9B59B6,color:#fff
 ```
 
@@ -455,6 +462,60 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 
 **映射规则：** `IQueue` → `RabbitMqQueueConsumer`；`ITopic` → `RabbitMqTopicSubscriber`；`IRequest<>` → `RabbitMqQueueConsumer`。
 
+### Bus HTTP（Euonia.Bus.Http）
+> HTTP 远程传输适配器。客户端经 HTTP POST 调用远端 `MapBusEndpoint` 端点完成请求-响应调用（`CallAsync`），服务端以 `RemoteReceiver` 接收消息、执行处理器并回传结果。与 gRPC 传输共用同一套线上协议（`RemoteReply<TResult>`）。
+
+| 类型 | 种类 | 作用 |
+|------|------|---------|
+| `HttpTransporter` | 类（internal） | `ITransporter` 实现：`CallAsync` → HTTP POST（透传 `x-*` 消息头），解析 `RemoteReply<T>` 并还原异常；`Send/Publish` → `NotSupportedException` |
+| `HttpBusOptions` | 类 | 选项：`Endpoint`、`Route`（默认 `/bus/call`）、`SerializerProvider`（默认 `SystemTestJson`）、`RequestTimeout`、`MessageHandlerFactory` |
+| `AddHttpBus(name, configure)` | 扩展 | 注册 Options + `HttpTransporter` 单例 + 按名称的 keyed `ITransporter` |
+| `MapBusEndpoint()` | 扩展 | 服务端映射端点：解析序列化器与 `IHandlerContext`，调用 `RemoteReceiver` 并回写 JSON 响应 |
+
+**线上协议**（`Source/Euonia.Bus/Remote/`）：
+
+| 类型 | 作用 |
+|------|---------|
+| `RemoteReply<TResult>` | `{ IsSuccess, Result, Error }`——调用结果或失败详情 |
+| `RemoteError` | `{ Type, Message, StackTrace }`——`ToException()` 在客户端还原原始异常类型，失败回退 `MessageDeliverException` |
+| `RemoteReceiver` | 服务端接收器：`DeserializeEnvelope` → `MessageContext`（订阅 Responded/Failed/Completed）→ `IHandlerContext.HandleAsync` → 回传结果/异常 |
+
+**使用示例：**
+
+```csharp
+// 客户端：注册 HTTP 传输并设置默认传输器
+services.Configure<MessageBusOptions>(o => o.DefaultTransporter = "http");
+services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
+
+// 服务端：映射请求端点（ASP.NET Core 应用内）
+app.MapBusEndpoint();   // POST /bus/call
+```
+
+详细实现与测试见 [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md)。
+
+### Bus gRPC（Euonia.Bus.Grpc）
+> gRPC 远程传输适配器。基于新增的 `ReplierService.Call` unary 服务（`nerorsoft.bus` 包，`Euonia.Grpc` 项目生成服务端基类与客户端），客户端经 `GrpcTransporter` 调用远端，服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。
+
+| 类型 | 种类 | 作用 |
+|------|------|---------|
+| `GrpcTransporter` | 类（internal） | `ITransporter` 实现：`GrpcChannel.ForAddress` + `ReplierServiceClient`，`Data` 承载序列化信封、属性携带消息头；`Send/Publish` → `NotSupportedException` |
+| `RemoteMessageService` | 类 | `ReplierService.ReplierServiceBase`：校验负载（空 → `InvalidArgument`）→ `RemoteReceiver` → 回传 `GrpcResponse` |
+| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider` |
+| `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | 扩展 | 客户端 keyed `ITransporter` 注册；服务端注册 `RemoteMessageService` |
+| `MapGrpcBusService()` | 扩展 | 服务端映射 `MapGrpcService<RemoteMessageService>()` |
+
+**使用示例：**
+
+```csharp
+// 客户端
+services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
+
+// 服务端（需启用 HTTP/2，明文环境配置 HttpProtocols.Http2）
+services.AddGrpc();
+services.AddGrpcBusServer();
+app.MapGrpcBusService();
+```
+
 ### Bus ActiveMQ（Euonia.Bus.ActiveMq）
 > ActiveMQ 传输适配器占位——当前为存根项目，无实际实现。
 
@@ -624,11 +685,12 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 | `BackgroundBuildOptions` | 类 | 流式 Job 与调度器配置 |
 
 ### gRPC（Euonia.Grpc）
-> gRPC 集成，含拦截器、健康检查与自动发现。
+> gRPC 集成，含拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | 类（partial） | Protobuf 扩展，含 JSON 序列化与类型化数据访问器 |
+| `ReplierService` | 服务（proto） | `nerorsoft.bus` 包中新增的 unary 服务：`rpc Call(GrpcRequest) returns (GrpcResponse)`，由 `Euonia.Bus.Grpc` 提供服务端基类与客户端 |
 | `ExceptionHandlingInterceptor` | 类 | 将 .NET 异常映射为 gRPC 状态码 |
 | `RequestTraceInterceptor` | 类 | 在 gRPC 调用中传播 `x-request-trace-id` |
 | `MapGrpcServices()` | 扩展 | 自动发现并映射入口程序集中所有 gRPC 服务 |
@@ -662,7 +724,7 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 | **语言** | C#（.NET 9 / .NET 10） |
 | **框架** | ASP.NET Core |
 | **数据库** | Entity Framework Core（InMemory、SQLite、SQL Server） |
-| **消息系统** | RabbitMQ（分布式）+ InMemory（本地）双传输 |
+| **消息系统** | RabbitMQ（分布式）+ InMemory（本地）双传输；HTTP / gRPC 远程调用（`CallAsync`） |
 | **API 文档** | Swagger / Swashbuckle |
 | **构建** | MSBuild / dotnet CLI |
 | **ID 生成** | Snowflake、ULID、ShortUniqueId |
@@ -702,6 +764,10 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 <!-- 消息总线（传输） -->
 <PackageReference Include="Euonia.Bus.InMemory" Version="10.0.0" />
 <PackageReference Include="Euonia.Bus.RabbitMq" Version="10.0.0" />
+
+<!-- 消息总线（远程调用） -->
+<PackageReference Include="Euonia.Bus.Http" Version="10.0.0" />
+<PackageReference Include="Euonia.Bus.Grpc" Version="10.0.0" />
 
 <!-- 仓储 -->
 <PackageReference Include="Euonia.Repository" Version="10.0.0" />
