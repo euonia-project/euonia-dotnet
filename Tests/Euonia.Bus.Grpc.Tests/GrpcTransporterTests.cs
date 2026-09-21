@@ -13,6 +13,37 @@ namespace Nerosoft.Euonia.Bus.Grpc.Tests;
 public class GrpcTransporterTests
 {
 	[Fact]
+	public void AddGrpcBus_SelfRegistersCoreServices()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddGrpcBus("grpc", options => options.Endpoint = "http://localhost:1");
+
+		using var provider = services.BuildServiceProvider();
+
+		// 无需额外调用 AddEuoniaBus 或注册序列化器，AddGrpcBus 即保证以下服务可用。
+		Assert.NotNull(provider.GetKeyedService<IMessageSerializer>("SystemTestJson"));
+		Assert.NotNull(provider.GetService<IConfigurator>());
+		Assert.NotNull(provider.GetService<IHandlerContext>());
+		Assert.NotNull(provider.GetRequiredKeyedService<ITransporter>("grpc"));
+	}
+
+	[Fact]
+	public void AddGrpcBusServer_SelfRegistersCoreServices()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddGrpcBusServer();
+
+		using var provider = services.BuildServiceProvider();
+
+		Assert.NotNull(provider.GetService<RemoteMessageService>());
+		Assert.NotNull(provider.GetService<IHandlerContext>());
+	}
+
+	[Fact]
 	public async Task CallAsync_ReturnsResult()
 	{
 		await using var server = await GrpcServerHarness.StartAsync(configurator =>

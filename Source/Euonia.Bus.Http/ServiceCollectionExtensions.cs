@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
 		public IServiceCollection AddHttpBus(string name = "http", Action<HttpBusOptions> configureOptions = null)
 		{
 			services.AddOptions();
+			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
+			services.AddEuoniaBus();
 			if (configureOptions != null)
 			{
 				services.Configure(configureOptions);

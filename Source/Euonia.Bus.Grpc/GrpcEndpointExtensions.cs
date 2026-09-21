@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
 
 namespace Microsoft.AspNetCore.Builder;
@@ -17,6 +19,10 @@ public static class GrpcEndpointExtensions
 	/// <returns>原始端点构建器，以支持链式调用。</returns>
 	public static IEndpointRouteBuilder MapGrpcBusService(this IEndpointRouteBuilder endpoints)
 	{
+		// 提前构造 IHandlerContext（DefaultHandlerContext 仅在构造时订阅渠道注册事件），
+		// 使应用启动阶段（模块初始化）的 RegisterChannel 注册不会被遗漏。
+		_ = endpoints.ServiceProvider?.GetService<IHandlerContext>();
+
 		endpoints.MapGrpcService<RemoteMessageService>();
 		return endpoints;
 	}

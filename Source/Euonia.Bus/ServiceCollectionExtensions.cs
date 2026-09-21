@@ -24,6 +24,10 @@ public static class ServiceCollectionExtensions
 			// 注册单例 IConfigurator，通过配置器实例执行用户配置委托
 			services.TryAddActivatedSingleton<IConfigurator, DefaultConfigurator>();
 
+			// 注册内置序列化器（键控），供各传输的 SerializerProvider 默认引用
+			services.TryAddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
+			services.TryAddKeyedSingleton<IMessageSerializer, NewtonsoftJsonSerializer>("NewtonsoftJson");
+
 			// 启用管道（Pipeline）支持
 			services.AddPipeline();
 			services.TryAddActivatedSingleton<IHandlerContext, DefaultHandlerContext>();

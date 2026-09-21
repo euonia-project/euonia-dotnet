@@ -30,12 +30,11 @@ public class HttpEndToEndTests
 		var configurator = app.Services.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
 
-		// 确保 DefaultHandlerContext 已构造并订阅信道注册事件，注册才会生效。
-		_ = app.Services.GetRequiredService<IHandlerContext>();
+		// 端点映射会提前构造 IHandlerContext 并订阅渠道注册事件，
+		// 因此映射之后（如模块初始化阶段）的 RegisterChannel 注册必定生效。
+		app.MapBusEndpoint();
 
 		configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
-
-		app.MapBusEndpoint();
 
 		try
 		{
@@ -72,12 +71,11 @@ public class HttpEndToEndTests
 		var configurator = app.Services.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
 
-		// 确保 DefaultHandlerContext 已构造并订阅信道注册事件，注册才会生效。
-		_ = app.Services.GetRequiredService<IHandlerContext>();
+		// 端点映射会提前构造 IHandlerContext 并订阅渠道注册事件，
+		// 因此映射之后（如模块初始化阶段）的 RegisterChannel 注册必定生效。
+		app.MapBusEndpoint();
 
 		configurator.RegisterChannel<CountRequest, int>("count", (_, _) => throw new InvalidOperationException("boom"));
-
-		app.MapBusEndpoint();
 
 		try
 		{
@@ -107,8 +105,6 @@ public class HttpEndToEndTests
 		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
-		services.AddEuoniaBus();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
 		services.AddHttpBus("http");
 	}
 
@@ -122,8 +118,6 @@ public class HttpEndToEndTests
 		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
-		services.AddEuoniaBus();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
 		services.AddHttpBus("http", options =>
 		{
 			options.Endpoint = endpoint;

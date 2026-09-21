@@ -109,7 +109,30 @@ service ReplierService {
 
 ---
 
-## 五、验证结果
+## 五、增强（后续追加）
+
+在基础版本之上继续完善与增强，全部通过回归：
+
+1. **消除处理器注册时序陷阱**：`MapBusEndpoint()` / `MapGrpcBusService()` 在映射时即通过
+   `endpoints.ServiceProvider` 提前构造 `IHandlerContext`——`DefaultHandlerContext` 仅在构造时订阅
+   `ChannelRegistered` 事件，此前用户在（模块初始化等）应用启动阶段注册的渠道会被静默遗漏
+   （运行时报“No handler registered”）。现在**先映射端点、后注册渠道**的常规顺序（模块初始化）
+   必定生效，无需手动先解析 `IHandlerContext`。
+   （`Source/Euonia.Bus.Http/BusEndpointExtensions.cs`、`Source/Euonia.Bus.Grpc/GrpcEndpointExtensions.cs`）
+2. **注册自足（少样板代码）**：
+   - `AddEuoniaBus()` 现在同时以 `TryAddKeyedSingleton` 注册内置键控序列化器
+     （`SystemTestJson` / `NewtonsoftJson`），`MessageBusModule` 中的重复注册已移除；
+   - `AddHttpBus` / `AddGrpcBus` / `AddGrpcBusServer` 内部先调用 `AddEuoniaBus()`（`TryAdd*`，
+     重复调用安全），用户**无需**再显式调用 `AddEuoniaBus()` 或注册序列化器。
+   - 测试同步精简：协议/端到端宿主依赖自我注册，并新增 `AddHttpBus_SelfRegistersCoreServices`、
+     `AddGrpcBus_SelfRegistersCoreServices`、`AddGrpcBusServer_SelfRegistersCoreServices` 3 个事实用例。
+   - 说明：`IBus`（客户端）解析仍依赖框架宿主提供的请求上下文访问器（
+     `DefaultRequestContextAccessor` / `DelegateRequestContextAccessor` / `IServiceAccessor` / `IRequestContextAccessor`），
+     与其余 Euonia 传输一致，不在传输注册内隐式提供。
+
+---
+
+## 六、验证结果
 
 | 项目 | 结果 |
 | --- | --- |
@@ -117,6 +140,7 @@ service ReplierService {
 | `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
 | `Euonia.Bus.Tests` | 67/67（回归） |
 | `Euonia.Bus.InMemory.Tests` | 10/10（回归） |
-| `Euonia.Bus.Http.Tests` | 10/10（新增） |
-| `Euonia.Bus.Grpc.Tests` | 7/7（新增） |
+| `Euonia.Bus.RabbitMq.Tests` | 10/10（回归） |
+| `Euonia.Bus.Http.Tests` | 11/11（新增 3：自我注册） |
+| `Euonia.Bus.Grpc.Tests` | 9/9（新增 4：自我注册） |
 | 新增项目 | `Euonia.Bus.Http`、`Euonia.Bus.Grpc`（同时纳入 `Euonia.slnx` 与 `Euonia.Test.slnx`） |

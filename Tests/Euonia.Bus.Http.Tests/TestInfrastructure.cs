@@ -135,24 +135,11 @@ public class StubHandlerContext : IHandlerContext
 /// </summary>
 internal static class HttpTestFactory
 {
-	internal const string SerializerProvider = "SystemTestJson";
-
-	internal static ServiceProvider BuildServerProvider(Action<IServiceCollection> configure = null)
-	{
-		var services = new ServiceCollection();
-		services.AddLogging();
-		services.AddOptions();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>(SerializerProvider);
-		configure?.Invoke(services);
-		return services.BuildServiceProvider();
-	}
-
 	internal static HttpTransporter BuildTransporter(HttpMessageHandler handler, Action<HttpBusOptions> configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>(SerializerProvider);
 		services.AddHttpBus("http", o =>
 		{
 			o.Endpoint = "http://localhost";

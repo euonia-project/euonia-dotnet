@@ -24,6 +24,10 @@ public static class BusEndpointExtensions
 	{
 		var route = ResolveRoute(endpoints);
 
+		// 提前构造 IHandlerContext（DefaultHandlerContext 仅在构造时订阅渠道注册事件），
+		// 使应用启动阶段（模块初始化）的 RegisterChannel 注册不会被遗漏。
+		_ = endpoints.ServiceProvider?.GetService<IHandlerContext>();
+
 		endpoints.MapPost(route, async (HttpContext context) =>
 		{
 			var options = context.RequestServices.GetRequiredService<IOptions<HttpBusOptions>>().Value;

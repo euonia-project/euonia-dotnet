@@ -25,6 +25,8 @@ public static class ServiceCollectionExtensions
 		public IServiceCollection AddGrpcBus(string name = "grpc", Action<GrpcBusOptions> configureOptions = null)
 		{
 			services.AddOptions();
+			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
+			services.AddEuoniaBus();
 			if (configureOptions != null)
 			{
 				services.Configure(configureOptions);
@@ -47,6 +49,9 @@ public static class ServiceCollectionExtensions
 		/// <returns>原始服务集合，以支持链式调用。</returns>
 		public IServiceCollection AddGrpcBusServer()
 		{
+			services.AddOptions();
+			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
+			services.AddEuoniaBus();
 			services.TryAddSingleton<RemoteMessageService>();
 			return services;
 		}

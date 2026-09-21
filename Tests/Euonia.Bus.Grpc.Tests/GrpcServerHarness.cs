@@ -58,8 +58,6 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
-		services.AddEuoniaBus();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
 		services.AddGrpc();
 		services.AddGrpcBusServer();
 
@@ -68,12 +66,11 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		var configurator = app.Services.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
 
-		// 确保 DefaultHandlerContext 已构造并订阅信道注册事件，注册才会生效。
-		_ = app.Services.GetRequiredService<IHandlerContext>();
+		// 端点映射会提前构造 IHandlerContext 并订阅渠道注册事件，
+		// 因此映射之后（如模块初始化阶段）的 RegisterChannel 注册必定生效。
+		app.MapGrpcBusService();
 
 		registerChannel(configurator);
-
-		app.MapGrpcBusService();
 
 		await app.StartAsync();
 
@@ -96,8 +93,6 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
-		services.AddEuoniaBus();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
 		services.AddGrpcBus("grpc", options =>
 		{
 			options.Endpoint = endpoint;
@@ -114,7 +109,6 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
 		services.AddGrpcBus("grpc", options =>
 		{
 			options.Endpoint = endpoint;

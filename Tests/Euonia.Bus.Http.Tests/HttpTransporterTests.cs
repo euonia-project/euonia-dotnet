@@ -1,4 +1,6 @@
 using System.Net;
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Http;
 using Nerosoft.Euonia.Bus.Http.Tests;
 
@@ -9,6 +11,23 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class HttpTransporterTests
 {
+	[Fact]
+	public void AddHttpBus_SelfRegistersCoreServices()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddHttpBus("http");
+
+		using var provider = services.BuildServiceProvider();
+
+		// 无需额外调用 AddEuoniaBus 或注册序列化器，AddHttpBus 即保证以下服务可用。
+		Assert.NotNull(provider.GetKeyedService<IMessageSerializer>("SystemTestJson"));
+		Assert.NotNull(provider.GetService<IConfigurator>());
+		Assert.NotNull(provider.GetService<IHandlerContext>());
+		Assert.NotNull(provider.GetRequiredKeyedService<ITransporter>("http"));
+	}
+
 	[Fact]
 	public async Task CallAsync_ReturnsResult()
 	{
