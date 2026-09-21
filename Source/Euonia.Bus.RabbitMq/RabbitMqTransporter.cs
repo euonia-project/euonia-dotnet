@@ -92,9 +92,10 @@ internal class RabbitMqTransporter : ITransporter
 	{
 		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		var requestQueueName = GetQueueName(message.Channel);
@@ -103,7 +104,10 @@ internal class RabbitMqTransporter : ITransporter
 
 		await CheckQueueAsync(channel, requestQueueName);
 
-		var responseQueueName = (await channel.QueueDeclareAsync(cancellationToken: cancellationToken)).QueueName;
+		// 回复队列必须声明为独占 + 自动删除：默认值会创建一个服务器命名的永久队列，
+		// 且全项目从不调用 QueueDeleteAsync，导致每次调用都在 broker 上永久留下一个队列，
+		// 迟到的回复还会在其中无界堆积。
+		var responseQueueName = (await channel.QueueDeclareAsync(exclusive: true, autoDelete: true, cancellationToken: cancellationToken)).QueueName;
 		var consumer = new AsyncEventingBasicConsumer(channel);
 
 		consumer.ReceivedAsync += OnReceivedAsync;
@@ -133,7 +137,18 @@ internal class RabbitMqTransporter : ITransporter
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			consumer.ReceivedAsync -= OnReceivedAsync;
+
+			// 显式删除作为兜底：独占队列在连接断开时会被 broker 回收，但显式删除更及时也更明确。
+			try
+			{
+				await channel.QueueDeleteAsync(responseQueueName, cancellationToken: CancellationToken.None);
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete reply queue '{QueueName}'.", responseQueueName);
+			}
 		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
@@ -182,14 +197,15 @@ internal class RabbitMqTransporter : ITransporter
 	/// <param name="message">请求消息信封。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步调用操作并返回响应的任务。</returns>
-	/// <exception cref="NotImplementedException">始终抛出，此方法当前未实现。</exception>
+	/// <exception cref="MessageDeliverException">当传输层未能完成调用时抛出。</exception>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		var requestQueueName = GetQueueName(message.Channel);
@@ -198,7 +214,8 @@ var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuati
 
 		await CheckQueueAsync(channel, requestQueueName);
 
-		var responseQueueName = (await channel.QueueDeclareAsync(cancellationToken: cancellationToken)).QueueName;
+		// 回复队列必须声明为独占 + 自动删除，否则每次调用都会在 broker 上永久留下一个服务器命名的队列。
+		var responseQueueName = (await channel.QueueDeclareAsync(exclusive: true, autoDelete: true, cancellationToken: cancellationToken)).QueueName;
 		var consumer = new AsyncEventingBasicConsumer(channel);
 
 		consumer.ReceivedAsync += OnReceivedAsync;
@@ -228,7 +245,17 @@ var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuati
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			consumer.ReceivedAsync -= OnReceivedAsync;
+
+			try
+			{
+				await channel.QueueDeleteAsync(responseQueueName, cancellationToken: CancellationToken.None);
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete reply queue '{QueueName}'.", responseQueueName);
+			}
 		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
