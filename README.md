@@ -491,21 +491,33 @@ app.MapBusEndpoint();   // POST /bus/call
 详细实现与测试见 [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md)。
 
 ### Bus gRPC（Euonia.Bus.Grpc）
-> gRPC 远程传输适配器。基于新增的 `ReplierService.Call` unary 服务（`nerorsoft.bus` 包），客户端经 `GrpcTransporter` 调用远端，服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。协议定义与通用 gRPC 工具（拦截器等）已并入本项目（原 `Euonia.Grpc` 项目已移除）。
+> gRPC 远程传输适配器。客户端采用**泛化调用**——运行时构造 `Method<GrpcRequest, GrpcResponse>` 经
+> `CallInvoker` 执行，服务名/方法名由 `GrpcBusOptions` 动态指定（默认 `nerorsoft.bus.ReplierService/Call`），
+> 不依赖生成的服务桩代码；服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。
+> 协议定义与通用 gRPC 工具（拦截器等）已并入本项目（原 `Euonia.Grpc` 项目已移除）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
-| `GrpcTransporter` | 类（internal） | `ITransporter` 实现：`GrpcChannel.ForAddress` + `ReplierServiceClient`，`Data` 承载序列化信封、属性携带消息头；`Send/Publish` → `NotSupportedException` |
+| `GrpcTransporter` | 类（internal） | `ITransporter` 实现：`GrpcChannel.CreateCallInvoker()` + 运行时构造的 `Method`（`GrpcMethodFactory`），`Data` 承载序列化信封、属性携带消息头；`Send/Publish` → `NotSupportedException` |
+| `GrpcMethodFactory` | 类（internal） | 运行时构造 `Method<GrpcRequest, GrpcResponse>`（含手写 protobuf `Marshaller`），支持动态服务名/方法名 |
 | `RemoteMessageService` | 类 | `ReplierService.ReplierServiceBase`：校验负载（空 → `InvalidArgument`）→ `RemoteReceiver` → 回传 `GrpcResponse` |
-| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider` |
+| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider`、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`） |
 | `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | 扩展 | 客户端 keyed `ITransporter` 注册；服务端注册 `RemoteMessageService` |
 | `MapGrpcBusService()` | 扩展 | 服务端映射 `MapGrpcService<RemoteMessageService>()` |
 
 **使用示例：**
 
 ```csharp
-// 客户端
+// 客户端：固定端点 + 默认契约（ReplierService/Call）
 services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
+
+// 客户端：动态方法名（泛化调用任意一元服务/方法）
+services.AddGrpcBus("grpc", o =>
+{
+	o.Endpoint = "https://grain.example.com";
+	o.ServiceName = "acme.InvokeService";
+	o.MethodName = "Invoke";
+});
 
 // 服务端（需启用 HTTP/2，明文环境配置 HttpProtocols.Http2）
 services.AddGrpc();

@@ -3,7 +3,6 @@ using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
-using Nerorsoft.Bus;
 
 namespace Nerosoft.Euonia.Bus.Grpc.Tests;
 
@@ -116,6 +115,47 @@ public class GrpcTransporterTests
 	}
 
 	[Fact]
+	public async Task CallAsync_UsesConfiguredMethodDescriptor()
+	{
+		await using var server = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		var transport = GrpcServerHarness.BuildTransporter(server.Endpoint, options =>
+		{
+			// 服务名/方法名由选项在运行时指定（此处为默认契约，验证描述符确实由选项驱动而非固定常量）。
+			options.ServiceName = "nerorsoft.bus.ReplierService";
+			options.MethodName = "Call";
+		});
+
+		var result = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 41 }, "count"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(42, result);
+	}
+
+	[Fact]
+	public async Task CallAsync_UnknownMethod_ReturnsUnimplemented()
+	{
+		await using var server = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (_, _) => Task.FromResult(0));
+		});
+		var transport = GrpcServerHarness.BuildTransporter(server.Endpoint, options =>
+		{
+			options.ServiceName = "nerorsoft.bus.ReplierService";
+			options.MethodName = "Nope";
+		});
+
+		var exception = await Assert.ThrowsAsync<RpcException>(() => transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest(), "count"),
+			TestContext.Current.CancellationToken));
+
+		Assert.Equal(StatusCode.Unimplemented, exception.StatusCode);
+	}
+
+	[Fact]
 	public async Task Server_RejectsEmptyPayload()
 	{
 		await using var server = await GrpcServerHarness.StartAsync(configurator =>
@@ -123,17 +163,18 @@ public class GrpcTransporterTests
 			configurator.RegisterChannel<CountRequest, int>("count", (_, _) => Task.FromResult(0));
 		});
 
-		using var channel = GrpcChannel.ForAddress(server.Endpoint);
-		var client = new ReplierService.ReplierServiceClient(channel);
+		var method = GrpcMethodFactory.CreateUnary("nerorsoft.bus.ReplierService", "Call");
 
-		var exception = await Assert.ThrowsAsync<RpcException>(() => CallAsyncRaw(client, TestContext.Current.CancellationToken));
+		using var channel = GrpcChannel.ForAddress(server.Endpoint);
+		var call = channel.CreateCallInvoker().AsyncUnaryCall(
+			method,
+			host: null,
+			new global::Grpc.Core.CallOptions().WithCancellationToken(TestContext.Current.CancellationToken),
+			new Google.Protobuf.GrpcRequest { Data = string.Empty });
+
+		var exception = await Assert.ThrowsAsync<RpcException>(async () => await call.ResponseAsync);
 
 		Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
-	}
-
-	private static async Task<Google.Protobuf.GrpcResponse> CallAsyncRaw(ReplierService.ReplierServiceClient client, CancellationToken cancellationToken)
-	{
-		return await client.CallAsync(new Google.Protobuf.GrpcRequest { Data = string.Empty }, cancellationToken: cancellationToken);
 	}
 
 	[Fact]

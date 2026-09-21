@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Protobuf CompileOutputs="true" Include="protos\nerosoft\*.proto" GrpcServices="Server,Client" AdditionalImportDirs=".\protos" AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+        <Protobuf CompileOutputs="true" Include="protos\nerosoft\*.proto" GrpcServices="Server" AdditionalImportDirs=".\protos" AdditionalProtocArguments="--experimental_allow_proto3_optional" />
 
         <None Update="protos\nerosoft\*.proto">
             <Pack>true</Pack>

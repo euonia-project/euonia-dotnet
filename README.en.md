@@ -500,21 +500,36 @@ app.MapBusEndpoint();   // POST /bus/call
 Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
 
 ### Bus gRPC (`Euonia.Bus.Grpc`)
-> gRPC remote-transport adapter. Built on the new `ReplierService.Call` unary service (`nerorsoft.bus` package). The client calls the remote via `GrpcTransporter`; the server processes messages in `RemoteMessageService`. Also reuses the `RemoteReply<TResult>` protocol. Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were consolidated into this project (the former `Euonia.Grpc` project was removed).
+> gRPC remote-transport adapter. The client uses **generic (universal) invocation** — it constructs
+> `Method<GrpcRequest, GrpcResponse>` at runtime and executes it via `CallInvoker`, with the
+> service/method names supplied dynamically through `GrpcBusOptions` (defaulting to
+> `nerorsoft.bus.ReplierService/Call`), so no generated service stub is required on the client. The
+> server processes messages in `RemoteMessageService`. Reuses the `RemoteReply<TResult>` protocol.
+> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were
+> consolidated into this project (the former `Euonia.Grpc` project was removed).
 
 | Type | Kind | Purpose |
 |------|------|---------|
-| `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.ForAddress` + `ReplierServiceClient`; `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
+| `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.CreateCallInvoker()` + runtime-built `Method` (`GrpcMethodFactory`); `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
+| `GrpcMethodFactory` | class (internal) | Builds `Method<GrpcRequest, GrpcResponse>` at runtime (hand-written protobuf `Marshaller`s); supports dynamic service/method names |
 | `RemoteMessageService` | class | `ReplierService.ReplierServiceBase`: validates the payload (empty → `InvalidArgument`) → `RemoteReceiver` → returns `GrpcResponse` |
-| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider` |
+| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider`, `ServiceName` (default `nerorsoft.bus.ReplierService`), `MethodName` (default `Call`) |
 | `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | extension | Client keyed `ITransporter` registration; server `RemoteMessageService` registration |
 | `MapGrpcBusService()` | extension | Maps `MapGrpcService<RemoteMessageService>()` on the server |
 
 **Usage:**
 
 ```csharp
-// Client
+// Client: fixed endpoint + default contract (ReplierService/Call)
 services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
+
+// Client: dynamic method names (generic invocation against any unary service/method)
+services.AddGrpcBus("grpc", o =>
+{
+	o.Endpoint = "https://grain.example.com";
+	o.ServiceName = "acme.InvokeService";
+	o.MethodName = "Invoke";
+});
 
 // Server (HTTP/2 must be enabled; configure HttpProtocols.Http2 for cleartext)
 services.AddGrpc();

@@ -1,14 +1,16 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Nerorsoft.Bus;
 
 namespace Nerosoft.Euonia.Bus.Grpc;
 
 /// <summary>
 /// 基于 gRPC 的 <see cref="ITransporter"/> 实现。
-/// 通过 <c>ReplierService.Call</c> 一元服务调用远端，并以 <see cref="RemoteReply{TResult}"/> 协议交换结果。
+/// 通过泛化调用（运行时构造 <see cref="Method{TRequest, TResponse}"/> 经 <see cref="CallInvoker"/> 执行）调用远端
+/// 一元服务，服务名/方法名由 <see cref="GrpcBusOptions"/> 指定，默认 <c>nerorsoft.bus.ReplierService/Call</c>，
+/// 并以 <see cref="RemoteReply{TResult}"/> 协议交换结果。
 /// </summary>
 internal class GrpcTransporter : ITransporter, IDisposable
 {
@@ -16,7 +18,8 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	private readonly IMessageSerializer _serializer;
 	private readonly ILogger<GrpcTransporter> _logger;
 	private readonly GrpcChannel _channel;
-	private readonly ReplierService.ReplierServiceClient _client;
+	private readonly CallInvoker _callInvoker;
+	private readonly Method<Google.Protobuf.GrpcRequest, Google.Protobuf.GrpcResponse> _method;
 
 	/// <summary>
 	/// 当消息成功投递到远端时触发。
@@ -45,11 +48,13 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		}
 
 		_channel = GrpcChannel.ForAddress(_options.Endpoint);
-		_client = new ReplierService.ReplierServiceClient(_channel);
+		// 泛化调用：运行时构造方法描述符（服务名/方法名可动态指定），不依赖生成的服务桩代码。
+		_method = GrpcMethodFactory.CreateUnary(_options.ServiceName, _options.MethodName);
+		_callInvoker = _channel.CreateCallInvoker();
 	}
 
 	/// <summary>
-	/// 通过 gRPC 一元服务调用远端并返回强类型响应。
+	/// 通过 gRPC 泛化一元调用（服务名与方法名由选项指定）执行远端并返回强类型响应。
 	/// </summary>
 	/// <typeparam name="TRequest">消息负载的类型。</typeparam>
 	/// <typeparam name="TResponse">期望的响应类型。</typeparam>
@@ -65,9 +70,9 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		};
 		SetProperties(request, message);
 
-		_logger.LogDebug("Calling remote gRPC service for channel '{Channel}' with correlation ID '{CorrelationId}'", message.Channel, message.CorrelationId);
+		_logger.LogDebug("Calling remote gRPC method '{Method}' for channel '{Channel}' with correlation ID '{CorrelationId}'", _method.FullName, message.Channel, message.CorrelationId);
 
-		var call = _client.CallAsync(request, cancellationToken: cancellationToken);
+		var call = _callInvoker.AsyncUnaryCall(_method, null, new global::Grpc.Core.CallOptions().WithCancellationToken(cancellationToken), request);
 		var response = await call.ResponseAsync.ConfigureAwait(false);
 
 		var content = response.Data;

@@ -85,6 +85,11 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 
 	internal static ServiceProvider BuildClientProvider(string endpoint)
 	{
+		return BuildClientProvider(endpoint, null);
+	}
+
+	internal static ServiceProvider BuildClientProvider(string endpoint, Action<GrpcBusOptions> configure)
+	{
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
@@ -96,6 +101,7 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		services.AddGrpcBus("grpc", options =>
 		{
 			options.Endpoint = endpoint;
+			configure?.Invoke(options);
 		});
 
 		var provider = services.BuildServiceProvider();
@@ -106,12 +112,18 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 
 	internal static GrpcTransporter BuildTransporter(string endpoint)
 	{
+		return BuildTransporter(endpoint, null);
+	}
+
+	internal static GrpcTransporter BuildTransporter(string endpoint, Action<GrpcBusOptions> configure)
+	{
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
 		services.AddGrpcBus("grpc", options =>
 		{
 			options.Endpoint = endpoint;
+			configure?.Invoke(options);
 		});
 		return services.BuildServiceProvider().GetRequiredService<GrpcTransporter>();
 	}

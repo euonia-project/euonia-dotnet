@@ -75,16 +75,17 @@ service ReplierService {
 ```
 - `GrpcRequest`/`GrpcResponse` 含 `RequestId`、`Data` 与 `map<string, string> Property`；
   生成命名空间 `Nerorsoft.Bus`。
-- `Euonia.Bus.Grpc.csproj` 的 Protobuf 项 `GrpcServices="Server,Client"`（同时产出
-  `ReplierServiceBase` 服务端基类与客户端）。
+- `Euonia.Bus.Grpc.csproj` 的 Protobuf 项 `GrpcServices="Server"`（仅产出消息类型与
+  `ReplierServiceBase` 服务端基类；**客户端桩不再生成**——客户端走泛化调用）。
 - `Directory.Packages.props` 新增 `Grpc.Net.Client`（`$(GrpcAspNetCoreVersion)` = 2.83.0）。已验证：
   protobuf 3.36 将 `google.protobuf.StringValue` 映射为原生 `string`，`Data` 直接承载 JSON 文本。
 
 ### 传输与端点（`Euonia.Bus.Grpc`，新增项目）
 | 类型 | 说明 |
 | --- | --- |
-| `GrpcBusOptions` | `Name`（默认 `"grpc"`）、`Endpoint`、`SerializerProvider`（默认 `"SystemTestJson"`） |
-| `GrpcTransporter`（internal, `IDisposable`） | `GrpcChannel.ForAddress(Endpoint)` + `ReplierServiceClient`；`Data = serializer.Serialize(message)`；属性写入 `RequestId` 与 `MessageHeaders`（空串跳过，兼容无上下文调用）；`Send/Publish` → `NotSupportedException` |
+| `GrpcBusOptions` | `Name`（默认 `"grpc"`）、`Endpoint`、`SerializerProvider`（默认 `"SystemTestJson"`）、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`） |
+| `GrpcMethodFactory`（internal） | 运行时构造 `Method<GrpcRequest, GrpcResponse>`（手写 protobuf `Marshaller`），服务名/方法名由选项动态指定 |
+| `GrpcTransporter`（internal, `IDisposable`） | **泛化调用**：`GrpcChannel.CreateCallInvoker()` + 运行时 `Method`，`Data = serializer.Serialize(message)`；属性写入 `RequestId` 与 `MessageHeaders`（空串跳过，兼容无上下文调用）；`Send/Publish` → `NotSupportedException` |
 | `RemoteMessageService : ReplierService.ReplierServiceBase` | `Call` 覆写：空 `Data` → `RpcException(InvalidArgument)`；否则 `RemoteReceiver.ReceiveAsync` 并回传 `GrpcResponse { RequestId, Data = reply }` |
 | `ServiceCollectionExtensions` | `AddGrpcBus(name, configure)` 客户端注册；`AddGrpcBusServer()` 注册 `RemoteMessageService` 单例（读自 `IHandlerContext`/keyed 序列化器） |
 | `GrpcEndpointExtensions.MapGrpcBusService(this IEndpointRouteBuilder)` | `MapGrpcService<RemoteMessageService>()` |
@@ -107,13 +108,16 @@ service ReplierService {
 - 新增 `AddHttpBus_SelfRegistersCoreServices`：仅调用 `AddHttpBus` 即可解析序列化器、
   `IConfigurator`、`IHandlerContext` 与 keyed `ITransporter`。
 
-### `Tests/Euonia.Bus.Grpc.Tests`（9 例，全部通过）
+### `Tests/Euonia.Bus.Grpc.Tests`（11 例，全部通过）
 - `GrpcServerHarness`：`WebApplication` + `UseKestrel(Listen(Loopback, 0, Http2))`（明文 h2c，
   端口 0 运行时绑定）+ `AddGrpc`/`AddGrpcBusServer`/`MapGrpcBusService` + 信道注册；
 - 用例：传输器往返、异常还原、`IBus` 端到端（成功 + 抛错）、空 `Data` → `InvalidArgument`、
   `Send/Publish` → `NotSupportedException`；
 - 新增 `AddGrpcBus_SelfRegistersCoreServices` / `AddGrpcBusServer_SelfRegistersCoreServices`：
-  仅调用 `AddGrpcBus`/`AddGrpcBusServer` 即可自足解析核心服务与 `RemoteMessageService`。
+  仅调用 `AddGrpcBus`/`AddGrpcBusServer` 即可自足解析核心服务与 `RemoteMessageService`；
+- 新增泛化调用用例：`CallAsync_UsesConfiguredMethodDescriptor`（显式指定 `ServiceName`/`MethodName`
+  往返成功，证明描述符由选项驱动）、`CallAsync_UnknownMethod_ReturnsUnimplemented`
+  （未知方法名 → `RpcException(Unimplemented)`）；空负载用例改为经泛化 `Method` + `CallInvoker` 直接调用。
 
 > 关键经验：Kestrel 明文 gRPC 必须显式启用 `HttpProtocols.Http2`（`UseUrls` 默认 HTTP/1.1，
 > 否则客户端收到 `HTTP_1_1_REQUIRED`）。
@@ -146,6 +150,20 @@ service ReplierService {
    同步清理无引用的 `.resx` 资源模板、`resource.props` 强类型资源机制与
    `build/Euonia.Grpc.targets`（JSON transcoding 样板死代码）。
 
+4. **客户端泛化调用（消除对生成桩的依赖）**：
+   - `GrpcTransporter` 不再依赖 `Grpc.Tools` 生成的 `ReplierServiceClient`，改为
+     `GrpcMethodFactory` 在运行时构造 `Method<GrpcRequest, GrpcResponse>`（手写 protobuf
+     `Marshaller`）+ `GrpcChannel.CreateCallInvoker()` 执行；
+   - 服务名/方法名由 `GrpcBusOptions.ServiceName` / `MethodName` 动态指定
+     （默认 `nerorsoft.bus.ReplierService/Call`），可泛化调用任意（与协议兼容的）一元方法；
+   - `Euonia.Bus.Grpc.csproj` 的 Protobuf 项由 `GrpcServices="Server,Client"` 收紧为
+     `GrpcServices="Server"`，**客户端桩代码不再生成**，装配体中也不含 `ReplierServiceClient`；
+   - 新增 2 个事实用例（显式方法描述符往返、未知方法回 `Unimplemented`），空负载契约用例改为
+     经泛化 `Method` + `CallInvoker` 直接调用。
+   - 命名空间注意：`Nerosoft.Euonia.Bus` 存在调度选项类 `CallOptions`，与 `Grpc.Core.CallOptions`
+     同名；位于 `Nerosoft.Euonia.Bus.Grpc(.Tests)` 命名空间内的代码需用 `global::Grpc.Core.CallOptions`
+     以免被外层命名空间解析遮蔽。
+
 ---
 
 ## 六、验证结果
@@ -158,5 +176,5 @@ service ReplierService {
 | `Euonia.Bus.InMemory.Tests` | 10/10（回归） |
 | `Euonia.Bus.RabbitMq.Tests` | 10/10（回归） |
 | `Euonia.Bus.Http.Tests` | 11/11（新增 3：自我注册） |
-| `Euonia.Bus.Grpc.Tests` | 9/9（新增 4：自我注册） |
+| `Euonia.Bus.Grpc.Tests` | 11/11（新增 6：自我注册 2 + 泛化调用 2 + 既有 7） |
 | 新增项目 | `Euonia.Bus.Http`、`Euonia.Bus.Grpc`（同时纳入 `Euonia.slnx` 与 `Euonia.Test.slnx`）；原 `Euonia.Grpc` 已并入 `Euonia.Bus.Grpc` 并从方案移除 |

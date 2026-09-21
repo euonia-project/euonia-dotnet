@@ -24,4 +24,15 @@ public class GrpcBusOptions
 	/// 获取或设置序列化器提供程序名称。
 	/// </summary>
 	public string SerializerProvider { get; set; } = "SystemTestJson";
+
+	/// <summary>
+	/// 获取或设置调用的 gRPC 服务完整名（不含方法名）。
+	/// 泛化调用在运行时据此构造方法描述符，默认对应 <c>ReplierService</c>。
+	/// </summary>
+	public string ServiceName { get; set; } = "nerorsoft.bus.ReplierService";
+
+	/// <summary>
+	/// 获取或设置调用的 gRPC 一元方法名。
+	/// </summary>
+	public string MethodName { get; set; } = "Call";
 }
