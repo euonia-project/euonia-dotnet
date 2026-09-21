@@ -211,10 +211,9 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>表示异步运行操作的任务，包含响应结果。</returns>
 	public virtual async Task<TResponse> RunAsync(TRequest context, Func<TRequest, Task<TResponse>> accumulate)
 	{
-		Use((request, _) =>
-		{
-			return Task.Run(() => accumulate(request));
-		});
+		// 直接用累积委托本身作为终结点。此前用 Task.Run 包裹会为每条消息多引入一次线程池调度，
+		// 且 Task.Run 内部对 AsyncLocal 的修改不会回流到调用方（影响关联 ID / 工作单元的传播）。
+		Use((request, _) => accumulate(request));
 		return await RunAsync(context);
 	}
 
