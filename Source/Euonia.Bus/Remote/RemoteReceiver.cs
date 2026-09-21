@@ -43,14 +43,20 @@ public static class RemoteReceiver
 		}
 
 		var taskCompletion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-		if (cancellationToken != CancellationToken.None)
-		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
-		}
+		var cancellationRegistration = cancellationToken != CancellationToken.None
+			? cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false)
+			: default;
 
-		context.Responded += OnResponded;
-		context.Failed += OnFailed;
-		context.Completed += OnCompleted;
+		// MessageContext 的事件由 WeakEventManager 支持，仅持有处理器目标（此处为局部函数的闭包）的弱引用。
+		// 若不以强引用变量持有委托，闭包可能在事件触发前被 GC 回收，导致三个回调全部失效、
+		// await taskCompletion.Task 永久挂起。委托同时在 finally 中用于退订，可确保其存活至方法结束。
+		EventHandler<MessageRepliedEventArgs> onResponded = OnResponded;
+		EventHandler<Exception> onFailed = OnFailed;
+		EventHandler<MessageHandledEventArgs> onCompleted = OnCompleted;
+
+		context.Responded += onResponded;
+		context.Failed += onFailed;
+		context.Completed += onCompleted;
 
 		try
 		{
@@ -71,9 +77,10 @@ public static class RemoteReceiver
 		}
 		finally
 		{
-			context.Responded -= OnResponded;
-			context.Failed -= OnFailed;
-			context.Completed -= OnCompleted;
+			context.Responded -= onResponded;
+			context.Failed -= onFailed;
+			context.Completed -= onCompleted;
+			cancellationRegistration.Dispose();
 		}
 
 		void OnResponded(object sender, MessageRepliedEventArgs e)

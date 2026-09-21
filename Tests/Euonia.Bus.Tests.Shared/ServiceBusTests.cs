@@ -26,7 +26,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -46,12 +46,12 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
+			// 无响应场景：SendAsync 能正常返回即表示单播链路完整（不应抛异常）。
 			await _provider.GetService<IBus>().SendAsync(new UserUpdateCommand(), TestContext.Current.CancellationToken);
-			Assert.True(true);
 		}
 	}
 
@@ -60,7 +60,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -80,7 +80,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -95,7 +95,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -112,7 +112,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -129,7 +129,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -156,7 +156,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -177,7 +177,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{
@@ -200,7 +200,7 @@ public class ServiceBusTests
 	{
 		if (_preventRunTests)
 		{
-			Assert.True(true);
+			Assert.Skip("Requires a live RabbitMQ broker; set PreventRunTests to false and start the broker to run this test.");
 		}
 		else
 		{

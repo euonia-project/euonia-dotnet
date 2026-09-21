@@ -55,6 +55,20 @@ public class OutboxTransport
 	}
 
 	/// <summary>
+	/// 将当前状态标记为已转入死信队列。
+	/// </summary>
+	/// <remarks>
+	/// 转入死信后该记录不再被后台调度器扫描重试；<see cref="RetryAttempts"/> 保留转入时的次数，
+	/// 便于运维判断死信产生的原因。重放时需重置状态与重试次数。
+	/// </remarks>
+	/// <param name="error">导致转入死信的最后一次错误信息。</param>
+	public void MarkAsDeadLettered(string error)
+	{
+		Status = OutboxTransportStatus.DeadLettered;
+		Error = error;
+	}
+
+	/// <summary>
 	/// 返回当前状态的字符串表示形式。
 	/// </summary>
 	/// <returns>包含消息标识符、传输器名称与状态的字符串。</returns>
@@ -83,4 +97,9 @@ public enum OutboxTransportStatus
 	/// 发送失败。
 	/// </summary>
 	Failed = 2,
+
+	/// <summary>
+	/// 重试次数耗尽，已转入死信队列。
+	/// </summary>
+	DeadLettered = 3,
 }

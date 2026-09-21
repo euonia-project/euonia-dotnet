@@ -1,5 +1,3 @@
-using System.Collections.Concurrent;
-
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
@@ -11,11 +9,6 @@ namespace Nerosoft.Euonia.Bus;
 /// </remarks>
 public interface IInboxStore
 {
-	/// <summary>
-	/// 收件箱条目缓存，避免重复读取已加载的条目。
-	/// </summary>
-	static readonly ConcurrentDictionary<string, InboxEntry> Cache = new();
-
 	/// <summary>
 	/// 将一条已接收消息及其涉及的处理程序列表插入收件箱存储。
 	/// </summary>
@@ -79,7 +72,8 @@ public interface IInboxStore
 	/// 获取收件箱条目并写入缓存。
 	/// </summary>
 	/// <remarks>
-	/// 优先从 <see cref="Cache"/> 读取；缓存未命中时调用 <see cref="Get"/> 并将结果缓存。
+	/// 优先从当前存储实例的缓存读取；缓存未命中时调用 <see cref="Get"/> 并将结果缓存。
+	/// 缓存按存储实例隔离，不同实例之间互不影响。
 	/// </remarks>
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>对应的收件箱条目；未找到时返回 <c>null</c>。</returns>
@@ -87,31 +81,38 @@ public interface IInboxStore
 	InboxEntry GetAndCache(string messageId)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
-		if (Cache.TryGetValue(messageId, out var cached))
-		{
-			return cached;
-		}
-
-		var entry = Get(messageId);
-		if (entry != null)
-		{
-			Cache[messageId] = entry;
-		}
-
-		return entry;
+		return StoreEntryCache<IInboxStore, InboxEntry>.GetOrAdd(this, messageId, Get);
 	}
 
 	/// <summary>
-	/// 清空收件箱条目缓存。
+	/// 清空当前存储实例的收件箱条目缓存。
 	/// </summary>
 	void ClearCache()
 	{
-		Cache.Clear();
+		StoreEntryCache<IInboxStore, InboxEntry>.Clear(this);
 	}
 
 	/// <summary>
 	/// 获取所有执行失败且等待重试的处理程序记录，供后台调度器重试。
 	/// </summary>
 	/// <returns>失败的处理程序记录集合。</returns>
+	/// <remarks>
+	/// 不应返回已转入死信（<see cref="InboxHandlerStatus.DeadLettered"/>）的记录，
+	/// 否则它们会被每轮轮询反复扫描。
+	/// </remarks>
 	IReadOnlyList<InboxHandler> GetFailedMessages();
+
+	/// <summary>
+	/// 清理早于 <paramref name="cutoff"/> 且已终结（全部处理程序记录均为
+	/// <see cref="InboxHandlerStatus.Success"/> 或 <see cref="InboxHandlerStatus.DeadLettered"/>）的条目。
+	/// </summary>
+	/// <remarks>
+	/// 默认实现为空操作，因此既有实现无需改动即可继续工作。
+	/// 持久化实现应真正删除记录，避免存储无界增长。
+	/// <paramref name="cutoff"/> 与 <see cref="InboxEntry.CreatedAt"/> 均为本地时间。
+	/// </remarks>
+	/// <param name="cutoff">清理截止时间（本地时间）；早于该时间的已终结条目将被移除。</param>
+	void Cleanup(DateTime cutoff)
+	{
+	}
 }

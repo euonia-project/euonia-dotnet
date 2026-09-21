@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Bus.Behaviors;
+using Nerosoft.Euonia.Bus.Telemetry;
 using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
@@ -21,6 +23,7 @@ internal sealed class OutboxDispatcher : IDisposable
 	private readonly IServiceAccessor _accessor;
 	private readonly IOutboxStore _store;
 	private readonly OutboxOptions _options;
+	private readonly IDeadLetterStore _deadLetterStore;
 	private readonly ILogger _logger;
 	private Timer _timer;
 	private int _running;
@@ -36,6 +39,8 @@ internal sealed class OutboxDispatcher : IDisposable
 		_accessor = accessor;
 		_store = store;
 		_options = options ?? new OutboxOptions();
+		// 死信存储为可选依赖：未注册时保持原有的"记录警告并跳过"行为。
+		_deadLetterStore = accessor.GetService<IDeadLetterStore>();
 		_logger = accessor.GetService<ILoggerFactory>()?.CreateLogger<OutboxDispatcher>();
 	}
 
@@ -70,6 +75,9 @@ internal sealed class OutboxDispatcher : IDisposable
 	{
 		try
 		{
+			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
+			CleanupExpired();
+
 			var items = _store?.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
@@ -87,7 +95,7 @@ internal sealed class OutboxDispatcher : IDisposable
 
 				if (!CanRetry(item))
 				{
-					_logger?.LogWarning("Outbox message {MessageId} on transport {Transport} has exceeded the maximum retry attempts and will be skipped.", item.MessageId, item.Name);
+					DeadLetter(entry, item);
 					continue;
 				}
 
@@ -112,6 +120,8 @@ internal sealed class OutboxDispatcher : IDisposable
 
 	private async Task RedeliverSafeAsync(IMessageEnvelope envelope, OutboxTransport item)
 	{
+		BusTelemetry.OutboxRetries.Add(1, new TagList { { "messaging.destination.name", item.Name } });
+
 		try
 		{
 			await RedeliverAsync(envelope, item.Name);
@@ -125,6 +135,60 @@ internal sealed class OutboxDispatcher : IDisposable
 	private bool CanRetry(OutboxTransport item)
 	{
 		return _options.MaxRetryAttempts <= 0 || item.RetryAttempts <= _options.MaxRetryAttempts;
+	}
+
+	/// <summary>
+	/// 按 <see cref="OutboxOptions.RetentionPeriod"/> 清理已终结的旧条目。
+	/// </summary>
+	/// <remarks>
+	/// 清理失败不应影响本轮重投递，因此仅记录警告。
+	/// </remarks>
+	private void CleanupExpired()
+	{
+		if (_store == null || _options.RetentionPeriod <= TimeSpan.Zero)
+		{
+			return;
+		}
+
+		try
+		{
+			_store.Cleanup(DateTime.Now - _options.RetentionPeriod);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to clean up expired outbox entries.");
+		}
+	}
+
+	/// <summary>
+	/// 将重试次数耗尽的传输记录转入死信：标记为 <see cref="OutboxTransportStatus.DeadLettered"/>
+	/// （从而被 <see cref="IOutboxStore.GetFailedMessages"/> 排除，不再被每轮轮询重复扫描），
+	/// 并在已注册死信存储时写入一条死信记录。
+	/// </summary>
+	private void DeadLetter(OutboxEntry entry, OutboxTransport item)
+	{
+		item.MarkAsDeadLettered(item.Error);
+		BusTelemetry.OutboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel }, { "messaging.destination.name", item.Name } });
+
+		if (_deadLetterStore == null)
+		{
+			_logger?.LogWarning("Outbox message {MessageId} on transport {Transport} has exceeded the maximum retry attempts ({Attempts}) and will be skipped. Register an IDeadLetterStore (e.g. services.AddInMemoryDeadLetters()) to capture dead letters.", item.MessageId, item.Name, item.RetryAttempts);
+			return;
+		}
+
+		_deadLetterStore.Add(new DeadLetterEntry
+		{
+			MessageId = entry.MessageId,
+			Channel = entry.Channel,
+			MessageType = entry.MessageType,
+			Content = entry.Content,
+			Source = DeadLetterSource.Outbox,
+			Target = item.Name,
+			Error = item.Error,
+			RetryAttempts = item.RetryAttempts,
+		});
+
+		_logger?.LogWarning("Outbox message {MessageId} on transport {Transport} has exceeded the maximum retry attempts ({Attempts}) and was moved to the dead letter store.", item.MessageId, item.Name, item.RetryAttempts);
 	}
 
 	private Task RedeliverAsync(IMessageEnvelope envelope, string transportName)

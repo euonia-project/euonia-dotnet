@@ -34,4 +34,13 @@ public class OutboxOptions
 	/// 该值统计的是重试轮次（<see cref="OutboxTransport.RetryAttempts"/>）。
 	/// </remarks>
 	public int MaxRetryAttempts { get; set; }
+
+	/// <summary>
+	/// 获取或设置已完成（或已转入死信）条目的保留时长，超期后在调度器轮询时清理。
+	/// </summary>
+	/// <remarks>
+	/// 默认保留 24 小时。<c>0</c> 或负数表示不清理。
+	/// 时区约定与 <see cref="OutboxEntry.CreatedAt"/> 一致，均为本地时间。
+	/// </remarks>
+	public TimeSpan RetentionPeriod { get; set; } = TimeSpan.FromHours(24);
 }

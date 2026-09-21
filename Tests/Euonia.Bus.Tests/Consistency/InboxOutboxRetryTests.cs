@@ -105,8 +105,11 @@ public class InboxOutboxRetryTests
 
 		Assert.DoesNotContain("outbox-retry-2", delivered);
 		var transport = store.Get("outbox-retry-2").GetTransport("test");
-		Assert.Equal(OutboxTransportStatus.Failed, transport.Status);
+		// 重试耗尽后记录转为终态 DeadLettered（而非停留在 Failed）：
+		// 否则 GetFailedMessages 会每轮都返回它，导致后台调度器反复扫描同一条永不成功的记录。
+		Assert.Equal(OutboxTransportStatus.DeadLettered, transport.Status);
 		Assert.Equal(2, transport.RetryAttempts);
+		Assert.Empty(store.GetFailedMessages());
 	}
 
 	[Fact]

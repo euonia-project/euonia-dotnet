@@ -55,4 +55,22 @@ public class InMemoryInboxStore : IInboxStore
 		               .Where(handler => handler.Status == InboxHandlerStatus.Failed)
 		               .ToList();
 	}
+
+	/// <inheritdoc/>
+	public void Cleanup(DateTime cutoff)
+	{
+		// 只清理已终结的条目：任何处理记录仍为 Pending / Failed 的条目都要保留，否则会丢失待重试的消息。
+		foreach (var entry in _entries.Values)
+		{
+			if (entry.CreatedAt >= cutoff)
+			{
+				continue;
+			}
+
+			if (entry.Handlers.All(handler => handler.Status is InboxHandlerStatus.Success or InboxHandlerStatus.DeadLettered))
+			{
+				_entries.TryRemove(entry.MessageId, out _);
+			}
+		}
+	}
 }

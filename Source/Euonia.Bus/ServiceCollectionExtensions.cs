@@ -65,6 +65,21 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
+		/// 注册内存版死信（Dead Letter）存储与查询/重放服务（<see cref="InMemoryDeadLetterStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 死信存储默认不注册任何实现；未注册时，重试次数耗尽的记录仅被标记为死信并记录警告，
+		/// 调用本方法后才会被真正捕获，并可通过 <see cref="IDeadLetterService"/> 查询、重放或丢弃。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryDeadLetters()
+		{
+			services.TryAddSingleton<IDeadLetterStore, InMemoryDeadLetterStore>();
+			services.TryAddSingleton<IDeadLetterService, DeadLetterService>();
+			return services;
+		}
+
+		/// <summary>
 		/// 注册一个用于配置消息总线的 <see cref="ConfiguratorBuilder"/> 委托。
 		/// 配置委托将在消息总线启动前被执行，用于设置消息约定、传输策略和处理器注册。
 		/// </summary>

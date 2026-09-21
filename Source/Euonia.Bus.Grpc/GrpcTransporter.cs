@@ -72,7 +72,9 @@ internal class GrpcTransporter : ITransporter, IDisposable
 
 		_logger.LogDebug("Calling remote gRPC method '{Method}' for channel '{Channel}' with correlation ID '{CorrelationId}'", _method.FullName, message.Channel, message.CorrelationId);
 
-		var call = _callInvoker.AsyncUnaryCall(_method, null, new global::Grpc.Core.CallOptions().WithCancellationToken(cancellationToken), request);
+		// AsyncUnaryCall 实现 IDisposable 并持有底层 HTTP 响应流；
+		// 错误路径（下方各 throw）若不释放会在高负载下持续保留流。
+		using var call = _callInvoker.AsyncUnaryCall(_method, null, new global::Grpc.Core.CallOptions().WithCancellationToken(cancellationToken), request);
 		var response = await call.ResponseAsync.ConfigureAwait(false);
 
 		var content = response.Data;

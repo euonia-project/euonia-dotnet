@@ -54,12 +54,15 @@ public static class ServiceCollectionExtensions
 
 			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetService<ActiveMqTransporter>());
+				// GetRequiredService 而非 GetService：解析失败应在此处立即暴露，而不是让键控传输器为 null。
+				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<ActiveMqTransporter>());
 			}
 
+			// 单例：注册器持有其创建的接收器（各自的会话与消费者），必须只有一个实例持有它们，
+			// 否则重复解析会为同一通道创建第二组消费者并导致重复消费。
 			if (!services.IsAddedImplementation<IRecipientRegistrar, ActiveMqRecipientRegistrar>())
 			{
-				services.AddTransient<IRecipientRegistrar, ActiveMqRecipientRegistrar>();
+				services.AddSingleton<IRecipientRegistrar, ActiveMqRecipientRegistrar>();
 			}
 			
 			// 在此处添加 ActiveMQ 总线相关服务

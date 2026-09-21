@@ -1,8 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
+using Nerosoft.Euonia.Bus.Telemetry;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
 
@@ -130,6 +132,10 @@ internal sealed class MessageBus : IBus, IDisposable
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
+		using var activity = BusTelemetry.StartActivity("bus.publish", pack);
+		var startTimestamp = Stopwatch.GetTimestamp();
+		BusTelemetry.Published.Add(1, BusTelemetry.Tags(channel, messageType));
+
 		// 当全局开关启用（或单条消息显式指定）发件箱时，先将消息写入发件箱存储，再分发到各传输通道。
 		var useOutbox = options.UseOutbox ?? _outboxOptions.Enabled;
 		if (useOutbox)
@@ -145,13 +151,34 @@ internal sealed class MessageBus : IBus, IDisposable
 			}
 		}
 
-		return Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
+		return PublishCoreAsync(transports, pack, behavior, useOutbox, channel, messageType, startTimestamp, activity, cancellationToken);
+	}
+
+	/// <summary>
+	/// 执行实际的并行分发并记录耗时与失败指标。
+	/// </summary>
+	private async Task PublishCoreAsync<TMessage>(IEnumerable<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long startTimestamp, Activity activity, CancellationToken cancellationToken)
+	{
+		try
 		{
-			await RunWithPipelineAsync(pack, behavior, (transport, p) =>
+			await Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 			{
-				return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
-			}, name, useOutbox);
-		});
+				await RunWithPipelineAsync(pack, behavior, (transport, p) =>
+				{
+					return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
+				}, name, useOutbox);
+			});
+		}
+		catch (Exception exception)
+		{
+			BusTelemetry.Failed.Add(1, BusTelemetry.Tags(channel, messageType));
+			activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+			throw;
+		}
+		finally
+		{
+			BusTelemetry.Duration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds, BusTelemetry.Tags(channel, messageType));
+		}
 	}
 
 	/// <summary>
@@ -199,6 +226,10 @@ internal sealed class MessageBus : IBus, IDisposable
 
 		var transportName = transports!.First();
 
+		using var activity = BusTelemetry.StartActivity("bus.send", pack, transportName);
+		var startTimestamp = Stopwatch.GetTimestamp();
+		BusTelemetry.Sent.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
+
 		try
 		{
 			var result = await RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName);
@@ -206,6 +237,9 @@ internal sealed class MessageBus : IBus, IDisposable
 		}
 		catch (Exception exception)
 		{
+			BusTelemetry.Failed.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
+			activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+
 			if (callback != null)
 			{
 				callback.OnError(exception);
@@ -217,6 +251,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		}
 		finally
 		{
+			BusTelemetry.Duration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds, BusTelemetry.Tags(channel, messageType, transportName));
 			callback?.OnCompleted();
 		}
 	}
@@ -322,9 +357,35 @@ internal sealed class MessageBus : IBus, IDisposable
 
 		var transportName = transports!.First();
 
+		var activity = BusTelemetry.StartActivity("bus.call", pack, transportName);
+		var startTimestamp = Stopwatch.GetTimestamp();
+		BusTelemetry.Called.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
+
 		var result = RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
 
-		return ApplyTimeoutAsync(result, options.Timeout, cancellationToken);
+		return CompleteCallAsync(result, options.Timeout, cancellationToken, activity, startTimestamp, channel, messageType, transportName);
+	}
+
+	/// <summary>
+	/// 为调用结果应用超时约束，并记录耗时与失败指标。
+	/// </summary>
+	private async Task<TResponse> CompleteCallAsync<TResponse>(Task<TResponse> task, long timeout, CancellationToken cancellationToken, Activity activity, long startTimestamp, string channel, Type messageType, string transportName)
+	{
+		try
+		{
+			return await ApplyTimeoutAsync(task, timeout, cancellationToken).ConfigureAwait(false);
+		}
+		catch (Exception exception)
+		{
+			BusTelemetry.Failed.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
+			activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
+			throw;
+		}
+		finally
+		{
+			BusTelemetry.Duration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds, BusTelemetry.Tags(channel, messageType, transportName));
+			activity?.Dispose();
+		}
 	}
 
 	/// <summary>

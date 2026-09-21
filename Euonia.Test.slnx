@@ -10,6 +10,7 @@
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.Http.Tests/Euonia.Bus.Http.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.Grpc.Tests/Euonia.Bus.Grpc.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Bus.HealthChecks.Tests/Euonia.Bus.HealthChecks.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.Tests.Shared/Euonia.Bus.Tests.Shared.shproj">
 			<Build Project="false" />
 		</Project>

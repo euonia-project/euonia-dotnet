@@ -64,17 +64,31 @@ public class SendBuilder<TMessage, TResult> : DispatchBuilder<SendBuilder<TMessa
 	/// </summary>
 	/// <param name="cancellationToken">用于取消发送操作的令牌。</param>
 	/// <returns>包含处理程序返回结果的任务。</returns>
+	/// <exception cref="OperationCanceledException">当 <paramref name="cancellationToken"/> 被取消时抛出。</exception>
+	/// <exception cref="MessageDeliverException">当传输层完成通知但未提供任何结果时抛出。</exception>
+	/// <remarks>
+	/// 结果通过 <see cref="Subject{TResult}"/> 回传。仅当传输层既未推送结果也未推送错误、
+	/// 而是直接发出完成通知时，以异常结束而非永久等待。
+	/// </remarks>
 	public async Task<TResult> ExecuteWithResultAsync(CancellationToken cancellationToken = default)
 	{
-		TaskCompletionSource<TResult> tcs = new TaskCompletionSource<TResult>();
+		// 续体不应同步运行在传输层的回调线程上。
+		var tcs = new TaskCompletionSource<TResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		_subject ??= new Subject<TResult>();
-		_subject.Subscribe(result =>
+		var subscription = _subject.Subscribe(result => tcs.TrySetResult(result),
+		                                       exception => tcs.TrySetException(exception),
+		                                       () => tcs.TrySetException(new MessageDeliverException("The send operation completed without producing a result.")));
+
+		try
 		{
-			tcs.TrySetResult(result);
+			await _bus.SendAsync(_message, _subject, Options, Pipeline, cancellationToken);
+			return await tcs.Task.WaitAsync(cancellationToken);
+		}
+		finally
+		{
+			subscription.Dispose();
 			_subject.OnCompleted();
-		}, exception => tcs.TrySetException(exception));
-		await _bus.SendAsync(_message, _subject, Options, Pipeline, cancellationToken);
-		return await tcs.Task;
+		}
 	}
 }

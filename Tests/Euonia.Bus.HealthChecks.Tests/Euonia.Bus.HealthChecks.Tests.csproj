@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <PropertyGroup>
+        <!--
+          本项目引用 Microsoft.AspNetCore.App 共享框架，Tests/common.props 中的
+          Microsoft.Extensions.Hosting 因此成为冗余引用（NU1510）。该包为所有测试项目共用，
+          不便单独移除，故在此抑制该提示。
+        -->
+        <NoWarn>$(NoWarn);NU1510</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Bus.HealthChecks\Euonia.Bus.HealthChecks.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Bus\Euonia.Bus.csproj" />
+    </ItemGroup>
+
+</Project>

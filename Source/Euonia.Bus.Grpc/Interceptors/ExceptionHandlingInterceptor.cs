@@ -15,6 +15,11 @@ internal class ExceptionHandlingInterceptor : Interceptor
 {
     private const string NULL_RESPONSE_MESSAGE = "Response data is <null>.";
 
+    /// <summary>
+    /// 沿内层异常链查找时的最大深度，防止异常链成环导致死循环。
+    /// </summary>
+    private const int MaxInnerExceptionDepth = 16;
+
     private readonly ILogger<ExceptionHandlingInterceptor> _logger;
     private readonly IExceptionHandler _handler;
 
@@ -60,46 +65,52 @@ internal class ExceptionHandlingInterceptor : Interceptor
 
     private static RpcException GenerateRpcException(Exception exception)
     {
-        while (true)
+        // 沿内层异常链向内查找，但要受次数上限约束：异常链成环时下面的 while 永不终止。
+        // 同时必须先判断 RpcException 再解包内层异常——RpcException 常带有内层异常
+        // （例如 RemoteMessageService 构造的 RpcException(status, inner)），
+        // 先解包会丢弃其状态码并被错误地重映射为 Internal。
+        for (var depth = 0; exception != null && depth < MaxInnerExceptionDepth; depth++)
         {
-            if (exception.InnerException != null)
-            {
-                exception = exception.InnerException;
-                continue;
-            }
-
             if (exception is RpcException rpcException)
             {
                 return rpcException;
             }
 
-            var statusCode = ConvertToStatusCode(exception);
-            return new RpcException(new Status(statusCode, exception.Message));
-
-            static StatusCode ConvertToStatusCode(Exception exception)
+            if (exception.InnerException == null)
             {
-                var name = exception.GetType().Name;
-
-                if (name == "NotImplementedException")
-                {
-                    return StatusCode.Unimplemented;
-                }
-
-                return exception switch
-                {
-                    ValidationException => StatusCode.InvalidArgument,
-                    InvalidDataException => StatusCode.InvalidArgument,
-                    UnauthorizedAccessException => StatusCode.PermissionDenied,
-                    AuthenticationException => StatusCode.Unauthenticated,
-                    OperationCanceledException => StatusCode.DeadlineExceeded,
-                    TimeoutException => StatusCode.DeadlineExceeded,
-                    ArgumentException => StatusCode.Internal,
-                    HttpRequestException => StatusCode.Unavailable,
-                    WebException => StatusCode.Unavailable,
-                    RowNotInTableException => StatusCode.NotFound,
-                    _ => GetStatusCode(exception.GetType().Name),
-                };
+                var statusCode = ConvertToStatusCode(exception);
+                return new RpcException(new Status(statusCode, exception.Message));
             }
+
+            exception = exception.InnerException;
+        }
+
+        var message = exception?.Message ?? "Rpc request failed.";
+        return new RpcException(new Status(StatusCode.Internal, message));
+
+        static StatusCode ConvertToStatusCode(Exception exception)
+        {
+            var name = exception.GetType().Name;
+
+            if (name == "NotImplementedException")
+            {
+                return StatusCode.Unimplemented;
+            }
+
+            return exception switch
+            {
+                ValidationException => StatusCode.InvalidArgument,
+                InvalidDataException => StatusCode.InvalidArgument,
+                UnauthorizedAccessException => StatusCode.PermissionDenied,
+                AuthenticationException => StatusCode.Unauthenticated,
+                OperationCanceledException => StatusCode.DeadlineExceeded,
+                TimeoutException => StatusCode.DeadlineExceeded,
+                ArgumentException => StatusCode.Internal,
+                HttpRequestException => StatusCode.Unavailable,
+                WebException => StatusCode.Unavailable,
+                RowNotInTableException => StatusCode.NotFound,
+                _ => GetStatusCode(exception.GetType().Name),
+            };
         }
     }
 

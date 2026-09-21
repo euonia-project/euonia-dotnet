@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Bus.Telemetry;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -17,6 +19,7 @@ internal sealed class InboxDispatcher : IDisposable
 	private readonly IInboxStore _store;
 	private readonly InboxOptions _options;
 	private readonly ConcurrentDictionary<string, List<HandlerRegistration>> _container;
+	private readonly IDeadLetterStore _deadLetterStore;
 	private readonly ILogger _logger;
 	private Timer _timer;
 	private int _running;
@@ -34,6 +37,8 @@ internal sealed class InboxDispatcher : IDisposable
 		_store = store;
 		_options = options ?? new InboxOptions();
 		_container = container;
+		// 死信存储为可选依赖：未注册时保持原有的"记录警告并跳过"行为。
+		_deadLetterStore = provider.GetService<IDeadLetterStore>();
 		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<InboxDispatcher>();
 	}
 
@@ -61,81 +66,140 @@ internal sealed class InboxDispatcher : IDisposable
 		_ = Task.Run(RetryAllAsync);
 	}
 
-/// <summary>
-/// 重试所有执行失败的处理记录。
-/// </summary>
-public async Task RetryAllAsync()
-{
-	try
+	/// <summary>
+	/// 重试所有执行失败的处理记录。
+	/// </summary>
+	public async Task RetryAllAsync()
 	{
-		var items = _store?.GetFailedMessages();
-		if (items == null || items.Count == 0)
+		try
 		{
-			return;
-		}
+			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
+			CleanupExpired();
 
-		var tasks = new List<Task>(items.Count);
-		foreach (var item in items)
+			var items = _store?.GetFailedMessages();
+			if (items == null || items.Count == 0)
+			{
+				return;
+			}
+
+			var tasks = new List<Task>(items.Count);
+			foreach (var item in items)
+			{
+				var entry = _store.GetAndCache(item.MessageId);
+				if (entry == null)
+				{
+					continue;
+				}
+
+				if (!_container.TryGetValue(entry.Channel, out var registrations) || registrations is not { Count: > 0 })
+				{
+					_logger?.LogWarning("Inbox message {MessageId} has no handler registered on channel {Channel} and will be skipped.", item.MessageId, entry.Channel);
+					continue;
+				}
+
+				var registration = registrations.FirstOrDefault(r => string.Equals(r.Name, item.Name, StringComparison.Ordinal));
+				if (registration == null)
+				{
+					_logger?.LogWarning("Inbox message {MessageId} has no handler named {Handler} on channel {Channel} and will be skipped.", item.MessageId, item.Name, entry.Channel);
+					continue;
+				}
+
+				if (!CanRetry(item))
+				{
+					DeadLetter(entry, item);
+					continue;
+				}
+
+				tasks.Add(ExecuteSafeAsync(registration, entry, item));
+			}
+
+			if (tasks.Count > 0)
+			{
+				await Task.WhenAll(tasks);
+			}
+		}
+		catch (Exception exception)
 		{
-			var entry = _store.GetAndCache(item.MessageId);
-			if (entry == null)
-			{
-				continue;
-			}
-
-			if (!_container.TryGetValue(entry.Channel, out var registrations) || registrations is not { Count: > 0 })
-			{
-				_logger?.LogWarning("Inbox message {MessageId} has no handler registered on channel {Channel} and will be skipped.", item.MessageId, entry.Channel);
-				continue;
-			}
-
-			var registration = registrations.FirstOrDefault(r => string.Equals(r.Name, item.Name, StringComparison.Ordinal));
-			if (registration == null)
-			{
-				_logger?.LogWarning("Inbox message {MessageId} has no handler named {Handler} on channel {Channel} and will be skipped.", item.MessageId, item.Name, entry.Channel);
-				continue;
-			}
-
-			if (!CanRetry(item))
-			{
-				_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts and will be skipped.", item.MessageId, item.Name);
-				continue;
-			}
-
-			tasks.Add(ExecuteSafeAsync(registration, entry, item));
+			_logger?.LogError(exception, "Inbox retry failed: {Error}", exception.Message);
 		}
-
-		if (tasks.Count > 0)
+		finally
 		{
-			await Task.WhenAll(tasks);
+			_store?.ClearCache();
+			Interlocked.Exchange(ref _running, 0);
 		}
 	}
-	catch (Exception exception)
-	{
-		_logger?.LogError(exception, "Inbox retry failed: {Error}", exception.Message);
-	}
-	finally
-	{
-		_store?.ClearCache();
-		Interlocked.Exchange(ref _running, 0);
-	}
-}
 
-private async Task ExecuteSafeAsync(HandlerRegistration registration, InboxEntry entry, InboxHandler item)
-{
-	try
+	private async Task ExecuteSafeAsync(HandlerRegistration registration, InboxEntry entry, InboxHandler item)
 	{
-		await ExecuteAsync(registration, entry);
+		BusTelemetry.InboxRetries.Add(1, new TagList { { "messaging.channel", entry.Channel } });
+
+		try
+		{
+			await ExecuteAsync(registration, entry);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to redeliver inbox message {MessageId} for handler {Handler}.", item.MessageId, item.Name);
+		}
 	}
-	catch (Exception exception)
-	{
-		_logger?.LogWarning(exception, "Failed to redeliver inbox message {MessageId} for handler {Handler}.", item.MessageId, item.Name);
-	}
-}
 
 	private bool CanRetry(InboxHandler item)
 	{
 		return _options.MaxRetryAttempts <= 0 || item.RetryAttempts <= _options.MaxRetryAttempts;
+	}
+
+	/// <summary>
+	/// 按 <see cref="InboxOptions.RetentionPeriod"/> 清理已终结的旧条目。
+	/// </summary>
+	/// <remarks>
+	/// 清理失败不应影响本轮重执行，因此仅记录警告。
+	/// </remarks>
+	private void CleanupExpired()
+	{
+		if (_store == null || _options.RetentionPeriod <= TimeSpan.Zero)
+		{
+			return;
+		}
+
+		try
+		{
+			_store.Cleanup(DateTime.Now - _options.RetentionPeriod);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to clean up expired inbox entries.");
+		}
+	}
+
+	/// <summary>
+	/// 将重试次数耗尽的处理记录转入死信：标记为 <see cref="InboxHandlerStatus.DeadLettered"/>
+	/// （从而被 <see cref="IInboxStore.GetFailedMessages"/> 排除，不再被每轮轮询重复扫描），
+	/// 并在已注册死信存储时写入一条死信记录。
+	/// </summary>
+	private void DeadLetter(InboxEntry entry, InboxHandler item)
+	{
+		item.MarkAsDeadLettered(item.Error);
+		BusTelemetry.InboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel } });
+
+		if (_deadLetterStore == null)
+		{
+			_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts ({Attempts}) and will be skipped. Register an IDeadLetterStore (e.g. services.AddInMemoryDeadLetters()) to capture dead letters.", item.MessageId, item.Name, item.RetryAttempts);
+			return;
+		}
+
+		_deadLetterStore.Add(new DeadLetterEntry
+		{
+			MessageId = entry.MessageId,
+			Channel = entry.Channel,
+			MessageType = entry.MessageType,
+			Content = entry.Content,
+			Source = DeadLetterSource.Inbox,
+			Target = item.Name,
+			Error = item.Error,
+			RetryAttempts = item.RetryAttempts,
+		});
+
+		_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts ({Attempts}) and was moved to the dead letter store.", item.MessageId, item.Name, item.RetryAttempts);
 	}
 
 	private async Task ExecuteAsync(HandlerRegistration registration, InboxEntry entry)

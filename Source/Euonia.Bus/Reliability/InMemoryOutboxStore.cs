@@ -54,4 +54,22 @@ public class InMemoryOutboxStore : IOutboxStore
 		               .Where(transport => transport.Status == OutboxTransportStatus.Failed)
 		               .ToList();
 	}
+
+	/// <inheritdoc/>
+	public void Cleanup(DateTime cutoff)
+	{
+		// 只清理已终结的条目：任何传输记录仍为 Pending / Failed 的条目都要保留，否则会丢失待重试的消息。
+		foreach (var entry in _entries.Values)
+		{
+			if (entry.CreatedAt >= cutoff)
+			{
+				continue;
+			}
+
+			if (entry.Transports.All(transport => transport.Status is OutboxTransportStatus.Success or OutboxTransportStatus.DeadLettered))
+			{
+				_entries.TryRemove(entry.MessageId, out _);
+			}
+		}
+	}
 }

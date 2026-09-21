@@ -75,9 +75,10 @@ internal class ActiveMqTransporter : ITransporter
 	{
 		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		using var session = await _connection.CreateSessionAsync();
@@ -86,7 +87,7 @@ internal class ActiveMqTransporter : ITransporter
 		var replyQueue = await session.CreateTemporaryQueueAsync();
 
 		// 2. 创建一个消费者，专门用来监听这个临时队列（等待消费回复消息）
-		var replyConsumer = await session.CreateConsumerAsync(replyQueue);
+		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
 		var destination = await session.GetQueueAsync(message.Channel);
@@ -112,7 +113,18 @@ internal class ActiveMqTransporter : ITransporter
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			replyConsumer.Listener -= OnReceived;
+			// 显式删除临时队列：其生命周期绑定在长驻的 IConnection 上，
+			// 若只依赖连接回收，每次调用都会在 broker 上留下一个临时队列。
+			try
+			{
+				replyQueue.Delete();
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete the temporary reply queue.");
+			}
 		}
 
 		void OnReceived(IMessage replyMessage)
@@ -167,9 +179,10 @@ internal class ActiveMqTransporter : ITransporter
 	{
 		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		using var session = await _connection.CreateSessionAsync();
@@ -178,7 +191,7 @@ internal class ActiveMqTransporter : ITransporter
 		var replyQueue = await session.CreateTemporaryQueueAsync();
 
 		// 2. 创建一个消费者，专门用来监听这个临时队列（等待消费回复消息）
-		var replyConsumer = await session.CreateConsumerAsync(replyQueue);
+		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
 		var destination = await session.GetQueueAsync(message.Channel);
@@ -204,7 +217,18 @@ internal class ActiveMqTransporter : ITransporter
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			replyConsumer.Listener -= OnReceived;
+			// 显式删除临时队列：其生命周期绑定在长驻的 IConnection 上，
+			// 若只依赖连接回收，每次调用都会在 broker 上留下一个临时队列。
+			try
+			{
+				replyQueue.Delete();
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete the temporary reply queue.");
+			}
 		}
 
 		void OnReceived(IMessage replyMessage)

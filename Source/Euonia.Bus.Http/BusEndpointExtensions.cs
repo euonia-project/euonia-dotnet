@@ -40,8 +40,25 @@ public static class BusEndpointExtensions
 			}
 
 			var handler = context.RequestServices.GetRequiredService<IHandlerContext>();
-			var body = await new StreamReader(context.Request.Body ?? Stream.Null).ReadToEndAsync(context.RequestAborted);
-			var reply = await RemoteReceiver.ReceiveAsync(serializer, handler, body, context.RequestAborted);
+
+			using var reader = new StreamReader(context.Request.Body ?? Stream.Null);
+			var body = await reader.ReadToEndAsync(context.RequestAborted);
+
+			string reply;
+			try
+			{
+				reply = await RemoteReceiver.ReceiveAsync(serializer, handler, body, context.RequestAborted);
+			}
+			catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+			{
+				// 客户端已断开，无需也无法再写入响应。
+				return;
+			}
+			catch (Exception exception)
+			{
+				// 端点级异常边界：避免向上抛出导致空 500，改为返回结构化的失败回复。
+				reply = serializer.Serialize(RemoteReply<object>.Failure(RemoteError.Create(exception)));
+			}
 
 			context.Response.ContentType = "application/json; charset=utf-8";
 			await context.Response.WriteAsync(reply, context.RequestAborted);

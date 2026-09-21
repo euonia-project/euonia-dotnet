@@ -13,8 +13,12 @@ public class InboxOptions
 	/// 获取或设置是否启用收件箱模式（全局开关）。
 	/// </summary>
 	/// <remarks>
-	/// 全局开关默认关闭。即使全局关闭，仍可通过消息级别选项
-	/// <see cref="ExtendableOptions.UseInbox"/> 对单条消息启用收件箱记录。
+	/// 默认关闭。启用后，多播消息在消费端会先写入收件箱存储做去重，
+	/// 已存在的消息标识符将被跳过；处理器执行结果（成功 / 失败）逐处理器记录。
+	/// <para>
+	/// 这是唯一生效的开关：<see cref="ExtendableOptions.UseInbox"/> 仅为发送侧标记，
+	/// 内置传输器不会将其透传到消费端，因此单独设置它对收件箱行为没有影响。
+	/// </para>
 	/// </remarks>
 	public bool Enabled { get; set; }
 
@@ -33,4 +37,13 @@ public class InboxOptions
 	/// 该值统计的是重试轮次（<see cref="InboxHandler.RetryAttempts"/>）。
 	/// </remarks>
 	public int MaxRetryAttempts { get; set; }
+
+	/// <summary>
+	/// 获取或设置已完成（或已转入死信）条目的保留时长，超期后在调度器轮询时清理。
+	/// </summary>
+	/// <remarks>
+	/// 默认保留 24 小时。<c>0</c> 或负数表示不清理。
+	/// 时区约定与 <see cref="InboxEntry.CreatedAt"/> 一致，均为本地时间。
+	/// </remarks>
+	public TimeSpan RetentionPeriod { get; set; } = TimeSpan.FromHours(24);
 }

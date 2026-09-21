@@ -96,9 +96,10 @@ public class InboxStoreTests
 	}
 
 	[Fact]
-	public void GetAndCache_ReturnsCachedEntryAndPopulatesStaticCache()
+	public void GetAndCache_ReturnsCachedEntryOnSecondCall()
 	{
-		IInboxStore store = new InMemoryInboxStore();
+		var counter = new CountingInboxStore();
+		IInboxStore store = counter;
 		var message = CreateEnvelope("cache-1");
 
 		store.Insert("test.events", message, ["handler-a"]);
@@ -107,10 +108,30 @@ public class InboxStoreTests
 
 		Assert.NotNull(first);
 		Assert.Same(first, second);
-		Assert.True(IInboxStore.Cache.TryGetValue("cache-1", out _));
+		// 第二次应命中缓存，不再回查底层存储。
+		Assert.Equal(1, counter.GetCallCount);
 
 		store.ClearCache();
-		Assert.False(IInboxStore.Cache.TryGetValue("cache-1", out _));
+		store.GetAndCache("cache-1");
+		Assert.Equal(2, counter.GetCallCount);
+	}
+
+	/// <summary>
+	/// 回归测试：缓存曾以接口上的 <c>static</c> 字段实现，导致进程内所有存储实例共享同一份缓存，
+	/// 且仅以消息标识符为键，不同数据库 / 租户 / 并行测试之间会互相读到对方的条目。
+	/// </summary>
+	[Fact]
+	public void GetAndCache_DoesNotLeakAcrossStoreInstances()
+	{
+		IInboxStore populated = new CountingInboxStore();
+		IInboxStore empty = new CountingInboxStore();
+
+		populated.Insert("test.events", CreateEnvelope("shared-id"), ["handler-a"]);
+
+		Assert.NotNull(populated.GetAndCache("shared-id"));
+
+		// empty 中并不存在该消息；若缓存跨实例共享，此处会错误地返回 populated 的条目。
+		Assert.Null(empty.GetAndCache("shared-id"));
 	}
 
 	[Fact]
@@ -127,5 +148,43 @@ public class InboxStoreTests
 		store.MarkAsSuccess("missing", "handler-a");
 		store.MarkAsFailed("missing", "handler-a", "error");
 		Assert.Empty(store.GetFailedMessages());
+	}
+
+	/// <summary>
+	/// 统计 <see cref="IInboxStore.Get"/> 调用次数的存储替身，用于观察缓存是否真正生效。
+	/// </summary>
+	/// <remarks>
+	/// 直接实现接口而非继承 <see cref="InMemoryInboxStore"/>：<c>GetAndCache</c> 是默认接口方法，
+	/// 通过接口槽位调用 <c>Get</c>，因此只能通过接口实现来拦截计数。
+	/// </remarks>
+	private sealed class CountingInboxStore : IInboxStore
+	{
+		private readonly Dictionary<string, InboxEntry> _entries = [];
+
+		public int GetCallCount { get; private set; }
+
+		public bool Insert(InboxEntry entry)
+		{
+			return _entries.TryAdd(entry.MessageId, entry);
+		}
+
+		public InboxEntry Get(string messageId)
+		{
+			GetCallCount++;
+			return _entries.GetValueOrDefault(messageId);
+		}
+
+		public void MarkAsSuccess(string messageId, string handler)
+		{
+		}
+
+		public void MarkAsFailed(string messageId, string handler, string errorMessage)
+		{
+		}
+
+		public IReadOnlyList<InboxHandler> GetFailedMessages()
+		{
+			return [];
+		}
 	}
 }

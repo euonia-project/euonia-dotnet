@@ -19,6 +19,7 @@
         <Project Path="Source/Euonia.Bus.Abstract/Euonia.Bus.Abstract.csproj" />
         <Project Path="Source/Euonia.Bus.ActiveMq/Euonia.Bus.ActiveMq.csproj" />
         <Project Path="Source/Euonia.Bus.Grpc/Euonia.Bus.Grpc.csproj" />
+        <Project Path="Source/Euonia.Bus.HealthChecks/Euonia.Bus.HealthChecks.csproj" />
         <Project Path="Source/Euonia.Bus.Http/Euonia.Bus.Http.csproj" />
         <Project Path="Source/Euonia.Bus.InMemory/Euonia.Bus.InMemory.csproj" />
         <Project Path="Source/Euonia.Bus.RabbitMq/Euonia.Bus.RabbitMq.csproj" />

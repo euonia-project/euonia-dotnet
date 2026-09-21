@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <PropertyGroup>
+        <RootNamespace>Nerosoft.Euonia.Bus.HealthChecks</RootNamespace>
+    </PropertyGroup>
+
+    <!--
+      健康检查抽象（IHealthCheck / HealthCheckRegistration / IHealthChecksBuilder）由
+      Microsoft.AspNetCore.App 共享框架提供，与 Euonia.Bus.Http 的做法一致，无需额外包引用。
+    -->
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Bus\Euonia.Bus.csproj" />
+    </ItemGroup>
+
+</Project>
