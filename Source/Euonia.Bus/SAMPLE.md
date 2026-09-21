@@ -39,6 +39,7 @@ public sealed record OrderData(string ProductId, int Quantity, decimal Amount);
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Modularity;
 
@@ -59,21 +60,28 @@ services.AddEuoniaBus();
 // services.AddInMemoryInbox();
 
 // ③ 注册具体处理器到 DI（供扫描注册的 IHandler<,> 通道在派发时按接口解析）
-services.AddMessageHandler(ServiceLifetime.Transient, typeof(OrderApplication).Assembly);
+services.AddMessageHandler(ServiceLifetime.Transient, typeof(OrderAssembly).Assembly);
 
 // ④ 配置消息约定与通道注册（ConfiguratorBuilder 在应用启动时被 ServiceActivator 执行）
 services.AddConfiguratorBuilder(configurator =>
 {
     configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
-    configurator.RegisterChannel(typeof(OrderApplication).Assembly);
+    configurator.RegisterChannel(typeof(OrderAssembly).Assembly);
 });
 
 var provider = services.BuildServiceProvider();
 var bus = provider.GetRequiredService<IBus>();
 ```
 
-> `ConfiguratorBuilder` 委托的执行时机在**应用启动后**（`ServiceActivator.ExecuteAsync`），
-> 因此「先注册通道、后发起调用」的顺序没有额外负担；端点映射时序见 §6 与 HTTP/gRPC 示例。
+> `OrderAssembly` 是本示例「消息与处理器所在程序集」的锚点类型（放一个空类型即可，见 §2）：
+
+> `ConfiguratorBuilder` 委托在**宿主应用**（ASP.NET Core / Modularity Host）里由
+> `ServiceActivator` 后台服务于启动时自动执行；裸 `ServiceProvider`（无宿主）不会自动执行，
+> 需像 §6 那样直接解析 `IConfigurator` 注册通道。端点映射与时序见 §6 与 HTTP/gRPC 示例。
+
+```csharp
+public static class OrderAssembly { }        // 锚点：谓词/扫描不到具体类型也没关系，只需程序集引用
+```
 
 ---
 
@@ -286,29 +294,50 @@ IBus.CallAsync
 ## 6. 端到端
 
 把 §1–§5 串起来：同一套 `CreateOrderRequest` 消息在一个进程内自洽运行（处理器注册 + 调用）。
-（此流程与 `Euonia.Bus.Http.Tests` 的端到端用例同构，仅省去远端进程。）
+这段代码已在仓库外的临时工程里**编译并运行通过**（输出 `o-1 / created`）。
 
 ```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.InMemory;
+using Nerosoft.Euonia.Modularity;
+
 var services = new ServiceCollection();
 services.AddLogging();
 services.AddSingleton<DefaultRequestContextAccessor>();
 services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 services.AddSingleton<System.IServiceAccessor, ServiceAccessor>();
 services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+
+// 进程内投递需要“进程内传输器”：《Euonia.Bus》核心包本身不注册任何键控 ITransporter，
+// 这里用 Euonia.Bus.InMemory 提供（传输名默认 "InMemory"）。
+services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "InMemory");
 services.AddEuoniaBus();
+services.AddInMemoryBus("InMemory");
 services.AddSingleton<IOrderStore, MemoryOrderStore>();
-services.AddConfiguratorBuilder(configurator =>
-{
-    configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
-    configurator.RegisterChannel<CreateOrderRequest, OrderResult>("orders",
-        (request, _) => Task.FromResult(new OrderResult(request.OrderId, DateTime.UtcNow, "created")));
-});
 
 var provider = services.BuildServiceProvider();
-var bus = provider.GetRequiredService<IBus>();
 
-// 启动激活：io 里会执行 ConfiguratorBuilder → 通道注册在这里完成
-// （真实托管环境由 ServiceActivator 后台服务完成）
+// ① 先解析一次 IHandlerContext：它的构造函数会订阅「通道注册」事件；
+//    跳过这一步，后面的 RegisterChannel 事件无人接收，进程内派发时会报
+//    “No handler registered ... on channel orders”。
+//    （宿主应用里该解析由配置激活/管线在启动时完成，无需手写。）
+_ = provider.GetRequiredService<IHandlerContext>();
+
+// ② 注册通道（与 §1 的 AddConfiguratorBuilder 委托内容等价，此处直接对 IConfigurator 执行）
+var configurator = provider.GetRequiredService<IConfigurator>();
+configurator.SetConvention(convention => convention.Add<DefaultMessageConvention>());
+configurator.RegisterChannel<CreateOrderRequest, OrderResult>("orders",
+    (request, _) => Task.FromResult(new OrderResult(request.OrderId, DateTime.UtcNow, "created")));
+
+// ③ 启动内存接收器（无宿主时手动执行；宿主中由 ServiceActivator 自动执行）
+var registrar = provider.GetRequiredService<IRecipientRegistrar>();
+await registrar.RegisterAsync(configurator.Registrations, "InMemory");
+
+var bus = provider.GetRequiredService<IBus>();
 
 var result = await bus.CallAsync<CreateOrderRequest, OrderResult>(
     new CreateOrderRequest { OrderId = "o-1", Data = new OrderData("sku-1", 2, 99.99m) },
@@ -343,3 +372,12 @@ Console.WriteLine($"{result.OrderId} / {result.Status}");   // o-1 / created
 9. `MessageMetadata` / 请求头透传是**选填**的；但 `Authorization` 只会在非空时写入传输头。
 10. 远程端处理器抛异常不丢失类型——`RemoteError` 在 `Euonia.Bus` 核心定义，客户端还原异常类型，
     但若服务端与客户端**引用了不同的程序集版本**，还原可能退化（保留 `Message`/`StackTrace`）。
+11. 核心包**不注册任何键控 `ITransporter`**：`CallAsync` / `SendAsync` / `PublishAsync` 都要经过传输器。
+    进程内投递需要额外引入 `Euonia.Bus.InMemory`（`AddInMemoryBus("InMemory")`）并把
+    `MessageBusOptions.DefaultTransporter` 指向同一传输名。
+12. **裸 `IServiceProvider`（无宿主）的顺序敏感**：先解析一次 `IHandlerContext`（订阅通道注册事件），
+    再 `RegisterChannel`，最后手动 `IRecipientRegistrar.RegisterAsync(...)` 启动接收器；
+    顺序颠倒会报 `No handler registered ...` / `No recipients registered ...`。
+    宿主应用中这三步分别由「配置唤醒 / `AddConfiguratorBuilder` / `ServiceActivator`」自动完成。
+13. `AddLogging` 不是可选项：`DefaultConfigurator` / `MessageBus` 依赖 `ILoggerFactory`，
+    需引用 `Microsoft.Extensions.Logging`（不只是 `Abstractions`）包并提供日志注册。

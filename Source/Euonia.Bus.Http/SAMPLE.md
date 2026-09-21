@@ -27,6 +27,7 @@
 ```csharp
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Http;
 using Nerosoft.Euonia.Modularity;
@@ -66,7 +67,7 @@ configurator.RegisterChannel<CreateOrderRequest, OrderResult>("orders",
 await app.RunAsync();
 ```
 
-消息类型只要声明在服务端进程能引用到的程序集里即可（两端 Simpler 共享 `Contracts` 程序集最常见）：
+消息类型只要声明在服务端进程能引用到的程序集里即可（两端通常共享一个 `Contracts` 程序集）：
 
 ```csharp
 public sealed class CountRequest : IRequest<int>
@@ -95,6 +96,7 @@ static Task<OrderResult> CreateOrderAsync(CreateOrderRequest request)
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Http;
 using Nerosoft.Euonia.Modularity;
@@ -130,7 +132,7 @@ configurator.SetConvention(convention => convention.Add<DefaultMessageConvention
 
 ### 2.1 配置绑定
 
-`HttpBusOptions` 可直接进配置（等价于上面代码里的 `configure`）：
+`HttpBusOptions` 可直接进配置（与代码里 `AddHttpBus` 的 `configure` 参数**二选一**，不要同时用）：
 
 ```jsonc
 // appsettings.json
@@ -186,9 +188,9 @@ Console.WriteLine(result);                    // 42
 ```
 POST http://localhost:5080/bus/call
 Content-Type: application/json
-X-Bus-Channel: count            MessageHeaders.Channel
-X-Bus-CorrelationId: corr-001
-X-Bus-MessageId / Type / Trace / Conversation / Authorization
+x-channel: count              MessageHeaders.Channel
+x-correlation-id: corr-001
+x-message-id / x-message-type / x-request-trace-id / x-conversation-id / x-authorization(选填)
 Body: 信封 JSON（含 typeName + payload + channel + correlationId …）
 
 ← 200 application/json
@@ -232,6 +234,15 @@ catch (InvalidOperationException ex)
 （与 `HttpEndToEndTests.CallAsync_OverHttpEndpoint_ReturnsResult` 同构）：
 
 ```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.Http;
+using Nerosoft.Euonia.Modularity;
+
 // ---- 服务端 ----
 var builder = WebApplication.CreateBuilder();
 builder.Logging.AddConsole();

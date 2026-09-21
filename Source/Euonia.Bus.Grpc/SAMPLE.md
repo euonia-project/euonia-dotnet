@@ -79,6 +79,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
 using Nerosoft.Euonia.Grpc;             // 拦截器 / 健康检查 / MapGrpcServices 工具
@@ -140,7 +141,7 @@ public sealed class CountRequest : IRequest<int>
 | `AddGrpcService(this IServiceCollection, Action<GrpcServiceOptions>)` | `AddGrpc` + `MaxReceiveMessageSize=null` + `EnableDetailedErrors` + `ExceptionHandlingInterceptor` + `RequestTraceInterceptor` + 反射 | §2 `builder.Services.AddGrpcService()` |
 | `ExceptionHandlingInterceptor` | 把服务端未处理异常统一转 `RpcException`（可配合 `IExceptionHandler` 自定义映射） | `AddGrpcService` 已自动挂载 |
 | `RequestTraceInterceptor` | 从元数据/上下文写入请求追踪 | 同上 |
-| `HealthService : HealthServiceImpl` | 内置健康项 `HealthCheck` = `Serving`，未随 `MapGrpcBusService` 挂起，需自行映射 | `app.MapGrpcServices()` 自动扫到，或 `endpoints.MapGrpcService<HealthService>()` |
+| `HealthService : HealthServiceImpl` | 内置健康项 `HealthCheck` = `Serving`，未随 `MapGrpcBusService` 挂起，需自行映射 | `app.MapGrpcServices()` 会经 `UseGrpcHealthCheck` 显式映射它，或 `endpoints.MapGrpcService<HealthService>()` |
 | `MapGrpcServices(this IEndpointRouteBuilder, bool useHealthCheck = true)` | 扫描入口程序集、自动映射所有 `GrpcServiceBase` 子类，默认带 gRPC 健康检查 | §2 `app.MapGrpcServices()` |
 | `UseGrpcEndpoints(this IApplicationBuilder, Action<IEndpointRouteBuilder>)` | `UseEndpoints` 便捷封装 + 为无 gRPC 的根路径回写提示 | 传统中间件管线用 |
 | `IExceptionHandler` | 自定义异常 → `RpcException` 映射（实现后需自己注册） | `services.AddSingleton<IExceptionHandler, MyHandler>()` |
@@ -152,6 +153,7 @@ public sealed class CountRequest : IRequest<int>
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
 using Nerosoft.Euonia.Modularity;
@@ -234,6 +236,17 @@ services.AddGrpcBus("grpc", options =>
 与 `GrpcServerHarness` + 客户端用例同构（h2c、端口 0 运行期绑定）：
 
 ```csharp
+using System.Net;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.Grpc;
+using Nerosoft.Euonia.Modularity;
+
 // ---- 服务端 ----
 var builder = WebApplication.CreateBuilder();
 builder.Logging.AddConsole();
@@ -297,7 +310,7 @@ await app.StopAsync();
    （`GrpcTransporter.cs` 与测试即如此处理。）
 6. Protobuf 项为 `GrpcServices="Server"`：程序集**不含** `ReplierServiceClient`，旧代码里的
    new `ReplierServiceClient(channel)` 编译不过，请改用 §4 泛化调用。
-7. 使用 `Guide` 服务能力探测时注意：`MethodName` 错 / 服务不存在 → `RpcException(Unimplemented)`，
+7. 用泛化调用做服务能力探测时注意：`MethodName` 错 / 服务不存在 → `RpcException(Unimplemented)`，
    不是静默失败。
 8. 内置传输只支持 `CallAsync`；`Send` / `Publish` → `NotSupportedException`。
 9. `AddGrpcBusServer()` 只注册 `RemoteMessageService`；`AddGrpc()` / `AddGrpcService()` 必须
