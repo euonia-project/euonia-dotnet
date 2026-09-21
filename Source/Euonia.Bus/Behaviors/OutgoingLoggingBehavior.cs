@@ -16,7 +16,8 @@ internal sealed class OutgoingLoggingBehavior<TMessage, TResult> : IPipelineBeha
 
 	public Task<TResult> HandleAsync(IMessageEnvelope<TMessage> context, PipelineDelegate<IMessageEnvelope<TMessage>, TResult> next)
 	{
-		_logger.LogInformation("Message '{Id}'({Type}) transport via '{Transport}' on channel: {Channel}.", context.MessageId, typeof(TMessage).FullName, _transport, context.Channel);
+		// 调用方通过 GetService 获取日志记录器，未注册日志服务时为 null。
+		_logger?.LogInformation("Message '{Id}'({Type}) transport via '{Transport}' on channel: {Channel}.", context.MessageId, typeof(TMessage).FullName, _transport, context.Channel);
 		return next(context);
 	}
 }

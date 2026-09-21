@@ -74,9 +74,9 @@ public abstract class ExtendableOptions
 	/// 获取或设置是否为当前消息启用收件箱（Inbox）去重记录。
 	/// </summary>
 	/// <remarks>
-	/// 收件箱去重发生在消费端（接收方），由全局开关 <see cref="InboxOptions.Enabled"/> 与
-	/// 收件箱存储的注册情况决定。该属性仅为发送侧的单条消息开关，供能够将选项
-	/// 透传至消费端的传输器使用；内置传输器目前不消费该值。
+	/// 收件箱去重发生在消费端（接收方），实际行为只由全局开关 <see cref="InboxOptions.Enabled"/>
+	/// 与收件箱存储的注册情况决定。该属性仅为发送侧的单条消息标记，供能够把选项透传至
+	/// 消费端的自定义传输器使用；内置传输器不消费该值，设置它对收件箱行为没有影响。
 	/// </remarks>
 	public virtual bool? UseInbox { get; set; }
 }
