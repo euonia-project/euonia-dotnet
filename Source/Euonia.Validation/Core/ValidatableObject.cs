@@ -120,7 +120,10 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 			}
 		}
 
-		IsValid = Errors.Count > 0;
+		// 校验通过 ⇔ 没有错误。此前写作 Errors.Count > 0，方向完全相反：
+		// 合法对象（无错误）会被判定为无效并抛出空的 ValidationException，
+		// 而非法对象（有错误）反而被放行——校验同时过度触发与失效。
+		IsValid = Errors.Count == 0;
 	}
 
 	/// <summary>
