@@ -78,6 +78,15 @@ internal sealed class ChannelRegistrar
 			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
 		}
 
+		// 幂等：同一个通道上重复注册同一个处理器（相同处理器类型 + 相同方法；lambda 注册时实例不同，
+		// 仍视为不同处理器）应被忽略。否则多播通道会把同一条消息交给同一处理器执行多次——
+		// 例如宿主被启动两次，或两个模块扫描了同一个程序集。
+		if (registration.Handlers.Contains(handler))
+		{
+			_logger.LogDebug("[ChannelRegistrar] Skipping duplicate handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
+			return;
+		}
+
 		_logger.LogInformation("[ChannelRegistrar] Registering handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
 
 		registration.AddHandler(handler);

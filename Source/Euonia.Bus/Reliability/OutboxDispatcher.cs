@@ -167,7 +167,9 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// </summary>
 	private void DeadLetter(OutboxEntry entry, OutboxTransport item)
 	{
-		item.MarkAsDeadLettered(item.Error);
+		// 必须经存储接口持久化终态：item 只是 GetFailedMessages 返回的快照，
+		// 直接调用 item.MarkAsDeadLettered 在持久化实现中不会落库，记录会每轮被重复扫描。
+		_store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
 		BusTelemetry.OutboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel }, { "messaging.destination.name", item.Name } });
 
 		if (_deadLetterStore == null)

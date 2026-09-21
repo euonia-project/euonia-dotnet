@@ -102,7 +102,7 @@ public sealed partial class ZooKeeperSemaphoreProvider
     /// <inheritdoc />
     public ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        return this.As<ISemaphoreProvider<ZooKeeperSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+        return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
     /// <inheritdoc />

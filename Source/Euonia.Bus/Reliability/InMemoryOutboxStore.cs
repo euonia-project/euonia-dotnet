@@ -47,6 +47,17 @@ public class InMemoryOutboxStore : IOutboxStore
 	}
 
 	/// <inheritdoc/>
+	public void MarkAsDeadLettered(string messageId, string transport, string errorMessage)
+	{
+		var entry = Get(messageId);
+		var item = entry?.GetTransport(transport);
+		if (item != null)
+		{
+			item.MarkAsDeadLettered(errorMessage);
+		}
+	}
+
+	/// <inheritdoc/>
 	public IReadOnlyList<OutboxTransport> GetFailedMessages()
 	{
 		return _entries.Values

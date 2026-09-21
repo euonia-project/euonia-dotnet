@@ -61,6 +61,22 @@ public interface IOutboxStore
 	void MarkAsFailed(string messageId, string transport, string errorMessage);
 
 	/// <summary>
+	/// 将指定消息在指定传输器上的发送状态标记为已转入死信队列。
+	/// </summary>
+	/// <remarks>
+	/// 这是一个**终态**：标记后该记录不应再被 <see cref="GetFailedMessages"/> 返回，
+	/// 否则后台调度器会每轮重复扫描一条永远不会成功的记录。
+	/// <para>
+	/// 必须通过本方法持久化终态，而不是去修改 <see cref="GetFailedMessages"/> 返回的对象：
+	/// 那只是存储的快照，对它的修改在持久化实现（数据库 / 远程存储）中会丢失。
+	/// </para>
+	/// </remarks>
+	/// <param name="messageId">消息标识符。</param>
+	/// <param name="transport">传输器名称。</param>
+	/// <param name="errorMessage">导致转入死信的最后一次错误信息。</param>
+	void MarkAsDeadLettered(string messageId, string transport, string errorMessage);
+
+	/// <summary>
 	/// 根据消息标识符获取发件箱条目；未找到时返回 <c>null</c>。
 	/// </summary>
 	/// <param name="messageId">消息标识符。</param>

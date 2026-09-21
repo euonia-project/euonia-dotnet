@@ -48,6 +48,17 @@ public class InMemoryInboxStore : IInboxStore
 	}
 
 	/// <inheritdoc/>
+	public void MarkAsDeadLettered(string messageId, string handler, string errorMessage)
+	{
+		var entry = Get(messageId);
+		var item = entry?.GetHandler(handler);
+		if (item != null)
+		{
+			item.MarkAsDeadLettered(errorMessage);
+		}
+	}
+
+	/// <inheritdoc/>
 	public IReadOnlyList<InboxHandler> GetFailedMessages()
 	{
 		return _entries.Values

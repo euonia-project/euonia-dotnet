@@ -228,8 +228,12 @@ internal static class Helpers
     public static THandle TryAcquire<THandle>(ILockProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
         where THandle : class, ISynchronizationHandle
     {
+        // 必须传入 TimeoutValue：ILockProvider<THandle> 用 new 隐藏了基接口的
+        // TryAcquireAsync(TimeSpan, …) 槽位，而以 TimeSpan 实参调用会绑回该槽位自身
+        // （即提供程序上这个"转发"方法），形成无条件的无限递归 → StackOverflow。
+        // TimeoutValue 重载才是真正的实现（带忙等待的重试）。
         return TaskHelper.Run(
-            state => state.@lock.TryAcquireAsync(state.timeout, state.cancellationToken),
+            state => state.@lock.TryAcquireAsync(new TimeoutValue(state.timeout), state.cancellationToken),
             (@lock, timeout, cancellationToken)
         );
     }
@@ -275,8 +279,10 @@ internal static class Helpers
     /// <returns>获取到的句柄；失败时返回 null。</returns>
     public static THandle TryAcquire<THandle>(ISemaphoreProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
         where THandle : class, ISynchronizationHandle =>
+        // 同 ILockProvider：以 TimeSpan 实参调用会绑回被 new 隐藏的槽位自身（无限递归），
+        // 必须传入 TimeoutValue 才能命中真正的实现。
         TaskHelper.Run(
-            state => state.@lock.TryAcquireAsync(state.timeout, state.cancellationToken),
+            state => state.@lock.TryAcquireAsync(new TimeoutValue(state.timeout), state.cancellationToken),
             (@lock, timeout, cancellationToken)
         );
 

@@ -174,7 +174,7 @@ public sealed partial class FileLockProvider
     /// <inheritdoc />
     public ValueTask<FileSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        return this.As<ILockProvider<FileSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+        return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
     /// <inheritdoc />

@@ -95,7 +95,7 @@ public sealed partial class RedisLockProvider
 	/// <inheritdoc />
 	public ValueTask<RedisSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
 	{
-		return this.As<ILockProvider<RedisSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+		return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
 	}
 
 	/// <inheritdoc />

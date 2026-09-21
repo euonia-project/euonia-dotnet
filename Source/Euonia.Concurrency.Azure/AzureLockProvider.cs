@@ -214,7 +214,7 @@ public sealed partial class AzureLockProvider
 	/// <inheritdoc />
 	public ValueTask<AzureSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        return this.As<ILockProvider<AzureSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+        return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
 	/// <inheritdoc />
