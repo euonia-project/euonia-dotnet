@@ -182,6 +182,32 @@ public class DeadLetterTests
 	}
 
 	/// <summary>
+	/// 回归测试：<c>GetFailedMessages</c> 返回的是存储快照，对它的修改在持久化实现中不会落库。
+	/// 终态必须经存储接口的 <c>MarkAsDeadLettered</c> 持久化，否则记录会每轮被重复扫描。
+	/// </summary>
+	[Fact]
+	public async Task OutboxDispatcher_WithDetachedStore_PersistsDeadLetteredState()
+	{
+		var delivered = new List<string>();
+		await using var provider = BuildOutboxProvider(delivered);
+		var accessor = provider.GetRequiredService<IServiceAccessor>();
+
+		// 用接口类型调用：Insert(信封, 传输器名) 是默认接口方法，只能经接口访问。
+		IOutboxStore store = new DetachedOutboxStore();
+		store.Insert(TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/dead" }, "test.events", "detached-1"), ["test"]);
+		var failed = store.Get("detached-1").GetTransport("test");
+		failed.MarkAsFailed("first attempt failed");
+		failed.MarkAsFailed("second attempt failed");
+
+		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 1 });
+		await dispatcher.RetryAllAsync();
+
+		// 若实现改为直接修改 GetFailedMessages 返回的对象，此处仍会返回该记录（状态未落库）。
+		Assert.Empty(store.GetFailedMessages());
+		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("detached-1").GetTransport("test").Status);
+	}
+
+	/// <summary>
 	/// 写入一条死信记录，其信封与 <paramref name="messageId"/> 对应。
 	/// </summary>
 	private static void AddDeadLetter(IServiceProvider provider, string messageId, DeadLetterSource source, string target)
@@ -256,6 +282,56 @@ public class DeadLetterTests
 		{
 			onHandled(message);
 			return Task.FromResult<object>(message);
+		}
+	}
+
+	/// <summary>
+	/// 模拟持久化存储：<see cref="GetFailedMessages"/> 返回**快照副本**而非内部对象，
+	/// 因此只有经存储接口的状态变更方法才能落库。
+	/// </summary>
+	private sealed class DetachedOutboxStore : IOutboxStore
+	{
+		private readonly InMemoryOutboxStore _inner = new();
+
+		public bool Insert(OutboxEntry entry)
+		{
+			return _inner.Insert(entry);
+		}
+
+		public OutboxEntry Get(string messageId)
+		{
+			return _inner.Get(messageId);
+		}
+
+		public void MarkAsSuccess(string messageId, string transport)
+		{
+			_inner.MarkAsSuccess(messageId, transport);
+		}
+
+		public void MarkAsFailed(string messageId, string transport, string errorMessage)
+		{
+			_inner.MarkAsFailed(messageId, transport, errorMessage);
+		}
+
+		public void MarkAsDeadLettered(string messageId, string transport, string errorMessage)
+		{
+			_inner.MarkAsDeadLettered(messageId, transport, errorMessage);
+		}
+
+		public IReadOnlyList<OutboxTransport> GetFailedMessages()
+		{
+			// 返回副本，模拟数据库查询物化出的新对象。
+			return
+			[
+				.. _inner.GetFailedMessages().Select(transport => new OutboxTransport
+				{
+					MessageId = transport.MessageId,
+					Name = transport.Name,
+					Status = transport.Status,
+					RetryAttempts = transport.RetryAttempts,
+					Error = transport.Error,
+				})
+			];
 		}
 	}
 

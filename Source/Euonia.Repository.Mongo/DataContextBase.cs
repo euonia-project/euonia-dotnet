@@ -50,9 +50,13 @@ public abstract class DataContextBase<TContext> : MongoDbContext, IRepositoryCon
 	protected IClientSessionHandle Session { get; }
 
 	/// <summary>
-	/// 
+	/// 获取当前上下文实例的唯一标识。
 	/// </summary>
-	public Guid Id => Guid.NewGuid();
+	/// <remarks>
+	/// 此前该属性返回 <c>Guid.NewGuid()</c>，每次读取都是一个新的值，
+	/// 任何以它为键、为日志关联标识或为幂等依据的逻辑都失效。现改为实例创建时固定一次。
+	/// </remarks>
+	public Guid Id { get; } = Guid.NewGuid();
 
 	/// <summary>
 	/// 

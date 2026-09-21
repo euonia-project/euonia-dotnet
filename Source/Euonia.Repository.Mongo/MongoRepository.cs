@@ -104,9 +104,13 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	}
 
 	/// <inheritdoc />
-	public override Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
-		return AnyAsync(predicate, handle, cancellationToken).ContinueWith(task => !task.Result, cancellationToken);
+		// All(p) ≡ !Any(!p)。此前的实现返回 !Any(p)，语义完全相反：
+		// 只要**不存在**满足谓词的实体就返回 true，即断言的成立恰好依赖于反例。
+		var negation = Expression.Lambda<Func<TEntity, bool>>(Expression.Not(predicate.Body), predicate.Parameters);
+		var anyCounterExample = await BuildQuery(negation, handle).AnyAsync(cancellationToken).ConfigureAwait(false);
+		return !anyCounterExample;
 	}
 
 	/// <inheritdoc />

@@ -182,6 +182,10 @@ public class InboxStoreTests
 		{
 		}
 
+		public void MarkAsDeadLettered(string messageId, string handler, string errorMessage)
+		{
+		}
+
 		public IReadOnlyList<InboxHandler> GetFailedMessages()
 		{
 			return [];

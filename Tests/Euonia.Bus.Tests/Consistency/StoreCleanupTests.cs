@@ -138,6 +138,11 @@ public class StoreCleanupTests
 			_inner.MarkAsFailed(messageId, transport, errorMessage);
 		}
 
+		public void MarkAsDeadLettered(string messageId, string transport, string errorMessage)
+		{
+			_inner.MarkAsDeadLettered(messageId, transport, errorMessage);
+		}
+
 		public IReadOnlyList<OutboxTransport> GetFailedMessages()
 		{
 			return _inner.GetFailedMessages();

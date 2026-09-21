@@ -195,6 +195,10 @@ public class OutboxStoreTests
 		{
 		}
 
+		public void MarkAsDeadLettered(string messageId, string transport, string errorMessage)
+		{
+		}
+
 		public IReadOnlyList<OutboxTransport> GetFailedMessages()
 		{
 			return [];
