@@ -129,6 +129,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		};
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
+		ApplyDeliveryProperties(pack, options);
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
@@ -151,16 +152,18 @@ internal sealed class MessageBus : IBus, IDisposable
 			}
 		}
 
-		return PublishCoreAsync(transports, pack, behavior, useOutbox, channel, messageType, startTimestamp, activity, cancellationToken);
+		return PublishCoreAsync(transports, pack, behavior, useOutbox, channel, messageType, options.Delay, startTimestamp, activity, cancellationToken);
 	}
 
 	/// <summary>
 	/// 执行实际的并行分发并记录耗时与失败指标。
 	/// </summary>
-	private async Task PublishCoreAsync<TMessage>(IEnumerable<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long startTimestamp, Activity activity, CancellationToken cancellationToken)
+	private async Task PublishCoreAsync<TMessage>(IEnumerable<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
 	{
 		try
 		{
+			await DelayDispatchAsync(delay, cancellationToken).ConfigureAwait(false);
+
 			await Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 			{
 				await RunWithPipelineAsync(pack, behavior, (transport, p) =>
@@ -221,6 +224,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		};
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
+		ApplyDeliveryProperties(pack, options);
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
@@ -232,6 +236,8 @@ internal sealed class MessageBus : IBus, IDisposable
 
 		try
 		{
+			await DelayDispatchAsync(options.Delay, cancellationToken).ConfigureAwait(false);
+
 			var result = await RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.SendAsync<TMessage, TResult>(envelope, cancellationToken), transportName);
 			callback?.OnNext(result);
 		}
@@ -352,6 +358,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		};
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
+		ApplyDeliveryProperties(pack, options);
 
 		var transports = _dispatcher.Determine(channel, messageType);
 
@@ -387,6 +394,75 @@ internal sealed class MessageBus : IBus, IDisposable
 			activity?.Dispose();
 		}
 	}
+
+	/// <summary>
+	/// 先按延迟设置等待，再执行实际的调用。
+	/// </summary>
+	private async Task<TResponse> CallWithDelayAsync<TRequest, TResponse>(RoutedMessage<TRequest> pack, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, string transportName, long delay, CancellationToken cancellationToken)
+	{
+		await DelayDispatchAsync(delay, cancellationToken).ConfigureAwait(false);
+
+		return await RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// 把发送侧的投递属性（目标队列、优先级）写入消息元数据，供传输器消费。
+	/// </summary>
+	/// <param name="message">消息信封。</param>
+	/// <param name="options">发送选项。</param>
+	/// <remarks>
+	/// 在 <see cref="ExtendableOptions.MetadataSetter"/> **之后**执行，
+	/// 使显式设置的类型化选项优先于通用元数据写入。
+	/// 未设置的属性不会被写入，以免用空值覆盖用户在元数据里自行放置的同名键。
+	/// </remarks>
+	private static void ApplyDeliveryProperties(IMessageEnvelope message, ExtendableOptions options)
+	{
+		if (!string.IsNullOrWhiteSpace(options.Queue))
+		{
+			message.SetQueue(options.Queue);
+		}
+
+		if (options.Priority > 0)
+		{
+			message.SetPriority(options.Priority);
+		}
+	}
+
+	/// <summary>
+	/// 按 <see cref="ExtendableOptions.Delay"/> 指定的毫秒数延迟分发。
+	/// </summary>
+	/// <param name="delay">延迟毫秒数；小于等于 0 表示不延迟。</param>
+	/// <param name="cancellationToken">用于取消等待的令牌。</param>
+	/// <remarks>
+	/// 延迟发生在**分发之前**，与传输器无关，因此对所有内置传输一致生效。
+	/// <para>
+	/// 注意：这是**进程内**延迟，消息在被真正投递前一直留在内存中；
+	/// 进程在延迟期间退出会导致该消息丢失。需要持久化的延迟投递应依赖传输器自身的能力
+	/// （例如 RabbitMQ 的消息 TTL + 死信路由）或启用发件箱。
+	/// </para>
+	/// </remarks>
+	/// <exception cref="ArgumentOutOfRangeException">当延迟超出 <see cref="Task.Delay(TimeSpan, CancellationToken)"/> 支持的范围时抛出。</exception>
+	private static async Task DelayDispatchAsync(long delay, CancellationToken cancellationToken)
+	{
+		if (delay <= 0)
+		{
+			return;
+		}
+
+		// Task.Delay 仅支持 uint.MaxValue - 1 毫秒（约 49.7 天）；显式校验以给出清晰错误，
+		// 而不是让框架抛出难以理解的参数异常。
+		if (delay > MaxDelayMilliseconds)
+		{
+			throw new ArgumentOutOfRangeException(nameof(delay), delay, $"The delay must not exceed {MaxDelayMilliseconds} milliseconds (about 49.7 days).");
+		}
+
+		await Task.Delay(TimeSpan.FromMilliseconds(delay), cancellationToken).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// 分发延迟的上限（毫秒），与 <see cref="Task.Delay(TimeSpan, CancellationToken)"/> 的限制一致。
+	/// </summary>
+	private const long MaxDelayMilliseconds = uint.MaxValue - 1;
 
 	/// <summary>
 	/// 为调用结果应用超时约束。

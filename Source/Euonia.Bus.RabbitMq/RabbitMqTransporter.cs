@@ -98,7 +98,7 @@ internal class RabbitMqTransporter : ITransporter
 			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
-		var requestQueueName = GetQueueName(message.Channel);
+		var requestQueueName = RabbitMqDelivery.ResolveQueueName(_options, message.Channel, message.GetQueue());
 
 		await using var channel = await _connection.CreateChannelAsync();
 
@@ -208,7 +208,7 @@ internal class RabbitMqTransporter : ITransporter
 			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
-		var requestQueueName = GetQueueName(message.Channel);
+		var requestQueueName = RabbitMqDelivery.ResolveQueueName(_options, message.Channel, message.GetQueue());
 
 		await using var channel = await _connection.CreateChannelAsync();
 
@@ -281,7 +281,7 @@ internal class RabbitMqTransporter : ITransporter
 		}
 	}
 
-	private static BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
+	private BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
 	{
 		var props = new BasicProperties
 		{
@@ -292,6 +292,8 @@ internal class RabbitMqTransporter : ITransporter
 			ReplyTo = replyTo,
 			MessageId = message.MessageId,
 			UserId = message.User?.Identity?.Name,
+			// 未启用优先级（MaxPriority <= 0）时返回 null，表示不设置该属性。
+			Priority = RabbitMqDelivery.ResolvePriority(message.GetPriority(), _options.MaxPriority) ?? 0,
 		};
 		props.Headers ??= new Dictionary<string, object>();
 		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
@@ -303,15 +305,15 @@ internal class RabbitMqTransporter : ITransporter
 
 	/// <summary>
 	/// 根据通道名称构建 RabbitMQ 队列名称。
-	/// 队列名称格式为：<c>{QueueNamePrefix}:{channel}@{subscriptionId}</c>。
+	/// 队列名称格式为：<c>{channel}@{subscriptionId}</c>，
+	/// 具体规则与消费端共用 <see cref="RabbitMqDelivery.ResolveQueueName"/>。
+	/// 注意 <see cref="RabbitMqBusOptions.QueueNamePrefix"/> 目前**未被使用**，队列名不含该前缀。
 	/// </summary>
 	/// <param name="channel">通道名称。</param>
 	/// <returns>生成的队列名称。</returns>
 	private string GetQueueName(string channel)
 	{
-		var subscriptionId = string.Collapse(_options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var requestQueueName = $"{channel}@{subscriptionId}";
-		return requestQueueName;
+		return RabbitMqDelivery.ResolveQueueName(_options, channel);
 	}
 
 	/// <summary>

@@ -19,6 +19,15 @@ internal sealed class ChannelRegistrar
 
 	private readonly ILogger<ChannelRegistrar> _logger;
 
+	/// <summary>
+	/// 用于把消息类型解析为通道名称的委托。
+	/// </summary>
+	/// <remarks>
+	/// 由配置器提供，并且必须与分发时使用**同一个**解析器，否则注册与分发会落在不同通道上。
+	/// 以委托形式持有（而非解析结果），是为了让运行期的 <c>SetChannelResolver</c> 同样生效。
+	/// </remarks>
+	private readonly Func<Type, string> _channelResolver;
+
 	private ChannelRegistrar()
 	{
 	}
@@ -27,11 +36,13 @@ internal sealed class ChannelRegistrar
 	/// 初始化 <see cref="ChannelRegistrar"/> 的新实例。
 	/// </summary>
 	/// <param name="registerAction">用于注册通道处理器的回调方法。</param>
+	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托，须与分发时使用的解析器一致。</param>
 	/// <param name="logger">用于创建当前注册器类型化日志记录器的日志工厂。</param>
-	public ChannelRegistrar(Action<string, Type, ChannelHandler> registerAction, ILoggerFactory logger)
+	public ChannelRegistrar(Action<string, Type, ChannelHandler> registerAction, Func<Type, string> channelResolver, ILoggerFactory logger)
 		: this()
 	{
 		_registerAction = registerAction;
+		_channelResolver = channelResolver;
 		_logger = logger.CreateLogger<ChannelRegistrar>();
 	}
 
@@ -147,7 +158,7 @@ internal sealed class ChannelRegistrar
 	{
 		ArgumentNullException.ThrowIfNull(types);
 
-		MessageHandlerFinder.Find(Register, types);
+		MessageHandlerFinder.Find(Register, _channelResolver, types);
 	}
 
 	/// <summary>
@@ -160,7 +171,7 @@ internal sealed class ChannelRegistrar
 	{
 		ArgumentNullException.ThrowIfNull(types);
 
-		MessageHandlerFinder.Find(Register, types);
+		MessageHandlerFinder.Find(Register, _channelResolver, types);
 	}
 
 	/// <summary>
@@ -173,7 +184,7 @@ internal sealed class ChannelRegistrar
 	{
 		ArgumentNullException.ThrowIfNull(assemblies);
 
-		MessageHandlerFinder.Find(Register, assemblies);
+		MessageHandlerFinder.Find(Register, _channelResolver, assemblies);
 	}
 
 	/// <summary>

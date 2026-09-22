@@ -70,6 +70,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		}
 
 		_strategies.AddRange(strategies);
+		ResetCache();
 	}
 
 	/// <summary>
@@ -82,6 +83,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		ArgumentNullException.ThrowIfNull(strategy);
 
 		_defaultStrategy.DefineIncomingStrategy(strategy);
+		ResetCache();
 	}
 
 	/// <summary>
@@ -94,11 +96,16 @@ public class BaseTransportStrategy : ITransportStrategy
 		ArgumentNullException.ThrowIfNull(strategy);
 
 		_defaultStrategy.DefineOutgoingStrategy(strategy);
+		ResetCache();
 	}
 
 	/// <summary>
 	/// 重置传出和传入消息评估的缓存。
 	/// </summary>
+	/// <remarks>
+	/// 策略集合或判定函数一旦变化，此前缓存的判定结果即失效。
+	/// 若不清空，在首次判定之后再添加策略或重定义判定函数将**静默无效**。
+	/// </remarks>
 	internal void ResetCache()
 	{
 		_outgoingCache.Reset();

@@ -57,7 +57,7 @@ internal class ActiveMqTransporter : ITransporter
 			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
 		            }).ExecuteAsync(async () =>
 		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 		            });
@@ -90,7 +90,7 @@ internal class ActiveMqTransporter : ITransporter
 		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
-		var destination = await session.GetQueueAsync(message.Channel);
+		var destination = await session.GetQueueAsync(ActiveMqDelivery.ResolveQueueName(message.Channel, message.GetQueue()));
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
@@ -104,7 +104,7 @@ internal class ActiveMqTransporter : ITransporter
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
 			            }).ExecuteAsync(async () =>
 			            {
-				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
 				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 			            });
@@ -194,7 +194,7 @@ internal class ActiveMqTransporter : ITransporter
 		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
-		var destination = await session.GetQueueAsync(message.Channel);
+		var destination = await session.GetQueueAsync(ActiveMqDelivery.ResolveQueueName(message.Channel, message.GetQueue()));
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
@@ -208,7 +208,7 @@ internal class ActiveMqTransporter : ITransporter
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
 			            }).ExecuteAsync(async () =>
 			            {
-				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
 				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 			            });

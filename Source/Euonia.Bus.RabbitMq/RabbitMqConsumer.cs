@@ -44,12 +44,13 @@ internal class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	internal override async Task StartAsync(CancellationToken cancellationToken = default)
 	{
-		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, ChannelName);
-		var queueName = $"{ChannelName}@{subscriptionId}";
+		var queueName = RabbitMqDelivery.ResolveQueueName(Options, ChannelName);
 
 		Channel = await Connection.CreateChannelAsync();
 
-		await Channel.QueueDeclareAsync(queueName, true, false, false, cancellationToken: cancellationToken);
+		// 启用优先级队列时附加 x-max-priority；未启用则为 null。
+		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority);
+		await Channel.QueueDeclareAsync(queueName, true, false, false, queueArguments, cancellationToken: cancellationToken);
 		await Channel.BasicQosAsync(0, 1, false, cancellationToken: cancellationToken);
 
 		await Channel.BasicConsumeAsync(queueName, false, Consumer, cancellationToken: cancellationToken);

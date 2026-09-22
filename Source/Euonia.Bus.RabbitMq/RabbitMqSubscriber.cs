@@ -55,8 +55,9 @@ internal class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 
 		// 每个订阅者拥有自己的队列来接收消息，
 		// 同一订阅者的所有实例将共享同一个队列。
-		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, ChannelName);
-		var queueName = await Channel.QueueDeclareAsync($"{ChannelName}@{subscriptionId}", true, false, false, cancellationToken: cancellationToken)
+		var subscriptionQueueName = RabbitMqDelivery.ResolveQueueName(Options, ChannelName);
+		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority);
+		var queueName = await Channel.QueueDeclareAsync(subscriptionQueueName, true, false, false, queueArguments, cancellationToken: cancellationToken)
 		                             .ContinueWith(task => task.Result.QueueName);
 
 		await Channel.QueueBindAsync(queueName, ChannelName, Options.RoutingKey ?? "*", cancellationToken: cancellationToken);

@@ -98,6 +98,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineUnicastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineUnicast(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -107,6 +108,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineMulticastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineMulticast(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -116,6 +118,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineRequestTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineRequest(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -144,6 +147,21 @@ public class BaseMessageConvention : IMessageConvention
 		}
 
 		_conventions.AddRange(conventions);
+		ResetCaches();
+	}
+
+	/// <summary>
+	/// 清空全部约定判定缓存。
+	/// </summary>
+	/// <remarks>
+	/// 约定集合一旦变化，此前缓存的判定结果即失效。若不清空，
+	/// 在首次判定之后再添加或重定义约定将**静默无效**——配置期与运行期分离时很容易踩到。
+	/// </remarks>
+	private void ResetCaches()
+	{
+		_unicastConventionCache.Reset();
+		_multicastConventionCache.Reset();
+		_requestConventionCache.Reset();
 	}
 
 	/// <summary>
@@ -172,8 +190,6 @@ public class BaseMessageConvention : IMessageConvention
 		{
 			return _cache.GetOrAdd((channel, type), key => convention(key.Item1, key.Item2));
 		}
-
-		// ReSharper disable once UnusedMember.Local
 
 		/// <summary>
 		/// 重置缓存。

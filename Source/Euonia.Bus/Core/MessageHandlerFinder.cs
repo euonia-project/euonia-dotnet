@@ -21,42 +21,46 @@ internal static class MessageHandlerFinder
 	/// 从指定的类型集合中查找消息处理程序。
 	/// </summary>
 	/// <param name="delegate">处理程序查找回调委托。</param>
+	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托；须与分发时使用的解析器一致。</param>
 	/// <param name="types">要扫描的类型集合。</param>
-	public static void Find(Delegate @delegate, IEnumerable<Type> types)
+	public static void Find(Delegate @delegate, Func<Type, string> channelResolver, IEnumerable<Type> types)
 	{
-		types.ForEach(type => Resolve(@delegate, type));
+		types.ForEach(type => Resolve(@delegate, channelResolver, type));
 	}
 
 	/// <summary>
 	/// 从指定的程序集中查找消息处理程序。
 	/// </summary>
 	/// <param name="delegate">处理程序查找回调委托。</param>
+	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托；须与分发时使用的解析器一致。</param>
 	/// <param name="assemblies">要扫描的程序集数组。</param>
-	public static void Find(Delegate @delegate, params Assembly[] assemblies)
+	public static void Find(Delegate @delegate, Func<Type, string> channelResolver, params Assembly[] assemblies)
 	{
 		var types = assemblies.SelectMany(x => x.DefinedTypes);
 
-		Find(@delegate, types);
+		Find(@delegate, channelResolver, types);
 	}
 
 	/// <summary>
 	/// 从指定的类型中查找消息处理程序。
 	/// </summary>
 	/// <param name="delegate">处理程序查找回调委托。</param>
+	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托；须与分发时使用的解析器一致。</param>
 	/// <param name="types">要扫描的类型数组。</param>
-	public static void Find(Delegate @delegate, params Type[] types)
+	public static void Find(Delegate @delegate, Func<Type, string> channelResolver, params Type[] types)
 	{
-		Find(@delegate, types.AsEnumerable());
+		Find(@delegate, channelResolver, types.AsEnumerable());
 	}
 
 	/// <summary>
 	/// 从指定的处理程序类型中提取消息注册信息。
 	/// </summary>
 	/// <param name="delegate">处理程序查找回调委托。</param>
+	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托；须与分发时使用的解析器一致。</param>
 	/// <param name="handlerType">要解析的处理程序类型。</param>
 	/// <exception cref="MissingMethodException">当在类型中找不到处理方法时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求或订阅特性未指定通道名称时抛出。</exception>
-	private static void Resolve(Delegate @delegate, Type handlerType)
+	private static void Resolve(Delegate @delegate, Func<Type, string> channelResolver, Type handlerType)
 	{
 		if (handlerType.IsPrimitive || !handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
 		{
@@ -82,7 +86,10 @@ internal static class MessageHandlerFinder
 
 				handlerInterfaceMethods.Add(method);
 
-				var channel = MessageChannelResolver.Default.GetOrAddChannel(messageType);
+				// 必须使用配置器提供的解析器：分发时用的是它，注册时必须用同一个，
+				// 否则配置了自定义解析器后处理器会注册在类型全名上、而消息被分发到自定义通道，
+				// 处理器永远匹配不到（此前这里硬编码调用进程级的 MessageChannelResolver.Default）。
+				var channel = channelResolver?.Invoke(messageType);
 
 				channel ??= messageType.FullName;
 				@delegate(channel, messageType, new ChannelHandler(@interface, null));
