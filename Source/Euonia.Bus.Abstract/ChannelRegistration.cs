@@ -62,8 +62,6 @@ public sealed class ChannelRegistration
 			throw new MissingMethodException(handlerType.FullName, methodName);
 		}
 
-		{
-		}
 		return AddHandler(new ChannelHandler(handlerType, method));
 	}
 

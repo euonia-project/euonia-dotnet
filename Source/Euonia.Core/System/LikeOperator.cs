@@ -35,52 +35,6 @@ public class LikeOperator
 		var zeroOrMoreChars = '*';
 		var oneChar = '?';
 
-		if (patternSpan.Length == 1)
-		{
-			ref readonly char patternItem = ref patternSpan[0];
-			if (patternItem == zeroOrMoreChars)
-			{
-				return true;
-			}
-		}
-
-		if (contentSpan.Length == 1)
-		{
-			ref readonly var patternItem = ref patternSpan[0];
-			if (patternItem == oneChar)
-			{
-				return true;
-			}
-		}
-
-		var zeroOrMorePatternCount = 0;
-		var onePatternCount = 0;
-		foreach (var @char in patternSpan)
-		{
-			ref readonly char patternItem = ref @char;
-			if (patternItem == zeroOrMoreChars)
-			{
-				zeroOrMorePatternCount++;
-			}
-			else if (patternItem == oneChar)
-			{
-				onePatternCount++;
-			}
-		}
-
-		if (zeroOrMorePatternCount + onePatternCount == patternSpan.Length)
-		{
-			if (zeroOrMorePatternCount > 0)
-			{
-				return true;
-			}
-
-			if (patternSpan.Length == contentSpan.Length)
-			{
-				return true;
-			}
-		}
-
 		EqualsCharDelegate equalsChar;
 		if (ignoreCase)
 		{
@@ -103,6 +57,7 @@ public class LikeOperator
 
 	/// <summary>
 	/// 使用 * 和 ? 通配符比较两个字符跨度的核心实现。
+	/// 采用带回溯指针的贪心双指针算法，避免指数级递归。
 	/// </summary>
 	/// <param name="contentSpan">要匹配的内容跨度。</param>
 	/// <param name="patternSpan">模式跨度，包含通配符。</param>
@@ -112,90 +67,45 @@ public class LikeOperator
 	/// <returns>如果内容匹配模式，则返回 true；否则返回 false。</returns>
 	private static bool LikeStringCore(ReadOnlySpan<char> contentSpan, ReadOnlySpan<char> patternSpan, in char zeroOrMoreChars, in char oneChar, EqualsCharDelegate equalsChar)
 	{
+		var contentLength = contentSpan.Length;
+		var patternLength = patternSpan.Length;
+
 		var contentIndex = 0;
 		var patternIndex = 0;
-		while (contentIndex < contentSpan.Length && patternIndex < patternSpan.Length)
+		var starIndex = -1;
+		var starMatchContentIndex = 0;
+
+		while (contentIndex < contentLength)
 		{
-			ref readonly var patternItem = ref patternSpan[patternIndex];
-			if (patternItem == zeroOrMoreChars)
-			{
-				while (true)
-				{
-					if (patternIndex < patternSpan.Length)
-					{
-						ref readonly char nextPatternItem = ref patternSpan[patternIndex];
-						if (nextPatternItem == zeroOrMoreChars)
-						{
-							patternIndex++;
-							continue;
-						}
-					}
-
-					break;
-				}
-
-				if (patternIndex == patternSpan.Length)
-				{
-					return true;
-				}
-
-				while (contentIndex < contentSpan.Length)
-				{
-					if (LikeStringCore(contentSpan[contentIndex..], patternSpan[patternIndex..], in zeroOrMoreChars, in oneChar, equalsChar))
-					{
-						return true;
-					}
-
-					contentIndex++;
-				}
-
-				return false;
-			}
-
-			if (patternItem == oneChar)
+			if (patternIndex < patternLength && (patternSpan[patternIndex] == oneChar || equalsChar(in contentSpan[contentIndex], in patternSpan[patternIndex])))
 			{
 				contentIndex++;
 				patternIndex++;
+			}
+			else if (patternIndex < patternLength && patternSpan[patternIndex] == zeroOrMoreChars)
+			{
+				starIndex = patternIndex;
+				starMatchContentIndex = contentIndex;
+				patternIndex++;
+			}
+			else if (starIndex != -1)
+			{
+				patternIndex = starIndex + 1;
+				starMatchContentIndex++;
+				contentIndex = starMatchContentIndex;
 			}
 			else
 			{
-				if (contentIndex >= contentSpan.Length)
-				{
-					return false;
-				}
-
-				ref readonly var contentItem = ref contentSpan[contentIndex];
-				if (!equalsChar(in contentItem, in patternItem))
-				{
-					return false;
-				}
-
-				contentIndex++;
-				patternIndex++;
+				return false;
 			}
 		}
 
-		if (contentIndex == contentSpan.Length)
+		while (patternIndex < patternLength && patternSpan[patternIndex] == zeroOrMoreChars)
 		{
-			while (true)
-			{
-				if (patternIndex < patternSpan.Length)
-				{
-					ref readonly char nextPatternItem = ref patternSpan[patternIndex];
-					if (nextPatternItem == zeroOrMoreChars)
-					{
-						patternIndex++;
-						continue;
-					}
-				}
-
-				break;
-			}
-
-			return patternIndex == patternSpan.Length;
+			patternIndex++;
 		}
 
-		return false;
+		return patternIndex == patternLength;
 	}
 
 	/// <summary>

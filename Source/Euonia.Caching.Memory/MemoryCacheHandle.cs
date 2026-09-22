@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using Nerosoft.Euonia.Caching.Internal;
 
@@ -18,14 +18,14 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	/// <param name="managerConfiguration">The manager configuration.</param>
 	/// <param name="configuration">The cache handle configuration.</param>
 	/// <param name="options">The vendor specific options.</param>
-	/// 
+	///
 	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions options = null)
 		: base(managerConfiguration, configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
 
 		Options = options ?? new MemoryCacheOptions();
-		_cache = new MemoryCache(Options);
+		_cache = MemoryCacheStoreRegistry.GetOrCreate(Options);
 	}
 
 	/// <inheritdoc/>
@@ -34,13 +34,19 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	internal MemoryCacheOptions Options { get; }
 
 	/// <inheritdoc/>
+	protected override void Dispose(bool disposeManaged)
+	{
+		// 存储按配置共享，不能在此释放：其他 TCacheValue 的句柄仍在使用同一实例。
+		// 共享存储随 MemoryCacheOptions 实例一同被回收（见 _sharedStores 的说明）。
+		base.Dispose(disposeManaged);
+	}
+
+	/// <inheritdoc/>
 	public override void Clear()
 	{
-		var old = _cache;
-		_cache = new MemoryCache(Options);
-
-		// 释放旧实例，避免其内部定时器与订阅在 GC 前持续存活造成资源泄漏
-		old.Dispose();
+		// 存储为多句柄共享，因此只能清空内容，不能替换实例（替换并释放会让其他句柄失去存储）。
+		// 这也修正了语义：文档承诺「清空本缓存及其所有区域」，而此前只清空了当前 TCacheValue 的那一份。
+		_cache.Clear();
 	}
 
 	/// <inheritdoc/>

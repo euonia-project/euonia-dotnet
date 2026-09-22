@@ -98,15 +98,18 @@ internal abstract class ActiveMqRecipient : DisposableObject
 
 		MessageReceived?.Invoke(this, new MessageReceivedEventArgs(envelope.Payload, context));
 
-		var taskCompletion = new TaskCompletionSource<object>();
-		if (cancellationToken != CancellationToken.None)
-		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
-		}
+		var taskCompletion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cancellationRegistration = cancellationToken != CancellationToken.None
+			? cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false)
+			: default;
 
-		context.Responded += OnResponded;
-		context.Failed += OnFailed;
-		context.Completed += OnCompleted;
+		EventHandler<MessageRepliedEventArgs> onResponded = OnResponded;
+		EventHandler<Exception> onFailed = OnFailed;
+		EventHandler<MessageHandledEventArgs> onCompleted = OnCompleted;
+
+		context.Responded += onResponded;
+		context.Failed += onFailed;
+		context.Completed += onCompleted;
 
 		ActiveMqReply<object> reply;
 
@@ -120,6 +123,14 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		catch (Exception exception)
 		{
 			reply = ActiveMqReply<object>.Failure(exception);
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			// 取消订阅上下文事件，避免在长生命周期场景中产生重复调用或额外的引用保留。
+			context.Responded -= onResponded;
+			context.Failed -= onFailed;
+			context.Completed -= onCompleted;
 		}
 
 		if (message.NMSReplyTo != null)
@@ -157,11 +168,6 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		{
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
 		}
-
-		// 取消订阅上下文事件，避免在长生命周期场景中产生重复调用或额外的引用保留。
-		context.Responded -= OnResponded;
-		context.Failed -= OnFailed;
-		context.Completed -= OnCompleted;
 	}
 
 	/// <summary>

@@ -42,10 +42,11 @@ public static class ServiceCollectionExtensions
 				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<InMemoryTransporter>());
 			}
 
-			// 将内存接收者注册器注册为瞬态服务，实现 IRecipientRegistrar 接口。
+			// 将内存接收者注册器注册为单例服务，实现 IRecipientRegistrar 接口。
+			// 单例生命周期确保被解析的接收者实例会被强引用持有，避免弱引用信使中的多播订阅者被提前回收。
 			if (!services.IsAddedImplementation<IRecipientRegistrar, InMemoryRecipientRegistrar>())
 			{
-				services.AddTransient<IRecipientRegistrar, InMemoryRecipientRegistrar>();
+				services.AddSingleton<IRecipientRegistrar, InMemoryRecipientRegistrar>();
 			}
 			return services;
 		}

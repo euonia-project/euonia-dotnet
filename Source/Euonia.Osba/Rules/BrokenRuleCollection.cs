@@ -10,7 +10,7 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 	/// <summary>
 	/// 用于保护集合访问的锁对象。
 	/// </summary>
-	private static readonly object _lockObject = new();
+	private readonly object _lockObject = new();
 
 	/// <summary>
 	/// 获取集合中严重级别为 Error 的违规规则数量。

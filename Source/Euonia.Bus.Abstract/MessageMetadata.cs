@@ -42,7 +42,7 @@ public class MessageMetadata : IDictionary<string, object>
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
-    public bool Remove(KeyValuePair<string, object> item) => _dictionary.Remove(item.Key);
+    public bool Remove(KeyValuePair<string, object> item) => ((ICollection<KeyValuePair<string, object>>)_dictionary).Remove(item);
 
     /// <summary>
     /// 
@@ -61,7 +61,7 @@ public class MessageMetadata : IDictionary<string, object>
     /// <param name="value"></param>
     public void Add(string key, object value)
     {
-	    _dictionary.TryAdd(key, value);
+	    _dictionary.Add(key, value);
     }
 
     /// <summary>
@@ -101,7 +101,7 @@ public class MessageMetadata : IDictionary<string, object>
     /// </summary>
     /// <param name="items"></param>
     /// <param name="index"></param>
-    public void CopyTo(KeyValuePair<string, object>[] items, int index) => _dictionary.ToArray().CopyTo(items, index);
+    public void CopyTo(KeyValuePair<string, object>[] items, int index) => ((ICollection<KeyValuePair<string, object>>)_dictionary).CopyTo(items, index);
 
     /// <summary>
     /// 

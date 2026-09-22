@@ -116,13 +116,18 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// 若当前未连接，则先尝试建立连接。
 	/// </summary>
 	/// <returns>表示异步操作的任务，包含创建的 <see cref="IChannel"/> 实例。</returns>
+	/// <exception cref="ObjectDisposedException">当连接对象已被释放时抛出。</exception>
+	/// <remarks>
+	/// 已释放的连接不可能再变为已连接状态：若在此处继续循环等待，
+	/// <see cref="TryConnectAsync"/> 会在每轮重新建立并丢弃一个到 broker 的 TCP 连接，
+	/// 且循环没有延迟、永不终止。因此这里在已释放时立即失败。
+	/// </remarks>
 	public async Task<IChannel> CreateChannelAsync()
 	{
 		while (!IsConnected)
 		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
 			await TryConnectAsync();
-			// 在连接失败时抛出异常，提示当前没有可用的 RabbitMQ 连接来执行此操作
-			//throw new InvalidOperationException("No RabbitMQ connections are available to perform this action");
 		}
 
 		return await _connection.CreateChannelAsync();
@@ -204,6 +209,9 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			_connection.CallbackExceptionAsync -= OnCallbackExceptionAsync;
 			_connection.ConnectionBlockedAsync -= OnConnectionBlockedAsync;
 			_connection.Dispose();
+			// 必须置空：否则 TryConnectAsync 会看到非空但已释放的连接，
+			// 进而每轮新建并丢弃一个 TCP 连接，使 CreateChannelAsync 的等待循环永不终止。
+			_connection = null;
 		}
 		catch (IOException exception)
 		{

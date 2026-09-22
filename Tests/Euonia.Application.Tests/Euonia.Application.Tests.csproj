@@ -5,6 +5,7 @@
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Application\Euonia.Application.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Validation\Euonia.Validation.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Caching.Memory\Euonia.Caching.Memory.csproj" />
     </ItemGroup>
 
 </Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Domain\Euonia.Domain.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Core\Euonia.Core.csproj" />
+    </ItemGroup>
+
+</Project>

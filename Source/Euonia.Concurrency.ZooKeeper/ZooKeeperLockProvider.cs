@@ -116,7 +116,7 @@ public sealed partial class ZooKeeperLockProvider
     /// <inheritdoc />
     public ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        return this.As<ILockProvider<ZooKeeperSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+        return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
     /// <inheritdoc />

@@ -50,7 +50,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	{
 		Name = name;
 		FriendlyName = friendlyName;
-		_propertyInfo = objectType?.GetProperty(name);
+		_propertyInfo = objectType?.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 		_defaultValue = defaultValue;
 	}
 
@@ -65,7 +65,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	{
 		Name = name;
 		FriendlyName = friendlyName;
-		_propertyInfo = objectType?.GetProperty(name);
+		_propertyInfo = objectType?.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 		_defaultValueFactory = defaultValueFactory;
 	}
 

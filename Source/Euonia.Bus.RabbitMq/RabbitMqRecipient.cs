@@ -194,17 +194,23 @@ internal abstract class RabbitMqRecipient : DisposableObject
 
 		OnMessageReceived(new MessageReceivedEventArgs(message.Payload, context));
 
-		var taskCompletion = new TaskCompletionSource<object>();
-		if (args.CancellationToken != CancellationToken.None)
-		{
-			args.CancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
-		}
+		var taskCompletion = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var cancellationRegistration = args.CancellationToken != CancellationToken.None
+			? args.CancellationToken.Register(() => taskCompletion.TrySetCanceled(), false)
+			: default;
+
+		// 回复的前提是两者齐备：只有 CorrelationId 而无 ReplyTo 时会以 null 作为路由键发布，必然抛异常。
+		var shouldReply = !string.IsNullOrEmpty(props.CorrelationId) && !string.IsNullOrWhiteSpace(props.ReplyTo);
 
 		RabbitMqReply<object> reply;
 
-		context.Responded += OnResponded;
-		context.Failed += OnFailed;
-		context.Completed += OnCompleted;
+		EventHandler<MessageRepliedEventArgs> onResponded = OnResponded;
+		EventHandler<Exception> onFailed = OnFailed;
+		EventHandler<MessageHandledEventArgs> onCompleted = OnCompleted;
+
+		context.Responded += onResponded;
+		context.Failed += onFailed;
+		context.Completed += onCompleted;
 
 		try
 		{
@@ -218,29 +224,59 @@ internal abstract class RabbitMqRecipient : DisposableObject
 			reply = RabbitMqReply<object>.Failure(exception);
 		}
 
-		if (!string.IsNullOrEmpty(props.CorrelationId) || !string.IsNullOrWhiteSpace(props.ReplyTo))
+		try
 		{
-			var replyProps = new BasicProperties();
-			replyProps.Headers ??= new Dictionary<string, object>();
-			replyProps.CorrelationId = props.CorrelationId;
-			replyProps.Type = reply.Result?.GetType().Name;
+			if (shouldReply)
+			{
+				var replyProps = new BasicProperties();
+				replyProps.Headers ??= new Dictionary<string, object>();
+				replyProps.CorrelationId = props.CorrelationId;
+				replyProps.Type = reply.Result?.GetType().Name;
 
-			var response = SerializeMessage(reply);
-			await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);
+				var response = SerializeMessage(reply);
+				await Channel.BasicPublishAsync(string.Empty, props.ReplyTo, true, replyProps, response);
+			}
+
+			// When auto-ack is enabled the broker has already acknowledged the message,
+			// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
+			if (!AutoAck)
+			{
+				await Channel.BasicAckAsync(args.DeliveryTag, false);
+			}
+
+			OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
 		}
-
-		// When auto-ack is enabled the broker has already acknowledged the message,
-		// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
-		if (!AutoAck)
+		catch (Exception exception)
 		{
-			await Channel.BasicAckAsync(args.DeliveryTag, false);
-		}
+			// 回复发布或确认失败时必须显式 nack（requeue: false，交由 DLX 处理）：
+			// 消费者设置了 prefetch=1，一条始终未确认的消息会永久阻塞该通道的后续投递。
+			if (!AutoAck)
+			{
+				try
+				{
+					await Channel.BasicNackAsync(args.DeliveryTag, false, false);
+				}
+				catch (Exception nackException)
+				{
+					throw new AggregateException(exception, nackException);
+				}
+			}
 
-		OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
+			throw;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			// Unsubscribe to avoid potential memory leaks or repeated calls in long-running
+			// scenarios. The context is per-message, but being defensive is useful.
+			context.Responded -= onResponded;
+			context.Failed -= onFailed;
+			context.Completed -= onCompleted;
+		}
 
 		void OnResponded(object s, MessageRepliedEventArgs e)
 		{
-			if (string.IsNullOrWhiteSpace(props.ReplyTo) && string.IsNullOrWhiteSpace(props.CorrelationId))
+			if (!shouldReply)
 			{
 				return;
 			}
@@ -257,12 +293,6 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		{
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
 		}
-
-		// Unsubscribe to avoid potential memory leaks or repeated calls in long-running
-		// scenarios. The context is per-message, but being defensive is useful.
-		context.Responded -= OnResponded;
-		context.Failed -= OnFailed;
-		context.Completed -= OnCompleted;
 	}
 
 	/// <summary>

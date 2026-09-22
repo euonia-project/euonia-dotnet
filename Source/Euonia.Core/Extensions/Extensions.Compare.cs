@@ -21,6 +21,6 @@ public static partial class Extensions
     public static bool IsNotInRange<T>(this T value, T minValue, T maxValue)
         where T : IComparable<T>
     {
-        return value.CompareTo(minValue) < 0 && value.CompareTo(maxValue) > 0;
+        return value.CompareTo(minValue) < 0 || value.CompareTo(maxValue) > 0;
     }
 }

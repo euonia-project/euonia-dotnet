@@ -30,6 +30,9 @@ graph TD
         BusRabbitMq --> BusAbstract
         BusRabbitMq --> Core
         BusActiveMq --> BusAbstract
+        BusHttp --> Bus
+        BusGrpc --> Bus
+        BusHealthChecks --> Bus
         Repository --> DDD
         Repository --> Modularity
         RepositoryEfCore --> Repository
@@ -70,6 +73,9 @@ graph TD
     style BusInMemory fill:#D35400,color:#fff
     style BusRabbitMq fill:#C0392B,color:#fff
     style BusActiveMq fill:#8E44AD,color:#fff
+    style BusHttp fill:#1ABC9C,color:#fff
+    style BusGrpc fill:#16A085,color:#fff
+    style BusHealthChecks fill:#27AE60,color:#fff
     style Sample fill:#9B59B6,color:#fff
 ```
 
@@ -208,29 +214,113 @@ BusinessObject<T>              — Core: rules, context, property management
 | **`PropertyInfo<T>`** | Typed property metadata: name, type, friendly name, default value, field reference |
 | **`FieldDataManager`** | Per-instance reflection-based field value management with undo history |
 | **Rule System** | Async rule validation with `RuleManager` (per-type singleton) & `Rules` (per-instance executor) |
+| **Permission System** | Operation permissions (type-level + row-level) and data permissions; grants resolved live from application data |
 | **`ObjectEditState`** | Lifecycle state machine: `None → New → Changed → Deleted` |
 | **`IObjectFactory`** | Reflection-driven CRUD factory: `[FactoryCreate]`, `[FactoryFetch]`, `[FactoryInsert]`, `[FactoryUpdate]`, `[FactoryDelete]`, `[FactoryExecute]` |
 
 #### Rule System
 
+Rules come in two kinds: **object-level** (`Property == null`, evaluated on save) and
+**property-level** (bound to a property registered via `RegisterProperty<T>`, matched by reference equality).
+
 ```csharp
 protected override void AddRules()
 {
-    Rules.AddRule<RequiredRule>(Property);
-    Rules.AddRule<RegularRule>(Email, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$");
-    Rules.AddLambdaRule(Age, (v, ctx) => v >= 18, "Must be 18+");
+    // Object-level: parameterless ctor ⇒ Property == null
+    Rules.AddRule<PasswordStrengthRule>();
+
+    // Property-level: pass the registered PropertyInfo<T>
+    Rules.AddRule(new UsernameCheckRule(NameProperty));
+    Rules.AddRule<CommonRule.Required>(NameProperty);
+    Rules.AddRule(new CommonRule.Regular(EmailProperty, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"));
+
+    // Convenience lambda overloads (RulesExtensions)
+    Rules.AddRule<MyObject>(AgeProperty, o => o.Age >= 18, "Must be 18+");
 }
 ```
 
 | Type | Description |
 |------|-------------|
-| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), priority, and related properties |
-| `CommonRule.Lambda<T>` | Lambda-based: `(value, context) → boolean` |
+| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), `Priority`, and `RelatedProperties` |
 | `CommonRule.Required` | Non-null property validation |
 | `CommonRule.Regular` | Regex-based string validation |
-| `DataAnnotationRule` | Wraps `System.ComponentModel.DataAnnotations.ValidationAttribute` |
-| `BrokenRule` / `BrokenRuleCollection` | Validation result with severity (Error, Warning, Information) |
-| `RuleSeverity` | enum: `Error`, `Warning`, `Information`, `Success` |
+| `CommonRule.Lambda<T>` | Lambda-based property rule |
+| `DataAnnotationRule` | Wraps `System.ComponentModel.DataAnnotations.ValidationAttribute` (auto-registered by `AddDataAnnotations()`) |
+| `ExecuteOnStateAttribute` | Restricts a rule to specific `ObjectEditState` values |
+| `BrokenRule` / `BrokenRuleCollection` | Validation result with severity |
+| `RuleSeverity` | enum: `Error`, `Warning`, `Information`, `Success` — **only `Error` invalidates the object** |
+
+> Rule instances are **per-type shared singletons** (held by `RuleManager`), so rules must not hold
+> per-instance or per-request state — read everything from `context.Target → BusinessContext`.
+
+#### Permission System
+
+`Euonia.Osba` ships two complementary permission layers. **Grants are always resolved live from
+application data — never baked into tokens.**
+
+| | Operation Permission | Data Permission |
+|---|---|---|
+| Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
+| Granularity | Type-level `[Permission]` + **row-level** (per permission code) | Row-level |
+| Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
+| Failure | `SecurityException` / `ValidationException` at the rule stage | Row excluded / same |
+
+Data permission has **exactly one implementation**: a policy compiles to a single
+`Allow`/`Deny` expression pair shared by query pushdown and single-row checks.
+
+```csharp
+// 1) Grant source (implemented by the app; resolved live, cached per request)
+public sealed class MySubjectResolver : IScopeSubjectResolver
+{
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
+        => ScopeSubjectSet.CreateBuilder()
+                          .AddCodes(await GetPermissionCodesAsync(user, ct))   // permission codes
+                          .AddSelf(userId)                                     // the user themself
+                          .AddGrant("repo:delete", "repo", await GetDeletableReposAsync(user, ct))  // row-level
+                          .Build();
+}
+
+// 2) Resource declaration: model + policy in one place
+public sealed class RepoScope : ScopeModel<Repo>
+{
+    public override void Define(ScopeModelBuilder<Repo> builder)
+        => builder.Map("repo", x => x.RepoId).Map(ScopeDimensions.Dept, x => x.TeamId);
+
+    public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
+
+    public override void Declare(ScopePolicySet<Repo> policies)
+        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // row-level operation permission
+}
+
+// 3) Enforcement
+services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
+var provider = services.BuildServiceProvider();
+provider.ValidatePermissionSetup();          // fails at startup when the resolver is missing
+
+var guard = provider.GetRequiredService<IScopeGuard>();
+var visible = guard.Apply(dbContext.Repos);  // pushed down to the database
+guard.Allows(repo, "repo:delete");           // single-row check
+guard.Explain(repo, "repo:delete");          // audit: which policy matched
+```
+
+**Key design points**:
+
+- **Permission codes come from data, not tokens** — a large code set never bloats the token, and
+  **revocation takes effect immediately** without reissuing tokens.
+- **Row-level operation permissions**: map the resource identity as a dimension and declare a
+  different row range per permission code, so "A1 allows push+delete, A2 allows push only" is
+  directly expressible.
+- **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
+  (deny wins).
+- **Rule system integration**: types with a declared model get a scope rule injected
+  automatically, surfacing violations as `ValidationException`; manual registration via
+  `Rules.AddRule(new PermissionRule("repo:push"))` is also supported.
+
+Full usage, troubleshooting, and performance notes:
+[`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md).
+Design rationale and trade-offs:
+[`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md).
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
 > Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.
@@ -239,16 +329,18 @@ protected override void AddRules()
 
 | Type | Kind | Purpose |
 |------|------|---------|
-| `ITransport` | interface | Transport abstraction: `PublishAsync` (multicast), `SendAsync` (unicast), `SendAsync<TMessage,TResponse>` (request-response) |
-| `IMessageEnvelope` | interface | Envelope: MessageId, CorrelationId, ConversationId, RequestTraceId, Channel |
-| `IRoutedMessage` | interface | Extended envelope: Timestamp, Metadata, User (`ClaimsPrincipal`), Data, Authorization |
-| `RoutedMessage<TData>` | class | Generic routed message with typed payload |
+| `ITransporter` | interface | Transport abstraction: `PublishAsync` (multicast), `SendAsync<TMessage,TResponse>` (unicast/request-response), `CallAsync` |
+| `IMessageEnvelope` / `IMessageEnvelope<T>` | interface | Envelope: MessageId, CorrelationId, ConversationId, RequestTraceId, Channel, Authorization, User, Metadata, Payload |
+| `RoutedMessage` | abstract class | Base routed message with identity/tracing/timestamp properties |
+| `RoutedMessage<TData>` | class | Generic routed message with typed payload (setting the payload records its type in metadata) |
+| `RoutedMessage<TData,TResponse>` | class | Generic routed message with request-response semantics |
 | `IMessageContext` | interface | Runtime context: Message access, `Response()`, `Failure()`, `Complete()` |
-| `MessageContext` | sealed class | Default implementation with event-based response/completion flow |
-| `IMessageSerializer` | interface | Serialization contract (to/from byte[], string, Stream) |
+| `MessageContext` | sealed class | Default implementation with weak-event based response/completion flow |
+| `IMessageSerializer` | interface | Serialization contract (to/from byte[], string, Stream + envelope deserialization) |
 | `IHandlerContext` | interface | Handler execution context: `MessageSubscribed` event, `HandleAsync()` |
-| `MessageRegistration` | class | Immutable registration: channel + messageType + handlerType + MethodInfo |
+| `ChannelRegistration` / `ChannelHandler` | class | Channel registration and handler descriptor (type + method + instance) |
 | `MessageMetadata` | class | Typed metadata bag (`IDictionary<string,object>`) |
+| `MessageHeaders` / `MessageProperties` | static class | Header keys; delivery-property (target queue, priority) metadata keys and read/write helpers |
 | `MessageConventionType` | enum | `None`, `Unicast`, `Multicast`, `Request` |
 | `MessageProcessType` | enum | `Send`, `Dispatch`, `Receive` |
 
@@ -256,37 +348,60 @@ protected override void AddRules()
 
 | Interface | Purpose |
 |-----------|---------|
-| `IQueue` | Point-to-point unicast message |
-| `ITopic` | Publish-subscribe multicast message |
+| `ITransportable` | Base interface for all transportable messages |
+| `IUnicast` | Point-to-point unicast message |
+| `IMulticast` | Publish-subscribe multicast message |
 | `IRequest<TResponse>` | Request-response message with typed response |
 
-**Annotations** (9 attribute types)
+**Annotations** (11 attribute types)
 
 | Attribute | Target | Purpose |
 |-----------|--------|---------|
 | `[Channel("name")]` | Class | Overrides default channel name |
-| `[Command]` | Class | Marks as command (unicast) |
-| `[Event]` | Class | Marks as event (multicast) |
+| `[Unicast]` | Class | Marks as unicast |
+| `[Multicast]` | Class | Marks as multicast |
 | `[Request(typeof(R))]` | Class | Marks as request with response type |
+| `[Transportable]` | Class | Marks as transportable (participates in channel resolution) |
 | `[LocalMessage]` | Class | Restricts to local transport only |
 | `[DistributedMessage]` | Class | Restricts to distributed transport only |
 | `[DispatchIn("t1","t2")]` | Class | Constrains outbound transports |
 | `[ReceiveIn("t1","t2")]` | Class | Constrains inbound transports |
 | `[Enqueue("name")]` | Class | Queue name + priority |
+| `[Subscribe("channel")]` | Method | Declares a handler method and its channel |
 
 **Convention & Strategy**
 
 | Type | Purpose |
 |------|---------|
-| `IMessageConvention` | Classifies message types: `IsUnicastType`, `IsMulticastType`, `IsRequestType` |
-| `DefaultMessageConvention` | Checks for marker interfaces (`IQueue` / `ITopic` / `IRequest<>`) |
-| `AttributeMessageConvention` | Checks for attributes (`[Command]` / `[Event]` / `[Request]`) |
-| `MessageConventionBuilder` | Fluent builder to compose conventions |
+| `IMessageConvention` | Classifies message types: `IsUnicast`, `IsMulticast`, `IsRequest` |
+| `DefaultMessageConvention` | Checks for marker interfaces (`IUnicast` / `IMulticast` / `IRequest<>`) |
+| `AnnotationMessageConvention` | Checks for attributes (`[Unicast]` / `[Multicast]` / `[Request]`) |
+| `BaseMessageConvention` / `OverridableMessageConvention` | Composes conventions, caches verdicts and invalidates them on change |
+| `DefaultMessageConventionBuilder` | Fluent builder to compose conventions |
 | `ITransportStrategy` | Routes messages to transports: `Outgoing` / `Incoming` |
-| `TransportStrategyBuilder` | Fluent builder for per-transport strategy chains |
-| `AttributeTransportStrategy` | Matches `[DispatchIn]` / `[ReceiveIn]` attributes |
+| `BaseTransportStrategy` / `DefaultTransportStrategyBuilder` | Composes strategy chains, caches verdicts and invalidates them on change |
+| `AnnotationTransportStrategy` | Matches `[DispatchIn]` / `[ReceiveIn]` attributes |
 | `LocalMessageTransportStrategy` | Matches `[LocalMessage]` types |
 | `DistributedMessageTransportStrategy` | Matches `[DistributedMessage]` types |
+
+**Reliability Contracts** (Outbox / Inbox / Dead Letter)
+
+| Type | Purpose |
+|------|---------|
+| `IOutboxStore` | Outbox store: `Insert`, `MarkAsSuccess`/`MarkAsFailed`/`MarkAsDeadLettered`, `GetFailedMessages`, `Cleanup` |
+| `IInboxStore` | Inbox store: same surface, tracked per handler |
+| `IDeadLetterStore` | Dead-letter store: `Add`, `Get`, `GetAll`, `Remove` |
+| `DeadLetterEntry` / `DeadLetterSource` | Dead-letter record (source, target, error, retry count) and its source enum |
+| `IDeadLetterService` | Dead-letter query and replay: `GetAll`, `ReplayAsync`, `Discard` |
+| `OutboxEntry` / `OutboxTransport` | Outbox entry and per-transport status (`Pending`/`Success`/`Failed`/`DeadLettered`) |
+| `InboxEntry` / `InboxHandler` | Inbox entry and per-handler status |
+
+**Recipient Contracts**
+
+| Type | Purpose |
+|------|---------|
+| `IRecipientRegistrar` | Registers transport-level recipients; implements `IAsyncDisposable` so they are released on shutdown |
+| `IRecipient` / `IConsumer` / `ISubscriber` / `IExecutor` | Recipient and its unicast/multicast/request role interfaces |
 
 **Event System**
 
@@ -312,76 +427,260 @@ protected override void AddRules()
 
 | Type | Kind | Purpose |
 |------|------|---------|
-| `IBus` | interface | Top-level bus API: `PublishAsync` (multicast), `SendAsync` (unicast with optional `IObserver<T>` callback), `CallAsync` (request-response with direct return) |
+| `IBus` | interface | Top-level bus API: `PublishAsync` (multicast), `SendAsync` (unicast with optional `Subject<T>` callback), `CallAsync` (request-response with direct return) |
 | `MessageBus` | class | Orchestration engine: type validation → context resolution → envelope construction → pipeline execution → dispatch decision → transport delivery |
 | `IHandler<TMessage>` / `IHandler<TMessage,TResponse>` | interface | Typed handler contracts |
 | `SubscribeAttribute` | attribute | `[Subscribe("channel")]` — declares a handler method |
-| `StrategicDispatcher` | class | `IDispatcher` implementation: strategy matching + cardinality validation + caching |
-| `HandlerContext` | class | Per-channel handler registration, single-handler execution, multi-handler parallel fan-out |
-| `MessageHandlerFinder` | class | Auto-discovers `[Subscribe]` methods and `IHandler<,>` implementations |
-| `PipelineMessage<TMessage,TResponse>` | class | Binds message + `IPipeline` for middleware-style processing |
+| `IDispatcher` / `StrategicDispatcher` | interface / class | Strategy matching + cardinality validation + transport-list cache **invalidated on configuration change** |
+| `IHandlerContext` / `DefaultHandlerContext` | interface / class | Per-channel handler registration; unicast executes the first handler (warns when several are registered), multicast fans out in parallel |
+| `ChannelRegistrar` | class | Channel registration with idempotent de-duplication (re-registering the same handler does not create a second entry) |
+| `MessageHandlerFinder` | class | Auto-discovers `[Subscribe]` methods and `IHandler<,>` implementations; uses the **same** channel resolver as dispatch |
+| `DefaultConfigurator` | class | `IConfigurator` implementation: conventions, strategies, channel registration and channel resolver |
+| `ServiceActivator` | class | Runs auto-registration at startup (see `AutoLoadAssemblies`) and starts each transport's recipients; disposes the registrars on shutdown |
+| `ConfiguratorBuilder` | delegate | User configuration callback, invoked by `ServiceActivator` during startup |
 
 **Fluent Options**
 
 | Type | Purpose |
 |------|---------|
-| `PublishOptions` | Publish operation: MessageId, Channel, Priority, RequestTraceId |
-| `SendOptions` | Send operation (adds CorrelationId) |
-| `CallOptions` | Call operation (adds CorrelationId) |
+| `ExtendableOptions` | Common base: MessageId, Channel, Queue, Priority, RequestTraceId, Delay, Timeout, MetadataSetter, UseOutbox, UseInbox |
+| `PublishOptions` / `SendOptions` / `CallOptions` | Per-operation options (send and call add CorrelationId) |
+| `PublishBuilder` / `SendBuilder` / `CallBuilder` | Fluent builders: `WithChannel`, `WithQueue`, `WithPriority`, `WithDelay`, `WithTimeout`, `WithMetadata`, `WithPipeline` |
+
+**Delivery Properties** (set on the sending side, carried to transports via metadata)
+
+| Option | Semantics |
+|--------|-----------|
+| `Queue` (`WithQueue`) | Overrides the target queue: honoured by RabbitMQ / ActiveMQ `Send`/`Call`; publish goes to an exchange/topic and ignores it |
+| `Priority` (`WithPriority`) | Message priority: RabbitMQ writes it into the message properties, clamped to `[0, min(MaxPriority, 9)]` (the queue must be declared with `x-max-priority`); ActiveMQ maps it to `MsgPriority`; other transports ignore it |
+| `Delay` (`WithDelay`) | Delay **before dispatch** in milliseconds, transport-agnostic and honoured uniformly by all built-in transports; cancellable. This is an in-process delay — a process exit during the delay loses the message, so use the outbox or a transport-native delay for durable delayed delivery |
 
 **Three Message Bus Operations**
 
 | Operation | Method | Message Type | Transport Strategy | Return |
 |-----------|--------|-------------|-------------------|--------|
 | **Publish** | `PublishAsync` | Multicast | Parallel across all matching transports | `Task` |
-| **Send** | `SendAsync` | Unicast | Single transport | `Task` (or with `IObserver<T>` callback) |
+| **Send** | `SendAsync` | Unicast | Single transport | `Task` (or with `Subject<T>` callback) |
 | **Call** | `CallAsync` | Request | Single transport | `Task<TResponse>` |
+
+**Reliability: Outbox / Inbox / Dead Letter**
+
+| Type | Purpose |
+|------|---------|
+| `InMemoryOutboxStore` / `InMemoryInboxStore` | In-memory implementations (development/reference only); the entry cache is **isolated per store instance** |
+| `InMemoryDeadLetterStore` | In-memory dead-letter store |
+| `OutboxDispatcher` / `InboxDispatcher` | Background dispatchers: poll failed records and redeliver/re-execute; exhausted records move to a terminal dead-letter state (no longer re-scanned); each round also applies the retention policy |
+| `DeadLetterService` | `IDeadLetterService` implementation: query, replay (redelivery or re-execution depending on source) and discard |
+
+| Option | Semantics |
+|--------|-----------|
+| `OutboxOptions.Enabled` / `MaxRetryAttempts` / `PollingInterval` | Outbox global switch, max redelivery attempts, polling interval |
+| `OutboxOptions.RetentionPeriod` / `InboxOptions.RetentionPeriod` | Retention for terminal entries (default 24 h; `<= 0` disables cleanup) |
+| `InboxOptions.Enabled` | Inbox global switch (`UseInbox` is a sending-side marker only; built-in transports do not consume it) |
+| `MessageBusOptions.AutoLoadAssemblies` | **Simple names** of assemblies scanned for handlers at startup; a load failure fails startup |
+| `MessageBusOptions.DefaultTransporter` | Default transporter (dispatch and recipient registration share this single source) |
+
+**Registration Extensions** (`Microsoft.Extensions.DependencyInjection`)
+
+| Extension | Purpose |
+|-----------|---------|
+| `AddEuoniaBus()` | Registers the bus core: `IConfigurator`, `IHandlerContext`, `IBus`, `IDispatcher`, keyed serializers, pipeline support and `ServiceActivator` |
+| `AddInMemoryOutbox()` / `AddInMemoryInbox()` / `AddInMemoryDeadLetters()` | Registers the corresponding in-memory store (outbox / inbox / dead letter). None is registered by default — each must be called explicitly |
+| `AddConfiguratorBuilder(configure)` | Registers the user configuration callback (conventions, strategies, channel scanning), invoked by `ServiceActivator` at startup |
+| `AddMessageHandler(lifetime, …)` | Registers `IHandler<,>` handlers by assembly, concrete type or generic argument |
+
+```csharp
+services.AddEuoniaBus();
+services.AddInMemoryOutbox();      // outbox (optional)
+services.AddInMemoryInbox();       // inbox (optional)
+services.AddInMemoryDeadLetters(); // dead-letter capture and replay (optional)
+services.AddMessageHandler(ServiceLifetime.Scoped, typeof(Program).Assembly);
+
+services.AddConfiguratorBuilder(config => config
+    .RegisterChannel(typeof(Program).Assembly)
+    .SetConvention(b => b.Add<DefaultMessageConvention>())
+    .SetStrategy("InMemory", s => s.Add<LocalMessageTransportStrategy>()));
+```
+
+**Observability**
+
+| Item | Purpose |
+|------|---------|
+| `Meter` = `Nerosoft.Euonia.Bus` | Counters `bus.messages.published` / `.sent` / `.called` / `.failed`, duration histogram `bus.messages.duration`, retries and dead letters `bus.outbox.retries` / `.deadlettered`, `bus.inbox.retries` / `.deadlettered` |
+| `ActivitySource` = `Nerosoft.Euonia.Bus` | `bus.publish` / `bus.send` / `bus.call` with tags message.id, channel, correlation_id, trace_id, destination.name, message.type |
+
+With no listener `ActivitySource.StartActivity` returns `null` and counter writes are negligible, so instrumentation never changes control flow. Wiring it up:
+
+```csharp
+builder.AddOpenTelemetry()
+       .WithMetrics(m => m.AddMeter("Nerosoft.Euonia.Bus"))
+       .WithTracing(t => t.AddSource("Nerosoft.Euonia.Bus"));
+```
 
 **Serialization**
 
 | Type | Purpose |
 |------|---------|
-| `NewtonsoftJsonSerializer` | Newtonsoft.Json-based serializer |
+| `NewtonsoftJsonSerializer` | Newtonsoft.Json-based serializer (with `ClaimsPrincipal` converters) |
 | `SystemTextJsonSerializer` | System.Text.Json-based serializer |
 | `MessageSerializerOptions` | Reference loop handling, encoding, null handling |
 
 **Key Features:**
-- Auto-discovers handlers via `[Subscribe]` methods or `IHandler<M,R>` interface
+- Auto-discovers handlers via `[Subscribe]` methods or `IHandler<M,R>`; duplicate registration is de-duplicated
 - Single-handler channels support request/response; multi-handler channels execute in parallel
-- `TransportStrategy` system maps message types to transports (Local vs Distributed)
+- `TransportStrategy` system maps message types to transports (Local vs Distributed); caches invalidate when strategies change
 - Pipeline integration for middleware-style message processing (logging, validation, authorization)
-- Fluent options API for publish/send/call operations
+- Fluent options API for publish/send/call, including delay and delivery properties
+- Outbox/inbox provide at-least-once delivery and de-duplication; exhausted retries become replayable dead letters
+- Built-in metrics and distributed tracing, OpenTelemetry-ready
 
 ### Bus InMemory (`Euonia.Bus.InMemory`)
-> In-process memory transport adapter — complete `ITransport` implementation. Provides pure in-memory message dispatch without external infrastructure, ideal for development, testing, and single-process integration.
+> In-process memory transport adapter — complete `ITransporter` implementation. Provides pure in-memory message dispatch without external infrastructure, ideal for development, testing, and single-process integration.
 
 | Type | Kind | Purpose |
 |------|------|---------|
-| `InMemoryTransport` | class | `ITransport` implementation: publish via `WeakReferenceMessenger`; send/call via `StrongReferenceMessenger` with TCS correlation |
-| `InMemoryRecipientRegistrar` | class | Maps handler registrations to `InMemoryQueueConsumer` / `InMemoryTopicSubscriber` |
-| `InMemoryQueueConsumer` | class | Unicast/request handler via `IHandlerContext` |
-| `InMemoryTopicSubscriber` | class | Multicast handler |
+| `InMemoryTransporter` | class | `ITransporter` implementation: publish via `WeakReferenceMessenger`; send/call via `StrongReferenceMessenger` with TCS correlation. Disposal never touches the process-wide messengers |
+| `InMemoryRecipientRegistrar` | class | Maps handler registrations to `InMemoryConsumer` / `InMemorySubscriber` / `InMemoryExecutor`; unregisters the recipients it created on disposal |
+| `InMemoryConsumer` | class | Unicast handler via `IHandlerContext` |
+| `InMemorySubscriber` | class | Multicast handler |
+| `InMemoryExecutor` | class | Request handler |
 | `StrongReferenceMessenger` | class | Strong-reference messenger for unicast/request (exact class match, identity-key dedup) |
 | `WeakReferenceMessenger` | class | Weak-reference messenger for multicast (GC auto-unsubscribe, cleanup scan) |
 
-**Mapping rules:** `IQueue` → `InMemoryQueueConsumer` → StrongMessenger; `ITopic` → `InMemoryTopicSubscriber` → WeakMessenger; `IRequest<>` → `InMemoryQueueConsumer` → StrongMessenger.
+**Mapping rules:** `IUnicast` → `InMemoryConsumer` → StrongMessenger; `IMulticast` → `InMemorySubscriber` → WeakMessenger; `IRequest<>` → `InMemoryExecutor` → StrongMessenger.
+
+**Delivery semantics:** recipients process messages through a **serial background pump** — messages for one recipient are handled in enqueue order, but `PublishAsync` no longer blocks the caller until the handlers finish (request-response still waits, since it awaits the TCS the handler writes into).
 
 ### Bus RabbitMQ (`Euonia.Bus.RabbitMq`)
-> RabbitMQ transport adapter — complete `ITransport` implementation. Provides distributed message dispatch via RabbitMQ broker with persistent connections, fanout exchanges, direct queues, and correlation-based RPC.
+> RabbitMQ transport adapter — complete `ITransporter` implementation. Provides distributed message dispatch via RabbitMQ broker with persistent connections, fanout exchanges, direct queues, and correlation-based RPC.
 
 | Type | Kind | Purpose |
 |------|------|---------|
-| `RabbitMqTransport` | class | Full transport: publish → fanout exchange; send → direct queue; call → RPC with correlation; Polly-based retry |
-| `RabbitMqRecipientRegistrar` | class | Maps handler registrations to `RabbitMqQueueConsumer` / `RabbitMqTopicSubscriber` |
-| `RabbitMqQueueConsumer` | class | Queue consumer with manual ack and RPC reply support |
-| `RabbitMqTopicSubscriber` | class | Topic subscriber via fanout exchange + auto-delete queue |
-| `DefaultPersistentConnection` | class | Connection lifecycle with `AsyncLock`, exponential backoff, auto-reconnect |
-| `RabbitMqBusOptions` | class | Options: Connection URI, exchange/queue prefixes, persistence, auto-ack, max retries |
+| `RabbitMqTransporter` | class | Full transport: publish → fanout exchange; send/call → direct queue (queue existence and consumer count checked before publishing); Polly-based retry |
+| `RabbitMqRecipient` and derived | class | Recipient base plus `RabbitMqConsumer` (unicast), `RabbitMqSubscriber` (multicast), `RabbitMqExecutor` (request) |
+| `RabbitMqRecipientRegistrar` | class | Creates and starts recipients; disposes each one (and its channel) on shutdown |
+| `RabbitMqDelivery` | class | Pure logic for queue name, subscription id and priority — **shared by publisher and consumers** |
+| `DefaultPersistentConnection` | class | Connection lifecycle with `AsyncLock`, exponential backoff, auto-reconnect; fails fast after disposal instead of spinning |
+| `RabbitMqBusOptions` | class | Options: connection URI, exchange/queue prefixes, persistence, auto-ack, max retries, **`MaxPriority`** |
 
-**Mapping rules:** `IQueue` → `RabbitMqQueueConsumer`; `ITopic` → `RabbitMqTopicSubscriber`; `IRequest<>` → `RabbitMqQueueConsumer`.
+**Mapping rules:** `IUnicast` → `RabbitMqConsumer`; `IMulticast` → `RabbitMqSubscriber`; `IRequest<>` → `RabbitMqExecutor`.
+
+**Queues and priority:**
+- Queue name format is `{channel}@{subscriptionId}`, where the subscription id falls back through: `SubscriptionId` → entry assembly **simple name** → channel name
+- The `Queue` option overrides the target queue for `Send`/`Call`; publish goes to an exchange and ignores it
+- With `MaxPriority > 0` consumers declare the queue with `x-max-priority` and the sender writes the message priority — **RabbitMQ only honours priority when the queue is declared with that argument**
+- Dead lettering: with `IsDeadLetterEnabled` the queue is bound to a DLX/DLQ; reply queues are declared exclusive + auto-delete and deleted explicitly in `finally`
+
+> Note: `QueueNamePrefix` / `ExchangeNamePrefix` are currently **unused** — queue and exchange names do not include those prefixes (enabling them would rename existing entities and needs a migration plan).
+
+### Bus HTTP (`Euonia.Bus.Http`)
+> HTTP remote-transport adapter. The client invokes a remote `MapBusEndpoint` endpoint over HTTP POST to complete request-response calls (`CallAsync`); the server receives messages through `RemoteReceiver`, executes handlers, and returns the result. Shares the same wire protocol (`RemoteReply<TResult>`) with the gRPC transport.
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `HttpTransporter` | class (internal) | `ITransporter` implementation: `CallAsync` → HTTP POST (propagates `x-*` headers), parses `RemoteReply<T>` and rehydrates exceptions; `Send`/`Publish` → `NotSupportedException` |
+| `HttpBusOptions` | class | Options: `Endpoint`, `Route` (default `/bus/call`), `SerializerProvider` (default `SystemTestJson`), `RequestTimeout`, `MessageHandlerFactory` |
+| `AddHttpBus(name, configure)` | extension | Registers Options + `HttpTransporter` singleton + named keyed `ITransporter` |
+| `MapBusEndpoint()` | extension | Maps the server endpoint: resolves the serializer and `IHandlerContext`, invokes `RemoteReceiver`, writes the JSON reply |
+
+**Wire protocol** (`Source/Euonia.Bus/Remote/`):
+
+| Type | Purpose |
+|------|---------|
+| `RemoteReply<TResult>` | `{ IsSuccess, Result, Error }` — result or failure details |
+| `RemoteError` | `{ Type, Message, StackTrace }` — `ToException()` rehydrates the original exception type on the client, falling back to `MessageDeliverException` |
+| `RemoteReceiver` | Server receiver: `DeserializeEnvelope` → `MessageContext` (subscribes Responded/Failed/Completed) → `IHandlerContext.HandleAsync` → returns result/exception |
+
+**Usage:**
+
+```csharp
+// Client: register the HTTP transport and set it as default
+services.Configure<MessageBusOptions>(o => o.DefaultTransporter = "http");
+services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
+
+// Server: map the request endpoint (inside an ASP.NET Core app)
+app.MapBusEndpoint();   // POST /bus/call
+```
+
+Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
+
+### Bus gRPC (`Euonia.Bus.Grpc`)
+> gRPC remote-transport adapter. The client uses **generic (universal) invocation** — it constructs
+> `Method<GrpcRequest, GrpcResponse>` at runtime and executes it via `CallInvoker`, with the
+> service/method names supplied dynamically through `GrpcBusOptions` (defaulting to
+> `nerorsoft.bus.ReplierService/Call`), so no generated service stub is required on the client. The
+> server processes messages in `RemoteMessageService`. Reuses the `RemoteReply<TResult>` protocol.
+> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were
+> consolidated into this project (the former `Euonia.Grpc` project was removed).
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.CreateCallInvoker()` + runtime-built `Method` (`GrpcMethodFactory`); `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
+| `GrpcMethodFactory` | class (internal) | Builds `Method<GrpcRequest, GrpcResponse>` at runtime (hand-written protobuf `Marshaller`s); supports dynamic service/method names |
+| `RemoteMessageService` | class | `ReplierService.ReplierServiceBase`: validates the payload (empty → `InvalidArgument`) → `RemoteReceiver` → returns `GrpcResponse` |
+| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider`, `ServiceName` (default `nerorsoft.bus.ReplierService`), `MethodName` (default `Call`) |
+| `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | extension | Client keyed `ITransporter` registration; server `RemoteMessageService` registration |
+| `MapGrpcBusService()` | extension | Maps `MapGrpcService<RemoteMessageService>()` on the server |
+
+**Usage:**
+
+```csharp
+// Client: fixed endpoint + default contract (ReplierService/Call)
+services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
+
+// Client: dynamic method names (generic invocation against any unary service/method)
+services.AddGrpcBus("grpc", o =>
+{
+	o.Endpoint = "https://grain.example.com";
+	o.ServiceName = "acme.InvokeService";
+	o.MethodName = "Invoke";
+});
+
+// Server (HTTP/2 must be enabled; configure HttpProtocols.Http2 for cleartext)
+services.AddGrpc();
+services.AddGrpcBusServer();
+app.MapGrpcBusService();
+```
 
 ### Bus ActiveMQ (`Euonia.Bus.ActiveMq`)
-> Placeholder for ActiveMQ transport adapter — currently a stub project with no implementation.
+> ActiveMQ transport adapter — complete `ITransporter` implementation. Message dispatch over NMS: publish goes to a topic, send/call go to queues, and calls complete request-response via a temporary reply queue plus a correlation id.
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `ActiveMqTransporter` | class | Full transport: publish → `GetTopicAsync`; send/call → `GetQueueAsync` + temporary reply queue; Polly-based retry |
+| `ActiveMqRecipient` and derived | class | Recipient base plus `ActiveMqConsumer` (unicast), `ActiveMqSubscriber` (multicast), `ActiveMqExecutor` (request) |
+| `ActiveMqRecipientRegistrar` | class | Creates and starts recipients; disposes each one (and its session) on shutdown |
+| `ActiveMqDelivery` | class | Pure logic for target queue and priority (`MsgPriority`) |
+| `DefaultPersistentConnection` | class | Connection lifecycle; fails fast after disposal instead of spinning |
+| `ActiveMqBusOptions` | class | Options: broker URI, persistence, acknowledgement mode, max retries, etc. |
+
+**Mapping rules:** `IUnicast` → `ActiveMqConsumer`; `IMulticast` → `ActiveMqSubscriber`; `IRequest<>` → `ActiveMqExecutor`.
+
+**Delivery properties:** the `Queue` option overrides the target queue for `Send`/`Call` (publish goes to a topic and ignores it); `Priority` maps to the NMS priority (0-9), and whether it takes effect is decided by the broker's per-destination policy.
+
+### Bus HealthChecks (`Euonia.Bus.HealthChecks`)
+> Message bus health checks. Reports the number of configured transporters and the backlog of outbox, inbox and dead-letter records, ready to plug into ASP.NET Core health endpoints.
+
+| Type | Kind | Purpose |
+|------|------|---------|
+| `BusHealthCheck` | class | `IHealthCheck` implementation: transporter count, outbox/inbox failure counts and dead-letter count; exceeds a threshold → `Unhealthy` |
+| `BusHealthCheckOptions` | class | Thresholds: `MaxDeadLetters` (default 0 — any dead letter is unhealthy), `MaxOutboxFailed` / `MaxInboxFailed` (default -1 — not checked), `RequireTransporter` |
+| `AddEuoniaBusHealthChecks(configure)` | extension | Registers the check on `IHealthChecksBuilder` |
+
+**Usage:**
+
+```csharp
+services.AddHealthChecks()
+        .AddEuoniaBusHealthChecks(options =>
+        {
+            options.MaxDeadLetters = 10;
+            options.MaxOutboxFailed = 100;
+        });
+
+app.MapHealthChecks("/health");
+```
+
+A store that is not registered simply does not take part in the verdict and does not cause an error, and the check never instantiates `IBus` (which would start background work such as outbox polling).
 
 ### Modularity (`Euonia.Modularity`)
 > Pluggable module system with dependency graph resolution, automatic service registration, and lifecycle management. The foundation upon which all other Euonia modules are built.
@@ -528,7 +827,7 @@ protected override void AddRules()
 | Type | Kind | Purpose |
 |------|------|---------|
 | `ISpecification<TEntity>` | interface | `Expression<Func<TEntity,bool>> Satisfy()` — composable query specifications |
-| `Specification<TEntity>` | abstract class | Base spec with `&`, `|`, `!` operators for logical composition |
+| `Specification<TEntity>` | abstract class | Base spec with `&`, `\|`, `!` operators for logical composition |
 | `CompositeSpecification<T>` | class | Aggregates multiple specs with `AndAlso` / `OrElse` |
 | `SegmentSpecification<TTarget,TProperty,TValue>` | abstract class | Range filtering with `RangeBoundary` (Left, Right, Both, Neither) |
 | `PredicateBuilder` | static class | `True<T>()`, `False<T>()`, `GetCompareCondition()`, `GetContainsCondition()` |
@@ -548,12 +847,13 @@ protected override void AddRules()
 | `[DailyTimeIntervalSchedule]` | attribute | Daily time interval trigger |
 | `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
 
-### gRPC (`Euonia.Grpc`)
-> gRPC integration with interceptors, health checks, and auto-discovery.
+### gRPC (consolidated into `Euonia.Bus.Grpc`)
+> gRPC integration (the former `Euonia.Grpc` project was consolidated into `Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
 
 | Type | Kind | Purpose |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | class (partial) | Protobuf extensions with JSON serialization and typed data accessors |
+| `ReplierService` | service (proto) | New unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
 | `ExceptionHandlingInterceptor` | class | Maps .NET exceptions to gRPC status codes |
 | `RequestTraceInterceptor` | class | Propagates `x-request-trace-id` in gRPC calls |
 | `MapGrpcServices()` | extension | Auto-discovers and maps all gRPC services from the entry assembly |
@@ -628,6 +928,13 @@ The `Samples/Euonia.Sample.Webapi` project demonstrates **full Euonia integratio
 <PackageReference Include="Euonia.Bus.InMemory" Version="10.0.0" />
 <PackageReference Include="Euonia.Bus.RabbitMq" Version="10.0.0" />
 
+<!-- Message Bus (remote calls) -->
+<PackageReference Include="Euonia.Bus.Http" Version="10.0.0" />
+<PackageReference Include="Euonia.Bus.Grpc" Version="10.0.0" />
+
+<!-- Message Bus (health checks) -->
+<PackageReference Include="Euonia.Bus.HealthChecks" Version="10.0.0" />
+
 <!-- Repository -->
 <PackageReference Include="Euonia.Repository" Version="10.0.0" />
 <PackageReference Include="Euonia.Repository.EfCore" Version="10.0.0" />
@@ -667,9 +974,12 @@ public class Order : EditableObject<Order>
 
     protected override void AddRules()
     {
-        Rules.AddRequiredRule(ProductNameProperty);
-        Rules.AddLambdaRule(ProductNameProperty,
-            (v, ctx) => v?.Length >= 3, "Product name must be at least 3 characters");
+        // Property-level rule: pass the PropertyInfo<T> returned by RegisterProperty (matched by reference)
+        Rules.AddRule<CommonRule.Required>(ProductNameProperty);
+
+        // Convenience lambda overload (RulesExtensions): the handler receives the business object itself
+        Rules.AddRule<Order>(ProductNameProperty,
+            order => order.ProductName?.Length >= 3, "Product name must be at least 3 characters");
     }
 }
 

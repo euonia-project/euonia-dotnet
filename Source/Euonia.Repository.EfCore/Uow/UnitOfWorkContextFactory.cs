@@ -6,18 +6,23 @@ using Nerosoft.Euonia.Uow;
 namespace Nerosoft.Euonia.Repository.EfCore;
 
 /// <summary>
-/// The <see cref="IContextFactory"/> implementation used to create a <see cref="IRepositoryContext"/> instance.
+/// <see cref="IContextFactory"/> 的实现，根据当前工作单元创建或复用 <see cref="IRepositoryContext"/> 实例。
 /// </summary>
+/// <remarks>
+/// <para>当没有活动的工作单元时返回 <c>null</c>，从而让其他工厂继续尝试。</para>
+/// <para>对于非事务性工作单元，直接由服务提供程序解析上下文；对于事务性工作单元，则以数据上下文类型与连接字符串组合为键复用上下文。</para>
+/// <para>连接字符串优先取 <see cref="ConnectionStringAttribute.Value"/>，否则以数据上下文类型名称从配置中读取。</para>
+/// </remarks>
 internal class UnitOfWorkContextFactory : IContextFactory
 {
 	private readonly IUnitOfWorkManager _manager;
 	private readonly IConfiguration _configuration;
 
 	/// <summary>
-	/// 
+	/// 初始化 <see cref="UnitOfWorkContextFactory"/> 类的新实例。
 	/// </summary>
-	/// <param name="manager"></param>
-	/// <param name="configuration"></param>
+	/// <param name="manager">工作单元管理器，用于获取当前工作单元。</param>
+	/// <param name="configuration">配置源，用于按名称读取连接字符串。</param>
 	public UnitOfWorkContextFactory(IUnitOfWorkManager manager, IConfiguration configuration)
 	{
 		_manager = manager;

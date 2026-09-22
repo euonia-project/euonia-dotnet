@@ -106,7 +106,16 @@ public static class RedisConfigurationBuilderExtensions
     {
         Check.EnsureNotNull(part, nameof(part));
 
-        return part.WithBackplane(typeof(RedisCacheBackplane), redisConfigurationKey);
+        // 与 WithRedisCacheHandle 同理：RedisCacheBackplane 的构造函数需要连接字符串，
+        // 而参数匹配只认「已知实例」。此处同样必须把它作为配置类型传入，
+        // 否则背板创建会因参数匹配失败而抛异常。
+        var configuration = RedisConfigurations.GetConfiguration(redisConfigurationKey)
+            ?? throw new InvalidOperationException($"No Redis configuration has been registered for the key '{redisConfigurationKey}'. Call WithRedisConfiguration('{redisConfigurationKey}', ...) before adding the Redis backplane.");
+
+        // 必须显式转换为 object 以命中 params object[] 重载：
+        // 直接传 string 会被解析到 WithBackplane(Type, string configurationKey, string channelName, ...)，
+        // 把连接字符串当成背板频道名，构造参数依然缺失。
+        return part.WithBackplane(typeof(RedisCacheBackplane), redisConfigurationKey, (object)configuration.ConnectionString);
     }
 
     /// <summary>
@@ -149,6 +158,14 @@ public static class RedisConfigurationBuilderExtensions
     {
         Check.EnsureNotNull(part, nameof(part));
 
-        return part.WithHandle(typeof(RedisCacheHandle<>), redisConfigurationKey, isBackplaneSource);
+        // RedisCacheHandle 的构造函数签名为 (CacheManagerConfiguration, CacheHandleConfiguration, string connectionString)，
+        // 该字符串只能作为句柄配置的 ConfigurationTypes 传入——CacheReflectionHelper.MatchArguments
+        // 只从「已知实例」里按可赋值性匹配构造参数，不会去查 RedisConfigurations 注册表。
+        // 此前这里调用的是不带 configurationTypes 的重载，导致该参数永远匹配不到，
+        // 句柄创建直接抛 InvalidOperationException：整个 Redis 缓存后端因此完全不可用。
+        var configuration = RedisConfigurations.GetConfiguration(redisConfigurationKey)
+            ?? throw new InvalidOperationException($"No Redis configuration has been registered for the key '{redisConfigurationKey}'. Call WithRedisConfiguration('{redisConfigurationKey}', ...) before adding the Redis cache handle.");
+
+        return part.WithHandle(typeof(RedisCacheHandle<>), redisConfigurationKey, isBackplaneSource, configuration.ConnectionString);
     }
 }

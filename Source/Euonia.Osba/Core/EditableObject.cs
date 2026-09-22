@@ -88,7 +88,10 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// <summary>
 	/// 保存对象。
 	/// </summary>
-	/// <param name="forceUpdate">是否强制将保存作为更新操作执行。</param>
+	/// <param name="forceUpdate">
+	/// 如果为 <see langword="true"/>，即使对象状态为 <see cref="ObjectEditState.None"/>，也会将对象标记为已更改，
+	/// 强制执行更新操作；否则，如果对象状态为 <see cref="ObjectEditState.None"/> 且没有已更改的属性，则不执行任何操作。
+	/// </param>
 	/// <param name="userState">与保存操作关联的用户定义状态信息。</param>
 	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
 	/// <returns>表示异步保存操作的任务，包含保存后的对象实例。</returns>
@@ -97,12 +100,13 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	{
 		if (State == ObjectEditState.None)
 		{
-			if (forceUpdate)
+			if (forceUpdate || HasChangedProperties)
 			{
 				MarkAsChanged();
 			}
 			else
 			{
+				// 对象未更改且无未保存的属性修改，无需执行保存
 				return (T)this;
 			}
 		}
@@ -110,19 +114,6 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 		if (!IsDeleted || CheckObjectRulesOnDelete)
 		{
 			await Rules.CheckObjectRulesAsync(true, cancellationToken);
-			if (Rules.HasRunningRules)
-			{
-				var task = new TaskCompletionSource<bool>();
-				ValidationComplete += OnValidationCompleted;
-				await task.Task;
-
-				ValidationComplete -= OnValidationCompleted;
-
-				void OnValidationCompleted(object sender, EventArgs args)
-				{
-					task.SetResult(true);
-				}
-			}
 		}
 
 		if (!IsValid && (!IsDeleted || CheckObjectRulesOnDelete))
@@ -131,11 +122,16 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 			throw new ValidationException("Object not valid for save.", errors);
 		}
 
+		var wasDeleted = IsDeleted;
 		MarkAsBusy();
 		try
 		{
 			var result = await BusinessContext.GetRequiredService<IObjectFactory>().SaveAsync((T)this, cancellationToken);
-			result?.MarkAsIdle();
+			if (ReferenceEquals(result, this) && !wasDeleted)
+			{
+				MarkAsClean();
+			}
+
 			OnSaved(result, null, userState);
 			return result;
 		}

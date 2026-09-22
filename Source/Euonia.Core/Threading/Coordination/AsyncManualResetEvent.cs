@@ -94,7 +94,7 @@ public sealed class AsyncManualResetEvent
     /// <param name="cancellationToken">用于取消等待的取消令牌。如果此令牌已被取消，此方法将首先检查事件是否已被设置。</param>
     public Task WaitAsync(CancellationToken cancellationToken)
     {
-        var waitTask = WaitAsync(cancellationToken);
+        var waitTask = WaitAsync();
         return waitTask.IsCompleted ? waitTask : waitTask.WaitAsync(cancellationToken);
     }
 

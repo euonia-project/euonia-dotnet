@@ -51,7 +51,7 @@ public class BaseMessageConvention : IMessageConvention
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
-		return _unicastConventionCache.Apply(channel, handle =>
+		return _unicastConventionCache.Apply(channel, type, (handle, _) =>
 		{
 			return _conventions.Any(x => x.IsUnicast(handle, type));
 		});
@@ -68,7 +68,7 @@ public class BaseMessageConvention : IMessageConvention
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
-		return _multicastConventionCache.Apply(channel, handle =>
+		return _multicastConventionCache.Apply(channel, type, (handle, _) =>
 		{
 			return _conventions.Any(x => x.IsMulticast(handle, type));
 		});
@@ -85,7 +85,7 @@ public class BaseMessageConvention : IMessageConvention
 	{
 		ArgumentNullException.ThrowIfNull(channel);
 
-		return _requestConventionCache.Apply(channel, handle =>
+		return _requestConventionCache.Apply(channel, type, (handle, _) =>
 		{
 			return _conventions.Any(x => x.IsRequest(handle, type));
 		});
@@ -98,6 +98,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineUnicastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineUnicast(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -107,6 +108,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineMulticastTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineMulticast(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -116,6 +118,7 @@ public class BaseMessageConvention : IMessageConvention
 	internal void DefineRequestTypeConvention(Func<string, Type, bool> convention)
 	{
 		_defaultConvention.DefineRequest(convention);
+		ResetCaches();
 	}
 
 	/// <summary>
@@ -144,6 +147,21 @@ public class BaseMessageConvention : IMessageConvention
 		}
 
 		_conventions.AddRange(conventions);
+		ResetCaches();
+	}
+
+	/// <summary>
+	/// 清空全部约定判定缓存。
+	/// </summary>
+	/// <remarks>
+	/// 约定集合一旦变化，此前缓存的判定结果即失效。若不清空，
+	/// 在首次判定之后再添加或重定义约定将**静默无效**——配置期与运行期分离时很容易踩到。
+	/// </remarks>
+	private void ResetCaches()
+	{
+		_unicastConventionCache.Reset();
+		_multicastConventionCache.Reset();
+		_requestConventionCache.Reset();
 	}
 
 	/// <summary>
@@ -157,7 +175,7 @@ public class BaseMessageConvention : IMessageConvention
 	public string Name => "Default";
 
 	/// <summary>
-	/// 约定缓存，用于缓存消息通道的约定判断结果。
+	/// 约定缓存，用于缓存消息通道和消息类型的约定判断结果。
 	/// </summary>
 	private class ConventionCache
 	{
@@ -165,14 +183,13 @@ public class BaseMessageConvention : IMessageConvention
 		/// 应用指定的约定函数并缓存结果。
 		/// </summary>
 		/// <param name="channel">消息通道名称。</param>
+		/// <param name="type">要检查的消息类型。</param>
 		/// <param name="convention">用于评估约定的函数。</param>
 		/// <returns>约定的判断结果。</returns>
-		public bool Apply(string channel, Func<string, bool> convention)
+		public bool Apply(string channel, Type type, Func<string, Type, bool> convention)
 		{
-			return _cache.GetOrAdd(channel, convention);
+			return _cache.GetOrAdd((channel, type), key => convention(key.Item1, key.Item2));
 		}
-
-		// ReSharper disable once UnusedMember.Local
 
 		/// <summary>
 		/// 重置缓存。
@@ -182,6 +199,6 @@ public class BaseMessageConvention : IMessageConvention
 			_cache.Clear();
 		}
 
-		private readonly ConcurrentDictionary<string, bool> _cache = new();
+		private readonly ConcurrentDictionary<(string Channel, Type Type), bool> _cache = new();
 	}
 }

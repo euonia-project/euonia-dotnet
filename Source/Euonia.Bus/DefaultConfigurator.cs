@@ -35,7 +35,7 @@ internal sealed class DefaultConfigurator : IConfigurator
 		_registrar = new ChannelRegistrar((channel, type, handler) =>
 		{
 			_events.HandleEvent(this, new ChannelRegisteredEventArgs(channel, type, handler), nameof(ChannelRegistered));
-		}, logger);
+		}, type => ChannelResolver(type), logger);
 	}
 
 	/// <summary>
@@ -47,6 +47,14 @@ internal sealed class DefaultConfigurator : IConfigurator
 	/// 以传输类型为键的传输策略构建器字典。
 	/// </summary>
 	public IDictionary<string, ITransportStrategyBuilder> StrategyBuilders => _strategyBuilders;
+
+	/// <summary>
+	/// 传输策略配置的版本号，每次策略变更时递增。
+	/// </summary>
+	private long _strategyVersion;
+
+	/// <inheritdoc/>
+	public long StrategyVersion => Interlocked.Read(ref _strategyVersion);
 
 	/// <summary>
 	/// 获取已注册的通道注册信息字典。
@@ -106,6 +114,10 @@ internal sealed class DefaultConfigurator : IConfigurator
 		ArgumentNullException.ThrowIfNull(strategyConfigurator);
 		var builder = _strategyBuilders.GetOrAdd(name, _ => new DefaultTransportStrategyBuilder());
 		strategyConfigurator(builder);
+
+		// 递增版本号，使依赖方（如 StrategicDispatcher 的传输器列表缓存）感知策略已变更。
+		Interlocked.Increment(ref _strategyVersion);
+
 		return this;
 	}
 

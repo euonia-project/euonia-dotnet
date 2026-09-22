@@ -4,21 +4,16 @@ using Microsoft.Extensions.Options;
 namespace Nerosoft.Euonia.Uow;
 
 /// <summary>
-/// Concrete implementation of <see cref="IUnitOfWork"/> that manages scoped contexts,
-/// commit/rollback lifecycles and completion handlers.
+/// <see cref="IUnitOfWork"/> 的具体实现，负责管理作用域内的上下文、提交/回滚生命周期以及完成处理器。
 /// </summary>
 public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 {
 	#region Events
 
-	/// <summary>
-	/// Event fired when this unit of work has been completed successfully.
-	/// </summary>
+	/// <inheritdoc />
 	public event EventHandler<UnitOfWorkEventArgs> Completed;
 
-	/// <summary>
-	/// Event fired when this unit of work has failed.
-	/// </summary>
+	/// <inheritdoc />
 	public event EventHandler<UnitOfWorkFailedEventArgs> Failed;
 
 	#endregion
@@ -26,17 +21,17 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Fields
 
 	/// <summary>
-	/// Default options sourced from the options monitor to be normalized against provided options.
+	/// 来自选项监视器的默认选项，用于补全调用方传入的选项。
 	/// </summary>
 	private readonly UnitOfWorkOptions _defaultOptions;
 
 	/// <summary>
-	/// Thread-safe storage of registered <see cref="IUnitOfWorkContext"/> instances keyed by name.
+	/// 按名称键存储的上下文集合，使用并发字典保证线程安全。
 	/// </summary>
 	private readonly ConcurrentDictionary<string, IUnitOfWorkContext> _contexts = new();
 
 	/// <summary>
-	/// Indicates whether completion is currently in progress to prevent reentrancy.
+	/// 指示当前是否正在执行完成操作，用于防止重入。
 	/// </summary>
 	private bool _isCompleting;
 
@@ -45,10 +40,10 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Ctors
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UnitOfWork"/> class.
+	/// 初始化 <see cref="UnitOfWork"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The service provider scoped to this unit of work.</param>
-	/// <param name="options">Options monitor providing default unit of work options.</param>
+	/// <param name="provider">限定于该工作单元作用域的服务提供程序。</param>
+	/// <param name="options">提供默认工作单元选项的选项监视器。</param>
 	public UnitOfWork(IServiceProvider provider, IOptionsMonitor<UnitOfWorkOptions> options)
 	{
 		ServiceProvider = provider;
@@ -60,53 +55,31 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Properties of IUnitOfWork
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets the unique identifier for this unit of work instance.
-	/// </summary>
 	public Guid Id { get; } = Guid.NewGuid();
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets a mutable dictionary for storing arbitrary contextual data for this unit of work.
-	/// </summary>
 	public Dictionary<string, object> Items { get; } = new();
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets a read-only view of the registered <see cref="IUnitOfWorkContext"/> instances.
-	/// </summary>
+	/// <remarks>该只读视图直接基于内部的并发字典，内容随上下文注册而实时变化。</remarks>
 	public IReadOnlyDictionary<string, IUnitOfWorkContext> Contexts => _contexts;
 
-	/// <summary>
-	/// Gets the <see cref="IServiceProvider"/> scoped to this unit of work.
-	/// </summary>
+	/// <inheritdoc />
 	public override IServiceProvider ServiceProvider { get; }
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets the outer (parent) unit of work if this unit is nested; otherwise null.
-	/// </summary>
 	public IUnitOfWork Outer { get; private set; }
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets a value indicating whether this unit of work has been reserved for exclusive use.
-	/// </summary>
 	public bool IsReserved { get; private set; }
 
-	/// <summary>
-	/// Gets the reservation name when this instance has been reserved.
-	/// </summary>
+	/// <inheritdoc />
 	public string ReservationName { get; private set; }
 
-	/// <summary>
-	/// Gets a value indicating whether this instance has been disposed.
-	/// </summary>
+	/// <inheritdoc />
 	public bool IsDisposed { get; private set; }
 
-	/// <summary>
-	/// Gets a value indicating whether the unit of work has been completed.
-	/// </summary>
+	/// <inheritdoc />
 	public bool IsCompleted { get; private set; }
 
 	#endregion
@@ -114,22 +87,20 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Properties of self
 
 	/// <summary>
-	/// Handlers to be invoked when the unit of work completes successfully.
+	/// 工作单元成功完成后需要依次调用的处理器集合。
 	/// </summary>
 	private List<Func<Task>> CompletedHandlers { get; } = new();
 
-	/// <summary>
-	/// The effective options applied to this unit of work after initialization.
-	/// </summary>
+	/// <inheritdoc />
 	public IUnitOfWorkOptions Options { get; private set; }
 
 	/// <summary>
-	/// Captured exception if the unit of work fails during completion.
+	/// 完成过程中发生失败时捕获的异常。
 	/// </summary>
 	private Exception Exception { get; set; }
 
 	/// <summary>
-	/// Indicates whether the unit of work has been rolled back.
+	/// 指示该工作单元是否已回滚。
 	/// </summary>
 	private bool RolledBack { get; set; }
 
@@ -137,22 +108,20 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 
 	#region Methods of IUnitOfWork
 
-	/// <summary>
-	/// Registers an asynchronous handler to be executed after a successful completion.
-	/// </summary>
-	/// <param name="handler">The asynchronous handler to register.</param>
+	/// <inheritdoc />
+	/// <remarks>处理器将在工作单元成功完成并保存变更之后依次被调用。</remarks>
 	public void OnCompleted(Func<Task> handler)
 	{
 		CompletedHandlers.Add(handler);
 	}
 
 	/// <summary>
-	/// Initializes the unit of work with the provided options. Options are normalized
-	/// against defaults from the options monitor.
+	/// 使用指定选项初始化该工作单元，并使用选项监视器中的默认值进行补全。
 	/// </summary>
-	/// <param name="options">Options to configure this unit of work.</param>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="options"/> is null.</exception>
-	/// <exception cref="Exception">Thrown if the unit of work has already been initialized.</exception>
+	/// <param name="options">用于配置该工作单元的选项。</param>
+	/// <exception cref="ArgumentNullException"><paramref name="options"/> 为 <c>null</c> 时抛出。</exception>
+	/// <exception cref="Exception">该工作单元已被初始化过时抛出。</exception>
+	/// <remarks>初始化同时会将 <see cref="IsReserved"/> 重置为 <c>false</c>。</remarks>
 	public void Initialize(UnitOfWorkOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
@@ -168,10 +137,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Marks this unit of work as reserved using the given name.
-	/// </summary>
-	/// <param name="reservationName">The reservation identifier to assign.</param>
+	/// <exception cref="ArgumentNullException"><paramref name="reservationName"/> 为 <c>null</c> 时抛出。</exception>
 	public void Reserve(string reservationName)
 	{
 		Check.EnsureNotNull(reservationName, nameof(reservationName));
@@ -181,25 +147,15 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Finds a registered context by key.
-	/// </summary>
-	/// <param name="key">The context key to find.</param>
-	/// <returns>The found <see cref="IUnitOfWorkContext"/> or <c>null</c> if not present.</returns>
 	public IUnitOfWorkContext FindContext(string key)
 	{
 		return _contexts.GetOrDefault(key);
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Adds a context instance under the specified key.
-	/// </summary>
-	/// <param name="key">The context key.</param>
-	/// <param name="context">The context instance to add.</param>
-	/// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is null or empty.</exception>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="context"/> is null.</exception>
-	/// <exception cref="InvalidOperationException">Thrown when a context with the given key already exists or could not be added.</exception>
+	/// <exception cref="ArgumentException"><paramref name="key"/> 为 <c>null</c> 或空字符串时抛出。</exception>
+	/// <exception cref="ArgumentNullException"><paramref name="context"/> 为 <c>null</c> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">已存在相同键的上下文，或上下文添加失败时抛出。</exception>
 	public void AddContext(string key, IUnitOfWorkContext context)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(key);
@@ -217,14 +173,8 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Gets an existing context by key or adds a new one created by the provided factory.
-	/// </summary>
-	/// <param name="key">The context key.</param>
-	/// <param name="factory">Factory used to create the context if it does not exist.</param>
-	/// <returns>The existing or newly created <see cref="IUnitOfWorkContext"/> instance.</returns>
-	/// <exception cref="ArgumentException">Thrown when <paramref name="key"/> is null or empty.</exception>
-	/// <exception cref="ArgumentNullException">Thrown when <paramref name="factory"/> is null.</exception>
+	/// <exception cref="ArgumentException"><paramref name="key"/> 为 <c>null</c> 或空字符串时抛出。</exception>
+	/// <exception cref="ArgumentNullException"><paramref name="factory"/> 为 <c>null</c> 时抛出。</exception>
 	public IUnitOfWorkContext GetOrAddContext(string key, Func<IUnitOfWorkContext> factory)
 	{
 		ArgumentException.ThrowIfNullOrEmpty(key);
@@ -233,21 +183,18 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		return _contexts.GetOrAdd(key, _ => factory());
 	}
 
-	/// <summary>
-	/// Sets the parent (outer) unit of work for nesting scenarios.
-	/// </summary>
-	/// <param name="outer">The outer <see cref="IUnitOfWork"/> instance.</param>
+	/// <inheritdoc />
 	public void SetOuter(IUnitOfWork outer)
 	{
 		Outer = outer;
 	}
 
-	/// <summary>
-	/// Completes the unit of work by saving changes on all contexts and invoking completion handlers.
-	/// </summary>
-	/// <param name="cancellationToken">Cancellation token to observe.</param>
-	/// <returns>A task representing the asynchronous operation.</returns>
-	/// <exception cref="InvalidOperationException">If completion has already been requested.</exception>
+	/// <inheritdoc />
+	/// <exception cref="InvalidOperationException">该工作单元已完成或正在完成中时抛出。</exception>
+	/// <remarks>
+	/// 若该工作单元已回滚则直接返回，不做任何处理；
+	/// 完成过程中发生异常会记录到内部字段并重新抛出，随后由释放流程触发失败事件。
+	/// </remarks>
 	public async Task CompleteAsync(CancellationToken cancellationToken = default)
 	{
 		if (RolledBack)
@@ -275,11 +222,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Persists pending changes for all registered contexts in this unit of work.
-	/// </summary>
-	/// <param name="cancellationToken">Cancellation token to observe.</param>
-	/// <returns>A task representing the asynchronous save operation.</returns>
+	/// <remarks>依次调用每个已注册上下文的 <see cref="IUnitOfWorkContext.SaveChangesAsync(CancellationToken)"/>；若该工作单元已回滚则直接返回。</remarks>
 	public async Task SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
 		if (RolledBack)
@@ -294,7 +237,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <summary>
-	/// Invokes registered completion handlers and raises the <see cref="Completed"/> event.
+	/// 依次调用已注册的完成处理器，并触发 <see cref="Completed"/> 事件。
 	/// </summary>
 	private async Task OnCompletedAsync()
 	{
@@ -307,11 +250,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Rolls back all registered contexts.
-	/// </summary>
-	/// <param name="cancellationToken">Cancellation token to observe.</param>
-	/// <returns>A task representing the asynchronous rollback operation.</returns>
+	/// <remarks>将 <see cref="RolledBack"/> 置为 <c>true</c> 后依次回滚所有已注册的上下文；已回滚时直接返回。</remarks>
 	public async Task RollbackAsync(CancellationToken cancellationToken = default)
 	{
 		if (RolledBack)
@@ -332,11 +271,10 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Methods
 
 	/// <inheritdoc />
-	/// <summary>
-	/// Releases managed resources held by the unit of work, raises failure event when necessary,
-	/// and invokes disposal notifications.
-	/// </summary>
-	/// <param name="disposing">Indicates whether the method was called from Dispose.</param>
+	/// <remarks>
+	/// 若该工作单元尚未完成或完成过程存在异常，会先触发 <see cref="Failed"/> 事件，
+	/// 随后抛出释放通知。重复调用不会重复执行释放逻辑。
+	/// </remarks>
 	protected override void Dispose(bool disposing)
 	{
 		if (IsDisposed)
@@ -364,7 +302,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Methods of self
 
 	/// <summary>
-	/// Raises the <see cref="Failed"/> event with the captured exception and rollback state.
+	/// 使用捕获的异常与回滚状态触发 <see cref="Failed"/> 事件。
 	/// </summary>
 	private void OnFailed()
 	{

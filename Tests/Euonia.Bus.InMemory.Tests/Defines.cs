@@ -2,6 +2,4 @@
 
 internal partial class Defines
 {
-	public const bool DontRunTests = false;
-
 }

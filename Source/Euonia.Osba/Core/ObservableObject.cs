@@ -65,6 +65,35 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	}
 
 	/// <summary>
+	/// 提交当前更改，将对象状态重置为 <see cref="ObjectEditState.None"/>。
+	/// </summary>
+	/// <remarks>
+	/// 在清除已更改属性跟踪与字段修改历史（由 <see cref="BusinessObject.AcceptChanges"/> 完成）的同时，
+	/// 将对象状态重置为 <see cref="ObjectEditState.None"/> 并清除删除时的对象规则检查标记，
+	/// 令 <see cref="IsChanged"/> 返回 <see langword="false"/>。
+	/// </remarks>
+	public override void AcceptChanges()
+	{
+		base.AcceptChanges();
+		State = ObjectEditState.None;
+		CheckObjectRulesOnDelete = false;
+	}
+
+	/// <summary>
+	/// 将对象标记为干净状态：提交当前更改，清空更改跟踪与字段修改历史，并将对象状态重置为
+	/// <see cref="ObjectEditState.None"/>。
+	/// </summary>
+	/// <remarks>
+	/// 通常在对象被成功保存或加载后调用，使 <see cref="IsChanged"/>、<see cref="BusinessObject.HasChangedProperties"/> 和
+	/// <see cref="IsSavable"/> 恢复初始状态。对象状态非 <see cref="ObjectEditState.None"/> 时也可显式调用，
+	/// 用于放弃未保存的更改。
+	/// </remarks>
+	public virtual void MarkAsClean()
+	{
+		AcceptChanges();
+	}
+
+	/// <summary>
 	/// 用于跟踪繁忙状态的计数器。
 	/// </summary>
 	private int _isBusyCounter;

@@ -53,21 +53,18 @@ public class UserContextBehavior<TMessage, TResponse> : IPipelineBehavior<TMessa
 		{
 			if (token.StartsWith("Bearer") && !token.Equals("Bearer null", StringComparison.OrdinalIgnoreCase))
 			{
-				context.Metadata.Set("Authorization", token);
+				context.Metadata.Set(UserContextMetadataKeys.Authorization, token);
 			}
 		}
 
 		if (user is { IsAuthenticated: true })
 		{
-			context.Metadata.Set("$nerosoft:user.name", user.Username);
-			context.Metadata.Set("$nerosoft:user.id", user.UserId);
-			context.Metadata.Set("$nerosoft:user.code", user.Code);
-			context.Metadata.Set("$nerosoft:user.tenant", user.Tenant);
+			context.Metadata.Set(UserContextMetadataKeys.UserName, user.Username);
+			context.Metadata.Set(UserContextMetadataKeys.UserId, user.UserId);
+			context.Metadata.Set(UserContextMetadataKeys.UserCode, user.Code);
+			context.Metadata.Set(UserContextMetadataKeys.UserTenant, user.Tenant);
 		}
 
-		{
-			// prevent code analysis
-		}
 		return await next(context);
 	}
 }

@@ -90,46 +90,66 @@ internal class RabbitMqTransporter : ITransporter
 	/// <returns>表示异步发送操作并返回强类型响应的任务。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
-		var requestQueueName = GetQueueName(message.Channel);
+		var requestQueueName = RabbitMqDelivery.ResolveQueueName(_options, message.Channel, message.GetQueue());
 
 		await using var channel = await _connection.CreateChannelAsync();
 
 		await CheckQueueAsync(channel, requestQueueName);
 
-		var responseQueueName = (await channel.QueueDeclareAsync(cancellationToken: cancellationToken)).QueueName;
+		// 回复队列必须声明为独占 + 自动删除：默认值会创建一个服务器命名的永久队列，
+		// 且全项目从不调用 QueueDeleteAsync，导致每次调用都在 broker 上永久留下一个队列，
+		// 迟到的回复还会在其中无界堆积。
+		var responseQueueName = (await channel.QueueDeclareAsync(exclusive: true, autoDelete: true, cancellationToken: cancellationToken)).QueueName;
 		var consumer = new AsyncEventingBasicConsumer(channel);
 
 		consumer.ReceivedAsync += OnReceivedAsync;
 
 		var props = BuildProperties(message, responseQueueName);
 
-		await Policy.Handle<SocketException>()
-		            .Or<TimeoutException>()
-		            .Or<BrokerUnreachableException>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            })
-		            .ExecuteAsync(async () =>
-		            {
-			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+		try
+		{
+			await Policy.Handle<SocketException>()
+			            .Or<TimeoutException>()
+			            .Or<BrokerUnreachableException>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            })
+			            .ExecuteAsync(async () =>
+			            {
+				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
+				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		consumer.ReceivedAsync -= OnReceivedAsync;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			consumer.ReceivedAsync -= OnReceivedAsync;
+
+			// 显式删除作为兜底：独占队列在连接断开时会被 broker 回收，但显式删除更及时也更明确。
+			try
+			{
+				await channel.QueueDeleteAsync(responseQueueName, cancellationToken: CancellationToken.None);
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete reply queue '{QueueName}'.", responseQueueName);
+			}
+		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
 		{
@@ -145,11 +165,11 @@ internal class RabbitMqTransporter : ITransporter
 				var response = _serializer.Deserialize<RabbitMqReply<object>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
-					task.SetResult(default);
+					task.TrySetResult(default);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 			else
@@ -157,11 +177,11 @@ internal class RabbitMqTransporter : ITransporter
 				var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
-					task.SetResult(response.Result);
+					task.TrySetResult(response.Result);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 
@@ -177,49 +197,66 @@ internal class RabbitMqTransporter : ITransporter
 	/// <param name="message">请求消息信封。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步调用操作并返回响应的任务。</returns>
-	/// <exception cref="NotImplementedException">始终抛出，此方法当前未实现。</exception>
+	/// <exception cref="MessageDeliverException">当传输层未能完成调用时抛出。</exception>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
-		var requestQueueName = GetQueueName(message.Channel);
+		var requestQueueName = RabbitMqDelivery.ResolveQueueName(_options, message.Channel, message.GetQueue());
 
 		await using var channel = await _connection.CreateChannelAsync();
 
 		await CheckQueueAsync(channel, requestQueueName);
 
-		var responseQueueName = (await channel.QueueDeclareAsync(cancellationToken: cancellationToken)).QueueName;
+		// 回复队列必须声明为独占 + 自动删除，否则每次调用都会在 broker 上永久留下一个服务器命名的队列。
+		var responseQueueName = (await channel.QueueDeclareAsync(exclusive: true, autoDelete: true, cancellationToken: cancellationToken)).QueueName;
 		var consumer = new AsyncEventingBasicConsumer(channel);
 
 		consumer.ReceivedAsync += OnReceivedAsync;
 
 		var props = BuildProperties(message, responseQueueName);
 
-		await Policy.Handle<SocketException>()
-		            .Or<TimeoutException>()
-		            .Or<BrokerUnreachableException>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            })
-		            .ExecuteAsync(async () =>
-		            {
-			            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-			            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-			            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+		try
+		{
+			await Policy.Handle<SocketException>()
+			            .Or<TimeoutException>()
+			            .Or<BrokerUnreachableException>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            })
+			            .ExecuteAsync(async () =>
+			            {
+				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
+				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		consumer.ReceivedAsync -= OnReceivedAsync;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			consumer.ReceivedAsync -= OnReceivedAsync;
+
+			try
+			{
+				await channel.QueueDeleteAsync(responseQueueName, cancellationToken: CancellationToken.None);
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete reply queue '{QueueName}'.", responseQueueName);
+			}
+		}
 
 		async Task OnReceivedAsync(object sender, BasicDeliverEventArgs args)
 		{
@@ -233,18 +270,18 @@ internal class RabbitMqTransporter : ITransporter
 			var response = _serializer.Deserialize<RabbitMqReply<TResponse>>(Encoding.UTF8.GetString(body));
 			if (response.IsSuccess)
 			{
-				task.SetResult(response.Result);
+				task.TrySetResult(response.Result);
 			}
 			else
 			{
-				task.SetException(response.Error);
+				task.TrySetException(response.Error);
 			}
 
 			await Task.CompletedTask;
 		}
 	}
 
-	private static BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
+	private BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
 	{
 		var props = new BasicProperties
 		{
@@ -255,6 +292,8 @@ internal class RabbitMqTransporter : ITransporter
 			ReplyTo = replyTo,
 			MessageId = message.MessageId,
 			UserId = message.User?.Identity?.Name,
+			// 未启用优先级（MaxPriority <= 0）时返回 null，表示不设置该属性。
+			Priority = RabbitMqDelivery.ResolvePriority(message.GetPriority(), _options.MaxPriority) ?? 0,
 		};
 		props.Headers ??= new Dictionary<string, object>();
 		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
@@ -266,15 +305,15 @@ internal class RabbitMqTransporter : ITransporter
 
 	/// <summary>
 	/// 根据通道名称构建 RabbitMQ 队列名称。
-	/// 队列名称格式为：<c>{QueueNamePrefix}:{channel}@{subscriptionId}</c>。
+	/// 队列名称格式为：<c>{channel}@{subscriptionId}</c>，
+	/// 具体规则与消费端共用 <see cref="RabbitMqDelivery.ResolveQueueName"/>。
+	/// 注意 <see cref="RabbitMqBusOptions.QueueNamePrefix"/> 目前**未被使用**，队列名不含该前缀。
 	/// </summary>
 	/// <param name="channel">通道名称。</param>
 	/// <returns>生成的队列名称。</returns>
 	private string GetQueueName(string channel)
 	{
-		var subscriptionId = string.Collapse(_options.SubscriptionId, Assembly.GetEntryAssembly()?.FullName, channel);
-		var requestQueueName = $"{channel}@{subscriptionId}";
-		return requestQueueName;
+		return RabbitMqDelivery.ResolveQueueName(_options, channel);
 	}
 
 	/// <summary>

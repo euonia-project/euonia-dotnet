@@ -45,15 +45,21 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
+			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
 			}
 			else
 			{
-				method.Invoke(target, parameters: criteria);
+				method.Invoke(target, parameters: parameters);
 			}
+
+			// 此处刻意不做数据范围判定：Create 只构造对象、不落库，且按设计由调用方在之后
+			// 填充字段（见框架自带示例 User.CreateAsync）。在字段尚不完整时判定会误杀正常流程，
+			// 而它又保护不了任何东西——真正需要拦截的落库发生在 SaveAsync/InsertAsync。
 			return target;
 		}
 		finally
@@ -70,15 +76,20 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
+			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: criteria));
+				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
 			}
 			else
 			{
-				method.Invoke(target, parameters: criteria);
+				method.Invoke(target, parameters: parameters);
 			}
+
+			// 目标由工厂方法填充：加载完成后才谈得上数据范围
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
 			return target;
 		}
 		finally
@@ -100,8 +111,11 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 同 Create：只构造不落库，不做数据范围判定
 			return target;
 		}
 		finally
@@ -118,8 +132,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：加载完成后才谈得上数据范围
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
 			return target;
 		}
 		finally
@@ -136,8 +154,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
 			return target;
 		}
 		finally
@@ -154,8 +176,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Update);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Update);
 			return target;
 		}
 		finally
@@ -167,24 +193,36 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public async Task<TTarget> SaveAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
 	{
-		var method = target switch
+		// 操作只由 ScopeOperationMap 这一条映射决定（见该类型的备注：三处各写一遍必然漂移）
+		var operation = ScopeOperationMap.Resolve(target);
+
+		var method = operation switch
 		{
-			IEditableObject editableObject => editableObject.State switch
-			{
-				ObjectEditState.New => ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]),
-				ObjectEditState.Changed => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]),
-				ObjectEditState.Deleted => ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]),
-				ObjectEditState.None => throw new InvalidOperationException(),
-				_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
-			},
-			ICommandObject => ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]),
-			IReadOnlyObject => throw new InvalidOperationException("The operation can not apply for ReadOnlyObject."),
-			_ => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken])
+			BusinessOperation.Create => ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>([cancellationToken]),
+			BusinessOperation.Update => ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>([cancellationToken]),
+			BusinessOperation.Delete => ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>([cancellationToken]),
+			BusinessOperation.Execute => ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]),
+			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
-		await InvokeAsync(method, target, [cancellationToken]);
+		ObjectAuthorization.EnsureAuthorized(target, operation);
 
-		return target;
+		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
+		ScopeAuthorization.EnsureAuthorizedBefore(target, operation);
+
+		try
+		{
+			_activator?.InitializeInstance(target);
+			await InvokeAsync(method, target, [cancellationToken]);
+
+			// 保存后再次判定：业务方法可能改动了范围列
+			ScopeAuthorization.EnsureAuthorizedAfter(target, operation);
+			return target;
+		}
+		finally
+		{
+			_activator?.FinalizeInstance(target);
+		}
 	}
 
 	/// <inheritdoc/>
@@ -195,6 +233,10 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
+
+			// 目标由调用方提供：可以前置判定
+			ScopeAuthorization.EnsureAuthorizedBefore(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, [cancellationToken]);
 			return target;
@@ -215,8 +257,12 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Execute);
 			return target;
 		}
 		finally
@@ -234,8 +280,12 @@ public class BusinessObjectFactory : IObjectFactory
 
 		try
 		{
+			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Delete);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
+
+			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
+			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Delete);
 		}
 		finally
 		{
@@ -247,14 +297,33 @@ public class BusinessObjectFactory : IObjectFactory
 
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
 	{
+		var normalized = NormalizeParameters(method, parameters);
 		if (method.IsAsync())
 		{
-			await ((Task)method.Invoke(target, parameters: parameters))!;
+			await ((Task)method.Invoke(target, parameters: normalized))!;
 		}
 		else
 		{
-			method.Invoke(target, parameters: parameters);
+			method.Invoke(target, parameters: normalized);
 		}
+	}
+
+	/// <summary>
+	/// 将调用参数补齐到目标方法的参数数量；未提供的尾随可选参数使用 <see cref="Type.Missing"/>
+	/// 填充，使反射调用应用其默认值。
+	/// </summary>
+	/// <param name="method">目标方法。</param>
+	/// <param name="parameters">已提供的调用参数。</param>
+	/// <returns>补齐后的参数数组。</returns>
+	private static object[] NormalizeParameters(MethodInfo method, object[] parameters)
+	{
+		var methodParameters = method.GetParameters();
+		if (methodParameters.Length <= parameters.Length)
+		{
+			return parameters;
+		}
+
+		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];
 	}
 
 	/// <summary>

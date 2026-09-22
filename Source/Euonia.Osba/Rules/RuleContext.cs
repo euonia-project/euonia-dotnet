@@ -14,6 +14,11 @@ public class RuleContext : IRuleContext
 	private readonly List<RuleResult> _results = new();
 
 	/// <summary>
+	/// 指示上下文是否已完成，防止重复完成导致规则结果被重复处理。
+	/// </summary>
+	private bool _completed;
+
+	/// <summary>
 	/// 初始化 <see cref="RuleContext"/> 类的新实例。
 	/// </summary>
 	/// <param name="completeAction">上下文完成时调用的操作。</param>
@@ -63,6 +68,13 @@ public class RuleContext : IRuleContext
 	/// <inheritdoc />
 	public void Complete()
 	{
+		if (_completed)
+		{
+			return;
+		}
+
+		_completed = true;
+
 		if (Results.Count == 0)
 		{
 			_results.Add(new RuleResult(Rule.Name));

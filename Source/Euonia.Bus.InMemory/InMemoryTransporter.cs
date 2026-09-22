@@ -67,11 +67,12 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			Aborted = cancellationToken
 		};
 
-		var taskCompletion = new TaskCompletionSource();
+		var taskCompletion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.SetCanceled(cancellationToken));
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken));
 		}
 
 		context.Failed += (_, exception) =>
@@ -88,7 +89,14 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
-		await taskCompletion.Task;
+		try
+		{
+			await taskCompletion.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+		}
 	}
 
 	/// <summary>
@@ -109,10 +117,11 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		};
 
 		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
-		var taskCompletion = new TaskCompletionSource<TResponse>();
+		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken), false);
 		}
 
 		try
@@ -129,6 +138,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		}
 		finally
 		{
+			cancellationRegistration.Dispose();
 			context.Responded -= OnResponded;
 			context.Failed -= OnFailed;
 			context.Completed -= OnCompleted;
@@ -171,24 +181,31 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		};
 
 		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
-		var taskCompletion = new TaskCompletionSource<TResponse>();
+		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => taskCompletion.TrySetCanceled(), false);
+			cancellationRegistration = cancellationToken.Register(() => taskCompletion.TrySetCanceled(cancellationToken), false);
 		}
 
 		context.Responded += OnResponded;
 		context.Failed += OnFailed;
 		context.Completed += OnCompleted;
 
-		StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+		try
+		{
+			StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
-		var result = await taskCompletion.Task;
-		context.Responded -= OnResponded;
-		context.Failed -= OnFailed;
-		context.Completed -= OnCompleted;
-		return result;
+			return await taskCompletion.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			context.Responded -= OnResponded;
+			context.Failed -= OnFailed;
+			context.Completed -= OnCompleted;
+		}
 
 		void OnResponded(object sender, MessageRepliedEventArgs args)
 		{
@@ -210,12 +227,18 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	}
 
 	/// <summary>
-	/// 释放资源时重置强引用和弱引用信使的状态。
+	/// 释放传输器自身持有的资源。
 	/// </summary>
 	/// <param name="disposing">指示是否正在主动释放资源。</param>
+	/// <remarks>
+	/// 本类型不持有需要释放的资源。此前这里会调用
+	/// <c>StrongReferenceMessenger.Default.Reset()</c> 与 <c>WeakReferenceMessenger.Default.Reset()</c>：
+	/// 这两个信使是进程级单例，因此释放任意一个传输器实例都会清空进程内所有内存总线的注册，
+	/// 且因为忽略了 <paramref name="disposing"/>，终结器线程同样会触发该副作用。
+	/// 接收者的注销由创建它们的 <see cref="InMemoryRecipientRegistrar"/> 在释放时负责，
+	/// 不会影响其他传输器实例。
+	/// </remarks>
 	protected override void Dispose(bool disposing)
 	{
-		StrongReferenceMessenger.Default.Reset();
-		WeakReferenceMessenger.Default.Reset();
 	}
 }

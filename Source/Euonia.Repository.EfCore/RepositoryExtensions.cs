@@ -4,18 +4,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Nerosoft.Euonia.Repository.EfCore;
 
 /// <summary>
-/// The extensions for <see cref="IRepository{TEntity,TKey}"/>.
+/// 提供 <see cref="IRepository{TEntity,TKey}"/> 的 EF Core 相关扩展方法（预加载、跟踪控制与附加实体）。
 /// </summary>
+/// <remarks>
+/// <see cref="Include{TEntity,TKey}(IRepository{TEntity,TKey},string)"/> 等方法会将查询处理委托追加到仓储的
+/// <see cref="IRepository{TEntity}.Actions"/> 集合，从而在构造查询时生效。
+/// </remarks>
 public static class RepositoryExtensions
 {
 	/// <summary>
-	/// Specifies related entities to include in the query results. The navigation property to be included is specified starting with the type of entity being queried (TEntity).
+	/// 指定查询结果中需要预加载的关联实体，以导航属性名称表示。
 	/// </summary>
-	/// <typeparam name="TEntity">The type of entity being queried.</typeparam>
-	/// <typeparam name="TKey">The type of entity primary key.</typeparam>
-	/// <param name="repository"></param>
-	/// <param name="property"></param>
-	/// <returns>Repository with the related data included.</returns>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="property">要预加载的导航属性名称。</param>
+	/// <returns>已添加预加载行为的仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> Include<TEntity, TKey>(this IRepository<TEntity, TKey> repository, string property)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -25,14 +29,14 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Specifies related entities to include in the query results. The navigation property to be included is specified starting with the type of entity being queried (TEntity).
+	/// 在指定条件成立时，才将关联实体的预加载行为添加到查询中。
 	/// </summary>
-	/// <typeparam name="TEntity">The type of entity being queried.</typeparam>
-	/// <typeparam name="TKey">The type of entity primary key.</typeparam>
-	/// <param name="repository"></param>
-	/// <param name="condition"></param>
-	/// <param name="property"></param>
-	/// <returns>Repository with the related data included.</returns>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="condition">是否应用预加载。</param>
+	/// <param name="property">要预加载的导航属性名称。</param>
+	/// <returns>仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> IncludeIf<TEntity, TKey>(this IRepository<TEntity, TKey> repository, bool condition, string property)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -47,13 +51,13 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Specifies related entities to include in the query results. The navigation properties to be included is specified starting with the type of entity being queried (TEntity).
+	/// 指定查询结果中需要预加载的多个关联实体，以导航属性名称表示。
 	/// </summary>
-	/// <typeparam name="TEntity">The type of entity being queried.</typeparam>
-	/// <typeparam name="TKey">The type of entity primary key.</typeparam>
-	/// <param name="repository"></param>
-	/// <param name="properties"></param>
-	/// <returns>Repository with the related data included.</returns>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="properties">要预加载的导航属性名称集合。</param>
+	/// <returns>已添加预加载行为的仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> Include<TEntity, TKey>(this IRepository<TEntity, TKey> repository, params string[] properties)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -67,14 +71,14 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Specifies related entities to include in the query results. The navigation property to be included is specified starting with the type of entity being queried (TEntity).
+	/// 指定查询结果中需要预加载的关联实体，以强类型表达式表示。
 	/// </summary>
-	/// <typeparam name="TEntity">The type of entity being queried.</typeparam>
-	/// <typeparam name="TKey">The type of entity primary key.</typeparam>
-	/// <typeparam name="TProperty">The type of the related entity to be included.</typeparam>
-	/// <param name="repository"></param>
-	/// <param name="property">A lambda expression representing the navigation property to be included (t => t.Property1).</param>
-	/// <returns>Repository with the related data included.</returns>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <typeparam name="TProperty">要预加载的关联实体的类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="property">表示要预加载的导航属性的表达式，例如 <c>t =&gt; t.Property1</c>。</param>
+	/// <returns>已添加预加载行为的仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> Include<TEntity, TKey, TProperty>(this IRepository<TEntity, TKey> repository, Expression<Func<TEntity, TProperty>> property)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -84,15 +88,15 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Specifies related entities to include in the query results. The navigation property to be included is specified starting with the type of entity being queried (TEntity).
+	/// 在指定条件成立时，才将关联实体的预加载行为（强类型表达式形式）添加到查询中。
 	/// </summary>
-	/// <typeparam name="TEntity">The type of entity being queried.</typeparam>
-	/// <typeparam name="TKey">The type of entity primary key.</typeparam>
-	/// <typeparam name="TProperty">The type of the related entity to be included.</typeparam>
-	/// <param name="repository"></param>
-	/// <param name="condition"></param>
-	/// <param name="property">A lambda expression representing the navigation property to be included (t => t.Property1).</param>
-	/// <returns>Repository with the related data included.</returns>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <typeparam name="TProperty">要预加载的关联实体的类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="condition">是否应用预加载。</param>
+	/// <param name="property">表示要预加载的导航属性的表达式，例如 <c>t =&gt; t.Property1</c>。</param>
+	/// <returns>仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> IncludeIf<TEntity, TKey, TProperty>(this IRepository<TEntity, TKey> repository, bool condition, Expression<Func<TEntity, TProperty>> property)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -107,13 +111,13 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Set whether track data changes or not.
+	/// 设置查询是否跟踪实体的变更。
 	/// </summary>
-	/// <param name="repository"></param>
-	/// <param name="tracking"><c>true</c> if track data changes; otherwise <c>false</c>.</param>
-	/// <typeparam name="TEntity"></typeparam>
-	/// <typeparam name="TKey"></typeparam>
-	/// <returns></returns>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="tracking"><c>true</c> 表示跟踪数据变更（<c>AsTracking</c>），<c>false</c> 表示不跟踪（<c>AsNoTracking</c>）。</param>
+	/// <typeparam name="TEntity">被查询的实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <returns>已添加跟踪行为的仓储实例，以便链式调用。</returns>
 	public static IRepository<TEntity, TKey> Tracking<TEntity, TKey>(this IRepository<TEntity, TKey> repository, bool tracking = true)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>
@@ -123,14 +127,15 @@ public static class RepositoryExtensions
 	}
 
 	/// <summary>
-	/// Attach an exists entity in context.
+	/// 将已存在的实体以未修改状态附加到上下文的变更跟踪器中。
 	/// </summary>
-	/// <typeparam name="TContext"></typeparam>
-	/// <typeparam name="TEntity"></typeparam>
-	/// <typeparam name="TKey"></typeparam>
-	/// <param name="repository"></param>
-	/// <param name="entity"></param>
-	/// <returns></returns>
+	/// <typeparam name="TContext">仓储上下文类型。</typeparam>
+	/// <typeparam name="TEntity">实体类型。</typeparam>
+	/// <typeparam name="TKey">实体主键类型。</typeparam>
+	/// <param name="repository">目标仓储。</param>
+	/// <param name="entity">要附加的实体。</param>
+	/// <returns>附加后的实体。</returns>
+	/// <exception cref="InvalidOperationException">仓储的 <see cref="IRepository{TContext,TEntity,TKey}.Context"/> 不是 <see cref="DbContext"/> 时抛出。</exception>
 	public static TEntity Attach<TContext, TEntity, TKey>(this IRepository<TContext, TEntity, TKey> repository, TEntity entity)
 		where TKey : IEquatable<TKey>
 		where TEntity : class, IEntity<TKey>

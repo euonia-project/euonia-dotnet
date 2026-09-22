@@ -7,6 +7,9 @@ using Nerosoft.Euonia.Threading;
 
 namespace Nerosoft.Euonia.Uow;
 
+/// <summary>
+/// 工作单元拦截器，为标注了 <see cref="UnitOfWorkAttribute"/> 或实现 <see cref="IUnitOfWorkEnabled"/> 的方法提供事务边界。
+/// </summary>
 /// <inheritdoc />
 public class UnitOfWorkInterceptor : IInterceptor
 {
@@ -17,7 +20,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	private readonly IServiceScopeFactory _factory;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UnitOfWorkInterceptor"/> class.
+	/// 初始化 <see cref="UnitOfWorkInterceptor"/> 类的新实例。
 	/// </summary>
 	/// <param name="factory">用于为每个被拦截调用创建作用域的服务作用域工厂。</param>
 	public UnitOfWorkInterceptor(IServiceScopeFactory factory)
@@ -25,7 +28,15 @@ public class UnitOfWorkInterceptor : IInterceptor
 		_factory = factory;
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 拦截方法调用：为需要工作单元的方法创建作用域与工作单元，并在目标方法成功返回后完成工作单元。
+	/// </summary>
+	/// <param name="invocation">当前拦截的调用上下文。</param>
+	/// <remarks>
+	/// 若目标方法不需要工作单元，则直接继续执行原有调用。
+	/// 异步方法（返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/>）会在其结果完成后再提交工作单元；
+	/// 目标方法抛出异常时不执行提交，由工作单元释放时触发失败与回滚语义。
+	/// </remarks>
 	public void Intercept(IInvocation invocation)
 	{
 		var method = invocation.MethodInvocationTarget ?? invocation.Method;
@@ -122,6 +133,12 @@ public class UnitOfWorkInterceptor : IInterceptor
 		return result;
 	}
 
+	/// <summary>
+	/// 解析工作单元是否为事务性，优先取 <see cref="UnitOfWorkAttribute.IsTransactional"/>，其次取 <see cref="UnitOfWorkOptions"/> 配置。
+	/// </summary>
+	/// <param name="attribute">方法或类型上的工作单元特性，可为 <c>null</c>。</param>
+	/// <param name="provider">用于解析 <see cref="UnitOfWorkOptions"/> 的服务提供程序。</param>
+	/// <returns>解析结果；均未配置时返回 <c>false</c>。</returns>
 	private static bool ResolveIsTransactional(UnitOfWorkAttribute attribute, IServiceProvider provider)
 	{
 		return PriorityValueFinder.Find<bool?>(queue =>
@@ -131,6 +148,12 @@ public class UnitOfWorkInterceptor : IInterceptor
 		}, t => t.HasValue) ?? false;
 	}
 
+	/// <summary>
+	/// 解析工作单元的超时时长，优先取 <see cref="UnitOfWorkAttribute.Timeout"/>，其次取 <see cref="UnitOfWorkOptions"/> 配置。
+	/// </summary>
+	/// <param name="attribute">方法或类型上的工作单元特性，可为 <c>null</c>。</param>
+	/// <param name="provider">用于解析 <see cref="UnitOfWorkOptions"/> 的服务提供程序。</param>
+	/// <returns>解析出的超时时长；均未配置时返回 <c>null</c>。</returns>
 	private static TimeSpan? ResolveTimeout(UnitOfWorkAttribute attribute, IServiceProvider provider)
 	{
 		return PriorityValueFinder.Find<TimeSpan?>(queue =>
@@ -140,6 +163,12 @@ public class UnitOfWorkInterceptor : IInterceptor
 		}, t => t.HasValue);
 	}
 
+	/// <summary>
+	/// 判断指定方法是否返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/>。
+	/// </summary>
+	/// <param name="method">要判断的方法。</param>
+	/// <param name="resultType">输出参数：<see cref="Task{TResult}"/> 的结果类型；非泛型 <see cref="Task"/> 或非任务方法时为 <c>null</c>。</param>
+	/// <returns>若为任务返回类型则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
 	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
 	{
 		if (method.ReturnType == typeof(Task))

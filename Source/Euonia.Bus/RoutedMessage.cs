@@ -85,7 +85,7 @@ public abstract class RoutedMessage
 	/// 返回当前实例的字符串表示形式。
 	/// </summary>
 	/// <returns>表示当前实例的字符串。</returns>
-	public override string ToString() => $"{MessageId}:{{GetTypeName()}}";
+	public override string ToString() => $"{MessageId}:{GetTypeName()}";
 }
 
 /// <summary>

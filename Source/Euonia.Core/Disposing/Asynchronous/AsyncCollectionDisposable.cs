@@ -72,11 +72,11 @@ public sealed class AsyncCollectionDisposable : AsyncSingleDisposable<ImmutableQ
     /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
     /// <param name="disposables">要释放的可释放对象。</param>
-    public static CollectionDisposable Create(params IDisposable[] disposables) => new(disposables);
+    public static AsyncCollectionDisposable Create(params IAsyncDisposable[] disposables) => new(disposables);
 
     /// <summary>
     /// 创建一个释放一组可释放对象的可释放对象。
     /// </summary>
     /// <param name="disposables">要释放的可释放对象。</param>
-    public static CollectionDisposable Create(IEnumerable<IDisposable> disposables) => new(disposables);
+    public static AsyncCollectionDisposable Create(IEnumerable<IAsyncDisposable> disposables) => new(disposables);
 }

@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using Nerosoft.Euonia.Threading;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Nerosoft.Euonia.Bus.InMemory;
 
@@ -56,16 +56,84 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 	#endregion
 
 	/// <summary>
-	/// 接收消息包，触发 <see cref="MessageReceived"/> 事件后调用 <see cref="HandleAsync"/> 进行业务处理，
-	/// 最后触发 <see cref="MessageAcknowledged"/> 事件。
+	/// 接收消息包，触发 <see cref="MessageReceived"/> 事件后交由后台泵异步处理，
+	/// 处理完成后再触发 <see cref="MessageAcknowledged"/> 事件。
 	/// </summary>
 	/// <param name="pack">消息包。</param>
-	/// <exception cref="MessageProcessingException">当消息处理过程中发生错误时抛出。</exception>
+	/// <remarks>
+	/// <see cref="IMessenger"/> 的接收契约是同步的（信使在同一线程上同步调用本方法），
+	/// 因此这里不能直接 <c>await</c> 异步处理。此前的实现用 <c>AsyncContext.Run</c> 同步阻塞等待处理完成，
+	/// 使得每次 <c>PublishAsync</c> 都会阻塞调用方线程直到所有处理程序执行完毕
+	/// （在 ASP.NET Core 请求线程下存在饥饿与死锁风险）。
+	/// <para>
+	/// 现在改为投递到接收者自己的串行泵：同一接收者内仍按入队顺序逐个处理，
+	/// 但 <c>PublishAsync</c> 不再等待处理完成。请求-响应（<c>SendAsync</c> / <c>CallAsync</c>）
+	/// 仍然会等待，因为它们 await 的是处理程序写入结果的 <see cref="System.Threading.Tasks.TaskCompletionSource"/>。
+	/// </para>
+	/// </remarks>
 	public void Receive(MessagePack pack)
 	{
 		MessageReceived?.Invoke(this, new MessageReceivedEventArgs(pack.Message, pack.Context));
-		AsyncContext.Run(() => HandleAsync(pack.Message.Channel, pack.Message.Payload, pack.Context, pack.Aborted));
-		MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
+
+		_pending.Enqueue(pack);
+		EnsurePumpRunning();
+	}
+
+	/// <summary>
+	/// 待处理的消息包，由 <see cref="PumpAsync"/> 按入队顺序逐个处理。
+	/// </summary>
+	private readonly ConcurrentQueue<MessagePack> _pending = new();
+
+	/// <summary>
+	/// 泵的运行标志（0 = 空闲，1 = 运行中），用于保证同一接收者内只有一个泵在消费队列。
+	/// </summary>
+	private int _pumping;
+
+	/// <summary>
+	/// 在泵未运行时启动它。
+	/// </summary>
+	private void EnsurePumpRunning()
+	{
+		if (Interlocked.CompareExchange(ref _pumping, 1, 0) == 0)
+		{
+			_ = Task.Run(PumpAsync);
+		}
+	}
+
+	/// <summary>
+	/// 串行消费待处理队列，直到队列为空。
+	/// </summary>
+	private async Task PumpAsync()
+	{
+		try
+		{
+			while (_pending.TryDequeue(out var pack))
+			{
+				try
+				{
+					await HandleAsync(pack.Message.Channel, pack.Message.Payload, pack.Context, pack.Aborted).ConfigureAwait(false);
+				}
+				catch (Exception exception)
+				{
+					// HandleAsync 自身已捕获处理程序异常并转为 context.Failure；
+					// 这里仅兜底，避免后台任务出现未被观察到的异常。
+					Logger.LogError(exception, "Message '{Id}' pump error: {Message}", pack.Context?.MessageId, exception.Message);
+				}
+
+				MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
+			}
+		}
+		finally
+		{
+			Interlocked.Exchange(ref _pumping, 0);
+
+			// 置空闲后必须复查队列：否则与本次退出并发的 Enqueue 可能观察到"泵在运行"而不再启动泵，
+			// 导致该消息永久滞留在队列中。
+			if (!_pending.IsEmpty)
+			{
+				EnsurePumpRunning();
+			}
+		}
 	}
 
 	/// <summary>

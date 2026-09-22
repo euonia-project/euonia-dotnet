@@ -216,6 +216,48 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 		OnItemChanged(default, DictionaryChangedAction.Clear, default, default);
 	}
 
+	/// <summary>
+	/// 如果指定的键尚不存在，则使用指定的值生成新条目，并在添加后引发 Add 更改事件。
+	/// </summary>
+	/// <remarks>
+	/// 如果键已存在，则返回现有值且不引发任何事件；否则添加新条目、引发 Add 事件并返回新生成的值。
+	/// </remarks>
+	/// <param name="key">要检索或添加其值的键。不能为 <c>null</c>。</param>
+	/// <param name="value">键不存在时要添加的值。</param>
+	/// <returns>与键关联的现有值，或新添加的值。</returns>
+	public TValue GetOrAdd(TKey key, TValue value)
+	{
+		return GetOrAdd(key, _ => value);
+	}
+
+	/// <summary>
+	/// 如果指定的键尚不存在，则使用指定工厂生成新条目，并在添加后引发 Add 更改事件。
+	/// </summary>
+	/// <remarks>
+	/// 如果键已存在，则返回现有值且不引发任何事件；否则通过工厂生成值、添加新条目、引发 Add 事件并返回。
+	/// 当另一个并发线程先完成了添加时，返回该线程已添加的值。
+	/// </remarks>
+	/// <param name="key">要检索或添加其值的键。不能为 <c>null</c>。</param>
+	/// <param name="valueFactory">为不存在的键生成值的工厂。不能为 <c>null</c>。</param>
+	/// <returns>与键关联的现有值，或新生成并添加的值。</returns>
+	public TValue GetOrAdd(TKey key, Func<TKey, TValue> valueFactory)
+	{
+		ArgumentNullException.ThrowIfNull(valueFactory);
+
+		if (TryGetValue(key, out var existing))
+		{
+			return existing;
+		}
+
+		var value = valueFactory(key);
+		if (TryAdd(key, value))
+		{
+			return value;
+		}
+
+		return this[key];
+	}
+
 	#endregion
 
 	/// <summary>

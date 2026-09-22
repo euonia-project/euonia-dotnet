@@ -78,6 +78,9 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			_connection.ConnectionInterruptedListener -= OnConnectionInterruptedAsync;
 			_connection.ExceptionListener -= OnConnectionExceptionAsync;
 			_connection.Dispose();
+			// 必须置空：否则 TryConnectAsync 会跳过重建（??= 失效）并对已释放的连接调用
+			// StartAsync，使 CreateSessionAsync 的等待循环永不终止。
+			_connection = null;
 		}
 		catch (IOException exception)
 		{
@@ -153,10 +156,16 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// 在持久连接上创建一个新的 ActiveMQ 会话。
 	/// </summary>
 	/// <returns>表示异步操作的任务，包含创建的 <see cref="ISession"/> 实例。</returns>
+	/// <exception cref="ObjectDisposedException">当连接对象已被释放时抛出。</exception>
+	/// <remarks>
+	/// 已释放的连接不可能再变为已连接状态：若在此处继续循环等待，
+	/// <see cref="TryConnectAsync"/> 会对已释放的连接反复调用 <c>StartAsync</c>，循环无延迟且永不终止。
+	/// </remarks>
 	public async Task<ISession> CreateSessionAsync()
 	{
 		while (!IsConnected)
 		{
+			ObjectDisposedException.ThrowIf(IsDisposed, this);
 			await TryConnectAsync();
 		}
 

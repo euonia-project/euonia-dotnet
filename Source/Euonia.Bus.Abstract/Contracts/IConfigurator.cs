@@ -54,6 +54,20 @@ public interface IConfigurator
 	}
 
 	/// <summary>
+	/// 获取传输策略配置的版本号，每次策略变更时递增。
+	/// </summary>
+	/// <remarks>
+	/// 供缓存「通道 + 类型 → 传输器列表」的组件判断缓存是否仍有效。
+	/// 没有该版本号时，缓存无法感知运行期的策略变更，
+	/// 后配置的传输器会被静默忽略（消息继续走旧传输器或退回默认传输器）。
+	/// <para>
+	/// 默认实现固定返回 <c>0</c>，因此既有实现无需改动即可继续工作；
+	/// 但若其策略可变，应重写并递增该值，否则依赖方无法感知变更。
+	/// </para>
+	/// </remarks>
+	long StrategyVersion => 0;
+
+	/// <summary>
 	/// 使用指定的委托配置消息约定。
 	/// </summary>
 	/// <param name="conventionConfigurator">用于配置 <see cref="IMessageConventionBuilder"/> 的委托。</param>

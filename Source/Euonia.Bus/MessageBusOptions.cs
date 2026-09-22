@@ -16,10 +16,30 @@ public class MessageBusOptions
 	public string DefaultTransporter { get; set; }
 
 	/// <summary>
-	/// 获取或设置需要自动加载的程序集名称列表。
+	/// 获取或设置需要自动扫描并注册消息处理器的程序集名称列表。
 	/// </summary>
 	/// <remarks>
-	///	自动加载程序集的名称列表，用于在应用程序启动时扫描并注册消息处理器和传输器。
+	/// 由 <see cref="ServiceActivator"/> 在应用启动时（用户配置委托之前）执行：
+	/// 逐个加载程序集并扫描其中的处理器类型注册到对应通道，
+	/// 因此配置后无需再手工调用 <c>RegisterChannel(assembly)</c>。
+	/// <para>程序集按**简单名称**加载（例如 <c>MyApp.Handlers</c>）；无法加载时启动即失败并指出具体名称。</para>
+	/// <para>通过 <c>Euonia:Bus:AutoLoadAssemblies</c> 节点配置。</para>
 	/// </remarks>
 	public string[] AutoLoadAssemblies { get; set; }
+
+	/// <summary>
+	/// 获取或设置发件箱（Outbox）模式的配置选项。
+	/// </summary>
+	/// <remarks>
+	/// 通过 <c>Euonia:Bus:Outbox</c> 配置节点进行绑定。
+	/// </remarks>
+	public OutboxOptions Outbox { get; set; } = new();
+
+	/// <summary>
+	/// 获取或设置收件箱（Inbox）模式的配置选项。
+	/// </summary>
+	/// <remarks>
+	/// 通过 <c>Euonia:Bus:Inbox</c> 配置节点进行绑定。
+	/// </remarks>
+	public InboxOptions Inbox { get; set; } = new();
 }

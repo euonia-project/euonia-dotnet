@@ -182,6 +182,20 @@ return result";
 	/// <summary>
 	/// Clears this cache, removing all items in the base cache and all regions.
 	/// </summary>
+	/// <remarks>
+	/// <b>注意爆炸半径</b>：实现为对当前逻辑库执行 <c>FLUSHDB</c>，清空的是**整个数据库**，
+	/// 而不是「本缓存」——同一逻辑库中其他应用的键、以及其他缓存类型的条目都会被一并删除
+	/// （例如 <c>Euonia.Concurrency.Redis</c> 的分布式锁键）。
+	/// <para>
+	/// 该 handle 没有自己的键空间前缀（键前缀由上层 <c>BaseCacheService.RewriteKey</c> 添加，句柄无从得知），
+	/// 因此无法把删除限定到自身条目。生产环境请为缓存使用独立的逻辑库（<c>Database</c>）。
+	/// </para>
+	/// <para>
+	/// <c>FLUSHDB</c> 需要连接启用 <c>allowAdmin</c>；未启用时 Redis 会拒绝执行，
+	/// 此时抛出带有可操作说明的 <see cref="NotSupportedException"/>。
+	/// </para>
+	/// </remarks>
+	/// <exception cref="NotSupportedException">当连接未启用 <c>allowAdmin</c> 而无法执行 <c>FLUSHDB</c> 时抛出。</exception>
 	public override void Clear()
 	{
 		try
@@ -197,9 +211,16 @@ return result";
 				});
 			}
 		}
-		catch (NotSupportedException ex)
+		catch (Exception exception) when (exception is not OperationCanceledException)
 		{
-			throw new NotSupportedException($"Clear is not available because '{ex.Message}'", ex);
+			// 此前只捕获 NotSupportedException，但 StackExchange.Redis 实际抛出的是
+			// RedisCommandException（"This operation is not available unless admin mode is enabled: FLUSHDB"），
+			// 于是给用户看的可操作提示从不出现，只有一条原始驱动错误。
+			throw new NotSupportedException(
+				$"Clear is not available because clearing this cache issues FLUSHDB, which requires 'allowAdmin=true' on the Redis connection (database {_redisConfiguration.Database}). " +
+				"Note that FLUSHDB clears the entire logical database, not just this cache; use a dedicated database for caching. " +
+				$"Underlying error: {exception.Message}",
+				exception);
 		}
 	}
 

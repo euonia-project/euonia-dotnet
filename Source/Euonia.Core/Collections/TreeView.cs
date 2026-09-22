@@ -16,7 +16,7 @@ public class TreeView<TEntity>
     /// 获取或设置子节点集合。
     /// </summary>
     /// <value>子节点集合。</value>
-    public virtual ICollection<TreeView<TEntity>> Children { get; set; }
+    public virtual ICollection<TreeView<TEntity>> Children { get; set; } = new List<TreeView<TEntity>>();
 
     /// <summary>
     /// 获取或设置属性字典。

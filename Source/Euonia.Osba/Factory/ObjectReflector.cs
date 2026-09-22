@@ -10,6 +10,11 @@ public class ObjectReflector
 {
 	private const BindingFlags BINDING_FLAGS = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
+	/// <summary>
+	/// 工厂方法特性名称的前缀：约定方法名需在去除该前缀后展开，使 <c>Update</c> 与 <c>FactoryUpdate</c> 两种写法都成立。
+	/// </summary>
+	private const string FactoryPrefix = "Factory";
+
 	private static readonly string[] _collectionTypesName =
 	[
 		typeof(IList<>).FullName,
@@ -19,6 +24,7 @@ public class ObjectReflector
 
 	private static readonly ConcurrentDictionary<Type, List<Tuple<PropertyInfo, Type, bool, object>>> _propertyCache = new();
 	private static readonly ConcurrentDictionary<string, MethodInfo> _factoryMethods = new();
+	private static readonly ConcurrentDictionary<Type, string[]> _conventionalMethodNames = new();
 
 	internal static List<Tuple<PropertyInfo, Type, bool, object>> GetAutoInjectProperties(Type objectType)
 	{
@@ -81,13 +87,17 @@ public class ObjectReflector
 		{
 			foreach (var candidate in candidates)
 			{
-				var score = 0;
 				var methodParameters = candidate.Item1.GetParameters();
-				if (methodParameters.Length != parameterCount)
+
+				// 目标方法的参数数量可以多于传入条件，多出的参数必须带默认值（可选参数）
+				var optionalCount = methodParameters.Length - parameterCount;
+				if (optionalCount < 0 || (optionalCount > 0 && methodParameters.Skip(parameterCount).Any(t => !t.HasDefaultValue)))
 				{
 					continue;
 				}
 
+				// 可选参数匹配降低优先级，使长度精确匹配的重载优先
+				var score = -Math.Max(optionalCount, 0);
 				var index = 0;
 
 				if (criteria!.GetType() == typeof(object[]))
@@ -124,9 +134,11 @@ public class ObjectReflector
 		{
 			foreach (var (method, score) in candidates)
 			{
-				if (method.GetParameters().Length == 0)
+				var methodParameters = method.GetParameters();
+				if (methodParameters.Length == 0 || methodParameters.All(t => t.HasDefaultValue))
 				{
-					matches.Add(Tuple.Create(method, score));
+					// 无参数方法优先于全为可选参数的方法
+					matches.Add(Tuple.Create(method, score - methodParameters.Length));
 				}
 			}
 		}
@@ -471,15 +483,48 @@ public class ObjectReflector
 	/// </summary>
 	/// <param name="attributeType">特性类型。</param>
 	/// <returns>约定的方法名称数组。</returns>
-	private static string[] GetConventionalMethodNames(Type attributeType)
+	/// <remarks>
+	/// 特性名本身带有 <c>Factory</c> 前缀（如 <see cref="FactoryUpdateAttribute"/>），
+	/// 需先去前缀再展开，否则会得到 <c>FactoryFactoryUpdate</c> 这类永不匹配的名称，
+	/// 使 <c>Update</c> / <c>UpdateAsync</c> 这一半约定形同虚设。
+	/// 对 <see cref="FactoryUpdateAttribute"/> 返回
+	/// <c>Update</c>、<c>UpdateAsync</c>、<c>FactoryUpdate</c>、<c>FactoryUpdateAsync</c>。
+	/// </remarks>
+	internal static string[] GetConventionalMethodNames(Type attributeType)
 	{
-		var validNames = new[]
+		return _conventionalMethodNames.GetOrAdd(attributeType, static type =>
 		{
-			$"Factory{attributeType.Name.Replace(nameof(Attribute), string.Empty)}",
-			$"Factory{attributeType.Name.Replace(nameof(Attribute), string.Empty)}Async",
-			$"{attributeType.Name.Replace(nameof(Attribute), string.Empty)}",
-			$"{attributeType.Name.Replace(nameof(Attribute), string.Empty)}Async"
-		};
-		return validNames;
+			// FactoryUpdateAttribute -> FactoryUpdate
+			var name = type.Name.Replace(nameof(Attribute), string.Empty);
+
+			// FactoryUpdate -> Update（前缀后为空时保持不变，避免生成空前缀名称）
+			var operation = name.StartsWith(FactoryPrefix, StringComparison.Ordinal) && name.Length > FactoryPrefix.Length
+				? name[FactoryPrefix.Length..]
+				: name;
+
+			return (string[])[operation, $"{operation}Async", name, $"{name}Async"];
+		});
+	}
+
+	/// <summary>
+	/// 判断方法是否为指定操作对应的工厂方法：标记了对应的工厂方法特性，或符合约定的方法名。
+	/// </summary>
+	/// <param name="method">待判断的方法。</param>
+	/// <param name="attributeType">工厂方法特性类型。</param>
+	/// <returns>是工厂方法则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <remarks>
+	/// <para>
+	/// 判定规则：标记了工厂方法特性的方法不限定名称；未标记的方法必须严格匹配约定名称
+	/// （<see cref="GetConventionalMethodNames"/>，大小写敏感），拼写不符即不予识别。
+	/// </para>
+	/// <para>
+	/// 该方法与工厂方法查找（<see cref="FindFactoryMethod{TTarget}(Type, object[])"/>）使用同一套判定规则，
+	/// 确保"能被工厂调用的方法"与"参与权限要求收集的方法"始终一致。
+	/// </para>
+	/// </remarks>
+	internal static bool IsFactoryMethod(MethodInfo method, Type attributeType)
+	{
+		return method.IsDefined(attributeType, true)
+		       || GetConventionalMethodNames(attributeType).Contains(method.Name);
 	}
 }

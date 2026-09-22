@@ -53,14 +53,16 @@ public class ValidationInterceptor : IInterceptor
 			var parameter = parameters[index];
 			var argument = args[index];
 
-			if (!parameter.ParameterType.IsInstanceOfType(argument))
-			{
-				continue;
-			}
-
 			if (parameter.NotNullAttribute != null && argument == null)
 			{
 				throw new ValidationException($"Parameter '{parameter.Name}' is required in method '{method.Name}'.");
+			}
+
+			// null 实参与任何引用类型都不匹配（IsInstanceOfType(null) 恒为 false）；
+			// 因此类型检查放在 NotNull 检查之后，避免 null 实参在 NotNull 触发前被跳过。
+			if (!parameter.ParameterType.IsInstanceOfType(argument))
+			{
+				continue;
 			}
 
 			if (parameter.ValidationAttribute != null)

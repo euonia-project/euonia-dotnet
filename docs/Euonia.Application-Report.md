@@ -1,0 +1,669 @@
+# Euonia.Application 报告（修复补全 + 实用功能增强 一/二/三）
+
+## 第一部分 修复与测试补全
+
+### 概述
+对 Euonia.Application 做一轮「修复 + 测试补全」：
+
+- 修复 **`[NotNull]` 参数检查死代码**导致空参不抛异常的缺陷（先红灯后修复）；
+- 补全此前无测试覆盖的区域：**锁令牌占位符**（`{param}` / `{param.Property}`）语义、**UseCase 接口族**（含非泛型入口适配）、**`DefaultUseCasePresenter`** 事件行为。
+
+验证结果：`Euonia.Build.slnx` 0 错误 0 警告；`Euonia.Test.slnx` 0 错误（Application.Tests 仅剩既有 xUnit1031 警告，非本次引入）；全仓 14 个测试程序集 `dotnet exec` 全绿（Application.Tests **38/38**，由 21 扩至 38）。
+
+---
+
+## 一、缺陷修复：`[NotNull]` 空参不抛异常（`Interceptors/ValidationInterceptor.cs`）
+
+### 现象
+`ValidationInterceptor.Intercept` 先按参数类型过滤实参，再检查 `[NotNull]`：
+
+```csharp
+if (!parameter.ParameterType.IsInstanceOfType(argument))
+{
+    continue;                            // ①
+}
+
+if (parameter.NotNullAttribute != null && argument == null)
+{
+    throw new ValidationException(...);  // ② 死代码
+}
+```
+
+`Type.IsInstanceOfType(null)` 对任意类型恒返回 `false`，因此 **null 实参总在 ① 就被 `continue` 跳过**，② 的 `[NotNull]` 校验永远无法触发：空参静默通过，违背方法的显式契约。
+
+### 修复
+将 `[NotNull]` 空参检查**前移**到类型匹配过滤之前，保证 null 实参先命中校验：
+
+```csharp
+if (parameter.NotNullAttribute != null && argument == null)
+{
+    throw new ValidationException($"Parameter '{parameter.Name}' is required in method '{method.Name}'.");
+}
+
+if (!parameter.ParameterType.IsInstanceOfType(argument))
+{
+    continue;
+}
+
+if (parameter.ValidationAttribute != null)
+{
+    Validate(argument, parameter.ParameterType);
+}
+```
+
+类型检查仅用于过滤「非 null 但类型不匹配」的实参，不再角色混淆地吞掉 null。
+
+### 回归测试（`ValidationInterceptorTests.cs`，新增 4 用例）
+| 用例 | 覆盖 |
+| --- | --- |
+| `NotNullParameter_WithNullArgument_ShouldThrow` | **红灯验证**：修复前 null 实参不抛异常（`Assert.ThrowsAsync` 失败 "No exception was thrown"）；修复后抛 `ValidationException` |
+| `NotNullParameter_WithValueArgument_ShouldPass` | 有值实参正常通过并返回结果 |
+| `ValidationAttribute_WithInvalidPayload_ShouldThrow` | `[Validation]` 参数内嵌 `IValidatableObject` 校验失败抛 `ValidationException` |
+| `ValidationAttribute_WithValidPayload_ShouldPass` | `[Validation]` 参数校验通过并返回结果 |
+
+> 测试服务 `ValidationTestService` 同时实现接口代理路径（特性标注在实现类方法上），并在 `[NotNull]`/`[Validation]` 两种特性下验证。
+
+---
+
+## 二、测试补全：锁令牌占位符语义（`LockTokenTests.cs`，新增 3 用例）
+
+锁令牌支持 `{parameterName}` 与 `{parameterName.PropertyName}` 占位符（`LockInterceptor.ResolveToken`），此前无任何测试。本次以「并发/互斥」反向验证占位符**确实按实参值替换**：
+
+| 用例 | 覆盖 |
+| --- | --- |
+| `PlaceholderToken_DifferentIds_ShouldRunConcurrently` | token `"item:{id}"`，两个不同 id ⇒ 两个独立信号量 ⇒ 并发到达（MaxConcurrent=2）。若占位符未替换（退化为字面令牌）则 MaxConcurrent 只能为 1 |
+| `PlaceholderToken_SameId_ShouldSerialize` | 相同 id ⇒ 同一把锁 ⇒ 10 个任务串行（MaxConcurrent=1） |
+| `NestedPropertyPlaceholder_DifferentPayloads_ShouldRunConcurrently` | token `"nested:{payload.Id}"`，嵌套属性占位符按实参属性值替换 ⇒ 并发到达（MaxConcurrent=2） |
+
+> 测试服务 `TokenLockService` 使用延迟临界区 + `MaxConcurrent` 静态计数，可靠区分"分锁并发"与"共锁互斥"。
+
+---
+
+## 三、测试补全：UseCase 接口族与 Presenter（`UseCaseTests.cs`，新增 10 用例）
+
+### `UseCaseTests`（5 用例）
+| 用例 | 覆盖 |
+| --- | --- |
+| `TypedUseCase_ShouldReturnOutput` | `IUseCase<TInput,TOutput>.ExecuteAsync(TInput)` 返回强类型输出 |
+| `NonGenericEntry_ShouldRouteToTypedUseCase` | 经非泛型 `IUseCase.ExecuteAsync(object)` 入口正确分派到泛型实现并强转类型 |
+| `NonOutputUseCase_ShouldReturnEmptyOutput` | `INonOutputUseCase<TInput>` 执行副作用后返回 `EmptyUseCaseOutput` |
+| `NonInputUseCase_ShouldIgnoreEmptyInput` | `INonInputUseCase<TOutput>` 忽略 `EmptyUseCaseInput` 直接产出输出 |
+| `ParameterlessUseCase_ShouldReturnEmptyInputAndOutput` | `IParameterlessUseCase` 无参执行，经非泛型入口返回 `EmptyUseCaseOutput` |
+
+### `DefaultUseCasePresenterTests`（5 用例）
+| 用例 | 覆盖 |
+| --- | --- |
+| `Ok_ShouldSetOutputAndRaiseOnSucceed` | `Ok(output)` 设置 `Output` 并触发 `OnSucceed`（携带输出） |
+| `Error_OrdinaryException_ShouldRaiseOnFailed` | 普通异常触发 `OnFailed` |
+| `Error_CancellationException_ShouldRaiseOnCanceled` | `OperationCanceledException` 触发 `OnCanceled` |
+| `Dispose_ShouldDetachAllEventHandlers` | `Dispose` 后清空事件订阅（不再触发） |
+| `Ok_WithoutSubscribers_ShouldNotThrow` | 无订阅者时 Ok/Error 均不抛空引用 |
+
+---
+
+## 四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **38/38**（21 → 38，新增 17） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+> 注：本机 `dotnet test`（xUnit.v3 MTP 适配器）会报 "Zero tests ran"/exit 5 误报，统一用 `dotnet exec <TestDll>` 跑真实测试。
+
+## 五、遗留观察（未改动，供后续决策）
+- **`ValidationInterceptor` 的类型过滤在非 null 情形基本不失效**：接口代理下 `invocation.MethodInvocationTarget` 优先取实现类方法，参数特性标注在实现类或接口方法均可命中——这与 `LockInterceptor`/`AuthorizationInterceptor` 的属性查找策略一致，均已有回归覆盖。本次仅修正 null 被提前跳过的问题。
+- **`UserContextBehavior` 仍有未测试的空代码块**（`{ /* prevent code analysis */ }`，`Behaviors/UserContextBehavior.cs:68`）：无副作用，可后续清理；其元数据注入依赖 scoped 的 `UserPrincipal`/`IRequestContextAccessor` 模拟，留待需要时补测。
+- **锁令牌解析走 `MethodInvocationTarget ?? Method`**：占位符参数名取自实现类方法；若接口与实现的参数名不一致，占位符匹配以实现类为准，接口上标注占位符时请保持参数名一致。
+
+---
+
+# 第二部分 实用功能增强
+
+## 一、概述
+在「修复 + 测试补全」基础上，为 Euonia.Application 增加一批实用功能并配套测试：
+
+1. **UseCase 执行器**（`IUseCaseExecutor` / `UseCaseExecutor`）：统一「执行用例 + 结果分发」入口，串联全部四类 UseCase 与 presenter；
+2. **UserContext 强化**：元数据键提取为常量、清理死代码块、补行为注入测试；
+3. **Logging/Tracing 拦截器测试**：基于内存日志捕获验证日志行为；
+4. **应用服务筛选注册**：`AddApplicationService` 谓词筛选重载 + `IServiceContext` 类型筛选支持；
+5. **`BaseApplicationService` 便捷属性**：新增 `RequestContext` / `RequestAborted` / `Logger`；
+6. **类级授权**：`AuthorizationInterceptor` 支持类级 `[Authorize]`，并补行为测试。
+
+验证结果：`Euonia.Build.slnx` 0 错误 0 警告；`Euonia.Test.slnx` 0 错误（仅既有 xUnit1031 警告）；Application.Tests **67/67**（38 → 67，新增 29）；全仓 14 程序集全绿。
+
+## 二、UseCase 执行器（新增 `UseCase/IUseCaseExecutor.cs` + `UseCase/UseCaseExecutor.cs`）
+
+此前 UseCase 与 presenter 各自独立，调用方需自行编写 try/catch 分发。执行器收敛该过程：
+
+```csharp
+public interface IUseCaseExecutor
+{
+    Task ExecuteAsync<TInput, TOutput>(IUseCase<TInput, TOutput> useCase, TInput input, IUseCasePresenter<TOutput> presenter, CancellationToken cancellationToken = default);
+    Task ExecuteAsync<TInput>(INonOutputUseCase<TInput> useCase, TInput input, IUseCasePresenter<EmptyUseCaseOutput> presenter, ...);
+    Task ExecuteAsync<TOutput>(INonInputUseCase<TOutput> useCase, IUseCasePresenter<TOutput> presenter, ...);
+    Task ExecuteAsync(IParameterlessUseCase useCase, IUseCasePresenter<EmptyUseCaseOutput> presenter, ...);
+}
+```
+
+- 成功 → `presenter.Ok(output)`；
+- 失败（含 `OperationCanceledException`）→ `presenter.Error(exception)`，由 presenter 自行决定取消语义；
+- 无输出/无输入/无参用例经 `EmptyUseCaseOutput.Instance` 与 `EmptyUseCaseInput` 适配到统一路径；
+- 已注册到 DI：`ApplicationModule` 中 `IUseCaseExecutor → UseCaseExecutor`（Transient）。
+
+测试（`UseCaseTests.cs` 新增 `UseCaseExecutorTests`，7 用例）：typed 成功分发、异常分发、`NonOutput`/`NonInput`/`Parameterless` 适配、取消分发、DI 可解析。
+
+## 三、UserContext 强化（`Behaviors/UserContextMetadataKeys.cs` + `Behaviors/UserContextBehavior.cs`）
+
+- **键名常量化**：`Authorization` 与 `$nerosoft:user.*` 四键提取为 `UserContextMetadataKeys`，消除实现与消费两端的魔法字符串；
+- **清理死代码**：移除上一轮遗留的空代码块 `{ /* prevent code analysis */ }`；
+- 逻辑不变：Bearer 令牌（非 `Bearer null`）写入 `Authorization`，已认证用户写入 name/id/code/tenant。
+
+测试（`UserContextBehaviorTests.cs`，6 用例，覆盖常量语义与回归）：有 token 写入、无 token 不写入、`Bearer null` 不写入、已认证用户四键写入、匿名用户不写用户键、`next` 正常调用。
+
+> 注：行为依赖 scoped 的 `UserPrincipal`/`IRequestContextAccessor`，测试通过 `StubRequestContextAccessor`（singleton 注册）+ `AddScoped` 用户实例注入。
+
+## 四、Logging/Tracing 拦截器测试（新增 `InterceptorTests.cs`）
+
+此前五类拦截器中 Logging/Tracing 无任何直接测试。本次新建内存日志提供程序 `InMemoryLoggerProvider` 捕获条目并断言：
+
+| 用例 | 覆盖 |
+| --- | --- |
+| `LoggingInterceptor_DebugEnabled_ShouldLogMethodAndArguments` | Debug 级别记录方法名与参数 JSON |
+| `LoggingInterceptor_DebugDisabled_ShouldNotLog` | Debug 未启用时零日志输出 |
+| `LoggingInterceptor_Exception_ShouldLogErrorAndRethrow` | 异常以 Error 记录后原样重抛（`DivideByZeroException`） |
+| `TracingInterceptor_WithAccessorAndDebug_ShouldLogTrace` | 注入 `IRequestContextAccessor` 且 Debug 启用时输出 `TraceInfo` |
+| `TracingInterceptor_WithoutAccessor_ShouldNotLog` | 未注入访问器时无 `TraceInfo`（避免 StackTrace 开销） |
+
+## 五、服务筛选注册（`Extensions/ServiceCollectionExtensions.cs` + `Seedwork/IServiceContext.cs`）
+
+- **`AddApplicationService(Assembly, lifetime, Func<Type,bool> filter)` 重载**：现有双参重载转发（filter=null 不筛选）；私有 `AddApplicationService(TypeInfo[], lifetime, filter)` 在既有「IsClass + 非抽象 + 实现 IApplicationService」基础上追加谓词；
+- **`IServiceContext.ApplicationServiceTypeFilter`**：接口新增属性，`ServiceContextBase` 默认返回 null（不筛选），派生上下文可覆写；`Register<TService>()` 扫描时自动应用。
+
+测试（`ServiceRegistrationFeatureTests.cs`，4 用例）：谓词筛选只注册 Alpha、无谓词全注册、`AlphaOnlyServiceContext`（覆写筛选器）经 `Register<>` 生效、默认上下文全注册。
+
+## 六、BaseApplicationService 便捷属性（`Services/BaseApplicationService.cs`）
+
+新增三个懒解析便捷属性，减少派生服务样板代码：
+
+- `RequestContext`：当前请求上下文（无访问器或请求外为 null）；
+- `RequestAborted`：当前请求取消令牌（非请求流内为 `CancellationToken.None`）；
+- `Logger`：以当前服务类型为类别的日志记录器（`ILoggerFactory` 缺失时回退 `NullLogger`）。
+
+测试（`ServiceRegistrationFeatureTests.cs`，2 用例）：解析 `ILoggerProbeService`（显式接口实现暴露基类属性）验证 `Logger` 非空、无请求流时 `RequestContext` 为 null 且 `RequestAborted == None`。
+
+## 七、类级 [Authorize]（`Interceptors/AuthorizationInterceptor.cs`）
+
+属性查找从「目标方法 / 接口方法」扩展到「目标声明类型 / 接口声明类型」：
+
+```csharp
+key.Target.GetCustomAttribute<AuthorizeAttribute>()
+?? key.Interface.GetCustomAttribute<AuthorizeAttribute>()
+?? key.Target.DeclaringType?.GetCustomAttribute<AuthorizeAttribute>()
+?? key.Interface.DeclaringType?.GetCustomAttribute<AuthorizeAttribute>()
+```
+
+实现类标注 `[Authorize]` 时，其全部方法均受保护（无需逐方法标注）。
+
+测试（`AuthorizationInterceptorTests.cs`，5 用例）：类级 `[Authorize(Roles="admin")]` 下「管理员放行 / 非管理员抛 `UnauthorizedAccessException` / 匿名抛 `AuthenticationException`」+ 方法级角色授权通过/拒绝。
+
+## 八、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **67/67**（38 → 67，新增 29） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 九、遗留观察（未改动，供后续决策）
+
+- **类级 `[Authorize]` 与缓存键**：`_attributeCache` 以 `(MethodInfo Target, MethodInfo Interface)` 为键，类级查找按目标方法声明类型进行；若同一实现类被多个接口代理，仍逐方法命中缓存，性能无虞。
+- **`UseCaseExecutor` 的容器解析重载**：`ExecuteAsync<TUseCase,...>` 直接以类型参数从 `IServiceProvider` `GetRequiredService`，注册备用类型；若需要更细粒度的作用域/生命周期控制，可经 `IServiceScopeFactory` 每次新建作用域，留待后续。
+- **`TracingInterceptor` 依赖 `IRequestContextAccessor` 判定是否启用**；`CorrelationIdBehavior` 已补上链路标识透传，若需将 CorrelationId 一并写入日志条目或 `TraceInfo`，可作为后续增强。
+
+---
+
+# 第三部分 实用功能增强（二）
+
+对 Euonia.Application 追加第二批实用功能：日志脱敏、用户上下文重建、UseCase 容器解析、关联 ID 透传。全程先补测试后实现，全仓无回归。
+
+## 十、日志脱敏：`SensitiveDataAttribute` + `LoggingInterceptor` 掩码
+
+新增 `Attributes/SensitiveDataAttribute.cs`（`AttributeTargets.Parameter`，自带可配置 `Mask`，默认 `***`）。`LoggingInterceptor` 在记录参数前按以下规则掩码：
+
+1. 参数名命中内置敏感关键字（`password`/`passwd`/`pwd`/`secret`/`token`/`accessToken`/`refreshToken`/`apikey`/`apiKey`/`key`/`authorization`/`credential`/`cookie`/`connectionString`，`OrdinalIgnoreCase`）；
+2. 参数标注 `[SensitiveData]`。
+
+每个方法的敏感性数组经 `ConcurrentDictionary<MethodInfo,bool[]>` 缓存，避免每次调用反射枚举；掩码替换为 `***` 后仍以 Debug 级 JSON 序列化记录。异常分支行为不变（Error 级日志后原样重抛）。
+
+测试（`InterceptorTests.cs`，3 新增）：关键字命中掩码、`[SensitiveData]` 特性掩码、普通参数原值记录。
+
+## 十一、用户上下文重建：`UserContextExtensions`
+
+与 `UserContextBehavior` 写入互为镜像，新增 `Extensions/UserContextExtensions.cs`：
+
+- `GetAuthorizationToken()`：读取 `Authorization` 元数据键；
+- `GetUserPrincipal()`：读取 `UserName`/`UserId`/`UserCode`/`UserTenant` 四键，任一存在即以 `Bearer` 身份类型构造 `ClaimsPrincipal` 重建 `UserPrincipal`；全部缺失返回 `null`。
+
+测试（`UserContextBehaviorTests.cs`，5 新增）：写入→读取全字段往返一致、无用户键返回 null、部分键仅重建可用声明、令牌读取、无令牌返回 null。
+
+## 十二、UseCase 容器解析：`IUseCaseExecutor` 重载
+
+`UseCaseExecutor` 注入 `IServiceProvider`，新增 4 个按类型参数的解析重载（类型参数约束与四类用例家族一一对应）：
+
+```csharp
+ExecuteAsync<TUseCase, TInput, TOutput>(input, presenter, ...)     // where TUseCase : IUseCase<,>
+ExecuteAsync<TUseCase, TInput>(input, presenter, ...)              // where TUseCase : INonOutputUseCase<>
+ExecuteAsync<TUseCase, TOutput>(presenter, ...)                    // where TUseCase : INonInputUseCase<>
+ExecuteAsync<TUseCase>(presenter, ...)                             // where TUseCase : IParameterlessUseCase
+```
+
+用例经 `GetRequiredService<TUseCase>()` 解析后走既有 `ExecuteCoreAsync` 分发路径。测试改造：既有用例测试改用 `CreateExecutor` 辅助（注入 `IServiceProvider`）。
+
+测试（`UseCaseTests.cs`，5 新增）：四个解析重载正常执行、未注册用例分发错误。
+
+## 十三、关联 ID 透传：`CorrelationIdBehavior`
+
+新增 `Behaviors/CorrelationIdBehavior.cs`，在管道中按优先级回填 `MessageHeaders.CorrelationId` / `RequestTraceId` 到消息元数据：
+
+1. 请求上下文 `TraceIdentifier` / `Request-Id` 请求头；
+2. 消息元数据既有 `RequestTraceId` / `CorrelationId`；
+3. 信封自身 `CorrelationId`；
+4. 全部缺失时生成 `GuidType.SequentialAsString`。
+
+已注册到 `ApplicationModule.cs`（顺序在 `ValidationBehavior`、`UserContextBehavior` 之后，链接口标识与用户上下文一并透传）。
+
+测试（`CorrelationIdBehaviorTests.cs`，6 用例）：TraceIdentifier 回填两键、Request-Id 请求头、无请求上下文时沿信封既有值、既有元数据复用、全缺失时生成新值、委托回调。
+
+## 十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **86/86**（67 → 86，新增 19） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 十五、遗留观察（未改动，供后续决策）
+
+- **脱敏覆盖范围**：现仅按参数名/特性掩码，未对复杂对象内部敏感属性（如输入 DTO 里的 `Password` 属性）逐字段脱敏；如需可加「类型级敏感属性声明」支持。
+- **`UseCaseExecutor` 生命周期**：容器解析重载使用注入的根 `IServiceProvider`，scoped 用例的解析范围取决于执行器自身的作用域；若需每个请求独立作用域可注入 `IServiceScopeFactory`。
+- **`CorrelationIdBehavior` 与 Web 层联动**：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第四部分 实用功能增强（三）
+
+对 Euonia.Application 追加第三批实用功能：对象图脱敏、UseCase 容器 scoped 解析、`BaseApplicationService` 执行器便捷属性。全程先补测试后实现，全仓无回归。
+
+## 十六、对象图脱敏：`SensitiveDataMasker` 落地遗留项
+
+上批遗留的「DTO 内部敏感属性逐字段脱敏」在本批实现。`SensitiveDataAttribute` 目标扩展为 参数/属性/字段/类（`Attributes/SensitiveDataAttribute.cs`）；新增 `Interceptors/SensitiveDataMasker.cs` 提供递归脱敏：
+
+- **成员级**：属性/字段标注 `[SensitiveData]` 时替换为掩码（尊重成员自定义 `Mask`）；
+- **类型级**：类型自身标注时整体掩码；`System`/`Microsoft`/`Newtonsoft`/`Castle` 等命名空间视为不透明，不递归展开（避免运行时结构炸日志）；
+- **集合/字典**：枚举成员逐项脱敏；循环引用经 `ReferenceEqualityComparer` + 深度上限（8）防护；返回脱敏副本（字典/列表），不修改原对象。
+
+`LoggingInterceptor.GetArguments` 现对每个非关键字命中的参数调用 `SensitiveDataMasker.Mask`，即复杂 DTO 里的敏感成员在序列化前即被替换（`Interceptors/LoggingInterceptor.cs:113`）。
+
+测试：`SensitiveDataMaskerTests.cs`（6 用例：null / 标量透传 / 敏感属性掩码 / 嵌套递归 / 集合逐项 / 循环引用不爆栈）+ `InterceptorTests.cs`（2 用例：DTO 内部掩码、自定义掩码文本）。
+
+## 十七、UseCase 容器 scoped 解析：`IServiceScopeFactory`
+
+上批遗留的「scoped 用例作用域」复核发现：默认 MS DI 容器解析 scoped 服务需经 `IServiceScopeFactory` 每次新建作用域，否则从根容器解析会抛异常或得到错误实例。`UseCaseExecutor` 改为持有 `IServiceScopeFactory`，容器解析重载在**每次执行新建作用域**内 `GetRequiredService<TUseCase>()`，scoped 注册的用例及其依赖每次执行获得独立实例（`UseCase/UseCaseExecutor.cs:23`）。
+
+测试（`UseCaseTests.cs`，2 新增）：scoped 用例每次执行新建实例（`InstancesCreated == 2`）、scoped 依赖正确注入（`ScopedCounter` 非空）。
+
+## 十八、`BaseApplicationService.Executor` 便捷属性
+
+`BaseApplicationService` 新增 `Executor`（懒加载 `IUseCaseExecutor`），派生应用服务可直接调用用例执行（`Services/BaseApplicationService.cs:56`）。
+
+测试（`ServiceRegistrationFeatureTests.cs`，1 新增）：`IExecutorProbeService` 解析到非空执行器；`CreateLoggingProvider` 补注册 `IUseCaseExecutor`。
+
+## 十九、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **97/97**（86 → 97，新增 11） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十、遗留观察（未改动，供后续决策）
+
+- **掩码性能**：`SensitiveDataMasker` 每次调用全量反射读取属性值（示例对象图较小）；若用于高吞吐入参日志，可缓存成员反射信息或以表达式树编译属性读取器。
+- **不透明命名空间策略**：`System`/`Microsoft` 等整类掩码可能吞掉有诊断价值的框架类型；如需细粒度可从掩码改为「类型名 + 掩码」占位。
+- **`TracingInterceptor` 链路 ID 集成**：`CorrelationIdBehavior` 已把标识写入元数据，但追踪日志（`TraceInfo`）尚未携带 CorrelationId；如需按链路聚合可让 `TracingInterceptor` 读取当前请求/元数据后一并输出。
+
+---
+
+# 第五部分 实用功能增强（四）
+
+对 Euonia.Application 追加第四批实用功能：方法结果缓存拦截器、追踪日志链路 ID 集成、脱敏器不透明类型占位 + 反射缓存。全程先补测试后实现，全仓无回归。
+
+## 二十一、方法结果缓存：`[Cache]` + `CacheInterceptor`（落地遗留项）
+
+新增 `Attributes/CacheAttribute.cs`（`AttributeTargets.Method`）与 `Interceptors/CacheInterceptor.cs`，基于 `Euonia.Caching` 的 `ICacheService` 实现方法级结果缓存（`Euonia.Application.csproj` 新增对 `Euonia.Caching` 的 `ProjectReference`；Caching 仅依赖 `Euonia.Core`，无循环依赖）：
+
+- **缓存键**：`Key` 模板支持 `{service}`（服务类型全名）、`{method}`（方法名）与 `{0}`、`{1}`…（按序参数；复杂参数经 `JsonSerializer.Serialize`）；未设置时默认 `{service}.{method}:arg1|arg2`；
+- **过期**：`TimeoutSeconds` 大于 0 时写 TTL，否则不设有效期；`IsUtc` 保留以兼容扩展；
+- **命中路径**：`TryServeFromCache<T>` 命中直接把缓存值写回 `invocation.ReturnValue`，且**不再执行方法体**：`Task<T>` 返回 `Task.FromResult`、`ValueTask<T>` 返回已完成 `ValueTask`、同步返回原值；
+- **写回**：同步方法直接 `AddOrUpdate`；异步方法经 `WriteBackAsync<T>` 在任务 `ContinueWith`（`TaskScheduler.Default`）成功完成后回写，避免阻塞调用线程；
+- **退化**：未注册 `ICacheService`、`void`/非泛型 `Task`/`ValueTask` 方法、`null` 结果一律跳过（`null` 不缓存，防止缓存击穿占位）。
+
+测试（新增 `CacheInterceptorTests.cs`，7 用例）：同步/异步命中第 2 次不再执行方法体、不同实参产生不同键、自定义 Key 模板、`{service}.{method}` 占位替换、未注册缓存服务退化为直接执行、`void` 方法不缓存不抛（写回为异步 continuation，测试经轮询等待缓存落盘后再断言）。`FakeCacheService` 为测试项目内最小内存实现，仅覆盖同步成员。
+
+## 二十二、追踪日志链路 ID 集成（落地遗留项）
+
+`TracingInterceptor`（`Interceptors/TracingInterceptor.cs`）在输出 `TraceInfo` 时先读取 `IRequestContextAccessor.Context` 中的 `RequestTraceId`（`X-Request-Trace-Id` 头，缺省回退 `TraceIdentifier`）与 `CorrelationId`（`X-Correlation-ID` 头），拼入 Debug 日志，使同一链路的日志可按标识聚合。
+
+测试（`InterceptorTests.cs`，2 新增）：带 `X-Request-Trace-Id` + `X-Correlation-ID` 时同时输出两个标识；仅 `TraceIdentifier` 时只输出 TraceId。
+
+## 二十三、脱敏器增强：不透明类型占位 + 反射缓存（落地遗留项）
+
+`SensitiveDataMasker`（`Interceptors/SensitiveDataMasker.cs`）两项增强：
+
+- **不透明类型占位**：`System`/`Microsoft`/`Newtonsoft`/`Castle` 等命名空间的类型不再整类替换为 `***`，改为 `类型名:掩码`（如 `Uri:***`），既避免展开庞大的运行时结构，又保留可辨识来源（诊断价值不丢失）；
+- **反射缓存**：按类型缓存成员描述符（属性/字段名 + getter + 敏感标识），避免每次掩码全量反射（`ConcurrentDictionary<Type, MemberDescriptor[]>`）。
+
+测试（`SensitiveDataMaskerTests.cs`，3 新增）：框架类型（`System.Uri`）输出类型名占位且不含明文、类型级 `[SensitiveData]` 整体掩码、重复调用结果稳定（缓存路径一致）。原掩码语义（敏感属性/字段、循环引用、深度上限）回归不变。
+
+## 二十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **109/109**（97 → 109，新增 12） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十五、遗留观察（未改动，供后续决策）
+
+- **缓存失效策略**：`CacheInterceptor` 仅支持按 TTL 过期，暂无主动删除/缓存版号失效；若需可在 `ICacheService` 之上提供版本化键或事件驱动失效。
+- **`CacheAttribute` 的 `IsUtc` 字段**：当前仅面向相对 TTL 语义保留，绝对时钟过期（如 `DateTime` 形式）尚未接线。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第六部分 实用功能增强（五）
+
+对 Euonia.Application 追加第五批实用功能：缓存绝对过期接线与缓存组失效。全程先补测试后实现，全仓无回归。
+
+## 二十六、缓存绝对过期接线（落地遗留项）
+
+`CacheAttribute` 新增 `AbsoluteExpirationSeconds`（double，自写入时刻起算）+ 复用 `IsUtc`（`Attributes/CacheAttribute.cs`）。`CacheInterceptor` 据此计算绝对到期时间：`AbsoluteExpirationSeconds` 大于 0 时以「写入时刻 + 该秒数」为绝对到期时间调用 `ICacheService.AddOrUpdate(key, value, DateTime, bool)`（`IsUtc=true` 按 `UtcNow` 起算，否则 `Now`），并优先于 `TimeoutSeconds`；否则回落相对 TTL/无 TTL 路径（`Interceptors/CacheInterceptor.cs` 的 `CacheExpirations`）。
+
+测试（`CacheInterceptorTests.cs`，2 新增）：绝对到期（未来 1h）第 1 次执行、把测试缓存时钟前拨 2h 后第 2 次重新执行（`FakeCacheService` 增加可调时钟 `NowUtc`/`Advance`）；`IsUtc=false` 同一断言。
+
+## 二十七、缓存组失效：`[Cache(Groups)]` + `[CacheEvict]`
+
+为缓存位安全失效补齐主动失效：数据变更后按组删除整组缓存键。
+
+- **`CacheAttribute.Groups`**：缓存写回时把键登记到组（`CacheInterceptor.WriteToCache` 在写回前 `Register`，异步路径在 continuation 内注册）；
+- **`ICacheGroupManager` / `CacheGroupManager`**（新增 `Caching/`）：内存键—组索引（`ConcurrentDictionary`），`Evict(groups)` 枚举组键经 `ICacheService.Remove<object>` 逐个删除并清空索引；`ICacheService` 经容器惰性解析，未注册时仅清索引不报错；ApplicationModule 注册单例；
+- **`[CacheEvict(groups)]`**（新增 `Attributes/CacheEvictAttribute.cs`）+ `CacheEvictionInterceptor`（新增 `Interceptors/`）：同步方法 `Proceed` 后立即失效；`Task`/`ValueTask` 在成功完成后经 continuation 失效（失败不误删）；泛型 `Task<T>`/`ValueTask<T>` 经 `MakeGenericMethod` 分发同路径；未标注或未注册组管理器时退化为直接执行。ApplicationModule 注册为拦截器。
+
+测试（新增 `CacheEvictionInterceptorTests.cs`，5 用例）：同步写→`void` 失效→组空→重读重新执行；异步写→`Task` 失效→轮询组空→重读重新执行；无特性方法不动缓存；`CacheGroupManager` 注册/失效并删除缓存键；无缓存服务时仅清索引。`CacheInterceptorTests.cs` 另新增 1 用例：`[Cache(Groups)]` 写回后键已入组。
+
+## 二十八、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **117/117**（109 → 117，新增 8） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 二十九、遗留观察（未改动，供后续决策）
+
+- **组索引的内存增长**：`CacheGroupManager` 的键—组索引只增不减（键随缓存过期后索引仍残留）；如需可增加 TTL 同步清理或在读取命中时惰性剔除。
+- **失效时序语义**：`CacheEvict` 的异步失效发生在方法任务成功后；对「先失效再执行」的 write-through 语义未做支持，可按需增加执行前失效模式。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+---
+
+# 第七部分 实用功能增强（六）
+
+对 Euonia.Application 追加第六批实用功能：缓存失效时序、组索引惰性剔除、方法耗时日志。全程先补测试后实现，全仓无回归。
+
+## 三十、缓存失效时序：`CacheEvict` 的 `Mode`（落地遗留项）
+
+新增 `CacheEvictionMode` 枚举（`Attributes/CacheEvictionMode.cs`），`CacheEvictAttribute` 增加 `Mode` 属性（默认 `After`）：
+
+- **`After`（默认）**：方法执行成功后失效；异步方法在任务成功完成后经 continuation 失效，失败不误删；
+- **`Before`**：方法执行前先失效（write-through，方法自身负责写回新值）；失效发生在 `Proceed` 之前，即使方法随后抛异常，旧缓存也已被清空（`Interceptors/CacheEvictionInterceptor.cs:40`）。
+
+测试（`CacheEvictionInterceptorTests.cs`，2 新增）：`Mode=Before` 的方法先失效再执行并抛异常 → 组索引已清空；默认 `After` 的方法抛异常 → 组索引保持完好。
+
+## 三十一、组索引惰性剔除（落地遗留项）
+
+`ICacheGroupManager` 新增 `Remove(string key)`（`Caching/ICacheGroupManager.cs`）；`CacheGroupManager` 实现为从全部组桶中移除该键（不删除缓存本身，仅清理索引，`Caching/CacheGroupManager.cs:60`）。
+
+`CacheInterceptor` 在「未写回」时联动剔除：方法返回 `null`（不缓存、避免缓存击穿占位）或异步失败时，调用 `manager.Remove(key)`，防止组索引残留指向已过期/不在缓存中的键（`Interceptors/CacheInterceptor.cs` 的 `WriteBackSync`/`WriteBackAsync` continuation 的 else 分支）。
+
+测试：`CacheInterceptorTests.cs` 1 新增（绝对到期后重新执行且本次返回 `null` → 组索引残留键被清理）；`CacheEvictionInterceptorTests.cs` 1 新增（`Remove` 把键从全部组同时移除）。
+
+## 三十二、方法耗时日志：`[Timing]` + `TimingInterceptor`
+
+新增 `Attributes/TimingAttribute.cs`（`AttributeTargets.Method|Class`，`ThresholdMs` 默认 1000ms）与 `Interceptors/TimingInterceptor.cs`：用 `Stopwatch` 度量方法耗时，**大于等于阈值**时以 Information 输出（含方法全名、耗时与阈值），低于阈值不输出，适合慢调用监控，避免日志噪音。
+
+- 同步/`void`：`Proceed` 返回后度量；
+- 异步：`Task`/`Task<T>`（`Task<T>` 直接以 `Task` 引用挂 continuation）、`ValueTask`/`ValueTask<T>`（`ValueTask<T>` 经 `MakeGenericMethod` 分发）以任务完成时刻度量，失败同样记录耗时；
+- 特性支持类级（作用于方法）+ 方法级，`ApplicationModule` 已注册为拦截器。
+
+测试（`InterceptorTests.cs`，4 新增）：同步低于阈值输出、超过阈值不输出、异步完成后输出（轮询等待日志落盘）、无 `[Timing]` 的方法不输出。
+
+## 三十三、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **125/125**（117 → 125，新增 8） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 三十四、遗留观察（未改动，供后续决策）
+
+- **幂等控制**：暂无 `[Idempotent]` 之类基于分布式锁 + 请求指纹的幂等拦截设施；如需可在 `LockInterceptor` / `Euonia.Concurrency` 之上实现。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+- **`TimingInterceptor` 日志级别固定为 Information**：如需区分「慢」与「极慢」可扩展为按多个阈值输出不同级别。
+
+# 第八部分 实用功能增强（七）
+
+## 三十五、幂等控制：`[Idempotent]` + `IdempotentInterceptor`（落地遗留项）
+
+新增 `[Idempotent]` 方法特性与 `IdempotentInterceptor`，在幂等窗口内对相同指纹的重复调用只执行一次：
+
+- **指纹确定**：优先 `IdempotentAttribute.Key` 模板（占位符 {service}/{method}/{0...}）；其次在 `UseRequestKey`（默认 true）且请求上下文存在 `Idempotency-Key` 请求头时使用「方法名 + 请求键」（与实参无关）；否则回退 `{service}.{method}:args`。
+- **去重语义**：窗口内重复调用——有返回值的方法直接返回首次缓存的结果；`void`/`Task` 方法跳过执行（写 `byte` 印记），避免重复提交副作用叠加。
+- **并发合并**：同指纹调用先经进程内信号量（复用 `SemaphoreLockStore`）串行化再检查，避免并发窗口内双双执行（并发合并击穿）；锁等待时长由 `TimeoutSeconds`（毫秒换算）决定。
+- **存储与超时**：经容器的 `ICacheService` 解析；有返回值写「方法结果」、无返回值写印记，均按 `TimeoutSeconds` 失效；返回 `null` 的结果不写缓存（与缓存行为一致）；未注册缓存服务时退化为直接执行。
+- **异步**：`Task`/`Task<T>` 经 `CaptureProceedInfo` 捕获后异步续延，锁在任务完成前不释放（模式同 `LockInterceptor`）；同步 `void`/普通返回值方法同步路径处理。
+- `ApplicationModule` 已注册 `IdempotentInterceptor`。
+
+测试（`IdempotentInterceptorTests.cs`，8 新增）：同步命令窗口内去重、窗口过期后重新执行（`FakeCacheService.Advance`）、`Task<T>` 重复返回首结果、不同实参各执行一次、请求头 `Idempotency-Key` 作用域（不同实参同键视为重复 + 换键重新执行）、自定义键模板、`Task` 方法重复跳过、未注册缓存服务时始终执行。
+
+## 三十六、耗时日志分级：`[Timing]` 的 Warning 阈值（落地遗留项）
+
+`TimingAttribute` 新增 `WarningThresholdMs`（默认 5000）：`TimingInterceptor.LogIfSlow` 在耗时大于等于 `WarningThresholdMs` 时以 **Warning** 级别记录，否则（大于等于 `ThresholdMs`）为 Information，便于区分「慢」与「极慢」。
+
+测试（`InterceptorTests.cs`，1 新增）：`[Timing(ThresholdMs = 0, WarningThresholdMs = 0)]` 的方法输出 Warning 条目；原有信息级别测试不受影响。
+
+## 三十七、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **134/134**（125 → 134，新增 9：幂等 8 + Timing 分级 1） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 三十八、遗留观察（未改动，供后续决策）
+
+- **分布式环境幂等**：`[Idempotent]` 的并发串行化基于进程内信号量，仅保证单节点语义；多节点部署时需换用 `ILockFactory`（Red Lock 等）持有的共享锁 + 共享存储中的指纹条目。
+- **`CorrelationIdBehavior` 与 Web 层联动**（沿用）：`RequestContext.RequestId` 读取 `Request-Id` 请求头；如需遵循 ASP.NET Core 的 `X-Correlation-ID` 惯例，可在 Web 中间件完成头名映射后接入。
+
+# 第九部分 实用功能增强（八）
+
+## 三十九、幂等并发锁走分布式 `ILockFactory`（落地遗留项）
+
+`IdempotentInterceptor` 的并发串行化由「仅进程内 `SemaphoreLockStore`」升级为「容器中注册 `ILockFactory` 时优先使用分布式锁，缺失时回退进程内信号量」：
+
+- 新增 `AcquireLock` / `AcquireLockAsync`：经 `IServiceProvider` 解析 `ILockFactory`（`factory.Create(key).Acquire/AcquireAsync`），未注册则走 `SemaphoreLockStore`。
+- 锁键即幂等指纹（模板 / 请求键 / 方法+实参），多节点部署下由同一共享锁互斥，配合共享缓存中的指纹条目实现跨节点去重（指纹存储仍走 `ICacheService`）。
+- 同步与 `Task`/`Task<T>` 三条路径统一接入，锁在方法体执行完成（含异步补写缓存/印记）前不释放。
+
+测试（`IdempotentInterceptorTests.cs`，2 新增）：注册内存 `ILockFactory`（`SemaphoreSlim` 语义桩）后，异步与同步路径均经工厂创建锁且去重生效；并发相同指纹调用经工厂锁合并为单次执行。
+
+## 四十、关联标识头映射：`X-Correlation-ID`（落地遗留项）
+
+`CorrelationIdBehavior` 新增关联标识来源：优先 `RequestContext.TraceIdentifier`（或 `Request-Id` 请求头），其次请求头 `X-Correlation-ID`，再次消息元数据 / 信封，最后自动生成。不再要求必须由 Web 中间件先完成头名映射才能透传。
+
+测试（`CorrelationIdBehaviorTests.cs`，2 新增）：仅有 `X-Correlation-ID` 头时作为关联标识写入元数据（不写 `RequestTraceId`）；同时存在 `TraceIdentifier` 与 `X-Correlation-ID` 时以 `TraceIdentifier` 优先。
+
+## 四十一、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **138/138**（134 → 138，新增 4：幂等分布式锁 2 + 关联头映射 2） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十二、遗留观察（未改动，供后续决策）
+
+- **分布式幂等的生产实施**：`[Idempotent]` 的指纹读取 / 写回走 `ICacheService`，多节点去重依赖共享缓存（如 Redis）实现；锁已支持 `ILockFactory`，生产建议接入 `Euonia.Concurrency.Redis` / `ZooKeeper` 等分布式锁模块，并在 `TimeoutSeconds` 内不短于方法最坏执行时长。
+- **响应头回写**：入站 `X-Correlation-ID` 已接入管道元数据，但把关联标识写回响应头 / 跨服务日志聚合仍属 Web 中间件职责，本仓库无 Web 层包，未进一步处理。
+
+# 第十部分 实用功能增强（九）
+
+## 四十三、故障重试：`[Retry]` + `RetryInterceptor`
+
+新增 `RetryAttribute`（可标注方法或类）与 `RetryBackoffMode` 枚举（Fixed / Linear / Exponential）及 `RetryInterceptor`：
+
+- **重试判定**：异步方法（`Task`/`Task{TResult}`）以任务失败时刻判定，同步方法在 `Proceed` 抛出异常时判定；异常链中任意节点可赋值给 `RetryableExceptions` 所列类型（未指定则任意异常）且未超过 `MaxRetries`（默认 3，不含首次）时重试。
+- **多次尝试复用捕获的继续执行信息**：进入前 `invocation.CaptureProceedInfo()`，每次尝试 `proceedInfo.Invoke()` 重新触发后续拦截器链与目标方法（Castle 的 `IInvocationProceedInfo` 支持重复调用，专为重试场景设计）。
+- **退避**：`DelayMs` 基础间隔（默认 0 立即重试）；`Linear` 线性递增（n×DelayMs）、`Exponential` 指数递增（2^(n-1)×DelayMs，指数上界避免溢出）；同步路径 `Thread.Sleep`、异步路径 `Task.Delay`。
+- **异常保持**：耗尽重试次数或异常不可重试时以 `throw;` 重新抛出原始异常；失败重试后成功即正常返回。
+- 返回 `ValueTask`/`ValueTask{TResult}` 的方法不重试（直接继续执行，避免类型包装复杂度），已在特性文档注明。
+- `ApplicationModule` 已注册 `RetryInterceptor`。
+
+测试（`RetryInterceptorTests.cs`，10 新增）：同步成功前失败重试、耗尽重试抛出原异常、不可重试异常不重试、`Task{T}` 与 `Task` 异步失败重试（含失败两次后成功）、异步耗尽抛异常、异步不可重试不重试、Fixed 间隔的延迟实测（≥ 两次间隔和）、Exponential 间隔递增实测、无特性方法只执行一次。
+
+## 四十四、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **148/148**（138 → 148，新增 10） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十五、遗留观察（未改动，供后续决策）
+
+- **`ValueTask` 重试**：返回 `ValueTask`/`ValueTask{TResult}` 的方法当前 `[Retry]` 不生效；如需支持可参考 `CacheInterceptor` 的 `AsTask` + `MakeGenericMethod` 包装模式改造。
+- **退避抖动（jitter）**：固定/线性/指数退避在同一节点高并发触发重试时可能同步唤醒（惊群）；如需可在 `ComputeDelay` 中混入随机抖动。
+- **拦截器组合验证**：`[Retry]` 与 `[Cache]`/`[Idempotent]`/`[Lock]` 的组合按注册顺序包裹，顺序对语义的影响（如缓存命中前是否重试）尚未做组合测试。
+
+# 第十一部分 实用功能增强（十）
+
+## 四十六、重试能力补齐：`ValueTask` 支持、退避抖动、组合验证（落地遗留项）
+
+对第十部分的 `RetryInterceptor` 补齐以下三处（对应四十五遗留观察）：
+
+- **`ValueTask`/`ValueTask{TResult}` 重试**：移除「不重试」限制。未类型化 `ValueTask` 以 `new ValueTask(RetryAsync(..., isValueTask: true))` 包装；`ValueTask{TResult}` 复用泛型 `RetryTypedAsync<T>`（内部按 `(ValueTask<T>).AsTask()` 取任务），再经静态泛型 `WrapValueTask<T>` 反射包装回 `ValueTask<T>` 赋回 `ReturnValue`（模式同 `CacheInterceptor`）。
+- **退避抖动（jitter）**：`RetryAttribute` 新增 `Jitter`（默认 false）；启用后 `ComputeDelay` 在实际间隔 `[0, 计算值]` 内经 `Random.Shared` 随机化（计算值 > 0 时），避免多节点在同一时刻同步唤醒造成惊群。
+- **组合验证**：新增 `[Cache]` + `[Retry]` 组合测试（缓存拦截器在前、重试在后）：首次调用缓存未命中 → 重试 1 次成功并写回缓存；第二次调用命中缓存不再执行。验证了失败冒泡不会污染缓存条目。
+
+测试（`RetryInterceptorTests.cs`，4 新增）：`ValueTask{T}` 失败后重试成功、未类型化 `ValueTask` 失败后重试成功、启用抖动时重试仍成功（Calls 为 3）、`[Cache]`+`[Retry]` 组合先重试再命中缓存。
+
+## 四十七、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **152/152**（148 → 152，新增 4） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 四十八、遗留观察（未改动，供后续决策）
+
+- **重试与幂等/锁组合**：`[Retry]` 与 `[Idempotent]`/`[Lock]` 的组合尚缺测试；生产注意 `[Idempotent]` 只在成功时写印记，失败走 `[Retry]` 重试多次（各自窗口/次数独立）。
+- **熔断（circuit breaker）**：`[Retry]` 只做有限的即时重试，不具备连续失败后的熔断/半开探测能力；如需可按方法或类维度引入基于 `ICacheService` 计数的断路器设施。
+- **`[Cache]` + 高故障率方法**：重试成功后写回缓存是成功的，但若重试期间每次失败都尝试写回（当前只有成功后写、失败不写）不存在污染；组合路径的失效时序（`CacheEvict` 与重试并发）未覆盖。
+
+# 第十二部分 实用功能增强（十一）
+
+## 四十九、熔断器：`[CircuitBreaker]` + `CircuitBreakerInterceptor`（落地遗留项）
+
+新增 `CircuitBreakerAttribute`（可标注方法或类）、公开异常 `CircuitBreakerOpenException` 及 `CircuitBreakerInterceptor`：
+
+- **状态机**：Closed（关闭）多数调用照常执行，逐次失败计数、成功即清零；连续失败达到 `MaxFailures`（默认 5）转为 Open；Open 经过 `ResetTimeoutSeconds`（默认 30）秒后转入 HalfOpen 放行探测请求；HalfOpen 连续成功达到 `SuccessThreshold`（默认 1）关闭熔断，任意探测失败立即重新 Open。
+- **快速失败**：Open（未到探测时机）不执行目标方法——同步方法抛 `CircuitBreakerOpenException`；`Task`/`Task{T}` 返回 `Task.FromException` 故障任务、`ValueTask`/`ValueTask{T}` 等价故障值（泛型经 `MakeGenericMethod` + `WrapValueTask<T>` 反射包装，模式同重试）。允许时正常 `Proceed`。
+- **计数更新**：同步方法在 try/catch 就地更新；异步方法（`Task`/`Task{T}`/`ValueTask`/`ValueTask{T}`）经 `AsTask` 取任务后 `ContinueWith` 按完成结果更新（`TaskScheduler.Default`）。状态迁移在 `CircuitState` 内以锁串行化，进程本地。
+- **按方法隔离**：键为 `{service}.{method}`（`InvocationTarget` 具体类型 + 方法名）；`CircuitStateStore` 静态持有多键状态。为测试提供时钟注入（`UtcNowProvider`，默认 `DateTime.UtcNow`）、`Clear()` 与 `GetStateKind`，并新增 `[InternalsVisibleTo("Euonia.Application.Tests")]`。
+- `ApplicationModule` 已注册 `CircuitBreakerInterceptor`。
+
+测试（`CircuitBreakerInterceptorTests.cs`，9 新增）：关闭无失败照常执行、失败低于阈值继续执行、达到阈值抛 `CircuitBreakerOpenException` 且不再执行、受控时钟下超时后探测成功关闭、半开探测失败重新打开、失败后成功重置计数不打开、`Task{T}` 打开后返回故障任务不执行、未类型化 `ValueTask` 打开后失败快速、无特性方法照常执行。
+
+## 五十、拦截器组合验证：`[Retry]` + `[Idempotent]` / `[Lock]`（落地遗留项）
+
+对应四十八遗留断言，新增两个组合测试（`RetryInterceptorTests.cs`）：
+
+- **`[Idempotent]` + `[Retry]`**（幂等外层、重试内层，代理顺序注入）：方法先在幂等锁与缓存窗口内执行，首次调用内部先失败 1 次、重试成功并在成功时才写幂等印记；第二次调用命中印记直接跳过、不再执行——验证失败冒泡不会写入印记。
+- **`[SemaphoreLock]` + `[Retry]`**（锁外层、重试内层）：同步锁持有覆盖整个重试过程（`SemaphoreLockStore` 本地信号量，`Timeout = 2000` 毫秒作死锁兜底）；首次调用在锁内失败后重试成功，第二次调用重新获取锁执行——验证重试期间不释放锁、无自锁死。
+
+## 五十一、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误 0 警告 |
+| `Euonia.Application.Tests`（`dotnet exec`） | **163/163**（152 → 163，新增 11） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 22 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 五十二、遗留观察（未改动，供后续决策）
+
+- **分布式熔断**：当前熔断状态为进程本地，多实例部署时各节点独立计数；如需跨实例共享可让 `CircuitStateStore` 接入 `IDistributedCache`/分布式锁（或在 `ICacheService` 上按计数原子化）。此外 `HalfOpen` 的 `SuccessThreshold` 允许并发探测（未达阈值前可同时放行多个），高并发场景可加「单飞」限制。
+- **熔断与缓存/重试组合时序**：`[Cache]`/`[Idempotent]` 在前、`[CircuitBreaker]` 在后时，打开/快速失败发生在缓存命中之后；按注册顺序的语义差异（熔断快速失败是否应先于缓存命中）尚未做组合测试。
+- **`CacheEvict` 与重试并发时序**：熔断/重试期间若并发触发组失效，是否有竞态（写回与新失效交错）未覆盖。
+- **熔断参数校验**：`MaxFailures`/`ResetTimeoutSeconds`/`SuccessThreshold` 均校验 > 0；打开时的内置复位计时依赖真实时间，长周期场景可考虑持久化 `OpenedAtUtc`。
+
+# 第十三部分 实用功能增强（十二）
+
+## 五十三、熔断半开「单飞」探测（落地遗留项）
+
+对应五十二遗留「`HalfOpen` 允许并发探测」，强化 `CircuitState` 状态机：
+
+- **在途探测配额**：`TryGetPermission` 在半开（`HalfOpen`）下除「未达 `SuccessThreshold`」外，还要求当前无在途探测（`_inFlightProbes == 0`）才放行；超时转入半开时即预留配额（`_inFlightProbes = 1`），保证同一时刻对下游只放行一个探测请求。
+- **配额释放**：`OnSuccess`/`OnFailure` 均释放并复位在途计数；探测失败重新打开或成功关闭后并发请求回到正常判定。
+- 并发探测被拒绝时走既有快速失败路径（同步抛 / 异步故障任务），不执行目标方法。
+
+测试（`CircuitBreakerInterceptorTests.cs`，新增 1）：半开期间用后台线程阻塞首个探测（`ManualResetEventSlim`），主线程并发探测被 `CircuitBreakerOpenException` 拒绝且不执行（Calls 不变）；放行后探测成功关闭熔断，后续调用照常执行。
+
+## 五十四、组合时序：熔断 × 重试（两种注册顺序）
+
+新增强化组合测试（`CircuitBreakerInterceptorTests.cs`，新增 3），并在受控时钟下验证 `SuccessThreshold > 1` 的顺序关闭语义：
+
+- **`[CircuitBreaker]` 外层 + `[Retry]` 内层——只计「冒泡」失败**：每次调用重试内部消耗 2 次执行后耗尽并冒泡原始异常，熔断对每次「冒泡」计 1 次失败；`MaxFailures = 2` 时第 1、2 次调用各执行 2 次（共 Calls=4）后打开，第 3 次快速失败不再执行。
+- **`[Retry]` 外层 + `[CircuitBreaker]` 内层——首次尝试即打开**：第 1 次尝试失败即打开熔断；后续每次重试都被快速失败拦截（不执行），耗尽重试后抛出 `CircuitBreakerOpenException`，全程只执行 1 次。
+- **半开顺序成功达阈值关闭**：`SuccessThreshold = 2` 时，超时转半开后第 1 个探测成功仍保持半开（累计 1/2），第 2 个连续探测成功才关闭（经 `GetStateKind` 断言中间态）。
+- `HalfOpen` 中间态断言依赖上批新增的 `GetStateKind` 测试辅助与 `InternalsVisibleTo`。
+
+## 五十五、验证结果
+
+| 检查 | 结果 |
+| --- | --- |
+| `dotnet build Euonia.Build.slnx` | 0 错误 0 警告 |
+| `dotnet build Euonia.Test.slnx` | 0 错误；1 条既有警告（Application.Tests `UnitOfWorkInterceptorTests.cs:138` xUnit1031，非本次引入） |
+| `Euonia.Application.Tests`（`dotnet exec`） | **167/167**（163 → 167，新增 4） |
+| 其余 13 个测试程序集（`dotnet exec`） | 全绿（Osba 131 / Core 78 / Linq 38 / Domain 22 / Bus 47 / Bus.InMemory 10 / Bus.RabbitMq 10 / Pipeline 10 / Caching.Memory 9 / Caching.Runtime 9 / Caching.Default 4 / Mapping.Automapper 3 / Mapping.Mapster 3） |
+
+## 五十六、遗留观察（未改动，供后续决策）
+
+- **分布式熔断**：状态仍为进程本地，多实例部署各节点独立计数；可让 `CircuitStateStore` 接入 `IDistributedCache`/分布式锁（或在 `ICacheService` 上按计数原子化）实现跨实例共享。单机语义已验证（单飞、阈值、超时复位）。
+- **熔断与缓存/幂等组合时序**：`[Cache]`/`[Idempotent]` 在前、`[CircuitBreaker]` 在后时，打开/快速失败发生在缓存命中之后；按注册顺序的语义差异（熔断快速失败是否应先于缓存命中）尚未做组合测试。
+- **`CacheEvict` 与重试并发时序**：熔断/重试期间若并发触发组失效，是否有竞态（写回与新失效交错）未覆盖。
+- **熔断参数校验**：属性均校验 > 0；打开时的内置复位计时依赖真实时间，长周期场景可考虑持久化 `OpenedAtUtc` 并支持自定义复位策略。

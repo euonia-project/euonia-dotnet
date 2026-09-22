@@ -3,7 +3,12 @@
 /// <summary>
 /// 定义消息接收者注册器的接口。
 /// </summary>
-public interface IRecipientRegistrar
+/// <remarks>
+/// 注册器负责创建并启动传输层的接收者（broker 消费者 / 订阅者 / 请求执行器），
+/// 因此也负责在停机时释放它们。实现必须释放 <see cref="RegisterAsync"/> 期间创建的
+/// 全部接收者，否则其持有的连接、通道与会话将随进程存活而泄漏。
+/// </remarks>
+public interface IRecipientRegistrar : IAsyncDisposable
 {
 	/// <summary>
 	/// 注册消息接收者。

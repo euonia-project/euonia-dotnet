@@ -16,7 +16,8 @@ namespace Nerosoft.Euonia.Application;
 /// <para>1. 通过 <see cref="IServiceScopeFactory"/> 创建作用域并解析 scoped 的 <see cref="UserPrincipal"/>；</para>
 /// <para>2. 用户未通过身份验证时抛出 <see cref="AuthenticationException"/>；</para>
 /// <para>3. 特性声明了角色（以逗号分隔）且用户不属于任一角色时抛出 <see cref="UnauthorizedAccessException"/>。</para>
-/// 方法上未标注 <see cref="AuthorizeAttribute"/> 时不执行任何检查，直接放行。
+/// <see cref="AuthorizeAttribute"/> 可在接口方法、实现类方法或实现类类型（类级授权，作用于其所有方法）上声明；
+/// 未标注授权特性时不执行任何检查，直接放行。
 /// </remarks>
 public class AuthorizationInterceptor : IInterceptor
 {
@@ -47,11 +48,13 @@ public class AuthorizationInterceptor : IInterceptor
 	public void Intercept(IInvocation invocation)
 	{
 		var method = invocation.MethodInvocationTarget ?? invocation.Method;
-		// 代理基于接口创建时，invocation.Method 是接口方法；特性可能标注在接口方法或实现类方法上，
-		// 两种位置都查找，避免实现类上的特性被静默忽略。
+		// 代理基于接口创建时，invocation.Method 是接口方法；特性可能标注在接口方法、实现类方法或实现类类型上，
+		// 三种位置都查找，避免实现类上的特性被静默忽略。
 		var attribute = _attributeCache.GetOrAdd((method, invocation.Method),
 			key => key.Target.GetCustomAttribute<AuthorizeAttribute>()
-			       ?? key.Interface.GetCustomAttribute<AuthorizeAttribute>());
+			       ?? key.Interface.GetCustomAttribute<AuthorizeAttribute>()
+			       ?? key.Target.DeclaringType?.GetCustomAttribute<AuthorizeAttribute>()
+			       ?? key.Interface.DeclaringType?.GetCustomAttribute<AuthorizeAttribute>());
 
 		if (attribute != null)
 		{

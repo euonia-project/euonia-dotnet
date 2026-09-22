@@ -1,23 +1,26 @@
 namespace Nerosoft.Euonia.Repository;
 
 /// <summary>
-/// Resolves a connection string for a specific repository context type.
+/// 定义针对特定仓储上下文类型的连接字符串解析器契约。
 /// </summary>
 /// <typeparam name="TContext">
-/// The repository context type this resolver targets. Must be a reference type that implements <see cref="IRepositoryContext"/>.
+/// 该解析器所面向的仓储上下文类型，必须是实现了 <see cref="IRepositoryContext"/> 的引用类型。
 /// </typeparam>
+/// <remarks>
+/// 该解析器通常作为连接字符串的兜底来源参与解析，可用于从密钥保管库等外部来源按需获取连接字符串。
+/// </remarks>
 public interface IConnectionStringResolver<TContext>
 	where TContext : class, IRepositoryContext
 {
 	/// <summary>
-	/// Asynchronously obtains the connection string for the configured context.
+	/// 以异步方式获取已配置上下文的连接字符串。
 	/// </summary>
 	/// <param name="cancellation">
-	/// A <see cref="CancellationToken"/> used to cancel the operation. Defaults to <see cref="CancellationToken.None"/>.
+	/// 用于取消操作的 <see cref="CancellationToken"/>，默认为 <see cref="CancellationToken.None"/>。
 	/// </param>
 	/// <returns>
-	/// A <see cref="Task{TResult}"/> whose result is the resolved connection string.
-	/// The result may be <c>null</c> or empty if no connection string could be resolved.
+	/// 表示异步操作的任务，其结果为解析出的连接字符串。
+	/// 若无法解析到连接字符串，结果可能为 <c>null</c> 或空字符串。
 	/// </returns>
 	Task<string> GetConnectionStringAsync(CancellationToken cancellation = default);
 }

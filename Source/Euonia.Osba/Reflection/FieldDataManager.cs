@@ -266,4 +266,18 @@ public class FieldDataManager
 	{
 		return _fieldData.Values.Any(t => t.IsBusy);
 	}
+
+	/// <summary>
+	/// 将所有字段数据标记为未更改，清除每个字段的修改历史。
+	/// </summary>
+	/// <remarks>
+	/// 在对象被成功保存或加载后调用，使字段的撤销历史失效，令字段的 <see cref="FieldData{T}.IsChanged"/> 属性返回 <see langword="false"/>。
+	/// </remarks>
+	public void MarkAllAsUnchanged()
+	{
+		foreach (var field in _fieldData.Values)
+		{
+			field.MarkAsUnchanged();
+		}
+	}
 }

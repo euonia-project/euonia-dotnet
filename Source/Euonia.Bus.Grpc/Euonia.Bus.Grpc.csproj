@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Google.Protobuf" />
+        <PackageReference Include="Grpc.AspNetCore" />
+        <PackageReference Include="Grpc.AspNetCore.Server" />
+        <PackageReference Include="Grpc.AspNetCore.Server.Reflection" />
+        <PackageReference Include="Grpc.Core" />
+        <PackageReference Include="Grpc.HealthCheck" />
+        <PackageReference Include="Grpc.Net.Client" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Protobuf CompileOutputs="true" Include="protos\nerosoft\*.proto" GrpcServices="Server" AdditionalImportDirs=".\protos" AdditionalProtocArguments="--experimental_allow_proto3_optional" />
+
+        <None Update="protos\nerosoft\*.proto">
+            <Pack>true</Pack>
+            <PackagePath>content</PackagePath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Bus\Euonia.Bus.csproj" />
+    </ItemGroup>
+
+</Project>

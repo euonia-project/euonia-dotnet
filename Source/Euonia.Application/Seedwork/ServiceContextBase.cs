@@ -28,6 +28,11 @@ public abstract class ServiceContextBase : IServiceContext
 	/// </summary>
 	public virtual ServiceLifetime ApplicationServiceLifetime => ServiceLifetime.Scoped;
 
+	/// <summary>
+	/// 获取应用服务自动注册时的类型筛选器，默认不筛选。
+	/// </summary>
+	public virtual Func<Type, bool> ApplicationServiceTypeFilter => null;
+
 	/// <inheritdoc />
 	public virtual void ConfigureServices(IServiceCollection services)
     {

@@ -68,6 +68,19 @@ public abstract class DispatchBuilder<TBuilder, TOptions, TMessage, TResult>
 	}
 
 	/// <summary>
+	/// 设置目标队列名称，覆盖传输器依据通道推导出的默认队列。
+	/// </summary>
+	/// <param name="queue">目标队列名称。</param>
+	/// <returns>返回当前的构建器实例，以便进行链式调用。</returns>
+	/// <exception cref="ArgumentException">当 <paramref name="queue"/> 为 <c>null</c> 或空白时抛出。</exception>
+	public TBuilder WithQueue(string queue)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(queue);
+		Options.Queue = queue;
+		return (TBuilder)this;
+	}
+
+	/// <summary>
 	/// 设置消息处理的超时时间（毫秒）。
 	/// </summary>
 	/// <param name="timeout">超时时间（毫秒）。</param>

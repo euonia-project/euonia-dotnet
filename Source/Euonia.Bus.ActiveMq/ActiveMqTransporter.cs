@@ -57,7 +57,7 @@ internal class ActiveMqTransporter : ITransporter
 			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
 		            }).ExecuteAsync(async () =>
 		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 		            });
@@ -73,11 +73,12 @@ internal class ActiveMqTransporter : ITransporter
 	/// <returns>表示异步操作的任务，任务结果为回复的消息。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		using var session = await _connection.CreateSessionAsync();
@@ -86,35 +87,56 @@ internal class ActiveMqTransporter : ITransporter
 		var replyQueue = await session.CreateTemporaryQueueAsync();
 
 		// 2. 创建一个消费者，专门用来监听这个临时队列（等待消费回复消息）
-		var replyConsumer = await session.CreateConsumerAsync(replyQueue);
+		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
-		var destination = await session.GetQueueAsync(message.Channel);
+		var destination = await session.GetQueueAsync(ActiveMqDelivery.ResolveQueueName(message.Channel, message.GetQueue()));
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
-		var request = await BuildRequestAsync(session, message);
+		var request = await BuildRequestAsync(session, message, replyQueue);
 
-		await Policy.Handle<Exception>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            }).ExecuteAsync(async () =>
-		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+		try
+		{
+			await Policy.Handle<Exception>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            }).ExecuteAsync(async () =>
+			            {
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		replyConsumer.Listener -= OnReceived;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			replyConsumer.Listener -= OnReceived;
+			// 显式删除临时队列：其生命周期绑定在长驻的 IConnection 上，
+			// 若只依赖连接回收，每次调用都会在 broker 上留下一个临时队列。
+			try
+			{
+				replyQueue.Delete();
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete the temporary reply queue.");
+			}
+		}
 
 		void OnReceived(IMessage replyMessage)
 		{
 			if (replyMessage is not ITextMessage reply)
 			{
-				task.SetException(new InvalidOperationException("Received message is not a text message."));
+				task.TrySetException(new InvalidOperationException("Received message is not a text message."));
+				return;
+			}
+
+			if (reply.NMSCorrelationID != message.CorrelationId)
+			{
 				return;
 			}
 
@@ -123,11 +145,11 @@ internal class ActiveMqTransporter : ITransporter
 				var response = _serializer.Deserialize<ActiveMqReply<object>>(reply.Text);
 				if (response.IsSuccess)
 				{
-					task.SetResult(default);
+					task.TrySetResult(default);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 			else
@@ -135,11 +157,11 @@ internal class ActiveMqTransporter : ITransporter
 				var response = _serializer.Deserialize<ActiveMqReply<TResponse>>(reply.Text);
 				if (response.IsSuccess)
 				{
-					task.SetResult(response.Result);
+					task.TrySetResult(response.Result);
 				}
 				else
 				{
-					task.SetException(response.Error);
+					task.TrySetException(response.Error);
 				}
 			}
 		}
@@ -155,11 +177,12 @@ internal class ActiveMqTransporter : ITransporter
 	/// <returns>表示异步操作的任务，任务结果为回复的消息。</returns>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		var task = new TaskCompletionSource<TResponse>();
+		var task = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 
+		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
 		{
-			cancellationToken.Register(() => task.TrySetCanceled());
+			cancellationRegistration = cancellationToken.Register(() => task.TrySetCanceled());
 		}
 
 		using var session = await _connection.CreateSessionAsync();
@@ -168,46 +191,67 @@ internal class ActiveMqTransporter : ITransporter
 		var replyQueue = await session.CreateTemporaryQueueAsync();
 
 		// 2. 创建一个消费者，专门用来监听这个临时队列（等待消费回复消息）
-		var replyConsumer = await session.CreateConsumerAsync(replyQueue);
+		using var replyConsumer = await session.CreateConsumerAsync(replyQueue);
 		replyConsumer.Listener += OnReceived;
 
-		var destination = await session.GetQueueAsync(message.Channel);
+		var destination = await session.GetQueueAsync(ActiveMqDelivery.ResolveQueueName(message.Channel, message.GetQueue()));
 		using var producer = await session.CreateProducerAsync(destination);
 		producer.DeliveryMode = MsgDeliveryMode.Persistent;
 		producer.RequestTimeout = TimeSpan.FromSeconds(30);
-		var request = await BuildRequestAsync(session, message);
+		var request = await BuildRequestAsync(session, message, replyQueue);
 
-		await Policy.Handle<Exception>()
-		            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
-		            {
-			            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-		            }).ExecuteAsync(async () =>
-		            {
-			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, MsgPriority.Normal, TimeSpan.MaxValue);
+		try
+		{
+			await Policy.Handle<Exception>()
+			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
+			            {
+				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			            }).ExecuteAsync(async () =>
+			            {
+				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-		            });
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            });
 
-		var result = await task.Task;
-		replyConsumer.Listener -= OnReceived;
-		return result;
+			return await task.Task;
+		}
+		finally
+		{
+			cancellationRegistration.Dispose();
+			replyConsumer.Listener -= OnReceived;
+			// 显式删除临时队列：其生命周期绑定在长驻的 IConnection 上，
+			// 若只依赖连接回收，每次调用都会在 broker 上留下一个临时队列。
+			try
+			{
+				replyQueue.Delete();
+			}
+			catch (Exception exception)
+			{
+				_logger.LogDebug(exception, "Failed to delete the temporary reply queue.");
+			}
+		}
 
 		void OnReceived(IMessage replyMessage)
 		{
 			if (replyMessage is not ITextMessage reply)
 			{
-				task.SetException(new InvalidOperationException("Received message is not a text message."));
+				task.TrySetException(new InvalidOperationException("Received message is not a text message."));
+				return;
+			}
+
+			if (reply.NMSCorrelationID != message.CorrelationId)
+			{
 				return;
 			}
 
 			var response = _serializer.Deserialize<ActiveMqReply<TResponse>>(reply.Text);
 			if (response.IsSuccess)
 			{
-				task.SetResult(response.Result);
+				task.TrySetResult(response.Result);
 			}
 			else
 			{
-				task.SetException(response.Error);
+				task.TrySetException(response.Error);
 			}
 		}
 	}
@@ -223,7 +267,7 @@ internal class ActiveMqTransporter : ITransporter
 		request.Properties[MessageHeaders.RequestTraceId] = message.RequestTraceId;
 		request.Properties[MessageHeaders.Authorization] = message.Authorization;
 		request.Properties[MessageHeaders.Channel] = message.Channel;
-		request.Properties[MessageHeaders.UserId] = message.User.Identity?.Name;
+		request.Properties[MessageHeaders.UserId] = message.User?.Identity?.Name;
 		request.Properties[MessageHeaders.MessageType] = message.TypeName;
 		return request;
 	}

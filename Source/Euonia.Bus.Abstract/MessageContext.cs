@@ -158,35 +158,20 @@ public sealed class MessageContext : IMessageContext
 	/// <summary>
 	/// 释放当前实例所使用的资源。
 	/// </summary>
-	/// <param name="disposing">指示是否正在主动释放托管资源。</param>
-	private void Dispose(bool disposing)
+	/// <remarks>
+	/// 本类型不持有非托管资源，事件订阅也由 <c>WeakEventManager</c> 以弱引用保存
+	/// （订阅者被回收时订阅自然失效），因此**没有终结器**。
+	/// 终结器会让每条消息的上下文多存活一轮 GC，而这里没有任何需要它兜底的状态。
+	/// </remarks>
+	public void Dispose()
 	{
 		if (_disposedValue)
 		{
 			return;
 		}
 
-		if (disposing)
-		{
-			Complete(MessageId);
-		}
-
+		Complete(MessageId);
 		_events.RemoveEventHandlers();
 		_disposedValue = true;
-	}
-
-	/// <summary>
-	/// 终止 <see cref="MessageContext"/> 类的当前实例。
-	/// </summary>
-	~MessageContext()
-	{
-		Dispose(disposing: false);
-	}
-
-	/// <inheritdoc />
-	public void Dispose()
-	{
-		Dispose(disposing: true);
-		GC.SuppressFinalize(this);
 	}
 }

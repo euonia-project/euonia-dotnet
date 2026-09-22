@@ -18,6 +18,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	/// <param name="minimumCount">集合中所需的最小元素数量。</param>
 	public CollectionCountAttribute(int minimumCount)
 	{
+		ValidateRange(minimumCount, null);
 		MinimumCount = minimumCount;
 	}
 
@@ -29,6 +30,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	/// <param name="maximumCount">集合中允许的最大元素数量。</param>
 	public CollectionCountAttribute(int minimumCount, int maximumCount)
 	{
+		ValidateRange(minimumCount, maximumCount);
 		MinimumCount = minimumCount;
 		MaximumCount = maximumCount;
 	}
@@ -42,6 +44,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	public CollectionCountAttribute(int minimumCount, Func<string> errorMessageAccessor)
 		: base(errorMessageAccessor)
 	{
+		ValidateRange(minimumCount, null);
 		MinimumCount = minimumCount;
 	}
 
@@ -55,6 +58,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	public CollectionCountAttribute(int minimumCount, int maximumCount, Func<string> errorMessageAccessor)
 		: base(errorMessageAccessor)
 	{
+		ValidateRange(minimumCount, maximumCount);
 		MinimumCount = minimumCount;
 		MaximumCount = maximumCount;
 	}
@@ -68,6 +72,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	public CollectionCountAttribute(int minimumCount, string errorMessage)
 		: base(errorMessage)
 	{
+		ValidateRange(minimumCount, null);
 		MinimumCount = minimumCount;
 	}
 
@@ -81,8 +86,22 @@ public class CollectionCountAttribute : ValidationAttribute
 	public CollectionCountAttribute(int minimumCount, int maximumCount, string errorMessage)
 		: base(errorMessage)
 	{
+		ValidateRange(minimumCount, maximumCount);
 		MinimumCount = minimumCount;
 		MaximumCount = maximumCount;
+	}
+
+	private static void ValidateRange(int minimumCount, int? maximumCount)
+	{
+		if (minimumCount < 0)
+		{
+			throw new ArgumentOutOfRangeException(nameof(minimumCount), "Minimum count must not be negative.");
+		}
+
+		if (maximumCount.HasValue && maximumCount.Value < minimumCount)
+		{
+			throw new ArgumentOutOfRangeException(nameof(maximumCount), "Maximum count must be greater than or equal to the minimum count.");
+		}
 	}
 
 	/// <summary>
@@ -120,16 +139,80 @@ public class CollectionCountAttribute : ValidationAttribute
 	/// <returns>指示成功或失败的 <see cref="ValidationResult"/>。</returns>
 	protected override ValidationResult IsValid(object value, ValidationContext validationContext)
 	{
-		return value switch
+		if (value == null)
 		{
-			null when AllowNull => ValidationResult.Success,
-			null => new ValidationResult(ErrorMessage ?? $"The collection must not be null."),
-			ICollection collection when collection.Count < MinimumCount =>
-				new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at least {MinimumCount} items.", validationContext.DisplayName), [validationContext.MemberName]),
-			ICollection collection when MaximumCount.HasValue && collection.Count > MaximumCount.Value =>
-				new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at most {MaximumCount.Value} items.", validationContext.DisplayName), [validationContext.MemberName]),
-			_ => ValidationResult.Success
-		};
+			return AllowNull ? ValidationResult.Success : new ValidationResult(ErrorMessage ?? $"The collection must not be null.");
+		}
+
+		// 字符串不是集合，保持原有行为：不按字符数校验。
+		if (value is string)
+		{
+			return ValidationResult.Success;
+		}
+
+		if (!TryGetCount(value, out var count))
+		{
+			return new ValidationResult(ErrorMessage ?? $"The {validationContext.DisplayName} must be a collection.");
+		}
+
+		if (count < MinimumCount)
+		{
+			return new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at least {MinimumCount} items.", validationContext.DisplayName), [validationContext.MemberName]);
+		}
+
+		if (MaximumCount.HasValue && count > MaximumCount.Value)
+		{
+			return new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at most {MaximumCount.Value} items.", validationContext.DisplayName), [validationContext.MemberName]);
+		}
+
+		return ValidationResult.Success;
+	}
+
+	/// <summary>
+	/// 尝试获取集合的元素数量。支持 <see cref="ICollection"/> 以及所有公开
+	/// <c>Count</c> 属性的集合类型（如 <see cref="ICollection{T}"/>、
+	/// <see cref="IReadOnlyCollection{T}"/>、<see cref="IReadOnlyList{T}"/>、
+	/// <see cref="HashSet{T}"/> 等）。对于既不实现 <see cref="ICollection"/>、
+	/// 也不暴露 <c>Count</c> 属性的序列，则通过枚举计算数量。
+	/// </summary>
+	private static bool TryGetCount(object value, out int count)
+	{
+		if (value is ICollection collection)
+		{
+			count = collection.Count;
+			return true;
+		}
+
+		var type = value.GetType();
+		var countProperty = type.GetProperty("Count");
+		if (countProperty?.GetValue(value) is int intCount)
+		{
+			count = intCount;
+			return true;
+		}
+
+		if (value is IEnumerable enumerable)
+		{
+			var result = 0;
+			var enumerator = enumerable.GetEnumerator();
+			try
+			{
+				while (enumerator.MoveNext())
+				{
+					result = checked(result + 1);
+				}
+			}
+			finally
+			{
+				(enumerator as IDisposable)?.Dispose();
+			}
+
+			count = result;
+			return true;
+		}
+
+		count = 0;
+		return false;
 	}
 
 	/// <summary>

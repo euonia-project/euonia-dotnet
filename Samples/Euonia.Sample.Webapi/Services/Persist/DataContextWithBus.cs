@@ -113,11 +113,13 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 					auditing.UpdatedAt = dateTime;
 
 					break;
-				case EntityState.Deleted:
+				case EntityState.Deleted when entry.Entity is ITombstone tombstone:
+				{
+					tombstone.IsDeleted = true;
+					entry.Property("DeletedBy").CurrentValue = user;
+					entry.Property("DeletedAt").CurrentValue = dateTime;
 					entry.State = EntityState.Modified;
-					auditing.DeletedBy = user;
-					auditing.DeletedAt = dateTime;
-					auditing.IsDeleted = true;
+				}
 
 					break;
 				case EntityState.Modified:

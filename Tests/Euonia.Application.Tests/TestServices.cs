@@ -113,6 +113,7 @@ internal static class TestContainer
 		services.AddTransient<IInterceptor, ValidationInterceptor>();
 		services.AddTransient<IInterceptor, TracingInterceptor>();
 		services.AddTransient<IInterceptor, LockInterceptor>();
+		services.AddTransient<IUseCaseExecutor, UseCaseExecutor>();
 		services.AddApplicationService(typeof(CounterService).Assembly, ServiceLifetime.Scoped);
 		return services.BuildServiceProvider();
 	}

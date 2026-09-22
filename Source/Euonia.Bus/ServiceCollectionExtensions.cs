@@ -24,6 +24,10 @@ public static class ServiceCollectionExtensions
 			// 注册单例 IConfigurator，通过配置器实例执行用户配置委托
 			services.TryAddActivatedSingleton<IConfigurator, DefaultConfigurator>();
 
+			// 注册内置序列化器（键控），供各传输的 SerializerProvider 默认引用
+			services.TryAddKeyedSingleton<IMessageSerializer, SystemTextJsonSerializer>("SystemTestJson");
+			services.TryAddKeyedSingleton<IMessageSerializer, NewtonsoftJsonSerializer>("NewtonsoftJson");
+
 			// 启用管道（Pipeline）支持
 			services.AddPipeline();
 			services.TryAddActivatedSingleton<IHandlerContext, DefaultHandlerContext>();
@@ -31,6 +35,47 @@ public static class ServiceCollectionExtensions
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
 			services.AddHostedService<ServiceActivator>();
 
+			return services;
+		}
+
+		/// <summary>
+		/// 注册内存版发件箱（Outbox）存储（<see cref="InMemoryOutboxStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 发件箱默认不注册任何实现，需显式调用本方法或注册自定义 <see cref="IOutboxStore"/> 实现后方可启用。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryOutbox()
+		{
+			services.TryAddSingleton<IOutboxStore, InMemoryOutboxStore>();
+			return services;
+		}
+
+		/// <summary>
+		/// 注册内存版收件箱（Inbox）存储（<see cref="InMemoryInboxStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 收件箱默认不注册任何实现，需显式调用本方法或注册自定义 <see cref="IInboxStore"/> 实现后方可启用。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryInbox()
+		{
+			services.TryAddSingleton<IInboxStore, InMemoryInboxStore>();
+			return services;
+		}
+
+		/// <summary>
+		/// 注册内存版死信（Dead Letter）存储与查询/重放服务（<see cref="InMemoryDeadLetterStore"/>，仅用于开发与参考）。
+		/// </summary>
+		/// <remarks>
+		/// 死信存储默认不注册任何实现；未注册时，重试次数耗尽的记录仅被标记为死信并记录警告，
+		/// 调用本方法后才会被真正捕获，并可通过 <see cref="IDeadLetterService"/> 查询、重放或丢弃。
+		/// </remarks>
+		/// <returns>返回当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
+		public IServiceCollection AddInMemoryDeadLetters()
+		{
+			services.TryAddSingleton<IDeadLetterStore, InMemoryDeadLetterStore>();
+			services.TryAddSingleton<IDeadLetterService, DeadLetterService>();
 			return services;
 		}
 

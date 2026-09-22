@@ -701,12 +701,15 @@ public sealed class StrongReferenceMessenger : IMessenger
 						i++;
 					}
 				}
-
-				if (i == 0)
-				{
-					throw new MessageDeliverException($"No recipients registered for the input message type '{typeof(TMessage).FullName}' and token to deliver.");
-				}
 			}
+		}
+
+		if (i == 0)
+		{
+			Array.Clear(rentedArray, 0, 0);
+			ArrayPool<object>.Shared.Return(rentedArray);
+
+			throw new MessageDeliverException($"No recipients registered for the input message type '{typeof(TMessage).FullName}' and token to deliver.");
 		}
 
 		try

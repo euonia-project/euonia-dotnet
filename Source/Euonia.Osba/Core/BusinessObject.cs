@@ -186,6 +186,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			{
 				Rules.AddDataAnnotations();
 				AddRules();
+				InjectScopePolicyRule(rules);
 				rules.Initialized = true;
 			}
 			catch (Exception)
@@ -193,6 +194,48 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				RuleManager.CleanRules(GetType());
 				throw;
 			}
+		}
+	}
+
+	/// <summary>
+	/// 若本类型声明了数据权限模型，则自动注入 <see cref="ScopePolicyRule"/>。
+	/// </summary>
+	/// <param name="rules">本类型的规则管理器。</param>
+	/// <remarks>
+	/// <para>
+	/// 注入使越权保存在保存前以验证错误暴露，无需使用方手工 <c>AddRule</c>，
+	/// 从而消除「漏加规则 = 静默无保护」。
+	/// </para>
+	/// <para>
+	/// <b>本方法绝不抛异常</b>：注册表缺失、环境态未建立、类型未声明模型等情况一律静默跳过。
+	/// 规则是补充信号而非强制点，让它在属性 setter 上抛出会把配置问题伪装成难以定位的异常。
+	/// </para>
+	/// <para>
+	/// 注入的规则是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据——
+	/// 这是必需的，因为规则集合是进程级共享的，而注册表是按容器的。
+	/// </para>
+	/// </remarks>
+	private void InjectScopePolicyRule(RuleManager rules)
+	{
+		try
+		{
+			var registry = BusinessContext?.GetService<ScopeModelRegistry>();
+
+			if (registry == null || !registry.IsDeclared(GetType()))
+			{
+				return;
+			}
+
+			if (rules.Rules.OfType<ScopePolicyRule>().Any())
+			{
+				return;
+			}
+
+			Rules.AddRule(new ScopePolicyRule());
+		}
+		catch
+		{
+			// 环境态未建立时 GetService 会抛：静默跳过，规则不是强制点
 		}
 	}
 
@@ -348,6 +391,24 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				return _changedProperties.Count > 0;
 			}
 		}
+	}
+
+	/// <summary>
+	/// 提交当前更改：清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
+	/// 将字段当前值作为新的基线，令 <see cref="HasChangedProperties"/> 和字段的
+	/// <see cref="FieldData{T}.IsChanged"/> 返回 <see langword="false"/>。
+	/// </summary>
+	/// <remarks>
+	/// 通常在对象被成功保存或加载后调用，使对象恢复"干净"状态。
+	/// </remarks>
+	public virtual void AcceptChanges()
+	{
+		lock (_changedPropertiesLock)
+		{
+			_changedProperties.Clear();
+		}
+
+		FieldManager.MarkAllAsUnchanged();
 	}
 
 	#endregion
@@ -883,6 +944,174 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 
 		return CanWriteProperty(propertyInfo, throwOnFalse);
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户读取此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	/// <remarks>
+	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给权限检查器；
+	/// 派生类可重写以实现自定义操作权限逻辑。
+	/// </remarks>
+	public virtual bool CanReadObject()
+	{
+		return IsOperationGranted(BusinessOperation.Read);
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户创建此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanCreateObject()
+	{
+		return IsOperationGranted(BusinessOperation.Create);
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户更新此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanUpdateObject()
+	{
+		return IsOperationGranted(BusinessOperation.Update);
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户删除此业务对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanDeleteObject()
+	{
+		return IsOperationGranted(BusinessOperation.Delete);
+	}
+
+	/// <summary>
+	/// 确定是否允许当前用户执行此命令对象。
+	/// </summary>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	public virtual bool CanExecuteObject()
+	{
+		return IsOperationGranted(BusinessOperation.Execute);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否拥有指定的权限。
+	/// </summary>
+	/// <param name="permission">权限名称，支持以 <c>*</c> 结尾的前缀通配符匹配。</param>
+	/// <returns>拥有该权限则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
+	protected bool HasPermission(string permission)
+	{
+		var checker = ResolvePermissionChecker();
+		return checker == null || checker.IsGranted(permission);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否属于指定的角色。
+	/// </summary>
+	/// <param name="role">角色名称。</param>
+	/// <returns>属于该角色则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
+	protected bool HasRole(string role)
+	{
+		var checker = ResolvePermissionChecker();
+		return checker == null || checker.IsInRole(role);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否可访问<b>本对象这一行</b>（行级数据权限）。
+	/// </summary>
+	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
+	/// <returns>可访问则返回 <c>true</c>；本类型未声明权限模型时返回 <c>true</c>。</returns>
+	/// <remarks>
+	/// 供业务方法内部做条件分支使用（例如「本人可编辑，他人只读」）。
+	/// 本方法不抛异常——真正的越权拦截发生在工厂边界。
+	/// </remarks>
+	protected bool CanAccessRow(string scopeKey = null)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		return guard == null || guard.AllowsObject(this, scopeKey);
+	}
+
+	/// <summary>
+	/// 判断当前用户是否可访问本对象这一行，并返回判定说明。
+	/// </summary>
+	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
+	/// <returns>判定说明；未注册数据权限时返回未受约束的结论。</returns>
+	protected string ExplainRowAccess(string scopeKey = null)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		return guard == null ? "未启用数据权限" : guard.ExplainObject(this, scopeKey);
+	}
+
+	/// <summary>
+	/// 异步判断当前用户是否被授予指定权限码。
+	/// </summary>
+	/// <param name="permission">权限码。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>被授予则返回 <c>true</c>；未注册权限检查器时返回 <c>true</c>。</returns>
+	/// <remarks>
+	/// 权限码来自授权数据（按请求缓存），首次访问可能触发一次异步查询。
+	/// 与 <see cref="HasPermission"/> 等价，异步版本避免在同步路径上阻塞线程。
+	/// </remarks>
+	protected async ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken cancellationToken = default)
+	{
+		var guard = BusinessContext?.GetService<IScopeGuard>();
+
+		if (guard == null)
+		{
+			return true;
+		}
+
+		await guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+
+		return guard.GetSubjects().HoldsPermission(permission);
+	}
+
+	/// <summary>
+	/// 依据类型级与方法级 <see cref="PermissionAttribute"/> 要求判断是否放行指定操作。
+	/// </summary>
+	/// <param name="operation">当前操作。</param>
+	/// <returns>无要求或要求全部满足时返回 <c>true</c>。</returns>
+	private bool IsOperationGranted(BusinessOperation operation)
+	{
+		var requirements = GetPermissionRequirements(operation);
+		if (requirements.Count == 0)
+		{
+			return true;
+		}
+
+		var checker = ResolvePermissionChecker();
+		if (checker == null)
+		{
+			return true;
+		}
+
+		return requirements.All(requirement => checker.IsRequirementSatisfied(requirement.Permission, requirement.Roles));
+	}
+
+	/// <summary>
+	/// 收集类型级与执行指定操作的工厂方法上的权限要求。
+	/// </summary>
+	/// <param name="operation">当前操作。</param>
+	/// <returns>权限要求列表；结果按（类型，操作）缓存。</returns>
+	/// <remarks>
+	/// 委托给 <see cref="PermissionRequirements"/>：运行期判定与启动期校验共用同一实现，
+	/// 确保两处对「某个操作声明了哪些权限码」不会得出不同答案。
+	/// </remarks>
+	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(BusinessOperation operation)
+	{
+		return PermissionRequirements.For(GetType(), operation);
+	}
+
+	/// <summary>
+	/// 从当前业务上下文解析权限检查器。
+	/// </summary>
+	/// <returns>权限检查器实例；上下文缺失或服务未注册时返回 <c>null</c>。</returns>
+	private IPermissionChecker ResolvePermissionChecker()
+	{
+		return BusinessContext?.GetService<IPermissionChecker>();
 	}
 
 	#endregion

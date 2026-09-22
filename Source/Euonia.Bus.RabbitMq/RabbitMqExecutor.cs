@@ -44,14 +44,14 @@ internal sealed class RabbitMqExecutor : RabbitMqRecipient, IExecutor
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	internal override async Task StartAsync(CancellationToken cancellationToken = default)
 	{
-		var subscriptionId = string.Collapse(Options.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, ChannelName);
-
-		var queueName = $"{ChannelName}@{subscriptionId}";
+		var queueName = RabbitMqDelivery.ResolveQueueName(Options, ChannelName);
 
 		Channel = await Connection.CreateChannelAsync();
 
+		// 合并死信参数与优先级参数（x-max-priority）。
 		var dlxArguments = await DeclareDeadLetterAsync(Channel, queueName);
-		await Channel.QueueDeclareAsync(queueName, true, false, false, dlxArguments, cancellationToken: cancellationToken);
+		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority, dlxArguments);
+		await Channel.QueueDeclareAsync(queueName, true, false, false, queueArguments, cancellationToken: cancellationToken);
 		await Channel.BasicQosAsync((uint)Options.PrefetchSize, (ushort)Options.PrefetchCount, false, cancellationToken);
 
 		await Channel.BasicConsumeAsync(queueName, false, Consumer, cancellationToken: cancellationToken);

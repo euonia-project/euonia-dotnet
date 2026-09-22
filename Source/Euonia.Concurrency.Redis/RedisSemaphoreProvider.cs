@@ -70,7 +70,7 @@ public sealed partial class RedisSemaphoreProvider
     /// <inheritdoc />
     public ValueTask<RedisSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
-        return this.As<ISemaphoreProvider<RedisSynchronizationHandle>>().TryAcquireAsync(timeout, cancellationToken);
+        return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
     /// <inheritdoc />

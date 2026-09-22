@@ -3,10 +3,15 @@
     <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
 	<Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
     <Project Path="Tests/Euonia.Application.Tests/Euonia.Application.Tests.csproj" />
+    <Project Path="Tests/Euonia.Domain.Tests/Euonia.Domain.Tests.csproj" />
     <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     <Folder Name="/Bus/">
         <Project Path="Tests/Euonia.Bus.InMemory.Tests/Euonia.Bus.InMemory.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Bus.ActiveMq.Tests/Euonia.Bus.ActiveMq.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Bus.Http.Tests/Euonia.Bus.Http.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Bus.Grpc.Tests/Euonia.Bus.Grpc.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Bus.HealthChecks.Tests/Euonia.Bus.HealthChecks.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.Tests.Shared/Euonia.Bus.Tests.Shared.shproj">
 			<Build Project="false" />
 		</Project>
@@ -16,6 +21,7 @@
         <Project Path="Tests/Euonia.Caching.Default.Tests/Euonia.Caching.Default.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Memory.Tests/Euonia.Caching.Memory.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Runtime.Tests/Euonia.Caching.Runtime.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Caching.Redis.Tests/Euonia.Caching.Redis.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj">
 			<Build Project="false" />
 		</Project>

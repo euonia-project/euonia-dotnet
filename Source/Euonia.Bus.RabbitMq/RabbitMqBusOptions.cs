@@ -80,6 +80,24 @@ public class RabbitMqBusOptions
 	public bool IsDeadLetterEnabled { get; set; } = true;
 
 	/// <summary>
+	/// 获取或设置队列支持的最大消息优先级。
+	/// </summary>
+	/// <remarks>
+	/// 小于等于 0 表示不启用优先级（默认）。启用后：
+	/// <list type="bullet">
+	/// <item><description>消费端声明队列时会附加 <c>x-max-priority</c> 参数；</description></item>
+	/// <item><description>发送端会把 <c>ExtendableOptions.Priority</c> 写入消息属性，并收敛到 <c>[0, min(该值, 9)]</c>。</description></item>
+	/// </list>
+	/// <para>
+	/// <b>注意</b>：RabbitMQ 只在队列以 <c>x-max-priority</c> 声明时才会采纳消息优先级；
+	/// 若同名队列已以其他参数存在，该声明会被忽略（参数不一致不会报错）。
+	/// 提高优先级会让 broker 为每个优先级维护独立队列，带来额外开销，建议保持较小取值范围。
+	/// </para>
+	/// </remarks>
+	/// <value>最大优先级；默认 <c>0</c>（不启用）。</value>
+	public int MaxPriority { get; set; }
+
+	/// <summary>
 	/// 获取或设置序列化器提供程序名称。
 	/// </summary>
 	public string SerializerProvider { get; set; } = "NewtonsoftJson";

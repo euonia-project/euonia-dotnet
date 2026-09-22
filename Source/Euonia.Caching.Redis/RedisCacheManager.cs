@@ -16,11 +16,14 @@ internal class RedisCacheManager
     {
         var configuration = ConfigurationBuilder.BuildConfiguration(settings =>
         {
+            // 顺序重要：必须先注册 Redis 连接配置。
+            // WithRedisBackplane / WithRedisCacheHandle 需要在构建时取回连接字符串，
+            // 并把它作为句柄/背板的构造参数（见各自的实现说明）。
             settings.WithUpdateMode(options.UpdateMode)
                     .WithMaxRetries(options.MaxRetries)
                     .WithRetryTimeout(options.RetryTimeout)
-                    .WithRedisBackplane("redisConnection")
                     .WithRedisConfiguration("redisConnection", options.ConnectionString, options.Database)
+                    .WithRedisBackplane("redisConnection")
                     .WithRedisCacheHandle("redisConnection")
                     .WithExpiration(CacheExpirationMode.Default, options.Expires ?? TimeSpan.MaxValue);
         });

@@ -10,9 +10,9 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	where TContext : DbContext, IRepositoryContext
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> class.
+	/// 初始化 <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The repository context.</param>
+	/// <param name="provider">用于获取仓储上下文的上下文提供程序。</param>
 	public EfCoreRepository(IContextProvider provider)
 		: base(provider)
 	{
@@ -45,6 +45,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 		{
 			query = handle(query);
 		}
+
 		return query.Where(predicate);
 	}
 
@@ -52,7 +53,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	public override async Task<TEntity> GetAsync(TKey key, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(key);
-		return await Context.FindAsync<TEntity>(key);
+		return await Context.FindAsync<TEntity>([key], cancellationToken);
 	}
 
 	/// <inheritdoc />
@@ -88,13 +89,20 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	/// <inheritdoc />
 	public override Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
-		return BuildQuery(predicate, handle).AnyAsync(predicate, cancellationToken);
+		// BuildQuery 已经应用了 Where(predicate)，此处不能再叠加一次：
+		// Where(p).Any(p) 虽然等价，但会产生冗余的 SQL 条件。
+		return BuildQuery(predicate, handle).AnyAsync(cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
-		return BuildQuery(predicate, handle).AllAsync(predicate, cancellationToken);
+		// 此前写作 BuildQuery(predicate, handle).AllAsync(predicate)，即 Where(p).All(p)，
+		// 翻译为 SQL 是 NOT EXISTS(... WHERE p AND NOT p)，**恒为 true**，断言完全失效。
+		// All(p) ≡ !Any(!p)：应针对取反后的谓词查找反例。
+		var negation = Expression.Lambda<Func<TEntity, bool>>(Expression.Not(predicate.Body), predicate.Parameters);
+		var anyCounterExample = await BuildQuery(negation, handle).AnyAsync(cancellationToken).ConfigureAwait(false);
+		return !anyCounterExample;
 	}
 
 	/// <inheritdoc />

@@ -4,8 +4,11 @@ using Microsoft.EntityFrameworkCore.ValueGeneration;
 namespace Nerosoft.Euonia.Repository.EfCore;
 
 /// <summary>
-/// Generates the current UTC time.
+/// 生成当前 UTC 时间的值生成器。
 /// </summary>
+/// <remarks>
+/// 用于在写入记录时自动填充创建时间、更新时间等时间字段，保证以 UTC 存储。
+/// </remarks>
 public class UtcTimeValueGenerator : ValueGenerator<DateTime>
 {
 	/// <inheritdoc />

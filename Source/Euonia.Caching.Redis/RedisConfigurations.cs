@@ -69,4 +69,21 @@ public static class RedisConfigurations
 
         return Configurations[configurationName];
     }
+
+    /// <summary>
+    /// 获取已注册的配置；未注册时返回 <c>null</c>。
+    /// </summary>
+    /// <param name="configurationName">配置标识。</param>
+    /// <returns>对应的 <see cref="RedisConfiguration"/>；未注册时为 <c>null</c>。</returns>
+    /// <remarks>
+    /// 供 <c>WithRedisCacheHandle</c> 在构建句柄前取回连接字符串使用：
+    /// <c>RedisCacheHandle</c> 的构造函数需要连接字符串，而它只能经由句柄配置的
+    /// <c>ConfigurationTypes</c> 传入（见 <c>CacheReflectionHelper.MatchArguments</c>）。
+    /// </remarks>
+    public static RedisConfiguration GetConfiguration(string configurationName)
+    {
+        Check.EnsureNotNullOrWhiteSpace(configurationName, nameof(configurationName));
+
+        return Configurations.TryGetValue(configurationName, out var configuration) ? configuration : null;
+    }
 }

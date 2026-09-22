@@ -36,6 +36,15 @@ internal sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 	private readonly ILogger<RabbitMqRecipientRegistrar> _logger;
 
 	/// <summary>
+	/// 已创建并启动的接收器，停机时需要释放。
+	/// </summary>
+	/// <remarks>
+	/// 接收器由本注册器 <c>new</c> 创建（不经过 DI 容器），且各自持有一个已打开的
+	/// <see cref="RabbitMQ.Client.IChannel"/> 与消费者。若不保留引用，这些通道将无法释放。
+	/// </remarks>
+	private readonly List<RabbitMqRecipient> _recipients = [];
+
+	/// <summary>
 	/// 初始化 <see cref="RabbitMqRecipientRegistrar"/> 的新实例。
 	/// </summary>
 	/// <param name="configurator">提供约定与策略解析的消息总线配置器。</param>
@@ -71,7 +80,7 @@ internal sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 		foreach (var (channel, registration) in registrations)
 		{
 			_logger.LogInformation("[RabbitMqRecipientRegistrar] Registering {MessageType} on channel {Channel}", registration.MessageType.FullName, channel);
-			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.CurrentCultureIgnoreCase))
+			if (!string.Equals(defaultTransporter, _options.Name, StringComparison.OrdinalIgnoreCase))
 			{
 				// 检查策略是否允许对该消息类型进行入站处理
 				if (_strategy == null || !_strategy.Incoming(channel, registration.MessageType))
@@ -92,6 +101,31 @@ internal sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 			};
 			
 			await recipient.StartAsync(cancellationToken);
+			_recipients.Add(recipient);
 		}
+	}
+
+	/// <summary>
+	/// 释放注册期间创建的全部接收器（及其持有的通道与消费者）。
+	/// </summary>
+	/// <remarks>
+	/// 单个接收器释放失败不影响其余接收器：停机路径上应尽量完成清理，失败仅记录警告。
+	/// </remarks>
+	public ValueTask DisposeAsync()
+	{
+		foreach (var recipient in _recipients)
+		{
+			try
+			{
+				recipient.Dispose();
+			}
+			catch (Exception exception)
+			{
+				_logger.LogWarning(exception, "Failed to dispose recipient {Recipient}.", recipient.GetType().FullName);
+			}
+		}
+
+		_recipients.Clear();
+		return ValueTask.CompletedTask;
 	}
 }

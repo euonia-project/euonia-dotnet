@@ -5,19 +5,19 @@
         <TargetFramework>net10.0</TargetFramework>
 		<RootNamespace>Nerosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
 		<IsPackable>false</IsPackable>
+		<!--
+		  xunit.v3 通过 Microsoft.Testing.Platform 运行，要求测试项目为可执行程序。
+		  .NET 10 起 MTP 项目不再支持 VSTest 目标，故不再引用 Microsoft.NET.Test.Sdk / xunit.runner.visualstudio。
+		-->
+		<OutputType>Exe</OutputType>
     </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Hosting" />
-		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="xunit.v3" />
 		<PackageReference Include="Xunit.DependencyInjection" />
         <PackageReference Include="Xunit.DependencyInjection.Logging" />
-		<PackageReference Include="xunit.runner.visualstudio">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
         <PackageReference Include="coverlet.collector">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

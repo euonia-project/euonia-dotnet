@@ -275,7 +275,7 @@ public interface IBus
 	Task<TResult> CallAsync<TResult>(Func<Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
-		return handler();
+		return CallAsync(_ => handler(), cancellationToken);
 	}
 
 	/// <summary>

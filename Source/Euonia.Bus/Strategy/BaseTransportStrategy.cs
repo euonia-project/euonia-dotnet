@@ -70,6 +70,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		}
 
 		_strategies.AddRange(strategies);
+		ResetCache();
 	}
 
 	/// <summary>
@@ -82,6 +83,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		ArgumentNullException.ThrowIfNull(strategy);
 
 		_defaultStrategy.DefineIncomingStrategy(strategy);
+		ResetCache();
 	}
 
 	/// <summary>
@@ -94,11 +96,16 @@ public class BaseTransportStrategy : ITransportStrategy
 		ArgumentNullException.ThrowIfNull(strategy);
 
 		_defaultStrategy.DefineOutgoingStrategy(strategy);
+		ResetCache();
 	}
 
 	/// <summary>
 	/// 重置传出和传入消息评估的缓存。
 	/// </summary>
+	/// <remarks>
+	/// 策略集合或判定函数一旦变化，此前缓存的判定结果即失效。
+	/// 若不清空，在首次判定之后再添加策略或重定义判定函数将**静默无效**。
+	/// </remarks>
 	internal void ResetCache()
 	{
 		_outgoingCache.Reset();
@@ -110,10 +117,10 @@ public class BaseTransportStrategy : ITransportStrategy
 	/// </summary>
 	private class StrategyCache
 	{
-		private readonly ConcurrentDictionary<string, bool> _cache = new();
+		private readonly ConcurrentDictionary<(string Channel, Type Type), bool> _cache = new();
 
 		/// <summary>
-		/// 将指定的策略应用到给定的通道上，并缓存结果。
+		/// 将指定的策略应用到给定的通道和消息类型上，并缓存结果。
 		/// </summary>
 		/// <param name="channel">要评估的通道名称。</param>
 		/// <param name="type">要检查的消息类型。</param>
@@ -121,7 +128,7 @@ public class BaseTransportStrategy : ITransportStrategy
 		/// <returns>缓存或新计算出的策略结果。</returns>
 		public bool Apply(string channel, Type type, Func<string, Type, bool> strategy)
 		{
-			return _cache.GetOrAdd(channel, key => strategy(key, type));
+			return _cache.GetOrAdd((channel, type), key => strategy(key.Item1, key.Item2));
 		}
 
 		/// <summary>

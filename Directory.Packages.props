@@ -125,6 +125,7 @@
         <PackageVersion Include="Google.Api.CommonProtos" Version="2.12.0" />
         <PackageVersion Include="Google.Protobuf" Version="3.36.0" />
         <PackageVersion Include="Grpc" Version="2.46.6" />
+        <PackageVersion Include="Grpc.Net.Client" Version="$(GrpcAspNetCoreVersion)" />
         <PackageVersion Include="Grpc.AspNetCore" Version="$(GrpcAspNetCoreVersion)" />
         <PackageVersion Include="Grpc.AspNetCore.HealthChecks" Version="$(GrpcAspNetCoreVersion)" />
         <PackageVersion Include="Grpc.AspNetCore.Server" Version="$(GrpcAspNetCoreVersion)" />

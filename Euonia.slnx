@@ -18,6 +18,9 @@
         <Project Path="Source/Euonia.Bus/Euonia.Bus.csproj" />
         <Project Path="Source/Euonia.Bus.Abstract/Euonia.Bus.Abstract.csproj" />
         <Project Path="Source/Euonia.Bus.ActiveMq/Euonia.Bus.ActiveMq.csproj" />
+        <Project Path="Source/Euonia.Bus.Grpc/Euonia.Bus.Grpc.csproj" />
+        <Project Path="Source/Euonia.Bus.HealthChecks/Euonia.Bus.HealthChecks.csproj" />
+        <Project Path="Source/Euonia.Bus.Http/Euonia.Bus.Http.csproj" />
         <Project Path="Source/Euonia.Bus.InMemory/Euonia.Bus.InMemory.csproj" />
         <Project Path="Source/Euonia.Bus.RabbitMq/Euonia.Bus.RabbitMq.csproj" />
     </Folder>
@@ -28,15 +31,14 @@
         <Project Path="Source/Euonia.Caching/Euonia.Caching.csproj" />
     </Folder>
     <Folder Name="/Source/Concurrency/">
-        <Project Path="Source\Euonia.Concurrency.Azure\Euonia.Concurrency.Azure.csproj" />
-        <Project Path="Source\Euonia.Concurrency.FileSystem\Euonia.Concurrency.FileSystem.csproj" />
-        <Project Path="Source\Euonia.Concurrency.Redis\Euonia.Concurrency.Redis.csproj" />
-        <Project Path="Source\Euonia.Concurrency.ZooKeeper\Euonia.Concurrency.ZooKeeper.csproj" />
-        <Project Path="Source\Euonia.Concurrency\Euonia.Concurrency.csproj" />
+        <Project Path="Source/Euonia.Concurrency.Azure/Euonia.Concurrency.Azure.csproj" />
+        <Project Path="Source/Euonia.Concurrency.FileSystem/Euonia.Concurrency.FileSystem.csproj" />
+        <Project Path="Source/Euonia.Concurrency.Redis/Euonia.Concurrency.Redis.csproj" />
+        <Project Path="Source/Euonia.Concurrency.ZooKeeper/Euonia.Concurrency.ZooKeeper.csproj" />
+        <Project Path="Source/Euonia.Concurrency/Euonia.Concurrency.csproj" />
     </Folder>
     <Folder Name="/Source/Core/">
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
-        <Project Path="Source/Euonia.Grpc/Euonia.Grpc.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
         <Project Path="Source/Euonia.Linq/Euonia.Linq.csproj" />
         <Project Path="Source/Euonia.Modularity/Euonia.Modularity.csproj" />
@@ -87,5 +89,7 @@
         <Project Path="Tests/Euonia.Bus.Tests/Euonia.Bus.Tests.csproj" />
         <Project Path="Tests/Euonia.Bus.InMemory.Tests/Euonia.Bus.InMemory.Tests.csproj" />
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj" />
+        <Project Path="Tests/Euonia.Bus.Http.Tests/Euonia.Bus.Http.Tests.csproj" />
+        <Project Path="Tests/Euonia.Bus.Grpc.Tests/Euonia.Bus.Grpc.Tests.csproj" />
     </Folder>
 </Solution>

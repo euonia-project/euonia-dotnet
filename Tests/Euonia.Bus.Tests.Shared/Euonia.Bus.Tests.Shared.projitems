@@ -15,8 +15,10 @@
     <Compile Include="$(MSBuildThisFileDirectory)Commands\UserExceptionCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Commands\UserUpdateCommand.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Defines.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Events\UserCreatedEvent.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\FooCommandHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserCommandHandler.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserEventListener.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserExceptionCommandHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserExceptionRequestHandler.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Handlers\UserRequestHandler.cs" />
