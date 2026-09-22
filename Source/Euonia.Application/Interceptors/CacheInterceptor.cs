@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Castle.DynamicProxy;
+using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Caching;
 
 namespace Nerosoft.Euonia.Application;
@@ -13,7 +14,7 @@ namespace Nerosoft.Euonia.Application;
 /// 行为：
 /// <list type="bullet">
 /// <item><description>方法调用前按缓存键查询，命中则直接返回缓存结果（不再执行方法体）；</description></item>
-/// <item><description>未命中则执行方法，并把结果写回缓存（异步方法在 <see cref="Task{TResult}"/> 完成后经 continuation 写回）；</description></item>
+/// <item><description>未命中则执行方法，并把结果写回缓存；异步方法的写回**并入返回的 <see cref="Task{TResult}"/>**，因此调用方 await 完成时缓存条目已就绪（"读己之写"），避免紧随其后的调用重复执行；</description></item>
 /// <item><description>不缓存 <c>null</c> 结果，避免缓存击穿占位；对同步 <c>void</c> 与非泛型 <see cref="Task"/>/<see cref="ValueTask"/> 不做处理。</description></item>
 /// </list>
 /// 缓存实现经容器中的 <see cref="ICacheService"/> 解析；未注册缓存服务时拦截器退化为直接执行方法。
@@ -105,7 +106,7 @@ public class CacheInterceptor : IInterceptor
 		if (isAsync)
 		{
 			_writeAsyncMethod.MakeGenericMethod(valueType)
-			                 .Invoke(null, new object[] { invocation.ReturnValue, cache, key, expirations, isValueTask, manager, groups });
+			                 .Invoke(null, new object[] { invocation, cache, key, expirations, isValueTask, manager, groups, _serviceProvider });
 		}
 		else
 		{
@@ -127,24 +128,66 @@ public class CacheInterceptor : IInterceptor
 		return false;
 	}
 
-	private static void WriteBackAsync<T>(object rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, bool isValueTask, ICacheGroupManager manager, string[] groups)
+	private static void WriteBackAsync<T>(IInvocation invocation, ICacheService cache, string key, CacheExpirations expirations, bool isValueTask, ICacheGroupManager manager, string[] groups, IServiceProvider serviceProvider)
 	{
-		var task = isValueTask
-			? ((ValueTask<T>)rawReturnValue).AsTask()
-			: (Task<T>)rawReturnValue;
+		var source = isValueTask
+			? ((ValueTask<T>)invocation.ReturnValue).AsTask()
+			: (Task<T>)invocation.ReturnValue;
 
-		task.ContinueWith(completed =>
+		// 把回写**并入返回的 Task**，而不是挂一个 fire-and-forget 的 continuation。
+		// 原实现丢弃了 ContinueWith 返回的任务，导致调用方 await 完成时缓存往往尚未写入：
+		// 紧接着的第二次调用会因缓存穿透而重复执行目标方法（"读己之写"不成立），
+		// 在负载较高的机器上这个竞态几乎必然出现。
+		var wrapped = WriteAndReturnAsync(source, cache, key, expirations, manager, groups, serviceProvider);
+
+		invocation.ReturnValue = isValueTask ? new ValueTask<T>(wrapped) : (object)wrapped;
+
+		static async Task<T> WriteAndReturnAsync(Task<T> source, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager manager, string[] groups, IServiceProvider serviceProvider)
 		{
-			if (completed.IsCompletedSuccessfully && completed.Result != null)
+			T value;
+
+			try
 			{
-				WriteToCache(cache, key, completed.Result, expirations, manager, groups);
+				value = await source.ConfigureAwait(false);
 			}
-			else
+			catch
 			{
-				// 未写回（失败或 null 结果，避免缓存占位）：同步清理组索引，防止残留过期键。
+				// 方法本身失败：不写回，并清理组索引，避免残留过期键。
 				manager?.Remove(key);
+				throw;
 			}
-		}, TaskScheduler.Default);
+
+			if (value == null)
+			{
+				// 不缓存 null，避免缓存击穿占位；同样清理组索引。
+				manager?.Remove(key);
+				return value;
+			}
+
+			try
+			{
+				WriteToCache(cache, key, value, expirations, manager, groups);
+			}
+			catch (Exception exception)
+			{
+				// 缓存写入失败不应让已经成功的业务调用失败——缓存只是优化。
+				LogWriteFailure(serviceProvider, key, exception);
+			}
+
+			return value;
+		}
+	}
+
+	/// <summary>
+	/// 记录缓存写入失败；容器未注册日志服务时静默忽略。
+	/// </summary>
+	/// <param name="serviceProvider">服务容器。</param>
+	/// <param name="key">缓存键。</param>
+	/// <param name="exception">写入失败原因。</param>
+	private static void LogWriteFailure(IServiceProvider serviceProvider, string key, Exception exception)
+	{
+		var factory = serviceProvider?.GetService(typeof(ILoggerFactory)) as ILoggerFactory;
+		factory?.CreateLogger<CacheInterceptor>().LogWarning(exception, "Failed to write the cache entry for key '{Key}'.", key);
 	}
 
 	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager manager, string[] groups)

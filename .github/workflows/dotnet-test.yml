@@ -1,4 +1,3 @@
-
 name: Test
 
 on:
@@ -10,7 +9,7 @@ on:
 jobs:
 
   build:
-  
+
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -19,19 +18,21 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     # Install the .NET workload
     - name: Install .NET ${{ matrix.dotnet-version }}
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ matrix.dotnet-version }}
-        
+
     - name: Restore packages
       run: dotnet restore Euonia.Test.slnx
-    
+
     - name: Build
-      run: dotnet build Euonia.Test.slnx --configuration Release --no-restore
-      
+      run: dotnet build Euonia.Test.slnx --configuration ${{ matrix.configuration }} --no-restore
+
+    # 必须显式指定与构建一致的 configuration：dotnet test 默认使用 Debug，
+    # 不指定会导致它按 Debug 重新构建一遍（既有构建被浪费，且测试跑的不是刚构建出来的产物）。
     - name: Test
-      run: dotnet test --solution Euonia.Test.slnx --no-restore --verbosity normal
+      run: dotnet test --solution Euonia.Test.slnx --configuration ${{ matrix.configuration }} --no-restore --verbosity minimal

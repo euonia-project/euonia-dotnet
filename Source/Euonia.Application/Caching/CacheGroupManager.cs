@@ -72,11 +72,14 @@ public class CacheGroupManager : ICacheGroupManager
 		var removed = 0;
 		foreach (var group in groups)
 		{
-			if (string.IsNullOrEmpty(group) || !_index.TryRemove(group, out var bucket))
+			if (string.IsNullOrEmpty(group) || !_index.TryGetValue(group, out var bucket))
 			{
 				continue;
 			}
 
+			// 先失效条目，再移除索引。
+			// 反过来的话，等待"索引被清空"的调用方会在条目仍然存活时就开始读取，
+			// 命中本应失效的缓存；中途失败时索引也仍保留这些键，便于重试。
 			foreach (var key in bucket.Keys)
 			{
 				if (cache != null)
@@ -86,6 +89,8 @@ public class CacheGroupManager : ICacheGroupManager
 
 				removed++;
 			}
+
+			_index.TryRemove(group, out _);
 		}
 
 		return removed;

@@ -62,14 +62,14 @@ public class CacheEvictionInterceptor : IInterceptor
 		if (returnType == typeof(Task))
 		{
 			invocation.Proceed();
-			AttachContinuation((Task)invocation.ReturnValue, groups);
+			invocation.ReturnValue = AttachContinuation((Task)invocation.ReturnValue, groups);
 			return;
 		}
 
 		if (returnType == typeof(ValueTask))
 		{
 			invocation.Proceed();
-			AttachContinuation(((ValueTask)invocation.ReturnValue).AsTask(), groups);
+			invocation.ReturnValue = new ValueTask(AttachContinuation(((ValueTask)invocation.ReturnValue).AsTask(), groups));
 			return;
 		}
 
@@ -77,7 +77,7 @@ public class CacheEvictionInterceptor : IInterceptor
 		{
 			invocation.Proceed();
 			_attachGenericMethod.MakeGenericMethod(valueType)
-			                    .Invoke(null, new object[] { invocation.ReturnValue, isValueTask, groups, this });
+			                    .Invoke(null, new object[] { invocation, isValueTask, groups, this });
 			return;
 		}
 
@@ -85,23 +85,40 @@ public class CacheEvictionInterceptor : IInterceptor
 		Evict(groups);
 	}
 
-	private static void AttachGenericContinuation<T>(object rawReturnValue, bool isValueTask, string[] groups, CacheEvictionInterceptor interceptor)
+	private static void AttachGenericContinuation<T>(IInvocation invocation, bool isValueTask, string[] groups, CacheEvictionInterceptor interceptor)
 	{
-		var task = isValueTask
-			? ((ValueTask<T>)rawReturnValue).AsTask()
-			: (Task<T>)rawReturnValue;
-		interceptor.AttachContinuation(task, groups);
+		var source = isValueTask
+			? ((ValueTask<T>)invocation.ReturnValue).AsTask()
+			: (Task<T>)invocation.ReturnValue;
+
+		var wrapped = interceptor.EvictAfterAsync(source, groups);
+		invocation.ReturnValue = isValueTask ? new ValueTask<T>(wrapped) : (object)wrapped;
 	}
 
-	private void AttachContinuation(Task task, string[] groups)
+	/// <summary>
+	/// 把失效操作**并入返回的 Task**：调用方 await 完成时条目已失效。
+	/// </summary>
+	/// <remarks>
+	/// 原实现把失效挂在丢弃的 <c>ContinueWith</c> 上，调用方返回后失效可能尚未发生，
+	/// 紧随其后的查询就会命中本应失效的缓存（"读己之写"不成立）。
+	/// 方法本身失败时不失效，与原语义一致：异常照常传播给调用方。
+	/// </remarks>
+	private Task AttachContinuation(Task source, string[] groups)
 	{
-		task.ContinueWith(completed =>
-		{
-			if (completed.IsCompletedSuccessfully)
-			{
-				Evict(groups);
-			}
-		}, TaskScheduler.Default);
+		return EvictAfterAsync(source, groups);
+	}
+
+	private async Task EvictAfterAsync(Task source, string[] groups)
+	{
+		await source.ConfigureAwait(false);
+		Evict(groups);
+	}
+
+	private async Task<T> EvictAfterAsync<T>(Task<T> source, string[] groups)
+	{
+		var value = await source.ConfigureAwait(false);
+		Evict(groups);
+		return value;
 	}
 
 	private static bool TryUnwrapAsync(Type returnType, out Type valueType, out bool isValueTask)
