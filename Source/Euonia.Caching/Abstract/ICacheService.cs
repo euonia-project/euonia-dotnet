@@ -99,7 +99,16 @@ public interface ICacheService
 	/// <summary>
 	/// Remove cached value of specified key.
 	/// </summary>
-	/// <typeparam name="TValue">The type of the cached value.</typeparam>
+	/// <remarks>
+	/// 移除是**类型无关**的：条目只由键标识，<typeparamref name="TValue"/> 不参与匹配。
+	/// 因此 <c>Remove&lt;object&gt;(key)</c> 可以移除以任意具体类型写入的条目
+	/// ——缓存失效方通常并不知道写入时的泛型实参。
+	/// <para>
+	/// 注意与读取的差异：<see cref="Get{TValue}"/> / <see cref="TryGet{TValue}"/> 要求
+	/// <typeparamref name="TValue"/> 与写入时一致（条目以 <c>CacheItem&lt;TValue&gt;</c> 存储，该类型不协变）。
+	/// </para>
+	/// </remarks>
+	/// <typeparam name="TValue">写入时使用的值类型；仅用于选择缓存管理器，不参与匹配。</typeparam>
 	/// <param name="key">The cache item key to remove.</param>
 	/// <returns><c>true</c> if the key was found and removed; otherwise, <c>false</c>.</returns>
 	bool Remove<TValue>(string key);

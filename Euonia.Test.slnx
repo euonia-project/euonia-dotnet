@@ -20,6 +20,7 @@
         <Project Path="Tests/Euonia.Caching.Default.Tests/Euonia.Caching.Default.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Memory.Tests/Euonia.Caching.Memory.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Runtime.Tests/Euonia.Caching.Runtime.Tests.csproj"/>
+        <Project Path="Tests/Euonia.Caching.Redis.Tests/Euonia.Caching.Redis.Tests.csproj"/>
         <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj">
 			<Build Project="false" />
 		</Project>
