@@ -99,7 +99,10 @@ internal class HttpTransporter : ITransporter, IDisposable
 	/// <exception cref="NotSupportedException">始终抛出。</exception>
 	public Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		throw new NotSupportedException("The HTTP transporter only supports request/response (CallAsync) invocations.");
+		// 返回已失败的任务而不是同步抛出：ITransporter 的方法契约是返回 Task，
+		// 同步抛出会让 Select(...) + Task.WhenAll(...) 这类组合在组合阶段就中断，
+		// 异常不会进入任务。
+		return Task.FromException(new NotSupportedException("The HTTP transporter only supports request/response (CallAsync) invocations."));
 	}
 
 	/// <summary>
@@ -108,7 +111,10 @@ internal class HttpTransporter : ITransporter, IDisposable
 	/// <exception cref="NotSupportedException">始终抛出。</exception>
 	public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		throw new NotSupportedException("The HTTP transporter only supports request/response (CallAsync) invocations.");
+		// 返回已失败的任务而不是同步抛出：ITransporter 的方法契约是返回 Task，
+		// 同步抛出会让 Select(...) + Task.WhenAll(...) 这类组合在组合阶段就中断，
+		// 异常不会进入任务。
+		return Task.FromException<TResponse>(new NotSupportedException("The HTTP transporter only supports request/response (CallAsync) invocations."));
 	}
 
 	/// <summary>

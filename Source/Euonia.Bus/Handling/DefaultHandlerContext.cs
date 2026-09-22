@@ -200,6 +200,13 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 
 		if (!Convention.IsMulticast(channel, message.GetType()))
 		{
+			// 单播语义只允许一个处理程序，但注册侧并不阻止在同一个通道上注册多个。
+			// 静默丢弃多余的处理器会让"注册了却没生效"极难排查，因此显式告警。
+			if (handlers.Count > 1)
+			{
+				_logger.LogWarning("Channel {Channel} is a unicast channel but has {Count} handlers registered; only the first one ({Handler}) will be invoked. Ignored handlers: {Ignored}", channel, handlers.Count, handlers[0].Name, string.Join(", ", handlers.Skip(1).Select(item => item.Name)));
+			}
+
 			// 单播：执行第一个处理程序；启用收件箱时标记执行结果（不做去重跳过 —— 与 Java 版本保持一致）。
 			var (name, handler) = handlers[0];
 			if (useInbox)

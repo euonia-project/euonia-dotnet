@@ -1,7 +1,8 @@
-﻿using Microsoft.Extensions.Configuration;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -12,7 +13,7 @@ namespace Nerosoft.Euonia.Bus;
 public class ServiceActivator : BackgroundService
 {
 	private readonly IServiceProvider _provider;
-	private readonly string _defaultTransporter;
+	private readonly MessageBusOptions _options;
 	private readonly IConfigurator _configurator;
 	private readonly ILogger<ServiceActivator> _logger;
 
@@ -26,12 +27,17 @@ public class ServiceActivator : BackgroundService
 	/// </summary>
 	/// <param name="provider">用于解析 <see cref="IRecipientRegistrar"/> 实例的服务提供程序。</param>
 	/// <param name="configurator">消息总线配置器，提供消息注册信息和默认传输器。</param>
-	/// <param name="configuration">应用程序配置，用于读取 "Euonia:Bus:DefaultTransport" 配置项。</param>
-	public ServiceActivator(IServiceProvider provider, IConfigurator configurator, IConfiguration configuration)
+	/// <param name="options">消息总线配置选项。</param>
+	/// <remarks>
+	/// 默认传输器取自 <see cref="MessageBusOptions.DefaultTransporter"/>，与分发时所用的来源一致。
+	/// 此前此处直接读取原始配置节 <c>Euonia:Bus:DefaultTransporter</c>，
+	/// 与选项绑定各读一份，配置键写法一旦不一致（例如写成 <c>DefaultTransport</c>）就会静默失效。
+	/// </remarks>
+	public ServiceActivator(IServiceProvider provider, IConfigurator configurator, IOptions<MessageBusOptions> options)
 	{
 		_provider = provider;
 		_configurator = configurator;
-		_defaultTransporter = configuration.GetValue<string>(Constants.DefaultTransporterSection);
+		_options = options?.Value ?? new MessageBusOptions();
 		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<ServiceActivator>();
 	}
 
@@ -49,6 +55,10 @@ public class ServiceActivator : BackgroundService
 	/// <returns>表示所有接收器注册操作并行执行的任务。</returns>
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
+		// 自动装配须在用户配置委托之前：这样同一处理器被显式再次注册时会被幂等去重，
+		// 而不是产生两份注册（多播场景下会被执行两次）。
+		AutoRegisterHandlers();
+
 		var builder = _provider.GetService<ConfiguratorBuilder>();
 
 		builder?.Invoke(_configurator);
@@ -57,7 +67,55 @@ public class ServiceActivator : BackgroundService
 
 		_registrars = [.. _provider.GetServices<IRecipientRegistrar>()];
 
-		return Task.WhenAll(_registrars.Select(x => x.RegisterAsync(registrations, _defaultTransporter, stoppingToken)));
+		return Task.WhenAll(_registrars.Select(x => x.RegisterAsync(registrations, _options.DefaultTransporter, stoppingToken)));
+	}
+
+	/// <summary>
+	/// 按 <see cref="MessageBusOptions.AutoLoadAssemblies"/> 配置扫描并注册处理器。
+	/// </summary>
+	/// <remarks>
+	/// 配置为空时不执行任何操作。程序集名称无法解析时**显式失败**：
+	/// 配置写错属于部署期错误，静默跳过会让处理器"注册了却没生效"难以排查。
+	/// </remarks>
+	/// <exception cref="InvalidOperationException">当配置的程序集无法加载时抛出。</exception>
+	private void AutoRegisterHandlers()
+	{
+		var assemblyNames = _options.AutoLoadAssemblies;
+		if (assemblyNames == null || assemblyNames.Length == 0)
+		{
+			return;
+		}
+
+		var types = new List<Type>();
+
+		foreach (var assemblyName in assemblyNames)
+		{
+			if (string.IsNullOrWhiteSpace(assemblyName))
+			{
+				continue;
+			}
+
+			Assembly assembly;
+			try
+			{
+				assembly = Assembly.Load(new AssemblyName(assemblyName));
+			}
+			catch (Exception exception)
+			{
+				throw new InvalidOperationException($"Failed to auto-load the assembly '{assemblyName}' configured in '{Constants.ConfigurationSection}:AutoLoadAssemblies'.", exception);
+			}
+
+			types.AddRange(assembly.DefinedTypes);
+		}
+
+		if (types.Count == 0)
+		{
+			return;
+		}
+
+		_logger?.LogInformation("Auto-registering message handlers from {Count} type(s) in {AssemblyCount} configured assembly/assemblies.", types.Count, assemblyNames.Length);
+
+		_configurator.RegisterChannel(types);
 	}
 
 	/// <summary>
