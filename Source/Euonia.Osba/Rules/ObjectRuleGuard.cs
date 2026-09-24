@@ -1,16 +1,15 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 对象级规则在「保存」与「命令执行」两条路径上的统一强制点，
+/// 规则在「保存」与「命令执行」两条路径上的统一强制点，
 /// 与 <see cref="ObjectAuthorization"/>（操作权限）、<see cref="ScopeAuthorization"/>（数据权限）并列。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 可编辑对象的保存历来会先跑对象级规则（见 <see cref="EditableObject{T}.SaveAsync(bool, CancellationToken)"/>），
-/// 但命令对象的执行过去<b>完全不跑规则</b>——命令对象自己 <c>AddRules()</c> 声明的对象级规则是死代码。
-/// 本类把这条路径补齐，两条路径共用 <see cref="Rules.EnsureObjectRulesAsync"/>，
-/// 因此失败形态一致：<see cref="Nerosoft.Euonia.Validation.ValidationException"/> 且
-/// <c>Errors</c> 携带逐条违规（属性名 + 消息）。
+/// 两条路径共用 <see cref="BusinessObject.EnsureRulesAsync"/>，因此失败形态一致：
+/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/> 且 <c>Errors</c> 携带逐条违规
+/// （属性名 + 消息）。可编辑对象在 <see cref="EditableObject{T}.SaveAsync(bool, CancellationToken)"/>
+/// 内调用，命令对象在命令体之前调用——命令体不会执行到一半才发现对象不合法。
 /// </para>
 /// <para>
 /// <b>本类不是安全强制点</b>：规则可被 <see cref="Rules.SuppressRuleChecking"/> 与执行器的
@@ -25,7 +24,7 @@ namespace Nerosoft.Euonia.Osba;
 internal static class ObjectRuleGuard
 {
 	/// <summary>
-	/// 运行目标的对象级规则；存在 Error 级违规时抛出
+	/// 运行目标的完整规则校验（先属性级、再对象级）；存在 Error 级违规时抛出
 	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>。
 	/// </summary>
 	/// <param name="target">目标业务对象。</param>
@@ -35,10 +34,10 @@ internal static class ObjectRuleGuard
 	/// <remarks>
 	/// 规则检查被挂起时不给出结论、也不抛出（见 <see cref="Rules.IsRuleCheckingSuspended"/>）。
 	/// </remarks>
-	internal static Task EnsureObjectRulesAsync(object target, string message, CancellationToken cancellationToken = default)
+	internal static Task EnsureRulesAsync(object target, string message, CancellationToken cancellationToken = default)
 	{
 		return target is BusinessObject businessObject
-			       ? businessObject.RuleSet.EnsureObjectRulesAsync(cascade: true, message, cancellationToken)
+			       ? businessObject.EnsureRulesAsync(message, cancellationToken)
 			       : Task.CompletedTask;
 	}
 }

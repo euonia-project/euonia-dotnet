@@ -11,7 +11,7 @@ namespace Nerosoft.Euonia.Core.Tests;
 /// <b>按类型共享的规则是进程级静态状态</b>（<see cref="RuleManager"/>），且 xunit 会并行执行不同的测试类。
 /// 因此凡是指望 <c>AddRules()</c> 注册的类型级规则的场景，都必须使用该场景<b>专属</b>的业务对象类型；
 /// 反过来，只用到实例级/操作级规则（<c>WithRule</c>、<c>AddInstanceRule</c>）的场景可以共用同一个类型，
-/// 因为那些规则不进入共享集合——这本身就是本次改造要保证的性质之一。
+/// 因为那些规则不进入共享集合，不会跨场景互相干扰。
 /// </para>
 /// </remarks>
 internal static class RuleTestHarness

@@ -113,11 +113,9 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 
 		if (!IsDeleted || CheckObjectRulesOnDelete)
 		{
-			// 委托给与命令执行路径共用的强制点：跑对象级规则，有 Error 级违规则抛 ValidationException。
-			// 检查被挂起（SuspendRuleChecking / 执行器的 WithoutRuleChecks）时不给出结论、也不抛出——
-			// 此前这里在抑制状态下仍读 IsValid，而那反映的是上一次检查的结果，
-			// 会让「挂起规则检查」后的保存按旧结论放行或拦截。
-			await Rules.EnsureObjectRulesAsync(true, "Object not valid for save.", cancellationToken);
+			// 与命令执行路径共用的强制点：先属性级（该类型把检查推迟到这里时），再对象级；
+			// 有 Error 级违规则抛 ValidationException。检查被挂起时不给结论也不抛出。
+			await EnsureRulesAsync("Object not valid for save.", cancellationToken);
 		}
 
 		var wasDeleted = IsDeleted;

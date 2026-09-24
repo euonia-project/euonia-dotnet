@@ -109,13 +109,12 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     /// <param name="index">插入位置。</param>
     /// <param name="item">要插入的违规规则。</param>
     /// <remarks>
-    /// 计数改由覆写 <see cref="ObservableCollection{T}.InsertItem"/> /
+    /// 计数由覆写 <see cref="ObservableCollection{T}.InsertItem"/> /
     /// <see cref="ObservableCollection{T}.RemoveItem"/> / <see cref="ObservableCollection{T}.SetItem"/> /
-    /// <see cref="ObservableCollection{T}.ClearItems"/> 维护。此前用私有 <c>new</c> 方法遮蔽基类成员，
-    /// 只覆盖了类内部的调用；外部通过 <see cref="Collection{T}.Clear"/> /
-    /// <see cref="Collection{T}.Remove"/> / 索引器改动集合时计数不会更新——例如
-    /// <c>GetBrokenRules().Clear()</c> 会清空条目却留下 <see cref="ErrorCount"/>，
-    /// 令 <c>IsValid</c> 永久为 <see langword="false"/>，后续每次保存都抛验证异常。
+    /// <see cref="ObservableCollection{T}.ClearItems"/> 维护，因此<b>无论从哪条口子改动集合</b>
+    /// （含外部直接调用的 <see cref="Collection{T}.Clear"/> / <see cref="Collection{T}.Remove"/>、
+    /// 索引器赋值）计数都跟着走。计数与集合一旦脱节，
+    /// <c>IsValid</c>（取自 <see cref="ErrorCount"/>）就会与集合内容长期不一致。
     /// </remarks>
     protected override void InsertItem(int index, BrokenRule item)
     {
@@ -151,9 +150,8 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     /// <param name="severity">严重级别。</param>
     /// <param name="one">计数的增量（1 或 -1）。</param>
     /// <remarks>
-    /// <see cref="RuleSeverity.Success"/> 不参与计数（它不表示违规），直接忽略——
-    /// 此前会抛 <see cref="Exception"/>，而调用点在规则完成的回调里，会让整轮检查以
-    /// 难以定位的异常失败。
+    /// 没有对应计数的严重级别（<see cref="RuleSeverity.Success"/> 表示未违规）直接忽略：
+    /// 本方法在规则完成的回调里被调用，抛出会中断整轮检查。
     /// </remarks>
     private void CountOne(RuleSeverity severity, int one)
     {

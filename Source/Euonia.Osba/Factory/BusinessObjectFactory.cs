@@ -240,9 +240,9 @@ public class BusinessObjectFactory : IObjectFactory
 
 			_activator?.InitializeInstance(target);
 
-			// 对象级规则在命令体之前裁决：不通过则命令根本不会执行。
+			// 规则在命令体之前裁决（先属性级、再对象级）：不通过则命令根本不会执行。
 			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
-			await ObjectRuleGuard.EnsureObjectRulesAsync(target, "Object not valid for execute.", cancellationToken);
+			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
 
 			await InvokeAsync(method, target, [cancellationToken]);
 			return target;

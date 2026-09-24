@@ -45,6 +45,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
+
+			// 数据权限规则按实例注入，且每次接线都判定一次：是否需要它取决于「本容器是否声明了
+			// 该类型的权限模型」（按容器的事实），而 InitializeRules 的结果按类型进程级缓存，
+			// 两者粒度不同，放一起会让规则取决于哪个容器先初始化了这个类型。
+			InjectScopePolicyRule();
 		}
 	}
 
@@ -205,6 +210,49 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 落库（保存 / 命令执行）前的完整校验：<b>先属性级，再对象级</b>。
+	/// </summary>
+	/// <param name="message">验证异常的说明。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步检查操作的任务。</returns>
+	/// <remarks>
+	/// <para>
+	/// 顺序是刻意的，而且<b>不能颠倒</b>：对象级那一遍一旦发现 Error 就<b>抛异常</b>，
+	/// 排在它之后的属性级检查根本没机会执行——字段级错误会被整批丢掉，调用方只能看到一个
+	/// 笼统的「对象不合法」。先跑属性级还顺带让错误列表是「先字段、后整体」，
+	/// 前端可以直接按这个顺序渲染字段级提示。
+	/// </para>
+	/// <para>
+	/// 之所以先字段后整体在语义上也说得通：<b>对象级规则可能依赖一个或多个属性值</b>，
+	/// 让它在「字段都已过检」的前提下判整体更自然。
+	/// </para>
+	/// <para>
+	/// 属性级那一遍<b>只在 <see cref="CheckRuleOnPropertyChanged"/> 为 <see langword="false"/> 时执行</b>：
+	/// 那种类型在 setter 上不做检查（推迟到这里），因此需要在这里补上；而默认模式下属性级规则
+	/// 已在变更时跑过，其结果就在违规集合里，这里再跑一遍纯属重复。
+	/// </para>
+	/// <para>
+	/// 补跑时<b>只检查变更过的属性</b>（<see cref="ChangedProperties"/>）：它们才是本次要落库的字段，
+	/// 未修改（乃至未装载）的属性不参与校验，也就不会因为「读出来是默认值」而被凭空拦下。
+	/// </para>
+	/// <para>
+	/// 那一遍属性级检查对命令对象自然为空：<see cref="CommandObject{T}"/> 是<b>无状态</b>的
+	/// （只表达「要执行某种操作」，不持有属性），<see cref="ChangedProperties"/> 恒为空，
+	/// 它也不参与变更追踪。命令的校验一律写成<b>对象级</b>规则，对象级那一遍照常执行。
+	/// </para>
+	/// </remarks>
+	/// <exception cref="Nerosoft.Euonia.Validation.ValidationException">存在 Error 级违规时抛出。</exception>
+	internal async Task EnsureRulesAsync(string message, CancellationToken cancellationToken = default)
+	{
+		if (!CheckRuleOnPropertyChanged)
+		{
+			await Rules.CheckRulesAsync(ChangedProperties, cancellationToken);
+		}
+
+		await Rules.EnsureObjectRulesAsync(cascade: true, message, cancellationToken);
+	}
+
+	/// <summary>
 	/// 当验证完成时调用。
 	/// </summary>
 	/// <remarks>
@@ -239,7 +287,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			{
 				Rules.AddDataAnnotations();
 				AddRules();
-				InjectScopePolicyRule(rules);
 				rules.Initialized = true;
 			}
 			catch (Exception)
@@ -251,24 +298,28 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 若本类型声明了数据权限模型，则自动注入 <see cref="ScopePolicyRule"/>。
+	/// 若<b>本容器</b>为本类型声明了数据权限模型，则为本对象注入 <see cref="ScopePolicyRule"/>。
 	/// </summary>
-	/// <param name="rules">本类型的规则管理器。</param>
 	/// <remarks>
 	/// <para>
 	/// 注入使越权保存在保存前以验证错误暴露，无需使用方手工 <c>AddRule</c>，
 	/// 从而消除「漏加规则 = 静默无保护」。
 	/// </para>
 	/// <para>
+	/// 注入的是<b>实例级</b>规则而非类型级，且每次接线都判定一次。这是必需的：
+	/// 「是否声明了模型」是<b>按容器</b>的事实（注册表是容器内的单例），而类型级注册会被
+	/// <c>RuleManager</c> 按类型进程级缓存——两者粒度不同，规则的有无不能取决于哪个容器先
+	/// 初始化了这个类型。
+	/// </para>
+	/// <para>
 	/// <b>本方法绝不抛异常</b>：注册表缺失、环境态未建立、类型未声明模型等情况一律静默跳过。
 	/// 规则是补充信号而非强制点，让它在属性 setter 上抛出会把配置问题伪装成难以定位的异常。
 	/// </para>
 	/// <para>
-	/// 注入的规则是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据——
-	/// 这是必需的，因为规则集合是进程级共享的，而注册表是按容器的。
+	/// 规则本身仍是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据。
 	/// </para>
 	/// </remarks>
-	private void InjectScopePolicyRule(RuleManager rules)
+	private void InjectScopePolicyRule()
 	{
 		try
 		{
@@ -279,12 +330,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				return;
 			}
 
-			if (rules.Rules.OfType<ScopePolicyRule>().Any())
+			// 幂等：上下文被重复赋值时不得叠加；使用方手工注册过同类型规则时也不重复注入
+			if (Rules.ContainsRule(typeof(ScopePolicyRule)))
 			{
 				return;
 			}
 
-			Rules.AddRule(new ScopePolicyRule());
+			Rules.AddInstanceRule(new ScopePolicyRule());
 		}
 		catch
 		{
@@ -329,9 +381,30 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region INotifyPropertyChanged/INotifyPropertyChanging
 
 	/// <summary>
-	/// 获取一个值，指示检查规则是否将调用属性更改。
+	/// 获取一个值，指示属性变更时是否触发该属性的规则检查。
 	/// </summary>
-	protected internal bool CheckRuleOnPropertyChanged { get; } = false;
+	/// <remarks>
+	/// <para>
+	/// 默认为 <see langword="true"/>——这是属性级规则的设计原则：<b>属性级规则在属性变更时检查</b>，
+	/// 于是只有真正被修改过的属性会被校验。未修改（乃至未装载）的属性不参与校验，
+	/// 保存时也就不会因为「读出来是默认值」而被凭空拦下；
+	/// 对应地，<b>未修改的属性不应回写数据库</b>（持久化只取 <see cref="ChangedProperties"/>）。
+	/// </para>
+	/// <para>
+	/// 校验产生的违规会按属性归因落进 <see cref="GetBrokenRules"/>，因此保存时仍会经
+	/// <see cref="IsValid"/> 生效并抛 <see cref="Nerosoft.Euonia.Validation.ValidationException"/>。
+	/// </para>
+	/// <para>
+	/// 只有该属性<b>存在规则</b>时才进入规则检查（<c>Rules.HasRulesFor</c> 短路）；
+	/// 没有规则的属性走普通变更通知，不产生额外开销。
+	/// </para>
+	/// <para>
+	/// 关心性能、或属性级规则需要 I/O 的类型可以覆写为 <see langword="false"/>：
+	/// 该路径是<b>同步阻塞</b>调用线程的（见 <c>Rules.RunPropertyRules</c>），
+	/// 异步/耗时的校验请放对象级规则（保存走异步路径）。
+	/// </para>
+	/// </remarks>
+	protected internal virtual bool CheckRuleOnPropertyChanged => true;
 
 	/// <inheritdoc/>
 	public event PropertyChangedEventHandler PropertyChanged;
@@ -399,7 +472,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			}
 		}
 
-		if (CheckRuleOnPropertyChanged)
+		// 该属性没有规则时退化为普通变更通知——绑定依赖这条通知，
+		// 不能因为「进了规则分支但无规则可跑」而丢掉它。
+		if (CheckRuleOnPropertyChanged && Rules.HasRulesFor(property))
 		{
 			CheckPropertyRules(property);
 		}

@@ -104,7 +104,7 @@ public class ObservableListTests
 		list[0] = newItem;
 		childEvents.Clear();
 
-		// 被替换掉的旧项不应再引发通知（修复前会泄漏钩子）
+		// 被替换掉的旧项不再引发通知：事件钩子随替换分离
 		oldItem.Name = "changed";
 		Assert.Empty(childEvents);
 
@@ -141,7 +141,7 @@ public class ObservableListTests
 		list.Clear();
 		childEvents.Clear();
 
-		// 修复前 Clear 不会分离钩子，被清空的元素仍会误触发 ChildChanged
+		// Clear 要分离每个被清空元素的事件钩子
 		item1.Name = "changed";
 		item2.Name = "changed";
 
@@ -168,7 +168,7 @@ public class ObservableListTests
 
 		list.Add(new TestItem());
 
-		// 修复前 PropertyChanged（Count/Item[]）仍会被引发
+		// Clear 之后不应再引发 Count / Item[] 的变更通知
 		Assert.Empty(collectionEvents);
 		Assert.Empty(propertyEvents);
 	}

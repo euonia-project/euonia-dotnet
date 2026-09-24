@@ -11,7 +11,7 @@ namespace Nerosoft.Euonia.Core.Tests;
 /// <para>
 /// 这里大量复用 <see cref="RuleCleanEditable"/>（无类型级规则）与 <see cref="RuleFailEditable"/>：
 /// 实例级/操作级规则<b>不进入</b>按类型共享的规则管理器，因此不会跨场景污染——
-/// 这正是本次改造要保证的性质，测试本身也依赖它。
+/// 测试本身也依赖这条性质来复用类型。
 /// </para>
 /// </remarks>
 public class ActuatorRuleTests
