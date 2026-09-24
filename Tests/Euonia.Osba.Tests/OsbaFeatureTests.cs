@@ -65,7 +65,7 @@ public class OsbaFeatureTests
 	[Fact]
 	public async Task CheckObjectRulesAsync_ShouldNotDeadlock_WaitingForCompletion()
 	{
-		// 验证对象级检查会正常完成并引发完成事件（修复前 HasRunningRules 始终为 true，永不触发）
+		// 对象级检查正常完成后必须引发一次完成事件，且 HasRunningRules 随之回到 false
 		using var scope = BeginRuleScope<RuleObject>(out var obj);
 
 		var completed = false;

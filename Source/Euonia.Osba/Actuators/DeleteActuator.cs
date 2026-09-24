@@ -33,7 +33,10 @@ public class DeleteActuator<TTarget> : EditableActuator<TTarget>
 	/// </remarks>
 	protected override Task ContinueHandleAsync(TTarget target, CancellationToken cancellationToken = default)
 	{
-		target.MarkAsDeleted();
+		// 是否连带检查对象级规则由 ActuatorBase.WithRuleChecksOnDelete 决定，默认不检查
+		// （与 MarkAsDeleted 的默认值一致）。默认不检查时，WithRule 附加的规则不会执行——
+		// 需要让规则覆盖删除，请显式开启该开关。
+		target.MarkAsDeleted(CheckObjectRulesOnDelete);
 		return base.ContinueHandleAsync(target, cancellationToken);
 	}
 }

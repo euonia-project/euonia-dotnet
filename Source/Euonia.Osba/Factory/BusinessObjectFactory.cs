@@ -237,7 +237,13 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由调用方提供：可以前置判定
 			ScopeAuthorization.EnsureAuthorizedBefore(target, BusinessOperation.Execute);
+
 			_activator?.InitializeInstance(target);
+
+			// 规则在命令体之前裁决（先属性级、再对象级）：不通过则命令根本不会执行。
+			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
+			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
+
 			await InvokeAsync(method, target, [cancellationToken]);
 			return target;
 		}
@@ -263,6 +269,12 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Execute);
+
+			// 本重载刻意不做对象级规则判定：这里 criteria 驱动的工厂方法**就是命令体**，
+			// 调用前对象还是空的、调用后命令已经执行完，不存在「可校验且来得及拦截」的时点；
+			// 事后补一次判定只能「报告」而无法「阻止」，反而让调用方以为命令没跑。
+			// 需要规则裁决请走 ExecuteAsync(target, ct)：执行器正是这条路径
+			// （CreateAsync 构造 → Handle 填充 → ExecuteAsync(target)）。
 			return target;
 		}
 		finally

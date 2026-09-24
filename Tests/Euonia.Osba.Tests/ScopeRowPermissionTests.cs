@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Core.Tests;
 
 /// <summary>
 /// 验证三点增强：行级操作权限（同一用户、同一类型、不同行权限不同）、
-/// 操作权限改为数据来源（撤销立即生效）、以及权限与 Rule 体系的适配。
+/// 操作权限以授权数据为来源（撤销立即生效）、以及权限与 Rule 体系的适配。
 /// </summary>
 public class ScopeRowPermissionTests
 {

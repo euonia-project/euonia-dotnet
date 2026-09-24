@@ -34,8 +34,8 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     {
         lock (_lockObject)
         {
+            // 计数由 ClearItems 覆写维护
             Clear();
-            ErrorCount = WarningCount = InformationCount = 0;
         }
     }
 	
@@ -78,22 +78,15 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 	/// </summary>
 	/// <param name="results">规则结果集合。</param>
 	/// <param name="propertyName">属性名称。</param>
-	/// <exception cref="InvalidOperationException">当结果的描述为空时抛出。</exception>
     internal void Add(IEnumerable<RuleResult> results, string propertyName)
     {
         lock (_lockObject)
         {
             foreach (var result in results)
             {
-                //ClearRules(propertyName);
                 if (result.Success)
                 {
                     continue;
-                }
-
-                if (string.IsNullOrWhiteSpace(result.Description))
-                {
-	                throw new InvalidOperationException(Resources.IDS_RULE_MESSAGE_REQUIRED);
                 }
 
                 var rule = new BrokenRule
@@ -108,25 +101,47 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
         }
     }
 
+    #region Counting
+
     /// <summary>
-    /// 向集合中添加违规规则，并更新对应严重级别的计数。
+    /// 在指定索引处插入违规规则，并更新对应严重级别的计数。
     /// </summary>
-    /// <param name="item">要添加的违规规则。</param>
-    private new void Add(BrokenRule item)
+    /// <param name="index">插入位置。</param>
+    /// <param name="item">要插入的违规规则。</param>
+    /// <remarks>
+    /// 计数由覆写 <see cref="ObservableCollection{T}.InsertItem"/> /
+    /// <see cref="ObservableCollection{T}.RemoveItem"/> / <see cref="ObservableCollection{T}.SetItem"/> /
+    /// <see cref="ObservableCollection{T}.ClearItems"/> 维护，因此<b>无论从哪条口子改动集合</b>
+    /// （含外部直接调用的 <see cref="Collection{T}.Clear"/> / <see cref="Collection{T}.Remove"/>、
+    /// 索引器赋值）计数都跟着走。计数与集合一旦脱节，
+    /// <c>IsValid</c>（取自 <see cref="ErrorCount"/>）就会与集合内容长期不一致。
+    /// </remarks>
+    protected override void InsertItem(int index, BrokenRule item)
     {
-        base.Add(item);
+        base.InsertItem(index, item);
         CountOne(item.Severity, 1);
     }
 
-    /// <summary>
-    /// 从集合中移除指定索引处的项，并更新对应严重级别的计数。
-    /// </summary>
-    /// <param name="i">要移除的项的索引。</param>
-    private new void RemoveItem(int i)
+    /// <inheritdoc cref="InsertItem"/>
+    protected override void RemoveItem(int index)
     {
-        CountOne(this[i].Severity, -1);
+        CountOne(this[index].Severity, -1);
+        base.RemoveItem(index);
+    }
 
-        base.RemoveItem(i);
+    /// <inheritdoc cref="InsertItem"/>
+    protected override void SetItem(int index, BrokenRule item)
+    {
+        CountOne(this[index].Severity, -1);
+        base.SetItem(index, item);
+        CountOne(item.Severity, 1);
+    }
+
+    /// <inheritdoc cref="InsertItem"/>
+    protected override void ClearItems()
+    {
+        base.ClearItems();
+        ErrorCount = WarningCount = InformationCount = 0;
     }
 
     /// <summary>
@@ -134,6 +149,10 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
     /// </summary>
     /// <param name="severity">严重级别。</param>
     /// <param name="one">计数的增量（1 或 -1）。</param>
+    /// <remarks>
+    /// 没有对应计数的严重级别（<see cref="RuleSeverity.Success"/> 表示未违规）直接忽略：
+    /// 本方法在规则完成的回调里被调用，抛出会中断整轮检查。
+    /// </remarks>
     private void CountOne(RuleSeverity severity, int one)
     {
         switch (severity)
@@ -149,7 +168,9 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
                 break;
             case RuleSeverity.Success:
             default:
-                throw new Exception("Unhandled severity=" + severity);
+                break;
         }
     }
+
+    #endregion
 }
