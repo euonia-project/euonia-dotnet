@@ -152,6 +152,59 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 获取本对象的规则实例，供同程序集内的强制点（工厂边界、执行器）使用。
+	/// </summary>
+	/// <remarks>
+	/// <see cref="Rules"/> 保持 <see langword="protected"/>，只开这一个 <see langword="internal"/> 口子，
+	/// 不把规则集合变成公开 API。程序集外的调用方请用 <see cref="ValidateAsync"/>。
+	/// </remarks>
+	internal Rules RuleSet => Rules;
+
+	/// <summary>
+	/// 运行对象级规则检查，并返回对象是否有效。
+	/// </summary>
+	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>规则检查后 <see cref="IsValid"/> 的值。</returns>
+	/// <remarks>
+	/// <para>
+	/// 本方法<b>不修改对象状态、也不抛异常</b>；失败明细经 <see cref="GetBrokenRules"/> 读取。
+	/// 需要「不合规就抛」的语义请用 <see cref="EnsureValidAsync"/>，或直接保存（保存会自行检查）。
+	/// </para>
+	/// <para>
+	/// 之所以需要显式的检查入口：<see cref="IsValid"/> 取自违规集合，而违规集合只有在
+	/// <b>某次检查跑过之后</b>才有内容——首次检查之前它恒为 <see langword="true"/>。
+	/// 因此 <c>IsSavable</c> 之类「读一下就知道能不能保存」的用法并不成立，
+	/// 必须先经本方法（或保存）真正跑一遍规则。
+	/// </para>
+	/// <para>
+	/// 规则检查被挂起（<see cref="SuspendRuleChecking"/>）时不会真正检查，
+	/// 返回值就是<b>当前</b>的 <see cref="IsValid"/>（可能来自上一次检查），此时它不构成结论。
+	/// </para>
+	/// </remarks>
+	public virtual async Task<bool> ValidateAsync(bool cascade = true, CancellationToken cancellationToken = default)
+	{
+		await Rules.CheckObjectRulesAsync(cascade, cancellationToken);
+		return IsValid;
+	}
+
+	/// <summary>
+	/// 运行对象级规则检查，存在 Error 级违规时抛出
+	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步检查操作的任务。</returns>
+	/// <remarks>
+	/// 与保存、命令执行共用同一套检查与异常形态（见 <see cref="ObjectRuleGuard"/>）。
+	/// 规则检查被挂起（<see cref="SuspendRuleChecking"/>）时不给出结论、也不抛出。
+	/// </remarks>
+	/// <exception cref="Nerosoft.Euonia.Validation.ValidationException">存在 Error 级违规时抛出。</exception>
+	public Task EnsureValidAsync(CancellationToken cancellationToken = default)
+	{
+		return Rules.EnsureObjectRulesAsync(cascade: true, "Object not valid.", cancellationToken);
+	}
+
+	/// <summary>
 	/// 当验证完成时调用。
 	/// </summary>
 	/// <remarks>

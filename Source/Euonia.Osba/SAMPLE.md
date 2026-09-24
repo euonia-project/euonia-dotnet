@@ -305,7 +305,14 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 
 ## 4. 规则体系
 
-规则分两类：**对象级**（`Property == null`，保存时执行）与**属性级**（绑定到某个已注册属性）。
+规则分两类：**对象级**（`Property == null`）与**属性级**（绑定到某个已注册属性）；
+按作用域又分**类型级**（`AddRule`，进程级共享）与**实例级 / 操作级**（`AddInstanceRule`、
+执行器的 `WithRule`，随对象或操作消失）。四个组合如下表。
+
+| | 类型级 `AddRule` | 实例级 `AddInstanceRule` / 操作级 `WithRule` |
+|---|---|---|
+| **对象级**（无属性绑定） | 最常用；在 `AddRules()` 里注册 | 按操作附加的对象级校验 |
+| **属性级**（绑定属性） | 在 `AddRules()` 里注册 | 按操作附加的字段级校验，结果按属性归因 |
 
 ```csharp
 protected override void AddRules()
@@ -323,10 +330,15 @@ protected override void AddRules()
     // ④ 属性级：便捷 Lambda 重载（handler 收到的是「业务对象本身」，不是属性值）
     Rules.AddRule<Repo>(NameProperty, repo => repo.Name != "admin", "该名称被保留。");
 
-    // ⑤ 对象级：无参构造 ⇒ Property == null，只在保存时执行
+    // ⑤ 对象级：无参构造 ⇒ Property == null
     Rules.AddRule<RepoConsistencyRule>();
 }
 ```
+
+> **`AddRules()` 只对每个类型执行一次**（由 `RuleManager` 的 `Initialized` 标志守卫）。
+> 因此**类型级注册只应写在 `AddRules()` 里**；在业务方法或属性 setter 里调 `AddRule`
+> 会注册进进程级共享集合，泄漏到同类型的**所有**实例、乃至同进程的所有容器与请求。
+> 运行期要加规则请用 `AddInstanceRule` 或执行器的 `WithRule`。
 
 自定义属性级规则：
 
@@ -356,18 +368,34 @@ public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(propert
 
 ### 4.1 规则的触发与结果
 
+| 路径 | 是否执行对象级规则 | 失败形态 |
+|---|---|---|
+| `EditableObject.SaveAsync`（直接调用） | ✅ | `ValidationException` |
+| `UpdateActuator` / `CreateActuator` | ✅（经 `SaveAsync`） | `ValidationException` |
+| `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | 越权时 `SecurityException`（规则被跳过，工厂兜住） |
+| `ExecuteActuator`（命令对象） | ✅（工厂边界在**命令体之前**裁决） | `ValidationException` |
+| `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | — |
+
 ```csharp
 repo.IsValid;                                   // ErrorCount == 0
 repo.GetBrokenRules();                          // BrokenRuleCollection（Error/Warning/Information）
 
-await repo.SaveAsync();                         // 内部先 CheckObjectRulesAsync(true, ct)
-                                                // 有 Error → 抛 ValidationException
+await repo.SaveAsync();                         // 内部先跑对象级规则；有 Error → 抛 ValidationException
+
+await repo.ValidateAsync();                     // 显式检查，返回 bool，不改状态、不抛异常
+await repo.EnsureValidAsync();                  // 显式检查，有 Error → 抛 ValidationException
 
 repo.ValidationComplete += (_, _) => { };       // 规则跑完的事件
 
-repo.SuspendRuleChecking();                     // 暂停检查
+repo.SuspendRuleChecking();                     // 挂起：本次不给出结论（不再读上一次的结论）
 repo.ResumeRuleChecking();
 ```
+
+> **`IsValid` 在首次检查之前恒为 `true`**——它取自违规集合，而集合只有在某次检查跑过之后才有内容。
+> 因此不要用 `IsSavable` 当作「能保存」的判据，需要结论就先 `ValidateAsync()`（或直接保存）。
+>
+> **挂起规则检查 ≠ 对象有效**：挂起期间既不跑规则、也不读陈旧的违规集合，
+> `SaveAsync` 因此不会按上一次检查的结论放行或拦截。
 
 只让规则在特定状态下生效：
 
@@ -378,10 +406,46 @@ public sealed class RepoCreateOnlyRule : RuleBase { /* ... */ }
 
 > **只有 `Error` 会让对象无效**（`IsValid => BrokenRules.ErrorCount == 0`）；Warning / Information 不阻断保存。
 >
-> **规则只在 `BusinessContext` 被赋值后才初始化**：setter 会触发 `AddRules()` 与 `AddDataAnnotations()`。
+> **报错必须给消息**：`AddErrorResult(null)` / `AddErrorResult("")` / `AddErrorResult(" ")` 会用占位消息
+> （`Rule message is required`）代替，不会被静默当成通过。
 >
-> `BusinessObject.Rules` 是 **`protected`**。要从外部驱动规则，得在派生类里暴露它：
+> **规则只在 `BusinessContext` 被赋值后才初始化**：setter 会触发 `AddRules()` 与 `AddDataAnnotations()`。
+> 直接 `new` 出来的对象若从不接线，`AddRules()` 永不执行。
+>
+> `BusinessObject.Rules` 是 **`protected`**。要从外部驱动规则用 `ValidateAsync()` / `EnsureValidAsync()`；
+> 要在派生类里暴露规则集合（例如运行期加实例级规则）：
 > `public Rules PublicRules => Rules;`
+
+### 4.2 按操作指定规则
+
+执行器让「只对这一次操作生效」的规则不必写进 `AddRules()`：
+
+```csharp
+await actuator.For<Repo>()
+             .Update(id)
+             .Handle(repo => repo.Name = "pay-web-2")
+             .WithRule(new RepoNameUniqueRule(Repo.NameProperty))   // 实例：按操作构造
+             .WithRule<RepoConsistencyRule>()                        // 无参构造
+             .WithRule<RepoAuditRule>(serviceProvider)               // 从容器解析依赖
+             .WithRules(ruleEnumerable)                              // 批量
+             .BypassRule<SlowRule>()                                 // 本次绕过这条类型级规则
+             .BypassRule("rule://nerosoft.../repo/name")             // 按 Name 绕过
+             .WithoutRuleChecks()                                    // 本次完全跳过规则检查
+             .ExecuteAsync(cancellationToken);
+```
+
+语义要点：
+
+- **追加的规则不写入类型级共享集合**，只挂在本次操作取到的对象上；并发请求互不可见，操作结束即消失。
+  动态加规则请一律走这条通道，不要在业务方法里 `AddRule`（那会泄漏到同进程的所有实例）。
+- **规则在 `Handle` 之后执行**：它看到的是处理完的对象，不在 `Handle` 里设值就看不到变更。
+- **绑定属性的附加规则也会执行**：属性级规则当前不会随属性变更自动触发，因此它们被纳入对象级检查，
+  失败时按该属性归因（`BrokenRule.Property`）。
+- `BypassRule<T>()` 按**精确类型**匹配，不含派生类型——避免 `BypassRule<RuleBase>()`
+  一次笔误就关掉框架自动注入的数据权限规则。
+- `WithoutRuleChecks()` 只跳过**规则**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`。
+- **删除默认不跑规则**。`.Delete(id).WithRule(...)` 要让附加规则真正执行，须同时 `.WithRuleChecksOnDelete()`。
+- 若 `Handle` 什么也没改、对象又是干净的，`SaveAsync` 会直接返回（无事可保存），规则那一轮不会发生。
 
 ---
 
@@ -448,6 +512,9 @@ await actuator.For<PushCommand>()
 > `.ExecuteAsync(ct)` 的才是取消令牌。两处都要传。
 >
 > 执行器**没有 `Fetch`**——读取请直接用 `IObjectFactory.FetchAsync` 或 `BusinessContext.FetchAsync`。
+>
+> 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `WithoutRuleChecks`），
+> 见 [§4.2](#42-按操作指定规则)。
 
 自定义管道行为：
 
@@ -611,12 +678,16 @@ protected bool CanDelete()
 
 ### 6.5 写侧强制与规则互通
 
-保存时有两道关卡：
+写路径有两道关卡：
 
 | 时机 | 结果 |
 |---|---|
 | 规则阶段（框架对已声明模型的类型**自动注入**范围规则） | `ValidationException` |
 | 工厂边界（criteria 入口、或规则被跳过时） | `SecurityException` |
+
+> 命令对象（`CommandObject`）也在规则阶段受检：`ExecuteActuator` 的对象级规则由工厂边界在
+> **命令体之前**裁决，不通过则命令根本不执行。而 `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、
+> `ExecuteAsync(criteria)` 这些 criteria 低层入口不做规则判定（调用前对象为空，无从校验）。
 
 ```csharp
 try
@@ -636,7 +707,8 @@ catch (SecurityException ex)            // 工厂边界拦下（越权删除走�
 
 > 越权**删除**抛的是 `SecurityException` 而不是 `ValidationException`：
 > `EditableObject<T>` 在 `IsDeleted` 时**默认跳过对象级规则**。
-> 需要让规则覆盖删除时，重写 `CheckObjectRulesOnDelete` 返回 `true`。
+> 需要让规则覆盖删除时，用执行器的 `WithRuleChecksOnDelete()`，或在派生类里让
+> `MarkAsDeleted(true)` 被调用（`CheckObjectRulesOnDelete` 是只读属性，不能重写）。
 
 也可以把权限断言写进自己的规则：
 
@@ -745,11 +817,12 @@ BusinessContextAccessor.Clear();
 6. `string` 属性的默认值是 `string.Empty`，不是 `null`。
 7. 加载数据用 `LoadProperty`（不标脏），用户改动用 `SetProperty`（标脏）——不要混用。
 8. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` **不是 virtual**；只有 `MarkAsClean` 是。
-9. `MarkAsDeleted(true)` 才让删除也执行对象级规则，默认**不执行**。
+9. `MarkAsDeleted(true)` 才让删除也执行对象级规则，默认**不执行**；走执行器时用 `WithRuleChecksOnDelete()`。
 10. `BusinessObject.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
-    外部只能读 `IsValid` / `GetBrokenRules()`，要驱动规则请在派生类里暴露。
-11. `CheckRuleOnPropertyChanged` 恒为 `false` 且不能赋值——**属性变更不会自动触发规则检查**，
-    需要时显式调用 `CheckPropertyRules(property)`。
+    外部可读 `IsValid` / `GetBrokenRules()`，并用 `ValidateAsync()` / `EnsureValidAsync()` 驱动检查；
+    要直接操作规则集合（例如加实例级规则）请在派生类里暴露它。
+11. `CheckRuleOnPropertyChanged` 恒为 `false` 且不能赋值——**属性变更不会自动触发规则检查**
+    （包括绑定到属性的规则）；它们只在对象级检查（保存 / 命令执行）或显式 `CheckPropertyRules(property)` 时执行。
 12. 跨程序集重写工厂方法时用 **`protected override`**（不是 `protected internal override`）。
 
 ### 工厂
@@ -776,29 +849,43 @@ BusinessContextAccessor.Clear();
 26. 规则实例是**类型级共享的单例**——绝不能把请求态存进规则字段，一律从 `context.Target` 取。
 27. 只有 `Error` 让对象无效；Warning/Information 不阻断保存。
 28. **规则只在 `BusinessContext` 被赋值后才初始化**；不设上下文则 `AddRules()` 永不执行、`IsValid` 恒 `true`。
+29. `IsValid` 在**首次检查之前恒为 `true`**（违规集合还是空的）。要结论就 `ValidateAsync()`，别拿 `IsSavable` 当判据。
+30. **挂起规则检查 ≠ 对象有效**：挂起期间不跑规则、也不看陈旧的违规集合，`SaveAsync` 不会按上一次的结论放行或拦截。
+31. `AddRule` 写进**进程级、按类型共享**的集合；`AddRules()` 每个类型只跑一次。运行期加规则请用
+    `AddInstanceRule` 或执行器的 `WithRule`，否则会泄漏到同进程的所有实例与容器。
+32. `AddErrorResult` 收到 `null`/空白描述时会用占位消息补上，**不会**被静默当成通过；
+    但反过来，报错却不给消息本身就是缺陷，别依赖这个兜底。
+33. **删除默认不跑对象级规则**，`.Delete(id).WithRule(...)` 需同时 `.WithRuleChecksOnDelete()` 才会执行。
+34. `BypassRule<T>()` 按**精确类型**匹配；`WithoutRuleChecks()` 只跳规则、**不**解除权限。
+35. **命令对象也会跑对象级规则**，且由工厂边界在命令体之前裁决——规则失败时命令体不会执行。
+    但 `IObjectFactory` 的 criteria 低层入口（`ExecuteAsync(criteria)` 等）不做规则判定。
+36. `ValidateAsync(cascade, ct)` 只管**对象级**规则且不抛异常（返回 bool）；
+    要抛异常用 `EnsureValidAsync()`。二者都不修改对象状态。
 
 ### 执行器
 
-29. `Actuator` 类是 `internal`；对外只能注入 `IActuator` 后 `For<T>()`。
-30. `ActuatorBuilderExtensions` **没有 `Fetch`**。
-31. `.Execute(ct)` 的参数进 `criteria`，`.ExecuteAsync(ct)` 的才是取消令牌——两处都要传。
-32. `IActuatorBehavior<T>` 需要注册到容器才会被自动接入管道。
+37. `Actuator` 类是 `internal`；对外只能注入 `IActuator` 后 `For<T>()`。
+38. `ActuatorBuilderExtensions` **没有 `Fetch`**。
+39. `.Execute(ct)` 的参数进 `criteria`，`.ExecuteAsync(ct)` 的才是取消令牌——两处都要传。
+40. `IActuatorBehavior<T>` 需要注册到容器才会被自动接入管道。
+41. `WithRule` 附加的规则**在 `Handle` 之后执行**：不在 `Handle` 里设值，规则看不到变更。
+42. `Handle` 什么都没改、对象又干净时 `SaveAsync` 直接返回，那一轮规则不会发生。
 
 ### 权限
 
-33. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
+43. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
     启动期 `ValidatePermissionSetup()` 失败（不调用它，首次判定也会报错，不会静默放行）。
-34. **`[Permission]` 的码同时是行级策略的键**：漏写就会解析到 `@delete` 之类的默认键，
+44. **`[Permission]` 的码同时是行级策略的键**：漏写就会解析到 `@delete` 之类的默认键，
     你在 `Declare` 里写的行级策略不会生效。
-35. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
-36. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
-37. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
-38. 越权新增/更新抛 `ValidationException`，越权删除抛 `SecurityException`（删除默认跳过对象级规则）。
-39. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
+45. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
+46. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
+47. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
+48. 越权新增/更新抛 `ValidationException`，越权删除抛 `SecurityException`（删除默认跳过对象级规则）。
+49. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
     （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
     `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，
     不需要为 `Create` 另写策略。
-40. 未声明 `ScopeModel<T>` 的类型不受数据权限约束——**读模型也要单独声明**。
+50. 未声明 `ScopeModel<T>` 的类型不受数据权限约束——**读模型也要单独声明**。
 41. **忘给对象接 `BusinessContext` 不会静默放行**：声明了 `[Permission]` 或 `ScopeModel<T>` 的类型，若目标对象没接入上下文，工厂会在强制点抛 `InvalidOperationException` 并指明缺少 `BusinessContext`。
     这是有意的——「判定不了」不等于「没有要求」。通过工厂创建/读取对象时会自动接线；手工 `new` 的对象必须自己设。
 42. 不要把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——EF 按 DbContext 类型缓存模型，

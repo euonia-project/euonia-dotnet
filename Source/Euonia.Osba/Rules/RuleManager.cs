@@ -28,7 +28,40 @@ public class RuleManager
     /// <summary>
     /// 获取规则列表。
     /// </summary>
+    /// <remarks>
+    /// 请勿直接修改此列表：写入请走 <see cref="Add"/>，读取请走 <see cref="Snapshot"/>。
+    /// 本列表按类型进程级共享，直接枚举的同时若发生写入会抛出
+    /// <see cref="InvalidOperationException"/>（集合已被修改）。
+    /// </remarks>
     public List<IRuleBase> Rules { get; }
+
+    /// <summary>
+    /// 向规则列表添加规则。
+    /// </summary>
+    /// <param name="rule">要添加的规则。</param>
+    /// <remarks>
+    /// 锁对象是 <see cref="RuleManager"/> 实例本身：<c>BusinessObject.InitializeRules</c>
+    /// 已在 <c>lock (rules)</c> 内调用本方法，共用同一把锁，不引入新的锁序。
+    /// </remarks>
+    internal void Add(IRuleBase rule)
+    {
+        lock (this)
+        {
+            Rules.Add(rule);
+        }
+    }
+
+    /// <summary>
+    /// 获取当前规则列表的线程安全快照。
+    /// </summary>
+    /// <returns>规则列表的副本。</returns>
+    internal IReadOnlyList<IRuleBase> Snapshot()
+    {
+        lock (this)
+        {
+            return [.. Rules];
+        }
+    }
 
     /// <summary>
     /// 获取指定类型的规则。

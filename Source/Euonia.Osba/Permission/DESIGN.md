@@ -182,8 +182,12 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 **但强制点仍在工厂边界**，因为规则可被绕过：
 
-- `SuspendRuleChecking()` / `BypassRuleChecks` 能跳过规则；
-- 对象级规则只在 `EditableObject.SaveAsync` 执行，且 `IsDeleted` 时**默认跳过**；
+- `SuspendRuleChecking()` / 执行器的 `WithoutRuleChecks()` / `BypassRuleChecks` 能跳过规则；
+- 规则只覆盖写路径：`EditableObject.SaveAsync`（可编辑对象）与
+  `BusinessObjectFactory.ExecuteAsync(target, ct)`（命令对象，见 `ObjectRuleGuard`），
+  且 `IsDeleted` 时**默认跳过**；
+- `IObjectFactory.InsertAsync/UpdateAsync/DeleteAsync(criteria)`、`ExecuteAsync(criteria)`
+  这类 criteria 低层入口不做规则判定（调用前对象为空，无从校验）；
 - 规则抛不出 `SecurityException`（`Rules.RunAsync` 把所有异常转成错误）。
 
 **规则实例是进程级、按类型共享的单例**（`RuleManager` 是静态字典）。
@@ -220,7 +224,9 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | 越权新增/更新 | `ValidationException`（规则先命中） |
 | 越权删除 | `SecurityException`（规则被跳过，工厂兜住） |
 
-需要让规则覆盖删除时，重写 `CheckObjectRulesOnDelete` 返回 `true`。
+需要让规则覆盖删除时有两条路：调用方改用 `MarkAsDeleted(true)`，或走执行器时加
+`.WithRuleChecksOnDelete()`。（`CheckObjectRulesOnDelete` 是只读属性，**无法重写**；
+它由 `MarkAsDeleted` 的入参驱动。）
 两条路径都有断言钉住（`ScopeTests` / `ScopeRowPermissionTests`），行为变化会让测试转红。
 
 ### 2.3 行级 ACL 要求解析器做反向展开
