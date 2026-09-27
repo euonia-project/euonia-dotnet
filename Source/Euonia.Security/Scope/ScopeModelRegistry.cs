@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 由 <c>AddBusinessObject</c> 在程序集扫描时构建，并在<b>注册期</b>完成校验（见
+/// 由程序集扫描构建，并在<b>注册期</b>完成校验（见
 /// <see cref="Create"/>）。注册表是<b>实例</b>而非进程级静态状态，因此不同的容器/测试之间天然隔离。
 /// </para>
 /// <para>

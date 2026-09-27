@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 键<b>只由操作决定</b>，操作由对象模型的状态映射决定（<c>Euonia.Osba</c> 的 <c>ScopeOperationMap</c>）。
+/// 键<b>只由操作决定</b>，操作由调用方给出。
 /// 键不受调用方状态直接影响——<c>MarkAsNew</c>/<c>MarkAsChanged</c>/<c>MarkAsDeleted</c>
 /// 改变的是实际执行的操作，而每个操作各自应用自己的策略。
 /// </para>
@@ -24,7 +24,7 @@ public static class ScopeKeyResolver
 	/// <param name="registration">资源类型的注册项；为 <see langword="null"/> 时返回该操作的默认键。</param>
 	/// <param name="resourceType">资源类型。</param>
 	/// <param name="operation">业务操作。</param>
-	/// <param name="codeSource">权限码来源；由对象模型提供（方法级 <see cref="PermissionAttribute"/> 要按工厂方法角色归类）。</param>
+	/// <param name="codeSource">权限码来源，由使用方提供，见 <see cref="IPermissionCodeSource"/>。</param>
 	/// <returns>策略键。</returns>
 	/// <exception cref="InvalidOperationException">同一操作解析出多个有策略的权限码时抛出。</exception>
 	public static string Resolve(ScopeModelRegistration registration, Type resourceType, BusinessOperation operation, IPermissionCodeSource codeSource)

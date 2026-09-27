@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Security;
 /// 资源权限模型的描述：资源类型、各维度的取值选择器、分类属性选择器。
 /// </summary>
 /// <remarks>
-/// 由 <see cref="IScopeModel"/> 在启动期经 <c>AddBusinessObject</c> 的程序集扫描构建，
+/// 由 <see cref="IScopeModel"/> 在启动期的程序集扫描中构建，
 /// 之后只读，可安全地在多线程间共享。
 /// </remarks>
 public sealed class ScopeModelDescriptor

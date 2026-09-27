@@ -1,10 +1,10 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 声明执行业务操作所需的权限要求，可应用于业务对象类型或其标记了工厂方法特性的方法。
+/// 声明执行业务操作所需的权限要求，可应用于资源类型或执行该操作的方法。
 /// </summary>
 /// <remarks>
-/// 类型级要求适用于该对象支持的全部操作；方法级要求仅在对应的工厂方法被调用时生效（两者取并集）。
+/// 类型级要求适用于该类型支持的全部操作；方法级要求仅在该方法被执行时生效（两者取并集）。
 /// 未指定 <see cref="Permission"/> 时仅校验角色，未指定角色时仅校验权限；两者均未指定则视为放行。
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = true, Inherited = true)]

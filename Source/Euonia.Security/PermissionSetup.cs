@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Security;
 /// 记录本次注册中权限体系对应用的要求，供构建容器后的启动期校验使用。
 /// </summary>
 /// <remarks>
-/// 之所以不在 <c>AddBusinessObject</c> 里直接检查解析器是否已注册：解析器通常在该调用之后才注册，
+/// 之所以不在注册服务的过程中直接检查解析器是否已注册：解析器通常在那之后才注册，
 /// 在那里检查会误报。因此这里只记录「是否需要」，真正的检查放在
 /// <c>provider.ValidatePermissionSetup()</c>（容器已构建、注册顺序已确定）。
 /// </remarks>

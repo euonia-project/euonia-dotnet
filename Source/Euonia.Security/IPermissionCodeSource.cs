@@ -5,10 +5,9 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 之所以是接口而不是 <c>IScopeGuard</c> 内部实现：方法级 <see cref="PermissionAttribute"/>
-/// 必须按<b>工厂方法角色</b>归类（<c>[FactoryDelete]</c> / <c>DeleteAsync</c> 之类），
-/// 而角色属于对象模型。依赖方向只能是「对象模型 → 权限」，
-/// 因此由对象模型实现本接口，权限库只消费结果。
+/// 之所以是接口：方法级 <see cref="PermissionAttribute"/> 声明在方法上，
+/// 而「哪个方法对应哪个 <see cref="BusinessOperation"/>」取决于该方法所属框架的约定，
+/// 权限引擎无从判断，因此把这一步交给使用方实现，引擎只消费结果。
 /// </para>
 /// <para>
 /// 该接口同时用于<b>注册期</b>校验：每个操作都必须能解析出唯一的策略键，
@@ -20,7 +19,7 @@ public interface IPermissionCodeSource
 	/// <summary>
 	/// 获取指定类型在指定操作上声明的全部权限码（含类型级与方法级，忽略空权限名）。
 	/// </summary>
-	/// <param name="type">业务对象类型。</param>
+	/// <param name="type">资源类型。</param>
 	/// <param name="operation">业务操作。</param>
 	/// <returns>权限码集合。</returns>
 	IReadOnlyCollection<string> CodesFor(Type type, BusinessOperation operation);

@@ -262,8 +262,8 @@ public sealed class ScopeGuard : IScopeGuard
 			return scopeKey;
 		}
 
-		// 未显式指定码时，按目标对象当前的操作解析——「资源当前代表哪个操作」由对象模型决定，
-		// 因此走 IScopeKeyResolver 这道缝，而不是让权限库去认识 IEditableObject/ObjectEditState。
+		// 未显式指定码时按资源当前对应的操作解析；该映射由使用方通过 IScopeKeyResolver 提供，
+		// 引擎因此不需要知道资源的状态模型。
 		return _keyResolver?.Resolve(resource, scopeKey) ?? ScopeKeys.Default;
 	}
 

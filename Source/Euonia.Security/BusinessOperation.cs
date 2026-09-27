@@ -1,11 +1,11 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 表示可在业务对象上执行的业务操作类型。
+/// 表示可在资源上执行的业务操作类型。
 /// </summary>
 public enum BusinessOperation
 {
-	/// <summary>读取操作，例如 <c>IObjectFactory.Fetch</c>。</summary>
+	/// <summary>读取操作。</summary>
 	Read,
 
 	/// <summary>创建（插入）操作。</summary>
@@ -17,6 +17,6 @@ public enum BusinessOperation
 	/// <summary>删除操作。</summary>
 	Delete,
 
-	/// <summary>命令执行操作，例如 <c>IObjectFactory</c> 的执行方法。</summary>
+	/// <summary>命令执行操作。</summary>
 	Execute
 }

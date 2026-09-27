@@ -28,7 +28,7 @@ namespace Nerosoft.Euonia.Security;
 /// }
 /// </code>
 /// <para>
-/// 模型由 <c>AddBusinessObject</c> 在程序集扫描时自动发现，并在启动期校验；
+/// 模型在程序集扫描时自动发现，并在启动期校验；
 /// 同一资源类型存在多个模型、或策略引用了未映射的维度，都会导致启动失败。
 /// </para>
 /// </remarks>
