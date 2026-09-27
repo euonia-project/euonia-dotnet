@@ -28,16 +28,18 @@
 
 ---
 
-## 2. 需要使用方提供的三处映射
+## 2. 需要使用方提供的两处映射
 
-引擎有三处无从判断、必须由使用方回答的问题，因此把它们定义成接口。**脱离宿主框架单独使用时，
-都可缺席**，此时行为已在各节标注，且一律 fail-closed。
+引擎有两处无从判断、必须由使用方回答的问题，因此把它们定义成接口。**脱离宿主框架单独使用时，
+两者都可缺席**，此时行为已在各节标注，且一律 fail-closed。
 
 | 接口 | 回答的问题 | 缺席时的行为 |
 |---|---|---|
 | `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明；写侧仍由调用方显式传入 |
-| `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错，绝不静默放行 |
-| `IPermissionUserAccessor` | 「当前是谁」 | 框架默认适配 `UserPrincipal`；两者皆无即未认证，全部拒绝 |
+| `IScopeKeyResolver` | 「这个资源实例当前代表哪个操作」 | 未显式指定权限码的判定回落到 `ScopeKeys.Default` |
+
+判定主体直接取 `UserPrincipal`（其 `Claims` 即 `ClaimsPrincipal`），由宿主在容器中注册，
+不再另立一层用户抽象：角色、认证状态、声明都能从它直接取到，多包一层反而要多处转换。
 
 两者的存在是为了让引擎不必认识使用方的类型体系——**引擎不认识的东西，使用方自己回答**，
 而不是让引擎去猜。
@@ -53,19 +55,13 @@ var services = new ServiceCollection();
 // IPermissionChecker、IScopeGuard、PermissionSetup
 services.AddPermission(EmptyCodeSource.Instance, typeof(Order).Assembly);
 
-// 当前用户主体：框架已默认把 UserPrincipal 适配为 IPermissionUserAccessor，通常无需额外注册；
-// 未注册 UserPrincipal 时按未认证处理（全部拒绝）。
+// 当前用户主体（判定主体）：由宿主注册，取其 Claims 即 ClaimsPrincipal
+services.AddSingleton(UserPrincipal.Current);
 ```
 
 第二个参数 `IPermissionCodeSource` 是**必填项**，见 [3.1](#31-为什么必须提供-ipermissioncodesource)。
 
-`IPermissionCodeSource`、`IPermissionUserAccessor` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：
-宿主已注册的实现不会被覆盖。宿主用别的用户模型（消息信封、gRPC 上下文……）时，注册自己的
-`IPermissionUserAccessor` 即可——不必把用户塞进 `UserPrincipal`：
-
-```csharp
-services.AddSingleton<IPermissionUserAccessor>(new EnvelopeUserAccessor(envelope));
-```
+`IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
 
 若使用了权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [4.2](#42-用户侧授权值从数据实时解析)）。框架不提供默认实现，以免把授权值固化。
@@ -74,7 +70,7 @@ services.AddSingleton<IPermissionUserAccessor>(new EnvelopeUserAccessor(envelope
 
 ```csharp
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或用户主体时在此抛出
+provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
 ```
 
 ### 3.1 为什么必须提供 `IPermissionCodeSource`
@@ -160,7 +156,7 @@ public class Order
 ```csharp
 public sealed class MySubjectResolver : IScopeSubjectResolver
 {
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
         => ScopeSubjectSet.CreateBuilder()
                           .AddCodes(await GetPermissionCodesAsync(user, ct))   // 权限码（类型级/方法级）
                           .AddSelf(userId)                                     // 本人
@@ -285,8 +281,7 @@ new ScopeModelRegistryBuilder()
 
 | 成员 | 用途 |
 |---|---|
-| `IScopeSubjectResolver` | 实时解析当前用户的权限码与行级授予 |
-| `IPermissionUserAccessor` | 提供当前用户（认证状态、角色、声明） |
+| `IScopeSubjectResolver` | 实时解析当前用户的权限码与行级授予（入参为 `ClaimsPrincipal`） |
 | `ScopeSubjectSet` | 授权数据快照（不可变） |
 | `ScopeSubjectSetBuilder` | 构造授权数据：`AddCodes` / `AddSelf` / `AddGrant` |
 
@@ -322,7 +317,6 @@ new ScopeModelRegistryBuilder()
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验 |
 | `IScopeKeyResolver` | 把资源实例解析为策略键 |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口） |
-| `IPermissionUserAccessor` | 换掉用户模型（`UserPrincipal` 之外的任意来源） |
 | `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |
 | `OperationCodeSource` / `OperationConventions` | 换掉权限码来源的识别规则 |
 
@@ -339,7 +333,7 @@ new ScopeModelRegistryBuilder()
 | 「策略引用了未映射的维度」 | 策略引用的维度没有在 `Define` 里 `Map`——这是「写了却没映射 ⇒ 静默放行」的根治点 |
 | 「未注册 IScopeSubjectResolver」 | 声明了模型或权限码却没接授权数据源 |
 | 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
-| 「当前作用域内没有用户主体」 | 既没注册 `UserPrincipal`，也没注册自定义 `IPermissionUserAccessor`；判定会一律拒绝 |
+| 「未注册 UserPrincipal」 | 判定主体取自 `UserPrincipal`；不注册则取用 `IScopeGuard` 直接失败 |
 | 「权限模型注册期校验失败，共 N 处问题」 | 这是**汇总**异常，`Diagnostics` 列出了全部问题，按序号逐条修 |
 
 ### 判定结果不符合预期

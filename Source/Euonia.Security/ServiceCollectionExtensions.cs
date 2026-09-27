@@ -8,7 +8,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// <summary>
 /// 权限体系的注册入口。
 /// </summary>
-public static class PermissionServiceCollectionExtensions
+public static class ServiceCollectionExtensions
 {
 	/// <summary>
 	/// 注册权限策略引擎的服务。
@@ -38,6 +38,11 @@ public static class PermissionServiceCollectionExtensions
 	/// <para>
 	/// <see cref="IScopeKeyResolver"/> 同样允许缺席；不提供时未显式指定权限码的判定回落到
 	/// <see cref="ScopeKeys.Default"/>。
+	/// </para>
+	/// <para>
+	/// 判定主体取宿主注册的 <see cref="UserPrincipal"/>：容器构建时若未注册它，
+	/// 首次取用 <see cref="IScopeGuard"/> 就会失败。可调用
+	/// <c>provider.ValidatePermissionSetup()</c> 让这一缺失在启动期暴露。
 	/// </para>
 	/// </remarks>
 	public static IServiceCollection AddPermission(this IServiceCollection services, IPermissionCodeSource codeSource, params Assembly[] assemblies)

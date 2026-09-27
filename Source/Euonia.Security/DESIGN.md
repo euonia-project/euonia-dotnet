@@ -22,7 +22,6 @@
 | `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明 |
 | `IScopeKeyResolver` | 「这个资源实例当前代表哪个操作」 | 未显式指定权限码的判定回落到 `ScopeKeys.Default` |
 | `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错 |
-| `IPermissionUserAccessor` | 「当前是谁」 | 默认适配 `UserPrincipal`；皆无即未认证，全部拒绝 |
 
 **为什么不提供默认实现**：一个「猜错」的默认实现比没有实现更糟——它会静默地把键路由到
 更宽松的策略上，且没有任何迹象。宁可让使用方显式回答。
@@ -61,7 +60,7 @@ graph TD
     end
 
     subgraph C["③ 请求作用域"]
-        C1["IPermissionUserAccessor<br/>当前用户主体（默认适配 UserPrincipal，可整体替换）"]
+        C1["UserPrincipal<br/>当前用户主体（Claims 即 ClaimsPrincipal）"]
         C2["IScopeGuard（Scoped · 按请求缓存）<br/>主体集合与已编译策略只解析/编译一次"]
         C3["快照失效<br/>guard.Refresh() / RefreshAsync()"]
     end

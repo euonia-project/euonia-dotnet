@@ -77,7 +77,7 @@ services.AddBusinessObject(typeof(Order).Assembly);
 
 ```csharp
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或用户主体时在此抛出
+provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
 ```
 
 使用时机说明：`BusinessContext` 在构造时会捕获当前用户
@@ -147,7 +147,7 @@ public class AdminSettings : EditableObject<AdminSettings>
 ```csharp
 public sealed class MySubjectResolver : IScopeSubjectResolver
 {
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
     {
         var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
 
@@ -258,7 +258,7 @@ public sealed class TeamScopeResolver : IScopeSubjectResolver
     private readonly ITeamMemberRepository _members;
     private readonly IOrgTree _org;
 
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
     {
         var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
         if (userId == null)
@@ -408,8 +408,8 @@ public sealed class RepoScope : ScopeModel<Repo>
 | 已认证用户 | 按策略判定 |
 
 > **无用户即拒绝**：解析器一旦返回了授予集合，而调用方其实并无身份，就会退化成「匿名即放行」。
-> 需要以系统 / 后台身份判定的宿主（后台任务、作业、迁移脚本），请让
-> `IPermissionUserAccessor` 报告 `IsAuthenticated == true`——这比让引擎去猜「无用户大概是想放行」安全。
+> 需要以系统 / 后台身份判定的宿主（后台任务、作业、迁移脚本），请给该场景的 `UserPrincipal`
+> 一个认证身份——这比让引擎去猜「无用户大概是想放行」安全。
 
 匿名可访问的数据（注册、密码重置等）由策略显式表达，不再需要专门的特例接口：
 
@@ -456,7 +456,7 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 校验只在「声明了模型」时生效：没有任何 `ScopeModel<T>` 的应用照常启动，只是全部资源都不受数据权限约束。
 
 未注册 `IScopeSubjectResolver` 但存在模型时，会在**首次判定**以明确错误抛出，绝不静默放行；
-调用 `ValidatePermissionSetup()` 可让它在启动时暴露。同理，「已声明模型或权限码却没有任何用户主体」
+调用 `ValidatePermissionSetup()` 可让它在启动时暴露。同理，「已声明模型或权限码却没注册 `UserPrincipal`」
 也会在启动期报错——其表现是所有人都被拒却毫无提示，最容易被误判成策略写错。
 
 ---
@@ -578,7 +578,7 @@ public sealed class TeamScopeResolver : IScopeSubjectResolver
     private readonly AppDb _db;
     private readonly IOrgTree _org;
 
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
     {
         var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
         if (userId == null)
@@ -673,7 +673,7 @@ guard.Allows(repoInTeamC);                // → true
 ```csharp
 public interface IScopeSubjectResolver
 {
-    ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default);
+    ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default);
 }
 
 public sealed class ScopeSubjectSetBuilder
@@ -834,7 +834,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 |---|---|
 | `IDataScoped.ScopeTags` 运行时拼标签 | `ScopeModel<T>.Define` 声明维度 → 属性**表达式**（可下推） |
 | `IDataScoped.OwnerId` 硬编码特例 | `ScopeDimensions.Owner` 普通维度；`Self()` 是其语法糖，可撤销 |
-| `IUserScopeProvider.ResolveScopes(user)` | `IScopeSubjectResolver.ResolveAsync(IPermissionUserAccessor, ct)`（异步、可取消） |
+| `IUserScopeProvider.ResolveScopes(user)` | `IScopeSubjectResolver.ResolveAsync(ClaimsPrincipal, ct)`（异步、可取消） |
 | `IDataScopeService.CanAccess(row)` | `IScopeGuard.Allows(row)` |
 | `IDataScopeService.CreateScopePredicate<T>()` / `Filter<T>()`（仅内存） | `IScopeGuard.Apply(IQueryable<T>)`（下推）+ `ScopeFilter.Filter`（内存） |
 | 固定「跨维度 AND / 同维度 OR」 | `All` / `Any` 任意嵌套 + `Deny` |

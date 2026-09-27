@@ -5,7 +5,7 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// <summary>
 /// 权限体系的启动期校验入口。
 /// </summary>
-public static class PermissionServiceProviderExtensions
+public static class ServiceProviderExtensions
 {
 	/// <summary>
 	/// 校验权限体系的依赖是否齐备；缺失即抛出，使配置错误在启动时暴露。
