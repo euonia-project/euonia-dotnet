@@ -229,7 +229,7 @@ public class ActuatorRuleTests
 		var result = await actuator.For<RuleFailEditable>()
 		                           .Update("id")
 		                           .Handle(editable => editable.Name = "changed")
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		// 保存确实发生了，说明跳过检查后终结步骤照常执行
@@ -247,7 +247,7 @@ public class ActuatorRuleTests
 		await actuator.For<RuleFailEditable>()
 		             .Update("id")
 		             .Handle(editable => editable.Name = "changed")
-		             .WithoutRuleChecks()
+		             .BypassRuleChecks()
 		             .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		await Assert.ThrowsAsync<ValidationException>(async () =>
@@ -273,7 +273,7 @@ public class ActuatorRuleTests
 		var target = await actuator.For<RuleCleanEditable>()
 		                           .Update("id")
 		                           .Handle(item => item.Name = "changed")
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		Assert.NotSame(editable, target);
@@ -293,7 +293,7 @@ public class ActuatorRuleTests
 
 		var result = await actuator.For<RuleFailCommand>()
 		                           .Execute()
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		Assert.True(result.Executed);

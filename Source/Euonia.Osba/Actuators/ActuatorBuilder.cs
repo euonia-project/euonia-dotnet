@@ -11,7 +11,8 @@ namespace Nerosoft.Euonia.Osba;
 /// <remarks>
 /// 操作执行器（<see cref="UpdateActuator{TTarget}"/>、<see cref="CreateActuator{TTarget}"/>、<see cref="DeleteActuator{TTarget}"/>、<see cref="ExecuteActuator{TTarget}"/>）
 /// 通过 <see cref="ActuatorBuilderExtensions"/> 中的扩展方法创建；扩展方法按目标类型约束区分：
-/// 可编辑对象（<see cref="EditableObject{T}"/>）使用 Update/Create/Delete，命令对象（<see cref="CommandObject{T}"/>）使用 Execute。
+/// 可编辑对象（<see cref="EditableObject{T}"/>）使用 Update/Delete，<see cref="CreateActuator{TTarget}"/> 支持任意业务对象类型，
+/// 命令对象（<see cref="CommandObject{T}"/>）使用 Execute。
 /// </remarks>
 public sealed class ActuatorBuilder<TTarget>(IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline)
 	where TTarget : BusinessObject<TTarget>
