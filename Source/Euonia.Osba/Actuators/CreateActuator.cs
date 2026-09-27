@@ -10,9 +10,10 @@
 /// （<c>Handle(...)</c> 注册的处理逻辑在终结步骤之前执行）。
 /// </para>
 /// <para>
-/// 终结步骤仅当目标是可编辑对象（实现了 <see cref="IEditableObject"/> / <see cref="ISavable"/>）时，
-/// 才将其标记为新增（<see cref="IEditableObject.MarkAsNew"/>）并按插入语义保存；
-/// 只读对象、命令对象等不可持久化类型构造完成即返回，不做落库。
+/// 后续处理阶段，目标是 <see cref="IEditableObject"/> 时将其标记为新增（<see cref="IEditableObject.MarkAsNew"/>）；
+/// 终结阶段，目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时
+/// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存（插入语义），
+/// 其余类型（只读对象、命令对象等不可持久化对象）构造完成即原样返回、不做落库。
 /// </para>
 /// </remarks>
 public class CreateActuator<TTarget> : ActuatorBase<TTarget>
@@ -55,9 +56,9 @@ public class CreateActuator<TTarget> : ActuatorBase<TTarget>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>表示异步保存操作的任务，包含处理完成后的目标对象。</returns>
 	/// <remarks>
-	/// 当目标是 <see cref="ISavable"/> 时按 <see cref="ITrackableObject.IsChanged"/> 触发保存，
-	/// 与 <see cref="EditableActuator{TTarget}"/> 的保存语义一致；不可保存类型（只读对象、命令对象等）
-	/// 创建即完成，直接返回目标。
+	/// 当目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时，
+	/// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存，与 <see cref="EditableActuator{TTarget}"/> 的保存语义一致；
+	/// 不可保存类型（只读对象、命令对象等）创建即完成，直接返回目标。
 	/// </remarks>
 	protected override async Task<TTarget> FinalizeAsync(TTarget target, CancellationToken cancellationToken)
 	{

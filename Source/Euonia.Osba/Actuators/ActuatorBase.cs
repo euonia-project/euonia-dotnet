@@ -12,8 +12,8 @@ namespace Nerosoft.Euonia.Osba;
 /// 构建器配置与对象工厂委托，并通过 <see cref="Handle(System.Func{TTarget,System.Threading.Tasks.Task})"/> 或
 /// <see cref="Handle(Action{TTarget})"/> 注册处理逻辑；调用 <see cref="ExecuteAsync(CancellationToken)"/> 触发完整流程。
 /// 终步骤 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 由派生类实现：
-/// 可编辑对象执行保存（<see cref="EditableActuator{TTarget}"/>、<see cref="CreateActuator{TTarget}"/>），
-/// 命令对象（<see cref="ExecuteActuator{TTarget}"/>）执行命令体。
+/// <see cref="EditableActuator{TTarget}"/> 对可编辑对象执行保存，<see cref="CreateActuator{TTarget}"/>
+/// 对可保存目标执行插入保存、其余类型原样返回，<see cref="ExecuteActuator{TTarget}"/> 对命令对象执行命令体。
 /// </para>
 /// <para>
 /// 规则可由调用方按操作指定（<see cref="WithRule(IRuleBase)"/> 等）。附加的规则只挂在本次操作取到的

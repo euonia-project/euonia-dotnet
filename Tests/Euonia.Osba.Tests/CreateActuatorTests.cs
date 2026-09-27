@@ -68,7 +68,7 @@ public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>
-	/// 指示创建工厂方法（<see cref="CreateAsync(CancellationToken)"/>）是否已执行。
+	/// 指示创建工厂方法（<c>FactoryCreateAsync</c>，标有 <see cref="FactoryCreateAttribute"/>）是否已执行。
 	/// </summary>
 	public bool Created { get; private set; }
 
@@ -107,7 +107,7 @@ public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 public class CreateProbeCommand : CommandObject<CreateProbeCommand>
 {
 	/// <summary>
-	/// 指示创建工厂方法（<see cref="CreateAsync(CancellationToken)"/>）是否已执行。
+	/// 指示创建工厂方法（<c>FactoryCreateAsync</c>，标有 <see cref="FactoryCreateAttribute"/>）是否已执行。
 	/// </summary>
 	public bool Created { get; private set; }
 
@@ -148,7 +148,7 @@ public class CreateProbeCommand : CommandObject<CreateProbeCommand>
 public class CreateProbeBusiness : BusinessObject<CreateProbeBusiness>
 {
 	/// <summary>
-	/// 指示创建工厂方法是否已执行。
+	/// 指示创建工厂方法（<c>FactoryCreateAsync</c>，标有 <see cref="FactoryCreateAttribute"/>）是否已执行。
 	/// </summary>
 	public bool Created { get; private set; }
 

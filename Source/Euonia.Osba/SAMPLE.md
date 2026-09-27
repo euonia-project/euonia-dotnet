@@ -500,7 +500,7 @@ await actuator.For<Repo>()
              .WithRules(ruleEnumerable)                              // 批量
              .BypassRule<SlowRule>()                                 // 本次绕过这条类型级规则
              .BypassRule("rule://nerosoft.../repo/name")             // 按 Name 绕过
-             .WithoutRuleChecks()                                    // 本次完全跳过规则检查
+             .BypassRuleChecks()                                    // 本次完全跳过规则检查
              .ExecuteAsync(cancellationToken);
 ```
 

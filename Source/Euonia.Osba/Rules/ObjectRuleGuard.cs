@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>
 /// <b>本类不是安全强制点</b>：规则可被 <see cref="Rules.SuppressRuleChecking"/> 与执行器的
-/// <c>WithoutRuleChecks()</c> 跳过。越权始终由工厂边界的 <see cref="ObjectAuthorization"/> /
+/// <c>BypassRuleChecks()</c> 跳过。越权始终由工厂边界的 <see cref="ObjectAuthorization"/> /
 /// <see cref="ScopeAuthorization"/> 拦截并抛 <see cref="System.Security.SecurityException"/>。
 /// </para>
 /// <para>

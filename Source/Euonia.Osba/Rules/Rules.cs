@@ -77,7 +77,7 @@ public class Rules : IRules
 	/// <remarks>
 	/// <para>
 	/// 两个来源：调用方显式 <see cref="SuppressRuleChecking"/>（<c>SuspendRuleChecking</c>），
-	/// 或本次操作声明跳过检查（<c>ActuatorBase.WithoutRuleChecks</c>）。两者语义一致，故合并成一个判定入口。
+	/// 或本次操作声明跳过检查（<c>ActuatorBase.BypassRuleChecks</c>）。两者语义一致，故合并成一个判定入口。
 	/// </para>
 	/// <para>
 	/// <b>挂起不等于「对象有效」</b>：挂起期间既不跑规则、也不读陈旧的 <see cref="BrokenRules"/>——

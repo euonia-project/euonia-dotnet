@@ -481,7 +481,7 @@ protected async Task CloseAsync(CancellationToken cancellationToken)
 > 需要规则覆盖删除时，两种做法：调用方改用 `MarkAsDeleted(true)`（`CheckObjectRulesOnDelete`
 > 是只读属性，无法重写），或走执行器时加 `.WithRuleChecksOnDelete()`。
 
-> **规则不是强制点**：`SuspendRuleChecking()`、执行器的 `WithoutRuleChecks()` 都能跳过规则。
+> **规则不是强制点**：`SuspendRuleChecking()`、执行器的 `BypassRuleChecks()` 都能跳过规则。
 > 规则覆盖「保存」与「命令执行」两条写路径（命令的对象级规则由工厂边界在命令体之前裁决），
 > 但**读路径与 `IObjectFactory.Insert/Update/DeleteAsync(criteria)` 这类低层调用不做规则判定**。
 > **工厂边界始终是权威强制点**。
