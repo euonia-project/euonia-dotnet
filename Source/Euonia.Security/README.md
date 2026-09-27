@@ -28,15 +28,16 @@
 
 ---
 
-## 2. 需要使用方提供的两处映射
+## 2. 需要使用方提供的三处映射
 
-引擎有两处无��判断、必须由使用方回答的问题，因此把它们定义成接口。**脱离宿主框架单独使用时，
-两者都可缺席**，此时行为已在各节标注。
+引擎有三处无从判断、必须由使用方回答的问题，因此把它们定义成接口。**脱离宿主框架单独使用时，
+都可缺席**，此时行为已在各节标注，且一律 fail-closed。
 
 | 接口 | 回答的问题 | 缺席时的行为 |
 |---|---|---|
-| `IPermissionCodeSource` | 「哪个方法对应哪个 `BusinessOperation`」 | 扫不到方法级权限码，故不存在方法级声明；写侧仍由调用方显式传入 |
-| `IScopeKeyResolver` | 「这个资源实例当前代表哪个操作」 | 未显式指定权限码的判定回落到 `ScopeKeys.Default` |
+| `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明；写侧仍由调用方显式传入 |
+| `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错，绝不静默放行 |
+| `IPermissionUserAccessor` | 「当前是谁」 | 框架默认适配 `UserPrincipal`；两者皆无即未认证，全部拒绝 |
 
 两者的存在是为了让引擎不必认识使用方的类型体系——**引擎不认识的东西，使用方自己回答**，
 而不是让引擎去猜。
@@ -52,14 +53,19 @@ var services = new ServiceCollection();
 // IPermissionChecker、IScopeGuard、PermissionSetup
 services.AddPermission(EmptyCodeSource.Instance, typeof(Order).Assembly);
 
-// 当前用户主体（IScopeGuard 的判定主体）
-services.AddSingleton(UserPrincipal.Current ?? new UserPrincipal(
-    new GenericPrincipal(new GenericIdentity("anonymous"))));
+// 当前用户主体：框架已默认把 UserPrincipal 适配为 IPermissionUserAccessor，通常无需额外注册；
+// 未注册 UserPrincipal 时按未认证处理（全部拒绝）。
 ```
 
 第二个参数 `IPermissionCodeSource` 是**必填项**，见 [3.1](#31-为什么必须提供-ipermissioncodesource)。
 
-`IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
+`IPermissionCodeSource`、`IPermissionUserAccessor` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：
+宿主已注册的实现不会被覆盖。宿主用别的用户模型（消息信封、gRPC 上下文……）时，注册自己的
+`IPermissionUserAccessor` 即可——不必把用户塞进 `UserPrincipal`：
+
+```csharp
+services.AddSingleton<IPermissionUserAccessor>(new EnvelopeUserAccessor(envelope));
+```
 
 若使用了权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [4.2](#42-用户侧授权值从数据实时解析)）。框架不提供默认实现，以免把授权值固化。
@@ -68,12 +74,12 @@ services.AddSingleton(UserPrincipal.Current ?? new UserPrincipal(
 
 ```csharp
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 时在此抛出
+provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或用户主体时在此抛出
 ```
 
 ### 3.1 为什么必须提供 `IPermissionCodeSource`
 
-方法级 `[Permission]` 写在方法上，而「哪个方法对应哪个 `BusinessOperation`」取决于使用方的约定——
+方法级 `[Permission]` 写在方法上，而「哪个方法对应哪个业务操作」取决于使用方的约定——
 有的框架用特性标记工厂方法，有的靠命名约定，引擎无从推断。因此 `IPermissionCodeSource` 没有默认实现。
 
 应用确实**不使用方法级**权限码时，传入 `EmptyCodeSource.Instance`。这是一个显式的断言，
@@ -88,6 +94,43 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 时在此�
 ```
 
 这正是期望行为——**声明了按码策略就说明存在方法级权限码**，那就必须给出方法与操作的对应关系。
+
+### 3.2 用规则描述「哪个方法对应哪个操作」
+
+绝大多数宿主的答案是同一种形状：入口方法要么打了某个特性，要么叫某个名字。
+`OperationCodeSource` 把这件事写成**数据**而不是代码，换框架只需换一组规则：
+
+```csharp
+var codeSource = OperationCodeSource.Create()
+    .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
+    .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute))
+    .OnAttributeOrName(BusinessOperation.Update, "Order", typeof(UpdateAttribute))
+    .OnAttributeOrName(BusinessOperation.Delete, "Order", typeof(DeleteAttribute))
+    .Build();
+
+services.AddPermission(codeSource, typeof(Order).Assembly);
+```
+
+第二个参数是**要从特性名里剥离的类型前缀**（`OrderFetchAttribute` → 候选名 `Fetch` / `FetchAsync` /
+`OrderFetch` / `OrderFetchAsync`）。只按特性（`OnAttribute`）、只按名字（`OnMethodName`，可传多个）
+或任意自定义谓词（`OnMethod`）也都可以；候选名也可由 `OperationConventions.Names` 自行推导。
+
+它只**收集**方法上已有的 `[Permission]`，不生成权限码——**码由应用自己写在特性上**，
+推导出来的码会与应用真正的鉴权口径悄悄分叉。
+
+**业务操作不是固定枚举。** `BusinessOperation` 只是 `read` / `create` / `update` / `delete` / `execute`
+的字符串常量集合，宿主可定义任意操作（如审批流里的 `approve`、`order:archive`）：
+
+```csharp
+const string approve = "approve";
+
+var codeSource = OperationCodeSource.Create()
+    .OnAttributeOrName(approve, "Order", typeof(ApproveAttribute))
+    .Build();
+```
+
+每个操作的默认策略键由 `ScopeKeys.For(operation)` 派生为 `@<operation>`；操作名不得以保留前缀
+`@` 开头。判定的其余部分与操作集合无关。
 
 ---
 
@@ -117,7 +160,7 @@ public class Order
 ```csharp
 public sealed class MySubjectResolver : IScopeSubjectResolver
 {
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(IPermissionUserAccessor user, CancellationToken ct = default)
         => ScopeSubjectSet.CreateBuilder()
                           .AddCodes(await GetPermissionCodesAsync(user, ct))   // 权限码（类型级/方法级）
                           .AddSelf(userId)                                     // 本人
@@ -192,7 +235,7 @@ public sealed class OrderScope : ScopeModel<Order>
 | 条件 | 结果 |
 |---|---|
 | 策略为空 / 无维度 | 不受数据权限约束（放行） |
-| 用户未登录 | 拒绝（除非策略显式放行匿名） |
+| 用户未认证（含无用户主体来源） | 拒绝——授权数据一律视为空，不调用解析器 |
 | 解析器缺席且已声明模型或权限码 | 拒绝，并抛出明确错误——绝不静默放行 |
 | 资源类型未注册模型 | 不受数据权限约束（放行） |
 
@@ -208,11 +251,31 @@ public sealed class OrderScope : ScopeModel<Order>
 
 ### 5.6 启动期校验
 
-`ScopeModelRegistry.Create` 只校验「声明了模型」的情况。没有任何 `IScopeModel<T>` 的应用照常启动，
+权限模型在**注册期**校验，只校验「声明了模型」的情况。没有任何 `IScopeModel<T>` 的应用照常启动，
 只是全部资源都不受数据权限约束。
 
-授权数据源是否齐备由 `provider.ValidatePermissionSetup()` 检查（必须在容器构建**之后**调用，
-因为解析器的注册顺序不受约束）。若遗漏该调用，首次判定时同样会以明确错误暴露。
+所有问题**一次报全**（`ScopeModelValidationException.Diagnostics`），而不是修一个跑一次——
+启动期配置错误往往同时存在多处，逐个报出等于让人反复重启。
+
+授权数据源与用户主体是否齐备由 `provider.ValidatePermissionSetup()` 检查（必须在容器构建**之后**调用，
+因为注册顺序不受约束）。若遗漏该调用，首次判定时同样会以明确错误暴露。
+
+### 5.7 模型的注册方式
+
+程序集扫描是默认路径（`AddPermission(codeSource, assemblies)`）。模型也可以**程序化注册**，
+适合模型需要构造参数、或按配置动态生成的宿主：
+
+```csharp
+// 需要构造参数 ⇒ 用实例
+new ScopeModelRegistryBuilder()
+    .Add(new TenantModel(tenantId, departmentId))
+    .AddFrom(typeof(Order).Assembly)      // 两者可混用
+    .Build(codeSource);
+```
+
+两条路径走**同一套校验**（`Build` 是唯一校验入口），因此不存在「扫描进来的查得严、手动注册的查得松」。
+同一资源类型注册两个模型是**配置错误**（会在 `Build` 报出），而不是「后者胜出」——后者会让作者
+误以为先注册的那个生效了。
 
 ---
 
@@ -223,6 +286,7 @@ public sealed class OrderScope : ScopeModel<Order>
 | 成员 | 用途 |
 |---|---|
 | `IScopeSubjectResolver` | 实时解析当前用户的权限码与行级授予 |
+| `IPermissionUserAccessor` | 提供当前用户（认证状态、角色、声明） |
 | `ScopeSubjectSet` | 授权数据快照（不可变） |
 | `ScopeSubjectSetBuilder` | 构造授权数据：`AddCodes` / `AddSelf` / `AddGrant` |
 
@@ -232,6 +296,8 @@ public sealed class OrderScope : ScopeModel<Order>
 |---|---|
 | `ScopeModel<T>` | 数据权限模型基类，模型与策略写在一起 |
 | `ScopeModelBuilder<T>` | 声明维度取值与分类属性 |
+| `ScopeModelRegistryBuilder` | 程序化注册模型（实例 / 类型 / 程序集） |
+| `OperationCodeSource` | 通用的「方法 → 业务操作」规则化来源（按特性或命名约定） |
 | `ScopePolicy<T>` | 策略组合：`Grant` / `Deny` / `Self` / `Any` / `All` / `Not` |
 | `ScopePolicySet<T>` | 按权限码声明行级策略 |
 | `ScopeDimensions` | 预置维度（`Self` / `Dept` / …） |
@@ -256,6 +322,9 @@ public sealed class OrderScope : ScopeModel<Order>
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验 |
 | `IScopeKeyResolver` | 把资源实例解析为策略键 |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口） |
+| `IPermissionUserAccessor` | 换掉用户模型（`UserPrincipal` 之外的任意来源） |
+| `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |
+| `OperationCodeSource` / `OperationConventions` | 换掉权限码来源的识别规则 |
 
 ---
 
@@ -269,7 +338,9 @@ public sealed class OrderScope : ScopeModel<Order>
 | 「声明了权限码但没有任何操作会解析到该码」 | `Declare` 里的码与方法上 `[Permission]` 的码对不上，行级策略会静默失效 |
 | 「策略引用了未映射的维度」 | 策略引用的维度没有在 `Define` 里 `Map`——这是「写了却没映射 ⇒ 静默放行」的根治点 |
 | 「未注册 IScopeSubjectResolver」 | 声明了模型或权限码却没接授权数据源 |
-| 「同一资源类型存在多个模型」 | 一个类型只能有一个模型 |
+| 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
+| 「当前作用域内没有用户主体」 | 既没注册 `UserPrincipal`，也没注册自定义 `IPermissionUserAccessor`；判定会一律拒绝 |
+| 「权限模型注册期校验失败，共 N 处问题」 | 这是**汇总**异常，`Diagnostics` 列出了全部问题，按序号逐条修 |
 
 ### 判定结果不符合预期
 

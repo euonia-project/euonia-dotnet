@@ -29,44 +29,61 @@ public static class ScopeKeys
 	/// <summary>
 	/// <see cref="BusinessOperation.Read"/> 的默认键。
 	/// </summary>
-	public const string Read = "@read";
+	public const string Read = Prefix + BusinessOperation.Read;
 
 	/// <summary>
 	/// <see cref="BusinessOperation.Create"/> 的默认键。
 	/// </summary>
-	public const string Create = "@create";
+	public const string Create = Prefix + BusinessOperation.Create;
 
 	/// <summary>
 	/// <see cref="BusinessOperation.Update"/> 的默认键。
 	/// </summary>
-	public const string Update = "@update";
+	public const string Update = Prefix + BusinessOperation.Update;
 
 	/// <summary>
 	/// <see cref="BusinessOperation.Delete"/> 的默认键。
 	/// </summary>
-	public const string Delete = "@delete";
+	public const string Delete = Prefix + BusinessOperation.Delete;
 
 	/// <summary>
 	/// <see cref="BusinessOperation.Execute"/> 的默认键。
 	/// </summary>
-	public const string Execute = "@execute";
+	public const string Execute = Prefix + BusinessOperation.Execute;
 
 	/// <summary>
-	/// 获取指定操作对应的默认键。
+	/// 获取指定操作对应的默认键：以 <see cref="Prefix"/> 为前缀加上操作名。
 	/// </summary>
-	/// <param name="operation">业务操作。</param>
+	/// <param name="operation">业务操作名；可以是 <see cref="BusinessOperation"/> 的常量，也可以是宿主自定义的操作。</param>
 	/// <returns>该操作的默认键。</returns>
-	public static string For(BusinessOperation operation)
+	/// <exception cref="ArgumentNullException">当 <paramref name="operation"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当操作名为空白、或使用了保留前缀时抛出。</exception>
+	/// <remarks>
+	/// 派生是纯字符串拼接而非查表，因此<b>任何</b>操作名都能得到确定的默认键——
+	/// 操作集由使用方定义，框架不枚举。
+	/// </remarks>
+	public static string For(string operation)
 	{
-		return operation switch
-		{
-			BusinessOperation.Read => Read,
-			BusinessOperation.Create => Create,
-			BusinessOperation.Update => Update,
-			BusinessOperation.Delete => Delete,
-			BusinessOperation.Execute => Execute,
-			_ => Default
-		};
+		return Prefix + ValidateOperation(operation);
+	}
+
+	/// <summary>
+	/// 校验一个操作名。
+	/// </summary>
+	/// <param name="operation">操作名。</param>
+	/// <returns>校验通过的操作名。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="operation"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当操作名为空白、或使用了保留前缀时抛出。</exception>
+	public static string ValidateOperation(string operation)
+	{
+		Check.EnsureNotNullOrWhiteSpace(operation, nameof(operation));
+		Check.Ensure(
+			!IsReserved(operation),
+			"操作名 '{0}' 使用了框架保留前缀 '{1}'。操作名的默认策略键由该前缀派生，操作名本身不得带前缀。",
+			operation,
+			Prefix);
+
+		return operation;
 	}
 
 	/// <summary>

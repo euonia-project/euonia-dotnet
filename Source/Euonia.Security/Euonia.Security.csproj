@@ -3,7 +3,7 @@
 	<Import Project="..\common.props" />
 
 	<PropertyGroup>
-		<Description>Authorization primitives: operation permission requirements and data-scope (row-level) policy engine for Euonia. Independent of any object model; Euonia.Osba wires it to the factory boundary.</Description>
+		<Description>Authorization primitives: operation permission requirements and data-scope (row-level) policy engine for Euonia. Independent of any object model, user model and application framework; host applications supply the code source, user accessor and grant resolver.</Description>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">

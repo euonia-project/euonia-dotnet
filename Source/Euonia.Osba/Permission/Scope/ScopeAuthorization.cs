@@ -41,7 +41,7 @@ internal static class ScopeAuthorization
 	/// <param name="target">目标对象（已由调用方填充）。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
-	internal static void EnsureAuthorizedBefore(object target, BusinessOperation operation)
+	internal static void EnsureAuthorizedBefore(object target, string operation)
 	{
 		Ensure(target, operation, "before");
 	}
@@ -52,12 +52,12 @@ internal static class ScopeAuthorization
 	/// <param name="target">目标对象（已由业务方法填充）。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
-	internal static void EnsureAuthorizedAfter(object target, BusinessOperation operation)
+	internal static void EnsureAuthorizedAfter(object target, string operation)
 	{
 		Ensure(target, operation, "after");
 	}
 
-	private static void Ensure(object target, BusinessOperation operation, string stage)
+	private static void Ensure(object target, string operation, string stage)
 	{
 		if (target is not IBusinessObject businessObject)
 		{

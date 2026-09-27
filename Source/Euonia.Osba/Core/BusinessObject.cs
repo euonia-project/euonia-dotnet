@@ -1151,7 +1151,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </summary>
 	/// <param name="operation">当前操作。</param>
 	/// <returns>无要求或要求全部满足时返回 <c>true</c>。</returns>
-	private bool IsOperationGranted(BusinessOperation operation)
+	private bool IsOperationGranted(string operation)
 	{
 		var requirements = GetPermissionRequirements(operation);
 		if (requirements.Count == 0)
@@ -1174,12 +1174,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="operation">当前操作。</param>
 	/// <returns>权限要求列表；结果按（类型，操作）缓存。</returns>
 	/// <remarks>
-	/// 委托给 <see cref="PermissionRequirements"/>：运行期判定与启动期校验共用同一实现，
+	/// 委托给 <see cref="ObjectPermissionCodeSource"/>：运行期判定与启动期校验共用同一个来源实例，
 	/// 确保两处对「某个操作声明了哪些权限码」不会得出不同答案。
 	/// </remarks>
-	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(BusinessOperation operation)
+	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(string operation)
 	{
-		return PermissionRequirements.For(GetType(), operation);
+		return ObjectPermissionCodeSource.RequirementsFor(GetType(), operation);
 	}
 
 	/// <summary>

@@ -28,11 +28,11 @@ public sealed class EmptyCodeSource : IPermissionCodeSource
 	/// </summary>
 	public static EmptyCodeSource Instance { get; } = new();
 
-	private static readonly BusinessOperation[] Operations = Enum.GetValues<BusinessOperation>();
+	private static readonly string[] Operations = [.. BusinessOperation.All];
 
 	/// <inheritdoc />
-	public IReadOnlyList<BusinessOperation> AllOperations => Operations;
+	public IReadOnlyList<string> AllOperations => Operations;
 
 	/// <inheritdoc />
-	public IReadOnlyCollection<string> CodesFor(Type type, BusinessOperation operation) => [];
+	public IReadOnlyCollection<string> CodesFor(Type type, string operation) => [];
 }

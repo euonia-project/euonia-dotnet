@@ -15,12 +15,14 @@
 **为什么要有两处接口**：权限要按「资源当前代表哪个业务操作」选策略键，而
 「资源类型 → 操作」的对应关系因框架而异（同一类型在不同框架下可能代表不同操作，
 也可能一个操作对应多个方法）。若引擎直接去猜，就等于把某个宿主框架的类型体系写进引擎，
-使引擎无法独立使用。因此引擎把这两处判断定义成接口：
+使引擎无法独立使用。因此引擎把这些判断定义成接口：
 
 | 接口 | 回答的问题 | 缺席时的行为 |
 |---|---|---|
-| `IPermissionCodeSource` | 「哪个方法对应哪个 `BusinessOperation`」 | 扫不到方法级权限码，故不存在方法级声明 |
+| `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明 |
 | `IScopeKeyResolver` | 「这个资源实例当前代表哪个操作」 | 未显式指定权限码的判定回落到 `ScopeKeys.Default` |
+| `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错 |
+| `IPermissionUserAccessor` | 「当前是谁」 | 默认适配 `UserPrincipal`；皆无即未认证，全部拒绝 |
 
 **为什么不提供默认实现**：一个「猜错」的默认实现比没有实现更糟——它会静默地把键路由到
 更宽松的策略上，且没有任何迹象。宁可让使用方显式回答。
@@ -54,12 +56,12 @@ graph TD
     end
 
     subgraph B["② 装配与启动"]
-        B1["扫描注册<br/>ScopeModelRegistry（数据权限模型注册表）"]
-        B2["启动期校验<br/>ScopeModelRegistry.Create：未映射维度 / 恒不放行 / 键歧义 / 死策略 / 保留前缀 @<br/>provider.ValidatePermissionSetup()：缺解析器"]
+        B1["注册<br/>ScopeModelRegistryBuilder：程序集扫描（AddFrom）或程序化注册（Add 实例/类型）<br/>两条路径共用 Build() 这一唯一校验入口"]
+        B2["启动期校验<br/>ScopeModelRegistryBuilder.Build：未映射维度 / 恒不放行 / 键歧义 / 死策略 / 保留前缀 @<br/>一次报全 ScopeModelValidationException.Diagnostics<br/>provider.ValidatePermissionSetup()：缺解析器 / 缺用户主体"]
     end
 
     subgraph C["③ 请求作用域"]
-        C1["UserPrincipal<br/>当前用户主体"]
+        C1["IPermissionUserAccessor<br/>当前用户主体（默认适配 UserPrincipal，可整体替换）"]
         C2["IScopeGuard（Scoped · 按请求缓存）<br/>主体集合与已编译策略只解析/编译一次"]
         C3["快照失效<br/>guard.Refresh() / RefreshAsync()"]
     end

@@ -28,14 +28,14 @@ internal static class ObjectAuthorization
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册检查器）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
-	internal static void EnsureAuthorized(object target, BusinessOperation operation)
+	internal static void EnsureAuthorized(object target, string operation)
 	{
 		if (target is not BusinessObject businessObject)
 		{
 			return;
 		}
 
-		var requirements = PermissionRequirements.For(businessObject.GetType(), operation);
+		var requirements = ObjectPermissionCodeSource.RequirementsFor(businessObject.GetType(), operation);
 
 		if (requirements.Count == 0)
 		{

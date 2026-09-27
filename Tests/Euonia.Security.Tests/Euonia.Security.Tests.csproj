@@ -7,6 +7,7 @@
       编译通过即证明权限引擎可以脱离对象模型独立使用，且依赖方向未被回退。
     -->
     <ItemGroup>
+        <ProjectReference Include="..\Euonia.Security.Tests.BrokenFixtures\Euonia.Security.Tests.BrokenFixtures.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Security\Euonia.Security.csproj" />
         <ProjectReference Include="..\Euonia.Security.Tests.Fixtures\Euonia.Security.Tests.Fixtures.csproj" />
     </ItemGroup>

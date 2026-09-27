@@ -18,11 +18,11 @@ public static class ScopeKeyResolver
 	/// </summary>
 	/// <param name="registration">资源类型的注册项；为 <see langword="null"/> 时返回该操作的默认键。</param>
 	/// <param name="resourceType">资源类型。</param>
-	/// <param name="operation">业务操作。</param>
+	/// <param name="operation">业务操作名。</param>
 	/// <param name="codeSource">权限码来源，由使用方提供，见 <see cref="IPermissionCodeSource"/>。</param>
 	/// <returns>策略键。</returns>
 	/// <exception cref="InvalidOperationException">同一操作解析出多个有策略的权限码时抛出。</exception>
-	public static string Resolve(ScopeModelRegistration registration, Type resourceType, BusinessOperation operation, IPermissionCodeSource codeSource)
+	public static string Resolve(ScopeModelRegistration registration, Type resourceType, string operation, IPermissionCodeSource codeSource)
 	{
 		if (registration == null)
 		{

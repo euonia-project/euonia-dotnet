@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Security;
 using System.Security.Claims;
+using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
@@ -299,6 +300,13 @@ public class ScopeRowPermissionTests
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
 		services.AddSingleton<IScopeSubjectResolver>(new AclResolver());
+		var identity = new ClaimsIdentity(
+			[new Claim(ClaimTypes.Name, "tester")],
+			"Bearer",
+			ClaimTypes.Name,
+			ClaimTypes.Role);
+
+		services.AddSingleton(new UserPrincipal(new ClaimsPrincipal(identity)));
 
 		var provider = services.BuildServiceProvider();
 
@@ -323,7 +331,7 @@ public class ScopeRowPermissionTests
 		var policies = new ScopePolicySet<GrantRepo>();
 
 		// 框架自身用 For(BusinessOperation) 落在保留键上，不得被上面的校验拦住
-		policies.For(BusinessOperation.Create, ScopePolicy<GrantRepo>.Where(_ => true));
+		policies.ForOperation(BusinessOperation.Create, ScopePolicy<GrantRepo>.Where(_ => true));
 
 		Assert.Contains(ScopeKeys.Create, policies.Codes);
 	}
@@ -533,7 +541,7 @@ public sealed class GrantRepoModel : ScopeModel<GrantRepo>
 	{
 		// 只为行级操作权限声明策略；Create 会落到默认策略（Grant("repo")）——
 		// 保存新行时字段已填完，判定才有意义。
-		policies.For(BusinessOperation.Read, ScopePolicy<GrantRepo>.Grant("repo"));
+		policies.ForOperation(BusinessOperation.Read, ScopePolicy<GrantRepo>.Grant("repo"));
 
 		// 行级操作权限：各自的行范围由解析器按码给出
 		policies.For("repo:push", ScopePolicy<GrantRepo>.Grant("repo"));

@@ -22,14 +22,17 @@ public sealed class ScopePolicySet<T>
 	/// <summary>
 	/// 为指定操作声明策略（等价于为该操作的默认键 <c>@read</c>/<c>@create</c>… 声明）。
 	/// </summary>
-	/// <param name="operation">业务操作。</param>
+	/// <param name="operation">业务操作名；可以是 <see cref="BusinessOperation"/> 的常量，也可以是宿主自定义的操作。</param>
 	/// <param name="policy">策略。</param>
 	/// <returns>当前集合，便于链式声明。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 为 <see langword="null"/> 时抛出。</exception>
-	public ScopePolicySet<T> For(BusinessOperation operation, ScopePolicy<T> policy)
+	/// <exception cref="ArgumentException">当操作名为空白、或使用了保留前缀时抛出。</exception>
+	/// <remarks>
+	/// 键由 <see cref="ScopeKeys.For(string)"/> 从操作名派生，因此落在保留命名空间内，
+	/// 不经过 <see cref="For"/> 的「拒绝保留码」校验。
+	/// </remarks>
+	public ScopePolicySet<T> ForOperation(string operation, ScopePolicy<T> policy)
 	{
-		// 走内部入口：框架自己的默认键（@read/@create/…）落在保留命名空间内，
-		// 不能经过「拒绝保留码」的用户校验
 		return Add(ScopeKeys.For(operation), policy);
 	}
 
@@ -40,13 +43,16 @@ public sealed class ScopePolicySet<T>
 	/// <param name="policy">策略。</param>
 	/// <returns>当前集合，便于链式声明。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="code"/> 为空白、或使用了保留前缀时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当同一权限码被重复声明时抛出。</exception>
+	/// <remarks>
+	/// 与 <see cref="ForOperation"/> 分开而不是合并成 <c>For(string, …)</c>：
+	/// 「<c>read</c> 是操作名」与「<c>read</c> 是权限码」在字符串层面无法区分，
+	/// 合并等于让调用方靠猜。框架刻意把两种意图写成两个方法。
+	/// </remarks>
 	public ScopePolicySet<T> For(string code, ScopePolicy<T> policy)
 	{
-		// 保留命名空间只允许框架自身（For(BusinessOperation)）使用
-		ScopeKeys.Validate(code);
-
-		return Add(code, policy);
+		return Add(ScopeKeys.Validate(code), policy);
 	}
 
 	/// <summary>

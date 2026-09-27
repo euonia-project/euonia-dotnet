@@ -231,7 +231,11 @@ public sealed class ScopeGuard : IScopeGuard
 					version = _version;
 				}
 
-				var subjects = await _resolver.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty;
+				// 未认证 ⇒ 授权数据一律视为空。fail-closed：解析器一旦返回了授予集合，
+				// 而调用方其实并无身份，就会退化成「匿名即放行」。
+				var subjects = User?.Identity?.IsAuthenticated == true
+					? await _resolver.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty
+					: ScopeSubjectSet.Empty;
 
 				lock (_sync)
 				{

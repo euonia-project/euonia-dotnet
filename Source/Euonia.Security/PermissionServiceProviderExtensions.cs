@@ -42,6 +42,15 @@ public static class PermissionServiceProviderExtensions
 			+ "请注册一个基于授权数据的实现，例如 services.AddScoped<{0}, YourResolver>()。",
 			nameof(IScopeSubjectResolver));
 
+		// 缺用户主体不算「声明了却没接数据源」，但同样值得在启动期说清：
+		// 否则表现为「所有人被拒」，极易被误判成策略写错。
+		Check.Ensure(
+			provider.GetService<UserPrincipal>() != null,
+			"已声明权限模型或 [Permission] 权限码，但未注册 {0}。"
+			+ "判定主体取自 UserPrincipal，未注册时取用 IScopeGuard 会直接失败。"
+			+ "请在服务注册中提供当前用户主体。",
+			nameof(UserPrincipal));
+
 		return provider;
 	}
 }

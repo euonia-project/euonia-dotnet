@@ -206,10 +206,10 @@ public class AddPermissionTests
 	{
 		// EmptyCodeSource 与按码声明的策略不可同用：没有任何操作能解析到应用自定义的码，
 		// 死策略校验必须拒绝启动。锁定这一边界，避免日后被「放宽校验」悄悄放过。
-		var exception = Assert.Throws<InvalidOperationException>(
+		var exception = Assert.Throws<ScopeModelValidationException>(
 			() => Build(s => s.AddPermission(EmptyCodeSource.Instance, FixturesAssembly)));
 
-		Assert.Contains(nameof(GuardedAssetModel), exception.Message);
+		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
 	}
 
 	[Fact]

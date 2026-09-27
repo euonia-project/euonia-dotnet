@@ -67,7 +67,8 @@
         <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
         <Project Path="Tests/Euonia.Security.Tests/Euonia.Security.Tests.csproj" />
-        <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj" />
+            <Project Path="Tests/Euonia.Security.Tests.BrokenFixtures/Euonia.Security.Tests.BrokenFixtures.csproj" />
+    <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj" />
         <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Caching/">

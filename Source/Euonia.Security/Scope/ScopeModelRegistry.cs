@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace Nerosoft.Euonia.Security;
@@ -8,8 +7,8 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 由程序集扫描构建，并在<b>注册期</b>完成校验（见
-/// <see cref="Create"/>）。注册表是<b>实例</b>而非进程级静态状态，因此不同的容器/测试之间天然隔离。
+/// 由 <see cref="ScopeModelRegistryBuilder"/> 构建（程序集扫描或程序化注册），并在<b>注册期</b>完成校验。
+/// 注册表是<b>实例</b>而非进程级静态状态，因此不同的容器/测试之间天然隔离。
 /// </para>
 /// <para>
 /// 校验只在「声明了模型」时生效：没有任何 <see cref="IScopeModel{T}"/> 的应用照常启动，
@@ -47,8 +46,8 @@ public sealed class ScopeModelRegistry
 	/// </summary>
 	/// <param name="assemblies">要扫描的程序集。</param>
 	/// <returns>构建好的注册表。</returns>
-	/// <exception cref="InvalidOperationException">
-	/// 同一资源类型存在多个模型、模型无法实例化、策略引用未映射的维度等情况下抛出。
+	/// <exception cref="ScopeModelValidationException">
+	/// 存在配置问题时抛出，携带<b>全部</b>诊断。
 	/// </exception>
 	/// <remarks>
 	/// 校验项（全部在启动期暴露，避免运行期出现「看似启用了数据权限、实际没有生效」）：
@@ -66,61 +65,9 @@ public sealed class ScopeModelRegistry
 	{
 		ArgumentNullException.ThrowIfNull(codeSource);
 
-		var registrations = new Dictionary<Type, ScopeModelRegistration>();
-
-		foreach (var modelType in GetModelTypes(assemblies))
-		{
-			ScopeModelDescriptor descriptor;
-			IScopeModel modelObject;
-
-			try
-			{
-				modelObject = (IScopeModel)Activator.CreateInstance(modelType)!;
-				descriptor = ScopeModelDescriptor.Create(modelObject);
-			}
-			catch (Exception exception) when (exception is not InvalidOperationException)
-			{
-				throw new InvalidOperationException($"无法构建权限模型 '{modelType.FullName}'：{exception.Message}", exception);
-			}
-
-			Check.Ensure(
-				!registrations.ContainsKey(descriptor.ResourceType),
-				"资源类型 '{0}' 存在多个权限模型（{1} 与 {2}）。请确保每个资源类型只声明一个权限模型。",
-				descriptor.ResourceType.FullName,
-				registrations.TryGetValue(descriptor.ResourceType, out var existing) ? existing.Descriptor.ResourceType.Name : "?",
-				modelType.Name);
-
-			var policy = modelObject.PolicyObject;
-
-			Check.Ensure(
-				policy != null,
-				"权限模型 '{0}' 未提供策略。策略与模型必须写在同一个声明类型里，缺少任何一个都无法通过校验。",
-				modelType.Name);
-
-			ValidatePolicy(modelType, descriptor, policy, ScopeKeys.Default);
-
-			// 逐码校验行级策略：未映射维度、恒不放行等问题都要在启动期暴露
-			foreach (var code in modelObject.DeclaredCodes)
-			{
-				var scopedPolicy = modelObject.PolicyFor(code);
-
-				Check.Ensure(
-					scopedPolicy != null,
-					"权限模型 '{0}' 声明了权限码 '{1}' 但未提供策略。",
-					modelType.Name,
-					code);
-
-				ValidatePolicy(modelType, descriptor, scopedPolicy, code);
-			}
-
-			var registration = new ScopeModelRegistration(descriptor, modelObject);
-
-			ValidateKeyResolution(modelType, registration, codeSource);
-
-			registrations[descriptor.ResourceType] = registration;
-		}
-
-		return registrations.Count == 0 ? Empty : new ScopeModelRegistry(registrations, codeSource);
+		return new ScopeModelRegistryBuilder()
+			.AddFrom(assemblies)
+			.Build(codeSource);
 	}
 
 	/// <summary>
@@ -181,112 +128,11 @@ public sealed class ScopeModelRegistry
 		return false;
 	}
 
-	private static IEnumerable<Type> GetModelTypes(IEnumerable<Assembly> assemblies)
-	{
-		if (assemblies == null)
-		{
-			yield break;
-		}
-
-		foreach (var assembly in assemblies.Where(assembly => assembly != null))
-		{
-			Type[] types;
-			try
-			{
-				types = assembly.GetTypes();
-			}
-			catch (ReflectionTypeLoadException exception)
-			{
-				types = exception.Types.Where(type => type != null).ToArray();
-			}
-
-			foreach (var type in types)
-			{
-				if (type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IScopeModel)))
-				{
-					yield return type;
-				}
-			}
-		}
-	}
-
 	/// <summary>
-	/// 校验每个操作都能解析出唯一的策略键。
+	/// 供 <see cref="ScopeModelRegistryBuilder"/> 构建已校验的注册表。
 	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// 同一操作若解析出多个「声明了行级策略」的权限码，属配置歧义——不允许「实际生效的是哪一个」靠猜，
-	/// 因此在启动期直接失败。
-	/// </para>
-	/// <para>
-	/// 同时检出「死策略」：声明了策略却没有任何操作会解析到该码。多半是 <c>Declare</c> 里的码与方法上
-	/// <c>[Permission]</c> 的码对不上——那样行级策略会静默失效并回落到默认策略，很可能比作者本意更宽松。
-	/// </para>
-	/// </remarks>
-	private static void ValidateKeyResolution(Type modelType, ScopeModelRegistration registration, IPermissionCodeSource codeSource)
+	internal static ScopeModelRegistry Create(Dictionary<Type, ScopeModelRegistration> registrations, IPermissionCodeSource codeSource)
 	{
-		var resolved = new HashSet<string>(StringComparer.Ordinal);
-
-		foreach (var operation in codeSource.AllOperations)
-		{
-			// 解析失败会抛 InvalidOperationException，消息里带类型、操作与冲突的码
-			resolved.Add(ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, codeSource));
-		}
-
-		foreach (var code in registration.DeclaredCodes)
-		{
-			// 框架保留键（@read/@create/…）由操作直接解析，不需要声明方匹配
-			if (ScopeKeys.IsReserved(code))
-			{
-				continue;
-			}
-
-			Check.Ensure(
-				resolved.Contains(code),
-				"权限模型 '{0}' 为权限码 '{1}' 声明了行级策略，但没有任何操作会解析到该码"
-				+ "（请核对方法上 [Permission] 的码与 Declare 里的码是否一致）。已解析到的码：{2}。",
-				modelType.Name,
-				code,
-				resolved.Count == 0 ? "（无）" : string.Join(", ", resolved));
-		}
-	}
-
-	/// <summary>
-	/// 用探针主体集试编译策略，借此暴露「策略引用了未映射维度」等配置错误。
-	/// </summary>
-	/// <remarks>
-	/// 刻意<b>不用空主体集</b>：空集合会让任何基于 Grant 的策略都退化成恒假，
-	/// 从而把「本维度未被授予」误判成「策略结构性恒不放行」。
-	/// 这里给每个已声明维度都填一个哨兵值，使策略结构被真实地走一遍。
-	/// </remarks>
-	private static void ValidatePolicy(Type modelType, ScopeModelDescriptor descriptor, object policy, string scopeKey)
-	{
-		var probe = ScopeSubjectSet.CreateBuilder();
-		foreach (var dimension in descriptor.Dimensions)
-		{
-			probe.Add(dimension, $"__scope_probe__{dimension}");
-		}
-
-		var compile = typeof(ScopePolicyCompiler)
-		              .GetMethod(nameof(ScopePolicyCompiler.Compile))!
-		              .MakeGenericMethod(descriptor.ResourceType);
-
-		try
-		{
-			var compiled = compile.Invoke(null, [policy, descriptor, probe.Build(), scopeKey]);
-
-			// 注意：只拒绝「恒不放行」的策略。只有拒绝条件的策略（All(Deny(...))）是合法的
-			// 拒绝清单语义——其 Allow 恒真，不应被误报。
-			var allow = (LambdaExpression)compiled!.GetType().GetProperty(nameof(CompiledScopePolicy<object>.Allow))!.GetValue(compiled)!;
-
-			Check.Ensure(
-				allow.Body is not ConstantExpression { Value: false },
-				"权限模型 '{0}' 的策略结构性恒不放行（Allow 恒假），通常意味着 Any 之下全是拒绝条件。请确认策略构成。",
-				modelType.Name);
-		}
-		catch (TargetInvocationException exception) when (exception.InnerException != null)
-		{
-			throw new InvalidOperationException($"权限模型 '{modelType.FullName}' 的策略校验失败：{exception.InnerException.Message}", exception.InnerException);
-		}
+		return new(registrations, codeSource);
 	}
 }

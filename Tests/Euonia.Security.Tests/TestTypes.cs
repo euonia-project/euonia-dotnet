@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Security.Claims;
 using Nerosoft.Euonia.Security.Tests.Fixtures;
 
 namespace Nerosoft.Euonia.Security.Tests;
@@ -52,11 +53,11 @@ public sealed class ClassLevelAsset
 /// </summary>
 public sealed class ConventionCodeSource : IPermissionCodeSource
 {
-	private static readonly BusinessOperation[] Operations = Enum.GetValues<BusinessOperation>();
+	private static readonly string[] Operations = [.. BusinessOperation.All];
 
-	public IReadOnlyList<BusinessOperation> AllOperations => Operations;
+	public IReadOnlyList<string> AllOperations => Operations;
 
-	public IReadOnlyCollection<string> CodesFor(Type type, BusinessOperation operation)
+	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{
 		if (operation != BusinessOperation.Execute)
 		{
@@ -107,6 +108,59 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 		_subjects = builder.Build();
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(System.Security.Claims.ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
 		=> new(_subjects);
+}
+
+/// <summary>
+/// 标记「审批」操作入口的示例特性，用于验证通用来源的按特性约定。
+/// </summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class AssetApproveAttribute : Attribute;
+
+public sealed class AssetSecondApproveAttribute : Attribute;
+
+/// <summary>
+/// 类型级 + 方法级（两种约定：特性与命名）都声明了审批权限的资源。
+/// </summary>
+[Permission("asset:read")]
+public sealed class ApprovableAsset
+{
+	public string Id { get; set; }
+
+	public string OwnerId { get; set; }
+
+	public string DeptId { get; set; }
+
+	[Permission("asset:approve", "auditor", "manager")]
+	[AssetApprove]
+	public void Approve() { }
+
+	[Permission("asset:approve")]
+	public void ApproveAsync() { }
+
+	[AssetApprove]
+	[AssetSecondApprove]
+	public void ApproveViaAttribute() { }
+}
+
+/// <summary>
+/// 没有类型级权限声明的资源：用于精确验证「只按入口方法收集」的语义。
+/// </summary>
+public sealed class ApproveOnlyAsset
+{
+	public string Id { get; set; }
+
+	public string OwnerId { get; set; }
+
+	[Permission("asset:approve")]
+	[AssetApprove]
+	public void Approve() { }
+
+	[Permission("asset:approve")]
+	public void ApproveAsync() { }
+
+	[AssetApprove]
+	[AssetSecondApprove]
+	public void ApproveViaAttribute() { }
 }
