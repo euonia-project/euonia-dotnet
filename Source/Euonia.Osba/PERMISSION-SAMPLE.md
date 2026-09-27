@@ -2,8 +2,9 @@
 
 > 面向需要「照着改就能用」的读者。每个场景都是独立的一段业务：给出领域需求、
 > 资源与操作声明、授权数据解析器、判定调用与运行结果，最后列关键语义。
-> 概念、类型速查与故障排查见 [README.md](README.md)，设计取舍见 [DESIGN.md](DESIGN.md)，
-> 体系架构总览（图）见 [DESIGN.md](DESIGN.md) §0.1。
+> 概念、类型速查与故障排查见 [PERMISSION.md](PERMISSION.md)，设计取舍见
+> [`Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md)，
+> 体系架构总览（图）见 [`Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) §0.1。
 
 **文中 API 与框架实现一致，判定语义均与单元测试（`PermissionTests`、`ScopeTests`、
 `ScopeRowPermissionTests`）验证过的行为对齐**。示例里的存储与授权数据是内存模拟
@@ -366,7 +367,7 @@ await stealing.SaveAsync();                             // SecurityException（�
 
 - **越权形态一致**：新增、更新、删除、命令执行一律 `SecurityException`。
   早前靠 `ScopePolicyRule` 注入让新增/更新抛 `ValidationException` 的做法已移除
-  （见 [DESIGN §1.10](DESIGN.md#110-权限与验证是两条线越权一律抛-securityexception)）。
+  （见 [PERMISSION-DESIGN §1.2](PERMISSION-DESIGN.md#12-权限与验证是两条线越权一律抛-securityexception)）。
 - **`[Permission]` 的码就是行级策略的键**：`DeleteAsync` 上若漏写 `[Permission("repo:delete")]`，
   删除会解析到默认键 `@delete` 并回落到模型的 `Policy`——你在 `Declare` 里为
   `"repo:delete"` 写的行级策略**根本不生效**。

@@ -320,12 +320,17 @@ guard.Explain(repo, "repo:delete");          // audit: which policy matched
   `SecurityException` with **no way to bypass it**. The rule channel does data validation only
   and throws `ValidationException`. The former `PermissionRule` / `ScopePolicyRule` and their
   automatic injection have been removed (see
-  [`DESIGN.md` §1.10](Source/Euonia.Security/DESIGN.md)).
+  [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)).
 
-Full usage, troubleshooting, and performance notes:
+Engine usage and troubleshooting:
 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md).
-Design rationale and trade-offs:
+Engine design rationale and trade-offs:
 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md).
+Full wiring usage and multi-scenario examples:
+[`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md) and
+[`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md);
+wiring decisions:
+[`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md).
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
 > Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.

@@ -6,8 +6,8 @@ namespace Nerosoft.Euonia.Security;
 /// <remarks>
 /// <para>
 /// 键<b>只由操作决定</b>，操作由调用方给出。
-/// 键不受调用方状态直接影响——<c>MarkAsNew</c>/<c>MarkAsChanged</c>/<c>MarkAsDeleted</c>
-/// 改变的是实际执行的操作，而每个操作各自应用自己的策略。
+/// 键不受调用方状态直接影响——资源状态的改变只是改变了实际执行的操作，
+/// 而每个操作各自应用自己的策略。
 /// </para>
 /// <para>
 /// 解析优先级：<b>声明了权限码且模型为该码声明了策略 → 用该码</b>；

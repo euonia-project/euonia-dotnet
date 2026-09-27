@@ -310,11 +310,14 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 - **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
 - **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
   `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`。
-  早前的 `PermissionRule` / `ScopePolicyRule` 与自动注入已删除（见
-  [`DESIGN.md` §1.10](Source/Euonia.Security/DESIGN.md)）。
+  早前的权限规则与自动注入已删除（见
+  [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)）。
 
-完整用法、故障排查与性能注意事项见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md)，
-设计动因与取舍见 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md)。
+引擎的用法与故障排查见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md)，
+引擎的设计取舍见 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md)；
+接线的完整用法与多场景示例见 [`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md)
+与 [`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md)，
+接线决策见 [`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md)。
 
 ### Bus Abstract（Euonia.Bus.Abstract）
 > 消息总线抽象契约层：定义消息信封、上下文、约定、传输策略、注解、抽象传输接口与事件体系。所有总线模块的扩展基础。
