@@ -495,6 +495,9 @@ protected async Task CloseAsync(CancellationToken cancellationToken)
 
 ## 5. 场景示例：Dev / TeamA / TeamB / Repo
 
+> 想一次看**多个不同业务**的完整落地（后台管理、组织部门树、行级 ACL、个人数据、
+> 机密与公开、命令对象），见 [SAMPLE.md](SAMPLE.md)。
+
 需求：`Dev` 属于 `TeamA`、`TeamB`（含其下级部门），可访问两团队下的仓库；
 不在 `TeamC`，无法访问其仓库；机密仓库任何人都不可见；本人创建的仓库始终可访问。
 

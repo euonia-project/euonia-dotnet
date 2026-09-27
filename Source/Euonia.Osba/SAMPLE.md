@@ -2,6 +2,7 @@
 
 > 一份从零到可运行的完整示例，覆盖业务对象、工厂、状态机、规则、执行器与权限体系。
 > 权限的深入说明见 [Permission/README.md](Permission/README.md)，
+> 多种业务场景的权限示例见 [Permission/SAMPLE.md](Permission/SAMPLE.md)，
 > 设计动因与取舍见 [Permission/DESIGN.md](Permission/DESIGN.md)。
 
 **本文的全部代码经过编译并实际运行验证**（端到端断言通过），可以直接放进项目使用。
