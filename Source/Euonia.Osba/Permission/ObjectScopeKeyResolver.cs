@@ -15,7 +15,16 @@ internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 {
 	private readonly ScopeModelRegistry _registry;
 
-	internal ObjectScopeKeyResolver(ScopeModelRegistry registry)
+	/// <summary>
+	/// 初始化 <see cref="ObjectScopeKeyResolver"/> 的新实例。
+	/// </summary>
+	/// <param name="registry">权限模型注册表；由容器注入（<c>AddPermission</c> 注册为单例）。</param>
+	/// <remarks>
+	/// 构造函数必须是 <see langword="public"/>——容器以反射激活实现类，不接受非公开构造函数。
+	/// 因此按类型注册（<c>TryAddSingleton&lt;IScopeKeyResolver, ObjectScopeKeyResolver&gt;</c>），
+	/// 而不是 <c>new</c> 出来再注册实例：注册表在 <c>AddPermission</c> 内部构建，调用方拿不到它。
+	/// </remarks>
+	public ObjectScopeKeyResolver(ScopeModelRegistry registry)
 	{
 		_registry = registry;
 	}

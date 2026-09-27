@@ -39,31 +39,15 @@ public static class ServiceCollectionExtensions
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
 
-		// 权限码来自授权数据，而非令牌声明（见 SubjectPermissionChecker 的备注）
-		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
+		// 权限码扫描与策略键的状态推断都是对象模型的知识（方法角色按工厂方法判定、
+		// 对象状态按 ObjectEditState 映射），因此由 Osba 提供这两处映射的实现。
+		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();
 
-		// 权限模型注册表是实例而非进程级静态状态，容器与测试之间天然隔离。
-		// 校验不依赖容器，因此可以在这里（注册期）立即完成。
-		// 权限码扫描是对象模型的知识（方法角色按工厂方法判定），因此由 Osba 提供，权限库反向消费
-		var codeSource = ObjectPermissionCodeSource.Instance;
-		var registry = ScopeModelRegistry.Create(codeSource, assemblies);
-		services.TryAddSingleton(registry);
+		// 策略引擎自身的注册（IPermissionChecker / IScopeGuard / ScopeModelRegistry / PermissionSetup）
+		// 归 AddPermission 所有，这里只负责把 Osba 的映射喂给它。
+		services.AddPermission(ObjectPermissionCodeSource.Instance, assemblies);
 
-		var businessObjectTypes = GetBusinessObjectTypes(assemblies);
-
-		services.TryAddSingleton(new PermissionSetup(registry.HasDeclarations || HasPermissionDeclarations(businessObjectTypes)));
-
-		// 策略键的状态推断依赖对象模型，故由 Osba 实现 IScopeKeyResolver 并注册
-		services.TryAddSingleton<IScopeKeyResolver>(new ObjectScopeKeyResolver(registry));
-
-		// IScopeSubjectResolver 允许缺席：只有真正声明了模型或权限码并发生判定时才会要求它。
-		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-			provider.GetRequiredService<UserPrincipal>(),
-			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetService<IScopeSubjectResolver>(),
-			provider.GetService<IScopeKeyResolver>()));
-
-		foreach (var type in businessObjectTypes)
+		foreach (var type in GetBusinessObjectTypes(assemblies))
 		{
 			services.TryAddTransient(type);
 		}
@@ -71,35 +55,6 @@ public static class ServiceCollectionExtensions
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
-	}
-
-	/// <summary>
-	/// 判断给定类型中是否存在 <see cref="PermissionAttribute" /> 声明。
-	/// </summary>
-	/// <param name="types">业务对象类型。</param>
-	/// <returns>存在声明则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	/// <remarks>
-	/// 只检查类型级声明与工厂方法上的声明：只要出现权限码，就需要解析器提供「用户持有哪些码」。
-	/// </remarks>
-	private static bool HasPermissionDeclarations(IEnumerable<Type> types)
-	{
-		foreach (var type in types)
-		{
-			if (type.GetCustomAttributes<PermissionAttribute>(true).Any())
-			{
-				return true;
-			}
-
-			foreach (var operation in PermissionRequirements.AllOperations)
-			{
-				if (PermissionRequirements.CodesFor(type, operation).Count > 0)
-				{
-					return true;
-				}
-			}
-		}
-
-		return false;
 	}
 
 	/// <summary>

@@ -48,20 +48,18 @@
 ```csharp
 var services = new ServiceCollection();
 
-// 用给定程序集构建数据权限模型注册表（注册期即完成全部校验）
-services.AddSingleton(ScopeModelRegistry.Create(codeSource, typeof(Order).Assembly));
+// 注册策略引擎：数据权限模型注册表（注册期即完成全部校验）、
+// IPermissionChecker、IScopeGuard、PermissionSetup
+services.AddPermission(EmptyCodeSource.Instance, typeof(Order).Assembly);
 
-services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
-services.TryAddScoped<IScopeGuard>(sp => new ScopeGuard(
-    sp.GetRequiredService<UserPrincipal>(),
-    sp.GetRequiredService<ScopeModelRegistry>(),
-    sp.GetService<IScopeSubjectResolver>(),
-    sp.GetService<IScopeKeyResolver>()));
-
-// 当前用户主体
-services.AddSingleton(UserPrincipal.Current ?? new UserPrincipal(new GenericPrincipal(
-    new GenericIdentity("anonymous"))));
+// 当前用户主体（IScopeGuard 的判定主体）
+services.AddSingleton(UserPrincipal.Current ?? new UserPrincipal(
+    new GenericPrincipal(new GenericIdentity("anonymous"))));
 ```
+
+第二个参数 `IPermissionCodeSource` 是**必填项**，见 [3.1](#31-为什么必须提供-ipermissioncodesource)。
+
+`IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
 
 若使用了权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [4.2](#42-用户侧授权值从数据实时解析)）。框架不提供默认实现，以免把授权值固化。
@@ -72,6 +70,24 @@ services.AddSingleton(UserPrincipal.Current ?? new UserPrincipal(new GenericPrin
 var provider = services.BuildServiceProvider();
 provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 时在此抛出
 ```
+
+### 3.1 为什么必须提供 `IPermissionCodeSource`
+
+方法级 `[Permission]` 写在方法上，而「哪个方法对应哪个 `BusinessOperation`」取决于使用方的约定——
+有的框架用特性标记工厂方法，有的靠命名约定，引擎无从推断。因此 `IPermissionCodeSource` 没有默认实现。
+
+应用确实**不使用方法级**权限码时，传入 `EmptyCodeSource.Instance`。这是一个显式的断言，
+不是「忘了提供来源」的默认值。
+
+代价是：模型里的按码声明（`ScopePolicySet<T>.For("code", …)`）与 `EmptyCodeSource` 不可同用。
+因为没有任何操作能解析到应用自定义的码，注册期死策略校验会拒绝启动：
+
+```
+权限模型 'OrderModel' 为权限码 'order:edit' 声明了行级策略，
+但没有任何操作会解析到该码（请核对方法上 [Permission] 的码与 Declare 里的码是否一致）。
+```
+
+这正是期望行为——**声明了按码策略就说明存在方法级权限码**，那就必须给出方法与操作的对应关系。
 
 ---
 

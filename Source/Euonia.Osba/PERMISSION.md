@@ -59,9 +59,16 @@ services.AddBusinessObject(typeof(Order).Assembly);
 
 - `BusinessContext` / `BusinessContextAccessor` / `IActuator`
 - `IObjectFactory` → `BusinessObjectFactory`
-- `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）
-- `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）
-- `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）
+- `IScopeKeyResolver` → `ObjectScopeKeyResolver`（Osba 对「对象当前代表哪个操作」的回答）
+- 策略引擎自身的一切注册，转交 `AddPermission`（`Euonia.Security` 提供）：
+  `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
+  `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
+  `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、
+  `PermissionSetup`
+
+也就是说，**引擎的 DI 归引擎自己**（`services.AddPermission(codeSource, assemblies)`），
+`AddBusinessObject` 只负责把 Osba 侧的两处映射（`IPermissionCodeSource`、`IScopeKeyResolver`）
+交给它。脱离 Osba 单独使用 `Euonia.Security` 时，直接调 `AddPermission` 即可。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [3.2](#32-用户侧授权数据实时解析)），框架不提供默认实现，以免把授权值固化。

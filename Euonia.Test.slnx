@@ -1,5 +1,9 @@
 <Solution>
 	<Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
+    <Project Path="Tests/Euonia.Security.Tests/Euonia.Security.Tests.csproj" />
+    <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj">
+        <Build Project="false" />
+    </Project>
     <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
 	<Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
     <Project Path="Tests/Euonia.Application.Tests/Euonia.Application.Tests.csproj" />
