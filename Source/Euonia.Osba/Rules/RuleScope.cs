@@ -81,8 +81,9 @@ internal sealed class RuleScope
 	/// <param name="rule">要判断的规则。</param>
 	/// <returns>被排除则返回 <see langword="true"/>。</returns>
 	/// <remarks>
-	/// 类型按<b>精确</b>匹配而非可赋值性：否则一次 <c>BypassRule&lt;RuleBase&gt;()</c> 就会
-	/// 连带排除框架自动注入的数据权限规则，把「排除一条」变成「关掉全部」。
+	/// 类型按<b>精确</b>匹配而非可赋值性：BypassRule 声明的是「这一条规则整体」，
+	/// 否则一次 <c>BypassRule&lt;RuleBase&gt;()</c> 会把所有派生规则一并排除，
+	/// 「排除一条」变成「关掉一批」。
 	/// </remarks>
 	internal bool IsExcluded(IRuleBase rule)
 	{

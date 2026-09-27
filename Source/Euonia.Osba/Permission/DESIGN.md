@@ -49,11 +49,11 @@ graph TD
         D4["IPermissionChecker<br/>SubjectPermissionChecker（默认 · 码来自授权数据）"]
     end
 
-    subgraph E["⑤ 强制点"]
+    subgraph E["⑤ 两条强制线（互不相干）"]
         E1["读侧 guard.Apply(query)<br/>表达式下推 → SQL WHERE"]
         E2["单行 guard.Allows / guard.AllowsObject<br/>审计 guard.Explain"]
-        E3["工厂边界 BusinessObjectFactory<br/>ObjectAuthorization（操作权限）<br/>ScopeAuthorization（数据权限）→ SecurityException"]
-        E4["规则通道（表单友好 · 前置信号）<br/>自动注入 ScopePolicyRule / PermissionRule<br/>→ ValidationException"]
+        E3["权限线 · 工厂边界 BusinessObjectFactory<br/>ObjectAuthorization（操作权限）<br/>ScopeAuthorization（数据权限）→ SecurityException"]
+        E4["验证线 · 规则通道（只做数据校验）<br/>EditableObject.SaveAsync / 命令执行前<br/>→ ValidationException"]
     end
 
     subgraph F["⑥ 外部世界"]
@@ -82,7 +82,6 @@ graph TD
     D3 --> E2
     D3 -. 单行判定 .-> E3
     D4 --> E3
-    E3 --> E4
     E1 --> F1
     C3 -. 显式失效 .-> C2
 ```
@@ -98,10 +97,13 @@ graph TD
   读写路径共享同一份快照，撤销生效于「下一次解析」（§1.9；缓存契约见 README §3.6）。
 - **④ 判定引擎**：操作权限判定走 `IPermissionChecker`（码来自授权数据，§1.2）；
   数据权限把策略编译成 **一对表达式**（§1.3/§1.4），键只由操作决定（§1.7）。
-- **⑤ 强制点**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
+- **⑤ 两条强制线**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
   该做法已被否决，见第 3 章）；单行 `Allows`/`Explain` 与查询共用同一棵表达式，
-  结论不可能漂移；写侧由工厂边界兜底（`SecurityException`），规则通道在前以表单错误呈现
-  （§1.10）。`Create/CreateAsync` 只构造、不落库，不参与数据范围判定（§2.1）。
+  结论不可能漂移。写侧分属两条线——
+  **权限线**（`ObjectAuthorization` + `ScopeAuthorization`）在工厂边界裁决，越权一律
+  `SecurityException`，无任何开关可以绕过；**验证线**（规则）只做数据校验，
+  失败 `ValidationException`，可被显式绕过。两者互不相干，详见 §1.10。
+  `Create/CreateAsync` 只构造、不落库，不参与数据范围判定（§2.1）。
 - **⑥ 外部世界**：授权数据与数据库都是应用的，框架只消费解析结果与表达式树。
 
 ---
@@ -217,8 +219,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 **问题**：键若受调用方状态影响，就可能把同一变更路由到更宽松的键。
 
 **决策**：键只由**操作**决定，操作只由 `ObjectEditState → BusinessOperation` 这**一条**映射
-（`ScopeOperationMap`）决定。工厂、规则、`CanXObject()` 共用它——三处各写一遍必然漂移，
-而「规则按 Update 判、工厂按 Create 判」会让规则静默失效。
+（`ScopeOperationMap`）决定。工厂边界与 `CanXObject()`、单行/下推判定共用它——三处各写一遍
+必然漂移，而「工厂按 Update 判、`CanXObject` 按 Create 判」会让策略键静默错位。
 
 `MarkAsNew/Changed/Deleted` 是公开方法，但它改变的是**实际执行的操作**，
 每个操作各自应用自己的策略，不存在越权通道。
@@ -235,7 +237,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 **决策**：在强制点（`ObjectAuthorization` / `ScopeAuthorization`）改为**抛
 `InvalidOperationException`**，消息指明缺的是 `BusinessContext`。原则与其它几处一致：
-`DataScopeRule` 无法判定即失败、缺解析器即抛、启动期校验缺失即失败。
+数据范围无法判定即失败、缺解析器即抛、启动期校验缺失即失败。
 
 **边界**：只对**声明了要求**的类型生效——没有任何 `[Permission]`、也没有 `ScopeModel<T>` 的类型
 不强制接线，避免给不关心权限的应用加无谓约束。
@@ -257,27 +259,37 @@ query            ≡ source.Where(Allow).Where(!Deny)
 **回归护栏**：`Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` 用可控时机的
 解析器精确构造该竞态——**关掉版本校验它就会转红**（已验证）。
 
-### 1.10 规则是补充信号，不是强制点
+### 1.10 权限与验证是两条线，越权一律抛 `SecurityException`
 
-**问题**：需要一个「以表单错误形式呈现」的通道，而不是让每个越权都变成异常。
+**问题**：早期版本把越权也表达成规则（`ScopePolicyRule` / `PermissionRule` + 对已声明类型的
+自动注入），让越权以 `BrokenRules` → `ValidationException` 的表单错误出现。看上去更「UI 友好」，
+实则四重代价：
 
-**决策**：`PermissionRule` / `ScopePolicyRule` 把权限失败表达为 `BrokenRules` →
-`ValidationException`；对已声明模型的类型**自动注入** `ScopePolicyRule`（消除「漏加规则」）。
+1. **形态不对称**：删除路径默认跳过对象级规则，于是越权新增/更新抛 `ValidationException`、
+   越权删除抛 `SecurityException`——同一个「越权」出现两种异常类型，调用方无法只按一个类型分支。
+2. **绕过即放行**：`SuspendRuleChecking()` / 执行器 `BypassRuleChecks()` 能整体跳过规则；
+   而 `Rules.RunAsync` 把所有异常转成错误，规则**结构上**就抛不出 `SecurityException`。
+3. **缓存粒度冲突**：为让注入不受 `RuleManager`（按类型的进程级静态缓存）影响，只能改成
+   按实例、每次接线判定，引入一层纯粹为了绕开缓存的复杂度（§2.4）。
+4. **概念混淆**：「这份数据不合法」与「你不许碰它」是两件事。把越权混进表单错误列表，
+   调用方会按字段提示渲染它，而不是当成授权失败。
 
-**但强制点仍在工厂边界**，因为规则可被绕过：
+**决策**：删除 `PermissionRule` / `ScopePolicyRule` 与自动注入，**权限只走工厂边界**：
 
-- `SuspendRuleChecking()` / 执行器的 `BypassRuleChecks` 能跳过规则；
-- 规则只覆盖写路径：`EditableObject.SaveAsync`（可编辑对象）与
-  `BusinessObjectFactory.ExecuteAsync(target, ct)`（命令对象，见 `ObjectRuleGuard`），
-  且 `IsDeleted` 时**默认跳过**；
-- `IObjectFactory.InsertAsync/UpdateAsync/DeleteAsync(criteria)`、`ExecuteAsync(criteria)`
-  这类 criteria 低层入口不做规则判定（调用前对象为空，无从校验）；
-- 规则抛不出 `SecurityException`（`Rules.RunAsync` 把所有异常转成错误）。
+| | 验证线 | 权限线 |
+|---|---|---|
+| 回答 | 这份数据**合不合法** | 这个用户**能不能**做这件事 / 碰这行 |
+| 裁决者 | 规则（属性级 / 对象级） | `ObjectAuthorization`（操作权限）+ `ScopeAuthorization`（数据范围） |
+| 位置 | `EditableObject.SaveAsync`；命令对象由 `ObjectRuleGuard` 在命令体之前 | `BusinessObjectFactory` 调用边界（前置 + 后置） |
+| 失败 | `ValidationException`（`Errors` 带属性名） | `SecurityException` |
+| 可否绕过 | 可（`SuspendRuleChecking` / `BypassRuleChecks` / `WithRuleChecksOnDelete`） | **不可**，无任何开关 |
 
-**规则实例是进程级、按类型共享的单例**（`RuleManager` 是静态字典）。
-因此注入的规则被刻意设计成**无状态桥**：只持有资源类型，运行期从
-`context.Target → BusinessContext` 解析一切。任何把注册表/守卫存进字段的写法都会
-导致跨容器串味。注入逻辑**绝不抛异常**——它在属性 setter 上，抛出会把配置问题伪装成难定位的异常。
+**收益**：越权在所有操作上一致（新增 / 更新 / 删除 / 命令都是 `SecurityException`），
+§2.2 的形态不对称随之消失；「权限可以被绕过」这个提法本身不再成立。
+
+**代价**（有意的）：越权不再出现在 `ValidationException.Errors` 里。需要「表单预提示」的场景，
+在调用侧显式捕获 `SecurityException`，或先用 `CanAccessRow` / `CheckPermissionAsync` 查再跳。
+这是把一条**静默的口头约定**换成**显式的 API**。
 
 ---
 
@@ -299,19 +311,17 @@ query            ≡ source.Where(Allow).Where(!Deny)
 真正的预提交强制需要持久化层拦截器或数据库约束，Osba 不提供。
 范围列的「搬迁」（把 `TeamId` 改到无权团队）能发现并抛出，但无法阻止已发生的写入。
 
-### 2.2 删除路径的失败形态不对称
+### 2.2 删除路径默认跳过的是「验证规则」，与权限无关
 
-`EditableObject<T>` 在 `IsDeleted` 时默认跳过对象级规则，因此：
+`EditableObject<T>` 在 `IsDeleted` 时默认不跑对象级规则。这只影响**验证线**：
+越权删除照样由工厂边界的 `ScopeAuthorization.EnsureAuthorizedBefore` 拦下并抛 `SecurityException`。
+换言之，删除路径**没有**任何权限上的例外。
 
-| 场景 | 结果 |
-|---|---|
-| 越权新增/更新 | `ValidationException`（规则先命中） |
-| 越权删除 | `SecurityException`（规则被跳过，工厂兜住） |
-
-需要让规则覆盖删除时有两条路：调用方改用 `MarkAsDeleted(true)`，或走执行器时加
+需要让**验证**规则也覆盖删除时有两条路：调用方改用 `MarkAsDeleted(true)`，或走执行器时加
 `.WithRuleChecksOnDelete()`。（`CheckObjectRulesOnDelete` 是只读属性，**无法重写**；
 它由 `MarkAsDeleted` 的入参驱动。）
-两条路径都有断言钉住（`ScopeTests` / `ScopeRowPermissionTests`），行为变化会让测试转红。
+两条路径都有断言钉住（`ActuatorRuleTests` / `UserGeneralBusinessTests`），
+验证线行为变化会让测试转红；越权形态由 `ScopeTests` / `ScopeRowPermissionTests` 钉住。
 
 ### 2.3 行级 ACL 要求解析器做反向展开
 
@@ -325,11 +335,11 @@ query            ≡ source.Where(Allow).Where(!Deny)
 **守则**：授权尽量授「组 id」而非「行 id」；行数巨大时改用
 `Where(x => aclQuery.Contains(x.Id))` 逃生舱并自行评估成本。
 
-### 2.4 规则的进程级共享 vs 容器级注册表
+### 2.4 权限判定不参与按类型的进程级缓存
 
-`RuleManager` 是静态的而 `ScopeModelRegistry` 是按容器的。自动注入的**判定**
-只在首次初始化该类型时发生一次。多容器且注册表不同的场景下，某容器可能带着另一容器的注入结果运行——
-由于规则运行期会重新查注册表、未声明时放行，行为仍然正确，但这是个需要知晓的耦合。
+规则实例按类型进程级共享（`RuleManager` 是静态字典），而 `ScopeModelRegistry` 是按容器的。
+既然权限已经移出规则集合，这类粒度冲突**不复存在**：判定完全发生在调用点，每次都从当前
+`BusinessContext` 解析注册表与授权数据，多容器之间没有需要知晓的耦合。
 
 ### 2.5 角色仍受令牌时效约束
 
@@ -373,7 +383,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `RowLevel_CodeGrantShouldOverrideDefault_NotUnion` | §1.6 覆盖而非并集 |
 | `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` | §1.2 撤销立即生效 |
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
-| `AutoInjectedScopeRule_ShouldFailUpdateWithValidationError` + `SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException` | §2.2 删除路径不对称 |
+| `SaveAsync_Update_OutOfScope_ShouldFailWithSecurityException` + `SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException` | §1.10 越权形态一致（都抛 `SecurityException`） |
+| `PermissionLineIndependenceTests` 三例 | §1.10 权限线不受规则通道影响 |
 | `ValidatePermissionSetup_ShouldFailWhenResolverMissing` | §3 启动期校验 |
 | `Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` | §1.9 缓存失效不可被回滚 |
 | `SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing` + `SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing` | §1.8 无法判定即失败 |

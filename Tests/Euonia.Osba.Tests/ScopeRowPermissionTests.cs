@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Core.Tests;
 
 /// <summary>
 /// 验证三点增强：行级操作权限（同一用户、同一类型、不同行权限不同）、
-/// 操作权限以授权数据为来源（撤销立即生效）、以及权限与 Rule 体系的适配。
+/// 操作权限以授权数据为来源（撤销立即生效）、以及<b>权限线与验证线彼此独立</b>。
 /// </summary>
 public class ScopeRowPermissionTests
 {
@@ -240,10 +240,10 @@ public class ScopeRowPermissionTests
 
 	#endregion
 
-	#region Rule 体系适配
+	#region 权限线与验证线彼此独立
 
 	[Fact]
-	public async Task AutoInjectedScopeRule_ShouldFailUpdateWithValidationError()
+	public async Task SaveAsync_Update_OutOfScope_ShouldFailWithSecurityException()
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
@@ -251,43 +251,12 @@ public class ScopeRowPermissionTests
 		denied.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		denied.MarkAsChanged();
 
-		// 框架对已声明模型的类型自动注入范围规则：越权更新在保存前以验证错误暴露
-		var exception = await Assert.ThrowsAsync<Nerosoft.Euonia.Validation.ValidationException>(
+		// 旧版靠自动注入的范围规则把越权「更新」报成 ValidationException；
+		// 拆分后权限只走工厂边界：统一抛 SecurityException，与验证线无关
+		var exception = await Assert.ThrowsAsync<SecurityException>(
 			() => denied.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
-		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
-
-		BusinessContextAccessor.Clear();
-	}
-
-	[Fact]
-	public async Task ManualPermissionRule_ShouldReportMissingPermission()
-	{
-		using var scope = CreateScope(new AclResolver(), out var provider);
-
-		// 规则按类型共享（进程级静态存储）：每个测试必须使用独立的对象类型，
-		// 否则上一个测试注册的规则会泄漏到本测试的规则检查里（GitHub Actions 顺序不定即因此失败）。
-		var obj = new MissingRuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
-		obj.PublicRules.AddRule(new PermissionRule("repo:force-push"));
-
-		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
-
-		Assert.False(obj.IsValid);
-
-		BusinessContextAccessor.Clear();
-	}
-
-	[Fact]
-	public async Task ManualPermissionRule_ShouldPassWhenGranted()
-	{
-		using var scope = CreateScope(new AclResolver(), out var provider);
-
-		var obj = new GrantedRuleProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
-		obj.PublicRules.AddRule(new PermissionRule("repo:push"));
-
-		_ = await obj.PublicRules.CheckObjectRulesAsync(true, TestContext.Current.CancellationToken);
-
-		Assert.True(obj.IsValid);
+		Assert.Contains("Data scope denied", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -584,26 +553,4 @@ public class GrantRepoProbe : GrantRepo
 	/// <param name="scopeKey">权限码。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	public bool ProbeRowAccess(string scopeKey) => CanAccessRow(scopeKey);
-}
-
-/// <summary>
-/// 用于手工注册规则、断言「缺少权限」的测试对象（独立类型，避免规则跨测试泄漏）。
-/// </summary>
-public class MissingRuleProbeObject : ObservableObject<MissingRuleProbeObject>
-{
-	/// <summary>
-	/// 公开规则集合以便测试调用。
-	/// </summary>
-	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
-}
-
-/// <summary>
-/// 用于手工注册规则、断言「权限已授予」的测试对象（独立类型，避免规则跨测试泄漏）。
-/// </summary>
-public class GrantedRuleProbeObject : ObservableObject<GrantedRuleProbeObject>
-{
-	/// <summary>
-	/// 公开规则集合以便测试调用。
-	/// </summary>
-	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
 }

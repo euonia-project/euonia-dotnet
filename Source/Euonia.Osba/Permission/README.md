@@ -154,8 +154,9 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
   「忘记给对象接上下文」变成一条无声的越权通道。
 - 有要求且判定得出，但未认证/未授权 → 拒绝（抛 `SecurityException`）
 
-除工厂边界外，框架还会对**已声明权限模型的类型**自动注入数据范围规则（见 [4.5](#45-与-rule-体系的适配)），
-使越权在保存前以验证错误暴露。两者分工：**工厂边界是权威强制点，规则是前置的、UI 友好的补充信号**。
+数据权限同理由工厂边界的 `ScopeAuthorization` 裁决（见 [2.3](#23-数据范围-scope)）：它负责
+「这一行在不在范围内」，同样抛 `SecurityException`，且**不受任何规则绕过开关影响**。
+越权不再经由规则通道表达——验证线只做数据校验（见 [4.5](#45-与-rule-体系的边界)）。
 
 ### 2.4 自定义授权逻辑
 
@@ -439,20 +440,22 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 > 而不是「越权数据写入」。真正的预提交强制应由持久化层（例如 EF 的 `SaveChanges` 拦截器）
 > 或数据库约束保证，`Euonia.Osba` 不提供这一层。
 
-### 4.5 与 Rule 体系的适配
+### 4.5 与 Rule 体系的边界
 
-框架对**已声明权限模型的类型**自动注入 `ScopePolicyRule`，使越权在保存前以**验证错误**暴露，
-无需手工 `AddRule`。也可以手工注册：
+**权限不通过规则表达**。早期版本有 `PermissionRule` / `ScopePolicyRule` 并对已声明模型的类型
+自动注入，让越权以 `ValidationException` 的表单错误出现；这两者均已删除。理由见
+[DESIGN §1.10](DESIGN.md#110-权限与验证是两条线越权一律抛-securityexception)。
 
-```csharp
-protected override void AddRules()
-{
-    Rules.AddRule(new PermissionRule("repo:force-push"));   // 断言权限码
-    Rules.AddRule(new ScopePolicyRule());                    // 断言当前行在范围内
-}
-```
+现在两条线各管一件事，互不相干：
 
-业务方法内可直接断言（做条件分支，而不只是报错）：
+| | 验证线（`Rules`） | 权限线（工厂边界） |
+|---|---|---|
+| 回答 | 这份数据**合不合法** | 这个用户**能不能**做这件事 / 碰这行 |
+| 失败 | `ValidationException` | `SecurityException` |
+| 可否绕过 | 可（`SuspendRuleChecking()` / `BypassRuleChecks()` / `WithRuleChecksOnDelete()`） | **不可** |
+
+因此**不要**用规则做授权。需要在业务方法里做条件分支（而不只是报错）时，用权限线提供的
+显式查询 API：
 
 ```csharp
 protected async Task CloseAsync(CancellationToken cancellationToken)
@@ -469,23 +472,14 @@ protected async Task CloseAsync(CancellationToken cancellationToken)
 }
 ```
 
-**失败形态的分工**（重要）：
-
-| 路径 | 结果 |
-|---|---|
-| 规则阶段（`SaveAsync` 的新增/更新） | `ValidationException`（可携带字段级错误，适合表单） |
-| 工厂边界（criteria 入口、规则被跳过时） | `SecurityException`（越权） |
-
-> **删除路径不对称**：`EditableObject<T>` 在 `IsDeleted` 时**默认跳过对象级规则**，
-> 因此越权**删除**由工厂边界兜住，抛 `SecurityException` 而非 `ValidationException`。
-> 需要规则覆盖删除时，两种做法：调用方改用 `MarkAsDeleted(true)`（`CheckObjectRulesOnDelete`
+> **越权形态一致**：新增、更新、删除、命令执行一律抛 `SecurityException`。
+> `EditableObject<T>` 在 `IsDeleted` 时默认跳过的是**验证规则**，与权限无关。
+> 需要让**验证**规则也覆盖删除时：调用方改用 `MarkAsDeleted(true)`（`CheckObjectRulesOnDelete`
 > 是只读属性，无法重写），或走执行器时加 `.WithRuleChecksOnDelete()`。
 
-> **规则不是强制点**：`SuspendRuleChecking()`、执行器的 `BypassRuleChecks()` 都能跳过规则。
-> 规则覆盖「保存」与「命令执行」两条写路径（命令的对象级规则由工厂边界在命令体之前裁决），
-> 但**读路径与 `IObjectFactory.Insert/Update/DeleteAsync(criteria)` 这类低层调用不做规则判定**。
-> **工厂边界始终是权威强制点**。
->
+> **越权不再出现在表单错误列表里**。需要「表单预提示」的场景，在调用侧显式捕获
+> `SecurityException`，或先用 `CanAccessRow` / `CheckPermissionAsync` 查再跳。
+
 > **范围列的"搬迁"不受保护**：业务方法可以把 `TeamId` 改到用户不属于的团队，
 > 后置检查能发现并抛出，但无法阻止已经发生的写入。
 
@@ -614,7 +608,7 @@ guard.Allows(repoInTeamC);                // → true
 | `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射 |
 | `ScopePolicySet<T>` | `Permission/Scope/` | `ScopeModel<T>.Declare` 入参：按权限码声明行级策略 |
 | `PermissionSetup` / `ValidatePermissionSetup()` | `Permission/` | 启动期检查解析器是否齐备 |
-| `PermissionRule` / `ScopePolicyRule` | `Permission/Rules/` | 权限的规则化（验证错误而非异常） |
+| `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的操作权限 / 数据权限闸门（越权抛 `SecurityException`） |
 | `ScopeDimensions` | `Permission/Scope/` | 维度名常量（`Owner`/`Dept`/`Region`/`Project`）与校验入口 |
 | `ScopeSubject` / `ScopeSubjectSet` | `Permission/Scope/` | 用户被授予的主体及集合（维度名大小写不敏感，值精确比较） |
 | `ScopeSubjectSetBuilder` | `Permission/Scope/` | 解析器构造主体集合（`Add`/`AddRange`/`AddSelf`） |
@@ -747,8 +741,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 |---|---|
 | `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验被跳过，首次判定时兜底暴露 |
 | `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext` |
-| `ValidationException` | 自动注入的范围规则判定越权（新增/更新路径） |
-| `SecurityException` | 工厂边界判定越权（criteria 入口、删除路径、或规则被跳过时） |
+| `SecurityException` | 工厂边界判定越权——操作权限或数据范围不满足（新增/更新/删除/命令**一致**） |
 
 ### 判定结果不符合预期
 
@@ -806,7 +799,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | `IDataScopeService.CreateScopePredicate<T>()` / `Filter<T>()`（仅内存） | `IScopeGuard.Apply(IQueryable<T>)`（下推）+ `ScopeFilter.Filter`（内存） |
 | 固定「跨维度 AND / 同维度 OR」 | `All` / `Any` 任意嵌套 + `Deny` |
 | 无 deny | `Deny` 一等公民，拒绝优先 |
-| `DataScopeRule`（需手工 `AddRule` 注册） | 工厂边界**自动**强制（`SaveAsync` 前置+后置） |
+| `DataScopeRule`（需手工 `AddRule` 注册） | 工厂边界**自动**强制（`SaveAsync` 前置+后置），不再需要注册任何规则 |
 | `IAnonymousAccessible` 特例接口 | 策略里的 `Where(x => x.IsPublic)`（显式、可审计） |
 | `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
 | `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
@@ -821,5 +814,6 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
   「本人数据也不可见」（fail-closed，不会反向放行）。
 - **权限码必须改由解析器提供**：原先写在令牌 `"perm"` 声明里的码，若既不迁移到授权数据、
   也不注册解析器，启动期校验会直接失败（不会静默放行）。
-- **运行期行为变化**：越权**更新**现在抛 `ValidationException`（自动注入的范围规则先命中），
-  越权**删除**仍抛 `SecurityException`。按异常类型做 400/403 区分的调用方需要相应调整。
+- **不要用规则做授权**：早前提供过 `PermissionRule` / `ScopePolicyRule` 让越权以
+  `ValidationException` 暴露，两者已删除。捕获 `ValidationException` 的调用方需要改为捕获
+  `SecurityException`——表单错误列表里不再含越权信息。

@@ -16,7 +16,6 @@ public class UserGeneralBusiness : EditableObjectBase<UserGeneralBusiness>
 	protected override void AddRules()
 	{
 		Rules.AddRule<UsernameCheckRule>();
-		Rules.AddRule<PermissionCheckRule>();
 	}
 
 	[FactoryCreate]

@@ -263,7 +263,7 @@ application data — never baked into tokens.**
 | Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
 | Granularity | Type-level `[Permission]` + **row-level** (per permission code) | Row-level |
 | Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
-| Failure | `SecurityException` / `ValidationException` at the rule stage | Row excluded / same |
+| Failure | `SecurityException` | Row excluded / `SecurityException` on save |
 
 Data permission has **exactly one implementation**: a policy compiles to a single
 `Allow`/`Deny` expression pair shared by query pushdown and single-row checks.
@@ -313,9 +313,12 @@ guard.Explain(repo, "repo:delete");          // audit: which policy matched
   directly expressible.
 - **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
   (deny wins).
-- **Rule system integration**: types with a declared model get a scope rule injected
-  automatically, surfacing violations as `ValidationException`; manual registration via
-  `Rules.AddRule(new PermissionRule("repo:push"))` is also supported.
+- **Permission and validation are two separate lines**: permission is decided solely at the
+  factory boundary, and a denial (insert / update / delete / command) always throws
+  `SecurityException` with **no way to bypass it**. The rule channel does data validation only
+  and throws `ValidationException`. The former `PermissionRule` / `ScopePolicyRule` and their
+  automatic injection have been removed (see
+  [`DESIGN.md` §1.10](Source/Euonia.Osba/Permission/DESIGN.md)).
 
 Full usage, troubleshooting, and performance notes:
 [`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md).

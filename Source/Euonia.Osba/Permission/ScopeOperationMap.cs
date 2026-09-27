@@ -6,8 +6,9 @@ namespace Nerosoft.Euonia.Osba;
 /// <remarks>
 /// <para>
 /// 这条映射是策略键解析的根：键只由操作决定，操作只由本映射决定。
-/// 工厂、规则、<c>CanXObject()</c> 必须共用本类——若各自实现一遍，
-/// 「规则按 Update 判、工厂按 Create 判」这类漂移会使规则静默失效。
+/// 工厂边界（<see cref="ObjectAuthorization"/> / <see cref="ScopeAuthorization"/>）、
+/// <c>CanXObject()</c> 与单行/下推判定必须共用本类——若各自实现一遍，
+/// 「工厂按 Update 判、CanXObject 按 Create 判」这类漂移会让策略键静默错位。
 /// </para>
 /// <para>
 /// 注意 <see cref="ObjectEditState"/> 由调用方通过公开的 <c>MarkAsNew</c>/<c>MarkAsChanged</c>/

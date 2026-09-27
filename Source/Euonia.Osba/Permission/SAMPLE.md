@@ -236,7 +236,7 @@ Console.WriteLine(guard.Explain(repoInTeamC));              // 判定：拒绝�
 var stealing = new Repo { TeamId = "TeamC", Level = "normal" };
 stealing.BusinessContext = provider.GetRequiredService<BusinessContext>();
 stealing.MarkAsNew();
-await stealing.SaveAsync();       // ValidationException（自动注入的范围规则先命中）
+await stealing.SaveAsync();       // SecurityException（工厂边界的 ScopeAuthorization 拦下）
 ```
 
 **读模型也要单独声明**，否则查询侧不受约束（未声明模型即不拦截）：
@@ -343,7 +343,7 @@ guard.Allows(a2, "repo:delete");     // False  ← 同一用户、同一对象�
 var pushable   = await guard.Apply(dbContext.Repos, "repo:push").ToListAsync();     // a1, a2
 var deletable  = await guard.Apply(dbContext.Repos, "repo:delete").ToListAsync();   // a1
 
-// 写侧：越权删除被工厂边界拦下（删除默认跳过对象级规则 → SecurityException）
+// 写侧：越权删除被工厂边界拦下 → SecurityException
 try
 {
     a2.MarkAsDeleted();
@@ -354,15 +354,18 @@ catch (SecurityException ex)
     // Data scope denied. Delete (before): Repo. [code=repo:delete] …
 }
 
-// 越权新增/更新走规则阶段 → ValidationException（自动注入的 ScopePolicyRule 先命中）
+// 越权新增/更新同样走工厂边界 → SecurityException（形态与删除完全一致）
 var stealing = await factory.CreateAsync<Repo>("a2");   // Create 只构造、不落库，不判定
 stealing.TeamId = "TeamB";                              // 填充后才落库
 stealing.MarkAsNew();
-await stealing.SaveAsync();                             // ValidationException（数据范围）
+await stealing.SaveAsync();                             // SecurityException（数据范围）
 ```
 
 要点：
 
+- **越权形态一致**：新增、更新、删除、命令执行一律 `SecurityException`。
+  早前靠 `ScopePolicyRule` 注入让新增/更新抛 `ValidationException` 的做法已移除
+  （见 [DESIGN §1.10](DESIGN.md#110-权限与验证是两条线越权一律抛-securityexception)）。
 - **`[Permission]` 的码就是行级策略的键**：`DeleteAsync` 上若漏写 `[Permission("repo:delete")]`，
   删除会解析到默认键 `@delete` 并回落到模型的 `Policy`——你在 `Declare` 里为
   `"repo:delete"` 写的行级策略**根本不生效**。
@@ -598,12 +601,12 @@ await actuator.For<ExportReportCommand>()
 
 要点：
 
-- **裁决发生在命令体之前**：操作权限由工厂边界先判，不满足抛 `SecurityException`（命令体不执行）；
-  命令对象的**对象级规则**也由工厂边界在命令体之前裁决。
+- **裁决发生在命令体之前**：操作权限与数据范围都由工厂边界先判，不满足抛 `SecurityException`
+  （命令体不执行）；命令对象的**验证规则**也由工厂边界在命令体之前裁决（`ValidationException`）。
 - **撤销 vs Token**：权限码从授权数据解析、按请求缓存。撤销只改数据，下一次解析即生效，
   不需要等旧令牌过期——这是权限码不进令牌的根本原因。
-- `IObjectFactory.ExecuteAsync(criteria)` 这类低层入口**不做对象级规则判定**（规则覆盖的是
-  「保存」与「执行命令」两条路径），操作权限仍强制。
+- `IObjectFactory.ExecuteAsync(criteria)` 这类低层入口**不做对象级验证规则判定**
+  （规则覆盖的是「保存」与「执行命令」两条路径），**操作权限与数据范围仍然强制**。
 
 ---
 
@@ -629,24 +632,20 @@ protected async Task ArchiveAsync(CancellationToken cancellationToken)
 }
 ```
 
-把权限断言直接写进 `AddRules()`，让越权以**验证错误**（而非异常）在表单层暴露：
+**不要把权限断言写进 `AddRules()`**。规则属于验证线，失败形态是 `ValidationException`，
+且可被 `SuspendRuleChecking()` / `BypassRuleChecks()` 绕过——用它做授权等于留了一条旁路。
+需要「先查再跳」的分支，用上面 `CanAccessRow` / `CheckPermissionAsync`；
+需要「越权即拒」，交给工厂边界即可。
 
-```csharp
-protected override void AddRules()
-{
-    Rules.AddRule(new PermissionRule("repo:force-push"));   // 缺码即报验证错误
-    // ScopePolicyRule 已自动注入，无需手工添加
-}
-```
-
-失败形态小结（写侧第一道关是规则，第二道是工厂边界）：
+写侧失败形态小结（**只有一条强制线**）：
 
 | 路径 | 结果 |
 |---|---|
-| 越权新增 / 更新（`SaveAsync`） | `ValidationException`（自动注入的范围规则先命中） |
-| 越权删除 | `SecurityException`（删除默认跳过对象级规则，工厂兜住） |
+| 越权新增 / 更新（`SaveAsync`） | `SecurityException`（工厂边界前置或后置判定） |
+| 越权删除 | `SecurityException`（删除跳过的只是验证规则） |
 | 越权命令执行 | `SecurityException`（命令体不执行） |
 | 判定不了（缺 `BusinessContext` / 缺检查器） | `InvalidOperationException`（绝不静默放行） |
+| 数据不合法（与权限无关） | `ValidationException`（`Errors` 带属性名） |
 
 ---
 

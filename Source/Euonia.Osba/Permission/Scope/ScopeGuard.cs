@@ -253,7 +253,7 @@ internal sealed class ScopeGuard : IScopeGuard
 			return scopeKey;
 		}
 
-		// 未显式指定码时，按目标对象当前的操作解析——这是规则与工厂共用的同一套键解析。
+		// 未显式指定码时，按目标对象当前的操作解析——这是工厂边界与单行/下推判定共用的同一套键解析。
 		// 对象没有待执行操作（如未变更的可编辑对象）时回落到默认键，而不是抛异常。
 		if (!ScopeOperationMap.TryResolve(resource, out var operation))
 		{

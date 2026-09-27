@@ -45,11 +45,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
-
-			// 数据权限规则按实例注入，且每次接线都判定一次：是否需要它取决于「本容器是否声明了
-			// 该类型的权限模型」（按容器的事实），而 InitializeRules 的结果按类型进程级缓存，
-			// 两者粒度不同，放一起会让规则取决于哪个容器先初始化了这个类型。
-			InjectScopePolicyRule();
 		}
 	}
 
@@ -294,53 +289,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				RuleManager.CleanRules(GetType());
 				throw;
 			}
-		}
-	}
-
-	/// <summary>
-	/// 若<b>本容器</b>为本类型声明了数据权限模型，则为本对象注入 <see cref="ScopePolicyRule"/>。
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// 注入使越权保存在保存前以验证错误暴露，无需使用方手工 <c>AddRule</c>，
-	/// 从而消除「漏加规则 = 静默无保护」。
-	/// </para>
-	/// <para>
-	/// 注入的是<b>实例级</b>规则而非类型级，且每次接线都判定一次。这是必需的：
-	/// 「是否声明了模型」是<b>按容器</b>的事实（注册表是容器内的单例），而类型级注册会被
-	/// <c>RuleManager</c> 按类型进程级缓存——两者粒度不同，规则的有无不能取决于哪个容器先
-	/// 初始化了这个类型。
-	/// </para>
-	/// <para>
-	/// <b>本方法绝不抛异常</b>：注册表缺失、环境态未建立、类型未声明模型等情况一律静默跳过。
-	/// 规则是补充信号而非强制点，让它在属性 setter 上抛出会把配置问题伪装成难以定位的异常。
-	/// </para>
-	/// <para>
-	/// 规则本身仍是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据。
-	/// </para>
-	/// </remarks>
-	private void InjectScopePolicyRule()
-	{
-		try
-		{
-			var registry = BusinessContext?.GetService<ScopeModelRegistry>();
-
-			if (registry == null || !registry.IsDeclared(GetType()))
-			{
-				return;
-			}
-
-			// 幂等：上下文被重复赋值时不得叠加；使用方手工注册过同类型规则时也不重复注入
-			if (Rules.ContainsRule(typeof(ScopePolicyRule)))
-			{
-				return;
-			}
-
-			Rules.AddInstanceRule(new ScopePolicyRule());
-		}
-		catch
-		{
-			// 环境态未建立时 GetService 会抛：静默跳过，规则不是强制点
 		}
 	}
 

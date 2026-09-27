@@ -261,7 +261,7 @@ protected override void AddRules()
 | 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
 | 粒度 | 类型级 `[Permission]` + **行级**（按权限码的策略） | 行级 |
 | 强制点 | `BusinessObjectFactory` 调用边界 | 查询下推 + 工厂保存边界 |
-| 失败形态 | `SecurityException`／规则阶段为 `ValidationException` | 排除该行／同上 |
+| 失败形态 | `SecurityException` | 查询排除该行／保存抛 `SecurityException` |
 
 数据权限的判定**只有一处实现**：策略编译成 `Allow`/`Deny` 一对表达式，读侧下推与单行判定共用它。
 
@@ -307,8 +307,10 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 - **行级操作权限**：把资源标识也映射为维度，按权限码声明不同的行范围，
   于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
 - **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
-- **与规则体系互通**：已声明模型的类型自动注入范围规则，越权以 `ValidationException` 暴露；
-  也可手工 `Rules.AddRule(new PermissionRule("repo:push"))`。
+- **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
+  `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`。
+  早前的 `PermissionRule` / `ScopePolicyRule` 与自动注入已删除（见
+  [`DESIGN.md` §1.10](Source/Euonia.Osba/Permission/DESIGN.md)）。
 
 完整用法、故障排查与性能注意事项见 [`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md)，
 设计动因与取舍见 [`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md)。

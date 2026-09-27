@@ -202,7 +202,7 @@ public class ActuatorRuleTests
 	[Fact]
 	public async Task Update_BypassRule_ExactTypeMatch_ShouldNotExcludeDerivedRules()
 	{
-		// 按精确类型匹配：排除基类不得连带排除派生规则（否则一次笔误会关掉框架自动注入的规则）
+		// 按精确类型匹配：排除基类不得连带排除派生规则（否则一次笔误会关掉所有数据校验规则）
 		using var scope = RuleTestHarness.CreateScope(out var provider);
 		var actuator = provider.GetRequiredService<IActuator>();
 

@@ -99,7 +99,8 @@ internal static class ScopeAuthorization
 			nameof(IScopeGuard));
 
 		// 按操作解析策略键（声明了权限码且模型为该码声明了策略时用该码，否则用操作默认键）。
-		// 与规则共用 ScopeKeyResolver，两处不可能对「当前是哪个键」得出不同答案。
+		// 键只由操作决定（见 DESIGN §1.7）：工厂边界与单行判定 / 查询下推共用 ScopeKeyResolver
+		// 这个唯一出口，不可能对「当前是哪个键」得出不同答案。
 		registry.TryGetInherited(rowType, out var registration);
 
 		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);

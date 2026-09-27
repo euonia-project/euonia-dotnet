@@ -423,13 +423,15 @@ public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(propert
 
 ### 4.1 规则的触发与结果
 
+> 本节只讲**验证规则**。权限由工厂边界裁决，不在此表内，失败一律 `SecurityException`（见 §6.5）。
+
 | 路径 | 是否执行**对象级**规则 | 失败形态 |
 |---|---|---|
 | `EditableObject.SaveAsync`（直接调用） | ✅ | `ValidationException` |
 | `UpdateActuator` / `CreateActuator` | ✅（经 `SaveAsync`） | `ValidationException` |
-| `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | 越权时 `SecurityException`（规则被跳过，工厂兜住） |
+| `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | `ValidationException`（**验证**失败；越权由权限线抛 `SecurityException`，与规则无关） |
 | `ExecuteActuator`（命令对象） | ✅（工厂边界在**命令体之前**裁决） | `ValidationException` |
-| `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | — |
+| `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | —（权限仍然强制） |
 | 任意 `SetProperty`（属性变更） | 执行该**属性级**规则（该类型把检查推迟时为挂起） | 违规落进 `BrokenRules`，`IsValid` 转 `false` |
 | `CheckRuleOnPropertyChanged => false` 的类型 | 保存/命令执行时补跑：**先属性级（仅变更过的属性）→ 再对象级** | `ValidationException`，错误列表「先字段、后整体」 |
 
@@ -514,8 +516,10 @@ await actuator.For<Repo>()
   无论它有没有绑定属性——所以附加在某个属性上的规则不会因为「那个属性这次没改」而被跳过，
   语义就是「本次操作必须满足它」。失败时按该属性归因（`BrokenRule.Property`）。
 - `BypassRule<T>()` 按**精确类型**匹配，不含派生类型——避免 `BypassRule<RuleBase>()`
-  一次笔误就关掉框架自动注入的数据权限规则。
-- `BypassRuleChecks()` 只跳过**规则**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`。
+  一次笔误就关掉所有数据校验规则。
+- **规则属于验证线，权限不属于规则**：`BypassRuleChecks()`、`.BypassRule<T>()`、
+  `SuspendRuleChecking()` 只跳过**校验**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`，
+  没有开关能关掉它。规则集合里也不应再出现权限类规则。
 - **删除默认不跑规则**。`.Delete(id).WithRule(...)` 要让附加规则真正执行，须同时 `.WithRuleChecksOnDelete()`。
 - 若 `Handle` 什么也没改、对象又是干净的，`SaveAsync` 会直接返回（无事可保存），规则那一轮不会发生。
 
@@ -750,18 +754,17 @@ protected bool CanDelete()
 `Deny` 是**否决**（压过一切、且一律上浮），不是布尔取反——需要取反请用
 `ScopePolicy<Repo>.Where(r => !...)`。
 
-### 6.5 写侧强制与规则互通
+### 6.5 权限与规则：两条线，互不相干
 
-写路径有两道关卡：
+| | 权限线（工厂边界） | 验证线（规则） |
+|---|---|---|
+| 回答 | 这个用户**能不能**做这件事 / 碰这行 | 这份数据**合不合法** |
+| 位置 | `ObjectAuthorization` + `ScopeAuthorization`，在 `BusinessObjectFactory` 调用边界 | `EditableObject.SaveAsync`；命令对象由 `ObjectRuleGuard` 在命令体之前 |
+| 结果 | `SecurityException` | `ValidationException`（`Errors` 带属性名） |
+| 可否绕过 | **不可**，无任何开关 | 可（`SuspendRuleChecking` / `BypassRuleChecks` / `WithRuleChecksOnDelete`） |
 
-| 时机 | 结果 |
-|---|---|
-| 规则阶段（框架对已声明模型的类型**自动注入**范围规则） | `ValidationException` |
-| 工厂边界（criteria 入口、或规则被跳过时） | `SecurityException` |
-
-> 命令对象（`CommandObject`）也在规则阶段受检：`ExecuteActuator` 的对象级规则由工厂边界在
-> **命令体之前**裁决，不通过则命令根本不执行。而 `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、
-> `ExecuteAsync(criteria)` 这些 criteria 低层入口不做规则判定（调用前对象为空，无从校验）。
+**新增、更新、删除、命令执行的越权一律 `SecurityException`**——没有形态差异。
+`EditableObject<T>` 在 `IsDeleted` 时默认跳过的是**验证规则**，与权限无关。
 
 ```csharp
 try
@@ -769,30 +772,22 @@ try
     repo.MarkAsChanged();
     await repo.SaveAsync();
 }
-catch (ValidationException ex)          // 规则阶段拦下（新增/更新）
-{
-    foreach (var error in ex.Errors) { Console.WriteLine(error.ErrorMessage); }
-}
-catch (SecurityException ex)            // 工厂边界拦下（越权删除走这里）
+catch (SecurityException ex)            // 越权：新增/更新/删除/命令 都走这里
 {
     Console.WriteLine($"越权：{ex.Message}");
 }
-```
-
-> 越权**删除**抛的是 `SecurityException` 而不是 `ValidationException`：
-> `EditableObject<T>` 在 `IsDeleted` 时**默认跳过对象级规则**。
-> 需要让规则覆盖删除时，用执行器的 `WithRuleChecksOnDelete()`，或在派生类里让
-> `MarkAsDeleted(true)` 被调用（`CheckObjectRulesOnDelete` 是只读属性，不能重写）。
-
-也可以把权限断言写进自己的规则：
-
-```csharp
-protected override void AddRules()
+catch (ValidationException ex)          // 数据不合法，与权限无关
 {
-    Rules.AddRule(new PermissionRule("repo:force-push"));   // 缺码即报验证错误
-    // ScopePolicyRule 已自动注入，无需手工添加
+    foreach (var error in ex.Errors) { Console.WriteLine(error.ErrorMessage); }
 }
 ```
+
+> `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、`ExecuteAsync(criteria)` 这些
+> criteria 低层入口不做**验证规则**判定（调用前对象为空，无从校验），但**权限仍然强制**。
+
+> **不要把权限断言写进 `AddRules()`**。规则可被绕过、`Rules.RunAsync` 又把所有异常转成错误，
+> 规则在结构上就抛不出 `SecurityException`。需要条件分支请用 `CanAccessRow` /
+> `CheckPermissionAsync`，需要「越权即拒」交给工厂边界即可。
 
 ---
 
@@ -967,7 +962,9 @@ BusinessContextAccessor.Clear();
 48. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
 49. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
 50. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
-51. 越权新增/更新抛 `ValidationException`，越权删除抛 `SecurityException`（删除默认跳过对象级规则）。
+51. **越权一律抛 `SecurityException`**——新增/更新/删除/命令执行形态完全一致。
+    越权**不会**出现在 `ValidationException.Errors` 里：早前的 `PermissionRule` / `ScopePolicyRule`
+    与自动注入均已删除，规则集合里只应有数据校验规则（见 §6.5）。
 52. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
     （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
     `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，

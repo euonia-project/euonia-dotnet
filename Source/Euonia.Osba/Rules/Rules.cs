@@ -177,29 +177,6 @@ public class Rules : IRules
 	}
 
 	/// <summary>
-	/// 判断指定类型的规则是否已在规则解析范围内（类型级、实例级或本次操作级）。
-	/// </summary>
-	/// <param name="ruleType">规则类型，按精确类型匹配。</param>
-	/// <returns>已存在则返回 <see langword="true"/>。</returns>
-	/// <remarks>
-	/// 供框架做「幂等注入」用（避免同一规则被注册两次、错误重复）。
-	/// 只判类型不判实例：同名不同参数的规则（如两条消息不同的 <see cref="CommonRule.Required"/>）
-	/// 是合法用法，本方法不用于去重它们。
-	/// </remarks>
-	internal bool ContainsRule(Type ruleType)
-	{
-		// 先取共享快照再进本对象的锁，避免与 InitializeRules 的锁序相互等待
-		var shared = RuleManager.Snapshot();
-
-		lock (_lockObject)
-		{
-			return shared.Any(rule => rule.GetType() == ruleType)
-			       || _instanceRules.Any(rule => rule.GetType() == ruleType)
-			       || (_operationScope != null && _operationScope.Rules.Any(rule => rule.GetType() == ruleType));
-		}
-	}
-
-	/// <summary>
 	/// 判断指定属性是否存在任何适用规则（类型级、实例级或本次操作级）。
 	/// </summary>
 	/// <param name="property">目标属性。</param>

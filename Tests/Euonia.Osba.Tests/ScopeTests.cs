@@ -374,28 +374,28 @@ public class ScopeTests
 
 		repo.TeamId = "team-c";      // 不在授予范围内
 
-		// 落库前被拦下（新增路径：自动注入的范围规则先命中，故为验证错误）
-		var exception = await Assert.ThrowsAsync<ValidationException>(
+		// 落库前被拦下（新增路径同样由工厂边界的权限线裁决，抛 SecurityException）
+		var exception = await Assert.ThrowsAsync<SecurityException>(
 			() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
-		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+		Assert.Contains("Data scope denied", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
 
 	[Fact]
-	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithValidationException()
+	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithSecurityException()
 	{
-		// 框架对已声明模型的类型自动注入范围规则，越权「更新」在规则阶段即以验证错误暴露。
+		// 越权更新与新增/删除同形：权限不再经规则通道，统一由工厂边界抛 SecurityException。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var repo = Repo("team-c");
 		repo.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		repo.MarkAsChanged();
 
-		var exception = await Assert.ThrowsAsync<ValidationException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+		var exception = await Assert.ThrowsAsync<SecurityException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
-		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+		Assert.Contains("Data scope denied", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -403,9 +403,8 @@ public class ScopeTests
 	[Fact]
 	public async Task SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException()
 	{
-		// 不对称是既有事实：EditableObject 在 IsDeleted 时默认跳过对象级规则，
-		// 因此越权「删除」由工厂边界兜住，抛的是 SecurityException。
-		// 这条断言把该行为钉住——若哪天规则覆盖了删除，这里会红，提醒同步更新文档。
+		// 越权删除由工厂边界兜住（权限线不依赖对象级规则），抛的是 SecurityException。
+		// EditableObject 在 IsDeleted 时默认跳过的是<b>验证</b>规则，与权限无关。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var repo = Repo("team-c");
