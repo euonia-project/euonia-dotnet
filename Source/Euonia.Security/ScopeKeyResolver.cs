@@ -5,15 +5,10 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 键<b>只由操作决定</b>，操作由调用方给出。
-/// 键不受调用方状态直接影响——资源状态的改变只是改变了实际执行的操作，
-/// 而每个操作各自应用自己的策略。
+/// 键<b>只由操作决定</b>，操作由调用方给出。键不受调用方状态直接影响——资源状态的改变只是改变了实际执行的操作，而每个操作各自应用自己的策略。
 /// </para>
 /// <para>
-/// 解析优先级：<b>声明了权限码且模型为该码声明了策略 → 用该码</b>；
-/// 否则用该操作的默认键（<see cref="ScopeKeys.For"/>）。
-/// 若同一操作解析出<b>多个</b>都有策略的码，属配置歧义，直接抛错——
-/// 不允许「实际生效的是哪一个」靠猜。
+/// 解析优先级：<b>声明了权限码且模型为该码声明了策略 → 用该码</b>；否则用该操作的默认键（<see cref="ScopeKeys.For"/>）。若同一操作解析出<b>多个</b>都有策略的码，属配置歧义，直接抛错——不允许「实际生效的是哪一个」靠猜。
 /// </para>
 /// </remarks>
 public static class ScopeKeyResolver
@@ -35,11 +30,10 @@ public static class ScopeKeyResolver
 		}
 
 		var matched = codeSource.CodesFor(resourceType, operation)
-		                                      .Where(code => registration.PolicyFor(code) != null)
-		                                      .ToArray();
+		                        .Where(code => registration.PolicyFor(code) != null)
+		                        .ToArray();
 
-		Check.Ensure(
-			matched.Length <= 1,
+		Check.Ensure(matched.Length <= 1,
 			"资源类型 '{0}' 的操作 {1} 解析出多个声明了行级策略的权限码（{2}）。请确保同一操作最多只有一个权限码声明了策略。",
 			resourceType.Name,
 			operation,
