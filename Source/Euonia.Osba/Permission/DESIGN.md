@@ -182,7 +182,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 **但强制点仍在工厂边界**，因为规则可被绕过：
 
-- `SuspendRuleChecking()` / 执行器的 `WithoutRuleChecks()` / `BypassRuleChecks` 能跳过规则；
+- `SuspendRuleChecking()` / 执行器的 `BypassRuleChecks` 能跳过规则；
 - 规则只覆盖写路径：`EditableObject.SaveAsync`（可编辑对象）与
   `BusinessObjectFactory.ExecuteAsync(target, ct)`（命令对象，见 `ObjectRuleGuard`），
   且 `IsDeleted` 时**默认跳过**；

@@ -514,7 +514,7 @@ await actuator.For<Repo>()
   语义就是「本次操作必须满足它」。失败时按该属性归因（`BrokenRule.Property`）。
 - `BypassRule<T>()` 按**精确类型**匹配，不含派生类型——避免 `BypassRule<RuleBase>()`
   一次笔误就关掉框架自动注入的数据权限规则。
-- `WithoutRuleChecks()` 只跳过**规则**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`。
+- `BypassRuleChecks()` 只跳过**规则**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`。
 - **删除默认不跑规则**。`.Delete(id).WithRule(...)` 要让附加规则真正执行，须同时 `.WithRuleChecksOnDelete()`。
 - 若 `Handle` 什么也没改、对象又是干净的，`SaveAsync` 会直接返回（无事可保存），规则那一轮不会发生。
 
@@ -586,7 +586,7 @@ await actuator.For<PushCommand>()
 >
 > 执行器**没有 `Fetch`**——读取请直接用 `IObjectFactory.FetchAsync` 或 `BusinessContext.FetchAsync`。
 >
-> 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `WithoutRuleChecks`），
+> 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `BypassRuleChecks`），
 > 见 [§4.2](#42-按操作指定规则)。
 
 自定义管道行为：
@@ -942,7 +942,7 @@ BusinessContextAccessor.Clear();
 35. `AddErrorResult` 收到 `null`/空白描述时会用占位消息补上，**不会**被静默当成通过；
     但反过来，报错却不给消息本身就是缺陷，别依赖这个兜底。
 36. **删除默认不跑对象级规则**，`.Delete(id).WithRule(...)` 需同时 `.WithRuleChecksOnDelete()` 才会执行。
-37. `BypassRule<T>()` 按**精确类型**匹配；`WithoutRuleChecks()` 只跳规则、**不**解除权限。
+37. `BypassRule<T>()` 按**精确类型**匹配；`BypassRuleChecks()` 只跳规则、**不**解除权限。
 38. **命令对象也会跑对象级规则**，且由工厂边界在命令体之前裁决——规则失败时命令体不会执行。
     但 `IObjectFactory` 的 criteria 低层入口（`ExecuteAsync(criteria)` 等）不做规则判定。
 39. `ValidateAsync(cascade, ct)` 只管**对象级**规则且不抛异常（返回 bool）；
