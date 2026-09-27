@@ -130,7 +130,7 @@ graph TD
 
 ### 1.2 操作权限不来自 Claims
 
-**问题**：把权限码放在令牌的 `"perm"` 声明里有两个实际风险：
+**问题**：把权限码放在令牌的 `"permission"` 声明里有两个实际风险：
 
 1. 权限码数量可能很大，**撑爆 Token**；
 2. 更严重的是**取消授权后，旧令牌在过期前一直有效**——撤销不生效。
@@ -140,7 +140,7 @@ graph TD
 
 **收益**：撤销只需改数据，下一次解析即生效，**不需要重新签发令牌**。
 测试 `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` 用一个
-**不含任何 `perm` 声明的同一个 `ClaimsPrincipal`** 钉住这一点。
+**不含任何 `permission` 声明的同一个 `ClaimsPrincipal`** 钉住这一点。
 
 **保留的部分**：**角色仍来自声明**。角色数量少而稳定，不构成令牌膨胀；
 且 `ClaimsIdentity.IsInRole` 是 BCL 能力。细粒度授权一律走权限码——README 明确禁止用角色承载。

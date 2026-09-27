@@ -172,5 +172,5 @@ public static class UserClaimTypes
 	/// 且取消授权后旧令牌在过期前仍然有效。Euonia.Osba 的默认权限检查器已改为从授权数据实时解析，
 	/// 本声明类型仅供显式回退的历史实现使用。
 	/// </remarks>
-	public const string Permission = "perm";
+	public const string Permission = "permission";
 }
