@@ -20,6 +20,90 @@
 二者共享同一份**授权数据**（`ScopeSubjectSet`）与同一套**表达式引擎**，
 由 `IScopeSubjectResolver` 一次解析、`IScopeGuard` 按请求缓存。
 
+### 0.1 架构总览
+
+```mermaid
+graph TD
+    subgraph A["① 声明层 · 应用代码（静态、可预定义）"]
+        A1["业务对象<br/>EditableObject&lt;T&gt; / CommandObject&lt;T&gt; / BusinessObject&lt;T&gt;"]
+        A2["操作权限点<br/>[FactoryXxx] + [Permission]（类级 / 方法级）"]
+        A3["数据权限模型 ScopeModel&lt;T&gt;<br/>Define：维度映射 · 分类属性<br/>Policy：默认策略 · Declare：按权限码行级策略"]
+        A4["授权数据来源（应用实现）<br/>IScopeSubjectResolver.ResolveAsync(user)"]
+    end
+
+    subgraph B["② 装配与启动 · AddBusinessObject"]
+        B1["扫描注册<br/>PermissionRequirements（操作权限要求集合）<br/>ScopeModelRegistry（数据权限模型注册表）"]
+        B2["启动期校验 provider.ValidatePermissionSetup()<br/>缺解析器 / 未映射维度 / 键歧义<br/>死策略 / 保留前缀 @"]
+    end
+
+    subgraph C["③ 请求上下文"]
+        C1["BusinessContext<br/>捕获当前用户（UserPrincipal）"]
+        C2["IScopeGuard（Scoped · 按请求缓存）<br/>主体集合与已编译策略只解析/编译一次"]
+        C3["快照失效<br/>guard.Refresh() / RefreshAsync()"]
+    end
+
+    subgraph D["④ 判定引擎"]
+        D1["ScopeSubjectSet<br/>Codes（类型级码）· Self（本人）<br/>维度值（Dept / Region / …）· AddGrant（行级码授予）"]
+        D2["ScopeKeyResolver<br/>ObjectEditState → 操作 → 策略键<br/>（权限码 或 @default / @read / @create / …）"]
+        D3["ScopePolicyCompiler<br/>策略 → (Allow, Deny) 一对表达式"]
+        D4["IPermissionChecker<br/>SubjectPermissionChecker（默认 · 码来自授权数据）"]
+    end
+
+    subgraph E["⑤ 强制点"]
+        E1["读侧 guard.Apply(query)<br/>表达式下推 → SQL WHERE"]
+        E2["单行 guard.Allows / guard.AllowsObject<br/>审计 guard.Explain"]
+        E3["工厂边界 BusinessObjectFactory<br/>ObjectAuthorization（操作权限）<br/>ScopeAuthorization（数据权限）→ SecurityException"]
+        E4["规则通道（表单友好 · 前置信号）<br/>自动注入 ScopePolicyRule / PermissionRule<br/>→ ValidationException"]
+    end
+
+    subgraph F["⑥ 外部世界"]
+        F1["数据库 / 查询提供程序"]
+        F2["授权数据存储<br/>权限码表 · 成员关系 · 组织树 · ACL"]
+    end
+
+    A1 --- A2
+    A1 --- A3
+    A2 --> B1
+    A2 --> D4
+    A3 --> B1
+    A4 --> B2
+    A4 --> C2
+    A4 --> F2
+
+    B1 --> B2
+    B1 --> C2
+    C1 --> C2
+    C2 --> D1
+    C2 --> D2
+    C2 --> D4
+    D1 --> D3
+    D2 --> D3
+    D3 --> E1
+    D3 --> E2
+    D3 -. 单行判定 .-> E3
+    D4 --> E3
+    E3 --> E4
+    E1 --> F1
+    C3 -. 显式失效 .-> C2
+```
+
+读法（自上而下、自左向右）：
+
+- **① 声明层**：能预定义的都写在这里。操作权限点（`[Permission]`）与数据权限模型
+  （`ScopeModel<T>`）都由 `AddBusinessObject` 扫描；授权数据来源 `IScopeSubjectResolver`
+  由应用实现，是**唯一**的数据入口。
+- **② 装配与启动**：扫描 + 注册期校验一体完成，配置错误全部 fail-fast
+  （键歧义 §1.7、保留前缀 / 死策略 §1.6；启动期校验清单见 README §3.7）。
+- **③ 请求上下文**：`BusinessContext` 捕获当前用户；`IScopeGuard` 按请求缓存解析结果，
+  读写路径共享同一份快照，撤销生效于「下一次解析」（§1.9；缓存契约见 README §3.6）。
+- **④ 判定引擎**：操作权限判定走 `IPermissionChecker`（码来自授权数据，§1.2）；
+  数据权限把策略编译成 **一对表达式**（§1.3/§1.4），键只由操作决定（§1.7）。
+- **⑤ 强制点**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
+  该做法已被否决，见第 3 章）；单行 `Allows`/`Explain` 与查询共用同一棵表达式，
+  结论不可能漂移；写侧由工厂边界兜底（`SecurityException`），规则通道在前以表单错误呈现
+  （§1.10）。`Create/CreateAsync` 只构造、不落库，不参与数据范围判定（§2.1）。
+- **⑥ 外部世界**：授权数据与数据库都是应用的，框架只消费解析结果与表达式树。
+
 ---
 
 ## 1. 核心决策

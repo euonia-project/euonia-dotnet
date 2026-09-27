@@ -2,7 +2,8 @@
 
 > 面向需要「照着改就能用」的读者。每个场景都是独立的一段业务：给出领域需求、
 > 资源与操作声明、授权数据解析器、判定调用与运行结果，最后列关键语义。
-> 概念、类型速查与故障排查见 [README.md](README.md)，设计取舍见 [DESIGN.md](DESIGN.md)。
+> 概念、类型速查与故障排查见 [README.md](README.md)，设计取舍见 [DESIGN.md](DESIGN.md)，
+> 体系架构总览（图）见 [DESIGN.md](DESIGN.md) §0.1。
 
 **文中 API 与框架实现一致，判定语义均与单元测试（`PermissionTests`、`ScopeTests`、
 `ScopeRowPermissionTests`）验证过的行为对齐**。示例里的存储与授权数据是内存模拟
