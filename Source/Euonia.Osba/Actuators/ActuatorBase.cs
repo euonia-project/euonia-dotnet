@@ -187,9 +187,10 @@ public abstract class ActuatorBase<TTarget>
 	/// <returns>当前执行器，用于链式调用。</returns>
 	/// <remarks>
 	/// 按<b>精确类型</b>匹配（<c>rule.GetType() == typeof(TRule)</c>），不含派生类型：
-	/// 若按可赋值性匹配，<c>BypassRule&lt;RuleBase&gt;()</c> 会连带命中框架自动注入的
-	/// <see cref="ScopePolicyRule"/> 等规则，一次笔误就把数据权限信号整体关掉。
-	/// 绕过只作用于本对象实例，不影响同类型的其他对象。
+	/// 绕过声明的是「这一条规则整体」，若按可赋值性匹配，<c>BypassRule&lt;RuleBase&gt;()</c> 会把所有
+	/// 派生规则一并排除——「排除一条」变成「关掉一批」。绕过只作用于本对象实例，
+	/// 不影响同类型的其他对象。<b>权限无关</b>：权限由工厂边界独立裁决（<see cref="ObjectAuthorization"/>
+	/// / <see cref="ScopeAuthorization"/>），本方法影响不了它。
 	/// </remarks>
 	public ActuatorBase<TTarget> BypassRule<TRule>()
 		where TRule : IRuleBase
@@ -239,9 +240,10 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// <para>
 	/// 默认<b>不</b>检查，与 <see cref="ObservableObject{T}.MarkAsDeleted(bool)"/> 的默认值一致：
-	/// 越权删除由工厂边界抛 <see cref="System.Security.SecurityException"/>，
-	/// 而不是以验证错误的形式出现。开启后删除将改抛
-	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>——这是有意的行为切换。
+	/// 删除时的数据校验规则默认不执行。越权删除由<b>权限线</b>（工厂边界）抛
+	/// <see cref="System.Security.SecurityException"/>——它不受本开关影响；开启本开关改变的只是
+	/// 「删除是否跑验证规则」：存在 Error 级验证违规时抛
+	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>。
 	/// </para>
 	/// <para>
 	/// 需要它的场景：<c>Delete(id).WithRule(...)</c> 附加的规则若要真正执行，必须同时开启本开关，
