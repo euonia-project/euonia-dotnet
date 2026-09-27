@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -8,12 +9,12 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 方法级要求的收集范围与工厂方法的查找范围一致（<see cref="ObjectReflector.IsFactoryMethod"/>）：
+/// 方法级要求的收集范围与工厂方法的查找范围一致（<c>ObjectReflector.IsFactoryMethod</c>）：
 /// 既包含标记了工厂方法特性的方法，也包含符合命名约定的方法。若只按特性收集，
 /// 以命名约定声明的工厂方法上的 <see cref="PermissionAttribute"/> 会被静默忽略，导致权限形同虚设。
 /// </para>
 /// <para>
-/// 本类同时服务于运行期判定（<see cref="BusinessObject"/>）与启动期校验
+/// 本类同时服务于运行期判定（<c>BusinessObject</c>）与启动期校验
 /// （<see cref="ScopeModelRegistry"/>），确保两处对「某个操作声明了哪些权限码」不会得出不同答案。
 /// </para>
 /// </remarks>

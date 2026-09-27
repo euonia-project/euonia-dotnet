@@ -254,7 +254,8 @@ protected override void AddRules()
 
 #### 权限体系
 
-`Euonia.Osba` 提供两套相辅相成的权限控制，**授权值一律从应用数据实时解析，不固化在令牌里**：
+权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`），`Euonia.Osba` 引用它并把策略
+接到工厂边界上。两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
 
 | | 操作权限 | 数据权限 |
 |---|---|---|
@@ -310,10 +311,10 @@ guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
 - **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
   `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`。
   早前的 `PermissionRule` / `ScopePolicyRule` 与自动注入已删除（见
-  [`DESIGN.md` §1.10](Source/Euonia.Osba/Permission/DESIGN.md)）。
+  [`DESIGN.md` §1.10](Source/Euonia.Security/DESIGN.md)）。
 
-完整用法、故障排查与性能注意事项见 [`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md)，
-设计动因与取舍见 [`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md)。
+完整用法、故障排查与性能注意事项见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md)，
+设计动因与取舍见 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md)。
 
 ### Bus Abstract（Euonia.Bus.Abstract）
 > 消息总线抽象契约层：定义消息信封、上下文、约定、传输策略、注解、抽象传输接口与事件体系。所有总线模块的扩展基础。

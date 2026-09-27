@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -43,18 +44,24 @@ public static class ServiceCollectionExtensions
 
 		// 权限模型注册表是实例而非进程级静态状态，容器与测试之间天然隔离。
 		// 校验不依赖容器，因此可以在这里（注册期）立即完成。
-		var registry = ScopeModelRegistry.Create(assemblies);
+		// 权限码扫描是对象模型的知识（方法角色按工厂方法判定），因此由 Osba 提供，权限库反向消费
+		var codeSource = ObjectPermissionCodeSource.Instance;
+		var registry = ScopeModelRegistry.Create(codeSource, assemblies);
 		services.TryAddSingleton(registry);
 
 		var businessObjectTypes = GetBusinessObjectTypes(assemblies);
 
 		services.TryAddSingleton(new PermissionSetup(registry.HasDeclarations || HasPermissionDeclarations(businessObjectTypes)));
 
+		// 策略键的状态推断依赖对象模型，故由 Osba 实现 IScopeKeyResolver 并注册
+		services.TryAddSingleton<IScopeKeyResolver>(new ObjectScopeKeyResolver(registry));
+
 		// IScopeSubjectResolver 允许缺席：只有真正声明了模型或权限码并发生判定时才会要求它。
 		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-			provider.GetRequiredService<BusinessContext>(),
+			provider.GetRequiredService<UserPrincipal>(),
 			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetService<IScopeSubjectResolver>()));
+			provider.GetService<IScopeSubjectResolver>(),
+			provider.GetService<IScopeKeyResolver>()));
 
 		foreach (var type in businessObjectTypes)
 		{

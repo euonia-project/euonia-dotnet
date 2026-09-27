@@ -1,5 +1,6 @@
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -103,7 +104,7 @@ internal static class ScopeAuthorization
 		// 这个唯一出口，不可能对「当前是哪个键」得出不同答案。
 		registry.TryGetInherited(rowType, out var registration);
 
-		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);
+		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, ObjectPermissionCodeSource.Instance);
 
 		if (!guard.AllowsObject(target, scopeKey))
 		{

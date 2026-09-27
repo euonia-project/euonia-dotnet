@@ -33,6 +33,7 @@
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 
@@ -99,6 +100,7 @@ public static class DemoUser
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 public sealed class Repo : EditableObject<Repo>
 {

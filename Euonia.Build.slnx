@@ -14,6 +14,7 @@
     </Folder>
     <Folder Name="/Source/Core/">
         <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
+        <Project Path="Source/Euonia.Security/Euonia.Security.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
         <Project Path="Source/Euonia.Linq/Euonia.Linq.csproj" />

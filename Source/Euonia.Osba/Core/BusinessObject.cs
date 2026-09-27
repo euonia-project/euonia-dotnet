@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Security;
 using Nerosoft.Euonia.Reflection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 

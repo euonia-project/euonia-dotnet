@@ -255,7 +255,9 @@ protected override void AddRules()
 
 #### Permission System
 
-`Euonia.Osba` ships two complementary permission layers. **Grants are always resolved live from
+The policy engine ships as its own library, `Euonia.Security` (depends on `Euonia.Core` only);
+`Euonia.Osba` references it and wires the policies to the factory boundary. The two are
+complementary. **Grants are always resolved live from
 application data — never baked into tokens.**
 
 | | Operation Permission | Data Permission |
@@ -318,12 +320,12 @@ guard.Explain(repo, "repo:delete");          // audit: which policy matched
   `SecurityException` with **no way to bypass it**. The rule channel does data validation only
   and throws `ValidationException`. The former `PermissionRule` / `ScopePolicyRule` and their
   automatic injection have been removed (see
-  [`DESIGN.md` §1.10](Source/Euonia.Osba/Permission/DESIGN.md)).
+  [`DESIGN.md` §1.10](Source/Euonia.Security/DESIGN.md)).
 
 Full usage, troubleshooting, and performance notes:
-[`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md).
+[`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md).
 Design rationale and trade-offs:
-[`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md).
+[`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md).
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
 > Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.

@@ -1,5 +1,6 @@
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
