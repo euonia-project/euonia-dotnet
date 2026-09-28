@@ -6,7 +6,7 @@ using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 using Nerosoft.Euonia.Validation;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 Euonia.Osba 的数据权限（ScopePolicy / IScopeModel / ScopeSubjectSet）：

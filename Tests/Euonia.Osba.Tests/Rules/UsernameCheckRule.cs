@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests.Rules;
+namespace Nerosoft.Euonia.Osba.Tests.Rules;
 
 [ExecuteOnState(ObjectEditState.New)]
 public class UsernameCheckRule : RuleBase

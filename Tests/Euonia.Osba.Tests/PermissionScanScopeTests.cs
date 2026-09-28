@@ -1,7 +1,7 @@
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 权限扫描的口径：<b>与对象工厂查找工厂方法的口径同源</b>（<see cref="ObjectReflector.GetFactoryMethods"/>）。

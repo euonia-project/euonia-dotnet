@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Osba;
 // DataAnnotations 下也有 ValidationException，这里要的是框架自己的那个
 using ValidationException = Nerosoft.Euonia.Validation.ValidationException;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证属性级规则的触发时机：<b>属性变更时</b>检查，而不是保存时。

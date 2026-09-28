@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 子表维度（<see cref="ScopeModelBuilder{T}.MapMany"/>）在<b>真实提供程序</b>上的翻译与执行。

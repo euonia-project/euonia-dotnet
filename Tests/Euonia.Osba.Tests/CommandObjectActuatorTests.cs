@@ -1,6 +1,6 @@
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证命令对象（<see cref="CommandObject{T}"/>）通过执行器（<see cref="IActuator"/>）执行的完整流程：

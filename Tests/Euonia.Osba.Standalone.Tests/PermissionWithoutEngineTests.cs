@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Standalone.Tests;
 
 /// <summary>
 /// 不引入策略引擎时的权限：Osba 的契约由宿主自己实现（这里模拟「权限码来自配置表」）。

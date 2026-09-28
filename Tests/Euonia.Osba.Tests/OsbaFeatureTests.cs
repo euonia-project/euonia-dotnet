@@ -3,7 +3,7 @@ using System.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证本次对 Euonia.Osba 的修复与新增功能：

@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 FieldData 撤销/变更跟踪及 PropertyInfo.FriendlyName 的修复行为。

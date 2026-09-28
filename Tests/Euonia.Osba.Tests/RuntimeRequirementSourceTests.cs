@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 运行期判定与注册期校验必须用**同一个**来源。

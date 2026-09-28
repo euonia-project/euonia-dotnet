@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Osba;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 [SuppressMessage("Performance", "CA1822:Mark members as static", Justification = "<Pending>")]
 [SuppressMessage("Style", "IDE0060:Remove unused parameter", Justification = "<Pending>")]

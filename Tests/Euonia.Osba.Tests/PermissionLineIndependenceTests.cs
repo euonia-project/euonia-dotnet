@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证数据权限<b>不再经规则通道</b>：权限线（工厂边界）与验证线（规则）彼此独立。

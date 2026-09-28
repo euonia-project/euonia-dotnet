@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Security;
 using System.Security.Claims;
 using Xunit;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 public class ObjectPermissionOptInTests
 {

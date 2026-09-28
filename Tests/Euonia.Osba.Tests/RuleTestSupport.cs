@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 规则体系测试的公共脚手架与测试用业务对象。

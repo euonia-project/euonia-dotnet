@@ -1,7 +1,7 @@
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Validation;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 public class UserGeneralBusinessTests
 {

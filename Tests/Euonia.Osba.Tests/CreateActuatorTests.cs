@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 <see cref="CreateActuator{TTarget}"/> 支持任意 <see cref="BusinessObject{T}"/> 类型：

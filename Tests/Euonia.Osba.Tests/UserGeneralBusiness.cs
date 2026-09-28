@@ -1,7 +1,7 @@
 using Nerosoft.Euonia.Osba;
-using Nerosoft.Euonia.Core.Tests.Rules;
+using Nerosoft.Euonia.Osba.Tests.Rules;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 public class UserGeneralBusiness : EditableObjectBase<UserGeneralBusiness>
 {
