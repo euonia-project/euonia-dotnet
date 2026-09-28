@@ -323,6 +323,37 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ---
 
+### 1.11 运行期判定与注册期校验用同一个来源
+
+**问题**：`Euonia.Osba` 的运行期判定（操作权限闸门、数据权限的策略键解析）原先直接使用它自己的
+`ObjectPermissionCodeSource`，而注册期校验用的是容器里注册的 `IPermissionCodeSource`（宿主补充的规则都在里面）。
+两者分叉的后果是：宿主通过回调 / 配置节 / 自定义来源补充的规则**只在启动期生效**——被它识别为入口的方法上的
+`[Permission]` 不进判定、为该码声明的行级策略不生效、策略键回落到 `@<operation>`，而启动期**不报错**。
+表现为「闸门比配置写的更宽松」，正是本库最不能接受的一类失败。
+
+**决策**：运行期与注册期问**同一个来源**。为此：
+
+- 新增 `IPermissionRequirementSource`：在「有哪些权限码」之上回答「要求是什么」（含角色的
+  `PermissionAttribute`），由 `OperationCodeSource` 与合并来源实现；
+- 合并来源对「只给权限码」的成员按「有码、无角色」折算——把它们的码整个丢掉会让闸门比来源本身更宽松，
+  而角色要求本就不在这类来源的表达力之内；
+- Osba 的运行期从容器解析该来源，缺席（对象未接线）或来源回答不了要求时回落到自己的来源。
+
+**收益**：宿主的补充规则在运行期同样生效（与 Osba 自己的工厂约定取并集）；
+注册期校验、操作权限闸门、策略键解析三处对「某操作解析到哪些要求」不可能得出不同答案
+（这条原先只对前两者成立）。
+
+**回归护栏**：`Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing`——
+**还原旧行为它就会转红**（已验证：宿主规则被忽略时该用例报「没有抛出异常」）。
+
+**被否决的方案**：
+
+| 方案 | 否决理由 |
+|---|---|
+| 让 Osba 直接用容器里的 `IPermissionCodeSource` | 它回答不了角色（只有 `CodesFor`），会把「带角色要求」的规则降级成只看权限码 |
+| 两个来源各自查询、结果在调用点取并集 | 并集与去重会散落到每个调用点；「谁先谁后」成为新的分叉点，合并逻辑应当只有一处 |
+| 不修，只在文档里写清楚 | 这是一条 fail-open 的静默路径，与「配置写了却不生效」等价；文档不能替代修复 |
+
 ## 2. 已知边界与取舍
 
 这些是**有意接受**的限制，不是待办事项。使用方需要知道它们。
@@ -387,28 +418,6 @@ query            ≡ source.Where(Allow).Where(!Deny)
 否则「给自己加一行」就是一次提权。这是子表维度的固有性质，不是实现缺陷：
 它同时是收益（撤销即时生效、无需同步）与责任（写入面即授权面）。
 
-### 2.8 Osba 宿主：额外注册的规则不进入运行期判定（已知缺口）
-
-`Euonia.Osba` 的运行期判定用的是它**自己的** `ObjectPermissionCodeSource`（内部单例）：
-操作权限闸门（`ObjectAuthorization`）与数据权限的策略键解析（`ScopeAuthorization`、
-`ObjectScopeKeyResolver`）都直接向它要「某类型在某操作上有哪些权限要求」，**不读容器里的
-`IPermissionCodeSource`**。因此对 Osba 宿主而言，通过回调 / 配置节 / 自定义来源**补充**的规则
-只参与注册期校验（校验用合并后的来源），运行期判定看不到它们：
-
-- 被额外规则识别为入口的方法，其上的 `[Permission]` 不会进入判定；
-- 为该码声明的行级策略不会生效，策略键回落到 `@<operation>`；
-- **启动期不会报错**——注册期校验看到的来源比运行期看到的更宽，恰好绕过了死策略拦截。
-
-表现为「闸门比配置写的更宽松」，属于本库最不能接受的一类失败。
-
-与前几节不同，这一条**不是有意接受的取舍，而是已知缺口**。它在本节的其它取舍之前就存在
-（宿主此前同样可以传自定义来源），但「规则配置化」让它更容易被撞上，因此必须显式写出来。
-
-修法方向（独立改动，需要新抽象）：让「要求」也走容器——为 `IPermissionCodeSource` 之外补一个
-能回答 `RequirementsFor`（含角色）的接口，由 `OperationCodeSource` 与 `CompositeCodeSource` 实现，
-Osba 优先询问容器中的实现、缺席时回落到自己的单例。在那之前：**Osba 宿主不要用额外注册的规则
-去改变工厂操作的入口集合**。
-
 ---
 
 ## 3. 被否决的方案
@@ -457,3 +466,5 @@ Osba 优先询问容器中的实现、缺席时回落到自己的单例。在那
 | `Callback_Without_Rules_Should_Fail_At_Registration` | §1.10 忘了给规则必须是错误，不是静默放行 |
 | `Configuration_Should_Declare_Rules_By_*` / `Configuration_And_Callback_Should_Merge` | §1.10 配置载体与回调等价 |
 | `Configuration_Should_Reject_Root_Node` / `_Operation_Without_Rules` / `_Unresolvable_Attribute_Type` / `_Ambiguous_Attribute_Type` / `_Non_Attribute_Type` | §1.10 配置的全部错误形态都在注册期暴露 |
+| `Merged_Sources_Should_Expose_Requirements_From_Every_Source` | §1.11 合并来源能回答「要求」（含角色）；只给码的来源折算为「有码、无角色」 |
+| `Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing` | §1.11 运行期与注册期用同一个来源——**还原旧行为即转红**（已验证） |

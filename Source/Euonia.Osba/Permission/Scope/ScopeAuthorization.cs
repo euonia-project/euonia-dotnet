@@ -104,7 +104,7 @@ internal static class ScopeAuthorization
 		// 这个唯一出口，不可能对「当前是哪个键」得出不同答案。
 		registry.TryGetInherited(rowType, out var registration);
 
-		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, ObjectPermissionCodeSource.Instance);
+		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, ObjectPermissionCodeSource.For(context));
 
 		if (!guard.AllowsObject(target, scopeKey))
 		{

@@ -14,19 +14,23 @@ namespace Nerosoft.Euonia.Osba;
 internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 {
 	private readonly ScopeModelRegistry _registry;
+	private readonly IPermissionCodeSource _codeSource;
 
 	/// <summary>
 	/// 初始化 <see cref="ObjectScopeKeyResolver"/> 的新实例。
 	/// </summary>
 	/// <param name="registry">权限模型注册表；由容器注入（<c>AddPermission</c> 注册为单例）。</param>
+	/// <param name="codeSource">权限码来源；由容器注入。与注册期校验、操作权限闸门用的是<b>同一个</b>来源，
+	/// 因此三处对「某操作解析到哪个码」不会得出不同答案（见 <see cref="ObjectPermissionCodeSource.For"/>）。</param>
 	/// <remarks>
 	/// 构造函数必须是 <see langword="public"/>——容器以反射激活实现类，不接受非公开构造函数。
 	/// 因此按类型注册（<c>TryAddSingleton&lt;IScopeKeyResolver, ObjectScopeKeyResolver&gt;</c>），
 	/// 而不是 <c>new</c> 出来再注册实例：注册表在 <c>AddPermission</c> 内部构建，调用方拿不到它。
 	/// </remarks>
-	public ObjectScopeKeyResolver(ScopeModelRegistry registry)
+	public ObjectScopeKeyResolver(ScopeModelRegistry registry, IPermissionCodeSource codeSource)
 	{
 		_registry = registry;
+		_codeSource = codeSource ?? ObjectPermissionCodeSource.Instance;
 	}
 
 	/// <inheritdoc />
@@ -45,7 +49,7 @@ internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 		}
 
 		return _registry.TryGetInherited(resource.GetType(), out var registration)
-			? ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, ObjectPermissionCodeSource.Instance)
+			? ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, _codeSource)
 			: ScopeKeys.For(operation);
 	}
 }

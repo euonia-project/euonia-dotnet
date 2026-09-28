@@ -35,7 +35,7 @@ internal static class ObjectAuthorization
 			return;
 		}
 
-		var requirements = ObjectPermissionCodeSource.RequirementsFor(businessObject.GetType(), operation);
+		var requirements = ObjectPermissionCodeSource.For(businessObject.BusinessContext).RequirementsFor(businessObject.GetType(), operation);
 
 		if (requirements.Count == 0)
 		{

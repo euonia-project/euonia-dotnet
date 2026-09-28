@@ -160,6 +160,44 @@ public class PermissionRuleConfigurationTests
 
 	#endregion
 
+	#region 合并后的「要求」面
+
+	[Fact]
+	public void Merged_Sources_Should_Expose_Requirements_From_Every_Source()
+	{
+		// 运行期判定要的是「要求」（含角色），不只是权限码：合并来源必须能回答它，
+		// 否则强制点只能看到权限码、看不到角色。
+		var services = new ServiceCollection();
+
+		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);                                                  // 只给码
+		services.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly);       // 能回答要求
+
+		var source = Assert.IsAssignableFrom<IPermissionRequirementSource>(
+			services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>());
+
+		// 只给码的来源（ConventionCodeSource 只实现 IPermissionCodeSource）：
+		// 折算为「有码、无角色」——丢掉它会让闸门比来源本身更宽松
+		Assert.Contains(
+			source.RequirementsFor(typeof(GuardedAsset), BusinessOperation.Execute),
+			requirement => requirement.Permission == "guarded:run" && requirement.Roles.Length == 0);
+
+		// 能回答要求的来源：角色原样保留
+		Assert.Contains(
+			source.RequirementsFor(typeof(ApprovableAsset), BusinessOperation.Read),
+			requirement => requirement.Permission == "asset:approve" && requirement.Roles.SequenceEqual(["auditor", "manager"]));
+	}
+
+	[Fact]
+	public void Single_Source_Should_Also_Answer_Requirements()
+	{
+		// 只有一个来源（最常见的情形）时不必经过合并，同样要能回答要求
+		var provider = Build(s => s.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly));
+
+		Assert.IsAssignableFrom<IPermissionRequirementSource>(provider.GetRequiredService<IPermissionCodeSource>());
+	}
+
+	#endregion
+
 	#region 配置的错误形态（全部在注册期暴露）
 
 	[Fact]

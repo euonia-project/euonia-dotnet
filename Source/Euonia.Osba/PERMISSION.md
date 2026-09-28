@@ -97,10 +97,9 @@ services.AddObjectPermission(typeof(Order).Assembly);
 （回调或配置节，见 [`Euonia.Security/README.md` §3.3–§3.4](../Euonia.Security/README.md)），
 并自行提供 `IScopeKeyResolver`。
 
-> ⚠️ **Osba 宿主不要用额外注册的规则去改变工厂操作的入口集合**：Osba 的运行期判定用的是它自己的码来源，
-> 额外注册（回调 / 配置节 / 自定义来源）只参与**注册期校验**，运行期看不到它们——
-> 结果是「闸门比配置写的更宽松，启动期却不报错」。需要补充识别约定时，应改 Osba 自己的口径
-> （见 [`DESIGN.md` §2.8](../Euonia.Security/DESIGN.md)）。
+Osba 宿主补充规则时，它们在**运行期同样生效**：额外注册的规则与 Osba 自己的工厂约定取并集，
+且注册期校验、操作权限闸门、策略键解析问的是**同一个来源**
+（见 [`DESIGN.md` §1.11](../Euonia.Security/DESIGN.md)）。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [3.2](#32-用户侧授权值从数据实时解析)），框架不提供默认实现，以免把授权值固化。

@@ -21,7 +21,7 @@ namespace Nerosoft.Euonia.Security;
 /// 结果按（类型，操作）缓存，反复调用不会重复反射。
 /// </para>
 /// </remarks>
-public sealed class OperationCodeSource : IPermissionCodeSource
+public sealed class OperationCodeSource : IPermissionRequirementSource
 {
 	/// <summary>方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。</summary>
 	private const BindingFlags MethodFlags =
@@ -48,12 +48,7 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 	/// <inheritdoc />
 	public IReadOnlyList<string> AllOperations { get; }
 
-	/// <summary>
-	/// 收集指定类型在指定操作上声明的全部权限要求（含类型级与方法级，保留特性上的角色等原始信息）。
-	/// </summary>
-	/// <param name="type">类型。</param>
-	/// <param name="operation">业务操作名。</param>
-	/// <returns>权限要求数组；结果按（类型，操作）缓存。</returns>
+	/// <inheritdoc />
 	/// <remarks>
 	/// 供需要 <see cref="PermissionAttribute.Roles"/> 的运行期判定使用；
 	/// 只关心权限码的调用方用 <see cref="CodesFor"/>。
