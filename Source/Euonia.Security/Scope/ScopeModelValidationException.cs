@@ -12,6 +12,10 @@ public sealed record ScopeModelDiagnostic(string ModelName, string Message);
 /// </summary>
 public sealed class ScopeModelValidationException : Exception
 {
+	/// <summary>
+	/// 以全部诊断创建异常。
+	/// </summary>
+	/// <param name="diagnostics">全部诊断。</param>
 	public ScopeModelValidationException(IReadOnlyList<ScopeModelDiagnostic> diagnostics)
 		: base(Format(diagnostics))
 	{

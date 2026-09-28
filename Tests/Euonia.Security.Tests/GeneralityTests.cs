@@ -2,11 +2,9 @@ using System.Reflection;
 using System.Security.Claims;
 using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection;
-using System.Security.Claims;
 using Nerosoft.Euonia.Security;
 using Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 using Nerosoft.Euonia.Security.Tests.Fixtures;
-using Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 
 namespace Nerosoft.Euonia.Security.Tests;
 
@@ -109,7 +107,7 @@ public class GeneralityTests
 			.OnAttribute(BusinessOperation.Execute, typeof(AssetApproveAttribute))
 			.Build();
 
-		Assert.Empty(source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Read).Where(c => c == "asset:approve"));
+		Assert.DoesNotContain("asset:approve", source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Read));
 	}
 
 	[Fact]
@@ -283,7 +281,7 @@ public class GeneralityTests
 
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		Assert.True(guard.Permissions.Contains("asset:approve"));
+		Assert.Contains("asset:approve", guard.Permissions);
 		Assert.True(guard.Allows(new Asset { DeptId = "team-a", OwnerId = "other", Level = "normal" }));
 	}
 
