@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Security;
 

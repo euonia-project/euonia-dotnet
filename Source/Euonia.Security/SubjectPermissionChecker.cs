@@ -62,9 +62,7 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// <inheritdoc />
 	public bool IsInRole(string role)
 	{
-		var user = _user;
-
-		return user != null && user.IsAuthenticated && user.IsInRole(role);
+		return _user is { IsAuthenticated: true } && _user.IsInRole(role);
 	}
 
 	/// <inheritdoc />
