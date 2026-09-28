@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 这是 <see cref="IPermissionCodeSource"/> 最常见的实现，规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3）。
+/// 这是 <see cref="IPermissionCodeSource"/> 最常见的实现，规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3、§3.4）。
 /// </para>
 /// <para>
 /// 收集范围与运行时判定一致：<b>类型级</b> <see cref="PermissionAttribute"/> 对本来源已声明的每个操作生效，
@@ -116,6 +116,11 @@ public sealed class OperationCodeSourceBuilder
 
 		foreach (var attributeType in attributeTypes)
 		{
+			// 在这里挡住非法元素：否则规则会带着一个永远匹配不上（或求值时才炸）的类型活到判定期
+			Check.Ensure(
+				attributeType != null && typeof(Attribute).IsAssignableFrom(attributeType),
+				"入口特性类型必须是非 null 的特性类型（Attribute 的派生类）。");
+
 			OnMethod(operation, method => method.IsDefined(attributeType, true));
 		}
 
@@ -196,7 +201,11 @@ public sealed class OperationCodeSourceBuilder
 	/// </remarks>
 	public OperationCodeSource Build()
 	{
-		Check.Ensure(_order.Count > 0, "没有声明任何操作入口规则。请至少调用一次 OnAttribute / OnMethodName / OnMethod；若本应用没有方法级权限码，请使用 EmptyCodeSource.Instance。");
+		Check.Ensure(
+			_order.Count > 0,
+			"没有声明任何操作入口规则。请至少调用一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；"
+			+ "若本应用确实没有方法级权限码，请改用 AddPermission(EmptyCodeSource.Instance, …) 显式断言；"
+			+ "只想追加要扫描的程序集，请用 AddPermissionModels。");
 
 		var rules = _rules.ToDictionary(
 			pair => pair.Key,

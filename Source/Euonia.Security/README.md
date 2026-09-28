@@ -1,7 +1,8 @@
 # Euonia.Security
 
-数据权限（行级）与操作权限的**策略引擎**。本库只依赖 `Euonia.Core`，不认识任何对象模型：
-它定义策略、编译策略、判定与下推，但**不决定强制执行点在哪里**。
+数据权限（行级）与操作权限的**策略引擎**。本库只依赖 `Euonia.Core` 与微软的 DI / 配置抽象包
+（`Microsoft.Extensions.DependencyInjection.Abstractions`、`Microsoft.Extensions.Configuration.Abstractions`），
+不认识任何对象模型：它定义策略、编译策略、判定与下推，但**不决定强制执行点在哪里**。
 
 > 设计动因、被否决的方案与已知边界见 [DESIGN.md](DESIGN.md)（面向维护者与评审者）。
 
@@ -51,15 +52,27 @@
 ```csharp
 var services = new ServiceCollection();
 
-// 注册策略引擎：数据权限模型注册表（注册期即完成全部校验）、
+// 注册策略引擎并声明操作入口规则：数据权限模型注册表（注册期即完成全部校验）、
 // IPermissionChecker、IScopeGuard、PermissionSetup
-services.AddPermission(EmptyCodeSource.Instance, typeof(Order).Assembly);
+services.AddPermission(options => options
+        .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
+        .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)),
+    typeof(Order).Assembly);
 
 // 当前用户主体（判定主体）：由宿主注册，取其 Claims 即 ClaimsPrincipal
 services.AddSingleton(UserPrincipal.Current);
 ```
 
-第二个参数 `IPermissionCodeSource` 是**必填项**，见 [3.1](#31-为什么必须提供-ipermissioncodesource)。
+规则必须**显式**给出——引擎不猜「哪个方法对应哪个业务操作」。载体有三种，语义完全一致：
+
+| 载体 | 用法 | 何时用 |
+|---|---|---|
+| **回调**（推荐） | `AddPermission(o => o.OnAttributeOrName(…), assemblies)` | 绝大多数情况：规则与代码同源、可导航、随代码评审发布；模块可各自贡献（[§3.2](#32-多个模块各自注册按并集合并)） |
+| **配置节** | `AddPermission(configuration.GetSection("Permission"), assemblies)` | 部署期要换命名约定时（[§3.4](#34-规则的载体回调--配置节--自定义来源)） |
+| **自定义来源** | `AddPermission(new MyCodeSource(), assemblies)` | 规则不在代码也不在配置里（例如来自数据库） |
+
+确实**没有方法级权限码**时，用 `AddPermission(EmptyCodeSource.Instance, assemblies)` 做断言——那是显式的
+「本应用没有方法级权限码」，不是默认值（见 [3.1](#31-为什么必须显式给出规则)）。
 
 `IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
 
@@ -73,10 +86,11 @@ var provider = services.BuildServiceProvider();
 provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
 ```
 
-### 3.1 为什么必须提供 `IPermissionCodeSource`
+### 3.1 为什么必须显式给出规则
 
 方法级 `[Permission]` 写在方法上，而「哪个方法对应哪个业务操作」取决于使用方的约定——
-有的框架用特性标记工厂方法，有的靠命名约定，引擎无从推断。因此 `IPermissionCodeSource` 没有默认实现。
+有的框架用特性标记工厂方法，有的靠命名约定，引擎无从推断。因此没有任何默认规则：
+**忘了给出规则必须是一个错误，而不是一次静默放行**（空回调/空配置会在注册处直接报错，见 §3.4）。
 
 应用确实**不使用方法级**权限码时，传入 `EmptyCodeSource.Instance`。这是一个显式的断言，
 不是「忘了提供来源」的默认值。
@@ -97,11 +111,17 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPr
 
 ### 3.2 多个模块各自注册（按并集合并）
 
-`AddPermission` **可以调用多次，每次的贡献都会被合并**：
+`AddPermission` **可以调用多次，每次的贡献都会被合并**——每个模块在自己的
+`ConfigureServices` 里贡献自己的规则即可（回调载体让这件事成为自然写法）：
 
 ```csharp
-services.AddPermission(new OrderCodeSource(),  typeof(Order).Assembly);   // 订单模块
-services.AddPermission(new ReportCodeSource(), typeof(Report).Assembly);  // 报表模块
+// 订单模块
+services.AddPermission(o => o.OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)),
+                       typeof(Order).Assembly);
+
+// 报表模块
+services.AddPermission(o => o.OnAttributeOrName(BusinessOperation.Read, "Report", typeof(ReportFetchAttribute)),
+                       typeof(Report).Assembly);
 ```
 
 合并规则：权限码来源合成一个（操作取并集，权限码取并集去重），程序集取并集，
@@ -111,6 +131,7 @@ services.AddPermission(new ReportCodeSource(), typeof(Report).Assembly);  // 报
 后注册模块的权限码会被**静默丢弃**——它对应的行级策略因此永远不会被解析到，
 判定反而比作者本意**更宽松**。这类失败没有任何报错，只在生产环境表现为「权限没拦住」。
 
+> 每个模块的回调各自成组地合并（操作取并集、权限码取并集去重）；
 > 同一个 `IPermissionCodeSource` 实例被重复传入时按幂等处理（跳过），
 > 因此 `EmptyCodeSource.Instance` 这样的共享单例可以被每个模块放心共用。
 > 同一个程序集被多个模块传入同样只扫一次。
@@ -133,18 +154,16 @@ services.AddPermissionModels(typeof(Report).Assembly);                  // 该�
 
 ### 3.3 用规则描述「哪个方法对应哪个操作」
 
-绝大多数宿主的答案是同一种形状：入口方法要么打了某个特性，要么叫某个名字。
-`OperationCodeSource` 把这件事写成**数据**而不是代码，换框架只需换一组规则：
+绝大多数宿主的答案是同一种形状：入口方法要么打了某个特性，要么叫某个名字。规则把这件事写成
+**数据**而不是代码，换框架只需换一组规则：
 
 ```csharp
-var codeSource = OperationCodeSource.Create()
-    .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
-    .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute))
-    .OnAttributeOrName(BusinessOperation.Update, "Order", typeof(UpdateAttribute))
-    .OnAttributeOrName(BusinessOperation.Delete, "Order", typeof(DeleteAttribute))
-    .Build();
-
-services.AddPermission(codeSource, typeof(Order).Assembly);
+services.AddPermission(options => options
+        .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
+        .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute))
+        .OnAttributeOrName(BusinessOperation.Update, "Order", typeof(UpdateAttribute))
+        .OnAttributeOrName(BusinessOperation.Delete, "Order", typeof(DeleteAttribute)),
+    typeof(Order).Assembly);
 ```
 
 第二个参数是**要从特性名里剥离的类型前缀**（`OrderFetchAttribute` → 候选名 `Fetch` / `FetchAsync` /
@@ -160,13 +179,63 @@ services.AddPermission(codeSource, typeof(Order).Assembly);
 ```csharp
 const string approve = "approve";
 
-var codeSource = OperationCodeSource.Create()
-    .OnAttributeOrName(approve, "Order", typeof(ApproveAttribute))
-    .Build();
+services.AddPermission(options => options.OnAttributeOrName(approve, "Order", typeof(ApproveAttribute)),
+    typeof(Order).Assembly);
 ```
 
 每个操作的默认策略键由 `ScopeKeys.For(operation)` 派生为 `@<operation>`；操作名不得以保留前缀
 `@` 开头。判定的其余部分与操作集合无关。
+
+### 3.4 规则的载体：回调 / 配置节 / 自定义来源
+
+三种载体产出的是**同一套规则**（同一份编译、同一份注册期校验），因此可以混用并取并集。
+区别只在「规则写在哪里、随什么发布」：
+
+| | 回调 | 配置节 | 自定义来源 |
+|---|---|---|---|
+| 规则位置 | 代码（组合根或各模块） | `appsettings` 等配置源 | 任意（数据库、远端…） |
+| 编译期可见 / 可导航 | ✅ | ❌ 类型名是字符串 | ❌ |
+| 表达力 | 全部（含自定义谓词） | 特性类型名 + 方法名 | 全部 |
+| 适合 | **默认选择** | 部署期换命名约定 | 规则不在应用里 |
+
+**配置节**的形状：
+
+```json
+{
+  "Permission": {
+    "Operations": {
+      "read":    { "Attributes": ["MyApp.Web.OrderFetchAttribute"], "Names": ["Fetch", "Get"] },
+      "approve": { "Names": ["Approve", "ApproveAsync"] }
+    }
+  }
+}
+```
+
+```csharp
+services.AddPermission(configuration.GetSection("Permission"), typeof(Order).Assembly);
+```
+
+- `Attributes` 是入口特性**类型名**（先按运行时能解析的名字找，再到传入的程序集里按完整名/短名唯一匹配），
+  `Names` 是入口**方法名**；二者并存时为「命中其一即为入口」的或语义；
+- **与 `OnAttributeOrName` 不同，配置不推导候选名**：后者会把 `OrderFetchAttribute` 展开成
+  `Fetch` / `FetchAsync` / `OrderFetch` / `OrderFetchAsync`，配置只认 `Names` 里字面写出的名字。
+  从回调/链式写法迁到配置时，请一并把候选名写全，否则「按命名」那一半会静默消失；
+- **全部错误都在注册期暴露**：缺 `Operations` 节点、操作下有未知节点、某操作没有任何规则、
+  写成标量而不是数组、数组里有空项、类型名解析不到或有歧义、类型不是特性或是泛型——
+  都会在 `AddPermission` 处抛出并指明修法（含出错节点路径）；
+- 读出来的规则与回调声明的规则合并，因此「一部分约定写代码、一部分放配置」是允许的。
+
+> ⚠️ **配置驱动等于把鉴权口径交给配置文件**：把某个方法从「需要审批码」改成「无码」只是一次配置改动。
+> 特性类型与自定义谓词天然属于代码；请让配置文件与代码走**同一套评审与发布流程**，
+> 不要把它当成运维侧的可调开关。配置只在注册期读一次，**不订阅变更**——改配置不会改变门禁，需重启。
+
+> ⚠️ **Osba 宿主注意**：`Euonia.Osba` 的运行期判定用的是它**自己的**码来源，通过回调 / 配置节 / 自定义来源
+> *补充*的规则只参与注册期校验，运行期看不到它们。用它去改变工厂操作的入口集合，会得到
+> 「闸门比预期更宽松、启动期却不报错」的结果（见 [DESIGN §2.8](DESIGN.md)）。
+
+**自定义来源**：两种载体都表达不了时（例如规则来自数据库、或需要按租户分派），实现
+`IPermissionCodeSource` 并直接传入 `AddPermission(instance, assemblies)` 即可——它只回答
+「某类型在某操作上声明了哪些权限码」这一个问题。
 
 ---
 
@@ -487,11 +556,12 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 
 | 成员 | 用途 |
 |---|---|
-| `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验 |
+| `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验；也是自定义规则的扩展点（§3.4） |
 | `IScopeKeyResolver` | 把资源实例解析为策略键（§5.8 的第 2 步） |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口，§5.8） |
 | `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |
-| `OperationCodeSource` / `OperationConventions` | 换掉权限码来源的识别规则 |
+| `OperationCodeSourceBuilder` | 声明规则：`OnAttribute` / `OnMethodName` / `OnAttributeOrName` / `OnMethod`（§3.3） |
+| `OperationConventions` | 按特性名推导候选方法名（§3.3） |
 
 ---
 
@@ -514,6 +584,10 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
 | 「未注册 UserPrincipal」 | 判定主体取自 `UserPrincipal`；不注册则取用 `IScopeGuard` 直接失败 |
 | 「权限模型注册期校验失败，共 N 处问题」 | 这是**汇总**异常，`Diagnostics` 列出了全部问题，按序号逐条修 |
+| 「没有声明任何操作入口规则」（回调载体） | 回调是空的：补规则，或改用 `EmptyCodeSource.Instance` 断言 / `AddPermissionModels` 只追加扫描（§3.1） |
+| 「权限规则配置缺少 'Operations' 节点」 | 传了根配置而不是配置节：改成 `configuration.GetSection("Permission")`（§3.4） |
+| 「配置里的操作 'x' 没有声明任何入口规则」 | 该操作既没给 `Attributes` 也没给 `Names`（键名拼错也会落到这里，消息会列出可用键） |
+| 「配置里的入口特性类型 'x' 无法解析 / 匹配到多个类型」 | 类型名写错或有歧义：改用完整类型名（命名空间 + 类型名），或直接给 `Names`（§3.4） |
 
 完整的模型级校验项清单（含每一条的修法）见 [§5.6](#56-启动期校验)。
 

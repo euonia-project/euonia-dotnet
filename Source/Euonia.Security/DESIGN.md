@@ -9,8 +9,9 @@
 
 ## 库边界
 
-本库只依赖 `Euonia.Core`，**不拦截任何调用**：它回答「能不能」，不回答「在哪里裁决」。
-强制执行点由使用方决定。
+本库只依赖 `Euonia.Core` 与微软的 DI / 配置抽象包（`DependencyInjection.Abstractions`、
+`Configuration.Abstractions`——后者只为「规则可由配置节给出」这一载体存在，不引入任何配置实现），
+**不拦截任何调用**：它回答「能不能」，不回答「在哪里裁决」。强制执行点由使用方决定。
 
 **为什么要有两处接口**：权限要按「资源当前代表哪个业务操作」选策略键，而
 「资源类型 → 操作」的对应关系因框架而异（同一类型在不同框架下可能代表不同操作，
@@ -287,6 +288,41 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ---
 
+### 1.10 规则以「配置」形态声明，但校验仍在注册处
+
+**问题**：`AddPermission(IPermissionCodeSource, assemblies)` 要求使用方先**构造**一个来源对象
+（`OperationCodeSource.Create()…Build()`），再把对象传进注册调用。这个形态有两个实际后果：
+
+1. 它看起来像「注册引擎服务」，于是被当成一次性调用；而它的载荷其实是**业务配置**
+   （「哪个方法对应哪个操作」）——配置与注册绑在一起，配置本身却无处安放；
+2. 模块化应用里，每个模块想贡献自己的操作入口约定时，只能「自己造一个来源」或「共享一个来源实例」，
+   README §3.2 的合并语义因此显得多余。
+
+**决策**：规则成为注册调用**接受的配置**——`AddPermission(o => o.OnAttributeOrName(…), assemblies)`（回调）
+与 `AddPermission(configuration.GetSection("Permission"), assemblies)`（配置节）。两者与自定义
+`IPermissionCodeSource` 产出**同一套规则**（同一份编译、同一份注册期校验、同一套合并），可混用并取并集。
+
+**收益**：
+
+- 一次注册调用即可「声明规则 + 注册引擎」，模块各自贡献并自动合并；
+- **配置错误仍在注册处抛出**：回调在注册处编译、配置在注册处读取，都不推迟到容器构建或首次判定；
+- 载体选择成为显式取舍：规则放代码（推荐）、放配置（部署期换约定）、放别处（自定义来源）。
+
+**被否决的方案**：
+
+| 方案 | 否决理由 |
+|---|---|
+| `services.ConfigurePermissionRules(...)` 之类的分离式注册 | 配置可能被遗忘（注册了引擎却没声明规则），且校验被推迟到容器构建——本库的既有性质是「配置错误在注册处抛出」，这条不能为了形态好看而放弃 |
+| `IOptions<T>` / `Configure<T>` 延迟绑定 | 同上：容器构建期才报错；且多次调用的合并顺序不再由调用方决定 |
+| 维持现状（只能传构造好的来源对象） | 见「问题」：形态误导 + 模块化无处贡献 |
+| 删掉 `AddPermission(IPermissionCodeSource, …)` 只留回调 | 它是已发布的公开 API，且是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口 |
+
+**已知边界**：配置节载体把**鉴权口径**搬进了可被部署改动的地方——把某个方法从「需要审批码」改成「无码」
+只是一次配置改动。因此文档要求配置文件与代码走同一套评审与发布流程，且特性类型与自定义谓词仍应留在代码里
+（README §3.4）。配置节只承载「类型名 + 方法名」，表达力小于回调——这是有意的：数据能表达的只有这些。
+
+---
+
 ## 2. 已知边界与取舍
 
 这些是**有意接受**的限制，不是待办事项。使用方需要知道它们。
@@ -351,6 +387,28 @@ query            ≡ source.Where(Allow).Where(!Deny)
 否则「给自己加一行」就是一次提权。这是子表维度的固有性质，不是实现缺陷：
 它同时是收益（撤销即时生效、无需同步）与责任（写入面即授权面）。
 
+### 2.8 Osba 宿主：额外注册的规则不进入运行期判定（已知缺口）
+
+`Euonia.Osba` 的运行期判定用的是它**自己的** `ObjectPermissionCodeSource`（内部单例）：
+操作权限闸门（`ObjectAuthorization`）与数据权限的策略键解析（`ScopeAuthorization`、
+`ObjectScopeKeyResolver`）都直接向它要「某类型在某操作上有哪些权限要求」，**不读容器里的
+`IPermissionCodeSource`**。因此对 Osba 宿主而言，通过回调 / 配置节 / 自定义来源**补充**的规则
+只参与注册期校验（校验用合并后的来源），运行期判定看不到它们：
+
+- 被额外规则识别为入口的方法，其上的 `[Permission]` 不会进入判定；
+- 为该码声明的行级策略不会生效，策略键回落到 `@<operation>`；
+- **启动期不会报错**——注册期校验看到的来源比运行期看到的更宽，恰好绕过了死策略拦截。
+
+表现为「闸门比配置写的更宽松」，属于本库最不能接受的一类失败。
+
+与前几节不同，这一条**不是有意接受的取舍，而是已知缺口**。它在本节的其它取舍之前就存在
+（宿主此前同样可以传自定义来源），但「规则配置化」让它更容易被撞上，因此必须显式写出来。
+
+修法方向（独立改动，需要新抽象）：让「要求」也走容器——为 `IPermissionCodeSource` 之外补一个
+能回答 `RequirementsFor`（含角色）的接口，由 `OperationCodeSource` 与 `CompositeCodeSource` 实现，
+Osba 优先询问容器中的实现、缺席时回落到自己的单例。在那之前：**Osba 宿主不要用额外注册的规则
+去改变工厂操作的入口集合**。
+
 ---
 
 ## 3. 被否决的方案
@@ -395,3 +453,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything` | §1.4 fail-closed（子表维度同样适用） |
 | `MapMany_Apply_ShouldTranslateTo_Exists_Subquery` / `MapMany_Apply_ForDeclaredKey_ShouldTranslateTo_NotExists`（EF Core + SQLite） | §1.9 可下推：真实提供程序必须产出 `EXISTS` / `NOT EXISTS` |
 | `MapMany_Sqlite_ShouldAgree_With_InMemory` | §1.3 下推与内存判定一致（真实提供程序，非 LINQ-to-Objects） |
+| `Callback_Should_Declare_Rules_Inline` / `Callbacks_From_Different_Modules_Should_Merge` / `Callback_And_Custom_Source_Should_Merge` | §1.10 回调载体与三种载体的并集合并 |
+| `Callback_Without_Rules_Should_Fail_At_Registration` | §1.10 忘了给规则必须是错误，不是静默放行 |
+| `Configuration_Should_Declare_Rules_By_*` / `Configuration_And_Callback_Should_Merge` | §1.10 配置载体与回调等价 |
+| `Configuration_Should_Reject_Root_Node` / `_Operation_Without_Rules` / `_Unresolvable_Attribute_Type` / `_Ambiguous_Attribute_Type` / `_Non_Attribute_Type` | §1.10 配置的全部错误形态都在注册期暴露 |

@@ -73,6 +73,8 @@ services.AddObjectPermission(typeof(Order).Assembly);
 
 - `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
 - `AddPermission(ObjectPermissionCodeSource.Instance, assemblies)`——把 Osba 的权限码来源交给引擎
+  （Osba 自己实现了 `IPermissionCodeSource`，宿主因此**不需要**声明操作入口规则；规则形态见
+  [`Euonia.Security/README.md` §3.3–§3.4](../Euonia.Security/README.md)）
 
 后者会注册策略引擎自身的一切（`Euonia.Security` 提供）：
 `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
@@ -91,8 +93,14 @@ services.AddObjectPermission(typeof(Order).Assembly);
 - **`IScopeKeyResolver` 是 `TryAdd` 语义**（先到先得），因为「某个资源实例当前代表哪个操作」
   是**全局**答案，多个模块给出不同答案本身就是配置错误。需要自定义时自己注册即可，会覆盖框架推断。
 
-脱离 Osba 单独使用 `Euonia.Security` 时，直接调 `services.AddPermission(codeSource, assemblies)`
+脱离 Osba 单独使用 `Euonia.Security` 时，用 `services.AddPermission(…)` 声明自己的操作入口规则
+（回调或配置节，见 [`Euonia.Security/README.md` §3.3–§3.4](../Euonia.Security/README.md)），
 并自行提供 `IScopeKeyResolver`。
+
+> ⚠️ **Osba 宿主不要用额外注册的规则去改变工厂操作的入口集合**：Osba 的运行期判定用的是它自己的码来源，
+> 额外注册（回调 / 配置节 / 自定义来源）只参与**注册期校验**，运行期看不到它们——
+> 结果是「闸门比配置写的更宽松，启动期却不报错」。需要补充识别约定时，应改 Osba 自己的口径
+> （见 [`DESIGN.md` §2.8](../Euonia.Security/DESIGN.md)）。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [3.2](#32-用户侧授权值从数据实时解析)），框架不提供默认实现，以免把授权值固化。

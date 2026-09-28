@@ -3,7 +3,7 @@
 	<Import Project="..\common.props" />
 
 	<PropertyGroup>
-		<Description>Authorization primitives: operation permission requirements and data-scope (row-level) policy engine for Euonia. Independent of any object model, user model and application framework; host applications supply the code source, user accessor and grant resolver.</Description>
+		<Description>Authorization primitives: operation permission requirements and data-scope (row-level) policy engine for Euonia. Independent of any object model, user model and application framework; host applications declare the operation rules (callback, configuration or a custom source) and supply the user accessor and grant resolver.</Description>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
@@ -11,6 +11,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<!--
+		  DI.Abstractions：AddPermission 这一注册入口所需。
+		  Configuration.Abstractions：权限码识别规则可以由配置节给出（AddPermission(configuration, …)），
+		  不引入 Configuration 实现包——读取由宿主的配置系统提供。
+		-->
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 	</ItemGroup>
 

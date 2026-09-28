@@ -138,6 +138,43 @@ public sealed class SharedDocumentModel : ScopeModel<SharedDocument>
 	public override ScopePolicy<SharedDocument> Policy => ScopePolicy<SharedDocument>.Grant(Reader);
 }
 
+/// <summary>入口特性：只用于验证配置载体按特性类型匹配。</summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class UnionProbeAttribute : Attribute;
+
+/// <summary>入口特性的基类：验证「规则写基类型、派生特性实例同样命中」。</summary>
+[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+public class EntryMarkAttribute : Attribute;
+
+/// <summary><see cref="EntryMarkAttribute"/> 的派生特性。</summary>
+[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+public sealed class DerivedEntryMarkAttribute : EntryMarkAttribute;
+
+/// <summary>泛型入口特性：配置里引用它应在注册期被拒绝（泛型特性无法作为入口标记）。</summary>
+[AttributeUsage(AttributeTargets.Method)]
+public sealed class GenericMarkAttribute<T> : Attribute;
+
+/// <summary>
+/// 「按特性」与「按命名」分别对应不同权限码的资源：用于证明配置里的两条规则是或语义，
+/// 而不是「只生效一条也不会被发现」。
+/// </summary>
+public sealed class UnionProbeAsset
+{
+	/// <summary>只按命名命中。</summary>
+	[Permission("probe:by-name")]
+	public void Probe() { }
+
+	/// <summary>只按特性命中。</summary>
+	[Permission("probe:by-attr")]
+	[UnionProbe]
+	public void Purge() { }
+
+	/// <summary>只按派生特性命中（规则里写的是基类型）。</summary>
+	[Permission("probe:by-derived")]
+	[DerivedEntryMark]
+	public void Sweep() { }
+}
+
 /// <summary>
 /// 未密封的受控资源：用于构造「声明类型已注册、实例却是派生类型」的场景。
 /// </summary>

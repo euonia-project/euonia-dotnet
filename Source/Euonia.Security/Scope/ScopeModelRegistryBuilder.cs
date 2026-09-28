@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Security;
 
@@ -228,31 +229,7 @@ public sealed class ScopeModelRegistryBuilder
 
 	private static IEnumerable<Type> GetModelTypes(IEnumerable<Assembly> assemblies)
 	{
-		if (assemblies == null)
-		{
-			yield break;
-		}
-
-		foreach (var assembly in assemblies.Where(assembly => assembly != null))
-		{
-			Type[] types;
-
-			try
-			{
-				types = assembly.GetTypes();
-			}
-			catch (ReflectionTypeLoadException exception)
-			{
-				types = exception.Types.Where(type => type != null).ToArray();
-			}
-
-			foreach (var type in types)
-			{
-				if (type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IScopeModel)))
-				{
-					yield return type;
-				}
-			}
-		}
+		return AssemblyHelper.LoadTypes(assemblies)
+						   .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IScopeModel)));
 	}
 }

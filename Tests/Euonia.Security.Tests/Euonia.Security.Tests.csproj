@@ -12,4 +12,12 @@
         <ProjectReference Include="..\Euonia.Security.Tests.Fixtures\Euonia.Security.Tests.Fixtures.csproj" />
     </ItemGroup>
 
+    <!--
+      权限码识别规则的配置载体需要真正的配置实现（ConfigurationBuilder / AddInMemoryCollection）。
+      虽然 Tests/common.props 的 Hosting 会传递带进来，但直接使用就应直接引用。
+    -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration" />
+    </ItemGroup>
+
 </Project>
