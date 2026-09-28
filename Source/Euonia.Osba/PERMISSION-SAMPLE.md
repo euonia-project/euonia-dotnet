@@ -7,7 +7,7 @@
 > 体系架构总览（图）见 [`Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) §0.1。
 
 **文中 API 与框架实现一致，判定语义均与单元测试（`PermissionTests`、`ScopeTests`、
-`ScopeRowPermissionTests`）验证过的行为对齐**。示例里的存储与授权数据是内存模拟
+`ScopeRowPermissionTests`、`SubTableDimensionTests`）验证过的行为对齐**。示例里的存储与授权数据是内存模拟
 （真实系统里是数据库表），请替换为你自己的数据访问层。
 
 | 场景 | 需求一句话 | 主要能力 |
@@ -18,6 +18,7 @@
 | [四、个人数据](#场景四个人数据self--可撤销) | 自己创建的内容自己可见 | `Self()`、所有者可撤销、缓存失效 |
 | [五、机密与公开](#场景五机密与公开deny--匿名公开) | 公开的匿名可见，机密的连本人也不见 | `Deny` 全局否决、`Where(IsPublic)`、匿名 fail-closed |
 | [六、命令对象](#场景六命令对象--授权变更实时生效) | 导出报表是允许就执行、撤销立即生效 | 命令对象权限、撤销 vs Token、移除即生效 |
+| [七、子表维度](#场景七子表维度查询我加入的团队) | 查询我加入的团队 / 家庭 / 组织 | 子表维度：`MapMany`、`EXISTS` 下推、写侧对象图要求 |
 
 ---
 
@@ -613,6 +614,121 @@ await actuator.For<ExportReportCommand>()
 
 ---
 
+## 场景七：子表维度（查询我加入的团队）
+
+**需求**：`dev` 能查询**自己已加入**的团队。成员关系存在**子表**里
+（`team_member(team_id, user_id, status)`），`expired` 的关系不算成员；团队负责人（行内的列）始终可见。
+成员表本身的写入由操作权限把守——本场景只回答「谁能看到哪些团队」。
+
+```csharp
+/// 子表行：团队成员（真实系统里就是 team_member 表的一行）
+public sealed class TeamMember
+{
+    public string TeamId { get; set; }
+    public string UserId { get; set; }
+    public string Status { get; set; }              // active / expired
+}
+
+public sealed class Team : EditableObject<Team>
+{
+    public string Id { get; set; }
+    public string LeaderId { get; set; }
+
+    /// 子表行。刻意不初始化：未加载时为空引用，单行判定会明确报错而不是静默拒绝。
+    public List<TeamMember> Members { get; set; }
+
+    [FactoryUpdate]
+    [Permission("team:edit")]
+    protected override async Task UpdateAsync(CancellationToken ct = default) { }
+}
+
+public sealed class TeamScope : ScopeModel<Team>
+{
+    public override void Define(ScopeModelBuilder<Team> builder)
+        => builder.Map(ScopeDimensions.Owner, t => t.LeaderId)                    // 行内的列：单值维度
+                  .MapMany(ScopeDimensions.Member,                                // 子表：集合维度
+                           t => t.Members.Where(m => m.Status == "active")
+                                         .Select(m => m.UserId));
+
+    public override ScopePolicy<Team> Policy =>
+        ScopePolicy<Team>.Any(ScopePolicy<Team>.Grant(ScopeDimensions.Member),
+                              ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
+}
+```
+
+解析器：**不查关系表**——授予的值是「子表里应当出现的值」，也就是当前用户标识：
+
+```csharp
+public sealed class TeamSubjectResolver(IAuthzData authz) : IScopeSubjectResolver
+{
+    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
+        if (userId == null)
+        {
+            return ScopeSubjectSet.Empty;                          // 匿名 → 空集合，fail-closed
+        }
+
+        return ScopeSubjectSet.CreateBuilder()
+                              .AddCodes(await authz.GetCodesAsync(userId, ct))
+                              .AddSelf(userId)                         // 负责人 / 所有者（owner 维度）
+                              .Add(ScopeDimensions.Member, userId)     // 团队成员（子表维度）
+                              .Build();
+    }
+}
+```
+
+判定与结果（`dev` 在 `t1` 的关系有效、在 `t2` 已失效，`t3` 与 `dev` 无关）：
+
+```csharp
+// 读侧：下推成 EXISTS 相关子查询——关系表多大都与解析成本无关
+var visible = await guard.Apply(dbContext.Teams).ToListAsync();
+// select * from team
+// where exists (select 1 from team_member
+//               where team_id = team.id and status = 'active' and user_id = 'dev')
+//    or leader_id = 'dev'
+// → t1
+
+// 单行判定：要求实例上子集合已加载（真实系统里由仓储 Include）
+guard.Allows(await LoadWithMembersAsync("t1"));      // True
+guard.Allows(await LoadWithMembersAsync("t3"));      // False
+
+// 子表是实时求值的：删掉 t1 里 dev 的那行关系，下一次判定即变，不需要 Refresh()
+membership.Leave("t1", "dev");
+guard.Allows(await LoadWithMembersAsync("t1"));      // False
+
+// 写侧（工厂边界）：仓储没加载子表时——判定不了就失败，绝不是「越权」
+var team = await LoadAsync("t1");                    // 只取 team 行，Members 为 null
+team.BusinessContext = provider.GetRequiredService<BusinessContext>();
+team.MarkAsChanged();
+await team.SaveAsync();                              // InvalidOperationException：
+// 数据权限判定失败：资源类型 'Team' 的子表维度 'member'（取值来源：x.Members）在单行判定时不可用——
+// 对应的子集合未加载（为空引用）。…修法：① 读侧改用 IScopeGuard.Apply 下推；② 加载对象时一并
+// 加载该子集合（例如 EF Core 的 Include）；③ 去掉集合属性的初始化器…
+```
+
+要点：
+
+- **授予的值是「子表里应当出现的值」，不是资源标识**：成员维度授 `userId`，团队维度才授 `teamId`。
+  方向授反的后果是恒不放行（fail-closed，不会泄漏），但极难排查——`guard.Explain` 会把该叶子显示为
+  `Grant(member[])`，先核对这一点。
+- **解析器不需要反向展开**：关系表有多大都与解析成本无关（对比场景二的部门树展开）。
+- **子表属性（`status`）由数据库实时求值**：它写在选择器里，而不是在解析期过滤成快照；
+  成员关系一改，下一次查询即生效，**不需要 `Refresh()`**。
+- **单行判定要求子集合已加载**：`Allows` 与工厂边界在内存中求值同一棵表达式，未加载时抛
+  `InvalidOperationException`（**不是** `SecurityException`，别混捕）；实体把集合初始化成 `= []` 时会
+  退化成**静默拒绝**（已知边界，见 DESIGN §2.5）。
+- **取值形状只有一种**：「导航集合（可带 `Where` 过滤）再取字符串值」，其余形状在**启动期**被拒绝。
+- **成员表的写入口必须由操作权限把守**：子表维度把「谁属于这个团队」的判定权交给了业务数据，
+  给自己加一行就等于给自己授权。
+
+> 完整语义、边界，以及与「解析器反向展开」的取舍见
+> [`Euonia.Security/README.md` §5.9](../Euonia.Security/README.md) 与
+> [`DESIGN.md` §1.9](../Euonia.Security/DESIGN.md)；
+> 本场景的行为由 `SubTableDimensionTests`、`CollectionDimensionTests`、`EfCoreCollectionDimensionTests` 钉住。
+
+---
+
 ## 7. 组合使用：操作权限 × 数据权限
 
 两套权限回答不同问题，通常**同时启用**：场景三就是典型——`[Permission("repo:delete")]`
@@ -662,6 +778,7 @@ protected async Task ArchiveAsync(CancellationToken cancellationToken)
 | 仅看自己创建的数据，且所有权可被收回 | [场景四](#场景四个人数据self--可撤销) |
 | 有公开、机密等密级，需要 deny 与匿名 | [场景五](#场景五机密与公开deny--匿名公开) |
 | 操作本身是命令（导出、推送、结算），要权限守卫 | [场景六](#场景六命令对象--授权变更实时生效) |
+| 可见性由子表（成员表 / 关系表）决定，如「我加入的团队」 | [场景七](#场景七子表维度查询我加入的团队) |
 | 对象既按码判操作、又按行判范围 | [场景三](#场景三行级资源授权同一类型不同行权限不同) + [§7](#7-组合使用操作权限--数据权限) |
 
 > 两个心智模型：

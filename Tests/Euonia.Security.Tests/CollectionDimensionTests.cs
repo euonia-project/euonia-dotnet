@@ -202,6 +202,19 @@ public class CollectionDimensionTests
 	}
 
 	[Fact]
+	public void MapMany_PolicyWithoutCollectionDimension_ShouldNotRequireLoadedMembers()
+	{
+		// 加载探测只针对「本策略确实引用到的」子表维度：
+		// 同一资源上只按行内列判定的策略（写侧的典型形状）不要求对象图完整。
+		var compiled = Compile<Workspace, WorkspaceModel>(
+			ScopePolicy<Workspace>.Grant(ScopeDimensions.Owner),
+			(ScopeDimensions.Owner, "dev"));
+
+		Assert.True(ScopeFilter.Allows(new Workspace { OwnerId = "dev", Members = null }, compiled));
+		Assert.False(ScopeFilter.Allows(new Workspace { OwnerId = "other", Members = null }, compiled));
+	}
+
+	[Fact]
 	public void MapMany_CollectionInitializedToEmpty_ShouldBeDeniedSilently()
 	{
 		// 已知边界（DESIGN §2）：实体把集合初始化成空集合时，「未加载」与「确实没有成员」无法区分，

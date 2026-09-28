@@ -25,6 +25,9 @@ internal sealed class ScopeCompileContext<T>
 	private readonly ScopeModelDescriptor _descriptor;
 	private readonly ScopeSubjectSet _subjects;
 
+	/// <summary>本次编译中真正被策略引用的集合维度：加载探测只针对它们。</summary>
+	private readonly HashSet<string> _referencedCollectionDimensions = new(StringComparer.OrdinalIgnoreCase);
+
 	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string scopeKey)
 	{
 		_descriptor = descriptor;
@@ -81,9 +84,16 @@ internal sealed class ScopeCompileContext<T>
 		var list = values is List<string> existing ? existing : new List<string>(values);
 		var granted = Expression.Constant(list, typeof(List<string>));
 
-		return mapping.IsCollection
-			? CollectionCondition(mapping, granted)
-			: Contains(granted, Rebind(mapping.Value));
+		if (!mapping.IsCollection)
+		{
+			return Contains(granted, Rebind(mapping.Value));
+		}
+
+		// 记下「本策略确实用到了这个子表维度」：加载探测只对用到的维度生效，
+		// 否则同一资源上不涉及子表的策略（例如写侧只按行内列判定）也会被要求对象图完整。
+		_referencedCollectionDimensions.Add(dimension);
+
+		return CollectionCondition(mapping, granted);
 	}
 
 	/// <summary>
@@ -124,14 +134,18 @@ internal sealed class ScopeCompileContext<T>
 	}
 
 	/// <summary>
-	/// 构建集合维度的加载探测（供单行判定在求值前检查对象图是否完整）。
+	/// 构建<b>本次编译的策略实际引用</b>的集合维度的加载探测（供单行判定在求值前检查对象图是否完整）。
 	/// </summary>
-	/// <returns>探测列表；模型没有集合维度时为空。</returns>
+	/// <returns>探测列表；本策略未引用任何子表维度时为空。</returns>
+	/// <remarks>
+	/// 只针对被引用的维度：同一资源上「只按行内列判定」的策略（典型是写侧用 owner 的那几条）
+	/// 因此不要求对象图完整——这正是「读侧用子表、写侧用行内列」这一取舍能够落地的前提。
+	/// </remarks>
 	internal IReadOnlyList<ScopeLoadGuard<T>> CreateLoadGuards()
 	{
 		var guards = new List<ScopeLoadGuard<T>>();
 
-		foreach (var dimension in _descriptor.CollectionDimensions)
+		foreach (var dimension in _referencedCollectionDimensions)
 		{
 			var mapping = _descriptor.GetDimension(dimension);
 			var probe = mapping.CreateLoadProbe();
