@@ -15,6 +15,9 @@ internal class SampleDataContext : DataContextWithBus<SampleDataContext>, IAppli
 	{
 	}
 
+	/// <summary>用户账号。</summary>
+	public virtual DbSet<UserEntity> Users => Set<UserEntity>();
+
 	/// <summary>代码仓库。</summary>
 	public virtual DbSet<CodeRepository> CodeRepositories => Set<CodeRepository>();
 

@@ -3,8 +3,7 @@ using Nerosoft.Euonia.Sample.Domain.Aggregates;
 namespace Nerosoft.Euonia.Sample.Domain.Repositories;
 
 /// <summary>
-/// 团队数据的内存仓储。生产环境应换用持久化仓储；此处用内存数据便于演示，
-/// 仓储只负责存取，权限判定全部由权限引擎完成。
+/// 团队数据的持久化仓储（EF Core + SQLite）。仓储只负责存取，权限判定全部由权限引擎完成。
 /// </summary>
 public interface ITeamStore
 {

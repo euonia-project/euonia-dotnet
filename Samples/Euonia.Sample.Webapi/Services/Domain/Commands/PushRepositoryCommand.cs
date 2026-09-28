@@ -35,7 +35,7 @@ public sealed class PushRepositoryCommand : CommandObjectBase<PushRepositoryComm
 		var repository = await BusinessContext.GetRequiredService<IRepositoryStore>().GetAsync(RepoId, cancellationToken);
 		if (repository == null)
 		{
-			throw new InvalidOperationException($"Repository with ID '{RepoId}' not found.");
+			throw new NotFoundException($"Repository with ID '{RepoId}' not found.");
 		}
 
 		var guard = BusinessContext.GetRequiredService<IScopeGuard>();

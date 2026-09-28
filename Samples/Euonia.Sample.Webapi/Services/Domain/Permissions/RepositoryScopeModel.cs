@@ -63,7 +63,7 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 
 /// <summary>
 /// 行级授予（ACL）在 <see cref="Persist.Entities.AuthorizationKinds.Grant"/> 授权行上的编码：
-/// 值为 <c>"{operation}|{repositoryId}"</c>，例如 <c>"repository:push|r-100"</c>。
+/// 值为 <c>"{operation}|{repositoryId}"</c>，例如 <c>"repository:push|&lt;repository-id&gt;"</c>。
 /// </summary>
 public static class RepositoryGrant
 {

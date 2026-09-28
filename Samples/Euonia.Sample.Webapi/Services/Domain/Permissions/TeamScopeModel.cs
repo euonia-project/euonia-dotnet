@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// <summary>
 /// 团队的数据权限模型：默认策略是「本团队成员或本团队负责人可见」，
 /// 编辑、删除按码收敛为「仅负责人可操作」——负责人维度由 <see cref="ScopeSubjectSetBuilder.AddSelf"/>
-/// 提供（owner 维度），因此与组件的外部队长（如 T-2 的 u-0）无关。
+/// 提供（owner 维度），因此与团队记录之外的外部负责人无关。
 /// 行级判定在工厂边界自动执行，读侧列表由 <see cref="IScopeGuard.Apply{T}"/> 下推。
 /// </summary>
 public sealed class TeamScopeModel : ScopeModel<Team>

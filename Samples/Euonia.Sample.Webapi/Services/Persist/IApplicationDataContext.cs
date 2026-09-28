@@ -6,11 +6,14 @@ using Nerosoft.Euonia.Sample.Persist.Entities;
 namespace Nerosoft.Euonia.Sample.Persist;
 
 /// <summary>
-/// 数据上下文的公开访问面：暴露权限演示所需的三个数据集与保存入口。
+/// 数据上下文的公开访问面：暴露授权数据、账号与保存入口。
 /// 实现为内部的 <see cref="SampleDataContext"/>，便于把内部上下文限制在持久化层。
 /// </summary>
 public interface IApplicationDataContext
 {
+	/// <summary>用户账号。</summary>
+	DbSet<UserEntity> Users { get; }
+
 	/// <summary>代码仓库。</summary>
 	DbSet<CodeRepository> CodeRepositories { get; }
 

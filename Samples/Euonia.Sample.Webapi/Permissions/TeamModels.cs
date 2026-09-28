@@ -6,5 +6,5 @@ public sealed record TeamDto(string Id, string Name, string LeaderId);
 /// <summary>创建团队入参。</summary>
 public sealed record TeamCreateInput(string Name);
 
-/// <summary>更新团队入参：仅允许改名称；负责人变更属组织调整，演示中不允许普通更新路径改。</summary>
+/// <summary>更新团队入参：仅允许改名称；负责人变更属组织调整，更新路径不允许修改。</summary>
 public sealed record TeamUpdateInput(string Name);

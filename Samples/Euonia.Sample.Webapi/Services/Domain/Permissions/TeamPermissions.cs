@@ -18,4 +18,7 @@ public static class TeamPermissions
 
 	/// <summary>删除团队（工厂 Delete），仅允许 项目管理。</summary>
 	public const string Delete = "team:delete";
+
+	/// <summary>团队全部权限码（用于初始化与管理授权）。</summary>
+	public static readonly string[] All = [Create, View, Edit, Delete];
 }

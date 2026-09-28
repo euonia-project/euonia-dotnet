@@ -8,7 +8,7 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 
 /// <summary>
-/// 代码仓库业务对象，演示操作权限、角色与行级数据权限在工厂边界的强制执行。
+/// 代码仓库业务对象。操作权限、角色与行级数据权限在工厂边界强制执行：
 /// 每个工厂方法用 <see cref="PermissionAttribute"/> 声明一个权限码与允许的角色：
 /// <see cref="RepositoryPermissions.Create"/> / <see cref="RepositoryPermissions.View"/> /
 /// <see cref="RepositoryPermissions.Push"/>（push 即本工程的更新操作，见 PERMISSION-SAMPLE.md 场景三）/
@@ -78,7 +78,7 @@ public sealed class CodeRepository : EditableObjectBase<CodeRepository, string>
 		var repository = await BusinessContext.GetRequiredService<IRepositoryStore>().GetAsync(id, cancellationToken);
 		if (repository == null)
 		{
-			throw new InvalidOperationException($"Repository with ID '{id}' not found.");
+			throw new NotFoundException($"Repository with ID '{id}' not found.");
 		}
 
 		LoadProperty(IdProperty, repository.Id);
@@ -110,7 +110,7 @@ public sealed class CodeRepository : EditableObjectBase<CodeRepository, string>
 		var repository = await BusinessContext.GetRequiredService<IRepositoryStore>().GetAsync(id, cancellationToken);
 		if (repository == null)
 		{
-			throw new InvalidOperationException($"Repository with ID '{id}' not found.");
+			throw new NotFoundException($"Repository with ID '{id}' not found.");
 		}
 
 		// 范围列必须在工厂方法内填充，才能先做行级判定再删除：

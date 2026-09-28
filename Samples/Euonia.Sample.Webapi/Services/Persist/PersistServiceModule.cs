@@ -6,6 +6,7 @@ using Nerosoft.Euonia.Sample.Constants;
 using Nerosoft.Euonia.Sample.Domain.Aggregates;
 using Nerosoft.Euonia.Sample.Domain.Permissions;
 using Nerosoft.Euonia.Sample.Persist.Entities;
+using Nerosoft.Euonia.Sample.Toolkit;
 using Nerosoft.Euonia.Uow;
 
 namespace Nerosoft.Euonia.Sample.Persist;
@@ -66,70 +67,46 @@ public class PersistServiceModule : ModuleContextBase
 	{
 		using var scope = context.ServiceProvider.CreateScope();
 		using var db = scope.ServiceProvider.GetRequiredService<IDbContextFactory<SampleDataContext>>().CreateDbContext();
+		var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 		db.Database.EnsureCreated();
-		Seed(db);
+		Seed(db, configuration);
 	}
 
-	private static void Seed(SampleDataContext db)
+	private static void Seed(SampleDataContext db, IConfiguration configuration)
 	{
-		if (!db.CodeRepositories.Any())
+		// 系统初始化：仅创建内置管理员账号与其授权；业务数据（团队/仓库）不预置，由运行时按需创建。
+		if (db.Users.Any())
 		{
-			db.CodeRepositories.AddRange(
-				new CodeRepository { Id = "r-100", Name = "web-portal", TeamId = "T-1", OwnerId = "u-1", Level = RepositoryLevel.Normal, IsPublic = false },
-				new CodeRepository { Id = "r-101", Name = "mobile-app", TeamId = "T-1", OwnerId = "u-1", Level = RepositoryLevel.Normal, IsPublic = true },
-				new CodeRepository { Id = "r-102", Name = "data-pipeline", TeamId = "T-2", OwnerId = "u-0", Level = RepositoryLevel.Secret, IsPublic = false },
-				new CodeRepository { Id = "r-103", Name = "legacy-mainframe", TeamId = "T-3", OwnerId = "u-3", Level = RepositoryLevel.Normal, IsPublic = false });
+			return;
 		}
 
-		if (!db.Teams.Any())
+		var password = configuration["Bootstrap:DefaultAdminPassword"];
+		if (string.IsNullOrWhiteSpace(password))
 		{
-			db.Teams.AddRange(
-				new Team { Id = "T-1", Name = "前端工程组", LeaderId = "u-1" },
-				new Team { Id = "T-2", Name = "数据工程组", LeaderId = "u-0" },
-				new Team { Id = "T-3", Name = "平台工程组", LeaderId = "u-3" });
+			password = "admin123";
 		}
 
-		if (!db.Authorizations.Any())
+		var salt = RandomUtility.GenerateRandomString(64);
+		var admin = UserEntity.Create(BootstrapUsers.AdminId, "admin", "系统管理员", Cryptography.SHA.Encrypt(salt + password), salt);
+		admin.Roles = new HashSet<UserRoleEntity>
 		{
-			SeedAuthorization(db, "u-1", "阿一", [RoleName.Developer], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Push, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit], ["T-1", "T-2"], [
-				RepositoryGrant.Encode(RepositoryPermissions.View, "r-103"),
-				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-100"),
-				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-101")]);
+			UserRoleEntity.Create(RoleName.Developer),
+			UserRoleEntity.Create(RoleName.ProjectManager)
+		};
 
-			SeedAuthorization(db, "u-2", "阿二", [RoleName.Tester], [RepositoryPermissions.View, TeamPermissions.View], ["T-1"], []);
+		db.Users.Add(admin);
 
-			SeedAuthorization(db, "u-3", "阿三", [RoleName.ProjectManager], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Push, RepositoryPermissions.Delete, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit, TeamPermissions.Delete], ["T-3"], [
-				// 跨团队读/推：u-3 不在 T-1，却能看/推（更新）r-100，但不能删它——同一行不同操作权限不同。
-				RepositoryGrant.Encode(RepositoryPermissions.View, "r-100"),
-				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-100"),
-				RepositoryGrant.Encode(RepositoryPermissions.Delete, "r-103"),
-				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-103")]);
+		// 管理员团队：为内置管理员提供团队范围；其余团队由业务侧接口创建。
+		db.Teams.Add(new Team { Id = BootstrapUsers.AdminTeamId, Name = "平台工程组", LeaderId = BootstrapUsers.AdminId });
+
+		// 管理员授权：团队归属 + 仓库/团队全部权限码 + 显示名。
+		db.Authorizations.Add(new AuthorizationRecord { UserId = BootstrapUsers.AdminId, Kind = AuthorizationKinds.Name, Value = "系统管理员" });
+		foreach (var code in RepositoryPermissions.All.Concat(TeamPermissions.All))
+		{
+			db.Authorizations.Add(new AuthorizationRecord { UserId = BootstrapUsers.AdminId, Kind = AuthorizationKinds.Code, Value = code });
 		}
 
+		db.Authorizations.Add(new AuthorizationRecord { UserId = BootstrapUsers.AdminId, Kind = AuthorizationKinds.Team, Value = BootstrapUsers.AdminTeamId });
 		db.SaveChanges();
-	}
-
-	private static void SeedAuthorization(SampleDataContext db, string userId, string name, IEnumerable<string> roles, IEnumerable<string> codes, IEnumerable<string> teams, IEnumerable<string> grants = null)
-	{
-		db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Name, Value = name });
-		foreach (var role in roles)
-		{
-			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Role, Value = role });
-		}
-
-		foreach (var code in codes)
-		{
-			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Code, Value = code });
-		}
-
-		foreach (var team in teams)
-		{
-			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Team, Value = team });
-		}
-
-		foreach (var grant in grants ?? [])
-		{
-			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Grant, Value = grant });
-		}
 	}
 }

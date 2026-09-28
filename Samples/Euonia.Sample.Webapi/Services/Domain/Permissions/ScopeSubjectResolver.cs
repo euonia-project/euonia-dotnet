@@ -11,11 +11,11 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// 再经 <see cref="ScopeSubjectSetBuilder.AddGrant"/> 下推到资源维度（见
 /// <see cref="RepositoryScopeModel.RepositoryDimension"/>）。
 /// </summary>
-public sealed class DemoScopeSubjectResolver : IScopeSubjectResolver
+public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 {
-	private readonly DemoAuthorizationStore _store;
+	private readonly AuthorizationStore _store;
 
-	public DemoScopeSubjectResolver(DemoAuthorizationStore store)
+	public ScopeSubjectResolver(AuthorizationStore store)
 	{
 		_store = store;
 	}

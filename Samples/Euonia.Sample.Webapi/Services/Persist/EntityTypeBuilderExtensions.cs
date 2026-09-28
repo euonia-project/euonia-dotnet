@@ -116,16 +116,16 @@ internal static class EntityTypeBuilderExtensions
 
 	/// <summary>
 	/// Configure UpdatedAt property with UTC time for entity type <typeparamref name="TEntity"/>.
+	/// 时间由 <see cref="UtcTimeValueGenerator"/> 在写入时填充；与 created_at 一样保持普通列，
+	/// 不做 ValueGeneratedOnAddOrUpdate——SQLite 的 RETURNING 会把该列视为数据库生成、
+	/// 期望表上存在默认值，而模型没有默认值会直接命中 NOT NULL 约束。
 	/// </summary>
-	/// <param name="builder"></param>
-	/// <typeparam name="TEntity"></typeparam>
 	public static void UpdatedAtUtc<TEntity>(this EntityTypeBuilder<TEntity> builder)
 		where TEntity : class, IHasUpdateTime
 	{
 		builder.Property(t => t.UpdatedAt)
 			   .HasColumnName("updated_at")
 			   .HasValueGenerator<UtcTimeValueGenerator>()
-			   .ValueGeneratedOnAddOrUpdate()
 			   .IsRequired();
 	}
 

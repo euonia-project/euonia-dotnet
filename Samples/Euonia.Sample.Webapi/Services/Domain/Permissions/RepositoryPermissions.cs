@@ -18,4 +18,7 @@ public static class RepositoryPermissions
 
 	/// <summary>删除仓库（工厂 Delete），仅允许 项目管理。</summary>
 	public const string Delete = "repository:delete";
+
+	/// <summary>仓库全部权限码（用于初始化与管理授权）。</summary>
+	public static readonly string[] All = [Create, View, Push, Delete];
 }

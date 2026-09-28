@@ -46,7 +46,7 @@ public sealed class Team : EditableObjectBase<Team, string>
 		var team = await BusinessContext.GetRequiredService<ITeamStore>().GetAsync(id, cancellationToken);
 		if (team == null)
 		{
-			throw new InvalidOperationException($"Team with ID '{id}' not found.");
+			throw new NotFoundException($"Team with ID '{id}' not found.");
 		}
 
 		LoadProperty(IdProperty, team.Id);
@@ -75,7 +75,7 @@ public sealed class Team : EditableObjectBase<Team, string>
 		var team = await BusinessContext.GetRequiredService<ITeamStore>().GetAsync(id, cancellationToken);
 		if (team == null)
 		{
-			throw new InvalidOperationException($"Team with ID '{id}' not found.");
+			throw new NotFoundException($"Team with ID '{id}' not found.");
 		}
 
 		// 范围列必须在工厂方法内填充，才能先做行级判定再删除：
