@@ -13,8 +13,8 @@ public static class RepositoryPermissions
 	/// <summary>查看仓库（工厂 Fetch），允许 开发、测试、项目管理。</summary>
 	public const string View = "repository:view";
 
-	/// <summary>编辑仓库（工厂 Update），允许 开发、项目管理。</summary>
-	public const string Edit = "repository:edit";
+	/// <summary>推送/更新仓库（工厂 Update，对齐 SAMPLE.md 的 push 语义；行级按单行授予），允许 开发、项目管理。</summary>
+	public const string Push = "repository:push";
 
 	/// <summary>删除仓库（工厂 Delete），仅允许 项目管理。</summary>
 	public const string Delete = "repository:delete";

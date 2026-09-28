@@ -6,12 +6,14 @@ using Nerosoft.Euonia.Sample.Persist.Entities;
 namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 
 /// <summary>
-/// 某个演示用户的授权数据：角色、持有的权限码（各资源并集）与团队范围。
+/// 某个演示用户的授权数据：角色、持有的权限码（各资源并集）、团队范围与行级授予。
 /// 演示授权数据存于授权数据库中；判定时由
 /// <see cref="DemoScopeSubjectResolver"/> 从中实时解析。
 /// 权限码是全局的（subject 维度），故此处为仓库、团队等资源权限码的并集。
+/// 行级授予（<see cref="AuthorizationKinds.Grant"/>）是 <see cref="RepositoryGrant"/>
+/// 编码的操作码与仓库 id 拼接值（如 <c>"repository:push|r-100"</c>）。
 /// </summary>
-public sealed record DemoAuthorization(string Name, IReadOnlyCollection<string> Roles, IReadOnlyCollection<string> Codes, IReadOnlyCollection<string> Teams);
+public sealed record DemoAuthorization(string Name, IReadOnlyCollection<string> Roles, IReadOnlyCollection<string> Codes, IReadOnlyCollection<string> Teams, IReadOnlyCollection<string> Grants);
 
 /// <summary>
 /// 演示用的授权数据库（SQLite），通过 <see cref="SampleDataContext"/> 读写。
@@ -75,6 +77,18 @@ public sealed class DemoAuthorizationStore(IApplicationDataContext context)
 		return await RevokeAsync(userId, AuthorizationKinds.Team, teamIds, cancellationToken);
 	}
 
+	/// <summary>授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；用户不存在时返回 <see langword="null"/>。</summary>
+	public async Task<DemoAuthorization> AddGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
+	{
+		return await GrantAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);
+	}
+
+	/// <summary>撤销行级权限（立即生效）；用户不存在时返回 <see langword="null"/>。</summary>
+	public async Task<DemoAuthorization> RemoveGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
+	{
+		return await RevokeAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);
+	}
+
 	private async Task<DemoAuthorization> GrantAsync(string userId, string kind, IEnumerable<string> values, CancellationToken cancellationToken)
 	{
 		var existing = await context.Authorizations
@@ -127,7 +141,8 @@ public sealed class DemoAuthorizationStore(IApplicationDataContext context)
 			Split(records, AuthorizationKinds.Name).FirstOrDefault() ?? userId,
 			Split(records, AuthorizationKinds.Role),
 			Split(records, AuthorizationKinds.Code),
-			Split(records, AuthorizationKinds.Team));
+			Split(records, AuthorizationKinds.Team),
+			Split(records, AuthorizationKinds.Grant));
 	}
 
 	private static IReadOnlyCollection<string> Split(IEnumerable<AuthorizationRecord> records, string kind)

@@ -30,5 +30,21 @@ public class CodeRepositoryEntityConfiguration : IEntityTypeConfiguration<CodeRe
 		       .HasColumnName("team_id")
 		       .HasMaxLength(64)
 		       .IsRequired();
+
+		builder.Property(x => x.OwnerId)
+		       .HasColumnName("owner_id")
+		       .HasMaxLength(64)
+		       .IsRequired();
+
+		builder.Property(x => x.Level)
+		       .HasColumnName("level")
+		       .HasMaxLength(16)
+		       .IsRequired()
+		       .HasDefaultValue(RepositoryLevel.Normal);
+
+		builder.Property(x => x.IsPublic)
+		       .HasColumnName("is_public")
+		       .IsRequired()
+		       .HasDefaultValue(false);
 	}
 }

@@ -62,6 +62,25 @@ public class PermissionController(DemoAuthorizationStore store) : ControllerBase
 		return Mutate(userId, input, store.AddTeamsAsync, store.RemoveTeamsAsync, cancellationToken);
 	}
 
+	/// <summary>授予/撤销指定用户的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|r-100"</c>）。即时生效。</summary>
+	[Authorize(Roles = RoleName.ProjectManager)]
+	[HttpPut("{userId}/grants")]
+	public Task<IActionResult> UpdateGrants(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
+	{
+		return Mutate(userId, input, store.AddGrantsAsync, store.RemoveGrantsAsync, cancellationToken);
+	}
+
+	/// <summary>演示用户列表（用户标识 + 显示名）。</summary>
+	[HttpGet("users")]
+	public async Task<IActionResult> Users(CancellationToken cancellationToken)
+	{
+		var items = (await store.SnapshotAsync(cancellationToken))
+		            .Select(pair => new PermissionUserDto(pair.Key, pair.Value.Name))
+		            .OrderBy(item => item.UserId)
+		            .ToArray();
+		return Ok(items);
+	}
+
 	private async Task<IActionResult> Mutate(string userId, PermissionChangeInput input, Func<string, IEnumerable<string>, CancellationToken, Task<DemoAuthorization>> grant, Func<string, IEnumerable<string>, CancellationToken, Task<DemoAuthorization>> revoke, CancellationToken cancellationToken)
 	{
 		var authorization = await grant(userId, input?.Add ?? [], cancellationToken);

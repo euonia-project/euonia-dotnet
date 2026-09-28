@@ -12,6 +12,9 @@ public static class AuthorizationKinds
 	/// <summary>所属团队。</summary>
 	public const string Team = "team";
 
+	/// <summary>行级授予（<see cref="Nerosoft.Euonia.Sample.Domain.Permissions.RepositoryGrant"/> 编码：操作码与仓库 id 的拼接值）。</summary>
+	public const string Grant = "grant";
+
 	/// <summary>显示名。</summary>
 	public const string Name = "name";
 }

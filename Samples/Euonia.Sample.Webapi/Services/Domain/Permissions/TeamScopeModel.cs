@@ -24,6 +24,13 @@ public sealed class TeamScopeModel : ScopeModel<Team>
 
 	public override void Declare(ScopePolicySet<Team> policies)
 	{
+		// 读侧显式按码：已登录用户必须持有 team:view（类型级闸门由工厂/控制器检查），
+		// 行范围与默认策略一致（本团队成员或负责人）。
+		policies.For(TeamPermissions.View,
+			ScopePolicy<Team>.Any(
+				ScopePolicy<Team>.Grant(ScopeDimensions.Team),
+				ScopePolicy<Team>.Grant(ScopeDimensions.Owner)));
+
 		policies.For(TeamPermissions.Edit, ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
 		policies.For(TeamPermissions.Delete, ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
 	}

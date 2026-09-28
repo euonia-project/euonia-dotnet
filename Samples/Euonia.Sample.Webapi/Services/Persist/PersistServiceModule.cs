@@ -75,10 +75,10 @@ public class PersistServiceModule : ModuleContextBase
 		if (!db.CodeRepositories.Any())
 		{
 			db.CodeRepositories.AddRange(
-				new CodeRepository { Id = "r-100", Name = "web-portal", TeamId = "T-1" },
-				new CodeRepository { Id = "r-101", Name = "mobile-app", TeamId = "T-1" },
-				new CodeRepository { Id = "r-102", Name = "data-pipeline", TeamId = "T-2" },
-				new CodeRepository { Id = "r-103", Name = "legacy-mainframe", TeamId = "T-3" });
+				new CodeRepository { Id = "r-100", Name = "web-portal", TeamId = "T-1", OwnerId = "u-1", Level = RepositoryLevel.Normal, IsPublic = false },
+				new CodeRepository { Id = "r-101", Name = "mobile-app", TeamId = "T-1", OwnerId = "u-1", Level = RepositoryLevel.Normal, IsPublic = true },
+				new CodeRepository { Id = "r-102", Name = "data-pipeline", TeamId = "T-2", OwnerId = "u-0", Level = RepositoryLevel.Secret, IsPublic = false },
+				new CodeRepository { Id = "r-103", Name = "legacy-mainframe", TeamId = "T-3", OwnerId = "u-3", Level = RepositoryLevel.Normal, IsPublic = false });
 		}
 
 		if (!db.Teams.Any())
@@ -91,15 +91,25 @@ public class PersistServiceModule : ModuleContextBase
 
 		if (!db.Authorizations.Any())
 		{
-			SeedAuthorization(db, "u-1", "阿一", [RoleName.Developer], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Edit, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit], ["T-1", "T-2"]);
-			SeedAuthorization(db, "u-2", "阿二", [RoleName.Tester], [RepositoryPermissions.View, TeamPermissions.View], ["T-1"]);
-			SeedAuthorization(db, "u-3", "阿三", [RoleName.ProjectManager], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Edit, RepositoryPermissions.Delete, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit, TeamPermissions.Delete], ["T-3"]);
+			SeedAuthorization(db, "u-1", "阿一", [RoleName.Developer], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Push, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit], ["T-1", "T-2"], [
+				RepositoryGrant.Encode(RepositoryPermissions.View, "r-103"),
+				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-100"),
+				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-101")]);
+
+			SeedAuthorization(db, "u-2", "阿二", [RoleName.Tester], [RepositoryPermissions.View, TeamPermissions.View], ["T-1"], []);
+
+			SeedAuthorization(db, "u-3", "阿三", [RoleName.ProjectManager], [RepositoryPermissions.Create, RepositoryPermissions.View, RepositoryPermissions.Push, RepositoryPermissions.Delete, TeamPermissions.Create, TeamPermissions.View, TeamPermissions.Edit, TeamPermissions.Delete], ["T-3"], [
+				// 跨团队读/推：u-3 不在 T-1，却能看/推（更新）r-100，但不能删它——同一行不同操作权限不同。
+				RepositoryGrant.Encode(RepositoryPermissions.View, "r-100"),
+				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-100"),
+				RepositoryGrant.Encode(RepositoryPermissions.Delete, "r-103"),
+				RepositoryGrant.Encode(RepositoryPermissions.Push, "r-103")]);
 		}
 
 		db.SaveChanges();
 	}
 
-	private static void SeedAuthorization(SampleDataContext db, string userId, string name, IEnumerable<string> roles, IEnumerable<string> codes, IEnumerable<string> teams)
+	private static void SeedAuthorization(SampleDataContext db, string userId, string name, IEnumerable<string> roles, IEnumerable<string> codes, IEnumerable<string> teams, IEnumerable<string> grants = null)
 	{
 		db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Name, Value = name });
 		foreach (var role in roles)
@@ -115,6 +125,11 @@ public class PersistServiceModule : ModuleContextBase
 		foreach (var team in teams)
 		{
 			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Team, Value = team });
+		}
+
+		foreach (var grant in grants ?? [])
+		{
+			db.Authorizations.Add(new AuthorizationRecord { UserId = userId, Kind = AuthorizationKinds.Grant, Value = grant });
 		}
 	}
 }
