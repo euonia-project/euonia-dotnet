@@ -13,7 +13,9 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 /// <summary>
 /// 团队读侧（列表）：把行级数据权限下推为查询条件。
 /// 读侧严格化：必须先持有 <c>team:view</c> 码，否则一视同仁返回空页。
-/// 团队行级范围为「本团队成员或负责人」（见 <see cref="TeamScopeModel"/>）。
+/// 团队行级范围为「本团队成员或负责人」（见 <see cref="TeamScopeModel"/>）——
+/// 成员关系在子表（<c>team_member</c>）里，下推后由数据库做 <c>EXISTS</c> 相关子查询，
+/// 因此列表查询既不需要反向展开成员关系，也不需要加载它。
 /// </summary>
 internal class TeamRequestHandler(ITeamStore store, IScopeGuard guard)
 	: IHandler<TeamListQueryRequest, PagedResult<TeamDto>>

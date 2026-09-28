@@ -29,6 +29,17 @@ public sealed class Team : EditableObjectBase<Team, string>
 		set => SetProperty(LeaderIdProperty, value);
 	}
 
+	/// <summary>
+	/// 子表行：团队成员（见 <see cref="TeamMember"/>）。它不是本聚合的持久化属性
+	/// （<c>team_member</c> 是独立的表，由 <see cref="Repositories.ITeamStore"/> 负责读写），
+	/// 读取时由仓储填充。
+	/// </summary>
+	/// <remarks>
+	/// <b>刻意不给初始化器</b>：未加载时保持空引用，单行判定（详情 / 工厂边界）会以明确异常失败，
+	/// 而不是把「没加载」伪装成「没有成员」而静默拒绝。
+	/// </remarks>
+	public IReadOnlyCollection<TeamMember> Members { get; set; }
+
 	[Permission(TeamPermissions.Create, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryCreate]
 	private async Task CreateAsync(string name, CancellationToken cancellationToken = default)
@@ -43,7 +54,9 @@ public sealed class Team : EditableObjectBase<Team, string>
 	[FactoryFetch]
 	private async Task FetchAsync(string id, CancellationToken cancellationToken = default)
 	{
-		var team = await BusinessContext.GetRequiredService<ITeamStore>().GetAsync(id, cancellationToken);
+		// 视图策略用到成员（子表）维度，而单行判定在内存中求值、要求对象图完整：
+		// 这里必须把成员一并取回来（读侧列表走下推，不受此限）。
+		var team = await BusinessContext.GetRequiredService<ITeamStore>().GetWithMembersAsync(id, cancellationToken);
 		if (team == null)
 		{
 			throw new NotFoundException($"Team with ID '{id}' not found.");
@@ -52,6 +65,7 @@ public sealed class Team : EditableObjectBase<Team, string>
 		LoadProperty(IdProperty, team.Id);
 		LoadProperty(NameProperty, team.Name);
 		LoadProperty(LeaderIdProperty, team.LeaderId);
+		Members = team.Members;
 	}
 
 	[Permission(TeamPermissions.Create, RoleName.Developer, RoleName.ProjectManager)]

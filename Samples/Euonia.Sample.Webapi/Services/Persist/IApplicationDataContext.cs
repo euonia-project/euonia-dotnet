@@ -20,6 +20,9 @@ public interface IApplicationDataContext
 	/// <summary>团队。</summary>
 	DbSet<Team> Teams { get; }
 
+	/// <summary>团队成员关系（子表：谁属于哪个团队）。</summary>
+	DbSet<TeamMember> TeamMembers { get; }
+
 	/// <summary>项目。</summary>
 	DbSet<Project> Projects { get; }
 

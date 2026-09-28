@@ -17,6 +17,10 @@ public class TeamEntityConfiguration : IEntityTypeConfiguration<Team>
 		builder.Ignore(x => x.State);
 		builder.Ignore(x => x.CheckObjectRulesOnDelete);
 
+		// 子表行由 team_member 表承载（见 TeamMemberEntityConfiguration），聚合上只做承载：
+		// 它不是本表的一列，也不是 EF 导航属性（否则 EF 会为它推出一条关系）。
+		builder.Ignore(x => x.Members);
+
 		builder.Property(x => x.Id)
 		       .HasColumnName("id")
 		       .HasMaxLength(64);

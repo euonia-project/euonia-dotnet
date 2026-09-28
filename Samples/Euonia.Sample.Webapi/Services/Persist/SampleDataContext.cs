@@ -24,6 +24,9 @@ internal class SampleDataContext : DataContextWithBus<SampleDataContext>, IAppli
 	/// <summary>团队。</summary>
 	public virtual DbSet<Team> Teams => Set<Team>();
 
+	/// <summary>团队成员关系（子表：谁属于哪个团队）。</summary>
+	public virtual DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+
 	/// <summary>项目。</summary>
 	public virtual DbSet<Project> Projects => Set<Project>();
 

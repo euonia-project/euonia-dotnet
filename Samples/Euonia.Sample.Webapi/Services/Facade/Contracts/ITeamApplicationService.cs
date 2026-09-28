@@ -23,4 +23,13 @@ public interface ITeamApplicationService : IApplicationService
 
 	/// <summary>删除团队（<c>team:delete</c>，行级负责人判定）。</summary>
 	Task DeleteAsync(string id, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 把账号加入团队（<c>team:edit</c>，行级仅本团队负责人；
+	/// 成员关系的变更即授权变更，见 Euonia.Security/README.md §5.9）。
+	/// </summary>
+	Task AddMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default);
+
+	/// <summary>把账号移出团队（<c>team:edit</c>，行级仅本团队负责人）。</summary>
+	Task RemoveMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default);
 }

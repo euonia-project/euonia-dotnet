@@ -8,28 +8,32 @@ using Nerosoft.Euonia.Sample.Permissions;
 namespace Nerosoft.Euonia.Sample.Controllers;
 
 /// <summary>
-/// 授权管理端点：查看/编辑账号的角色、权限码与团队范围。
+/// 授权管理端点：查看/编辑账号的角色与权限码（授权数据），并查看其团队归属。
 /// 角色由账号角色表（user_role）承载，随令牌传递，改角色后重新登录生效；
-/// 权限码与团队范围由 <see cref="ScopeSubjectResolver"/> 在下一次解析时生效，
+/// 权限码由 <see cref="ScopeSubjectResolver"/> 在下一次解析时生效，
 /// 故撤销即时生效、无需重新签发令牌。
+/// <b>团队归属不在这里</b>：它是业务关系（<see cref="TeamMember"/> / <c>team_member</c>），
+/// 由团队端点（<c>POST /api/team/{id}/members</c>）在 <c>team:edit</c> 的行级闸门下维护，
+/// 本控制器只负责<b>查看</b>。
 /// 变更类操作仅限项目管理角色（视作许可管理员）。
 /// </summary>
 [Authorize]
 [Route("api/[controller]")]
 [ApiController]
-public class PermissionController(AuthorizationStore store, IUserRepository users) : ControllerBase
+public class PermissionController(AuthorizationStore store, IUserRepository users, ITeamStore teams) : ControllerBase
 {
 	/// <summary>列出全部账号的授权。</summary>
 	[HttpGet]
 	public async Task<IActionResult> List(CancellationToken cancellationToken)
 	{
 		var snapshot = await store.SnapshotAsync(cancellationToken);
+		var memberships = await teams.GetMembershipsAsync(cancellationToken);
 		var accounts = await users.FindAsync(_ => true, ["Roles"], 0, 1000, cancellationToken);
 		var items = accounts.Select(user =>
 		{
 			snapshot.TryGetValue(user.Id, out var security);
 			var roles = user.Roles?.Select(role => role.Name).ToArray() ?? [];
-			return AuthorizationView.From(user.Id, security?.Name ?? user.Nickname ?? user.Username, roles, security?.Codes ?? [], security?.Teams ?? [], security?.Grants ?? []);
+			return AuthorizationView.From(user.Id, security?.Name ?? user.Nickname ?? user.Username, roles, security?.Codes ?? [], memberships.TryGetValue(user.Id, out var joined) ? joined : [], security?.Grants ?? []);
 		}).OrderBy(item => item.UserId).ToArray();
 		return Ok(items);
 	}
@@ -69,14 +73,6 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 	public Task<IActionResult> UpdateCodes(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
 	{
 		return Mutate(userId, input, store.GrantCodesAsync, store.RevokeCodesAsync, cancellationToken);
-	}
-
-	/// <summary>把指定账号加入/移出团队（行级范围）。即时生效。</summary>
-	[Authorize(Roles = RoleName.ProjectManager)]
-	[HttpPut("{userId}/teams")]
-	public Task<IActionResult> UpdateTeams(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
-	{
-		return Mutate(userId, input, store.AddTeamsAsync, store.RemoveTeamsAsync, cancellationToken);
 	}
 
 	/// <summary>授予/撤销指定账号的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|&lt;repository-id&gt;"</c>）。即时生效。</summary>
@@ -124,6 +120,6 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 
 		var security = await store.GetAsync(userId, cancellationToken);
 		var roles = await users.GetRolesAsync(userId, cancellationToken);
-		return AuthorizationView.From(userId, security?.Name ?? account[0].Nickname ?? account[0].Username, roles, security?.Codes ?? [], security?.Teams ?? [], security?.Grants ?? []);
+		return AuthorizationView.From(userId, security?.Name ?? account[0].Nickname ?? account[0].Username, roles, security?.Codes ?? [], await teams.GetTeamIdsAsync(userId, cancellationToken), security?.Grants ?? []);
 	}
 }

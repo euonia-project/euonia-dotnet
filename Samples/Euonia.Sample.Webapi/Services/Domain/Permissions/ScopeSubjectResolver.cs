@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Nerosoft.Euonia.Sample.Domain.Repositories;
 using Nerosoft.Euonia.Sample.Persist.Entities;
 using Nerosoft.Euonia.Security;
 
@@ -6,19 +7,26 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 
 /// <summary>
 /// 按当前用户（claim 中的 subject）查找授权数据并解析为权限主体。
-/// 团队范围在此处展开为扁平集合交给框架；角色由令牌中的声明提供；
-/// 行级授予（<see cref="AuthorizationKinds.Grant"/>，编码 <c>"{op}|{id}"</c>）按操作码分组，
-/// 再经 <see cref="ScopeSubjectSetBuilder.AddGrant"/> 下推到对应资源的行级维度：
+/// 角色由令牌中的声明提供；行级授予（<see cref="AuthorizationKinds.Grant"/>，编码 <c>"{op}|{id}"</c>）
+/// 按操作码分组，再经 <see cref="ScopeSubjectSetBuilder.AddGrant"/> 下推到对应资源的行级维度：
 /// <c>repository:*</c> → <see cref="RepositoryScopeModel.RepositoryDimension"/>、
 /// <c>project:*</c> → <see cref="ProjectScopeModel.ProjectDimension"/>；其余前缀一律忽略。
+/// <para>
+/// <b>团队</b>有两处来源，注意它们的差别：<see cref="ScopeDimensions.Member"/> 授予「我自己」——
+/// 团队自身的可见性由 <c>team_member</c> 子表实时判定（<see cref="TeamScopeModel"/>），无需展开；
+/// 而 <see cref="ScopeDimensions.Team"/> 是给仓库用的：仓库行上没有到成员表的导航，
+/// 只能把「我加入的团队」反向展开成扁平 id 集合（见 Euonia.Security/DESIGN.md §2.1 的取舍表）。
+/// </para>
 /// </summary>
 public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 {
 	private readonly AuthorizationStore _store;
+	private readonly ITeamStore _teams;
 
-	public ScopeSubjectResolver(AuthorizationStore store)
+	public ScopeSubjectResolver(AuthorizationStore store, ITeamStore teams)
 	{
 		_store = store;
+		_teams = teams;
 	}
 
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -44,9 +52,13 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 
 		var builder = ScopeSubjectSet.CreateBuilder()
 		                              .AddCodes(authorization.Codes)
-		                              .AddSelf(userId);
+		                              .AddSelf(userId)
+		                              // 成员维度授予的是「子表里应当出现的值」——也就是我自己。
+		                              // 团队可见性因此由 team_member 实时判定，解析器不必知道任何关系表的内容。
+		                              .Add(ScopeDimensions.Member, userId);
 
-		foreach (var team in authorization.Teams)
+		// 仓库的团队维度仍要扁平 id 集合：把「我加入的团队」在这里反向展开（只取有效关系）。
+		foreach (var team in await _teams.GetTeamIdsAsync(userId, cancellationToken))
 		{
 			builder.Add(ScopeDimensions.Team, team);
 		}

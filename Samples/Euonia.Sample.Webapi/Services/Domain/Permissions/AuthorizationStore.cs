@@ -6,20 +6,24 @@ using Nerosoft.Euonia.Sample.Persist.Entities;
 namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 
 /// <summary>
-/// 某账号的权限数据：权限码（各资源并集）、团队范围与行级授予。
+/// 某账号的权限数据：权限码（各资源并集）与行级授予。
 /// 授权数据存于授权表中；判定时由
 /// <see cref="ScopeSubjectResolver"/> 从中实时解析。
 /// 权限码是全局的（subject 维度），故此处为仓库、团队等资源权限码的并集。
 /// 行级授予（<see cref="AuthorizationKinds.Grant"/>）是 <see cref="RepositoryGrant"/>
 /// 编码的操作码与仓库 id 拼接值（如 <c>"repository:push|&lt;repository-id&gt;"</c>）。
-/// 角色不属于授权维度（见账号角色表 user_role），由令牌传递。
+/// 角色不属于授权维度（见账号角色表 user_role），由令牌传递；
+/// <b>团队归属也不在这里</b>——它是业务关系（<c>team_member</c> 子表），
+/// 由 <see cref="Repositories.ITeamStore"/> 读写、由团队的数据权限模型直接判定。
 /// </summary>
-public sealed record SecurityProfile(string Name, IReadOnlyCollection<string> Codes, IReadOnlyCollection<string> Teams, IReadOnlyCollection<string> Grants);
+public sealed record SecurityProfile(string Name, IReadOnlyCollection<string> Codes, IReadOnlyCollection<string> Grants);
 
 /// <summary>
-/// 授权数据的读写入口。权限码、团队范围与行级授予不能固化在令牌中，否则取消授权后旧令牌依然有效，
+/// 授权数据的读写入口。权限码与行级授予不能固化在令牌中，否则取消授权后旧令牌依然有效，
 /// 故此类提供即时生效的授予/撤销——请求时读取、撤销立即生效、无需重新签发令牌；
 /// 角色由账号角色表承载、随令牌传递，改角色后重新登录生效。
+/// 团队归属不在此处：它是业务关系（<c>team_member</c> 子表），读写走
+/// <see cref="Repositories.ITeamStore"/>，可见性由 <see cref="TeamScopeModel"/> 实时判定。
 /// 授权变更/查看由 <see cref="Nerosoft.Euonia.Sample.Controllers.PermissionController"/> 承载。
 /// </summary>
 public sealed class AuthorizationStore(IApplicationDataContext context)
@@ -52,18 +56,6 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 	public async Task<SecurityProfile> RevokeCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
 	{
 		return await RevokeAsync(userId, AuthorizationKinds.Code, codes, cancellationToken);
-	}
-
-	/// <summary>把用户加入团队（扩大行级可见范围，立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> AddTeamsAsync(string userId, IEnumerable<string> teamIds, CancellationToken cancellationToken = default)
-	{
-		return await GrantAsync(userId, AuthorizationKinds.Team, teamIds, cancellationToken);
-	}
-
-	/// <summary>把用户移出团队（立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> RemoveTeamsAsync(string userId, IEnumerable<string> teamIds, CancellationToken cancellationToken = default)
-	{
-		return await RevokeAsync(userId, AuthorizationKinds.Team, teamIds, cancellationToken);
 	}
 
 	/// <summary>授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
@@ -142,7 +134,6 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return new SecurityProfile(
 			Split(records, AuthorizationKinds.Name).FirstOrDefault() ?? userId,
 			Split(records, AuthorizationKinds.Code),
-			Split(records, AuthorizationKinds.Team),
 			Split(records, AuthorizationKinds.Grant));
 	}
 

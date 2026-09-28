@@ -67,6 +67,32 @@ public class TeamController(ITeamApplicationService service) : ControllerBase
 		return NoContent();
 	}
 
+	/// <summary>
+	/// 把账号加入团队（<c>team:edit</c>，行级仅本团队负责人）。
+	/// 成员关系的增删即授权变更——团队的可见性由 <c>team_member</c> 实时判定，
+	/// 因此这条写入口本身就是授权面。
+	/// </summary>
+	[HttpPost("{id}/members")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> AddMemberAsync(string id, [FromBody] TeamMemberChangeInput input, CancellationToken cancellationToken)
+	{
+		await service.AddMemberAsync(id, input.UserId, cancellationToken);
+		return NoContent();
+	}
+
+	/// <summary>把账号移出团队（<c>team:edit</c>，行级仅本团队负责人）。</summary>
+	[HttpDelete("{id}/members/{userId}")]
+	[ProducesResponseType(StatusCodes.Status204NoContent)]
+	[ProducesResponseType(StatusCodes.Status403Forbidden)]
+	[ProducesResponseType(StatusCodes.Status404NotFound)]
+	public async Task<IActionResult> RemoveMemberAsync(string id, string userId, CancellationToken cancellationToken)
+	{
+		await service.RemoveMemberAsync(id, userId, cancellationToken);
+		return NoContent();
+	}
+
 	private async Task<IActionResult> InvokeAsync<T>(Func<Task<T>> handler)
 	{
 		return Ok(await handler());

@@ -56,4 +56,14 @@ internal class TeamApplicationService(IObjectFactory factory)
 	{
 		return Bus.SendAsync(new DeleteTeamCommand { Id = id }, cancellationToken);
 	}
+
+	public Task AddMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default)
+	{
+		return Bus.SendAsync(new AddTeamMemberCommand { TeamId = teamId, UserId = userId }, cancellationToken);
+	}
+
+	public Task RemoveMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default)
+	{
+		return Bus.SendAsync(new RemoveTeamMemberCommand { TeamId = teamId, UserId = userId }, cancellationToken);
+	}
 }
