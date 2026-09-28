@@ -367,3 +367,8 @@ package-lock.json
 nupkg/
 .fleet/
 .vscode/
+
+# SQLite sample database
+*.db
+*.db-shm
+*.db-wal

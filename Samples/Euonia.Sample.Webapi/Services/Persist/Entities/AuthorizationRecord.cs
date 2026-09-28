@@ -1,0 +1,33 @@
+namespace Nerosoft.Euonia.Sample.Persist.Entities;
+
+/// <summary>授权记录的维度名。</summary>
+public static class AuthorizationKinds
+{
+	/// <summary>角色。</summary>
+	public const string Role = "role";
+
+	/// <summary>权限码。</summary>
+	public const string Code = "code";
+
+	/// <summary>所属团队。</summary>
+	public const string Team = "team";
+
+	/// <summary>显示名。</summary>
+	public const string Name = "name";
+}
+
+/// <summary>
+/// 授权数据表中的一行：某用户在某个维度（角色 / 权限码 / 所属团队 / 显示名）上的一个取值。
+/// 组合主键为 <c>(UserId, Kind, Value)</c>。
+/// </summary>
+public sealed class AuthorizationRecord
+{
+	/// <summary>演示用户标识（u-1 / u-2 / u-3）。</summary>
+	public string UserId { get; set; }
+
+	/// <summary>维度名，见 <see cref="AuthorizationKinds"/>。</summary>
+	public string Kind { get; set; }
+
+	/// <summary>维度取值（如角色名、权限码、团队 id 或显示名）。</summary>
+	public string Value { get; set; }
+}

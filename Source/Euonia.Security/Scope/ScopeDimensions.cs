@@ -31,6 +31,11 @@ public static class ScopeDimensions
 	public const string Dept = "dept";
 
 	/// <summary>
+	/// 团队维度：值为所属团队的标识。
+	/// </summary>
+	public const string Team = "team";
+
+	/// <summary>
 	/// 区域维度。
 	/// </summary>
 	public const string Region = "region";

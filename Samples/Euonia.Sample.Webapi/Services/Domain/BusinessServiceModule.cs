@@ -30,9 +30,10 @@ public class BusinessServiceModule : ModuleContextBase
 	{
 		context.Services.AddBusinessObject(typeof(BusinessServiceModule).Assembly);
 		context.Services.AddObjectPermission(typeof(BusinessServiceModule).Assembly);
-		context.Services.AddSingleton<Nerosoft.Euonia.Sample.Domain.Repositories.IProjectStore, Nerosoft.Euonia.Sample.Domain.Repositories.ProjectStore>();
-		context.Services.AddSingleton<Nerosoft.Euonia.Sample.Domain.Permissions.ProjectAuthorizationStore>();
-		context.Services.AddScoped<Nerosoft.Euonia.Security.IScopeSubjectResolver, Nerosoft.Euonia.Sample.Domain.Permissions.ProjectScopeSubjectResolver>();
+		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.IRepositoryStore, Nerosoft.Euonia.Sample.Persist.Repositories.RepositoryStore>();
+		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.ITeamStore, Nerosoft.Euonia.Sample.Persist.Repositories.TeamStore>();
+		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Permissions.DemoAuthorizationStore>();
+		context.Services.AddScoped<Nerosoft.Euonia.Security.IScopeSubjectResolver, Nerosoft.Euonia.Sample.Domain.Permissions.DemoScopeSubjectResolver>();
 	}
 
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
