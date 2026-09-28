@@ -14,23 +14,9 @@ public static class ServiceCollectionExtensions
 	/// 向指定的 <see cref="IServiceCollection" /> 添加业务对象相关服务。
 	/// </summary>
 	/// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
-	/// <param name="assemblies">要扫描业务对象类型与数据权限模型的程序集数组。</param>
+	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
 	/// <remarks>
-	/// <para>
-	/// 权限（操作权限的权限码、数据权限的行级授予）需要应用提供 <see cref="IScopeSubjectResolver" />：
-	/// 授权值必须从应用数据运行期解析，框架不提供任何默认实现，以防把值固化——
-	/// 固化在令牌里会导致「取消授权后旧令牌仍然有效」。
-	/// </para>
-	/// <para>
-	/// 权限模型在<b>注册期</b>完成校验（重复声明、未映射维度、恒不放行、策略键歧义等），
-	/// 因此配置错误会在启动时失败，而不是等到运行期。
-	/// </para>
-	/// <para>
-	/// 解析器本身允许在 <see cref="AddBusinessObject"/> 之后再注册，因此这里只记录「是否需要解析器」
-	/// （见 <see cref="PermissionSetup"/>）。应用应在构建容器后调用
-	/// <c>provider.ValidatePermissionSetup()</c> 完成启动期检查；
-	/// 若遗漏，首次判定时也会以明确错误暴露，不会静默放行。
-	/// </para>
+	/// 不注册任何权限服务；需要权限时显式调用 <see cref="AddObjectPermission"/>。
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
@@ -38,14 +24,6 @@ public static class ServiceCollectionExtensions
 		services.TryAddScoped<BusinessContextAccessor>();
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
-
-		// 权限码扫描与策略键的状态推断都是对象模型的知识（方法角色按工厂方法判定、
-		// 对象状态按 ObjectEditState 映射），因此由 Osba 提供这两处映射的实现。
-		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();
-
-		// 策略引擎自身的注册（IPermissionChecker / IScopeGuard / ScopeModelRegistry / PermissionSetup）
-		// 归 AddPermission 所有，这里只负责把 Osba 的映射喂给它。
-		services.AddPermission(ObjectPermissionCodeSource.Instance, assemblies);
 
 		foreach (var type in GetBusinessObjectTypes(assemblies))
 		{
@@ -55,6 +33,17 @@ public static class ServiceCollectionExtensions
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
+	}
+
+	/// <summary>
+	/// 为业务对象启用权限控制：注册 Osba 的两处映射并接入策略引擎。
+	/// </summary>
+	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection" />。</param>
+	/// <param name="assemblies">要扫描权限码与数据权限模型的程序集数组。</param>
+	public static void AddObjectPermission(this IServiceCollection services, params Assembly[] assemblies)
+	{
+		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();
+		services.AddPermission(ObjectPermissionCodeSource.Instance, assemblies);
 	}
 
 	/// <summary>

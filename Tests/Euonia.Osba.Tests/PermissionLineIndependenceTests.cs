@@ -91,6 +91,7 @@ public class PermissionLineIndependenceTests
 		var services = new ServiceCollection();
 		// 扫描测试程序集 ⇒ 注册表包含 ScopeOrderModel，ScopeOrder 因此受数据权限约束
 		services.AddBusinessObject(typeof(PermissionLineIndependenceTests).Assembly);
+	services.AddObjectPermission(typeof(PermissionLineIndependenceTests).Assembly);
 		services.AddSingleton<IScopeSubjectResolver, NoGrantResolver>();
 		services.AddSingleton(User("dev"));
 

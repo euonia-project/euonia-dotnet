@@ -95,7 +95,7 @@ internal static class ScopeAuthorization
 		// 已声明模型却拿不到判定入口属配置错误：必须暴露，不能静默放行
 		Check.Ensure(
 			guard != null,
-			"资源类型 '{0}' 已声明数据权限模型，但无法解析 {1}。请确认已调用 AddBusinessObject。",
+			"资源类型 '{0}' 已声明数据权限模型，但无法解析 {1}。请确认已调用 AddObjectPermission（或 AddPermission）。",
 			rowType.FullName,
 			nameof(IScopeGuard));
 

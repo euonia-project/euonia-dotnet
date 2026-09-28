@@ -31,7 +31,8 @@ using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
-services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务对象与权限模型
+services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务对象（不启用权限）
+services.AddObjectPermission(typeof(Order).Assembly);           // 显式启用权限：Osba 的码来源 + 策略键推断
 services.AddSingleton<AuthzStore>();                            // 授权数据（模拟数据库表，见各场景）
 services.AddScoped<IScopeSubjectResolver, /* 各场景的解析器 */>();  // 授权值来源
 services.AddSingleton(DemoUser.Dev);                            // 当前用户（UserPrincipal）

@@ -19,6 +19,7 @@ public class Startup
 		           {
 			           services.AddModularityApplication<BusinessTestModule>();
 			           services.AddBusinessObject(typeof(Startup).Assembly);
+			           services.AddObjectPermission(typeof(Startup).Assembly);
 			           // Register service here.
 		           });
 	}

@@ -247,6 +247,7 @@ public class PermissionTests
 		var activator = new RecordingObjectActivator();
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(PermissionTests).Assembly);
+		services.AddObjectPermission(typeof(PermissionTests).Assembly);
 		services.AddSingleton<IObjectActivator>(activator);
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver("order:update"));
 		services.AddSingleton(UserWith());
@@ -324,6 +325,7 @@ public class PermissionTests
 
 		// 走真实的注册路径：权限检查器、数据权限守卫与模型注册表都由 AddBusinessObject 装配
 		services.AddBusinessObject(typeof(PermissionTests).Assembly);
+		services.AddObjectPermission(typeof(PermissionTests).Assembly);
 
 		// 权限码来自授权数据（解析器），而不是令牌声明
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver(permissions));

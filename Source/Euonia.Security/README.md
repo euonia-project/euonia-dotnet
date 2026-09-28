@@ -91,7 +91,31 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPr
 
 这正是期望行为——**声明了按码策略就说明存在方法级权限码**，那就必须给出方法与操作的对应关系。
 
-### 3.2 用规则描述「哪个方法对应哪个操作」
+### 3.2 多个模块各自注册（按并集合并）
+
+`AddPermission` **可以调用多次，每次的贡献都会被合并**：
+
+```csharp
+services.AddPermission(new OrderCodeSource(),  typeof(Order).Assembly);   // 订单模块
+services.AddPermission(new ReportCodeSource(), typeof(Report).Assembly);  // 报表模块
+```
+
+合并规则：权限码来源合成一个（操作取并集，权限码取并集去重），程序集取并集，
+最终只构建**一个** `ScopeModelRegistry`，所有模块的模型与权限码都在里面生效。
+
+这不是可有可无的宽松设计。若采用「先到先得」，那么先注册的模块就决定了全局的码来源，
+后注册模块的权限码会被**静默丢弃**——它对应的行级策略因此永远不会被解析到，
+判定反而比作者本意**更宽松**。这类失败没有任何报错，只在生产环境表现为「权限没拦住」。
+
+> 同一个 `IPermissionCodeSource` 实例被重复传入时按幂等处理（跳过），
+> 因此 `EmptyCodeSource.Instance` 这样的共享单例可以被每个模块放心共用。
+> 同一个程序集被多个模块传入同样只扫一次。
+
+注意 `IScopeKeyResolver` 仍是 `TryAdd` 语义（**先到先得**）：它决定「某个资源实例当前代表哪个操作」，
+属于**全局**语义，多个模块同时给出不同答案本身就是配置错误。需要按模块区分时，
+请自行实现一个带分派的 `IScopeKeyResolver`。
+
+### 3.3 用规则描述「哪个方法对应哪个操作」
 
 绝大多数宿主的答案是同一种形状：入口方法要么打了某个特性，要么叫某个名字。
 `OperationCodeSource` 把这件事写成**数据**而不是代码，换框架只需换一组规则：

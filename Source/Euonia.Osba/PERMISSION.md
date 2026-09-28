@@ -24,7 +24,8 @@
 | `IPermissionCodeSource` | `Euonia.Osba`（`ObjectPermissionCodeSource`） | 提供「某类型在某操作上声明了哪些权限码」，用于**注册期**校验策略键歧义与死策略 |
 | `IScopeKeyResolver` | `Euonia.Osba`（`ObjectScopeKeyResolver`） | 把资源实例解析为策略键，供 `IScopeGuard` 的单行判定使用 |
 
-`AddBusinessObject` 已自动注册上述实现，因此**不需要**手工注册这两个接口。
+`AddObjectPermission` 会注册上述实现，因此**不需要**手工注册这两个接口。
+不调用它就等于不启用权限。
 
 引擎内的公开类型在命名空间 `Nerosoft.Euonia.Security`（原先位于 `Nerosoft.Euonia.Osba`，
 拆分后需补 `using Nerosoft.Euonia.Security;`）。
@@ -51,24 +52,47 @@
 ```csharp
 var services = new ServiceCollection();
 
-// 注册 Osba 基础设施
+// 1) 注册 Osba 基础设施
 services.AddBusinessObject(typeof(Order).Assembly);
+
+// 2) 启用权限（需要时才加）
+services.AddObjectPermission(typeof(Order).Assembly);
 ```
 
-`AddBusinessObject` 会注册：
+**这两步是分开的，是否启用由应用决定。**
+`AddBusinessObject` 只注册对象工厂需要的东西：
 
 - `BusinessContext` / `BusinessContextAccessor` / `IActuator`
 - `IObjectFactory` → `BusinessObjectFactory`
-- `IScopeKeyResolver` → `ObjectScopeKeyResolver`（Osba 对「对象当前代表哪个操作」的回答）
-- 策略引擎自身的一切注册，转交 `AddPermission`（`Euonia.Security` 提供）：
-  `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
-  `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
-  `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、
-  `PermissionSetup`
 
-也就是说，**引擎的 DI 归引擎自己**（`services.AddPermission(codeSource, assemblies)`），
-`AddBusinessObject` 只负责把 Osba 侧的两处映射（`IPermissionCodeSource`、`IScopeKeyResolver`）
-交给它。脱离 Osba 单独使用 `Euonia.Security` 时，直接调 `AddPermission` 即可。
+它**不碰权限**。只用 Osba 做对象工厂、不做权限的应用（纯查询、内部工具、无授权需求）
+不会被迫承担策略引擎、授权解析器与模型注册期校验的成本；反过来，宿主的其他模块
+想启用自己的权限体系，也不必顺带把 Osba 拉进来。
+
+`AddObjectPermission` 才启用权限，它做两件事：
+
+- `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
+- `AddPermission(ObjectPermissionCodeSource.Instance, assemblies)`——把 Osba 的权限码来源交给引擎
+
+后者会注册策略引擎自身的一切（`Euonia.Security` 提供）：
+`IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
+`ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
+`IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、
+`PermissionSetup`。
+
+两处映射（`IPermissionCodeSource` 与 `IScopeKeyResolver`）必须成对出现：模型里一旦存在
+按码声明的行级策略，引擎就会要求收到能解析出这些码的 `IPermissionCodeSource`。
+所以 `AddObjectPermission` 把它们收在一个调用里，而不是让开发者漏掉其中之一。
+
+两点使用说明：
+
+- **调用顺序与调用次数都不受限制。**`AddObjectPermission` 可以在 `AddBusinessObject`
+  之前或之后调用；多个模块可以各自调用，权限码与模型按**并集**合并。
+- **`IScopeKeyResolver` 是 `TryAdd` 语义**（先到先得），因为「某个资源实例当前代表哪个操作」
+  是**全局**答案，多个模块给出不同答案本身就是配置错误。需要自定义时自己注册即可，会覆盖框架推断。
+
+脱离 Osba 单独使用 `Euonia.Security` 时，直接调 `services.AddPermission(codeSource, assemblies)`
+并自行提供 `IScopeKeyResolver`。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [3.2](#32-用户侧授权值从数据实时解析)），框架不提供默认实现，以免把授权值固化。
@@ -444,7 +468,7 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 
 ### 3.7 启动期校验
 
-`AddBusinessObject` 会在**注册期**扫描权限模型并完成校验，配置错误一律在启动时暴露，
+`AddObjectPermission`（即 `AddPermission`）会在**注册期**扫描权限模型并完成校验，配置错误一律在启动时暴露，
 不会等到运行期才变成「看似启用了数据权限、实际没有生效」：
 
 - 同一资源类型存在多个权限模型 → 失败
@@ -597,6 +621,7 @@ public sealed class TeamScopeResolver : IScopeSubjectResolver
 
 ```csharp
 services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddObjectPermission(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 
 // 组织 DI + 用户后：

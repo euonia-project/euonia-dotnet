@@ -50,44 +50,40 @@ public static class ServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(codeSource);
 
-		// 权限模型注册表是实例而非进程级静态状态，容器与测试之间天然隔离。
-		// 校验不依赖容器，因此可以在这里（注册期）立即完成。
-		var registry = ScopeModelRegistry.Create(codeSource, assemblies);
+		var setup = services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
+			?.ImplementationInstance as PermissionModelSetup;
 
-		services.TryAddSingleton(codeSource);
-		services.TryAddSingleton(registry);
-		services.TryAddSingleton(new PermissionSetup(registry.HasDeclarations || HasPermissionDeclarations(assemblies, codeSource)));
+		if (setup is null)
+		{
+			setup = new PermissionModelSetup();
+			services.AddSingleton(setup);
 
-		// 权限码来自授权数据，而非令牌声明（见 SubjectPermissionChecker 的备注）
-		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
+			services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
 
-		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-			provider.GetRequiredService<UserPrincipal>(),
-			registry,
-			provider.GetService<IScopeSubjectResolver>(),
-			provider.GetService<IScopeKeyResolver>()));
+			services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
+				provider.GetRequiredService<UserPrincipal>(),
+				provider.GetRequiredService<ScopeModelRegistry>(),
+				provider.GetService<IScopeSubjectResolver>(),
+				provider.GetService<IScopeKeyResolver>()));
+		}
+
+		setup.Add(codeSource, assemblies);
+
+		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
+		services.AddSingleton(registry);
+		services.AddSingleton(setup.CodeSource);
+		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
 
 		return services;
 	}
 
 	/// <summary>
-	/// 判断给定程序集中是否存在 <see cref="PermissionAttribute"/> 声明。
+	/// 判断给定程序集中是否存在 <see cref="PermissionAttribute"/> 声明或可解析的权限码。
 	/// </summary>
 	/// <param name="assemblies">要扫描的程序集。</param>
 	/// <param name="codeSource">权限码来源。</param>
 	/// <returns>存在声明则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	/// <remarks>
-	/// <para>
-	/// 只要出现权限码，就需要解析器提供「用户持有哪些码」。这里按<b>类型级与方法级</b>都检查——
-	/// 方法级必须问 <paramref name="codeSource"/>，因为「哪些方法是操作入口」由使用方的约定决定。
-	/// </para>
-	/// <para>
-	/// 扫描范围是程序集内<b>全部非抽象类</b>，而不是「使用方的资源基类」：引擎不知道什么是宿主框架的
-	/// 业务对象，把范围收窄到某个基类只能由使用方另开一个入口。方向上偏保守——
-	/// 最多多要求一个解析器，不会漏掉任何声明。
-	/// </para>
-	/// </remarks>
-	private static bool HasPermissionDeclarations(IEnumerable<Assembly> assemblies, IPermissionCodeSource codeSource)
+	internal static bool HasPermissionDeclarations(IEnumerable<Assembly> assemblies, IPermissionCodeSource codeSource)
 	{
 		foreach (var type in GetLoadableTypes(assemblies))
 		{
@@ -113,9 +109,6 @@ public static class ServiceCollectionExtensions
 		return false;
 	}
 
-	/// <summary>
-	/// 获取程序集中可加载的类型，跳过因依赖缺失而无法加载的类型，避免 <see cref="ReflectionTypeLoadException"/>。
-	/// </summary>
 	private static IEnumerable<Type> GetLoadableTypes(IEnumerable<Assembly> assemblies)
 	{
 		if (assemblies?.ToArray() is not { Length: > 0 } targets)
@@ -126,7 +119,6 @@ public static class ServiceCollectionExtensions
 		return targets.SelectMany(GetLoadableTypes);
 	}
 
-	/// <inheritdoc cref="GetLoadableTypes(IEnumerable{Assembly})"/>
 	private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 	{
 		try

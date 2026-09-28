@@ -8,10 +8,6 @@ using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Core.Tests;
 
-/// <summary>
-/// 验证三点增强：行级操作权限（同一用户、同一类型、不同行权限不同）、
-/// 操作权限以授权数据为来源（撤销立即生效）、以及<b>权限线与验证线彼此独立</b>。
-/// </summary>
 public class ScopeRowPermissionTests
 {
 	#region 行级操作权限
@@ -19,21 +15,17 @@ public class ScopeRowPermissionTests
 	[Fact]
 	public void RowLevel_SameUserSameType_DifferentRowsDifferentRights()
 	{
-		// A1 可 push + delete；A2 仅可 push；A3 都不行
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		// push：A1、A2 通过，A3 拒绝
 		Assert.True(guard.Allows(Repo("A1"), "repo:push"));
 		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
 		Assert.False(guard.Allows(Repo("A3"), "repo:push"));
 
-		// delete：仅 A1 通过
 		Assert.True(guard.Allows(Repo("A1"), "repo:delete"));
 		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
 		Assert.False(guard.Allows(Repo("A3"), "repo:delete"));
 
-		// 同一行 A2 在两个码下结论不同 —— 这正是「行级操作权限」的验收点
 		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
 		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
 
@@ -43,8 +35,6 @@ public class ScopeRowPermissionTests
 	[Fact]
 	public void RowLevel_CodeGrantShouldOverrideDefault_NotUnion()
 	{
-		// 默认键上给了 repo = {A1,A2,A3}，但 repo:delete 码上只给了 {A1}。
-		// 若实现成「并集」，delete 会拿到 {A1,A2,A3} —— 行级差异直接失效。
 		var resolver = new AclResolver();
 		resolver.GrantDefault("repo", "A1", "A2", "A3");
 		resolver.GrantCode("repo:delete", "repo", "A1");
@@ -52,16 +42,13 @@ public class ScopeRowPermissionTests
 		using var scope = CreateScope(resolver, out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		// delete 在码上被收窄到 {A1}：默认键上的 {A1,A2,A3} 不得「并」进来
 		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
 		Assert.False(guard.Allows(Repo("A3"), "repo:delete"));
 		Assert.True(guard.Allows(Repo("A1"), "repo:delete"));
 
-		// 同理，push 在码上是 {A1,A2}，A3 不会因为默认键里有它而通过
 		Assert.False(guard.Allows(Repo("A3"), "repo:push"));
 		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
 
-		// 未在码上单独授予时才会回落到默认键
 		Assert.True(guard.Allows(Repo("A3"), null));
 
 		BusinessContextAccessor.Clear();
@@ -98,12 +85,10 @@ public class ScopeRowPermissionTests
 
 		var compiled = guard.GetPolicy<GrantRepo>("repo:delete");
 
-		// 仍是可翻译的集合成员判断
 		var call = Assert.IsAssignableFrom<MethodCallExpression>(compiled.Allow.Body);
 		Assert.Equal(nameof(Enumerable.Contains), call.Method.Name);
 		Assert.Contains("x.RepoId", compiled.Allow.ToString());
 
-		// 下推仍走表达式重载；且表达式里不得出现权限码本身
 		var query = guard.Apply(new[] { Repo("A1") }.AsQueryable(), "repo:delete");
 		var where = Assert.IsAssignableFrom<MethodCallExpression>(query.Expression);
 
@@ -131,16 +116,12 @@ public class ScopeRowPermissionTests
 	[Fact]
 	public void GenericAndNonGenericEntries_ShouldAgreeOnSameObject()
 	{
-		// guard.Allows<T>(row) 与 guard.AllowsObject(row) 必须给出同一答案：
-		// 二者都用「对象当前操作」解析策略键，否则同一对象会有两套结论。
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		// 无未决操作 → 回落到默认键
 		var idle = Repo("A2");
 		Assert.Equal(guard.Allows(idle), guard.AllowsObject(idle));
 
-		// 有未决操作 → 按该操作解析：A2 可 push（Update）但不可 delete
 		var pushable = Repo("A2");
 		pushable.MarkAsChanged();
 		Assert.Equal(guard.Allows(pushable), guard.AllowsObject(pushable));
@@ -163,7 +144,6 @@ public class ScopeRowPermissionTests
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
-		// A2 可 push：更新通过
 		var allowed = Repo("A2");
 		allowed.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		allowed.MarkAsChanged();
@@ -178,7 +158,6 @@ public class ScopeRowPermissionTests
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
-		// A2 不可 delete：越权删除由工厂边界兜住（IsDeleted 时默认跳过对象级规则）
 		var denied = Repo("A2");
 		denied.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		denied.MarkAsDeleted();
@@ -199,24 +178,19 @@ public class ScopeRowPermissionTests
 	{
 		var resolver = new AclResolver();
 
-		// 关键安全断言：全程使用同一个既不含任何 perm 声明的 ClaimsPrincipal，只改授权数据
 		using var scope = CreateScope(resolver, out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 		var target = Repo("A2");
 
 		Assert.True(guard.Allows(target, "repo:push"));
 
-		// 撤销授权：数据层移除该码
 		resolver.RevokeCode("repo:push");
 
-		// 同一作用域内仍是旧快照——钉住「按请求缓存」这一事实，避免文档写出「立即生效」的假承诺
 		Assert.True(guard.Allows(target, "repo:push"));
 
-		// 显式失效后立即生效
 		guard.Refresh();
 		Assert.False(guard.Allows(target, "repo:push"));
 
-		// 新作用域自然拿到新授权
 		using var next = CreateScope(resolver, out var nextProvider);
 		Assert.False(nextProvider.GetRequiredService<IScopeGuard>().Allows(target, "repo:push"));
 
@@ -230,10 +204,8 @@ public class ScopeRowPermissionTests
 
 		var user = provider.GetRequiredService<UserPrincipal>();
 
-		// 用户在令牌里没有任何权限声明
 		Assert.Empty(user.FindClaims(UserClaimTypes.Permission));
 
-		// 但权限码仍然可用——来自授权数据
 		Assert.Contains("repo:push", provider.GetRequiredService<IScopeGuard>().Permissions);
 
 		BusinessContextAccessor.Clear();
@@ -252,8 +224,6 @@ public class ScopeRowPermissionTests
 		denied.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		denied.MarkAsChanged();
 
-		// 旧版靠自动注入的范围规则把越权「更新」报成 ValidationException；
-		// 拆分后权限只走工厂边界：统一抛 SecurityException，与验证线无关
 		var exception = await Assert.ThrowsAsync<SecurityException>(
 			() => denied.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
@@ -284,8 +254,8 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 
-		// 测试程序集里存在 [Permission] 声明与权限模型 => 必须有解析器
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
 
@@ -299,6 +269,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
 		services.AddSingleton<IScopeSubjectResolver>(new AclResolver());
 		var identity = new ClaimsIdentity(
 			[new Claim(ClaimTypes.Name, "tester")],
@@ -318,7 +289,6 @@ public class ScopeRowPermissionTests
 	{
 		var policies = new ScopePolicySet<GrantRepo>();
 
-		// 保留命名空间属于框架，应用不得声明
 		var exception = Assert.Throws<InvalidOperationException>(
 			() => policies.For("@custom", ScopePolicy<GrantRepo>.Where(_ => true)));
 
@@ -330,7 +300,6 @@ public class ScopeRowPermissionTests
 	{
 		var policies = new ScopePolicySet<GrantRepo>();
 
-		// 框架自身用 For(BusinessOperation) 落在保留键上，不得被上面的校验拦住
 		policies.ForOperation(BusinessOperation.Create, ScopePolicy<GrantRepo>.Where(_ => true));
 
 		Assert.Contains(ScopeKeys.Create, policies.Codes);
@@ -353,6 +322,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
 		services.AddSingleton(resolver);
 		services.AddSingleton(User("dev"));
 
@@ -368,9 +338,6 @@ public class ScopeRowPermissionTests
 		return new GrantRepo { RepoId = repoId };
 	}
 
-	/// <summary>
-	/// 构造一个<b>不含任何权限声明</b>的已认证用户：权限码只能来自授权数据。
-	/// </summary>
 	private static UserPrincipal User(string userId)
 	{
 		var identity = new ClaimsIdentity(
@@ -387,18 +354,12 @@ public class ScopeRowPermissionTests
 	#endregion
 }
 
-/// <summary>
-/// 模拟资源级 ACL 的授权数据解析器：权限码与「按码分组的资源授予」都在数据侧，可随时变更。
-/// </summary>
 public class AclResolver : IScopeSubjectResolver
 {
 	private readonly HashSet<string> _codes = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, HashSet<string>> _codeGrants = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, HashSet<string>> _defaultGrants = new(StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>
-	/// 初始化 <see cref="AclResolver"/> 的新实例，默认给出 push 与 delete 两个码的行级授予。
-	/// </summary>
 	public AclResolver()
 	{
 		_codes.Add("repo:push");
@@ -408,36 +369,21 @@ public class AclResolver : IScopeSubjectResolver
 		GrantCode("repo:delete", "repo", "A1");
 	}
 
-	/// <summary>
-	/// 授予权限码。
-	/// </summary>
-	/// <param name="code">权限码。</param>
 	public void GrantCode(string code)
 	{
 		_codes.Add(code);
 	}
 
-	/// <summary>
-	/// 撤销权限码。
-	/// </summary>
-	/// <param name="code">权限码。</param>
 	public void RevokeCode(string code)
 	{
 		_codes.Remove(code);
 
-		// 一并清掉该码上的行级授予：撤销授权意味着这个码上什么都不能做
 		foreach (var key in _codeGrants.Keys.Where(key => key.StartsWith($"{code}|", StringComparison.Ordinal)).ToArray())
 		{
 			_codeGrants.Remove(key);
 		}
 	}
 
-	/// <summary>
-	/// 在指定权限码下授予维度值。
-	/// </summary>
-	/// <param name="code">权限码。</param>
-	/// <param name="dimension">维度名。</param>
-	/// <param name="values">值。</param>
 	public void GrantCode(string code, string dimension, params string[] values)
 	{
 		GrantCode(code);
@@ -454,11 +400,6 @@ public class AclResolver : IScopeSubjectResolver
 		}
 	}
 
-	/// <summary>
-	/// 在默认键上授予维度值（对所有权限码生效，除非该码有自己的授予）。
-	/// </summary>
-	/// <param name="dimension">维度名。</param>
-	/// <param name="values">值。</param>
 	public void GrantDefault(string dimension, params string[] values)
 	{
 		if (!_defaultGrants.TryGetValue(dimension, out var set))
@@ -473,7 +414,6 @@ public class AclResolver : IScopeSubjectResolver
 		}
 	}
 
-	/// <inheritdoc />
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
 	{
 		var builder = ScopeSubjectSet.CreateBuilder().AddCodes(_codes);
@@ -493,9 +433,6 @@ public class AclResolver : IScopeSubjectResolver
 	}
 }
 
-/// <summary>
-/// 受行级操作权限约束的资源：A1 可 push+delete、A2 仅可 push。
-/// </summary>
 public class GrantRepo : EditableObject<GrantRepo>
 {
 	public string RepoId { get; set; }
@@ -521,44 +458,115 @@ public class GrantRepo : EditableObject<GrantRepo>
 	}
 }
 
-/// <summary>
-/// <see cref="GrantRepo"/> 的权限模型：资源标识本身也是一个维度，因此可以按行授权。
-/// </summary>
 public sealed class GrantRepoModel : ScopeModel<GrantRepo>
 {
 	public override void Define(ScopeModelBuilder<GrantRepo> builder)
 	{
-		// 把「资源标识」映射为维度，行级 ACL 才可表达
 		builder.Map("repo", x => x.RepoId);
 	}
 
-	/// <summary>
-	/// 默认策略：在默认键上没有 repo 授予时一律拒绝。
-	/// </summary>
 	public override ScopePolicy<GrantRepo> Policy => ScopePolicy<GrantRepo>.Grant("repo");
 
 	public override void Declare(ScopePolicySet<GrantRepo> policies)
 	{
-		// 只为行级操作权限声明策略；Create 会落到默认策略（Grant("repo")）——
-		// 保存新行时字段已填完，判定才有意义。
 		policies.ForOperation(BusinessOperation.Read, ScopePolicy<GrantRepo>.Grant("repo"));
 
-		// 行级操作权限：各自的行范围由解析器按码给出
 		policies.For("repo:push", ScopePolicy<GrantRepo>.Grant("repo"));
 		policies.For("repo:delete", ScopePolicy<GrantRepo>.Grant("repo"));
 	}
 }
 
-/// <summary>
-/// 暴露 <see cref="BusinessObject.CanAccessRow"/> 的探针。
-/// 必须派生自受控类型本身，否则该类型不参与数据权限。
-/// </summary>
 public class GrantRepoProbe : GrantRepo
 {
-	/// <summary>
-	/// 调用 <see cref="BusinessObject.CanAccessRow(string)"/>。
-	/// </summary>
-	/// <param name="scopeKey">权限码。</param>
-	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	public bool ProbeRowAccess(string scopeKey) => CanAccessRow(scopeKey);
+}
+
+public class MultiModulePermissionTests
+{
+	public sealed class ReportRow
+	{
+		public string Id { get; set; }
+
+		public string OwnerId { get; set; }
+
+		public string DeptId { get; set; }
+	}
+
+	public sealed class ReportRowModel : ScopeModel<ReportRow>
+	{
+		public override void Define(ScopeModelBuilder<ReportRow> builder)
+		{
+			builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
+			       .Map(ScopeDimensions.Dept, x => x.DeptId);
+		}
+
+		public override ScopePolicy<ReportRow> Policy =>
+			ScopePolicy<ReportRow>.Grant(ScopeDimensions.Dept);
+	}
+
+	[Fact]
+	public void Other_Module_Registered_After_Osba_Should_Also_Be_Enforced()
+	{
+		var services = new ServiceCollection();
+
+		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
+		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+
+		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+
+		var registry = services.BuildServiceProvider().GetRequiredService<ScopeModelRegistry>();
+
+		Assert.True(registry.IsDeclared(typeof(ReportRow)), "后注册模块的模型必须进入注册表");
+		Assert.True(registry.IsDeclared(typeof(GrantRepo)), "Osba 自己的模型也不应被挤掉");
+	}
+
+	[Fact]
+	public void Other_Module_Row_Policy_Should_Actually_Be_Enforced()
+	{
+		var services = new ServiceCollection();
+
+		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
+		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+
+		var identity = new ClaimsIdentity(
+			[new Claim(ClaimTypes.Name, "tester")],
+			"Bearer",
+			ClaimTypes.Name,
+			ClaimTypes.Role);
+
+		services.AddSingleton(new UserPrincipal(new ClaimsPrincipal(identity)));
+		services.AddSingleton<IScopeSubjectResolver>(new ReportAclResolver());
+
+		var guard = services.BuildServiceProvider().GetRequiredService<IScopeGuard>();
+
+		Assert.True(guard.Allows(new ReportRow { Id = "r1", DeptId = "team-a", OwnerId = "other" }));
+		Assert.False(guard.Allows(new ReportRow { Id = "r2", DeptId = "team-b", OwnerId = "other" }));
+	}
+
+	[Fact]
+	public void Code_Source_Registered_By_Osba_Should_Survive_Other_Modules()
+	{
+		var services = new ServiceCollection();
+
+		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
+		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+
+		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
+
+		Assert.Contains(BusinessOperation.Update, source.AllOperations);
+		Assert.Equal(["repo:push"], source.CodesFor(typeof(GrantRepo), BusinessOperation.Update));
+	}
+
+	private sealed class ReportAclResolver : IScopeSubjectResolver
+	{
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+		{
+			var builder = ScopeSubjectSet.CreateBuilder();
+			builder.Add(ScopeDimensions.Dept, "team-a");
+
+			return ValueTask.FromResult(builder.Build());
+		}
+	}
 }
