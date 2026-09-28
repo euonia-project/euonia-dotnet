@@ -84,7 +84,7 @@ public class RuntimeRequirementSourceTests
 }
 
 /// <summary>
-/// 宿主补充的要求来源：只认识权限码（不实现 <see cref="IPermissionRequirementSource"/>），
+/// 宿主补充的要求来源：只给权限码（要求由 <see cref="IPermissionCodeSource"/> 的默认实现折算），
 /// 对 <see cref="ScopedTask"/> 的更新操作额外要求 <c>host:update</c>。
 /// </summary>
 internal sealed class HostUpdateRequirementSource : IPermissionCodeSource

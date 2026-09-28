@@ -333,10 +333,10 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 **决策**：运行期与注册期问**同一个来源**。为此：
 
-- 新增 `IPermissionRequirementSource`：在「有哪些权限码」之上回答「要求是什么」（含角色的
-  `PermissionAttribute`），由 `OperationCodeSource` 与合并来源实现；
-- 合并来源对「只给权限码」的成员按「有码、无角色」折算——把它们的码整个丢掉会让闸门比来源本身更宽松，
-  而角色要求本就不在这类来源的表达力之内；
+- 「要求」并入 `IPermissionCodeSource`（Core）：`RequirementsFor` 是它的成员，默认实现把权限码折算成
+  「有码、无角色」——把只给码的来源的码整个丢掉会让闸门比来源本身更宽松，而角色要求本就不在这类来源的
+  表达力之内（能表达角色的实现覆写它即可）；
+- 合并来源对每个成员取要求并去重，不再需要「能回答要求的来源」这类能力判定；
 - Osba 的运行期从容器解析该来源（由 `Euonia.Osba.Security` 适配包注册；Osba 本身不引用引擎），
   缺席（对象未接线）或来源回答不了要求时回落到 Osba 自己的约定来源。
 

@@ -74,12 +74,13 @@
 
 - **基础词汇**（`PermissionAttribute`、`BusinessOperation`）下沉到 `Euonia.Core`，命名空间不变——
   不装引擎的宿主也能在业务对象上声明要求；
-- **「要求从哪来」下沉到 Core**（`IPermissionRequirementProvider`），与 `[Permission]`、`BusinessOperation`
-  同层：它是两边共同的基础概念，只声明一次——若宿主与引擎各定义一遍形状相同的接口，中间就得有胶水
-  来回翻译，那是抽象放错了层；Osba 只提供**默认实现**（按工厂约定扫描，兜底静态单例，见 §1.1）；
-- **Osba 定义另外两个契约**：操作权限判定（`IOperationPermissionChecker`）、行级判定
-  （`IObjectScopeAuthorizer`）——它们要么用到宿主的作用域（本库的 `BusinessContext`），要么需要宿主
-  的对象模型，引擎无法实现；工厂边界保留**强制**（`SecurityException` / 判定不了抛
+- **「要求从哪来」与「操作权限判定」下沉到 Core**（`IPermissionCodeSource`、`IPermissionChecker`），
+  与 `[Permission]`、`BusinessOperation` 同层：它们是两边共同的基础概念，各只声明一次——若宿主与引擎
+  各定义一遍形状相同的接口，中间就得有胶水来回翻译，那是抽象放错了层。
+  两个接口都只要求实现**必需成员**（来源给权限码、判定给「持有/属于」），组合语义与异步入口由默认实现覆盖；
+  Osba 只提供来源的**默认实现**（按工厂约定扫描，兜底静态单例，见 §1.1）；
+- **只有行级判定留在 Osba**（`IObjectScopeAuthorizer`）：它要读宿主的作用域（`BusinessContext`）与对象
+  状态，引擎无法实现；工厂边界保留**强制**（`SecurityException` / 判定不了抛
   `InvalidOperationException`）；
 - **桥接放到新包 `Euonia.Osba.Security`**：提供三个契约的引擎实现与 `AddObjectPermission`。
   `Euonia.Osba` 与 `Euonia.Security` 之间**不再有边**。
@@ -93,7 +94,8 @@
 
 **判据（评审时用）**：适配代码可以存在，但要盯住两类信号——
 ① 适配层里出现「两端形状相同、只为翻译」的代码 ⇒ 抽象放错了层，把这个概念下沉到双方都依赖的最底层
-（本条就是这么发现并消灭了 `IPermissionRequirementProvider` 的重复声明与那个只为翻译而存在的类）；
+（本条就是这么发现并消灭了要求来源的重复声明、以及「权限判定」与「要求来源」两处重叠接口——
+它们现在都只有一份声明，住在 Core；默认实现也各只有一处，宿主框架与引擎都不再各写一遍）；
 ② 适配层开始 reach-in（用某一方的 internal，或复制它的判定逻辑）⇒ 契约划错了，说明该由那一方自己实现。
 留下的适配若是「纯翻译 + 只碰公开 API + 宿主选择才引入」，那它就是两个独立库组合时的固有成本；
 反过来，把适配写进任一方（本次之前的做法：胶水在 Osba 里，且只能接一个引擎）才是真正的通用性缺口。
@@ -170,6 +172,6 @@
 |---|---|
 | §1.1 无法判定即失败 | `IScopeSubjectResolver` 缺席时 `IScopeGuard` 拒绝；`PermissionSetup` + `ValidatePermissionSetup()` |
 | §1.2 越权一律 `SecurityException` | 引擎侧的 `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
-| §1.3 权限契约 | `IPermissionRequirementProvider` ↔ `IPermissionCodeSource` / `IPermissionRequirementSource`；`IOperationPermissionChecker` ↔ `IPermissionChecker`；`IObjectScopeAuthorizer` ↔ `IScopeGuard`（全部由 `Euonia.Osba.Security` 适配，可替换为宿主自己的实现） |
+| §1.3 权限契约 | 来源与判定就是引擎自己的两个契约（`IPermissionCodeSource`、`IPermissionChecker`，均在 Core）；行级判定 `IObjectScopeAuthorizer` ↔ `IScopeGuard`，由 `Euonia.Osba.Security` 适配。三者都可替换为宿主自己的实现 |
 | §2.1 后置检查 | `AllowsOperation` 的调用时机由本库决定 |
 | §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete`（本库公开的类型，适配包也用它） |

@@ -50,29 +50,30 @@ public class SubjectPermissionChecker : IPermissionChecker
 	}
 
 	/// <inheritdoc />
-	public bool IsGrantedAny(params string[] permissions)
-	{
-		return permissions?.Any(IsGranted) == true;
-	}
-
-	/// <inheritdoc />
 	public bool IsInRole(string role)
 	{
 		return _user is { IsAuthenticated: true } && _user.IsInRole(role);
 	}
 
 	/// <inheritdoc />
-	public bool IsInAnyRole(params string[] roles)
+	/// <remarks>
+	/// 覆写默认实现：授权数据按请求解析是异步的，走这里可以避免同步路径上的 sync-over-async
+	/// （默认实现会直接调用 <see cref="IsGranted"/>，那会在首次判定时阻塞线程）。
+	/// </remarks>
+	public async ValueTask<bool> IsGrantedAsync(string permission, CancellationToken cancellationToken = default)
 	{
-		return roles?.Any(IsInRole) == true;
-	}
+		if (string.IsNullOrEmpty(permission))
+		{
+			return true;
+		}
 
-	/// <inheritdoc />
-	public bool IsRequirementSatisfied(string permission, string[] roles)
-	{
-		var rolesGranted = roles == null || roles.Length == 0 || IsInAnyRole(roles);
-		var permissionGranted = string.IsNullOrEmpty(permission) || IsGranted(permission);
+		if (_user is not { IsAuthenticated: true })
+		{
+			return false;
+		}
 
-		return rolesGranted && permissionGranted;
+		await _guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+
+		return _guard.GetSubjects().HoldsPermission(permission);
 	}
 }

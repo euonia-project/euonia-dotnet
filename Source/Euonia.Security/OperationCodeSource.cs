@@ -21,7 +21,7 @@ namespace Nerosoft.Euonia.Security;
 /// 结果按（类型，操作）缓存，反复调用不会重复反射。
 /// </para>
 /// </remarks>
-public sealed class OperationCodeSource : IPermissionRequirementSource
+public sealed class OperationCodeSource : IPermissionCodeSource
 {
 	/// <summary>方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。</summary>
 	private const BindingFlags MethodFlags =

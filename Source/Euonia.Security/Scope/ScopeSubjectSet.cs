@@ -1,22 +1,38 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 用户当前被授予的授权数据：权限码集合 + 按（权限码，维度）分组的行级授予值。
+/// 用户当前被授予的授权数据：权限码集合 + 按策略键分组的行级授予。
 /// </summary>
 /// <remarks>
-/// 由 <see cref="IScopeSubjectResolver"/> 从应用数据实时解析，是操作权限与数据权限共同的输入；层级关系（例如部门树）应在解析期展开为扁平集合，使判定与下推始终只是集合成员判断。
-/// <b>查找规则</b>：<see cref="ValuesOf"/> / <see cref="Contains"/> 先看该权限码下的授予，没有再回落到 <see cref="ScopeKeys.Default"/> 上的授予——是<b>覆盖</b>而不是并集（见 DESIGN §1.6）。
-/// <b>通配不参与维度查找</b>：权限码的 <c>*</c> 前缀通配只用于「是否持有该权限码」的布尔判定（见 <see cref="HoldsPermission"/>），绝不用于维度取值的回落。
-/// 维度名比较<b>大小写不敏感</b>，维度值比较<b>大小写敏感</b>；权限码按码查找授予时大小写敏感，而在 <see cref="HoldsPermission"/> 的持有判定中<b>不敏感</b>（其前缀通配同理）。
+/// <para>
+/// 由 <see cref="IScopeSubjectResolver"/> 从应用数据实时解析，是操作权限与数据权限共同的输入；
+/// 层级关系（例如部门树）应在解析期展开为扁平集合，使判定与下推始终只是集合成员判断。
+/// </para>
+/// <para>
+/// 行级授予的形状是「策略键 → <see cref="ScopeSubject"/>」，而 <see cref="ScopeSubject"/> 是
+/// 「维度 → 值集合」——每一层都有一个名字，代码里看不到三层泛型嵌套。
+/// </para>
+/// <para>
+/// <b>查找规则</b>：<see cref="ValuesOf"/> / <see cref="Contains"/> 先看该权限码下的授予，没有再回落到
+/// <see cref="ScopeKeys.Default"/> 上的授予——是<b>覆盖</b>而不是并集（见 DESIGN §1.6）。
+/// </para>
+/// <para>
+/// <b>通配不参与维度查找</b>：权限码的 <c>*</c> 前缀通配只用于「是否持有该权限码」的布尔判定
+/// （见 <see cref="HoldsPermission"/>），绝不用于维度取值的回落。
+/// </para>
+/// <para>
+/// 维度名比较<b>大小写不敏感</b>，维度值比较<b>大小写敏感</b>；
+/// 权限码按码查找授予时大小写敏感，而在 <see cref="HoldsPermission"/> 的持有判定中<b>不敏感</b>（其前缀通配同理）。
+/// </para>
 /// </remarks>
 public sealed class ScopeSubjectSet
 {
-	private readonly Dictionary<string, Dictionary<string, HashSet<string>>> _values;
+	private readonly Dictionary<string, ScopeSubject> _subjects;
 	private readonly HashSet<string> _codes;
 
-	private ScopeSubjectSet(Dictionary<string, Dictionary<string, HashSet<string>>> values, HashSet<string> codes)
+	private ScopeSubjectSet(Dictionary<string, ScopeSubject> subjects, HashSet<string> codes)
 	{
-		_values = values;
+		_subjects = subjects;
 		_codes = codes;
 	}
 
@@ -24,7 +40,7 @@ public sealed class ScopeSubjectSet
 	/// 空集合：未授予任何权限码与主体。
 	/// </summary>
 	public static ScopeSubjectSet Empty { get; } = new(
-		new Dictionary<string, Dictionary<string, HashSet<string>>>(StringComparer.Ordinal),
+		new Dictionary<string, ScopeSubject>(StringComparer.Ordinal),
 		new HashSet<string>(StringComparer.Ordinal));
 
 	/// <summary>
@@ -50,7 +66,7 @@ public sealed class ScopeSubjectSet
 	/// <returns>被授予则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	public bool Contains(string scopeKey, string dimension, string value)
 	{
-		return value != null && ValuesOf(scopeKey, dimension).Contains(value);
+		return value != null && GrantedFor(scopeKey).Contains(dimension, value);
 	}
 
 	/// <summary>
@@ -67,19 +83,7 @@ public sealed class ScopeSubjectSet
 			return Array.Empty<string>();
 		}
 
-		// 优先取该码下的授予；没有再回落到默认键（覆盖，不是并集）
-		if (scopeKey != null
-		    && !string.Equals(scopeKey, ScopeKeys.Default, StringComparison.Ordinal)
-		    && _values.TryGetValue(scopeKey, out var scoped)
-		    && scoped.TryGetValue(dimension, out var scopedValues)
-		    && scopedValues.Count > 0)
-		{
-			return scopedValues;
-		}
-
-		return _values.TryGetValue(ScopeKeys.Default, out var defaults) && defaults.TryGetValue(dimension, out var values)
-			? values
-			: Array.Empty<string>();
+		return GrantedFor(scopeKey).ValuesOf(dimension);
 	}
 
 	/// <summary>
@@ -120,15 +124,31 @@ public sealed class ScopeSubjectSet
 	/// </summary>
 	/// <returns>权限码集合。</returns>
 	/// <remarks>命名刻意避开 <see cref="ScopeKeys"/>，以免与框架保留键的常量类型混淆。</remarks>
-	public IReadOnlyCollection<string> KeysWithGrants => _values.Keys;
+	public IReadOnlyCollection<string> KeysWithGrants => _subjects.Keys;
+
+	/// <summary>
+	/// 按策略键取授予主体集合：该码下没有授予时回落到默认键（覆盖，不是并集）。
+	/// </summary>
+	private ScopeSubject GrantedFor(string scopeKey)
+	{
+		if (scopeKey != null
+		    && !string.Equals(scopeKey, ScopeKeys.Default, StringComparison.Ordinal)
+		    && _subjects.TryGetValue(scopeKey, out var scoped)
+		    && !scoped.IsEmpty)
+		{
+			return scoped;
+		}
+
+		return _subjects.TryGetValue(ScopeKeys.Default, out var defaults) ? defaults : ScopeSubject.Empty;
+	}
 
 	/// <summary>
 	/// 由构建器调用的内部构造入口。
 	/// </summary>
-	internal static ScopeSubjectSet Create(Dictionary<string, Dictionary<string, HashSet<string>>> values, HashSet<string> codes)
+	internal static ScopeSubjectSet Create(Dictionary<string, ScopeSubject> subjects, HashSet<string> codes)
 	{
-		return values.Count == 0 && codes.Count == 0
+		return subjects.Count == 0 && codes.Count == 0
 			? Empty
-			: new ScopeSubjectSet(values, codes);
+			: new ScopeSubjectSet(subjects, codes);
 	}
 }

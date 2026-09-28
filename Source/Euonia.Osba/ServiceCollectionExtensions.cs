@@ -17,7 +17,7 @@ public static class ServiceCollectionExtensions
 	/// <remarks>
 	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
 	/// 需要权限时，接引擎用 <c>Euonia.Osba.Security</c> 的 <c>AddObjectPermission</c>，
-	/// 或注册自己的 <c>IOperationPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
+	/// 或注册自己的 <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{

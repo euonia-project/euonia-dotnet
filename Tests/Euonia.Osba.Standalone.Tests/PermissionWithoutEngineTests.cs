@@ -77,7 +77,7 @@ public class PermissionWithoutEngineTests
 		var exception = await Assert.ThrowsAsync<InvalidOperationException>(
 			() => factory.SaveAsync(entity, TestContext.Current.CancellationToken));
 
-		Assert.Contains(nameof(IOperationPermissionChecker), exception.Message);
+		Assert.Contains(nameof(IPermissionChecker), exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -148,12 +148,12 @@ public class PermissionWithoutEngineTests
 
 		// 宿主的实现：要求来自「配置表」（这里的 GroundedEntity 声明了 host:* 码），
 		// 判定来自当前用户的权限码集合（现实里可能是配置、权限表或已有鉴权框架）
-		services.AddSingleton<IPermissionRequirementProvider, TableRequirementProvider>();
+		services.AddSingleton<IPermissionCodeSource, TableRequirementProvider>();
 		services.AddSingleton<IObjectScopeAuthorizer, VisibleScopeAuthorizer>();
 
 		if (codes != null)
 		{
-			services.AddSingleton<IOperationPermissionChecker>(new CodeSetChecker(codes));
+			services.AddSingleton<IPermissionChecker>(new CodeSetChecker(codes));
 		}
 
 		services.AddSingleton(User("dev"));
@@ -251,8 +251,16 @@ public class PlainEntity : EditableObject<PlainEntity>
 }
 
 /// <summary>把「要求」当作数据提供的来源（模拟配置表 / 权限表）。</summary>
-internal sealed class TableRequirementProvider : IPermissionRequirementProvider
+internal sealed class TableRequirementProvider : IPermissionCodeSource
 {
+	public IReadOnlyList<string> AllOperations => BusinessOperation.All;
+
+	/// <inheritdoc />
+	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
+	{
+		return [.. RequirementsFor(type, operation).Select(requirement => requirement.Permission).Where(permission => !string.IsNullOrEmpty(permission))];
+	}
+
 	public IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation)
 	{
 		// 只对更新操作提要求，且要求写在实体数据上——真实宿主这里会查配置或权限表
@@ -262,8 +270,11 @@ internal sealed class TableRequirementProvider : IPermissionRequirementProvider
 	}
 }
 
-/// <summary>按当前用户持有的权限码集合判定（支持末尾 <c>*</c> 通配）。</summary>
-internal sealed class CodeSetChecker(string[] codes) : IOperationPermissionChecker
+/// <summary>
+/// 按当前用户持有的权限码集合判定（支持末尾 <c>*</c> 通配）。
+/// </summary>
+/// <remarks>只实现两个必需成员：任一/要求整体/异步入口都由 <see cref="IPermissionChecker"/> 的默认实现覆盖。</remarks>
+internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 {
 	public bool IsGranted(string permission)
 	{
@@ -279,16 +290,6 @@ internal sealed class CodeSetChecker(string[] codes) : IOperationPermissionCheck
 	public bool IsInRole(string role)
 	{
 		return string.IsNullOrEmpty(role);
-	}
-
-	public bool IsRequirementSatisfied(string permission, IReadOnlyList<string> roles)
-	{
-		return IsGranted(permission) && (roles is not { Count: > 0 } || roles.Any(IsInRole));
-	}
-
-	public ValueTask<bool> IsGrantedAsync(string permission, CancellationToken cancellationToken = default)
-	{
-		return ValueTask.FromResult(IsGranted(permission));
 	}
 }
 

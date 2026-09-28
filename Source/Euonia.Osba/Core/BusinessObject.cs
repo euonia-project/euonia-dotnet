@@ -1029,7 +1029,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	/// <remarks>
 	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给宿主注册的
-	/// <see cref="IOperationPermissionChecker"/>；派生类可重写以实现自定义操作权限逻辑。
+	/// <see cref="IPermissionChecker"/>；派生类可重写以实现自定义操作权限逻辑。
 	/// </remarks>
 	public virtual bool CanReadObject()
 	{
@@ -1183,18 +1183,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 从当前业务上下文解析权限要求来源。
 	/// </summary>
 	/// <returns>要求来源；上下文缺失或未注册时回落到 Osba 的默认来源。</returns>
-	private IPermissionRequirementProvider ResolveRequirementProvider()
+	private IPermissionCodeSource ResolveRequirementProvider()
 	{
-		return BusinessContext?.GetService<IPermissionRequirementProvider>() ?? ObjectPermissionRequirementProvider.Instance;
+		return BusinessContext?.GetService<IPermissionCodeSource>() ?? ObjectPermissionRequirementProvider.Instance;
 	}
 
 	/// <summary>
 	/// 从当前业务上下文解析操作权限判定实现。
 	/// </summary>
 	/// <returns>判定实现；上下文缺失或未注册时返回 <c>null</c>（查询语义下视为放行）。</returns>
-	private IOperationPermissionChecker ResolvePermissionChecker()
+	private IPermissionChecker ResolvePermissionChecker()
 	{
-		return BusinessContext?.GetService<IOperationPermissionChecker>();
+		return BusinessContext?.GetService<IPermissionChecker>();
 	}
 
 	#endregion

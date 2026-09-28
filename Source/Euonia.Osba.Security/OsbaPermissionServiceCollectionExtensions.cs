@@ -29,7 +29,7 @@ public static class OsbaPermissionServiceCollectionExtensions
 	/// <param name="assemblies">要扫描权限码与数据权限模型的程序集数组。</param>
 	public static void AddObjectPermission(this IServiceCollection services, params Assembly[] assemblies)
 	{
-		AddObjectPermission(services, OsbaConventionRequirementSource.Instance, assemblies);
+		AddObjectPermission(services, ObjectPermissionRequirementProvider.Instance, assemblies);
 	}
 
 	/// <summary>
@@ -42,15 +42,15 @@ public static class OsbaPermissionServiceCollectionExtensions
 	/// 宿主想补充自己的识别约定时，请用 <c>AddPermission</c> 追加规则（两面按并集合并），
 	/// 而不是替换这里的来源——替换会让 Osba 的工厂约定整体失效。
 	/// </remarks>
-	public static void AddObjectPermission(this IServiceCollection services, IPermissionRequirementSource codeSource, params Assembly[] assemblies)
+	public static void AddObjectPermission(this IServiceCollection services, IPermissionCodeSource codeSource, params Assembly[] assemblies)
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(codeSource);
 
 		// Osba 的权限契约 → 引擎实现。TryAdd 语义：宿主已注册自己的实现时不被覆盖。
-		// 要求来源不在这里注册：AddPermission 已把「容器里的权限码来源」注册成 IPermissionRequirementProvider
-		// （见 CodeSourceRequirementProvider），它天然包含本包的约定来源与宿主追加的规则。
-		services.TryAddScoped<IOperationPermissionChecker, EngineOperationPermissionChecker>();
+		// 要求来源与操作权限判定都不在这里注册：
+		// 前者就是引擎的 IPermissionCodeSource（AddPermission 注册的那个，天然含本包的约定与宿主追加的规则），
+		// 后者就是引擎的 IPermissionChecker（AddPermission 注册为 SubjectPermissionChecker）。
 		services.TryAddSingleton<IObjectScopeAuthorizer, EngineObjectScopeAuthorizer>();
 		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();
 

@@ -558,8 +558,8 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | 成员 | 用途 |
 |---|---|
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验；也是自定义规则的扩展点（§3.4） |
-| `IPermissionRequirementSource` | 在权限码之上回答「要求」（含角色）；`OperationCodeSource` 与合并来源已实现（DESIGN §1.11） |
-| `IPermissionRequirementProvider`（Core） | 「某类型在某操作上有哪些要求」的唯一声明，宿主框架与引擎共用；`AddPermission` 会把容器里的权限码来源注册成它（只给码的来源折算为「有码、无角色」） |
+| `IPermissionCodeSource`（Core） | 「要求 + 权限码」的唯一声明，宿主框架与引擎共用；只需实现 `AllOperations`/`CodesFor`，`RequirementsFor` 有默认实现（按权限码折算为「有码、无角色」） |
+| `IPermissionChecker`（Core） | 操作权限判定的唯一声明；只需实现 `IsGranted`/`IsInRole`，组合语义与异步入口有默认实现 |
 | `IScopeKeyResolver` | 把资源实例解析为策略键（§5.8 的第 2 步） |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口，§5.8） |
 | `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |

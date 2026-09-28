@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeSubjectSetBuilder
 {
-	private readonly Dictionary<string, Dictionary<string, HashSet<string>>> _values = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, ScopeSubject> _subjects = new(StringComparer.Ordinal);
 	private readonly HashSet<string> _codes = new(StringComparer.Ordinal);
 
 	/// <summary>
@@ -120,19 +120,13 @@ public sealed class ScopeSubjectSetBuilder
 			key,
 			ScopeKeys.Prefix);
 
-		if (!_values.TryGetValue(key, out var dimensions))
+		if (!_subjects.TryGetValue(key, out var subject))
 		{
-			dimensions = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
-			_values[key] = dimensions;
+			subject = new ScopeSubject();
+			_subjects[key] = subject;
 		}
 
-		if (!dimensions.TryGetValue(dimension, out var values))
-		{
-			values = new HashSet<string>(StringComparer.Ordinal);
-			dimensions[dimension] = values;
-		}
-
-		values.Add(value);
+		subject.Add(dimension, value);
 
 		return this;
 	}
@@ -165,6 +159,6 @@ public sealed class ScopeSubjectSetBuilder
 	/// <returns>构建好的 <see cref="ScopeSubjectSet"/>。</returns>
 	public ScopeSubjectSet Build()
 	{
-		return ScopeSubjectSet.Create(_values, _codes);
+		return ScopeSubjectSet.Create(_subjects, _codes);
 	}
 }

@@ -659,13 +659,13 @@ internal sealed class ForbiddenNodeVisitor : ExpressionVisitor
 /// </summary>
 public class CountingScopeResolver : IScopeSubjectResolver
 {
-	private readonly List<ScopeSubject> _subjects = [];
+	private readonly List<(string Dimension, string Value)> _subjects = [];
 
 	public int CallCount { get; private set; }
 
 	public void Grant(string dimension, string value)
 	{
-		_subjects.Add(new ScopeSubject(dimension, value));
+		_subjects.Add((dimension, value));
 	}
 
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)

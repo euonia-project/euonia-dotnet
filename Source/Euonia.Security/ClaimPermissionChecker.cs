@@ -49,30 +49,10 @@ public class ClaimPermissionChecker : IPermissionChecker
 	}
 
 	/// <inheritdoc />
-	public bool IsGrantedAny(params string[] permissions)
-	{
-		return permissions?.Any(IsGranted) == true;
-	}
-
-	/// <inheritdoc />
 	public bool IsInRole(string role)
 	{
 		var user = _user;
 		return user != null && user.IsAuthenticated && user.IsInRole(role);
-	}
-
-	/// <inheritdoc />
-	public bool IsInAnyRole(params string[] roles)
-	{
-		return roles?.Any(IsInRole) == true;
-	}
-
-	/// <inheritdoc />
-	public bool IsRequirementSatisfied(string permission, string[] roles)
-	{
-		var rolesGranted = roles == null || roles.Length == 0 || IsInAnyRole(roles);
-		var permissionGranted = string.IsNullOrEmpty(permission) || IsGranted(permission);
-		return rolesGranted && permissionGranted;
 	}
 
 	private static bool Matches(string grantedPermission, string requiredPermission)

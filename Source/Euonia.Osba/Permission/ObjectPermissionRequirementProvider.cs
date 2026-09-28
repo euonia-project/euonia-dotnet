@@ -16,12 +16,12 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>
 /// 本实现的实例在 Osba 内以静态单例存在（<see cref="Instance"/>），用于「宿主没有注册任何
-/// <see cref="IPermissionRequirementProvider"/>」时的兜底：声明了要求但无人判定必须报错，
+/// <see cref="IPermissionCodeSource"/>」时的兜底：声明了要求但无人判定必须报错，
 /// 而不是因为没装权限实现就静默放行。
 /// </para>
 /// <para>结果按（类型，操作）缓存，反复调用不会重复反射。</para>
 /// </remarks>
-public sealed class ObjectPermissionRequirementProvider : IPermissionRequirementProvider
+public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
 {
 	/// <summary>操作 → 工厂方法特性。一个操作可以有多个同义特性（如创建与插入）。</summary>
 	private static readonly (string Operation, Type[] AttributeTypes)[] Rules =
@@ -34,7 +34,7 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionRequirement
 	];
 
 	/// <summary>
-	/// 默认实例：宿主未注册 <see cref="IPermissionRequirementProvider"/> 时由工厂边界兜底使用；
+	/// 默认实例：宿主未注册 <see cref="IPermissionCodeSource"/> 时由工厂边界兜底使用；
 	/// 引擎适配包也用它作为注册期的约定来源。
 	/// </summary>
 	public static ObjectPermissionRequirementProvider Instance { get; } = new();
@@ -42,6 +42,24 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionRequirement
 	private readonly ConcurrentDictionary<(Type Type, string Operation), PermissionAttribute[]> _cache = new();
 
 	/// <inheritdoc />
+	public IReadOnlyList<string> AllOperations => BusinessOperation.All;
+
+	/// <inheritdoc />
+	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
+	{
+		return
+		[
+			.. RequirementsFor(type, operation)
+			   .Select(requirement => requirement.Permission)
+			   .Where(permission => !string.IsNullOrEmpty(permission))
+			   .Distinct(StringComparer.Ordinal)
+		];
+	}
+
+	/// <inheritdoc />
+	/// <remarks>
+	/// 覆写默认实现：本来源能表达<b>角色</b>要求（声明里带的角色），因此不折算成「有码、无角色」。
+	/// </remarks>
 	public IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation)
 	{
 		var attributeTypes = AttributeTypesOf(operation);

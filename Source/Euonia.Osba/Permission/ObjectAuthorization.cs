@@ -9,14 +9,14 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 要求来自对象自身的声明（<see cref="IPermissionRequirementProvider"/>），判定交给宿主注册的
-/// <see cref="IOperationPermissionChecker"/>——本类只负责<b>强制</b>：拒绝抛
+/// 要求来自宿主注册的来源（<see cref="IPermissionCodeSource"/>，未注册时回落到 Osba 的默认来源），
+/// 判定交给宿主注册的 <see cref="IPermissionChecker"/>——本类只负责<b>强制</b>：拒绝抛
 /// <see cref="SecurityException"/>，判定不了抛 <see cref="InvalidOperationException"/>。
 /// </para>
 /// <para>
 /// <b>无法判定时必须失败，不能静默放行</b>：目标声明了权限要求却取不到
 /// <see cref="BusinessContext"/>（<see cref="BusinessObject.CanUpdateObject"/> 之类会因此解析不到
-/// <see cref="IOperationPermissionChecker"/>）属配置错误——多半是调用方 <c>new</c> 出对象后忘了接线。
+/// <see cref="IPermissionChecker"/>）属配置错误——多半是调用方 <c>new</c> 出对象后忘了接线。
 /// 这种情况下抛 <see cref="InvalidOperationException"/>，而不是当作「没有权限要求」放过去。
 /// </para>
 /// <para>
@@ -57,11 +57,11 @@ internal static class ObjectAuthorization
 			operation);
 
 		Check.Ensure(
-			businessObject.BusinessContext.GetService<IOperationPermissionChecker>() != null,
+			businessObject.BusinessContext.GetService<IPermissionChecker>() != null,
 			"业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。"
 			+ "请调用 AddObjectPermission（Euonia.Osba.Security 包），或注册你自己的实现。",
 			businessObject.GetType().Name,
-			nameof(IOperationPermissionChecker));
+			nameof(IPermissionChecker));
 
 		var allowed = operation switch
 		{
@@ -84,7 +84,7 @@ internal static class ObjectAuthorization
 	/// </summary>
 	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation)
 	{
-		var provider = businessObject.BusinessContext?.GetService<IPermissionRequirementProvider>()
+		var provider = businessObject.BusinessContext?.GetService<IPermissionCodeSource>()
 		               ?? ObjectPermissionRequirementProvider.Instance;
 
 		return provider.RequirementsFor(businessObject.GetType(), operation);

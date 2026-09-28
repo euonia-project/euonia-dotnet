@@ -172,7 +172,7 @@ public class PermissionRuleConfigurationTests
 		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);                                                  // 只给码
 		services.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly);       // 能回答要求
 
-		var source = Assert.IsAssignableFrom<IPermissionRequirementSource>(
+		var source = Assert.IsAssignableFrom<IPermissionCodeSource>(
 			services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>());
 
 		// 只给码的来源（ConventionCodeSource 只实现 IPermissionCodeSource）：
@@ -193,7 +193,7 @@ public class PermissionRuleConfigurationTests
 		// 只有一个来源（最常见的情形）时不必经过合并，同样要能回答要求
 		var provider = Build(s => s.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly));
 
-		Assert.IsAssignableFrom<IPermissionRequirementSource>(provider.GetRequiredService<IPermissionCodeSource>());
+		Assert.IsAssignableFrom<IPermissionCodeSource>(provider.GetRequiredService<IPermissionCodeSource>());
 	}
 
 	#endregion
