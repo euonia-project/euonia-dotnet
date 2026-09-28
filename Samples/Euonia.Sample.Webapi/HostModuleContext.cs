@@ -19,6 +19,7 @@ public class HostModuleContext : ModuleContextBase
 	{
 		context.Services.AddControllers();
 		context.Services.AddHealthChecks();
+		context.Services.AddJwtAuthentication("JwtAuthenticationOptions");
 		context.Services.AddSwaggerGen(c =>
 		{
 			c.SwaggerDoc("v1", new OpenApiInfo { Title = "Euonia Sample", Version = "v1" });
