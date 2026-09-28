@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Microsoft.Extensions.Configuration;
+using Nerosoft.Euonia.Osba;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
@@ -19,7 +20,7 @@ public class Startup
 		           {
 			           services.AddModularityApplication<BusinessTestModule>();
 			           services.AddBusinessObject(typeof(Startup).Assembly);
-			           services.AddObjectPermission(typeof(Startup).Assembly);
+			           services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Startup).Assembly);
 			           // Register service here.
 		           });
 	}

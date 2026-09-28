@@ -301,22 +301,22 @@ internal sealed class VisibleScopeAuthorizer : IObjectScopeAuthorizer
 		return resourceType == typeof(GroundedEntity);
 	}
 
-	public bool AllowsOperation(BusinessContext context, object target, string operation)
+	public bool Allows(object target, string operation, IServiceProvider scope)
 	{
 		return true;
 	}
 
-	public string ExplainOperation(BusinessContext context, object target, string operation)
+	public string Explain(object target, string operation, IServiceProvider scope)
 	{
 		return "可见";
 	}
 
-	public bool AllowsRow(BusinessContext context, object target, string scopeKey = null)
+	public bool AllowsRow(object target, string scopeKey, IServiceProvider scope)
 	{
 		return true;
 	}
 
-	public string ExplainRow(BusinessContext context, object target, string scopeKey = null)
+	public string ExplainRow(object target, string scopeKey, IServiceProvider scope)
 	{
 		return "可见";
 	}

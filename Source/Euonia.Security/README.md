@@ -229,8 +229,8 @@ services.AddPermission(configuration.GetSection("Permission"), typeof(Order).Ass
 > 特性类型与自定义谓词天然属于代码；请让配置文件与代码走**同一套评审与发布流程**，
 > 不要把它当成运维侧的可调开关。配置只在注册期读一次，**不订阅变更**——改配置不会改变门禁，需重启。
 
-> **Osba 宿主**：用 `Euonia.Osba.Security` 包的 `AddObjectPermission` 接入本引擎
-> （`Euonia.Osba` 自己不引用引擎——它只定义权限契约，见 [DESIGN §1.11](DESIGN.md)）。
+> **Osba 宿主**：用 `AddPermission(ObjectPermissionRequirementProvider.Instance, assemblies)` 接入本引擎
+> （`Euonia.Osba` 自己不引用引擎，两者之间也没有适配包——契约都在 Core，各实现一半，见 [DESIGN §1.11](DESIGN.md)）。
 > 接入后，运行期判定与注册期校验用**同一个来源**：你在这里补充的规则，工厂边界同样生效
 > （与 Osba 自己的工厂约定取并集）。
 
@@ -560,6 +560,8 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验；也是自定义规则的扩展点（§3.4） |
 | `IPermissionCodeSource`（Core） | 「要求 + 权限码」的唯一声明，宿主框架与引擎共用；只需实现 `AllOperations`/`CodesFor`，`RequirementsFor` 有默认实现（按权限码折算为「有码、无角色」） |
 | `IPermissionChecker`（Core） | 操作权限判定的唯一声明；只需实现 `IsGranted`/`IsInRole`，组合语义与异步入口有默认实现 |
+| `IObjectScopeAuthorizer`（Core） | 行级数据权限的落地契约（宿主框架在工厂边界调用）；引擎提供基于 `IScopeGuard` 的实现，可按需替换 |
+| `IObjectOperationResolver`（Core） | 「资源实例当前代表哪个操作」；由宿主框架实现（引擎的 `IScopeKeyResolver` 实现会消费它） |
 | `IScopeKeyResolver` | 把资源实例解析为策略键（§5.8 的第 2 步） |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口，§5.8） |
 | `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |

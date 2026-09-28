@@ -257,6 +257,14 @@ public static class ServiceCollectionExtensions
 		services.AddSingleton(setup.CodeSource);
 
 
+		// 宿主框架与鉴权实现之间的两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）：
+		// 行级判定、策略键解析。契约在 Core，因此这里不需要任何「同时引用两边」的适配包。
+		services.TryAddSingleton<IObjectScopeAuthorizer>(new ObjectScopeAuthorizer(registry, setup.CodeSource));
+		services.TryAddSingleton<IScopeKeyResolver>(provider => new ObjectScopeKeyResolver(
+			provider.GetRequiredService<ScopeModelRegistry>(),
+			provider.GetRequiredService<IPermissionCodeSource>(),
+			provider.GetService<IObjectOperationResolver>()));
+
 		services.RemoveAll<PermissionSetup>();
 		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
 	}

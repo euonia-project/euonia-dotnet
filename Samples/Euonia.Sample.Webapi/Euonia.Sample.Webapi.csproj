@@ -19,8 +19,6 @@
         <ProjectReference Include="..\..\Source\Euonia.Bus.InMemory\Euonia.Bus.InMemory.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus.RabbitMq\Euonia.Bus.RabbitMq.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
-        <!-- Osba 不认识策略引擎（见 Euonia.Osba.csproj）；接引擎需要显式引用适配包与引擎本身 -->
-        <ProjectReference Include="..\..\Source\Euonia.Osba.Security\Euonia.Osba.Security.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Security\Euonia.Security.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus\Euonia.Bus.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Domain\Euonia.Domain.csproj" />

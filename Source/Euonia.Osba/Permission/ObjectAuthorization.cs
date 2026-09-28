@@ -59,7 +59,7 @@ internal static class ObjectAuthorization
 		Check.Ensure(
 			businessObject.BusinessContext.GetService<IPermissionChecker>() != null,
 			"业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。"
-			+ "请调用 AddObjectPermission（Euonia.Osba.Security 包），或注册你自己的实现。",
+			+ "请调用 AddPermission 接入鉴权实现，或注册你自己的 IPermissionChecker。",
 			businessObject.GetType().Name,
 			nameof(IPermissionChecker));
 

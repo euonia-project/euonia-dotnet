@@ -67,7 +67,7 @@ BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
 `AddBusinessObject` 会注册：`IActuator`、`BusinessContext` 与 `BusinessContextAccessor`、
 `IObjectFactory`，并把扫描到的每个业务对象类型注册为 Transient。
 全部使用 `TryAdd*`——已注册的服务不会被覆盖。**它不注册任何权限服务**：
-是否启用权限由应用决定，需要时再调 `AddObjectPermission`（来自 `Euonia.Osba.Security` 适配包，见下文）。
+是否启用权限由应用决定，需要时再用引擎的 `AddPermission` 接上（规则来源用 Osba 的工厂约定，见下文）。
 
 > **两个容易踩的点**
 > 1. `AddBusinessObject(...)` 的返回类型是 **`void`**，不能链式调用。
@@ -731,7 +731,7 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 ```
 
 **模型与策略写在同一个类型里**，所以结构上不可能出现「有模型没策略」。
-模型由 `AddObjectPermission`（即 `AddPermission`）的扫描发现，并在**注册期**完成校验（未映射维度、策略键歧义等都会启动即失败）。
+模型由 `AddPermission` 的扫描发现，并在**注册期**完成校验（未映射维度、策略键歧义等都会启动即失败）。
 
 > **未声明模型的类型不受任何数据权限约束**——这是当前边界。所以查询用的读模型也要单独声明，
 > 否则 `guard.Apply` 会原样返回。
@@ -802,7 +802,7 @@ catch (ValidationException ex)          // 数据不合法，与权限无关
 ```csharp
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Repo).Assembly);
-services.AddObjectPermission(typeof(Repo).Assembly);   // 显式启用权限
+services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Repo).Assembly);   // 显式接入引擎
 services.AddSingleton<RepoStore>();
 services.AddSingleton<RepoAcl>();
 services.AddSingleton<IScopeSubjectResolver, DemoSubjectResolver>();

@@ -256,10 +256,12 @@ protected override void AddRules()
 #### Permission System
 
 The policy engine ships as its own library, `Euonia.Security` (depends on `Euonia.Core` only).
-`Euonia.Osba` does **not** reference it: it defines the permission contracts (requirement provider,
-operation checker, row-scope authorizer) and enforces them at the factory boundary. Wiring the engine
-to those contracts is the job of the adapter package `Euonia.Osba.Security` — hosts that prefer their
-own implementation can register the contracts directly and skip the engine entirely. The two are
+`Euonia.Osba` does **not** reference it: Osba implements its own half of the Core-level permission
+contracts (object state to operation, requirement source, enforcement at the factory boundary) while
+the engine implements the other half (policy compilation, row scope, scope-key resolution).
+There is **no adapter package** between them: a host wires the engine with two lines —
+`AddBusinessObject(asm)` plus `AddPermission(ObjectPermissionRequirementProvider.Instance, asm)` —
+or registers its own implementations and skips the engine entirely. The two are
 complementary. **Grants are always resolved live from
 application data — never baked into tokens.**
 

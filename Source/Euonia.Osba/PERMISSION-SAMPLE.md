@@ -25,7 +25,7 @@
 ## 0. 场景通用装配
 
 每个场景都需要这段（其中 `AuthzStore` 是「授权数据」的内存模拟，见各场景）。
-`AddObjectPermission` 来自 **`Euonia.Osba.Security`** 适配包——`Euonia.Osba` 本身不引用策略引擎：
+`AddPermission` 是策略引擎自己的入口，规则来源直接用 Osba 的工厂约定——**不需要任何适配包**：
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
@@ -34,7 +34,7 @@ using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务对象（不启用权限）
-services.AddObjectPermission(typeof(Order).Assembly);           // 显式启用权限：Osba 的码来源 + 策略键推断
+services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Order).Assembly);           // 显式启用权限：Osba 的码来源 + 策略键推断
 services.AddSingleton<AuthzStore>();                            // 授权数据（模拟数据库表，见各场景）
 services.AddScoped<IScopeSubjectResolver, /* 各场景的解析器 */>();  // 授权值来源
 services.AddSingleton(DemoUser.Dev);                            // 当前用户（UserPrincipal）

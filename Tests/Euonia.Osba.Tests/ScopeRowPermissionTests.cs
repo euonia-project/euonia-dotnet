@@ -255,7 +255,7 @@ public class ScopeRowPermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
 
@@ -269,7 +269,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
 		services.AddSingleton<IScopeSubjectResolver>(new AclResolver());
 		var identity = new ClaimsIdentity(
 			[new Claim(ClaimTypes.Name, "tester")],
@@ -322,7 +322,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddObjectPermission(typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
 		services.AddSingleton(resolver);
 		services.AddSingleton(User("dev"));
 
@@ -510,7 +510,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
 
 		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
 
@@ -526,7 +526,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
 		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
 
 		var identity = new ClaimsIdentity(
@@ -550,7 +550,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddObjectPermission(typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
 		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();

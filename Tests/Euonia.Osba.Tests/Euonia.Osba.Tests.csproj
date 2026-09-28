@@ -4,11 +4,10 @@
 
     <!--
       Osba 本身不引用引擎（见 Euonia.Osba.csproj 的说明）；本测试项目要跑「接引擎」的行为，
-      因此自己引用引擎与适配包。想验证「不接引擎也能用权限」的用例在 Euonia.Osba.Standalone.Tests。
+      因此自己引用引擎。想验证「不接引擎也能用权限」的用例在 Euonia.Osba.Standalone.Tests。
     -->
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
-        <ProjectReference Include="..\..\Source\Euonia.Osba.Security\Euonia.Osba.Security.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Security\Euonia.Security.csproj" />
     </ItemGroup>
 

@@ -82,15 +82,18 @@
 - **只有行级判定留在 Osba**（`IObjectScopeAuthorizer`）：它要读宿主的作用域（`BusinessContext`）与对象
   状态，引擎无法实现；工厂边界保留**强制**（`SecurityException` / 判定不了抛
   `InvalidOperationException`）；
-- **桥接放到新包 `Euonia.Osba.Security`**：提供三个契约的引擎实现与 `AddObjectPermission`。
-  `Euonia.Osba` 与 `Euonia.Security` 之间**不再有边**。
+- **跨边界的契约全部下沉到 Core**（`IPermissionCodeSource`、`IPermissionChecker`、`IObjectScopeAuthorizer`、
+  `IObjectOperationResolver`），**由两边各自实现自己懂的那一半**：Osba 提供来源的默认实现与
+  「对象状态 → 操作」，引擎提供策略编译、行级判定与按操作解析策略键。
+  `Euonia.Osba` 与 `Euonia.Security` 之间没有边，**也不再需要任何适配包**——这正是本条判据的由来
+  （跨边界契约放在中间某一侧，就必然长出一个翻译者）。
 
 **收益**：宿主可以接引擎、也可以只注册自己的三个实现（`Euonia.Osba.Standalone.Tests` 是这种用法的
 可运行证明）；依赖方向变成 `适配包 → (Osba, Security)`，两边谁都不认识谁。
 
-**代价（需要使用者动作）**：用引擎的宿主需补一个包引用（`Euonia.Osba.Security`）并重新编译；
-`[Permission]`、`BusinessOperation`、`AddObjectPermission` 的命名空间不变，因此**源码兼容**，
-但二进制不兼容（类型换了程序集）。
+**代价（需要使用者动作）**：宿主把 `AddObjectPermission(asm)` 换成
+`AddPermission(ObjectPermissionRequirementProvider.Instance, asm)`（两行，各自属于一个库）；
+`[Permission]`、`BusinessOperation` 的命名空间不变，因此**源码兼容**，但二进制不兼容（类型换了程序集）。
 
 **判据（评审时用）**：适配代码可以存在，但要盯住两类信号——
 ① 适配层里出现「两端形状相同、只为翻译」的代码 ⇒ 抽象放错了层，把这个概念下沉到双方都依赖的最底层
@@ -172,6 +175,6 @@
 |---|---|
 | §1.1 无法判定即失败 | `IScopeSubjectResolver` 缺席时 `IScopeGuard` 拒绝；`PermissionSetup` + `ValidatePermissionSetup()` |
 | §1.2 越权一律 `SecurityException` | 引擎侧的 `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
-| §1.3 权限契约 | 来源与判定就是引擎自己的两个契约（`IPermissionCodeSource`、`IPermissionChecker`，均在 Core）；行级判定 `IObjectScopeAuthorizer` ↔ `IScopeGuard`，由 `Euonia.Osba.Security` 适配。三者都可替换为宿主自己的实现 |
+| §1.3 权限契约 | 四个跨边界契约都在 Core：`IPermissionCodeSource` / `IPermissionChecker`（引擎与 Osba 各自实现一半）、`IObjectScopeAuthorizer` ↔ `IScopeGuard`（引擎实现）、`IObjectOperationResolver` ↔ `ScopeOperationMap`（Osba 实现）。任一都可替换为宿主自己的实现 |
 | §2.1 后置检查 | `AllowsOperation` 的调用时机由本库决定 |
 | §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete`（本库公开的类型，适配包也用它） |

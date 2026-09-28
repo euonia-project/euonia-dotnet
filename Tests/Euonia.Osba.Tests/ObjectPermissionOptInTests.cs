@@ -53,12 +53,12 @@ public class ObjectPermissionOptInTests
 	}
 
 	[Fact]
-	public void AddObjectPermission_Should_Register_The_Engine()
+	public void AddPermission_Should_Register_The_Engine()
 	{
 		var services = NewServicesWithUser();
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddObjectPermission(typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
 
@@ -69,11 +69,11 @@ public class ObjectPermissionOptInTests
 	}
 
 	[Fact]
-	public void AddObjectPermission_Before_AddBusinessObject_Should_Work_Too()
+	public void AddPermission_Before_AddBusinessObject_Should_Work_Too()
 	{
 		var services = NewServicesWithUser();
 
-		services.AddObjectPermission(typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
@@ -83,11 +83,11 @@ public class ObjectPermissionOptInTests
 	}
 
 	[Fact]
-	public void AddObjectPermission_Should_Not_Override_Developer_KeyResolver()
+	public void AddPermission_Should_Not_Override_Developer_KeyResolver()
 	{
 		var services = NewServices();
 
-		services.AddObjectPermission(typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 		services.AddSingleton<IScopeKeyResolver, FixedKeyResolver>();
 
 		var provider = services.BuildServiceProvider();
@@ -101,7 +101,7 @@ public class ObjectPermissionOptInTests
 		var services = NewServices();
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddObjectPermission(typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 		var provider = services.BuildServiceProvider();
 
 		var ex = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());

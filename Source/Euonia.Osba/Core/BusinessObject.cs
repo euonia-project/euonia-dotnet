@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Security;
 using Nerosoft.Euonia.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
@@ -1106,9 +1107,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	protected bool CanAccessRow(string scopeKey = null)
 	{
 		var context = BusinessContext;
-		var authorizer = context?.GetService<IObjectScopeAuthorizer>();
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null || authorizer.AllowsRow(context, this, scopeKey);
+		return authorizer == null || authorizer.AllowsRow(this, scopeKey, context.CurrentServiceProvider);
 	}
 
 	/// <summary>
@@ -1119,9 +1120,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	protected string ExplainRowAccess(string scopeKey = null)
 	{
 		var context = BusinessContext;
-		var authorizer = context?.GetService<IObjectScopeAuthorizer>();
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null ? "未启用数据权限" : authorizer.ExplainRow(context, this, scopeKey);
+		return authorizer == null ? "未启用数据权限" : authorizer.ExplainRow(this, scopeKey, context.CurrentServiceProvider);
 	}
 
 	/// <summary>

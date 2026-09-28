@@ -67,7 +67,7 @@ internal static class ScopeAuthorization
 		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」——
 		// 该查询必须能在没有请求作用域时回答（见 IObjectScopeAuthorizer.IsConstrained）。
 		var context = businessObject.BusinessContext;
-		var authorizer = context?.GetService<IObjectScopeAuthorizer>()
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>()
 		                 ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
 
 		if (authorizer == null || !authorizer.IsConstrained(target.GetType()))
@@ -84,11 +84,12 @@ internal static class ScopeAuthorization
 			target.GetType().Name,
 			operation);
 
-		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）
-		if (!authorizer.AllowsOperation(context, target, operation))
+		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）；
+		// 作用域用对象自己的那一个，实现不得依赖环境上下文
+		if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))
 		{
 			throw new SecurityException(
-				$"Data scope denied. {operation} ({stage}): {target.GetType().Name}. {authorizer.ExplainOperation(context, target, operation)}");
+				$"Data scope denied. {operation} ({stage}): {target.GetType().Name}. {authorizer.Explain(target, operation, context.CurrentServiceProvider)}");
 		}
 	}
 }

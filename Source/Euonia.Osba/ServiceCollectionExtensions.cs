@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -16,12 +17,17 @@ public static class ServiceCollectionExtensions
 	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
 	/// <remarks>
 	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
-	/// 需要权限时，接引擎用 <c>Euonia.Osba.Security</c> 的 <c>AddObjectPermission</c>，
-	/// 或注册自己的 <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
+	/// 需要权限时，接引擎用 <c>AddPermission(ObjectPermissionRequirementProvider.Instance, assemblies)</c>
+	/// （规则来源就用 Osba 的工厂约定），或注册自己的
+	/// <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
 		services.TryAddScoped<IActuator, Actuator>();
+
+		// 「对象状态 → 业务操作」是对象模型自己的知识，与是否启用鉴权无关：
+		// 这里注册一次，任何鉴权实现（引擎或宿主自建）都能直接消费，不必再写适配
+		services.TryAddSingleton<IObjectOperationResolver, ObjectOperationResolver>();
 		services.TryAddScoped<BusinessContextAccessor>();
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
