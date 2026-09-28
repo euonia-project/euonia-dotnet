@@ -4,22 +4,10 @@ namespace Nerosoft.Euonia.Security;
 /// 用户当前被授予的授权数据：权限码集合 + 按（权限码，维度）分组的行级授予值。
 /// </summary>
 /// <remarks>
-/// <para>
-/// 由 <see cref="IScopeSubjectResolver"/> 从应用数据实时解析，是操作权限与数据权限共同的输入。
-/// 层级关系（例如部门树）应在解析期展开为扁平集合，使判定与下推始终只是集合成员判断
-/// （数据库侧即 <c>IN (...)</c>）。
-/// </para>
-/// <para>
-/// <b>查找规则</b>：<see cref="ValuesOf"/> / <see cref="Contains"/> 先看该权限码下的授予，
-/// 没有再回落到 <see cref="ScopeKeys.Default"/> 上的授予——是<b>覆盖</b>而不是并集。
-/// 若做并集，默认授予会把某个具体码下被收窄的行集合重新撑开，行级差异将失效。
-/// </para>
-/// <para>
-/// <b>通配不参与维度查找</b>：权限码的 <c>*</c> 前缀通配只用于「是否持有该权限码」的布尔判定
-/// （见 <see cref="HoldsPermission"/>），绝不用于维度取值的回落——否则给整个命名空间授权会
-/// 顺带泄漏行级授予。
-/// </para>
-/// <para>维度名比较<b>大小写不敏感</b>；权限码与维度值比较<b>大小写敏感</b>。</para>
+/// 由 <see cref="IScopeSubjectResolver"/> 从应用数据实时解析，是操作权限与数据权限共同的输入；层级关系（例如部门树）应在解析期展开为扁平集合，使判定与下推始终只是集合成员判断。
+/// <b>查找规则</b>：<see cref="ValuesOf"/> / <see cref="Contains"/> 先看该权限码下的授予，没有再回落到 <see cref="ScopeKeys.Default"/> 上的授予——是<b>覆盖</b>而不是并集（见 DESIGN §1.6）。
+/// <b>通配不参与维度查找</b>：权限码的 <c>*</c> 前缀通配只用于「是否持有该权限码」的布尔判定（见 <see cref="HoldsPermission"/>），绝不用于维度取值的回落。
+/// 维度名比较<b>大小写不敏感</b>，维度值比较<b>大小写敏感</b>；权限码按码查找授予时大小写敏感，而在 <see cref="HoldsPermission"/> 的持有判定中<b>不敏感</b>（其前缀通配同理）。
 /// </remarks>
 public sealed class ScopeSubjectSet
 {

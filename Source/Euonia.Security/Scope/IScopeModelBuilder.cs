@@ -12,12 +12,14 @@ namespace Nerosoft.Euonia.Security;
 public interface IScopeModelBuilder
 {
 	/// <summary>
-	/// 获取已声明的维度映射：维度名 → 取值表达式。
+	/// 已声明的维度映射：维度名 → 取值表达式，表达式以资源类型为参数并返回字符串（通常是实体的列值）。
+	/// 名称大小写不敏感，一个模型至少要映射一个维度。
 	/// </summary>
 	IReadOnlyDictionary<string, LambdaExpression> Dimensions { get; }
 
 	/// <summary>
-	/// 获取已声明的分类属性映射：分类名 → 取值表达式。
+	/// 已声明的分类属性映射：分类名 → 取值表达式，表达式以资源类型为参数（可返回任意类型）。
+	/// 分类不参与授权，只供 <see cref="ScopePolicy{T}.Where"/> 之类的谓词引用。
 	/// </summary>
 	IReadOnlyDictionary<string, LambdaExpression> Classifications { get; }
 }

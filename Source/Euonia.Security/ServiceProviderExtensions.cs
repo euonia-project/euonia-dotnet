@@ -9,11 +9,13 @@ public static class ServiceProviderExtensions
 {
 	/// <summary>
 	/// 校验权限体系的依赖是否齐备；缺失即抛出，使配置错误在启动时暴露。
+	/// 未经 <c>AddPermission</c> 启用权限体系时不做任何检查。
 	/// </summary>
 	/// <param name="provider">已构建的服务提供程序。</param>
 	/// <returns>原 <paramref name="provider"/>，便于链式调用。</returns>
 	/// <exception cref="InvalidOperationException">
-	/// 声明了权限模型或使用了 <see cref="PermissionAttribute"/>，却未注册 <see cref="IScopeSubjectResolver"/> 时抛出。
+	/// 声明了权限模型或使用了 <see cref="PermissionAttribute"/>，却未注册 <see cref="IScopeSubjectResolver"/>
+	/// 或 <see cref="UserPrincipal"/> 时抛出。
 	/// </exception>
 	/// <remarks>
 	/// <para>

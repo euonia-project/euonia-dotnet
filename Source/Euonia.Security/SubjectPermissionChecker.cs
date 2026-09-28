@@ -5,18 +5,14 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 权限码不放在令牌里，有两个理由：一是权限码数量可能很大，放进令牌会撑爆它；
-/// 二是授权变更（尤其是<b>取消授权</b>）必须立即生效，而令牌在过期前一直有效——
-/// 把权限固化在令牌里意味着撤销后旧令牌仍可通行，这是严重的安全缺口。
+/// 权限码<b>不放在令牌里</b>（理由见 DESIGN §1.2）：它由 <see cref="IScopeSubjectResolver"/> 实时解析、随 <see cref="IScopeGuard"/> 按请求缓存。
 /// </para>
 /// <para>
-/// 权限码由 <see cref="IScopeSubjectResolver"/> 解析、随 <see cref="IScopeGuard"/> 按请求缓存。
-/// 因此<b>撤销的生效时机是「下一次解析」</b>（通常是下一个请求）；同一作用域内需要立即生效时
-/// 显式调用 <see cref="IScopeGuard.Refresh"/>。全程不需要重新签发令牌。
+/// 因此<b>撤销的生效时机是「下一次解析」</b>（通常是下一个请求）；同一作用域内需要立即生效时显式调用
+/// <see cref="IScopeGuard.Refresh"/>，全程不需要重新签发令牌（见 README §5.5）。
 /// </para>
 /// <para>
-/// 角色仍走 <see cref="UserPrincipal.IsInRole"/>（来自声明）：角色数量少而稳定，不构成令牌膨胀问题。
-/// <b>细粒度授权请一律使用权限码</b>，不要用角色承载。
+/// 角色仍走 <see cref="UserPrincipal.IsInRole"/>（来自声明）：角色数量少而稳定，不构成令牌膨胀问题；<b>细粒度授权请一律使用权限码</b>。
 /// </para>
 /// </remarks>
 public class SubjectPermissionChecker : IPermissionChecker

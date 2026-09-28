@@ -16,14 +16,23 @@ public sealed class ScopeSubjectSetBuilder
 	/// <summary>
 	/// 授予一个权限码（类型级闸门）。
 	/// </summary>
-	/// <param name="code">权限码，不得使用框架保留前缀 <c>@</c>。</param>
+	/// <param name="code">权限码，不得使用框架保留前缀 <c>@</c>；为 <see langword="null"/> 或空白时忽略。</param>
 	/// <returns>当前构建器，便于链式调用。</returns>
+	/// <exception cref="InvalidOperationException">当权限码落在框架保留命名空间内时抛出。</exception>
 	public ScopeSubjectSetBuilder AddCode(string code)
 	{
-		if (!string.IsNullOrWhiteSpace(code))
+		if (string.IsNullOrWhiteSpace(code))
 		{
-			_codes.Add(code);
+			return this;
 		}
+
+		Check.Ensure(
+			!ScopeKeys.IsReserved(code),
+			"权限码 '{0}' 使用了框架保留前缀 '{1}'，请改用不含该前缀的码。",
+			code,
+			ScopeKeys.Prefix);
+
+		_codes.Add(code);
 
 		return this;
 	}
@@ -76,9 +85,8 @@ public sealed class ScopeSubjectSetBuilder
 	/// <param name="userId">当前用户标识。</param>
 	/// <returns>当前构建器，便于链式调用。</returns>
 	/// <remarks>
-	/// <see cref="ScopePolicy{T}.Self"/> 等价于 <c>Grant(owner)</c>，因此解析器<b>必须</b>调用本方法
-	/// （或自行授予 owner 维度）才能让「本人可访问」成立。这是有意为之：所有者关系因此可撤销——
-	/// 不授予即不可访问本人数据。
+	/// <see cref="ScopePolicy{T}.Self"/> 等价于 <c>Grant(owner)</c>，解析器<b>必须</b>调用本方法
+	/// （或自行授予 owner 维度）才能让「本人可访问」成立——这是有意的：所有者关系因此可撤销。
 	/// </remarks>
 	public ScopeSubjectSetBuilder AddSelf(string userId)
 	{

@@ -140,7 +140,8 @@ internal sealed class AnyScopePolicy<T> : ScopePolicy<T>
 		{
 			var node = policy.Reduce(context);
 
-			// 只带拒绝条件的分支不参与「或」，否则 Allow 会变成恒真（静默提权）
+			// 只带拒绝条件的分支不参与「或」，也不计入允许分支数：
+			// 「没有允许条件」不等于「允许条件为真」，混入会让本节点被当成有允许分支（静默提权）
 			if (node.HasAllow)
 			{
 				allows.Add(node.Allow);

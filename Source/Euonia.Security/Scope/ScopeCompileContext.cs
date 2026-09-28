@@ -41,7 +41,7 @@ internal sealed class ScopeCompileContext<T>
 	/// </summary>
 	/// <remarks>
 	/// <c>Grant(dimension)</c> 取的是「用户<b>在该码下</b>于该维度被授予的值」。
-	/// 该值只影响取值来源，不会出现在编译出的表达式里。
+	/// 该码只决定取值来源，其本身不会出现在编译出的表达式里。
 	/// </remarks>
 	internal string ScopeKey { get; }
 

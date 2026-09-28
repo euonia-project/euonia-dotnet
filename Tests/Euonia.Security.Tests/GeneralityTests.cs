@@ -325,6 +325,52 @@ public class GeneralityTests
 
 	#endregion
 
+	#region 派生类型（代理）
+
+	/// <summary>
+	/// 实体框架代理的替身：注册的是声明类型 <see cref="ProxyableAsset"/>，实例却是派生类型。
+	/// </summary>
+	private sealed class ProxyableAssetProxy : ProxyableAsset
+	{
+	}
+
+	[Fact]
+	public void Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance()
+	{
+		var provider = Build(
+			s => s.AddSingleton(User(authenticated: true)),
+			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
+				grants: [(ScopeDimensions.Dept, "team-a")])));
+
+		var guard = provider.GetRequiredService<IScopeGuard>();
+
+		var visible = new ProxyableAssetProxy { DeptId = "team-a" };
+		var invisible = new ProxyableAssetProxy { DeptId = "team-b" };
+
+		Assert.True(guard.Allows(visible));
+		Assert.True(guard.AllowsObject(visible));
+
+		// 代理类型本身未注册，但基类注册了：必须按声明类型判定，不得静默放行。
+		Assert.False(guard.Allows(invisible));
+		Assert.False(guard.AllowsObject(invisible));
+	}
+
+	#endregion
+
+	#region 授权数据校验
+
+	[Fact]
+	public void AddCode_Should_Reject_Reserved_Namespace()
+	{
+		var builder = ScopeSubjectSet.CreateBuilder();
+
+		Assert.Throws<InvalidOperationException>(() => builder.AddCode("@read"));
+		Assert.Throws<InvalidOperationException>(() => builder.AddCode(ScopeKeys.Default));
+	}
+
+	#endregion
+
 	#region 多模块合并
 
 	[Fact]

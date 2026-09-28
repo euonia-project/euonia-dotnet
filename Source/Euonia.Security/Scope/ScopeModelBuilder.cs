@@ -27,7 +27,8 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	/// <param name="dimension">维度名，例如 <see cref="ScopeDimensions.Dept"/>。</param>
 	/// <param name="selector">取值表达式，例如 <c>x =&gt; x.DeptId</c>。</param>
 	/// <returns>当前构建器，便于链式调用。</returns>
-	/// <exception cref="ArgumentNullException">当参数为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="dimension"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="selector"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当同一维度被重复声明时抛出。</exception>
 	public ScopeModelBuilder<T> Map(string dimension, Expression<Func<T, string>> selector)
 	{
@@ -45,7 +46,8 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	/// <param name="name">分类名。</param>
 	/// <param name="selector">取值表达式，例如 <c>x =&gt; x.Level</c>。</param>
 	/// <returns>当前构建器，便于链式调用。</returns>
-	/// <exception cref="ArgumentNullException">当参数为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="selector"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当同一分类被重复声明时抛出。</exception>
 	/// <remarks>
 	/// 分类属性<b>不参与授权</b>——它不表示「用户被授予了什么」，而是资源的固有属性，

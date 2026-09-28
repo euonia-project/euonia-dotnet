@@ -41,13 +41,14 @@ public sealed class CompiledScopePolicy<T>
 	public string ScopeKey { get; }
 
 	/// <summary>
-	/// 获取允许条件。
+	/// 允许条件；策略只含拒绝条件时它是恒真或恒假的常量，因此判断策略有没有提供允许条件必须看 <see cref="HasAllow"/>，
+	/// 不能看表达式形状。
 	/// </summary>
 	/// <remarks>可直接交给 <c>IQueryable.Where</c> 下推到数据库。</remarks>
 	public Expression<Func<T, bool>> Allow { get; }
 
 	/// <summary>
-	/// 获取拒绝条件。
+	/// 拒绝条件；策略没有拒绝条件时它是恒假常量（归约会剔除恒假的拒绝项，不会留下 <c>x || false</c> 这类节点）。
 	/// </summary>
 	/// <remarks>
 	/// 下推时应使用其否定形式：<c>source.Where(allow).Where(deny.Not())</c>。
@@ -58,8 +59,9 @@ public sealed class CompiledScopePolicy<T>
 	/// 获取策略是否提供了允许条件。
 	/// </summary>
 	/// <remarks>
-	/// 为 <see langword="false"/> 表示策略只含拒绝条件（拒绝清单语义）。本属性主要用于
-	/// 启动期校验：没有任何允许条件的策略应当被显式确认，否则容易误配成「拒绝一切」。
+	/// 为 <see langword="false"/> 表示策略不提供任何允许条件，此时 <see cref="Allow"/> 取决于策略形状：
+	/// <c>Any</c> 之下全是拒绝条件会归约为恒假（拒绝一切），<c>All</c> 之下则归约为恒真
+	/// （除拒绝清单外全部放行）。两者都不是常见写法，辨识与取舍见 README §5.3。
 	/// </remarks>
 	public bool HasAllow { get; }
 

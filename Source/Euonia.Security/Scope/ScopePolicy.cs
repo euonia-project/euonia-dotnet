@@ -7,19 +7,10 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <typeparam name="T">资源类型。</typeparam>
 /// <remarks>
-/// <para>
-/// 策略是一个闭合的组合子集合，通过 <see cref="Self"/>、<see cref="Grant"/>、<see cref="All"/>、
-/// <see cref="Any"/>、<see cref="Deny"/>、<see cref="Where"/> 构造，不支持自定义派生。
-/// </para>
-/// <para>
-/// <b>判定语义</b>：策略编译为 <c>(Allow, Deny)</c> 一对表达式，
-/// 最终判定为 <c>Allow &amp;&amp; !Deny</c>。
-/// </para>
-/// <para>
-/// <b>Deny 一律上浮</b>：策略树中任意位置出现的 <see cref="Deny"/> 都对整个策略生效，
-/// 相当于防火墙式的「拒绝优先」。因此在 <see cref="Any"/> 的分支里写 <see cref="Deny"/>，
-/// 也会作用于整体，而不是只影响该分支。这是有意的保守选择。
-/// </para>
+/// 策略是一个闭合的组合子集合，通过 <see cref="Self"/>、<see cref="Grant"/>、<see cref="All"/>、<see cref="Any"/>、<see cref="Deny"/>、
+/// <see cref="Where"/> 构造，不支持自定义派生。<b>判定语义</b>：策略编译为 <c>(Allow, Deny)</c> 一对表达式，最终判定为 <c>Allow &amp;&amp; !Deny</c>（见 README §5.3）。
+/// <b>Deny 一律上浮</b>：策略树中任意位置出现的 <see cref="Deny"/> 都对整个策略生效，相当于防火墙式的「拒绝优先」，
+/// 因此在 <see cref="Any"/> 的分支里写 <see cref="Deny"/> 也会作用于整体，而不是只影响该分支（见 DESIGN §1.4）。
 /// </remarks>
 public abstract class ScopePolicy<T>
 	where T : class
@@ -49,7 +40,7 @@ public abstract class ScopePolicy<T>
 	/// </summary>
 	/// <param name="dimension">维度名，必须已在本资源模型的 <see cref="ScopeModelBuilder{T}.Map"/> 中声明。</param>
 	/// <returns>策略。</returns>
-	/// <exception cref="ArgumentNullException">当 <paramref name="dimension"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="dimension"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
 	public static ScopePolicy<T> Grant(string dimension)
 	{
 		Check.EnsureNotNullOrWhiteSpace(dimension, nameof(dimension));
@@ -62,6 +53,7 @@ public abstract class ScopePolicy<T>
 	/// <param name="policies">子策略。</param>
 	/// <returns>策略。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policies"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当 <paramref name="policies"/> 为空数组，或含 <see langword="null"/> 元素时抛出。</exception>
 	public static ScopePolicy<T> All(params ScopePolicy<T>[] policies)
 	{
 		Check.EnsureNotNull(policies, nameof(policies));
@@ -77,6 +69,7 @@ public abstract class ScopePolicy<T>
 	/// <param name="policies">子策略。</param>
 	/// <returns>策略。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policies"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当 <paramref name="policies"/> 为空数组，或含 <see langword="null"/> 元素时抛出。</exception>
 	public static ScopePolicy<T> Any(params ScopePolicy<T>[] policies)
 	{
 		Check.EnsureNotNull(policies, nameof(policies));
@@ -92,6 +85,7 @@ public abstract class ScopePolicy<T>
 	/// <param name="policy">产生拒绝条件的子策略。</param>
 	/// <returns>策略。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当 <paramref name="policy"/> 本身是 <see cref="Deny"/> 时抛出：不允许嵌套。</exception>
 	public static ScopePolicy<T> Deny(ScopePolicy<T> policy)
 	{
 		Check.EnsureNotNull(policy, nameof(policy));

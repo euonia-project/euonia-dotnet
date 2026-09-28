@@ -5,32 +5,20 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <typeparam name="T">资源类型。</typeparam>
 /// <remarks>
-/// <para>
 /// 一个完整的声明同时给出「资源在各维度上的取值」与「访问策略」，例如：
-/// </para>
 /// <code>
 /// public sealed class OrderScope : ScopeModel&lt;Order&gt;
 /// {
 ///     public override void Define(ScopeModelBuilder&lt;Order&gt; builder)
-///     {
-///         builder.Map(ScopeDimensions.Owner, x =&gt; x.OwnerId)
-///                .Map(ScopeDimensions.Dept, x =&gt; x.DeptId)
-///                .Classify("classification", x =&gt; x.Level);
-///     }
+///         =&gt; builder.Map(ScopeDimensions.Dept, x =&gt; x.DeptId);
 ///
-///     public override ScopePolicy&lt;Order&gt; Policy =&gt;
-///         ScopePolicy&lt;Order&gt;.All(
-///             ScopePolicy&lt;Order&gt;.Any(
-///                 ScopePolicy&lt;Order&gt;.Self(),
-///                 ScopePolicy&lt;Order&gt;.Grant(ScopeDimensions.Dept)),
-///             ScopePolicy&lt;Order&gt;.Deny(
-///                 ScopePolicy&lt;Order&gt;.Where(x =&gt; x.Level == "secret")));
+///     public override ScopePolicy&lt;Order&gt; Policy =&gt; ScopePolicy&lt;Order&gt;.Grant(ScopeDimensions.Dept);
+///
+///     public override void Declare(ScopePolicySet&lt;Order&gt; policies)
+///         =&gt; policies.For("order:delete", ScopePolicy&lt;Order&gt;.Grant("id"));
 /// }
 /// </code>
-/// <para>
-/// 模型在程序集扫描时自动发现，并在启动期校验；
-/// 同一资源类型存在多个模型、或策略引用了未映射的维度，都会导致启动失败。
-/// </para>
+/// 模型在程序集扫描时自动发现并在启动期校验；同一资源类型存在多个模型、或策略引用了未映射的维度都会导致启动失败（更多示例见 README §5.2）。
 /// </remarks>
 public abstract class ScopeModel<T> : IScopeModel<T>
 	where T : class

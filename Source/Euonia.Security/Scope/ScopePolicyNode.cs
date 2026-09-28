@@ -13,12 +13,13 @@ internal sealed class ScopePolicyNode<T>
 	where T : class
 {
 	/// <summary>
-	/// 表示恒真。
+	/// 恒真的布尔常量表达式，用作 <c>All</c> 折叠的初值：没有任何允许条件时「与」不施加限制。
 	/// </summary>
 	internal static readonly Expression True = Expression.Constant(true, typeof(bool));
 
 	/// <summary>
-	/// 表示恒假。
+	/// 恒假的布尔常量表达式：<c>Any</c> 折叠的初值（没有允许条件即拒绝，fail-closed），也用作「无条件」的占位；
+	/// 归约会按值识别并剔除恒假的拒绝条件。
 	/// </summary>
 	internal static readonly Expression False = Expression.Constant(false, typeof(bool));
 
@@ -43,8 +44,10 @@ internal sealed class ScopePolicyNode<T>
 	/// 获取本节点是否提供了允许条件。
 	/// </summary>
 	/// <remarks>
-	/// <see cref="ScopePolicy{T}.Any"/> 归约时必须据此把「只带拒绝条件」的分支排除在「或」之外，
-	/// 否则 <c>Any(Grant("dept"), Deny(...))</c> 会退化成恒真——这是一个静默提权。
+	/// 两种作用：一是决定折叠初值——<c>All</c> 在无任何允许条件时取恒真（拒绝清单语义），
+	/// <c>Any</c> 在无任何允许条件时取恒假（fail-closed）；二是把「本子树不提供允许条件」
+	/// 向上传播，使外层不被误判为存在允许分支。缺少它就会把「没有允许条件」当成「允许条件为真」，
+	/// <c>Any(Grant("dept"), Deny(...))</c> 随之退化成恒真——一个静默提权。
 	/// </remarks>
 	internal bool HasAllow { get; }
 

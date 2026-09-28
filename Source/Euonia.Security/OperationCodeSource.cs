@@ -8,22 +8,17 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 这是 <see cref="IPermissionCodeSource"/> 最常见的实现，规则是<b>数据</b>而非代码：
-/// 「读取操作 = 打上 <c>FetchAttribute</c> 或名为 <c>Fetch</c>/<c>FetchAsync</c> 的方法」。
-/// 换框架只是换一组规则，不需要换实现。
+/// 这是 <see cref="IPermissionCodeSource"/> 最常见的实现，规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3）。
 /// </para>
 /// <para>
-/// 收集范围与运行时判定保持一致：<b>类型级</b> <see cref="PermissionAttribute"/> 对本来源已声明的每个操作生效；
-/// <b>方法级</b>只在该方法被本操作的规则识别为操作入口时才生效。
-/// 否则以命名约定声明的入口方法上的权限声明会被静默忽略，权限形同虚设。
+/// 收集范围与运行时判定一致：<b>类型级</b> <see cref="PermissionAttribute"/> 对本来源已声明的每个操作生效，
+/// <b>方法级</b>只在该方法被本操作的规则识别为操作入口时才生效，否则入口方法上的权限声明会被静默忽略。
 /// </para>
 /// <para>
-/// 操作词汇以 <see cref="AllOperations"/> 为准：<b>只有声明过规则的操作才属于本来源</b>，
-/// 未声明规则的操作不会参与判定（此时方法级无从识别，类型级声明也不会被单独征用）。
-/// 这是刻意的——否则「宿主没配这个操作」与「宿主配了这个操作但没人声明权限」将无法区分。
+/// 操作词汇以 <see cref="AllOperations"/> 为准：<b>只有声明过规则的操作才属于本来源</b>，未声明规则的操作不参与判定。
 /// </para>
 /// <para>
-/// 结果按（类型，操作）缓存，因此反复调用不会重复反射。
+/// 结果按（类型，操作）缓存，反复调用不会重复反射。
 /// </para>
 /// </remarks>
 public sealed class OperationCodeSource : IPermissionCodeSource

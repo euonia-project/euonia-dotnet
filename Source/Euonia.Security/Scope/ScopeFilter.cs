@@ -7,8 +7,8 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 本类只消费 <see cref="CompiledScopePolicy{T}"/>，不自行解释策略——
-/// 因此下列所有方法给出的结论必然一致。
+/// 除 <see cref="Explain{T}"/> 需要原始策略以逐叶子给出命中路径外，本类只消费
+/// <see cref="CompiledScopePolicy{T}"/>，因此下推、过滤与单行判定给出的结论必然一致。
 /// </para>
 /// <para>
 /// <b>不可翻译即失败</b>：<see cref="Apply{T}(IQueryable{T}, CompiledScopePolicy{T})"/> 只做表达式下推，
@@ -90,10 +90,10 @@ public static class ScopeFilter
 	/// <param name="resource">待判定的资源。</param>
 	/// <param name="policy">策略（未经编译的原始策略，用于逐条给出命中路径）。</param>
 	/// <param name="model">资源模型描述。</param>
-	/// <param name="subjects">用户被授予的主体集合。</param>
+	/// <param name="subjects">用户被授予的主体集合；为 <see langword="null"/> 时视为空集合（fail-closed）。</param>
 	/// <param name="scopeKey">权限码（策略键）；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
 	/// <returns>判定结果与命中的条件说明。</returns>
-	/// <exception cref="ArgumentNullException">当任一参数为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 或 <paramref name="model"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <remarks>
 	/// 供审计与排障使用：逐叶子求值，列出成立的条件，并在结果中带上策略键。这是诊断路径，不用于热路径判定。
 	/// </remarks>

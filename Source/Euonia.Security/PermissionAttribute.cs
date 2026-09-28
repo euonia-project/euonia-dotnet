@@ -41,7 +41,7 @@ public sealed class PermissionAttribute : Attribute
 	public string[] Roles { get; }
 
 	/// <summary>
-	/// 获取或设置权限被拒绝时的提示消息。
+	/// 获取或设置权限被拒绝时的提示消息。框架自身不读取它，由使用方在拒绝路径上取用。
 	/// </summary>
 	public string Message { get; set; } = string.Empty;
 }

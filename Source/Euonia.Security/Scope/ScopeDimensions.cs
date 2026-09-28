@@ -45,8 +45,7 @@ public static class ScopeDimensions
 	/// </summary>
 	/// <param name="name">维度名。</param>
 	/// <returns>校验通过的维度名。</returns>
-	/// <exception cref="ArgumentNullException">当 <paramref name="name"/> 为 <see langword="null"/> 时抛出。</exception>
-	/// <exception cref="ArgumentException">当 <paramref name="name"/> 为空白时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
 	public static string Register(string name)
 	{
 		return Check.EnsureNotNullOrWhiteSpace(name, nameof(name));

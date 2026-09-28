@@ -6,19 +6,11 @@ namespace Nerosoft.Euonia.Security;
 /// 授权判定的统一入口：读侧下推、写侧判定、审计。
 /// </summary>
 /// <remarks>
-/// <para>
-/// 本接口按请求（Scoped）注册，授权数据与已编译策略在<b>一次请求内只解析/编译一次</b>，
-/// 随后读写共用同一份快照。这既保证同一请求内多处判定一致，也避免逐行查询授权数据。
-/// 因此<b>撤销授权的生效时机是「下一次解析」</b>：同一请求内需显式 <see cref="Refresh"/>。
-/// </para>
-/// <para>
-/// 若在长生命周期作用域（例如后台 worker）中使用，授权数据变化后必须自行调用
-/// <see cref="Refresh"/>，否则会一直使用首次解析的结果。
-/// </para>
-/// <para>
-/// 所有带 <c>scopeKey</c> 参数的方法，传 <see langword="null"/> 表示「按当前操作自动解析」；
-/// 框架刻意<b>不引入环境态「当前码」</b>，避免隐式状态带来的判定漂移。
-/// </para>
+/// 本接口按请求（Scoped）注册，授权数据与已编译策略在<b>一次请求内只解析/编译一次</b>，随后读写共用同一份快照；因此<b>撤销授权的生效时机是「下一次解析」</b>，
+/// 同一请求内需显式 <see cref="Refresh"/>。若在长生命周期作用域（例如后台 worker）中使用，授权数据变化后必须自行调用 <see cref="Refresh"/>（见 README §5.5）。
+/// 带 <c>scopeKey</c> 参数的方法在传 <see langword="null"/> 时分两类：判定单个资源的（<see cref="Allows{T}"/> / <see cref="Explain{T}"/> /
+/// <see cref="AllowsObject"/> / <see cref="ExplainObject"/>）按该资源当前对应的操作解析；查询类的（<see cref="GetPolicy{T}"/> / <see cref="Apply{T}"/>）
+/// 取 <see cref="ScopeKeys.Default"/>——框架刻意<b>不引入环境态「当前码」</b>，避免隐式状态带来的判定漂移（见 DESIGN §1.7）。
 /// </remarks>
 public interface IScopeGuard
 {
@@ -70,7 +62,7 @@ public interface IScopeGuard
 	/// <param name="resource">待判定的资源。</param>
 	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按该资源当前的操作解析（见 <see cref="AllowsObject"/>）。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	/// <remarks>与 <see cref="AllowsObject"/> 使用同一套键解析，对同一对象必然给出同一答案。</remarks>
+	/// <remarks>与 <see cref="AllowsObject"/> 共用同一套键解析与同一份策略，同一实例经两个入口必然得到同一结论。</remarks>
 	bool Allows<T>(T resource, string scopeKey = null)
 		where T : class;
 

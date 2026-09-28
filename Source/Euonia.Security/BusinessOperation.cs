@@ -5,19 +5,14 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 操作是<b>字符串</b>而不是枚举：操作集是使用方的领域知识，框架不替它划定边界。
-/// 任何宿主都可以定义自己的操作（<c>"approve"</c>、<c>"publish"</c>…），
-/// 由 <see cref="IPermissionCodeSource.AllOperations"/> 声明全集，
-/// 由 <see cref="ScopePolicySet{T}.For(string, ScopePolicy{T})"/> 声明策略。
+/// 操作是<b>字符串</b>而不是枚举：操作集是使用方的领域知识，框架不替它划定边界，宿主可定义自己的操作（<c>"approve"</c>、
+/// <c>"publish"</c>…），由 <see cref="IPermissionCodeSource.AllOperations"/> 声明全集。
 /// </para>
 /// <para>
-/// 本类提供一组<b>约定俗成</b>的操作名（CRUD 与命令执行），覆盖绝大多数应用，
-/// 但不构成限制——它们只是常量字符串。
+/// 本类只提供一组<b>约定俗成</b>的操作名（CRUD 与命令执行），不构成限制——它们只是常量字符串。
 /// </para>
 /// <para>
-/// 操作名不得使用 <see cref="ScopeKeys.Prefix"/>（<c>@</c>）前缀：
-/// 每个操作的默认策略键由 <see cref="ScopeKeys.For(string)"/> 以该前缀派生，
-/// 带前缀会与保留命名空间冲突。
+/// 操作名不得使用 <see cref="ScopeKeys.Prefix"/>（<c>@</c>）前缀：默认策略键由 <see cref="ScopeKeys.For(string)"/> 以该前缀派生，带前缀会与保留命名空间冲突（见 DESIGN §1.6）。
 /// </para>
 /// </remarks>
 public static class BusinessOperation

@@ -23,10 +23,10 @@ public static class ScopePolicyCompiler
 	/// <typeparam name="T">资源类型。</typeparam>
 	/// <param name="policy">策略。</param>
 	/// <param name="model">资源模型描述。</param>
-	/// <param name="subjects">用户被授予的主体集合。</param>
+	/// <param name="subjects">用户被授予的主体集合；为 <see langword="null"/> 时视为空集合（fail-closed）。</param>
 	/// <param name="scopeKey">权限码（策略键）；为 <see langword="null"/> 时取 <see cref="ScopeKeys.Default"/>。</param>
 	/// <returns>编译结果。</returns>
-	/// <exception cref="ArgumentNullException">当任一参数为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 或 <paramref name="model"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当策略引用了模型中未映射的维度时抛出。</exception>
 	public static CompiledScopePolicy<T> Compile<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey = null)
 		where T : class

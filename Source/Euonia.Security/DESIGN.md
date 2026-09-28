@@ -56,7 +56,7 @@ graph TD
 
     subgraph B["② 装配与启动"]
         B1["注册<br/>ScopeModelRegistryBuilder：程序集扫描（AddFrom）或程序化注册（Add 实例/类型）<br/>两条路径共用 Build() 这一唯一校验入口"]
-        B2["启动期校验<br/>ScopeModelRegistryBuilder.Build：未映射维度 / 恒不放行 / 键歧义 / 死策略 / 保留前缀 @<br/>一次报全 ScopeModelValidationException.Diagnostics<br/>provider.ValidatePermissionSetup()：缺解析器 / 缺用户主体"]
+        B2["启动期校验<br/>ScopeModelRegistryBuilder.Build：模型级校验项见 README §5.6<br/>一次报全 ScopeModelValidationException.Diagnostics<br/>provider.ValidatePermissionSetup()：缺解析器 / 缺用户主体"]
     end
 
     subgraph C["③ 请求作用域"]
@@ -112,7 +112,7 @@ graph TD
 - **② 装配与启动**：扫描 + 注册期校验一体完成，配置错误全部 fail-fast
   （键歧义 §1.7、保留前缀 / 死策略 §1.6；启动期校验清单见 README §5.6）。
 - **③ 请求作用域**：`IScopeGuard` 按请求缓存解析结果，读写路径共享同一份快照，
-  撤销生效于「下一次解析」（§1.9；缓存契约见 README §5.5）。
+  撤销生效于「下一次解析」（§1.8；缓存契约见 README §5.5）。
 - **④ 判定引擎**：操作权限判定走 `IPermissionChecker`（码来自授权数据，§1.2）；
   数据权限把策略编译成 **一对表达式**（§1.3/§1.4），键只由操作决定（§1.7）。
 - **⑤ 判定出口**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
@@ -324,3 +324,5 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` | §1.8 缓存失效不可被回滚 |
 | `PolicySet_ShouldRejectReservedPermissionCode` / `PolicySet_ShouldAllowFrameworkDefaultKeys` | §1.6 保留命名空间 |
 | `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
+| `AddCode_Should_Reject_Reserved_Namespace` | §1.6 保留命名空间（授权数据这一侧同样不得携带保留码） |
+| `Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance` | §1.3 两个单行判定入口对同一实例结论一致；派生/代理实例不得 fail-open |

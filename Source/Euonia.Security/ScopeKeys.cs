@@ -9,9 +9,8 @@ namespace Nerosoft.Euonia.Security;
 /// 「该码下的行级授予」用于按行的判定，两者共用同一个键空间。
 /// </para>
 /// <para>
-/// 以 <see cref="Prefix"/>（<c>@</c>）开头的键是<b>框架保留</b>的，应用声明的权限码不得使用该前缀。
-/// 这里刻意不使用字面量 <c>*</c> 作为通配键：<c>*</c> 在本框架中已表示「权限码的前缀通配」，
-/// 再叠加一层「策略键通配」会让排障变成猜谜。
+/// 以 <see cref="Prefix"/>（<c>@</c>）开头的键是<b>框架保留</b>的，应用声明的权限码不得使用该前缀；
+/// 这里刻意不用字面量 <c>*</c> 作通配键（理由见 DESIGN §1.6）。键的完整解析规则见 README §5.8。
 /// </para>
 /// </remarks>
 public static class ScopeKeys
@@ -56,8 +55,8 @@ public static class ScopeKeys
 	/// </summary>
 	/// <param name="operation">业务操作名；可以是 <see cref="BusinessOperation"/> 的常量，也可以是宿主自定义的操作。</param>
 	/// <returns>该操作的默认键。</returns>
-	/// <exception cref="ArgumentNullException">当 <paramref name="operation"/> 为 <see langword="null"/> 时抛出。</exception>
-	/// <exception cref="ArgumentException">当操作名为空白、或使用了保留前缀时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="operation"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当 <paramref name="operation"/> 使用了框架保留前缀 <see cref="Prefix"/> 时抛出。</exception>
 	/// <remarks>
 	/// 派生是纯字符串拼接而非查表，因此<b>任何</b>操作名都能得到确定的默认键——
 	/// 操作集由使用方定义，框架不枚举。
@@ -72,8 +71,8 @@ public static class ScopeKeys
 	/// </summary>
 	/// <param name="operation">操作名。</param>
 	/// <returns>校验通过的操作名。</returns>
-	/// <exception cref="ArgumentNullException">当 <paramref name="operation"/> 为 <see langword="null"/> 时抛出。</exception>
-	/// <exception cref="ArgumentException">当操作名为空白、或使用了保留前缀时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="operation"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当 <paramref name="operation"/> 使用了框架保留前缀 <see cref="Prefix"/> 时抛出。</exception>
 	public static string ValidateOperation(string operation)
 	{
 		Check.EnsureNotNullOrWhiteSpace(operation, nameof(operation));
@@ -101,9 +100,8 @@ public static class ScopeKeys
 	/// </summary>
 	/// <param name="code">权限码。</param>
 	/// <returns>校验通过的权限码。</returns>
-	/// <exception cref="ArgumentNullException">当 <paramref name="code"/> 为 <see langword="null"/> 时抛出。</exception>
-	/// <exception cref="ArgumentException">当权限码为空白时抛出。</exception>
-	/// <exception cref="InvalidOperationException">当权限码落在保留命名空间内时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="code"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当权限码落在框架保留命名空间内时抛出。</exception>
 	public static string Validate(string code)
 	{
 		Check.EnsureNotNullOrWhiteSpace(code, nameof(code));

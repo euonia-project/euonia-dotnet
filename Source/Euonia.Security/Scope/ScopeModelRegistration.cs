@@ -21,17 +21,18 @@ public sealed class ScopeModelRegistration
 	}
 
 	/// <summary>
-	/// 获取模型描述。
+	/// 模型描述：资源类型、维度映射与分类属性，由 <see cref="ScopeModelDescriptor.Create"/> 从模型实例构建。
 	/// </summary>
 	public ScopeModelDescriptor Descriptor { get; }
 
 	/// <summary>
-	/// 获取模型实例。
+	/// 模型实例：默认策略与按权限码声明的行级策略都由它提供，本注册项只做类型擦除后的转发。
 	/// </summary>
 	internal IScopeModel Model { get; }
 
 	/// <summary>
-	/// 获取默认策略（<see cref="ScopePolicy{T}"/> 实例，T 为资源类型）。
+	/// 默认策略：未单独声明行级策略的权限码都回落到它；实际类型是 <see cref="ScopePolicy{T}"/>（T 为资源类型），
+	/// 因类型参数在运行期才确定而以 <see cref="object"/> 持有，由 <see cref="ScopeGuard"/> 解析时完成强类型转换。
 	/// </summary>
 	internal object DefaultPolicy => Model.PolicyObject;
 
@@ -46,7 +47,7 @@ public sealed class ScopeModelRegistration
 	}
 
 	/// <summary>
-	/// 获取已显式声明行级策略的权限码集合。
+	/// 已显式声明行级策略的权限码；<see cref="PolicyFor"/> 对集合外的码一律返回 <see langword="null"/>，调用方回落到默认策略。
 	/// </summary>
 	internal IReadOnlyCollection<string> DeclaredCodes => Model.DeclaredCodes;
 }

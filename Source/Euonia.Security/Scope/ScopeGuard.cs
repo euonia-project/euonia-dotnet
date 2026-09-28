@@ -36,7 +36,8 @@ public sealed class ScopeGuard : IScopeGuard
 	/// </summary>
 	/// <param name="user">当前用户主体。</param>
 	/// <param name="registry">权限模型注册表。</param>
-	/// <param name="resolver">授权数据解析器；可缺席，此时任何判定都拒绝。</param>
+	/// <param name="resolver">授权数据解析器；可缺席，但一旦需要解析授权数据（判定的类型已注册模型）就会抛
+	/// <see cref="InvalidOperationException"/>，不会静默放行。</param>
 	/// <param name="keyResolver">策略键解析器；可缺席，此时未显式指定权限码的判定回落到 <see cref="ScopeKeys.Default"/>。</param>
 	public ScopeGuard(UserPrincipal user, ScopeModelRegistry registry, IScopeSubjectResolver resolver, IScopeKeyResolver keyResolver)
 	{
@@ -127,11 +128,19 @@ public sealed class ScopeGuard : IScopeGuard
 	public bool Allows<T>(T resource, string scopeKey = null)
 		where T : class
 	{
-		// 与 AllowsObject 走同一套键解析：对「有未决变更的对象」按当前操作取键，
-		// 否则回落到默认键。两个入口对同一对象必须给出同一答案。
-		var policy = GetPolicy<T>(ResolveScopeKey(resource, scopeKey));
+		// 与 AllowsObject 走同一套键解析：对「有未决变更的对象」按当前操作取键，否则回落到默认键。
+		var key = ResolveScopeKey(resource, scopeKey);
+		var policy = GetPolicy<T>(key);
 
-		return policy == null || ScopeFilter.Allows(resource, policy);
+		if (policy != null)
+		{
+			return ScopeFilter.Allows(resource, policy);
+		}
+
+		// T 本身未注册，但可能沿基类链有注册（实体框架的代理类型是派生类）。
+		// 此时必须按声明类型判定——回落到 AllowsObject 而不是直接放行，
+		// 否则声明了数据权限的类型在代理实例上会全部通过。
+		return !_registry.IsDeclared(typeof(T)) || AllowsObject(resource, key);
 	}
 
 	/// <inheritdoc />

@@ -39,6 +39,31 @@ public sealed class AssetModel : ScopeModel<Asset>
 }
 
 /// <summary>
+/// 未密封的受控资源：用于构造「声明类型已注册、实例却是派生类型」的场景。
+/// </summary>
+public class ProxyableAsset
+{
+	public string Id { get; set; }
+
+	public string DeptId { get; set; }
+}
+
+/// <summary>
+/// <see cref="ProxyableAsset"/> 的权限模型：本部门可见。只声明默认策略，
+/// 因此可与 <see cref="EmptyCodeSource"/> 搭配使用。
+/// </summary>
+public sealed class ProxyableAssetModel : ScopeModel<ProxyableAsset>
+{
+	public override void Define(ScopeModelBuilder<ProxyableAsset> builder)
+	{
+		builder.Map(ScopeDimensions.Dept, x => x.DeptId);
+	}
+
+	public override ScopePolicy<ProxyableAsset> Policy =>
+		ScopePolicy<ProxyableAsset>.Grant(ScopeDimensions.Dept);
+}
+
+/// <summary>
 /// 类型级声明权限码的资源。
 /// </summary>
 [Permission("asset:read")]

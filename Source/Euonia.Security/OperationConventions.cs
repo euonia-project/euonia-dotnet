@@ -8,17 +8,14 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 绝大多数框架的「操作入口」有两条并行约定：给方法打一个特性，或者按名字匹配。
-/// 本类把后者做成可复用的推导，因此每个宿主不必各写一遍。
+/// 绝大多数框架的「操作入口」有两条并行约定：打特性或按名字匹配；本类把后者做成可复用的推导（见 README §3.3）。
 /// </para>
 /// <para>
-/// 推导规则：以 <c>FetchAttribute</c>、可选前缀 <c>Factory</c> 为例，
-/// 得到 <c>Fetch</c>、<c>FetchAsync</c>、<c>FactoryFetch</c>、<c>FactoryFetchAsync</c>。
-/// 前缀可选：许多框架的约定不含前缀，只取 <c>Fetch</c> 与 <c>FetchAsync</c>。
+/// 推导规则：以 <c>FetchAttribute</c>、可选前缀 <c>Factory</c> 为例，得到 <c>Fetch</c>、<c>FetchAsync</c>、
+/// <c>FactoryFetch</c>、<c>FactoryFetchAsync</c>；许多框架的约定不含前缀。
 /// </para>
 /// <para>
-/// 名字匹配<b>大小写敏感</b>，且不做任何模糊化——拼写不符即不识别。
-/// 宁可漏认（启动期可见）也不误认。
+/// 名字匹配<b>大小写敏感</b>，不做任何模糊化——拼写不符即不识别，宁可漏认（启动期可见）也不误认。
 /// </para>
 /// </remarks>
 public static class OperationConventions

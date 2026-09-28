@@ -22,17 +22,18 @@ public sealed class ScopeModelDescriptor
 	}
 
 	/// <summary>
-	/// 获取本模型描述的资源类型。
+	/// 本描述所辖的资源类型；注册表以它为键，故实体框架的代理类型（派生类）查不到，判定时需沿基类链查找。
 	/// </summary>
 	public Type ResourceType { get; }
 
 	/// <summary>
-	/// 获取已映射的维度名集合。
+	/// 已映射的维度名，至少一个（<see cref="Create"/> 会拒绝未声明任何维度的模型）；名称大小写不敏感，枚举顺序不保证。
 	/// </summary>
 	public IReadOnlyCollection<string> Dimensions => _dimensions.Keys;
 
 	/// <summary>
-	/// 获取已声明的分类属性名集合。
+	/// 已声明的分类属性名，可以为空；名称大小写不敏感。分类不参与授权，只能在 <see cref="ScopePolicy{T}.Where"/>
+	/// 之类的谓词里引用，用于判定资源自身的属性（例如密级）。
 	/// </summary>
 	public IReadOnlyCollection<string> Classifications => _classifications.Keys;
 
