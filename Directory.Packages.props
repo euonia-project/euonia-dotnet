@@ -64,6 +64,7 @@
     <!-- Microsoft.Extensions -->
     <ItemGroup>
         <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="$(ExtensionsPackageVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.Configuration" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="$(ExtensionsPackageVersion)" />
