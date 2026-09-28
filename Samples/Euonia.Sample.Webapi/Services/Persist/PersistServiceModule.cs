@@ -99,9 +99,9 @@ public class PersistServiceModule : ModuleContextBase
 		// 管理员团队：为内置管理员提供团队范围；其余团队由业务侧接口创建。
 		db.Teams.Add(new Team { Id = BootstrapUsers.AdminTeamId, Name = "平台工程组", LeaderId = BootstrapUsers.AdminId });
 
-		// 管理员授权：团队归属 + 仓库/团队全部权限码 + 显示名。
+		// 管理员授权：团队归属 + 仓库/团队/项目全部权限码 + 显示名。
 		db.Authorizations.Add(new AuthorizationRecord { UserId = BootstrapUsers.AdminId, Kind = AuthorizationKinds.Name, Value = "系统管理员" });
-		foreach (var code in RepositoryPermissions.All.Concat(TeamPermissions.All))
+		foreach (var code in RepositoryPermissions.All.Concat(TeamPermissions.All).Concat(ProjectPermissions.All))
 		{
 			db.Authorizations.Add(new AuthorizationRecord { UserId = BootstrapUsers.AdminId, Kind = AuthorizationKinds.Code, Value = code });
 		}

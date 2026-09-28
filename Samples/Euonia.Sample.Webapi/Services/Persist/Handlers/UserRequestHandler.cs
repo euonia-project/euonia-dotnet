@@ -2,6 +2,7 @@
 using Nerosoft.Euonia.Mapping;
 using Nerosoft.Euonia.Sample.Domain.Dtos;
 using Nerosoft.Euonia.Sample.Domain.Repositories;
+using Nerosoft.Euonia.Sample.Persist.Entities;
 using Nerosoft.Euonia.Sample.Persist.Requests;
 using Nerosoft.Euonia.Sample.Persist.Specifications;
 
@@ -13,8 +14,25 @@ internal class UserRequestHandler(IUserRepository repository)
 {
 	public async Task<UserDetailDto> HandleAsync(UserDetailQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
-		var entity = await repository.GetAsync(message.Id, false, cancellationToken);
-		return TypeAdapter.ProjectedAs<UserDetailDto>(entity);
+		// Roles 是集合导航属性，必须显式 Include，否则 AsNoTracking 查询拿不到角色。
+		var entity = await repository.GetAsync(message.Id, false, [nameof(UserEntity.Roles)], cancellationToken);
+		if (entity == null)
+		{
+			throw new NotFoundException($"User with ID '{message.Id}' not found.");
+		}
+
+		return new UserDetailDto
+		{
+			Id = entity.Id,
+			Username = entity.Username,
+			Nickname = entity.Nickname,
+			Email = entity.Email,
+			Phone = entity.Phone,
+			PasswordChangedTime = entity.PasswordChangedTime,
+			CreatedAt = entity.CreatedAt,
+			UpdatedAt = entity.UpdatedAt,
+			Roles = entity.Roles?.Select(role => role.Name).ToArray() ?? []
+		};
 	}
 
 	public Task HandleAsync(UserListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)

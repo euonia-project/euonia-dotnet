@@ -29,9 +29,12 @@ public class BusinessServiceModule : ModuleContextBase
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.AddBusinessObject(typeof(BusinessServiceModule).Assembly);
+		// 扫描本程序集：注册数据权限模型（ProjectScopeModel / ArchiveProjectScopeModel / RepositoryScopeModel…）
+		// 与方法级 [Permission] 声明，并在注册期完成策略键解析校验。
 		context.Services.AddObjectPermission(typeof(BusinessServiceModule).Assembly);
 		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.IRepositoryStore, Nerosoft.Euonia.Sample.Persist.Repositories.RepositoryStore>();
 		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.ITeamStore, Nerosoft.Euonia.Sample.Persist.Repositories.TeamStore>();
+		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.IProjectStore, Nerosoft.Euonia.Sample.Persist.Repositories.ProjectStore>();
 		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Permissions.AuthorizationStore>();
 		context.Services.AddScoped<Nerosoft.Euonia.Security.IScopeSubjectResolver, Nerosoft.Euonia.Sample.Domain.Permissions.ScopeSubjectResolver>();
 	}

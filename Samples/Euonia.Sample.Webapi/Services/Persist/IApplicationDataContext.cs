@@ -20,6 +20,9 @@ public interface IApplicationDataContext
 	/// <summary>团队。</summary>
 	DbSet<Team> Teams { get; }
 
+	/// <summary>项目。</summary>
+	DbSet<Project> Projects { get; }
+
 	/// <summary>授权数据（角色 / 权限码 / 团队范围 / 显示名）。</summary>
 	DbSet<AuthorizationRecord> Authorizations { get; }
 

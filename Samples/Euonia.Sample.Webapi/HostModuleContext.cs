@@ -20,6 +20,8 @@ public class HostModuleContext : ModuleContextBase
 		context.Services.AddControllers();
 		context.Services.AddHealthChecks();
 		context.Services.AddJwtAuthentication("JwtAuthenticationOptions");
+		// 权限判定主体：按当前请求包装 UserPrincipal（SubjectPermissionChecker / ScopeGuard 都依赖它）。
+		context.Services.AddUserPrincipal();
 		context.Services.AddSwaggerGen(c =>
 		{
 			c.SwaggerDoc("v1", new OpenApiInfo { Title = "Euonia Sample", Version = "v1" });

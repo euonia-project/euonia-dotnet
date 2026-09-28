@@ -12,11 +12,11 @@ public class Program
 		{
 			options.EnableHttp2 = true;
 			//options.ConfigureWebHostBuilder = WebHostBuilderAction;
-			options.ConfigureHostBuilder = builder =>
+		options.ConfigureHostBuilder = builder =>
+		{
+			builder.UseSerilog((context, configuration) =>
 			{
-				builder.UseSerilog((context, configuration) =>
-				{
-					configuration.ReadFrom.Configuration(context.Configuration)
+				configuration.ReadFrom.Configuration(context.Configuration)
 					             .Enrich.FromLogContext()
 					             .Enrich.WithProperty("ApplicationName", context.HostingEnvironment.ApplicationName)
 					             .Enrich.WithProperty("Environment", context.HostingEnvironment);
