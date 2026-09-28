@@ -37,7 +37,12 @@ public static class ScopePolicyCompiler
 		var context = new ScopeCompileContext<T>(model, subjects ?? ScopeSubjectSet.Empty, scopeKey);
 		var node = policy.Reduce(context);
 
-		return new CompiledScopePolicy<T>(context.Lambda(node.Allow), context.Lambda(node.Deny), node.HasAllow, context.ScopeKey);
+		return new CompiledScopePolicy<T>(
+			context.Lambda(node.Allow),
+			context.Lambda(node.Deny),
+			node.HasAllow,
+			context.ScopeKey,
+			context.CreateLoadGuards());
 	}
 
 	/// <summary>

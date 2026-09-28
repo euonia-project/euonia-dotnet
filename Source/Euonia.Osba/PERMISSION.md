@@ -392,6 +392,7 @@ public sealed class RepoScope : ScopeModel<Repo>
 
 > 维度选择器的值类型目前固定为 `string`。若列是 `Guid`/`long`，请在模型里提供一个字符串投影
 > （例如把 `TeamId` 声明为字符串列，或映射到一个 `string` 形式的属性）。
+> 子表维度（§3.8）同理：`MapMany` 的元素取值也必须是字符串。
 
 ### 3.4 匹配语义与允许/拒绝代数
 
@@ -399,7 +400,7 @@ public sealed class RepoScope : ScopeModel<Repo>
 
 | 策略 | Allow | Deny | 是否提供允许条件 |
 |---|---|---|---|
-| `Grant(d)` | `用户在该维度被授予的值.Contains(x.D)` | `false` | 是 |
+| `Grant(d)` | 单值维度：`用户在该维度被授予的值.Contains(x.D)`；子表维度（§3.8）：`x.集合.Any(v => 授予值.Contains(v.D))` | `false` | 是 |
 | `Self()` | 等价于 `Grant(owner)` | `false` | 是 |
 | `Where(p)` | `p` | `false` | 是 |
 | `Deny(p)` | — | `p` 的成立条件 | **否** |
@@ -475,6 +476,8 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 - 模型未声明任何维度 → 失败
 - **策略引用了模型中未映射的维度** → 失败（这是「策略写了却没映射 ⇒ 静默放行」的根治点）
 - 策略结构性恒不放行（`Any` 之下全是拒绝条件）→ 失败
+- 子表维度（§3.8）的取值形状不受支持 → 失败（只有「导航集合 + 可选 `Where` + 取字符串值」能下推为 `EXISTS`）
+- 同一维度被 `Map` 与 `MapMany` 重复声明 → 失败
 - `All`/`Any` 无子策略、`Deny` 嵌套 `Deny`、`Deny(null)` → 在**构造策略时**即失败
 
 校验只在「声明了模型」时生效：没有任何 `ScopeModel<T>` 的应用照常启动，只是全部资源都不受数据权限约束。
@@ -482,6 +485,43 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 未注册 `IScopeSubjectResolver` 但存在模型时，会在**首次判定**以明确错误抛出，绝不静默放行；
 调用 `ValidatePermissionSetup()` 可让它在启动时暴露。同理，「已声明模型或权限码却没注册 `UserPrincipal`」
 也会在启动期报错——其表现是所有人都被拒却毫无提示，最容易被误判成策略写错。
+
+### 3.8 子表维度（关系表作为取值来源）
+
+「查询我加入的团队 / 家庭 / 组织」这类权限，关系在**子表**里（`team_member(team_id, user_id, status)`），
+资源却是父行（`team`）。用 `MapMany` 把子表声明为**集合维度**，判定即下推为 `EXISTS` 相关子查询：
+
+```csharp
+public sealed class TeamScope : ScopeModel<Team>
+{
+    public override void Define(ScopeModelBuilder<Team> builder)
+        => builder.Map(ScopeDimensions.Owner, t => t.LeaderId)                     // 行内的列
+                  .MapMany(ScopeDimensions.Member,                                 // 子表
+                           t => t.Members.Where(m => m.Status == "active").Select(m => m.UserId));
+
+    public override ScopePolicy<Team> Policy
+        => ScopePolicy<Team>.Any(ScopePolicy<Team>.Grant(ScopeDimensions.Member),
+                                 ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
+}
+```
+
+解析器授予的是「子表里应当出现的值」，通常就是当前用户标识：`builder.Add(ScopeDimensions.Member, userId)`。
+语义与单值维度完全一致——`Grant(d)` 即「资源在该维度上的取值集合 ∩ 授予集合 ≠ ∅」；
+`Deny` 之下编译为 `NOT EXISTS`。子表属性（如 `status`）写在选择器里，由数据库**实时**求值，
+成员增减下一次查询即生效，不必等授权数据刷新。
+
+三条必须知道的事：
+
+- **单行判定要求子集合已加载**：工厂边界（`ScopeAuthorization`）与 `Allows` / `Explain` 在内存中求值同一棵表达式，
+  子集合为 `null` 时抛 `InvalidOperationException`（**不是** `SecurityException`）并指明修法——
+  仓储返回的实体通常不带子表，写侧尤其要注意。实体把集合初始化成空集合（`= []`）时，
+  「未加载」与「没有成员」不可区分，表现为**静默拒绝**（已知边界）。
+- **只支持一种取值形状**：「导航集合（可带 `Where` 过滤）再取字符串值」；其余形状在注册期被拒绝。
+- **成员表的写入口必须由操作权限把守**：子表维度把「谁属于这个资源」的判定权交给了业务数据。
+
+完整说明（含与「解析器反向展开」的取舍）见
+[`Euonia.Security/README.md` §5.9](../Euonia.Security/README.md) 与
+[`Euonia.Security/DESIGN.md` §1.9](../Euonia.Security/DESIGN.md)。
 
 ---
 
@@ -674,12 +714,12 @@ guard.Allows(repoInTeamC);                // → true
 | `ScopePolicySet<T>` | `Permission/Scope/` | `ScopeModel<T>.Declare` 入参：按权限码声明行级策略 |
 | `PermissionSetup` / `ValidatePermissionSetup()` | `Permission/` | 启动期检查解析器是否齐备 |
 | `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的操作权限 / 数据权限闸门（越权抛 `SecurityException`） |
-| `ScopeDimensions` | `Permission/Scope/` | 维度名常量（`Owner`/`Dept`/`Region`/`Project`）与校验入口 |
+| `ScopeDimensions` | `Permission/Scope/` | 维度名常量（`Owner`/`Dept`/`Member`/`Region`/`Project`）与校验入口 |
 | `ScopeSubject` / `ScopeSubjectSet` | `Permission/Scope/` | 用户被授予的主体及集合（维度名大小写不敏感，值精确比较） |
 | `ScopeSubjectSetBuilder` | `Permission/Scope/` | 解析器构造主体集合（`Add`/`AddRange`/`AddSelf`） |
 | `IScopeSubjectResolver` | `Permission/Scope/` | 授权值来源（应用实现，实时解析） |
 | `ScopeModel<T>` / `IScopeModel<T>` | `Permission/Scope/` | 资源模型 + 策略的声明基类 |
-| `ScopeModelBuilder<T>` | `Permission/Scope/` | `Map` 维度、`Classify` 分类属性 |
+| `ScopeModelBuilder<T>` | `Permission/Scope/` | `Map` 行内列维度、`MapMany` 子表维度（§3.8）、`Classify` 分类属性 |
 | `ScopePolicy<T>` | `Permission/Scope/` | 策略组合子（`Self`/`Grant`/`All`/`Any`/`Deny`/`Where`） |
 | `CompiledScopePolicy<T>` | `Permission/Scope/` | 编译结果：`Allow`/`Deny` 一对表达式 |
 | `ScopePolicyCompiler` | `Permission/Scope/` | 唯一编译出口 |
@@ -734,8 +774,10 @@ public abstract class ScopeModel<T>
 
 public sealed class ScopeModelBuilder<T>
 {
-    ScopeModelBuilder<T> Map(string dimension, Expression<Func<T, string>> selector);
-    ScopeModelBuilder<T> Classify(string name, Expression<Func<T, object>> selector);   // 不参与授权
+    ScopeModelBuilder<T> Map(string dimension, Expression<Func<T, string>> selector);        // 行内的列
+    ScopeModelBuilder<T> MapMany(string dimension,                                           // 子表（§3.8）
+                                 Expression<Func<T, IEnumerable<string>>> selector);
+    ScopeModelBuilder<T> Classify(string name, Expression<Func<T, object>> selector);       // 不参与授权
 }
 
 public sealed class ScopePolicySet<T>
@@ -796,6 +838,8 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | `引用了未映射的维度` | 策略里 `Grant("x")` 但模型没 `Map("x", …)` | 补 `Map`，或改用正确维度名 |
 | `没有任何操作会解析到该码`（死策略） | `Declare` 里写的码与方法上 `[Permission]` 的码对不上（多半是拼写不一致） | 核对两处字面量；错误消息会列出实际解析到的码 |
 | `未声明任何维度` | 模型没调用 `Map` | 至少映射一个维度 |
+| `取值表达式 ... 不受支持` | 子表维度（§3.8）的选择器不是「导航集合 + 可选 `Where` + 取字符串值」 | 改成受支持的形状；行内的单值请用 `Map` |
+| `维度 'x' 在类型 'Y' 的权限模型中重复声明` | 同一维度被 `Map` 与 `MapMany` 各声明了一次 | 一个维度只能有一个取值来源 |
 | `结构性恒不放行` | `Any` 之下全是 `Deny` 分支 | 补上 `Grant`/`Where`/`Self` 等允许条件 |
 | `存在多个权限模型` | 同一资源类型有两个 `ScopeModel<T>` | 合并为一个 |
 | `未注册 IScopeSubjectResolver` | 声明了模型或 `[Permission]` 却没接解析器 | 注册实现，并调用 `provider.ValidatePermissionSetup()` |
@@ -806,6 +850,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 |---|---|
 | `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验被跳过，首次判定时兜底暴露 |
 | `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext` |
+| `InvalidOperationException`：提示含「子表维度」 | 单行判定遇到未加载的子集合（§3.8）。它不是越权，**不要**当成 `SecurityException` 捕获；按下推/加载/去掉初始化器三条修法处理 |
 | `SecurityException` | 工厂边界判定越权——操作权限或数据范围不满足（新增/更新/删除/命令**一致**） |
 
 ### 判定结果不符合预期
@@ -827,6 +872,9 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 - **列表查询没有过滤**：读侧必须显式走 `guard.Apply(query)`，框架不会自动介入。
 - **不要**把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——见 §3.1 的警告。
 - 生成的 SQL 里出现空 `IN ()` 是不可能的：码下无授予时直接产出恒假常量。
+- 子表维度（§3.8）产出的是 `EXISTS` 相关子查询，因此 `Apply` 必须作用在**实体查询**上、
+  且在投影之前：投影成 DTO 后集合已被物化，无法再翻译。
+- 子表维度在内存判定（`Allows`）前多一次加载探测；大批量对象请走 `Apply` 而不是逐行判定。
 
 ---
 
@@ -846,6 +894,10 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 若 ACL 正向存储（「哪些用户能操作 A1」），需要翻成 id 列表——列表可能很大。
 建议**授权尽量授「组 id」而非「行 id」**；行数巨大时改用
 `Where(x => aclQuery.Contains(x.Id))` 逃生舱，并自行评估执行成本。
+若关系就在同库的子表里（成员表 / 关系表），改用子表维度（§3.8）可免去反向展开。
+
+**子表维度的下推成本**：产出的 `EXISTS` 子查询按子表的过滤列取数，
+请在子表上建 `(父标识, 值)` 组合索引（例如 `(team_id, user_id)`），否则外层每一行都要扫一遍子表。
 
 **同步与异步**：`IPermissionChecker` 是同步接口，首次判定会走一次 sync-over-async
 （每作用域仅一次）。工厂的异步入口可优先用 `CheckPermissionAsync` 避免阻塞线程。

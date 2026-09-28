@@ -36,6 +36,19 @@ public static class ScopeDimensions
 	public const string Team = "team";
 
 	/// <summary>
+	/// 成员（参与者）维度：值为该资源的<b>成员标识</b>。
+	/// </summary>
+	/// <remarks>
+	/// 与其余维度不同，本维度的取值通常不在资源行上，而在<b>子表</b>（成员表/关系表）里，
+	/// 因此用 <see cref="ScopeModelBuilder{T}.MapMany"/> 声明为集合维度：
+	/// 「我加入了哪些团队」即 <c>Grant(Member)</c> + 解析器授予本人的用户标识，
+	/// 下推为 <c>EXISTS</c> 子查询。同一个用户在团队上的角色（管理员/普通成员）若也要参与判定，
+	/// 写在选择器里（<c>x =&gt; x.Members.Where(m =&gt; m.Role == "admin").Select(m =&gt; m.UserId)</c>），
+	/// 或另立一个维度。
+	/// </remarks>
+	public const string Member = "member";
+
+	/// <summary>
 	/// 区域维度。
 	/// </summary>
 	public const string Region = "region";

@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using System.Security.Claims;
 using Nerosoft.Euonia.Threading;
 
@@ -318,7 +319,18 @@ public sealed class ScopeGuard : IScopeGuard
 		              .GetMethod(nameof(ScopeFilter.Explain))!
 		              .MakeGenericMethod(declaredType);
 
-		return (ScopeDecision)explain.Invoke(null, [resource, policy, registration.Descriptor, GetSubjects(), scopeKey])!;
+		try
+		{
+			return (ScopeDecision)explain.Invoke(null, [resource, policy, registration.Descriptor, GetSubjects(), scopeKey])!;
+		}
+		catch (TargetInvocationException exception) when (exception.InnerException != null)
+		{
+			// 反射会把原异常包一层，类型与消息都变样（例如把「判定不了」的说明变成一句反射错误）；
+			// 审计路径本身就是用来排障的，这里还原原始异常再抛。
+			ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+
+			throw;
+		}
 	}
 
 	/// <summary>

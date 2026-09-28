@@ -1,4 +1,6 @@
+using System.Collections.Concurrent;
 using System.Linq.Expressions;
+using System.Reflection;
 
 namespace Nerosoft.Euonia.Security;
 
@@ -46,39 +48,129 @@ internal sealed class ScopeCompileContext<T>
 	internal string ScopeKey { get; }
 
 	/// <summary>
-	/// 生成「资源在指定维度上的值，属于用户在该维度上被授予的集合」这一条件。
+	/// 获取本次编译使用的模型描述（叶子描述据此区分单值维度与子表维度）。
+	/// </summary>
+	internal ScopeModelDescriptor Descriptor => _descriptor;
+
+	/// <summary>
+	/// 生成「资源在指定维度上的取值集合，与用户在该维度上被授予的集合相交非空」这一条件。
 	/// </summary>
 	/// <param name="dimension">维度名。</param>
 	/// <returns>条件表达式 body。</returns>
 	/// <exception cref="InvalidOperationException">当该维度未在资源模型中映射时抛出。</exception>
+	/// <remarks>
+	/// 单值维度（<c>x =&gt; x.DeptId</c>）产出集合成员判断，下推为 <c>IN (...)</c>；
+	/// 集合维度（<c>x =&gt; x.Members.Select(m =&gt; m.UserId)</c>，见 <see cref="ScopeModelBuilder{T}.MapMany"/>）
+	/// 产出「子集合中存在一个值被授予」，下推为 <c>EXISTS</c> 子查询。两者语义一致，单值是后者的退化情形。
+	/// </remarks>
 	internal Expression GrantCondition(string dimension)
 	{
 		// 先取映射：即便用户在该维度上没有任何授予，未映射的维度也必须暴露为错误
-		var selector = _descriptor.GetDimensionSelector(dimension);
+		var mapping = _descriptor.GetDimension(dimension);
 
 		// 只按「当前码 → 默认键」取值，绝不做权限码通配回落（见 ScopeSubjectSet 的查找规则）
 		var values = _subjects.ValuesOf(ScopeKey, dimension);
 		if (values.Count == 0)
 		{
 			// 用户在该维度上未被授予任何值：直接产出恒假。
-			// 不生成空 IN ()，避免落入各提供程序对空集合翻译的差异。
+			// 不生成空 IN ()，也不会生成空 EXISTS，避免落入各提供程序对空集合翻译的差异。
 			return ScopePolicyNode<T>.False;
 		}
 
-		// 资源侧取值：x => x.DeptId，重绑定到规范参数
-		var value = Rebind(selector);
-
 		// 用户侧取值：烘成常量集合（去重由 ScopeSubjectSet 保证）
 		var list = values is List<string> existing ? existing : new List<string>(values);
+		var granted = Expression.Constant(list, typeof(List<string>));
 
-		// 生成 Enumerable.Contains(values, x.DeptId) —— EF Core 会翻译成 IN (...)
-		return Expression.Call(
-			typeof(Enumerable),
-			nameof(Enumerable.Contains),
-			[typeof(string)],
-			Expression.Constant(list, typeof(List<string>)),
-			value);
+		return mapping.IsCollection
+			? CollectionCondition(mapping, granted)
+			: Contains(granted, Rebind(mapping.Value));
 	}
+
+	/// <summary>
+	/// 生成集合维度的条件：<c>x.Members.Where(f).Any(v =&gt; values.Contains(v.UserId))</c>。
+	/// </summary>
+	/// <remarks>
+	/// 刻意产出「导航集合 + 过滤 + 元素谓词」这一种形状：它就是人类手写、提供程序确定能翻译成
+	/// <c>EXISTS</c> 子查询的形状。选择器里的 <c>Select</c> 之所以被拆掉，是因为
+	/// 「对投影结果求 <c>Any</c>」的形状能否翻译取决于提供程序，而这里不允许把可翻译性押在猜测上。
+	/// </remarks>
+	private Expression CollectionCondition(ScopeDimensionMapping mapping, Expression granted)
+	{
+		var element = Expression.Parameter(mapping.ElementType, "v");
+		var source = Rebind(mapping.Collection);
+
+		foreach (var filter in mapping.Filters)
+		{
+			source = Expression.Call(
+				PredicateMethod(nameof(Enumerable.Where), mapping.ElementType),
+				source,
+				Expression.Lambda(ScopeParameterReplacer.Replace(filter, element), element));
+		}
+
+		var value = mapping.Value == null ? element : ScopeParameterReplacer.Replace(mapping.Value, element);
+
+		return Expression.Call(
+			PredicateMethod(nameof(Enumerable.Any), mapping.ElementType),
+			source,
+			Expression.Lambda(Contains(granted, value), element));
+	}
+
+	/// <summary>
+	/// 生成 <c>Enumerable.Contains(values, value)</c>，即「value 属于授予集合」。
+	/// </summary>
+	private static Expression Contains(Expression values, Expression value)
+	{
+		return Expression.Call(ContainsMethod, values, value);
+	}
+
+	/// <summary>
+	/// 构建集合维度的加载探测（供单行判定在求值前检查对象图是否完整）。
+	/// </summary>
+	/// <returns>探测列表；模型没有集合维度时为空。</returns>
+	internal IReadOnlyList<ScopeLoadGuard<T>> CreateLoadGuards()
+	{
+		var guards = new List<ScopeLoadGuard<T>>();
+
+		foreach (var dimension in _descriptor.CollectionDimensions)
+		{
+			var mapping = _descriptor.GetDimension(dimension);
+			var probe = mapping.CreateLoadProbe();
+
+			if (probe != null)
+			{
+				guards.Add(new ScopeLoadGuard<T>(dimension, mapping.Path, Lambda(Rebind(probe))));
+			}
+		}
+
+		return guards;
+	}
+
+	/// <summary>
+	/// 取「集合 + 元素谓词」形态的 <see cref="Enumerable"/> 方法（<c>Where</c> / <c>Any</c>）。
+	/// </summary>
+	/// <remarks>
+	/// 不能用按名字查找的重载：<see cref="Enumerable.Where{TSource}(IEnumerable{TSource}, Func{TSource, bool})"/>
+	/// 还有一个同元数的 <c>Func&lt;TSource, int, bool&gt;</c> 版本，按名字查会歧义。
+	/// 结果按（方法名，元素类型）缓存——编译路径是热点，不该反复反射。
+	/// </remarks>
+	private static MethodInfo PredicateMethod(string name, Type elementType)
+	{
+		return Methods.GetOrAdd((name, elementType), key => typeof(Enumerable)
+			.GetMethods(BindingFlags.Public | BindingFlags.Static)
+			.Single(method => method.Name == key.Name
+			                  && method.IsGenericMethodDefinition
+			                  && method.GetParameters().Length == 2
+			                  && method.GetParameters()[1].ParameterType.IsGenericType
+			                  && method.GetParameters()[1].ParameterType.GetGenericArguments().Length == 2)
+			.MakeGenericMethod(key.ElementType));
+	}
+
+	private static readonly ConcurrentDictionary<(string Name, Type ElementType), MethodInfo> Methods = new();
+
+	private static readonly MethodInfo ContainsMethod = typeof(Enumerable)
+		.GetMethods(BindingFlags.Public | BindingFlags.Static)
+		.Single(method => method.Name == nameof(Enumerable.Contains) && method.GetParameters().Length == 2)
+		.MakeGenericMethod(typeof(string));
 
 	/// <summary>
 	/// 将谓词重绑定到规范参数上，返回其 body。

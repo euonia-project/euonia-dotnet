@@ -15,6 +15,11 @@ namespace Nerosoft.Euonia.Security;
 /// 判定语义恒为 <c>Allow &amp;&amp; !Deny</c>。当策略只包含拒绝条件时，
 /// <see cref="Allow"/> 恒真而 <see cref="HasAllow"/> 为 <see langword="false"/>。
 /// </para>
+/// <para>
+/// 「不可能得出不同结论」的前提是两边求值的是<b>同一份数据</b>：下推由数据库求值，
+/// 内存求值则由实例承载。子表维度（<see cref="ScopeModelBuilder{T}.MapMany"/>）的取值来自子集合，
+/// 因此内存求值要求对象图完整（子集合已加载），否则明确失败——详见 <see cref="Evaluate"/>。
+/// </para>
 /// </remarks>
 public sealed class CompiledScopePolicy<T>
 	where T : class
@@ -22,7 +27,10 @@ public sealed class CompiledScopePolicy<T>
 	private readonly Lazy<Func<T, bool>> _allow;
 	private readonly Lazy<Func<T, bool>> _deny;
 
-	internal CompiledScopePolicy(Expression<Func<T, bool>> allow, Expression<Func<T, bool>> deny, bool hasAllow, string scopeKey)
+	/// <summary>集合维度的加载探测与已编译的探测委托，按需编译：下推路径不做探测，不应付出编译开销。</summary>
+	private readonly Lazy<(ScopeLoadGuard<T> Guard, Func<T, bool> IsMissing)[]> _loadGuards;
+
+	internal CompiledScopePolicy(Expression<Func<T, bool>> allow, Expression<Func<T, bool>> deny, bool hasAllow, string scopeKey, IReadOnlyList<ScopeLoadGuard<T>> loadGuards)
 	{
 		Allow = allow;
 		Deny = deny;
@@ -32,6 +40,11 @@ public sealed class CompiledScopePolicy<T>
 		// 委托按需编译并缓存：下推路径根本不求值，不应付出编译开销
 		_allow = new Lazy<Func<T, bool>>(() => Allow.Compile());
 		_deny = new Lazy<Func<T, bool>>(() => Deny.Compile());
+
+		var guards = loadGuards ?? [];
+		_loadGuards = new Lazy<(ScopeLoadGuard<T> Guard, Func<T, bool> IsMissing)[]>(() => guards
+			.Select(guard => (guard, guard.IsMissing.Compile()))
+			.ToArray());
 	}
 
 	/// <summary>
@@ -70,8 +83,72 @@ public sealed class CompiledScopePolicy<T>
 	/// </summary>
 	/// <param name="resource">待判定的资源。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <exception cref="InvalidOperationException">策略引用了子表维度，但实例上对应的子集合未加载（为空引用）时抛出。</exception>
 	internal bool Evaluate(T resource)
 	{
-		return resource != null && _allow.Value(resource) && !_deny.Value(resource);
+		if (resource == null)
+		{
+			return false;
+		}
+
+		EnsureEvaluable(resource);
+
+		return _allow.Value(resource) && !_deny.Value(resource);
+	}
+
+	/// <summary>
+	/// 在内存判定之前检查对象图是否完整：策略引用的子表维度，其子集合必须是已加载的。
+	/// </summary>
+	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时直接返回。</param>
+	/// <exception cref="InvalidOperationException">任一子表维度的子集合为空引用时抛出。</exception>
+	/// <remarks>
+	/// <para>
+	/// 子表维度（见 <see cref="ScopeModelBuilder{T}.MapMany"/>）的取值来自子集合，而内存判定
+	/// （<c>Allows</c> / <c>AllowsObject</c> / <c>Filter</c> / <c>Explain</c>）在实例上求值，
+	/// 因此需要对象图完整。<b>未加载时明确失败，而不是判为拒绝</b>：后者会把「没加载」伪装成
+	/// 「无权限」，写侧表现为合法用户被拒且毫无线索。
+	/// </para>
+	/// <para>
+	/// 这是探测而非求值短路：即便策略本身会先短路到某个结论，对象图不完整也照样报错——
+	/// 结论若建立在没加载的数据上，本身就是错的。
+	/// </para>
+	/// </remarks>
+	internal void EnsureEvaluable(T resource)
+	{
+		if (resource == null || _loadGuards.Value.Length == 0)
+		{
+			return;
+		}
+
+		foreach (var (guard, isMissing) in _loadGuards.Value)
+		{
+			bool missing;
+
+			try
+			{
+				missing = isMissing(resource);
+			}
+			catch (NullReferenceException)
+			{
+				// 中间导航为空（例如 x.Team.Members 而 x.Team 未加载）同样属于对象图不完整
+				missing = true;
+			}
+
+			// 只有真的缺失时才拼消息：判定是热路径，探测本身不该产生分配
+			if (missing)
+			{
+				throw new InvalidOperationException(MissingSubCollection(guard));
+			}
+		}
+	}
+
+	private static string MissingSubCollection(ScopeLoadGuard<T> guard)
+	{
+		return $"数据权限判定失败：资源类型 '{typeof(T).Name}' 的子表维度 '{guard.Dimension}'（取值来源：{guard.Path}）在单行判定时不可用——"
+		       + "对应的子集合未加载（为空引用）。单行判定在内存中求值同一棵表达式，需要对象图完整；"
+		       + "判定不了就失败，因此这里抛错而不是静默拒绝。"
+		       + "修法：① 读侧改用 IScopeGuard.Apply 下推（数据库侧 EXISTS，推荐）；"
+		       + "② 加载对象时一并加载该子集合（例如 EF Core 的 Include）；"
+		       + "③ 去掉集合属性的初始化器（例如 = []）——否则「未加载」会变成「空集合」而被静默拒绝。";
 	}
 }

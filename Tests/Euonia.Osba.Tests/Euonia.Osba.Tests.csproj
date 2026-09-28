@@ -6,6 +6,14 @@
         <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
     </ItemGroup>
 
+    <!--
+      数据权限的「可下推」承诺只能在真实提供程序上证明：子表维度是否真的翻译成 EXISTS 相关子查询，
+      表达式形状的断言回答不了（译器/提供程序才是裁判）。故这里引入 EF Core + SQLite 做翻译与执行验证。
+    -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    </ItemGroup>
+
     <ItemGroup>
         <None Update="appsettings.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>

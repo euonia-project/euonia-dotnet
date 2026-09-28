@@ -256,6 +256,9 @@ public sealed class OrderScope : ScopeModel<Order>
 模型在程序集扫描时自动发现，并在启动期完成全部校验——配置错误一律 fail-fast，
 校验项清单见 [§5.6](#56-启动期校验)。
 
+维度取值默认取自资源行自身（`Map`）。若授权关系落在**子表**（成员表 / 关系表）里——
+「我加入了哪些团队 / 家庭 / 组织」就是这种形状——用 `MapMany` 声明为集合维度，见 [§5.9](#59-子表维度关系表作为取值来源)。
+
 ### 5.3 匹配语义与允许/拒绝代数
 
 最终结论是 `Allow && !Deny`：
@@ -294,7 +297,9 @@ public sealed class OrderScope : ScopeModel<Order>
 | 诊断 | 含义与修法 |
 |---|---|
 | 模型无法实例化 | 程序集扫描要求模型有公共无参构造；需要构造参数的模型改用程序化注册（§5.7） |
-| 模型未声明任何维度 | `Define` 里至少调用一次 `ScopeModelBuilder<T>.Map` |
+| 模型未声明任何维度 | `Define` 里至少调用一次 `ScopeModelBuilder<T>.Map`（取值来自子表时用 `MapMany`） |
+| 集合维度的取值形状不受支持 | `MapMany` 的选择器不是「导航集合（可带 `Where` 过滤）再取字符串值」。只有这一种形状能下推为 `EXISTS`，故注册期直接拒绝（§5.9） |
+| 同一维度被重复声明 | 同一个维度名被 `Map` 与 `MapMany`（或同名声明两次）声明——一个维度只能有一个取值来源 |
 | 同一资源类型存在多个模型 | 一个类型只能有一个 `ScopeModel<T>`；程序化注册同样参与检查 |
 | 未提供策略 | `Policy` 返回 `null`。模型与策略必须写在同一个声明类型里 |
 | 声明了权限码但未提供策略 | `Declare` 里声明了该码，却没有对应的 `For(code, …)` |
@@ -354,6 +359,95 @@ new ScopeModelRegistryBuilder()
 
 ---
 
+### 5.9 子表维度（关系表作为取值来源）
+
+**问题**：「我加入了哪些团队 / 家庭 / 组织」这类权限，关系存在**子表**里
+（`team_member(team_id, user_id, status)`），资源却是父行（`team`）。维度取值只能取自资源行自身时，
+唯一的办法是让解析器把关系**反向展开**成一堆 id（[DESIGN §2.1](DESIGN.md)）：关系表与授权数据要互相同步、
+每次解析多一次反查与一个 `IN (...)`，而且关系的属性（`status`、`expires_at`）无法参与行级判定。
+
+**做法**：用 `MapMany` 把子表声明成一个**集合维度**——维度取值是「子表里的一组值」：
+
+```csharp
+public sealed class TeamScope : ScopeModel<Team>
+{
+    public override void Define(ScopeModelBuilder<Team> builder)
+        => builder.Map(ScopeDimensions.Owner, t => t.LeaderId)                    // 行内的列：单值维度
+                  .MapMany(ScopeDimensions.Member,                                // 子表：集合维度
+                           t => t.Members.Where(m => m.Status == "active")
+                                         .Select(m => m.UserId));
+
+    public override ScopePolicy<Team> Policy
+        => ScopePolicy<Team>.Any(ScopePolicy<Team>.Grant(ScopeDimensions.Member),
+                                 ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
+}
+```
+
+解析器侧与其它维度没有区别——授予的是「子表里应当出现的值」，通常就是**当前用户的标识**：
+
+```csharp
+builder.Add(ScopeDimensions.Member, userId);      // 「我是这个团队的成员」
+```
+
+> `owner` 维度已被行内的列占用时（如上例的 `LeaderId`），成员关系必须另立维度名——
+> 同一个维度只能声明一次。授予的值标识的是**子表里的那个值**，不是资源标识。
+
+判定与查询：
+
+```csharp
+await guard.EnsureResolvedAsync(ct);
+guard.Allows(team, "team:view");            // 单行判定：要求 team.Members 已加载（见下方边界）
+guard.Apply(db.Teams, "team:view");         // 下推：交给数据库做 EXISTS 相关子查询
+```
+
+生成的 SQL 就是这个形状（真实提供程序实测，非示意）：
+
+```sql
+SELECT "t"."id", "t"."name" FROM "team" AS "t"
+WHERE EXISTS (
+    SELECT 1 FROM "team_member" AS "m"
+    WHERE "t"."id" = "m"."team_id" AND "m"."status" = 'active' AND "m"."user_id" = 'dev')
+```
+
+**语义与单值维度是同一套**：`Grant(d)` 一律是「资源在该维度上的取值集合 ∩ 用户被授予的集合 ≠ ∅」
+（单值只是集合的退化情形），因此 `Self()` / `Any` / `All` / `Deny` / 策略键 / 审计全部照旧，
+`Explain` 里该叶子会带上 `[]` 标记（`Grant(member[])`）以便与行内列区分。
+子表属性写在选择器里，由数据库**实时**求值——成员关系一改，下一次查询即生效，
+不需要等授权数据刷新（对比 [§5.5](#55-缓存契约) 的解析快照）。
+
+**边界**（每条都对应一类真实事故）：
+
+| 边界 | 说明 |
+|---|---|
+| 单行判定要求子集合已加载 | `Allows` / `AllowsObject` / `Filter` / `Explain` 在内存中求值同一棵表达式：实例上子集合为 `null` 时**抛 `InvalidOperationException`**（指明维度与三条修法），绝不静默拒绝。写侧尤其注意——仓储返回的实体通常不带子表。 |
+| 初始化为空集合 ⇒ 静默拒绝 | 实体若把集合初始化成 `= []`，「未加载」与「确实没有成员」无法区分，表现为拒绝且无报错。这是**有意接受的边界**（[DESIGN §2.5](DESIGN.md)），要么去掉初始化器让它报错，要么就只走下推路径。 |
+| `Apply` 必须作用在实体查询上 | 先投影成 DTO / 读模型再过滤时集合已被物化，无法翻译。读模型要参与下推，请只声明行内的列维度。 |
+| 只支持存在量词 | 「子行**全部**命中」这类全称量词不支持——判定语义始终是集合成员判断。 |
+| 值类型仍是 `string` | 与单值维度一致（[DESIGN §2.4](DESIGN.md)）；子表列是 `Guid`/`long` 时请提供字符串投影。 |
+| 子表的写入口要单独设防 | 子表维度把「谁属于这个资源」的判定权交给业务数据，因此成员表的增删改必须由**操作权限**把守。 |
+
+**取值形状只有一种**，其余在**注册期**被拒绝：
+
+```csharp
+x => x.Members.Select(m => m.UserId)                        // ✅
+x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId)   // ✅ 子表属性参与判定
+x => x.MemberIds                                            // ✅ 元素本身就是字符串
+x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报错：形状不受支持
+```
+
+理由：可下推的只有「导航集合 + 过滤 + 元素谓词」这一种形状。与其让它在查询时被提供程序
+抛出翻译失败，不如在启动时说清楚——这也是本库一贯的 fail-fast 取舍。
+
+**与「解析器反向展开」怎么选**（[DESIGN §2.1](DESIGN.md)）：
+
+| 关系在哪 | 用什么 |
+|---|---|
+| 与查询同库、关系行可枚举（成员表这类） | `MapMany`——`EXISTS` 下推，实时、无需同步、无需反向展开 |
+| 关系在别处（跨库 / 外部服务），或需要「授组 id 而非行 id」的收窄 | 解析器反向展开为扁平集合（§2.1），框架只看到 `IN (...)` |
+| 行数巨大且关系极稀疏 | 逃生舱 `Where(x => aclQuery.Contains(x.Id))`，自行评估成本 |
+
+---
+
 ## 6. 关键成员速查
 
 ### 授权数据（使用方实现）
@@ -369,12 +463,12 @@ new ScopeModelRegistryBuilder()
 | 成员 | 用途 |
 |---|---|
 | `ScopeModel<T>` | 数据权限模型基类，模型与策略写在一起 |
-| `ScopeModelBuilder<T>` | 声明维度取值与分类属性 |
+| `ScopeModelBuilder<T>` | 声明维度取值（`Map` 行内列 / `MapMany` 子表）与分类属性 |
 | `ScopeModelRegistryBuilder` | 程序化注册模型（实例 / 类型 / 程序集） |
 | `OperationCodeSource` | 通用的「方法 → 业务操作」规则化来源（按特性或命名约定） |
 | `ScopePolicy<T>` | 策略组合：`Grant` / `Deny` / `Self` / `Any` / `All` / `Not` |
 | `ScopePolicySet<T>` | 按权限码声明行级策略 |
-| `ScopeDimensions` | 预置维度（`Self` / `Dept` / …） |
+| `ScopeDimensions` | 预置维度（`Owner` / `Dept` / `Member` / …） |
 | `ScopeKeys` | 保留键（`@default` / `@read` / `@create` / …）与操作默认键的派生（§5.8） |
 | `PermissionAttribute` | 声明操作权限点（类型级或方法级） |
 
@@ -414,6 +508,8 @@ new ScopeModelRegistryBuilder()
 | 「声明了权限码但未提供策略」 | `Declare` 里声明了该码，却没有对应的 `For(code, …)`；模型与策略必须写在一起 |
 | 「策略结构性恒不放行」 | 归约后 `Allow` 恒假，通常是 `Any` 之下全是拒绝条件——先确认这是本意还是漏写了允许条件 |
 | 「权限模型无法实例化」 | 程序集扫描要求模型有公共无参构造；需要构造参数时改用 §5.7 的程序化注册 |
+| 「集合维度的取值形状不受支持」 | `MapMany` 只接受「导航集合（可带 `Where` 过滤）再取字符串值」这一种形状，其余无法下推为 `EXISTS`（§5.9） |
+| 「维度 'x' 在类型 'Y' 的权限模型中重复声明」 | `Map` 与 `MapMany` 声明了同一个维度名——一个维度只能有一个取值来源 |
 | 「未注册 IScopeSubjectResolver」 | 声明了模型或权限码却没接授权数据源 |
 | 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
 | 「未注册 UserPrincipal」 | 判定主体取自 `UserPrincipal`；不注册则取用 `IScopeGuard` 直接失败 |
@@ -428,6 +524,9 @@ new ScopeModelRegistryBuilder()
    与 `Map("order", x => x.Id)` 取到的必须是同一套值。
 3. 再确认用的是**同一个权限码**：默认键与 `policies.For(code, ...)` 声明的键不是同一套策略，
    参见 [DESIGN §1.6](DESIGN.md)。
+4. 若结论来自**子表维度**（审计里显示 `Grant(member[])`，§5.9）：先核对授予的值与子表列里的值
+   是不是同一套——最常见的是把**资源标识**授予了成员维度（父子的方向搞反了，结果是恒不放行）；
+   再确认单行判定时子集合已加载（未加载会抛错而不是给出结论）。
 
 ### 下推相关问题
 
@@ -435,6 +534,8 @@ new ScopeModelRegistryBuilder()
   后者会把全表拉进内存。可以用 `ToQueryString()` 确认 SQL 里确实带了过滤条件。
 - 策略表达式里若引用了无法翻译的成员，EF 会抛异常；此时考虑改用 `Apply` 之后再做其他过滤，
   或调整维度选择器为可翻译形式。
+- 子表维度（§5.9）产生的条件是**相关子查询**（`EXISTS`），因此 `Apply` 必须作用在实体查询上、
+  且在投影之前：投影成 DTO 之后集合已被物化，无法再翻译。
 - 上下文要求：`IScopeGuard` 依赖当前 `UserPrincipal`。在后台任务里没有请求作用域时，
   需自行提供 `UserPrincipal` 并在数据变化后调用 `Refresh()`。
 
@@ -448,6 +549,10 @@ new ScopeModelRegistryBuilder()
 - `Refresh()` 会丢弃已编译策略；授权数据频繁变化时应把变更频率与 `Refresh` 频率一并考虑。
 - 策略表达式的复杂度直接决定 SQL 的复杂度：嵌套 `Any` 会被翻译成相关子查询，
   层数越深越慢。
+- 子表维度（§5.9）的 `EXISTS` 子查询按子表的过滤列取数，请在子表上建
+  `(父标识, 值)` 组合索引（例如 `(team_id, user_id)`），否则每行都要扫一遍子表。
+- 单行判定（`Allows` / `AllowsObject`）在子表维度上多了一次加载探测；
+  大批量对象应改用 `Apply` 下推，而不是逐行判定。
 
 ---
 

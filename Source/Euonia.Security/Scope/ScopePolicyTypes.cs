@@ -23,7 +23,10 @@ internal sealed class GrantScopePolicy<T> : ScopePolicy<T>
 
 	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
 	{
-		traces.Add(new ScopePolicyLeaf<T>($"Grant({_dimension})", context.Lambda(context.GrantCondition(_dimension)), negated));
+		// 集合维度（子表维度）带 "[]" 标记：审计时要能一眼看出授予的是「资源标识」还是「子表里的值」
+		var marker = context.Descriptor.IsCollectionDimension(_dimension) ? "[]" : string.Empty;
+
+		traces.Add(new ScopePolicyLeaf<T>($"Grant({_dimension}{marker})", context.Lambda(context.GrantCondition(_dimension)), negated));
 	}
 
 	public override string ToString()

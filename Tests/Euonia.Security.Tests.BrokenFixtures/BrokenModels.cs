@@ -54,6 +54,35 @@ public sealed class AlwaysDenyModel : ScopeModel<AlwaysDenyAsset>
 }
 
 /// <summary>
+/// 子表维度用了不受支持取值形状的资源。
+/// </summary>
+public sealed class UnsupportedCollectionAsset
+{
+	public string Id { get; set; }
+
+	public string[] Tags { get; set; }
+
+	public string[] OtherTags { get; set; }
+}
+
+/// <summary>
+/// 取值形状不受支持的模型：集合维度只支持「导航集合（可带 Where 过滤）再取字符串值」，
+/// 其余形状应<b>在注册期</b>被拒绝，而不是等到查询时由提供程序抛出翻译失败。
+/// </summary>
+public sealed class UnsupportedCollectionModel : ScopeModel<UnsupportedCollectionAsset>
+{
+	/// <inheritdoc />
+	public override void Define(ScopeModelBuilder<UnsupportedCollectionAsset> builder)
+	{
+		builder.MapMany("tags", x => x.Tags.Concat(x.OtherTags));
+	}
+
+	/// <inheritdoc />
+	public override ScopePolicy<UnsupportedCollectionAsset> Policy =>
+		ScopePolicy<UnsupportedCollectionAsset>.Grant("tags");
+}
+
+/// <summary>
 /// 正常的资源，用于验证混合注册（程序集 + 实例）路径。
 /// </summary>
 public sealed class ReportAsset

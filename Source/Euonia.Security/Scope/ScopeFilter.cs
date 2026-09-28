@@ -105,6 +105,11 @@ public static class ScopeFilter
 
 		var key = string.IsNullOrWhiteSpace(scopeKey) ? ScopeKeys.Default : scopeKey;
 		var compiled = ScopePolicyCompiler.Compile(policy, model, subjects, key);
+
+		// 逐叶子求值不走 Evaluate，故这里先独立检查一次对象图：否则子表维度会以
+		// 空引用异常的形式冒出来，而不是「判定不了」的明确报错（见 CompiledScopePolicy.EnsureEvaluable）。
+		compiled.EnsureEvaluable(resource);
+
 		var allowed = compiled.Evaluate(resource);
 
 		var matchedAllows = new List<string>();

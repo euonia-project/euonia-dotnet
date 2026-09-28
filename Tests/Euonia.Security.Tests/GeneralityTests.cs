@@ -226,6 +226,7 @@ public class GeneralityTests
 			() => new ScopeModelRegistryBuilder()
 				.Add<AlwaysDenyModel>()
 				.Add<UnmappedDimensionModel>()
+				.Add<UnsupportedCollectionModel>()
 				.Build(EmptyCodeSource.Instance));
 
 		Assert.Equal(

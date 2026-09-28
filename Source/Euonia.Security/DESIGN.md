@@ -50,7 +50,7 @@
 graph TD
     subgraph A["① 声明层 · 使用方代码（静态、可预定义）"]
         A1["操作权限点<br/>PermissionAttribute（类级 / 方法级）"]
-        A2["数据权限模型 ScopeModel&lt;T&gt;<br/>Define：维度映射 · 分类属性<br/>Policy：默认策略 · Declare：按权限码行级策略"]
+        A2["数据权限模型 ScopeModel&lt;T&gt;<br/>Define：维度映射（行内列 Map / 子表 MapMany）· 分类属性<br/>Policy：默认策略 · Declare：按权限码行级策略"]
         A3["授权数据来源（使用方实现）<br/>IScopeSubjectResolver.ResolveAsync(user)"]
     end
 
@@ -254,23 +254,55 @@ query            ≡ source.Where(Allow).Where(!Deny)
 **回归护栏**：`Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` 用可控时机的
 解析器精确构造该竞态——**关掉版本校验它就会转红**（已验证）。
 
+### 1.9 子表维度：关系表作为取值来源
+
+**问题**：「用户属于哪些团队」这类授权关系常常不在资源行上，而在**子表**里
+（`team_member(team_id, user_id, status)`）。维度取值只能取自资源行时，只剩解析器反向展开一条路
+（§2.1）：关系表与授权数据必须互相同步，每次解析多一次反查与一个 `IN (...)`，
+且关系的属性（`status`、`expires_at`）无法参与行级判定，只能塌缩成解析期的一次性快照。
+
+**决策**：把维度取值从「单值」推广为「集合」，`Grant(d)` 的语义统一为
+**「资源在该维度上的取值集合 ∩ 用户被授予的集合 ≠ ∅」**（单值是退化情形，语义不变）。
+集合值由 `MapMany` 声明，编译成 `x.Members.Where(f).Any(v => values.Contains(v.UserId))`，
+即提供程序翻译为 `EXISTS` 相关子查询的形状；`Deny` 之下则是 `NOT EXISTS`。
+
+**收益**：
+
+- 关系表成为**唯一真值来源**——不必把成员关系镜像进授权数据，成员增减下一次查询即生效；
+- 授予的值从「资源 id 列表」变为「用户自己的标识」（通常一个元素），`IN` 列表不再随关系规模增长；
+- 子表属性由数据库实时求值，而不是解析期快照；
+- 策略代数、策略键、审计、启动期校验**全部复用**——本决策只扩展「取值来源」，不扩展策略语言。
+
+**代价**：单行判定要求对象图完整（§2.5）；取值形状只支持一种（见下）。
+
+**被否决的方案**：
+
+| 方案 | 否决理由 |
+|---|---|
+| 原样保留选择器，把 `Any(Select(...))` 丢给提供程序翻译 | 「对投影结果求 `Any`」能否翻译取决于提供程序与版本，可下推性不该押在猜测上。改为在**注册期分解**选择器，只产出确定可翻译的那一种形状；不可分解即启动失败——与其在查询时报翻译失败，不如在启动时说清楚 |
+| 让 `Where` 的谓词引用当前用户 / 授权集合 | 逃逸口过大：授权值会从 `IScopeSubjectResolver` 之外的来源进入策略，撤销语义与 fail-closed 都不再可保证 |
+| 支持「子行全部命中」（∀ 量词） | 判定语义始终是集合成员判断；引入量词等于把表达式引擎推向通用 DSL（第 3 章已否决） |
+| 引擎回查数据库补齐子集合 | 引擎没有数据访问（库边界），且会把 I/O 带进判定 |
+| 只保留解析器反向展开、把子表场景写进文档 | 关系表越大越糟，且它逼迫每个宿主把关系**镜像**成授权数据。反向展开仍有它的位置（跨库、授组收窄，见 §2.1），但不该是唯一路径 |
+
 ---
 
 ## 2. 已知边界与取舍
 
 这些是**有意接受**的限制，不是待办事项。使用方需要知道它们。
 
-### 2.1 行级 ACL 要求解析器做反向展开
+### 2.1 行级 ACL 仍要求解析器做反向展开
 
 行级策略的形式是 `Grant("repo")` ⇒ `repoIds.Contains(x.RepoId)`，
 即解析器必须回答「此用户在此码下能碰**哪些资源 id**」。
 
 若 ACL 是正向存储的（「哪些用户能 push 到 A1」），解析器要把它翻成 id 列表，
-得到的是巨型 `IN (...)` + 每请求成本；编译器目前只支持 `Constant(List<string>)` 形态，
-无法下推子查询。
+得到的是巨型 `IN (...)` + 每请求成本。
 
-**守则**：授权尽量授「组 id」而非「行 id」；行数巨大时改用
-`Where(x => aclQuery.Contains(x.Id))` 逃生舱并自行评估成本。
+**这条边界的适用范围已被 §1.9 收窄**：关系在同库、且关系行可枚举时（成员表 / 关系表），
+改用子表维度即可下推成 `EXISTS`，不必反向展开。反向展开仍适用于：
+关系在别处（跨库 / 外部授权服务）、或需要把授予集合**收窄**成「组 id 而非行 id」的场合。
+行数巨大且关系极稀疏时，仍有逃生舱 `Where(x => aclQuery.Contains(x.Id))`，成本自行评估。
 
 ### 2.2 注册表不参与按类型的进程级缓存
 
@@ -287,7 +319,33 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 `Expression<Func<T,string>>` 是 `IN` 下推最自然的载体，但真实系统里 `TeamId` 常为 `Guid`/`long`。
 当前只能把列声明为字符串（或提供一个字符串投影）。扩展到泛型值类型会显著增加编译复杂度与校验面，
-暂不做。
+暂不做。子表维度（§1.9）同理：`MapMany` 的元素取值也必须是字符串。
+
+### 2.5 子表维度的单行判定要求对象图完整
+
+内存判定（`Allows` / `AllowsObject` / `Filter` / `Explain`，以及 Osba 的工厂边界）在**实例上**求值，
+而集合维度的取值来自子集合：子集合未加载（空引用）时判定不了，框架抛
+`InvalidOperationException` 并指明维度、路径与三条修法。这是**有意的**——
+静默判为拒绝会把「没加载」伪装成「无权限」，在写侧表现为合法用户被拒且毫无线索。
+
+探测在求值**之前**执行，因此「策略本来就会短路到某个结论」也照样报错：
+结论若建立在没加载的数据上，本身就是错的。探测表达式只用于内存判定，
+下推路径（`Apply`）**不做**任何探测——查询由数据库求值，与 CLR 对象图无关。
+
+有一处**无法检测**的残余：实体把集合初始化成空集合（`public List<Member> Members { get; set; } = [];`）时，
+「未加载」与「确实没有成员」不可区分，于是表现为静默拒绝。这属于应用自己的对象图约定，
+框架无从判断——去掉初始化器即可让它报错。
+
+### 2.6 子表维度只有存在量词
+
+「子行**全部**命中」这类全称量词不支持（见 §1.9 被否决的方案）。
+需要这类语义时，应把它建模成另一个维度或另一个资源，而不是给策略语言加量词。
+
+### 2.7 子表维度把关系表的写入口变成授权面
+
+成员关系一旦参与判定，`team_member` 的增删改就等同于授权变更——**该表的写入口必须由操作权限把守**，
+否则「给自己加一行」就是一次提权。这是子表维度的固有性质，不是实现缺陷：
+它同时是收益（撤销即时生效、无需同步）与责任（写入面即授权面）。
 
 ---
 
@@ -326,3 +384,10 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
 | `AddCode_Should_Reject_Reserved_Namespace` | §1.6 保留命名空间（授权数据这一侧同样不得携带保留码） |
 | `Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance` | §1.3 两个单行判定入口对同一实例结论一致；派生/代理实例不得 fail-open |
+| `MapMany_ShouldCompileTo_AnyOverContains_NotProjectedAny` / `MapMany_UnsupportedShape_ShouldFail_AtRegistration` | §1.9 只产出确定可下推的形状，其余在注册期拒绝 |
+| `MapMany_Pushdown_And_InMemoryEvaluation_ShouldAgree` | §1.3 单一真值来源（子表维度同样成立） |
+| `MapMany_UnloadedCollection_ShouldFailLoudly_WithDimensionAndFix` | §2.5 判定不了就失败，绝不静默拒绝 |
+| `MapMany_CollectionInitializedToEmpty_ShouldBeDeniedSilently` | §2.5 已知边界：初始化为空集合时静默拒绝——**有意保留**，不要改成放行 |
+| `MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything` | §1.4 fail-closed（子表维度同样适用） |
+| `MapMany_Apply_ShouldTranslateTo_Exists_Subquery` / `MapMany_Apply_ForDeclaredKey_ShouldTranslateTo_NotExists`（EF Core + SQLite） | §1.9 可下推：真实提供程序必须产出 `EXISTS` / `NOT EXISTS` |
+| `MapMany_Sqlite_ShouldAgree_With_InMemory` | §1.3 下推与内存判定一致（真实提供程序，非 LINQ-to-Objects） |

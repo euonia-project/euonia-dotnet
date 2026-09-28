@@ -12,7 +12,8 @@ namespace Nerosoft.Euonia.Security;
 public interface IScopeModelBuilder
 {
 	/// <summary>
-	/// 已声明的维度映射：维度名 → 取值表达式，表达式以资源类型为参数并返回字符串（通常是实体的列值）。
+	/// 已声明的维度映射：维度名 → 取值表达式，表达式以资源类型为参数并返回 <see cref="string"/>
+	/// （单值维度，通常是实体的列值）或 <see cref="IEnumerable{T}"/>（集合维度，取值来自子表/关系表）。
 	/// 名称大小写不敏感，一个模型至少要映射一个维度。
 	/// </summary>
 	IReadOnlyDictionary<string, LambdaExpression> Dimensions { get; }

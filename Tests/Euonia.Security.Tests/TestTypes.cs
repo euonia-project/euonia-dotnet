@@ -39,6 +39,106 @@ public sealed class AssetModel : ScopeModel<Asset>
 }
 
 /// <summary>
+/// 子表行：工作区成员。授权关系（谁属于这个工作区）存在这里，而不是工作区行上。
+/// </summary>
+public sealed class WorkspaceMember
+{
+	public string UserId { get; set; }
+
+	public string Status { get; set; }
+}
+
+/// <summary>
+/// 子表维度资源：成员关系在子表里，「我加入了哪些工作区」由此判定（见 <see cref="WorkspaceModel"/>）。
+/// </summary>
+/// <remarks>
+/// 子集合<b>刻意不给初始化器</b>：未加载时为空引用，单行判定会明确报错而不是静默拒绝。
+/// </remarks>
+public sealed class Workspace
+{
+	public string Id { get; set; }
+
+	public string OwnerId { get; set; }
+
+	public List<WorkspaceMember> Members { get; set; }
+}
+
+/// <summary>
+/// <see cref="Workspace"/> 的权限模型：成员（子表维度）或负责人可见。
+/// </summary>
+public sealed class WorkspaceModel : ScopeModel<Workspace>
+{
+	public override void Define(ScopeModelBuilder<Workspace> builder)
+	{
+		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
+		       .MapMany(ScopeDimensions.Member, x => x.Members.Select(m => m.UserId));
+	}
+
+	public override ScopePolicy<Workspace> Policy =>
+		ScopePolicy<Workspace>.Any(
+			ScopePolicy<Workspace>.Grant(ScopeDimensions.Member),
+			ScopePolicy<Workspace>.Self());
+}
+
+/// <summary>
+/// 子表行：频道成员，带状态属性（用于验证子表属性参与选择器）。
+/// </summary>
+public sealed class ChannelMember
+{
+	public string UserId { get; set; }
+
+	public string Status { get; set; }
+}
+
+/// <summary>
+/// 子表维度资源的第二种形态：只有「有效成员」算成员——子表属性写在选择器里，由数据库实时求值。
+/// </summary>
+public sealed class Channel
+{
+	public string Id { get; set; }
+
+	public List<ChannelMember> Members { get; set; }
+}
+
+/// <summary>
+/// <see cref="Channel"/> 的权限模型：仅「有效成员」可见。
+/// </summary>
+public sealed class ChannelModel : ScopeModel<Channel>
+{
+	public override void Define(ScopeModelBuilder<Channel> builder)
+	{
+		builder.MapMany(ScopeDimensions.Member, x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId));
+	}
+
+	public override ScopePolicy<Channel> Policy => ScopePolicy<Channel>.Grant(ScopeDimensions.Member);
+}
+
+/// <summary>
+/// 子表维度资源的第三种形态：集合元素本身就是维度值（选择器不带取值投射）。
+/// </summary>
+public sealed class SharedDocument
+{
+	public string Id { get; set; }
+
+	public List<string> ReaderIds { get; set; }
+}
+
+/// <summary>
+/// <see cref="SharedDocument"/> 的权限模型：被列为读者的用户可见。
+/// </summary>
+public sealed class SharedDocumentModel : ScopeModel<SharedDocument>
+{
+	public const string Reader = "reader";
+
+	public override void Define(ScopeModelBuilder<SharedDocument> builder)
+	{
+		builder.MapMany(Reader, x => x.ReaderIds);
+	}
+
+	public override ScopePolicy<SharedDocument> Policy => ScopePolicy<SharedDocument>.Grant(Reader);
+}
+
+/// <summary>
 /// 未密封的受控资源：用于构造「声明类型已注册、实例却是派生类型」的场景。
 /// </summary>
 public class ProxyableAsset
