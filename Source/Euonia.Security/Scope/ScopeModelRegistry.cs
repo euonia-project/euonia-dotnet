@@ -19,19 +19,17 @@ namespace Nerosoft.Euonia.Security;
 public sealed class ScopeModelRegistry
 {
 	private readonly Dictionary<Type, ScopeModelRegistration> _registrations;
-	private readonly IPermissionCodeSource _codeSource;
 
-	private ScopeModelRegistry(Dictionary<Type, ScopeModelRegistration> registrations, IPermissionCodeSource codeSource)
+	private ScopeModelRegistry(Dictionary<Type, ScopeModelRegistration> registrations)
 	{
 		_registrations = registrations;
-		_codeSource = codeSource;
 	}
 
 	/// <summary>
 	/// 不含任何模型的共享空表（不可变）：<see cref="ScopeModelRegistryBuilder.Build"/> 未注册到模型时返回它，
 	/// 此时全部资源都不受数据权限约束。
 	/// </summary>
-	public static ScopeModelRegistry Empty { get; } = new([], EmptyCodeSource.Instance);
+	public static ScopeModelRegistry Empty { get; } = new([]);
 
 	/// <summary>
 	/// 已注册模型的资源类型；只含显式注册的类型，实体框架的代理类型（派生类）不在其中，未注册任何模型时为空集合。
@@ -129,8 +127,8 @@ public sealed class ScopeModelRegistry
 	/// <summary>
 	/// 供 <see cref="ScopeModelRegistryBuilder"/> 构建已校验的注册表。
 	/// </summary>
-	internal static ScopeModelRegistry Create(Dictionary<Type, ScopeModelRegistration> registrations, IPermissionCodeSource codeSource)
+	internal static ScopeModelRegistry Create(Dictionary<Type, ScopeModelRegistration> registrations)
 	{
-		return new(registrations, codeSource);
+		return new(registrations);
 	}
 }

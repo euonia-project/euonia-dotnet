@@ -22,6 +22,15 @@ internal sealed class PermissionModelSetup
 			_sources.Add(codeSource);
 		}
 
+		AddAssemblies(assemblies);
+	}
+
+	/// <summary>
+	/// 只累积程序集，不改变权限码来源；同一程序集按幂等处理。
+	/// </summary>
+	/// <remarks>供「模型分散在多个程序集、来源只有一处」的注册路径使用。</remarks>
+	public void AddAssemblies(Assembly[] assemblies)
+	{
 		foreach (var assembly in assemblies ?? [])
 		{
 			if (assembly != null && !_assemblies.Contains(assembly))

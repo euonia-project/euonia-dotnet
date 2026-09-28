@@ -5,7 +5,8 @@ using Nerosoft.Euonia.Security;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// 权限体系的注册入口。
+/// 权限体系的注册入口：<see cref="AddPermission"/> 给出权限码来源与扫描范围，
+/// <see cref="AddPermissionModels"/> 只追加扫描范围。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
@@ -39,31 +40,90 @@ public static class ServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(codeSource);
 
-		var setup = services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
-			?.ImplementationInstance as PermissionModelSetup;
-
-		if (setup is null)
-		{
-			setup = new PermissionModelSetup();
-			services.AddSingleton(setup);
-
-			services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
-
-			services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-				provider.GetRequiredService<UserPrincipal>(),
-				provider.GetRequiredService<ScopeModelRegistry>(),
-				provider.GetService<IScopeSubjectResolver>(),
-				provider.GetService<IScopeKeyResolver>()));
-		}
+		var setup = GetOrCreateSetup(services);
 
 		setup.Add(codeSource, assemblies);
-
-		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
-		services.AddSingleton(registry);
-		services.AddSingleton(setup.CodeSource);
-		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
+		Rebuild(services, setup);
 
 		return services;
+	}
+
+	/// <summary>
+	/// 追加要扫描的程序集（数据权限模型与权限声明），不改变权限码来源。
+	/// </summary>
+	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
+	/// <param name="assemblies">要扫描数据权限模型与权限声明的程序集。</param>
+	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
+	/// <remarks>
+	/// <para>
+	/// 用于「模型分散在多个程序集、权限码来源只有一处」的布局：来源照旧由一次
+	/// <see cref="AddPermission"/> 给出，其余程序集各自用本方法追加（见 README §3.2）。
+	/// 程序集按幂等处理，重复传入只扫一次。
+	/// </para>
+	/// <para>
+	/// <b>本方法不提供权限码来源</b>，因此它不是「本应用没有方法级权限码」的断言
+	/// （那个断言只能用 <see cref="AddPermission"/> 传 <see cref="EmptyCodeSource.Instance"/> 做出，见 README §3.1）。
+	/// 若此前从未注册过来源：扫描到的方法级 <see cref="PermissionAttribute"/> 不会参与判定，
+	/// 而按权限码声明的策略会被注册期的<b>死策略校验</b>拒绝——两者都不会静默放行。
+	/// </para>
+	/// </remarks>
+	public static IServiceCollection AddPermissionModels(this IServiceCollection services, params Assembly[] assemblies)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+
+		var setup = GetOrCreateSetup(services);
+
+		setup.AddAssemblies(assemblies);
+		Rebuild(services, setup);
+
+		return services;
+	}
+
+	/// <summary>
+	/// 取得本次注册累积的状态；首次调用时一并注册引擎自身的服务。
+	/// </summary>
+	private static PermissionModelSetup GetOrCreateSetup(IServiceCollection services)
+	{
+		if (services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
+		            ?.ImplementationInstance is PermissionModelSetup existing)
+		{
+			return existing;
+		}
+
+		var setup = new PermissionModelSetup();
+
+		services.AddSingleton(setup);
+
+		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
+
+		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
+			provider.GetRequiredService<UserPrincipal>(),
+			provider.GetRequiredService<ScopeModelRegistry>(),
+			provider.GetService<IScopeSubjectResolver>(),
+			provider.GetService<IScopeKeyResolver>()));
+
+		return setup;
+	}
+
+	/// <summary>
+	/// 按累积后的来源与程序集重建注册表，并<b>替换</b>（而非追加）三者在本容器中的注册。
+	/// </summary>
+	/// <remarks>
+	/// 重建是逐次调用进行的，因此配置错误在<b>注册处</b>抛出，而不是等到容器构建或首次判定。
+	/// 用替换而非追加：多次注册后每种类型只保留一条描述符，容器里不留失效的中间注册表。
+	/// </remarks>
+	private static void Rebuild(IServiceCollection services, PermissionModelSetup setup)
+	{
+		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
+
+		services.RemoveAll<ScopeModelRegistry>();
+		services.AddSingleton(registry);
+
+		services.RemoveAll<IPermissionCodeSource>();
+		services.AddSingleton(setup.CodeSource);
+
+		services.RemoveAll<PermissionSetup>();
+		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
 	}
 
 	/// <summary>

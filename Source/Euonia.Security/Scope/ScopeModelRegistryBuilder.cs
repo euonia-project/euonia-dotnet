@@ -113,7 +113,7 @@ public sealed class ScopeModelRegistryBuilder
 
 		return registrations.Count == 0
 			? ScopeModelRegistry.Empty
-			: ScopeModelRegistry.Create(registrations, codeSource);
+			: ScopeModelRegistry.Create(registrations);
 	}
 
 	private static List<ScopeModelDiagnostic> ValidateModel(string name, ScopeModelRegistration registration, IPermissionCodeSource codeSource)

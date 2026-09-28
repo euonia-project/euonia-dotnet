@@ -245,6 +245,53 @@ public class AddPermissionTests
 
 	#endregion
 
+	#region 只追加扫描范围
+
+	[Fact]
+	public void AddPermissionModels_Should_Extend_Scan_Scope()
+	{
+		// 模型分散在多个程序集、权限码来源只有一处：来源由 AddPermission 给出，
+		// 其余程序集用本入口追加，不必重复传同一个来源实例。
+		var services = new ServiceCollection();
+
+		services.AddPermission(EmptyCodeSource.Instance);
+		services.AddPermissionModels(TestAssembly);
+
+		var provider = services.BuildServiceProvider();
+
+		Assert.True(provider.GetRequiredService<ScopeModelRegistry>().IsDeclared(typeof(Asset)));
+		Assert.Same(EmptyCodeSource.Instance, provider.GetRequiredService<IPermissionCodeSource>());
+	}
+
+	[Fact]
+	public void AddPermissionModels_Should_Not_Be_A_Code_Source_Assertion()
+	{
+		// 本入口不提供权限码来源，因此不能用来绕过「显式给出来源」的要求（README §3.1）。
+		// 只追加程序集时来源缺席、回落到 EmptyCodeSource，按码声明的策略无人能解析到——
+		// 死策略校验必须在这里拦住，锁定该边界以免日后被当成缺陷「放宽」。
+		var exception = Assert.Throws<ScopeModelValidationException>(
+			() => new ServiceCollection().AddPermissionModels(FixturesAssembly));
+
+		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
+	}
+
+	[Fact]
+	public void Registering_Twice_Should_Keep_One_Descriptor_Per_Service()
+	{
+		// 注册是「替换」而非「追加」：多次注册后每种类型只留一条描述符，
+		// 容器里不留失效的中间注册表。
+		var services = new ServiceCollection();
+
+		services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
+		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);
+
+		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ScopeModelRegistry)));
+		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IPermissionCodeSource)));
+		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(PermissionSetup)));
+	}
+
+	#endregion
+
 	#region 辅助
 
 	private static string[] ReferencedBy(Assembly assembly)

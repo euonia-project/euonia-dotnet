@@ -91,6 +91,10 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPr
 
 这正是期望行为——**声明了按码策略就说明存在方法级权限码**，那就必须给出方法与操作的对应关系。
 
+> 只追加扫描范围请用 [`AddPermissionModels`](#32-多个模块各自注册按并集合并)，但注意它**不提供来源**，
+> 因此**不构成**上面这个断言。用它代替 `EmptyCodeSource` 时，方法级 `[Permission]` 会被静默忽略
+> （按码声明的策略仍会被死策略校验拦住）。
+
 ### 3.2 多个模块各自注册（按并集合并）
 
 `AddPermission` **可以调用多次，每次的贡献都会被合并**：
@@ -114,6 +118,18 @@ services.AddPermission(new ReportCodeSource(), typeof(Report).Assembly);  // 报
 注意 `IScopeKeyResolver` 仍是 `TryAdd` 语义（**先到先得**）：它决定「某个资源实例当前代表哪个操作」，
 属于**全局**语义，多个模块同时给出不同答案本身就是配置错误。需要按模块区分时，
 请自行实现一个带分派的 `IScopeKeyResolver`。
+
+**来源只有一处、模型却分散在多个程序集**时，用 `AddPermissionModels` 单独追加扫描范围，
+不必重复传同一个来源实例：
+
+```csharp
+services.AddPermission(new OrderCodeSource(), typeof(Order).Assembly);  // 给出唯一的权限码来源
+services.AddPermissionModels(typeof(Report).Assembly);                  // 该程序集只有模型，无方法级权限码
+```
+
+它只追加程序集（同样按幂等合并），**不提供权限码来源**；来源沿用此前注册的那个，
+从未注册过则回落到 `EmptyCodeSource`（此时不要指望方法级权限码生效，见 §3.1）。
+每次调用同样会重建并校验注册表，因此配置错误依旧在注册处抛出。
 
 ### 3.3 用规则描述「哪个方法对应哪个操作」
 
