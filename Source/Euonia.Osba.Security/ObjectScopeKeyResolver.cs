@@ -1,15 +1,13 @@
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba.Security;
 
 /// <summary>
 /// 由对象状态推断策略键，实现 <see cref="IScopeKeyResolver"/>。
 /// </summary>
 /// <remarks>
-/// 「资源当前代表哪个操作」是对象模型的知识——可编辑对象有新增/更改/删除状态、
-/// 命令对象是 <see cref="ICommandObject"/>、只读对象是 <see cref="IReadOnlyObject"/>。
-/// <see cref="ScopeOperationMap"/> 是这套映射的<b>唯一</b>实现，因此本类只做「拿到操作后交给
-/// <see cref="ScopeKeyResolver"/> 按键」这一步，不重复实现任何映射。
+/// 「资源当前代表哪个操作」是对象模型的知识（<see cref="ScopeOperationMap"/> 是它的唯一实现），
+/// 而「按操作取键」是引擎的知识（<see cref="ScopeKeyResolver"/>）——本类只把两者接起来。
 /// </remarks>
 internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 {
@@ -21,7 +19,7 @@ internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 	/// </summary>
 	/// <param name="registry">权限模型注册表；由容器注入（<c>AddPermission</c> 注册为单例）。</param>
 	/// <param name="codeSource">权限码来源；由容器注入。与注册期校验、操作权限闸门用的是<b>同一个</b>来源，
-	/// 因此三处对「某操作解析到哪个码」不会得出不同答案（见 <see cref="ObjectPermissionCodeSource.For"/>）。</param>
+	/// 因此三处对「某操作解析到哪个码」不会得出不同答案。</param>
 	/// <remarks>
 	/// 构造函数必须是 <see langword="public"/>——容器以反射激活实现类，不接受非公开构造函数。
 	/// 因此按类型注册（<c>TryAddSingleton&lt;IScopeKeyResolver, ObjectScopeKeyResolver&gt;</c>），
@@ -30,7 +28,7 @@ internal sealed class ObjectScopeKeyResolver : IScopeKeyResolver
 	public ObjectScopeKeyResolver(ScopeModelRegistry registry, IPermissionCodeSource codeSource)
 	{
 		_registry = registry;
-		_codeSource = codeSource ?? ObjectPermissionCodeSource.Instance;
+		_codeSource = codeSource;
 	}
 
 	/// <inheritdoc />

@@ -47,6 +47,7 @@
         <Project Path="Source/Euonia.Validation/Euonia.Validation.csproj" />
         <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
         <Project Path="Source/Euonia.Security/Euonia.Security.csproj" />
+        <Project Path="Source/Euonia.Osba.Security/Euonia.Osba.Security.csproj" />
     </Folder>
     <Folder Name="/Source/Domain/">
         <Project Path="Source/Euonia.Application/Euonia.Application.csproj" />
@@ -66,6 +67,7 @@
         <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
         <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
+        <Project Path="Tests/Euonia.Osba.Standalone.Tests/Euonia.Osba.Standalone.Tests.csproj" />
         <Project Path="Tests/Euonia.Security.Tests/Euonia.Security.Tests.csproj" />
             <Project Path="Tests/Euonia.Security.Tests.BrokenFixtures/Euonia.Security.Tests.BrokenFixtures.csproj" />
     <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj" />

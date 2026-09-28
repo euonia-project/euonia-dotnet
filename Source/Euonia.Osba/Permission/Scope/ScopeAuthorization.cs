@@ -64,21 +64,15 @@ internal static class ScopeAuthorization
 			return;
 		}
 
-		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」。
-		// 这一步只用于诊断，不能用于判定——对象自己没接线就取不到 IScopeGuard。
+		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」——
+		// 该查询必须能在没有请求作用域时回答（见 IObjectScopeAuthorizer.IsConstrained）。
 		var context = businessObject.BusinessContext;
-		var registry = context?.GetService<ScopeModelRegistry>()
-		               ?? BusinessContextAccessor.Current?.GetService<ScopeModelRegistry>();
+		var authorizer = context?.GetService<IObjectScopeAuthorizer>()
+		                 ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
 
-		if (registry == null || !registry.HasDeclarations)
+		if (authorizer == null || !authorizer.IsConstrained(target.GetType()))
 		{
-			return;
-		}
-
-		// 未声明权限模型的资源类型不受数据权限约束
-		var rowType = target.GetType();
-		if (!registry.IsDeclared(rowType))
-		{
+			// 未启用数据权限，或该类型未声明权限模型：不受数据权限约束
 			return;
 		}
 
@@ -87,29 +81,14 @@ internal static class ScopeAuthorization
 			context != null,
 			"资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。"
 			+ "请通过工厂创建/读取对象，或在调用前设置 BusinessContext。",
-			rowType.Name,
+			target.GetType().Name,
 			operation);
 
-		var guard = context.GetService<IScopeGuard>();
-
-		// 已声明模型却拿不到判定入口属配置错误：必须暴露，不能静默放行
-		Check.Ensure(
-			guard != null,
-			"资源类型 '{0}' 已声明数据权限模型，但无法解析 {1}。请确认已调用 AddObjectPermission（或 AddPermission）。",
-			rowType.FullName,
-			nameof(IScopeGuard));
-
-		// 按操作解析策略键（声明了权限码且模型为该码声明了策略时用该码，否则用操作默认键）。
-		// 键只由操作决定（见 DESIGN §1.7）：工厂边界与单行判定 / 查询下推共用 ScopeKeyResolver
-		// 这个唯一出口，不可能对「当前是哪个键」得出不同答案。
-		registry.TryGetInherited(rowType, out var registration);
-
-		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, ObjectPermissionCodeSource.For(context));
-
-		if (!guard.AllowsObject(target, scopeKey))
+		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）
+		if (!authorizer.AllowsOperation(context, target, operation))
 		{
 			throw new SecurityException(
-				$"Data scope denied. {operation} ({stage}): {rowType.Name}. {guard.ExplainObject(target, scopeKey)}");
+				$"Data scope denied. {operation} ({stage}): {target.GetType().Name}. {authorizer.ExplainOperation(context, target, operation)}");
 		}
 	}
 }

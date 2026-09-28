@@ -24,7 +24,8 @@
 
 ## 0. 场景通用装配
 
-每个场景都需要这段（其中 `AuthzStore` 是「授权数据」的内存模拟，见各场景）：
+每个场景都需要这段（其中 `AuthzStore` 是「授权数据」的内存模拟，见各场景）。
+`AddObjectPermission` 来自 **`Euonia.Osba.Security`** 适配包——`Euonia.Osba` 本身不引用策略引擎：
 
 ```csharp
 using Microsoft.Extensions.DependencyInjection;

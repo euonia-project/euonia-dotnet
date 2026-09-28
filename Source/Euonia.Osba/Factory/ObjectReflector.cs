@@ -507,24 +507,18 @@ public class ObjectReflector
 	}
 
 	/// <summary>
-	/// 判断方法是否为指定操作对应的工厂方法：标记了对应的工厂方法特性，或符合约定的方法名。
+	/// 枚举类型上「属于指定工厂操作」的方法：与 <c>FindMatchedMethod</c> 共用同一套候选口径
+	/// （<see cref="BindingFlags.DeclaredOnly"/> 逐层查找，当前层没有候选才上溯基类）。
 	/// </summary>
-	/// <param name="method">待判断的方法。</param>
-	/// <param name="attributeType">工厂方法特性类型。</param>
-	/// <returns>是工厂方法则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <param name="targetType">业务对象类型。</param>
+	/// <param name="attributeType">工厂方法特性类型（如 <c>FactoryUpdateAttribute</c>）。</param>
+	/// <returns>候选方法；没有则返回空列表。</returns>
 	/// <remarks>
-	/// <para>
-	/// 判定规则：标记了工厂方法特性的方法不限定名称；未标记的方法必须严格匹配约定名称
-	/// （<see cref="GetConventionalMethodNames"/>，大小写敏感），拼写不符即不予识别。
-	/// </para>
-	/// <para>
-	/// 该方法与工厂方法查找（<see cref="FindFactoryMethod{TTarget}(Type, object[])"/>）使用同一套判定规则，
-	/// 确保"能被工厂调用的方法"与"参与权限要求收集的方法"始终一致。
-	/// </para>
+	/// 权限扫描必须用本方法而不是自己走一遍反射：「工厂会调用哪些方法」与「权限声明从哪些方法上收集」
+	/// 只要分叉，就会出现声明了权限却从不生效（或反之）的静默缺口。
 	/// </remarks>
-	internal static bool IsFactoryMethod(MethodInfo method, Type attributeType)
+	internal static IReadOnlyList<MethodInfo> GetFactoryMethods(Type targetType, Type attributeType)
 	{
-		return method.IsDefined(attributeType, true)
-		       || GetConventionalMethodNames(attributeType).Contains(method.Name);
+		return [.. GetCandidateMethods(targetType, attributeType).Select(candidate => candidate.Item1).Distinct()];
 	}
 }

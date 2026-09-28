@@ -33,6 +33,12 @@ public class ObjectPermissionOptInTests
 		Assert.Null(provider.GetService<IPermissionChecker>());
 		Assert.Null(provider.GetService<ScopeModelRegistry>());
 		Assert.Null(provider.GetService<IScopeKeyResolver>());
+
+		// Osba 自己的权限契约同样不由 AddBusinessObject 注册：
+		// 没有要求来源、没有判定实现，工厂边界在「声明了要求」时会报错而不是静默放行
+		Assert.Null(provider.GetService<IPermissionRequirementProvider>());
+		Assert.Null(provider.GetService<IOperationPermissionChecker>());
+		Assert.Null(provider.GetService<IObjectScopeAuthorizer>());
 	}
 
 	[Fact]

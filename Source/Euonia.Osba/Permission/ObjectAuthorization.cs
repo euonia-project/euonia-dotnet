@@ -9,9 +9,14 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// <para>
+/// 要求来自对象自身的声明（<see cref="IPermissionRequirementProvider"/>），判定交给宿主注册的
+/// <see cref="IOperationPermissionChecker"/>——本类只负责<b>强制</b>：拒绝抛
+/// <see cref="SecurityException"/>，判定不了抛 <see cref="InvalidOperationException"/>。
+/// </para>
+/// <para>
 /// <b>无法判定时必须失败，不能静默放行</b>：目标声明了权限要求却取不到
 /// <see cref="BusinessContext"/>（<see cref="BusinessObject.CanUpdateObject"/> 之类会因此解析不到
-/// <see cref="IPermissionChecker"/>）属配置错误——多半是调用方 <c>new</c> 出对象后忘了接线。
+/// <see cref="IOperationPermissionChecker"/>）属配置错误——多半是调用方 <c>new</c> 出对象后忘了接线。
 /// 这种情况下抛 <see cref="InvalidOperationException"/>，而不是当作「没有权限要求」放过去。
 /// </para>
 /// <para>
@@ -26,7 +31,7 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="target">目标业务对象；非 <see cref="BusinessObject"/> 类型时自动放行。</param>
 	/// <param name="operation">要执行的操作。</param>
-	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册检查器）时抛出。</exception>
+	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	internal static void EnsureAuthorized(object target, string operation)
 	{
@@ -35,7 +40,7 @@ internal static class ObjectAuthorization
 			return;
 		}
 
-		var requirements = ObjectPermissionCodeSource.For(businessObject.BusinessContext).RequirementsFor(businessObject.GetType(), operation);
+		var requirements = Requirements(businessObject, operation);
 
 		if (requirements.Count == 0)
 		{
@@ -52,10 +57,11 @@ internal static class ObjectAuthorization
 			operation);
 
 		Check.Ensure(
-			businessObject.BusinessContext.GetService<IPermissionChecker>() != null,
-			"业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。",
+			businessObject.BusinessContext.GetService<IOperationPermissionChecker>() != null,
+			"业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。"
+			+ "请调用 AddObjectPermission（Euonia.Osba.Security 包），或注册你自己的实现。",
 			businessObject.GetType().Name,
-			nameof(IPermissionChecker));
+			nameof(IOperationPermissionChecker));
 
 		var allowed = operation switch
 		{
@@ -64,12 +70,23 @@ internal static class ObjectAuthorization
 			BusinessOperation.Update => businessObject.CanUpdateObject(),
 			BusinessOperation.Delete => businessObject.CanDeleteObject(),
 			BusinessOperation.Execute => businessObject.CanExecuteObject(),
-			_ => false
+			_ => true
 		};
 
 		if (!allowed)
 		{
-			throw new SecurityException($"Operation not permitted. {operation}: {target.GetType().Name}");
+			throw new SecurityException($"Operation not allowed. {operation}: {businessObject.GetType().Name}.");
 		}
+	}
+
+	/// <summary>
+	/// 收集目标在指定操作上的要求；未注册要求来源时回落到 Osba 的默认来源（工厂约定扫描）。
+	/// </summary>
+	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation)
+	{
+		var provider = businessObject.BusinessContext?.GetService<IPermissionRequirementProvider>()
+		               ?? ObjectPermissionRequirementProvider.Instance;
+
+		return provider.RequirementsFor(businessObject.GetType(), operation);
 	}
 }

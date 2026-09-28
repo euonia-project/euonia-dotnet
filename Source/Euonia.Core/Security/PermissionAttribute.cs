@@ -4,6 +4,11 @@ namespace Nerosoft.Euonia.Security;
 /// 声明执行业务操作所需的权限要求，可应用于资源类型或执行该操作的方法。
 /// </summary>
 /// <remarks>
+/// <b>本类型位于 <c>Euonia.Core</c> 程序集</b>（命名空间沿用 <c>Nerosoft.Euonia.Security</c>，与
+/// <c>UserPrincipal</c>、<c>UserClaimTypes</c> 同类）：权限的「基础词汇」必须能被不引入策略引擎的宿主使用——
+/// 业务对象上的声明、对象工厂边界的判定，都不应要求宿主安装引擎。
+/// </remarks>
+/// <remarks>
 /// 类型级要求适用于该类型支持的全部操作；方法级要求仅在该方法被执行时生效（两者取并集）。
 /// 未指定 <see cref="Permission"/> 时仅校验角色，未指定角色时仅校验权限；两者均未指定则视为放行。
 /// </remarks>

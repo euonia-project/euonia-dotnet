@@ -1,7 +1,8 @@
 # Euonia.Osba 权限控制使用说明
 
-`Euonia.Security` 提供两套相辅相成的权限控制的**策略引擎**（仅依赖 `Euonia.Core`），
-`Euonia.Osba` 引用它，并把策略接到**工厂边界**上——本文档讲的就是这条接线该怎么用。
+`Euonia.Osba` 自己**不认识任何鉴权实现**：它只定义权限契约，并在**工厂边界**强制判定。
+接策略引擎是另一件事——由 `Euonia.Osba.Security` 把引擎接到这些契约上；宿主也可以用自己的实现
+（读配置、查权限表、接已有鉴权框架）。本文档讲的就是这套契约与接线该怎么用。
 
 > 引擎自身的类型、语义与设计取舍见 [`Euonia.Security/README.md`](../Euonia.Security/README.md)
 > 与 [`DESIGN.md`](../Euonia.Security/DESIGN.md)；多场景示例见
@@ -12,23 +13,35 @@
 
 | 库 | 内容 | 依赖 |
 |---|---|---|
-| `Euonia.Security` | `[Permission]`、`ScopeModel<T>`、策略编译与下推、`IScopeGuard`、`ScopeKeyResolver` | 仅 `Euonia.Core` |
-| `Euonia.Osba` | `BusinessObject` / 工厂 / 上下文，以及**强制执行点**（`ObjectAuthorization`、`ScopeAuthorization`） | `Euonia.Security` |
+| `Euonia.Core` | 权限的**基础词汇**：`[Permission]`、`BusinessOperation`、`UserPrincipal`、`UserClaimTypes` | — |
+| `Euonia.Osba` | `BusinessObject` / 工厂 / 上下文，权限**契约**（`IPermissionRequirementProvider`、`IOperationPermissionChecker`、`IObjectScopeAuthorizer`）与**强制执行点**（`ObjectAuthorization`、`ScopeAuthorization`） | `Euonia.Core`（**不引用引擎**） |
+| `Euonia.Security` | 策略引擎：`ScopeModel<T>`、策略编译与下推、`IScopeGuard`、`ScopeKeyResolver` | `Euonia.Core` |
+| `Euonia.Osba.Security` | **适配包**：把引擎接到 Osba 的权限契约上，提供 `AddObjectPermission` | `Euonia.Osba` + `Euonia.Security` |
 
-依赖方向是单向的 `Euonia.Osba → Euonia.Security`。原因是「资源当前代表哪个业务操作」
-（可编辑对象的新增/更改/删除状态、命令对象、只读对象）属于**对象模型**的知识，权限引擎不该认识它。
-因此引擎把两处需要对象模型知识的地方定义成接口，由 `Euonia.Osba` 实现：
+**两条边都是单向的**：`Euonia.Osba.Security → (Euonia.Osba, Euonia.Security)`，而 `Euonia.Osba` 与
+`Euonia.Security` 之间**没有边**。做成这样是因为两边的知识各自有主：
 
-| 接口 | 由谁实现 | 用途 |
-|---|---|---|
-| `IPermissionCodeSource` | `Euonia.Osba`（`ObjectPermissionCodeSource`） | 提供「某类型在某操作上声明了哪些权限码」，用于**注册期**校验策略键歧义与死策略 |
-| `IScopeKeyResolver` | `Euonia.Osba`（`ObjectScopeKeyResolver`） | 把资源实例解析为策略键，供 `IScopeGuard` 的单行判定使用 |
+- 「资源当前代表哪个业务操作」（可编辑对象的新增/更改/删除状态、命令对象、只读对象）是**对象模型**的知识；
+- 「这些要求是否被满足」是**鉴权实现**的知识。
 
-`AddObjectPermission` 会注册上述实现，因此**不需要**手工注册这两个接口。
-不调用它就等于不启用权限。
+因此 Osba 把前者收在自己的契约里（要求来源 + 两个判定入口），后者留给宿主回答：
 
-引擎内的公开类型在命名空间 `Nerosoft.Euonia.Security`（原先位于 `Nerosoft.Euonia.Osba`，
-拆分后需补 `using Nerosoft.Euonia.Security;`）。
+| 契约 | Osba 自带 | 引擎适配包提供 | 宿主自己实现 |
+|---|---|---|---|
+| `IPermissionRequirementProvider`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | 桥接到引擎的权限码来源（含宿主用 `AddPermission` 追加的规则） | 例如规则来自配置或权限表 |
+| `IOperationPermissionChecker`（操作权限判定） | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
+| `IObjectScopeAuthorizer`（行级数据权限） | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
+
+**不装任何实现也能用**：声明了 `[Permission]` 的类型在工厂边界会因「无人判定」而**报错**，
+而不是静默放行——这是刻意的（fail-closed）。
+
+接引擎时 `AddObjectPermission` 会注册上表第二列的三个实现，因此**不需要**手工注册它们；
+它同时注册引擎的两个映射（`IPermissionCodeSource`、`IScopeKeyResolver`）。
+不调用它、也不注册自己的实现，就等于不启用操作权限与行内数据权限。
+
+命名空间约定：`PermissionAttribute`、`BusinessOperation` 位于 `Euonia.Core` **程序集**但沿用命名空间
+`Nerosoft.Euonia.Security`（与 `UserPrincipal` 同类）——不引入引擎的宿主也能用它们，
+因此业务对象文件里出现 `using Nerosoft.Euonia.Security;` 是正常的。
 
 | | 操作权限（Operation Permission） | 数据权限（Data Permission） |
 |---|---|---|
@@ -65,26 +78,25 @@ services.AddObjectPermission(typeof(Order).Assembly);
 - `BusinessContext` / `BusinessContextAccessor` / `IActuator`
 - `IObjectFactory` → `BusinessObjectFactory`
 
-它**不碰权限**。只用 Osba 做对象工厂、不做权限的应用（纯查询、内部工具、无授权需求）
-不会被迫承担策略引擎、授权解析器与模型注册期校验的成本；反过来，宿主的其他模块
-想启用自己的权限体系，也不必顺带把 Osba 拉进来。
+它**不碰权限**——连 Osba 自己的三个权限契约也不注册。只用 Osba 做对象工厂、不做权限的应用
+（纯查询、内部工具）不会被迫承担任何权限装配；反过来，宿主的其他模块想启用自己的权限体系，
+也不必顺带把 Osba 的权限拉进来。（声明了 `[Permission]` 的类型仍需有人判定，否则工厂边界会报错——
+见 §0 的说明。）
 
-`AddObjectPermission` 才启用权限，它做两件事：
+`AddObjectPermission`（来自 **`Euonia.Osba.Security`** 适配包）才启用引擎鉴权，它做两件事：
 
-- `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
-- `AddPermission(ObjectPermissionCodeSource.Instance, assemblies)`——把 Osba 的权限码来源交给引擎
-  （Osba 自己实现了 `IPermissionCodeSource`，宿主因此**不需要**声明操作入口规则；规则形态见
-  [`Euonia.Security/README.md` §3.3–§3.4](../Euonia.Security/README.md)）
+- 注册 Osba 三个权限契约的**引擎实现**：`IPermissionRequirementProvider`（桥接到引擎的权限码来源）、
+  `IOperationPermissionChecker`、`IObjectScopeAuthorizer`，以及引擎映射
+  `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
+- `AddPermission(<Osba 的工厂约定来源>, assemblies)`——把「哪个工厂方法对应哪个操作」交给引擎
+  （宿主因此**不需要**自己声明操作入口规则；要补充规则用 `AddPermission` 追加，见 §0 末）
 
-后者会注册策略引擎自身的一切（`Euonia.Security` 提供）：
-`IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
+引擎侧随之注册 `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
 `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
-`IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、
-`PermissionSetup`。
+`IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、`PermissionSetup`。
 
-两处映射（`IPermissionCodeSource` 与 `IScopeKeyResolver`）必须成对出现：模型里一旦存在
-按码声明的行级策略，引擎就会要求收到能解析出这些码的 `IPermissionCodeSource`。
-所以 `AddObjectPermission` 把它们收在一个调用里，而不是让开发者漏掉其中之一。
+三个契约都是 `TryAdd` 语义：宿主可以先注册自己的实现，适配包不会覆盖它——
+这样「接引擎」与「用自己的实现」可以是同一个装配路径，甚至可以交替使用（例如行级用引擎、操作权限用自建表）。
 
 两点使用说明：
 
@@ -93,12 +105,12 @@ services.AddObjectPermission(typeof(Order).Assembly);
 - **`IScopeKeyResolver` 是 `TryAdd` 语义**（先到先得），因为「某个资源实例当前代表哪个操作」
   是**全局**答案，多个模块给出不同答案本身就是配置错误。需要自定义时自己注册即可，会覆盖框架推断。
 
-脱离 Osba 单独使用 `Euonia.Security` 时，用 `services.AddPermission(…)` 声明自己的操作入口规则
-（回调或配置节，见 [`Euonia.Security/README.md` §3.3–§3.4](../Euonia.Security/README.md)），
-并自行提供 `IScopeKeyResolver`。
+不用 Osba 的工厂约定时，另一种装配是：只 `AddBusinessObject`，然后注册自己的
+`IPermissionRequirementProvider` / `IOperationPermissionChecker` / `IObjectScopeAuthorizer`
+（`Euonia.Osba.Standalone.Tests` 项目就是这种用法的可运行示例）。此时不需要引用任何引擎包。
 
-Osba 宿主补充规则时，它们在**运行期同样生效**：额外注册的规则与 Osba 自己的工厂约定取并集，
-且注册期校验、操作权限闸门、策略键解析问的是**同一个来源**
+Osba 宿主用 `AddPermission` 补充的规则在**运行期同样生效**：额外注册的规则与 Osba 自己的工厂约定
+取并集，且注册期校验、操作权限闸门、策略键解析问的是**同一个来源**
 （见 [`DESIGN.md` §1.11](../Euonia.Security/DESIGN.md)）。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
@@ -708,33 +720,50 @@ guard.Allows(repoInTeamC);                // → true
 
 ## 7. 类型速查
 
+按**所属程序集**分组——「这个类型我该从哪个包拿到」在解耦之后是第一个要回答的问题。
+
+### `Euonia.Core`（权限的基础词汇，任何宿主都拿得到）
+
+| 类型 | 用途 |
+|---|---|
+| `PermissionAttribute` | 声明操作权限点（类级 / 方法级） |
+| `BusinessOperation` | 操作词汇（`read` / `create` / `update` / `delete` / `execute`，只是常量字符串） |
+| `UserPrincipal` / `UserClaimTypes` | 判定主体与其声明类型 |
+
+### `Euonia.Osba`（约定 + 契约 + 强制点，不引用引擎）
+
 | 类型 | 位置 | 用途 |
 |---|---|---|
-| `BusinessOperation` | `Permission/` | 操作类型枚举（Read/Create/Update/Delete/Execute） |
-| `PermissionAttribute` | `Permission/` | 声明操作权限点（类级/方法级） |
-| `IPermissionChecker` | `Permission/` | 权限判断抽象 |
-| `SubjectPermissionChecker` | `Permission/` | **默认**实现：权限码来自授权数据（撤销立即生效） |
-| `ClaimPermissionChecker` | `Permission/` | `[Obsolete]` 回退：读 `"perm"` 声明（不推荐） |
-| `PermissionRequirements` | `Permission/` | 权限要求收集（运行期判定与启动期校验共用） |
-| `ScopeKeys` / `ScopeKeyResolver` | `Permission/` | 策略键的保留命名空间与**唯一**解析出口 |
-| `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射 |
-| `ScopePolicySet<T>` | `Permission/Scope/` | `ScopeModel<T>.Declare` 入参：按权限码声明行级策略 |
-| `PermissionSetup` / `ValidatePermissionSetup()` | `Permission/` | 启动期检查解析器是否齐备 |
-| `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的操作权限 / 数据权限闸门（越权抛 `SecurityException`） |
-| `ScopeDimensions` | `Permission/Scope/` | 维度名常量（`Owner`/`Dept`/`Member`/`Region`/`Project`）与校验入口 |
-| `ScopeSubject` / `ScopeSubjectSet` | `Permission/Scope/` | 用户被授予的主体及集合（维度名大小写不敏感，值精确比较） |
-| `ScopeSubjectSetBuilder` | `Permission/Scope/` | 解析器构造主体集合（`Add`/`AddRange`/`AddSelf`） |
-| `IScopeSubjectResolver` | `Permission/Scope/` | 授权值来源（应用实现，实时解析） |
-| `ScopeModel<T>` / `IScopeModel<T>` | `Permission/Scope/` | 资源模型 + 策略的声明基类 |
-| `ScopeModelBuilder<T>` | `Permission/Scope/` | `Map` 行内列维度、`MapMany` 子表维度（§3.8）、`Classify` 分类属性 |
-| `ScopePolicy<T>` | `Permission/Scope/` | 策略组合子（`Self`/`Grant`/`All`/`Any`/`Deny`/`Where`） |
-| `CompiledScopePolicy<T>` | `Permission/Scope/` | 编译结果：`Allow`/`Deny` 一对表达式 |
-| `ScopePolicyCompiler` | `Permission/Scope/` | 唯一编译出口 |
-| `ScopeFilter` | `Permission/Scope/` | `Apply`（下推）/ `Allows`（单行）/ `Explain`（审计） |
-| `ScopeDecision` | `Permission/Scope/` | 判定结果与命中路径 |
-| `IScopeGuard` / `ScopeGuard` | `Permission/Scope/` | 按请求缓存的统一入口 |
-| `ScopeModelRegistry` | `Permission/Scope/` | 模型注册表与启动期校验 |
-| `UserClaimTypes.Permission` | `Euonia.Core` | 操作权限声明类型（`"perm"`） |
+| `IPermissionRequirementProvider` | `Permission/` | 契约：某类型在某操作上有哪些要求 |
+| `ObjectPermissionRequirementProvider` | `Permission/` | 默认实现：按工厂约定扫描（特性或约定名） |
+| `IOperationPermissionChecker` | `Permission/` | 契约：操作权限判定（由宿主提供） |
+| `IObjectScopeAuthorizer` | `Permission/` | 契约：行级数据权限判定（由宿主提供） |
+| `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（适配包也用它） |
+| `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的两个闸门（越权抛 `SecurityException`，判定不了抛 `InvalidOperationException`） |
+| `BusinessObject.CanXObject()` / `HasPermission` / `HasRole` / `CanAccessRow` / `ExplainRowAccess` / `CheckPermissionAsync` | `Core/BusinessObject.cs` | 业务对象内的权限查询（**查询语义**：无从判定时返回 `true`，拦截只在工厂边界） |
+
+### `Euonia.Security`（策略引擎）
+
+| 类型 | 用途 |
+|---|---|
+| `ScopeModel<T>` / `ScopeModelBuilder<T>` | 行级模型与维度声明（`Map` 行内列 / `MapMany` 子表） |
+| `ScopePolicy<T>` / `ScopePolicySet<T>` | 策略组合子与按权限码声明的行级策略 |
+| `IScopeGuard` / `ScopeGuard` | 数据权限判定入口（按请求缓存） |
+| `IScopeSubjectResolver` / `ScopeSubjectSet` | 授权值来源与主体集合 |
+| `IPermissionChecker` / `SubjectPermissionChecker` | 操作权限判定与其默认实现（权限码来自授权数据） |
+| `ClaimPermissionChecker` | `[Obsolete]` 回退：读 `"perm"` 声明（不推荐） |
+| `IPermissionCodeSource` / `IPermissionRequirementSource` | 注册期校验用的权限码 / 要求来源 |
+| `IScopeKeyResolver` / `ScopeKeyResolver` / `ScopeKeys` | 策略键的解析出口与保留命名空间 |
+| `ScopeFilter` / `CompiledScopePolicy<T>` / `ScopeDecision` | 下推、内存过滤、单行判定与审计 |
+| `ScopeDimensions` | 维度名常量（`Owner` / `Dept` / `Member` / `Region` / `Project`） |
+| `ScopeModelRegistry` / `PermissionSetup` / `ValidatePermissionSetup()` | 注册表与启动期校验 |
+
+### `Euonia.Osba.Security`（适配包）
+
+| 类型 | 用途 |
+|---|---|
+| `AddObjectPermission(assemblies)` | 唯一入口：注册 Osba 契约的引擎实现 + 把 Osba 的工厂约定交给引擎 |
+| `ObjectScopeKeyResolver` / `EngineRequirementProvider` / `EngineOperationPermissionChecker` / `EngineObjectScopeAuthorizer` | 适配实现（内部类型，无需直接使用） |
 
 ---
 

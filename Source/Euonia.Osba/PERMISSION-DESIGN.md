@@ -5,7 +5,7 @@
 > 使用说明见 [PERMISSION.md](PERMISSION.md)。
 
 `Euonia.Security` 只回答「能不能」，**不拦截任何调用**。因此「在哪里裁决、以什么异常形态裁决」
-必然是宿主框架的决定。以下四条决策就是关于这个接缝的。
+必然是宿主框架的决定。以下决策就是关于这个接缝的。
 
 ---
 
@@ -63,6 +63,48 @@
 
 ---
 
+### 1.3 权限契约归 Osba，实现由宿主选择
+
+**问题**：早期 `Euonia.Osba` 直接引用 `Euonia.Security`：工厂边界调用引擎的两个闸门，
+「哪个方法对应哪个操作」由引擎的 `OperationCodeSource` 扫描。于是**对象模型库把策略引擎当成了必需依赖**——
+不想用引擎的宿主也得把它装进来，也无法换上自己的鉴权实现；而且依赖方向是反的：
+引擎反过来要求 Osba 使用它自己的概念（`BusinessOperation`、`PermissionAttribute` 都由引擎定义）。
+
+**决策**：把权限拆成「对象模型的知识」与「鉴权实现的知识」两半，各归其主：
+
+- **基础词汇**（`PermissionAttribute`、`BusinessOperation`）下沉到 `Euonia.Core`，命名空间不变——
+  不装引擎的宿主也能在业务对象上声明要求；
+- **Osba 定义三个契约**：要求来源（`IPermissionRequirementProvider`）、操作权限判定
+  （`IOperationPermissionChecker`）、行级判定（`IObjectScopeAuthorizer`）；工厂边界保留**强制**
+  （`SecurityException` / 判定不了抛 `InvalidOperationException`）与**要求收集**（默认按工厂约定扫描，
+  兜底静态单例，见 §1.1）；
+- **桥接放到新包 `Euonia.Osba.Security`**：提供三个契约的引擎实现与 `AddObjectPermission`。
+  `Euonia.Osba` 与 `Euonia.Security` 之间**不再有边**。
+
+**收益**：宿主可以接引擎、也可以只注册自己的三个实现（`Euonia.Osba.Standalone.Tests` 是这种用法的
+可运行证明）；依赖方向变成 `适配包 → (Osba, Security)`，两边谁都不认识谁。
+
+**代价（需要使用者动作）**：用引擎的宿主需补一个包引用（`Euonia.Osba.Security`）并重新编译；
+`[Permission]`、`BusinessOperation`、`AddObjectPermission` 的命名空间不变，因此**源码兼容**，
+但二进制不兼容（类型换了程序集）。
+
+**行为收窄（有意）**：要求来源改为与**工厂查找方法**同一套候选口径（`ObjectReflector.GetFactoryMethods`）——
+工厂只在「当前类型这一层没有候选」时才上溯基类。因此被派生类型遮蔽的基类方法上的权限声明不再被收集：
+那些方法不会被工厂调用，为它们收集要求只会产生永远无法满足的闸门。旧文档声称「扫描口径与工厂查找一致」，
+实际上两条口径不同（引擎侧扫描整个继承链、无 DeclaredOnly）；本次**把这句声明变成真的**，
+并把收窄钉在 `PermissionScanScopeTests`。
+
+**被否决的方案**：
+
+| 方案 | 否决理由 |
+|---|---|
+| 维持 `Euonia.Osba → Euonia.Security` | 见「问题」：对象模型被策略引擎绑死，宿主无从替换鉴权实现 |
+| 契约留在引擎、Osba 实现（现状的反向版） | 契约是「对象模型的知识」（对象状态 → 操作），放在引擎里等于引擎继续认识对象模型 |
+| 只把 `Permission/` 拆成新包、不反转依赖 | `BusinessObject` / `BusinessObjectFactory` 里的调用点仍在 Osba，包拆分减少不了耦合，只是把引用换了地方 |
+| Osba 自定义一套标记、由适配层翻译 | 全库会出现两个 `[Permission]`（业务对象用一个、引擎模型可能用另一个），多一层映射与两套文档；下沉到 Core 只有一个 |
+
+---
+
 ## 2. 已知边界与取舍
 
 这些是**有意接受**的限制，不是待办事项。
@@ -106,6 +148,9 @@
 | `SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing` + `SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing` | §1.1 无法判定即失败 |
 | `ActuatorRuleTests` / `UserGeneralBusinessTests` | §2.2 验证线行为（删除路径默认不跑规则） |
 | `ScopeTests` / `ScopeRowPermissionTests` | §1.2 越权形态、§2.2 删除路径无权限例外 |
+| `Euonia.Osba.Standalone.Tests`（整个项目） | §1.3 Osba 不依赖引擎：只引用 `Euonia.Osba` 即可用权限；`Osba_Assembly_Should_Not_Reference_Security` 连间接引用一起守 |
+| `PermissionScanScopeTests` | §1.3 扫描口径与工厂查找同源（含有意收窄） |
+| `ObjectPermissionOptInTests.AddBusinessObject_Alone_Should_Not_Register_Permission_Engine` | §1.3 `AddBusinessObject` 不注册任何权限服务（含三个契约） |
 
 ---
 
@@ -114,6 +159,7 @@
 | 本文的决策 | 引擎侧的对应物 |
 |---|---|
 | §1.1 无法判定即失败 | `IScopeSubjectResolver` 缺席时 `IScopeGuard` 拒绝；`PermissionSetup` + `ValidatePermissionSetup()` |
-| §1.2 越权一律 `SecurityException` | `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
-| §2.1 后置检查 | `IScopeGuard.AllowsObject` 的调用时机由本库决定 |
-| §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete` |
+| §1.2 越权一律 `SecurityException` | 引擎侧的 `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
+| §1.3 权限契约 | `IPermissionRequirementProvider` ↔ `IPermissionCodeSource` / `IPermissionRequirementSource`；`IOperationPermissionChecker` ↔ `IPermissionChecker`；`IObjectScopeAuthorizer` ↔ `IScopeGuard`（全部由 `Euonia.Osba.Security` 适配，可替换为宿主自己的实现） |
+| §2.1 后置检查 | `AllowsOperation` 的调用时机由本库决定 |
+| §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete`（本库公开的类型，适配包也用它） |

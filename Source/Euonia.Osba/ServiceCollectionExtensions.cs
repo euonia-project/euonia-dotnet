@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
-using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -16,7 +15,9 @@ public static class ServiceCollectionExtensions
 	/// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
 	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
 	/// <remarks>
-	/// 不注册任何权限服务；需要权限时显式调用 <see cref="AddObjectPermission"/>。
+	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
+	/// 需要权限时，接引擎用 <c>Euonia.Osba.Security</c> 的 <c>AddObjectPermission</c>，
+	/// 或注册自己的 <c>IOperationPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
@@ -33,17 +34,6 @@ public static class ServiceCollectionExtensions
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
-	}
-
-	/// <summary>
-	/// 为业务对象启用权限控制：注册 Osba 的两处映射并接入策略引擎。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection" />。</param>
-	/// <param name="assemblies">要扫描权限码与数据权限模型的程序集数组。</param>
-	public static void AddObjectPermission(this IServiceCollection services, params Assembly[] assemblies)
-	{
-		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();
-		services.AddPermission(ObjectPermissionCodeSource.Instance, assemblies);
 	}
 
 	/// <summary>

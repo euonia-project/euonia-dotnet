@@ -1028,8 +1028,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </summary>
 	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
 	/// <remarks>
-	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给权限检查器；
-	/// 派生类可重写以实现自定义操作权限逻辑。
+	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给宿主注册的
+	/// <see cref="IOperationPermissionChecker"/>；派生类可重写以实现自定义操作权限逻辑。
 	/// </remarks>
 	public virtual bool CanReadObject()
 	{
@@ -1105,9 +1105,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </remarks>
 	protected bool CanAccessRow(string scopeKey = null)
 	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
+		var context = BusinessContext;
+		var authorizer = context?.GetService<IObjectScopeAuthorizer>();
 
-		return guard == null || guard.AllowsObject(this, scopeKey);
+		return authorizer == null || authorizer.AllowsRow(context, this, scopeKey);
 	}
 
 	/// <summary>
@@ -1117,9 +1118,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>判定说明；未注册数据权限时返回未受约束的结论。</returns>
 	protected string ExplainRowAccess(string scopeKey = null)
 	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
+		var context = BusinessContext;
+		var authorizer = context?.GetService<IObjectScopeAuthorizer>();
 
-		return guard == null ? "未启用数据权限" : guard.ExplainObject(this, scopeKey);
+		return authorizer == null ? "未启用数据权限" : authorizer.ExplainRow(context, this, scopeKey);
 	}
 
 	/// <summary>
@@ -1132,18 +1134,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 权限码来自授权数据（按请求缓存），首次访问可能触发一次异步查询。
 	/// 与 <see cref="HasPermission"/> 等价，异步版本避免在同步路径上阻塞线程。
 	/// </remarks>
-	protected async ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken cancellationToken = default)
+	protected ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken cancellationToken = default)
 	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
+		var checker = ResolvePermissionChecker();
 
-		if (guard == null)
-		{
-			return true;
-		}
-
-		await guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
-
-		return guard.GetSubjects().HoldsPermission(permission);
+		// 未注册判定实现时视为拥有（查询语义；真正的拦截在工厂边界）
+		return checker == null ? ValueTask.FromResult(true) : checker.IsGrantedAsync(permission, cancellationToken);
 	}
 
 	/// <summary>
@@ -1174,21 +1170,31 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="operation">当前操作。</param>
 	/// <returns>权限要求列表；结果按（类型，操作）缓存。</returns>
 	/// <remarks>
-	/// 委托给 <see cref="ObjectPermissionCodeSource.For"/>：运行期判定与启动期校验问的是<b>同一个来源</b>
-	/// （容器中的那个，含宿主补充的规则），确保两处对「某个操作声明了哪些要求」不会得出不同答案。
+	/// 要求来源由宿主提供（引擎适配包或宿主自己的实现）；<b>未注册时回落到 Osba 的默认来源</b>
+	/// （<see cref="ObjectPermissionRequirementProvider"/>，按工厂约定扫描）——声明了要求就必须判定，
+	/// 不能因为没装权限实现就静默放行。
 	/// </remarks>
 	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(string operation)
 	{
-		return ObjectPermissionCodeSource.For(BusinessContext).RequirementsFor(GetType(), operation);
+		return ResolveRequirementProvider().RequirementsFor(GetType(), operation);
 	}
 
 	/// <summary>
-	/// 从当前业务上下文解析权限检查器。
+	/// 从当前业务上下文解析权限要求来源。
 	/// </summary>
-	/// <returns>权限检查器实例；上下文缺失或服务未注册时返回 <c>null</c>。</returns>
-	private IPermissionChecker ResolvePermissionChecker()
+	/// <returns>要求来源；上下文缺失或未注册时回落到 Osba 的默认来源。</returns>
+	private IPermissionRequirementProvider ResolveRequirementProvider()
 	{
-		return BusinessContext?.GetService<IPermissionChecker>();
+		return BusinessContext?.GetService<IPermissionRequirementProvider>() ?? ObjectPermissionRequirementProvider.Instance;
+	}
+
+	/// <summary>
+	/// 从当前业务上下文解析操作权限判定实现。
+	/// </summary>
+	/// <returns>判定实现；上下文缺失或未注册时返回 <c>null</c>（查询语义下视为放行）。</returns>
+	private IOperationPermissionChecker ResolvePermissionChecker()
+	{
+		return BusinessContext?.GetService<IOperationPermissionChecker>();
 	}
 
 	#endregion

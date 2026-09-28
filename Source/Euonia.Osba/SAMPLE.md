@@ -67,7 +67,7 @@ BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
 `AddBusinessObject` 会注册：`IActuator`、`BusinessContext` 与 `BusinessContextAccessor`、
 `IObjectFactory`，并把扫描到的每个业务对象类型注册为 Transient。
 全部使用 `TryAdd*`——已注册的服务不会被覆盖。**它不注册任何权限服务**：
-是否启用权限由应用决定，需要时再调 `AddObjectPermission`（见下文）。
+是否启用权限由应用决定，需要时再调 `AddObjectPermission`（来自 `Euonia.Osba.Security` 适配包，见下文）。
 
 > **两个容易踩的点**
 > 1. `AddBusinessObject(...)` 的返回类型是 **`void`**，不能链式调用。

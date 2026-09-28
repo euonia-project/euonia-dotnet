@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <!--
+      **本项目的引用图就是守卫**：只引用 Euonia.Osba，不引用 Euonia.Security，也不引用适配包。
+      它一旦编译通过，就证明「不接策略引擎也能用 Osba 的权限」是真的；有人给 Osba 加回引擎引用，
+      这里会立刻失败。引擎一侧的行为由 Euonia.Osba.Tests 覆盖。
+    -->
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
+    </ItemGroup>
+
+</Project>

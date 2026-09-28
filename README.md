@@ -254,8 +254,10 @@ protected override void AddRules()
 
 #### 权限体系
 
-权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`），`Euonia.Osba` 引用它并把策略
-接到工厂边界上。两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
+权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`）。`Euonia.Osba` **不引用引擎**：
+它只定义权限契约（要求来源、操作权限判定、行级判定）并在工厂边界强制；把引擎接到这些契约上的是
+适配包 `Euonia.Osba.Security`（宿主也可以注册自己的实现，完全不引入引擎）。
+两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
 
 | | 操作权限 | 数据权限 |
 |---|---|---|
@@ -909,6 +911,10 @@ app.MapHealthChecks("/health");
 
 <!-- 业务对象（OSBA） -->
 <PackageReference Include="Euonia.Osba" Version="10.0.0" />
+
+<!-- 权限体系：策略引擎 + 把引擎接到 OSBA 工厂边界的适配包（不接引擎可只用前者之外的实现） -->
+<PackageReference Include="Euonia.Security" Version="10.0.0" />
+<PackageReference Include="Euonia.Osba.Security" Version="10.0.0" />
 
 <!-- 领域驱动设计 -->
 <PackageReference Include="Euonia.Domain" Version="10.0.0" />

@@ -18,7 +18,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 而每个操作各自应用自己的策略，不存在「把同一变更路由到更宽松的键」。
 /// </para>
 /// </remarks>
-internal static class ScopeOperationMap
+public static class ScopeOperationMap
 {
 	/// <summary>
 	/// 依据目标对象的类型与状态解析要执行的业务操作。
@@ -26,7 +26,7 @@ internal static class ScopeOperationMap
 	/// <param name="target">目标对象。</param>
 	/// <returns>业务操作。</returns>
 	/// <exception cref="InvalidOperationException">可编辑对象的状态为 <see cref="ObjectEditState.None"/>，或目标为只读对象时抛出。</exception>
-	internal static string Resolve(object target)
+	public static string Resolve(object target)
 	{
 		return target switch
 		{
@@ -47,7 +47,7 @@ internal static class ScopeOperationMap
 	/// 供行级断言（<c>CanAccessRow</c>）等「非保存」场景使用：那里对象状态通常为
 	/// <see cref="ObjectEditState.None"/>，应当回落到默认键而不是抛异常。
 	/// </remarks>
-	internal static bool TryResolve(object target, out string operation)
+	public static bool TryResolve(object target, out string operation)
 	{
 		switch (target)
 		{
@@ -76,7 +76,7 @@ internal static class ScopeOperationMap
 	/// <param name="state">对象状态。</param>
 	/// <returns>业务操作。</returns>
 	/// <exception cref="InvalidOperationException">状态为 <see cref="ObjectEditState.None"/> 时抛出。</exception>
-	internal static string FromEditState(ObjectEditState state)
+	public static string FromEditState(ObjectEditState state)
 	{
 		return state switch
 		{
