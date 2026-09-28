@@ -48,7 +48,8 @@ public static class OsbaPermissionServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(codeSource);
 
 		// Osba 的权限契约 → 引擎实现。TryAdd 语义：宿主已注册自己的实现时不被覆盖。
-		services.TryAddSingleton<IPermissionRequirementProvider, EngineRequirementProvider>();
+		// 要求来源不在这里注册：AddPermission 已把「容器里的权限码来源」注册成 IPermissionRequirementProvider
+		// （见 CodeSourceRequirementProvider），它天然包含本包的约定来源与宿主追加的规则。
 		services.TryAddScoped<IOperationPermissionChecker, EngineOperationPermissionChecker>();
 		services.TryAddSingleton<IObjectScopeAuthorizer, EngineObjectScopeAuthorizer>();
 		services.TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>();

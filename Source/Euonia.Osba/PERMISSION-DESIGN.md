@@ -74,10 +74,13 @@
 
 - **基础词汇**（`PermissionAttribute`、`BusinessOperation`）下沉到 `Euonia.Core`，命名空间不变——
   不装引擎的宿主也能在业务对象上声明要求；
-- **Osba 定义三个契约**：要求来源（`IPermissionRequirementProvider`）、操作权限判定
-  （`IOperationPermissionChecker`）、行级判定（`IObjectScopeAuthorizer`）；工厂边界保留**强制**
-  （`SecurityException` / 判定不了抛 `InvalidOperationException`）与**要求收集**（默认按工厂约定扫描，
-  兜底静态单例，见 §1.1）；
+- **「要求从哪来」下沉到 Core**（`IPermissionRequirementProvider`），与 `[Permission]`、`BusinessOperation`
+  同层：它是两边共同的基础概念，只声明一次——若宿主与引擎各定义一遍形状相同的接口，中间就得有胶水
+  来回翻译，那是抽象放错了层；Osba 只提供**默认实现**（按工厂约定扫描，兜底静态单例，见 §1.1）；
+- **Osba 定义另外两个契约**：操作权限判定（`IOperationPermissionChecker`）、行级判定
+  （`IObjectScopeAuthorizer`）——它们要么用到宿主的作用域（本库的 `BusinessContext`），要么需要宿主
+  的对象模型，引擎无法实现；工厂边界保留**强制**（`SecurityException` / 判定不了抛
+  `InvalidOperationException`）；
 - **桥接放到新包 `Euonia.Osba.Security`**：提供三个契约的引擎实现与 `AddObjectPermission`。
   `Euonia.Osba` 与 `Euonia.Security` 之间**不再有边**。
 
@@ -87,6 +90,13 @@
 **代价（需要使用者动作）**：用引擎的宿主需补一个包引用（`Euonia.Osba.Security`）并重新编译；
 `[Permission]`、`BusinessOperation`、`AddObjectPermission` 的命名空间不变，因此**源码兼容**，
 但二进制不兼容（类型换了程序集）。
+
+**判据（评审时用）**：适配代码可以存在，但要盯住两类信号——
+① 适配层里出现「两端形状相同、只为翻译」的代码 ⇒ 抽象放错了层，把这个概念下沉到双方都依赖的最底层
+（本条就是这么发现并消灭了 `IPermissionRequirementProvider` 的重复声明与那个只为翻译而存在的类）；
+② 适配层开始 reach-in（用某一方的 internal，或复制它的判定逻辑）⇒ 契约划错了，说明该由那一方自己实现。
+留下的适配若是「纯翻译 + 只碰公开 API + 宿主选择才引入」，那它就是两个独立库组合时的固有成本；
+反过来，把适配写进任一方（本次之前的做法：胶水在 Osba 里，且只能接一个引擎）才是真正的通用性缺口。
 
 **行为收窄（有意）**：要求来源改为与**工厂查找方法**同一套候选口径（`ObjectReflector.GetFactoryMethods`）——
 工厂只在「当前类型这一层没有候选」时才上溯基类。因此被派生类型遮蔽的基类方法上的权限声明不再被收集：

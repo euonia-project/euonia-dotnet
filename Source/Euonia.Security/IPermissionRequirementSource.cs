@@ -1,27 +1,18 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 权限<b>要求</b>来源：在「某类型在某操作上声明了哪些权限码」之上，进一步给出要求本身的完整信息
-/// （角色、提示消息）。
+/// 权限要求来源 + 权限码视图：在 <see cref="IPermissionRequirementProvider"/> 之上补齐注册期校验
+/// 需要的「某类型在某操作上有哪些权限码」。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 注册期校验只需要权限码，运行期判定却需要角色——只认识权限码的强制点因此无从判断角色要求。
-/// 实现本接口的来源可以同时服务两处，使「某操作声明了哪些要求」不会因为问的是谁而给出不同答案
-/// （<see cref="OperationCodeSource"/> 与合并来源都已实现）。
+/// 「要求从哪来」这个基础概念住在 <see cref="IPermissionRequirementProvider"/>（Core 程序集）里，
+/// 本接口只负责把它与引擎的权限码视图（注册期校验、策略键解析要用）合起来——
+/// 因此引擎的来源实现同时也是宿主的来源实现，中间<b>不需要翻译层</b>。
 /// </para>
 /// <para>
-/// 使用方自定义 <see cref="IPermissionCodeSource"/> 时<b>不强制</b>实现本接口：强制点会退化为
-/// 「只见权限码、不见角色」——那是该来源表达力的边界，不是错误。
+/// 使用方自定义 <see cref="IPermissionCodeSource"/> 时<b>不强制</b>实现本接口：<c>AddPermission</c>
+/// 会把只给权限码的来源折算成「有码、无角色」的要求。
 /// </para>
 /// </remarks>
-public interface IPermissionRequirementSource : IPermissionCodeSource
-{
-	/// <summary>
-	/// 收集指定类型在指定操作上声明的全部权限要求（含类型级与方法级，保留特性上的角色等原始信息）。
-	/// </summary>
-	/// <param name="type">类型。</param>
-	/// <param name="operation">业务操作名。</param>
-	/// <returns>权限要求列表；实现可缓存结果。</returns>
-	IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation);
-}
+public interface IPermissionRequirementSource : IPermissionCodeSource, IPermissionRequirementProvider;

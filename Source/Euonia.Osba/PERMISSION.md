@@ -13,8 +13,8 @@
 
 | 库 | 内容 | 依赖 |
 |---|---|---|
-| `Euonia.Core` | 权限的**基础词汇**：`[Permission]`、`BusinessOperation`、`UserPrincipal`、`UserClaimTypes` | — |
-| `Euonia.Osba` | `BusinessObject` / 工厂 / 上下文，权限**契约**（`IPermissionRequirementProvider`、`IOperationPermissionChecker`、`IObjectScopeAuthorizer`）与**强制执行点**（`ObjectAuthorization`、`ScopeAuthorization`） | `Euonia.Core`（**不引用引擎**） |
+| `Euonia.Core` | 权限的**基础词汇与契约**：`[Permission]`、`BusinessOperation`、`IPermissionRequirementProvider`、`UserPrincipal`、`UserClaimTypes` | — |
+| `Euonia.Osba` | `BusinessObject` / 工厂 / 上下文，权限**契约**（`IPermissionRequirementProvider` 的默认实现、`IOperationPermissionChecker`、`IObjectScopeAuthorizer`）与**强制执行点**（`ObjectAuthorization`、`ScopeAuthorization`） | `Euonia.Core`（**不引用引擎**） |
 | `Euonia.Security` | 策略引擎：`ScopeModel<T>`、策略编译与下推、`IScopeGuard`、`ScopeKeyResolver` | `Euonia.Core` |
 | `Euonia.Osba.Security` | **适配包**：把引擎接到 Osba 的权限契约上，提供 `AddObjectPermission` | `Euonia.Osba` + `Euonia.Security` |
 
@@ -26,11 +26,11 @@
 
 因此 Osba 把前者收在自己的契约里（要求来源 + 两个判定入口），后者留给宿主回答：
 
-| 契约 | Osba 自带 | 引擎适配包提供 | 宿主自己实现 |
-|---|---|---|---|
-| `IPermissionRequirementProvider`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | 桥接到引擎的权限码来源（含宿主用 `AddPermission` 追加的规则） | 例如规则来自配置或权限表 |
-| `IOperationPermissionChecker`（操作权限判定） | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
-| `IObjectScopeAuthorizer`（行级数据权限） | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
+| 契约 | 声明位置 | Osba 自带 | 引擎提供 | 宿主自己实现 |
+|---|---|---|---|---|
+| `IPermissionRequirementProvider`（要求从哪来） | **Core** | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ `AddPermission` 把容器里的权限码来源注册成它（含宿主追加的规则） | 例如规则来自配置或权限表 |
+| `IOperationPermissionChecker`（操作权限判定） | Euonia.Osba | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
+| `IObjectScopeAuthorizer`（行级数据权限） | Euonia.Osba | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
 
 **不装任何实现也能用**：声明了 `[Permission]` 的类型在工厂边界会因「无人判定」而**报错**，
 而不是静默放行——这是刻意的（fail-closed）。
@@ -85,9 +85,9 @@ services.AddObjectPermission(typeof(Order).Assembly);
 
 `AddObjectPermission`（来自 **`Euonia.Osba.Security`** 适配包）才启用引擎鉴权，它做两件事：
 
-- 注册 Osba 三个权限契约的**引擎实现**：`IPermissionRequirementProvider`（桥接到引擎的权限码来源）、
-  `IOperationPermissionChecker`、`IObjectScopeAuthorizer`，以及引擎映射
-  `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
+- 注册 Osba 两个权限契约的**引擎实现**：`IOperationPermissionChecker`、`IObjectScopeAuthorizer`，
+  以及引擎映射 `TryAddSingleton<IScopeKeyResolver, ObjectScopeKeyResolver>`——Osba 对「对象当前代表哪个操作」的回答
+  （要求来源不必在这里注册：`AddPermission` 已经把「容器里的权限码来源」注册成 `IPermissionRequirementProvider`）
 - `AddPermission(<Osba 的工厂约定来源>, assemblies)`——把「哪个工厂方法对应哪个操作」交给引擎
   （宿主因此**不需要**自己声明操作入口规则；要补充规则用 `AddPermission` 追加，见 §0 末）
 
@@ -95,7 +95,7 @@ services.AddObjectPermission(typeof(Order).Assembly);
 `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
 `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、`PermissionSetup`。
 
-三个契约都是 `TryAdd` 语义：宿主可以先注册自己的实现，适配包不会覆盖它——
+两个契约都是 `TryAdd` 语义：宿主可以先注册自己的实现，适配包不会覆盖它——
 这样「接引擎」与「用自己的实现」可以是同一个装配路径，甚至可以交替使用（例如行级用引擎、操作权限用自建表）。
 
 两点使用说明：
@@ -728,14 +728,14 @@ guard.Allows(repoInTeamC);                // → true
 |---|---|
 | `PermissionAttribute` | 声明操作权限点（类级 / 方法级） |
 | `BusinessOperation` | 操作词汇（`read` / `create` / `update` / `delete` / `execute`，只是常量字符串） |
+| `IPermissionRequirementProvider` | **契约**：某类型在某操作上有哪些要求（引擎与宿主框架共用同一个声明） |
 | `UserPrincipal` / `UserClaimTypes` | 判定主体与其声明类型 |
 
 ### `Euonia.Osba`（约定 + 契约 + 强制点，不引用引擎）
 
 | 类型 | 位置 | 用途 |
 |---|---|---|
-| `IPermissionRequirementProvider` | `Permission/` | 契约：某类型在某操作上有哪些要求 |
-| `ObjectPermissionRequirementProvider` | `Permission/` | 默认实现：按工厂约定扫描（特性或约定名） |
+| `ObjectPermissionRequirementProvider` | `Permission/` | `IPermissionRequirementProvider` 的默认实现：按工厂约定扫描（特性或约定名） |
 | `IOperationPermissionChecker` | `Permission/` | 契约：操作权限判定（由宿主提供） |
 | `IObjectScopeAuthorizer` | `Permission/` | 契约：行级数据权限判定（由宿主提供） |
 | `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（适配包也用它） |
@@ -763,7 +763,7 @@ guard.Allows(repoInTeamC);                // → true
 | 类型 | 用途 |
 |---|---|
 | `AddObjectPermission(assemblies)` | 唯一入口：注册 Osba 契约的引擎实现 + 把 Osba 的工厂约定交给引擎 |
-| `ObjectScopeKeyResolver` / `EngineRequirementProvider` / `EngineOperationPermissionChecker` / `EngineObjectScopeAuthorizer` | 适配实现（内部类型，无需直接使用） |
+| `ObjectScopeKeyResolver` / `EngineOperationPermissionChecker` / `EngineObjectScopeAuthorizer` | 适配实现（内部类型，无需直接使用）；要求来源由引擎统一注册，见上 |
 
 ---
 

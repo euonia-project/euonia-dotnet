@@ -256,6 +256,11 @@ public static class ServiceCollectionExtensions
 		services.RemoveAll<IPermissionCodeSource>();
 		services.AddSingleton(setup.CodeSource);
 
+		// 「要求从哪来」也由引擎回答：注册期校验、工厂边界的闸门、宿主框架都问这一个服务，
+		// 不必各自写一份形状相同的转换（见 CodeSourceRequirementProvider）
+		services.RemoveAll<IPermissionRequirementProvider>();
+		services.AddSingleton<IPermissionRequirementProvider>(new CodeSourceRequirementProvider(setup.CodeSource));
+
 		services.RemoveAll<PermissionSetup>();
 		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
 	}

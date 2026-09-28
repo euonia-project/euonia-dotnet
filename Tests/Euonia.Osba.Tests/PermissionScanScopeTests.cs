@@ -92,7 +92,7 @@ public class PlainDerivedScopedEntity : BaseScopedEntity
 public class ConventionNamedEntity : EditableObject<ConventionNamedEntity>
 {
 	[Permission("convention:update")]
-	protected async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected new async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

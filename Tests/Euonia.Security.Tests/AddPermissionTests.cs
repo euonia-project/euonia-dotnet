@@ -88,6 +88,31 @@ public class AddPermissionTests
 	#region 扩展点不被覆盖
 
 	[Fact]
+	public void AddPermission_Should_Register_A_Requirement_Provider_For_Hosts()
+	{
+		// 宿主不必自己写「要求来源」的转换：引擎把容器里的权限码来源回答成要求（角色等原样保留）
+		var provider = Build(s => s.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly));
+
+		var requirements = provider.GetRequiredService<IPermissionRequirementProvider>()
+		                           .RequirementsFor(typeof(ApprovableAsset), BusinessOperation.Read);
+
+		Assert.Contains(requirements, requirement => requirement.Permission == "asset:approve" && requirement.Roles.Length > 0);
+	}
+
+	[Fact]
+	public void Requirement_Provider_Should_Synthesize_CodeOnly_Requirements()
+	{
+		// 只给权限码的来源折算成「有码、无角色」——回答不了角色不等于没有要求，
+		// 把它当成空要求会让闸门比来源本身更宽松
+		var provider = Build(s => s.AddPermission(new ConventionCodeSource(), FixturesAssembly));
+
+		var requirements = provider.GetRequiredService<IPermissionRequirementProvider>()
+		                           .RequirementsFor(typeof(GuardedAsset), BusinessOperation.Execute);
+
+		Assert.Contains(requirements, requirement => requirement.Permission == "guarded:run" && requirement.Roles.Length == 0);
+	}
+
+	[Fact]
 	public void AddPermission_Should_Not_Overwrite_Host_Key_Resolver()
 	{
 		var expected = new FixedKeyResolver();
