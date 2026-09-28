@@ -10,7 +10,7 @@ public abstract class AutomaticRegistrationBase : IAutomaticRegistration
     /// <inheritdoc />
     public virtual void AddAssembly(IServiceCollection services, Assembly assembly)
     {
-        var types = AssemblyHelper.GetAllTypes(assembly)
+        var types = AssemblyHelper.LoadTypes(assembly)
                                   .Where(type => type is { IsClass: true, IsAbstract: false, IsGenericType: false })
                                   .ToArray();
         AddTypes(services, types);

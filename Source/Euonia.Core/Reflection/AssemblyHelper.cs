@@ -25,20 +25,20 @@ public static class AssemblyHelper
 	public static List<Assembly> LoadAssemblies(string directory, SearchOption searchOption)
 	{
 		return GetAssemblyFiles(directory, searchOption).Select(AssemblyLoadContext.Default.LoadFromAssemblyPath)
-		                                                .ToList();
+														.ToList();
 	}
 
 	/// <summary>
-/// 获取 <paramref name="directory"/> 目录中的程序集文件。
-/// </summary>
-/// <param name="directory">目录路径。</param>
-/// <param name="searchOption">指定搜索操作是仅包含当前目录还是包含所有子目录。</param>
-/// <returns>找到的程序集文件路径集合。</returns>
-public static IEnumerable<string> GetAssemblyFiles(string directory, SearchOption searchOption)
+	/// 获取 <paramref name="directory"/> 目录中的程序集文件。
+	/// </summary>
+	/// <param name="directory">目录路径。</param>
+	/// <param name="searchOption">指定搜索操作是仅包含当前目录还是包含所有子目录。</param>
+	/// <returns>找到的程序集文件路径集合。</returns>
+	public static IEnumerable<string> GetAssemblyFiles(string directory, SearchOption searchOption)
 	{
 		return Directory.EnumerateFiles(directory, "*.*", searchOption)
-		                .Where(s => string.Equals(Path.GetExtension(s), ".dll", StringComparison.OrdinalIgnoreCase)
-		                            || string.Equals(Path.GetExtension(s), ".exe", StringComparison.OrdinalIgnoreCase));
+						.Where(s => string.Equals(Path.GetExtension(s), ".dll", StringComparison.OrdinalIgnoreCase)
+									|| string.Equals(Path.GetExtension(s), ".exe", StringComparison.OrdinalIgnoreCase));
 	}
 
 	/// <summary>
@@ -46,9 +46,19 @@ public static IEnumerable<string> GetAssemblyFiles(string directory, SearchOptio
 	/// </summary>
 	/// <param name="assembly">要获取类型的程序集。</param>
 	/// <returns>在程序集中找到的类型列表。</returns>
-	public static IReadOnlyList<Type> GetAllTypes(Assembly assembly)
+	public static IReadOnlyList<Type> LoadTypes(Assembly assembly)
 	{
 		return _typeCache.GetOrAdd(assembly, _ => GetLoadableTypes(assembly));
+	}
+
+	/// <summary>
+	/// 从一组程序集中加载并返回所有可加载类型。
+	/// </summary>
+	/// <param name="assemblies">要加载类型的程序集集合。</param>
+	/// <returns>所有程序集中找到的类型列表；如果 <paramref name="assemblies"/> 为 <c>null</c>，则返回 <c>null</c>。</returns>
+	public static IReadOnlyList<Type> LoadTypes(IEnumerable<Assembly> assemblies)
+	{
+		return assemblies?.SelectMany(LoadTypes)?.ToList();
 	}
 
 	private static IReadOnlyList<Type> GetLoadableTypes(Assembly assembly)
