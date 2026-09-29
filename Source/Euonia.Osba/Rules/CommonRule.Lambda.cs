@@ -43,10 +43,6 @@ public partial class CommonRule
 					context.AddErrorResult(string.Format(MessageFactory(), Property.FriendlyName));
 				}
 			}
-			else
-			{
-				await Task.CompletedTask;
-			}
 		}
 	}
 
@@ -76,7 +72,7 @@ public partial class CommonRule
 		private Func<T, IRuleContext, bool> Handler { get; }
 
 		/// <inheritdoc />
-		public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
+		public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 		{
 			if (context.Target is IBusinessObject target)
 			{
@@ -90,7 +86,7 @@ public partial class CommonRule
 				}
 			}
 
-			await Task.CompletedTask;
+			return Task.CompletedTask;
 		}
 	}
 }

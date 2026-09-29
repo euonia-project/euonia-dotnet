@@ -48,7 +48,7 @@ public partial class CommonRule
 		public bool IgnoreNullValue { get; set; } = true;
 
 		/// <inheritdoc />
-		public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
+		public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 		{
 			if (context.Target is IBusinessObject target)
 			{
@@ -66,7 +66,7 @@ public partial class CommonRule
 				}
 			}
 
-			await Task.CompletedTask;
+			return Task.CompletedTask;
 		}
 	}
 }
