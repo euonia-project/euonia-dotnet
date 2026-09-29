@@ -50,7 +50,8 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 			}
 		}
 
-		return codes;
+		// 只读包装：直接返回 List 的话，调用方强转一下就能改动本来源算出的码
+		return codes.AsReadOnly();
 	}
 
 	/// <inheritdoc />
@@ -75,7 +76,8 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 			}
 		}
 
-		return requirements;
+		// 只读包装：与 CodesFor 同口径
+		return requirements.AsReadOnly();
 	}
 
 	/// <summary>要求的去重键：权限码 + 角色集合。</summary>
