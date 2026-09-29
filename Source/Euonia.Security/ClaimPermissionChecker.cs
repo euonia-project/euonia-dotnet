@@ -13,7 +13,6 @@ namespace Nerosoft.Euonia.Security;
 /// 仅为显式回退保留；新代码请使用 <see cref="SubjectPermissionChecker"/>（从授权数据实时解析）。
 /// </para>
 /// </remarks>
-[Obsolete("权限码不应固化在令牌中：取消授权后旧令牌仍然有效。请改用 SubjectPermissionChecker（从授权数据实时解析）。")]
 public class ClaimPermissionChecker : IPermissionChecker
 {
 	private readonly UserPrincipal _user;
