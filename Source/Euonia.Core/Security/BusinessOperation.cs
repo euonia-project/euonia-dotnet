@@ -40,12 +40,12 @@ public static class BusinessOperation
 	/// 宿主自定义操作集时不要复用本列表——它只是「没有任何自定义操作时」的合理默认，
 	/// 操作全集应由使用方的权限实现声明（策略引擎侧即其权限码来源的 <c>AllOperations</c>）。
 	/// </remarks>
-	public static IReadOnlyList<string> All { get; } =
+	public static IReadOnlyList<string> All { get; } = Array.AsReadOnly(
 	[
 		Read,
 		Create,
 		Update,
 		Delete,
 		Execute
-	];
+	]);// 包了一层只读包装：直接返回数组的话，任何拿到它的人都能强转改写这个全局共享的操作词汇表。
 }
