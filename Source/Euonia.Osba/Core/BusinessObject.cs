@@ -1170,7 +1170,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var context = BusinessContext;
 		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null ? "未启用数据权限" : authorizer.ExplainRow(this, scopeKey, context.CurrentServiceProvider);
+		return authorizer == null ? Resources.IDS_SCOPE_NOT_ENABLED : authorizer.ExplainRow(this, scopeKey, context.CurrentServiceProvider);
 	}
 
 	/// <summary>

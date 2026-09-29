@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -125,5 +125,17 @@
   </data>
   <data name="IDS_INVALID_STATE" xml:space="preserve">
       <value>Invalid state.</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
+    <value>Data scope is not enabled.</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>The resource type '{0}' declares a data scope model, but the target object is not wired to BusinessContext, so {1} can not be determined. Create or read the object through the factory, or set BusinessContext before calling.</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>The business object '{0}' declares permission requirements, but is not wired to BusinessContext, so {1} can not be determined. Create or read the object through the factory, or set BusinessContext before calling.</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>The business object '{0}' declares permission requirements, but {1} is not registered in the container. Call AddPermission to wire up an authorization implementation, or register your own IPermissionChecker.</value>
   </data>
 </root>

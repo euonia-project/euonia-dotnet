@@ -79,8 +79,7 @@ internal static class ScopeAuthorization
 		// 已声明模型却拿不到上下文：无法判定，属配置错误（多半是忘了接线），不能静默放行
 		Check.Ensure(
 			context != null,
-			"资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。"
-			+ "请通过工厂创建/读取对象，或在调用前设置 BusinessContext。",
+			Resources.IDS_SCOPE_CONTEXT_MISSING,
 			target.GetType().Name,
 			operation);
 

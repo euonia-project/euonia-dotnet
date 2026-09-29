@@ -51,15 +51,13 @@ internal static class ObjectAuthorization
 		// 有要求却判定不了 —— 属配置错误，必须暴露
 		Check.Ensure(
 			businessObject.BusinessContext != null,
-			"业务对象 '{0}' 声明了权限要求，但未接入 BusinessContext，无法判定 {1}。"
-			+ "请通过工厂创建/读取对象，或在调用前设置 BusinessContext。",
+			Resources.IDS_OBJECT_CONTEXT_MISSING,
 			businessObject.GetType().Name,
 			operation);
 
 		Check.Ensure(
 			businessObject.BusinessContext.GetService<IPermissionChecker>() != null,
-			"业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。"
-			+ "请调用 AddPermission 接入鉴权实现，或注册你自己的 IPermissionChecker。",
+			Resources.IDS_PERMISSION_CHECKER_MISSING,
 			businessObject.GetType().Name,
 			nameof(IPermissionChecker));
 

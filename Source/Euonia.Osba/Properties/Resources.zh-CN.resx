@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
 		Microsoft ResX Schema
@@ -105,5 +105,17 @@
   </data>
   <data name="IDS_RULE_MESSAGE_REQUIRED" xml:space="preserve">
     <value>规则消息必需。</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
+    <value>未启用数据权限</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。请通过工厂创建/读取对象，或在调用前设置 BusinessContext。</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>业务对象 '{0}' 声明了权限要求，但未接入 BusinessContext，无法判定 {1}。请通过工厂创建/读取对象，或在调用前设置 BusinessContext。</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。请调用 AddPermission 接入鉴权实现，或注册你自己的 IPermissionChecker。</value>
   </data>
 </root>
