@@ -162,7 +162,9 @@ public sealed class ScopeModelRegistryBuilder
 
 	private static string ValidateKeyResolution(string name, ScopeModelRegistration registration, IPermissionCodeSource codeSource)
 	{
-		var resolved = new HashSet<string>(StringComparer.Ordinal);
+		// 与 ScopePolicySet 的忽略大小写口径一致：否则 Declare("Repo:Push") + [Permission("repo:push")] 
+		// 会因解析结果与声明键仅差大小写而被误判为「没有任何操作会解析到该码」。
+		var resolved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var operation in codeSource.AllOperations)
 		{

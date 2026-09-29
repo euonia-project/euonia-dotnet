@@ -86,7 +86,7 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 		return RequirementsFor(type, operation)
 		       .Select(requirement => requirement.Permission)
 		       .Where(permission => !string.IsNullOrEmpty(permission))
-		       .Distinct(StringComparer.Ordinal)
+		       .Distinct(StringComparer.OrdinalIgnoreCase)
 		       .ToArray();
 	}
 }
@@ -96,7 +96,9 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 /// </summary>
 public sealed class OperationCodeSourceBuilder
 {
-	private readonly Dictionary<string, List<Func<MethodInfo, bool>>> _rules = new(StringComparer.Ordinal);
+	// 操作名按忽略大小写匹配：配置里写 "Read" 与运行时查询 "read" 必须命中同一组规则，
+	// 否则 _rules 查不到 → RequirementsFor 返回空 → 授权门静默放行（fail-open）。
+	private readonly Dictionary<string, List<Func<MethodInfo, bool>>> _rules = new(StringComparer.OrdinalIgnoreCase);
 
 	private readonly List<string> _order = [];
 
@@ -206,7 +208,7 @@ public sealed class OperationCodeSourceBuilder
 		var rules = _rules.ToDictionary(
 			pair => pair.Key,
 			pair => (IReadOnlyList<Func<MethodInfo, bool>>)[.. pair.Value],
-			StringComparer.Ordinal);
+			StringComparer.OrdinalIgnoreCase);
 
 		return new OperationCodeSource([.. _order], rules);
 	}

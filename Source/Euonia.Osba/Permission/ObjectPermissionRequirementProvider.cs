@@ -52,7 +52,7 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
 			.. RequirementsFor(type, operation)
 			   .Select(requirement => requirement.Permission)
 			   .Where(permission => !string.IsNullOrEmpty(permission))
-			   .Distinct(StringComparer.Ordinal)
+			   .Distinct(StringComparer.OrdinalIgnoreCase)
 		];
 	}
 
@@ -77,7 +77,7 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
 	{
 		foreach (var (name, attributeTypes) in Rules)
 		{
-			if (string.Equals(name, operation, StringComparison.Ordinal))
+			if (string.Equals(name, operation, StringComparison.OrdinalIgnoreCase))
 			{
 				return attributeTypes;
 			}

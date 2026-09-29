@@ -16,7 +16,7 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 
 		foreach (var operation in sources.SelectMany(source => source.AllOperations))
 		{
-			if (operation != null && !operations.Contains(operation, StringComparer.Ordinal))
+			if (operation != null && !operations.Contains(operation, StringComparer.OrdinalIgnoreCase))
 			{
 				operations.Add(operation);
 			}
