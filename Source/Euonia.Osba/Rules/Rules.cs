@@ -437,9 +437,11 @@ public class Rules : IRules
 
 		BrokenRules.ClearRules(null);
 
+		// 比较口径必须与 BrokenRuleCollection.ClearRules(string) 的序数相等保持一致，
+		// 否则仅大小写不同的两个属性只会清理其中一个，陈旧条目跨轮累积导致 IsValid 失真。
 		foreach (var property in rules.Select(rule => rule.Property)
 		                              .Where(property => property != null)
-		                              .DistinctBy(property => property.Name, StringComparer.OrdinalIgnoreCase))
+		                              .DistinctBy(property => property.Name))
 		{
 			BrokenRules.ClearRules(property);
 		}

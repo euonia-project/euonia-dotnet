@@ -266,12 +266,14 @@ public class ObjectReflector
 	/// </summary>
 	/// <param name="name">属性名称。</param>
 	/// <param name="type">属性类型。</param>
-	/// <param name="multiple">服务是否有多个实现。</param>
 	/// <returns>包含服务类型和是否为多实现的元组。</returns>
 	/// <exception cref="NotSupportedException">当属性类型不受支持时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当属性类型无效时抛出。</exception>
-	private static Tuple<Type, bool> FindServiceType(string name, Type type, bool? multiple = null)
+	private static Tuple<Type, bool> FindServiceType(string name, Type type)
 	{
+		// multiple 是下钻收集状态（遇到集合即置位），不是入参：调用方只关心最终结果。
+		var multiple = false;
+
 		while (true)
 		{
 			if (type.IsPrimitive)
@@ -292,10 +294,12 @@ public class ObjectReflector
 			var @interface = type.GetInterface(nameof(IEnumerable));
 			if (@interface == null)
 			{
-				return Tuple.Create(type, multiple ?? false);
+				return Tuple.Create(type, multiple);
 			}
 
-			if (multiple == true)
+			// 只解一层集合：进入第二层（T[][]、IEnumerable<List<T>> 等）说明属性本身是嵌套集合，
+			// 必须在此终止，否则会退化成元素类型 + 多实现的错误组合，晚爆于 PropertyInfo.SetValue。
+			if (multiple)
 			{
 				throw new NotSupportedException($"Can not inject property '{name}', the enumerable property type {type.FullName} can not be injected as a single service.");
 			}
@@ -315,8 +319,10 @@ public class ObjectReflector
 
 			if (type.IsGenericType)
 			{
+				// _collectionTypesName 列出的三种集合接口都按同一方式解出元素类型，
+				// 否则常量宣称支持的 IList<> / ICollection<> 会在下一行抛出 NotSupportedException。
 				var propertyTypeFullname = $"{type.Namespace}.{type.Name}";
-				if (propertyTypeFullname == typeof(IEnumerable<>).FullName)
+				if (_collectionTypesName.Contains(propertyTypeFullname))
 				{
 					if (type.GenericTypeArguments.Length != 1)
 					{

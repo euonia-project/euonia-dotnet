@@ -328,6 +328,7 @@ public class BusinessObjectFactory : IObjectFactory
 		}
 
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];

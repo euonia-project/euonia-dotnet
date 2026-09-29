@@ -52,6 +52,7 @@ internal sealed class Actuator(IServiceProvider provider) : IActuator
 		}
 
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 		return new ActuatorBuilder<TTarget>(factory, pipeline);
 	}
