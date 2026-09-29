@@ -1,7 +1,3 @@
-// ReSharper disable InconsistentNaming
-// ReSharper disable UnusedMember.Global
-// ReSharper disable UnusedType.Global
-
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>

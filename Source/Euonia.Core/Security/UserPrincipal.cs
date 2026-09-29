@@ -1,8 +1,5 @@
 using System.Security.Claims;
 
-// ReSharper disable UnusedMember.Global
-// ReSharper disable MemberCanBePrivate.Global
-
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
@@ -77,7 +74,7 @@ public class UserPrincipal
 	{
 		get
 		{
-			return Claims.Identity?.AuthenticationType switch
+			return Claims?.Identity?.AuthenticationType switch
 			{
 				null or "Anonymous" => null,
 				// 对于 JWT/Bearer，优先使用 'name' 声明
