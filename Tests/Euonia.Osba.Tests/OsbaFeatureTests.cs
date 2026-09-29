@@ -494,20 +494,20 @@ public class SaveEditableObject : EditableObject<SaveEditableObject>
 	}
 
 	[FactoryInsert]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		UpdateCalled = true;
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		DeleteCalled = true;
 		await Task.CompletedTask;

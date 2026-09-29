@@ -536,30 +536,54 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		/// </summary>
 		/// <param name="target">业务对象。</param>
 		/// <returns>绕过规则检查的管理器对象。</returns>
+		/// <remarks>
+		/// 必须<strong>在锁内</strong>取定返回值：字段在 <see cref="DeRef"/> 归零时会被置空，
+		/// 若在解锁之后再回读一次 <see cref="BusinessObject.InternalBypassRuleChecks"/>，
+		/// 中途并发的 <c>Dispose</c> 就能让这里返回 <see langword="null"/>——
+		/// 调用方拿到 null 后 <c>using</c> 形同虚设，而刚建立的绕过状态已被对方还原。
+		/// </remarks>
 		public static BypassRuleChecksObject GetManager(BusinessObject target)
 		{
 			lock (_lock)
 			{
 				target.InternalBypassRuleChecks ??= new BypassRuleChecksObject(target);
 
-				target.InternalBypassRuleChecks.AddRef();
+				var manager = target.InternalBypassRuleChecks;
+				manager.AddRef();
+				return manager;
 			}
-
-			return target.InternalBypassRuleChecks;
 		}
 
 		#region Reference counting
 
+		/// <summary>
+		/// 当前引用计数。读写都在 <see cref="_lock"/> 内完成——
+		/// <see cref="Dispose"/> 可能来自与 <see cref="GetManager"/> 完全不同的线程。
+		/// </summary>
 		private int _refCount;
 
 		/// <summary>
 		/// 获取此对象的当前引用计数。
 		/// </summary>
-		public int RefCount => _refCount;
+		public int RefCount
+		{
+			get
+			{
+				lock (_lock)
+				{
+					return _refCount;
+				}
+			}
+		}
 
 		private void AddRef()
 		{
-			_refCount += 1;
+			// 自己加锁，不依赖调用方：把「必须先持锁」变成方法自身的契约，
+			// 否则漏了锁的调用方会得到一个毫无保护的非原子自增。
+			lock (_lock)
+			{
+				_refCount += 1;
+			}
 		}
 
 		private void DeRef()
@@ -568,12 +592,18 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			{
 				if (_refCount == 0)
 				{
-					// 已经释放，防止重复释放导致引用计数为负或空引用
+					// 已经释放，防止重复释放导致引用计数为负或空引用。
+					// 归零后 _target 同步置空，这里必须一并挡住，避免对空目标动刀。
 					return;
 				}
 
 				_refCount -= 1;
 				if (_refCount != 0)
+				{
+					return;
+				}
+
+				if (_target == null)
 				{
 					return;
 				}
@@ -1071,6 +1101,37 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual bool CanExecuteObject()
 	{
 		return IsOperationGranted(BusinessOperation.Execute);
+	}
+
+	/// <summary>
+	/// 确定当前用户是否被允许对本对象执行指定的业务操作。
+	/// </summary>
+	/// <param name="operation">操作标识；既包括 <see cref="BusinessOperation"/> 的 5 个内置操作，
+	/// 也包括宿主自定义的操作（如 <c>approve</c>、<c>order:archive</c>）。</param>
+	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	/// <remarks>
+	/// <para>
+	/// 这是操作级闸门（<c>ObjectAuthorization</c>）的唯一入口：内置操作分派到对应的
+	/// <c>CanReadObject</c> / <c>CanCreateObject</c> / <c>CanUpdateObject</c> / <c>CanDeleteObject</c> /
+	/// <c>CanExecuteObject</c>（派生类重写它们即可定制），其余操作一律按
+	/// <see cref="PermissionAttribute"/> 要求判定。
+	/// </para>
+	/// <para>
+	/// <b>不允许对未知操作返回恒真</b>：声明了权限要求却因为操作串不在这 5 个常量里而放行，
+	/// 等于自定义操作完全没有鉴权。
+	/// </para>
+	/// </remarks>
+	public virtual bool CanPerformOperation(string operation)
+	{
+		return operation switch
+		{
+			BusinessOperation.Read => CanReadObject(),
+			BusinessOperation.Create => CanCreateObject(),
+			BusinessOperation.Update => CanUpdateObject(),
+			BusinessOperation.Delete => CanDeleteObject(),
+			BusinessOperation.Execute => CanExecuteObject(),
+			_ => IsOperationGranted(operation)
+		};
 	}
 
 	/// <summary>

@@ -361,21 +361,21 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 {
 	[FactoryInsert]
 	[Permission("order:create")]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
 	[Permission("order:update")]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
 	[Permission("order:delete")]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -388,19 +388,19 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 public class AdminEditableObject : EditableObject<AdminEditableObject>
 {
 	[FactoryInsert]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -433,7 +433,7 @@ public class PlainNamedSecuredObject : EditableObject<PlainNamedSecuredObject>
 	/// </summary>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[Permission("order:update")]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -451,7 +451,7 @@ public class SecuredCommand : CommandObject<SecuredCommand>
 
 	[FactoryExecute]
 	[Permission("report:export")]
-	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = true;
 		await Task.CompletedTask;
@@ -530,7 +530,7 @@ public class TestSubjectResolver : IScopeSubjectResolver
 public class UnsecuredEditableObject : EditableObject<UnsecuredEditableObject>
 {
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

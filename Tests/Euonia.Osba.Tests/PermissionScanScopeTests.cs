@@ -67,7 +67,7 @@ public class BaseScopedEntity : EditableObject<BaseScopedEntity>
 {
 	[Permission("base:update")]
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

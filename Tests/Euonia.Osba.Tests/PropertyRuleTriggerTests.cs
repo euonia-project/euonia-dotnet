@@ -441,7 +441,7 @@ public class RequiredNameObject : EditableObject<RequiredNameObject>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
@@ -506,7 +506,7 @@ public class OptOutObject : EditableObject<OptOutObject>
 		set => SetProperty(NameProperty, value);
 	}
 
-	protected override bool CheckRuleOnPropertyChanged => false;
+	protected internal override bool CheckRuleOnPropertyChanged => false;
 
 	/// <summary>
 	/// 显式驱动 Name 的属性级规则检查。
@@ -562,7 +562,7 @@ public class DeferredRuleObject : EditableObject<DeferredRuleObject>
 		set => SetProperty(NameProperty, value);
 	}
 
-	protected override bool CheckRuleOnPropertyChanged => false;
+	protected internal override bool CheckRuleOnPropertyChanged => false;
 
 	protected override void AddRules()
 	{
@@ -570,7 +570,7 @@ public class DeferredRuleObject : EditableObject<DeferredRuleObject>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
@@ -589,7 +589,7 @@ public class DeferredOrderObject : EditableObject<DeferredOrderObject>
 		set => SetProperty(NameProperty, value);
 	}
 
-	protected override bool CheckRuleOnPropertyChanged => false;
+	protected internal override bool CheckRuleOnPropertyChanged => false;
 
 	protected override void AddRules()
 	{
@@ -598,7 +598,7 @@ public class DeferredOrderObject : EditableObject<DeferredOrderObject>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
@@ -617,7 +617,7 @@ public class DeferredAsyncRuleObject : EditableObject<DeferredAsyncRuleObject>
 		set => SetProperty(NameProperty, value);
 	}
 
-	protected override bool CheckRuleOnPropertyChanged => false;
+	protected internal override bool CheckRuleOnPropertyChanged => false;
 
 	protected override void AddRules()
 	{
@@ -632,7 +632,7 @@ public class DeferredAsyncRuleObject : EditableObject<DeferredAsyncRuleObject>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}

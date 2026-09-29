@@ -243,11 +243,27 @@ public static class ServiceCollectionExtensions
 	/// 按累积后的来源与程序集重建注册表，并<b>替换</b>（而非追加）三者在本容器中的注册。
 	/// </summary>
 	/// <remarks>
+	/// <para>
 	/// 重建是逐次调用进行的，因此配置错误在<b>注册处</b>抛出，而不是等到容器构建或首次判定。
 	/// 用替换而非追加：多次注册后每种类型只保留一条描述符，容器里不留失效的中间注册表。
+	/// </para>
+	/// <para>
+	/// 输入没变时<b>整段跳过</b>：<c>ScopeModelRegistry.Create</c> 要重扫全部程序集并把每个模型
+	/// 重新实例化、逐条重新编译校验，<c>HasPermissionDeclarations</c> 还要按「类型 × 操作」跑一遍
+	/// <c>CodesFor</c>——<c>AddPermission(source, asm)</c> 原样重复一次的代价与首次相同。
+	/// 累积清单只增不减且按幂等去重（见 <see cref="PermissionModelSetup.Signature"/>），
+	/// 所以两个计数相等即等价于集合相等，可以安全跳过。新增模块/程序集会改变计数，照常重建。
+	/// </para>
 	/// </remarks>
 	private static void Rebuild(IServiceCollection services, PermissionModelSetup setup)
 	{
+		var signature = setup.Signature;
+
+		if (setup.LastBuild == signature)
+		{
+			return;
+		}
+
 		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
 
 		services.RemoveAll<ScopeModelRegistry>();
@@ -259,7 +275,15 @@ public static class ServiceCollectionExtensions
 
 		// 宿主框架与鉴权实现之间的两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）：
 		// 行级判定、策略键解析。契约在 Core，因此这里不需要任何「同时引用两边」的适配包。
-		services.TryAddSingleton<IObjectScopeAuthorizer>(new ObjectScopeAuthorizer(registry, setup.CodeSource));
+		//
+		// 必须用工厂委托延迟解析，不能在注册期直接 new 出实例：
+		// Rebuild 是逐次调用进行的，第二次 AddPermission 会把 ScopeModelRegistry / IPermissionCodeSource
+		// 替换成新的实例；若这里捕获了首次的实例，TryAddSingleton 会因描述符已存在而不再注册，
+		// 于是 IsConstrained 拿着旧注册表判定 → 第二个模块的模型被判为「不受约束」，
+		// 行级数据权限被静默跳过（fail-open）。下面的 IScopeKeyResolver 一直是对的，这里与它对齐。
+		services.TryAddSingleton<IObjectScopeAuthorizer>(provider => new ObjectScopeAuthorizer(
+			provider.GetRequiredService<ScopeModelRegistry>(),
+			provider.GetRequiredService<IPermissionCodeSource>()));
 		services.TryAddSingleton<IScopeKeyResolver>(provider => new ObjectScopeKeyResolver(
 			provider.GetRequiredService<ScopeModelRegistry>(),
 			provider.GetRequiredService<IPermissionCodeSource>(),
@@ -267,6 +291,9 @@ public static class ServiceCollectionExtensions
 
 		services.RemoveAll<PermissionSetup>();
 		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
+
+		// 全部登记成功才记账：前面任何一步抛出时，下次调用必须重新走完整重建
+		setup.LastBuild = signature;
 	}
 
 	/// <summary>

@@ -17,7 +17,7 @@ namespace Nerosoft.Euonia.Security;
 public sealed class ScopePolicySet<T>
 	where T : class
 {
-	private readonly Dictionary<string, ScopePolicy<T>> _policies = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, ScopePolicy<T>> _policies = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// 为指定操作声明策略（等价于为该操作的默认键 <c>@read</c>/<c>@create</c>… 声明）。

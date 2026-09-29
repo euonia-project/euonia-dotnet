@@ -29,6 +29,27 @@ public sealed class ScopeGuard : IScopeGuard
 	/// <summary>失效代数：在途解析若发现代数已变，说明结果已过期，必须丢弃重来。</summary>
 	private int _version;
 
+	/// <summary>
+	/// 单个守卫内按（类型，权限码）缓存的上限。
+	/// </summary>
+	/// <remarks>
+	/// 权限码在当前用法下只来自代码常量（<c>TeamPermissions.Delete</c> 这类），条目数恒定；
+	/// 但 <c>scopeKey</c> 毕竟是个 <see cref="string"/> 入参，一旦有调用方把它接到了外部输入上，
+	/// 两个字典就会随不同键无限增长（Scoped 生命周期只能约束到请求边界，约束不了单请求内的高频调用）。
+	/// 超过上限就只算不缓：结论仍然正确，代价是多编译几次，换来内存有界。
+	/// </remarks>
+	private const int MaxCacheEntries = 512;
+
+	/// <summary>
+	/// 在途重试上限：解析或编译期间被 <see cref="Refresh"/> 打断多少次之后放弃。
+	/// </summary>
+	/// <remarks>
+	/// 打断本身就是罕见的竞争（<see cref="Refresh"/> 在同一作用域内高频调用是病态场景），
+	/// 真实竞争通常重试一次就稳了。但「循环直到稳定」没有上界：只要有个调用方在循环里 Refresh，
+	/// 每个判定线程就会被永久拖在自旋上，得到的是线程饿死而不是「刷新生效」。到点就抛，把病态暴露成错误。
+	/// </remarks>
+	private const int MaxResolveRetries = 3;
+
 	private ScopeSubjectSet _subjects;
 	private bool _resolved;
 
@@ -42,6 +63,11 @@ public sealed class ScopeGuard : IScopeGuard
 	/// <param name="keyResolver">策略键解析器；可缺席，此时未显式指定权限码的判定回落到 <see cref="ScopeKeys.Default"/>。</param>
 	public ScopeGuard(UserPrincipal user, ScopeModelRegistry registry, IScopeSubjectResolver resolver, IScopeKeyResolver keyResolver)
 	{
+		// registry 缺席时不会在构造期失败，而是一路走到 GetPolicy 的 _registry.TryGet 才 NRE ——
+		// 那是运行期、在判定路径上。接线错误必须在构造处就说清楚。
+		// user/resolver/keyResolver 允许为空是设计（见各自的 <param> 文档），不在此校验。
+		Check.EnsureNotNull(registry, nameof(registry));
+
 		_user = user;
 		_registry = registry;
 		_resolver = resolver;
@@ -86,7 +112,7 @@ public sealed class ScopeGuard : IScopeGuard
 	public CompiledScopePolicy<T> GetPolicy<T>(string scopeKey = null)
 		where T : class
 	{
-		var key = string.IsNullOrWhiteSpace(scopeKey) ? ScopeKeys.Default : scopeKey;
+		var key = NormalizeKey(scopeKey);
 
 		lock (_sync)
 		{
@@ -102,13 +128,56 @@ public sealed class ScopeGuard : IScopeGuard
 			return null;
 		}
 
-		// 该码上有专属策略就用它，否则回落到模型的默认策略
+		// 该码上有专属策略就用它，否则回落到模型的默认策略。
+		// 这个回落是文档化的设计（见 ScopeModelRegistration.DeclaredCodes），且与授予侧的
+		// 「覆盖式回落到 @default」同构 —— 一个模型没声明过策略的键，拿到的正是 @default 的待遇，
+		// 不构成「相对 @default 的提权」。真正的键一律来自代码常量或 ScopeKeyResolver（按操作派生），
+		// 后者只返回「有策略的码」或 @<operation>，不会把任意字符串送到这里。
 		var policy = (ScopePolicy<T>)registration.PolicyFor(key) ?? (ScopePolicy<T>)registration.DefaultPolicy;
-		var compiled = ScopePolicyCompiler.Compile(policy, registration.Descriptor, GetSubjects(), key);
+
+		// 与 ResolveAsync 同一套失效代数：(代数, 授权数据) 必须是同一把锁下的原子快照，
+		// 发布前再比对一次代数。否则在途的这次编译会把「用撤销前的授权数据」算出的策略，
+		// 写回已被 Refresh 清空的缓存（Invalidate 清表在先，这里无条件回填在后），
+		// 此后 GetPolicy 每次都命中它、再也不触发 GetSubjects() —— 撤销在本作用域内被静默回滚。
+		// 这正是 DESIGN.md §1.8 自己定义为「真实的安全缺口」的那类缺陷。
+		int version;
+		ScopeSubjectSet subjects;
+		var attempts = 0;
+
+		// 窗口期内被再次失效时重来：GetSubjects() 会重新解析，代价可接受（Refresh 高频本身是病态场景）
+		while (true)
+		{
+			if (++attempts > MaxResolveRetries)
+			{
+				throw new InvalidOperationException(
+					$"权限策略编译在 {MaxResolveRetries} 次重试后仍未拿到稳定的授权数据快照，期间持续有并发的 Refresh。" +
+					"请检查是否存在在同一作用域内反复调用 IScopeGuard.Refresh 的代码。");
+			}
+
+			GetSubjects();
+
+			lock (_sync)
+			{
+				version = _version;
+				subjects = _subjects;
+			}
+
+			if (subjects != null)
+			{
+				break;
+			}
+		}
+
+		var compiled = ScopePolicyCompiler.Compile(policy, registration.Descriptor, subjects, key);
 
 		lock (_sync)
 		{
-			_compiledPolicies[(typeof(T), key)] = compiled;
+			// 代数已变：本次编译基于陈旧授权数据，只返回给调用方本次使用、不进缓存。
+			// 下一次调用会重新走这条路径并拿到新的授权数据。
+			if (version == _version && _compiledPolicies.Count < MaxCacheEntries)
+			{
+				_compiledPolicies[(typeof(T), key)] = compiled;
+			}
 		}
 
 		return compiled;
@@ -126,9 +195,21 @@ public sealed class ScopeGuard : IScopeGuard
 	}
 
 	/// <inheritdoc />
+	/// <remarks>
+	/// <paramref name="resource"/> 为 <see langword="null"/> 时一律返回 <see langword="false"/>（fail-closed）：
+	/// 既判不出「它当前的操作」，也无法用模型对它求值。此前该路径会带着 <see langword="null"/> 走进
+	/// 已编译策略求值（已注册类型 ⇒ 空引用），而未注册类型又走 <c>!IsDeclared</c> 短路返回 <see langword="true"/>，
+	/// 与 <see cref="AllowsObject"/> 的 <see langword="false"/> 正好相反——<see cref="IScopeGuard"/> 明确承诺
+	/// 「同一实例经两个入口必然得到同一结论」，这个反向结果就是违约。
+	/// </remarks>
 	public bool Allows<T>(T resource, string scopeKey = null)
 		where T : class
 	{
+		if (resource == null)
+		{
+			return false;
+		}
+
 		// 与 AllowsObject 走同一套键解析：对「有未决变更的对象」按当前操作取键，否则回落到默认键。
 		var key = ResolveScopeKey(resource, scopeKey);
 		var policy = GetPolicy<T>(key);
@@ -221,8 +302,17 @@ public sealed class ScopeGuard : IScopeGuard
 			_resolver != null,
 			"权限体系已启用（存在权限模型或 [Permission] 声明），但未注册 IScopeSubjectResolver。请在服务注册中提供一个基于授权数据的实现。");
 
+		var attempts = 0;
+
 		while (true)
 		{
+			if (++attempts > MaxResolveRetries)
+			{
+				throw new InvalidOperationException(
+					$"授权数据解析在 {MaxResolveRetries} 次重试后仍未被接受，期间持续有并发的 Refresh。" +
+					"请检查是否存在在同一作用域内反复调用 IScopeGuard.Refresh 的代码。");
+			}
+
 			await _resolveGate.WaitAsync(cancellationToken).ConfigureAwait(false);
 
 			try
@@ -267,18 +357,34 @@ public sealed class ScopeGuard : IScopeGuard
 	}
 
 	/// <summary>
+	/// 规范化策略键：空白一律落到 <see cref="ScopeKeys.Default"/>，其余去掉首尾空白。
+	/// </summary>
+	/// <remarks>不 trim 的话，<c>"repo:push"</c> 与 <c>"repo:push "</c> 会是两个缓存条目、两条不同查找路径。</remarks>
+	private static string NormalizeKey(string scopeKey)
+	{
+		if (string.IsNullOrWhiteSpace(scopeKey))
+		{
+			return ScopeKeys.Default;
+		}
+
+		var trimmed = scopeKey.Trim();
+
+		return trimmed.Length == 0 ? ScopeKeys.Default : trimmed;
+	}
+
+	/// <summary>
 	/// 解析资源实例对应的策略键（沿基类链找已声明类型，再按当前操作解析）。
 	/// </summary>
 	private string ResolveScopeKey(object resource, string scopeKey)
 	{
 		if (!string.IsNullOrWhiteSpace(scopeKey))
 		{
-			return scopeKey;
+			return NormalizeKey(scopeKey);
 		}
 
 		// 未显式指定码时按资源当前对应的操作解析；该映射由使用方通过 IScopeKeyResolver 提供，
 		// 引擎因此不需要知道资源的状态模型。
-		return _keyResolver?.Resolve(resource, scopeKey) ?? ScopeKeys.Default;
+		return NormalizeKey(_keyResolver?.Resolve(resource, scopeKey));
 	}
 
 	/// <summary>
@@ -304,16 +410,26 @@ public sealed class ScopeGuard : IScopeGuard
 
 	private ScopeDecision ExplainCore(object resource, string scopeKey)
 	{
+		var key = NormalizeKey(scopeKey);
 		var declaredType = ResolveDeclaredType(resource);
+
+		// resource 与「类型没注册」是两件事，不能合用一句结论：
+		// 资源为 null 时说「未注册权限模型，不受数据权限约束 allowed=true」，
+		// 而 AllowsObject(null) 实际返回 false —— 审计路径给出的解释比判定本身更宽松，
+		// 排障时会把「因 null 被拒」误读成「本来就不受限」。判定与解释必须同口径（fail-closed）。
+		if (resource == null)
+		{
+			return new ScopeDecision(false, key, Array.Empty<string>(), ["资源为 null，无法判定（fail-closed）"]);
+		}
 
 		if (declaredType == null)
 		{
-			return new ScopeDecision(true, scopeKey, ["未注册权限模型，不受数据权限约束"], Array.Empty<string>());
+			return new ScopeDecision(true, key, ["未注册权限模型，不受数据权限约束"], Array.Empty<string>());
 		}
 
 		_registry.TryGetInherited(declaredType, out var registration);
 
-		var policy = registration.PolicyFor(scopeKey) ?? registration.DefaultPolicy;
+		var policy = registration.PolicyFor(key) ?? registration.DefaultPolicy;
 
 		var explain = typeof(ScopeFilter)
 		              .GetMethod(nameof(ScopeFilter.Explain))!
@@ -321,7 +437,7 @@ public sealed class ScopeGuard : IScopeGuard
 
 		try
 		{
-			return (ScopeDecision)explain.Invoke(null, [resource, policy, registration.Descriptor, GetSubjects(), scopeKey])!;
+			return (ScopeDecision)explain.Invoke(null, [resource, policy, registration.Descriptor, GetSubjects(), key])!;
 		}
 		catch (TargetInvocationException exception) when (exception.InnerException != null)
 		{
@@ -365,7 +481,11 @@ public sealed class ScopeGuard : IScopeGuard
 
 		lock (_sync)
 		{
-			_evaluators[(declaredType, scopeKey)] = evaluator;
+			// 同 GetPolicy：超过上限就不进缓存，保证内存有界（求值委托本身无状态，重编译无副作用）
+			if (_evaluators.Count < MaxCacheEntries)
+			{
+				_evaluators[(declaredType, scopeKey)] = evaluator;
+			}
 		}
 
 		return evaluator;

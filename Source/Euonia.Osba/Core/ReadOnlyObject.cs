@@ -10,12 +10,29 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	where T : ReadOnlyObject<T>
 {
 	/// <summary>
-	/// 重写 IsBypassingRuleChecks 以防止 PropertyChanged 事件被引发。
+	/// 只读对象拒绝任何属性写入。
 	/// </summary>
-	protected override bool IsBypassingRuleChecks
+	/// <remarks>
+	/// <para>此前这里靠重写 <c>IsBypassingRuleChecks</c> 来「让只读对象安静一点」，但那个开关的本意是
+	/// 「本次绕过规则检查与权限检查」，被永久置真之后的副作用是：</para>
+	/// <list type="bullet">
+	/// <item>写入路径的 <c>!IsBypassingRuleChecks &amp;&amp; !CanWriteProperty(...)</c> 被整体短路——
+	/// <strong>只读对象实际上可写</strong>，而且写完既不通知也不报错，是静默的数据损坏；</item>
+	/// <item>读取路径的 <c>IsBypassingRuleChecks || CanReadProperty(...)</c> 同样被短路——权限对只读对象永不生效。</item>
+	/// </list>
+	/// <para>因此把「只读」这件事放回它该在的位置：覆盖 <see cref="BusinessObject.CanWriteProperty(IPropertyInfo)"/>。
+	/// 写入由各 <c>SetProperty</c> 入口的 <c>CanWriteProperty(property, true)</c> 统一裁决
+	/// （拒绝时抛 <see cref="System.Security.SecurityException"/>）；
+	/// 显式的 <c>BypassRuleChecks</c> 仍然可以写（那是调用方主动声明的绕过，语义由 <c>ObservableObject</c> 统一定义）；
+	/// 读取权限则回归 <c>CanReadProperty</c> 正常判定。</para>
+	/// </remarks>
+	/// <param name="property">待写入的属性。</param>
+	/// <returns>恒为 <see langword="false"/>。</returns>
+	public override bool CanWriteProperty(IPropertyInfo property)
 	{
-		get => true;
+		return false;
 	}
+
 
 	#region Get Properties
 

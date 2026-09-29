@@ -59,7 +59,7 @@ public interface IScopeGuard
 	/// 判定单个资源是否可访问；该类型未注册权限模型时返回 <see langword="true"/>。
 	/// </summary>
 	/// <typeparam name="T">资源类型。</typeparam>
-	/// <param name="resource">待判定的资源。</param>
+	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时返回 <see langword="false"/>（fail-closed）。</param>
 	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按该资源当前的操作解析（见 <see cref="AllowsObject"/>）。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	/// <remarks>与 <see cref="AllowsObject"/> 共用同一套键解析与同一份策略，同一实例经两个入口必然得到同一结论。</remarks>
@@ -70,16 +70,17 @@ public interface IScopeGuard
 	/// 解释某个资源为何可访问或被拒绝；该类型未注册权限模型时返回未受约束的结论。
 	/// </summary>
 	/// <typeparam name="T">资源类型。</typeparam>
-	/// <param name="resource">待判定的资源。</param>
+	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时给出与 <see cref="Allows{T}"/> 同结论的拒绝说明（fail-closed）。</param>
 	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按该资源当前的操作解析。</param>
 	/// <returns>判定结果与命中路径。</returns>
+	/// <remarks>解释与判定必须同口径：<see cref="Explain"/> 不能给出比 <see cref="Allows"/> 更宽松的结论，否则排障时会读反。</remarks>
 	ScopeDecision Explain<T>(T resource, string scopeKey = null)
 		where T : class;
 
 	/// <summary>
 	/// 判定任意对象是否可访问（非泛型入口，供写侧强制使用）。
 	/// </summary>
-	/// <param name="resource">待判定的资源。</param>
+	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时返回 <see langword="false"/>（无从判定类型，fail-closed）。</param>
 	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按目标对象当前的操作自动解析。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	/// <remarks>目标类型未声明权限模型时返回 <see langword="true"/>（不受数据权限约束）。</remarks>
@@ -88,7 +89,7 @@ public interface IScopeGuard
 	/// <summary>
 	/// 解释任意对象为何可访问或被拒绝（非泛型入口，供拒绝时给出原因）。
 	/// </summary>
-	/// <param name="resource">待判定的资源。</param>
+	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时给出拒绝说明，而不是「不受约束」。</param>
 	/// <param name="scopeKey">权限码；为 <see langword="null"/> 时按目标对象当前的操作自动解析。</param>
 	/// <returns>判定说明，形如 <c>[code=repo:delete] 判定：拒绝；…</c>。</returns>
 	string ExplainObject(object resource, string scopeKey = null);

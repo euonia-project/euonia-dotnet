@@ -10,8 +10,8 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeSubjectSetBuilder
 {
-	private readonly Dictionary<string, ScopeSubject> _subjects = new(StringComparer.Ordinal);
-	private readonly HashSet<string> _codes = new(StringComparer.Ordinal);
+	private readonly Dictionary<string, ScopeSubject> _subjects = new(StringComparer.OrdinalIgnoreCase);
+	private readonly HashSet<string> _codes = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// 授予一个权限码（类型级闸门）。
@@ -157,8 +157,25 @@ public sealed class ScopeSubjectSetBuilder
 	/// 构建授权数据。
 	/// </summary>
 	/// <returns>构建好的 <see cref="ScopeSubjectSet"/>。</returns>
+	/// <remarks>
+	/// <b>快照</b>：内部集合会被深拷贝，因此 Build 之后继续调用 <see cref="AddCode"/> / <see cref="AddGrant(string, string, string)"/>
+	/// 不会改动已经发布出去的那份授权数据。发布与构建必须是两份状态——共享同一份可变集合
+	/// 意味着「解析器先 Build、后补一条授予」会悄悄改掉上层已判定过的结论。
+	/// </remarks>
 	public ScopeSubjectSet Build()
 	{
-		return ScopeSubjectSet.Create(_subjects, _codes);
+		if (_subjects.Count == 0 && _codes.Count == 0)
+		{
+			return ScopeSubjectSet.Empty;
+		}
+
+		var subjects = new Dictionary<string, ScopeSubject>(_subjects.Count, StringComparer.OrdinalIgnoreCase);
+
+		foreach (var (key, subject) in _subjects)
+		{
+			subjects[key] = subject.Clone();
+		}
+
+		return ScopeSubjectSet.Create(subjects, new HashSet<string>(_codes, StringComparer.OrdinalIgnoreCase));
 	}
 }

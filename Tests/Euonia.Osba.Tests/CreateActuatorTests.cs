@@ -94,7 +94,7 @@ public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		Inserted = true;
 		return Task.CompletedTask;
@@ -135,7 +135,7 @@ public class CreateProbeCommand : CommandObject<CreateProbeCommand>
 	}
 
 	[FactoryExecute]
-	protected override Task ExecuteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = true;
 		return Task.CompletedTask;

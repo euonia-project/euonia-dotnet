@@ -35,7 +35,8 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 		IReadOnlyList<string> operations,
 		IReadOnlyDictionary<string, IReadOnlyList<Func<MethodInfo, bool>>> rules)
 	{
-		AllOperations = operations;
+		// 快照 + 只读包装：调用方传进来的可能是可变 List / 数组，强转即可改动本来源的操作全集
+		AllOperations = Array.AsReadOnly([.. operations]);
 		_rules = rules;
 	}
 

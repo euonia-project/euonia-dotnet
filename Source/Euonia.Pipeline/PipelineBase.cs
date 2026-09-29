@@ -12,22 +12,43 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <summary>
 	/// 管道组件列表（含优先级），数字越小越先执行，同优先级按注册顺序执行。
 	/// </summary>
+	/// <remarks>返回的是排序后的快照：构造委托与对外读取都不共享同一条 <see cref="List{T}"/>。</remarks>
 	public IReadOnlyList<PipelineDelegateComponent<TRequest, TResponse>> Components =>
 	[
-		.. _components.OrderBy(t => t.Priority)
-		              .ThenBy(t => t.Sequence)
-		              .Select(c => c.Component)
+		.. Snapshot()
+			.OrderBy(t => t.Priority)
+			.ThenBy(t => t.Sequence)
+			.Select(c => c.Component)
 	];
 
 	/// <summary>
 	/// 管道组件存储，每个组件携带执行优先级和注册序号（用于同优先级时的顺序保持）。
 	/// </summary>
-	private readonly List<(int Priority, long Sequence, PipelineDelegateComponent<TRequest, TResponse> Component)> _components = new();
+	private readonly List<ComponentEntry> _components = new();
+
+	/// <summary>
+	/// 保护 <see cref="_components"/> 与 <see cref="_sequence"/>：注册与构建可能来自不同线程
+	/// （管道实例在容器里是瞬时的，但同一个实例完全可能被并发的两次 <c>RunAsync</c> 用到）。
+	/// 裸 <see cref="List{T}"/> 在枚举期间被另一线程写入会直接损坏内部状态。
+	/// </summary>
+	private readonly object _sync = new();
 
 	/// <summary>
 	/// 注册序号计数器，每次添加组件时自增，用于同优先级时保持注册顺序。
 	/// </summary>
 	private long _sequence;
+
+	/// <summary>
+	/// 组件表项：优先级 + 注册序号 + 包装函数。
+	/// </summary>
+	private readonly struct ComponentEntry(int priority, long sequence, PipelineDelegateComponent<TRequest, TResponse> component)
+	{
+		public int Priority { get; } = priority;
+
+		public long Sequence { get; } = sequence;
+
+		public PipelineDelegateComponent<TRequest, TResponse> Component { get; } = component;
+	}
 
 	#region Implements
 
@@ -60,8 +81,23 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>返回当前的 <see cref="IPipeline{TRequest, TResponse}"/> 实例，以便进行链式调用。</returns>
 	private IPipeline<TRequest, TResponse> AddComponent(PipelineDelegateComponent<TRequest, TResponse> component, int? priority)
 	{
-		_components.Add((priority ?? 0, _sequence++, component));
+		lock (_sync)
+		{
+			_components.Add(new ComponentEntry(priority ?? 0, _sequence++, component));
+		}
+
 		return this;
+	}
+
+	/// <summary>
+	/// 取当前组件表的快照（复制），调用方在锁外排序与组装，避免在锁内做反射/表达式编译等重活。
+	/// </summary>
+	private List<ComponentEntry> Snapshot()
+	{
+		lock (_sync)
+		{
+			return [.. _components];
+		}
 	}
 
 	/// <summary>
@@ -148,45 +184,69 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>返回当前的 <see cref="IPipeline{TRequest, TResponse}"/> 实例，以便进行链式调用。</returns>
 	public virtual IPipeline<TRequest, TResponse> UseOf(Type contextType, bool useAheadOfOthers = false)
 	{
-		var attributes = contextType.GetCustomAttributes<PipelineBehaviorAttribute>(true).ToList();
-		foreach (var attribute in attributes)
+		var behaviors = ResolveBehaviors(contextType, useAheadOfOthers);
+
+		lock (_sync)
 		{
-			// 置于最前：使用最小优先级，保证最先执行；否则使用特性声明的优先级。
-			var priority = useAheadOfOthers ? int.MinValue : attribute.Priority;
-			Use(next => GetNext(next, attribute.BehaviorType), priority);
+			foreach (var (behaviorType, priority) in behaviors)
+			{
+				_components.Add(new ComponentEntry(priority, _sequence++, next => GetNext(next, behaviorType)));
+			}
 		}
 
 		return this;
 	}
 
 	/// <summary>
-	/// 构建类型化管道委托。
-	/// 按优先级组合所有组件（数字越小越先执行，同优先级按注册顺序），最终形成完整的类型化管道委托，并在完成后清空组件列表。
+	/// 解析上下文类型上标记的 <see cref="PipelineBehaviorAttribute"/>，得到（行为类型, 优先级）列表。
 	/// </summary>
+	/// <remarks>只做反射、不碰共享状态，因此可以完全在锁外调用。</remarks>
+	private static List<(Type BehaviorType, int Priority)> ResolveBehaviors(Type contextType, bool useAheadOfOthers)
+	{
+		List<(Type BehaviorType, int Priority)> behaviors = [];
+
+		foreach (var attribute in contextType.GetCustomAttributes<PipelineBehaviorAttribute>(true))
+		{
+			// 置于最前：使用最小优先级，保证最先执行；否则使用特性声明的优先级。
+			behaviors.Add((attribute.BehaviorType, useAheadOfOthers ? int.MinValue : attribute.Priority));
+		}
+
+		return behaviors;
+	}
+
+	/// <summary>
+	/// 构建类型化管道委托。
+	/// 按优先级组合所有组件（数字越小越先执行，同优先级按注册顺序），最终形成完整的类型化管道委托。
+	/// </summary>
+	/// <remarks>
+	/// 构建是<strong>非破坏性</strong>的：组件表在构建后保持不变，因此同一个管道实例可以反复 <see cref="Build"/>，
+	/// 每次得到等价的委托。曾经的「构建即清空」会让 <c>ActuatorBuilder&lt;TTarget&gt;</c> 之类的持有方
+	/// 在第二次执行时静默丢失全部已注册行为。
+	/// </remarks>
 	/// <returns>构建完成的类型化管道委托。</returns>
 	public virtual PipelineDelegate<TRequest, TResponse> Build()
 	{
-		try
-		{
-			// ReSharper disable once ConvertToLocalFunction
-			PipelineDelegate<TRequest, TResponse> app = _ => Task.FromResult(default(TResponse));
+		return Compose(Snapshot());
+	}
 
-			// 执行顺序：优先级小的先执行，同优先级按注册顺序（Sequence）执行。
-			// 但每个组件都是包装函数：接收“下一个委托”，返回包装后的委托，
-			// 因此只能从最内层的终结点（app）开始、按执行顺序的逆序逐层向外包装：
-			// 优先级最高（最后执行）的组件最先被包装，成为最内层；
-			// 优先级最低（最先执行）的组件最后被包装，成为最外层。
-			// 直接按 (优先级, 注册序号) 降序聚合即可得到该包装顺序，
-			// 避免经 Components 属性重复排序并再经 Reverse 缓冲一次。
-			return _components
-				.OrderByDescending(c => c.Priority)
-				.ThenByDescending(c => c.Sequence)
-				.Aggregate(app, (current, c) => c.Component(current));
-		}
-		finally
-		{
-			_components.Clear();
-		}
+	/// <summary>
+	/// 按 (优先级, 注册序号) 降序把组件包装到终结点上，得到完整的类型化管道委托。
+	/// </summary>
+	/// <remarks>
+	/// 每个组件都是包装函数：接收“下一个委托”，返回包装后的委托。
+	/// 因此只能从最内层的终结点开始、按执行顺序的逆序逐层向外包装：
+	/// 优先级最高（最后执行）的组件最先被包装，成为最内层；优先级最低（最先执行）的最后包装，成为最外层。
+	/// 必须在锁外调用：<c>Component</c> 的执行会触发反射与表达式编译，不适合持锁。
+	/// </remarks>
+	private static PipelineDelegate<TRequest, TResponse> Compose(IReadOnlyList<ComponentEntry> entries)
+	{
+		// ReSharper disable once ConvertToLocalFunction
+		PipelineDelegate<TRequest, TResponse> app = _ => Task.FromResult(default(TResponse));
+
+		return entries
+			.OrderByDescending(c => c.Priority)
+			.ThenByDescending(c => c.Sequence)
+			.Aggregate(app, (current, c) => c.Component(current));
 	}
 
 	/// <summary>
@@ -197,10 +257,7 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <returns>表示异步运行操作的任务，包含响应结果。</returns>
 	public virtual async Task<TResponse> RunAsync(TRequest context)
 	{
-		var type = context.GetType();
-		var pipeline = UseOf(type, true);
-		var @delegate = pipeline.Build();
-		return await @delegate(context);
+		return await RunCoreAsync(context, null);
 	}
 
 	/// <summary>
@@ -213,8 +270,39 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	{
 		// 直接用累积委托本身作为终结点。此前用 Task.Run 包裹会为每条消息多引入一次线程池调度，
 		// 且 Task.Run 内部对 AsyncLocal 的修改不会回流到调用方（影响关联 ID / 工作单元的传播）。
-		Use((request, _) => accumulate(request));
-		return await RunAsync(context);
+		return await RunCoreAsync(context, accumulate);
+	}
+
+	/// <summary>
+	/// 取组件快照、按需附加本次运行专属的累积委托与请求类型行为，组装后执行。
+	/// </summary>
+	/// <remarks>
+	/// <para>本次运行的附加项<strong>不写入共享组件表</strong>：累计委托与按请求类型解析的行为都是“这一次调用”的输入，
+	/// 混入共享表会在复用同一实例时留下跨次的残留。</para>
+	/// <para>顺序与旧实现一致：请求类型行为优先级为 <see cref="int.MinValue"/>，故排在最外层（最先执行）；
+	/// 累积委托优先级 0、序号最大，故排在优先级 0 组件的最内层。</para>
+	/// </remarks>
+	private async Task<TResponse> RunCoreAsync(TRequest context, Func<TRequest, Task<TResponse>> accumulate)
+	{
+		var behaviors = ResolveBehaviors(context.GetType(), useAheadOfOthers: true);
+
+		List<ComponentEntry> entries;
+		lock (_sync)
+		{
+			entries = [.. _components];
+
+			if (accumulate != null)
+			{
+				entries.Add(new ComponentEntry(0, _sequence++, _ => request => accumulate(request)));
+			}
+
+			foreach (var (behaviorType, priority) in behaviors)
+			{
+				entries.Add(new ComponentEntry(priority, _sequence++, next => GetNext(next, behaviorType)));
+			}
+		}
+
+		return await Compose(entries)(context);
 	}
 
 	#endregion

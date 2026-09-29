@@ -701,19 +701,19 @@ public class ScopedRepo : EditableObject<ScopedRepo>
 	public string Level { get; set; }
 
 	[FactoryInsert]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -727,7 +727,7 @@ public class ScopedRepoOther : EditableObject<ScopedRepoOther>
 	public string TeamId { get; set; }
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

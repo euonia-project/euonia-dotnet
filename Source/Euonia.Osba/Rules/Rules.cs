@@ -617,6 +617,8 @@ public class Rules : IRules
 
 			var context = new RuleContext(ruleContext =>
 			{
+				List<IPropertyInfo> notify = [];
+
 				lock (_lockObject)
 				{
 					BrokenRules.Add(ruleContext.Results, ruleContext.Rule.Property?.Name);
@@ -632,13 +634,24 @@ public class Rules : IRules
 
 					properties = properties.Concat(ruleContext.Rule.RelatedProperties);
 
+					// 「该通知谁」这个判断必须在锁内（要读 RunningRules 的一致快照），
+					// 但通知本身不能在锁内做——见下面。
 					foreach (var property in properties)
 					{
 						if (RunningRules.All(r => r.Property != property))
 						{
-							_target.RuleCheckComplete(property);
+							notify.Add(property);
 						}
 					}
+				}
+
+				// RuleCheckComplete 是用户可重写的成员（会走 PropertyChanged → 用户事件处理器），
+				// 把任意用户代码放进 _lockObject 的临界区，等于让外部代码握着本锁去等它自己的锁：
+				// 一旦另一条线程反过来先拿外层锁再来要 _lockObject，就是互相咬死。
+				// 判定已经原子完成，这里只负责把结果发出去。
+				foreach (var property in notify)
+				{
+					_target.RuleCheckComplete(property);
 				}
 			})
 			{
@@ -677,20 +690,51 @@ public class Rules : IRules
 	/// <param name="rule">要执行的规则。</param>
 	/// <param name="context">规则上下文。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="OperationCanceledException">操作被取消时原样上抛——取消不是规则失败。</exception>
 	private static async Task RunAsync(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			await rule.ExecuteAsync(context, cancellationToken);
 		}
+		catch (OperationCanceledException)
+		{
+			// 取消必须原样传播：若把它收敛成一条错误结果，
+			// 调用方看到的就是「校验不通过」，而实际是「操作已被取消」，
+			// 两者的处置方式完全不同（前者重填数据，后者直接返回）。
+			throw;
+		}
 		catch (Exception ex)
 		{
-			context.AddErrorResult($"{rule.Name}: {ex.Message}");
+			// 规则自身抛出的异常仍然收敛为错误结果（规则检查不该让整个保存流程直接崩掉），
+			// 但描述里必须带上异常类型与内部异常，否则 NRE 之类的编程错误会被伪装成
+			// 一句孤零零的业务提示，线上根本无法定位。
+			context.AddErrorResult(Describe(rule, ex));
 		}
 		finally
 		{
 			context.Complete();
 		}
+	}
+
+	/// <summary>
+	/// 把规则抛出的异常渲染成错误结果描述，保留异常类型与内部异常信息。
+	/// </summary>
+	/// <param name="rule">抛出异常的规则。</param>
+	/// <param name="exception">规则抛出的异常。</param>
+	/// <returns>错误描述。</returns>
+	private static string Describe(IRuleBase rule, Exception exception)
+	{
+		var description = $"{rule.Name}: [{exception.GetType().Name}] {exception.Message}";
+
+		var inner = exception.InnerException;
+		while (inner != null)
+		{
+			description += $" -> [{inner.GetType().Name}] {inner.Message}";
+			inner = inner.InnerException;
+		}
+
+		return description;
 	}
 
 	#endregion

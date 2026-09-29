@@ -17,15 +17,18 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class EmptyCodeSource : IPermissionCodeSource
 {
+	// 注意声明顺序：Instance 的初始化会构造本类实例，实例字段初始化器会读 Operations，
+	// 因此 Operations 必须排在 Instance 之前（静态字段按文本顺序初始化）。
+	private static readonly string[] Operations = [.. BusinessOperation.All];
+
 	/// <summary>
 	/// 共享实例。
 	/// </summary>
 	public static EmptyCodeSource Instance { get; } = new();
 
-	private static readonly string[] Operations = [.. BusinessOperation.All];
-
 	/// <inheritdoc />
-	public IReadOnlyList<string> AllOperations => Operations;
+	/// <remarks>包一层只读：原本直接暴露 <c>string[]</c>，强转后可改写这个被所有宿主共享的静态数组。</remarks>
+	public IReadOnlyList<string> AllOperations { get; } = Array.AsReadOnly(Operations);
 
 	/// <inheritdoc />
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation) => [];

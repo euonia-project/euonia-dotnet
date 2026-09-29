@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Security;
 internal sealed class CompositeCodeSource : IPermissionCodeSource
 {
 	private readonly IPermissionCodeSource[] _sources;
-	private readonly string[] _operations;
+	private readonly IReadOnlyList<string> _operations;
 
 	public CompositeCodeSource(IPermissionCodeSource[] sources)
 	{
@@ -22,13 +22,19 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 			}
 		}
 
-		_operations = operations.ToArray();
+		_operations = Array.AsReadOnly(operations.ToArray());
 	}
 
 	/// <inheritdoc />
+	/// <remarks>只读快照，无法通过强转回写。</remarks>
 	public IReadOnlyList<string> AllOperations => _operations;
 
 	/// <inheritdoc />
+	/// <remarks>
+	/// 权限码按 <see cref="StringComparer.OrdinalIgnoreCase"/> 去重：两个模块分别声明
+	/// <c>repo:delete</c> 与 <c>Repo:Delete</c> 时必须收敛成一个码，否则既绕过去重，
+	/// 也让 <see cref="ScopeKeyResolver"/> 的「同一操作最多一个有策略的码」校验误报歧义。
+	/// </remarks>
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{
 		var codes = new List<string>();
@@ -37,7 +43,7 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 		{
 			foreach (var code in source.CodesFor(type, operation))
 			{
-				if (!string.IsNullOrEmpty(code) && !codes.Contains(code, StringComparer.Ordinal))
+				if (!string.IsNullOrEmpty(code) && !codes.Contains(code, StringComparer.OrdinalIgnoreCase))
 				{
 					codes.Add(code);
 				}
@@ -50,11 +56,12 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 	/// <inheritdoc />
 	/// <remarks>
 	/// 逐个来源取要求并去重：只给权限码的来源由接口的默认实现折算成「有码、无角色」，这里不必特判。
+	/// 去重键按 <see cref="StringComparer.OrdinalIgnoreCase"/> 比较，与 <see cref="CodesFor"/> 同口径。
 	/// </remarks>
 	public IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation)
 	{
 		var requirements = new List<PermissionAttribute>();
-		var seen = new HashSet<string>(StringComparer.Ordinal);
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 		foreach (var source in _sources)
 		{

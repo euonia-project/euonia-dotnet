@@ -25,8 +25,12 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// </summary>
 	/// <param name="user">当前登录用户；为 <see langword="null"/> 时所有权限码判定为未授权。</param>
 	/// <param name="guard">授权数据入口，提供当前用户持有的权限码。</param>
+	/// <exception cref="ArgumentNullException">当 <paramref name="guard"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <remarks><paramref name="user"/> 允许为 <see langword="null"/>（匿名视为全部未授予）；<paramref name="guard"/> 不允许——它缺席只能是接线错误。</remarks>
 	public SubjectPermissionChecker(UserPrincipal user, IScopeGuard guard)
 	{
+		Check.EnsureNotNull(guard, nameof(guard));
+
 		_user = user;
 		_guard = guard;
 	}
@@ -45,8 +49,7 @@ public class SubjectPermissionChecker : IPermissionChecker
 			return false;
 		}
 
-		// 支持以 * 结尾的前缀通配（例如持有 repo:* 可通过 repo:push 的类型级闸门）
-		return _guard.GetSubjects().HoldsPermission(permission);
+		return Holds(permission);
 	}
 
 	/// <inheritdoc />
@@ -72,8 +75,38 @@ public class SubjectPermissionChecker : IPermissionChecker
 			return false;
 		}
 
-		await _guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+		try
+		{
+			await _guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch (InvalidOperationException)
+		{
+			return false;
+		}
 
-		return _guard.GetSubjects().HoldsPermission(permission);
+		return Holds(permission);
+	}
+
+	/// <summary>
+	/// 取当前用户持有的权限码并判定；授权数据取不到时返回 <see langword="false"/>。
+	/// </summary>
+	/// <remarks>
+	/// <see cref="IPermissionChecker"/> 明确要求「拿不到用户、拿不到授权数据时返回 <see langword="false"/>」，
+	/// 所以这里吞掉 <see cref="ScopeGuard"/> 在解析器缺席时抛的 <see cref="InvalidOperationException"/>——
+	/// 把接线错误抛进调用方的判定分支，得到的是 500 而不是「拒绝」，既不比拒绝更安全，也不符合契约。
+	/// 这不等于把接线错误悄悄藏起来：<c>provider.ValidatePermissionSetup()</c> 在启动期就会把它抛出来，
+	/// 而行级数据权限那条路径（直接用 <see cref="IScopeGuard"/>）仍照旧抛出、不会静默放行。
+	/// </remarks>
+	private bool Holds(string permission)
+	{
+		try
+		{
+			// 支持以 * 结尾的前缀通配（例如持有 repo:* 可通过 repo:push 的类型级闸门）
+			return _guard.GetSubjects().HoldsPermission(permission);
+		}
+		catch (InvalidOperationException)
+		{
+			return false;
+		}
 	}
 }

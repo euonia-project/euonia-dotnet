@@ -130,7 +130,7 @@ public class ScopeOrder : EditableObject<ScopeOrder>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}

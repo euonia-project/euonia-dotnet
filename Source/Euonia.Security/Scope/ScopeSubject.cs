@@ -41,9 +41,15 @@ internal sealed class ScopeSubject
 	/// </summary>
 	/// <param name="dimension">维度名，大小写不敏感。</param>
 	/// <returns>该维度上的值集合。</returns>
+	/// <remarks>
+	/// 返回<b>副本</b>：原本直接返回底层 <see cref="HashSet{T}"/>，调用方强转即可向本授权数据回写一个值。
+	/// 这里每次构造一份，调用方拿到的集合不可回写；下游（<c>ScopeCompileContext</c>）本来就会再拷一次。
+	/// </remarks>
 	internal IReadOnlyCollection<string> ValuesOf(string dimension)
 	{
-		return _values.TryGetValue(dimension, out var values) ? values : Array.Empty<string>();
+		return _values.TryGetValue(dimension, out var values) && values.Count > 0
+			? new List<string>(values)
+			: Array.Empty<string>();
 	}
 
 	/// <summary>
@@ -61,4 +67,24 @@ internal sealed class ScopeSubject
 	/// 判断本键下是否记录了任何授予。
 	/// </summary>
 	internal bool IsEmpty => _values.Count == 0;
+
+	/// <summary>
+	/// 深拷贝出一份互不共享内部集合的副本。
+	/// </summary>
+	/// <returns>副本。</returns>
+	/// <remarks>
+	/// 由 <see cref="ScopeSubjectSetBuilder.Build"/> 调用：不拷贝的话，Build 之后继续调用
+	/// Add/AddGrant 会改动<b>已经发布出去</b>的授权数据快照——那正是「构建期与使用期共享可变状态」。
+	/// </remarks>
+	internal ScopeSubject Clone()
+	{
+		var copy = new ScopeSubject();
+
+		foreach (var (dimension, values) in _values)
+		{
+			copy._values[dimension] = new HashSet<string>(values, StringComparer.Ordinal);
+		}
+
+		return copy;
+	}
 }

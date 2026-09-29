@@ -61,9 +61,8 @@ public class FieldDataManager
 		// 从顶层到底层遍历，构建合并列表
 		for (var index = hierarchy.Count - 1; index >= 0; index--)
 		{
-			var source = PropertyInfoManager.GetPropertyListCache(hierarchy[index]);
-			source.IsLocked = true;
-			result.AddRange(source);
+			// 取快照（锁内置 IsLocked + 复制），避免另一个线程此刻正往这条列表里注册属性。
+			result.AddRange(PropertyInfoManager.GetLockedSnapshot(hierarchy[index]));
 		}
 
 		return result;

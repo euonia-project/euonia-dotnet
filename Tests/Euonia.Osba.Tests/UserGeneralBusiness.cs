@@ -19,25 +19,25 @@ public class UserGeneralBusiness : EditableObjectBase<UserGeneralBusiness>
 	}
 
 	[FactoryCreate]
-	protected override async Task CreateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task CreateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return base.InsertAsync(cancellationToken);
 	}
 
 	[FactoryUpdate]
-	protected override Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		return base.UpdateAsync(cancellationToken);
 	}
 
 	[FactoryDelete]
-	protected override Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		return base.DeleteAsync(cancellationToken);
 	}

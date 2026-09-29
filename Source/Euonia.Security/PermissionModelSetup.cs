@@ -56,6 +56,21 @@ internal sealed class PermissionModelSetup
 	public IReadOnlyList<Assembly> Assemblies => _assemblies;
 
 	/// <summary>
+	/// 当前累积输入的签名。
+	/// </summary>
+	/// <remarks>
+	/// 两份清单都<b>只增不减</b>且按幂等去重（重复的来源实例与重复的程序集都不追加），
+	/// 因此「计数」唯一确定当前集合——两个计数没变就意味着集合没变，不需要逐项比对。
+	/// </remarks>
+	public (int Sources, int Assemblies) Signature => (_sources.Count, _assemblies.Count);
+
+	/// <summary>
+	/// 上一次成功完成重建时的输入签名；尚未成功重建过时为 <see langword="null"/>。
+	/// </summary>
+	/// <remarks>重建抛出（注册期校验失败）时不得记录——否则下一次调用会以为已建好而跳过校验。</remarks>
+	public (int Sources, int Assemblies)? LastBuild { get; set; }
+
+	/// <summary>
 	/// 累积的贡献中是否存在权限模型或权限码声明。
 	/// </summary>
 	public bool HasDeclarations(ScopeModelRegistry registry)

@@ -63,17 +63,10 @@ internal static class ObjectAuthorization
 			businessObject.GetType().Name,
 			nameof(IPermissionChecker));
 
-		var allowed = operation switch
-		{
-			BusinessOperation.Read => businessObject.CanReadObject(),
-			BusinessOperation.Create => businessObject.CanCreateObject(),
-			BusinessOperation.Update => businessObject.CanUpdateObject(),
-			BusinessOperation.Delete => businessObject.CanDeleteObject(),
-			BusinessOperation.Execute => businessObject.CanExecuteObject(),
-			_ => true
-		};
-
-		if (!allowed)
+		// 唯一入口：内置操作分派到 CanReadObject/…（派生类可重写），自定义操作按 PermissionAttribute 判定。
+		// 此前这里对 5 个内置常量之外的操作写的是 _ => true —— requirements 已收集却从不交给
+		// IPermissionChecker，等于自定义操作（README §3.3 的 approve / order:archive 等）没有鉴权。
+		if (!businessObject.CanPerformOperation(operation))
 		{
 			throw new SecurityException($"Operation not allowed. {operation}: {businessObject.GetType().Name}.");
 		}
