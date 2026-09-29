@@ -77,4 +77,25 @@ public interface IObjectScopeAuthorizer
 	/// <param name="scope">对象所属作用域的服务提供程序。</param>
 	/// <returns>可读的判定说明。</returns>
 	string ExplainRow(object target, string scopeKey, IServiceProvider scope);
+
+	/// <summary>
+	/// 确保判定所需的授权数据已解析（异步；幂等，已解析时立即返回）。
+	/// </summary>
+	/// <param name="scope">对象所属作用域的服务提供程序；为 <see langword="null"/> 时实现应无操作返回。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <remarks>
+	/// <para>
+	/// 本方法<b>只做预热，不做判定</b>：供宿主框架的<b>异步</b>授权路径在调用同步判定
+	/// （<see cref="Allows"/>）之前把授权数据解析出来——否则首次判定会退化成 sync-over-async。
+	/// </para>
+	/// <para>
+	/// 默认实现是<b>空操作</b>（授权数据同步可用时无需预热），因此新增本成员不破坏任何现有实现。
+	/// 注意参数带 <paramref name="scope"/>：<see cref="Allows"/> 明确要求用调用方传入的那一个服务提供程序，
+	/// 预热同样必须解析<b>那一个</b>作用域里的数据，不能退化成环境上下文。
+	/// </para>
+	/// </remarks>
+	ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
+	{
+		return ValueTask.CompletedTask;
+	}
 }

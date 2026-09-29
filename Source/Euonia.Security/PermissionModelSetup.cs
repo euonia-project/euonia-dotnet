@@ -65,6 +65,23 @@ internal sealed class PermissionModelSetup
 	public (int Sources, int Assemblies) Signature => (_sources.Count, _assemblies.Count);
 
 	/// <summary>
+	/// 是否已由使用方显式断言「本应用没有任何权限模型与 <see cref="PermissionAttribute"/> 声明」。
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	/// 与 <see cref="EmptyCodeSource.Instance"/> 是同一条规则：<b>空输入不是默认值，而是必须做出的显式选择</b>。
+	/// 省略程序集时扫描范围为空，行级数据权限必然静默失效，而
+	/// <see cref="PermissionSetup.RequiresSubjectResolver"/> 同时恒为 <see langword="false"/>，
+	/// 让启动期校验一并短路——「能启动但什么都没生效」正是本断言要堵住的形态。
+	/// </para>
+	/// <para>
+	/// 供 <c>provider.ValidatePermissionSetup()</c> 读取；置位入口是
+	/// <c>services.AssertNoPermissionModels()</c>。
+	/// </para>
+	/// </remarks>
+	public bool NoModelsAsserted { get; set; }
+
+	/// <summary>
 	/// 上一次成功完成重建时的输入签名；尚未成功重建过时为 <see langword="null"/>。
 	/// </summary>
 	/// <remarks>重建抛出（注册期校验失败）时不得记录——否则下一次调用会以为已建好而跳过校验。</remarks>

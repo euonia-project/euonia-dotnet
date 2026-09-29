@@ -151,7 +151,7 @@ graph TD
 2. 更严重的是**取消授权后，旧令牌在过期前一直有效**——撤销不生效。
 
 **决策**：权限码改由 `IScopeSubjectResolver` 从授权数据实时解析，随 `IScopeGuard` 按请求缓存。
-`ClaimPermissionChecker` 保留但标记 `[Obsolete]`、不再是默认实现。
+`ClaimPermissionChecker` 保留、**没有** `[Obsolete]`、且不再是默认实现——是否选用由宿主自行决定（在 `AddPermission` 之后 `AddScoped` 即可，见 README §4）。
 
 **收益**：撤销只需改数据，下一次解析即生效，**不需要重新签发令牌**。
 测试 `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` 用一个
@@ -430,7 +430,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | **同步的解析器接口** | 解析器必然查库；同步签名会把同步 I/O 带进请求链路。用 `ValueTask` + 单次解析已足够 |
 | **引用 `Euonia.Linq` 复用表达式组合子** | 其承重的 `ParameterRebinder` 是 `internal`，外部用不上；且 `Source/` 下没有任何项目在用该组合子。为三个方法引入 ProjectReference 不划算，改为 25 行的内部参数替换 + body 层归并 |
 | **在注册服务的过程中直接检查解析器是否已注册** | 解析器通常在那之后才注册，在那里检查会误报。改为记录 `PermissionSetup`，由容器构建后的 `ValidatePermissionSetup()` 检查 |
-| **删除 `ClaimPermissionChecker`** | 它是已发布的公开 API。改为保留 + `[Obsolete]` + 不再是默认实现——同等达成「默认路径不依赖令牌」，且不破坏使用方 |
+| **删除 `ClaimPermissionChecker`** | 它是已发布的公开 API。改为保留 + 不再是默认实现——同等达成「默认路径不依赖令牌」，且不破坏使用方。（当初同时计划的 `[Obsolete]` 后来**未采纳**：类保持无警告，由宿主自行启用，见 §1.2） |
 
 ---
 

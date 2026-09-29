@@ -84,4 +84,26 @@ public interface IPermissionChecker
 	{
 		return new ValueTask<bool>(IsGranted(permission));
 	}
+
+	/// <summary>
+	/// 确保判定所需的授权数据已解析（异步；幂等，已解析时立即返回）。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <remarks>
+	/// <para>
+	/// 本方法<b>只做预热，不做判定</b>：供宿主框架的<b>异步</b>授权路径（<c>BusinessObjectFactory</c> 的
+	/// <c>*Async</c> 入口）在调用同步判定（<see cref="IsGranted"/>）之前把授权数据解析出来——
+	/// 否则首次判定会退化成 sync-over-async，在负载下表现为线程池饥饿。
+	/// </para>
+	/// <para>
+	/// 默认实现是<b>空操作</b>：授权数据本就同步可用、或不需要预热的实现无需改动即可继续编译。
+	/// 授权数据由 <c>IScopeGuard</c> 异步解析的实现应当覆写，且<b>必须容忍解析器缺席</b>
+	/// （抛 <see cref="InvalidOperationException"/> 而不是吞掉会让预热阶段把「拒绝」变成 500；
+	/// 接线错误由启动期的 <c>ValidatePermissionSetup()</c> 负责暴露）。
+	/// </para>
+	/// </remarks>
+	ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)
+	{
+		return ValueTask.CompletedTask;
+	}
 }

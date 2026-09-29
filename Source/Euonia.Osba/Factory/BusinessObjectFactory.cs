@@ -102,7 +102,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
@@ -118,12 +118,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Read, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Read, default);
 		});
 	}
 
@@ -135,12 +135,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Create, default);
 		});
 	}
 
@@ -152,12 +152,12 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Update);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Update, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Update);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Update, default);
 		});
 	}
 
@@ -176,10 +176,10 @@ public class BusinessObjectFactory : IObjectFactory
 			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
-		ObjectAuthorization.EnsureAuthorized(target, operation);
+		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken);
 
 		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
-		ScopeAuthorization.EnsureAuthorizedBefore(target, operation);
+		await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken);
 
 		return await WithActivatorAsync(target, async () =>
 		{
@@ -187,7 +187,7 @@ public class BusinessObjectFactory : IObjectFactory
 			await InvokeAsync(method, target, [cancellationToken]);
 
 			// 保存后再次判定：业务方法可能改动了范围列
-			ScopeAuthorization.EnsureAuthorizedAfter(target, operation);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken);
 		});
 	}
 
@@ -199,10 +199,10 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken);
 
 			// 目标由调用方提供：可以前置判定
-			ScopeAuthorization.EnsureAuthorizedBefore(target, BusinessOperation.Execute);
+			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, BusinessOperation.Execute, cancellationToken);
 
 			_activator?.InitializeInstance(target);
 
@@ -224,12 +224,12 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Execute);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Execute, default);
 
 			// 本重载刻意不做对象级规则判定：这里 criteria 驱动的工厂方法**就是命令体**，
 			// 调用前对象还是空的、调用后命令已经执行完，不存在「可校验且来得及拦截」的时点；
@@ -248,12 +248,12 @@ public class BusinessObjectFactory : IObjectFactory
 
 		await WithActivatorAsync(target, async () =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Delete);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Delete, default);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Delete);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Delete, default);
 		});
 	}
 

@@ -177,6 +177,37 @@ public static class ServiceCollectionExtensions
 	}
 
 	/// <summary>
+	/// 显式断言「本应用没有任何权限模型与 <see cref="PermissionAttribute"/> 声明」。
+	/// </summary>
+	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
+	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
+	/// <remarks>
+	/// <para>
+	/// 与 <see cref="EmptyCodeSource.Instance"/> 是<b>同一条规则</b>：<b>空输入不是默认值，而是必须做出的显式选择</b>。
+	/// 没有调用 <see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/> 时本方法无意义
+	/// （<c>ValidatePermissionSetup()</c> 会在没有 <see cref="PermissionSetup"/> 时直接放行）。
+	/// </para>
+	/// <para>
+	/// 需要它的场景只有一个：<c>AddPermission</c> 全程<b>一个程序集都没给</b>。那时扫描范围为空，
+	/// 行级数据权限必然静默失效，而 <see cref="PermissionSetup.RequiresSubjectResolver"/> 同时恒为
+	/// <see langword="false"/>，启动期校验会一并短路——于是「能启动但什么都没生效」，无从察觉。
+	/// 调用本方法即等于说「我知道没有任何权限模型，这是有意的」，校验据此放行。
+	/// </para>
+	/// <para>
+	/// 只要有过一次 <c>AddPermission(source, someAssembly)</c> 或 <c>AddPermissionModels(someAssembly)</c>，
+	/// 就<b>不需要</b>本方法：真正的扫描就是一次显式断言（扫过但没有声明，与从没扫过是两回事）。
+	/// </para>
+	/// </remarks>
+	public static IServiceCollection AssertNoPermissionModels(this IServiceCollection services)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+
+		GetOrCreateSetup(services).NoModelsAsserted = true;
+
+		return services;
+	}
+
+	/// <summary>
 	/// 追加要扫描的程序集（数据权限模型与权限声明），不改变权限码来源。
 	/// </summary>
 	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>

@@ -221,8 +221,9 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 **角色仍来自声明**（`UserPrincipal.IsInRole`）：角色数量少而稳定，不构成令牌膨胀问题。
 **细粒度授权一律使用权限码**，不要用角色承载。
 
-> `ClaimPermissionChecker`（读 `"perm"` 声明）仍保留但已标记 `[Obsolete]` 且不再是默认实现，
-> 仅为显式回退存在。
+> `ClaimPermissionChecker`（读 `"perm"` 声明）仍保留、**没有** `[Obsolete]`、也不是默认实现；
+> 它只是显式回退。需要时在 `AddPermission` **之后** `AddScoped<IPermissionChecker, ClaimPermissionChecker>()`
+> 即可生效（MS DI 取最后一个描述符，先后顺序不影响结果），只需容器里有 `UserPrincipal`。
 
 ### 2.3 强制执行
 
@@ -758,7 +759,7 @@ guard.Allows(repoInTeamC);                // → true
 | `IScopeGuard` / `ScopeGuard` | 数据权限判定入口（按请求缓存） |
 | `IScopeSubjectResolver` / `ScopeSubjectSet` | 授权值来源与主体集合 |
 | `IPermissionChecker` / `SubjectPermissionChecker` | 操作权限判定与其默认实现（权限码来自授权数据） |
-| `ClaimPermissionChecker` | `[Obsolete]` 回退：读 `"perm"` 声明（不推荐） |
+| `ClaimPermissionChecker` | 非默认回退（无 `[Obsolete]`）：读 `"perm"` 声明，不推荐 |
 | `IPermissionCodeSource` | 要求与权限码来源（Core）；注册期校验与工厂边界都问它 |
 | `IScopeKeyResolver` / `ScopeKeyResolver` / `ScopeKeys` | 策略键的解析出口与保留命名空间 |
 | `ScopeFilter` / `CompiledScopePolicy<T>` / `ScopeDecision` | 下推、内存过滤、单行判定与审计 |
@@ -967,7 +968,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | `IAnonymousAccessible` 特例接口 | 策略里的 `Where(x => x.IsPublic)`（显式、可审计） |
 | `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
 | `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
-| `ClaimPermissionChecker`（权限码读 `"perm"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类保留但已 `[Obsolete]` |
+| `ClaimPermissionChecker`（权限码读 `"perm"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类保留、**无** `[Obsolete]`、非默认 |
 | 类型级 `[Permission]` 唯一粒度 | 同一类型内可按权限码声明行级策略（`Declare`），行与行之间权限可不同 |
 
 **迁移检查项**：

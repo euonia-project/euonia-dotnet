@@ -266,22 +266,32 @@ public class FieldDataManager
 	/// 强制初始化类型及其所有基类类型声明的静态字段。
 	/// </summary>
 	/// <param name="type">要初始化的对象类型。</param>
+	/// <remarks>
+	/// <para>
+	/// <b>不要在这里对 <paramref name="type"/> 加锁</b>：CLR 的类型初始化锁已经保证每个类型的静态初始化
+	/// 只执行一次（并发调用会被串行化到同一个初始化器上），这里的 <c>GetValue</c> 只是「主动踩一脚」，
+	/// 并不需要互斥来保证正确性。
+	/// </para>
+	/// <para>
+	/// 而加锁会造出一条可证明的 ABBA 锁序反转：本方法被 <c>PropertyInfoManager.CreateAndPublish</c>
+	/// 在持有 <c>_publishLock</c> 时调用（A→B），而本方法一旦触发类型的静态初始化器，
+	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</b>（B→A）。
+	/// 早期版本在 B 段额外拿 <c>lock(type)</c> 时，两个入口并发即可能互等。
+	/// </para>
+	/// </remarks>
 	public static void ForceStaticFieldInit(Type type)
 	{
 		const BindingFlags attr = BindingFlags.Static |
 		                          BindingFlags.Public |
 		                          BindingFlags.DeclaredOnly |
 		                          BindingFlags.NonPublic;
-		lock (type)
+		var t = type;
+		while (t != null)
 		{
-			var t = type;
-			while (t != null)
-			{
-				var fields = t.GetFields(attr);
-				if (fields.Length > 0)
-					fields[0].GetValue(null);
-				t = t.BaseType;
-			}
+			var fields = t.GetFields(attr);
+			if (fields.Length > 0)
+				fields[0].GetValue(null);
+			t = t.BaseType;
 		}
 	}
 

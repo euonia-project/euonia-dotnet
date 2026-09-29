@@ -298,6 +298,25 @@ var checker = provider.GetRequiredService<IPermissionChecker>();
 checker.EnsurePermission("order:cancel");
 ```
 
+### 4.4 非默认回退：`ClaimPermissionChecker`
+
+默认实现是 `SubjectPermissionChecker`——权限码由 `IScopeSubjectResolver` 从**授权数据**实时解析，
+撤销改数据即可，下一次解析（通常是下一个请求）生效，**不需要重新签发令牌**。
+
+`ClaimPermissionChecker` 仍然保留，它读的是令牌里的 `"perm"` 声明。它**没有** `[Obsolete]`，
+不会产生任何编译或分析器警告；是否选用完全由宿主自行决定。不推荐用它承载细粒度授权：
+令牌里的权限码在过期前无法撤销。
+
+要切换，在 `AddPermission` **之后**注册即可（MS DI 取最后一个描述符，先后顺序不影响结果）：
+
+```csharp
+services.AddPermission(/* ... */);
+services.AddScoped<IPermissionChecker, ClaimPermissionChecker>();
+```
+
+只需要容器里有 `UserPrincipal`。`AddPermission` 与 `Rebuild` 都不碰 `IPermissionChecker`
+（判定实现是 `TryAddScoped`，且 `Rebuild` 只重建模型注册表），因此不会把它覆盖回去。
+
 ---
 
 ## 5. 数据权限
@@ -392,6 +411,19 @@ public sealed class OrderScope : ScopeModel<Order>
 
 授权数据源与用户主体是否齐备由 `provider.ValidatePermissionSetup()` 检查（必须在容器构建**之后**调用，
 因为解析器的注册顺序不受约束）。若遗漏该调用，首次判定时同样会以明确错误暴露。
+
+`ValidatePermissionSetup()` 还会拒绝**一个程序集都没扫描过**的注册：`AddPermission` 省略
+`assemblies` 时扫描范围为空，行级数据权限必然静默失效，而「没有任何声明」又会让上面的
+`IScopeSubjectResolver` / `UserPrincipal` 检查一并短路——于是「能启动但什么都没生效」，无从察觉。
+这与 §3.1 的 `EmptyCodeSource` 是**同一条规则：空输入不是默认值，而是必须做出的显式选择**：
+
+```csharp
+services.AddPermission(codeSource);      // 没有程序集 → 启动期报错
+services.AssertNoPermissionModels();     // 显式断言「本应用确实没有任何权限模型与 [Permission] 声明」
+```
+
+只要给过一次程序集（`AddPermission(source, asm)` 或 `AddPermissionModels(asm)`）就不需要这个断言：
+**扫过但没有声明**与**从没扫过**是两回事，前者本身就是一次显式声明。
 
 ### 5.7 模型的注册方式
 

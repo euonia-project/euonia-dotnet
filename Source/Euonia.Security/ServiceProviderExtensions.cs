@@ -15,7 +15,8 @@ public static class ServiceProviderExtensions
 	/// <returns>原 <paramref name="provider"/>，便于链式调用。</returns>
 	/// <exception cref="InvalidOperationException">
 	/// 声明了权限模型或使用了 <see cref="PermissionAttribute"/>，却未注册 <see cref="IScopeSubjectResolver"/>
-	/// 或 <see cref="UserPrincipal"/> 时抛出。
+	/// 或 <see cref="UserPrincipal"/> 时抛出；<c>AddPermission</c> 未指定任何程序集、
+	/// 也未用 <c>AssertNoPermissionModels()</c> 显式断言时同样抛出。
 	/// </exception>
 	/// <remarks>
 	/// <para>
@@ -32,7 +33,25 @@ public static class ServiceProviderExtensions
 
 		var setup = provider.GetService<PermissionSetup>();
 
-		if (setup?.RequiresSubjectResolver != true)
+		if (setup == null)
+		{
+			return provider;
+		}
+
+		// 零程序集扫描必须显式断言（与 EmptyCodeSource 同一条规则：空输入不是默认值）。
+		// 这一条刻意排在 RequiresSubjectResolver 短路之前——零程序集时它恒为 false，
+		// 放在后面就永远检查不到，「能启动但行级权限静默失效」正是这样漏过去的。
+		var modelSetup = provider.GetService<PermissionModelSetup>();
+
+		Check.Ensure(
+			modelSetup == null || modelSetup.NoModelsAsserted || modelSetup.Assemblies.Count > 0,
+			"调用了 AddPermission 却没有指定任何要扫描的程序集。"
+			+ "权限模型与 [Permission] 声明都来自程序集扫描：扫描范围为空会让行级数据权限静默失效，"
+			+ "而启动期校验也会因「没有声明」一并短路。"
+			+ "请传入要扫描的程序集，例如 AddPermission(source, typeof(X).Assembly)；"
+			+ "若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 services.AssertNoPermissionModels()。");
+
+		if (setup.RequiresSubjectResolver != true)
 		{
 			return provider;
 		}

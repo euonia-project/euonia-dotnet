@@ -57,23 +57,78 @@ internal static class ScopeAuthorization
 		Ensure(target, operation, "after");
 	}
 
+	/// <summary>
+	/// 异步版本的 <see cref="EnsureAuthorizedBefore"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
+	/// </summary>
+	/// <param name="target">目标对象（已由调用方填充）。</param>
+	/// <param name="operation">要执行的操作。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
+	internal static ValueTask EnsureAuthorizedBeforeAsync(object target, string operation, CancellationToken cancellationToken = default)
+	{
+		return EnsureAsync(target, operation, "before", cancellationToken);
+	}
+
+	/// <summary>
+	/// 异步版本的 <see cref="EnsureAuthorizedAfter"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
+	/// </summary>
+	/// <param name="target">目标对象（已由工厂方法填充）。</param>
+	/// <param name="operation">要执行的操作。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
+	internal static ValueTask EnsureAuthorizedAfterAsync(object target, string operation, CancellationToken cancellationToken = default)
+	{
+		return EnsureAsync(target, operation, "after", cancellationToken);
+	}
+
 	private static void Ensure(object target, string operation, string stage)
 	{
-		if (target is not IBusinessObject businessObject)
+		if (!TryPrepare(target, operation, out var context, out var authorizer))
 		{
 			return;
 		}
 
+		Enforce(target, operation, stage, context, authorizer);
+	}
+
+	private static async ValueTask EnsureAsync(object target, string operation, string stage, CancellationToken cancellationToken)
+	{
+		if (!TryPrepare(target, operation, out var context, out var authorizer))
+		{
+			return;
+		}
+
+		// 判定与策略键解析都要读授权数据（GetPolicy → GetSubjects），冷缓存会阻塞调用线程；
+		// 作用域必须用判定时那一个（与 Allows 传参同源），不能退化成环境上下文
+		await AuthorizationWarmup.WarmAsync(authorizer, context.CurrentServiceProvider, cancellationToken).ConfigureAwait(false);
+
+		Enforce(target, operation, stage, context, authorizer);
+	}
+
+	/// <summary>
+	/// 判定前的全部前置条件：不受数据权限约束直接放行；受约束却拿不到上下文则视为配置错误。
+	/// </summary>
+	private static bool TryPrepare(object target, string operation, out BusinessContext context, out IObjectScopeAuthorizer authorizer)
+	{
+		context = null;
+		authorizer = null;
+
+		if (target is not IBusinessObject businessObject)
+		{
+			return false;
+		}
+
 		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」——
 		// 该查询必须能在没有请求作用域时回答（见 IObjectScopeAuthorizer.IsConstrained）。
-		var context = businessObject.BusinessContext;
-		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>()
-		                 ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
+		context = businessObject.BusinessContext;
+		authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>()
+		             ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
 
 		if (authorizer == null || !authorizer.IsConstrained(target.GetType()))
 		{
 			// 未启用数据权限，或该类型未声明权限模型：不受数据权限约束
-			return;
+			context = null;
+			return false;
 		}
 
 		// 已声明模型却拿不到上下文：无法判定，属配置错误（多半是忘了接线），不能静默放行
@@ -83,6 +138,11 @@ internal static class ScopeAuthorization
 			target.GetType().Name,
 			operation);
 
+		return true;
+	}
+
+	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
+	{
 		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）；
 		// 作用域用对象自己的那一个，实现不得依赖环境上下文
 		if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))

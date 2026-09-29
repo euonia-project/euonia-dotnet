@@ -53,6 +53,30 @@ internal sealed class ObjectScopeAuthorizer(ScopeModelRegistry registry, IPermis
 		return Guard(scope).ExplainObject(target, scopeKey);
 	}
 
+	/// <inheritdoc />
+	/// <remarks>
+	/// 覆写默认（空操作）实现：判定要读授权数据（<see cref="AllowsObject"/> → <c>GetSubjects</c>），
+	/// 异步授权路径先预热，避免冷缓存时阻塞调用线程。作用域取调用方传入的那一个，与 <see cref="Allows"/> 同口径。
+	/// </remarks>
+	public async ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
+	{
+		var guard = scope?.GetService<IScopeGuard>();
+
+		if (guard == null)
+		{
+			return;
+		}
+
+		try
+		{
+			await guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch (InvalidOperationException)
+		{
+			// 解析器缺席：交回同步判定 fail-closed（<see cref="Guard"/> 仍会报配置错误），预热不改写行为
+		}
+	}
+
 	private IScopeGuard Guard(IServiceProvider scope)
 	{
 		var guard = scope?.GetService<IScopeGuard>();

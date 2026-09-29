@@ -74,6 +74,23 @@ public class SubjectPermissionChecker : IPermissionChecker
 		return Holds(permission);
 	}
 
+	/// <inheritdoc />
+	/// <remarks>
+	/// 覆写默认（空操作）实现：授权数据按请求异步解析，预热后再走同步判定，
+	/// 异步调用链就不会在首次判定时触发 <see cref="ScopeGuard.GetSubjects"/> 的 <c>AsyncContext.Run</c>。
+	/// </remarks>
+	public async ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)
+	{
+		try
+		{
+			await _guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+		}
+		catch (InvalidOperationException)
+		{
+			// 与 IsGrantedAsync/Holds 同口径：解析器缺席交回同步判定 fail-closed，不在预热阶段改写行为
+		}
+	}
+
 	/// <summary>
 	/// 不访问授权数据就能得出的结论：空权限码恒放行，未认证主体恒拒绝。
 	/// </summary>
