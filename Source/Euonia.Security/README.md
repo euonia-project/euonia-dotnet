@@ -223,7 +223,11 @@ services.AddPermission(configuration.GetSection("Permission"), typeof(Order).Ass
 - **全部错误都在注册期暴露**：缺 `Operations` 节点、操作下有未知节点、某操作没有任何规则、
   写成标量而不是数组、数组里有空项、类型名解析不到或有歧义、类型不是特性或是泛型——
   都会在 `AddPermission` 处抛出并指明修法（含出错节点路径）；
-- 读出来的规则与回调声明的规则合并，因此「一部分约定写代码、一部分放配置」是允许的。
+- 读出来的规则与回调声明的规则合并，因此「一部分约定写代码、一部分放配置」是允许的；
+- **操作名忽略大小写**：声明端写 `Read`、`EXECUTE` 或 `read` 都与运行期用 `BusinessOperation` 小写常量
+  的查询命中同一组规则。若按序数比较，声明端只要换个大小写，规则表就查不到 →
+  `RequirementsFor` 返回空 → 判定端认为「没有任何权限要求」而**静默放行**（fail-open）。
+  入口**方法名**（`Names` / `OnMethodName`）仍按 C# 语义大小写敏感，不在此列。
 
 > ⚠️ **配置驱动等于把鉴权口径交给配置文件**：把某个方法从「需要审批码」改成「无码」只是一次配置改动。
 > 特性类型与自定义谓词天然属于代码；请让配置文件与代码走**同一套评审与发布流程**，
@@ -258,6 +262,11 @@ public class Order
 ```
 
 未指定 `Permission` 时仅校验角色，未指定角色时仅校验权限；两者均未指定则视为放行。
+
+**权限码忽略大小写**：`order:read`、`Order:Read` 视为同一个码——判定（`ScopeSubjectSet.HoldsPermission`
+与 `ClaimPermissionChecker.Matches`）、去重（`CompositeCodeSource.CodesFor`）、行级策略表
+（`ScopePolicySet`）与注册期死策略校验一律按忽略大小写比较。因此 `[Permission("repo:push")]` 配
+`Declare("Repo:Push", …)` 是合法的，不会被误报成「没有任何操作会解析到该码」。
 
 ### 4.2 用户侧：授权值从数据实时解析
 
