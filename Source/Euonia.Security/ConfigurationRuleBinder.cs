@@ -51,8 +51,9 @@ internal static class ConfigurationRuleBinder
 
 		foreach (var operation in operations.GetChildren())
 		{
-			// 操作名按 Ordinal 比较（「read」与「Read」是两个操作）：仅大小写不同的写法会让预期的那一个
-			// 静默失去规则，故在此拒绝
+			// 本表刻意用 OrdinalIgnoreCase：它要收拢的是<b>写法差异</b>。
+			// 下游操作表按 Ordinal 比较（OperationCodeSource._rules），「read」与「Read」会成为两个不同操作，
+			// 预期的那一个会静默失去规则，故在这里直接拒绝仅大小写不同的重复声明。
 			Check.Ensure(
 				seen.Add(operation.Key),
 				"配置里的操作名 '{0}' 与前面的操作仅大小写不同。操作名大小写敏感，请统一写法。",
