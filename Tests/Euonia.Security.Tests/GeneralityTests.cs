@@ -287,6 +287,28 @@ public class GeneralityTests
 	}
 
 	[Fact]
+	public async Task GetSubjectsAsync_Should_Return_The_Cached_Snapshot_Without_Blocking()
+	{
+		var provider = Build(
+			s => s.AddSingleton(User(authenticated: true)),
+			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
+				codes: ["asset:approve"],
+				grants: [(ScopeDimensions.Dept, "team-a")])));
+
+		var guard = provider.GetRequiredService<IScopeGuard>();
+
+		// 冷缓存先走异步入口：它 await 解析完成后再返回快照，
+		// 让异步调用链不必像 GetSubjects 那样在冷路径上被 AsyncContext.Run 阻塞
+		var snapshot = await guard.GetSubjectsAsync(TestContext.Current.CancellationToken);
+
+		Assert.True(snapshot.HoldsPermission("asset:approve"));
+
+		// 随后的同步入口命中同一条暖路径，必须返回同一份快照（判定口径不因入口而异）
+		Assert.Same(snapshot, guard.GetSubjects());
+	}
+
+	[Fact]
 	public void Unauthenticated_User_Should_Deny_Even_When_Resolver_Returns_Grants()
 	{
 		var provider = Build(

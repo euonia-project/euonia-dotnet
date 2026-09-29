@@ -42,6 +42,8 @@ public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 
 	public override void Declare(ScopePolicySet<GuardedAsset> policies)
 	{
-		policies.For("guarded:run", ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Dept));
+		// 刻意与 [Permission("guarded:run")] 只差大小写：权限码按忽略大小写匹配，
+		// 注册期的「没有任何操作会解析到该码」校验不得因大小写差异误报。
+		policies.For("Guarded:Run", ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Dept));
 	}
 }

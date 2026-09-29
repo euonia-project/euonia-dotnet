@@ -173,6 +173,51 @@ public class AddPermissionTests
 	}
 
 	[Fact]
+	public void AddPermission_Without_Any_Assembly_Should_Fail_Validation_Without_Explicit_Assertion()
+	{
+		// 零程序集 ⇒ 扫描范围为空 ⇒ 行级数据权限静默失效，而 RequiresSubjectResolver 恒为 false
+		// 会让下面的校验一并短路。与 EmptyCodeSource 同一条规则：空输入必须显式做出选择。
+		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance));
+
+		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+
+		Assert.Contains("程序集", exception.Message, StringComparison.Ordinal);
+		Assert.Contains(nameof(ServiceCollectionExtensions.AssertNoPermissionModels), exception.Message, StringComparison.Ordinal);
+	}
+
+	[Fact]
+	public void AddPermission_Without_Any_Assembly_Should_Pass_Validation_After_Explicit_Assertion()
+	{
+		var provider = Build(
+			s => s.AddPermission(EmptyCodeSource.Instance),
+			s => s.AssertNoPermissionModels());
+
+		Assert.Same(provider, provider.ValidatePermissionSetup());
+	}
+
+	[Fact]
+	public void Explicit_Assertion_Should_Be_Honored_When_Declared_Before_AddPermission()
+	{
+		// 顺序无关：断言与 AddPermission 谁先谁后都要生效（两者都落在同一份累积状态上）
+		var provider = Build(
+			s => s.AssertNoPermissionModels(),
+			s => s.AddPermission(EmptyCodeSource.Instance));
+
+		Assert.Same(provider, provider.ValidatePermissionSetup());
+	}
+
+	[Fact]
+	public void Scanning_Any_Assembly_Should_Count_As_The_Assertion_And_Need_No_Extra_Step()
+	{
+		// 「扫过但确实没有声明」与「从没扫过」是两回事：前者本身就是显式断言
+		var provider = Build(
+			s => s.AddPermissionModels(CleanAssembly),
+			s => s.AddPermission(EmptyCodeSource.Instance));
+
+		Assert.Same(provider, provider.ValidatePermissionSetup());
+	}
+
+	[Fact]
 	public void AddPermission_Should_Require_Subject_Resolver_When_Declared()
 	{
 		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
