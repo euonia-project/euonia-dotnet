@@ -71,8 +71,6 @@ internal sealed class ObjectScopeAuthorizer(ScopeModelRegistry registry, IPermis
 	/// </summary>
 	private string KeyFor(object target, string operation)
 	{
-		return registry.TryGetInherited(target.GetType(), out var registration)
-			? ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, codeSource)
-			: ScopeKeys.For(operation);
+		return ScopeKeyResolver.Resolve(registry, target.GetType(), operation, codeSource);
 	}
 }

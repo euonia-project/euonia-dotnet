@@ -29,7 +29,7 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 
 	private readonly IReadOnlyDictionary<string, IReadOnlyList<Func<MethodInfo, bool>>> _rules;
 
-	private readonly ConcurrentDictionary<(Type Type, string Operation), PermissionAttribute[]> _cache = new();
+	private readonly ConcurrentDictionary<(Type Type, string Operation), IReadOnlyList<PermissionAttribute>> _cache = new();
 
 	internal OperationCodeSource(
 		IReadOnlyList<string> operations,
@@ -76,7 +76,7 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 				}
 			}
 
-			return requirements.ToArray();
+			return Array.AsReadOnly(requirements.ToArray());
 		});
 	}
 

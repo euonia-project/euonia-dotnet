@@ -736,6 +736,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
 		}
+		
+		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
+		}
+
 		return ReadProperty(property);
 	}
 
@@ -752,21 +757,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <inheritdoc />
 	public void LoadProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
-		TValue oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				_ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TValue> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TValue)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		LoadPropertyValue(propertyInfo, oldValue, newValue, false);
 	}
@@ -985,6 +976,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
 			return true;
+		}
+		
+		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return CanReadProperty(propertyInfo, throwOnFalse);

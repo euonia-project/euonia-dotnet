@@ -32,8 +32,6 @@ internal sealed class ObjectScopeKeyResolver(ScopeModelRegistry registry, IPermi
 			return ScopeKeys.Default;
 		}
 
-		return registry.TryGetInherited(resource.GetType(), out var registration)
-			? ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, codeSource)
-			: ScopeKeys.For(operation);
+		return ScopeKeyResolver.Resolve(registry, resource.GetType(), operation, codeSource);
 	}
 }

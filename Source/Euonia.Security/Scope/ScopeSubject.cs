@@ -15,7 +15,14 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 internal sealed class ScopeSubject
 {
-	/// <summary>没有任何授予的空主体集合。</summary>
+	/// <summary>
+	/// 没有任何授予的空主体集合。
+	/// </summary>
+	/// <remarks>
+	/// 共享的<b>只读</b>兜底实例（<see cref="ScopeSubjectSet"/> 在没有授予时把它直接交给调用方），
+	/// 因此 <see cref="Add"/> 对它一律拒绝——往里写一次等于给所有无授予的主体注入维度值。
+	/// 需要一份可变副本时用 <see cref="Clone"/>。
+	/// </remarks>
 	internal static ScopeSubject Empty { get; } = new();
 
 	private readonly Dictionary<string, HashSet<string>> _values = new(StringComparer.OrdinalIgnoreCase);
@@ -25,8 +32,14 @@ internal sealed class ScopeSubject
 	/// </summary>
 	/// <param name="dimension">维度名。</param>
 	/// <param name="value">该维度上的值。</param>
+	/// <exception cref="InvalidOperationException">当本实例是 <see cref="Empty"/> 时抛出。</exception>
 	internal void Add(string dimension, string value)
 	{
+		if (ReferenceEquals(this, Empty))
+		{
+			throw new InvalidOperationException($"{nameof(ScopeSubject)}.{nameof(Empty)} 是共享的只读实例，不能添加授予；需要可变副本请先 Clone()。");
+		}
+
 		if (!_values.TryGetValue(dimension, out var values))
 		{
 			values = new HashSet<string>(StringComparer.Ordinal);

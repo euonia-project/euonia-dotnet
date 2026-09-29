@@ -28,36 +28,33 @@ public class DataAnnotationRule : RuleBase
     /// <summary>
     /// 执行规则检查。
     /// </summary>
+    /// <remarks>
+    /// 本方法<b>不</b>捕获异常：取消必须原样传播、其他异常由 <c>Rules.RunAsync</c> 收敛为带异常类型与内部异常的错误结果，
+    /// 与其余规则路径共用同一套异常策略。在这里自行捕获会让数据注解规则成为唯一的旁路。
+    /// </remarks>
     /// <param name="context">规则上下文。</param>
     /// <param name="cancellationToken">用于取消操作的令牌。</param>
     /// <returns>表示异步规则执行操作的任务。</returns>
-    public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
+    public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
-        try
+        ValidationResult result;
+        if (context.Target is IBusinessObject target)
         {
-            ValidationResult result;
-            if (context.Target is IBusinessObject target)
-            {
-                var value = target.ReadProperty(Property);
-                var serviceProvider = target.BusinessContext?.CurrentServiceProvider;
-                result = Attribute.GetValidationResult(value, CreateContext(context.Target, serviceProvider));
-            }
-            else
-            {
-                result = Attribute.GetValidationResult(Property.DefaultValue, CreateContext(context.Target, null));
-            }
-
-            if (result != null)
-            {
-                context.AddErrorResult(result.ErrorMessage);
-            }
+            var value = target.ReadProperty(Property);
+            var serviceProvider = target.BusinessContext?.CurrentServiceProvider;
+            result = Attribute.GetValidationResult(value, CreateContext(context.Target, serviceProvider));
         }
-        catch (Exception exception)
+        else
         {
-            context.AddErrorResult(exception.Message);
+            result = Attribute.GetValidationResult(Property.DefaultValue, CreateContext(context.Target, null));
         }
 
-        await Task.CompletedTask;
+        if (result != null)
+        {
+            context.AddErrorResult(result.ErrorMessage);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

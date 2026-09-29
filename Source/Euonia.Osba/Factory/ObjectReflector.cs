@@ -247,22 +247,16 @@ public class ObjectReflector
 	{
 		var validNames = GetConventionalMethodNames(attributeType);
 
-		var result = new List<Tuple<MethodInfo, int>>();
 		var methods = targetType.GetMethods(BINDING_FLAGS)
 		                        .Where(t => t.GetCustomAttribute(attributeType) != null || validNames.Contains(t.Name));
 
-		// ReSharper disable once LoopCanBeConvertedToQuery
-		foreach (var method in methods)
-		{
-			result.Add(Tuple.Create(method, level));
-		}
+		var result = methods.Select(method => Tuple.Create(method, level)).ToList();
 
 		if (result.Count == 0 && targetType.BaseType != null && targetType.BaseType != typeof(object) && !targetType.BaseType.IsInterface)
 		{
 			level--;
 			result.AddRange(GetCandidateMethods(targetType.BaseType, attributeType, level));
 		}
-
 
 		return result;
 	}
@@ -303,7 +297,7 @@ public class ObjectReflector
 
 			if (multiple == true)
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException($"Can not inject property '{name}', the enumerable property type {type.FullName} can not be injected as a single service.");
 			}
 
 			if (type.IsArray)
@@ -311,7 +305,7 @@ public class ObjectReflector
 				var interfaces = type.FindInterfaces(HandlerInterfaceFilter, null);
 				if (interfaces == null || interfaces.Length == 0)
 				{
-					throw new InvalidOperationException();
+					throw new InvalidOperationException($"Can not inject property '{name}', the array type {type.FullName} does not implement any supported collection interface.");
 				}
 
 				type = interfaces[0].GenericTypeArguments[0];
@@ -326,7 +320,7 @@ public class ObjectReflector
 				{
 					if (type.GenericTypeArguments.Length != 1)
 					{
-						throw new InvalidOperationException("");
+						throw new InvalidOperationException($"Can not inject property '{name}', the generic type {type.FullName} must declare exactly one generic argument, but declares {type.GenericTypeArguments.Length}.");
 					}
 
 					var genericArgumentType = type.GenericTypeArguments[0];
@@ -369,14 +363,11 @@ public class ObjectReflector
 		var parameterTypeNames = new List<string>();
 		if (criteria.GetType() == typeof(object[]))
 		{
-			// ReSharper disable once LoopCanBeConvertedToQuery
-			foreach (var item in criteria)
-			{
-				parameterTypeNames.Add(item == null ? "null" : GetTypeName(item.GetType()));
-			}
+			parameterTypeNames.AddRange(criteria.Select(item => item == null ? "null" : GetTypeName(item.GetType())));
 		}
 		else
 		{
+			// 协变场景（如传入 string[]）只登记数组类型本身，而不是逐个展开元素类型。
 			parameterTypeNames.Add(GetTypeName(criteria.GetType()));
 		}
 

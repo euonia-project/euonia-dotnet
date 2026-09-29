@@ -44,7 +44,7 @@ public class BusinessObjectFactory : IObjectFactory
 			editable.MarkAsNew();
 		}
 
-		try
+		return WithActivator(target, () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
@@ -61,12 +61,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 此处刻意不做数据范围判定：Create 只构造对象、不落库，且按设计由调用方在之后
 			// 填充字段（见框架自带示例 User.CreateAsync）。在字段尚不完整时判定会误杀正常流程，
 			// 而它又保护不了任何东西——真正需要拦截的落库发生在 SaveAsync/InsertAsync。
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -75,7 +70,7 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		try
+		return WithActivator(target, () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
@@ -91,12 +86,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -110,19 +100,14 @@ public class BusinessObjectFactory : IObjectFactory
 			editable.MarkAsNew();
 		}
 
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, criteria);
 
 			// 同 Create：只构造不落库，不做数据范围判定
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -131,7 +116,7 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			_activator?.InitializeInstance(target);
@@ -139,12 +124,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -153,7 +133,7 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			_activator?.InitializeInstance(target);
@@ -161,12 +141,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Create);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -175,7 +150,7 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Update);
 			_activator?.InitializeInstance(target);
@@ -183,12 +158,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Update);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -211,19 +181,14 @@ public class BusinessObjectFactory : IObjectFactory
 		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
 		ScopeAuthorization.EnsureAuthorizedBefore(target, operation);
 
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			_activator?.InitializeInstance(target);
 			await InvokeAsync(method, target, [cancellationToken]);
 
 			// 保存后再次判定：业务方法可能改动了范围列
 			ScopeAuthorization.EnsureAuthorizedAfter(target, operation);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -232,7 +197,7 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]);
 
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 
@@ -246,12 +211,7 @@ public class BusinessObjectFactory : IObjectFactory
 			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
 
 			await InvokeAsync(method, target, [cancellationToken]);
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -262,7 +222,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 
-		try
+		return await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Execute);
 			_activator?.InitializeInstance(target);
@@ -276,12 +236,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 事后补一次判定只能「报告」而无法「阻止」，反而让调用方以为命令没跑。
 			// 需要规则裁决请走 ExecuteAsync(target, ct)：执行器正是这条路径
 			// （CreateAsync 构造 → Handle 填充 → ExecuteAsync(target)）。
-			return target;
-		}
-		finally
-		{
-			_activator?.FinalizeInstance(target);
-		}
+		});
 	}
 
 	/// <inheritdoc/>
@@ -291,7 +246,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 
-		try
+		await WithActivatorAsync(target, async () =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Delete);
 			_activator?.InitializeInstance(target);
@@ -299,6 +254,29 @@ public class BusinessObjectFactory : IObjectFactory
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Delete);
+		});
+	}
+
+	#region Supports
+
+	/// <summary>
+	/// 在激活器的初始化/终结配对中执行 <paramref name="body"/>，并原样返回 <paramref name="target"/>。
+	/// </summary>
+	/// <remarks>
+	/// <c>InitializeInstance</c> 与 <c>FinalizeInstance</c> 必须成对，且终结必须覆盖所有异常路径。
+	/// 此前本类型的每个入口都各手写一份 try/finally——新增入口时漏掉 <c>finally</c> 不会有任何
+	/// 编译期或测试期信号，只会静默泄漏未终结的对象。收敛到这里后，配对关系只声明一次。
+	/// </remarks>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <param name="target">目标实例。</param>
+	/// <param name="body">授权、初始化与工厂方法调用。</param>
+	/// <returns><paramref name="target"/> 本身。</returns>
+	private TTarget WithActivator<TTarget>(TTarget target, Action body)
+	{
+		try
+		{
+			body();
+			return target;
 		}
 		finally
 		{
@@ -306,7 +284,20 @@ public class BusinessObjectFactory : IObjectFactory
 		}
 	}
 
-	#region Supports
+	/// <inheritdoc cref="WithActivator{TTarget}"/>
+	private async Task<TTarget> WithActivatorAsync<TTarget>(TTarget target, Func<Task> body)
+	{
+		try
+		{
+			await body();
+			return target;
+		}
+		finally
+		{
+			_activator?.FinalizeInstance(target);
+		}
+	}
+
 
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
 	{
@@ -338,6 +329,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		{
 		}
+
 		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];
 	}
 

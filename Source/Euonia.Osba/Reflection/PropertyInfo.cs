@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection;
 
 namespace Nerosoft.Euonia.Osba;
@@ -241,19 +242,43 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	}
 
 	/// <summary>
-	/// 使用无参构造函数创建类型实例；失败时返回 <see langword="null"/>。
+	/// 使用无参构造函数创建类型实例；类型本身不支持无参实例化时返回 <see langword="null"/>。
 	/// </summary>
 	/// <param name="type">要创建的类型。</param>
-	/// <returns>类型实例；如果无法创建则为 <see langword="null"/>。</returns>
+	/// <returns>类型实例；如果该类型无法无参实例化则为 <see langword="null"/>。</returns>
+	/// <remarks>
+	/// 这里只吞掉「这个类型本就无法用无参构造创建」的预期失败，让调用方退化为共享同一个默认值实例；
+	/// 其余异常照常向上抛，避免把真正的缺陷（例如 <see cref="TypeInitializationException"/>
+	/// 背后的静态构造函数崩溃）静默成 <see langword="null"/>。Debug 下写入跟踪，便于定位退化点。
+	/// </remarks>
 	private static object CreateInstance(Type type)
 	{
 		try
 		{
 			return Activator.CreateInstance(type);
 		}
-		catch
+		catch (Exception ex) when (IsUnsupportedInstance(ex))
 		{
+			Debug.WriteLine($"[PropertyInfo] 无法为 {type} 创建实例，退化为共享默认值：{ex.Message}");
 			return null;
 		}
+	}
+
+	/// <summary>
+	/// 判断 <see cref="Activator.CreateInstance(Type)"/> 的失败是否属于「类型本就不支持无参实例化」。
+	/// </summary>
+	/// <param name="exception">捕获到的异常。</param>
+	/// <returns>若属于预期失败则为 <c>true</c>。</returns>
+	private static bool IsUnsupportedInstance(Exception exception)
+	{
+		return exception switch
+		{
+			// 无无参构造函数 / 抽象类 / 接口 / 不可实例化的 COM 类型
+			MissingMethodException or MemberAccessException or ArgumentException or NotSupportedException => true,
+			// 静态构造函数或实例构造函数抛出的异常：视为「该类型无法安全实例化」，
+			// 退化为共享同一个默认值实例，而不是让读取 DefaultValue 的调用方跟着炸。
+			TypeInitializationException or TargetInvocationException => true,
+			_ => false
+		};
 	}
 }

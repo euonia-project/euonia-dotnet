@@ -445,21 +445,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			return;
 		}
 
-		TField oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TField> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TField)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		if (typeof(TValue) == typeof(string) && newValue == null)
 		{
@@ -487,21 +473,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			return;
 		}
 
-		TValue oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TValue> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TValue)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		if (typeof(TValue) == typeof(string) && newValue == null)
 		{

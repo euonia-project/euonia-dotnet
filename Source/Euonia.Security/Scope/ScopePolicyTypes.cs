@@ -66,20 +66,38 @@ internal sealed class WhereScopePolicy<T> : ScopePolicy<T>
 }
 
 /// <summary>
-/// 逻辑「与」策略节点。
+/// 逻辑「与」/「或」共用的组合策略：收集各子策略的允许与拒绝条件，差别只在允许条件的折叠方式。
 /// </summary>
 /// <typeparam name="T">资源类型。</typeparam>
-internal sealed class AllScopePolicy<T> : ScopePolicy<T>
+/// <remarks>
+/// <para>
+/// 收集口径对两者完全一致：只带拒绝条件的分支不参与允许折叠，也不计入允许分支数——
+/// 「没有允许条件」不等于「允许条件为真」，混入会让本节点被当成有允许分支（静默提权）。
+/// </para>
+/// <para>
+/// 语义差异只落在 <see cref="FoldAllows"/>：「与」把空集折叠为 <c>True</c>（全部分支都没有允许条件时不施加限制，
+/// 例如全部是 Deny 分支 → 拒绝清单语义），「或」把空集折叠为 <c>False</c>（没有任何分支提供允许条件时一律拒绝，fail-closed）。
+/// 归约逻辑只此一份，将来加规则不会漏改其中一侧——那正是「与/或语义漂移」。
+/// </para>
+/// </remarks>
+internal abstract class CompositeScopePolicy<T> : ScopePolicy<T>
 	where T : class
 {
 	private readonly ScopePolicy<T>[] _policies;
 
-	internal AllScopePolicy(ScopePolicy<T>[] policies)
+	private protected CompositeScopePolicy(ScopePolicy<T>[] policies)
 	{
 		_policies = policies;
 	}
 
-	internal override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
+	/// <summary>审计输出用的算子名：<c>All</c> 或 <c>Any</c>。</summary>
+	private protected abstract string OperatorName { get; }
+
+	/// <summary>把收集到的允许条件折叠成一个表达式；空集的取值决定本节点的默认语义。</summary>
+	private protected abstract Expression FoldAllows(List<Expression> allows);
+
+	/// <inheritdoc />
+	internal sealed override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
 	{
 		var allows = new List<Expression>();
 		var denies = new List<Expression>();
@@ -99,14 +117,14 @@ internal sealed class AllScopePolicy<T> : ScopePolicy<T>
 			}
 		}
 
-		// 全部分支都没有允许条件时，「与」不施加任何限制（例如全部是 Deny 分支 → 拒绝清单语义）
 		return new ScopePolicyNode<T>(
-			ScopePolicyNode<T>.Fold(allows, Expression.AndAlso, ScopePolicyNode<T>.True),
+			FoldAllows(allows),
 			ScopePolicyNode<T>.Fold(denies, Expression.OrElse, ScopePolicyNode<T>.False),
 			allows.Count > 0);
 	}
 
-	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
+	/// <inheritdoc />
+	internal sealed override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
 	{
 		foreach (var policy in _policies)
 		{
@@ -114,9 +132,32 @@ internal sealed class AllScopePolicy<T> : ScopePolicy<T>
 		}
 	}
 
+	/// <inheritdoc />
 	public override string ToString()
 	{
-		return $"All({string.Join(", ", _policies.AsEnumerable())})";
+		return $"{OperatorName}({string.Join(", ", _policies.AsEnumerable())})";
+	}
+}
+
+/// <summary>
+/// 逻辑「与」策略节点。
+/// </summary>
+/// <typeparam name="T">资源类型。</typeparam>
+internal sealed class AllScopePolicy<T> : CompositeScopePolicy<T>
+	where T : class
+{
+	internal AllScopePolicy(ScopePolicy<T>[] policies)
+		: base(policies)
+	{
+	}
+
+	private protected override string OperatorName => "All";
+
+	private protected override Expression FoldAllows(List<Expression> allows)
+	{
+		// 空集折叠为 True：全部分支都没有允许条件时「与」不施加任何限制
+		// （例如全部是 Deny 分支 → 拒绝清单语义）
+		return ScopePolicyNode<T>.Fold(allows, Expression.AndAlso, ScopePolicyNode<T>.True);
 	}
 }
 
@@ -124,56 +165,20 @@ internal sealed class AllScopePolicy<T> : ScopePolicy<T>
 /// 逻辑「或」策略节点。
 /// </summary>
 /// <typeparam name="T">资源类型。</typeparam>
-internal sealed class AnyScopePolicy<T> : ScopePolicy<T>
+internal sealed class AnyScopePolicy<T> : CompositeScopePolicy<T>
 	where T : class
 {
-	private readonly ScopePolicy<T>[] _policies;
-
 	internal AnyScopePolicy(ScopePolicy<T>[] policies)
+		: base(policies)
 	{
-		_policies = policies;
 	}
 
-	internal override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
+	private protected override string OperatorName => "Any";
+
+	private protected override Expression FoldAllows(List<Expression> allows)
 	{
-		var allows = new List<Expression>();
-		var denies = new List<Expression>();
-
-		foreach (var policy in _policies)
-		{
-			var node = policy.Reduce(context);
-
-			// 只带拒绝条件的分支不参与「或」，也不计入允许分支数：
-			// 「没有允许条件」不等于「允许条件为真」，混入会让本节点被当成有允许分支（静默提权）
-			if (node.HasAllow)
-			{
-				allows.Add(node.Allow);
-			}
-
-			if (!ScopePolicyNode<T>.IsConstantFalse(node.Deny))
-			{
-				denies.Add(node.Deny);
-			}
-		}
-
-		// 没有任何分支提供允许条件时一律拒绝（fail-closed）
-		return new ScopePolicyNode<T>(
-			ScopePolicyNode<T>.Fold(allows, Expression.OrElse, ScopePolicyNode<T>.False),
-			ScopePolicyNode<T>.Fold(denies, Expression.OrElse, ScopePolicyNode<T>.False),
-			allows.Count > 0);
-	}
-
-	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
-	{
-		foreach (var policy in _policies)
-		{
-			policy.CollectLeaves(context, negated, traces);
-		}
-	}
-
-	public override string ToString()
-	{
-		return $"Any({string.Join(", ", _policies.AsEnumerable())})";
+		// 空集折叠为 False：没有任何分支提供允许条件时一律拒绝（fail-closed）
+		return ScopePolicyNode<T>.Fold(allows, Expression.OrElse, ScopePolicyNode<T>.False);
 	}
 }
 

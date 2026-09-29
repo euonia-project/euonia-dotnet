@@ -90,18 +90,11 @@ public sealed class ScopeModelRegistry
 	/// <returns>已声明则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	/// <remarks>
 	/// 沿基类链查找：实体框架的代理类型是派生类，直接按 <c>GetType()</c> 查找会漏。
+	/// 实现即 <see cref="TryGetInherited"/>——两者是同一段遍历，分开写只会让「要不要越过 object」的口径分叉。
 	/// </remarks>
 	public bool IsDeclared(Type resourceType)
 	{
-		for (var type = resourceType; type != null && type != typeof(object); type = type.BaseType)
-		{
-			if (_registrations.ContainsKey(type))
-			{
-				return true;
-			}
-		}
-
-		return false;
+		return TryGetInherited(resourceType, out _);
 	}
 
 	/// <summary>

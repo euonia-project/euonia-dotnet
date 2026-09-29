@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Nerosoft.Euonia.Osba;
 
@@ -62,6 +63,22 @@ public class RuleExecutionRegressionTests
 		Assert.True(heldDuringNotification.HasValue, "规则完成后应对 Name 发出 PropertyChanged 通知。");
 		Assert.False(heldDuringNotification.Value, "规则完成回调不得在 Rules 的锁内执行——那是把用户代码带进了临界区。");
 	}
+
+	[Fact]
+	public async Task DataAnnotationRule_That_Throws_Should_Keep_The_Exception_Type_In_The_Result()
+	{
+		// 数据注解规则曾自行 catch(Exception) 并只留 message，是规则异常策略唯一的旁路；
+		// 它必须和其余规则一样把异常类型（含内部异常链）写进错误描述。
+		var target = new RulePropertyBoundEditable();
+		target.PublicRules.AddInstanceRule(
+			new DataAnnotationRule(RulePropertyBoundEditable.NameProperty, new ExplodingValidationAttribute()));
+
+		await target.PublicRules.CheckObjectRulesAsync(false, TestContext.Current.CancellationToken);
+
+		Assert.Contains(target.GetBrokenRules(), broken =>
+			broken.Description.Contains("[InvalidOperationException]", StringComparison.Ordinal)
+			&& broken.Description.Contains("attribute boom", StringComparison.Ordinal));
+	}
 }
 
 /// <summary>
@@ -85,5 +102,17 @@ internal sealed class CancelledPropertyRule(IPropertyInfo property) : RuleBase(p
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		throw new OperationCanceledException();
+	}
+}
+
+/// <summary>
+/// 在校验阶段抛出 <see cref="InvalidOperationException"/> 的数据注解特性。
+/// </summary>
+internal sealed class ExplodingValidationAttribute : ValidationAttribute
+{
+	/// <inheritdoc />
+	public override bool IsValid(object value)
+	{
+		throw new InvalidOperationException("attribute boom");
 	}
 }

@@ -38,18 +38,9 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// <inheritdoc />
 	public bool IsGranted(string permission)
 	{
-		if (string.IsNullOrEmpty(permission))
-		{
-			return true;
-		}
+		var fast = FastVerdict(permission, _user);
 
-		var user = _user;
-		if (user == null || !user.IsAuthenticated)
-		{
-			return false;
-		}
-
-		return Holds(permission);
+		return fast ?? Holds(permission);
 	}
 
 	/// <inheritdoc />
@@ -65,14 +56,10 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// </remarks>
 	public async ValueTask<bool> IsGrantedAsync(string permission, CancellationToken cancellationToken = default)
 	{
-		if (string.IsNullOrEmpty(permission))
+		var fast = FastVerdict(permission, _user);
+		if (fast.HasValue)
 		{
-			return true;
-		}
-
-		if (_user is not { IsAuthenticated: true })
-		{
-			return false;
+			return fast.Value;
 		}
 
 		try
@@ -85,6 +72,25 @@ public class SubjectPermissionChecker : IPermissionChecker
 		}
 
 		return Holds(permission);
+	}
+
+	/// <summary>
+	/// 不访问授权数据就能得出的结论：空权限码恒放行，未认证主体恒拒绝。
+	/// </summary>
+	/// <param name="permission">待判定的权限码。</param>
+	/// <param name="user">当前登录用户，可为 <see langword="null"/>。</param>
+	/// <returns>可直接返回的结论；需要继续读授权数据时返回 <see langword="null"/>。</returns>
+	/// <remarks>
+	/// 同步与异步两个入口共用本方法，避免「空码放行 / 未认证拒绝」这套前置判定被写成两份而逐渐走样。
+	/// </remarks>
+	private static bool? FastVerdict(string permission, UserPrincipal user)
+	{
+		if (string.IsNullOrEmpty(permission))
+		{
+			return true;
+		}
+
+		return user is { IsAuthenticated: true } ? null : false;
 	}
 
 	/// <summary>

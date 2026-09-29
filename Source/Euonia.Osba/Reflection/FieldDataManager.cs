@@ -211,6 +211,34 @@ public class FieldDataManager
 	}
 
 	/// <summary>
+	/// 读取属性的当前旧值；尚无字段数据时按注册的默认值初始化，并返回该默认值。
+	/// </summary>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>属性的当前旧值。</returns>
+	/// <remarks>
+	/// 写入路径（<c>SetProperty</c> / <c>LoadProperty</c>）必须先拿到旧值，再决定是否标脏，
+	/// 于是这段三分支曾在 <c>BusinessObject</c>、<c>ObservableObject</c>、<c>ReadOnlyObject</c> 各手抄一遍。
+	/// 任何一处调整 <c>null</c> 分支的副作用顺序（先 <see cref="LoadFieldData{TValue}"/> 再比较），
+	/// 其余几处都不会跟着改——收敛到这里后只有一个地方需要维护。
+	/// </remarks>
+	internal TValue GetExistingOrInit<TValue>(PropertyInfo<TValue> property)
+	{
+		var fieldData = GetFieldData(property);
+		switch (fieldData)
+		{
+			case null:
+				var value = property.DefaultValue;
+				LoadFieldData(property, value);
+				return value;
+			case IFieldData<TValue> fd:
+				return fd.Value;
+			default:
+				return (TValue)fieldData.Value;
+		}
+	}
+
+	/// <summary>
 	/// 移除属性的字段数据。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
