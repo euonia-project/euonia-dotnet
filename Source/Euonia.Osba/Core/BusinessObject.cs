@@ -102,7 +102,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 恰挂起所有规则检查，稍后可恢复。
+	/// 暂停所有规则检查，稍后可恢复。
 	/// </summary>
 	public void SuspendRuleChecking()
 	{
@@ -736,11 +736,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
 		}
-		
-		{
-			// 空块：用于阻止 IDE 代码分析建议（勿删除）
-		}
-
 		return ReadProperty(property);
 	}
 
@@ -992,9 +987,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return true;
 		}
 
-		// 空块：用于阻止 IDE 代码分析建议（勿删除）
-		{
-		}
 		return CanReadProperty(propertyInfo, throwOnFalse);
 	}
 
@@ -1266,9 +1258,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private bool _disposedValue;
 
 	/// <summary>
-	/// 可释放模式的实现。
+	/// 可释放模式的实现。本类型当前不持有任何资源，此方法仅维护释放状态，
+	/// 供派生类重写并在其中按 <paramref name="disposing"/> 释放资源。
 	/// </summary>
-	/// <param name="disposing">指示是否正在释放托管资源。</param>
+	/// <param name="disposing">
+	/// <c><see langword="true"/></c> 表示由 <see cref="Dispose()"/> 显式释放（可安全访问托管资源）；
+	/// <c><see langword="false"/></c> 表示由终结器释放（不可访问托管资源）。
+	/// 本类型没有终结器，故该参数恒为 <c><see langword="true"/></c>。
+	/// </param>
 	protected virtual void Dispose(bool disposing)
 	{
 		if (_disposedValue)
@@ -1276,7 +1273,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return;
 		}
 
-		// 当前无托管/非托管资源需要释放，保留该重写方法供派生类扩展
+		// 派生类引入资源时在此释放：托管资源只应在 disposing 为 true 时访问，非托管资源两种情况都要释放。
 		_disposedValue = true;
 	}
 
@@ -1284,6 +1281,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public void Dispose()
 	{
 		Dispose(disposing: true);
+		GC.SuppressFinalize(this);
 	}
 
 	#endregion

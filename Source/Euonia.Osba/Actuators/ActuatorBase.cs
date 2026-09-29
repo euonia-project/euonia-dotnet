@@ -270,7 +270,6 @@ public abstract class ActuatorBase<TTarget>
 	/// 整个流程通过 <see cref="ActuatorBuilder{TTarget}"/> 的执行管道运行；若构建器启用了工作单元，
 	/// 处理逻辑将在事务边界内执行。终结步骤由 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 决定：
 	/// 可编辑对象在状态发生变更（<see cref="ObservableObject{T}.IsChanged"/>）时才保存，命令对象则执行命令体。
-	/// 领域事件的自动发布逻辑当前已注释停用。
 	/// </remarks>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>处理完成并终结后的目标对象。</returns>

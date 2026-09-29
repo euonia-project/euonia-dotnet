@@ -350,10 +350,9 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		var @object = ActivatorUtilities.GetServiceOrCreateInstance<TTarget>(_provider);
 
+		// 对象可能同时实现 IHasLazyServiceProvider 和 IUseBusinessContext，两段初始化必须都要执行；
+		// 合并成 switch 只会命中第一个匹配分支，因此这里保留 ReSharper 的抑制。
 		// ReSharper disable once ConvertIfStatementToSwitchStatement
-
-		// 对象可能同时实现 IHasLazyServiceProvider 和 IUseBusinessContext
-
 		if (@object is IHasLazyServiceProvider lazy)
 		{
 			lazy.LazyServiceProvider = _provider.GetRequiredService<ILazyServiceProvider>();
