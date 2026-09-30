@@ -249,7 +249,8 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	/// <remarks>
 	/// 这里只吞掉「这个类型本就无法用无参构造创建」的预期失败，让调用方退化为共享同一个默认值实例；
 	/// 其余异常照常向上抛，避免把真正的缺陷（例如 <see cref="TypeInitializationException"/>
-	/// 背后的静态构造函数崩溃）静默成 <see langword="null"/>。Debug 下写入跟踪，便于定位退化点。
+	/// 背后的静态构造函数崩溃）静默成 <see langword="null"/>。降级写入 <see cref="Trace"/>：
+	/// <see cref="Debug.WriteLine(string)"/> 在 Release 下会被编译器剔除，退化将零痕迹。
 	/// </remarks>
 	private static object CreateInstance(Type type)
 	{
@@ -259,7 +260,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 		}
 		catch (Exception ex) when (IsUnsupportedInstance(ex))
 		{
-			Debug.WriteLine($"[PropertyInfo] 无法为 {type} 创建实例，退化为共享默认值：{ex.Message}");
+			Trace.WriteLine($"[PropertyInfo] 无法为 {type} 创建实例，退化为共享默认值：{ex.Message}");
 			return null;
 		}
 	}

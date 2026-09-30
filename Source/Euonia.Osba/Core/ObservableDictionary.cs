@@ -21,18 +21,16 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// </summary>
 	public bool RaiseItemChangedEvents { get; set; } = true;
 
-	private DictionaryChangedEventHandler<TKey, TValue> _itemChanged;
-
 	/// <summary>
 	/// 当字典中的项被添加、移除或更新时发生。
 	/// </summary>
 	/// <remarks>附加到此事件的处理程序会在 DictionaryChangedEventArgs 参数中接收受影响的键、
 	/// 更改类型以及旧值和新值。当 RaiseItemChangedEvents 为 <see langword="false"/> 时（例如在抑制批量操作期间），不会引发此事件。</remarks>
-	public event DictionaryChangedEventHandler<TKey, TValue> ItemChanged
-	{
-		add => _itemChanged = (DictionaryChangedEventHandler<TKey, TValue>)Delegate.Combine(_itemChanged, value);
-		remove => _itemChanged = (DictionaryChangedEventHandler<TKey, TValue>)Delegate.Remove(_itemChanged, value);
-	}
+	/// <remarks>
+	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
+	/// 并发订阅不会静默丢失处理器。
+	/// </remarks>
+	public event DictionaryChangedEventHandler<TKey, TValue> ItemChanged;
 
 	/// <summary>
 	/// 引发 ItemChanged 事件。
@@ -50,21 +48,18 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 			return;
 		}
 
-		_itemChanged?.Invoke(this, new DictionaryChangedEventArgs<TKey, TValue>(key, action, oldValue, newValue));
+		ItemChanged?.Invoke(this, new DictionaryChangedEventArgs<TKey, TValue>(key, action, oldValue, newValue));
 	}
 
 	#region BusyChanged
 
-	private BusyChangedEventHandler _busyChanged;
-
 	/// <summary>
 	/// 指示对象繁忙状态已改变的事件。
 	/// </summary>
-	public event BusyChangedEventHandler BusyChanged
-	{
-		add => _busyChanged = (BusyChangedEventHandler)Delegate.Combine(_busyChanged, value);
-		remove => _busyChanged = (BusyChangedEventHandler)Delegate.Remove(_busyChanged, value);
-	}
+	/// <remarks>
+	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子。
+	/// </remarks>
+	public event BusyChangedEventHandler BusyChanged;
 
 	/// <summary>
 	/// 重写此方法以在 IsBusy 属性改变时收到通知。
@@ -72,7 +67,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <param name="args">事件参数。</param>
 	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
 	{
-		_busyChanged?.Invoke(this, args);
+		BusyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>

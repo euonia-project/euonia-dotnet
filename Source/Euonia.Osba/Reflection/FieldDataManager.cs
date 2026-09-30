@@ -24,8 +24,15 @@ public class FieldDataManager
 	/// <summary>
 	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
 	/// </summary>
+	/// <remarks>
+	/// <c>_properties</c> 必须在此初始化为空列表：公开无参构造若留 <see langword="null"/>，
+	/// <see cref="GetRegisteredProperty"/> 会在「属性未注册」之前先抛
+	/// <see cref="NullReferenceException"/>，违背其文档承诺的
+	/// <see cref="ArgumentOutOfRangeException"/>。
+	/// </remarks>
 	public FieldDataManager()
 	{
+		_properties = [];
 	}
 
 	/// <summary>
@@ -74,7 +81,7 @@ public class FieldDataManager
 	/// <returns>已注册属性的列表。</returns>
 	public List<IPropertyInfo> GetRegisteredProperties()
 	{
-		return [.._properties];
+		return [.. _properties];
 	}
 
 	/// <summary>
@@ -242,12 +249,16 @@ public class FieldDataManager
 	/// 移除属性的字段数据。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
+	/// <remarks>
+	/// 名称承诺「移除」，因此真正删除条目而不是置 <see langword="null"/>：
+	/// 置 null 会让 <see cref="FieldExists"/> 仍返回 <see langword="true"/>、
+	/// <see cref="ReadProperty{TValue}(PropertyInfo{TValue})"/> 返回 <see langword="null"/>
+	/// 而不是注册的 <see cref="IPropertyInfo.DefaultValue"/>——三者口径互相矛盾。
+	/// 本方法当前在仓库内零调用；保留但修正语义，供派生/宿主场景使用。
+	/// </remarks>
 	internal void RemoveField(IPropertyInfo property)
 	{
-		if (_fieldData.TryGetValue(property.Name, out var field))
-		{
-			field.Value = null;
-		}
+		_fieldData.TryRemove(property.Name, out _);
 	}
 
 	/// <summary>
@@ -282,9 +293,9 @@ public class FieldDataManager
 	public static void ForceStaticFieldInit(Type type)
 	{
 		const BindingFlags attr = BindingFlags.Static |
-		                          BindingFlags.Public |
-		                          BindingFlags.DeclaredOnly |
-		                          BindingFlags.NonPublic;
+								  BindingFlags.Public |
+								  BindingFlags.DeclaredOnly |
+								  BindingFlags.NonPublic;
 		var t = type;
 		while (t != null)
 		{

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Threading;
 using Nerosoft.Euonia.Security;
@@ -362,17 +363,55 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			if (multiple)
 			{
-				var implement = serviceKey == null ? _provider.GetServices(type) : _provider.GetKeyedServices(type, serviceKey);
-				property.SetValue(@object, implement);
+				// GetKeyedServices 扩展内部也要求 IKeyedServiceProvider；
+				// 这里用类型判断给出明确错误，而不是让包装了 IServiceProvider 的自定义容器在强转处炸 InvalidCastException
+				var services = serviceKey == null
+					   ? _provider.GetServices(type)
+					   : ResolveKeyedServices(type, serviceKey);
+				property.SetValue(@object, services);
 			}
 			else
 			{
-				var implement = serviceKey == null ? _provider.GetService(type) : ((IKeyedServiceProvider)_provider).GetKeyedService(type, serviceKey);
+				var implement = serviceKey == null
+					   ? _provider.GetService(type)
+					   : ResolveKeyedService(type, serviceKey);
+
+				// [Inject] 是「可选协作对象」：未注册合法地解析为 null（不可改 GetRequiredService，那会破坏可选语义）。
+				// 但零诊断的 null 会让 NRE 爆在远离病因处——这里按 Debug 级别留下线索，指明属性、类型与修法。
+				if (implement == null)
+				{
+					Debug.WriteLine(
+							$"[BusinessObjectFactory] 属性 '{property.Name}'（{type.FullName}）的 [Inject] 服务未注册，已赋 null。" +
+							$"若该属性是必需的，请在容器中注册 {type.FullName}。");
+				}
+
 				property.SetValue(@object, implement);
 			}
 		}
 
 		return @object;
+	}
+
+	/// <summary>
+	/// 解析键控的单个服务；容器不支持键控服务时给出明确错误而不是强转异常。
+	/// </summary>
+	private object ResolveKeyedService(Type type, object serviceKey)
+	{
+		return _provider is IKeyedServiceProvider keyedServiceProvider
+			   ? keyedServiceProvider.GetKeyedService(type, serviceKey)
+			   : throw new InvalidOperationException(
+					   $"属性注入需要键控服务（serviceKey = '{serviceKey}'），但当前容器（{_provider.GetType().FullName}）不支持 {nameof(IKeyedServiceProvider)}。");
+	}
+
+	/// <summary>
+	/// 解析键控的全部服务；容器不支持键控服务时给出明确错误而不是强转异常。
+	/// </summary>
+	private IEnumerable<object> ResolveKeyedServices(Type type, object serviceKey)
+	{
+		return _provider is IKeyedServiceProvider keyedServiceProvider
+			   ? keyedServiceProvider.GetKeyedServices(type, serviceKey)
+			   : throw new InvalidOperationException(
+					   $"属性注入需要键控服务（serviceKey = '{serviceKey}'），但当前容器（{_provider.GetType().FullName}）不支持 {nameof(IKeyedServiceProvider)}。");
 	}
 
 	#endregion

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
@@ -65,6 +66,12 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="assembly">目标程序集。</param>
 	/// <returns>可加载的类型序列。</returns>
+	/// <remarks>
+	/// 跳过不可加载的类型是刻意的降级，但<b>不能零痕迹</b>：
+	/// <see cref="ReflectionTypeLoadException.LoaderExceptions"/> 是唯一能报告
+	/// 「哪个类型因缺哪个依赖而加载失败」的地方，丢弃它会让拼错依赖表现为
+	/// 「扫描什么都没找到」。这里逐条写入 <see cref="Trace"/>（Release 也可用）。
+	/// </remarks>
 	private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 	{
 		try
@@ -73,6 +80,11 @@ public static class ServiceCollectionExtensions
 		}
 		catch (ReflectionTypeLoadException ex)
 		{
+			foreach (var loaderException in ex.LoaderExceptions ?? [])
+			{
+				Trace.WriteLine($"[AddBusinessObject] 程序集 '{assembly.FullName}' 中有类型无法加载，已跳过：{loaderException?.Message}");
+			}
+
 			return ex.Types.Where(t => t != null);
 		}
 	}

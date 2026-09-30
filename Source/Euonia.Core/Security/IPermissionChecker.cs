@@ -41,6 +41,13 @@ public interface IPermissionChecker
 	/// </summary>
 	/// <param name="permissions">权限码数组。</param>
 	/// <returns>任意一个通过则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 仓库与示例中没有任何调用点（判定入口 <see cref="IsRequirementSatisfied"/> 只消费
+	/// <see cref="IsGranted"/> 与 <see cref="IsInAnyRole"/>）。保留默认实现以兼容已发布的公开表面，
+	/// 但标记 <see cref="ObsoleteAttribute"/> 提示新代码改用 <c>permissions.Any(IsGranted)</c>——
+	/// 与 <see cref="IsInAnyRole"/> 不同，它没有被任何组合语义依赖。
+	/// </remarks>
+	[Obsolete("仓库内无调用点；如需「任一通过」语义请直接 permissions.Any(IsGranted)。")]
 	bool IsGrantedAny(params string[] permissions)
 	{
 		return permissions?.Any(IsGranted) == true;
@@ -104,6 +111,7 @@ public interface IPermissionChecker
 	/// </remarks>
 	ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)
 	{
-		return ValueTask.CompletedTask;
+		// netstandard2.1 没有 ValueTask.CompletedTask（.NET 5 才引入）
+		return default;
 	}
 }

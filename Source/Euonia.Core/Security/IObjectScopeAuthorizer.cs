@@ -96,6 +96,7 @@ public interface IObjectScopeAuthorizer
 	/// </remarks>
 	ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
 	{
-		return ValueTask.CompletedTask;
+		// netstandard2.1 没有 ValueTask.CompletedTask（.NET 5 才引入）
+		return default;
 	}
 }

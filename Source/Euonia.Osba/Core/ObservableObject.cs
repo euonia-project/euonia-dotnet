@@ -113,18 +113,14 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// </summary>
 	public virtual bool IsSavable => IsValid && (HasChangedProperties || IsChanged) && !IsBusy;
 
-	private BusyChangedEventHandler _busyChanged;
-
 	/// <summary>
 	/// 当繁忙状态改变时引发的事件。
 	/// </summary>
-	public event BusyChangedEventHandler BusyChanged
-	{
-		// add => _busyChanged += value;
-		// remove => _busyChanged -= value;
-		add => _busyChanged = (BusyChangedEventHandler)Delegate.Combine(_busyChanged, value);
-		remove => _busyChanged = (BusyChangedEventHandler)Delegate.Remove(_busyChanged, value);
-	}
+	/// <remarks>
+	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
+	/// 并发订阅/退订不会静默丢失处理器（此前手写 <c>Delegate.Combine/Remove</c> 的读-改-写不是原子的）。
+	/// </remarks>
+	public event BusyChangedEventHandler BusyChanged;
 
 	/// <summary>
 	/// 引发 <see cref="BusyChanged"/> 事件。
@@ -132,7 +128,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <param name="args">事件参数。</param>
 	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
 	{
-		_busyChanged?.Invoke(this, args);
+		BusyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>

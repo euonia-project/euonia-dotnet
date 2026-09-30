@@ -136,20 +136,29 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <summary>
 	/// 获取此业务对象的规则对象。
 	/// </summary>
+	/// <remarks>
+	/// 惰性初始化在临界区内完成：无锁的双重创建会让并发首访产生两个 <see cref="Rules"/> 实例，
+	/// 后写者胜出、先者上累积的 <see cref="Rules.BrokenRules"/> 与 <see cref="Rules.RunningRules"/>
+	/// 被整体丢弃——表现为偶发「违规列表为空但对象实际不合法」。锁复用既有的
+	/// <see cref="_changedPropertiesLock"/>（该锁只护各自字段的短临界区，锁序无环）。
+	/// </remarks>
 	protected Rules Rules
 	{
 		get
 		{
-			if (field == null)
+			lock (_changedPropertiesLock)
 			{
-				field = new Rules(this);
-			}
-			else if (field.Target == null)
-			{
-				field.SetTarget(this);
-			}
+				if (field == null)
+				{
+					field = new Rules(this);
+				}
+				else if (field.Target == null)
+				{
+					field.SetTarget(this);
+				}
 
-			return field;
+				return field;
+			}
 		}
 	}
 
@@ -636,7 +645,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Fields
 
 	/// <inheritdoc/>
-	public FieldDataManager FieldManager => field ??= new FieldDataManager(GetType());
+	/// <remarks>
+	/// 惰性初始化在临界区内完成：无锁的双重创建会让并发首访产生两个
+	/// <see cref="FieldDataManager"/>，两份 <c>_fieldData</c> 各自维护变更历史——
+	/// <see cref="HasChangedProperties"/> 与 <see cref="ReadProperty{TValue}"/> 会在
+	/// 线程间给出分歧答案。锁复用 <see cref="_changedPropertiesLock"/>，与 <see cref="Rules"/> 同一口径。
+	/// </remarks>
+	public FieldDataManager FieldManager
+	{
+		get
+		{
+			lock (_changedPropertiesLock)
+			{
+				return field ??= new FieldDataManager(GetType());
+			}
+		}
+	}
 
 	#endregion
 
@@ -736,7 +760,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
 		}
-		
+
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
@@ -977,7 +1001,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			Trace.TraceError("CanReadProperty: {0} is not a registered property of {1}.{2}", propertyName, this.GetType().Namespace, this.GetType().Name);
 			return true;
 		}
-		
+
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
