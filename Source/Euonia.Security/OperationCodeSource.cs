@@ -46,6 +46,16 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 	/// <returns>构造器。</returns>
 	public static OperationCodeSourceBuilder Create() => new();
 
+	/// <summary>
+	/// 判断构造器是否已声明任何操作入口规则。
+	/// </summary>
+	/// <param name="builder">规则构造器。</param>
+	/// <returns>已声明则返回 <see langword="true"/>。</returns>
+	internal static bool HasDeclarations(OperationCodeSourceBuilder builder)
+	{
+		return builder.HasRules;
+	}
+
 	/// <inheritdoc />
 	public IReadOnlyList<string> AllOperations { get; }
 
@@ -96,11 +106,15 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 /// </summary>
 public sealed class OperationCodeSourceBuilder
 {
-	// 操作名按忽略大小写匹配：配置里写 "Read" 与运行时查询 "read" 必须命中同一组规则，
-	// 否则 _rules 查不到 → RequirementsFor 返回空 → 授权门静默放行（fail-open）。
+	// 操作名按忽略大小写匹配：配置里写 "Read" 与运行时查询 "read" 必须命中同一组规则。
 	private readonly Dictionary<string, List<Func<MethodInfo, bool>>> _rules = new(StringComparer.OrdinalIgnoreCase);
 
 	private readonly List<string> _order = [];
+
+	/// <summary>
+	/// 获取一个值，指示是否已声明任何操作入口规则。
+	/// </summary>
+	internal bool HasRules => _order.Count > 0;
 
 	/// <summary>
 	/// 声明「打了指定特性的方法即该操作的入口」。

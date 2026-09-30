@@ -27,7 +27,7 @@ public class PermissionRuleConfigurationTests
 	[Fact]
 	public void Callback_Should_Declare_Rules_Inline()
 	{
-		var provider = Build(s => s.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName(BusinessOperation.Execute, "Run"); }));
 
 		Assert.Equal("guarded:run", ResolveExecuteKey(provider, typeof(GuardedAsset)));
 	}
@@ -35,11 +35,11 @@ public class PermissionRuleConfigurationTests
 	[Fact]
 	public void Callback_Without_Rules_Should_Fail_At_Registration()
 	{
-		// 空回调几乎总是漏写：直接报错，并指明两种「说清楚意图」的写法
-		var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddPermission(o => { }));
+		// 空回调几乎总是漏写：直接报错，并指明「说清楚意图」的写法
+		var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddPermission(p => { }));
 
 		Assert.Contains("AddPermissionModels", exception.Message);
-		Assert.Contains("EmptyCodeSource", exception.Message);
+		Assert.Contains("NoOperationCodes", exception.Message);
 	}
 
 	[Fact]
@@ -47,8 +47,8 @@ public class PermissionRuleConfigurationTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(o => o.OnAttribute(BusinessOperation.Execute, typeof(AssetApproveAttribute)), TestAssembly);
-		services.AddPermission(o => o.OnAttribute(BusinessOperation.Execute, typeof(AssetSecondApproveAttribute)), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Execute, typeof(AssetApproveAttribute)); });
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Execute, typeof(AssetSecondApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -63,7 +63,7 @@ public class PermissionRuleConfigurationTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);
-		services.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -76,8 +76,8 @@ public class PermissionRuleConfigurationTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly);
-		services.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName(BusinessOperation.Execute, "Run"); });
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName(BusinessOperation.Execute, "Run"); });
 
 		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ScopeModelRegistry)));
 		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IPermissionCodeSource)));
@@ -150,7 +150,7 @@ public class PermissionRuleConfigurationTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(Rules([("Operations:execute:Names:0", "Run")]), FixturesAssembly);
-		services.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -170,7 +170,7 @@ public class PermissionRuleConfigurationTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);                                                  // 只给码
-		services.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly);       // 能回答要求
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)); });       // 能回答要求
 
 		var source = Assert.IsAssignableFrom<IPermissionCodeSource>(
 			services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>());
@@ -191,7 +191,7 @@ public class PermissionRuleConfigurationTests
 	public void Single_Source_Should_Also_Answer_Requirements()
 	{
 		// 只有一个来源（最常见的情形）时不必经过合并，同样要能回答要求
-		var provider = Build(s => s.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName(BusinessOperation.Execute, "Run"); }));
 
 		Assert.IsAssignableFrom<IPermissionCodeSource>(provider.GetRequiredService<IPermissionCodeSource>());
 	}
@@ -316,7 +316,7 @@ public class PermissionRuleConfigurationTests
 		// 规则不合法时不应留下半套注册：既是实现约束（先构造规则再动容器），也是排障体验
 		var services = new ServiceCollection();
 
-		Assert.Throws<InvalidOperationException>(() => services.AddPermission(o => { }));
+		Assert.Throws<InvalidOperationException>(() => services.AddPermission(p => { }));
 		Assert.Throws<InvalidOperationException>(() => services.AddPermission(Rules([])));
 
 		// 累积状态（internal 的 PermissionModelSetup）同样不该留下：它一旦被创建，就说明「先构造规则」被破坏了
@@ -325,7 +325,7 @@ public class PermissionRuleConfigurationTests
 		                                           || descriptor.ServiceType.Name == "PermissionModelSetup");
 
 		// 同一容器随后仍可正常注册
-		services.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run"), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName(BusinessOperation.Execute, "Run"); });
 
 		Assert.Equal("guarded:run", ResolveExecuteKey(services.BuildServiceProvider(), typeof(GuardedAsset)));
 	}

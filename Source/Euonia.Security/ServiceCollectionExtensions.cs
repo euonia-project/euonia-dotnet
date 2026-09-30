@@ -7,295 +7,175 @@ using Nerosoft.Euonia.Security;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// 权限体系的注册入口：<see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/> 声明「哪个方法对应哪个业务操作」的规则并给出扫描范围，
-/// <see cref="AddPermissionModels"/> 只追加扫描范围。
+/// 权限体系的注册入口：一个 <c>AddPermission</c> 回调声明扫描范围、操作入口规则与断言，
+/// 据此构建模型注册表与判定服务。
 /// </summary>
-/// <remarks>
-/// 规则的<b>载体</b>有三种，产出的是同一套规则、走的是同一份注册期校验；
-/// 差别只在「规则写在哪里、随什么发布」与表达力（配置不承载自定义谓词与按特性名推导的候选名）：
-/// <list type="number">
-/// <item><description><b>回调</b>（<see cref="AddPermission(IServiceCollection, Action{OperationCodeSourceBuilder}, Assembly[])"/>）：
-/// 推荐用法——规则与代码同源、可导航、编译期可见，模块可以各自贡献自己的规则并自动合并。</description></item>
-/// <item><description><b>配置节</b>（<see cref="AddPermission(IServiceCollection, IConfigurationSection, Assembly[])"/>）：
-/// 适合「部署期换命名约定」，代价是规则脱离代码（见 README §3.4）。</description></item>
-/// <item><description><b>自定义来源</b>（<see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/>）：
-/// 两种载体都表达不了时的扩展点，例如规则来自数据库。</description></item>
-/// </list>
-/// 无论走哪种载体，都必须在注册处<b>显式</b>给出规则——引擎不猜。确实没有方法级权限码时，
-/// 用 <c>EmptyCodeSource.Instance</c> 做断言（<see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/>，
-/// 见 README §3.1）。
-/// </remarks>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	/// 注册权限策略引擎的服务，并用回调声明操作入口规则。
+	/// 注册权限体系：扫描范围、操作入口规则、断言都在同一个回调里声明。
 	/// </summary>
 	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="configure">规则声明回调，例如 <c>o =&gt; o.OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute))</c>。</param>
-	/// <param name="assemblies">要扫描数据权限模型与权限声明的程序集。</param>
+	/// <param name="configure">配置回调，例如 <c>p =&gt; { p.Scan(typeof(Order).Assembly); p.OnAttributeOrName(…); }</c>。</param>
 	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <exception cref="InvalidOperationException">回调没有声明任何规则时抛出（此时引擎无从收集方法级权限码）。</exception>
+	/// <exception cref="InvalidOperationException">配置自相矛盾时抛出（如既断言无码又声明了入口规则、既断言无模型又传入了扫描程序集）。</exception>
 	/// <remarks>
 	/// <para>
-	/// 这是声明规则的<b>推荐形态</b>：规则写在代码里，随代码评审与发布，且可以按模块分散声明——
-	/// 每次调用贡献一组规则，多次调用按并集合并（见 README §3.2）。
+	/// 这是权限体系的<b>唯一入口</b>。规则、扫描范围与断言在同一处声明，
+	/// 注册期即完成模型扫描与全部校验——配置错误在启动时失败而非运行期。
 	/// </para>
 	/// <para>
-	/// 只声明了规则、没有可扫描的模型或权限声明时，引擎照常工作；规则的编译与校验发生在<b>注册处</b>，
-	/// 因此写错的规则不会等到运行期才暴露。
+	/// 使用了权限（方法级权限码或数据权限模型）时，应用还需注册
+	/// <see cref="IScopeSubjectResolver"/>（从授权数据实时解析授权值）与 <see cref="UserPrincipal"/>
+	/// （判定主体），并调用 <c>provider.ValidatePermissionSetup()</c> 使缺漏在启动时暴露。
 	/// </para>
 	/// </remarks>
-	public static IServiceCollection AddPermission(this IServiceCollection services, Action<OperationCodeSourceBuilder> configure, params Assembly[] assemblies)
+	public static IServiceCollection AddPermission(this IServiceCollection services, Action<PermissionOptions> configure)
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configure);
 
-		// 先构造规则再动容器：规则不合法时不应留下半套注册（Build 会拒绝空规则）
-		var builder = OperationCodeSource.Create();
-		configure(builder);
+		var options = new PermissionOptions();
+		configure(options);
+		Validate(options);
 
-		var source = builder.Build();
+		// 什么都不说不是合法配置：没有任何规则，方法级 [Permission] 无从收集；
+		// 没有扫描范围也没有断言，行级数据权限会静默失效。两种「说清楚意图」的方式都拒绝空回调。
+		Check.Ensure(
+			options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
+			"权限配置是空的：没有声明操作入口规则，也没有断言 NoOperationCodes / NoModels 或给出扫描程序集。"
+			+ "有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；"
+			+ "没有方法级权限码请断言 NoOperationCodes；"
+			+ "只想追加扫描范围请改用 AddPermissionModels；"
+			+ "确实没有任何权限模型与声明请断言 NoModels。");
+
 		var setup = GetOrCreateSetup(services);
-
-		setup.Add(source, assemblies);
-		Rebuild(services, setup);
-
+		Apply(services, setup, options);
 		return services;
 	}
 
 	/// <summary>
-	/// 注册权限策略引擎的服务，并从配置节读取操作入口规则。
+	/// 注册权限体系并从配置节读取操作入口规则。
 	/// </summary>
 	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
 	/// <param name="configuration">规则所在的配置节，例如 <c>configuration.GetSection("Permission")</c>。</param>
-	/// <param name="assemblies">要扫描数据权限模型与权限声明的程序集；配置里的类型名也在其中解析。</param>
+	/// <param name="assemblies">要扫描的程序集；配置里的入口特性类型名也在其中解析。</param>
 	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
 	/// <exception cref="InvalidOperationException">
 	/// 配置缺少 <c>Operations</c> 节点、操作下有未知节点、某个操作没有声明任何规则、
-	/// 写成了标量而不是数组、含空项，或入口特性类型名无法解析 / 有歧义 / 不是特性时抛出。
-	/// 以上全部发生在<b>注册处</b>。
+	/// 写成标量而不是数组、含空项，或入口特性类型名无法解析 / 有歧义 / 不是特性时抛出。
 	/// </exception>
 	/// <remarks>
-	/// <para>
-	/// 配置键：<c>Operations</c> 下每个子节点是一个操作，可以给出 <c>Attributes</c>（入口特性类型名数组）
-	/// 与 <c>Names</c>（入口方法名数组），二者并存时为「命中其一即为入口」的或语义：
-	/// </para>
-	/// <code>
-	/// {
-	///   "Permission": {
-	///     "Operations": {
-	///       "read":    { "Attributes": ["MyApp.Web.OrderFetchAttribute"], "Names": ["Fetch", "Get"] },
-	///       "approve": { "Names": ["Approve", "ApproveAsync"] }
-	///     }
-	///   }
-	/// }
-	/// </code>
-	/// <para>
-	/// <b>与 <see cref="OperationCodeSourceBuilder.OnAttributeOrName"/> 的差别</b>：后者还会按特性名
-	/// 推导候选方法名（<c>OrderFetchAttribute</c> → <c>Fetch</c> / <c>FetchAsync</c> / …），配置不推导——
-	/// 用配置表达同一条规则要显式写出候选名，否则「按命名」那一半会静默消失。
-	/// </para>
-	/// <para>
-	/// 配置只在注册期读取一次：<b>不订阅变更</b>，改配置不会改变门禁，需重启（或重新注册）。
-	/// </para>
-	/// <para>
-	/// <b>注意</b>：配置驱动的规则意味着「改配置即改鉴权口径」。特性类型与自定义谓词天然属于代码，
-	/// 配置只适合承载方法名 / 类型名这类纯数据；请让配置文件与代码走同一套评审与发布流程，
-	/// 不要把它当成运维侧的可调开关（见 README §3.4）。
-	/// </para>
+	/// 配置键：<c>Operations</c> 下每个子节点是一个操作，可给出 <c>Attributes</c>（入口特性类型名数组）
+	/// 与 <c>Names</c>（入口方法名数组），二者并存时为「命中其一即为入口」的或语义。配置只在注册期读取一次。
 	/// </remarks>
 	public static IServiceCollection AddPermission(this IServiceCollection services, IConfigurationSection configuration, params Assembly[] assemblies)
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configuration);
 
-		// 先读配置再动容器：规则不合法时不应留下半套注册。
-		// 类型名在「本次调用已知的扫描范围」里解析——包括此前已累积的程序集，
-		// 因此 AddPermissionModels(Order.Assembly) 之后再注册配置节是可以解析到该程序集的类型的。
-		var builder = OperationCodeSource.Create();
-		ConfigurationRuleBinder.Bind(configuration, builder, KnownAssemblies(services, assemblies));
+		var options = new PermissionOptions().Scan(assemblies ?? []);
+		ConfigurationRuleBinder.Bind(configuration, options.RulesBuilder(), KnownAssemblies(services, assemblies));
 
-		var source = builder.Build();
 		var setup = GetOrCreateSetup(services);
-
-		setup.Add(source, assemblies);
-		Rebuild(services, setup);
-
+		Apply(services, setup, options);
 		return services;
 	}
 
-	/// <summary>本次调用可见的程序集：此前累积的 ∪ 本次传入。</summary>
-	/// <remarks>
-	/// 只读取累积状态，不创建它——规则不合法时不应留下半套注册。
-	/// 代价是「程序集只在之后的调用里传入」这种情况解析不到：配置里的类型名必须出现在**本次或更早**的调用中。
-	/// </remarks>
-	private static Assembly[] KnownAssemblies(IServiceCollection services, Assembly[] assemblies)
-	{
-		var known = assemblies ?? [];
-
-		return TryGetSetup(services) is { } setup
-			? [.. setup.Assemblies.Concat(known).Distinct()]
-			: known;
-	}
-
 	/// <summary>
-	/// 注册权限策略引擎的服务。
+	/// 注册权限体系并使用给定的权限码来源。
 	/// </summary>
 	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="codeSource">权限码来源；由使用方实现，回答「某类型在某操作上声明了哪些权限码」。</param>
-	/// <param name="assemblies">要扫描数据权限模型与权限声明的程序集。</param>
+	/// <param name="codeSource">权限码来源，回答「某类型在某操作上声明了哪些权限码」。</param>
+	/// <param name="assemblies">要扫描的程序集。</param>
 	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
 	/// <remarks>
-	/// <para>
-	/// <paramref name="codeSource"/> <b>是必填项</b>，没有默认实现：「哪个方法对应哪个业务操作」
-	/// 取决于使用方的约定，引擎无从推断。确实不使用方法级权限码时，请显式传入
-	/// <see cref="EmptyCodeSource.Instance"/>——那是一个断言，而不是默认值（见 README §3.1）。
-	/// </para>
-	/// <para>
-	/// 权限模型在<b>注册期</b>完成校验，配置错误在启动时失败而非运行期（校验项清单见 README §5.6）。
-	/// 本方法可多次调用，每次的贡献按并集合并（见 README §3.2）。
-	/// </para>
-	/// <para>
-	/// <see cref="IScopeSubjectResolver"/> 与 <see cref="IScopeKeyResolver"/> 均允许缺席：前者只
-	/// 在真正发生判定时才被要求，解析器可在本方法<b>之后</b>注册，故这里只记录是否需要它
-	/// （见 <see cref="PermissionSetup"/>）；后者缺席时未显式指定权限码的判定回落到
-	/// <see cref="ScopeKeys.Default"/>。判定主体取宿主注册的 <see cref="UserPrincipal"/>，
-	/// 它与解析器都由容器构建后的 <c>provider.ValidatePermissionSetup()</c> 检查。
-	/// </para>
+	/// 规则不在代码也不在配置里（例如来自数据库）时的扩展点。
 	/// </remarks>
 	public static IServiceCollection AddPermission(this IServiceCollection services, IPermissionCodeSource codeSource, params Assembly[] assemblies)
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(codeSource);
 
+		var options = new PermissionOptions().Scan(assemblies ?? []);
 		var setup = GetOrCreateSetup(services);
 
-		setup.Add(codeSource, assemblies);
-		Rebuild(services, setup);
-
+		Apply(services, setup, options, codeSource);
 		return services;
 	}
 
 	/// <summary>
-	/// 显式断言「本应用没有任何权限模型与 <see cref="PermissionAttribute"/> 声明」。
+	/// 校验配置的自洽性。
 	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
+	private static void Validate(PermissionOptions options)
+	{
+		var hasRules = options.Rules is { } rules && OperationCodeSource.HasDeclarations(rules);
+
+		Check.Ensure(
+			!(options.NoCodesAsserted && hasRules),
+			"权限配置自相矛盾：已断言 NoOperationCodes（没有方法级权限码），却又声明了操作入口规则。"
+			+ "两者只能取其一：有方法级权限码就声明规则，没有就断言 NoOperationCodes。");
+
+		Check.Ensure(
+			!(options.NoModelsAsserted && options.Assemblies.Count > 0),
+			"权限配置自相矛盾：已断言 NoModels（没有任何权限模型与声明），却又传入了扫描程序集。"
+			+ "有程序集要扫描就不要断言 NoModels。");
+	}
+
+	/// <summary>
+	/// 把一份配置落到容器：累积来源与程序集，重建模型注册表，并注册引擎自身的服务。
+	/// </summary>
 	/// <remarks>
-	/// <para>
-	/// 与 <see cref="EmptyCodeSource.Instance"/> 是<b>同一条规则</b>：<b>空输入不是默认值，而是必须做出的显式选择</b>。
-	/// 没有调用 <see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/> 时本方法无意义
-	/// （<c>ValidatePermissionSetup()</c> 会在没有 <see cref="PermissionSetup"/> 时直接放行）。
-	/// </para>
-	/// <para>
-	/// 需要它的场景只有一个：<c>AddPermission</c> 全程<b>一个程序集都没给</b>。那时扫描范围为空，
-	/// 行级数据权限必然静默失效，而 <see cref="PermissionSetup.RequiresSubjectResolver"/> 同时恒为
-	/// <see langword="false"/>，启动期校验会一并短路——于是「能启动但什么都没生效」，无从察觉。
-	/// 调用本方法即等于说「我知道没有任何权限模型，这是有意的」，校验据此放行。
-	/// </para>
-	/// <para>
-	/// 只要有过一次 <c>AddPermission(source, someAssembly)</c> 或 <c>AddPermissionModels(someAssembly)</c>，
-	/// 就<b>不需要</b>本方法：真正的扫描就是一次显式断言（扫过但没有声明，与从没扫过是两回事）。
-	/// </para>
+	/// 重建只发生在本调用内（累积状态由 <see cref="PermissionModelSetup"/> 保存），
+	/// 因此配置错误在注册处抛出而不是等到容器构建或首次判定。
 	/// </remarks>
-	public static IServiceCollection AssertNoPermissionModels(this IServiceCollection services)
+	private static void Apply(IServiceCollection services, PermissionModelSetup setup, PermissionOptions options, IPermissionCodeSource explicitSource = null)
 	{
-		ArgumentNullException.ThrowIfNull(services);
-
-		GetOrCreateSetup(services).NoModelsAsserted = true;
-
-		return services;
-	}
-
-	/// <summary>
-	/// 追加要扫描的程序集（数据权限模型与权限声明），不改变权限码来源。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="assemblies">要扫描数据权限模型与权限声明的程序集。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <remarks>
-	/// <para>
-	/// 用于「模型分散在多个程序集、权限码来源只有一处」的布局：来源照旧由一次
-	/// <see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/> 给出，其余程序集各自用本方法追加（见 README §3.2）。
-	/// 程序集按幂等处理，重复传入只扫一次。
-	/// </para>
-	/// <para>
-	/// <b>本方法不提供权限码来源</b>，因此它不是「本应用没有方法级权限码」的断言
-	/// （那个断言只能用 <see cref="AddPermission(IServiceCollection, IPermissionCodeSource, Assembly[])"/> 传 <see cref="EmptyCodeSource.Instance"/> 做出，见 README §3.1）。
-	/// 若此前从未注册过来源：扫描到的方法级 <see cref="PermissionAttribute"/> 不会参与判定，
-	/// 而按权限码声明的策略会被注册期的<b>死策略校验</b>拒绝——两者都不会静默放行。
-	/// </para>
-	/// </remarks>
-	public static IServiceCollection AddPermissionModels(this IServiceCollection services, params Assembly[] assemblies)
-	{
-		ArgumentNullException.ThrowIfNull(services);
-
-		var setup = GetOrCreateSetup(services);
-
-		setup.AddAssemblies(assemblies);
-		Rebuild(services, setup);
-
-		return services;
-	}
-
-	/// <summary>只读取本次注册已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>
-	private static PermissionModelSetup TryGetSetup(IServiceCollection services)
-	{
-		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
-		               ?.ImplementationInstance as PermissionModelSetup;
-	}
-
-	/// <summary>
-	/// 取得本次注册累积的状态；首次调用时一并注册引擎自身的服务。
-	/// </summary>
-	private static PermissionModelSetup GetOrCreateSetup(IServiceCollection services)
-	{
-		if (TryGetSetup(services) is { } existing)
+		// 来源三选一：显式传入 > 配置/回调产出的规则 > 无码断言
+		IPermissionCodeSource source = explicitSource;
+		if (source == null && options.Rules != null)
 		{
-			return existing;
+			source = options.Rules.Build();
 		}
 
-		var setup = new PermissionModelSetup();
-
-		services.AddSingleton(setup);
-
-		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
-
-		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-			provider.GetRequiredService<UserPrincipal>(),
-			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetService<IScopeSubjectResolver>(),
-			provider.GetService<IScopeKeyResolver>()));
-
-		return setup;
-	}
-
-	/// <summary>
-	/// 按累积后的来源与程序集重建注册表，并<b>替换</b>（而非追加）三者在本容器中的注册。
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// 重建是逐次调用进行的，因此配置错误在<b>注册处</b>抛出，而不是等到容器构建或首次判定。
-	/// 用替换而非追加：多次注册后每种类型只保留一条描述符，容器里不留失效的中间注册表。
-	/// </para>
-	/// <para>
-	/// 输入没变时<b>整段跳过</b>：<c>ScopeModelRegistry.Create</c> 要重扫全部程序集并把每个模型
-	/// 重新实例化、逐条重新编译校验，<c>HasPermissionDeclarations</c> 还要按「类型 × 操作」跑一遍
-	/// <c>CodesFor</c>——<c>AddPermission(source, asm)</c> 原样重复一次的代价与首次相同。
-	/// 累积清单只增不减且按幂等去重（见 <see cref="PermissionModelSetup.Signature"/>），
-	/// 所以两个计数相等即等价于集合相等，可以安全跳过。新增模块/程序集会改变计数，照常重建。
-	/// </para>
-	/// </remarks>
-	private static void Rebuild(IServiceCollection services, PermissionModelSetup setup)
-	{
-		var signature = setup.Signature;
-
-		if (setup.LastBuild == signature)
+		if (source == null && options.NoCodesAsserted)
 		{
-			return;
+			source = EmptyCodeSource.Instance;
 		}
 
-		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
+		var nextSource = source ?? setup.CodeSource;
+		var assemblies = setup.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
+
+		if (options.NoModelsAsserted)
+		{
+			setup.NoModelsAsserted = true;
+		}
+
+		if (source != null)
+		{
+			setup.AddSource(source);
+		}
+
+		setup.AddAssemblies([.. options.Assemblies]);
+
+		if (options.Operations.Count > 0)
+		{
+			setup.AddOperations(options.Operations);
+		}
+
+		RegisterEngine(services);
+
+		// 输入没变时复用上一次的注册表：全量构建要重扫程序集并逐条编译校验，重复注册应当是空操作
+		ScopeModelRegistry registry;
+		if (setup.SameAsLastBuild(nextSource, assemblies))
+		{
+			registry = setup.LastRegistry;
+		}
+		else
+		{
+			registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
+			setup.LastRegistry = registry;
+		}
 
 		services.RemoveAll<ScopeModelRegistry>();
 		services.AddSingleton(registry);
@@ -303,15 +183,8 @@ public static class ServiceCollectionExtensions
 		services.RemoveAll<IPermissionCodeSource>();
 		services.AddSingleton(setup.CodeSource);
 
-
-		// 宿主框架与鉴权实现之间的两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）：
-		// 行级判定、策略键解析。契约在 Core，因此这里不需要任何「同时引用两边」的适配包。
-		//
-		// 必须用工厂委托延迟解析，不能在注册期直接 new 出实例：
-		// Rebuild 是逐次调用进行的，第二次 AddPermission 会把 ScopeModelRegistry / IPermissionCodeSource
-		// 替换成新的实例；若这里捕获了首次的实例，TryAddSingleton 会因描述符已存在而不再注册，
-		// 于是 IsConstrained 拿着旧注册表判定 → 第二个模块的模型被判为「不受约束」，
-		// 行级数据权限被静默跳过（fail-open）。下面的 IScopeKeyResolver 一直是对的，这里与它对齐。
+		// 两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）；契约在 Core，无需适配包。
+		// 工厂委托延迟解析：注册表在容器里只保留最新一份，契约解析时取到的必然是它。
 		services.TryAddSingleton<IObjectScopeAuthorizer>(provider => new ObjectScopeAuthorizer(
 			provider.GetRequiredService<ScopeModelRegistry>(),
 			provider.GetRequiredService<IPermissionCodeSource>()));
@@ -322,17 +195,56 @@ public static class ServiceCollectionExtensions
 
 		services.RemoveAll<PermissionSetup>();
 		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
-
-		// 全部登记成功才记账：前面任何一步抛出时，下次调用必须重新走完整重建
-		setup.LastBuild = signature;
 	}
 
 	/// <summary>
-	/// 判断给定程序集中是否存在 <see cref="PermissionAttribute"/> 声明或可解析的权限码。
+	/// 注册引擎自身的判定与守卫服务（幂等：只在首次注册时执行）。
 	/// </summary>
-	/// <param name="assemblies">要扫描的程序集。</param>
-	/// <param name="codeSource">权限码来源。</param>
-	/// <returns>存在声明则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	private static void RegisterEngine(IServiceCollection services)
+	{
+		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
+		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
+			provider.GetRequiredService<UserPrincipal>(),
+			provider.GetRequiredService<ScopeModelRegistry>(),
+			provider.GetService<IScopeSubjectResolver>(),
+			provider.GetService<IScopeKeyResolver>()));
+	}
+
+	/// <summary>本次调用可见的程序集：已累积的 ∪ 本次传入；供配置里的类型名解析使用。</summary>
+	private static Assembly[] KnownAssemblies(IServiceCollection services, Assembly[] assemblies)
+	{
+		var known = assemblies ?? [];
+
+		return TryGetSetup(services) is { } setup
+			? [.. setup.Assemblies.Concat(known).Distinct()]
+			: known;
+	}
+
+	/// <summary>只读取已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>
+	private static PermissionModelSetup TryGetSetup(IServiceCollection services)
+	{
+		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
+		               ?.ImplementationInstance as PermissionModelSetup;
+	}
+
+	/// <summary>
+	/// 取得累积状态；首次调用时创建并登记。
+	/// </summary>
+	private static PermissionModelSetup GetOrCreateSetup(IServiceCollection services)
+	{
+		if (TryGetSetup(services) is { } existing)
+		{
+			return existing;
+		}
+
+		var setup = new PermissionModelSetup();
+		services.AddSingleton(setup);
+		return setup;
+	}
+
+	/// <summary>
+	/// 判断给定程序集中是否存在权限声明（类型级 <see cref="PermissionAttribute"/> 或可解析的权限码）。
+	/// </summary>
 	internal static bool HasPermissionDeclarations(IEnumerable<Assembly> assemblies, IPermissionCodeSource codeSource)
 	{
 		foreach (var type in AssemblyHelper.LoadTypes(assemblies))
@@ -359,4 +271,53 @@ public static class ServiceCollectionExtensions
 		return false;
 	}
 
+	/// <summary>
+	/// 追加要扫描的程序集（数据权限模型与权限声明），不改变权限码来源。
+	/// </summary>
+	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
+	/// <param name="assemblies">要扫描的程序集。</param>
+	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
+	/// <remarks>
+	/// 用于「模型分散在多个程序集、权限码来源只有一处」的布局。
+	/// 本方法不提供来源：若尚无任何来源，方法级 <see cref="PermissionAttribute"/> 不参与判定，
+	/// 按权限码声明的策略会被注册期死策略校验拒绝——两者都不会静默放行。
+	/// </remarks>
+	public static IServiceCollection AddPermissionModels(this IServiceCollection services, params Assembly[] assemblies)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+
+		var setup = GetOrCreateSetup(services);
+		setup.AddAssemblies(assemblies ?? []);
+
+		RegisterEngine(services);
+
+		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
+		services.RemoveAll<ScopeModelRegistry>();
+		services.AddSingleton(registry);
+
+		services.RemoveAll<IPermissionCodeSource>();
+		services.AddSingleton(setup.CodeSource);
+
+		services.RemoveAll<PermissionSetup>();
+		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
+
+		return services;
+	}
+
+	/// <summary>
+	/// 断言本应用没有任何权限模型与权限声明；仅用于没有任何扫描范围的场景。
+	/// </summary>
+	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
+	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
+	/// <remarks>
+	/// <c>AddPermission</c> 全程一个程序集都没给时，扫描范围为空会让行级数据权限静默失效，
+	/// 启动期校验也会因「没有声明」一并短路。调用本方法即等于说「这是有意的」，校验据此放行。
+	/// </remarks>
+	public static IServiceCollection AssertNoPermissionModels(this IServiceCollection services)
+	{
+		ArgumentNullException.ThrowIfNull(services);
+
+		GetOrCreateSetup(services).NoModelsAsserted = true;
+		return services;
+	}
 }

@@ -91,7 +91,11 @@ public class AddPermissionTests
 	public void AddPermission_Should_Make_The_Source_Answer_Requirements_For_Hosts()
 	{
 		// 宿主不必自己写「要求来源」的转换：引擎把容器里的权限码来源回答成要求（角色等原样保留）
-		var provider = Build(s => s.AddPermission(o => o.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)), TestAssembly));
+		var provider = Build(s => s.AddPermission(p =>
+		{
+			p.Scan(TestAssembly);
+			p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute));
+		}));
 
 		var requirements = provider.GetRequiredService<IPermissionCodeSource>()
 		                           .RequirementsFor(typeof(ApprovableAsset), BusinessOperation.Read);

@@ -30,7 +30,7 @@ public class OperationCaseInsensitivityTests
 	{
 		// 声明端写成大写，运行时用 BusinessOperation.Execute（"execute"）查询
 		var services = new ServiceCollection();
-		services.AddPermission(o => o.OnMethodName("Execute", "Run"), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("Execute", "Run"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -41,8 +41,8 @@ public class OperationCaseInsensitivityTests
 	public void Operations_Declared_With_Different_Casing_Should_Collapse_Into_One_Vocabulary_Entry()
 	{
 		var services = new ServiceCollection();
-		services.AddPermission(o => o.OnMethodName("Execute", "Run"), FixturesAssembly);
-		services.AddPermission(o => o.OnMethodName("EXECUTE", "Run"), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("Execute", "Run"); });
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("EXECUTE", "Run"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -57,7 +57,7 @@ public class OperationCaseInsensitivityTests
 		// 同一操作上两次声明只差大小写的码，必须收敛成一个：
 		// 否则下游 ScopeKeyResolver 的「同一操作最多一个有策略的码」会误报歧义。
 		var services = new ServiceCollection();
-		services.AddPermission(o => o.OnMethodName(BusinessOperation.Execute, "Run", "Execute"), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnMethodName(BusinessOperation.Execute, "Run", "Execute"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
