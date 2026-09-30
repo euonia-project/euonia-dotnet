@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_TYPE_CANNOT_NULL" xml:space="preserve">
+    <value>Der Typ darf nicht null sein.</value>
+  </data>
+  <data name="IDS_CONVENTION_PROVIDER_REQUIRED" xml:space="preserve">
+    <value>Es muss mindestens eine Konvention angegeben werden.</value>
+  </data>
+  <data name="IDS_NO_HANDLER_REGISTERED" xml:space="preserve">
+    <value>Für die Nachricht {0} ist auf dem Kanal {1} kein Handler registriert</value>
+  </data>
+  <data name="IDS_INBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>Der Inbox-Speicher ist nicht registriert, obwohl die Inbox aktiviert ist. Registrieren Sie eine IInboxStore-Implementierung (z. B. services.AddInMemoryInbox()).</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
+    <value>Die Methode existiert nicht.</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
+    <value>Die Handlermethode muss mindestens einen Parameter enthalten</value>
+  </data>
+  <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
+    <value>Der erste Parameter der Handlermethode muss der Nachrichtentyp sein</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
+    <value>Der zweite Parameter der Handlermethode muss MessageContext oder CancellationToken sein, wenn die Methode zwei Parameter enthält</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
+    <value>Der zweite und der dritte Parameter der Handlermethode müssen MessageContext und CancellationToken sein, wenn die Methode drei Parameter enthält</value>
+  </data>
+  <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
+    <value>Die Handlermethode darf kein SubscribeAttribute mit leerem Namen aufweisen</value>
+  </data>
+  <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
+    <value>Die in '{1}:AutoLoadAssemblies' konfigurierte Assembly '{0}' konnte nicht automatisch geladen werden.</value>
+  </data>
+  <data name="IDS_CHANNEL_ALREADY_REGISTERED" xml:space="preserve">
+    <value>Der Kanal '{0}' ist bereits mit einem anderen Nachrichtentyp registriert.</value>
+  </data>
+  <data name="IDS_CONFIGURATOR_BUILDER_CANNOT_NULL" xml:space="preserve">
+    <value>Der Configurator-Builder darf nicht null sein.</value>
+  </data>
+  <data name="IDS_ASSEMBLIES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>Assemblies dürfen weder null noch leer sein.</value>
+  </data>
+  <data name="IDS_HANDLER_TYPES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>Handlertypen dürfen weder null noch leer sein.</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER" xml:space="preserve">
+    <value>Der Typ {0} implementiert keine IHandler&lt;,&gt;-Schnittstelle.</value>
+  </data>
+  <data name="IDS_HANDLER_TYPE_MUST_BE_CONCRETE" xml:space="preserve">
+    <value>Der Typ {0} muss eine nicht abstrakte Klasse sein.</value>
+  </data>
+  <data name="IDS_TRANSPORT_NOT_REGISTERED" xml:space="preserve">
+    <value>Der Transport '{0}' ist nicht registriert.</value>
+  </data>
+  <data name="IDS_MULTIPLE_TRANSPORTS_FOR_UNICAST" xml:space="preserve">
+    <value>Für einen Unicast-Nachrichtentyp sind mehrere Transporte konfiguriert.</value>
+  </data>
+  <data name="IDS_NO_TRANSPORT_FOR_MESSAGE_TYPE" xml:space="preserve">
+    <value>Für den Nachrichtentyp '{0}' ist auf dem Kanal '{1}' kein Transport konfiguriert, und es ist kein Standard-Transporter konfiguriert.</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_MULTICAST" xml:space="preserve">
+    <value>Der Nachrichtentyp ist kein Multicast-Typ.</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_UNICAST" xml:space="preserve">
+    <value>Der Nachrichtentyp ist kein Unicast-Typ.</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_REQUEST" xml:space="preserve">
+    <value>Der Nachrichtentyp ist kein Anforderungstyp.</value>
+  </data>
+  <data name="IDS_OUTBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>Der Outbox-Speicher ist nicht registriert, obwohl die Nachricht '{0}' die Outbox-Persistenz benötigt. Registrieren Sie eine IOutboxStore-Implementierung (z. B. services.AddInMemoryOutbox()).</value>
+  </data>
+  <data name="IDS_OUTBOX_MESSAGE_ALREADY_EXISTS" xml:space="preserve">
+    <value>Die Outbox-Nachricht mit der ID '{0}' ist bereits vorhanden.</value>
+  </data>
+  <data name="IDS_DELAY_TOO_LARGE" xml:space="preserve">
+    <value>Die Verzögerung darf {0} Millisekunden (etwa 49,7 Tage) nicht überschreiten.</value>
+  </data>
+  <data name="IDS_CALL_TIMEOUT" xml:space="preserve">
+    <value>Der Aufruf wurde nicht innerhalb des konfigurierten Timeouts ({0} ms) abgeschlossen.</value>
+  </data>
+  <data name="IDS_CHANNEL_NAME_REQUIRED" xml:space="preserve">
+    <value>Der Kanalname für den Nachrichtentyp '{0}' darf weder null noch leer sein. Geben Sie einen Kanal in den Optionen an, oder konfigurieren Sie einen Standardkanal für diesen Nachrichtentyp.</value>
+  </data>
+  <data name="IDS_STRATEGY_REQUIRED" xml:space="preserve">
+    <value>Es ist mindestens eine Strategie erforderlich.</value>
+  </data>
+  <data name="IDS_REMOTE_PAYLOAD_INVALID_TYPE_NAME" xml:space="preserve">
+    <value>Die Nutzdaten der Remotenachricht enthalten keinen gültigen Nachrichtentypnamen.</value>
+  </data>
+  <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
+    <value>Der Nachrichtentyp '{0}' konnte nicht aufgelöst werden.</value>
+  </data>
+</root>
