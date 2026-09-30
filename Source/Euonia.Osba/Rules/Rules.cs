@@ -326,6 +326,21 @@ public class Rules : IRules
 	/// </summary>
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
+	/// <remarks>
+	/// <para>
+	/// <b>同步契约的固有阻塞</b>：本方法与 <see cref="CheckRules(IPropertyInfo)"/> 一样运行在
+	/// 调用线程上——这是同步 API 的既定代价，不是缺陷（O-4 方案 A 的 fail-fast 曾试过
+	/// 把「未同步完成的异步规则」变成异常，因破坏既有契约被否决并回滚）。
+	/// </para>
+	/// <para>
+	/// <b>异步调用方请改走 <see cref="CheckObjectRulesAsync"/>（O-4 方案 B）</b>：
+	/// 它是本方法的异步对等物（同一解析、同一裁决、同一通知），只是 <c>await</c> 而不是
+	/// <c>Task.WaitAll</c>——不会阻塞线程池线程，也就不存在「并发下线程池饥饿」。
+	/// 生产代码中的保存（<c>EditableObject.SaveAsync</c>）、命令执行（<c>ObjectRuleGuard</c>）
+	/// 与 <c>BusinessObject.ValidateAsync</c> 全部已经走异步入口；
+	/// 本方法保留给纯同步宿主（WPF/WinForms 命令处理器等）使用。
+	/// </para>
+	/// </remarks>
 	public List<string> CheckObjectRules(bool cascade)
 	{
 		if (IsRuleCheckingSuspended)
@@ -455,6 +470,18 @@ public class Rules : IRules
 	/// <param name="property">要检查规则的属性。</param>
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 <c>null</c> 时抛出。</exception>
+	/// <remarks>
+	/// <para>
+	/// <b>setter 热路径的同步契约</b>：本方法由 <c>BusinessObject.CheckPropertyRules</c> 在属性变更时调用，
+	/// 阻塞调用线程是同步 API 的既定代价（也是 <c>CheckRuleOnPropertyChanged</c> 约束的来源：
+	/// 属性级规则应当是同步即可完成的纯校验）。
+	/// </para>
+	/// <para>
+	/// <b>含 I/O 的属性级校验请改走 <see cref="CheckRulesAsync(IPropertyInfo, CancellationToken)"/>（O-4 方案 B）</b>：
+	/// 那条路径把属性检查推迟到保存时（<c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型），
+	/// 在异步流程里 <c>await</c> 而不是 <c>Task.WaitAll</c>——不阻塞线程池线程。
+	/// </para>
+	/// </remarks>
 	public List<string> CheckRules(IPropertyInfo property)
 	{
 		if (property == null)

@@ -259,6 +259,30 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 异步检查指定属性的规则（O-4 方案 B 的公共出口）。
+	/// </summary>
+	/// <param name="property">目标属性。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步检查操作的任务。</returns>
+	/// <remarks>
+	/// <para>
+	/// 与 <see cref="CheckPropertyRules(IPropertyInfo)"/>（同步、阻塞、供 setter 热路径）相对：
+	/// 本方法在<b>异步流程里</b> <c>await</c> 属性级规则——含 I/O 的校验（查库、调远端）
+	/// 不再阻塞线程池线程。典型用法是 <c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型
+	/// 在保存前的异步管线里逐属性校验；「推迟到保存时」的路径
+	/// （<see cref="EnsureRulesAsync(string, CancellationToken)"/>）内部走的就是同一异步内核。
+	/// </para>
+	/// <para>
+	/// 与保存路径的差别：本方法<b>只跑指定属性</b>、不清对象级违规、不抛
+	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>——结论仍经 <see cref="IsValid"/> 读取。
+	/// </para>
+	/// </remarks>
+	internal async Task CheckPropertyRulesAsync(IPropertyInfo property, CancellationToken cancellationToken = default)
+	{
+		await Rules.CheckRulesAsync(property, cancellationToken);
+	}
+
+	/// <summary>
 	/// 当验证完成时调用。
 	/// </summary>
 	/// <remarks>
@@ -503,9 +527,42 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Property Checks
 
 	/// <summary>
-	/// 获取或设置一个值，指示对象是否应绕过属性检查。
+	/// 绕过规则检查的<b>异步流作用域</b>开关（每实例一份 <see cref="AsyncLocal{T}"/> 容器）。
 	/// </summary>
-	protected virtual bool IsBypassingRuleChecks { get; set; }
+	/// <remarks>
+	/// <para>
+	/// <b>BREAKING 变更（原为对象级 <c>bool</c>）</b>：标志挂在当前 <see cref="AsyncLocal{T}"/>（逻辑执行流）上，
+	/// 而不是对象字段上。
+	/// </para>
+	/// <para>
+	/// 原对象级布尔有两个可证明的缺陷：
+	/// ① <c>using (target.BypassRuleChecks) { await handler(target); }</c> 期间标志<b>跨 await 存活在对象上</b>，
+	/// 异步 handler 执行期间同实例的<b>并发</b> setter 会被一并跳过写权限检查、变更追踪与通知——
+	/// 其中 <c>PropertyHasChanged</c> 是唯一写入 <c>_changedProperties</c> 的路径，被跳过即<b>静默不持久化</b>；
+	/// ② 并发进出 <c>using</c> 会让先退出的调用方把还在线程上的后一个调用方的绕过状态一并还原。
+	/// 改为 AsyncLocal 后：绕过只影响<b>发起它的逻辑流及其派生流</b>，并发调用方互不可见；
+	/// <c>using</c> 退出时恢复的是<b>本流</b>进入前的值（嵌套绕过正确叠加/还原）。
+	/// </para>
+	/// <para>
+	/// 保留 <c>virtual</c>（派生类如需「永不绕过」可整体覆盖为恒 <see langword="false"/>），
+	/// 但 setter 语义从「写对象状态」变为「写本异步流的值」，覆写时请保持流作用域语义。
+	/// </para>
+	/// </remarks>
+	protected virtual bool IsBypassingRuleChecks
+	{
+		get => (_bypassScope?.Value ?? false);
+		set
+		{
+			_bypassScope ??= new AsyncLocal<bool>();
+			_bypassScope.Value = value;
+		}
+	}
+
+	/// <summary>
+	/// 本实例的绕过开关容器；<see langword="null"/> 表示从未在本流的任何位置置位（读侧零分配）。
+	/// </summary>
+	[ThreadStatic]
+	private AsyncLocal<bool> _bypassScope;
 
 	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
 
@@ -519,14 +576,20 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 用于创建绕过规则检查的对象，允许设置某些即使不是严格有效的值。
 	/// 该对象还允许开发者在任何时候检查某些规则是否正在被绕过。
 	/// </summary>
+	/// <remarks>
+	/// <see cref="Dispose"/> 还原的是<b>进入时捕获的本流旧值</b>而不是恒 <see langword="false"/>：
+	/// 嵌套 <c>using</c>（例如 lambda 规则内再嵌一层绕过）退出时不会关闭外层的绕过状态。
+	/// </remarks>
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
 		private BusinessObject _target;
+		private readonly bool _captured;
 		private static readonly Lock _lock = new();
 
 		private BypassRuleChecksObject(BusinessObject target)
 		{
 			_target = target;
+			_captured = target.IsBypassingRuleChecks;
 			_target.IsBypassingRuleChecks = true;
 		}
 
@@ -617,7 +680,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 					return;
 				}
 
-				_target.IsBypassingRuleChecks = false;
+				// 还原「进入时捕获的旧值」而不是恒 false：嵌套 using 退出时不关闭外层绕过。
+				// AsyncLocal 语义下这写的是本异步流的值——并发的其他流不受影响，
+				// 也不再把对象级标志误还原给正在别处绕过的调用方。
+				_target.IsBypassingRuleChecks = _captured;
 				_target.InternalBypassRuleChecks = null;
 				_target = null;
 			}
