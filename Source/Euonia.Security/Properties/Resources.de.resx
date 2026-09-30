@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>Die Berechtigungskonfiguration widerspricht sich selbst: NoModels wurde bestätigt (kein Berechtigungsmodell und keine Deklaration), es wurden jedoch zu scannende Assemblies angegeben. Bestätigen Sie NoModels nicht, wenn es Assemblies zu scannen gibt.</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>Die Berechtigungskonfiguration widerspricht sich: Eine Berechtigungscode-Quelle wurde angegeben (Source), gleichzeitig wurden Regeln für Operationseingänge deklariert. Beides sind sich ausschließende Quellformen: Die Quelle beantwortet selbst, welche Berechtigungscodes ein Typ für eine Operation deklariert; Eingangsregeln sind nur eine dieser Implementierungen.</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>AddPermission wurde ohne eine zu scannende Assembly aufgerufen. Sowohl die Berechtigungsmodelle als auch die [Permission]-Deklarationen stammen aus dem Assembly-Scan: Ein leerer Scanbereich deaktiviert den Datenbereich auf Zeilenebene stillschweigend, und die Startvalidierung wird ebenfalls kurzgeschlossen, weil nichts deklariert wurde. Übergeben Sie die zu scannenden Assemblies, beispielsweise AddPermission(source, typeof(X).Assembly); wenn die Anwendung tatsächlich kein Berechtigungsmodell und keine [Permission]-Deklaration hat, bestätigen Sie explizit services.AssertNoPermissionModels().</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>Die Bereichsrichtlinie des Ressourcentyps '{0}' verweist auf die nicht zugeordnete Dimension '{1}'. Rufen Sie in Define des Berechtigungsmodells Map("{1}", ...) auf (verwenden Sie MapMany("{1}", ...), wenn der Wert aus einer untergeordneten Tabelle stammt); zugeordnete Dimensionen: {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>Die Berechtigungscode-Quelle wurde bereits angegeben; sie kann nur einmal angegeben werden.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Die Registrierungsvalidierung des Berechtigungsmodells ist fehlgeschlagen.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Die Registrierungsvalidierung des Berechtigungsmodells ist mit {0} Problemen fehlgeschlagen:</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>Das Berechtigungsmodell konnte nicht instanziiert werden: {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>Die Ressource ist null; keine Entscheidung möglich (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>Kein Berechtigungsmodell registriert; keine Einschränkung durch den Datenbereich</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(keine)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Entscheidung: {0}; Bereichsschlüssel: {1}; erfüllte Zulassungen: {2}; erfüllte Ablehnungen: {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>zulassen</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>ablehnen</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>Der Wertausdruck '{1}' der Dimension '{0}' wird nicht unterstützt. Eine Auflistungsdimension unterstützt nur die Form "eine Navigationsauflistung der Ressource (optional über Where gefiltert) und dann ihr Zeichenfolgenwert", beispielsweise x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId) oder x =&gt; x.MemberIds, wenn das Element selbst eine Zeichenfolge ist; jede andere Form kann nicht in eine EXISTS-Unterabfrage pushdown übertragen werden und wird daher hier abgelehnt. Verwenden Sie Map für einen Einzelwert, der direkt in der Zeile liegt.</value>

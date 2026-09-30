@@ -71,7 +71,7 @@ public sealed class ScopeModelRegistryBuilder
 			}
 			catch (Exception exception)
 			{
-				problems.Add(new ScopeModelDiagnostic(name, $"无法实例化权限模型：{exception.Message}"));
+				problems.Add(new ScopeModelDiagnostic(name, string.Format(Resources.IDS_MODEL_INSTANTIATE_FAILED, exception.Message)));
 				continue;
 			}
 
@@ -183,7 +183,7 @@ public sealed class ScopeModelRegistryBuilder
 				continue;
 			}
 
-			return string.Format(Resources.IDS_SCOPE_CODE_NEVER_RESOLVED, code, resolved.Count == 0 ? "（无）" : string.Join(", ", resolved));
+						return string.Format(Resources.IDS_SCOPE_CODE_NEVER_RESOLVED, code, resolved.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", resolved));
 		}
 
 		return null;

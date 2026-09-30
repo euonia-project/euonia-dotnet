@@ -211,7 +211,7 @@ public class PermissionRuleConfigurationTests
 		})));
 
 		Assert.Contains("Attributes", exception.Message);
-		Assert.Contains("数组", exception.Message);
+		Assert.Contains("written as an array", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -223,7 +223,7 @@ public class PermissionRuleConfigurationTests
 			("Operations:execute:Names:0", nameof(UnionProbeAsset.Probe))
 		})));
 
-		Assert.Contains("非空字符串", exception.Message);
+		Assert.Contains("non-empty string", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains("Attributes:0", exception.Message);
 	}
 
@@ -237,7 +237,7 @@ public class PermissionRuleConfigurationTests
 			("Operations:execute:Name:0", "Run")
 		})));
 
-		Assert.Contains("未知的节点", exception.Message);
+		Assert.Contains("unknown", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains("Names", exception.Message);
 	}
 
@@ -255,7 +255,7 @@ public class PermissionRuleConfigurationTests
 
 		var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddPermission(section));
 
-		Assert.Contains("大小写", exception.Message);
+		Assert.Contains("differs from an earlier operation only by case", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -266,7 +266,7 @@ public class PermissionRuleConfigurationTests
 			("Operations:execute:Attributes:0", typeof(GenericMarkAttribute<>).FullName)
 		}), TestAssembly));
 
-		Assert.Contains("泛型", exception.Message);
+		Assert.Contains("generic", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -293,7 +293,7 @@ public class PermissionRuleConfigurationTests
 		})));
 
 		Assert.Contains("No.Such.TypeName", exception.Message);
-		Assert.Contains("无法解析", exception.Message);
+		Assert.Contains("cannot be resolved", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -374,7 +374,7 @@ public class PermissionRuleConfigurationTests
 		}), TestAssembly));
 
 		Assert.Contains(nameof(SharedEntryAttribute), exception.Message);
-		Assert.Contains("完整类型名", exception.Message);
+		Assert.Contains("ambiguous short name", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -385,7 +385,7 @@ public class PermissionRuleConfigurationTests
 			("Operations:execute:Attributes:0", typeof(GuardedAsset).FullName)
 		}), FixturesAssembly));
 
-		Assert.Contains("不是特性", exception.Message);
+		Assert.Contains("not an attribute", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	#endregion

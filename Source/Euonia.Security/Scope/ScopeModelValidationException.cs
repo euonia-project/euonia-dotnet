@@ -31,12 +31,12 @@ public sealed class ScopeModelValidationException : Exception
 	{
 		if (diagnostics == null || diagnostics.Count == 0)
 		{
-			return "权限模型注册期校验失败。";
+			return Resources.IDS_VALIDATION_FAILED_SINGLE;
 		}
 
 		var lines = new List<string>(diagnostics.Count + 1)
 		{
-			$"权限模型注册期校验失败，共 {diagnostics.Count} 处问题："
+			string.Format(Resources.IDS_VALIDATION_FAILED_MULTIPLE, diagnostics.Count)
 		};
 
 		for (var index = 0; index < diagnostics.Count; index++)

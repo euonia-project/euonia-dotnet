@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>The permission configuration contradicts itself: NoModels was asserted (no permission model and no declaration) yet scanning assemblies were given. Do not assert NoModels when there are assemblies to scan.</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>The permission configuration contradicts itself: a permission code source was specified (Source) yet operation entry rules were declared. The two are mutually exclusive source shapes: the source itself answers which permission codes a type declares for an operation, and entry rules are just one of its implementations.</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>AddPermission was called without any assembly to scan. Both permission models and [Permission] declarations come from assembly scanning: an empty scanning scope silently disables row-level data scope, and the start-up validation short-circuits as well because nothing was declared. Pass the assemblies to scan, for example AddPermission(source, typeof(X).Assembly); if the application really has no permission model and no [Permission] declaration, assert services.AssertNoPermissionModels() explicitly.</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>The scope policy of resource type '{0}' references the unmapped dimension '{1}'. Please call Map("{1}", ...) in Define of the permission model (use MapMany("{1}", ...) when the value comes from a child table); mapped dimensions: {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>The permission code source has already been specified; it can only be specified once.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Permission model registration validation failed.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Permission model registration validation failed with {0} problems:</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>Failed to instantiate the permission model: {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>Resource is null; cannot make a decision (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>No permission model registered; not constrained by data scope</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Decision: {0}; scope key: {1}; matched allows: {2}; matched denies: {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>allow</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>deny</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>The value expression '{1}' of dimension '{0}' is not supported. A collection dimension only supports the shape "a navigation collection of the resource (optionally filtered by Where) then its string value", for example x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId), or x =&gt; x.MemberIds when the element itself is a string; every other shape can not be pushed down into an EXISTS sub-query and is therefore rejected here. Use Map for a single value that lives on the row itself.</value>

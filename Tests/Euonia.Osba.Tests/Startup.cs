@@ -20,7 +20,11 @@ public class Startup
 		           {
 			           services.AddModularityApplication<BusinessTestModule>();
 			           services.AddBusinessObject(typeof(Startup).Assembly);
-			           services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Startup).Assembly);
+			           services.AddPermission(permission =>
+			           {
+				           permission.Scan(typeof(Startup).Assembly);
+				           permission.Source(ObjectPermissionRequirementProvider.Instance);
+			           });
 			           // Register service here.
 		           });
 	}

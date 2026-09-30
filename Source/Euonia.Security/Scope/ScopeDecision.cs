@@ -16,10 +16,10 @@ public sealed record ScopeDecision(bool Allowed, string ScopeKey, IReadOnlyList<
 	/// <remarks>带上策略键，便于审计时定位「是哪条行级策略给出的结论」。</remarks>
 	public override string ToString()
 	{
-		var verdict = Allowed ? "允许" : "拒绝";
-		var allows = MatchedAllows.Count == 0 ? "（无）" : string.Join(", ", MatchedAllows);
-		var denies = MatchedDenies.Count == 0 ? "（无）" : string.Join(", ", MatchedDenies);
+		var verdict = Allowed ? Resources.IDS_DECISION_ALLOW : Resources.IDS_DECISION_DENY;
+		var allows = MatchedAllows.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", MatchedAllows);
+		var denies = MatchedDenies.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", MatchedDenies);
 
-		return $"判定：{verdict}；策略键：{ScopeKey}；成立的允许条件：{allows}；成立的拒绝条件：{denies}";
+		return string.Format(Resources.IDS_DECISION_SUMMARY, verdict, ScopeKey, allows, denies);
 	}
 }

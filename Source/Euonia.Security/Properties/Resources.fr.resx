@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>La configuration des autorisations se contredit : NoModels a été affirmé (aucun modèle d'autorisation ni déclaration), alors que des assemblies à analyser ont été fournies. N'affirmez pas NoModels lorsqu'il y a des assemblies à analyser.</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>La configuration des autorisations se contredit : une source de codes d'autorisation a été spécifiée (Source) et des règles d'entrée d'opération ont été déclarées. Les deux formes sont mutuellement exclusives : la source répond elle-même aux codes d'autorisation qu'un type déclare pour une opération ; les règles d'entrée ne sont que l'une de ses implémentations.</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>AddPermission a été appelée sans aucune assembly à analyser. Les modèles d'autorisation comme les déclarations [Permission] proviennent de l'analyse des assemblies : une portée d'analyse vide désactive silencieusement la portée de données au niveau des lignes, et la validation au démarrage est également court-circuitée puisque rien n'a été déclaré. Passez les assemblies à analyser, par exemple AddPermission(source, typeof(X).Assembly) ; si l'application n'a réellement aucun modèle d'autorisation ni aucune déclaration [Permission], affirmez explicitement services.AssertNoPermissionModels().</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>La politique de portée du type de ressource '{0}' référence la dimension non mappée '{1}'. Veuillez appeler Map("{1}", ...) dans Define du modèle d'autorisation (utilisez MapMany("{1}", ...) lorsque la valeur provient d'une table enfant) ; dimensions mappées : {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>La source de codes d'autorisation a déjà été spécifiée ; elle ne peut être spécifiée qu'une seule fois.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Échec de la validation d'enregistrement du modèle d'autorisation.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Échec de la validation d'enregistrement du modèle d'autorisation avec {0} problèmes :</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>Impossible d'instancier le modèle d'autorisation : {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>La ressource est null ; décision impossible (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>Aucun modèle d'autorisation enregistré ; non soumis à la contrainte de portée de données</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(aucun)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Décision : {0} ; clé de portée : {1} ; autorisations correspondantes : {2} ; refus correspondants : {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>autoriser</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>refuser</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>L'expression de valeur '{1}' de la dimension '{0}' n'est pas prise en charge. Une dimension de collection ne prend en charge que la forme « une collection de navigation de la ressource (éventuellement filtrée par Where) puis sa valeur de chaîne », par exemple x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId), ou x =&gt; x.MemberIds lorsque l'élément est lui-même une chaîne ; toute autre forme ne peut pas être déplacée dans une sous-requête EXISTS et est donc rejetée ici. Utilisez Map pour une valeur unique portée par la ligne elle-même.</value>

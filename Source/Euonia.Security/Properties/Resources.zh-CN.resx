@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>权限配置自相矛盾：已断言 NoModels（没有任何权限模型与声明），却又传入了扫描程序集。有程序集要扫描就不要断言 NoModels。</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>权限配置自相矛盾：已指定权限码来源（Source），却又声明了操作入口规则。两者是互斥的来源形态：来源自己回答「某类型在某操作上声明了哪些权限码」，入口规则只是其中一种实现。</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>调用了 AddPermission 却没有指定任何要扫描的程序集。权限模型与 [Permission] 声明都来自程序集扫描：扫描范围为空会让行级数据权限静默失效，而启动期校验也会因「没有声明」一并短路。请传入要扫描的程序集，例如 AddPermission(source, typeof(X).Assembly)；若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 services.AssertNoPermissionModels()。</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>资源类型 '{0}' 的权限策略引用了未映射的维度 '{1}'。请在权限模型的 Define 中调用 Map("{1}", ...)（取值来自子表时用 MapMany("{1}", ...)）；已映射的维度：{2}。</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>权限配置中权限码来源只能指定一次。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>权限模型注册期校验失败。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>权限模型注册期校验失败，共 {0} 处问题：</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>无法实例化权限模型：{0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>资源为 null，无法判定（fail-closed）</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>未注册权限模型，不受数据权限约束</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>（无）</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>判定：{0}；策略键：{1}；成立的允许条件：{2}；成立的拒绝条件：{3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>允许</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>拒绝</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>维度 '{0}' 的取值表达式 '{1}' 不受支持。集合维度只支持「资源的导航集合（可带 Where 过滤）再取其字符串值」这一形状，例如 x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)，或元素本身就是字符串的 x =&gt; x.MemberIds；其余形状无法下推为 EXISTS 子查询，因此在这里直接拒绝。需要行内的单值请改用 Map。</value>

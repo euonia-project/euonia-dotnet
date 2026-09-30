@@ -413,12 +413,12 @@ public sealed class ScopeGuard : IScopeGuard
 		// 排障时会把「因 null 被拒」误读成「本来就不受限」。判定与解释必须同口径（fail-closed）。
 		if (resource == null)
 		{
-			return new ScopeDecision(false, key, Array.Empty<string>(), ["资源为 null，无法判定（fail-closed）"]);
+			return new ScopeDecision(false, key, Array.Empty<string>(), [Resources.IDS_DECISION_NULL_RESOURCE]);
 		}
 
 		if (declaredType == null)
 		{
-			return new ScopeDecision(true, key, ["未注册权限模型，不受数据权限约束"], Array.Empty<string>());
+			return new ScopeDecision(true, key, [Resources.IDS_DECISION_UNMODELED], Array.Empty<string>());
 		}
 
 		_registry.TryGetInherited(declaredType, out var registration);

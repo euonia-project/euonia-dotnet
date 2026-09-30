@@ -251,7 +251,7 @@ public class CollectionDimensionTests
 			ScopeModelDescriptor.Create(new WorkspaceModel()),
 			ScopeSubjectSet.Empty));
 
-		Assert.Contains("未映射的维度", exception.Message);
+		Assert.Contains("unmapped dimension", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -262,7 +262,7 @@ public class CollectionDimensionTests
 			.Add<UnsupportedCollectionModel>()
 			.Build(EmptyCodeSource.Instance));
 
-		Assert.Contains("不受支持", exception.Message);
+		Assert.Contains("unsupported", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains("tags", exception.Message);
 	}
 

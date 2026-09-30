@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>La configuración de permisos de acceso es contradictoria: indicó NoModels (sin modelos ni declaraciones de permisos), pero especificó ensamblados que se van a examinar. No indique NoModels si hay ensamblados que examinar.</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>La configuración de permisos se contradice: se especificó una fuente de códigos de permiso (Source) y también se declararon reglas de entrada de operaciones. Ambas son formas de fuente mutuamente excluyentes: la fuente responde por sí misma qué códigos de permiso declara un tipo para una operación; las reglas de entrada son solo una de sus implementaciones.</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>Se llamó a AddPermission sin especificar ensamblados que examinar. Los modelos de permisos y las declaraciones [Permission] se obtienen del examen de ensamblados. Si el ámbito del examen está vacío, el ámbito de datos en el nivel de la fila se deshabilita de forma implícita y, al no declararse, la validación del inicio se omite. Pase los ensamblados que se van a examinar (por ejemplo, AddPermission(source, typeof(X).Assembly)). Si la aplicación no declara ningún modelo de permisos ni declaración [Permission], indique explícitamente services.AssertNoPermissionModels().</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>La política de ámbito del tipo de recurso '{0}' hace referencia a la dimensión sin asignar '{1}'. Llame a Map("{1}", ...) en Define del modelo de permisos (use MapMany("{1}", ...) si el valor procede de una tabla secundaria). Dimensiones asignadas: {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>La fuente de códigos de permiso ya se ha especificado; solo puede especificarse una vez.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Error en la validación de registro del modelo de permisos.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Error en la validación de registro del modelo de permisos con {0} problemas:</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>No se pudo instanciar el modelo de permisos: {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>El recurso es null; no se puede decidir (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>No hay modelo de permisos registrado; sin restricción de alcance de datos</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(ninguno)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Decisión: {0}; clave de alcance: {1}; permisos coincidentes: {2}; denegaciones coincidentes: {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>permitir</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>denegar</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>La expresión de valor '{1}' de la dimensión '{0}' no es compatible. Las dimensiones de colección solo admiten el valor de cadena de una colección de navegación del recurso (filtrada con Where si hace falta). Ejemplos: x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId) o x =&gt; x.MemberIds si los elementos ya son cadenas. Las demás formas no se pueden convertir en una subconsulta EXISTS, por lo que se rechazan aquí. Use Map para un único valor presente en la propia fila.</value>

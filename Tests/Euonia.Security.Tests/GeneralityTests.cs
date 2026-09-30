@@ -213,7 +213,7 @@ public class GeneralityTests
 				.Add(new AssetModel())
 				.Build(EmptyCodeSource.Instance));
 
-		Assert.Contains(exception.Diagnostics, x => x.Message.Contains("多个权限模型"));
+		Assert.Contains(exception.Diagnostics, x => x.Message.Contains("more than one permission model"));
 	}
 
 	[Fact]
@@ -248,8 +248,8 @@ public class GeneralityTests
 				.Build(EmptyCodeSource.Instance));
 
 		Assert.Equal(2, exception.Diagnostics.Count);
-		Assert.Contains("未映射的维度", exception.Message);
-		Assert.Contains("恒不放行", exception.Message);
+		Assert.Contains("unmapped dimension", exception.Message, StringComparison.OrdinalIgnoreCase);
+		Assert.Contains("can never allow structurally", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]
@@ -263,7 +263,7 @@ public class GeneralityTests
 		var diagnostic = Assert.Single(exception.Diagnostics);
 
 		Assert.Equal(nameof(AlwaysDenyModel), diagnostic.ModelName);
-		Assert.Contains("恒不放行", diagnostic.Message);
+		Assert.Contains("can never allow structurally", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	#endregion

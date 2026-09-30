@@ -126,6 +126,9 @@
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
     <value>アクセス許可の構成が矛盾しています。NoModels (アクセス許可モデルも宣言もなし) を表明しているのに、スキャン対象のアセンブリが指定されています。スキャン対象のアセンブリがある場合は NoModels を表明しないでください。</value>
   </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>アクセス許可の構成に矛盾があります: アクセス許可コードのソース (Source) が指定されているのに、操作エントリの規則が宣言されています。両者は相互に排他的なソース形式です。ソース自体が「ある型がある操作に対して宣言するアクセス許可コード」に答え、エントリ規則はその実装の一つにすぎません。</value>
+  </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
     <value>スキャン対象のアセンブリを指定せずに AddPermission が呼び出されました。アクセス許可モデルと [Permission] 宣言はどちらもアセンブリのスキャンから取得されます。スキャン範囲が空だと行レベルのデータ スコープが暗黙に無効になり、宣言されていないためスタートアップ時の検証も短絡します。スキャン対象のアセンブリを渡してください (例: AddPermission(source, typeof(X).Assembly)。アプリケーションに本当にアクセス許可モデルも [Permission] 宣言もない場合は、services.AssertNoPermissionModels() を明示的に表明してください。</value>
   </data>
@@ -218,6 +221,36 @@
   </data>
   <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
     <value>リソース型 '{0}' のスコープポリシーが未マップの次元 '{1}' を参照しています。アクセス許可モデルの Define で Map("{1}", ...) を呼び出してください (値が子テーブルに由来する場合は MapMany("{1}", ...) を使用します)。マップ済みの次元: {2}。</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>アクセス許可コードのソースは既に指定されています。指定できるのは一度だけです。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>権限モデルの登録検証に失敗しました。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>権限モデルの登録検証に失敗しました（{0} 件の問題）：</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>権限モデルをインスタンス化できませんでした：{0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>リソースが null のため判定できません（fail-closed）</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>権限モデルが未登録のため、データスコープの制約を受けません</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>（なし）</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>判定：{0}；ポリシーキー：{1}；成立した許可条件：{2}；成立した拒否条件：{3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>許可</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>拒否</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
     <value>次元 '{0}' の値式 '{1}' はサポートされていません。コレクション次元がサポートするのは「リソースのナビゲーション コレクション (必要に応じて Where でフィルター) の文字列値」という形式のみです。例: x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)、または要素自体が文字列の場合は x =&gt; x.MemberIds。その他の形式は EXISTS サブクエリにプッシュダウンできないため、ここでは拒否されます。行自体に存在する単一の値には Map を使用してください。</value>

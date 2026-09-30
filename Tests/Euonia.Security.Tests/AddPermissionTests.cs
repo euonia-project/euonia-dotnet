@@ -185,7 +185,7 @@ public class AddPermissionTests
 
 		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
 
-		Assert.Contains("程序集", exception.Message, StringComparison.Ordinal);
+		Assert.Contains("without any assembly", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains(nameof(ServiceCollectionExtensions.AssertNoPermissionModels), exception.Message, StringComparison.Ordinal);
 	}
 

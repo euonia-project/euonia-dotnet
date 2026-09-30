@@ -47,9 +47,9 @@ public class PhaseOneRegressionTests
 	public void SubjectSet_Should_Not_Hand_Out_Writable_Collections()
 	{
 		var subjects = ScopeSubjectSet.CreateBuilder()
-		                              .AddCode("repo:delete")
-		                              .Add(ScopeDimensions.Dept, "team-a")
-		                              .Build();
+									  .AddCode("repo:delete")
+									  .Add(ScopeDimensions.Dept, "team-a")
+									  .Build();
 
 		// Codes 原本直接返回底层 HashSet：强转回去 Add 一个 'admin:*' 就等于凭空发权限码
 		var codes = Assert.IsAssignableFrom<ICollection<string>>(subjects.Codes);
@@ -83,7 +83,7 @@ public class PhaseOneRegressionTests
 	public void Build_Should_Publish_A_Snapshot_Not_The_Builder_State()
 	{
 		var builder = ScopeSubjectSet.CreateBuilder()
-		                             .Add(ScopeDimensions.Dept, "team-a");
+									 .Add(ScopeDimensions.Dept, "team-a");
 
 		var snapshot = builder.Build();
 
@@ -105,10 +105,10 @@ public class PhaseOneRegressionTests
 		// 回归：HoldsPermission 一直按 OrdinalIgnoreCase 比较，而按码取授予是 Ordinal。
 		// 差值 = "REPO:DELETE" 通过类型级闸门、却在行级落空并回落到更宽的 @default。
 		var subjects = ScopeSubjectSet.CreateBuilder()
-		                              .AddCode("repo:delete")
-		                              .Add(ScopeDimensions.Dept, "team-default")
-		                              .AddGrant("repo:delete", ScopeDimensions.Dept, "team-scoped")
-		                              .Build();
+									  .AddCode("repo:delete")
+									  .Add(ScopeDimensions.Dept, "team-default")
+									  .AddGrant("repo:delete", ScopeDimensions.Dept, "team-scoped")
+									  .Build();
 
 		Assert.True(subjects.HoldsPermission("REPO:DELETE"));
 		Assert.True(subjects.HoldsPermission("repo:delete"));
@@ -122,8 +122,8 @@ public class PhaseOneRegressionTests
 	public void Dimension_Name_Case_Insensitive_Value_Case_Sensitive_Rule_Should_Hold()
 	{
 		var subjects = ScopeSubjectSet.CreateBuilder()
-		                              .Add("Dept", "TeamA")
-		                              .Build();
+									  .Add("Dept", "TeamA")
+									  .Build();
 
 		Assert.True(subjects.Contains(ScopeKeys.Default, "DEPT", "TeamA"));
 		Assert.False(subjects.Contains(ScopeKeys.Default, "dept", "teama"));
@@ -143,8 +143,7 @@ public class PhaseOneRegressionTests
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
 		Assert.False(guard.AllowsObject(null));
-		Assert.Contains("判定：拒绝", guard.ExplainObject(null));
-
+		Assert.Contains("Decision: deny", guard.ExplainObject(null), StringComparison.OrdinalIgnoreCase);
 		// 未注册权限模型的类型：null 资源同样判不出，不得因「类型不受约束」而放行
 		Assert.False(guard.Allows<ClassLevelAsset>(null));
 		Assert.False(guard.Explain<ClassLevelAsset>(null).Allowed);
@@ -243,7 +242,8 @@ public class PhaseOneRegressionTests
 		services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
 		services.AddSingleton<IScopeSubjectResolver>(resolver ?? new FixedSubjectResolver(grants: [(ScopeDimensions.Dept, "team-a")]));
 
-		return services.BuildServiceProvider();	}
+		return services.BuildServiceProvider();
+	}
 
 	private static UserPrincipal User()
 	{
@@ -282,8 +282,8 @@ internal sealed class SwappableSubjectResolver : IScopeSubjectResolver
 	private static ScopeSubjectSet Build(string dept)
 	{
 		return ScopeSubjectSet.CreateBuilder()
-		                      .AddSelf("tester")
-		                      .Add(ScopeDimensions.Dept, dept)
-		                      .Build();
+							  .AddSelf("tester")
+							  .Add(ScopeDimensions.Dept, dept)
+							  .Build();
 	}
 }

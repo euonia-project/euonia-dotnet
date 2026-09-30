@@ -113,7 +113,7 @@ public sealed class ScopeModelDescriptor
 			Resources.IDS_SCOPE_DIMENSION_NOT_MAPPED,
 			ResourceType.Name,
 			dimension,
-			_dimensions.Count == 0 ? "（无）" : string.Join(", ", _dimensions.Keys));
+_dimensions.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", _dimensions.Keys));
 
 		return mapping;
 	}

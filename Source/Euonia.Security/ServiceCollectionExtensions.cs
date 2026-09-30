@@ -114,6 +114,10 @@ public static class ServiceCollectionExtensions
 		Check.Ensure(
 			!(options.NoModelsAsserted && options.Assemblies.Count > 0),
 			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS);
+
+		Check.Ensure(
+			!(options.ExplicitSource != null && options.Rules != null),
+			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE);
 	}
 
 	/// <summary>
@@ -125,8 +129,8 @@ public static class ServiceCollectionExtensions
 	/// </remarks>
 	private static void Apply(IServiceCollection services, PermissionModelSetup setup, PermissionOptions options, IPermissionCodeSource explicitSource = null)
 	{
-		// 来源三选一：显式传入 > 配置/回调产出的规则 > 无码断言
-		IPermissionCodeSource source = explicitSource;
+		// 来源三选一：显式传入或 Source() 指定 > 配置/回调产出的规则 > 无码断言
+		IPermissionCodeSource source = explicitSource ?? options.ExplicitSource;
 		if (source == null && options.Rules != null)
 		{
 			source = options.Rules.Build();

@@ -53,6 +53,11 @@ public sealed class PermissionOptions
 	internal bool NoCodesAsserted { get; private set; }
 
 	/// <summary>
+	/// 显式指定的权限码来源；未指定时为 <see langword="null"/>。
+	/// </summary>
+	private IPermissionCodeSource _source;
+
+	/// <summary>
 	/// 获取是否声明了「本应用没有任何权限模型与权限声明」。
 	/// </summary>
 	internal bool NoModelsAsserted { get; private set; }
@@ -185,6 +190,29 @@ public sealed class PermissionOptions
 		EnsureRules().OnMethod(operation, predicate);
 		return this;
 	}
+
+	/// <summary>
+	/// 直接指定权限码来源；规则不在代码也不在配置里（例如来自数据库）时使用。
+	/// </summary>
+	/// <param name="source">权限码来源，回答「某类型在某操作上声明了哪些权限码」。</param>
+	/// <returns>当前配置，便于链式调用。</returns>
+	/// <remarks>
+	/// 指定来源后不能再声明入口规则（<see cref="OnAttribute"/> 等）——两者是互斥的来源形态。
+	/// </remarks>
+	public PermissionOptions Source(IPermissionCodeSource source)
+	{
+		ArgumentNullException.ThrowIfNull(source);
+
+		Check.Ensure(_source == null, Resources.IDS_PERMISSION_SOURCE_DUPLICATED);
+
+		_source = source;
+		return this;
+	}
+
+	/// <summary>
+	/// 获取显式指定的权限码来源；未指定时为 <see langword="null"/>。
+	/// </summary>
+	internal IPermissionCodeSource ExplicitSource => _source;
 
 	/// <summary>
 	/// 确保规则构造器已创建。
