@@ -40,7 +40,7 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	{
 		Check.EnsureNotNullOrWhiteSpace(dimension, nameof(dimension));
 		Check.EnsureNotNull(selector, nameof(selector));
-		Check.Ensure(!_dimensions.ContainsKey(dimension), "维度 '{0}' 在类型 '{1}' 的权限模型中重复声明。", dimension, typeof(T).Name);
+		Check.Ensure(!_dimensions.ContainsKey(dimension), Resources.IDS_SCOPE_DIMENSION_DUPLICATED, dimension, typeof(T).Name);
 
 		_dimensions[dimension] = selector;
 		return this;
@@ -80,7 +80,7 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	{
 		Check.EnsureNotNullOrWhiteSpace(dimension, nameof(dimension));
 		Check.EnsureNotNull(selector, nameof(selector));
-		Check.Ensure(!_dimensions.ContainsKey(dimension), "维度 '{0}' 在类型 '{1}' 的权限模型中重复声明。", dimension, typeof(T).Name);
+		Check.Ensure(!_dimensions.ContainsKey(dimension), Resources.IDS_SCOPE_DIMENSION_DUPLICATED, dimension, typeof(T).Name);
 
 		_dimensions[dimension] = selector;
 		return this;
@@ -103,7 +103,7 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	{
 		Check.EnsureNotNullOrWhiteSpace(name, nameof(name));
 		Check.EnsureNotNull(selector, nameof(selector));
-		Check.Ensure(!_classifications.ContainsKey(name), "分类 '{0}' 在类型 '{1}' 的权限模型中重复声明。", name, typeof(T).Name);
+		Check.Ensure(!_classifications.ContainsKey(name), Resources.IDS_SCOPE_CLASSIFICATION_DUPLICATED, name, typeof(T).Name);
 
 		_classifications[name] = selector;
 		return this;

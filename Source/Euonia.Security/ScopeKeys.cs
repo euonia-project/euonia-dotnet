@@ -78,7 +78,7 @@ public static class ScopeKeys
 		Check.EnsureNotNullOrWhiteSpace(operation, nameof(operation));
 		Check.Ensure(
 			!IsReserved(operation),
-			"操作名 '{0}' 使用了框架保留前缀 '{1}'。操作名的默认策略键由该前缀派生，操作名本身不得带前缀。",
+			Resources.IDS_SCOPE_OPERATION_RESERVED_PREFIX,
 			operation,
 			Prefix);
 
@@ -107,7 +107,7 @@ public static class ScopeKeys
 		Check.EnsureNotNullOrWhiteSpace(code, nameof(code));
 		Check.Ensure(
 			!IsReserved(code),
-			"权限码 '{0}' 使用了框架保留前缀 '{1}'。请改用不含该前缀的码。",
+			Resources.IDS_SCOPE_CODE_RESERVED_PREFIX,
 			code,
 			Prefix);
 

@@ -84,7 +84,7 @@ public sealed class ScopeModelDescriptor
 
 		Check.Ensure(
 			builder.Dimensions.Count > 0,
-			"权限模型 '{0}' 未声明任何维度：请至少调用一次 ScopeModelBuilder.Map（取值来自子表时用 MapMany）。",
+			Resources.IDS_SCOPE_MODEL_NO_DIMENSION,
 			model.GetType().Name);
 
 		var dimensions = new Dictionary<string, ScopeDimensionMapping>(StringComparer.OrdinalIgnoreCase);
@@ -110,7 +110,7 @@ public sealed class ScopeModelDescriptor
 	{
 		Check.Ensure(
 			_dimensions.TryGetValue(dimension, out var mapping),
-			"资源类型 '{0}' 的权限策略引用了未映射的维度 '{1}'。请在权限模型的 Define 中调用 Map(\"{1}\", ...)（取值来自子表时用 MapMany(\"{1}\", ...)）；已映射的维度：{2}。",
+			Resources.IDS_SCOPE_DIMENSION_NOT_MAPPED,
 			ResourceType.Name,
 			dimension,
 			_dimensions.Count == 0 ? "（无）" : string.Join(", ", _dimensions.Keys));

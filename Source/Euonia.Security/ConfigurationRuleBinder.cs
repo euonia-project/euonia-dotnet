@@ -42,7 +42,7 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			operations.Exists(),
-			"权限规则配置缺少 '{0}' 节点（已检查配置节 '{1}'）。请传入规则所在的配置节，例如 configuration.GetSection(\"Permission\")。",
+			Resources.IDS_CONFIG_OPERATIONS_NODE_MISSING,
 			OperationsKey,
 			configuration.Path);
 
@@ -56,7 +56,7 @@ internal static class ConfigurationRuleBinder
 			// 预期的那一个会静默失去规则，故在这里直接拒绝仅大小写不同的重复声明。
 			Check.Ensure(
 				seen.Add(operation.Key),
-				"配置里的操作名 '{0}' 与前面的操作仅大小写不同。操作名大小写敏感，请统一写法。",
+				Resources.IDS_CONFIG_OPERATION_DUPLICATE_CASE,
 				operation.Key);
 
 			RejectUnknownKeys(operation);
@@ -69,7 +69,7 @@ internal static class ConfigurationRuleBinder
 
 			Check.Ensure(
 				attributes.Length > 0 || names.Length > 0,
-				"配置里的操作 '{0}' 没有声明任何入口规则：请给出 '{1}'（入口特性类型名数组）或 '{2}'（入口方法名数组），二者可同时给出（命中其一即为入口）。",
+				Resources.IDS_CONFIG_OPERATION_NO_RULES,
 				operation.Path,
 				AttributesKey,
 				NamesKey);
@@ -90,7 +90,7 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			declared > 0,
-			"权限规则配置的 '{0}' 节点下没有任何操作。若本应用确实没有方法级权限码，请改用 AddPermission(EmptyCodeSource.Instance, …) 显式断言；只想追加扫描范围请用 AddPermissionModels。",
+			Resources.IDS_CONFIG_NO_OPERATIONS,
 			operations.Path);
 	}
 
@@ -101,7 +101,7 @@ internal static class ConfigurationRuleBinder
 		{
 			Check.Ensure(
 				child.Key is AttributesKey or NamesKey,
-				"配置里的操作 '{0}' 含有未知的节点 '{1}'。可用节点：'{2}'（入口特性类型名）与 '{3}'（入口方法名）。",
+				Resources.IDS_CONFIG_UNKNOWN_NODE,
 				operation.Path,
 				child.Key,
 				AttributesKey,
@@ -120,7 +120,7 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			node.Value == null,
-			"配置里的 '{0}' 必须写成数组（例如 \"{1}\": [\"…\"]），不能写成单个字符串。",
+			Resources.IDS_CONFIG_VALUE_MUST_BE_ARRAY,
 			node.Path,
 			key);
 
@@ -130,7 +130,7 @@ internal static class ConfigurationRuleBinder
 		{
 			Check.Ensure(
 				!string.IsNullOrWhiteSpace(item.Value),
-				"配置里的 '{0}' 必须是非空字符串。",
+				Resources.IDS_CONFIG_VALUE_EMPTY,
 				item.Path);
 
 			values.Add(item.Value);
@@ -155,19 +155,19 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			resolved != null,
-			"配置里的入口特性类型 '{0}'（{1}）无法解析。请改用完整类型名（命名空间 + 类型名）、程序集限定名（\"类型, 程序集\"），或直接用 '{2}' 给出方法名。",
+			Resources.IDS_CONFIG_TYPE_UNRESOLVED,
 			name,
 			operation.GetSection(AttributesKey).Path,
 			NamesKey);
 
 		Check.Ensure(
 			!resolved.IsGenericType,
-			"配置里的入口特性类型 '{0}' 是泛型类型：泛型特性无法作为入口标记。",
+			Resources.IDS_CONFIG_TYPE_GENERIC,
 			name);
 
 		Check.Ensure(
 			typeof(Attribute).IsAssignableFrom(resolved),
-			"配置里的入口特性类型 '{0}' 不是特性（应指向 Attribute 的派生类）。",
+			Resources.IDS_CONFIG_TYPE_NOT_ATTRIBUTE,
 			name);
 
 		return resolved;
@@ -184,7 +184,7 @@ internal static class ConfigurationRuleBinder
 		{
 			// Type.GetType 对格式错误 / 加载失败的限定名抛的是框架异常，不能让它盖过这里的报错口径
 			throw new InvalidOperationException(
-				$"配置里的入口特性类型 '{name}'（{operation.GetSection(AttributesKey).Path}）无法解析：{exception.Message}",
+				string.Format(Resources.IDS_CONFIG_TYPE_LOAD_FAILED, name, operation.GetSection(AttributesKey).Path, exception.Message),
 				exception);
 		}
 	}
@@ -199,7 +199,7 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			exact.Length <= 1,
-			"配置里的入口特性类型 '{0}'（{1}）在扫描范围内匹配到多个同名类型（{2}）。请改用程序集限定名（\"类型, 程序集\"）。",
+			Resources.IDS_CONFIG_TYPE_AMBIGUOUS,
 			name,
 			path,
 			Describe(exact));
@@ -213,7 +213,7 @@ internal static class ConfigurationRuleBinder
 
 		Check.Ensure(
 			byShortName.Length <= 1,
-			"配置里的入口特性类型 '{0}'（{1}）在扫描范围内短名有歧义（{2}）。请改用完整类型名。",
+			Resources.IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS,
 			name,
 			path,
 			Describe(byShortName));

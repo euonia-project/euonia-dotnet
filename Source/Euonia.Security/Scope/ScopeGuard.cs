@@ -147,9 +147,7 @@ public sealed class ScopeGuard : IScopeGuard
 		{
 			if (++attempts > MaxResolveRetries)
 			{
-				throw new InvalidOperationException(
-					$"权限策略编译在 {MaxResolveRetries} 次重试后仍未拿到稳定的授权数据快照，期间持续有并发的 Refresh。" +
-					"请检查是否存在在同一作用域内反复调用 IScopeGuard.Refresh 的代码。");
+				throw new InvalidOperationException(string.Format(Resources.IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE, MaxResolveRetries));
 			}
 
 			GetSubjects();
@@ -297,7 +295,8 @@ public sealed class ScopeGuard : IScopeGuard
 	{
 		Check.Ensure(
 			_resolver != null,
-			"权限体系已启用（存在权限模型或 [Permission] 声明），但未注册 IScopeSubjectResolver。请在服务注册中提供一个基于授权数据的实现。");
+			Resources.IDS_SCOPE_SUBJECT_RESOLVER_MISSING,
+			nameof(IScopeSubjectResolver));
 
 		var attempts = 0;
 
@@ -305,9 +304,7 @@ public sealed class ScopeGuard : IScopeGuard
 		{
 			if (++attempts > MaxResolveRetries)
 			{
-				throw new InvalidOperationException(
-					$"授权数据解析在 {MaxResolveRetries} 次重试后仍未被接受，期间持续有并发的 Refresh。" +
-					"请检查是否存在在同一作用域内反复调用 IScopeGuard.Refresh 的代码。");
+				throw new InvalidOperationException(string.Format(Resources.IDS_SCOPE_RESOLVE_UNSTABLE, MaxResolveRetries));
 			}
 
 			await _resolveGate.WaitAsync(cancellationToken).ConfigureAwait(false);

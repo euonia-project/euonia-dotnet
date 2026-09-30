@@ -208,7 +208,7 @@ public class ObjectReflector
 		                             .ToList();
 		if (methods is not { Count: > 0 })
 		{
-			throw new MissingMethodException($"Missing method with attribute '{attributeType.Name}' on {typeof(TTarget).FullName}");
+			throw new MissingMethodException(string.Format(Resources.IDS_MISSING_METHOD_WITH_ATTRIBUTE, attributeType.Name, typeof(TTarget).FullName));
 		}
 
 		var matches = new List<MethodInfo>();
@@ -237,9 +237,9 @@ public class ObjectReflector
 
 		return matches.Count switch
 		{
-			0 => throw new MissingMethodException("Missing method matched the specified arguments."),
+			0 => throw new MissingMethodException(Resources.IDS_MISSING_METHOD_MATCHED_ARGUMENTS),
 			1 => matches[0],
-			_ => throw new AmbiguousMatchException("Multiple methods matched.")
+			_ => throw new AmbiguousMatchException(Resources.IDS_MULTIPLE_METHODS_MATCHED)
 		};
 	}
 
@@ -278,17 +278,17 @@ public class ObjectReflector
 		{
 			if (type.IsPrimitive)
 			{
-				throw new NotSupportedException("Can not inject primitive type property.");
+				throw new NotSupportedException(Resources.IDS_INJECT_PRIMITIVE_PROPERTY);
 			}
 
 			if (!type.IsClass && !type.IsInterface)
 			{
-				throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 			}
 
 			if (type == typeof(object))
 			{
-				throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 			}
 
 			var @interface = type.GetInterface(nameof(IEnumerable));
@@ -301,7 +301,7 @@ public class ObjectReflector
 			// 必须在此终止，否则会退化成元素类型 + 多实现的错误组合，晚爆于 PropertyInfo.SetValue。
 			if (multiple)
 			{
-				throw new NotSupportedException($"Can not inject property '{name}', the enumerable property type {type.FullName} can not be injected as a single service.");
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_ENUMERABLE_AS_SINGLE, name, type.FullName));
 			}
 
 			if (type.IsArray)
@@ -309,7 +309,7 @@ public class ObjectReflector
 				var interfaces = type.FindInterfaces(HandlerInterfaceFilter, null);
 				if (interfaces == null || interfaces.Length == 0)
 				{
-					throw new InvalidOperationException($"Can not inject property '{name}', the array type {type.FullName} does not implement any supported collection interface.");
+					throw new InvalidOperationException(string.Format(Resources.IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE, name, type.FullName));
 				}
 
 				type = interfaces[0].GenericTypeArguments[0];
@@ -326,7 +326,7 @@ public class ObjectReflector
 				{
 					if (type.GenericTypeArguments.Length != 1)
 					{
-						throw new InvalidOperationException($"Can not inject property '{name}', the generic type {type.FullName} must declare exactly one generic argument, but declares {type.GenericTypeArguments.Length}.");
+						throw new InvalidOperationException(string.Format(Resources.IDS_INJECT_GENERIC_ARGUMENT_COUNT, name, type.FullName, type.GenericTypeArguments.Length));
 					}
 
 					var genericArgumentType = type.GenericTypeArguments[0];
@@ -338,7 +338,7 @@ public class ObjectReflector
 			}
 
 
-			throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+			throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 		}
 	}
 

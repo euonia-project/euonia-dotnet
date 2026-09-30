@@ -144,11 +144,10 @@ public sealed class CompiledScopePolicy<T>
 
 	private static string MissingSubCollection(ScopeLoadGuard<T> guard)
 	{
-		return $"数据权限判定失败：资源类型 '{typeof(T).Name}' 的子表维度 '{guard.Dimension}'（取值来源：{guard.Path}）在单行判定时不可用——"
-		       + "对应的子集合未加载（为空引用）。单行判定在内存中求值同一棵表达式，需要对象图完整；"
-		       + "判定不了就失败，因此这里抛错而不是静默拒绝。"
-		       + "修法：① 读侧改用 IScopeGuard.Apply 下推（数据库侧 EXISTS，推荐）；"
-		       + "② 加载对象时一并加载该子集合（例如 EF Core 的 Include）；"
-		       + "③ 去掉集合属性的初始化器（例如 = []）——否则「未加载」会变成「空集合」而被静默拒绝。";
+		return string.Format(
+			Resources.IDS_SCOPE_SUBCOLLECTION_NOT_LOADED,
+			guard.Dimension,
+			typeof(T).Name,
+			guard.Path);
 	}
 }

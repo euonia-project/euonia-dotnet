@@ -32,7 +32,7 @@ public static class ScopeOperationMap
 		{
 			IEditableObject editable => FromEditState(editable.State),
 			ICommandObject => BusinessOperation.Execute,
-			IReadOnlyObject => throw new InvalidOperationException("The operation can not apply for ReadOnlyObject."),
+			IReadOnlyObject => throw new InvalidOperationException(Resources.IDS_OPERATION_NOT_APPLY_READONLY),
 			_ => BusinessOperation.Update
 		};
 	}
@@ -83,7 +83,7 @@ public static class ScopeOperationMap
 			ObjectEditState.New => BusinessOperation.Create,
 			ObjectEditState.Changed => BusinessOperation.Update,
 			ObjectEditState.Deleted => BusinessOperation.Delete,
-			_ => throw new InvalidOperationException("The object has no pending change to save.")
+			_ => throw new InvalidOperationException(Resources.IDS_NO_PENDING_CHANGE)
 		};
 	}
 }

@@ -52,7 +52,7 @@ public static class ScopeKeyResolver
 		                        .ToArray();
 
 		Check.Ensure(matched.Length <= 1,
-			"资源类型 '{0}' 的操作 {1} 解析出多个声明了行级策略的权限码（{2}）。请确保同一操作最多只有一个权限码声明了策略。",
+			Resources.IDS_SCOPE_MULTIPLE_POLICY_CODES,
 			resourceType.Name,
 			operation,
 			string.Join(", ", matched));

@@ -173,12 +173,7 @@ internal sealed record ScopeDimensionMapping
 
 	private static string UnsupportedShape(string dimension, LambdaExpression selector)
 	{
-		return $"维度 '{dimension}' 的取值表达式 '{selector}' 不受支持。"
-		       + "集合维度只支持「资源的导航集合（可带 Where 过滤）再取其字符串值」这一形状，"
-		       + "例如 x => x.Members.Select(m => m.UserId)、"
-		       + "x => x.Members.Where(m => m.Status == \"active\").Select(m => m.UserId)，"
-		       + "或元素本身就是字符串的 x => x.MemberIds；"
-		       + "其余形状无法下推为 EXISTS 子查询，因此在这里直接拒绝。需要行内的单值请改用 Map。";
+		return string.Format(Resources.IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED, dimension, selector);
 	}
 }
 

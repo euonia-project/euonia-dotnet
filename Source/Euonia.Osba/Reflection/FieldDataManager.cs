@@ -9,10 +9,8 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 public class FieldDataManager
 {
-	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property name '{0}' not registered";
-
 	/// <summary>
-	/// 存储字段数据的字典（以属性名称为键）。
+	/// 管理给定业务对象的字段和属性。
 	/// </summary>
 	private readonly ConcurrentDictionary<string, IFieldData> _fieldData = new();
 
@@ -95,7 +93,7 @@ public class FieldDataManager
 		var result = _properties.FirstOrDefault(c => c.Name == propertyName);
 		if (result == null)
 		{
-			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, propertyName));
+			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(Resources.IDS_PROPERTY_NAME_NOT_REGISTERED, propertyName));
 		}
 
 		return result;

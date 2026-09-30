@@ -131,7 +131,7 @@ public sealed class OperationCodeSourceBuilder
 			// 在这里挡住非法元素：否则规则会带着一个永远匹配不上（或求值时才炸）的类型活到判定期
 			Check.Ensure(
 				attributeType != null && typeof(Attribute).IsAssignableFrom(attributeType),
-				"入口特性类型必须是非 null 的特性类型（Attribute 的派生类）。");
+				Resources.IDS_OPERATION_ATTRIBUTE_TYPE_INVALID);
 
 			OnMethod(operation, method => method.IsDefined(attributeType, true));
 		}
@@ -215,9 +215,7 @@ public sealed class OperationCodeSourceBuilder
 	{
 		Check.Ensure(
 			_order.Count > 0,
-			"没有声明任何操作入口规则。请至少调用一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；"
-			+ "若本应用确实没有方法级权限码，请改用 AddPermission(EmptyCodeSource.Instance, …) 显式断言；"
-			+ "只想追加要扫描的程序集，请用 AddPermissionModels。");
+			Resources.IDS_OPERATION_RULE_REQUIRED);
 
 		var rules = _rules.ToDictionary(
 			pair => pair.Key,

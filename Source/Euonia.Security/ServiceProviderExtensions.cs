@@ -45,11 +45,7 @@ public static class ServiceProviderExtensions
 
 		Check.Ensure(
 			modelSetup == null || modelSetup.NoModelsAsserted || modelSetup.Assemblies.Count > 0,
-			"调用了 AddPermission 却没有指定任何要扫描的程序集。"
-			+ "权限模型与 [Permission] 声明都来自程序集扫描：扫描范围为空会让行级数据权限静默失效，"
-			+ "而启动期校验也会因「没有声明」一并短路。"
-			+ "请传入要扫描的程序集，例如 AddPermission(source, typeof(X).Assembly)；"
-			+ "若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 services.AssertNoPermissionModels()。");
+			Resources.IDS_PERMISSION_NO_ASSEMBLY_SCANNED);
 
 		if (setup.RequiresSubjectResolver != true)
 		{
@@ -58,18 +54,14 @@ public static class ServiceProviderExtensions
 
 		Check.Ensure(
 			provider.GetService<IScopeSubjectResolver>() != null,
-			"已声明权限模型或 [Permission] 权限码，但未注册 {0}。"
-			+ "权限码与行级授予必须从授权数据实时解析（固化在令牌中会导致取消授权后旧令牌仍然有效），"
-			+ "请注册一个基于授权数据的实现，例如 services.AddScoped<{0}, YourResolver>()。",
+			Resources.IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED,
 			nameof(IScopeSubjectResolver));
 
 		// 缺用户主体不算「声明了却没接数据源」，但同样值得在启动期说清：
 		// 否则表现为「所有人被拒」，极易被误判成策略写错。
 		Check.Ensure(
 			provider.GetService<UserPrincipal>() != null,
-			"已声明权限模型或 [Permission] 权限码，但未注册 {0}。"
-			+ "判定主体取自 UserPrincipal，未注册时取用 IScopeGuard 会直接失败。"
-			+ "请在服务注册中提供当前用户主体。",
+			Resources.IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED,
 			nameof(UserPrincipal));
 
 		return provider;

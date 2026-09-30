@@ -57,8 +57,8 @@ public abstract class ScopePolicy<T>
 	public static ScopePolicy<T> All(params ScopePolicy<T>[] policies)
 	{
 		Check.EnsureNotNull(policies, nameof(policies));
-		Check.Ensure(policies.Length > 0, "All 至少需要一个子策略；「无约束」必须显式写成 Where(_ => true)。");
-		Check.Ensure(policies.All(policy => policy != null), "All 的子策略不能为 null。");
+		Check.Ensure(policies.Length > 0, Resources.IDS_SCOPE_POLICY_ALL_EMPTY);
+		Check.Ensure(policies.All(policy => policy != null), Resources.IDS_SCOPE_POLICY_ALL_NULL);
 
 		return new AllScopePolicy<T>(policies);
 	}
@@ -73,8 +73,8 @@ public abstract class ScopePolicy<T>
 	public static ScopePolicy<T> Any(params ScopePolicy<T>[] policies)
 	{
 		Check.EnsureNotNull(policies, nameof(policies));
-		Check.Ensure(policies.Length > 0, "Any 至少需要一个子策略；「无约束」必须显式写成 Where(_ => true)。");
-		Check.Ensure(policies.All(policy => policy != null), "Any 的子策略不能为 null。");
+		Check.Ensure(policies.Length > 0, Resources.IDS_SCOPE_POLICY_ANY_EMPTY);
+		Check.Ensure(policies.All(policy => policy != null), Resources.IDS_SCOPE_POLICY_ANY_NULL);
 
 		return new AnyScopePolicy<T>(policies);
 	}
@@ -91,7 +91,7 @@ public abstract class ScopePolicy<T>
 		Check.EnsureNotNull(policy, nameof(policy));
 
 		// Deny 是否决（override），不是布尔取反；嵌套 Deny 既无意义又容易掩盖笔误
-		Check.Ensure(policy is not DenyScopePolicy<T>, "Deny 不可嵌套。Deny 表示「否决」，不是布尔取反；需要取反请用 Where(x => !...)。");
+		Check.Ensure(policy is not DenyScopePolicy<T>, Resources.IDS_SCOPE_POLICY_DENY_NOT_NESTABLE);
 
 		return new DenyScopePolicy<T>(policy);
 	}

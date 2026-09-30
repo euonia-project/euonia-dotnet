@@ -399,8 +399,7 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		return _provider is IKeyedServiceProvider keyedServiceProvider
 			   ? keyedServiceProvider.GetKeyedService(type, serviceKey)
-			   : throw new InvalidOperationException(
-					   $"属性注入需要键控服务（serviceKey = '{serviceKey}'），但当前容器（{_provider.GetType().FullName}）不支持 {nameof(IKeyedServiceProvider)}。");
+			   : throw new InvalidOperationException(string.Format(Resources.IDS_KEYED_SERVICE_NOT_SUPPORTED, serviceKey, _provider.GetType().FullName));
 	}
 
 	/// <summary>
@@ -410,8 +409,7 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		return _provider is IKeyedServiceProvider keyedServiceProvider
 			   ? keyedServiceProvider.GetKeyedServices(type, serviceKey)
-			   : throw new InvalidOperationException(
-					   $"属性注入需要键控服务（serviceKey = '{serviceKey}'），但当前容器（{_provider.GetType().FullName}）不支持 {nameof(IKeyedServiceProvider)}。");
+			   : throw new InvalidOperationException(string.Format(Resources.IDS_KEYED_SERVICE_NOT_SUPPORTED, serviceKey, _provider.GetType().FullName));
 	}
 
 	#endregion

@@ -116,7 +116,7 @@ internal static class ObjectAuthorization
 		// IPermissionChecker，等于自定义操作（README §3.3 的 approve / order:archive 等）没有鉴权。
 		if (!businessObject.CanPerformOperation(operation))
 		{
-			throw new SecurityException($"Operation not allowed. {operation}: {businessObject.GetType().Name}.");
+			throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
 		}
 	}
 

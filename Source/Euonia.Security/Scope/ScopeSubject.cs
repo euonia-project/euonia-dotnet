@@ -37,7 +37,7 @@ internal sealed class ScopeSubject
 	{
 		if (ReferenceEquals(this, Empty))
 		{
-			throw new InvalidOperationException($"{nameof(ScopeSubject)}.{nameof(Empty)} 是共享的只读实例，不能添加授予；需要可变副本请先 Clone()。");
+			throw new InvalidOperationException(string.Format(Resources.IDS_SCOPE_EMPTY_SUBJECT_READONLY, nameof(ScopeSubject), nameof(Empty)));
 		}
 
 		if (!_values.TryGetValue(dimension, out var values))

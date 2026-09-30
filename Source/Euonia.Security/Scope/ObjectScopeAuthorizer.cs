@@ -83,7 +83,7 @@ internal sealed class ObjectScopeAuthorizer(ScopeModelRegistry registry, IPermis
 
 		Check.Ensure(
 			guard != null,
-			"资源类型受数据权限约束，但无法从对象的作用域解析 {0}。请确认已调用 AddPermission。",
+			Resources.IDS_SCOPE_GUARD_NOT_RESOLVED,
 			nameof(IScopeGuard));
 
 		return guard;

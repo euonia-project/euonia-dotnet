@@ -57,7 +57,7 @@ public partial class CommonRule
 		{
 			if (property?.Type != null && property.Type != typeof(string))
 			{
-				throw new NotSupportedException($"The regular expression can not use on property '{property.FriendlyName}'.");
+				throw new NotSupportedException(string.Format(Resources.IDS_REGULAR_NOT_ON_STRING_PROPERTY, property.FriendlyName));
 			}
 		}
 
@@ -77,7 +77,7 @@ public partial class CommonRule
 				{
 					string @string => _regex.IsMatch(@string) ? string.Empty : string.Format(MessageFactory(), Property.FriendlyName),
 					null => IgnoreNullValue ? string.Empty : string.Format(MessageFactory(), Property.FriendlyName),
-					_ => throw new NotSupportedException($"The regular expression can not use on property '{Property.FriendlyName}'.")
+					_ => throw new NotSupportedException(string.Format(Resources.IDS_REGULAR_NOT_ON_STRING_PROPERTY, Property.FriendlyName))
 				};
 				if (!string.IsNullOrWhiteSpace(message))
 				{

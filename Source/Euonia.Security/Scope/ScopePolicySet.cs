@@ -63,7 +63,7 @@ public sealed class ScopePolicySet<T>
 	{
 		Check.EnsureNotNullOrWhiteSpace(code, nameof(code));
 		Check.EnsureNotNull(policy, nameof(policy));
-		Check.Ensure(!_policies.ContainsKey(code), "权限码 '{0}' 的策略被重复声明。", code);
+		Check.Ensure(!_policies.ContainsKey(code), Resources.IDS_SCOPE_POLICY_DUPLICATE_DECLARED, code);
 
 		_policies[code] = policy;
 		return this;

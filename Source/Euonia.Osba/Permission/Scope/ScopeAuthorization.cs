@@ -148,7 +148,12 @@ internal static class ScopeAuthorization
 		if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))
 		{
 			throw new SecurityException(
-				$"Data scope denied. {operation} ({stage}): {target.GetType().Name}. {authorizer.Explain(target, operation, context.CurrentServiceProvider)}");
+				string.Format(
+					Resources.IDS_SCOPE_DENIED,
+					operation,
+					stage,
+					target.GetType().Name,
+					authorizer.Explain(target, operation, context.CurrentServiceProvider)));
 		}
 	}
 }

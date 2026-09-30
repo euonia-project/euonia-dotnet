@@ -91,7 +91,7 @@ public sealed class ScopeModelRegistryBuilder
 			{
 				problems.Add(new ScopeModelDiagnostic(
 					name,
-					$"资源类型 '{descriptor.ResourceType.FullName}' 存在多个权限模型（另有 '{existing.Model.GetType().Name}'）。请确保每个资源类型只声明一个权限模型。"));
+					string.Format(Resources.IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE, descriptor.ResourceType.FullName, existing.Model.GetType().Name)));
 				continue;
 			}
 
@@ -125,9 +125,7 @@ public sealed class ScopeModelRegistryBuilder
 
 		if (policy == null)
 		{
-			problems.Add(new ScopeModelDiagnostic(
-				name,
-				"未提供策略。策略与模型必须写在同一个声明类型里，缺少任何一个都无法通过校验。"));
+			problems.Add(new ScopeModelDiagnostic(name, Resources.IDS_SCOPE_POLICY_NOT_PROVIDED));
 		}
 		else
 		{
@@ -140,7 +138,7 @@ public sealed class ScopeModelRegistryBuilder
 
 			if (scopedPolicy == null)
 			{
-				problems.Add(new ScopeModelDiagnostic(name, $"声明了权限码 '{code}' 但未提供策略。"));
+				problems.Add(new ScopeModelDiagnostic(name, string.Format(Resources.IDS_SCOPE_CODE_WITHOUT_POLICY, code)));
 				continue;
 			}
 
@@ -185,8 +183,7 @@ public sealed class ScopeModelRegistryBuilder
 				continue;
 			}
 
-			return $"为权限码 '{code}' 声明了行级策略，但没有任何操作会解析到该码"
-			       + $"（请核对方法上 [Permission] 的码与 Declare 里的码是否一致）。已解析到的码：{(resolved.Count == 0 ? "（无）" : string.Join(", ", resolved))}。";
+			return string.Format(Resources.IDS_SCOPE_CODE_NEVER_RESOLVED, code, resolved.Count == 0 ? "（无）" : string.Join(", ", resolved));
 		}
 
 		return null;
@@ -223,7 +220,7 @@ public sealed class ScopeModelRegistryBuilder
 
 		if (allow.Body is ConstantExpression { Value: false })
 		{
-			return "策略结构性恒不放行（Allow 恒假），通常意味着 Any 之下全是拒绝条件。请确认策略构成。";
+			return Resources.IDS_SCOPE_POLICY_NEVER_ALLOW;
 		}
 
 		return null;

@@ -43,11 +43,7 @@ public static class ServiceCollectionExtensions
 		// 没有扫描范围也没有断言，行级数据权限会静默失效。两种「说清楚意图」的方式都拒绝空回调。
 		Check.Ensure(
 			options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
-			"权限配置是空的：没有声明操作入口规则，也没有断言 NoOperationCodes / NoModels 或给出扫描程序集。"
-			+ "有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；"
-			+ "没有方法级权限码请断言 NoOperationCodes；"
-			+ "只想追加扫描范围请改用 AddPermissionModels；"
-			+ "确实没有任何权限模型与声明请断言 NoModels。");
+			Resources.IDS_PERMISSION_CONFIG_EMPTY);
 
 		var setup = GetOrCreateSetup(services);
 		Apply(services, setup, options);
@@ -113,13 +109,11 @@ public static class ServiceCollectionExtensions
 
 		Check.Ensure(
 			!(options.NoCodesAsserted && hasRules),
-			"权限配置自相矛盾：已断言 NoOperationCodes（没有方法级权限码），却又声明了操作入口规则。"
-			+ "两者只能取其一：有方法级权限码就声明规则，没有就断言 NoOperationCodes。");
+			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_CODES);
 
 		Check.Ensure(
 			!(options.NoModelsAsserted && options.Assemblies.Count > 0),
-			"权限配置自相矛盾：已断言 NoModels（没有任何权限模型与声明），却又传入了扫描程序集。"
-			+ "有程序集要扫描就不要断言 NoModels。");
+			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS);
 	}
 
 	/// <summary>

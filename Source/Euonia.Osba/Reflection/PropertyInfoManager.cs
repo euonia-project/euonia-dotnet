@@ -152,14 +152,14 @@ public static class PropertyInfoManager
 		{
 			if (list.IsLocked)
 			{
-				throw new InvalidOperationException($"Property list for type '{objectType.FullName}' is locked and cannot be modified.");
+				throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_LIST_LOCKED, objectType.FullName));
 			}
 
 			var index = list.BinarySearch(info, new PropertyComparer());
 
 			if (index >= 0)
 			{
-				throw new InvalidOperationException($"Property '{info.Name}' has already been registered for type '{objectType.FullName}'.");
+				throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_ALREADY_REGISTERED, info.Name, objectType.FullName));
 			}
 
 			// 在正确的排序索引处插入属性信息

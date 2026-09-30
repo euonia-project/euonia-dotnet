@@ -798,7 +798,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
-			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_NOT_REGISTERED, propertyName));
 		}
 
 		return ReadProperty(propertyInfo);
@@ -819,12 +819,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 		if (propertyInfo == null)
 		{
-			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_NOT_REGISTERED, propertyName));
 		}
 
 		if (propertyInfo is not PropertyInfo<TValue> property)
 		{
-			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_TYPE_MISMATCH, propertyName, propertyInfo.Type.Name, typeof(TValue).Name));
 		}
 
 		{
@@ -1043,7 +1043,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var result = CanReadProperty(property);
 		if (throwOnFalse && !result)
 		{
-			throw new SecurityException($"Property get not allowed. {property.Name}");
+			throw new SecurityException(string.Format(Resources.IDS_PROPERTY_GET_NOT_ALLOWED, property.Name));
 		}
 
 		return result;
@@ -1097,7 +1097,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var result = CanWriteProperty(property);
 		if (throwOnFalse && result == false)
 		{
-			throw new SecurityException($"Property set not allowed. {property.Name}");
+			throw new SecurityException(string.Format(Resources.IDS_PROPERTY_SET_NOT_ALLOWED, property.Name));
 		}
 
 		return result;

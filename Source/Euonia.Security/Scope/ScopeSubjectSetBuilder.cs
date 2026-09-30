@@ -28,7 +28,7 @@ public sealed class ScopeSubjectSetBuilder
 
 		Check.Ensure(
 			!ScopeKeys.IsReserved(code),
-			"权限码 '{0}' 使用了框架保留前缀 '{1}'，请改用不含该前缀的码。",
+			Resources.IDS_SCOPE_CODE_RESERVED_PREFIX,
 			code,
 			ScopeKeys.Prefix);
 
@@ -116,7 +116,7 @@ public sealed class ScopeSubjectSetBuilder
 
 		Check.Ensure(
 			!ScopeKeys.IsReserved(key) || key == ScopeKeys.Default,
-			"权限码 '{0}' 使用了框架保留前缀 '{1}'，请改用不含该前缀的码。",
+			Resources.IDS_SCOPE_CODE_RESERVED_PREFIX,
 			key,
 			ScopeKeys.Prefix);
 
