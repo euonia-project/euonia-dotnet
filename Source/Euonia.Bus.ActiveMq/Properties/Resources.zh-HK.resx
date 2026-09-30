@@ -102,6 +102,6 @@
     <value>尚未設定 ActiveMqBusOptions。</value>
   </data>
   <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
-    <value>訊息類型 {0} 不是佇列/主題/請求類型。</value>
+    <value>訊息類型 {0} 不是隊列/主題/請求類型。</value>
   </data>
 </root>

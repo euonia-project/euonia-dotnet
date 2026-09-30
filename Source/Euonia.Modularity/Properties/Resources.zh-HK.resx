@@ -133,7 +133,7 @@
     <value>無法建立模組 {0}</value>
   </data>
   <data name="IDS_DEPENDED_MODULE_NOT_FOUND" xml:space="preserve">
-    <value>找不到模組 {0} 所相依的模組 {1}</value>
+    <value>找不到模組 {0} 所依賴的模組 {1}</value>
   </data>
   <data name="IDS_CONFIGURATION_CONTEXT_UNAVAILABLE" xml:space="preserve">
     <value>{0} 只能在 {1} 方法中使用。</value>
@@ -160,6 +160,6 @@
     <value>找不到名為 {1} 的服務 {0}。</value>
   </data>
   <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
-    <value>目前的服務提供者不支援具名（keyed）服務。</value>
+    <value>目前的服務提供者不支持具名（keyed）服務。</value>
   </data>
 </root>

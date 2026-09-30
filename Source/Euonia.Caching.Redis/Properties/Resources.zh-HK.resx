@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_TIMEOUT_LOWER_THAN_ONE_MILLISECOND_NOT_SUPPORTED" xml:space="preserve">
-    <value>不支援小於 1 毫秒的逾時時間。</value>
+    <value>不支持小於 1 毫秒的超時時間。</value>
   </data>
   <data name="IDS_ERROR_RETRIEVING" xml:space="preserve">
     <value>取得 {0} 時發生錯誤</value>
@@ -142,13 +142,13 @@
     <value>尚未為索引鍵 '{0}' 註冊 Redis 設定。請在加入 Redis 快取控制代碼之前呼叫 WithRedisConfiguration('{0}', ...)。</value>
   </data>
   <data name="IDS_NO_SERVERS_CONNECTED_OR_CONFIGURED" xml:space="preserve">
-    <value>沒有任何已連線或已設定的服務器。</value>
+    <value>沒有任何已連接或已設定的服務器。</value>
   </data>
   <data name="IDS_FAILED_TO_SET_KEY_VALUE" xml:space="preserve">
     <value>無法將 '{0}' 設定為 '{1}'。</value>
   </data>
   <data name="IDS_CONNECTION_FAILED" xml:space="preserve">
-    <value>連線至 '{0}' 失敗。</value>
+    <value>連接至 '{0}' 失敗。</value>
   </data>
   <data name="IDS_NO_WRITABLE_ENDPOINT" xml:space="preserve">
     <value>找不到可寫入的端點。</value>
@@ -157,6 +157,6 @@
     <value>無法載入類型，{0}。</value>
   </data>
   <data name="IDS_CLEAR_REQUIRES_ALLOW_ADMIN" xml:space="preserve">
-    <value>無法執行 Clear：清空此快取會發出 FLUSHDB，而此指令要求 Redis 連線設定 'allowAdmin=true'（資料庫 {0}）。請注意 FLUSHDB 會清空整個邏輯資料庫，而不只是此快取；建議為快取使用專用的資料庫。底層錯誤：{1}</value>
+    <value>無法執行 Clear：清空此快取會發出 FLUSHDB，而此指令要求 Redis 連接設定 'allowAdmin=true'（資料庫 {0}）。請注意 FLUSHDB 會清空整個邏輯資料庫，而不只是此快取；建議為快取使用專用的資料庫。底層錯誤：{1}</value>
   </data>
 </root>

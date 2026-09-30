@@ -182,7 +182,7 @@
     <value>targetIndex 應介於 0 和 {0} 之間。</value>
   </data>
   <data name="IDS_CYCLIC_DEPENDENCY_FOUND" xml:space="preserve">
-    <value>發現循環相依！項目：{0}</value>
+    <value>發現循環依賴性！項目：{0}</value>
   </data>
   <data name="IDS_ENUM_FIELD_NOT_DEFINED" xml:space="preserve">
     <value>未定義欄位 '{0}'。</value>
@@ -212,7 +212,7 @@
     <value>字元集必須至少包含 {0:N0} 個非分隔符號的不重複字元。</value>
   </data>
   <data name="IDS_HASH_PRODUCED_NO_RESULT" xml:space="preserve">
-    <value>提供的雜湊值沒有產生任何結果。</value>
+    <value>提供的哈希值沒有產生任何結果。</value>
   </data>
   <data name="IDS_MACHINE_ID_INVALID" xml:space="preserve">
     <value>機器 ID 無效。</value>
@@ -224,16 +224,16 @@
     <value>時間戳記比最後一個產生 ID 的時間戳記還要早。</value>
   </data>
   <data name="IDS_INFINITE_TIMEOUT_CANNOT_CONVERT_TO_SECONDS" xml:space="preserve">
-    <value>無限逾時無法轉換為秒數。</value>
+    <value>無限超時無法轉換為秒數。</value>
   </data>
   <data name="IDS_DELAY_CANCELED" xml:space="preserve">
     <value>延遲已取消。</value>
   </data>
   <data name="IDS_ASYNC_COLLECTION_ADD_ALREADY_COMPLETED" xml:space="preserve">
-    <value>新增失敗；生產者/消費者集合已完成加入。</value>
+    <value>加入失敗；生產者/消費者集合已完成加入。</value>
   </data>
   <data name="IDS_ASYNC_COLLECTION_ADD_FAILED" xml:space="preserve">
-    <value>新增失敗；加入基礎集合時失敗。</value>
+    <value>加入失敗；加入基礎集合時失敗。</value>
   </data>
   <data name="IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY" xml:space="preserve">
     <value>取出失敗；生產者/消費者集合已完成加入且為空。</value>
@@ -245,13 +245,13 @@
     <value>尚未建立。</value>
   </data>
   <data name="IDS_QUEUE_ENQUEUE_COMPLETED" xml:space="preserve">
-    <value>入佇列失敗；生產者/消費者佇列已完成加入。</value>
+    <value>入隊失敗；生產者/消費者隊列已完成加入。</value>
   </data>
   <data name="IDS_QUEUE_DEQUEUE_COMPLETED_AND_EMPTY" xml:space="preserve">
-    <value>出佇列失敗；生產者/消費者佇列已完成加入且為空。</value>
+    <value>出隊失敗；生產者/消費者隊列已完成加入且為空。</value>
   </data>
   <data name="IDS_DEQUE_EMPTY" xml:space="preserve">
-    <value>雙端佇列是空的。</value>
+    <value>雙端隊列是空的。</value>
   </data>
   <data name="IDS_TYPE_NOT_ENUM" xml:space="preserve">
     <value>類型 {0} 不是列舉。</value>

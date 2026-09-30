@@ -121,10 +121,10 @@
     <value>參數 {0} 的 DateKind 必須是 {1}。</value>
   </data>
   <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_BETWEEN" xml:space="preserve">
-    <value>逾時時間必須介於 {0} 與 {1} 之間。</value>
+    <value>超時時間必須介於 {0} 與 {1} 之間。</value>
   </data>
   <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_GREATER_THAN_ZERO_IF_EXPIRATION_MODE_IS_DEFINED" xml:space="preserve">
-    <value>若已定義過期模式，逾時時間必須大於零。</value>
+    <value>若已定義過期模式，超時時間必須大於零。</value>
   </data>
   <data name="IDS_EXPIRATION_VALUE_MUST_BE_GREATER_THAN_ZERO" xml:space="preserve">
     <value>有效期限值必須大於零。</value>
@@ -145,7 +145,7 @@
     <value>'{0}:{1}' 上的更新失敗：區域/鍵不存在。</value>
   </data>
   <data name="IDS_TIMEOUT_CANNOT_BE_ZERO" xml:space="preserve">
-    <value>當過期模式不是 'None' 時，逾時時間不能為零。</value>
+    <value>當過期模式不是 'None' 時，超時時間不能為零。</value>
   </data>
   <data name="IDS_ONLY_ONE_BACKPLANE_SOURCE" xml:space="preserve">
     <value>只能有一個快取控制代碼作為 backplane 的來源。</value>
@@ -175,7 +175,7 @@
     <value>無法讀取字串，沒有其他位元組可用。</value>
   </data>
   <data name="IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT" xml:space="preserve">
-    <value>已定義過期模式但未設定逾時時間。</value>
+    <value>已定義過期模式但未設定超時時間。</value>
   </data>
   <data name="IDS_COULD_NOT_INITIALIZE_HANDLE" xml:space="preserve">
     <value>無法初始化類型 {0} 的控制代碼</value>

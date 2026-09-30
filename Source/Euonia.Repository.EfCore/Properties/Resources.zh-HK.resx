@@ -124,6 +124,6 @@
     <value>連接字串格式無效。</value>
   </data>
   <data name="IDS_DATABASE_PROVIDER_NOT_SUPPORTED" xml:space="preserve">
-    <value>不支援資料庫提供者 '{0}'。</value>
+    <value>不支持資料庫提供者 '{0}'。</value>
   </data>
 </root>

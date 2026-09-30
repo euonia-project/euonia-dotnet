@@ -124,7 +124,7 @@
     <value>未授權</value>
   </data>
   <data name="IDS_UNSUPPORTED_LOCK_ATTRIBUTE" xml:space="preserve">
-    <value>不支援的鎖定特性 '{0}'。</value>
+    <value>不支持的鎖定特性 '{0}'。</value>
   </data>
   <data name="IDS_LOCK_FACTORY_NOT_REGISTERED" xml:space="preserve">
     <value>尚未註冊 ILockFactory。請註冊分散式鎖定模組（例如 Nerosoft.Euonia.Concurrency.Redis.RedisLockModule）以啟用分散式鎖定。</value>

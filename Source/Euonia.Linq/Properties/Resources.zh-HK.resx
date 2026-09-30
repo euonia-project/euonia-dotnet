@@ -133,13 +133,13 @@
     <value>屬性名稱不能為空。</value>
   </data>
   <data name="IDS_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
-    <value>LIKE 運算子需要查詢提供者的支援。</value>
+    <value>LIKE 運算子需要查詢提供者的支持。</value>
   </data>
   <data name="IDS_NOT_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
-    <value>NOT LIKE 運算子需要查詢提供者的支援。</value>
+    <value>NOT LIKE 運算子需要查詢提供者的支持。</value>
   </data>
   <data name="IDS_UNSUPPORTED_QUERY_OPERATOR" xml:space="preserve">
-    <value>不支援的查詢運算子：{0}</value>
+    <value>不支持的查詢運算子：{0}</value>
   </data>
   <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
     <value>找不到方法 {0}。</value>

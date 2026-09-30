@@ -220,7 +220,7 @@
     <value>資源類型 '{0}' 的權限策略參照了未對應的維度 '{1}'。請在權限模型的 Define 中呼叫 Map("{1}", ...)（值來自子表格時請用 MapMany("{1}", ...)）；已對應的維度：{2}。</value>
   </data>
   <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
-    <value>維度 '{0}' 的取值運算式 '{1}' 不受支援。集合維度只支援「資源的導覽集合（可加 Where 篩選）再取其字串值」這種形式，例如 x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)，或元素本身就是字串的 x =&gt; x.MemberIds；其他形式無法下推成 EXISTS 子查詢，因此在此直接拒絕。若要使用資料列本身的單一值，請改用 Map。</value>
+    <value>維度 '{0}' 的取值運算式 '{1}' 不受支持。集合維度只支持「資源的導覽集合（可加 Where 篩選）再取其字串值」這種形式，例如 x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)，或元素本身就是字串的 x =&gt; x.MemberIds；其他形式無法下推成 EXISTS 子查詢，因此在此直接拒絕。若要使用資料列本身的單一值，請改用 Map。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>未提供策略。策略與模型必須寫在同一個宣告類型中，缺少任何一個都無法通過驗證。</value>
@@ -244,10 +244,10 @@
     <value>資源類型受資料範圍授權約束，但無法從物件的範圍解析 {0}。請確認已呼叫 AddPermission。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>權限策略編譯在重試 {0} 次後仍無法取得穩定的授權資料快照，期間持續發生並行的 Refresh。請檢查是否有程式碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
+    <value>權限策略編譯在重試 {0} 次後仍無法取得穩定的授權資料快照，期間持續發生並行的 Refresh。請檢查是否有程式代碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
   </data>
   <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>授權資料解析在重試 {0} 次後仍未被接受，期間持續發生並行的 Refresh。請檢查是否有程式碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
+    <value>授權資料解析在重試 {0} 次後仍未被接受，期間持續發生並行的 Refresh。請檢查是否有程式代碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} 是共用的唯讀執行個體，無法加入授予；需要可變更的複本時請先呼叫 Clone()。</value>

@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
-    <value>訊息類型 {0} 不是佇列/主題/請求類型。</value>
+    <value>訊息類型 {0} 不是隊列/主題/請求類型。</value>
   </data>
   <data name="IDS_NO_RESPONSE_RECEIVED" xml:space="preserve">
     <value>該請求訊息沒有收到任何回應。</value>

@@ -196,7 +196,7 @@
     <value>延遲不得超過 {0} 毫秒（約 49.7 天）。</value>
   </data>
   <data name="IDS_CALL_TIMEOUT" xml:space="preserve">
-    <value>呼叫未在設定的逾時時間（{0} 毫秒）內完成。</value>
+    <value>呼叫未在設定的超時時間（{0} 毫秒）內完成。</value>
   </data>
   <data name="IDS_CHANNEL_NAME_REQUIRED" xml:space="preserve">
     <value>訊息類型 '{0}' 的通道名稱不能為 null 或空白。請在選項中指定通道，或為該訊息類型設定預設通道。</value>

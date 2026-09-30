@@ -167,13 +167,13 @@
     <value>無法注入基本類型屬性。</value>
   </data>
   <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
-    <value>無法注入屬性 '{0}'，其類型 {1} 不受支援。</value>
+    <value>無法注入屬性 '{0}'，其類型 {1} 不受支持。</value>
   </data>
   <data name="IDS_INJECT_ENUMERABLE_AS_SINGLE" xml:space="preserve">
     <value>無法注入屬性 '{0}'，其可列舉類型 {1} 不能作為單一服務注入。</value>
   </data>
   <data name="IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE" xml:space="preserve">
-    <value>無法注入屬性 '{0}'，其陣列類型 {1} 未實作任何受支援的集合介面。</value>
+    <value>無法注入屬性 '{0}'，其陣列類型 {1} 未實作任何受支持的集合介面。</value>
   </data>
   <data name="IDS_INJECT_GENERIC_ARGUMENT_COUNT" xml:space="preserve">
     <value>無法注入屬性 '{0}'，其泛型類型 {1} 必須恰好宣告一個泛型引數，但宣告了 {2} 個。</value>

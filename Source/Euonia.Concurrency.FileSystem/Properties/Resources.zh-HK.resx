@@ -127,7 +127,7 @@
     <value>無法建立鎖定檔案 '{0}'，因為該名稱已被一個目錄佔用。</value>
   </data>
   <data name="IDS_LOCK_FILE_READ_ONLY" xml:space="preserve">
-    <value>不支援在唯讀檔案 '{0}' 上加鎖。</value>
+    <value>不支持在唯讀檔案 '{0}' 上加鎖。</value>
   </data>
   <data name="IDS_LOCK_FILE_DIRECTORY_CREATE_FAILED" xml:space="preserve">
     <value>無法確保鎖定檔案目錄 {0} 存在。</value>
