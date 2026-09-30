@@ -71,7 +71,7 @@ services.AddSingleton(UserPrincipal.Current);
 | **配置节** | `AddPermission(configuration.GetSection("Permission"), assemblies)` | 部署期要换命名约定时（[§3.4](#34-规则的载体回调--配置节--自定义来源)） |
 | **自定义来源** | `AddPermission(new MyCodeSource(), assemblies)` | 规则不在代码也不在配置里（例如来自数据库） |
 
-确实**没有方法级权限码**时，用 `AddPermission(EmptyCodeSource.Instance, assemblies)` 做断言——那是显式的
+确实**没有方法级权限码**时，在回调里断言 `p.NoOperationCodes()`——那是显式的
 「本应用没有方法级权限码」，不是默认值（见 [3.1](#31-为什么必须显式给出规则)）。
 
 `IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
@@ -79,11 +79,12 @@ services.AddSingleton(UserPrincipal.Current);
 若使用了权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [4.2](#42-用户侧授权值从数据实时解析)）。框架不提供默认实现，以免把授权值固化。
 
-容器构建后请调用一次启动期校验，使「声明了权限却忘了接解析器」在启动时失败：
+启动期校验在**首次解析 `IScopeGuard` 时自动执行**——解析器 / 判定主体 / 扫描范围的缺漏
+当场暴露，无需任何手动步骤。需要主动触发时（例如启动早期想尽早失败）解析一次守卫即可：
 
 ```csharp
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
+_ = provider.GetRequiredService<IScopeGuard>();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
 ```
 
 ### 3.1 为什么必须显式给出规则
@@ -92,10 +93,10 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPr
 有的框架用特性标记工厂方法，有的靠命名约定，引擎无从推断。因此没有任何默认规则：
 **忘了给出规则必须是一个错误，而不是一次静默放行**（空回调/空配置会在注册处直接报错，见 §3.4）。
 
-应用确实**不使用方法级**权限码时，传入 `EmptyCodeSource.Instance`。这是一个显式的断言，
+应用确实**不使用方法级**权限码时，在回调里断言 `p.NoOperationCodes()`。这是一个显式的断言，
 不是「忘了提供来源」的默认值。
 
-代价是：模型里的按码声明（`ScopePolicySet<T>.For("code", …)`）与 `EmptyCodeSource` 不可同用。
+代价是：模型里的按码声明（`ScopePolicySet<T>.For("code", …)`）与该断言不可同用。
 因为没有任何操作能解析到应用自定义的码，注册期死策略校验会拒绝启动：
 
 ```
@@ -105,9 +106,9 @@ provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPr
 
 这正是期望行为——**声明了按码策略就说明存在方法级权限码**，那就必须给出方法与操作的对应关系。
 
-> 只追加扫描范围请用 [`AddPermissionModels`](#32-多个模块各自注册按并集合并)，但注意它**不提供来源**，
-> 因此**不构成**上面这个断言。用它代替 `EmptyCodeSource` 时，方法级 `[Permission]` 会被静默忽略
-> （按码声明的策略仍会被死策略校验拦住）。
+> 只追加扫描范围请在同一回调里继续调用 `p.Scan(otherAssembly)`（可多次，程序集按并集累积）；
+> 只扫描而不声明来源意图（规则或 `NoOperationCodes`）不构成上面这个断言——方法级 `[Permission]`
+> 会被静默忽略，按码声明的策略仍会被死策略校验拦住。
 
 ### 3.2 多个模块各自注册（按并集合并）
 
@@ -133,23 +134,25 @@ services.AddPermission(o => o.OnAttributeOrName(BusinessOperation.Read, "Report"
 
 > 每个模块的回调各自成组地合并（操作取并集、权限码取并集去重）；
 > 同一个 `IPermissionCodeSource` 实例被重复传入时按幂等处理（跳过），
-> 因此 `EmptyCodeSource.Instance` 这样的共享单例可以被每个模块放心共用。
+> 因此通过 `p.Source(...)` 传入的共享单例可以被每个模块放心共用。
 > 同一个程序集被多个模块传入同样只扫一次。
 
 注意 `IScopeKeyResolver` 仍是 `TryAdd` 语义（**先到先得**）：它决定「某个资源实例当前代表哪个操作」，
 属于**全局**语义，多个模块同时给出不同答案本身就是配置错误。需要按模块区分时，
 请自行实现一个带分派的 `IScopeKeyResolver`。
 
-**来源只有一处、模型却分散在多个程序集**时，用 `AddPermissionModels` 单独追加扫描范围，
-不必重复传同一个来源实例：
+**来源只有一处、模型却分散在多个程序集**时，在同一回调里 `Source` 一次、`Scan` 多次即可：
+程序集按并集累积，不必重复传同一个来源实例：
 
 ```csharp
-services.AddPermission(new OrderCodeSource(), typeof(Order).Assembly);  // 给出唯一的权限码来源
-services.AddPermissionModels(typeof(Report).Assembly);                  // 该程序集只有模型，无方法级权限码
+services.AddPermission(p =>
+{
+    p.Source(new OrderCodeSource());       // 给出唯一的权限码来源
+    p.Scan(typeof(Order).Assembly);
+    p.Scan(typeof(Report).Assembly);       // 该程序集只有模型，无方法级权限码
+});
 ```
 
-它只追加程序集（同样按幂等合并），**不提供权限码来源**；来源沿用此前注册的那个，
-从未注册过则回落到 `EmptyCodeSource`（此时不要指望方法级权限码生效，见 §3.1）。
 每次调用同样会重建并校验注册表，因此配置错误依旧在注册处抛出。
 
 ### 3.3 用规则描述「哪个方法对应哪个操作」
@@ -409,20 +412,20 @@ public sealed class OrderScope : ScopeModel<Order>
 所有问题**一次报全**（`ScopeModelValidationException.Diagnostics`），而不是修一个跑一次——
 启动期配置错误往往同时存在多处，逐个报出等于让人反复重启。
 
-授权数据源与用户主体是否齐备由 `provider.ValidatePermissionSetup()` 检查（必须在容器构建**之后**调用，
-因为解析器的注册顺序不受约束）。若遗漏该调用，首次判定时同样会以明确错误暴露。
+授权数据源与用户主体是否齐备由**首次解析 `IScopeGuard` 时的启动校验**检查（
+因为解析器的注册顺序不受约束）。若从未解析过守卫，首次判定时同样会以明确错误暴露。
 
-`ValidatePermissionSetup()` 还会拒绝**一个程序集都没扫描过**的注册：`AddPermission` 省略
+启动校验还会拒绝**一个程序集都没扫描过**的注册：`AddPermission` 省略
 `assemblies` 时扫描范围为空，行级数据权限必然静默失效，而「没有任何声明」又会让上面的
 `IScopeSubjectResolver` / `UserPrincipal` 检查一并短路——于是「能启动但什么都没生效」，无从察觉。
-这与 §3.1 的 `EmptyCodeSource` 是**同一条规则：空输入不是默认值，而是必须做出的显式选择**：
+这与 §3.1 的「空输入不是默认值」是**同一条规则：必须做出的显式选择**：
 
 ```csharp
-services.AddPermission(codeSource);      // 没有程序集 → 启动期报错
-services.AssertNoPermissionModels();     // 显式断言「本应用确实没有任何权限模型与 [Permission] 声明」
+services.AddPermission(p => p.NoOperationCodes());   // 没有程序集 → 首次解析守卫时报错
+services.AddPermission(p => p.NoModels());           // 显式断言「本应用确实没有任何权限模型与 [Permission] 声明」
 ```
 
-只要给过一次程序集（`AddPermission(source, asm)` 或 `AddPermissionModels(asm)`）就不需要这个断言：
+只要给过一次程序集（回调里的任意 `p.Scan(asm)`）就不需要这个断言：
 **扫过但没有声明**与**从没扫过**是两回事，前者本身就是一次显式声明。
 
 ### 5.7 模型的注册方式
@@ -630,7 +633,7 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
 | 「未注册 UserPrincipal」 | 判定主体取自 `UserPrincipal`；不注册则取用 `IScopeGuard` 直接失败 |
 | 「权限模型注册期校验失败，共 N 处问题」 | 这是**汇总**异常，`Diagnostics` 列出了全部问题，按序号逐条修 |
-| 「没有声明任何操作入口规则」（回调载体） | 回调是空的：补规则，或改用 `EmptyCodeSource.Instance` 断言 / `AddPermissionModels` 只追加扫描（§3.1） |
+| 「没有声明任何操作入口规则」（回调载体） | 回调是空的：补规则；没有方法级权限码就断言 `p.NoOperationCodes()`；只想追加扫描就 `p.Scan(asm)`（§3.1） |
 | 「权限规则配置缺少 'Operations' 节点」 | 传了根配置而不是配置节：改成 `configuration.GetSection("Permission")`（§3.4） |
 | 「配置里的操作 'x' 没有声明任何入口规则」 | 该操作既没给 `Attributes` 也没给 `Names`（键名拼错也会落到这里，消息会列出可用键） |
 | 「配置里的入口特性类型 'x' 无法解析 / 匹配到多个类型」 | 类型名写错或有歧义：改用完整类型名（命名空间 + 类型名），或直接给 `Names`（§3.4） |

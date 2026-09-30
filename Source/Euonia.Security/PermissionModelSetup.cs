@@ -3,13 +3,12 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 多次 <c>AddPermission</c> 的累积结果：并集的权限码来源、程序集与操作词汇。
+/// 多次 <c>AddPermission</c> 的累积结果：并集的权限码来源与程序集。
 /// </summary>
 internal sealed class PermissionModelSetup
 {
 	private readonly List<IPermissionCodeSource> _sources = [];
 	private readonly List<Assembly> _assemblies = [];
-	private readonly HashSet<string> _operations = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// 累积一个权限码来源；同一来源实例按幂等处理。
@@ -34,20 +33,6 @@ internal sealed class PermissionModelSetup
 			if (assembly != null && !_assemblies.Contains(assembly))
 			{
 				_assemblies.Add(assembly);
-			}
-		}
-	}
-
-	/// <summary>
-	/// 累积显式声明的操作词汇。
-	/// </summary>
-	public void AddOperations(IEnumerable<string> operations)
-	{
-		foreach (var operation in operations ?? [])
-		{
-			if (!string.IsNullOrWhiteSpace(operation))
-			{
-				_operations.Add(operation);
 			}
 		}
 	}
@@ -101,8 +86,7 @@ internal sealed class PermissionModelSetup
 
 		return sourcesMatch
 		       && _assemblies.Count == assemblies.Count
-		       && _assemblies.All(assemblies.Contains)
-		       && _operations.Count == 0;
+		       && _assemblies.All(assemblies.Contains);
 	}
 
 	/// <summary>

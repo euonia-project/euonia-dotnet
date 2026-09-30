@@ -13,18 +13,16 @@ public sealed class PermissionSetup
 	/// <summary>
 	/// 初始化 <see cref="PermissionSetup"/> 的新实例。
 	/// </summary>
-	/// <param name="requiresSubjectResolver">是否需要 <see cref="IScopeSubjectResolver"/>。</param>
-	public PermissionSetup(bool requiresSubjectResolver)
+	internal PermissionSetup()
 	{
-		RequiresSubjectResolver = requiresSubjectResolver;
 	}
 
 	/// <summary>
-	/// 获取一个值，指示是否必须注册 <see cref="IScopeSubjectResolver"/>。
+	/// 获取或设置一个值，指示是否必须注册 <see cref="IScopeSubjectResolver"/>。
 	/// </summary>
 	/// <remarks>
 	/// 声明了权限模型（<see cref="IScopeModel{T}"/>）或使用了 <see cref="PermissionAttribute"/>
 	/// 时为 <see langword="true"/>——两者都需要从授权数据解析「用户被授予了什么」。
 	/// </remarks>
-	public bool RequiresSubjectResolver { get; }
+	public bool RequiresSubjectResolver { get; internal set; }
 }

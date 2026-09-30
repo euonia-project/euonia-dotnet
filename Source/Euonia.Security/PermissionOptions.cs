@@ -43,11 +43,6 @@ public sealed class PermissionOptions
 	private readonly HashSet<Assembly> _assemblies = [];
 
 	/// <summary>
-	/// 显式声明的业务操作词汇（可选；未声明时从规则推导）。
-	/// </summary>
-	private readonly HashSet<string> _operations = new(StringComparer.OrdinalIgnoreCase);
-
-	/// <summary>
 	/// 获取是否声明了「本应用没有方法级权限码」。
 	/// </summary>
 	internal bool NoCodesAsserted { get; private set; }
@@ -66,11 +61,6 @@ public sealed class PermissionOptions
 	/// 获取累积的扫描程序集。
 	/// </summary>
 	internal IReadOnlyCollection<Assembly> Assemblies => _assemblies;
-
-	/// <summary>
-	/// 获取显式声明的操作词汇。
-	/// </summary>
-	internal IReadOnlyCollection<string> Operations => _operations;
 
 	/// <summary>
 	/// 获取规则构造器；尚未声明任何规则时为 <see langword="null"/>。
@@ -121,24 +111,6 @@ public sealed class PermissionOptions
 	public PermissionOptions NoModels()
 	{
 		NoModelsAsserted = true;
-		return this;
-	}
-
-	/// <summary>
-	/// 显式登记业务操作词汇；未登记时词汇从入口规则推导。
-	/// </summary>
-	/// <param name="operations">业务操作名（如 <see cref="BusinessOperation"/> 的常量或自定义操作）。</param>
-	/// <returns>当前配置，便于链式调用。</returns>
-	public PermissionOptions UseOperations(params string[] operations)
-	{
-		foreach (var operation in operations ?? [])
-		{
-			if (!string.IsNullOrWhiteSpace(operation))
-			{
-				_operations.Add(operation);
-			}
-		}
-
 		return this;
 	}
 

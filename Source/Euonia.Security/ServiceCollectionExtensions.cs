@@ -45,8 +45,8 @@ public static class ServiceCollectionExtensions
 			options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
 			Resources.IDS_PERMISSION_CONFIG_EMPTY);
 
-		var setup = GetOrCreateSetup(services);
-		Apply(services, setup, options);
+		var (setup, validation) = GetOrCreateSetup(services);
+		Apply(services, setup, options, validation: validation);
 		return services;
 	}
 
@@ -73,8 +73,8 @@ public static class ServiceCollectionExtensions
 		var options = new PermissionOptions().Scan(assemblies ?? []);
 		ConfigurationRuleBinder.Bind(configuration, options.RulesBuilder(), KnownAssemblies(services, assemblies));
 
-		var setup = GetOrCreateSetup(services);
-		Apply(services, setup, options);
+		var (setup, validation) = GetOrCreateSetup(services);
+		Apply(services, setup, options, validation: validation);
 		return services;
 	}
 
@@ -94,9 +94,9 @@ public static class ServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(codeSource);
 
 		var options = new PermissionOptions().Scan(assemblies ?? []);
-		var setup = GetOrCreateSetup(services);
+		var (setup, validation) = GetOrCreateSetup(services);
 
-		Apply(services, setup, options, codeSource);
+		Apply(services, setup, options, codeSource, validation);
 		return services;
 	}
 
@@ -127,7 +127,7 @@ public static class ServiceCollectionExtensions
 	/// 重建只发生在本调用内（累积状态由 <see cref="PermissionModelSetup"/> 保存），
 	/// 因此配置错误在注册处抛出而不是等到容器构建或首次判定。
 	/// </remarks>
-	private static void Apply(IServiceCollection services, PermissionModelSetup setup, PermissionOptions options, IPermissionCodeSource explicitSource = null)
+	private static void Apply(IServiceCollection services, PermissionModelSetup setup, PermissionOptions options, IPermissionCodeSource explicitSource = null, PermissionSetup validation = null)
 	{
 		// 来源三选一：显式传入或 Source() 指定 > 配置/回调产出的规则 > 无码断言
 		IPermissionCodeSource source = explicitSource ?? options.ExplicitSource;
@@ -155,11 +155,6 @@ public static class ServiceCollectionExtensions
 		}
 
 		setup.AddAssemblies([.. options.Assemblies]);
-
-		if (options.Operations.Count > 0)
-		{
-			setup.AddOperations(options.Operations);
-		}
 
 		RegisterEngine(services);
 
@@ -191,8 +186,12 @@ public static class ServiceCollectionExtensions
 			provider.GetRequiredService<IPermissionCodeSource>(),
 			provider.GetService<IObjectOperationResolver>()));
 
-		services.RemoveAll<PermissionSetup>();
-		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
+		// 启动期校验要求按累积状态更新（可变单例，不再 RemoveAll + 重建快照）
+		validation ??= services.FirstOrDefault(d => d.ServiceType == typeof(PermissionSetup))?.ImplementationInstance as PermissionSetup;
+		if (validation != null)
+		{
+			validation.RequiresSubjectResolver = setup.HasDeclarations(registry);
+		}
 	}
 
 	/// <summary>
@@ -280,19 +279,24 @@ public static class ServiceCollectionExtensions
 	}
 
 	/// <summary>
-	/// 取得累积状态；首次调用时创建并登记。
+	/// 取得累积状态；首次调用时创建并登记（同时登记供启动期校验读取的 <see cref="PermissionSetup"/>）。
 	/// </summary>
-	private static PermissionModelSetup GetOrCreateSetup(IServiceCollection services)
+	private static (PermissionModelSetup Setup, PermissionSetup Validation) GetOrCreateSetup(IServiceCollection services)
 	{
 		if (TryGetSetup(services) is { } existing)
 		{
-			return existing;
+			var validation = services.First(d => d.ServiceType == typeof(PermissionSetup))
+			                       .ImplementationInstance as PermissionSetup;
+			return (existing, validation!);
 		}
 
 		var setup = new PermissionModelSetup();
+		var permissionSetup = new PermissionSetup();
 		services.AddSingleton(setup);
-		return setup;
+		services.AddSingleton(permissionSetup);
+		return (setup, permissionSetup);
 	}
+
 
 	/// <summary>
 	/// 判断给定程序集中是否存在权限声明（类型级 <see cref="PermissionAttribute"/> 或可解析的权限码）。
