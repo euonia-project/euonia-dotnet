@@ -173,7 +173,7 @@ public class AddPermissionTests
 		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
 
 		Assert.False(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]
@@ -183,7 +183,7 @@ public class AddPermissionTests
 		// 会让下面的校验一并短路。与 EmptyCodeSource 同一条规则：空输入必须显式做出选择。
 		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance));
 
-		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
 		Assert.Contains("without any assembly", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains(nameof(ServiceCollectionExtensions.AssertNoPermissionModels), exception.Message, StringComparison.Ordinal);
@@ -196,7 +196,7 @@ public class AddPermissionTests
 			s => s.AddPermission(EmptyCodeSource.Instance),
 			s => s.AssertNoPermissionModels());
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]
@@ -207,7 +207,7 @@ public class AddPermissionTests
 			s => s.AssertNoPermissionModels(),
 			s => s.AddPermission(EmptyCodeSource.Instance));
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]
@@ -218,7 +218,7 @@ public class AddPermissionTests
 			s => s.AddPermissionModels(CleanAssembly),
 			s => s.AddPermission(EmptyCodeSource.Instance));
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]
@@ -230,24 +230,24 @@ public class AddPermissionTests
 	}
 
 	[Fact]
-	public void ValidatePermissionSetup_Should_Throw_When_Declared_Without_Resolver()
+	public void Guard_Resolution_Should_Throw_When_Declared_Without_Resolver()
 	{
 		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
 
-		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
 		Assert.Contains(nameof(IScopeSubjectResolver), exception.Message);
 	}
 
 	[Fact]
-	public void ValidatePermissionSetup_Should_Pass_When_Resolver_Registered_After_AddPermission()
+	public void Guard_Resolution_Should_Pass_When_Resolver_Registered_After_AddPermission()
 	{
 		// 解析器允许在 AddPermission 之后注册：只有容器定稿才能判断它是否存在。
 		var provider = Build(
 			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]

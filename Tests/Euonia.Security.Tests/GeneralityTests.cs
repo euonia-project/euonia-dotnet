@@ -324,26 +324,26 @@ public class GeneralityTests
 	}
 
 	[Fact]
-	public void Missing_UserPrincipal_Should_Be_Reported_By_ValidatePermissionSetup()
+	public void Missing_UserPrincipal_Should_Be_Reported_When_Guard_Resolved()
 	{
 		var provider = Build(
 			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
-		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
 		Assert.Contains("UserPrincipal", exception.Message);
 	}
 
 	[Fact]
-	public void ValidatePermissionSetup_Should_Pass_When_User_Registered()
+	public void Setup_Validation_Should_Pass_When_User_Registered()
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: true)),
 			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	#endregion

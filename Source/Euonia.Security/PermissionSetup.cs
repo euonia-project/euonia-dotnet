@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Security;
 /// <remarks>
 /// 之所以不在注册服务的过程中直接检查解析器是否已注册：解析器通常在那之后才注册，
 /// 在那里检查会误报。因此这里只记录「是否需要」，真正的检查放在
-/// <c>provider.ValidatePermissionSetup()</c>（容器已构建、注册顺序已确定）。
+/// 首次解析 <c>IScopeGuard</c> 时的启动校验（容器已构建、注册顺序已确定）。
 /// </remarks>
 public sealed class PermissionSetup
 {

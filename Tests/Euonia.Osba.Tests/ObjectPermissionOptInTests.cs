@@ -49,13 +49,16 @@ public class ObjectPermissionOptInTests
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
-		provider.ValidatePermissionSetup();
+
+		// 未启用权限体系：没有守卫可解析，也没有任何校验会触发
+		Assert.Null(provider.GetService<IScopeGuard>());
 	}
 
 	[Fact]
 	public void AddPermission_Should_Register_The_Engine()
 	{
 		var services = NewServicesWithUser();
+		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
@@ -72,6 +75,7 @@ public class ObjectPermissionOptInTests
 	public void AddPermission_Before_AddBusinessObject_Should_Work_Too()
 	{
 		var services = NewServicesWithUser();
+		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
@@ -104,12 +108,18 @@ public class ObjectPermissionOptInTests
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
 		var provider = services.BuildServiceProvider();
 
-		var ex = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+		var ex = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 		Assert.Contains(nameof(IScopeSubjectResolver), ex.Message, StringComparison.Ordinal);
 	}
 
 	private sealed class FixedKeyResolver : IScopeKeyResolver
 	{
 		public string Resolve(object resource, string explicitKey) => explicitKey ?? "fixed";
+	}
+
+	private sealed class FixedSubjectResolver : IScopeSubjectResolver
+	{
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+			=> ValueTask.FromResult(ScopeSubjectSet.Empty);
 	}
 }

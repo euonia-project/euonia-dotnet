@@ -1,5 +1,6 @@
 ﻿using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Sample.Domain;
 
@@ -43,8 +44,8 @@ public class BusinessServiceModule : ModuleContextBase
 
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
 	{
-		// 启动期校验：解析器 / 判定主体 / 扫描范围缺失在此暴露，而不是等到首次权限判定
+		// 解析一次守卫：启动期校验（解析器 / 判定主体 / 扫描范围）随首次解析自动执行，缺漏当场暴露
 		using var scope = context.ServiceProvider.CreateScope();
-		scope.ServiceProvider.ValidatePermissionSetup();
+		_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 	}
 }

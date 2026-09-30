@@ -117,7 +117,7 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// <see cref="IPermissionChecker"/> 明确要求「拿不到用户、拿不到授权数据时返回 <see langword="false"/>」，
 	/// 所以这里吞掉 <see cref="ScopeGuard"/> 在解析器缺席时抛的 <see cref="InvalidOperationException"/>——
 	/// 把接线错误抛进调用方的判定分支，得到的是 500 而不是「拒绝」，既不比拒绝更安全，也不符合契约。
-	/// 这不等于把接线错误悄悄藏起来：<c>provider.ValidatePermissionSetup()</c> 在启动期就会把它抛出来，
+	/// 这不等于把接线错误悄悄藏起来：首次解析 <c>IScopeGuard</c> 时的启动校验就会把它抛出来，
 	/// 而行级数据权限那条路径（直接用 <see cref="IScopeGuard"/>）仍照旧抛出、不会静默放行。
 	/// </remarks>
 	private bool Holds(string permission)

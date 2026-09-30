@@ -250,7 +250,7 @@ public class ScopeRowPermissionTests
 	#region 启动期校验
 
 	[Fact]
-	public void ValidatePermissionSetup_ShouldFailWhenResolverMissing()
+	public void GuardResolution_ShouldFailWhenResolverMissing()
 	{
 		var services = new ServiceCollection();
 
@@ -259,13 +259,13 @@ public class ScopeRowPermissionTests
 
 		var provider = services.BuildServiceProvider();
 
-		var exception = Assert.Throws<InvalidOperationException>(() => provider.ValidatePermissionSetup());
+		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
 		Assert.Contains(nameof(IScopeSubjectResolver), exception.Message);
 	}
 
 	[Fact]
-	public void ValidatePermissionSetup_ShouldPassWhenResolverRegistered()
+	public void GuardResolution_ShouldPassWhenResolverRegistered()
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
@@ -281,7 +281,7 @@ public class ScopeRowPermissionTests
 
 		var provider = services.BuildServiceProvider();
 
-		Assert.Same(provider, provider.ValidatePermissionSetup());
+		provider.GetRequiredService<IScopeGuard>();
 	}
 
 	[Fact]
