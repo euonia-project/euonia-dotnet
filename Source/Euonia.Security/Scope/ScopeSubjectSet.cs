@@ -28,10 +28,8 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeSubjectSet
 {
-	// 权限码/策略键一律 OrdinalIgnoreCase：此前 _subjects/_codes 是 Ordinal，而 HoldsPermission
-	// 自己按 OrdinalIgnoreCase 比较 —— 于是 "REPO:DELETE" 能通过类型级闸门，却在按码取授予时
-	// 落空并回落到更宽的 @default。两个入口必须给同一个答案，否则差值就是越权面。
-	// 维度值仍然大小写敏感（由 ScopeSubject 内部的字典保证），不受此影响。
+	// 权限码/策略键一律 OrdinalIgnoreCase：HoldsPermission 与按码取授予必须给同一个答案，
+	// 否则差值就是越权面。维度值仍大小写敏感（由 ScopeSubject 内部的字典保证）。
 	private readonly Dictionary<string, ScopeSubject> _subjects;
 	private readonly HashSet<string> _codes;
 

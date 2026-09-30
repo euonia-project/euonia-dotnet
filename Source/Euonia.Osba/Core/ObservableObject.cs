@@ -118,7 +118,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// </summary>
 	/// <remarks>
 	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
-	/// 并发订阅/退订不会静默丢失处理器（此前手写 <c>Delegate.Combine/Remove</c> 的读-改-写不是原子的）。
+	/// 并发订阅/退订不会静默丢失处理器。
 	/// </remarks>
 	public event BusyChangedEventHandler BusyChanged;
 

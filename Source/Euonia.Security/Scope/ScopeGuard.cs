@@ -63,9 +63,7 @@ public sealed class ScopeGuard : IScopeGuard
 	/// <param name="keyResolver">策略键解析器；可缺席，此时未显式指定权限码的判定回落到 <see cref="ScopeKeys.Default"/>。</param>
 	public ScopeGuard(UserPrincipal user, ScopeModelRegistry registry, IScopeSubjectResolver resolver, IScopeKeyResolver keyResolver)
 	{
-		// registry 缺席时不会在构造期失败，而是一路走到 GetPolicy 的 _registry.TryGet 才 NRE ——
-		// 那是运行期、在判定路径上。接线错误必须在构造处就说清楚。
-		// user/resolver/keyResolver 允许为空是设计（见各自的 <param> 文档），不在此校验。
+		// user/resolver/keyResolver 允许为空是设计（见各自的 <param> 文档）；registry 不允许。
 		Check.EnsureNotNull(registry, nameof(registry));
 
 		_user = user;
@@ -197,10 +195,9 @@ public sealed class ScopeGuard : IScopeGuard
 	/// <inheritdoc />
 	/// <remarks>
 	/// <paramref name="resource"/> 为 <see langword="null"/> 时一律返回 <see langword="false"/>（fail-closed）：
-	/// 既判不出「它当前的操作」，也无法用模型对它求值。此前该路径会带着 <see langword="null"/> 走进
-	/// 已编译策略求值（已注册类型 ⇒ 空引用），而未注册类型又走 <c>!IsDeclared</c> 短路返回 <see langword="true"/>，
-	/// 与 <see cref="AllowsObject"/> 的 <see langword="false"/> 正好相反——<see cref="IScopeGuard"/> 明确承诺
-	/// 「同一实例经两个入口必然得到同一结论」，这个反向结果就是违约。
+	/// 既判不出「它当前的操作」，也无法用模型对它求值。
+	/// 与 <see cref="AllowsObject"/> 同口径——<see cref="IScopeGuard"/> 承诺
+	/// 「同一实例经两个入口必然得到同一结论」。
 	/// </remarks>
 	public bool Allows<T>(T resource, string scopeKey = null)
 		where T : class
