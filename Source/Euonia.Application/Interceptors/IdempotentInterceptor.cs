@@ -28,13 +28,13 @@ namespace Nerosoft.Euonia.Application;
 public class IdempotentInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _tryServeMethod = typeof(IdempotentInterceptor).GetMethod(nameof(TryServeCached), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                     ?? throw new InvalidOperationException("IdempotentInterceptor.TryServeCached not found.");
+	                                                     ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(IdempotentInterceptor), nameof(TryServeCached)));
 
 	private static readonly MethodInfo _writeSyncMethod = typeof(IdempotentInterceptor).GetMethod(nameof(WriteBackSync), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                      ?? throw new InvalidOperationException("IdempotentInterceptor.WriteBackSync not found.");
+	                                                      ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(IdempotentInterceptor), nameof(WriteBackSync)));
 
 	private static readonly MethodInfo _wrapAsyncMethod = typeof(IdempotentInterceptor).GetMethod(nameof(InterceptTypedAsync), BindingFlags.Instance | BindingFlags.NonPublic)
-	                                                     ?? throw new InvalidOperationException("IdempotentInterceptor.InterceptTypedAsync not found.");
+	                                                     ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(IdempotentInterceptor), nameof(InterceptTypedAsync)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapAsyncMethods = new();
 

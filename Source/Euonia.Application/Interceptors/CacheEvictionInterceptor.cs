@@ -14,7 +14,7 @@ namespace Nerosoft.Euonia.Application;
 public class CacheEvictionInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _attachGenericMethod = typeof(CacheEvictionInterceptor).GetMethod(nameof(AttachGenericContinuation), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                         ?? throw new InvalidOperationException("CacheEvictionInterceptor.AttachGenericContinuation not found.");
+	                                                         ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CacheEvictionInterceptor), nameof(AttachGenericContinuation)));
 
 	private readonly IServiceProvider _serviceProvider;
 

@@ -22,12 +22,12 @@ namespace Nerosoft.Euonia.Application;
 public class RetryInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _retryTypedMethod = typeof(RetryInterceptor).GetMethod(nameof(RetryTypedAsync), BindingFlags.Instance | BindingFlags.NonPublic)
-	                                                        ?? throw new InvalidOperationException("RetryInterceptor.RetryTypedAsync not found.");
+	                                                        ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(RetryInterceptor), nameof(RetryTypedAsync)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _retryTypedMethods = new();
 
 	private static readonly MethodInfo _wrapValueTaskMethod = typeof(RetryInterceptor).GetMethod(nameof(WrapValueTask), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                          ?? throw new InvalidOperationException("RetryInterceptor.WrapValueTask not found.");
+	                                                          ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(RetryInterceptor), nameof(WrapValueTask)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapValueTaskMethods = new();
 

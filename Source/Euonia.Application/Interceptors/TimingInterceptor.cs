@@ -17,7 +17,7 @@ namespace Nerosoft.Euonia.Application;
 public class TimingInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _attachValueTaskMethod = typeof(TimingInterceptor).GetMethod(nameof(AttachValueTask), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                             ?? throw new InvalidOperationException("TimingInterceptor.AttachValueTask not found.");
+	                                                             ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(TimingInterceptor), nameof(AttachValueTask)));
 
 	private readonly ILogger _logger;
 
