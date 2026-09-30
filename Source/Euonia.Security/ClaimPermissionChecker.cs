@@ -8,9 +8,9 @@ namespace Nerosoft.Euonia.Security;
 /// 权限值支持以 <c>*</c> 结尾的前缀通配符匹配，例如用户拥有 <c>order:*</c> 可匹配 <c>order:create</c>。
 /// </para>
 /// <para>
-/// <b>不建议使用</b>：本实现把权限码固化在令牌里，权限码多时会撑爆令牌，
-/// 且<b>取消授权后旧令牌在过期前仍然有效</b>。它已不是默认实现，
-/// 仅为显式回退保留；新代码请使用 <see cref="SubjectPermissionChecker"/>（从授权数据实时解析）。
+/// 本实现把权限码固化在令牌里，权限码多时会撑爆令牌，
+/// 且<b>取消授权后旧令牌在过期前仍然有效</b>。
+/// 需要实时解析授权数据时请使用 <see cref="SubjectPermissionChecker"/>。
 /// </para>
 /// </remarks>
 public class ClaimPermissionChecker : IPermissionChecker
