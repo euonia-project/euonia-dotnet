@@ -100,7 +100,7 @@ internal sealed class DeadLetterService : IDeadLetterService
 	private async Task RedeliverAsync<TMessage>(DeadLetterEntry entry, CancellationToken cancellationToken)
 	{
 		var transporter = _accessor.GetKeyedService<ITransporter>(entry.Target)
-		                  ?? throw new MessageTransportException($"The transport '{entry.Target}' is not registered.");
+		                  ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, entry.Target));
 
 		await transporter.PublishAsync((IMessageEnvelope<TMessage>)entry.Content, cancellationToken);
 	}

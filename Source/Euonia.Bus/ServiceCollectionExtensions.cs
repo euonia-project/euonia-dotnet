@@ -90,7 +90,7 @@ public static class ServiceCollectionExtensions
 		{
 			if (configure == null)
 			{
-				throw new ArgumentNullException(nameof(configure), @"Configurator builder cannot be null.");
+				throw new ArgumentNullException(nameof(configure), Resources.IDS_CONFIGURATOR_BUILDER_CANNOT_NULL);
 			}
 
 			services.TryAddSingleton<ConfiguratorBuilder>(_ =>
@@ -113,7 +113,7 @@ public static class ServiceCollectionExtensions
 		{
 			if (assemblies == null || assemblies.Length == 0)
 			{
-				throw new ArgumentNullException(nameof(assemblies), @"Assemblies cannot be null or empty.");
+				throw new ArgumentNullException(nameof(assemblies), Resources.IDS_ASSEMBLIES_CANNOT_NULL_OR_EMPTY);
 			}
 
 			var handlerTypes = assemblies.SelectMany(t => t.GetTypes().Where(x => x.IsClass && !x.IsAbstract && x.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IHandler<,>))));
@@ -149,7 +149,7 @@ public static class ServiceCollectionExtensions
 			                            .ToList();
 			if (!interfaces.Any())
 			{
-				throw new ArgumentException($"The type {handlerType.FullName} does not implement any IHandler<,> interface.");
+				throw new ArgumentException(string.Format(Resources.IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER, handlerType.FullName));
 			}
 
 			foreach (var @interface in interfaces)
@@ -172,14 +172,14 @@ public static class ServiceCollectionExtensions
 		{
 			if (handlerTypes == null || handlerTypes.Length == 0)
 			{
-				throw new ArgumentNullException(nameof(handlerTypes), @"Handler types cannot be null or empty.");
+				throw new ArgumentNullException(nameof(handlerTypes), Resources.IDS_HANDLER_TYPES_CANNOT_NULL_OR_EMPTY);
 			}
 
 			foreach (var handlerType in handlerTypes)
 			{
 				if (handlerType.IsPrimitive || !handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
 				{
-					throw new ArgumentException($"The type {handlerType.FullName} must be a non-abstract class.");
+					throw new ArgumentException(string.Format(Resources.IDS_HANDLER_TYPE_MUST_BE_CONCRETE, handlerType.FullName));
 				}
 
 				var interfaces = handlerType.GetInterfaces()
@@ -187,7 +187,7 @@ public static class ServiceCollectionExtensions
 				                            .ToList();
 				if (!interfaces.Any())
 				{
-					throw new ArgumentException($"The type {handlerType.FullName} does not implement any IHandler<,> interface.");
+					throw new ArgumentException(string.Format(Resources.IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER, handlerType.FullName));
 				}
 
 				foreach (var @interface in interfaces)

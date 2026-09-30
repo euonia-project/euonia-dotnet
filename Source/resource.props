@@ -1,7 +1,17 @@
 <Project>
     
+    <PropertyGroup>
+        <!--
+          资源生成器所在命名空间。默认为 $(RootNamespace).Properties；
+          当项目的 RootNamespace 与其依赖项目的 RootNamespace 相同时
+          （例如 Euonia.Bus 与 Euonia.Bus.Abstract 都是 Nerosoft.Euonia.Bus），
+          两者会生成同名 Resources 类型并触发 CS0436，需要在此覆盖。
+        -->
+        <ResourcesNamespace Condition="'$(ResourcesNamespace)' == ''">$(RootNamespace).Properties</ResourcesNamespace>
+    </PropertyGroup>
+
     <ItemGroup>
-        <Using Include="$(RootNamespace).Properties"/>
+        <Using Include="$(ResourcesNamespace)"/>
     </ItemGroup>
 
     <!-- See Microsoft.Common.CurrentVersion.targets -->
@@ -12,7 +22,7 @@
                           ExecuteAsTool="false"
                           StronglyTypedLanguage="C#"
                           StronglyTypedClassName="%(Filename)"
-                          StronglyTypedNamespace="@(EmbeddedResource->'$(RootNamespace).Properties')"
+                          StronglyTypedNamespace="@(EmbeddedResource->'$(ResourcesNamespace)')"
                           StronglyTypedFileName="@(EmbeddedResource->'%(RootDir)%(Directory)%(Filename).Designer.cs')"
                           Condition="'%(EmbeddedResource.GenerateResource)' != 'false' and '%(EmbeddedResource.FileName)' == 'Resources'"
                           PublicClass="false"

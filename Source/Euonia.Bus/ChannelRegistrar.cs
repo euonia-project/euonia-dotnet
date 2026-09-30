@@ -86,7 +86,7 @@ internal sealed class ChannelRegistrar
 		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
 		if (registration.MessageType != messageType)
 		{
-			throw new InvalidOperationException($"Channel '{channel}' is already registered with a different message type.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_CHANNEL_ALREADY_REGISTERED, channel));
 		}
 
 		// 幂等：同一个通道上重复注册同一个处理器（相同处理器类型 + 相同方法；lambda 注册时实例不同，

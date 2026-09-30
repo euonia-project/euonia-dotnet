@@ -181,7 +181,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
 		if (!_handlerContainer.TryGetValue(channel, out var registrations) || registrations == null || registrations.Count == 0)
 		{
-			throw new InvalidOperationException($"No handler registered for message {context.MessageId} on channel {channel}");
+			throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
 		}
 
 		// 从服务提供程序获取处理程序实例
@@ -191,7 +191,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		var useInbox = _inboxOptions.Enabled;
 		if (useInbox && _inboxStore == null)
 		{
-			throw new MessagePersistentException($"The inbox store is not registered, but inbox is enabled. Please register an IInboxStore implementation (e.g. services.AddInMemoryInbox()).");
+			throw new MessagePersistentException(Resources.IDS_INBOX_STORE_NOT_REGISTERED);
 		}
 
 		object result;

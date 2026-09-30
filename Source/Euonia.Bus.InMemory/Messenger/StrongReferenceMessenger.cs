@@ -624,7 +624,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 				// Check whether there are any registered recipients
 				if (!TryGetMapping<TMessage>(out var mapping))
 				{
-					throw new MessageDeliverException("No recipients registered for the input message type.");
+					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
 				}
 
 				// Check the number of remaining handlers, see below
@@ -632,7 +632,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				if (totalHandlersCount == 0)
 				{
-					throw new MessageDeliverException("No recipients registered for the input message type.");
+					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
 				}
 
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
@@ -652,7 +652,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 				// Check whether there are any registered recipients
 				if (!TryGetMapping<TMessage, TToken>(out var mapping))
 				{
-					throw new InvalidOperationException($"No recipients registered for the input message type '{typeof(TMessage).FullName}' and token.");
+					throw new InvalidOperationException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN, typeof(TMessage).FullName));
 				}
 
 				// We need to make a local copy of the currently registered handlers, since users might
@@ -670,7 +670,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				if (totalHandlersCount == 0)
 				{
-					throw new MessageDeliverException("No recipients registered for the input message type.");
+					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
 				}
 
 				// Rent the array and also assign it to a span, which will be used to access values.
@@ -709,7 +709,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 			Array.Clear(rentedArray, 0, 0);
 			ArrayPool<object>.Shared.Return(rentedArray);
 
-			throw new MessageDeliverException($"No recipients registered for the input message type '{typeof(TMessage).FullName}' and token to deliver.");
+			throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER, typeof(TMessage).FullName));
 		}
 
 		try
@@ -977,6 +977,6 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// </summary>
 	private static void ThrowInvalidOperationExceptionForDuplicateRegistration()
 	{
-		throw new InvalidOperationException("The target recipient has already subscribed to the target message.");
+		throw new InvalidOperationException(Resources.IDS_RECIPIENT_ALREADY_SUBSCRIBED);
 	}
 }

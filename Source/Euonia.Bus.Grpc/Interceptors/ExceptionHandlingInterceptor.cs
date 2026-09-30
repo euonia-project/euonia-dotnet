@@ -13,8 +13,6 @@ namespace Nerosoft.Euonia.Grpc;
 /// </summary>
 internal class ExceptionHandlingInterceptor : Interceptor
 {
-    private const string NULL_RESPONSE_MESSAGE = "Response data is <null>.";
-
     /// <summary>
     /// 沿内层异常链查找时的最大深度，防止异常链成环导致死循环。
     /// </summary>
@@ -51,7 +49,7 @@ internal class ExceptionHandlingInterceptor : Interceptor
             var result = await continuation(request, context);
             if (result == null)
             {
-                throw new RpcException(new Status(StatusCode.NotFound, NULL_RESPONSE_MESSAGE));
+                throw new RpcException(new Status(StatusCode.NotFound, Resources.IDS_NULL_RESPONSE));
             }
 
             return result;

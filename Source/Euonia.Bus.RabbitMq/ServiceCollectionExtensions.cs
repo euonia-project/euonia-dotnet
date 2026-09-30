@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
 
 				if (options == null)
 				{
-					throw new InvalidOperationException("RabbitMqMessageBusOptions was not configured.");
+					throw new InvalidOperationException(Resources.IDS_OPTIONS_NOT_CONFIGURED);
 				}
 
 				// 使用提供的连接 URI 创建并返回 RabbitMQ 连接工厂。

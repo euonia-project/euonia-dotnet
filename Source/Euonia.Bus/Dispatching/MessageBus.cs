@@ -115,7 +115,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsMulticast(channel, messageType))
 		{
-			throw new MessageTypeException("The message type is not a multicast type.");
+			throw new MessageTypeException(Resources.IDS_MESSAGE_TYPE_NOT_MULTICAST);
 		}
 
 		var context = _requestAccessor?.Context;
@@ -143,12 +143,12 @@ internal sealed class MessageBus : IBus, IDisposable
 		{
 			if (_outboxStore == null)
 			{
-				throw new MessagePersistentException($"The outbox store is not registered, but the message '{message.GetType().FullName}' requires outbox persistence. Please register an IOutboxStore implementation (e.g. services.AddInMemoryOutbox()).");
+				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_STORE_NOT_REGISTERED, message.GetType().FullName));
 			}
 
 			if (!_outboxStore.Insert(pack, transports.ToArray()))
 			{
-				throw new MessagePersistentException($"The outbox message with id '{pack.MessageId}' already exists.");
+				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_MESSAGE_ALREADY_EXISTS, pack.MessageId));
 			}
 		}
 
@@ -209,7 +209,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsUnicast(channel, messageType))
 		{
-			throw new MessageTypeException("The message type is not a unicast type.");
+			throw new MessageTypeException(Resources.IDS_MESSAGE_TYPE_NOT_UNICAST);
 		}
 
 		var context = _requestAccessor?.Context;
@@ -286,7 +286,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
-			throw new MessageTypeException("The message type is not a request type.");
+			throw new MessageTypeException(Resources.IDS_MESSAGE_TYPE_NOT_REQUEST);
 		}
 
 		return CallAsyncCore(message, channel, messageType, options, behavior, cancellationToken);
@@ -310,7 +310,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
-			throw new MessageTypeException("The message type is not a request type.");
+			throw new MessageTypeException(Resources.IDS_MESSAGE_TYPE_NOT_REQUEST);
 		}
 
 		return CallAsyncCore<IRequest<TResult>, TResult>(request, channel, messageType, options, behavior, cancellationToken);
@@ -453,7 +453,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		// 而不是让框架抛出难以理解的参数异常。
 		if (delay > MaxDelayMilliseconds)
 		{
-			throw new ArgumentOutOfRangeException(nameof(delay), delay, $"The delay must not exceed {MaxDelayMilliseconds} milliseconds (about 49.7 days).");
+			throw new ArgumentOutOfRangeException(nameof(delay), delay, string.Format(Resources.IDS_DELAY_TOO_LARGE, MaxDelayMilliseconds));
 		}
 
 		await Task.Delay(TimeSpan.FromMilliseconds(delay), cancellationToken).ConfigureAwait(false);
@@ -492,7 +492,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		}
 		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
 		{
-			throw new TimeoutException($"The call did not complete within the configured timeout ({timeout} ms).");
+			throw new TimeoutException(string.Format(Resources.IDS_CALL_TIMEOUT, timeout));
 		}
 	}
 
@@ -530,7 +530,7 @@ internal sealed class MessageBus : IBus, IDisposable
 			var transport = _transporters.GetOrAdd(transportName, name =>
 			{
 				var service = _accessor.GetKeyedService<ITransporter>(name);
-				return service ?? throw new MessageTransportException($"The transport '{name}' is not registered.");
+				return service ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, name));
 			});
 			return await next(transport, message);
 		});
@@ -553,7 +553,7 @@ internal sealed class MessageBus : IBus, IDisposable
 
 		var channel = selector(messageType);
 
-		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException($"The channel name for message type '{messageType.FullName}' cannot be null or empty. Please specify a channel in the options or configure a default channel for this message type.");
+		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException(string.Format(Resources.IDS_CHANNEL_NAME_REQUIRED, messageType.FullName));
 	}
 
 	/// <inheritdoc/>

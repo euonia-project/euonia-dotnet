@@ -123,4 +123,19 @@
   <data name="IDS_EXCHANGE_TYPE_IS_REQUIRED" xml:space="preserve">
     <value>必须指定Exchange的类型。</value>
   </data>
+  <data name="IDS_CHANNEL_NOT_INITIALIZED" xml:space="preserve">
+    <value>RabbitMQ 通道未初始化。</value>
+  </data>
+  <data name="IDS_OPTIONS_NOT_CONFIGURED" xml:space="preserve">
+    <value>未配置 RabbitMqMessageBusOptions。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
+    <value>消息类型 {0} 不是队列/主题/请求类型。</value>
+  </data>
+  <data name="IDS_CHANNEL_NOT_FOUND_IN_VHOST" xml:space="preserve">
+    <value>在 vhost '/' 中未找到通道。</value>
+  </data>
+  <data name="IDS_NO_CONSUMER_FOUND_FOR_CHANNEL" xml:space="preserve">
+    <value>该通道没有消费者。</value>
+  </data>
 </root>

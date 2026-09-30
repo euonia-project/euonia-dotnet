@@ -61,7 +61,7 @@ internal class StrategicDispatcher : IDispatcher
 				break;
 
 			case > 1 when !_configurator.Convention.IsMulticast(channel, type):
-				throw new MessageTypeException("Multiple transports are configured for a unicast message type.");
+				throw new MessageTypeException(Resources.IDS_MULTIPLE_TRANSPORTS_FOR_UNICAST);
 		}
 
 		return transports;
@@ -91,7 +91,7 @@ internal class StrategicDispatcher : IDispatcher
 		{
 			if (string.IsNullOrEmpty(_options.DefaultTransporter))
 			{
-				throw new MessageTypeException($"No transport is configured for the message type '{type.FullName}' on channel '{channel}', and no default transporter is configured.");
+				throw new MessageTypeException(string.Format(Resources.IDS_NO_TRANSPORT_FOR_MESSAGE_TYPE, type.FullName, channel));
 			}
 
 			// 默认传输器的回退结果同样缓存：此前每次调用都要重新分配一个列表。

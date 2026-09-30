@@ -39,7 +39,7 @@ public sealed class BusHealthCheck : IHealthCheck
 		var configurator = _provider.GetService<IConfigurator>();
 		if (configurator == null)
 		{
-			failures.Add("The message bus (IConfigurator) is not registered.");
+			failures.Add(Resources.IDS_BUS_NOT_REGISTERED);
 		}
 
 		var transportCount = configurator?.StrategyAssignedTypes.Count ?? 0;
@@ -47,7 +47,7 @@ public sealed class BusHealthCheck : IHealthCheck
 
 		if (_options.RequireTransporter && transportCount == 0)
 		{
-			failures.Add("No transporter is configured.");
+			failures.Add(Resources.IDS_NO_TRANSPORTER_CONFIGURED);
 		}
 
 		// 死信是重试耗尽的终态，默认只要出现即视为不健康。
@@ -58,7 +58,7 @@ public sealed class BusHealthCheck : IHealthCheck
 
 			if (deadLetters.Value > _options.MaxDeadLetters)
 			{
-				failures.Add($"Dead letter backlog ({deadLetters.Value}) exceeds the configured limit ({_options.MaxDeadLetters}).");
+				failures.Add(string.Format(Resources.IDS_DEAD_LETTER_BACKLOG_EXCEEDS, deadLetters.Value, _options.MaxDeadLetters));
 			}
 		}
 
@@ -69,7 +69,7 @@ public sealed class BusHealthCheck : IHealthCheck
 
 			if (_options.MaxOutboxFailed >= 0 && outboxFailed.Value > _options.MaxOutboxFailed)
 			{
-				failures.Add($"Outbox failed backlog ({outboxFailed.Value}) exceeds the configured limit ({_options.MaxOutboxFailed}).");
+				failures.Add(string.Format(Resources.IDS_OUTBOX_FAILED_BACKLOG_EXCEEDS, outboxFailed.Value, _options.MaxOutboxFailed));
 			}
 		}
 
@@ -80,7 +80,7 @@ public sealed class BusHealthCheck : IHealthCheck
 
 			if (_options.MaxInboxFailed >= 0 && inboxFailed.Value > _options.MaxInboxFailed)
 			{
-				failures.Add($"Inbox failed backlog ({inboxFailed.Value}) exceeds the configured limit ({_options.MaxInboxFailed}).");
+				failures.Add(string.Format(Resources.IDS_INBOX_FAILED_BACKLOG_EXCEEDS, inboxFailed.Value, _options.MaxInboxFailed));
 			}
 		}
 
@@ -89,6 +89,6 @@ public sealed class BusHealthCheck : IHealthCheck
 			return Task.FromResult(HealthCheckResult.Unhealthy(string.Join(" ", failures), data: data));
 		}
 
-		return Task.FromResult(HealthCheckResult.Healthy("The message bus is healthy.", data));
+		return Task.FromResult(HealthCheckResult.Healthy(Resources.IDS_BUS_HEALTHY, data));
 	}
 }

@@ -135,13 +135,13 @@ public static class RemoteReceiver
 		var typeName = ReadTypeName(payload);
 		if (string.IsNullOrWhiteSpace(typeName))
 		{
-			throw new MessageDeliverException("The remote message payload does not contain a valid message type name.");
+			throw new MessageDeliverException(Resources.IDS_REMOTE_PAYLOAD_INVALID_TYPE_NAME);
 		}
 
 		var messageType = Type.GetType(typeName);
 		if (messageType == null)
 		{
-			throw new MessageDeliverException($"Failed to resolve message type '{typeName}'.");
+			throw new MessageDeliverException(string.Format(Resources.IDS_REMOTE_TYPE_RESOLVE_FAILED, typeName));
 		}
 
 		return serializer.DeserializeEnvelope(payload, messageType);

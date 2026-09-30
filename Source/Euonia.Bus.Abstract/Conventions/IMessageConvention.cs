@@ -73,7 +73,7 @@ public interface IMessageConvention
 			1 => MessageConventionType.Multicast,
 			2 => MessageConventionType.Unicast,
 			4 => MessageConventionType.Request,
-			_ => throw new MessageTypeException($"The message type {type.AssemblyQualifiedName} is not a queue/topic/request type.")
+			_ => throw new MessageTypeException(string.Format(Resources.IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST, type.AssemblyQualifiedName))
 		};
 	}
 }

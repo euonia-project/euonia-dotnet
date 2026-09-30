@@ -331,17 +331,17 @@ internal class RabbitMqTransporter : ITransporter
 
 			if (queueDeclare == null)
 			{
-				throw new MessageDeliverException("Channel not found in vhost '/'.");
+				throw new MessageDeliverException(Resources.IDS_CHANNEL_NOT_FOUND_IN_VHOST);
 			}
 
 			if (queueDeclare.ConsumerCount < 1)
 			{
-				throw new MessageDeliverException("No consumer found for the channel.");
+				throw new MessageDeliverException(Resources.IDS_NO_CONSUMER_FOUND_FOR_CHANNEL);
 			}
 		}
 		catch (OperationInterruptedException exception) when (exception.ShutdownReason?.ReplyCode == 404)
 		{
-			throw new MessageDeliverException("No consumer found for the channel.");
+			throw new MessageDeliverException(Resources.IDS_NO_CONSUMER_FOUND_FOR_CHANNEL);
 		}
 	}
 }

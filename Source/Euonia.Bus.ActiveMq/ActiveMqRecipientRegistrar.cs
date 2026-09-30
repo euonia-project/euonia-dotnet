@@ -91,8 +91,8 @@ internal class ActiveMqRecipientRegistrar : IRecipientRegistrar
 				MessageConventionType.Unicast => new ActiveMqConsumer(_provider, channel, registration.MessageType),
 				MessageConventionType.Multicast => new ActiveMqSubscriber(_provider, channel, registration.MessageType),
 				MessageConventionType.Request => new ActiveMqExecutor(_provider, channel, registration.MessageType),
-				MessageConventionType.None => throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type."),
-				_ => throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.")
+				MessageConventionType.None => throw new MessageTypeException(string.Format(Resources.IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST, registration.MessageType.AssemblyQualifiedName)),
+				_ => throw new MessageTypeException(string.Format(Resources.IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST, registration.MessageType.AssemblyQualifiedName))
 			};
 
 			await recipient.StartAsync(cancellationToken);

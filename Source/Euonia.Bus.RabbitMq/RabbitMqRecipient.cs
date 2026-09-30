@@ -101,7 +101,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		{
 			if (Channel == null)
 			{
-				throw new InvalidOperationException("The RabbitMQ channel is not initialized.");
+					throw new InvalidOperationException(Resources.IDS_CHANNEL_NOT_INITIALIZED);
 			}
 
 			var consumer = _consumer;

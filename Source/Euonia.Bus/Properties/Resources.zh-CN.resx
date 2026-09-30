@@ -123,4 +123,91 @@
   <data name="IDS_CONVENTION_PROVIDER_REQUIRED" xml:space="preserve">
     <value>至少需要一个Convention。</value>
   </data>
+  <data name="IDS_NO_HANDLER_REGISTERED" xml:space="preserve">
+    <value>通道 {1} 上没有为消息 {0} 注册处理程序。</value>
+  </data>
+  <data name="IDS_INBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>收件箱已启用，但未注册收件箱存储。请注册 IInboxStore 实现（例如 services.AddInMemoryInbox()）。</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
+    <value>方法不存在。</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
+    <value>处理程序方法必须至少包含一个参数。</value>
+  </data>
+  <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
+    <value>处理程序方法的第一个参数必须是消息类型。</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
+    <value>当方法包含 2 个参数时，第二个参数必须是 MessageContext 或 CancellationToken。</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
+    <value>当方法包含 3 个参数时，第二、三个参数必须依次是 MessageContext 与 CancellationToken。</value>
+  </data>
+  <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
+    <value>处理程序方法不能带有名称为空的 SubscribeAttribute。</value>
+  </data>
+  <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
+    <value>自动加载配置项 '{1}:AutoLoadAssemblies' 中指定的程序集 '{0}' 失败。</value>
+  </data>
+  <data name="IDS_CHANNEL_ALREADY_REGISTERED" xml:space="preserve">
+    <value>通道 '{0}' 已注册，且绑定了不同的消息类型。</value>
+  </data>
+  <data name="IDS_CONFIGURATOR_BUILDER_CANNOT_NULL" xml:space="preserve">
+    <value>Configurator 构造器不能为空。</value>
+  </data>
+  <data name="IDS_ASSEMBLIES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>程序集集合不能为空。</value>
+  </data>
+  <data name="IDS_HANDLER_TYPES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>处理程序类型集合不能为空。</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER" xml:space="preserve">
+    <value>类型 {0} 未实现任何 IHandler&lt;,&gt; 接口。</value>
+  </data>
+  <data name="IDS_HANDLER_TYPE_MUST_BE_CONCRETE" xml:space="preserve">
+    <value>类型 {0} 必须是非抽象类。</value>
+  </data>
+  <data name="IDS_TRANSPORT_NOT_REGISTERED" xml:space="preserve">
+    <value>传输器 '{0}' 未注册。</value>
+  </data>
+  <data name="IDS_MULTIPLE_TRANSPORTS_FOR_UNICAST" xml:space="preserve">
+    <value>为同一个单播消息类型配置了多个传输器。</value>
+  </data>
+  <data name="IDS_NO_TRANSPORT_FOR_MESSAGE_TYPE" xml:space="preserve">
+    <value>通道 '{1}' 上的消息类型 '{0}' 没有配置传输器，也没有配置默认传输器。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_MULTICAST" xml:space="preserve">
+    <value>该消息类型不是多播类型。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_UNICAST" xml:space="preserve">
+    <value>该消息类型不是单播类型。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_REQUEST" xml:space="preserve">
+    <value>该消息类型不是请求类型。</value>
+  </data>
+  <data name="IDS_OUTBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>未注册发件箱存储，但消息 '{0}' 需要发件箱持久化。请注册 IOutboxStore 实现（例如 services.AddInMemoryOutbox()）。</value>
+  </data>
+  <data name="IDS_OUTBOX_MESSAGE_ALREADY_EXISTS" xml:space="preserve">
+    <value>标识为 '{0}' 的发件箱消息已存在。</value>
+  </data>
+  <data name="IDS_DELAY_TOO_LARGE" xml:space="preserve">
+    <value>延迟不得超过 {0} 毫秒（约 49.7 天）。</value>
+  </data>
+  <data name="IDS_CALL_TIMEOUT" xml:space="preserve">
+    <value>调用未在配置的超时时间（{0} 毫秒）内完成。</value>
+  </data>
+  <data name="IDS_CHANNEL_NAME_REQUIRED" xml:space="preserve">
+    <value>消息类型 '{0}' 的通道名不能为空。请在选项中指定通道，或为该消息类型配置默认通道。</value>
+  </data>
+  <data name="IDS_STRATEGY_REQUIRED" xml:space="preserve">
+    <value>至少需要一个策略。</value>
+  </data>
+  <data name="IDS_REMOTE_PAYLOAD_INVALID_TYPE_NAME" xml:space="preserve">
+    <value>远程消息负载中没有有效的消息类型名称。</value>
+  </data>
+  <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
+    <value>解析消息类型 '{0}' 失败。</value>
+  </data>
 </root>

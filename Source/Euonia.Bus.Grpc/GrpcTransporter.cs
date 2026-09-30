@@ -38,13 +38,13 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	{
 		_options = options.Value;
 		_logger = logger;
-		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider) ?? throw new InvalidOperationException($"Message serializer '{_options.SerializerProvider}' is not registered.");
+		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider) ?? throw new InvalidOperationException(string.Format(Resources.IDS_SERIALIZER_NOT_REGISTERED, _options.SerializerProvider));
 
 		Name = _options.Name ?? "grpc";
 
 		if (string.IsNullOrWhiteSpace(_options.Endpoint))
 		{
-			throw new InvalidOperationException("GrpcBusOptions.Endpoint must be configured.");
+			throw new InvalidOperationException(Resources.IDS_ENDPOINT_NOT_CONFIGURED);
 		}
 
 		_channel = GrpcChannel.ForAddress(_options.Endpoint);
@@ -80,13 +80,13 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		var content = response.Data;
 		if (string.IsNullOrWhiteSpace(content))
 		{
-			throw new MessageDeliverException("Remote call failed: the response payload is empty.");
+			throw new MessageDeliverException(Resources.IDS_RESPONSE_PAYLOAD_EMPTY);
 		}
 
 		var reply = _serializer.Deserialize<RemoteReply<TResponse>>(content);
 		if (reply == null)
 		{
-			throw new MessageDeliverException("Remote call failed: the response payload could not be parsed.");
+			throw new MessageDeliverException(Resources.IDS_RESPONSE_PAYLOAD_UNPARSABLE);
 		}
 
 		if (!reply.IsSuccess)

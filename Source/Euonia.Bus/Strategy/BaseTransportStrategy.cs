@@ -66,7 +66,7 @@ public class BaseTransportStrategy : ITransportStrategy
 	{
 		if (strategies == null || strategies.Length == 0)
 		{
-			throw new ArgumentException(@"At least one strategy is required.", nameof(strategies));
+			throw new ArgumentException(Resources.IDS_STRATEGY_REQUIRED, nameof(strategies));
 		}
 
 		_strategies.AddRange(strategies);

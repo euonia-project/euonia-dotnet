@@ -117,97 +117,22 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="IDS_TYPE_CANNOT_NULL" xml:space="preserve">
-    <value>The type cannot be null.</value>
+  <data name="IDS_BUS_NOT_REGISTERED" xml:space="preserve">
+    <value>The message bus (IConfigurator) is not registered.</value>
   </data>
-  <data name="IDS_CONVENTION_PROVIDER_REQUIRED" xml:space="preserve">
-    <value>At least one convention must be provided.</value>
+  <data name="IDS_NO_TRANSPORTER_CONFIGURED" xml:space="preserve">
+    <value>No transporter is configured.</value>
   </data>
-  <data name="IDS_NO_HANDLER_REGISTERED" xml:space="preserve">
-    <value>No handler registered for message {0} on channel {1}</value>
+  <data name="IDS_DEAD_LETTER_BACKLOG_EXCEEDS" xml:space="preserve">
+    <value>Dead letter backlog ({0}) exceeds the configured limit ({1}).</value>
   </data>
-  <data name="IDS_INBOX_STORE_NOT_REGISTERED" xml:space="preserve">
-    <value>The inbox store is not registered, but inbox is enabled. Please register an IInboxStore implementation (e.g. services.AddInMemoryInbox()).</value>
+  <data name="IDS_OUTBOX_FAILED_BACKLOG_EXCEEDS" xml:space="preserve">
+    <value>Outbox failed backlog ({0}) exceeds the configured limit ({1}).</value>
   </data>
-  <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>The method doesn't exist.</value>
+  <data name="IDS_INBOX_FAILED_BACKLOG_EXCEEDS" xml:space="preserve">
+    <value>Inbox failed backlog ({0}) exceeds the configured limit ({1}).</value>
   </data>
-  <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>The handler method must contain at least one parameter</value>
-  </data>
-  <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>The first parameter of handler method must be message type</value>
-  </data>
-  <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>The second parameter of handler method must be MessageContext or CancellationToken if the method contains 2 parameters</value>
-  </data>
-  <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>The second and third parameter of handler method must be MessageContext and CancellationToken if the method contains 3 parameters</value>
-  </data>
-  <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>The handler method must not have any SubscribeAttribute with an empty name</value>
-  </data>
-  <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
-    <value>Failed to auto-load the assembly '{0}' configured in '{1}:AutoLoadAssemblies'.</value>
-  </data>
-  <data name="IDS_CHANNEL_ALREADY_REGISTERED" xml:space="preserve">
-    <value>Channel '{0}' is already registered with a different message type.</value>
-  </data>
-  <data name="IDS_CONFIGURATOR_BUILDER_CANNOT_NULL" xml:space="preserve">
-    <value>Configurator builder cannot be null.</value>
-  </data>
-  <data name="IDS_ASSEMBLIES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
-    <value>Assemblies cannot be null or empty.</value>
-  </data>
-  <data name="IDS_HANDLER_TYPES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
-    <value>Handler types cannot be null or empty.</value>
-  </data>
-  <data name="IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER" xml:space="preserve">
-    <value>The type {0} does not implement any IHandler&lt;,&gt; interface.</value>
-  </data>
-  <data name="IDS_HANDLER_TYPE_MUST_BE_CONCRETE" xml:space="preserve">
-    <value>The type {0} must be a non-abstract class.</value>
-  </data>
-  <data name="IDS_TRANSPORT_NOT_REGISTERED" xml:space="preserve">
-    <value>The transport '{0}' is not registered.</value>
-  </data>
-  <data name="IDS_MULTIPLE_TRANSPORTS_FOR_UNICAST" xml:space="preserve">
-    <value>Multiple transports are configured for a unicast message type.</value>
-  </data>
-  <data name="IDS_NO_TRANSPORT_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>No transport is configured for the message type '{0}' on channel '{1}', and no default transporter is configured.</value>
-  </data>
-  <data name="IDS_MESSAGE_TYPE_NOT_MULTICAST" xml:space="preserve">
-    <value>The message type is not a multicast type.</value>
-  </data>
-  <data name="IDS_MESSAGE_TYPE_NOT_UNICAST" xml:space="preserve">
-    <value>The message type is not a unicast type.</value>
-  </data>
-  <data name="IDS_MESSAGE_TYPE_NOT_REQUEST" xml:space="preserve">
-    <value>The message type is not a request type.</value>
-  </data>
-  <data name="IDS_OUTBOX_STORE_NOT_REGISTERED" xml:space="preserve">
-    <value>The outbox store is not registered, but the message '{0}' requires outbox persistence. Please register an IOutboxStore implementation (e.g. services.AddInMemoryOutbox()).</value>
-  </data>
-  <data name="IDS_OUTBOX_MESSAGE_ALREADY_EXISTS" xml:space="preserve">
-    <value>The outbox message with id '{0}' already exists.</value>
-  </data>
-  <data name="IDS_DELAY_TOO_LARGE" xml:space="preserve">
-    <value>The delay must not exceed {0} milliseconds (about 49.7 days).</value>
-  </data>
-  <data name="IDS_CALL_TIMEOUT" xml:space="preserve">
-    <value>The call did not complete within the configured timeout ({0} ms).</value>
-  </data>
-  <data name="IDS_CHANNEL_NAME_REQUIRED" xml:space="preserve">
-    <value>The channel name for message type '{0}' cannot be null or empty. Please specify a channel in the options or configure a default channel for this message type.</value>
-  </data>
-  <data name="IDS_STRATEGY_REQUIRED" xml:space="preserve">
-    <value>At least one strategy is required.</value>
-  </data>
-  <data name="IDS_REMOTE_PAYLOAD_INVALID_TYPE_NAME" xml:space="preserve">
-    <value>The remote message payload does not contain a valid message type name.</value>
-  </data>
-  <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
-    <value>Failed to resolve message type '{0}'.</value>
+  <data name="IDS_BUS_HEALTHY" xml:space="preserve">
+    <value>The message bus is healthy.</value>
   </data>
 </root>
