@@ -164,7 +164,7 @@
     <value>{1} 上缺少帶有特性 '{0}' 的方法</value>
   </data>
   <data name="IDS_INJECT_PRIMITIVE_PROPERTY" xml:space="preserve">
-    <value>無法植入基本型別屬性。</value>
+    <value>無法植入基本類型屬性。</value>
   </data>
   <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
     <value>無法植入屬性 '{0}'，其類型 {1} 不受支援。</value>
@@ -179,6 +179,6 @@
     <value>無法植入屬性 '{0}'，其泛型類型 {1} 必須恰好宣告一個泛型引數，但宣告了 {2} 個。</value>
   </data>
   <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
-    <value>目前的服務提供者不支援具名（keyed）服務。</value>
+    <value>屬性植入需要索引鍵服務（serviceKey = '{0}'），但目前的容器（{1}）未實作 IKeyedServiceProvider。</value>
   </data>
 </root>

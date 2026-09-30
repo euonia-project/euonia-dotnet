@@ -96,7 +96,8 @@
   </resheader>
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>  <data name="IDS_CANNOT_LOCK_MUTEX_WITH_EXPIRED_STATE" xml:space="preserve">
+  </resheader>
+  <data name="IDS_CANNOT_LOCK_MUTEX_WITH_EXPIRED_STATE" xml:space="preserve">
     <value>無法鎖定狀態已過期的互斥體。</value>
   </data>
   <data name="IDS_PARAMETER_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
