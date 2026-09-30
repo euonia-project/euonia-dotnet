@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="IDS_LOCK_FILE_NAME_TOO_LONG" xml:space="preserve">
+    <value>無法建構鎖定檔案名稱，因為基礎目錄（長度 = {0}）沒有為長度 {1} 的鎖定名稱預留足夠空間</value>
+  </data>
+  <data name="IDS_LOCK_FILE_EMPTY_NAME" xml:space="preserve">
+    <value>lockFile：檔案名稱不能為空。</value>
+  </data>
+  <data name="IDS_LOCK_FILE_IS_DIRECTORY" xml:space="preserve">
+    <value>無法建立鎖定檔案 '{0}'，因為該名稱已被一個目錄佔用。</value>
+  </data>
+  <data name="IDS_LOCK_FILE_READ_ONLY" xml:space="preserve">
+    <value>不支援在唯讀檔案 '{0}' 上加鎖。</value>
+  </data>
+  <data name="IDS_LOCK_FILE_DIRECTORY_CREATE_FAILED" xml:space="preserve">
+    <value>無法確保鎖定檔案目錄 {0} 存在。</value>
+  </data>
+</root>

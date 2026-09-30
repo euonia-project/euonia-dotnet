@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="IDS_INTERCEPTOR_MEMBER_NOT_FOUND" xml:space="preserve">
+    <value>找不到攔截器成員 '{0}.{1}'。</value>
+  </data>
+  <data name="IDS_UNAUTHORIZED" xml:space="preserve">
+    <value>未授權</value>
+  </data>
+  <data name="IDS_UNSUPPORTED_LOCK_ATTRIBUTE" xml:space="preserve">
+    <value>不支援的鎖定特性 '{0}'。</value>
+  </data>
+  <data name="IDS_LOCK_FACTORY_NOT_REGISTERED" xml:space="preserve">
+    <value>尚未註冊 ILockFactory。請註冊分散式鎖定模組（例如 Nerosoft.Euonia.Concurrency.Redis.RedisLockModule）以啟用分散式鎖定。</value>
+  </data>
+  <data name="IDS_LOCK_TOKEN_PROPERTY_NOT_FOUND" xml:space="preserve">
+    <value>解析鎖定權杖預留位置 '{{{2}.{3}}}' 時，在類型 '{1}' 上找不到屬性 '{0}'。</value>
+  </data>
+  <data name="IDS_LOCAL_LOCK_TIMEOUT" xml:space="preserve">
+    <value>無法在 {1} 毫秒內取得本機鎖定 '{0}'。</value>
+  </data>
+  <data name="IDS_PARAMETER_REQUIRED" xml:space="preserve">
+    <value>方法 '{1}' 的參數 '{0}' 為必要項目。</value>
+  </data>
+</root>

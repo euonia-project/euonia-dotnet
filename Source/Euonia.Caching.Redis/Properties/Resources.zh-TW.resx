@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="IDS_TIMEOUT_LOWER_THAN_ONE_MILLISECOND_NOT_SUPPORTED" xml:space="preserve">
+    <value>不支援小於 1 毫秒的逾時時間。</value>
+  </data>
+  <data name="IDS_ERROR_RETRIEVING" xml:space="preserve">
+    <value>取得 {0} 時發生錯誤</value>
+  </data>
+  <data name="IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>加入項目時發生問題，結果不能為 null。</value>
+  </data>
+  <data name="IDS_LUA_SCRIPTS_NOT_LOADED" xml:space="preserve">
+    <value>Lua 指令碼有問題，似乎尚未載入。</value>
+  </data>
+  <data name="IDS_ENDPOINT_LIST_MUST_NOT_BE_EMPTY" xml:space="preserve">
+    <value>端點清單不能為空。</value>
+  </data>
+  <data name="IDS_INVALID_REDIS_CONNECTION_STRING" xml:space="preserve">
+    <value>提供的 Redis 連接字串似乎無效。</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_BACKPLANE" xml:space="preserve">
+    <value>尚未為索引鍵 '{0}' 註冊 Redis 設定。請在加入 Redis backplane 之前呼叫 WithRedisConfiguration('{0}', ...)。</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_CACHE_HANDLE" xml:space="preserve">
+    <value>尚未為索引鍵 '{0}' 註冊 Redis 設定。請在加入 Redis 快取控制代碼之前呼叫 WithRedisConfiguration('{0}', ...)。</value>
+  </data>
+  <data name="IDS_NO_SERVERS_CONNECTED_OR_CONFIGURED" xml:space="preserve">
+    <value>沒有任何已連線或已設定的伺服器。</value>
+  </data>
+  <data name="IDS_FAILED_TO_SET_KEY_VALUE" xml:space="preserve">
+    <value>無法將 '{0}' 設定為 '{1}'。</value>
+  </data>
+  <data name="IDS_CONNECTION_FAILED" xml:space="preserve">
+    <value>連線至 '{0}' 失敗。</value>
+  </data>
+  <data name="IDS_NO_WRITABLE_ENDPOINT" xml:space="preserve">
+    <value>找不到可寫入的端點。</value>
+  </data>
+  <data name="IDS_TYPE_COULD_NOT_BE_LOADED" xml:space="preserve">
+    <value>無法載入類型，{0}。</value>
+  </data>
+  <data name="IDS_CLEAR_REQUIRES_ALLOW_ADMIN" xml:space="preserve">
+    <value>無法執行 Clear：清空此快取會發出 FLUSHDB，而此命令要求 Redis 連線設定 'allowAdmin=true'（資料庫 {0}）。請注意 FLUSHDB 會清空整個邏輯資料庫，而不只是此快取；建議為快取使用專屬的資料庫。底層錯誤：{1}</value>
+  </data>
+</root>

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="IDS_AT_LEAST_ONE_PARAMETER_IS_REQUIRED" xml:space="preserve">
+    <value>{0} 至少需要其中一個。</value>
+  </data>
+  <data name="IDS_PROPERTY_EXPRESSION_CAN_NOT_NULL" xml:space="preserve">
+    <value>屬性運算式不能為 null。</value>
+  </data>
+  <data name="IDS_VALUE_OF_MIN_CAN_NOT_GREATER_THAN_MAX" xml:space="preserve">
+    <value>{0} 的值不能大於 {1}。</value>
+  </data>
+  <data name="IDS_AT_LEAST_ONE_SPECIFICATION_REQUIRED" xml:space="preserve">
+    <value>至少需要 1 個規格。</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_CAN_NOT_BE_EMPTY" xml:space="preserve">
+    <value>屬性名稱不能為空。</value>
+  </data>
+  <data name="IDS_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
+    <value>LIKE 運算子需要查詢提供者的支援。</value>
+  </data>
+  <data name="IDS_NOT_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
+    <value>NOT LIKE 運算子需要查詢提供者的支援。</value>
+  </data>
+  <data name="IDS_UNSUPPORTED_QUERY_OPERATOR" xml:space="preserve">
+    <value>不支援的查詢運算子：{0}</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>找不到方法 {0}。</value>
+  </data>
+  <data name="IDS_ONLY_ONE_PREDICATE_ALLOWED" xml:space="preserve">
+    <value>只允許一個述詞：{0}</value>
+  </data>
+  <data name="IDS_CONTAINS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>找不到 'Contains' 方法。</value>
+  </data>
+</root>
