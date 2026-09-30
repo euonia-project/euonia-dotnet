@@ -10,10 +10,11 @@ public class AccountExpiredException : AccountException
 	/// 使用指定的账户标识初始化 <see cref="AccountExpiredException"/> 类的新实例。
 	/// </summary>
 	/// <param name="identity">已过期账户的标识（例如用户名或账户 ID）。</param>
-	public AccountExpiredException(string identity)
-		: base(identity)
-	{
-	}
+        /// <remarks>默认消息用 <paramref name="identity"/> 格式化（异常→状态码管道读取 <see cref="Exception.Message"/>，无参消息会停留在 BCL 默认值）。</remarks>
+        public AccountExpiredException(string identity)
+                : base(identity, $"Account expired: '{identity}'.")
+        {
+        }
 
 	/// <summary>
 	/// 使用指定的错误消息和账户标识初始化 <see cref="AccountExpiredException"/> 类的新实例。

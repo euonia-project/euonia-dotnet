@@ -10,10 +10,11 @@ public class CredentialExpiredException : CredentialException
 	/// 使用指定的凭据初始化 <see cref="CredentialExpiredException"/> 类的新实例。
 	/// </summary>
 	/// <param name="credential">已过期的凭据对象。</param>
-	public CredentialExpiredException(object credential)
-		: base(credential)
-	{
-	}
+        /// <remarks>默认消息不携带凭据内容（避免泄漏敏感信息；异常→状态码管道读取 <see cref="Exception.Message"/>，无参消息会停留在 BCL 默认值）。</remarks>
+        public CredentialExpiredException(object credential)
+                : base(credential, "Credential expired.")
+        {
+        }
 
 	/// <summary>
 	/// 使用指定的凭据和错误消息初始化 <see cref="CredentialExpiredException"/> 类的新实例。

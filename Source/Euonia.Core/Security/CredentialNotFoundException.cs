@@ -10,10 +10,11 @@ public class CredentialNotFoundException : CredentialException
 	/// 使用指定的凭据初始化 <see cref="CredentialNotFoundException"/> 类的新实例。
 	/// </summary>
 	/// <param name="credential">未找到的凭据对象。</param>
-	public CredentialNotFoundException(object credential)
-		: base(credential)
-	{
-	}
+        /// <remarks>默认消息带凭据描述（异常→状态码管道读取 <see cref="Exception.Message"/>，无参消息会停留在 BCL 默认值）。凭据对象本身不进消息，避免泄漏敏感内容。</remarks>
+        public CredentialNotFoundException(object credential)
+                : base(credential, "Credential not found.")
+        {
+        }
 
 	/// <summary>
 	/// 使用指定的凭据和错误消息初始化 <see cref="CredentialNotFoundException"/> 类的新实例。
