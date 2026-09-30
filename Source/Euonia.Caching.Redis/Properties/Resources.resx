@@ -120,4 +120,43 @@
   <data name="IDS_TIMEOUT_LOWER_THAN_ONE_MILLISECOND_NOT_SUPPORTED" xml:space="preserve">
     <value>Timeout lower than one millisecond is not supported.</value>
   </data>
+  <data name="IDS_ERROR_RETRIEVING" xml:space="preserve">
+    <value>Error retrieving {0}</value>
+  </data>
+  <data name="IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>Something went wrong adding an item, result must not be null.</value>
+  </data>
+  <data name="IDS_LUA_SCRIPTS_NOT_LOADED" xml:space="preserve">
+    <value>Something is wrong with the Lua scripts. Seem to be not loaded.</value>
+  </data>
+  <data name="IDS_ENDPOINT_LIST_MUST_NOT_BE_EMPTY" xml:space="preserve">
+    <value>List of endpoints must not be empty.</value>
+  </data>
+  <data name="IDS_INVALID_REDIS_CONNECTION_STRING" xml:space="preserve">
+    <value>Provided redis connection string seems to be invalid.</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_BACKPLANE" xml:space="preserve">
+    <value>No Redis configuration has been registered for the key '{0}'. Call WithRedisConfiguration('{0}', ...) before adding the Redis backplane.</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_CACHE_HANDLE" xml:space="preserve">
+    <value>No Redis configuration has been registered for the key '{0}'. Call WithRedisConfiguration('{0}', ...) before adding the Redis cache handle.</value>
+  </data>
+  <data name="IDS_NO_SERVERS_CONNECTED_OR_CONFIGURED" xml:space="preserve">
+    <value>No servers are connected or configured.</value>
+  </data>
+  <data name="IDS_FAILED_TO_SET_KEY_VALUE" xml:space="preserve">
+    <value>Failed to set '{0}' to '{1}'.</value>
+  </data>
+  <data name="IDS_CONNECTION_FAILED" xml:space="preserve">
+    <value>Connection to '{0}' failed.</value>
+  </data>
+  <data name="IDS_NO_WRITABLE_ENDPOINT" xml:space="preserve">
+    <value>No writeable endpoint found.</value>
+  </data>
+  <data name="IDS_TYPE_COULD_NOT_BE_LOADED" xml:space="preserve">
+    <value>Type could not be loaded, {0}.</value>
+  </data>
+  <data name="IDS_CLEAR_REQUIRES_ALLOW_ADMIN" xml:space="preserve">
+    <value>Clear is not available because clearing this cache issues FLUSHDB, which requires 'allowAdmin=true' on the Redis connection (database {0}). Note that FLUSHDB clears the entire logical database, not just this cache; use a dedicated database for caching. Underlying error: {1}</value>
+  </data>
 </root>

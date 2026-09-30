@@ -110,7 +110,7 @@ public static class RedisConfigurationBuilderExtensions
         // 而参数匹配只认「已知实例」。此处同样必须把它作为配置类型传入，
         // 否则背板创建会因参数匹配失败而抛异常。
         var configuration = RedisConfigurations.GetConfiguration(redisConfigurationKey)
-            ?? throw new InvalidOperationException($"No Redis configuration has been registered for the key '{redisConfigurationKey}'. Call WithRedisConfiguration('{redisConfigurationKey}', ...) before adding the Redis backplane.");
+            ?? throw new InvalidOperationException(string.Format(Resources.IDS_NO_REDIS_CONFIG_FOR_BACKPLANE, redisConfigurationKey));
 
         // 必须显式转换为 object 以命中 params object[] 重载：
         // 直接传 string 会被解析到 WithBackplane(Type, string configurationKey, string channelName, ...)，
@@ -164,7 +164,7 @@ public static class RedisConfigurationBuilderExtensions
         // 此前这里调用的是不带 configurationTypes 的重载，导致该参数永远匹配不到，
         // 句柄创建直接抛 InvalidOperationException：整个 Redis 缓存后端因此完全不可用。
         var configuration = RedisConfigurations.GetConfiguration(redisConfigurationKey)
-            ?? throw new InvalidOperationException($"No Redis configuration has been registered for the key '{redisConfigurationKey}'. Call WithRedisConfiguration('{redisConfigurationKey}', ...) before adding the Redis cache handle.");
+            ?? throw new InvalidOperationException(string.Format(Resources.IDS_NO_REDIS_CONFIG_FOR_CACHE_HANDLE, redisConfigurationKey));
 
         return part.WithHandle(typeof(RedisCacheHandle<>), redisConfigurationKey, isBackplaneSource, configuration.ConnectionString);
     }

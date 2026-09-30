@@ -132,4 +132,73 @@
   <data name="IDS_VALUE_MUST_BE_GREATER_THAN" xml:space="preserve">
     <value>值必须大于 {0}。</value>
   </data>
+  <data name="IDS_CACHE_ITEM_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>待添加的 CacheItem 不能为 null。</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL" xml:space="preserve">
+    <value>在 '{0}:{1}' 上更新失败：值工厂返回了 null。</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_TOO_MANY_RETRIES" xml:space="preserve">
+    <value>在 '{0}:{1}' 上更新失败：重试次数过多：{2}。</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_REGION_KEY_NOT_FOUND" xml:space="preserve">
+    <value>在 '{0}:{1}' 上更新失败：区域/键不存在。</value>
+  </data>
+  <data name="IDS_TIMEOUT_CANNOT_BE_ZERO" xml:space="preserve">
+    <value>当过期模式不是 'None' 时，超时时间不能为零。</value>
+  </data>
+  <data name="IDS_ONLY_ONE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>只能有一个缓存句柄作为 backplane 的源。</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE" xml:space="preserve">
+    <value>无效的消息</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE_TYPE" xml:space="preserve">
+    <value>无效的消息类型</value>
+  </data>
+  <data name="IDS_INVALID_V2_BACKPLANE_MESSAGE" xml:space="preserve">
+    <value>无效的 v2 backplane 消息</value>
+  </data>
+  <data name="IDS_CANNOT_READ_INT32" xml:space="preserve">
+    <value>无法读取 INT32，没有更多可用字节。</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTE" xml:space="preserve">
+    <value>无法读取字节，没有更多可用字节。</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTES" xml:space="preserve">
+    <value>无法读取字节序列，没有更多可用字节。</value>
+  </data>
+  <data name="IDS_INVALID_LENGTH_FOR_STRING" xml:space="preserve">
+    <value>字符串长度无效</value>
+  </data>
+  <data name="IDS_CANNOT_READ_STRING" xml:space="preserve">
+    <value>无法读取字符串，没有更多可用字节。</value>
+  </data>
+  <data name="IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT" xml:space="preserve">
+    <value>已定义过期模式但未设置超时时间。</value>
+  </data>
+  <data name="IDS_COULD_NOT_INITIALIZE_HANDLE" xml:space="preserve">
+    <value>无法初始化类型 {0} 的句柄</value>
+  </data>
+  <data name="IDS_NO_CACHE_HANDLES_DEFINED" xml:space="preserve">
+    <value>未定义任何缓存句柄。</value>
+  </data>
+  <data name="IDS_LAST_HANDLE_MUST_BE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>最后一个缓存句柄必须是 backplane 的源。</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_EXTEND_FROM" xml:space="preserve">
+    <value>类型 {0} 并非派生自 {1}。</value>
+  </data>
+  <data name="IDS_COULD_NOT_LOAD_TYPE" xml:space="preserve">
+    <value>无法加载类型 '{0}'。如果解析仍然失败，请尝试添加 TypeCache.RegisterResolveType 来解析该类型。</value>
+  </data>
+  <data name="IDS_BACKPLANE_REQUIRES_SOURCE_HANDLE" xml:space="preserve">
+    <value>如果通过配置定义了 backplane，则必须至少将一个缓存句柄标记为 backplane 源。</value>
+  </data>
+  <data name="IDS_NO_MATCHING_CONSTRUCTOR" xml:space="preserve">
+    <value>未找到类型 '{0}' 的匹配构造函数。尝试匹配 [{1}]，但缺少 {2}</value>
+  </data>
+  <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
+    <value>未找到类型 '{0}' 的匹配构造函数或无参构造函数。</value>
+  </data>
 </root>

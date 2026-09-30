@@ -290,7 +290,7 @@ public static class Check
 
 		if (!type.IsAssignableTo<TBaseType>())
 		{
-			throw new ArgumentException($"{parameter} (type of {type.AssemblyQualifiedName}) should be assignable to the {typeof(TBaseType).GetFullNameWithAssemblyName()}!");
+			throw new ArgumentException(string.Format(Resources.IDS_TYPE_SHOULD_BE_ASSIGNABLE_TO, parameter, type.AssemblyQualifiedName, typeof(TBaseType).GetFullNameWithAssemblyName()));
 		}
 
 		return type;

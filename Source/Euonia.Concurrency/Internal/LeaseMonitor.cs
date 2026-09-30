@@ -142,7 +142,7 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
                 return true;
 
             default:
-                throw new InvalidOperationException("should never get here");
+                throw new InvalidOperationException(Resources.IDS_SHOULD_NEVER_GET_HERE);
         }
 
         // 将取消操作卸载到后台线程，以避免挂起或错误

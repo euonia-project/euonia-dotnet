@@ -62,7 +62,7 @@ public class RedisConfiguration
 
         if (endpoints.Count == 0)
         {
-            throw new InvalidOperationException("List of endpoints must not be empty.");
+            throw new InvalidOperationException(Resources.IDS_ENDPOINT_LIST_MUST_NOT_BE_EMPTY);
         }
 
         Key = key;
@@ -188,7 +188,7 @@ public class RedisConfiguration
             _connectionString = _configurationOptions.ToString();
             if (string.IsNullOrWhiteSpace(_connectionString))
             {
-                throw new ArgumentException("Provided redis connection string seems to be invalid.");
+                throw new ArgumentException(Resources.IDS_INVALID_REDIS_CONNECTION_STRING);
             }
         }
     }

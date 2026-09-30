@@ -96,24 +96,29 @@
   </resheader>
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </resheader>
-  <data name="IDS_CANNOT_LOCK_MUTEX_WITH_EXPIRED_STATE" xml:space="preserve">
+  </resheader>  <data name="IDS_CANNOT_LOCK_MUTEX_WITH_EXPIRED_STATE" xml:space="preserve">
     <value>无法锁定过期状态的互斥体。</value>
   </data>
   <data name="IDS_PARAMETER_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
     <value>{0} 不能为空。</value>
   </data>
-  <data name="IDS_CAPACITY_CANNOT_BE_SET_TO_A_VALUE_LESS_THAN_COUNT" xml:space="preserve">
-    <value>元素容量不能设置为小于 Count 的值。</value>
-  </data>
   <data name="IDS_CAPACITY_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
     <value>容量不能为负数。</value>
   </data>
-  <data name="IDS_EXPRESSION_IS_NOT_A_MEMBER_ACCESS_EXPRESSION" xml:space="preserve">
-    <value>该表达式不是成员访问表达式。</value>
+  <data name="IDS_VALUE_CANNOT_BE_NULL" xml:space="preserve">
+    <value>值不能为空。</value>
+  </data>
+  <data name="IDS_VALUE_IS_OF_INCORRECT_TYPE" xml:space="preserve">
+    <value>值的类型不正确。</value>
+  </data>
+  <data name="IDS_CAPACITY_CANNOT_BE_SET_TO_A_VALUE_LESS_THAN_COUNT" xml:space="preserve">
+    <value>元素容量不能设置为小于 Count 的值。</value>
   </data>
   <data name="IDS_GIVEN_TYPE_SHOULD_BE_INSTANCE_OF_TYPE" xml:space="preserve">
     <value>指定类型 ({0}) 应为 {1} 的实例。</value>
+  </data>
+  <data name="IDS_EXPRESSION_IS_NOT_A_MEMBER_ACCESS_EXPRESSION" xml:space="preserve">
+    <value>该表达式不是成员访问表达式。</value>
   </data>
   <data name="IDS_MEMBER_ACCESS_EXPRESSION_DOES_NOT_ACCESS_A_PROPERTY" xml:space="preserve">
     <value>成员访问表达式无法访问属性。</value>
@@ -121,17 +126,11 @@
   <data name="IDS_NOT_A_LAMBDA_EXPRESSION" xml:space="preserve">
     <value>不是lambda表达式。</value>
   </data>
-  <data name="IDS_NOT_A_MEMBER_ACCESS" xml:space="preserve">
-    <value>Not a member access.</value>
-  </data>
   <data name="IDS_NOT_A_METHOD_CALL" xml:space="preserve">
-    <value>Not a method call.</value>
+    <value>不是方法调用。</value>
   </data>
-  <data name="IDS_VALUE_CANNOT_BE_NULL" xml:space="preserve">
-    <value>值不能为空。</value>
-  </data>
-  <data name="IDS_VALUE_IS_OF_INCORRECT_TYPE" xml:space="preserve">
-    <value>值的类型不正确。</value>
+  <data name="IDS_NOT_A_MEMBER_ACCESS" xml:space="preserve">
+    <value>不是成员访问。</value>
   </data>
   <data name="IDS_DESTINATION_ARRAY_CANNOT_BE_NULL" xml:space="preserve">
     <value>目标数组不能为空。</value>
@@ -163,11 +162,11 @@
   <data name="IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_ZERO" xml:space="preserve">
     <value>最大计数必须大于零。</value>
   </data>
-  <data name="IDS_PARAMETER_CAN_NOT_BE_NULL" xml:space="preserve">
-    <value>{0} 不能为空。</value>
-  </data>
   <data name="IDS_PARAMETER_CANNOT_NULL_OR_WHITE_SPACE" xml:space="preserve">
     <value>{0} 不能为空或空白。</value>
+  </data>
+  <data name="IDS_PARAMETER_CAN_NOT_BE_NULL" xml:space="preserve">
+    <value>{0} 不能为空。</value>
   </data>
   <data name="IDS_PARAMETER_IS_NOT_MATCH_WITH_PATTERN" xml:space="preserve">
     <value>{0} 不能匹配正则表达式 {1}。</value>
@@ -177,5 +176,98 @@
   </data>
   <data name="IDS_PARAMETER_LENGTH_MUST_BE_EQUAL_OR_LOWER_THAN" xml:space="preserve">
     <value>{0} 长度必须等于或小于 {1}。</value>
+  </data>
+  <data name="IDS_TARGET_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>targetIndex 应介于 0 和 {0} 之间。</value>
+  </data>
+  <data name="IDS_CYCLIC_DEPENDENCY_FOUND" xml:space="preserve">
+    <value>发现循环依赖！项：{0}</value>
+  </data>
+  <data name="IDS_ENUM_FIELD_NOT_DEFINED" xml:space="preserve">
+    <value>未定义字段 '{0}'。</value>
+  </data>
+  <data name="IDS_RESOURCE_PROPERTY_NOT_DEFINED" xml:space="preserve">
+    <value>资源类型 '{1}' 中未定义属性 '{0}'。</value>
+  </data>
+  <data name="IDS_REQUESTED_KEY_NOT_PRESENT" xml:space="preserve">
+    <value>集合中不存在请求的键。</value>
+  </data>
+  <data name="IDS_LENGTH_GREATER_THAN_STRING_LENGTH" xml:space="preserve">
+    <value>length 参数不能大于给定字符串的长度！</value>
+  </data>
+  <data name="IDS_METHOD_INSTANCE_IS_NULL" xml:space="preserve">
+    <value>方法实例为 null。</value>
+  </data>
+  <data name="IDS_TYPE_SHOULD_BE_ASSIGNABLE_TO" xml:space="preserve">
+    <value>{0}（类型为 {1}）应可赋值给 {2}！</value>
+  </data>
+  <data name="IDS_OPTIONAL_CONTAINS_NO_VALUE" xml:space="preserve">
+    <value>Optional 不包含任何值。</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_CHARS" xml:space="preserve">
+    <value>字符集必须至少包含 {0:N0} 个唯一字符。</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_NON_SEPARATOR_CHARS" xml:space="preserve">
+    <value>字符集必须至少包含 {0:N0} 个不在分隔符中的唯一字符。</value>
+  </data>
+  <data name="IDS_HASH_PRODUCED_NO_RESULT" xml:space="preserve">
+    <value>提供的哈希没有产生任何结果。</value>
+  </data>
+  <data name="IDS_MACHINE_ID_INVALID" xml:space="preserve">
+    <value>机器码ID非法</value>
+  </data>
+  <data name="IDS_DATA_CENTER_ID_INVALID" xml:space="preserve">
+    <value>数据中心ID非法</value>
+  </data>
+  <data name="IDS_TIMESTAMP_EARLIER_THAN_LAST" xml:space="preserve">
+    <value>时间戳比上一次生成ID时时间戳还小，故异常</value>
+  </data>
+  <data name="IDS_INFINITE_TIMEOUT_CANNOT_CONVERT_TO_SECONDS" xml:space="preserve">
+    <value>无限超时无法转换为秒。</value>
+  </data>
+  <data name="IDS_DELAY_CANCELED" xml:space="preserve">
+    <value>延迟已被取消。</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_ALREADY_COMPLETED" xml:space="preserve">
+    <value>添加失败；生产者/使用者集合已完成添加。</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_FAILED" xml:space="preserve">
+    <value>添加失败；向基础集合添加时失败。</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>获取失败；生产者/使用者集合已完成添加且为空。</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_FAILED" xml:space="preserve">
+    <value>获取失败；从基础集合获取时失败。</value>
+  </data>
+  <data name="IDS_NOT_YET_CREATED" xml:space="preserve">
+    <value>尚未创建。</value>
+  </data>
+  <data name="IDS_QUEUE_ENQUEUE_COMPLETED" xml:space="preserve">
+    <value>入队失败；生产者/使用者队列已完成添加。</value>
+  </data>
+  <data name="IDS_QUEUE_DEQUEUE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>出队失败；生产者/使用者队列已完成添加且为空。</value>
+  </data>
+  <data name="IDS_DEQUE_EMPTY" xml:space="preserve">
+    <value>双端队列为空。</value>
+  </data>
+  <data name="IDS_TYPE_NOT_ENUM" xml:space="preserve">
+    <value>类型 {0} 不是枚举。</value>
+  </data>
+  <data name="IDS_EXPRESSION_DOES_NOT_REFER_TO_PROPERTY" xml:space="preserve">
+    <value>表达式 '{0}' 未引用属性。</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_FOUND_ON_TYPE" xml:space="preserve">
+    <value>在类型 {1} 上未找到属性 {0}。</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>未找到方法 {0}</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_PROPERTY" xml:space="preserve">
+    <value>成员不是属性</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
+    <value>成员不是字段</value>
   </data>
 </root>

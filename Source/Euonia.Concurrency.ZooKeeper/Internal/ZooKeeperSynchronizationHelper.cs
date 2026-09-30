@@ -79,7 +79,7 @@ internal class ZooKeeperSynchronizationHelper
                 if (!sortedChildren.Any(t => t.Path == ephemeralNodePath))
                 {
                     ephemeralNodeLost = true;
-                    throw new InvalidOperationException($"Node '{ephemeralNodePath}' was created, but no longer exists");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_NODE_CREATED_BUT_NO_LONGER_EXISTS, ephemeralNodePath));
                 }
 
                 // see if we've acquired

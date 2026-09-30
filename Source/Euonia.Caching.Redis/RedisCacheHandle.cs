@@ -217,9 +217,7 @@ return result";
 			// RedisCommandException（"This operation is not available unless admin mode is enabled: FLUSHDB"），
 			// 于是给用户看的可操作提示从不出现，只有一条原始驱动错误。
 			throw new NotSupportedException(
-				$"Clear is not available because clearing this cache issues FLUSHDB, which requires 'allowAdmin=true' on the Redis connection (database {_redisConfiguration.Database}). " +
-				"Note that FLUSHDB clears the entire logical database, not just this cache; use a dedicated database for caching. " +
-				$"Underlying error: {exception.Message}",
+				string.Format(Resources.IDS_CLEAR_REQUIRES_ALLOW_ADMIN, _redisConfiguration.Database, exception.Message),
 				exception);
 		}
 	}
@@ -449,7 +447,7 @@ return result";
 		if (result == null || result.IsNull)
 		{
 			// something went wrong. HMGET should return at least a null result for each requested field
-			throw new InvalidOperationException("Error retrieving " + fullKey);
+			throw new InvalidOperationException(string.Format(Resources.IDS_ERROR_RETRIEVING, fullKey));
 		}
 
 		var values = (RedisValue[])result;
@@ -831,7 +829,7 @@ return result";
 			}
 
 			// should never happen, something went wrong with the script
-			throw new InvalidOperationException("Something went wrong adding an item, result must not be null.");
+			throw new InvalidOperationException(Resources.IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL);
 		}
 		else
 		{
@@ -933,7 +931,7 @@ return result";
 		    || (_canPreloadScripts && !_shaScripts.TryGetValue(scriptType, out script)))
 		{
 			_scriptsLoaded = false;
-			throw new InvalidOperationException("Something is wrong with the Lua scripts. Seem to be not loaded.");
+			throw new InvalidOperationException(Resources.IDS_LUA_SCRIPTS_NOT_LOADED);
 		}
 
 		try

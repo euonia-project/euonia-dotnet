@@ -120,4 +120,43 @@
   <data name="IDS_TIMEOUT_LOWER_THAN_ONE_MILLISECOND_NOT_SUPPORTED" xml:space="preserve">
     <value>超时时间不能少于1毫秒。</value>
   </data>
+  <data name="IDS_ERROR_RETRIEVING" xml:space="preserve">
+    <value>获取 {0} 时出错</value>
+  </data>
+  <data name="IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>添加项时出现问题，结果不能为 null。</value>
+  </data>
+  <data name="IDS_LUA_SCRIPTS_NOT_LOADED" xml:space="preserve">
+    <value>Lua 脚本出现问题，似乎尚未加载。</value>
+  </data>
+  <data name="IDS_ENDPOINT_LIST_MUST_NOT_BE_EMPTY" xml:space="preserve">
+    <value>端点列表不能为空。</value>
+  </data>
+  <data name="IDS_INVALID_REDIS_CONNECTION_STRING" xml:space="preserve">
+    <value>提供的 Redis 连接字符串似乎无效。</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_BACKPLANE" xml:space="preserve">
+    <value>未为键 '{0}' 注册 Redis 配置。请在添加 Redis backplane 之前调用 WithRedisConfiguration('{0}', ...)。</value>
+  </data>
+  <data name="IDS_NO_REDIS_CONFIG_FOR_CACHE_HANDLE" xml:space="preserve">
+    <value>未为键 '{0}' 注册 Redis 配置。请在添加 Redis 缓存句柄之前调用 WithRedisConfiguration('{0}', ...)。</value>
+  </data>
+  <data name="IDS_NO_SERVERS_CONNECTED_OR_CONFIGURED" xml:space="preserve">
+    <value>没有已连接或已配置的服务器。</value>
+  </data>
+  <data name="IDS_FAILED_TO_SET_KEY_VALUE" xml:space="preserve">
+    <value>将 '{0}' 设置为 '{1}' 失败。</value>
+  </data>
+  <data name="IDS_CONNECTION_FAILED" xml:space="preserve">
+    <value>连接到 '{0}' 失败。</value>
+  </data>
+  <data name="IDS_NO_WRITABLE_ENDPOINT" xml:space="preserve">
+    <value>未找到可写端点。</value>
+  </data>
+  <data name="IDS_TYPE_COULD_NOT_BE_LOADED" xml:space="preserve">
+    <value>无法加载类型 {0}。</value>
+  </data>
+  <data name="IDS_CLEAR_REQUIRES_ALLOW_ADMIN" xml:space="preserve">
+    <value>无法执行 Clear：清空此缓存会发出 FLUSHDB，而该命令要求 Redis 连接设置 'allowAdmin=true'（数据库 {0}）。请注意 FLUSHDB 会清空整个逻辑数据库，而不仅是此缓存；建议为缓存使用独立数据库。底层错误：{1}</value>
+  </data>
 </root>

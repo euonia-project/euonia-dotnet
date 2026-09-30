@@ -19,7 +19,7 @@ public static class EnumHelper
 
         if (!type.GetTypeInfo().IsEnum)
         {
-            throw new InvalidCastException($"The type {type.FullName} is not enum.");
+            throw new InvalidCastException(string.Format(Resources.IDS_TYPE_NOT_ENUM, type.FullName));
         }
 
         return (
@@ -38,7 +38,7 @@ public static class EnumHelper
         var type = typeof(TEnum);
         if (!type.GetTypeInfo().IsEnum)
         {
-            throw new InvalidCastException($"The type {type.FullName} is not enum.");
+            throw new InvalidCastException(string.Format(Resources.IDS_TYPE_NOT_ENUM, type.FullName));
         }
 
         return (

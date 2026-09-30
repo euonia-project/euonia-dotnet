@@ -126,4 +126,28 @@
   <data name="IDS_VALUE_OF_MIN_CAN_NOT_GREATER_THAN_MAX" xml:space="preserve">
     <value>Value of {0} can not greater than {1}.</value>
   </data>
+  <data name="IDS_AT_LEAST_ONE_SPECIFICATION_REQUIRED" xml:space="preserve">
+    <value>At least 1 specification.</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_CAN_NOT_BE_EMPTY" xml:space="preserve">
+    <value>Property name can not be empty.</value>
+  </data>
+  <data name="IDS_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
+    <value>The LIKE operator requires support from the query provider.</value>
+  </data>
+  <data name="IDS_NOT_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT" xml:space="preserve">
+    <value>The NOT LIKE operator requires support from the query provider.</value>
+  </data>
+  <data name="IDS_UNSUPPORTED_QUERY_OPERATOR" xml:space="preserve">
+    <value>Unsupported query operator: {0}</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>Method {0} not found.</value>
+  </data>
+  <data name="IDS_ONLY_ONE_PREDICATE_ALLOWED" xml:space="preserve">
+    <value>Only one predicate is allowed: {0}</value>
+  </data>
+  <data name="IDS_CONTAINS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>The method of 'Contains' not found.</value>
+  </data>
 </root>

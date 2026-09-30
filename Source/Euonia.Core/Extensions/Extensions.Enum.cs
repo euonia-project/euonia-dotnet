@@ -58,7 +58,7 @@ public static partial class Extensions
 		var field = @enum.GetType().GetField(@enum.ToString());
 		if (field == null)
 		{
-			throw new NullReferenceException($"Field '{@enum}' not defined.");
+			throw new NullReferenceException(string.Format(Resources.IDS_ENUM_FIELD_NOT_DEFINED, @enum));
 		}
 
 		var attribute = field.GetCustomAttribute<DescriptionAttribute>();
@@ -79,7 +79,7 @@ public static partial class Extensions
 		var field = @enum.GetType().GetField(@enum.ToString());
 		if (field == null)
 		{
-			throw new NullReferenceException($"Field '{@enum}' not defined.");
+			throw new NullReferenceException(string.Format(Resources.IDS_ENUM_FIELD_NOT_DEFINED, @enum));
 		}
 
 		var attribute = field.GetCustomAttribute<DescriptionAttribute>();
@@ -87,7 +87,7 @@ public static partial class Extensions
 		var property = resourceType.GetProperty(key, BindingFlags.Public | BindingFlags.Static);
 		if (property == null)
 		{
-			throw new NullReferenceException($"Property '{key}' not defined in resource type '{resourceType.FullName}'.");
+			throw new NullReferenceException(string.Format(Resources.IDS_RESOURCE_PROPERTY_NOT_DEFINED, key, resourceType.FullName));
 		}
 
 		return property.GetValue(null)?.ToString();

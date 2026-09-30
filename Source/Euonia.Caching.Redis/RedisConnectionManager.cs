@@ -58,7 +58,7 @@ internal class RedisConnectionManager
             var server = Servers.FirstOrDefault(p => p.IsConnected);
             if (server == null)
             {
-                throw new InvalidOperationException("No servers are connected or configured.");
+                throw new InvalidOperationException(Resources.IDS_NO_SERVERS_CONNECTED_OR_CONFIGURED);
             }
 
             return server.Features;
@@ -103,7 +103,7 @@ internal class RedisConnectionManager
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Failed to set '{key}' to '{value}'.", ex);
+            throw new InvalidOperationException(string.Format(Resources.IDS_FAILED_TO_SET_KEY_VALUE, key, value), ex);
         }
     }
 
@@ -145,7 +145,7 @@ internal class RedisConnectionManager
                         if (!connection.IsConnected)
                         {
                             connection.Dispose();
-                            throw new InvalidOperationException($"Connection to '{RemoveCredentials(_connectionString)}' failed.");
+                            throw new InvalidOperationException(string.Format(Resources.IDS_CONNECTION_FAILED, RemoveCredentials(_connectionString)));
                         }
 
                         connection.ConnectionRestored += (_, args) =>
@@ -160,7 +160,7 @@ internal class RedisConnectionManager
                             if (!endpoints.Select(p => connection.GetServer(p))
                                           .Any(p => !p.IsReplica || p.AllowReplicaWrites))
                             {
-                                throw new InvalidOperationException("No writeable endpoint found.");
+                                throw new InvalidOperationException(Resources.IDS_NO_WRITABLE_ENDPOINT);
                             }
                         }
 

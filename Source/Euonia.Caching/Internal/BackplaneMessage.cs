@@ -289,7 +289,7 @@ public sealed class BackplaneMessage
         Check.EnsureNotNull(message, nameof(message));
         if (message.Length < 5)
         {
-            throw new ArgumentException("Invalid message");
+            throw new ArgumentException(Resources.IDS_INVALID_MESSAGE);
         }
         var reader = new MessageReader(message);
 
@@ -344,7 +344,7 @@ public sealed class BackplaneMessage
                 return ForClear(owner);
 
             default:
-                throw new ArgumentException("Invalid message type");
+                throw new ArgumentException(Resources.IDS_INVALID_MESSAGE_TYPE);
         }
     }
 
@@ -430,7 +430,7 @@ public sealed class BackplaneMessage
             if (_data.Length < 4
              || _data[0] != 0 || _data[1] != 118 || _data[2] != 50 || _data[3] != 0)
             {
-                throw new InvalidOperationException("Invalid v2 backplane message");
+                throw new InvalidOperationException(Resources.IDS_INVALID_V2_BACKPLANE_MESSAGE);
             }
         }
 
@@ -444,7 +444,7 @@ public sealed class BackplaneMessage
             var pos = (_position += 4);
             if (pos > _data.Length)
             {
-                throw new IndexOutOfRangeException("Cannot read INT32, no additional bytes available.");
+                throw new IndexOutOfRangeException(Resources.IDS_CANNOT_READ_INT32);
             }
 
             return BitConverter.ToInt32(_data, pos - 4);
@@ -454,7 +454,7 @@ public sealed class BackplaneMessage
         {
             if (_position >= _data.Length)
             {
-                throw new IndexOutOfRangeException("Cannot read byte, no additional bytes available.");
+                throw new IndexOutOfRangeException(Resources.IDS_CANNOT_READ_BYTE);
             }
 
             return _data[_position++];
@@ -465,7 +465,7 @@ public sealed class BackplaneMessage
             var pos = (_position += length);
             if (pos > _data.Length)
             {
-                throw new IndexOutOfRangeException("Cannot read bytes, no additional bytes available.");
+                throw new IndexOutOfRangeException(Resources.IDS_CANNOT_READ_BYTES);
             }
 
             // 修复：在分配前进行长度检查
@@ -479,13 +479,13 @@ public sealed class BackplaneMessage
             var len = ReadInt();
             if (len <= 0)
             {
-                throw new IndexOutOfRangeException("Invalid length for string");
+                throw new IndexOutOfRangeException(Resources.IDS_INVALID_LENGTH_FOR_STRING);
             }
 
             var pos = (_position += len);
             if (pos > _data.Length)
             {
-                throw new IndexOutOfRangeException("Cannot read string, no additional bytes available.");
+                throw new IndexOutOfRangeException(Resources.IDS_CANNOT_READ_STRING);
             }
 
             return _encoding.GetString(_data, pos - len, len);

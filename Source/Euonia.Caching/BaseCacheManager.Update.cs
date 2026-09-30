@@ -203,7 +203,7 @@ public partial class BaseCacheManager<TValue>
                 TriggerOnUpdate(key, region);
                 break;
             case CacheItemUpdateResultState.FactoryReturnedNull when throwOnFailure:
-                throw new InvalidOperationException($"Update failed on '{region}:{key}' because value factory returned null.");
+                throw new InvalidOperationException(string.Format(Resources.IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL, region, key));
             case CacheItemUpdateResultState.TooManyRetries:
             {
                 // 如果重试次数过多，这基本上表明缓存处于无效状态：
@@ -212,7 +212,7 @@ public partial class BaseCacheManager<TValue>
 
                 if (throwOnFailure)
                 {
-                    throw new InvalidOperationException($"Update failed on '{region}:{key}' because of too many retries: {result.NumberOfTriesNeeded}.");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_UPDATE_FAILED_TOO_MANY_RETRIES, region, key, result.NumberOfTriesNeeded));
                 }
 
                 break;
@@ -226,7 +226,7 @@ public partial class BaseCacheManager<TValue>
 
                 if (throwOnFailure)
                 {
-                    throw new InvalidOperationException($"Update failed on '{region}:{key}' because the region/key did not exist.");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_UPDATE_FAILED_REGION_KEY_NOT_FOUND, region, key));
                 }
 
                 break;

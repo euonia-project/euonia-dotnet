@@ -515,7 +515,7 @@ public static partial class Extensions
 	{
 		if (!targetIndex.IsBetween(0, source.Count - 1))
 		{
-			throw new IndexOutOfRangeException("targetIndex should be between 0 and " + (source.Count - 1));
+			throw new IndexOutOfRangeException(string.Format(Resources.IDS_TARGET_INDEX_OUT_OF_RANGE, source.Count - 1));
 		}
 
 		var currentIndex = source.FindIndex(0, selector);
@@ -591,7 +591,7 @@ public static partial class Extensions
 		{
 			if (inProcess)
 			{
-				throw new ArgumentException("Cyclic dependency found! Item: " + item);
+				throw new ArgumentException(string.Format(Resources.IDS_CYCLIC_DEPENDENCY_FOUND, item));
 			}
 		}
 		else

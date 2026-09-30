@@ -32,7 +32,7 @@ public sealed class CompositeSpecification<TEntity> : Specification<TEntity>
 	{
 		if (specifications == null || specifications.Length == 0)
 		{
-			throw new ArgumentException("At least 1 specification.");
+			throw new ArgumentException(Resources.IDS_AT_LEAST_ONE_SPECIFICATION_REQUIRED);
 		}
 		_specifications.AddRange(specifications);
 		return this;

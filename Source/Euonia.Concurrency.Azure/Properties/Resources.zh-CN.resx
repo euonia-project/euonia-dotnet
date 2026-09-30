@@ -123,4 +123,7 @@
   <data name="IDS_MUST_BE_INFINITE_OR_IN" xml:space="preserve">
     <value>必须是无限大或是 [{0}] 中的一个。</value>
   </data>
+  <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
+    <value>Blob {0} 不存在且无法创建。详情请查看内部异常</value>
+  </data>
 </root>

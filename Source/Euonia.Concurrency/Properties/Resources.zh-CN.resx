@@ -129,4 +129,7 @@
   <data name="IDS_VALUE_MUST_BE_POSITIVE" xml:space="preserve">
     <value>值必须为正数。</value>
   </data>
+  <data name="IDS_SHOULD_NEVER_GET_HERE" xml:space="preserve">
+    <value>不应到达此处。</value>
+  </data>
 </root>

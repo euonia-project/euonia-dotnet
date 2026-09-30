@@ -75,7 +75,7 @@ public sealed class ShortUniqueId
 		_minBufferSize = Math.Max(20, minHashLength);
 
 		if (_alphabet.Length < MIN_ALPHABET_LENGTH)
-			throw new ArgumentException($"字符集必须至少包含 {MIN_ALPHABET_LENGTH:N0} 个唯一字符。", paramName: nameof(alphabet));
+			throw new ArgumentException(string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_ALPHABET_MIN_UNIQUE_CHARS, MIN_ALPHABET_LENGTH), paramName: nameof(alphabet));
 
 		// 分隔符只能从字符集中的字符中选择
 		if (_seps.Length > 0)
@@ -86,7 +86,7 @@ public sealed class ShortUniqueId
 			_alphabet = _alphabet.Except(_seps).ToArray();
 
 		if (_alphabet.Length < (MIN_ALPHABET_LENGTH - 6))
-			throw new ArgumentException($"字符集必须至少包含 {MIN_ALPHABET_LENGTH:N0} 个不在分隔符中的唯一字符。", paramName: nameof(alphabet));
+			throw new ArgumentException(string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_ALPHABET_MIN_UNIQUE_NON_SEPARATOR_CHARS, MIN_ALPHABET_LENGTH), paramName: nameof(alphabet));
 
 		ConsistentShuffle(alphabet: _seps, salt: _salt);
 
@@ -213,7 +213,7 @@ public sealed class ShortUniqueId
 
 		return number switch
 		{
-			-1 => throw new Exception("提供的哈希没有产生任何结果。"),
+			-1 => throw new Exception(Nerosoft.Euonia.Core.Properties.Resources.IDS_HASH_PRODUCED_NO_RESULT),
 			_ => number,
 		};
 	}
@@ -250,7 +250,7 @@ public sealed class ShortUniqueId
 
 		return number switch
 		{
-			-1 => throw new Exception("提供的哈希没有产生任何结果。"),
+			-1 => throw new Exception(Nerosoft.Euonia.Core.Properties.Resources.IDS_HASH_PRODUCED_NO_RESULT),
 			_ => (int)number,
 		};
 	}

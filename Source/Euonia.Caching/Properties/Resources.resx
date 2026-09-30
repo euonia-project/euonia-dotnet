@@ -132,4 +132,73 @@
   <data name="IDS_VALUE_MUST_BE_GREATER_THAN" xml:space="preserve">
     <value>Value must be greater than {0}.</value>
   </data>
+  <data name="IDS_CACHE_ITEM_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>The CacheItem which should be added must not be null.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL" xml:space="preserve">
+    <value>Update failed on '{0}:{1}' because value factory returned null.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_TOO_MANY_RETRIES" xml:space="preserve">
+    <value>Update failed on '{0}:{1}' because of too many retries: {2}.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_REGION_KEY_NOT_FOUND" xml:space="preserve">
+    <value>Update failed on '{0}:{1}' because the region/key did not exist.</value>
+  </data>
+  <data name="IDS_TIMEOUT_CANNOT_BE_ZERO" xml:space="preserve">
+    <value>If expiration mode is not set to 'None', timeout cannot be zero.</value>
+  </data>
+  <data name="IDS_ONLY_ONE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>Only one cache handle can be the backplane's source.</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE" xml:space="preserve">
+    <value>Invalid message</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE_TYPE" xml:space="preserve">
+    <value>Invalid message type</value>
+  </data>
+  <data name="IDS_INVALID_V2_BACKPLANE_MESSAGE" xml:space="preserve">
+    <value>Invalid v2 backplane message</value>
+  </data>
+  <data name="IDS_CANNOT_READ_INT32" xml:space="preserve">
+    <value>Cannot read INT32, no additional bytes available.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTE" xml:space="preserve">
+    <value>Cannot read byte, no additional bytes available.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTES" xml:space="preserve">
+    <value>Cannot read bytes, no additional bytes available.</value>
+  </data>
+  <data name="IDS_INVALID_LENGTH_FOR_STRING" xml:space="preserve">
+    <value>Invalid length for string</value>
+  </data>
+  <data name="IDS_CANNOT_READ_STRING" xml:space="preserve">
+    <value>Cannot read string, no additional bytes available.</value>
+  </data>
+  <data name="IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT" xml:space="preserve">
+    <value>Expiration mode is defined without timeout.</value>
+  </data>
+  <data name="IDS_COULD_NOT_INITIALIZE_HANDLE" xml:space="preserve">
+    <value>Couldn't initialize handle of type {0}</value>
+  </data>
+  <data name="IDS_NO_CACHE_HANDLES_DEFINED" xml:space="preserve">
+    <value>No cache handles defined.</value>
+  </data>
+  <data name="IDS_LAST_HANDLE_MUST_BE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>The last cache handle should be the backplane source.</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_EXTEND_FROM" xml:space="preserve">
+    <value>Type {0} does not extend from {1}.</value>
+  </data>
+  <data name="IDS_COULD_NOT_LOAD_TYPE" xml:space="preserve">
+    <value>Could not load type '{0}'. Try add TypeCache.RegisterResolveType to resolve your type if the resolving continues to fail.</value>
+  </data>
+  <data name="IDS_BACKPLANE_REQUIRES_SOURCE_HANDLE" xml:space="preserve">
+    <value>At least one cache handle must be marked as the backplane source if a backplane is defined via configuration.</value>
+  </data>
+  <data name="IDS_NO_MATCHING_CONSTRUCTOR" xml:space="preserve">
+    <value>Could not find a matching constructor for type '{0}'. Trying to match [{1}] but missing {2}</value>
+  </data>
+  <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
+    <value>Could not find a matching or empty constructor for type '{0}'.</value>
+  </data>
 </root>

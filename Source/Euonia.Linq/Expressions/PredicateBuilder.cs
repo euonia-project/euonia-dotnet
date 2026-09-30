@@ -85,7 +85,7 @@ public static class PredicateBuilder
 		var methodInfo = typeof(List<TValue>).GetRuntimeMethod("Contains", new[] { typeof(TValue) });
 		if (methodInfo == null)
 		{
-			throw new MissingMethodException("The method of 'Contains' not found.");
+			throw new MissingMethodException(Resources.IDS_CONTAINS_METHOD_NOT_FOUND);
 		}
 
 		var list = Expression.Constant(value, typeof(List<TValue>));
@@ -250,7 +250,7 @@ public static class PredicateBuilder
 
 		if (method == null)
 		{
-			throw new MissingMethodException("The method of 'Contains' not found.");
+			throw new MissingMethodException(Resources.IDS_CONTAINS_METHOD_NOT_FOUND);
 		}
 
 		method = method.MakeGenericMethod(typeof(TValue));

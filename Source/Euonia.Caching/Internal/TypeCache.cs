@@ -112,7 +112,7 @@ public static class TypeCache
 				}
 			}
 
-			return typeResult ?? throw new InvalidOperationException($"Could not load type '{t}'. Try add TypeCache.RegisterResolveType to resolve your type if the resolving continues to fail.");
+			return typeResult ?? throw new InvalidOperationException(string.Format(Resources.IDS_COULD_NOT_LOAD_TYPE, t));
 		});
 	}
 }

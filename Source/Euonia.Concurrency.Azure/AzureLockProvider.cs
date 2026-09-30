@@ -156,7 +156,7 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
                         // 处理竞争条件：尝试创建时其他人已先创建
                         return createException.ErrorCode == AzureErrors.LeaseIdMissing
                             ? default
-                            : throw new AggregateException($"Blob {BlobClient.Name} does not exist and could not be created. See inner exceptions for details", acquireException, createException);
+                            : throw new AggregateException(string.Format(Resources.IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED, BlobClient.Name), acquireException, createException);
                     }
 
                     try
