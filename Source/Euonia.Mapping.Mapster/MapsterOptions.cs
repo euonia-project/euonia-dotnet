@@ -55,7 +55,7 @@ public class MapsterOptions
 	{
 		if (!typeof(IRegister).IsAssignableFrom(registerType))
 		{
-			throw new ArgumentException($"The register type '{registerType!.FullName}' must be assignable from IRegister");
+			throw new ArgumentException(string.Format(Resources.IDS_REGISTER_TYPE_MUST_ASSIGNABLE, registerType!.FullName));
 		}
 
 		Profiles.TryAdd(registerType, (IRegister)Activator.CreateInstance(registerType));

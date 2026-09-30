@@ -39,7 +39,7 @@ public static class QuartzExtensions
 		
 		if (!typeof(IJob).IsAssignableFrom(jobType))
 		{
-			throw new ArgumentException($"The type {jobType.FullName} must be a job type.");
+			throw new ArgumentException(string.Format(Resources.IDS_TYPE_MUST_BE_JOB_TYPE, jobType.FullName));
 		}
 
 		var attribute = jobType.GetCustomAttribute<BackgroundJobAttribute>();
@@ -87,7 +87,7 @@ public static class QuartzExtensions
 
 		if (options.TriggerConfigure.Count == 0)
 		{
-			throw new InvalidOperationException("No trigger configuration found.");
+			throw new InvalidOperationException(Resources.IDS_NO_TRIGGER_CONFIGURATION);
 		}
 
 		foreach (var configure in options.TriggerConfigure)

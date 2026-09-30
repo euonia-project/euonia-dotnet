@@ -98,4 +98,49 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_MODULE_INITIALIZE_PHASE_FAILED" xml:space="preserve">
+    <value>An error occurred during the initialize {0} phase of the module {1}: {2}. See the inner exception for details.</value>
+  </data>
+  <data name="IDS_MODULE_SHUTDOWN_PHASE_FAILED" xml:space="preserve">
+    <value>An error occurred during the shutdown {0} phase of the module {1}: {2}. See the inner exception for details.</value>
+  </data>
+  <data name="IDS_MODULE_LIFECYCLE_PHASE_FAILED" xml:space="preserve">
+    <value>An error occurred during the {0} phase of the module {1}. See the inner exception for details.</value>
+  </data>
+  <data name="IDS_TYPE_NOT_A_MODULE" xml:space="preserve">
+    <value>Given type is not an module: {0}</value>
+  </data>
+  <data name="IDS_MODULE_CREATE_FAILED" xml:space="preserve">
+    <value>Could not create module {0}</value>
+  </data>
+  <data name="IDS_DEPENDED_MODULE_NOT_FOUND" xml:space="preserve">
+    <value>Could not find a depended module {0} for {1}</value>
+  </data>
+  <data name="IDS_CONFIGURATION_CONTEXT_UNAVAILABLE" xml:space="preserve">
+    <value>{0} is only available in the {1} methods.</value>
+  </data>
+  <data name="IDS_ONLY_INTERFACE_OR_CLASS" xml:space="preserve">
+    <value>Only interface or class can be registered as service.</value>
+  </data>
+  <data name="IDS_IMPLEMENTATION_NOT_INHERIT_SERVICE" xml:space="preserve">
+    <value>The implementation type '{0}' is not inherits from service type '{1}'</value>
+  </data>
+  <data name="IDS_SINGLETON_SERVICE_NOT_FOUND" xml:space="preserve">
+    <value>Could not find singleton service: {0}</value>
+  </data>
+  <data name="IDS_OBJECT_ACCESSOR_ALREADY_REGISTERED" xml:space="preserve">
+    <value>An object accessor is registered before for type: {0}</value>
+  </data>
+  <data name="IDS_OBJECT_NOT_FOUND_IN_SERVICES" xml:space="preserve">
+    <value>Could not find an object of {0} in services. Be sure that you have used AddObjectAccessor before!</value>
+  </data>
+  <data name="IDS_NAMED_SERVICE_ALREADY_REGISTERED" xml:space="preserve">
+    <value>{0} with name '{1}' already registered.</value>
+  </data>
+  <data name="IDS_NAMED_SERVICE_NOT_FOUND" xml:space="preserve">
+    <value>The service {0} with name {1} was not found.</value>
+  </data>
+  <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
+    <value>This service provider doesn't support keyed services.</value>
+  </data>
 </root>

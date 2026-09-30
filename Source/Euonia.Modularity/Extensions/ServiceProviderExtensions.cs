@@ -33,7 +33,7 @@ public static class ServiceProviderExtensions
         where TService : class
     {
         var @delegate = (NamedService<TService>)provider.GetService(typeof(NamedService<TService>));
-        return @delegate?.Invoke(name) ?? throw new InvalidOperationException($"The service {typeof(TService).FullName} with name {name} was not found.");
+        return @delegate?.Invoke(name) ?? throw new InvalidOperationException(string.Format(Nerosoft.Euonia.Modularity.Properties.Resources.IDS_NAMED_SERVICE_NOT_FOUND, typeof(TService).FullName, name));
     }
 
 	/// <summary>
@@ -51,6 +51,6 @@ public static class ServiceProviderExtensions
 			return keyedServiceProvider.GetKeyedService(serviceType, serviceKey);
 		}
 
-		throw new InvalidOperationException("This service provider doesn't support keyed services.");
+		throw new InvalidOperationException(Nerosoft.Euonia.Modularity.Properties.Resources.IDS_KEYED_SERVICE_NOT_SUPPORTED);
 	}
 }

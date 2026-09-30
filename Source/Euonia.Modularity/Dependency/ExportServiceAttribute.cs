@@ -44,7 +44,7 @@ public class ExportServiceAttribute : Attribute
 
             if (!serviceType.IsClass && !serviceType.IsInterface)
             {
-                throw new InvalidOperationException("Only interface or class can be registered as service.");
+                throw new InvalidOperationException(Resources.IDS_ONLY_INTERFACE_OR_CLASS);
             }
         }
 

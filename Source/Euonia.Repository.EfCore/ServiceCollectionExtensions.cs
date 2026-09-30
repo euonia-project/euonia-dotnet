@@ -212,7 +212,7 @@ public static class ServiceCollectionExtensions
 		var match = Regex.Match(connectionString, CONNECTION_STRING_PATTERN);
 		if (!match.Success)
 		{
-			throw new ArgumentException("Invalid connection string format.");
+			throw new ArgumentException(Resources.IDS_INVALID_CONNECTION_STRING);
 		}
 
 		var databaseProvider = match.Groups["provider"].Value;
@@ -221,7 +221,7 @@ public static class ServiceCollectionExtensions
 		var configurer = provider.GetKeyedService<ConnectionConfigurator>(databaseProvider);
 		if (configurer == null)
 		{
-			throw new NotSupportedException($"The database provider '{databaseProvider}' is not supported.");
+			throw new NotSupportedException(string.Format(Resources.IDS_DATABASE_PROVIDER_NOT_SUPPORTED, databaseProvider));
 		}
 
 		configurer(options, connection);

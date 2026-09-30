@@ -74,7 +74,7 @@ internal static class FileNameValidationHelper
             return minimumLengthFileName;
         }
 
-        throw new PathTooLongException($"Unable to construct lock file name because the base directory (length = {directoryPathWithTrailingSeparator.Length}) does not leave enough room for a {MIN_FILE_NAME_LENGTH} lock name");
+        throw new PathTooLongException(string.Format(Resources.IDS_LOCK_FILE_NAME_TOO_LONG, directoryPathWithTrailingSeparator.Length, MIN_FILE_NAME_LENGTH));
     }
 
     private static bool IsTooLong(string name)

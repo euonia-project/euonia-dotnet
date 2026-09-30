@@ -35,7 +35,7 @@ public class DefaultContextProvider : IContextProvider
 
         if (_factories == null || !_factories.Any())
         {
-            throw new InvalidOperationException("No context factory registered");
+            throw new InvalidOperationException(Resources.IDS_CONTEXT_FACTORY_NOT_REGISTERED);
         }
 
         foreach (var factory in _factories)
@@ -47,7 +47,7 @@ public class DefaultContextProvider : IContextProvider
             }
         }
 
-        throw new InvalidOperationException("No context factory registered");
+        throw new InvalidOperationException(Resources.IDS_CONTEXT_FACTORY_NOT_REGISTERED);
     }
 
     /// <inheritdoc />

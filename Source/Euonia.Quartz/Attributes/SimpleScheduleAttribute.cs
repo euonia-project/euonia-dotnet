@@ -60,7 +60,7 @@ public class SimpleScheduleAttribute : BackgroundJobScheduleAttribute
 				builder.WithRepeatCount(RepeatCount.Value);
 				break;
 			case < 0:
-				throw new InvalidOperationException("RepeatCount must be greater than or equal to 0. Leave it null if you want to repeat forever.");
+				throw new InvalidOperationException(Resources.IDS_REPEAT_COUNT_MUST_BE_NON_NEGATIVE);
 		}
 
 		if (RepeatCount >= 0)

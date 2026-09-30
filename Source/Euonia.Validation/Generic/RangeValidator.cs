@@ -33,7 +33,7 @@ public class RangeValidator<TValue> : AbstractValidator<TValue>
     {
         if (minimum.CompareTo(maximum) >= 0)
         {
-            throw new ArgumentException("Minimum value could not greater than or equals maximum value.");
+            throw new ArgumentException(Resources.IDS_MIN_CANNOT_GREATER_THAN_MAX);
         }
 
         Minimum = minimum;

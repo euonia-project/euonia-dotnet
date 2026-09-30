@@ -74,7 +74,7 @@ public static class ServiceCollectionExtensions
 					var profile = (Profile)ActivatorUtilities.CreateInstance(provider, profileType);
 					if (profile == null)
 					{
-						throw new Exception($"{profileType} is a not valid AutoMapper profile.");
+						throw new Exception(string.Format(Resources.IDS_NOT_VALID_AUTOMAPPER_PROFILE, profileType));
 					}
 
 					mapperConfiguration.AssertConfigurationIsValid();

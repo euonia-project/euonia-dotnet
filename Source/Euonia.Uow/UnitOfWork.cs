@@ -128,7 +128,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 
 		if (Options != null)
 		{
-			throw new Exception("This unit of work is already initialized before!");
+			throw new Exception(Resources.IDS_UOW_ALREADY_INITIALIZED);
 		}
 
 		Options = _defaultOptions.Normalize(options);
@@ -163,12 +163,12 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 
 		if (_contexts.ContainsKey(key))
 		{
-			throw new InvalidOperationException("This unit of work already already contains a context with the key: " + key);
+			throw new InvalidOperationException(string.Format(Resources.IDS_UOW_CONTEXT_KEY_ALREADY_EXISTS, key));
 		}
 
 		if (!_contexts.TryAdd(key, context))
 		{
-			throw new InvalidOperationException("Failed to add context with the key: " + key);
+			throw new InvalidOperationException(string.Format(Resources.IDS_UOW_ADD_CONTEXT_FAILED, key));
 		}
 	}
 
@@ -204,7 +204,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 
 		if (IsCompleted || _isCompleting)
 		{
-			throw new InvalidOperationException("Completion has already been requested for this unit of work.");
+			throw new InvalidOperationException(Resources.IDS_UOW_COMPLETION_ALREADY_REQUESTED);
 		}
 
 		try

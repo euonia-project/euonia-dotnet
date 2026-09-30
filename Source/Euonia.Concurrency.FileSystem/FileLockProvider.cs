@@ -32,7 +32,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
         Name = (lockFile ?? throw new ArgumentNullException(nameof(lockFile))).FullName;
         if (lockFile.Name.Length == 0)
         {
-            throw new FormatException($"{nameof(lockFile)}: may not have an empty file name");
+            throw new FormatException(Resources.IDS_LOCK_FILE_EMPTY_NAME);
         }
     }
 
@@ -86,7 +86,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
                 // The path is already directory, so we'll never be able to open a handle of it as a file
                 if (System.IO.Directory.Exists(Name))
                 {
-                    throw new InvalidOperationException($"Failed to create lock file '{Name}' because it is already the name of a directory");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_LOCK_FILE_IS_DIRECTORY, Name));
                 }
 
                 // The file exists and is read-only
@@ -104,7 +104,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
                 {
                     // We could support this by eschewing DeleteOnClose once we detect that a file is read-only,
                     // but absent interest or a use-case we'll just throw for now
-                    throw new NotSupportedException($"Locking on read-only file '{Name}' is not supported");
+                    throw new NotSupportedException(string.Format(Resources.IDS_LOCK_FILE_READ_ONLY, Name));
                 }
 
                 // Frustratingly, this error can be thrown transiently due to concurrent creation/deletion. Initially assume
@@ -151,7 +151,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to ensure that lock file directory {Directory} exists", ex);
+                throw new InvalidOperationException(string.Format(Resources.IDS_LOCK_FILE_DIRECTORY_CREATE_FAILED, Directory), ex);
             }
         }
     }

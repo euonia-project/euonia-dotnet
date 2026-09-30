@@ -68,7 +68,7 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 
 				if (behavior == null)
 				{
-					throw new NullReferenceException($"The type of {behaviorType} not injected.");
+					throw new NullReferenceException(string.Format(Resources.IDS_BEHAVIOR_TYPE_NOT_INJECTED, behaviorType));
 				}
 
 				return await behavior.HandleAsync(context, next);
@@ -84,9 +84,9 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 		switch (invokeMethods.Length)
 		{
 			case > 1:
-				throw new InvalidOperationException("Multiple methods.");
+				throw new InvalidOperationException(Resources.IDS_MULTIPLE_METHODS);
 			case 0:
-				throw new InvalidOperationException("Method not found.");
+				throw new InvalidOperationException(Resources.IDS_METHOD_NOT_FOUND);
 		}
 
 		var methodInfo = invokeMethods[0];
@@ -144,7 +144,7 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 
 			if (parameterType == typeof(CancellationToken))
 			{
-				throw new NotSupportedException("Please remove the CancellationToken parameter from handle method.");
+				throw new NotSupportedException(Resources.IDS_CANCELLATION_TOKEN_NOT_SUPPORTED);
 			}
 
 			var parameterTypeExpression = new Expression[]

@@ -88,7 +88,7 @@ public class ModuleLoader : IModuleLoader
 		var module = (IModuleContext)Activator.CreateInstance(moduleType);
 		if (module == null)
 		{
-			throw new Exception($"Could not create module {moduleType.AssemblyQualifiedName}");
+			throw new Exception(string.Format(Resources.IDS_MODULE_CREATE_FAILED, moduleType.AssemblyQualifiedName));
 		}
 
 		services.AddSingleton(moduleType, module);
@@ -108,7 +108,7 @@ public class ModuleLoader : IModuleLoader
 			var dependedModule = modules.FirstOrDefault(m => m.Type == dependedModuleType);
 			if (dependedModule == null)
 			{
-				throw new Exception($"Could not find a depended module {dependedModuleType.AssemblyQualifiedName} for {module.Type.AssemblyQualifiedName}");
+				throw new Exception(string.Format(Resources.IDS_DEPENDED_MODULE_NOT_FOUND, dependedModuleType.AssemblyQualifiedName, module.Type.AssemblyQualifiedName));
 			}
 
 			module.AddDependency(dependedModule);
