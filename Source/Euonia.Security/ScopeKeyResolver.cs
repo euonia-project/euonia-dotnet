@@ -23,11 +23,7 @@ public static class ScopeKeyResolver
 	/// <param name="codeSource">权限码来源，由使用方提供，见 <see cref="IPermissionCodeSource"/>。</param>
 	/// <returns>策略键；类型未声明模型时返回该操作的默认键。</returns>
 	/// <exception cref="InvalidOperationException">同一操作解析出多个有策略的权限码时抛出。</exception>
-	/// <remarks>
-	/// 「先沿基类链找注册项，找不到就回落到 <see cref="ScopeKeys.For"/>」这个回落组合此前在
-	/// <c>ObjectScopeAuthorizer</c> 与 <c>ObjectScopeKeyResolver</c> 各写了一遍，
-	/// 收敛到这里后，回落口径只需要维护一处。
-	/// </remarks>
+
 	public static string Resolve(ScopeModelRegistry registry, Type resourceType, string operation, IPermissionCodeSource codeSource)
 	{
 		registry.TryGetInherited(resourceType, out var registration);
