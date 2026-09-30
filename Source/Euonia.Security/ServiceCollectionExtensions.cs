@@ -27,7 +27,7 @@ public static class ServiceCollectionExtensions
 	/// <para>
 	/// 使用了权限（方法级权限码或数据权限模型）时，应用还需注册
 	/// <see cref="IScopeSubjectResolver"/>（从授权数据实时解析授权值）与 <see cref="UserPrincipal"/>
-	/// （判定主体），并调用 <c>provider.ValidatePermissionSetup()</c> 使缺漏在启动时暴露。
+	/// （判定主体）。缺漏在首次解析 <c>IScopeGuard</c> 的启动校验中暴露。
 	/// </para>
 	/// </remarks>
 	public static IServiceCollection AddPermission(this IServiceCollection services, Action<PermissionOptions> configure)
@@ -205,7 +205,7 @@ public static class ServiceCollectionExtensions
 		{
 			// 首次解析守卫时执行启动期校验：解析器、判定主体、扫描范围的缺漏
 			// 在此刻暴露，而不是等到首次权限判定甚至静默失效。
-			// 手动调用 ValidatePermissionSetup 的步骤由此取消。
+			// 启动期校验（解析器 / 判定主体 / 扫描范围）随此次解析自动执行。
 			ValidateSetup(provider);
 
 			return new ScopeGuard(
@@ -224,7 +224,7 @@ public static class ServiceCollectionExtensions
 	/// <exception cref="InvalidOperationException">
 	/// 声明了权限模型或使用了 <see cref="PermissionAttribute"/>，却未注册 <see cref="IScopeSubjectResolver"/>
 	/// 或 <see cref="UserPrincipal"/> 时抛出；<c>AddPermission</c> 未指定任何程序集、
-	/// 也未用 <c>AssertNoPermissionModels()</c> 显式断言时同样抛出。
+	/// 也未用 <see cref="PermissionOptions.NoModels"/> 显式断言时同样抛出。
 	/// </exception>
 	private static void ValidateSetup(IServiceProvider provider)
 	{
@@ -323,53 +323,4 @@ public static class ServiceCollectionExtensions
 		return false;
 	}
 
-	/// <summary>
-	/// 追加要扫描的程序集（数据权限模型与权限声明），不改变权限码来源。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="assemblies">要扫描的程序集。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <remarks>
-	/// 用于「模型分散在多个程序集、权限码来源只有一处」的布局。
-	/// 本方法不提供来源：若尚无任何来源，方法级 <see cref="PermissionAttribute"/> 不参与判定，
-	/// 按权限码声明的策略会被注册期死策略校验拒绝——两者都不会静默放行。
-	/// </remarks>
-	public static IServiceCollection AddPermissionModels(this IServiceCollection services, params Assembly[] assemblies)
-	{
-		ArgumentNullException.ThrowIfNull(services);
-
-		var setup = GetOrCreateSetup(services);
-		setup.AddAssemblies(assemblies ?? []);
-
-		RegisterEngine(services);
-
-		var registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
-		services.RemoveAll<ScopeModelRegistry>();
-		services.AddSingleton(registry);
-
-		services.RemoveAll<IPermissionCodeSource>();
-		services.AddSingleton(setup.CodeSource);
-
-		services.RemoveAll<PermissionSetup>();
-		services.AddSingleton(new PermissionSetup(setup.HasDeclarations(registry)));
-
-		return services;
-	}
-
-	/// <summary>
-	/// 断言本应用没有任何权限模型与权限声明；仅用于没有任何扫描范围的场景。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <remarks>
-	/// <c>AddPermission</c> 全程一个程序集都没给时，扫描范围为空会让行级数据权限静默失效，
-	/// 启动期校验也会因「没有声明」一并短路。调用本方法即等于说「这是有意的」，校验据此放行。
-	/// </remarks>
-	public static IServiceCollection AssertNoPermissionModels(this IServiceCollection services)
-	{
-		ArgumentNullException.ThrowIfNull(services);
-
-		GetOrCreateSetup(services).NoModelsAsserted = true;
-		return services;
-	}
 }

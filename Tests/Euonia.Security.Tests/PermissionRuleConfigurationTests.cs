@@ -38,7 +38,7 @@ public class PermissionRuleConfigurationTests
 		// 空回调几乎总是漏写：直接报错，并指明「说清楚意图」的写法
 		var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddPermission(p => { }));
 
-		Assert.Contains("AddPermissionModels", exception.Message);
+		Assert.Contains("NoModels", exception.Message);
 		Assert.Contains("NoOperationCodes", exception.Message);
 	}
 
@@ -302,7 +302,7 @@ public class PermissionRuleConfigurationTests
 		// 类型名在「已累积 + 本次」的扫描范围里解析：先加程序集、后注册配置节也应可用
 		var services = new ServiceCollection();
 
-		services.AddPermissionModels(TestAssembly);
+		services.AddPermission(p => p.Scan(TestAssembly));
 		services.AddPermission(Rules([("Operations:execute:Attributes:0", typeof(UnionProbeAttribute).FullName)]));
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();

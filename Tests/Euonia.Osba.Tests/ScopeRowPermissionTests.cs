@@ -512,7 +512,7 @@ public class MultiModulePermissionTests
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
 
-		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var registry = services.BuildServiceProvider().GetRequiredService<ScopeModelRegistry>();
 
@@ -527,7 +527,7 @@ public class MultiModulePermissionTests
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var identity = new ClaimsIdentity(
 			[new Claim(ClaimTypes.Name, "tester")],
@@ -551,7 +551,7 @@ public class MultiModulePermissionTests
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
 		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(EmptyCodeSource.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 

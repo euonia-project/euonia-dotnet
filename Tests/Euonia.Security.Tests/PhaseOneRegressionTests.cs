@@ -30,7 +30,7 @@ public class PhaseOneRegressionTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(RunCodeSource(), TestAssembly);
-		services.AddPermission(EmptyCodeSource.Instance, FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		using var provider = services.BuildServiceProvider();
 
@@ -164,13 +164,13 @@ public class PhaseOneRegressionTests
 		// 每一个模型。输入一个字节都没变时，重复调用应当是真正的空操作。
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
 
 		using (var first = services.BuildServiceProvider())
 		{
 			var before = first.GetRequiredService<ScopeModelRegistry>();
 
-			services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
+			services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
 
 			using var second = services.BuildServiceProvider();
 			var after = second.GetRequiredService<ScopeModelRegistry>();
@@ -197,7 +197,7 @@ public class PhaseOneRegressionTests
 		using var before = services.BuildServiceProvider();
 		var registryBefore = before.GetRequiredService<ScopeModelRegistry>();
 
-		services.AddPermission(EmptyCodeSource.Instance, FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		using var after = services.BuildServiceProvider();
 		var registryAfter = after.GetRequiredService<ScopeModelRegistry>();
@@ -239,7 +239,7 @@ public class PhaseOneRegressionTests
 		var services = new ServiceCollection();
 
 		services.AddSingleton(User());
-		services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
 		services.AddSingleton<IScopeSubjectResolver>(resolver ?? new FixedSubjectResolver(grants: [(ScopeDimensions.Dept, "team-a")]));
 
 		return services.BuildServiceProvider();

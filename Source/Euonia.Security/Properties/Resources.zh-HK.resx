@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>權限設定是空的：沒有宣告操作入口規則，也沒有斷言 NoOperationCodes / NoModels 或提供掃描組件。若有方法層級的權限碼，請用 OnAttribute / OnMethodName / OnAttributeOrName 宣告入口規則；若沒有，請斷言 NoOperationCodes；若只想擴充掃描範圍，請改用 AddPermissionModels；若應用程式確實沒有任何權限模型與宣告，請斷言 NoModels。</value>
+    <value>權限配置是空的：沒有聲明操作入口規則，也沒有斷言 NoOperationCodes / NoModels 或給出掃描程序集。有方法級權限碼請用 OnAttribute / OnMethodName / OnAttributeOrName 聲明入口規則；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>權限設定自相矛盾：已斷言 NoOperationCodes（沒有方法層級的權限碼），卻又宣告了操作入口規則。兩者只能擇一：有方法層級的權限碼就宣告規則，沒有就斷言 NoOperationCodes。</value>
@@ -130,7 +130,7 @@
     <value>權限配置自相矛盾：已指定權限碼來源（Source），卻又聲明了操作入口規則。兩者是互斥的來源形態：來源自己回答「某類型在某操作上聲明了哪些權限碼」，入口規則只是其中一種實現。</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>呼叫了 AddPermission 卻沒有指定任何要掃描的組件。權限模型與 [Permission] 宣告都來自組件掃描：掃描範圍為空會讓列層級資料範圍授權靜默失效，而啟動期驗證也會因為「沒有宣告」而一併短路。請傳入要掃描的組件，例如 AddPermission(source, typeof(X).Assembly)；若應用程式確實沒有任何權限模型與 [Permission] 宣告，請明確斷言 services.AssertNoPermissionModels()。</value>
+    <value>調用 AddPermission 時沒有指定任何要掃描的程序集。權限模型與 [Permission] 聲明都來自程序集掃描：掃描範圍為空會讓行級數據權限靜默失效，而啟動期校驗也會因「沒有聲明」一併短路。請傳入要掃描的程序集，例如 permission.Scan(typeof(X).Assembly)；若本應用確實沒有任何權限模型與 [Permission] 聲明，請顯式斷言 permission.NoModels()。</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>已宣告權限模型或 [Permission] 權限碼，但未註冊 {0}。權限碼與列層級授予必須即時從授權資料解析（若固化在權杖中，取消授權後舊權杖仍會有效）。請註冊一個以授權資料為後端的實作，例如 services.AddScoped&lt;{0}, YourResolver&gt;()。</value>
@@ -142,7 +142,7 @@
     <value>入口特性類型必須是非 null 的特性類型（Attribute 的衍生類別）。</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>沒有宣告任何操作入口規則。請至少呼叫一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；若應用程式確實沒有方法層級的權限碼，請改用 AddPermission(EmptyCodeSource.Instance, …) 明確斷言；若只想擴充要掃描的組件，請用 AddPermissionModels。</value>
+    <value>沒有聲明任何操作入口規則。請至少調用一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；若本應用確實沒有方法級權限碼，請顯式斷言 permission.NoOperationCodes()。</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>權限規則設定缺少 '{0}' 節點（已檢查設定區段 '{1}'）。請傳入規則所在的設定區段，例如 configuration.GetSection("Permission")。</value>
@@ -154,7 +154,7 @@
     <value>設定中的操作 '{0}' 沒有宣告任何入口規則：請提供 '{1}'（入口特性類型名稱陣列）或 '{2}'（入口方法名稱陣列）；兩者可同時提供（任一相符即為入口）。</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>權限規則設定的 '{0}' 節點下完全沒有任何操作。若應用程式確實沒有方法層級的權限碼，請改用 AddPermission(EmptyCodeSource.Instance, …) 明確斷言；若只想擴充掃描範圍，請用 AddPermissionModels。</value>
+    <value>權限規則配置的 '{0}' 節點下沒有任何操作。若本應用確實沒有方法級權限碼，請顯式斷言 permission.NoOperationCodes()。</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>設定中的操作 '{0}' 含有未知的節點 '{1}'。可用節點：'{2}'（入口特性類型名稱）與 '{3}'（入口方法名稱）。</value>

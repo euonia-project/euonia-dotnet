@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>アクセス許可の構成が空です。操作のエントリー ルールが宣言されておらず、NoOperationCodes / NoModels も表明されておらず、スキャン対象のアセンブリも指定されていません。メソッド レベルのアクセス許可コードがある場合は OnAttribute / OnMethodName / OnAttributeOrName でエントリー ルールを宣言してください。ない場合は NoOperationCodes を表明してください。スキャン範囲を拡張するだけの場合は AddPermissionModels を使用してください。アプリケーションに本当にアクセス許可モデルも宣言もない場合は NoModels を表明してください。</value>
+    <value>権限の構成が空です。操作エントリの規則が宣言されておらず、NoOperationCodes / NoModels も表明されておらず、スキャン対象アセンブリも指定されていません。メソッドレベルの権限コードがある場合は OnAttribute / OnMethodName / OnAttributeOrName でエントリ規則を宣言してください。ない場合は NoOperationCodes を、権限モデルと宣言が一切ない場合は NoModels を表明してください。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>アクセス許可の構成が矛盾しています。NoOperationCodes (メソッド レベルのアクセス許可コードなし) を表明しているのに、操作のエントリー ルールが宣言されています。どちらか一方のみが許可されます。メソッド レベルのアクセス許可コードがある場合はルールを宣言し、ない場合は NoOperationCodes を表明してください。</value>
@@ -130,7 +130,7 @@
     <value>アクセス許可の構成に矛盾があります: アクセス許可コードのソース (Source) が指定されているのに、操作エントリの規則が宣言されています。両者は相互に排他的なソース形式です。ソース自体が「ある型がある操作に対して宣言するアクセス許可コード」に答え、エントリ規則はその実装の一つにすぎません。</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>スキャン対象のアセンブリを指定せずに AddPermission が呼び出されました。アクセス許可モデルと [Permission] 宣言はどちらもアセンブリのスキャンから取得されます。スキャン範囲が空だと行レベルのデータ スコープが暗黙に無効になり、宣言されていないためスタートアップ時の検証も短絡します。スキャン対象のアセンブリを渡してください (例: AddPermission(source, typeof(X).Assembly)。アプリケーションに本当にアクセス許可モデルも [Permission] 宣言もない場合は、services.AssertNoPermissionModels() を明示的に表明してください。</value>
+    <value>AddPermission がスキャン対象アセンブリなしで呼び出されました。権限モデルと [Permission] 宣言はどちらもアセンブリのスキャンから取得されます。スキャン範囲が空だと行レベルのデータスコープが暗黙的に無効になり、何も宣言されていないため起動時検証も短絡します。スキャンするアセンブリを指定してください（例：permission.Scan(typeof(X).Assembly)）。アプリケーションに権限モデルと [Permission] 宣言が本当にない場合は、permission.NoModels() を明示的に表明してください。</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>アクセス許可モデルまたは [Permission] アクセス許可コードが宣言されましたが、{0} が登録されていません。アクセス許可コードと行レベルの付与は、認可データからリアルタイムに解決する必要があります (トークンに固定すると、取消されたアクセス許可が古いトークンに残り続けます)。認可データに基づく実装を登録してください (例: services.AddScoped&lt;{0}, YourResolver&gt;()。</value>
@@ -142,7 +142,7 @@
     <value>エントリー属性の型は null でない属性型 (Attribute の派生クラス) でなければなりません。</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>操作のエントリー ルールが宣言されていません。OnAttribute / OnMethodName / OnAttributeOrName / OnMethod を少なくとも 1 回呼び出してください。アプリケーションに本当にメソッド レベルのアクセス許可コードがない場合は、AddPermission(EmptyCodeSource.Instance, …) で明示的に表明してください。スキャン対象のアセンブリを拡張するだけの場合は AddPermissionModels を使用してください。</value>
+    <value>操作エントリの規則が宣言されていません。OnAttribute / OnMethodName / OnAttributeOrName / OnMethod を少なくとも一度呼び出してください。メソッドレベルの権限コードが本当にない場合は、permission.NoOperationCodes() を明示的に表明してください。</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>アクセス許可ルールの構成に '{0}' ノードがありません (セクション '{1}' を調べました)。ルールを含むセクションを渡してください (例: configuration.GetSection("Permission"))。</value>
@@ -154,7 +154,7 @@
     <value>構成内の操作 '{0}' はエントリー ルールを宣言していません。'{1}' (エントリー属性型の名前の配列) または '{2}' (エントリー メソッド名の配列) を指定してください。両方を指定することもでき (いずれかが一致すればエントリーされます)、</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>アクセス許可ルールの構成の '{0}' ノードに操作が 1 つもありません。アプリケーションに本当にメソッド レベルのアクセス許可コードがない場合は、AddPermission(EmptyCodeSource.Instance, …) で明示的に表明してください。スキャン範囲を拡張するだけの場合は AddPermissionModels を使用してください。</value>
+    <value>権限ルール構成の '{0}' ノードには操作が一切ありません。アプリケーションにメソッドレベルの権限コードが本当にない場合は、permission.NoOperationCodes() を明示的に表明してください。</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>構成内の操作 '{0}' に不明なノード '{1}' が含まれています。使用できるノード: '{2}' (エントリー属性型の名前) と '{3}' (エントリー メソッド名)。</value>

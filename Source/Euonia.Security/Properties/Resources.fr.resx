@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>La configuration des autorisations est vide : aucune règle d'entrée d'opération n'a été déclarée, et ni NoOperationCodes / NoModels n'a été affirmé, ni une assembly à analyser n'a été fournie. Utilisez OnAttribute / OnMethodName / OnAttributeOrName pour déclarer la règle d'entrée lorsqu'il existe des codes d'autorisation au niveau des méthodes ; affirmez NoOperationCodes lorsqu'il n'y en a pas ; utilisez AddPermissionModels lorsque vous souhaitez uniquement étendre la portée d'analyse ; affirmez NoModels lorsque l'application n'a réellement aucun modèle d'autorisation ni aucune déclaration.</value>
+    <value>La configuration des autorisations est vide : aucune règle d'entrée d'opération n'a été déclarée, et ni NoOperationCodes / NoModels n'ont été affirmés ni un assemblage à scanner n'a été donné. Utilisez OnAttribute / OnMethodName / OnAttributeOrName pour déclarer la règle d'entrée lorsqu'il y a des codes d'autorisation au niveau méthode ; affirmez NoOperationCodes s'il n'y en a pas ; affirmez NoModels lorsque l'application n'a vraiment aucun modèle d'autorisation ni déclaration.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>La configuration des autorisations se contredit : NoOperationCodes a été affirmé (aucun code d'autorisation au niveau des méthodes), alors que des règles d'entrée d'opération ont été déclarées. Une seule des deux options est autorisée : déclarez des règles lorsqu'il existe des codes d'autorisation au niveau des méthodes, et affirmez NoOperationCodes lorsqu'il n'y en a pas.</value>
@@ -130,7 +130,7 @@
     <value>La configuration des autorisations se contredit : une source de codes d'autorisation a été spécifiée (Source) et des règles d'entrée d'opération ont été déclarées. Les deux formes sont mutuellement exclusives : la source répond elle-même aux codes d'autorisation qu'un type déclare pour une opération ; les règles d'entrée ne sont que l'une de ses implémentations.</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>AddPermission a été appelée sans aucune assembly à analyser. Les modèles d'autorisation comme les déclarations [Permission] proviennent de l'analyse des assemblies : une portée d'analyse vide désactive silencieusement la portée de données au niveau des lignes, et la validation au démarrage est également court-circuitée puisque rien n'a été déclaré. Passez les assemblies à analyser, par exemple AddPermission(source, typeof(X).Assembly) ; si l'application n'a réellement aucun modèle d'autorisation ni aucune déclaration [Permission], affirmez explicitement services.AssertNoPermissionModels().</value>
+    <value>AddPermission a été appelé sans aucun assemblage à analyser. Les modèles d'autorisation et les déclarations [Permission] proviennent de l'analyse des assemblages : une portée d'analyse vide désactive silencieusement la portée des données au niveau ligne, et la validation de démarrage est également court-circuitée car rien n'a été déclaré. Passez les assemblages à analyser, par exemple permission.Scan(typeof(X).Assembly) ; si l'application n'a vraiment aucun modèle d'autorisation ni déclaration [Permission], affirmez explicitement permission.NoModels().</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>Un modèle d'autorisation ou un code d'autorisation [Permission] a été déclaré, mais {0} n'est pas enregistré. Les codes d'autorisation et les attributions au niveau des lignes doivent être résolus en temps réel à partir des données d'autorisation (les figer dans un jeton permet à une autorisation révoquée de survivre dans des jetons obsolètes). Veuillez enregistrer une implémentation adossée aux données d'autorisation, par exemple services.AddScoped&lt;{0}, YourResolver&gt;().</value>
@@ -142,7 +142,7 @@
     <value>Le type de l'attribut d'entrée doit être un type d'attribut non nul (une sous-classe de Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>Aucune règle d'entrée d'opération n'a été déclarée. Appelez OnAttribute / OnMethodName / OnAttributeOrName / OnMethod au moins une fois ; si l'application n'a réellement aucun code d'autorisation au niveau des méthodes, affirmez-le explicitement avec AddPermission(EmptyCodeSource.Instance, …) ; pour étendre uniquement les assemblies à analyser, utilisez AddPermissionModels.</value>
+    <value>Aucune règle d'entrée d'opération n'a été déclarée. Appelez OnAttribute / OnMethodName / OnAttributeOrName / OnMethod au moins une fois ; si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>Il manque le nœud '{0}' dans la configuration des règles d'autorisation (la section '{1}' a été vérifiée). Veuillez passer la section qui contient les règles, par exemple configuration.GetSection("Permission").</value>
@@ -154,7 +154,7 @@
     <value>L'opération '{0}' dans la configuration ne déclare aucune règle d'entrée : indiquez '{1}' (un tableau de noms de types d'attributs d'entrée) ou '{2}' (un tableau de noms de méthodes d'entrée) ; les deux peuvent être fournis (une entrée dès que l'un des deux correspond).</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>Le nœud '{0}' de la configuration des règles d'autorisations ne contient aucune opération. Si l'application n'a réellement aucun code d'autorisation au niveau des méthodes, affirmez-le explicitement avec AddPermission(EmptyCodeSource.Instance, …) ; pour étendre uniquement la portée d'analyse, utilisez AddPermissionModels.</value>
+    <value>Le nœud '{0}' de la configuration des règles d'autorisation ne contient aucune opération. Si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>L'opération '{0}' dans la configuration contient un nœud inconnu '{1}'. Nœuds disponibles : '{2}' (noms de types d'attributs d'entrée) et '{3}' (noms de méthodes d'entrée).</value>

@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>权限配置是空的：没有声明操作入口规则，也没有断言 NoOperationCodes / NoModels 或给出扫描程序集。有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；没有方法级权限码请断言 NoOperationCodes；只想追加扫描范围请改用 AddPermissionModels；确实没有任何权限模型与声明请断言 NoModels。</value>
+    <value>权限配置是空的：没有声明操作入口规则，也没有断言 NoOperationCodes / NoModels 或给出扫描程序集。有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；没有方法级权限码请断言 NoOperationCodes；确实没有任何权限模型与声明请断言 NoModels。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>权限配置自相矛盾：已断言 NoOperationCodes（没有方法级权限码），却又声明了操作入口规则。两者只能取其一：有方法级权限码就声明规则，没有就断言 NoOperationCodes。</value>
@@ -130,7 +130,7 @@
     <value>权限配置自相矛盾：已指定权限码来源（Source），却又声明了操作入口规则。两者是互斥的来源形态：来源自己回答「某类型在某操作上声明了哪些权限码」，入口规则只是其中一种实现。</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>调用了 AddPermission 却没有指定任何要扫描的程序集。权限模型与 [Permission] 声明都来自程序集扫描：扫描范围为空会让行级数据权限静默失效，而启动期校验也会因「没有声明」一并短路。请传入要扫描的程序集，例如 AddPermission(source, typeof(X).Assembly)；若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 services.AssertNoPermissionModels()。</value>
+    <value>调用 AddPermission 时没有指定任何要扫描的程序集。权限模型与 [Permission] 声明都来自程序集扫描：扫描范围为空会让行级数据权限静默失效，而启动期校验也会因「没有声明」一并短路。请传入要扫描的程序集，例如 permission.Scan(typeof(X).Assembly)；若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 permission.NoModels()。</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>已声明权限模型或 [Permission] 权限码，但未注册 {0}。权限码与行级授予必须从授权数据实时解析（固化在令牌中会导致取消授权后旧令牌仍然有效），请注册一个基于授权数据的实现，例如 services.AddScoped&lt;{0}, YourResolver&gt;()。</value>
@@ -142,7 +142,7 @@
     <value>入口特性类型必须是非 null 的特性类型（Attribute 的派生类）。</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>没有声明任何操作入口规则。请至少调用一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；若本应用确实没有方法级权限码，请改用 AddPermission(EmptyCodeSource.Instance, …) 显式断言；只想追加要扫描的程序集，请用 AddPermissionModels。</value>
+    <value>没有声明任何操作入口规则。请至少调用一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；若本应用确实没有方法级权限码，请显式断言 permission.NoOperationCodes()。</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>权限规则配置缺少 '{0}' 节点（已检查配置节 '{1}'）。请传入规则所在的配置节，例如 configuration.GetSection("Permission")。</value>
@@ -154,7 +154,7 @@
     <value>配置里的操作 '{0}' 没有声明任何入口规则：请给出 '{1}'（入口特性类型名数组）或 '{2}'（入口方法名数组），二者可同时给出（命中其一即为入口）。</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>权限规则配置的 '{0}' 节点下没有任何操作。若本应用确实没有方法级权限码，请改用 AddPermission(EmptyCodeSource.Instance, …) 显式断言；只想追加扫描范围请用 AddPermissionModels。</value>
+    <value>权限规则配置的 '{0}' 节点下没有任何操作。若本应用确实没有方法级权限码，请显式断言 permission.NoOperationCodes()。</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>配置里的操作 '{0}' 含有未知的节点 '{1}'。可用节点：'{2}'（入口特性类型名）与 '{3}'（入口方法名）。</value>

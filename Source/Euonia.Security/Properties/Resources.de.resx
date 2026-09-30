@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Einstiegsregel für Vorgänge deklariert, und weder NoOperationCodes / NoModels wurde bestätigt, noch wurde eine zu scannende Assembly angegeben. Verwenden Sie OnAttribute / OnMethodName / OnAttributeOrName, um die Einstiegsregel zu deklarieren, wenn es Berechtigungscodes auf Methodenebene gibt; bestätigen Sie NoOperationCodes, wenn es keine gibt; verwenden Sie AddPermissionModels, wenn Sie den Scanbereich lediglich erweitern möchten; bestätigen Sie NoModels, wenn die Anwendung tatsächlich kein Berechtigungsmodell und keine Deklaration hat.</value>
+    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Regel für Operationseingänge deklariert und weder NoOperationCodes / NoModels bestätigt noch eine zu scannende Assembly angegeben. Deklarieren Sie die Eingangsregel mit OnAttribute / OnMethodName / OnAttributeOrName, wenn es Methodenebene-Berechtigungscodes gibt; bestätigen Sie NoOperationCodes, wenn nicht; bestätigen Sie NoModels, wenn die Anwendung wirklich kein Berechtigungsmodell und keine Deklaration hat.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>Die Berechtigungskonfiguration widerspricht sich selbst: NoOperationCodes wurde bestätigt (keine Berechtigungscodes auf Methodenebene), es wurden jedoch Einstiegsregeln für Vorgänge deklariert. Nur eines von beidem ist zulässig: Deklarieren Sie Regeln, wenn es Berechtigungscodes auf Methodenebene gibt, und bestätigen Sie NoOperationCodes, wenn es keine gibt.</value>
@@ -130,7 +130,7 @@
     <value>Die Berechtigungskonfiguration widerspricht sich: Eine Berechtigungscode-Quelle wurde angegeben (Source), gleichzeitig wurden Regeln für Operationseingänge deklariert. Beides sind sich ausschließende Quellformen: Die Quelle beantwortet selbst, welche Berechtigungscodes ein Typ für eine Operation deklariert; Eingangsregeln sind nur eine dieser Implementierungen.</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>AddPermission wurde ohne eine zu scannende Assembly aufgerufen. Sowohl die Berechtigungsmodelle als auch die [Permission]-Deklarationen stammen aus dem Assembly-Scan: Ein leerer Scanbereich deaktiviert den Datenbereich auf Zeilenebene stillschweigend, und die Startvalidierung wird ebenfalls kurzgeschlossen, weil nichts deklariert wurde. Übergeben Sie die zu scannenden Assemblies, beispielsweise AddPermission(source, typeof(X).Assembly); wenn die Anwendung tatsächlich kein Berechtigungsmodell und keine [Permission]-Deklaration hat, bestätigen Sie explizit services.AssertNoPermissionModels().</value>
+    <value>AddPermission wurde ohne eine zu scannende Assembly aufgerufen. Sowohl Berechtigungsmodelle als auch [Permission]-Deklarationen stammen aus dem Assembly-Scanning: Ein leerer Scambereich deaktiviert stillschweigend den zeilenbezogenen Datenbereich, und die Startvalidierung wird ebenfalls kurzgeschlossen, da nichts deklariert wurde. Geben Sie die zu scannenden Assemblies an, z. B. permission.Scan(typeof(X).Assembly); wenn die Anwendung wirklich kein Berechtigungsmodell und keine [Permission]-Deklaration hat, bestätigen Sie explizit permission.NoModels().</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>Ein Berechtigungsmodell oder ein Berechtigungscode [Permission] wurde deklariert, {0} ist jedoch nicht registriert. Berechtigungscodes und Berechtigungen auf Zeilenebene müssen in Echtzeit aus den Autorisierungsdaten aufgelöst werden (werden sie in ein Token eingefroren, bleibt eine entzogene Berechtigung in veralteten Tokens bestehen). Bitte registrieren Sie eine Implementierung, die auf Autorisierungsdaten basiert, beispielsweise services.AddScoped&lt;{0}, YourResolver&gt;().</value>
@@ -142,7 +142,7 @@
     <value>Der Typ des Einstiegsattributs muss ein Attributtyp sein, der nicht null ist (eine Unterklasse von Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>Es wurde keine Einstiegsregel für Vorgänge deklariert. Rufen Sie mindestens einmal OnAttribute / OnMethodName / OnAttributeOrName / OnMethod auf; wenn die Anwendung wirklich keine Berechtigungscodes auf Methodenebene hat, bestätigen Sie dies explizit mit AddPermission(EmptyCodeSource.Instance, …); um lediglich die zu scannenden Assemblies zu erweitern, verwenden Sie AddPermissionModels.</value>
+    <value>Es wurde keine Regel für Operationseingänge deklariert. Rufen Sie OnAttribute / OnMethodName / OnAttributeOrName / OnMethod mindestens einmal auf; wenn die Anwendung wirklich keine Methodenebene-Berechtigungscodes hat, bestätigen Sie explizit permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>In der Konfiguration der Berechtigungsregeln fehlt der Knoten '{0}' (geprüft wurde der Abschnitt '{1}'). Übergeben Sie den Abschnitt, der die Regeln enthält, beispielsweise configuration.GetSection("Permission").</value>
@@ -154,7 +154,7 @@
     <value>Der Vorgang '{0}' in der Konfiguration deklariert keine Einstiegsregel: Geben Sie '{1}' (ein Array der Attributtypen für den Einstieg) oder '{2}' (ein Array der Methodennamen für den Einstieg) an; beide können angegeben werden (ein Einstieg, sobald eine der beiden übereinstimmt).</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>Der Knoten '{0}' der Konfiguration der Berechtigungsregeln enthält überhaupt keinen Vorgang. Wenn die Anwendung wirklich keine Berechtigungscodes auf Methodenebene hat, geben Sie dies explizit mit AddPermission(EmptyCodeSource.Instance, …) an; um lediglich den Scanbereich zu erweitern, verwenden Sie AddPermissionModels.</value>
+    <value>Der Knoten '{0}' der Berechtigungsregelkonfiguration enthält überhaupt keine Operation. Wenn die Anwendung wirklich keine Methodenebene-Berechtigungscodes hat, bestätigen Sie explizit permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>Der Vorgang '{0}' in der Konfiguration enthält den unbekannten Knoten '{1}'. Verfügbare Knoten: '{2}' (Attributtypen für den Einstieg) und '{3}' (Methodennamen für den Einstieg).</value>

@@ -322,7 +322,7 @@ public class CollectionDimensionTests
 		var services = new ServiceCollection();
 
 		services.AddSingleton(User());
-		services.AddPermission(EmptyCodeSource.Instance, typeof(WorkspaceModel).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(WorkspaceModel).Assembly); p.NoOperationCodes(); });
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 			grants: [(ScopeDimensions.Member, "dev"), (ScopeDimensions.Owner, "dev")]));
 

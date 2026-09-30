@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>La configuración de permisos de acceso está vacía. No se declaró ninguna regla de entrada para la operación, no se indicó NoOperationCodes / NoModels y no se especificó ningún ensamblado que se vaya a examinar. Si hay códigos de permiso de acceso en el nivel del método, declare las reglas de entrada con OnAttribute / OnMethodName / OnAttributeOrName. Si no los hay, indique NoOperationCodes. Si solo desea ampliar el ámbito del examen, use AddPermissionModels. Si la aplicación no declara ningún modelo ni atributo de acceso, indique NoModels.</value>
+    <value>La configuración de permisos está vacía: no se declaró ninguna regla de entrada de operaciones y no se afirmó NoOperationCodes / NoModels ni se dio un ensamblado para escanear. Use OnAttribute / OnMethodName / OnAttributeOrName para declarar la regla de entrada cuando haya códigos de permiso a nivel de método; afirme NoOperationCodes cuando no los haya; afirme NoModels cuando la aplicación realmente no tenga modelo de permisos ni declaración.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>La configuración de permisos de acceso es contradictoria: indicó NoOperationCodes (sin códigos de permiso en el nivel del método), pero declaró reglas de entrada para la operación. Solo se permite una de las dos. Si hay códigos de permiso en el nivel del método, declare las reglas; si no los hay, indique NoOperationCodes.</value>
@@ -130,7 +130,7 @@
     <value>La configuración de permisos se contradice: se especificó una fuente de códigos de permiso (Source) y también se declararon reglas de entrada de operaciones. Ambas son formas de fuente mutuamente excluyentes: la fuente responde por sí misma qué códigos de permiso declara un tipo para una operación; las reglas de entrada son solo una de sus implementaciones.</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>Se llamó a AddPermission sin especificar ensamblados que examinar. Los modelos de permisos y las declaraciones [Permission] se obtienen del examen de ensamblados. Si el ámbito del examen está vacío, el ámbito de datos en el nivel de la fila se deshabilita de forma implícita y, al no declararse, la validación del inicio se omite. Pase los ensamblados que se van a examinar (por ejemplo, AddPermission(source, typeof(X).Assembly)). Si la aplicación no declara ningún modelo de permisos ni declaración [Permission], indique explícitamente services.AssertNoPermissionModels().</value>
+    <value>Se llamó a AddPermission sin ningún ensamblado para escanear. Tanto los modelos de permisos como las declaraciones [Permission] provienen del escaneo de ensamblados: un alcance de escaneo vacío deshabilita silenciosamente el alcance de datos a nivel de fila, y la validación de inicio también se cortocircuita porque no se declaró nada. Pase los ensamblados a escanear, por ejemplo permission.Scan(typeof(X).Assembly); si la aplicación realmente no tiene modelo de permisos ni declaración [Permission], afirme explícitamente permission.NoModels().</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>Se declaró un modelo de permisos o un código de permiso [Permission], pero {0} no está registrado. Los códigos de permiso y las concesiones en el nivel de la fila deben resolverse en tiempo real desde los datos de autorización (fijarlos al token deja permisos revocados en tokens antiguos). Registre una implementación basada en datos de autorización (por ejemplo, services.AddScoped&lt;{0}, YourResolver&gt;()).</value>
@@ -142,7 +142,7 @@
     <value>El tipo del atributo de entrada debe ser un tipo de atributo no nulo (una clase derivada de Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>No se declaró ninguna regla de entrada para la operación. Llame al menos una vez a OnAttribute / OnMethodName / OnAttributeOrName / OnMethod. Si la aplicación no tiene realmente códigos de permiso de acceso en el nivel del método, indíquelo explícitamente con AddPermission(EmptyCodeSource.Instance, …). Si solo desea ampliar el ámbito del examen, use AddPermissionModels.</value>
+    <value>No se declaró ninguna regla de entrada de operaciones. Llame a OnAttribute / OnMethodName / OnAttributeOrName / OnMethod al menos una vez; si la aplicación realmente no tiene códigos de permiso a nivel de método, afirme explícitamente permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>Falta el nodo '{0}' en la configuración de reglas de permisos (se examinó la sección '{1}'). Pase la sección que contiene las reglas (por ejemplo, configuration.GetSection("Permission")).</value>
@@ -154,7 +154,7 @@
     <value>La operación '{0}' de la configuración no declara reglas de entrada. Especifique '{1}' (un arreglo con nombres de tipos de atributo de entrada) o '{2}' (un arreglo con nombres de métodos de entrada). Puede especificar ambos: la entrada se produce si coincide cualquiera de los dos.</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>El nodo '{0}' de la configuración de reglas de permisos no contiene ninguna operación. Si la aplicación no tiene realmente códigos de permiso de acceso en el nivel del método, indíquelo explícitamente con AddPermission(EmptyCodeSource.Instance, …). Si solo desea ampliar el ámbito del examen, use AddPermissionModels.</value>
+    <value>El nodo '{0}' de la configuración de reglas de permisos no contiene ninguna operación. Si la aplicación realmente no tiene códigos de permiso a nivel de método, afirme explícitamente permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>La operación '{0}' de la configuración contiene un nodo desconocido '{1}'. Los nodos disponibles son '{2}' (nombres de tipos de atributo de entrada) y '{3}' (nombres de métodos de entrada).</value>

@@ -25,7 +25,7 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermission_Should_Register_Engine_Services()
 	{
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		Assert.NotNull(provider.GetService<ScopeModelRegistry>());
 		Assert.NotNull(provider.GetService<PermissionSetup>());
@@ -38,7 +38,7 @@ public class AddPermissionTests
 	{
 		// 只引用 Euonia.Security 的独立使用：注册、建模、判定全链路可用。
 		var provider = Build(
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				grants: [(ScopeDimensions.Dept, "team-a")])));
 
@@ -51,7 +51,7 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermission_Should_Register_Model_Registry_As_Singleton()
 	{
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
 		var registry = provider.GetRequiredService<ScopeModelRegistry>();
 
@@ -64,7 +64,7 @@ public class AddPermissionTests
 	{
 		var services = new ServiceCollection();
 
-		Assert.Same(services, services.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+		Assert.Same(services, services.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 	}
 
 	[Fact]
@@ -80,7 +80,7 @@ public class AddPermissionTests
 	{
 		IServiceCollection services = null;
 
-		Assert.Throws<ArgumentNullException>(() => services.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 	}
 
 	#endregion
@@ -122,7 +122,7 @@ public class AddPermissionTests
 		var expected = new FixedKeyResolver();
 		var provider = Build(
 			s => s.AddSingleton<IScopeKeyResolver>(expected),
-			s => s.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+			s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		Assert.Same(expected, provider.GetRequiredService<IScopeKeyResolver>());
 	}
@@ -133,7 +133,7 @@ public class AddPermissionTests
 		var expected = new FixedSubjectResolver();
 		var provider = Build(
 			s => s.AddSingleton<IScopeSubjectResolver>(expected),
-			s => s.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+			s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		Assert.Same(expected, provider.GetRequiredService<IScopeSubjectResolver>());
 	}
@@ -153,7 +153,7 @@ public class AddPermissionTests
 		// 未注册 IScopeKeyResolver 时必须回落到 ScopeKeys.Default（AssetModel 只声明了默认策略），
 		// 而不是因缺少依赖而解析失败。
 		var provider = Build(
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				grants: [(ScopeDimensions.Dept, "team-a")])));
 
@@ -170,7 +170,7 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermission_Should_Not_Require_Subject_Resolver_When_Nothing_Declared()
 	{
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, CleanAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		Assert.False(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
 		provider.GetRequiredService<IScopeGuard>();
@@ -181,20 +181,19 @@ public class AddPermissionTests
 	{
 		// 零程序集 ⇒ 扫描范围为空 ⇒ 行级数据权限静默失效，而 RequiresSubjectResolver 恒为 false
 		// 会让下面的校验一并短路。与 EmptyCodeSource 同一条规则：空输入必须显式做出选择。
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance));
+		var provider = Build(s => s.AddPermission(p => p.NoOperationCodes()));
 
 		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
 		Assert.Contains("without any assembly", exception.Message, StringComparison.OrdinalIgnoreCase);
-		Assert.Contains(nameof(ServiceCollectionExtensions.AssertNoPermissionModels), exception.Message, StringComparison.Ordinal);
+		Assert.Contains("NoModels", exception.Message, StringComparison.Ordinal);
 	}
 
 	[Fact]
 	public void AddPermission_Without_Any_Assembly_Should_Pass_Validation_After_Explicit_Assertion()
 	{
 		var provider = Build(
-			s => s.AddPermission(EmptyCodeSource.Instance),
-			s => s.AssertNoPermissionModels());
+			s => s.AddPermission(p => p.NoModels()));
 
 		provider.GetRequiredService<IScopeGuard>();
 	}
@@ -204,8 +203,7 @@ public class AddPermissionTests
 	{
 		// 顺序无关：断言与 AddPermission 谁先谁后都要生效（两者都落在同一份累积状态上）
 		var provider = Build(
-			s => s.AssertNoPermissionModels(),
-			s => s.AddPermission(EmptyCodeSource.Instance));
+			s => s.AddPermission(p => { p.NoOperationCodes(); p.NoModels(); }));
 
 		provider.GetRequiredService<IScopeGuard>();
 	}
@@ -215,8 +213,7 @@ public class AddPermissionTests
 	{
 		// 「扫过但确实没有声明」与「从没扫过」是两回事：前者本身就是显式断言
 		var provider = Build(
-			s => s.AddPermissionModels(CleanAssembly),
-			s => s.AddPermission(EmptyCodeSource.Instance));
+			s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		provider.GetRequiredService<IScopeGuard>();
 	}
@@ -224,7 +221,7 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermission_Should_Require_Subject_Resolver_When_Declared()
 	{
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
 		Assert.True(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
 	}
@@ -232,7 +229,7 @@ public class AddPermissionTests
 	[Fact]
 	public void Guard_Resolution_Should_Throw_When_Declared_Without_Resolver()
 	{
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
 		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
@@ -244,7 +241,7 @@ public class AddPermissionTests
 	{
 		// 解析器允许在 AddPermission 之后注册：只有容器定稿才能判断它是否存在。
 		var provider = Build(
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
 		provider.GetRequiredService<IScopeGuard>();
@@ -270,7 +267,7 @@ public class AddPermissionTests
 	public void AddPermission_Should_Key_Execute_From_Operation_When_Code_Source_Has_No_Codes()
 	{
 		// 没有方法级权限码时，各操作解析到各自的框架默认键。
-		var provider = Build(s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
 		Assert.Equal(ScopeKeys.Execute, ResolveExecuteKey(provider, typeof(Asset)));
 	}
@@ -281,7 +278,7 @@ public class AddPermissionTests
 		// EmptyCodeSource 与按码声明的策略不可同用：没有任何操作能解析到应用自定义的码，
 		// 死策略校验必须拒绝启动。锁定这一边界，避免日后被「放宽校验」悄悄放过。
 		var exception = Assert.Throws<ScopeModelValidationException>(
-			() => Build(s => s.AddPermission(EmptyCodeSource.Instance, FixturesAssembly)));
+			() => Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); })));
 
 		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
 	}
@@ -324,27 +321,27 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermissionModels_Should_Extend_Scan_Scope()
 	{
-		// 模型分散在多个程序集、权限码来源只有一处：来源由 AddPermission 给出，
-		// 其余程序集用本入口追加，不必重复传同一个来源实例。
+		// 模型分散在多个程序集：Scan 可多次调用，程序集按并集累积。
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance);
-		services.AddPermissionModels(TestAssembly);
+		services.AddPermission(p =>
+		{
+			p.Scan(TestAssembly);
+			p.NoOperationCodes();
+		});
 
 		var provider = services.BuildServiceProvider();
 
 		Assert.True(provider.GetRequiredService<ScopeModelRegistry>().IsDeclared(typeof(Asset)));
-		Assert.Same(EmptyCodeSource.Instance, provider.GetRequiredService<IPermissionCodeSource>());
 	}
 
 	[Fact]
-	public void AddPermissionModels_Should_Not_Be_A_Code_Source_Assertion()
+	public void Scanning_Without_Source_Or_Assertion_Should_Fail_At_Registration()
 	{
-		// 本入口不提供权限码来源，因此不能用来绕过「显式给出来源」的要求（README §3.1）。
-		// 只追加程序集时来源缺席、回落到 EmptyCodeSource，按码声明的策略无人能解析到——
-		// 死策略校验必须在这里拦住，锁定该边界以免日后被当成缺陷「放宽」。
+		// 只扫描程序集而不说明来源意图（规则 / NoOperationCodes）时，
+		// 按码声明的策略无人能解析到——死策略校验在注册处拦住，锁定该边界。
 		var exception = Assert.Throws<ScopeModelValidationException>(
-			() => new ServiceCollection().AddPermissionModels(FixturesAssembly));
+			() => new ServiceCollection().AddPermission(p => p.Scan(FixturesAssembly)));
 
 		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
 	}
@@ -356,7 +353,7 @@ public class AddPermissionTests
 		// 容器里不留失效的中间注册表。
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance, TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
 		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);
 
 		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ScopeModelRegistry)));

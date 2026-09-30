@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>The permission configuration is empty: no operation entry rule was declared, and neither NoOperationCodes / NoModels was asserted nor a scanning assembly was given. Use OnAttribute / OnMethodName / OnAttributeOrName to declare the entry rule when there are method-level permission codes; assert NoOperationCodes when there are none; use AddPermissionModels when you only want to extend the scanning scope; assert NoModels when the application really has no permission model and no declaration.</value>
+    <value>The permission configuration is empty: no operation entry rule was declared, and neither NoOperationCodes / NoModels was asserted nor a scanning assembly was given. Use OnAttribute / OnMethodName / OnAttributeOrName to declare the entry rule when there are method-level permission codes; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>The permission configuration contradicts itself: NoOperationCodes was asserted (no method-level permission codes) yet operation entry rules were declared. Only one of the two is allowed: declare rules when there are method-level permission codes, assert NoOperationCodes when there are none.</value>
@@ -130,7 +130,7 @@
     <value>The permission configuration contradicts itself: a permission code source was specified (Source) yet operation entry rules were declared. The two are mutually exclusive source shapes: the source itself answers which permission codes a type declares for an operation, and entry rules are just one of its implementations.</value>
   </data>
   <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
-    <value>AddPermission was called without any assembly to scan. Both permission models and [Permission] declarations come from assembly scanning: an empty scanning scope silently disables row-level data scope, and the start-up validation short-circuits as well because nothing was declared. Pass the assemblies to scan, for example AddPermission(source, typeof(X).Assembly); if the application really has no permission model and no [Permission] declaration, assert services.AssertNoPermissionModels() explicitly.</value>
+    <value>AddPermission was called without any assembly to scan. Both permission models and [Permission] declarations come from assembly scanning: an empty scanning scope silently disables row-level data scope, and the start-up validation short-circuits as well because nothing was declared. Pass the assemblies to scan, for example permission.Scan(typeof(X).Assembly); if the application really has no permission model and no [Permission] declaration, assert permission.NoModels() explicitly.</value>
   </data>
   <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
     <value>A permission model or [Permission] permission code was declared, but {0} is not registered. Permission codes and row-level grants must be resolved from authorization data in real time (freezing them into a token lets a revoked permission survive in stale tokens). Please register an implementation backed by authorization data, for example services.AddScoped&lt;{0}, YourResolver&gt;().</value>
@@ -142,7 +142,7 @@
     <value>The entry attribute type must be a non-null attribute type (a subclass of Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>No operation entry rule was declared. Call OnAttribute / OnMethodName / OnAttributeOrName / OnMethod at least once; if the application really has no method-level permission codes, assert it explicitly with AddPermission(EmptyCodeSource.Instance, …); to only extend the assemblies to scan, use AddPermissionModels.</value>
+    <value>No operation entry rule was declared. Call OnAttribute / OnMethodName / OnAttributeOrName / OnMethod at least once; if the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
   </data>
   <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
     <value>The permission rule configuration is missing the '{0}' node (the section '{1}' was checked). Please pass the section that holds the rules, for example configuration.GetSection("Permission").</value>
@@ -154,7 +154,7 @@
     <value>The operation '{0}' in the configuration declares no entry rule: give '{1}' (an array of entry attribute type names) or '{2}' (an array of entry method names); both may be given (an entry when either one matches).</value>
   </data>
   <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>The '{0}' node of the permission rule configuration holds no operation at all. If the application really has no method-level permission codes, assert it explicitly with AddPermission(EmptyCodeSource.Instance, …); to only extend the scanning scope, use AddPermissionModels.</value>
+    <value>The '{0}' node of the permission rule configuration holds no operation at all. If the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
   </data>
   <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
     <value>The operation '{0}' in the configuration contains an unknown node '{1}'. Available nodes: '{2}' (entry attribute type names) and '{3}' (entry method names).</value>

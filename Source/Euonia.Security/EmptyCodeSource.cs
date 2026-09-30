@@ -15,7 +15,7 @@ namespace Nerosoft.Euonia.Security;
 /// <b>不可与按码声明的策略（<c>ScopePolicySet{T}.For(code, …)</c>）同用</b>：没有任何操作能解析到应用自定义的码，死策略校验会拒绝启动（见 README §3.1、DESIGN §1.6）。
 /// </para>
 /// </remarks>
-public sealed class EmptyCodeSource : IPermissionCodeSource
+internal sealed class EmptyCodeSource : IPermissionCodeSource
 {
 	// 注意声明顺序：Instance 的初始化会构造本类实例，实例字段初始化器会读 Operations，
 	// 因此 Operations 必须排在 Instance 之前（静态字段按文本顺序初始化）。
@@ -24,7 +24,7 @@ public sealed class EmptyCodeSource : IPermissionCodeSource
 	/// <summary>
 	/// 共享实例。
 	/// </summary>
-	public static EmptyCodeSource Instance { get; } = new();
+	internal static EmptyCodeSource Instance { get; } = new();
 
 	/// <inheritdoc />
 	/// <remarks>包一层只读：原本直接暴露 <c>string[]</c>，强转后可改写这个被所有宿主共享的静态数组。</remarks>

@@ -275,7 +275,7 @@ public class GeneralityTests
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: true)),
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				codes: ["asset:approve"],
 				grants: [(ScopeDimensions.Dept, "team-a")])));
@@ -291,7 +291,7 @@ public class GeneralityTests
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: true)),
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				codes: ["asset:approve"],
 				grants: [(ScopeDimensions.Dept, "team-a")])));
@@ -313,7 +313,7 @@ public class GeneralityTests
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: false)),
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				grants: [(ScopeDimensions.Dept, "team-a")])));
 
@@ -327,7 +327,7 @@ public class GeneralityTests
 	public void Missing_UserPrincipal_Should_Be_Reported_When_Guard_Resolved()
 	{
 		var provider = Build(
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
 		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
@@ -340,7 +340,7 @@ public class GeneralityTests
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: true)),
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver()));
 
 		provider.GetRequiredService<IScopeGuard>();
@@ -362,7 +362,7 @@ public class GeneralityTests
 	{
 		var provider = Build(
 			s => s.AddSingleton(User(authenticated: true)),
-			s => s.AddPermission(EmptyCodeSource.Instance, TestAssembly),
+			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
 			s => s.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 				grants: [(ScopeDimensions.Dept, "team-a")])));
 
@@ -402,7 +402,7 @@ public class GeneralityTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(RunCodeSource(), typeof(Asset).Assembly);
-		services.AddPermission(EmptyCodeSource.Instance, FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		var registry = services.BuildServiceProvider().GetRequiredService<ScopeModelRegistry>();
 
@@ -416,7 +416,7 @@ public class GeneralityTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(RunCodeSource(), typeof(Asset).Assembly);
-		services.AddPermission(EmptyCodeSource.Instance, FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		services.AddSingleton(User(authenticated: true));
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
@@ -480,7 +480,7 @@ public class GeneralityTests
 
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance);
+		services.AddPermission(p => p.NoOperationCodes());
 		services.AddPermission(other, typeof(ApprovableAsset).Assembly);
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
@@ -494,8 +494,8 @@ public class GeneralityTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance);
-		services.AddPermission(EmptyCodeSource.Instance, typeof(ApprovableAsset).Assembly);
+		services.AddPermission(p => p.NoOperationCodes());
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.NoOperationCodes(); });
 
 		var setup = services.BuildServiceProvider().GetRequiredService<PermissionSetup>();
 
@@ -525,8 +525,8 @@ public class GeneralityTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(EmptyCodeSource.Instance, typeof(Asset).Assembly);
-		services.AddPermission(EmptyCodeSource.Instance, typeof(Asset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(Asset).Assembly); p.NoOperationCodes(); });
+		services.AddPermission(p => { p.Scan(typeof(Asset).Assembly); p.NoOperationCodes(); });
 
 		var registry = services.BuildServiceProvider().GetRequiredService<ScopeModelRegistry>();
 
