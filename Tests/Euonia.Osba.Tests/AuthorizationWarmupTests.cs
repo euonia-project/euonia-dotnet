@@ -148,7 +148,7 @@ public class AuthorizationWarmupTests
 
 		// 走真实的注册路径：权限检查器、数据权限守卫与模型注册表都由 AddBusinessObject/AddPermission 装配
 		services.AddBusinessObject(typeof(AuthorizationWarmupTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(AuthorizationWarmupTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(AuthorizationWarmupTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver("order:create"));
 		services.AddSingleton(new UserPrincipal(new ClaimsPrincipal(new ClaimsIdentity("Bearer"))));

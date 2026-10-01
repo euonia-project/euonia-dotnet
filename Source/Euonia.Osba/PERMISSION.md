@@ -29,7 +29,7 @@
 
 | 契约（共四个，全部在 Core） | Osba 自带 | 引擎提供 | 宿主自己实现 |
 |---|---|---|---|
-| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ 你在回调里 `Source(...)` 指定的就是它（含追加的规则） | 例如规则来自权限表或已有鉴权框架 |
+| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionCodeSource`） | ✅ 你在回调里 `Source(...)` 指定的就是它（含追加的规则） | 例如规则来自权限表或已有鉴权框架 |
 | `IPermissionChecker`（操作权限判定） | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
 | `IObjectScopeAuthorizer`（行级数据权限） | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
 | `IObjectOperationResolver`（对象状态 → 操作） | ✅ `ObjectOperationResolver`（`AddBusinessObject` 注册） | 消费它 | — |
@@ -80,7 +80,7 @@ services.AddBusinessObject(typeof(Order).Assembly);
 services.AddPermission(p =>
 {
     p.Scan(typeof(Order).Assembly);
-    p.Source(ObjectPermissionRequirementProvider.Instance);
+    p.Source(ObjectPermissionCodeSource.Instance);
 });
 ```
 
@@ -100,7 +100,7 @@ services.AddPermission(p =>
 - 注册引擎那两个契约的**实现**：`IObjectScopeAuthorizer`（行级判定）与 `IPermissionChecker`（操作权限判定，
   权限码来自授权数据）；行级判定会向容器里的 `IObjectOperationResolver` 问「当前是哪个操作」，
   而那是 `AddBusinessObject` 注册的（引擎直接消费该契约，没有中间解析层）
-- 回调里的 `p.Scan(assemblies)` + `p.Source(ObjectPermissionRequirementProvider.Instance)`——
+- 回调里的 `p.Scan(assemblies)` + `p.Source(ObjectPermissionCodeSource.Instance)`——
   把扫描范围与「哪个工厂方法对应哪个操作」交给引擎
   （宿主因此**不需要**自己声明操作入口规则；要补充规则在同一个回调里继续声明，见 §0 末）
 
@@ -726,7 +726,7 @@ services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddPermission(p =>
 {
     p.Scan(typeof(Repo).Assembly);
-    p.Source(ObjectPermissionRequirementProvider.Instance);
+    p.Source(ObjectPermissionCodeSource.Instance);
 });
 services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 
@@ -786,7 +786,7 @@ guard.Allows(repoInTeamC);                // → true
 
 | 类型 | 位置 | 用途 |
 |---|---|---|
-| `ObjectPermissionRequirementProvider` | `Permission/` | `IPermissionCodeSource` 的默认实现：按工厂约定扫描（特性或约定名，能表达角色） |
+| `ObjectPermissionCodeSource` | `Permission/` | `IPermissionCodeSource` 的默认实现：按工厂约定扫描（特性或约定名，能表达角色） |
 | `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（工厂边界与 `IObjectOperationResolver` 共用） |
 | `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的两个闸门（越权抛 `SecurityException`，判定不了抛 `InvalidOperationException`） |
 | `BusinessObject.CanPerformOperation(string operation)` | `Core/BusinessObject.cs` | 业务对象内**唯一**的操作权限查询（**查询语义**：无从判定时返回 `true`，拦截只在工厂边界）；行级可见性经 `BusinessContext` 取 `IScopeGuard`（`Euonia.Security`）后调用 `AllowsObject` / `ExplainObject` |

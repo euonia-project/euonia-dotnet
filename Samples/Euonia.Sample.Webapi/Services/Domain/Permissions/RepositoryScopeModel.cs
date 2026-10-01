@@ -65,21 +65,31 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 }
 
 /// <summary>
-/// 行级授予（ACL）在 <see cref="Persist.Entities.AuthorizationKinds.Grant"/> 授权行上的编码：
-/// 值为 <c>"{operation}|{repositoryId}"</c>，例如 <c>"repository:push|&lt;repository-id&gt;"</c>。
+/// 一条仓库行级授予（ACL）：权限码 + 仓库标识。
 /// </summary>
-public static class RepositoryGrant
+/// <param name="Operation">授权行上写的权限码（如 <c>repository:push</c>）。</param>
+/// <param name="RepositoryId">被授予的那一行仓库的标识。</param>
+/// <remarks>
+/// 持久化时编码为 <c>"{operation}|{repositoryId}"</c> 写在
+/// <see cref="Persist.Entities.AuthorizationKinds.Grant"/> 授权行上，例如
+/// <c>"repository:push|&lt;repository-id&gt;"</c>；编码与解析见 <see cref="ToString"/> 与 <see cref="Parse"/>。
+/// </remarks>
+public readonly record struct RepositoryGrant(string Operation, string RepositoryId)
 {
 	/// <summary>操作码与仓库标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。</summary>
 	public const string Separator = "|";
 
-	public static string Encode(string operation, string repositoryId)
+	/// <summary>编码为授权行的值。</summary>
+	/// <returns>形如 <c>"repository:push|&lt;repository-id&gt;"</c> 的字符串。</returns>
+	public override string ToString()
 	{
-		return string.Concat(operation, Separator, repositoryId);
+		return string.Concat(Operation, Separator, RepositoryId);
 	}
 
 	/// <summary>解析授权行的值；格式非法时返回 <see langword="null"/>。</summary>
-	public static (string Operation, string RepositoryId)? Parse(string value)
+	/// <param name="value">授权行上存储的值。</param>
+	/// <returns>解析结果；格式非法时返回 <see langword="null"/>。</returns>
+	public static RepositoryGrant? Parse(string value)
 	{
 		if (string.IsNullOrWhiteSpace(value))
 		{
@@ -92,6 +102,6 @@ public static class RepositoryGrant
 			return null;
 		}
 
-		return (value[..index], value[(index + 1)..]);
+		return new RepositoryGrant(value[..index], value[(index + 1)..]);
 	}
 }

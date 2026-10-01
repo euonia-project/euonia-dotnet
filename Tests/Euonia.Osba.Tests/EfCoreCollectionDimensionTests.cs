@@ -108,7 +108,7 @@ public class EfCoreCollectionDimensionTests
 
 			// 本程序集里既有本文件的模型，也有 Osba 权限用例的模型（含方法级 [Permission] 码），
 			// 因此扫描必须用 Osba 的码来源；用 EmptyCodeSource 会把它们的按码策略判成死策略。
-			services.AddPermission(p => { p.Scan(typeof(EfWorkspace).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+			services.AddPermission(p => { p.Scan(typeof(EfWorkspace).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 			services.AddSingleton<IScopeSubjectResolver>(new MemberResolver());
 
 			_provider = services.BuildServiceProvider();

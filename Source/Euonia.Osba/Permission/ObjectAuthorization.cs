@@ -169,7 +169,7 @@ internal static class ObjectAuthorization
 	}
 
 	/// <summary>
-	/// 收集目标在指定操作上的要求；未注册要求来源时回落到 Osba 的默认来源（工厂约定扫描）。
+	/// 收集目标在指定操作上的要求；未注册权限码来源时回落到 Osba 的默认来源（工厂约定扫描）。
 	/// </summary>
 	/// <param name="businessObject">目标业务对象。</param>
 	/// <param name="operation">业务操作。</param>
@@ -177,7 +177,7 @@ internal static class ObjectAuthorization
 	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation)
 	{
 		var provider = businessObject.BusinessContext?.GetService<IPermissionCodeSource>()
-		               ?? ObjectPermissionRequirementProvider.Instance;
+		               ?? ObjectPermissionCodeSource.Instance;
 
 		return provider.RequirementsFor(businessObject.GetType(), operation);
 	}

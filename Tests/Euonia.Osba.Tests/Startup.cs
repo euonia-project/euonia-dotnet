@@ -23,7 +23,7 @@ public class Startup
 			           services.AddPermission(permission =>
 			           {
 				           permission.Scan(typeof(Startup).Assembly);
-				           permission.Source(ObjectPermissionRequirementProvider.Instance);
+				           permission.Source(ObjectPermissionCodeSource.Instance);
 			           });
 			           // Register service here.
 		           });

@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
-/// 兜底权限要求来源的操作名匹配口径：<b>忽略大小写</b>。
+/// 兜底权限码来源的操作名匹配口径：<b>忽略大小写</b>。
 /// </summary>
 /// <remarks>
 /// 规则表按 <see cref="BusinessOperation"/> 的小写常量登记，而调用方可能传入任意大小写的操作名。
@@ -16,10 +16,10 @@ public class PermissionOperationCaseTests
 	[Fact]
 	public void Requirements_Lookup_Should_Ignore_Operation_Casing()
 	{
-		var provider = ObjectPermissionRequirementProvider.Instance;
+		var source = ObjectPermissionCodeSource.Instance;
 
-		var expected = provider.RequirementsFor(typeof(MixedCaseOperationSubject), BusinessOperation.Update);
-		var actual = provider.RequirementsFor(typeof(MixedCaseOperationSubject), "UPDATE");
+		var expected = source.RequirementsFor(typeof(MixedCaseOperationSubject), BusinessOperation.Update);
+		var actual = source.RequirementsFor(typeof(MixedCaseOperationSubject), "UPDATE");
 
 		Assert.NotEmpty(expected);
 		Assert.Equal(expected, actual);
@@ -28,10 +28,10 @@ public class PermissionOperationCaseTests
 	[Fact]
 	public void Codes_Lookup_Should_Ignore_Operation_Casing()
 	{
-		var provider = ObjectPermissionRequirementProvider.Instance;
+		var source = ObjectPermissionCodeSource.Instance;
 
-		var expected = provider.CodesFor(typeof(MixedCaseOperationSubject), BusinessOperation.Update);
-		var actual = provider.CodesFor(typeof(MixedCaseOperationSubject), "UpDaTe");
+		var expected = source.CodesFor(typeof(MixedCaseOperationSubject), BusinessOperation.Update);
+		var actual = source.CodesFor(typeof(MixedCaseOperationSubject), "UpDaTe");
 
 		Assert.Equal(["mixed:update"], expected);
 		Assert.Equal(expected, actual);

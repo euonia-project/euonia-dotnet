@@ -209,7 +209,7 @@ services.AddPermission(options => options.Scan(typeof(Order).Assembly)
 > 把某个方法从「需要审批码」改成「无码」只是数据侧的一次改动。请让来源与代码走**同一套评审与发布流程**，
 > 不要把它当成运维侧的可调开关。
 
-> **Osba 宿主**：用 `AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionRequirementProvider.Instance); })` 接入本引擎
+> **Osba 宿主**：用 `AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })` 接入本引擎
 > （`Euonia.Osba` 自己不引用引擎，两者之间也没有适配包——契约都在 Core，各实现一半，见 [DESIGN §1.11](DESIGN.md)）。
 > 接入后，运行期判定与注册期校验用**同一个来源**：你在这里补充的规则，工厂边界同样生效
 > （与 Osba 自己的工厂约定取并集）。

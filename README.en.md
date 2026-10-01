@@ -261,7 +261,7 @@ contracts (object state to operation, requirement source, enforcement at the fac
 the engine implements the other half (policy compilation, row scope, policy selection by
 authorization identifier — an operation name or a permission code).
 There is **no adapter package** between them: a host wires the engine with two lines —
-`AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })` —
+`AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionCodeSource.Instance); })` —
 or registers its own implementations and skips the engine entirely. The two are
 complementary. **Grants are always resolved live from
 application data — never baked into tokens.**

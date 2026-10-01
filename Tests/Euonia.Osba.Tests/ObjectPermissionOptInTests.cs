@@ -60,7 +60,7 @@ public class ObjectPermissionOptInTests
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		var provider = services.BuildServiceProvider();
 
@@ -75,7 +75,7 @@ public class ObjectPermissionOptInTests
 		var services = NewServicesWithUser();
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
-		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
@@ -89,7 +89,7 @@ public class ObjectPermissionOptInTests
 	{
 		var services = NewServices();
 
-		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddSingleton<IObjectOperationResolver, FixedOperationResolver>();
 
 		var provider = services.BuildServiceProvider();
@@ -103,7 +103,7 @@ public class ObjectPermissionOptInTests
 		var services = NewServices();
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		var provider = services.BuildServiceProvider();
 
 		var ex = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);

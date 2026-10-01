@@ -5,7 +5,7 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Osba 的默认权限要求来源：按<b>工厂方法约定</b>收集类型级与方法级的 <see cref="PermissionAttribute"/>。
+/// Osba 的默认权限码来源：按<b>工厂方法约定</b>收集类型级与方法级的 <see cref="PermissionAttribute"/>。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,7 +21,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>结果按（类型，操作）缓存，反复调用不会重复反射。</para>
 /// </remarks>
-public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
+public sealed class ObjectPermissionCodeSource : IPermissionCodeSource
 {
 	/// <summary>操作 → 工厂方法特性。一个操作可以有多个同义特性（如创建与插入）。</summary>
 	private static readonly (string Operation, Type[] AttributeTypes)[] Rules =
@@ -35,9 +35,9 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
 
 	/// <summary>
 	/// 默认实例：宿主未注册 <see cref="IPermissionCodeSource"/> 时由工厂边界兜底使用；
-	/// 引擎适配包也用它作为注册期的约定来源。
+	/// 注册期的声明扫描也取它。
 	/// </summary>
-	public static ObjectPermissionRequirementProvider Instance { get; } = new();
+	public static ObjectPermissionCodeSource Instance { get; } = new();
 
 	private readonly ConcurrentDictionary<(Type Type, string Operation), PermissionAttribute[]> _cache = new();
 

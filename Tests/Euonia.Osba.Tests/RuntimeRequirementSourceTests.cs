@@ -52,7 +52,7 @@ public class RuntimeRequirementSourceTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(ScopedTask).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ScopedTask).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ScopedTask).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		// 宿主补充的规则：与 Osba 自己的口径并存，注册期与运行期都必须看到它
 		services.AddPermission(p => { p.Scan(typeof(ScopedTask).Assembly); p.Source(new HostUpdateRequirementSource()); });

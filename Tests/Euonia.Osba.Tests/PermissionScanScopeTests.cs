@@ -17,15 +17,15 @@ public class PermissionScanScopeTests
 	[Fact]
 	public void Requirement_Should_Come_From_The_Method_The_Factory_Invokes()
 	{
-		var provider = ObjectPermissionRequirementProvider.Instance;
+		var source = ObjectPermissionCodeSource.Instance;
 
 		// 基类：自己的更新方法上声明了权限
-		var fromBase = provider.RequirementsFor(typeof(BaseScopedEntity), BusinessOperation.Update);
+		var fromBase = source.RequirementsFor(typeof(BaseScopedEntity), BusinessOperation.Update);
 
 		Assert.Equal(["base:update"], fromBase.Select(requirement => requirement.Permission));
 
 		// 派生类：遮蔽了更新方法（不是 override），工厂会调用派生类那一个 ⇒ 基类的声明不再适用
-		var fromDerived = provider.RequirementsFor(typeof(DerivedScopedEntity), BusinessOperation.Update);
+		var fromDerived = source.RequirementsFor(typeof(DerivedScopedEntity), BusinessOperation.Update);
 
 		Assert.Empty(fromDerived);
 	}
@@ -34,9 +34,9 @@ public class PermissionScanScopeTests
 	public void Derived_Type_Should_Still_Inherit_Requirements_When_It_Declares_No_Candidate()
 	{
 		// 派生类没有任何候选方法时（没有遮蔽），工厂会上溯基类 ⇒ 基类方法上的声明照旧生效
-		var provider = ObjectPermissionRequirementProvider.Instance;
+		var source = ObjectPermissionCodeSource.Instance;
 
-		var requirements = provider.RequirementsFor(typeof(PlainDerivedScopedEntity), BusinessOperation.Update);
+		var requirements = source.RequirementsFor(typeof(PlainDerivedScopedEntity), BusinessOperation.Update);
 
 		Assert.Equal(["base:update"], requirements.Select(requirement => requirement.Permission));
 	}
@@ -45,9 +45,9 @@ public class PermissionScanScopeTests
 	public void Convention_Named_Method_Should_Be_An_Entry_Without_Any_Attribute()
 	{
 		// 约定名同样算入口（与工厂查找一致）：方法叫 UpdateAsync 即可，不必打特性
-		var provider = ObjectPermissionRequirementProvider.Instance;
+		var source = ObjectPermissionCodeSource.Instance;
 
-		var requirements = provider.RequirementsFor(typeof(ConventionNamedEntity), BusinessOperation.Update);
+		var requirements = source.RequirementsFor(typeof(ConventionNamedEntity), BusinessOperation.Update);
 
 		Assert.Equal(["convention:update"], requirements.Select(requirement => requirement.Permission));
 	}
@@ -56,7 +56,7 @@ public class PermissionScanScopeTests
 	public void Unknown_Operation_Should_Declare_Nothing()
 	{
 		// 本来源只认识规则表里的操作：自定义操作由宿主的实现回答
-		Assert.Empty(ObjectPermissionRequirementProvider.Instance.RequirementsFor(typeof(BaseScopedEntity), "approve"));
+		Assert.Empty(ObjectPermissionCodeSource.Instance.RequirementsFor(typeof(BaseScopedEntity), "approve"));
 	}
 }
 

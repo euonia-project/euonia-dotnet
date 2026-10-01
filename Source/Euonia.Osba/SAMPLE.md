@@ -808,7 +808,7 @@ services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddPermission(p =>                                                                     // 显式接入引擎
 {
     p.Scan(typeof(Repo).Assembly);
-    p.Source(ObjectPermissionRequirementProvider.Instance);
+    p.Source(ObjectPermissionCodeSource.Instance);
 });
 services.AddSingleton<RepoStore>();
 services.AddSingleton<RepoAcl>();

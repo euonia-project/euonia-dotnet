@@ -33,7 +33,7 @@ public class BusinessServiceModule : ModuleContextBase
 		context.Services.AddPermission(permission =>
 		{
 			permission.Scan(typeof(BusinessServiceModule).Assembly);
-			permission.Source(ObjectPermissionRequirementProvider.Instance);
+			permission.Source(ObjectPermissionCodeSource.Instance);
 		});
 		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.IRepositoryStore, Nerosoft.Euonia.Sample.Persist.Repositories.RepositoryStore>();
 		context.Services.AddScoped<Nerosoft.Euonia.Sample.Domain.Repositories.ITeamStore, Nerosoft.Euonia.Sample.Persist.Repositories.TeamStore>();

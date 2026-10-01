@@ -37,7 +37,7 @@ services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务�
 services.AddPermission(p =>                                     // 显式启用权限：Osba 的码来源 + 对象操作推断
 {
     p.Scan(typeof(Order).Assembly);
-    p.Source(ObjectPermissionRequirementProvider.Instance);
+    p.Source(ObjectPermissionCodeSource.Instance);
 });
 services.AddSingleton<AuthzStore>();                            // 授权数据（模拟数据库表，见各场景）
 services.AddScoped<IScopeSubjectResolver, /* 各场景的解析器 */>();  // 授权值来源

@@ -274,7 +274,7 @@ public class ScopeRowPermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		var provider = services.BuildServiceProvider();
 
@@ -288,7 +288,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddSingleton<IScopeSubjectResolver>(new AclResolver());
 		var identity = new ClaimsIdentity(
 			[new Claim(ClaimTypes.Name, "tester")],
@@ -341,7 +341,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddSingleton(resolver);
 		services.AddSingleton(User("dev"));
 
@@ -537,7 +537,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
@@ -553,7 +553,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var identity = new ClaimsIdentity(
@@ -577,7 +577,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();

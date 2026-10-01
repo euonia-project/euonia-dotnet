@@ -68,22 +68,33 @@ public sealed class ProjectScopeModel : ScopeModel<Project>
 }
 
 /// <summary>
-/// 行级授予（ACL）在 <see cref="Persist.Entities.AuthorizationKinds.Grant"/> 授权行上的编码：
-/// 值为 <c>"{operation}|{projectId}"</c>，例如 <c>"project:edit|&lt;project-id&gt;"</c>。
-/// 与 <see cref="RepositoryGrant"/> 共用同一分隔格式，<see cref="ScopeSubjectResolver"/> 按操作码前缀路由维度。
+/// 一条项目行级授予（ACL）：权限码 + 项目标识。
 /// </summary>
-public static class ProjectGrant
+/// <param name="Operation">授权行上写的权限码（如 <c>project:edit</c>）。</param>
+/// <param name="ProjectId">被授予的那一行项目的标识。</param>
+/// <remarks>
+/// 持久化时编码为 <c>"{operation}|{projectId}"</c> 写在
+/// <see cref="Persist.Entities.AuthorizationKinds.Grant"/> 授权行上，例如
+/// <c>"project:edit|&lt;project-id&gt;"</c>。
+/// 与 <see cref="RepositoryGrant"/> 共用同一分隔格式，
+/// <see cref="ScopeSubjectResolver"/> 按权限码前缀路由维度。
+/// </remarks>
+public readonly record struct ProjectGrant(string Operation, string ProjectId)
 {
 	/// <summary>操作码与项目标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。</summary>
 	public const string Separator = "|";
 
-	public static string Encode(string operation, string projectId)
+	/// <summary>编码为授权行的值。</summary>
+	/// <returns>形如 <c>"project:edit|&lt;project-id&gt;"</c> 的字符串。</returns>
+	public override string ToString()
 	{
-		return string.Concat(operation, Separator, projectId);
+		return string.Concat(Operation, Separator, ProjectId);
 	}
 
 	/// <summary>解析授权行的值；格式非法时返回 <see langword="null"/>。</summary>
-	public static (string Operation, string ProjectId)? Parse(string value)
+	/// <param name="value">授权行上存储的值。</param>
+	/// <returns>解析结果；格式非法时返回 <see langword="null"/>。</returns>
+	public static ProjectGrant? Parse(string value)
 	{
 		if (string.IsNullOrWhiteSpace(value))
 		{
@@ -96,6 +107,6 @@ public static class ProjectGrant
 			return null;
 		}
 
-		return (value[..index], value[(index + 1)..]);
+		return new ProjectGrant(value[..index], value[(index + 1)..]);
 	}
 }

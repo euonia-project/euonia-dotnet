@@ -93,7 +93,7 @@
 可运行证明）；依赖方向变成 `适配包 → (Osba, Security)`，两边谁都不认识谁。
 
 **代价（需要使用者动作）**：宿主把 `AddObjectPermission(asm)` 换成
-`AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })`
+`AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionCodeSource.Instance); })`
 （两行，各自属于一个库）；
 `[Permission]`、`BusinessOperation` 的命名空间不变，因此**源码兼容**，但二进制不兼容（类型换了程序集）。
 

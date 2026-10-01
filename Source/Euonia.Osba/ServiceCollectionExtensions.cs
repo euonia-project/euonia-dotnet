@@ -19,7 +19,7 @@ public static class ServiceCollectionExtensions
 	/// <remarks>
 	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
 	/// 需要权限时，接引擎用
-	/// <c>AddPermission(p =&gt; { p.Scan(assemblies); p.Source(ObjectPermissionRequirementProvider.Instance); })</c>
+	/// <c>AddPermission(p =&gt; { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })</c>
 	/// （规则来源就用 Osba 的工厂约定），或注册自己的
 	/// <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
