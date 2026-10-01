@@ -1,5 +1,4 @@
 using System.Reflection;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Reflection;
 using Nerosoft.Euonia.Security;
@@ -49,33 +48,6 @@ public static class ServiceCollectionExtensions
 	}
 
 	/// <summary>
-	/// 注册权限体系并从配置节读取操作入口规则。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="configuration">规则所在的配置节，例如 <c>configuration.GetSection("Permission")</c>。</param>
-	/// <param name="assemblies">要扫描的程序集；配置里的入口特性类型名也在其中解析。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <exception cref="InvalidOperationException">
-	/// 配置缺少 <c>Operations</c> 节点、操作下有未知节点、某个操作没有声明任何规则、
-	/// 写成标量而不是数组、含空项，或入口特性类型名无法解析 / 有歧义 / 不是特性时抛出。
-	/// </exception>
-	/// <remarks>
-	/// 配置键：<c>Operations</c> 下每个子节点是一个操作，可给出 <c>Attributes</c>（入口特性类型名数组）
-	/// 与 <c>Names</c>（入口方法名数组），二者并存时为「命中其一即为入口」的或语义。配置只在注册期读取一次。
-	/// </remarks>
-	public static IServiceCollection AddPermission(this IServiceCollection services, IConfigurationSection configuration, params Assembly[] assemblies)
-	{
-		ArgumentNullException.ThrowIfNull(services);
-		ArgumentNullException.ThrowIfNull(configuration);
-
-		var options = new PermissionOptions().Scan(assemblies ?? []);
-		ConfigurationRuleBinder.Bind(configuration, options.RulesBuilder(), KnownAssemblies(services, assemblies));
-
-		Apply(services, GetOrCreateRegistration(services), options);
-		return services;
-	}
-
-	/// <summary>
 	/// 校验配置的自洽性。
 	/// </summary>
 	private static void Validate(PermissionOptions options)
@@ -117,7 +89,6 @@ public static class ServiceCollectionExtensions
 			source = EmptyCodeSource.Instance;
 		}
 
-		var nextSource = source ?? registration.CodeSource;
 		var assemblies = registration.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
 
 		if (options.NoModelsAsserted)
@@ -134,16 +105,11 @@ public static class ServiceCollectionExtensions
 
 		RegisterEngine(services);
 
-		// 输入没变时复用上一次的注册表：全量构建要重扫程序集并逐条编译校验，重复注册应当是空操作
-		ScopeModelRegistry registry;
-		if (registration.SameAsLastBuild(nextSource, assemblies))
+		// 程序集没变时复用上一次的注册表：全量构建要重扫程序集并逐条编译校验，重复注册应当是空操作
+		if (!registration.TryReuse(assemblies, out var registry))
 		{
-			registry = registration.LastRegistry;
-		}
-		else
-		{
-			registry = ScopeModelRegistry.Create(registration.CodeSource, [.. registration.Assemblies]);
-			registration.LastRegistry = registry;
+			registry = ScopeModelRegistry.Create([.. registration.Assemblies]);
+			registration.MarkBuilt(registry, assemblies);
 		}
 
 		services.RemoveAll<ScopeModelRegistry>();
@@ -152,15 +118,10 @@ public static class ServiceCollectionExtensions
 		services.RemoveAll<IPermissionCodeSource>();
 		services.AddSingleton(registration.CodeSource);
 
-		// 两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）；契约在 Core，无需适配包。
+		// 契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）；契约在 Core，无需适配包。
 		// 工厂委托延迟解析：注册表在容器里只保留最新一份，契约解析时取到的必然是它。
 		services.TryAddSingleton<IObjectScopeAuthorizer>(provider => new ObjectScopeAuthorizer(
-			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetRequiredService<IPermissionCodeSource>()));
-		services.TryAddSingleton<IScopeKeyResolver>(provider => new ObjectScopeKeyResolver(
-			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetRequiredService<IPermissionCodeSource>(),
-			provider.GetService<IObjectOperationResolver>()));
+			provider.GetRequiredService<ScopeModelRegistry>()));
 
 		// 启动期校验读取的是累计状态，故就地更新（同一实例，不再 RemoveAll + 重建快照）
 		registration.RequiresSubjectResolver = registration.HasDeclarations(registry);
@@ -182,7 +143,7 @@ public static class ServiceCollectionExtensions
 							provider.GetRequiredService<UserPrincipal>(),
 							provider.GetRequiredService<ScopeModelRegistry>(),
 							provider.GetService<IScopeSubjectResolver>(),
-							provider.GetService<IScopeKeyResolver>());
+							provider.GetService<IObjectOperationResolver>());
 		});
 	}
 
@@ -228,16 +189,6 @@ public static class ServiceCollectionExtensions
 				provider.GetService<UserPrincipal>() != null,
 				Resources.IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED,
 				nameof(UserPrincipal));
-	}
-
-	/// <summary>本次调用可见的程序集：已累积的 ∪ 本次传入；供配置里的类型名解析使用。</summary>
-	private static Assembly[] KnownAssemblies(IServiceCollection services, Assembly[] assemblies)
-	{
-		var known = assemblies ?? [];
-
-		return TryGetRegistration(services) is { } registration
-				? [.. registration.Assemblies.Concat(known).Distinct()]
-				: known;
 	}
 
 	/// <summary>只读取已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>

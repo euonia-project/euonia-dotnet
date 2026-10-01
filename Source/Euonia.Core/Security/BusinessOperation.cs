@@ -12,8 +12,12 @@ namespace Nerosoft.Euonia.Security;
 /// 本类只提供一组<b>约定俗成</b>的操作名（CRUD 与命令执行），不构成限制——它们只是常量字符串。
 /// </para>
 /// <para>
-/// 操作名不得以 <c>@</c> 开头：该前缀是策略键的保留命名空间（由引擎以 <c>@&lt;operation&gt;</c> 派生默认键，
-/// 见 Euonia.Security 的 DESIGN §1.6）。
+/// 操作名不得以 <c>@</c> 开头：该前缀是框架保留的命名空间（见 Euonia.Security 的 <c>ScopeKeys</c>）。
+/// </para>
+/// <para>
+/// 操作名与权限码在策略引擎里<b>共用一个命名空间</b>：模型为哪个名字声明过行级策略，判定入口用哪个
+/// 名字寻址（<c>IScopeGuard.Allows</c> 等接受操作名，也接受权限码）。两者不必同名，但一个名字上
+/// 只能有一条策略。
 /// </para>
 /// </remarks>
 public static class BusinessOperation

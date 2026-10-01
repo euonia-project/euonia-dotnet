@@ -54,7 +54,7 @@ public class RuleManager
 	/// 而 <c>PropertyInfo&lt;T&gt;</c> 未重写 <c>Equals</c>，字典的默认比较器即引用相等，语义一致。
 	/// </remarks>
 	/// <summary>
-	/// 读取走 <see cref="Volatile.Read{T}(T[])"/>、写入在锁内普通写：
+	/// 读取走 <c>Volatile.Read</c>、写入在锁内普通写：
 	/// 发布侧的普通写在 x86 上恰好是 release 语义，但 ARM64 弱内存模型下，
 	/// 无 acquire 的普通读可能「先见到引用、后见到字典内部存储」，进而在热路径上
 	/// 读到半初始化的字典。Volatile.Read 提供 acquire 栅栏，与锁内的写入构成

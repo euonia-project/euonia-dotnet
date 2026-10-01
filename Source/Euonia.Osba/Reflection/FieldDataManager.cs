@@ -250,7 +250,7 @@ public class FieldDataManager
 	/// <remarks>
 	/// 名称承诺「移除」，因此真正删除条目而不是置 <see langword="null"/>：
 	/// 置 null 会让 <see cref="FieldExists"/> 仍返回 <see langword="true"/>、
-	/// <see cref="ReadProperty{TValue}(PropertyInfo{TValue})"/> 返回 <see langword="null"/>
+	/// <see cref="BusinessObject.ReadProperty{TValue}(PropertyInfo{TValue})"/> 返回 <see langword="null"/>
 	/// 而不是注册的 <see cref="IPropertyInfo.DefaultValue"/>——三者口径互相矛盾。
 	/// 本方法当前在仓库内零调用；保留但修正语义，供派生/宿主场景使用。
 	/// </remarks>
@@ -284,7 +284,7 @@ public class FieldDataManager
 	/// <para>
 	/// 而加锁会造出一条可证明的 ABBA 锁序反转：本方法被 <c>PropertyInfoManager.CreateAndPublish</c>
 	/// 在持有 <c>_publishLock</c> 时调用（A→B），而本方法一旦触发类型的静态初始化器，
-	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</b>（B→A）。
+	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</c>（B→A）。
 	/// 早期版本在 B 段额外拿 <c>lock(type)</c> 时，两个入口并发即可能互等。
 	/// </para>
 	/// </remarks>

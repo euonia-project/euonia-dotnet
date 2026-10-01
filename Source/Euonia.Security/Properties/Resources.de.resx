@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Regel für Operationseingänge deklariert und weder eine Codequelle / NoOperationCodes / NoModels angegeben noch eine zu scannende Assembly hinzugefügt. Deklarieren Sie die Eingangsregel mit OnAttribute / OnMethodName / OnAttributeOrName, wenn es Methodenebene-Berechtigungscodes gibt; geben Sie mit Source eine Codequelle an, wenn die Regeln woanders herkommen; bestätigen Sie NoOperationCodes, wenn es keine gibt; bestätigen Sie NoModels, wenn die Anwendung wirklich kein Berechtigungsmodell und keine Deklaration hat.</value>
+    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Regel für Operationseingänge deklariert und weder eine Codequelle / NoOperationCodes / NoModels angegeben noch eine zu scannende Assembly hinzugefügt. Deklarieren Sie die Eingangsregel mit OnAttributeOrName / OnMethod, wenn es Methodenebene-Berechtigungscodes gibt; geben Sie mit Source eine Codequelle an, wenn die Regeln woanders herkommen; bestätigen Sie NoOperationCodes, wenn es keine gibt; bestätigen Sie NoModels, wenn die Anwendung wirklich kein Berechtigungsmodell und keine Deklaration hat.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>Die Berechtigungskonfiguration widerspricht sich selbst: NoOperationCodes wurde bestätigt (keine Berechtigungscodes auf Methodenebene), es wurden jedoch Einstiegsregeln für Vorgänge deklariert. Nur eines von beidem ist zulässig: Deklarieren Sie Regeln, wenn es Berechtigungscodes auf Methodenebene gibt, und bestätigen Sie NoOperationCodes, wenn es keine gibt.</value>
@@ -142,49 +142,10 @@
     <value>Der Typ des Einstiegsattributs muss ein Attributtyp sein, der nicht null ist (eine Unterklasse von Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>Es wurde keine Regel für Operationseingänge deklariert. Rufen Sie OnAttribute / OnMethodName / OnAttributeOrName / OnMethod mindestens einmal auf; wenn die Anwendung wirklich keine Methodenebene-Berechtigungscodes hat, bestätigen Sie explizit permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>In der Konfiguration der Berechtigungsregeln fehlt der Knoten '{0}' (geprüft wurde der Abschnitt '{1}'). Übergeben Sie den Abschnitt, der die Regeln enthält, beispielsweise configuration.GetSection("Permission").</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>Der Vorgangsname '{0}' in der Konfiguration unterscheidet sich von einem früheren Vorgang nur durch die Groß-/Kleinschreibung. Vorgangsnamen unterscheiden zwischen Groß- und Kleinschreibung, bitte vereinheitlichen Sie die Schreibweise.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>Der Vorgang '{0}' in der Konfiguration deklariert keine Einstiegsregel: Geben Sie '{1}' (ein Array der Attributtypen für den Einstieg) oder '{2}' (ein Array der Methodennamen für den Einstieg) an; beide können angegeben werden (ein Einstieg, sobald eine der beiden übereinstimmt).</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>Der Knoten '{0}' der Berechtigungsregelkonfiguration enthält überhaupt keine Operation. Wenn die Anwendung wirklich keine Methodenebene-Berechtigungscodes hat, bestätigen Sie explizit permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>Der Vorgang '{0}' in der Konfiguration enthält den unbekannten Knoten '{1}'. Verfügbare Knoten: '{2}' (Attributtypen für den Einstieg) und '{3}' (Methodennamen für den Einstieg).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>Der Wert '{0}' in der Konfiguration muss als Array geschrieben werden (zum Beispiel "{1}": ["…"]), nicht als einzelne Zeichenfolge.</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>Der Wert '{0}' in der Konfiguration muss eine nicht leere Zeichenfolge sein.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' ({1}) in der Konfiguration kann nicht aufgelöst werden. Verwenden Sie den vollständigen Typnamen (Namespace + Typname), einen assemblyqualifizierten Namen ("Typ, Assembly"), oder geben Sie den Methodennamen direkt über '{2}' an.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' in der Konfiguration ist ein generischer Typ: Generische Attribute können nicht als Einstiegsmarkierungen dienen.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' in der Konfiguration ist kein Attribut (er sollte auf eine Unterklasse von Attribute verweisen).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' ({1}) in der Konfiguration kann nicht aufgelöst werden: {2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' ({1}) in der Konfiguration passt im Scanbereich auf mehrere Typen mit demselben Namen ({2}). Verwenden Sie einen assemblyqualifizierten Namen ("Typ, Assembly").</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>Der Attributtyp für den Einstieg '{0}' ({1}) in der Konfiguration hat im Scanbereich einen mehrdeutigen Kurznamen ({2}). Verwenden Sie den vollständigen Typnamen.</value>
+    <value>Es wurde keine Regel für Operationseingänge deklariert. Rufen Sie OnAttributeOrName / OnMethod mindestens einmal auf; wenn die Anwendung wirklich keine Methodenebene-Berechtigungscodes hat, bestätigen Sie explizit permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>Der Vorgangsname '{0}' verwendet das für das Framework reservierte Präfix '{1}'. Der Standardschlüssel eines Vorgangs wird aus diesem Präfix abgeleitet, daher darf der Vorgangsname selbst es nicht enthalten.</value>
+    <value>Der Vorgangsname '{0}' verwendet das für das Framework reservierte Präfix '{1}'. Namen mit diesem Präfix gehören dem Framework; von der Anwendung definierte Vorgänge und Berechtigungscodes dürfen es nicht tragen.</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>Der Berechtigungscode '{0}' verwendet das für das Framework reservierte Präfix '{1}'. Verwenden Sie einen Code ohne dieses Präfix.</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>Ein reiner '*'-Berechtigungscode stimmt mit jeder Berechtigung überein und ist daher nicht zulässig. Verwenden Sie einen Präfix-Platzhalter mit nicht leerem Präfix (z. B. 'repo:*'); eine Vollberechtigung muss durch explizites Vergeben der Codes ausgedrückt werden.</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>Die Richtlinie für den Berechtigungscode '{0}' ist mehr als einmal deklariert.</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>Der Name '{0}' ist bereits von '{1}' belegt. Eine Kennung (Vorgangsname oder Berechtigungscode) und ein Freigabeschlüssel teilen sich einen Namensraum; jeder Name kann nur eine Richtlinie tragen.</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>Der Vorgang {1} auf dem Ressourcentyp '{0}' löst mehrere Berechtigungscodes auf, die eine Richtlinie auf Zeilenebene deklariert haben ({2}). Stellen Sie sicher, dass höchstens ein Berechtigungscode eines Vorgangs eine Richtlinie deklariert.</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>Die Autorisierungsdaten wurden in diesem Bereich noch nicht aufgelöst, und synchrone Lesezugriffe warten nie darauf. Warten Sie an einem asynchronen Einstiegspunkt zuerst auf '{0}' (oder '{1}'), bevor Sie synchron prüfen.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>Die Richtlinie für '{0}' ist mehr als einmal deklariert.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All benötigt mindestens eine Teilrichtlinie; "uneingeschränkt" muss explizit als Where(_ =&gt; true) geschrieben werden.</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>Es wurde keine Richtlinie bereitgestellt. Richtlinie und Modell müssen im selben deklarierenden Typ geschrieben werden; die Validierung kann nicht erfolgreich sein, wenn eine der beiden fehlt.</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>Der Berechtigungscode '{0}' wurde deklariert, aber es wurde keine Richtlinie dafür bereitgestellt.</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>Für den Berechtigungscode '{0}' wurde eine Richtlinie auf Zeilenebene deklariert, aber kein Vorgang löst auf diesen Code auf (prüfen Sie bitte, ob die Codes in [Permission] mit den Codes in Declare übereinstimmen). Aufgelöste Codes: {1}.</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>Die Richtlinie kann strukturell niemals zulassen (Allow ist dauerhaft false), was in der Regel bedeutet, dass jeder Zweig unter Any eine Verweigerungsbedingung ist. Prüfen Sie bitte die Zusammensetzung der Richtlinie.</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>Der Ressourcentyp ist durch den Datenbereich eingeschränkt, {0} kann jedoch nicht aus dem Bereich des Objekts aufgelöst werden. Stellen Sie sicher, dass AddPermission aufgerufen wurde.</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>Die Kompilierung der Bereichsrichtlinie konnte nach {0} Versuchen weiterhin keinen stabilen Snapshot der Autorisierungsdaten ermitteln; es treten weiterhin gleichzeitige Refresh-Aufrufe auf. Prüfen Sie bitte auf Code, der IScopeGuard.Refresh im selben Bereich wiederholt aufruft.</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>Die Auflösung der Autorisierungsdaten wurde nach {0} Versuchen weiterhin nicht akzeptiert; es treten weiterhin gleichzeitige Refresh-Aufrufe auf. Prüfen Sie bitte auf Code, der IScopeGuard.Refresh im selben Bereich wiederholt aufruft.</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} ist eine gemeinsam genutzte schreibgeschützte Instanz und es können keine Berechtigungen hinzugefügt werden; rufen Sie zuerst Clone() auf, wenn eine veränderbare Kopie benötigt wird.</value>

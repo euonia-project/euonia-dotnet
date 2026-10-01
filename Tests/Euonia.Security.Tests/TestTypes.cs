@@ -39,6 +39,42 @@ public sealed class AssetModel : ScopeModel<Asset>
 }
 
 /// <summary>
+/// 只有权限码、没有「操作」概念的资源：宿主从不按对象状态推断操作，判定入口一律直接给码。
+/// </summary>
+public sealed class KeyedAsset
+{
+	public string Id { get; set; }
+
+	public string OwnerId { get; set; }
+
+	public string DeptId { get; set; }
+}
+
+/// <summary>
+/// <see cref="KeyedAsset"/> 的权限模型：全部用 <see cref="ScopePolicySet{T}.For"/> 按<b>权限码</b>声明。
+/// </summary>
+public sealed class KeyedAssetModel : ScopeModel<KeyedAsset>
+{
+	public const string View = "keyed:view";
+
+	public const string Delete = "keyed:delete";
+
+	public override void Define(ScopeModelBuilder<KeyedAsset> builder)
+	{
+		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
+		       .Map(ScopeDimensions.Dept, x => x.DeptId);
+	}
+
+	public override ScopePolicy<KeyedAsset> Policy => ScopePolicy<KeyedAsset>.Self();
+
+	public override void Declare(ScopePolicySet<KeyedAsset> policies)
+	{
+		policies.For(View, ScopePolicy<KeyedAsset>.Any(ScopePolicy<KeyedAsset>.Self(), ScopePolicy<KeyedAsset>.Grant(ScopeDimensions.Dept)));
+		policies.For(Delete, ScopePolicy<KeyedAsset>.Grant(ScopeDimensions.Owner));
+	}
+}
+
+/// <summary>
 /// 子表行：工作区成员。授权关系（谁属于这个工作区）存在这里，而不是工作区行上。
 /// </summary>
 public sealed class WorkspaceMember
@@ -234,16 +270,6 @@ public sealed class ConventionCodeSource : IPermissionCodeSource
 		           .Where(x => !string.IsNullOrEmpty(x))
 		           .ToArray() ?? [];
 	}
-}
-
-/// <summary>
-/// 固定键的解析器，用于验证宿主实现不会被 <c>AddPermission</c> 覆盖。
-/// </summary>
-public sealed class FixedKeyResolver : IScopeKeyResolver
-{
-	public const string Key = "host:key";
-
-	public string Resolve(object resource, string explicitKey) => explicitKey ?? Key;
 }
 
 /// <summary>

@@ -16,7 +16,7 @@
 |---|---|---|
 | `Euonia.Core` | 权限的**基础词汇与契约**：`[Permission]`、`BusinessOperation`、`IPermissionCodeSource`、`IPermissionChecker`、`UserPrincipal`、`UserClaimTypes` | — |
 | `Euonia.Osba` | `BusinessObject` / 工厂 / 上下文，权限**契约**（行级判定 `IObjectScopeAuthorizer`）与**强制执行点**（`ObjectAuthorization`、`ScopeAuthorization`），以及来源的默认实现 | `Euonia.Core`（**不引用引擎**） |
-| `Euonia.Security` | 策略引擎：`ScopeModel<T>`、策略编译与下推、`IScopeGuard`、`ScopeKeyResolver` | `Euonia.Core` |
+| `Euonia.Security` | 策略引擎：`ScopeModel<T>`、策略编译与下推、`IScopeGuard`（按授权标识选取行级策略） | `Euonia.Core` |
 | `Euonia.Core` 的契约 | 跨边界的四个契约都住在这里：来源、判定、行级判定、对象状态 → 操作——因此两边**各自实现自己的一半，不需要适配包** | — |
 
 `Euonia.Osba` 与 `Euonia.Security` 之间**没有边**，也没有任何第三方包替它们翻译：
@@ -29,7 +29,7 @@
 
 | 契约（共四个，全部在 Core） | Osba 自带 | 引擎提供 | 宿主自己实现 |
 |---|---|---|---|
-| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ 你在回调里 `Source(...)` 指定的就是它（含追加的规则） | 例如规则来自配置或权限表 |
+| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ 你在回调里 `Source(...)` 指定的就是它（含追加的规则） | 例如规则来自权限表或已有鉴权框架 |
 | `IPermissionChecker`（操作权限判定） | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
 | `IObjectScopeAuthorizer`（行级数据权限） | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
 | `IObjectOperationResolver`（对象状态 → 操作） | ✅ `ObjectOperationResolver`（`AddBusinessObject` 注册） | 消费它 | — |
@@ -42,8 +42,9 @@
 **不装任何实现也能用**：声明了 `[Permission]` 的类型在工厂边界会因「无人判定」而**报错**，
 而不是静默放行——这是刻意的（fail-closed）。
 
-接引擎时 `AddPermission` 会注册引擎那两个契约的实现（来源由回调产出或 `Source(...)` 指定），因此**不需要**手工注册它们；
-它同时注册引擎的两个映射（`IPermissionCodeSource`、`IScopeKeyResolver`）。
+接引擎时 `AddPermission` 会注册引擎那两个契约的实现（`IPermissionChecker` / `IObjectScopeAuthorizer`），
+因此**不需要**手工注册它们；规则来源由回调产出或 `Source(...)` 指定，
+连同模型注册表 `ScopeModelRegistry` 一起注册进容器。
 不调用它、也不注册自己的实现，就等于不启用操作权限与行内数据权限。
 
 命名空间约定：`PermissionAttribute`、`BusinessOperation` 位于 `Euonia.Core` **程序集**但沿用命名空间
@@ -96,10 +97,9 @@ services.AddPermission(p =>
 
 第 2 步是引擎自己的 `AddPermission`，它做两件事：
 
-- 注册引擎那两个契约的**实现**：`IObjectScopeAuthorizer`（行级判定）、`IScopeKeyResolver`（按操作解析策略键——
-  它会向容器里的 `IObjectOperationResolver` 问「当前是哪个操作」，而那是 `AddBusinessObject` 注册的）
-  （要求来源与操作权限判定不必注册：你在回调里指定的来源与 `AddPermission` 注册的 `IPermissionChecker`
-  就是那两个契约的实现）
+- 注册引擎那两个契约的**实现**：`IObjectScopeAuthorizer`（行级判定）与 `IPermissionChecker`（操作权限判定，
+  权限码来自授权数据）；行级判定会向容器里的 `IObjectOperationResolver` 问「当前是哪个操作」，
+  而那是 `AddBusinessObject` 注册的（引擎直接消费该契约，没有中间解析层）
 - 回调里的 `p.Scan(assemblies)` + `p.Source(ObjectPermissionRequirementProvider.Instance)`——
   把扫描范围与「哪个工厂方法对应哪个操作」交给引擎
   （宿主因此**不需要**自己声明操作入口规则；要补充规则在同一个回调里继续声明，见 §0 末）
@@ -108,7 +108,7 @@ services.AddPermission(p =>
 `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
 `IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）。
 
-引擎对 `IObjectScopeAuthorizer` 与 `IScopeKeyResolver` 用 `TryAdd` 语义：宿主可以先注册自己的实现，
+引擎对 `IPermissionChecker` 与 `IObjectScopeAuthorizer` 用 `TryAdd` 语义：宿主可以先注册自己的实现，
 不会被覆盖。`IPermissionCodeSource` 则完全由回调决定（各次注册的来源按并集合并后注入，会替换宿主
 另行注册的描述符）——想换来源请在回调里用 `Source(...)`。这样「接引擎」与「用自己的实现」可以是
 同一个装配路径，甚至可以交替使用（例如行级用引擎、操作权限用自建表）。
@@ -117,15 +117,16 @@ services.AddPermission(p =>
 
 - **调用顺序与调用次数都不受限制。**`AddPermission` 可以在 `AddBusinessObject`
   之前或之后调用；多个模块可以各自调用，权限码与模型按**并集**合并。
-- **`IScopeKeyResolver` 是 `TryAdd` 语义**（先到先得），因为「某个资源实例当前代表哪个操作」
-  是**全局**答案，多个模块给出不同答案本身就是配置错误。需要自定义时自己注册即可，会覆盖框架推断。
+- **「某个资源实例当前代表哪个操作」由 `IObjectOperationResolver` 回答**（Osba 在 `AddBusinessObject`
+  里以 `TryAdd` 注册）：它是**全局**答案，多个模块给出不同答案本身就是配置错误。
+  需要自定义时先注册自己的实现即可，不会被覆盖。
 
 不用 Osba 的工厂约定时，另一种装配是：只 `AddBusinessObject`，然后注册自己的
 `IPermissionCodeSource` / `IPermissionChecker` / `IObjectScopeAuthorizer`
 （`Euonia.Osba.Standalone.Tests` 项目就是这种用法的可运行示例）。此时不需要引用任何引擎包。
 
 Osba 宿主用 `AddPermission` 补充的规则在**运行期同样生效**：额外注册的规则与 Osba 自己的工厂约定
-取并集，且注册期校验、操作权限闸门、策略键解析问的是**同一个来源**
+取并集，且注册期校验与操作权限闸门问的是**同一个来源**
 （见 [`DESIGN.md` §1.11](../Euonia.Security/DESIGN.md)）。
 
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
@@ -276,7 +277,7 @@ public class Order : EditableObject<Order>
 
 它是**查询语义**（无从判定时返回 `true`，不抛异常），真正的拦截在工厂边界。
 业务方法内部要问「这一行数据我看不看得见」时，从 `BusinessContext` 取 `IScopeGuard`：
-`guard.AllowsObject(this, code)` / `guard.ExplainObject(this, code)`（见 §4.5）。
+`guard.AllowsObject(this, operation)` / `guard.ExplainObject(this, operation)`（见 §4.5）。
 
 ---
 
@@ -297,6 +298,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ```csharp
 IScopeGuard guard = ...;
+
+await guard.EnsureResolvedAsync();   // 同步判定前预热（工厂入口自带；直接调守卫需手动预热）
 
 // 读侧：下推到数据库（生成的仍是表达式，由 EF/提供程序翻译成 WHERE）
 IQueryable<Order> visible = guard.Apply(dbContext.Orders);
@@ -385,8 +388,9 @@ public sealed class OrderScope : ScopeModel<Order>
 映射必须是**表达式**（`Expression<Func<T,string>>`）而不是委托——这是能够下推到数据库的前提。
 映射的值应当是资源的**自身数据列**，列值一变归属立即变化。
 
-**按权限码声明行级策略**（表达「同一用户、同一类型、不同行权限不同」）：
-把资源标识本身也映射为维度，再为不同权限码声明各自的行范围。
+**按授权标识声明行级策略**（表达「同一用户、同一类型、不同行权限不同」）：
+把资源标识本身也映射为维度，再为各标识声明行范围。`ForOperation(操作, 策略, 授予键)` 把操作与
+权限码连起来（该码就是行级授予写在的那个键）；`For(码, 策略)` 则直接按权限码声明，标识与键同为一码。
 
 ```csharp
 public sealed class RepoScope : ScopeModel<Repo>
@@ -397,14 +401,14 @@ public sealed class RepoScope : ScopeModel<Repo>
                .Map(ScopeDimensions.Dept, x => x.TeamId);
     }
 
-    // 默认策略：未单独声明的码都用它
+    // 默认策略：未单独声明的标识都用它
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant("repo");
 
     public override void Declare(ScopePolicySet<Repo> policies)
     {
         policies.ForOperation(BusinessOperation.Create, ScopePolicy<Repo>.Where(_ => true));  // 新建不受既有行约束
-        policies.For("repo:push",   ScopePolicy<Repo>.Grant("repo"));                 // 行级 push
-        policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));                 // 行级 delete
+        policies.ForOperation(BusinessOperation.Update, ScopePolicy<Repo>.Grant("repo"), "repo:push");   // 行级 push
+        policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete"); // 行级 delete
     }
 }
 ```
@@ -420,17 +424,23 @@ public sealed class RepoScope : ScopeModel<Repo>
 
 **策略键的三条硬规则**：
 
-1. **保留命名空间 `@`**：默认键为 `@default`，操作的默认码为 `@read`/`@create`/`@update`/`@delete`/`@execute`。
-   应用声明的权限码不得以 `@` 开头（启动期拒绝）。
+1. **保留命名空间 `@`**：框架只保留 `@` 这一个前缀，其中只有 `@default` 一个有意义的名字。
+   应用声明的操作名与权限码都不得以 `@` 开头（拒绝）；标识未单独声明策略时以**自身**为键，
+   不落在保留前缀下。
 2. **码级授予是「覆盖」，不是「并集」**：`(码, 维度)` 有授予就用它，**否则才**回落到默认键。
    若做并集，默认授予会把某个码上被收窄的行集合重新撑开，行级差异直接失效。
 3. **通配不参与维度查找**：持 `repo:*` 可通过 `repo:push` 的**类型级闸门**，但**不会**让
    `(repo:*, repo)` 的授予落到 `(repo:push, repo)` 上——否则给整个命名空间授权会顺带泄漏行级授予。
 
-**策略键如何确定**（`ScopeKeyResolver`，全框架唯一出口）：
-键只由**操作**决定，操作只由 `ObjectEditState → 业务操作名` 这一条映射决定。
-声明了权限码且模型为该码声明了策略 → 用该码；否则用该操作的默认键。
-同一操作若解析出多个有策略的码，属配置歧义，**启动期直接失败**。
+**授权标识与授予键如何确定**：
+判定入口收的字符串是**授权标识**——操作名（`read`/`update`）或权限码（`repo:push`）。
+操作由调用方显式传入或经 `IObjectOperationResolver` 从对象状态推断
+（`ObjectEditState → 业务操作名` 由 `ScopeOperationMap` 这一条映射承担）。
+模型为它声明过策略（`ForOperation` 按操作声明、`For` 按权限码声明）→ 用该条声明的策略；
+没声明过 → 用默认策略。**授予键**由声明给出：`For(code, p)` 的键就是码；`ForOperation(op, p, key)`
+的键是显式给出的 `key`，省略时取操作名自身（不是派生的保留键——保留前缀下写不进授予）。
+标识与授予键共用同一个命名空间：为 `update` 声明策略、键写 `"repo:push"` 之后，用 `"repo:push"`
+寻址同样命中；任何一个名字（标识或键）与既有声明相撞，都在 `Declare` 处直接失败。
 
 > 维度选择器的值类型目前固定为 `string`。若列是 `Guid`/`long`，请在模型里提供一个字符串投影
 > （例如把 `TeamId` 声明为字符串列，或映射到一个 `string` 形式的属性）。
@@ -490,23 +500,30 @@ public override ScopePolicy<Registration> Policy =>
 ### 3.6 缓存契约
 
 `IScopeGuard` 按请求（Scoped）注册，**每个请求只解析一次**用户主体集合，
-并按类型缓存已编译的策略，读写路径共享同一份快照。因此：
+并按（资源类型，解析出的授予键）缓存已编译的策略，读写路径共享同一份快照。因此：
 
 - 同一请求内的多次判定结论必然一致；
 - 一次列表查询不会对授权数据发起与行数相同次数的查询（N+1 的根治点）。
 
-若在长生命周期作用域（后台 worker、单例）中使用，授权数据变化后需显式失效：
+**同步读只读已解析的快照**：冷缓存时 `GetSubjects` / `Allows*` / `Apply` / `Explain*` 会抛
+`InvalidOperationException`，绝不隐式等待解析——等待点由宿主的入口决定（工厂入口见 §10）。
+因此在直接使用 `IScopeGuard` 的异步路径里，要先预热（幂等：已解析时立即返回）：
 
 ```csharp
-guard.Refresh();                              // 同步：清空缓存，下次访问重新解析
-await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新解析
+await guard.EnsureResolvedAsync(cancellationToken);
+```
+
+若在长生命周期作用域（后台 worker、单例）中使用，授权数据变化后需显式刷新：
+
+```csharp
+await guard.RefreshAsync(cancellationToken);   // 失效并立即重新解析（唯一失效入口）
 ```
 
 **并发行为**（`Task.WhenAll` 之类的场景）：
 
 - 并发的首次访问**只会真正解析一次**（解析被闸门串行化），不会重复查库；
-- **失效不会被在途解析回滚**：若解析进行中发生了 `Refresh()`（例如刚撤销完授权），
-  那份「撤销前读到」的结果会被丢弃并重新解析，而不是覆盖失效。
+- **失效不会被在途解析回滚**：解析与重新解析共用同一道闸门、不会交错——
+  刷新必然排在在途解析之后，以撤销后的数据重新发布。
   没有这条保证，一次撤销可能在竞态下被静默撤销掉。
 
 ### 3.7 启动期校验
@@ -520,6 +537,7 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 - 策略结构性恒不放行（`Any` 之下全是拒绝条件）→ 失败
 - 子表维度（§3.8）的取值形状不受支持 → 失败（只有「导航集合 + 可选 `Where` + 取字符串值」能下推为 `EXISTS`）
 - 同一维度被 `Map` 与 `MapMany` 重复声明 → 失败
+- 两条声明占用同一个名字（标识或授予键，任意方向相撞）→ 在 `Declare` 处失败（两者共用一个命名空间）
 - `All`/`Any` 无子策略、`Deny` 嵌套 `Deny`、`Deny(null)` → 在**构造策略时**即失败
 
 校验只在「声明了模型」时生效：没有任何 `ScopeModel<T>` 的应用照常启动，只是全部资源都不受数据权限约束。
@@ -613,7 +631,7 @@ protected async Task CloseAsync(CancellationToken cancellationToken)
 
     var guard = BusinessContext.GetRequiredService<IScopeGuard>();
     await guard.EnsureResolvedAsync(cancellationToken);   // 行级判定前先预热授权数据
-    if (!guard.AllowsObject(this, "repo:delete"))         // 行级：本行在不在该码的范围内
+    if (!guard.AllowsObject(this, BusinessOperation.Delete))   // 行级：本行在不在该操作的范围内
     {
         throw new InvalidOperationException("无权关闭该仓库。");
     }
@@ -715,6 +733,8 @@ services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 // 组织 DI + 用户后：
 var guard = provider.GetRequiredService<IScopeGuard>();
 
+await guard.EnsureResolvedAsync();        // 同步判定前预热（幂等；工厂入口自带这一步）
+
 // 1. 查询过滤：只返回可访问的仓库（下推到数据库）
 var visible = await guard.Apply(dbContext.Repos).ToListAsync();
 
@@ -729,7 +749,7 @@ await stealing.SaveAsync();               // TeamC 不在授予范围内 → Sec
 
 // 4. 授权变更立即生效：只改成员关系数据
 db.Memberships.Add(new Membership("dev", "TeamC"));
-guard.Refresh();                          // 请求级缓存需显式失效（新请求自动是新快照）
+await guard.RefreshAsync();               // 失效并立即重新解析（新请求自动是新快照）
 guard.Allows(repoInTeamC);                // → true
 ```
 
@@ -759,6 +779,7 @@ guard.Allows(repoInTeamC);                // → true
 | `BusinessOperation` | 操作词汇（`read` / `create` / `update` / `delete` / `execute`，只是常量字符串） |
 | `IPermissionCodeSource` | **契约**：要求 + 权限码视图（`RequirementsFor` 有默认实现，按权限码折算） |
 | `IPermissionChecker` | **契约**：操作权限判定（`IsGranted` / `IsInRole` / `EnsureResolvedAsync` 为必需成员，异步判定入口有默认实现） |
+| `IObjectScopeAuthorizer` | **契约**：行级数据权限判定（引擎的 `ObjectScopeAuthorizer` 实现它） |
 | `UserPrincipal` / `UserClaimTypes` | 判定主体与其声明类型 |
 
 ### `Euonia.Osba`（约定 + 契约 + 强制点，不引用引擎）
@@ -766,8 +787,7 @@ guard.Allows(repoInTeamC);                // → true
 | 类型 | 位置 | 用途 |
 |---|---|---|
 | `ObjectPermissionRequirementProvider` | `Permission/` | `IPermissionCodeSource` 的默认实现：按工厂约定扫描（特性或约定名，能表达角色） |
-| `IObjectScopeAuthorizer` | `Permission/` | 契约：行级数据权限判定（由宿主提供） |
-| `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（适配包也用它） |
+| `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（工厂边界与 `IObjectOperationResolver` 共用） |
 | `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的两个闸门（越权抛 `SecurityException`，判定不了抛 `InvalidOperationException`） |
 | `BusinessObject.CanPerformOperation(string operation)` | `Core/BusinessObject.cs` | 业务对象内**唯一**的操作权限查询（**查询语义**：无从判定时返回 `true`，拦截只在工厂边界）；行级可见性经 `BusinessContext` 取 `IScopeGuard`（`Euonia.Security`）后调用 `AllowsObject` / `ExplainObject` |
 
@@ -776,12 +796,12 @@ guard.Allows(repoInTeamC);                // → true
 | 类型 | 用途 |
 |---|---|
 | `ScopeModel<T>` / `ScopeModelBuilder<T>` | 行级模型与维度声明（`Map` 行内列 / `MapMany` 子表） |
-| `ScopePolicy<T>` / `ScopePolicySet<T>` | 策略组合子与按权限码声明的行级策略 |
+| `ScopePolicy<T>` / `ScopePolicySet<T>` | 策略组合子与按授权标识声明的行级策略（`For` / `ForOperation`） |
 | `IScopeGuard` / `ScopeGuard` | 数据权限判定入口（按请求缓存） |
 | `IScopeSubjectResolver` / `ScopeSubjectSet` | 授权值来源与主体集合 |
 | `IPermissionChecker` / `SubjectPermissionChecker` | 操作权限判定与其默认实现（权限码来自授权数据） |
 | `IPermissionCodeSource` | 要求与权限码来源（Core）；注册期校验与工厂边界都问它 |
-| `IScopeKeyResolver` / `ScopeKeyResolver` / `ScopeKeys` | 策略键的解析出口与保留命名空间 |
+| `ScopeKeys` | 框架保留命名空间（`@default`）与名字/授予键的校验、回落 |
 | `ScopeFilter` / `CompiledScopePolicy<T>` / `ScopeDecision` | 下推、内存过滤、单行判定与审计 |
 | `ScopeDimensions` | 维度名常量（`Owner` / `Dept` / `Member` / `Region` / `Project`） |
 | `ScopeModelRegistry` | 数据权限模型注册表（注册期构建并校验；解析器 / 用户主体的启动期校验在首次解析 `IScopeGuard` 时执行） |
@@ -816,8 +836,8 @@ public sealed class ScopeSubjectSetBuilder
     ScopeSubjectSetBuilder AddSelf(string userId);                                // = Add(owner, userId)
     ScopeSubjectSetBuilder Add(string dimension, string value);                   // 默认键上的维度授予
     ScopeSubjectSetBuilder AddRange(string dimension, IEnumerable<string> values);
-    ScopeSubjectSetBuilder AddGrant(string code, string dimension, string value); // 按码的行级授予
-    ScopeSubjectSetBuilder AddGrant(string code, string dimension, IEnumerable<string> values);
+    ScopeSubjectSetBuilder AddGrant(string scopeKey, string dimension, string value); // 按授予键的行级授予
+    ScopeSubjectSetBuilder AddGrant(string scopeKey, string dimension, IEnumerable<string> values);
     ScopeSubjectSet Build();
 }
 
@@ -825,8 +845,8 @@ public sealed class ScopeSubjectSet
 {
     IReadOnlyCollection<string> Codes { get; }                     // 用户持有的权限码
     bool HoldsPermission(string code);                             // 支持 * 前缀通配
-    bool Contains(string code, string dimension, string value);
-    IReadOnlyCollection<string> ValuesOf(string code, string dimension);
+    bool Contains(string scopeKey, string dimension, string value);
+    IReadOnlyCollection<string> ValuesOf(string scopeKey, string dimension);
 }
 ```
 
@@ -837,7 +857,7 @@ public abstract class ScopeModel<T>
 {
     public abstract void Define(ScopeModelBuilder<T> builder);     // 维度 → 属性表达式
     public abstract ScopePolicy<T> Policy { get; }                 // 必填：默认策略
-    public virtual void Declare(ScopePolicySet<T> policies) { }    // 可选：按权限码覆盖
+    public virtual void Declare(ScopePolicySet<T> policies) { }    // 可选：按授权标识覆盖
 }
 
 public sealed class ScopeModelBuilder<T>
@@ -850,8 +870,12 @@ public sealed class ScopeModelBuilder<T>
 
 public sealed class ScopePolicySet<T>
 {
-    ScopePolicySet<T> For(BusinessOperation operation, ScopePolicy<T> policy);   // @read/@create/…
-    ScopePolicySet<T> For(string code, ScopePolicy<T> policy);                   // 如 "repo:push"
+    // 按操作声明：scopeKey 是该操作的授予键
+    // （省略时取操作名自身，常写字面权限码，如 "repo:push"；保留前缀下写不进授予）
+    ScopePolicySet<T> ForOperation(string operation, ScopePolicy<T> policy, string scopeKey = null);
+    // 按权限码声明：标识与授予键都是这个码（= ForOperation(code, policy, code)）
+    ScopePolicySet<T> For(string code, ScopePolicy<T> policy);
+    IReadOnlyCollection<string> Identifiers { get; }   // 显式声明过策略的授权标识
 }
 
 public abstract class ScopePolicy<T>
@@ -870,18 +894,22 @@ public abstract class ScopePolicy<T>
 ```csharp
 public interface IScopeGuard
 {
-    ScopeSubjectSet GetSubjects();
-    ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken ct = default);
+    ScopeSubjectSet GetSubjects();                                         // 冷缓存抛 InvalidOperationException
     IReadOnlyCollection<string> Permissions { get; }
-    IQueryable<T> Apply<T>(IQueryable<T> source, string code = null);      // 读侧下推
-    bool Allows<T>(T resource, string code = null);                        // 单行判定
-    ScopeDecision Explain<T>(T resource, string code = null);              // 审计
-    bool AllowsObject(object resource, string code = null);                // 非泛型（写侧用）
-    string ExplainObject(object resource, string code = null);
-    void Refresh();                                                        // 显式失效
-    ValueTask<ScopeSubjectSet> RefreshAsync(CancellationToken ct = default);
-    ValueTask EnsureResolvedAsync(CancellationToken ct = default);
+    ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken ct = default);
+    ValueTask EnsureResolvedAsync(CancellationToken ct = default);         // 判定前预热（幂等）
+    CompiledScopePolicy<T> GetPolicy<T>(string identifier = null);
+    IQueryable<T> Apply<T>(IQueryable<T> source, string identifier = null); // 读侧下推
+    bool Allows<T>(T resource, string identifier = null);                   // 单行判定
+    ScopeDecision Explain<T>(T resource, string identifier = null);         // 审计
+    bool AllowsObject(object resource, string identifier = null);           // 非泛型（写侧用）
+    string ExplainObject(object resource, string identifier = null);
+    ValueTask<ScopeSubjectSet> RefreshAsync(CancellationToken ct = default);   // 失效并立即重新解析（唯一失效入口）
+    ClaimsPrincipal User { get; }
 }
+
+// identifier 是授权标识（操作名或权限码）；为空时按对象状态经 IObjectOperationResolver
+// 推断，推断不出按默认策略判定。
 ```
 
 ### 业务对象内的查询
@@ -889,7 +917,7 @@ public interface IScopeGuard
 ```csharp
 public virtual bool CanPerformOperation(string operation);   // 操作级：无从判定时返回 true（查询语义）
 
-// 行级：BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, code) / ExplainObject(this, code)
+// 行级：BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, operation) / ExplainObject(this, operation)
 ```
 
 ---
@@ -900,10 +928,9 @@ public virtual bool CanPerformOperation(string operation);   // 操作级：无�
 
 | 消息关键词 | 原因 | 处理 |
 |---|---|---|
-| `使用了框架保留前缀` | 权限码以 `@` 开头 | 改名为不含 `@` 的码；框架自身的默认键只能由 `For(BusinessOperation, …)` 声明 |
-| `解析出多个声明了行级策略的权限码` | 同一操作上多个 `[Permission]` 都配了策略 | 只保留一个；或把其余的策略去掉改为共用默认策略 |
+| `使用了框架保留前缀` | 操作名或权限码以 `@` 开头 | 改名为不含 `@` 的名字；`@` 下只有框架自己的 `@default`，标识未声明策略时以自身为键，无需也不能显式声明保留键 |
+| `名称 '…' 已被 '…' 占用` / `标识 '…' 的策略被重复声明` | 两条声明占用了同一个名字（标识或键，任意方向） | 为每个操作指定各自的授予键；按权限码声明请用 `For`（共用名字等于共用同一份行级授予） |
 | `引用了未映射的维度` | 策略里 `Grant("x")` 但模型没 `Map("x", …)` | 补 `Map`，或改用正确维度名 |
-| `没有任何操作会解析到该码`（死策略） | `Declare` 里写的码与方法上 `[Permission]` 的码对不上（多半是拼写不一致） | 核对两处字面量；错误消息会列出实际解析到的码 |
 | `未声明任何维度` | 模型没调用 `Map` | 至少映射一个维度 |
 | `取值表达式 ... 不受支持` | 子表维度（§3.8）的选择器不是「导航集合 + 可选 `Where` + 取字符串值」 | 改成受支持的形状；行内的单值请用 `Map` |
 | `维度 'x' 在类型 'Y' 的权限模型中重复声明` | 同一维度被 `Map` 与 `MapMany` 各声明了一次 | 一个维度只能有一个取值来源 |
@@ -916,6 +943,7 @@ public virtual bool CanPerformOperation(string operation);   // 操作级：无�
 | 异常 | 含义 |
 |---|---|
 | `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验在首次解析 `IScopeGuard` 时执行，在此暴露；守卫是判定入口，首次判定前必然先解析它 |
+| `InvalidOperationException`：提示含 `EnsureResolvedAsync`（`IDS_SCOPE_NOT_RESOLVED`） | 同步读遇到冷缓存：授权数据尚未解析，而同步读不会为它等待。在调用判定前先 `await guard.EnsureResolvedAsync(ct)`；工厂入口已自带预热，出现它多半是在工厂之外直接用了守卫 |
 | `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext`；直接调用 `EditableObject<T>.SaveAsync` 而对象未接线时同样抛此异常（无论是否声明权限） |
 | `InvalidOperationException`：提示含「子表维度」 | 单行判定遇到未加载的子集合（§3.8）。它不是越权，**不要**当成 `SecurityException` 捕获；按下推/加载/去掉初始化器三条修法处理 |
 | `SecurityException` | 工厂边界判定越权——操作权限或数据范围不满足（新增/更新/删除/命令**一致**） |
@@ -948,8 +976,8 @@ public virtual bool CanPerformOperation(string operation);   // 操作级：无�
 ## 10. 性能与下推注意事项
 
 **按请求缓存**：`IScopeGuard` 是 Scoped，授权数据与已编译策略在一次请求内只解析/编译一次，
-读写共用。因此**撤销的生效时机是「下一次解析」**；同一作用域内需显式 `Refresh()`。
-长生命周期作用域（后台 worker、单例）必须自行 `Refresh()`。
+读写共用。因此**撤销的生效时机是「下一次解析」**；同一作用域内需显式 `await guard.RefreshAsync(ct)`
+（失效并立即重新解析）。长生命周期作用域（后台 worker、单例）必须自行刷新。
 
 **下推是首选**：`guard.Apply(query)` 产出的是表达式树，由 EF/提供程序翻成 `WHERE`。
 `ScopeFilter.Filter(IEnumerable<T>, …)` 只在数据已在内存时使用。
@@ -966,9 +994,12 @@ public virtual bool CanPerformOperation(string operation);   // 操作级：无�
 **子表维度的下推成本**：产出的 `EXISTS` 子查询按子表的过滤列取数，
 请在子表上建 `(父标识, 值)` 组合索引（例如 `(team_id, user_id)`），否则外层每一行都要扫一遍子表。
 
-**同步与异步**：`IPermissionChecker` 是同步接口，首次判定会走一次 sync-over-async
-（每作用域仅一次）。工厂的异步入口（`*Async`）在判定前先预热授权数据
-（`EnsureResolvedAsync`），因此不会在首次判定时阻塞线程。
+**同步与异步**：引擎的同步读只读已解析快照（冷缓存抛 `InvalidOperationException`，绝不隐式阻塞）。
+Osba 因此把「等待」挪到**自己的入口**：
+
+- 异步入口（`*Async`）在判定前 `await` 预热（`EnsureResolvedAsync`），整条链路不阻塞线程；
+- 同步入口（`Create` / `Fetch` 等）本就运行在同步契约上，由 `AuthorizationWarmup` 在入口阻塞一次
+  （`AsyncContext.Run`，每作用域仅一次）——等待点可枚举，不在判定路径深处。
 
 ## 11. 从旧数据权限迁移
 
@@ -989,7 +1020,7 @@ public virtual bool CanPerformOperation(string operation);   // 操作级：无�
 | `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
 | `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
 | `ClaimPermissionChecker`（权限码读令牌 `"permission"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类**已删除**，需要自定义判定请自行实现 `IPermissionChecker` |
-| 类型级 `[Permission]` 唯一粒度 | 同一类型内可按权限码声明行级策略（`Declare`），行与行之间权限可不同 |
+| 类型级 `[Permission]` 唯一粒度 | 同一类型内可按授权标识声明行级策略（`Declare` + `For` / `ForOperation`），行与行之间权限可不同 |
 
 **迁移检查项**：
 

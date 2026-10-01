@@ -16,7 +16,7 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// <para>
 /// 口径依据：<see cref="CompositeCodeSource.CodesFor"/> 早已按 <c>OrdinalIgnoreCase</c> 去重，
 /// 并在文档里写明理由——两个模块分别声明 <c>repo:delete</c> 与 <c>Repo:Delete</c> 必须收敛成同一个码，
-/// 否则会让 <see cref="ScopeKeyResolver"/> 的「同一操作最多一个有策略的码」校验误报歧义。
+/// 否则同一个判定会看到两条只差大小的要求，「用户到底持没持有这个码」就成了字符串比对的运气。
 /// </para>
 /// </remarks>
 public class OperationCaseInsensitivityTests
@@ -30,7 +30,7 @@ public class OperationCaseInsensitivityTests
 	{
 		// 声明端写成大写，运行时用 BusinessOperation.Execute（"execute"）查询
 		var services = new ServiceCollection();
-		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("Execute", "Run"); });
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethod("Execute", m => m.Name == "Run"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -41,8 +41,8 @@ public class OperationCaseInsensitivityTests
 	public void Operations_Declared_With_Different_Casing_Should_Collapse_Into_One_Vocabulary_Entry()
 	{
 		var services = new ServiceCollection();
-		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("Execute", "Run"); });
-		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethodName("EXECUTE", "Run"); });
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethod("Execute", m => m.Name == "Run"); });
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.OnMethod("EXECUTE", m => m.Name == "Run"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -55,9 +55,9 @@ public class OperationCaseInsensitivityTests
 	public void Permission_Codes_Should_Be_De_Duplicated_Across_Different_Casing()
 	{
 		// 同一操作上两次声明只差大小写的码，必须收敛成一个：
-		// 否则下游 ScopeKeyResolver 的「同一操作最多一个有策略的码」会误报歧义。
+		// 否则同一个判定会看到两条只差大小的要求。
 		var services = new ServiceCollection();
-		services.AddPermission(p => { p.Scan(TestAssembly); p.OnMethodName(BusinessOperation.Execute, "Run", "Execute"); });
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnMethod(BusinessOperation.Execute, m => m.Name == "Run" || m.Name == "Execute"); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 

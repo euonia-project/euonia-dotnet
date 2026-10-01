@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Security;
 /// </para>
 /// <para>
 /// 因此<b>撤销的生效时机是「下一次解析」</b>（通常是下一个请求）；同一作用域内需要立即生效时显式调用
-/// <see cref="IScopeGuard.Refresh"/>，全程不需要重新签发令牌（见 README §5.5）。
+/// <see cref="IScopeGuard.RefreshAsync"/>，全程不需要重新签发令牌（见 README §5.5）。
 /// </para>
 /// <para>
 /// 角色仍走 <see cref="UserPrincipal.IsInRole"/>（来自声明）：角色数量少而稳定，不构成令牌膨胀问题；<b>细粒度授权请一律使用权限码</b>。
@@ -114,11 +114,23 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// 取当前用户持有的权限码并判定；授权数据取不到时返回 <see langword="false"/>。
 	/// </summary>
 	/// <remarks>
+	/// <para>
 	/// <see cref="IPermissionChecker"/> 明确要求「拿不到用户、拿不到授权数据时返回 <see langword="false"/>」，
-	/// 所以这里吞掉 <see cref="ScopeGuard"/> 在解析器缺席时抛的 <see cref="InvalidOperationException"/>——
-	/// 把接线错误抛进调用方的判定分支，得到的是 500 而不是「拒绝」，既不比拒绝更安全，也不符合契约。
-	/// 这不等于把接线错误悄悄藏起来：首次解析 <c>IScopeGuard</c> 时的启动校验就会把它抛出来，
-	/// 而行级数据权限那条路径（直接用 <see cref="IScopeGuard"/>）仍照旧抛出、不会静默放行。
+	/// 所以这里把 <see cref="ScopeGuard"/> 抛出的 <see cref="InvalidOperationException"/> 折算成拒绝。
+	/// 两种情形都会走到这里：
+	/// </para>
+	/// <list type="bullet">
+	/// <item><description><b>解析器缺席</b>（接线错误）——把接线错误抛进调用方的判定分支，得到的是 500
+	/// 而不是「拒绝」，既不比拒绝更安全，也不符合契约。它不会因此被藏起来：首次解析
+	/// <c>IScopeGuard</c> 时的启动校验就会把它抛出来。</description></item>
+	/// <item><description><b>快照尚未预热</b>（调用方在同步路径上没先 <c>await EnsureResolvedAsync</c>）——
+	/// 引擎的同步读不会替任何人等待，这里按 fail-closed 折算成拒绝。预热是异步入口的职责，
+	/// 宿主框架的同步入口会在边界上显式等一次。</description></item>
+	/// </list>
+	/// <para>
+	/// 行级数据权限那条路径（直接用 <see cref="IScopeGuard"/>）不折算：拿不到数据就是拿不到，
+	/// 抛出去而不是静默放行。
+	/// </para>
 	/// </remarks>
 	private bool Holds(string permission)
 	{

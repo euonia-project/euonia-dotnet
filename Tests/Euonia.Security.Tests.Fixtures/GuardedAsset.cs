@@ -26,8 +26,8 @@ public sealed class GuardedAsset
 /// <see cref="GuardedAsset"/> 的权限模型。
 /// </summary>
 /// <remarks>
-/// 必须为 <c>guarded:run</c> 显式声明策略：注册期校验会拒绝「声明了行级策略，
-/// 却没有任何操作解析到该码」的死策略。
+/// <c>execute</c> 上的行级策略刻意写成<b>显式键</b>：验证「授予按权限码写」这条路径
+/// （宿主用 <c>AddGrant("guarded:run", …)</c> 授予，而不是写在 <c>@execute</c> 下）。
 /// </remarks>
 public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 {
@@ -42,8 +42,6 @@ public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 
 	public override void Declare(ScopePolicySet<GuardedAsset> policies)
 	{
-		// 刻意与 [Permission("guarded:run")] 只差大小写：权限码按忽略大小写匹配，
-		// 注册期的「没有任何操作会解析到该码」校验不得因大小写差异误报。
-		policies.For("Guarded:Run", ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Dept));
+		policies.ForOperation(BusinessOperation.Execute, ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Dept), "guarded:run");
 	}
 }

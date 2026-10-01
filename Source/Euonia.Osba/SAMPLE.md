@@ -631,7 +631,7 @@ services.AddScoped<IActuatorBehavior<Repo>, AuditBehavior<Repo>>();
 protected override Task InsertAsync(CancellationToken cancellationToken = default) { ... }   // 无权限码
 
 [FactoryUpdate]
-[Permission("repo:push")]                     // ← 这个码同时决定「类型级闸门」与「行级策略的键」
+[Permission("repo:push")]                     // ← 类型级闸门：做这个操作必须持有该码
 protected override Task UpdateAsync(CancellationToken cancellationToken = default) { ... }
 
 [FactoryDelete]
@@ -639,9 +639,10 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 protected override Task DeleteAsync(CancellationToken cancellationToken = default) { ... }
 ```
 
-> **`[Permission]` 的码不只是「有没有这个权限」，它还是行级策略的键。**
-> 如果 `DeleteAsync` 上没有 `[Permission("repo:delete")]`，删除操作会解析到默认键 `@delete`
-> 并回落到模型的默认策略——你在 `Declare` 里为 `"repo:delete"` 写的行级策略**根本不会生效**。
+> **`[Permission]` 的码只决定类型级闸门，不参与行级策略的选取。**
+> 行级策略按**授权标识**声明：`ForOperation` 的第三个参数是授予键，`For(...)` 则用权限码同时作
+> 标识与键（见 §6.3）——方法上的 `[Permission]` 与模型里的键写同一个字面量只是惯例，
+> 两者对不上时策略照样按模型声明执行。
 
 ### 6.2 授权数据来源
 
@@ -699,19 +700,19 @@ public sealed class RepoScope : ScopeModel<Repo>
                .Classify("level", r => r.Level);          // 分类属性：不参与授权
     }
 
-    // 默认策略：未单独声明的操作都用它
+    // 默认策略：未单独声明的标识都用它
     public override ScopePolicy<Repo> Policy =>
         ScopePolicy<Repo>.Any(
             ScopePolicy<Repo>.Self(),
             ScopePolicy<Repo>.Grant(ScopeDimensions.Dept));
 
-    // 按权限码声明行级策略
+    // 按操作声明行级策略：第三个参数是该操作的授予键（权限码）
     public override void Declare(ScopePolicySet<Repo> policies)
     {
         // 注意：Create 不需要单独声明。保存新行时默认策略一样适用，而且此时字段已由调用方填完，
         // 于是「本人创建的、或建在自己团队下的」才允许落库——这正是想要的效果。
-        policies.For("repo:push", ScopePolicy<Repo>.Grant("repo"));
-        policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));
+        policies.ForOperation(BusinessOperation.Update, ScopePolicy<Repo>.Grant("repo"), "repo:push");
+        policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");
     }
 }
 
@@ -732,7 +733,7 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 ```
 
 **模型与策略写在同一个类型里**，所以结构上不可能出现「有模型没策略」。
-模型由 `AddPermission` 的扫描发现，并在**注册期**完成校验（未映射维度、策略键歧义等都会启动即失败）。
+模型由 `AddPermission` 的扫描发现，并在**注册期**完成校验（未映射维度、策略恒不放行、重复授予键等都会启动即失败）。
 
 > **未声明模型的类型不受任何数据权限约束**——这是当前边界。所以查询用的读模型也要单独声明，
 > 否则 `guard.Apply` 会原样返回。
@@ -744,15 +745,15 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 var visible = await guard.Apply(dbContext.Repos).ToListAsync();
 
 // 单行判定
-guard.Allows(repo);                                  // 按当前对象状态对应的操作解析键
-guard.Allows(repo, "repo:delete");                   // 指定权限码
-guard.Explain(repo, "repo:delete");                  // 审计：命中了哪条策略
+guard.Allows(repo);                                  // 按当前对象状态对应的操作解析
+guard.Allows(repo, BusinessOperation.Delete);        // 显式指定操作
+guard.Explain(repo, BusinessOperation.Delete);       // 审计：命中了哪条策略
 
 // 业务对象内部
 protected bool CanDelete()
 {
-    return CanPerformOperation(BusinessOperation.Delete)                                             // 操作级
-        && BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, "repo:delete");      // 行级
+    return CanPerformOperation(BusinessOperation.Delete)                                                    // 操作级
+        && BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, BusinessOperation.Delete);  // 行级
 }
 ```
 
@@ -825,6 +826,8 @@ var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 var store = scope.ServiceProvider.GetRequiredService<RepoStore>();
 var acl = scope.ServiceProvider.GetRequiredService<RepoAcl>();
 
+await guard.EnsureResolvedAsync();                 // 同步判定前预热（工厂入口自带；直接调守卫需手动预热）
+
 // 1. 造两个属于 TeamA、所有者为 dev 的仓库
 async Task<Repo> CreateAsync(string name, string teamId, string ownerId)
 {
@@ -847,15 +850,15 @@ store.Repos["repo-b1"] = new RepoRecord("repo-b1", "repo-b1", "TeamB", "someone"
 acl.Entries.Add((a1.Id, "dev", "repo:push"));
 acl.Entries.Add((a2.Id, "dev", "repo:push"));
 acl.Entries.Add((a1.Id, "dev", "repo:delete"));
-guard.Refresh();                                   // 授权数据变了，让本作用域的缓存失效
+await guard.RefreshAsync();                        // 授权数据变了：失效并立即重新解析
 
 // 3. 读侧：只有本团队/本人的仓库可见
 var visible = guard.Apply(store.Repos.Values.AsQueryable()).ToList();
 Console.WriteLine(string.Join(", ", visible.Select(r => r.Name)));   // repo-a1, repo-a2
 
 // 4. 行级操作权限：同一用户、同一类型，不同仓库结论不同
-Console.WriteLine(guard.Allows(a2, "repo:push"));     // True
-Console.WriteLine(guard.Allows(a2, "repo:delete"));   // False ← 这就是「行级操作权限」
+Console.WriteLine(guard.Allows(a2, BusinessOperation.Update));   // True（push 即更新操作）
+Console.WriteLine(guard.Allows(a2, BusinessOperation.Delete));   // False ← 这就是「行级操作权限」
 
 // 5. 越权删除被工厂边界拦下
 try
@@ -866,7 +869,7 @@ try
 catch (SecurityException ex)
 {
     Console.WriteLine($"越权删除被拒绝：{ex.Message}");
-    // Data scope denied. Delete (before): Repo. [code=repo:delete] 判定：拒绝；…
+    // Data scope denied. Delete (before): Repo. [scope=delete] 判定：拒绝；…
 }
 
 // 6. 命令对象走执行器
@@ -968,8 +971,9 @@ BusinessContextAccessor.Clear();
 
 46. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
     首次解析 `IScopeGuard` 时启动期校验失败（守卫是判定入口，首次判定前必然先解析它，不会静默放行）。
-47. **`[Permission]` 的码同时是行级策略的键**：漏写就会解析到 `@delete` 之类的默认键，
-    你在 `Declare` 里写的行级策略不会生效。
+47. **行级策略按授权标识声明，不在 `[Permission]` 上**：`ForOperation` 的第三个参数是授予键，
+    省略时取操作名自身；`For(code, …)` 则让标识与键同为权限码。授予键与 `[Permission]` 对不上时，
+    解析器写在权限码下的行级授予不会被查到——该操作改用默认键上的授予（或没有授予），行级收窄静默失效。
 48. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
 49. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
 50. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。

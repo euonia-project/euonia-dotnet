@@ -18,16 +18,16 @@ public class ScopeRowPermissionTests
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		Assert.True(guard.Allows(Repo("A1"), "repo:push"));
-		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
-		Assert.False(guard.Allows(Repo("A3"), "repo:push"));
+		Assert.True(guard.Allows(Repo("A1"), BusinessOperation.Update));
+		Assert.True(guard.Allows(Repo("A2"), BusinessOperation.Update));
+		Assert.False(guard.Allows(Repo("A3"), BusinessOperation.Update));
 
-		Assert.True(guard.Allows(Repo("A1"), "repo:delete"));
-		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
-		Assert.False(guard.Allows(Repo("A3"), "repo:delete"));
+		Assert.True(guard.Allows(Repo("A1"), BusinessOperation.Delete));
+		Assert.False(guard.Allows(Repo("A2"), BusinessOperation.Delete));
+		Assert.False(guard.Allows(Repo("A3"), BusinessOperation.Delete));
 
-		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
-		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
+		Assert.True(guard.Allows(Repo("A2"), BusinessOperation.Update));
+		Assert.False(guard.Allows(Repo("A2"), BusinessOperation.Delete));
 
 		BusinessContextAccessor.Clear();
 	}
@@ -42,12 +42,12 @@ public class ScopeRowPermissionTests
 		using var scope = CreateScope(resolver, out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		Assert.False(guard.Allows(Repo("A2"), "repo:delete"));
-		Assert.False(guard.Allows(Repo("A3"), "repo:delete"));
-		Assert.True(guard.Allows(Repo("A1"), "repo:delete"));
+		Assert.False(guard.Allows(Repo("A2"), BusinessOperation.Delete));
+		Assert.False(guard.Allows(Repo("A3"), BusinessOperation.Delete));
+		Assert.True(guard.Allows(Repo("A1"), BusinessOperation.Delete));
 
-		Assert.False(guard.Allows(Repo("A3"), "repo:push"));
-		Assert.True(guard.Allows(Repo("A2"), "repo:push"));
+		Assert.False(guard.Allows(Repo("A3"), BusinessOperation.Update));
+		Assert.True(guard.Allows(Repo("A2"), BusinessOperation.Update));
 
 		Assert.True(guard.Allows(Repo("A3"), null));
 
@@ -55,17 +55,17 @@ public class ScopeRowPermissionTests
 	}
 
 	[Fact]
-	public void Pushdown_PerCode_ShouldAgreeWithInMemory()
+	public void Pushdown_PerOperation_ShouldAgreeWithInMemory()
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
 		var rows = new[] { Repo("A1"), Repo("A2"), Repo("A3") };
 
-		foreach (var code in new[] { "repo:push", "repo:delete" })
+		foreach (var operation in new[] { BusinessOperation.Update, BusinessOperation.Delete })
 		{
-			var pushed = guard.Apply(rows.AsQueryable(), code).ToList();
-			var inMemory = rows.Where(row => guard.Allows(row, code)).ToList();
+			var pushed = guard.Apply(rows.AsQueryable(), operation).ToList();
+			var inMemory = rows.Where(row => guard.Allows(row, operation)).ToList();
 
 			Assert.Equal(pushed.Count, inMemory.Count);
 			foreach (var row in pushed)
@@ -78,18 +78,18 @@ public class ScopeRowPermissionTests
 	}
 
 	[Fact]
-	public void Pushdown_PerCode_ShouldKeepExpressionShape()
+	public void Pushdown_PerOperation_ShouldKeepExpressionShape()
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		var compiled = guard.GetPolicy<GrantRepo>("repo:delete");
+		var compiled = guard.GetPolicy<GrantRepo>(BusinessOperation.Delete);
 
 		var call = Assert.IsAssignableFrom<MethodCallExpression>(compiled.Allow.Body);
 		Assert.Equal(nameof(Enumerable.Contains), call.Method.Name);
 		Assert.Contains("x.RepoId", compiled.Allow.ToString());
 
-		var query = guard.Apply(new[] { Repo("A1") }.AsQueryable(), "repo:delete");
+		var query = guard.Apply(new[] { Repo("A1") }.AsQueryable(), BusinessOperation.Delete);
 		var where = Assert.IsAssignableFrom<MethodCallExpression>(query.Expression);
 
 		Assert.Equal(typeof(Queryable), where.Method.DeclaringType);
@@ -104,11 +104,30 @@ public class ScopeRowPermissionTests
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		var decision = guard.Explain(Repo("A2"), "repo:delete");
+		var decision = guard.Explain(Repo("A2"), BusinessOperation.Delete);
 
 		Assert.False(decision.Allowed);
 		Assert.Equal("repo:delete", decision.ScopeKey);
 		Assert.Contains("repo:delete", decision.ToString());
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
+	public void Addressing_By_Grant_Key_ShouldMatch_Addressing_By_Operation()
+	{
+		// 调用点常写权限码（<c>AllowsObject(row, RepositoryPermissions.Delete)</c>），
+		// 而模型是按操作声明并指定了键。两个名字必须落到同一条声明上：
+		// 用码寻址若退回默认策略，判定结果会比声明的行范围宽，而且没有任何征兆。
+		using var scope = CreateScope(new AclResolver(), out var provider);
+		var guard = provider.GetRequiredService<IScopeGuard>();
+
+		var byOperation = guard.Explain(Repo("A2"), BusinessOperation.Delete);
+		var byCode = guard.Explain(Repo("A2"), "repo:delete");
+
+		Assert.Equal(byOperation.Allowed, byCode.Allowed);
+		Assert.Equal(byOperation.ScopeKey, byCode.ScopeKey);
+		Assert.Equal("repo:delete", byCode.ScopeKey);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -174,7 +193,7 @@ public class ScopeRowPermissionTests
 	#region 操作权限数据来源：撤销立即生效
 
 	[Fact]
-	public void RevokedPermission_ShouldTakeEffectWithoutReissuingToken()
+	public async Task RevokedPermission_ShouldTakeEffectWithoutReissuingToken()
 	{
 		var resolver = new AclResolver();
 
@@ -182,14 +201,14 @@ public class ScopeRowPermissionTests
 		var guard = provider.GetRequiredService<IScopeGuard>();
 		var target = Repo("A2");
 
-		Assert.True(guard.Allows(target, "repo:push"));
+		Assert.True(guard.Allows(target, BusinessOperation.Update));
 
 		resolver.RevokeCode("repo:push");
 
-		Assert.True(guard.Allows(target, "repo:push"));
+		Assert.True(guard.Allows(target, BusinessOperation.Update));
 
-		guard.Refresh();
-		Assert.False(guard.Allows(target, "repo:push"));
+		await guard.RefreshAsync(TestContext.Current.CancellationToken);
+		Assert.False(guard.Allows(target, BusinessOperation.Update));
 
 		using var next = CreateScope(resolver, out var nextProvider);
 		Assert.False(nextProvider.GetRequiredService<IScopeGuard>().Allows(target, "repo:push"));
@@ -239,8 +258,8 @@ public class ScopeRowPermissionTests
 
 		var probe = new GrantRepoProbe { RepoId = "A2", BusinessContext = provider.GetRequiredService<BusinessContext>() };
 
-		Assert.True(probe.ProbeRowAccess("repo:push"));
-		Assert.False(probe.ProbeRowAccess("repo:delete"));
+		Assert.True(probe.ProbeRowAccess(BusinessOperation.Update));
+		Assert.False(probe.ProbeRowAccess(BusinessOperation.Delete));
 
 		BusinessContextAccessor.Clear();
 	}
@@ -285,12 +304,12 @@ public class ScopeRowPermissionTests
 	}
 
 	[Fact]
-	public void PolicySet_ShouldRejectReservedPermissionCode()
+	public void PolicySet_ShouldRejectReservedScopeKey()
 	{
 		var policies = new ScopePolicySet<GrantRepo>();
 
 		var exception = Assert.Throws<InvalidOperationException>(
-			() => policies.For("@custom", ScopePolicy<GrantRepo>.Where(_ => true)));
+			() => policies.ForOperation(BusinessOperation.Update, ScopePolicy<GrantRepo>.Where(_ => true), "@custom"));
 
 		Assert.Contains(ScopeKeys.Prefix, exception.Message);
 	}
@@ -302,16 +321,16 @@ public class ScopeRowPermissionTests
 
 		policies.ForOperation(BusinessOperation.Create, ScopePolicy<GrantRepo>.Where(_ => true));
 
-		Assert.Contains(ScopeKeys.Create, policies.Codes);
+		Assert.Contains(BusinessOperation.Create, policies.Identifiers);
 	}
 
 	[Fact]
-	public void PolicySet_ShouldRejectDuplicateCode()
+	public void PolicySet_ShouldRejectDuplicateOperation()
 	{
 		var policies = new ScopePolicySet<GrantRepo>();
-		policies.For("repo:push", ScopePolicy<GrantRepo>.Where(_ => true));
+		policies.ForOperation(BusinessOperation.Update, ScopePolicy<GrantRepo>.Where(_ => true));
 
-		Assert.Throws<InvalidOperationException>(() => policies.For("repo:push", ScopePolicy<GrantRepo>.Where(_ => true)));
+		Assert.Throws<InvalidOperationException>(() => policies.ForOperation(BusinessOperation.Update, ScopePolicy<GrantRepo>.Where(_ => true)));
 	}
 
 	#endregion
@@ -329,7 +348,7 @@ public class ScopeRowPermissionTests
 		var built = services.BuildServiceProvider();
 		var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = scope.ServiceProvider.Warm();
 		return scope;
 	}
 
@@ -471,8 +490,8 @@ public sealed class GrantRepoModel : ScopeModel<GrantRepo>
 	{
 		policies.ForOperation(BusinessOperation.Read, ScopePolicy<GrantRepo>.Grant("repo"));
 
-		policies.For("repo:push", ScopePolicy<GrantRepo>.Grant("repo"));
-		policies.For("repo:delete", ScopePolicy<GrantRepo>.Grant("repo"));
+		policies.ForOperation(BusinessOperation.Update, ScopePolicy<GrantRepo>.Grant("repo"), "repo:push");
+		policies.ForOperation(BusinessOperation.Delete, ScopePolicy<GrantRepo>.Grant("repo"), "repo:delete");
 	}
 }
 
@@ -546,7 +565,7 @@ public class MultiModulePermissionTests
 		services.AddSingleton(new UserPrincipal(new ClaimsPrincipal(identity)));
 		services.AddSingleton<IScopeSubjectResolver>(new ReportAclResolver());
 
-		var guard = services.BuildServiceProvider().GetRequiredService<IScopeGuard>();
+		var guard = services.BuildServiceProvider().Warm().GetRequiredService<IScopeGuard>();
 
 		Assert.True(guard.Allows(new ReportRow { Id = "r1", DeptId = "team-a", OwnerId = "other" }));
 		Assert.False(guard.Allows(new ReportRow { Id = "r2", DeptId = "team-b", OwnerId = "other" }));

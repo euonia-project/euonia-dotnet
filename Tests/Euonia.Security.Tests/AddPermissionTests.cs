@@ -94,7 +94,7 @@ public class AddPermissionTests
 		var provider = Build(s => s.AddPermission(p =>
 		{
 			p.Scan(TestAssembly);
-			p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute));
+			p.OnAttributeOrName(BusinessOperation.Read, null, typeof(AssetApproveAttribute));
 		}));
 
 		var requirements = provider.GetRequiredService<IPermissionCodeSource>()
@@ -114,17 +114,6 @@ public class AddPermissionTests
 		                           .RequirementsFor(typeof(GuardedAsset), BusinessOperation.Execute);
 
 		Assert.Contains(requirements, requirement => requirement.Permission == "guarded:run" && requirement.Roles.Length == 0);
-	}
-
-	[Fact]
-	public void AddPermission_Should_Not_Overwrite_Host_Key_Resolver()
-	{
-		var expected = new FixedKeyResolver();
-		var provider = Build(
-			s => s.AddSingleton<IScopeKeyResolver>(expected),
-			s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
-
-		Assert.Same(expected, provider.GetRequiredService<IScopeKeyResolver>());
 	}
 
 	[Fact]
@@ -148,9 +137,9 @@ public class AddPermissionTests
 	}
 
 	[Fact]
-	public void ScopeGuard_Should_Resolve_Without_Host_Key_Resolver()
+	public void ScopeGuard_Should_Resolve_Without_Operation_Resolver()
 	{
-		// 未注册 IScopeKeyResolver 时必须回落到 ScopeKeys.Default（AssetModel 只声明了默认策略），
+		// 未注册 IObjectOperationResolver 时必须按模型的默认策略判定（AssetModel 只声明了默认策略），
 		// 而不是因缺少依赖而解析失败。
 		var provider = Build(
 			s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }),
@@ -256,45 +245,35 @@ public class AddPermissionTests
 	}
 
 	[Fact]
-	public void AddPermission_Should_Key_Execute_From_Code_Source()
+	public void AddPermission_Should_Key_Execute_From_Model_Declaration()
 	{
+		// 键由模型为操作声明，与权限码来源无关：GuardedAssetModel 为 execute 显式指定了 "guarded:run"。
 		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 
 		Assert.Equal("guarded:run", ResolveExecuteKey(provider, typeof(GuardedAsset)));
 	}
 
 	[Fact]
-	public void AddPermission_Should_Key_Execute_From_Operation_When_Code_Source_Has_No_Codes()
+	public void AddPermission_Should_Key_Execute_From_Operation_When_Model_Declares_None()
 	{
-		// 没有方法级权限码时，各操作解析到各自的框架默认键。
+		// 模型没为某操作声明策略时，该操作以自身为键（以 @execute 为键的话授予写不进去）。
 		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
-		Assert.Equal(ScopeKeys.Execute, ResolveExecuteKey(provider, typeof(Asset)));
+		Assert.Equal(BusinessOperation.Execute, ResolveExecuteKey(provider, typeof(Asset)));
 	}
 
 	[Fact]
-	public void AddPermission_Should_Reject_Per_Code_Policy_Without_Code_Source()
+	public void AddPermission_Should_Not_Key_Declared_Operation_From_Other_Declarations()
 	{
-		// EmptyCodeSource 与按码声明的策略不可同用：没有任何操作能解析到应用自定义的码，
-		// 死策略校验必须拒绝启动。锁定这一边界，避免日后被「放宽校验」悄悄放过。
-		var exception = Assert.Throws<ScopeModelValidationException>(
-			() => Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); })));
-
-		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
-	}
-
-	[Fact]
-	public void AddPermission_Should_Not_Key_Read_From_Code_Source()
-	{
-		// codeSource 只影响它声明了权限码的操作，其余操作一律走框架默认键。
+		// 声明是按标识生效的：模型只为 execute 声明了键，read 一律以自身为键。
 		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 		var registry = provider.GetRequiredService<ScopeModelRegistry>();
-		var codeSource = provider.GetRequiredService<IPermissionCodeSource>();
 
 		Assert.True(registry.TryGet(typeof(GuardedAsset), out var registration));
-		Assert.Equal(
-			ScopeKeys.Read,
-			ScopeKeyResolver.Resolve(registration, typeof(GuardedAsset), BusinessOperation.Read, codeSource));
+
+		registration.TryResolve(BusinessOperation.Read, out _, out var key);
+
+		Assert.Equal(BusinessOperation.Read, key);
 	}
 
 	#endregion
@@ -336,17 +315,6 @@ public class AddPermissionTests
 	}
 
 	[Fact]
-	public void Scanning_Without_Source_Or_Assertion_Should_Fail_At_Registration()
-	{
-		// 只扫描程序集而不说明来源意图（规则 / NoOperationCodes）时，
-		// 按码声明的策略无人能解析到——死策略校验在注册处拦住，锁定该边界。
-		var exception = Assert.Throws<ScopeModelValidationException>(
-			() => new ServiceCollection().AddPermission(p => p.Scan(FixturesAssembly)));
-
-		Assert.Equal(nameof(GuardedAssetModel), Assert.Single(exception.Diagnostics).ModelName);
-	}
-
-	[Fact]
 	public void Registering_Twice_Should_Keep_One_Descriptor_Per_Service()
 	{
 		// 注册是「替换」而非「追加」：多次注册后每种类型只留一条描述符，
@@ -373,11 +341,12 @@ public class AddPermissionTests
 	private static string ResolveExecuteKey(IServiceProvider provider, Type resourceType)
 	{
 		var registry = provider.GetRequiredService<ScopeModelRegistry>();
-		var codeSource = provider.GetRequiredService<IPermissionCodeSource>();
 
 		Assert.True(registry.TryGet(resourceType, out var registration));
 
-		return ScopeKeyResolver.Resolve(registration, resourceType, BusinessOperation.Execute, codeSource);
+		registration.TryResolve(BusinessOperation.Execute, out _, out var key);
+
+		return key;
 	}
 
 	private static ServiceProvider Build(params Action<IServiceCollection>[] configure)
@@ -390,7 +359,7 @@ public class AddPermissionTests
 			action(services);
 		}
 
-		return services.BuildServiceProvider();
+		return services.BuildServiceProvider().Warm();
 	}
 
 	private static UserPrincipal User(string userId = "dev")

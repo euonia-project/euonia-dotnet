@@ -16,9 +16,10 @@ namespace Nerosoft.Euonia.Security;
 /// 能表达<b>角色</b>要求的实现（例如按特性/配置收集声明的那个）才需要覆写它。
 /// </para>
 /// <para>
-/// 该接口同时用于策略引擎的<b>注册期</b>校验：每个操作的策略键必须能<b>无歧义</b>地解析——
-/// 同时命中多个「声明了策略」的权限码即配置歧义，直接失败；一个都没命中则回落到该操作的默认键。
-/// 另有「声明了策略却没有任何操作解析到」的死策略校验（引擎侧见 <c>ScopeModelRegistry</c>）。
+/// 策略引擎只在<b>注册期</b>用它回答一个问题：「本应用到底有没有声明权限」——扫描到的类型上既没有
+/// 类型级 <see cref="PermissionAttribute"/>、又没有任何一个操作能经由 <see cref="CodesFor"/> 答出码时，
+/// 该应用不需要授权数据解析器。行级策略的解析<b>不</b>经过本接口：策略挂在模型声明的授权标识上
+/// （见 <c>ScopePolicySet{T}</c>），与操作集无关。
 /// </para>
 /// </remarks>
 public interface IPermissionCodeSource
@@ -27,8 +28,9 @@ public interface IPermissionCodeSource
 	/// 获取本应用使用的全部业务操作。
 	/// </summary>
 	/// <remarks>
-	/// 这是操作集的<b>唯一权威</b>：注册期校验会对这里的每个操作解析策略键，
-	/// 少列一个就等于让该操作永远走不到自己的策略。
+	/// 注册期检查会按它逐个询问 <see cref="CodesFor"/>，因此少列一个操作，就等于让仅以
+	/// <b>方法级</b> <see cref="PermissionAttribute"/> 声明的权限不被发现——进而让宿主以为
+	/// 本应用不需要授权数据，行级判定从此拿不到数据。
 	/// </remarks>
 	IReadOnlyList<string> AllOperations { get; }
 

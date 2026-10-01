@@ -25,16 +25,19 @@ public interface IScopeModel
 	object PolicyObject { get; }
 
 	/// <summary>
-	/// 获取指定权限码上的行级策略（实际类型为 <see cref="ScopePolicy{T}"/>）。
+	/// 获取逐条声明的行级策略：<b>授权标识</b>（操作名或权限码）→ 策略（实际类型为 <see cref="ScopePolicy{T}"/>）。
 	/// </summary>
-	/// <param name="code">权限码。</param>
-	/// <returns>该码上显式声明的策略；未声明时返回 <see langword="null"/>（调用方回落到默认策略）。</returns>
-	object PolicyFor(string code);
+	/// <remarks>未声明的标识回落到 <see cref="PolicyObject"/>。</remarks>
+	IReadOnlyDictionary<string, object> DeclaredPolicies { get; }
 
 	/// <summary>
-	/// 获取已显式声明行级策略的权限码集合。
+	/// 获取各条声明的授予键：授权标识 → 键。
 	/// </summary>
-	IReadOnlyCollection<string> DeclaredCodes { get; }
+	/// <remarks>
+	/// 键决定「用户在该标识下被授予的维度值从哪里取」（见 <see cref="ScopeSubjectSet.ValuesOf"/>），
+	/// 按操作声明时取显式给出的权限码，按码声明时取该码本身，都没给则取操作名自身。
+	/// </remarks>
+	IReadOnlyDictionary<string, string> DeclaredKeys { get; }
 }
 
 /// <summary>
@@ -54,7 +57,7 @@ public interface IScopeModel<T> : IScopeModel
 	where T : class
 {
 	/// <summary>
-	/// 获取本资源的访问策略。
+	/// 获取本资源的默认访问策略。
 	/// </summary>
 	ScopePolicy<T> Policy { get; }
 }

@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 由 <see cref="Create(IPermissionCodeSource, Assembly[])"/> 扫描程序集构建，并在<b>注册期</b>完成校验。
+/// 由 <c>Create</c> 扫描程序集构建，并在<b>注册期</b>完成校验。
 /// 注册表按容器构建、不含进程级可变状态，因此不同的容器与测试之间天然隔离
 /// （共享的 <see cref="Empty"/> 是空表，不可变）。
 /// </para>
@@ -26,7 +26,7 @@ public sealed class ScopeModelRegistry
 	}
 
 	/// <summary>
-	/// 不含任何模型的共享空表（不可变）：<see cref="Create(IPermissionCodeSource, Assembly[])"/> 未扫描到模型时返回它，
+	/// 不含任何模型的共享空表（不可变）：<see cref="Create(Assembly[])"/> 未扫描到模型时返回它，
 	/// 此时全部资源都不受数据权限约束。
 	/// </summary>
 	public static ScopeModelRegistry Empty { get; } = new([]);
@@ -46,10 +46,8 @@ public sealed class ScopeModelRegistry
 	/// <summary>
 	/// 从给定程序集中扫描权限模型并完成注册期校验。
 	/// </summary>
-	/// <param name="codeSource">权限码来源，用于校验策略键解析。见 <see cref="IPermissionCodeSource"/>。</param>
 	/// <param name="assemblies">要扫描的程序集。</param>
 	/// <returns>构建好的注册表。</returns>
-	/// <exception cref="ArgumentNullException"><paramref name="codeSource"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="ScopeModelValidationException">
 	/// 存在配置问题时抛出，携带<b>全部</b>诊断。
 	/// </exception>
@@ -57,13 +55,11 @@ public sealed class ScopeModelRegistry
 	/// 校验项清单与各自的修法见 README §5.6。所有问题一次报全
 	/// （<see cref="ScopeModelValidationException.Diagnostics"/>），而不是修一个跑一次。
 	/// </remarks>
-	public static ScopeModelRegistry Create(IPermissionCodeSource codeSource, params Assembly[] assemblies)
+	public static ScopeModelRegistry Create(params Assembly[] assemblies)
 	{
-		ArgumentNullException.ThrowIfNull(codeSource);
-
 		return new ScopeModelRegistryBuilder()
 			.AddFrom(assemblies)
-			.Build(codeSource);
+			.Build();
 	}
 
 	/// <summary>

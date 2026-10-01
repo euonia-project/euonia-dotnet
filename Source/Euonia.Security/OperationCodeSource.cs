@@ -8,7 +8,9 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 这是 <see cref="IPermissionCodeSource"/> 最常见的实现，规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3、§3.4）。
+/// 规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3、§3.4）。
+/// 宿主经由 <see cref="Microsoft.Extensions.DependencyInjection.PermissionOptions"/> 的
+/// <c>OnAttributeOrName</c> / <c>OnMethod</c> 声明规则，本类型是那份声明的执行体，故不公开。
 /// </para>
 /// <para>
 /// 收集范围与运行时判定一致：<b>类型级</b> <see cref="PermissionAttribute"/> 对本来源已声明的每个操作生效，
@@ -21,7 +23,7 @@ namespace Nerosoft.Euonia.Security;
 /// 结果按（类型，操作）缓存，反复调用不会重复反射。
 /// </para>
 /// </remarks>
-public sealed class OperationCodeSource : IPermissionCodeSource
+internal sealed class OperationCodeSource : IPermissionCodeSource
 {
 	/// <summary>方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。</summary>
 	private const BindingFlags MethodFlags =
@@ -104,7 +106,7 @@ public sealed class OperationCodeSource : IPermissionCodeSource
 /// <summary>
 /// <see cref="OperationCodeSource"/> 的构造器：把「操作入口判定」写成数据。
 /// </summary>
-public sealed class OperationCodeSourceBuilder
+internal sealed class OperationCodeSourceBuilder
 {
 	// 操作名按忽略大小写匹配：配置里写 "Read" 与运行时查询 "read" 必须命中同一组规则。
 	private readonly Dictionary<string, List<Func<MethodInfo, bool>>> _rules = new(StringComparer.OrdinalIgnoreCase);

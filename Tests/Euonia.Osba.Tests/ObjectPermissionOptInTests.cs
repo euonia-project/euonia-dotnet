@@ -32,7 +32,6 @@ public class ObjectPermissionOptInTests
 		Assert.Null(provider.GetService<IScopeGuard>());
 		Assert.Null(provider.GetService<IPermissionChecker>());
 		Assert.Null(provider.GetService<ScopeModelRegistry>());
-		Assert.Null(provider.GetService<IScopeKeyResolver>());
 
 		// Osba 自己的权限契约同样不由 AddBusinessObject 注册：
 		// 没有来源、没有判定实现，工厂边界在「声明了要求」时会报错而不是静默放行
@@ -68,7 +67,6 @@ public class ObjectPermissionOptInTests
 		Assert.NotNull(provider.GetService<IScopeGuard>());
 		Assert.NotNull(provider.GetService<IPermissionChecker>());
 		Assert.NotNull(provider.GetService<ScopeModelRegistry>());
-		Assert.NotNull(provider.GetService<IScopeKeyResolver>());
 	}
 
 	[Fact]
@@ -87,16 +85,16 @@ public class ObjectPermissionOptInTests
 	}
 
 	[Fact]
-	public void AddPermission_Should_Not_Override_Developer_KeyResolver()
+	public void AddPermission_Should_Not_Override_Developer_Operation_Resolver()
 	{
 		var services = NewServices();
 
 		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
-		services.AddSingleton<IScopeKeyResolver, FixedKeyResolver>();
+		services.AddSingleton<IObjectOperationResolver, FixedOperationResolver>();
 
 		var provider = services.BuildServiceProvider();
 
-		Assert.IsType<FixedKeyResolver>(provider.GetService<IScopeKeyResolver>());
+		Assert.IsType<FixedOperationResolver>(provider.GetService<IObjectOperationResolver>());
 	}
 
 	[Fact]
@@ -112,9 +110,13 @@ public class ObjectPermissionOptInTests
 		Assert.Contains(nameof(IScopeSubjectResolver), ex.Message, StringComparison.Ordinal);
 	}
 
-	private sealed class FixedKeyResolver : IScopeKeyResolver
+	private sealed class FixedOperationResolver : IObjectOperationResolver
 	{
-		public string Resolve(object resource, string explicitKey) => explicitKey ?? "fixed";
+		public bool TryResolve(object resource, out string operation)
+		{
+			operation = "fixed";
+			return true;
+		}
 	}
 
 	private sealed class FixedSubjectResolver : IScopeSubjectResolver

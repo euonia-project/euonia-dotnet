@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>La configuration des autorisations est vide : aucune règle d'entrée d'opération n'a été déclarée, et ni une source de codes / NoOperationCodes / NoModels n'a été fournie ni un assemblage à scanner n'a été ajouté. Utilisez OnAttribute / OnMethodName / OnAttributeOrName pour déclarer la règle d'entrée lorsqu'il y a des codes d'autorisation au niveau méthode ; fournissez une source de codes via Source lorsque les règles viennent d'ailleurs ; affirmez NoOperationCodes s'il n'y en a pas ; affirmez NoModels lorsque l'application n'a vraiment aucun modèle d'autorisation ni déclaration.</value>
+    <value>La configuration des autorisations est vide : aucune règle d'entrée d'opération n'a été déclarée, et ni une source de codes / NoOperationCodes / NoModels n'a été fournie ni un assemblage à scanner n'a été ajouté. Utilisez OnAttributeOrName / OnMethod pour déclarer la règle d'entrée lorsqu'il y a des codes d'autorisation au niveau méthode ; fournissez une source de codes via Source lorsque les règles viennent d'ailleurs ; affirmez NoOperationCodes s'il n'y en a pas ; affirmez NoModels lorsque l'application n'a vraiment aucun modèle d'autorisation ni déclaration.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>La configuration des autorisations se contredit : NoOperationCodes a été affirmé (aucun code d'autorisation au niveau des méthodes), alors que des règles d'entrée d'opération ont été déclarées. Une seule des deux options est autorisée : déclarez des règles lorsqu'il existe des codes d'autorisation au niveau des méthodes, et affirmez NoOperationCodes lorsqu'il n'y en a pas.</value>
@@ -142,49 +142,10 @@
     <value>Le type de l'attribut d'entrée doit être un type d'attribut non nul (une sous-classe de Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>Aucune règle d'entrée d'opération n'a été déclarée. Appelez OnAttribute / OnMethodName / OnAttributeOrName / OnMethod au moins une fois ; si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>Il manque le nœud '{0}' dans la configuration des règles d'autorisation (la section '{1}' a été vérifiée). Veuillez passer la section qui contient les règles, par exemple configuration.GetSection("Permission").</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>Le nom d'opération '{0}' dans la configuration ne diffère d'une opération antérieure que par la casse. Les noms d'opération sont sensibles à la casse, veuillez uniformiser l'orthographe.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>L'opération '{0}' dans la configuration ne déclare aucune règle d'entrée : indiquez '{1}' (un tableau de noms de types d'attributs d'entrée) ou '{2}' (un tableau de noms de méthodes d'entrée) ; les deux peuvent être fournis (une entrée dès que l'un des deux correspond).</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>Le nœud '{0}' de la configuration des règles d'autorisation ne contient aucune opération. Si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>L'opération '{0}' dans la configuration contient un nœud inconnu '{1}'. Nœuds disponibles : '{2}' (noms de types d'attributs d'entrée) et '{3}' (noms de méthodes d'entrée).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>Le '{0}' dans la configuration doit être écrit sous forme de tableau (par exemple "{1}" : ["…"]), et non comme une chaîne unique.</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>Le '{0}' dans la configuration doit être une chaîne non vide.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' ({1}) dans la configuration ne peut pas être résolu. Veuillez utiliser le nom de type complet (espace de noms + nom de type), un nom qualifié par assembly (« Type, Assembly »), ou donner directement le nom de la méthode via '{2}'.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' dans la configuration est un type générique : les attributs génériques ne peuvent pas servir de marqueurs d'entrée.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' dans la configuration n'est pas un attribut (il doit pointer vers une sous-classe de Attribute).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' ({1}) dans la configuration ne peut pas être résolu : {2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' ({1}) dans la configuration correspond à plusieurs types portant le même nom dans la portée d'analyse ({2}). Veuillez utiliser un nom qualifié par assembly (« Type, Assembly »).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>Le type d'attribut d'entrée '{0}' ({1}) dans la configuration a un nom court ambigu dans la portée d'analyse ({2}). Veuillez utiliser le nom de type complet.</value>
+    <value>Aucune règle d'entrée d'opération n'a été déclarée. Appelez OnAttributeOrName / OnMethod au moins une fois ; si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>Le nom d'opération '{0}' utilise le préfixe '{1}' réservé par l'infrastructure. La clé de politique par défaut d'une opération est dérivée de ce préfixe, le nom d'opération lui-même ne doit donc pas le contenir.</value>
+    <value>Le nom d'opération '{0}' utilise le préfixe '{1}' réservé par l'infrastructure. Les noms portant ce préfixe appartiennent à l'infrastructure ; les opérations et codes de permission définis par l'application ne doivent pas le porter.</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>Le code d'autorisation '{0}' utilise le préfixe '{1}' réservé par l'infrastructure. Veuillez utiliser un code dépourvu de ce préfixe.</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>Un code d'autorisation « * » seul correspond à toutes les autorisations et n'est donc pas autorisé. Utilisez un joker de préfixe avec un préfixe non vide (par exemple « repo:* ») ; l'octroi de tout doit être exprimé en accordant explicitement les codes.</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>La politique du code d'autorisation '{0}' est déclarée plus d'une fois.</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>Le nom « {0} » est déjà revendiqué par « {1} ». Un identifiant (nom d'opération ou code de permission) et une clé d'octroi partagent le même espace de noms ; un nom ne peut porter qu'une seule politique.</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>L'opération {1} sur le type de ressource '{0}' se résout en plusieurs codes d'autorisation ayant déclaré une politique au niveau des lignes ({2}). Veuillez vous assurer qu'au plus un code d'autorisation d'une opération déclare une politique.</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>Les données d'autorisation ne sont pas encore résolues dans cette portée, et les lectures synchrones n'attendent jamais après elles. Attendez d'abord « {0} » (ou « {1} ») sur un point d'entrée asynchrone avant tout contrôle synchrone.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>La politique de « {0} » est déclarée plus d'une fois.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All nécessite au moins une sous-politique ; « sans contrainte » doit être écrit explicitement sous la forme Where(_ =&gt; true).</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>Aucune politique n'a été fournie. La politique et le modèle doivent être écrits dans le même type déclarant ; la validation ne peut pas aboutir si l'un des deux est absent.</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>Le code d'autorisation '{0}' a été déclaré mais aucune politique n'a été fournie pour lui.</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>Une politique au niveau des lignes a été déclarée pour le code d'autorisation '{0}', mais aucune opération ne se résout vers ce code (vérifiez que les codes de [Permission] correspondent à ceux de Declare). Codes résolus : {1}.</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>La politique ne peut structurellement jamais autoriser (Allow est en permanence faux), ce qui signifie généralement que chaque branche sous Any est une condition de refus. Veuillez vérifier la composition de la politique.</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>Le type de ressource est contraint par la portée des données, mais {0} ne peut pas être résolu depuis la portée de l'objet. Veuillez vous assurer que AddPermission a été appelée.</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>La compilation de la politique de portée n'a toujours pas pu obtenir un instantané stable des données d'autorisation après {0} tentatives ; des appels Refresh concurrents continuent de se produire. Veuillez rechercher du code qui appelle IScopeGuard.Refresh de manière répétée dans la même portée.</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>La résolution des données d'autorisation n'a toujours pas été acceptée après {0} tentatives ; des appels Refresh concurrents continuent de se produire. Veuillez rechercher du code qui appelle IScopeGuard.Refresh de manière répétée dans la même portée.</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} est une instance partagée en lecture seule à laquelle aucune attribution ne peut être ajoutée ; appelez d'abord Clone() lorsqu'une copie modifiable est nécessaire.</value>

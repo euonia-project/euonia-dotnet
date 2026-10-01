@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>權限配置是空的：沒有聲明操作入口規則，也沒有給出權限碼來源 / 斷言 NoOperationCodes / NoModels 或掃描程序集。有方法級權限碼請用 OnAttribute / OnMethodName / OnAttributeOrName 聲明入口規則；規則來自別處請用 Source 給出權限碼來源；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
+    <value>權限配置是空的：沒有聲明操作入口規則，也沒有給出權限碼來源 / 斷言 NoOperationCodes / NoModels 或掃描程序集。有方法級權限碼請用 OnAttributeOrName / OnMethod 聲明入口規則；規則來自別處請用 Source 給出權限碼來源；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>權限設定自相矛盾：已斷言 NoOperationCodes（沒有方法層級的權限碼），卻又宣告了操作入口規則。兩者只能擇一：有方法層級的權限碼就宣告規則，沒有就斷言 NoOperationCodes。</value>
@@ -142,49 +142,10 @@
     <value>入口特性類型必須是非 null 的特性類型（Attribute 的衍生類別）。</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>沒有宣告任何操作入口規則。請至少呼叫一次 OnAttribute / OnMethodName / OnAttributeOrName / OnMethod；若本應用確實沒有方法級權限碼，請明確斷言 permission.NoOperationCodes()。</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>權限規則設定缺少 '{0}' 節點（已檢查設定區段 '{1}'）。請傳入規則所在的設定區段，例如 configuration.GetSection("Permission")。</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>設定中的操作名稱 '{0}' 與先前的操作只有大小寫不同。操作名稱區分大小寫，請統寫法。</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>設定中的操作 '{0}' 沒有宣告任何入口規則：請提供 '{1}'（入口特性類型名稱陣列）或 '{2}'（入口方法名稱陣列）；兩者可同時提供（任一相符即為入口）。</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>權限規則配置的 '{0}' 節點下沒有任何操作。若本應用確實沒有方法級權限碼，請明確斷言 permission.NoOperationCodes()。</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>設定中的操作 '{0}' 含有未知的節點 '{1}'。可用節點：'{2}'（入口特性類型名稱）與 '{3}'（入口方法名稱）。</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>設定中的 '{0}' 必須寫成陣列（例如 "{1}": ["…"]），不能寫成單一字串。</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>設定中的 '{0}' 必須是非空字串。</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}'（{1}）無法解析。請改用完整類型名稱（命名空間 + 類型名稱）、組件限定名稱（"類型, 組件"），或直接透過 '{2}' 給出方法名稱。</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}' 是泛型類型：泛型特性無法作為入口標記。</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}' 不是特性（應指向 Attribute 的衍生類別）。</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}'（{1}）無法解析：{2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}'（{1}）在掃描範圍內比對到多個同名類型（{2}）。請改用組件限定名稱（"類型, 組件"）。</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>設定中的入口特性類型 '{0}'（{1}）在掃描範圍內的短名稱有歧義（{2}）。請改用完整類型名稱。</value>
+    <value>沒有宣告任何操作入口規則。請至少呼叫一次 OnAttributeOrName / OnMethod；若本應用確實沒有方法級權限碼，請明確斷言 permission.NoOperationCodes()。</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>操作名稱 '{0}' 使用了框架保留的前置詞 '{1}'。操作的預設策略鍵是由該前置詞衍生，因此操作名稱本身不得帶上前置詞。</value>
+    <value>操作名稱 '{0}' 使用了框架保留的前置詞 '{1}'。該前置詞下的名稱歸框架所有，應用定義的操作名稱與權限碼都不得帶上前置詞。</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>權限碼 '{0}' 使用了框架保留的前置詞 '{1}'。請改用不含該前置詞的權限碼。</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>裸 '*' 權限碼會匹配全部權限，因此不允許使用。請改用帶非空前置詞的通配（例如 'repo:*'）；「全部」必須透過逐個授予權限碼來明確表達。</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>權限碼 '{0}' 的策略被重複宣告。</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>名稱 '{0}' 已被 '{1}' 佔用。授權標識（操作名稱或權限碼）與授予鍵共用同一個命名空間，一個名字上只能有一條策略。</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>資源類型 '{0}' 的操作 {1} 解析出多個宣告了列層級策略的權限碼（{2}）。請確保同一個操作最多只有一個權限碼宣告了策略。</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>本作用域內尚未解析授權資料，而同步讀不會為它等待。請在非同步入口先 await '{0}'（或 '{1}'），再進入同步判定。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>標識 '{0}' 的策略被重複宣告。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All 至少需要一個子策略；「無限制」必須明確寫成 Where(_ =&gt; true)。</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>未提供策略。策略與模型必須寫在同一個宣告類型中，缺少任何一個都無法通過驗證。</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>已宣告權限碼 '{0}'，但未提供對應的策略。</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>已為權限碼 '{0}' 宣告列層級策略，但沒有任何操作會解析到該權限碼（請核對方法上 [Permission] 的權限碼與 Declare 中的權限碼是否一致）。已解析到的權限碼：{1}。</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>此策略在結構上永遠不會放行（Allow 恆為 false），通常代表 Any 底下全都是拒絕條件。請檢查策略的組成。</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>資源類型受資料範圍授權約束，但無法從物件的範圍解析 {0}。請確認已呼叫 AddPermission。</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>權限策略編譯在重試 {0} 次後仍無法取得穩定的授權資料快照，期間持續發生並行的 Refresh。請檢查是否有程式碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>授權資料解析在重試 {0} 次後仍未被接受，期間持續發生並行的 Refresh。請檢查是否有程式碼在同一個範圍內反覆呼叫 IScopeGuard.Refresh。</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} 是共用的唯讀執行個體，無法加入授予；需要可變更的複本時請先呼叫 Clone()。</value>

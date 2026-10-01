@@ -18,11 +18,14 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// });
 /// </code>
 /// <para>
-/// <see cref="Scan"/> 可多次调用（程序集按并集累积）；规则方法与 <see cref="OperationCodeSourceBuilder"/> 一致，
-/// 可任意组合。两种特殊场景用显式断言表达：
+/// <see cref="Scan"/> 可多次调用（程序集按并集累积）。规则只有两个入口：<see cref="OnAttributeOrName"/>
+/// 覆盖「打特性或按推导出的名字」这一最常见约定，<see cref="OnMethod"/> 是任意谓词的逃生舱。
+/// </para>
+/// <para>
+/// 两种特殊场景用显式断言表达：
 /// </para>
 /// <list type="bullet">
-/// <item><see cref="NoOperationCodes"/>：本应用没有方法级权限码（取代 <c>EmptyCodeSource.Instance</c>）。</item>
+/// <item><see cref="NoOperationCodes"/>：本应用没有方法级权限码。</item>
 /// <item><see cref="NoModels"/>：本应用没有任何权限模型与权限声明（用于零扫描范围的显式放行）。</item>
 /// </list>
 /// <para>
@@ -68,11 +71,6 @@ public sealed class PermissionOptions
 	internal OperationCodeSourceBuilder Rules => _rules;
 
 	/// <summary>
-	/// 获取规则构造器；尚未声明时创建（供配置载体直接写入规则）。
-	/// </summary>
-	internal OperationCodeSourceBuilder RulesBuilder() => _rules ??= OperationCodeSource.Create();
-
-	/// <summary>
 	/// 登记要扫描权限模型与权限声明的程序集；可多次调用，程序集按并集累积。
 	/// </summary>
 	/// <param name="assemblies">要扫描的程序集。</param>
@@ -95,8 +93,8 @@ public sealed class PermissionOptions
 	/// </summary>
 	/// <returns>当前配置，便于链式调用。</returns>
 	/// <remarks>
-	/// 这是显式选择而非默认值；与本断言不可同用的是按权限码声明的行级策略
-	/// （<c>ScopePolicySet&lt;T&gt;.For(code, …)</c>）——没有任何操作能解析到自定义的码，注册期会拒绝。
+	/// 这是显式选择而非默认值：方法上的 <see cref="PermissionAttribute"/> 与类型级声明不同，
+	/// 它必须由本来源声明了入口规则才会被收集，否则形同虚设——所以「没有方法级权限码」要说出来。
 	/// </remarks>
 	public PermissionOptions NoOperationCodes()
 	{
@@ -111,30 +109,6 @@ public sealed class PermissionOptions
 	public PermissionOptions NoModels()
 	{
 		NoModelsAsserted = true;
-		return this;
-	}
-
-	/// <summary>
-	/// 声明「打了指定特性的方法即该操作的入口」。
-	/// </summary>
-	/// <param name="operation">业务操作名。</param>
-	/// <param name="attributeTypes">入口特性类型。</param>
-	/// <returns>当前配置，便于链式调用。</returns>
-	public PermissionOptions OnAttribute(string operation, params Type[] attributeTypes)
-	{
-		EnsureRules().OnAttribute(operation, attributeTypes);
-		return this;
-	}
-
-	/// <summary>
-	/// 声明「方法名在给定集合内的方法即该操作的入口」。
-	/// </summary>
-	/// <param name="operation">业务操作名。</param>
-	/// <param name="names">入口方法名；大小写敏感。</param>
-	/// <returns>当前配置，便于链式调用。</returns>
-	public PermissionOptions OnMethodName(string operation, params string[] names)
-	{
-		EnsureRules().OnMethodName(operation, names);
 		return this;
 	}
 
@@ -164,12 +138,13 @@ public sealed class PermissionOptions
 	}
 
 	/// <summary>
-	/// 直接指定权限码来源；规则不在代码也不在配置里（例如来自数据库）时使用。
+	/// 直接指定权限码来源；规则不在代码里（例如来自数据库）时使用。
 	/// </summary>
 	/// <param name="source">权限码来源，回答「某类型在某操作上声明了哪些权限码」。</param>
 	/// <returns>当前配置，便于链式调用。</returns>
 	/// <remarks>
-	/// 指定来源后不能再声明入口规则（<see cref="OnAttribute"/> 等）——两者是互斥的来源形态。
+	/// 指定来源后不能再声明入口规则（<see cref="OnAttributeOrName"/>、<see cref="OnMethod"/>）——
+	/// 两者是互斥的来源形态。
 	/// </remarks>
 	public PermissionOptions Source(IPermissionCodeSource source)
 	{

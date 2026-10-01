@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>La configuración de permisos está vacía: no se declaró ninguna regla de entrada de operaciones y no se dio un origen de códigos / NoOperationCodes / NoModels ni un ensamblado para escanear. Use OnAttribute / OnMethodName / OnAttributeOrName para declarar la regla de entrada cuando haya códigos de permiso a nivel de método; indique un origen de códigos con Source cuando las reglas vengan de otro sitio; afirme NoOperationCodes cuando no los haya; afirme NoModels cuando la aplicación realmente no tenga modelo de permisos ni declaración.</value>
+    <value>La configuración de permisos está vacía: no se declaró ninguna regla de entrada de operaciones y no se dio un origen de códigos / NoOperationCodes / NoModels ni un ensamblado para escanear. Use OnAttributeOrName / OnMethod para declarar la regla de entrada cuando haya códigos de permiso a nivel de método; indique un origen de códigos con Source cuando las reglas vengan de otro sitio; afirme NoOperationCodes cuando no los haya; afirme NoModels cuando la aplicación realmente no tenga modelo de permisos ni declaración.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>La configuración de permisos de acceso es contradictoria: indicó NoOperationCodes (sin códigos de permiso en el nivel del método), pero declaró reglas de entrada para la operación. Solo se permite una de las dos. Si hay códigos de permiso en el nivel del método, declare las reglas; si no los hay, indique NoOperationCodes.</value>
@@ -142,49 +142,10 @@
     <value>El tipo del atributo de entrada debe ser un tipo de atributo no nulo (una clase derivada de Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>No se declaró ninguna regla de entrada de operaciones. Llame a OnAttribute / OnMethodName / OnAttributeOrName / OnMethod al menos una vez; si la aplicación realmente no tiene códigos de permiso a nivel de método, afirme explícitamente permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>Falta el nodo '{0}' en la configuración de reglas de permisos (se examinó la sección '{1}'). Pase la sección que contiene las reglas (por ejemplo, configuration.GetSection("Permission")).</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>El nombre de operación '{0}' de la configuración coincide con una operación anterior si se distinguen mayúsculas de minúsculas. Los nombres de operación distinguen mayúsculas de minúsculas, así que unifique la grafía.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>La operación '{0}' de la configuración no declara reglas de entrada. Especifique '{1}' (un arreglo con nombres de tipos de atributo de entrada) o '{2}' (un arreglo con nombres de métodos de entrada). Puede especificar ambos: la entrada se produce si coincide cualquiera de los dos.</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>El nodo '{0}' de la configuración de reglas de permisos no contiene ninguna operación. Si la aplicación realmente no tiene códigos de permiso a nivel de método, afirme explícitamente permission.NoOperationCodes().</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>La operación '{0}' de la configuración contiene un nodo desconocido '{1}'. Los nodos disponibles son '{2}' (nombres de tipos de atributo de entrada) y '{3}' (nombres de métodos de entrada).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>El valor '{0}' de la configuración debe especificarse como un arreglo y no como una sola cadena (por ejemplo, "{1}": ["…"]).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>El valor '{0}' de la configuración debe ser una cadena no vacía.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>No se puede resolver el tipo de atributo de entrada '{0}' ({1}) de la configuración. Use un nombre de tipo completo (espacio de nombres + nombre de tipo), un nombre completo con ensamblado ("tipo, ensamblado") o especifique directamente los nombres de método con '{2}'.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>El tipo de atributo de entrada '{0}' de la configuración es genérico. Un atributo genérico no se puede usar como marcador de entrada.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>El tipo de atributo de entrada '{0}' de la configuración no es un atributo (debe apuntar a una clase derivada de Attribute).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>No se puede resolver el tipo de atributo de entrada '{0}' ({1}) de la configuración: {2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>El tipo de atributo de entrada '{0}' ({1}) de la configuración coincide con varios tipos del mismo nombre dentro del ámbito del examen ({2}). Use un nombre completo con ensamblado ("tipo, ensamblado").</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>El tipo de atributo de entrada '{0}' ({1}) de la configuración tiene un nombre corto ambiguo dentro del ámbito del examen ({2}). Use un nombre de tipo completo.</value>
+    <value>No se declaró ninguna regla de entrada de operaciones. Llame a OnAttributeOrName / OnMethod al menos una vez; si la aplicación realmente no tiene códigos de permiso a nivel de método, afirme explícitamente permission.NoOperationCodes().</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>El nombre de operación '{0}' usa el prefijo reservado del marco '{1}'. La clave de política predeterminada de una operación se deriva de ese prefijo, por lo que no puede formar parte del propio nombre de la operación.</value>
+    <value>El nombre de operación '{0}' usa el prefijo reservado del marco '{1}'. Los nombres con ese prefijo pertenecen al marco; ni las operaciones ni los códigos de permiso definidos por la aplicación deben llevarlo.</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>El código de permiso '{0}' usa el prefijo reservado del marco '{1}'. Use un código que no contenga ese prefijo.</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>Un código de permiso '*' simple coincide con todos los permisos y no está permitido. Use un comodín de prefijo con un prefijo no vacío (por ejemplo, 'repo:*'); conceder todo debe expresarse concediendo los códigos explícitamente.</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>La política del código de permiso '{0}' se declaró más de una vez.</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>El nombre '{0}' ya está ocupado por '{1}'. Un identificador (nombre de operación o código de permiso) y una clave de concesión comparten un mismo espacio de nombres; cada nombre admite una sola política.</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>La operación {1} del tipo de recurso '{0}' se resuelve a varios códigos de permiso ({2}) que declaran políticas en el nivel de la fila. Asegúrese de que los códigos de permiso de la operación declaren como máximo una política.</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>Los datos de autorización aún no se resolvieron en este ámbito y las lecturas sincrónicas nunca esperan por ellos. Espere primero '{0}' (o '{1}') en una entrada asincrónica antes de cualquier comprobación sincrónica.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>La política de '{0}' se declaró más de una vez.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All necesita al menos una subpolítica. Escriba explícitamente Where(_ =&gt; true) para indicar «sin restricciones».</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>No se indicó ninguna política. La política y el modelo deben describirse en el mismo tipo de origen de la declaración. La validación no se supera si falta cualquiera de los dos.</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>Se declaró el código de permiso '{0}', pero no se indicó su política.</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>Se declaró una política en el nivel de la fila para el código de permiso '{0}', pero ninguna operación se resuelve a ese código (compruebe que los códigos de [Permission] coincidan con los de Declare). Códigos resueltos: {1}.</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>Esta política no puede permitir de forma estructural (Allow siempre es false). Normalmente significa que todas las ramas de Any son condiciones de denegación. Revise la composición de la política.</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>El tipo de recurso está restringido por el ámbito de datos, pero no se puede resolver {0} desde el ámbito del objeto. Compruebe que se haya llamado a AddPermission.</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>No se pudo obtener una instantánea estable de los datos de autorización para compilar la política de ámbito después de {0} intentos. Las llamadas a Refresh simultáneas continúan. Busque código que llame a IScopeGuard.Refresh repetidamente dentro del mismo ámbito.</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>La resolución de los datos de autorización no se aceptó después de {0} intentos. Las llamadas a Refresh simultáneas continúan. Busque código que llame a IScopeGuard.Refresh repetidamente dentro del mismo ámbito.</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} es una instancia compartida de solo lectura, por lo que no se le pueden agregar concesiones. Llame primero a Clone() si necesita una copia mutable.</value>

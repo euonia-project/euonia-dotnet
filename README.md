@@ -256,7 +256,7 @@ protected override void AddRules()
 
 权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`）。`Euonia.Osba` **不引用引擎**：
 它实现 Core 里权限契约的自己那一半（对象状态 → 操作、来源、工厂边界的强制），引擎实现另一半
-（策略编译、行级判定、策略键解析）。**两者之间不需要适配包**：宿主用
+（策略编译、行级判定、按授权标识选取行级策略）。**两者之间不需要适配包**：宿主用
 `AddBusinessObject(asm)` + `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })` 两行接上，
 也可以只注册自己的实现。
 两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
@@ -264,7 +264,7 @@ protected override void AddRules()
 | | 操作权限 | 数据权限 |
 |---|---|---|
 | 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
-| 粒度 | 类型级 `[Permission]` + **行级**（按权限码的策略） | 行级 |
+| 粒度 | 类型级 `[Permission]` + **行级**（策略按授权标识声明，授予写在权限码下） | 行级 |
 | 强制点 | `BusinessObjectFactory` 调用边界 | 查询下推 + 工厂保存边界 |
 | 失败形态 | `SecurityException` | 查询排除该行／保存抛 `SecurityException` |
 
@@ -291,7 +291,7 @@ public sealed class RepoScope : ScopeModel<Repo>
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
 
     public override void Declare(ScopePolicySet<Repo> policies)
-        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // 行级操作权限
+        => policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");  // 行级操作权限
 }
 
 // 3) 判定
@@ -301,16 +301,17 @@ var provider = services.BuildServiceProvider();
 provider.GetRequiredService<IScopeGuard>();  // 首次解析守卫即执行启动校验：缺解析器马上失败
 
 var guard = provider.GetRequiredService<IScopeGuard>();
-var visible = guard.Apply(dbContext.Repos);  // 下推到数据库
-guard.Allows(repo, "repo:delete");           // 单行判定
-guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
+await guard.EnsureResolvedAsync();             // 同步判定前预热（幂等）
+var visible = guard.Apply(dbContext.Repos);    // 下推到数据库
+guard.Allows(repo, BusinessOperation.Delete);  // 单行判定
+guard.Explain(repo, BusinessOperation.Delete); // 审计：命中了哪条策略
 ```
 
 **关键设计**：
 
 - **权限码来自数据而非令牌**——权限码多时不撑爆 Token，且**取消授权立即生效**（无需重签令牌）。
-- **行级操作权限**：把资源标识也映射为维度，按权限码声明不同的行范围，
-  于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
+- **行级操作权限**：把资源标识也映射为维度，按授权标识声明不同的行范围（授予键默认取标识自身，
+  也可以显式写字面权限码），于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
 - **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
 - **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
   `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`。

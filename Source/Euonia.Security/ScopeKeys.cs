@@ -1,15 +1,19 @@
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 数据权限策略的键：框架保留命名空间。
+/// 数据权限的框架保留命名空间。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 策略按<b>权限码</b>声明。「用户持有的权限码」用于类型级的操作闸门，
-/// 「该码下的行级授予」用于按行的判定，两者共用同一个键空间。
+/// 授权的键空间由应用自己的<b>权限码</b>构成：用户持有某个码用于类型级闸门，该码下的授予用于按行判定。
+/// 框架只保留 <see cref="Prefix"/>（<c>@</c>）这一个前缀，其中只有一个有意义的键——<see cref="Default"/>。
 /// </para>
 /// <para>
-/// 以 <see cref="Prefix"/>（<c>@</c>）开头的键是<b>框架保留</b>的，应用声明的权限码不得使用该前缀；
+/// <b>操作名不再映射到 <c>@</c> 命名空间</b>：未单独声明策略的标识直接以自身为键
+/// （见 <c>ScopeModelRegistration.TryResolve</c>），因此宿主自定义的操作（<c>approve</c>、<c>push</c>）
+/// 与权限码一样能承载行级授予——把操作名塞进保留前缀只会让它的授予永远取不到。
+/// </para>
+/// <para>
 /// 这里刻意不用字面量 <c>*</c> 作通配键（理由见 DESIGN §1.6）。键的完整解析规则见 README §5.8。
 /// </para>
 /// </remarks>
@@ -21,50 +25,9 @@ public static class ScopeKeys
 	public const string Prefix = "@";
 
 	/// <summary>
-	/// 默认键：模型未针对某个权限码单独声明策略时生效的键。
+	/// 默认键：调用方没有给出标识时生效的键，也是任何标识在自身没有任何授予时的回落目标。
 	/// </summary>
 	public const string Default = "@default";
-
-	/// <summary>
-	/// <see cref="BusinessOperation.Read"/> 的默认键。
-	/// </summary>
-	public const string Read = Prefix + BusinessOperation.Read;
-
-	/// <summary>
-	/// <see cref="BusinessOperation.Create"/> 的默认键。
-	/// </summary>
-	public const string Create = Prefix + BusinessOperation.Create;
-
-	/// <summary>
-	/// <see cref="BusinessOperation.Update"/> 的默认键。
-	/// </summary>
-	public const string Update = Prefix + BusinessOperation.Update;
-
-	/// <summary>
-	/// <see cref="BusinessOperation.Delete"/> 的默认键。
-	/// </summary>
-	public const string Delete = Prefix + BusinessOperation.Delete;
-
-	/// <summary>
-	/// <see cref="BusinessOperation.Execute"/> 的默认键。
-	/// </summary>
-	public const string Execute = Prefix + BusinessOperation.Execute;
-
-	/// <summary>
-	/// 获取指定操作对应的默认键：以 <see cref="Prefix"/> 为前缀加上操作名。
-	/// </summary>
-	/// <param name="operation">业务操作名；可以是 <see cref="BusinessOperation"/> 的常量，也可以是宿主自定义的操作。</param>
-	/// <returns>该操作的默认键。</returns>
-	/// <exception cref="ArgumentException">当 <paramref name="operation"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
-	/// <exception cref="InvalidOperationException">当 <paramref name="operation"/> 使用了框架保留前缀 <see cref="Prefix"/> 时抛出。</exception>
-	/// <remarks>
-	/// 派生是纯字符串拼接而非查表，因此<b>任何</b>操作名都能得到确定的默认键——
-	/// 操作集由使用方定义，框架不枚举。
-	/// </remarks>
-	public static string For(string operation)
-	{
-		return Prefix + ValidateOperation(operation);
-	}
 
 	/// <summary>
 	/// 校验一个操作名。
@@ -112,5 +75,30 @@ public static class ScopeKeys
 			Prefix);
 
 		return code;
+	}
+
+	/// <summary>
+	/// 取一个<b>没有单独声明策略</b>的标识所用的授予键。
+	/// </summary>
+	/// <param name="identifier">授权标识：操作名或权限码。</param>
+	/// <returns>授予键。</returns>
+	/// <remarks>
+	/// <para>
+	/// 规则是「以自身为键」，而不是把操作名派生成 <c>@&lt;operation&gt;</c>：后者落在保留命名空间里，
+	/// 而授予写入（<c>AddGrant</c>）明确拒绝保留键，于是那条策略的授予永远取不到、只能回落到
+	/// <see cref="Default"/>——自定义操作由此变成二等公民。<b>以自身为键没有这个缺口</b>：
+	/// 宿主在 <c>approve</c> 这类标识下写的授予会被读到，没写则与从前一样回落到
+	/// <see cref="Default"/>（见 <c>ScopeSubjectSet.GrantedFor</c>）。
+	/// </para>
+	/// <para>
+	/// 保留命名空间内（以及空）的标识一律落到 <see cref="Default"/>：调用方可以传任意字符串，
+	/// 而 <c>@</c> 下只应有框架自己的键。
+	/// </para>
+	/// </remarks>
+	internal static string KeyFor(string identifier)
+	{
+		return string.IsNullOrWhiteSpace(identifier) || IsReserved(identifier)
+			? Default
+			: identifier;
 	}
 }

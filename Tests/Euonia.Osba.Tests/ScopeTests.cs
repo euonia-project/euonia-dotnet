@@ -305,7 +305,7 @@ public class ScopeTests
 	}
 
 	[Fact]
-	public void Guard_Refresh_ShouldPickUpAuthorizationChanges()
+	public async Task Guard_Refresh_ShouldPickUpAuthorizationChanges()
 	{
 		var resolver = new CountingScopeResolver();
 		using var scope = CreateScope(User("dev"), resolver, out var provider);
@@ -316,7 +316,7 @@ public class ScopeTests
 
 		// 授权数据变化：改数据即可，无需改代码
 		resolver.Grant(ScopeDimensions.Dept, "team-c");
-		guard.Refresh();
+		await guard.RefreshAsync(TestContext.Current.CancellationToken);
 
 		Assert.True(guard.Allows(Repo("team-c")));
 		Assert.Equal(2, resolver.CallCount);
@@ -414,7 +414,7 @@ public class ScopeTests
 		var exception = await Assert.ThrowsAsync<SecurityException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
 		Assert.Contains("Data scope denied", exception.Message);
-		Assert.Contains("code=", exception.Message);
+		Assert.Contains("[scope=delete]", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -522,23 +522,24 @@ public class ScopeTests
 
 
 	[Fact]
-	public async Task Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot()
+	public async Task Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes()
 	{
-		// 竞态：解析在途时发生撤销 + Refresh。若陈旧快照仍被发布，撤销就被回滚了。
+		// 竞态：解析在途时发生撤销 + 刷新。刷新必须排在在途解析之后、以撤销后的数据重新发布，
+		// 否则撤销会被在途的旧快照回滚。
 		var resolver = new GatedScopeResolver();
-		using var scope = CreateScope(User("dev"), resolver, out var provider);
+		using var scope = CreateScope(User("dev"), resolver, out var provider, warm: false);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
 		// 首次解析在 resolver 里阻塞（已读到「撤销前」的授权数据）
 		var pending = guard.EnsureResolvedAsync(TestContext.Current.CancellationToken).AsTask();
 
-		// 数据侧撤销，并显式失效
+		// 数据侧撤销，并请求刷新（刷新会等在途解析让出解析闸门）
 		resolver.Revoked = true;
-		guard.Refresh();
+		var refresh = guard.RefreshAsync(TestContext.Current.CancellationToken).AsTask();
 
-		// 放行：在途结果不得覆盖那次失效
 		resolver.Release();
 		await pending;
+		await refresh;
 
 		Assert.False(guard.Allows(Repo("team-a")));
 
@@ -598,6 +599,15 @@ public class ScopeTests
 
 	private static IServiceScope CreateScope(UserPrincipal user, IScopeSubjectResolver resolver, out IServiceProvider provider)
 	{
+		return CreateScope(user, resolver, out provider, warm: true);
+	}
+
+	/// <summary>
+	/// 建作用域。<paramref name="warm"/> 为 <see langword="false"/> 时不预热：
+	/// 「解析在途」这类竞态用例要自己控制第一次解析的时机。
+	/// </summary>
+	private static IServiceScope CreateScope(UserPrincipal user, IScopeSubjectResolver resolver, out IServiceProvider provider, bool warm)
+	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopedRepo).Assembly);
 		services.AddPermission(p => { p.Scan(typeof(ScopedRepo).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
@@ -610,7 +620,7 @@ public class ScopeTests
 		var built = services.BuildServiceProvider();
 		var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = warm ? scope.ServiceProvider.Warm() : scope.ServiceProvider;
 		return scope;
 	}
 

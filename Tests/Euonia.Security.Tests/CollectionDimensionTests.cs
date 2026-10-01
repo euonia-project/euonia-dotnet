@@ -260,7 +260,7 @@ public class CollectionDimensionTests
 		// 不受支持的取值形状在注册期就失败：可下推的形状只有一种，不能等到查询时让提供程序去猜
 		var exception = Assert.Throws<ScopeModelValidationException>(() => new ScopeModelRegistryBuilder()
 			.Add<UnsupportedCollectionModel>()
-			.Build(EmptyCodeSource.Instance));
+			.Build());
 
 		Assert.Contains("unsupported", exception.Message, StringComparison.OrdinalIgnoreCase);
 		Assert.Contains("tags", exception.Message);
@@ -273,7 +273,7 @@ public class CollectionDimensionTests
 		// 不会误报「策略结构性恒不放行」。
 		var registry = new ScopeModelRegistryBuilder()
 			.Add<ChannelModel>()
-			.Build(EmptyCodeSource.Instance);
+			.Build();
 
 		Assert.True(registry.IsDeclared(typeof(Channel)));
 	}
@@ -326,7 +326,7 @@ public class CollectionDimensionTests
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver(
 			grants: [(ScopeDimensions.Member, "dev"), (ScopeDimensions.Owner, "dev")]));
 
-		return services.BuildServiceProvider().GetRequiredService<IScopeGuard>();
+		return services.BuildServiceProvider().Warm().GetRequiredService<IScopeGuard>();
 	}
 
 	private static UserPrincipal User()

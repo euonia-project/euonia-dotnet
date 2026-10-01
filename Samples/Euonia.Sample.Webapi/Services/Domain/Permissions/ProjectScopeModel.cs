@@ -34,14 +34,17 @@ public sealed class ProjectScopeModel : ScopeModel<Project>
 	{
 		// 读侧显式按码：已登录用户必须持有 project:view（类型级闸门由工厂/控制器检查），
 		// 行范围 = 本人 / 单行授予；归档项目仍可查看（只读凝固）。
-		policies.For(ProjectPermissions.View,
+		policies.ForOperation(BusinessOperation.Read,
 			ScopePolicy<Project>.Any(
 				ScopePolicy<Project>.Self(),
-				ScopePolicy<Project>.Grant(ProjectDimension)));
+				ScopePolicy<Project>.Grant(ProjectDimension)),
+			ProjectPermissions.View);
 
 		// 编辑 / 删除：本人或单行授予是放行前提，但归档项目 Deny 一律否决。
-		policies.For(ProjectPermissions.Edit, Mutable<Project>(p => p.IsArchived));
-		policies.For(ProjectPermissions.Delete, Mutable<Project>(p => p.IsArchived));
+		policies.ForOperation(BusinessOperation.Update,  Mutable<Project>(p => p.IsArchived),
+			ProjectPermissions.Edit);
+		policies.ForOperation(BusinessOperation.Delete,  Mutable<Project>(p => p.IsArchived),
+			ProjectPermissions.Delete);
 
 		// 归档的码声明在命令对象 ArchiveProjectCommand 上，其行级策略因此由该命令自己的模型
 		// （ArchiveProjectScopeModel）承担：框架按「资源类型 + 操作」解析策略键，

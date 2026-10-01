@@ -34,14 +34,17 @@ public sealed class TeamScopeModel : ScopeModel<Team>
 	public override void Declare(ScopePolicySet<Team> policies)
 	{
 		// 读侧：本团队成员或负责人可见。成员维度来自子表 ⇒ 下推为 EXISTS，实时生效。
-		policies.For(TeamPermissions.View,
+		policies.ForOperation(BusinessOperation.Read,
 			ScopePolicy<Team>.Any(
 				ScopePolicy<Team>.Grant(ScopeDimensions.Member),
-				ScopePolicy<Team>.Grant(ScopeDimensions.Owner)));
+				ScopePolicy<Team>.Grant(ScopeDimensions.Owner)),
+			TeamPermissions.View);
 
 		// 写侧：只用行内的列。单行判定在内存中求值，而写路径上的实体通常不带子表；
 		// 把写侧策略限定在行内列上，判定就不依赖对象图是否完整（见 README §5.9 的边界表）。
-		policies.For(TeamPermissions.Edit, ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
-		policies.For(TeamPermissions.Delete, ScopePolicy<Team>.Grant(ScopeDimensions.Owner));
+		policies.ForOperation(BusinessOperation.Update,  ScopePolicy<Team>.Grant(ScopeDimensions.Owner),
+			TeamPermissions.Edit);
+		policies.ForOperation(BusinessOperation.Delete,  ScopePolicy<Team>.Grant(ScopeDimensions.Owner),
+			TeamPermissions.Delete);
 	}
 }

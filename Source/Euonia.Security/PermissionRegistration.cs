@@ -81,38 +81,43 @@ internal sealed class PermissionRegistration
 	public bool RequiresSubjectResolver { get; set; }
 
 	/// <summary>
-	/// 获取或设置最近一次成功构建的注册表；输入未变时重复注册直接复用它。
+	/// 获取最近一次成功构建的注册表；尚未构建时为 <see langword="null"/>。
 	/// </summary>
-	/// <remarks>
-	/// 全量构建要重扫全部程序集并逐条编译校验模型，成本不低——同一组输入反复
-	/// <c>AddPermission</c>（例如多个模块都传同一个来源实例与同一个程序集）应当是空操作。
-	/// 构建抛出时不会记录，失败的调用下次照常重建。
-	/// </remarks>
-	public ScopeModelRegistry LastRegistry { get; set; }
+	public ScopeModelRegistry LastRegistry { get; private set; }
+
+	/// <summary>最近一次成功构建时的程序集集合；用于判断下一次注册是否真的改变了输入。</summary>
+	private Assembly[] _lastBuiltAssemblies;
 
 	/// <summary>
-	/// 判断给定累积输入是否与最近一次构建时相同（来源实例与程序集全部一致）。
+	/// 尝试复用上一次成功构建的注册表。
 	/// </summary>
-	/// <param name="source">当前的权限码来源。</param>
-	/// <param name="assemblies">当前的扫描程序集。</param>
-	/// <returns>相同则返回 <see langword="true"/>。</returns>
-	public bool SameAsLastBuild(IPermissionCodeSource source, IReadOnlyCollection<Assembly> assemblies)
+	/// <param name="assemblies">本次要扫描的程序集（累积后的并集）。</param>
+	/// <param name="registry">复用到的注册表。</param>
+	/// <returns>输入与上次构建完全一致、可复用时返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 注册表是「扫了哪些程序集」的纯函数（来源只影响运行期判定，不参与建模），
+	/// 因此复用判据也就只看程序集：全量构建要重扫并逐条编译校验模型，成本不低——
+	/// 同一组程序集反复 <c>AddPermission</c>（多个模块各注册一次）应当是空操作。
+	/// 构建抛出时不会记录，失败的调用下次照常重建。
+	/// </remarks>
+	public bool TryReuse(Assembly[] assemblies, out ScopeModelRegistry registry)
 	{
-		if (LastRegistry == null)
-		{
-			return false;
-		}
+		registry = LastRegistry;
 
-		var sourcesMatch = _sources.Count switch
-		{
-			0 => source is EmptyCodeSource,
-			1 => ReferenceEquals(_sources[0], source),
-			_ => source is CompositeCodeSource
-		};
+		return LastRegistry != null
+		       && _lastBuiltAssemblies.Length == assemblies.Length
+		       && _lastBuiltAssemblies.All(assemblies.Contains);
+	}
 
-		return sourcesMatch
-		       && _assemblies.Count == assemblies.Count
-		       && _assemblies.All(assemblies.Contains);
+	/// <summary>
+	/// 记录一次成功构建。
+	/// </summary>
+	/// <param name="registry">构建出的注册表。</param>
+	/// <param name="assemblies">本次扫描的程序集。</param>
+	public void MarkBuilt(ScopeModelRegistry registry, Assembly[] assemblies)
+	{
+		LastRegistry = registry;
+		_lastBuiltAssemblies = assemblies;
 	}
 
 	/// <summary>

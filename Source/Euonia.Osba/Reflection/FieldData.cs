@@ -11,19 +11,22 @@ public class FieldData<T> : IFieldData<T>
 	/// <summary>
 	/// 存储字段值历史记录的栈，用于支持撤销操作。
 	/// </summary>
-        /// <remarks>
-        /// 每次写入都会 <see cref="Stack{T}.Push"/>，仅 <see cref="MarkAsUnchanged"/> 清空、
-        /// <see cref="Undo"/> 逐个弹出——若调用方从不提交/撤销（例如高频遥测字段），
-        /// 历史会随对象生命周期无界增长。因此入栈时按 <see cref="HistoryDepth"/> 截断：
-        /// 超出深度的最旧记录被丢弃（撤销只能回到有限步，<see cref="IsChanged"/> 语义不变）。
-        /// 默认深度 32 对交互式编辑足够；设为负数表示不设限（维持旧行为）。
-        /// </remarks>
-        private readonly Stack<T> _histories = new();
+	/// <remarks>
+	/// 每次写入都会 <see cref="Stack{T}.Push"/>，仅 <see cref="MarkAsUnchanged"/> 清空、
+	/// <see cref="Undo"/> 逐个弹出——若调用方从不提交/撤销（例如高频遥测字段），
+	/// 历史会随对象生命周期无界增长。因此入栈时按 <see cref="HistoryDepth"/> 截断：
+	/// 超出深度的最旧记录被丢弃（撤销只能回到有限步，<see cref="IsChanged"/> 语义不变）。
+	/// 默认深度 32 对交互式编辑足够；设为负数表示不设限（维持旧行为）。
+	/// </remarks>
+	private readonly Stack<T> _histories = new();
 
-        /// <summary>
-        /// 获取或设置历史记录的最大深度；超出后丢弃最旧记录。负数表示不设限。
-        /// </summary>
-        public int HistoryDepth { get; set; } = 32;
+	/// <summary>
+	/// 获取或设置历史记录的最大深度；超出后丢弃最旧记录。负数表示不设限。
+	/// </summary>
+	public int HistoryDepth { get; set; } = 32;
+
+	/// <summary>
+	/// 初始化 <see cref="FieldData{T}"/> 的新实例。
 	/// </summary>
 	public FieldData()
 	{

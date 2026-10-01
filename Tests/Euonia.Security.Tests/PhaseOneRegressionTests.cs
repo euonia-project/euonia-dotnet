@@ -211,7 +211,7 @@ public class PhaseOneRegressionTests
 	#region 撤销生效
 
 	[Fact]
-	public void Refresh_Should_Recompile_The_Policy_From_Fresh_Authorization_Data()
+	public async Task Refresh_Should_Recompile_The_Policy_From_Fresh_Authorization_Data()
 	{
 		// 契约护栏：撤销之后，后续判定拿到的编译策略必须基于撤销后的授权数据。
 		//（「在途编译把陈旧策略回写进缓存」这条竞态由 ScopeGuard.GetPolicy 的失效代数比对挡住，
@@ -224,7 +224,7 @@ public class PhaseOneRegressionTests
 		Assert.True(guard.Allows(new Asset { DeptId = "team-a" }));
 
 		resolver.Grant("team-b");
-		guard.Refresh();
+		await guard.RefreshAsync(TestContext.Current.CancellationToken);
 
 		Assert.False(guard.Allows(new Asset { DeptId = "team-a" }));
 		Assert.True(guard.Allows(new Asset { DeptId = "team-b" }));
@@ -242,7 +242,7 @@ public class PhaseOneRegressionTests
 		services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
 		services.AddSingleton<IScopeSubjectResolver>(resolver ?? new FixedSubjectResolver(grants: [(ScopeDimensions.Dept, "team-a")]));
 
-		return services.BuildServiceProvider();
+		return services.BuildServiceProvider().Warm();
 	}
 
 	private static UserPrincipal User()

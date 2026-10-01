@@ -9,26 +9,24 @@ namespace Nerosoft.Euonia.Security;
 /// <c>AddPermission</c> 要求传入真正的 <see cref="IPermissionCodeSource"/>，缺失即失败。
 /// </para>
 /// <para>
-/// 只适用于「仅用类型级 <see cref="PermissionAttribute"/> 与模型默认策略」的应用，此时各操作解析出各自的默认键。
-/// </para>
-/// <para>
-/// <b>不可与按码声明的策略（<c>ScopePolicySet{T}.For(code, …)</c>）同用</b>：没有任何操作能解析到应用自定义的码，死策略校验会拒绝启动（见 README §3.1、DESIGN §1.6）。
+/// 适用于「只有模型、没有权限码」的应用：行级判定仍按模型声明的策略走，
+/// 只是没有任何码会被解析出来。
 /// </para>
 /// </remarks>
 internal sealed class EmptyCodeSource : IPermissionCodeSource
 {
-	// 注意声明顺序：Instance 的初始化会构造本类实例，实例字段初始化器会读 Operations，
-	// 因此 Operations 必须排在 Instance 之前（静态字段按文本顺序初始化）。
-	private static readonly string[] Operations = [.. BusinessOperation.All];
-
 	/// <summary>
 	/// 共享实例。
 	/// </summary>
 	internal static EmptyCodeSource Instance { get; } = new();
 
 	/// <inheritdoc />
-	/// <remarks>包一层只读：原本直接暴露 <c>string[]</c>，强转后可改写这个被所有宿主共享的静态数组。</remarks>
-	public IReadOnlyList<string> AllOperations { get; } = Array.AsReadOnly(Operations);
+	/// <remarks>
+	/// <b>空集，而不是一份默认词表</b>：本来源没有任何规则，因此它对「本应用用到哪些操作」这个问题的诚实回答就是「不知道」——
+	/// 操作集由宿主的对象模型决定（见 <c>IObjectOperationResolver</c>），引擎不替它枚举。
+	/// 这里曾经回落到 CRUD 五项，那等于把某个宿主框架的词汇表当成引擎的默认值。
+	/// </remarks>
+	public IReadOnlyList<string> AllOperations { get; } = [];
 
 	/// <inheritdoc />
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation) => [];

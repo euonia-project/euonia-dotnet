@@ -561,7 +561,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <summary>
 	/// 本实例的绕过开关容器；<see langword="null"/> 表示从未在本流的任何位置置位（读侧零分配）。
 	/// </summary>
-	[ThreadStatic]
+	/// <remarks>
+	/// 状态按<b>实例</b>隔离，流内传播由 <see cref="AsyncLocal{T}"/> 自己负责，因此这里不加
+	/// <c>[ThreadStatic]</c>：该特性只对静态字段生效，写在实例字段上既无效，又会让人误以为存在线程亲和。
+	/// </remarks>
 	private AsyncLocal<bool> _bypassScope;
 
 	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
@@ -714,7 +717,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <remarks>
 	/// 惰性初始化在临界区内完成：无锁的双重创建会让并发首访产生两个
 	/// <see cref="FieldDataManager"/>，两份 <c>_fieldData</c> 各自维护变更历史——
-	/// <see cref="HasChangedProperties"/> 与 <see cref="ReadProperty{TValue}"/> 会在
+	/// <see cref="HasChangedProperties"/> 与 <see cref="ReadProperty{TValue}(PropertyInfo{TValue})"/> 会在
 	/// 线程间给出分歧答案。锁复用 <see cref="_changedPropertiesLock"/>，与 <see cref="Rules"/> 同一口径。
 	/// </remarks>
 	public FieldDataManager FieldManager

@@ -113,7 +113,7 @@ public class SubTableDimensionTests
 		var scope = built.CreateScope();
 
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = scope.ServiceProvider.Warm();
 
 		return scope;
 	}

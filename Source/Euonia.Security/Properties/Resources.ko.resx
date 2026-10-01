@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>권한 구성이 비어 있습니다. 작업 항목 규칙이 선언되지 않았고 권한 코드 원본 / NoOperationCodes / NoModels도 지정되지 않았으며 스캔할 어셈블리도 추가되지 않았습니다. 메서드 수준 권한 코드가 있으면 OnAttribute / OnMethodName / OnAttributeOrName으로 항목 규칙을 선언하고, 규칙이 다른 곳에 있으면 Source로 권한 코드 원본을 지정하고, 코드가 없으면 NoOperationCodes를, 권한 모델과 선언이 전혀 없으면 NoModels를 확인하세요.</value>
+    <value>권한 구성이 비어 있습니다. 작업 항목 규칙이 선언되지 않았고 권한 코드 원본 / NoOperationCodes / NoModels도 지정되지 않았으며 스캔할 어셈블리도 추가되지 않았습니다. 메서드 수준 권한 코드가 있으면 OnAttributeOrName / OnMethod으로 항목 규칙을 선언하고, 규칙이 다른 곳에 있으면 Source로 권한 코드 원본을 지정하고, 코드가 없으면 NoOperationCodes를, 권한 모델과 선언이 전혀 없으면 NoModels를 확인하세요.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>권한 허용 구성이 모순됩니다. NoOperationCodes(메서드 수준 허용 코드 없음)를 명시했는데 작업에 대한 항목 규칙이 선언되어 있습니다. 둘 중 하나만 허용됩니다. 메서드 수준 허용 코드가 있으면 규칙을 선언하고, 없다면 NoOperationCodes를 명시하십시오.</value>
@@ -142,49 +142,10 @@
     <value>항목 특성 형식은 null이 아닌 특성 형식(Attribute의 파생 클래스)이어야 합니다.</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>작업 항목 규칙이 선언되지 않았습니다. OnAttribute / OnMethodName / OnAttributeOrName / OnMethod를 최소 한 번 호출하세요. 메서드 수준 권한 코드가 정말 없다면 permission.NoOperationCodes()를 명시적으로 확인하세요.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>권한 규칙 구성에 '{0}' 노드가 없습니다(구간 '{1}'을(를) 확인했습니다). 규칙이 들어 있는 구간을 전달하십시오(예: configuration.GetSection("Permission")).</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>구성의 작업 이름 '{0}'이(가) 대소문자를 무시했을 때 이전 작업과 중복됩니다. 작업 이름은 대소문자를 구분하므로 철자를 통일하십시오.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>구성의 작업 '{0}'에 항목 규칙이 선언되지 않았습니다. '{1}'(항목 특성 형식 이름 배열) 또는 '{2}'(항목 메서드 이름 배열)을 지정하십시오. 둘 다 지정할 수 있으며(둘 중 하나라도 일치하면 항목으로 추가됨),</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>권한 규칙 구성의 '{0}' 노드에는 작업이 전혀 없습니다. 애플리케이션에 메서드 수준 권한 코드가 정말 없다면 permission.NoOperationCodes()를 명시적으로 확인하세요.</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>구성의 작업 '{0}'에 알 수 없는 노드 '{1}'이(가) 있습니다. 사용할 수 있는 노드는 '{2}'(항목 특성 형식 이름)와 '{3}'(항목 메서드 이름)입니다.</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>구성의 '{0}'은(는) 단일 문자열이 아니라 배열로 지정해야 합니다(예: "{1}": ["…"]).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>구성의 '{0}'은(는) 비어 있지 않은 문자열이어야 합니다.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'({1})을(를) 확인할 수 없습니다. 전체 형식 이름(네임스페이스 + 형식 이름) 또는 어셈블리 한정 이름("형식, 어셈블리")을 사용하거나 '{2}'을(를) 통해 메서드 이름을 직접 지정하십시오.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'은(는) 제네릭 형식입니다. 제네릭 특성을 항목 표시자로 사용할 수 없습니다.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'은(는) 특성이 아닙니다(Attribute의 파생 클래스를 가리켜야 합니다).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'({1})을(를) 확인할 수 없습니다: {2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'({1})은(는) 검사 범위({2})에서 이름이 같은 여러 형식과 일치합니다. 어셈블리 한정 이름("형식, 어셈블리")을 사용하십시오.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>구성의 항목 특성 형식 '{0}'({1})은(는) 검사 범위({2})에서 짧은 이름이 모호합니다. 전체 형식 이름을 사용하십시오.</value>
+    <value>작업 항목 규칙이 선언되지 않았습니다. OnAttributeOrName / OnMethod를 최소 한 번 호출하세요. 메서드 수준 권한 코드가 정말 없다면 permission.NoOperationCodes()를 명시적으로 확인하세요.</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>작업 이름 '{0}'이(가) 프레임워크 예약 접두사 '{1}'을(를) 사용합니다. 작업의 기본 정책 키는 해당 접두사에서 파생되므로 작업 이름 자체에 포함할 수 없습니다.</value>
+    <value>작업 이름 '{0}'이(가) 프레임워크 예약 접두사 '{1}'을(를) 사용합니다. 이 접두사를 가진 이름은 프레임워크에 속하므로 애플리케이션이 정의한 작업 이름과 권한 코드에는 포함할 수 없습니다.</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>허용 코드 '{0}'이(가) 프레임워크 예약 접두사 '{1}'을(를) 사용합니다. 해당 접두사를 포함하지 않는 코드를 사용하십시오.</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>단독 '*' 권한 코드는 모든 권한과 일치하므로 허용되지 않습니다. 비어 있지 않은 접두사를 가진 접두사 와일드카드(예: 'repo:*')를 사용하십시오. '전체'는 권한 코드를 명시적으로 부여하여 표현해야 합니다.</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>허용 코드 '{0}'의 정책이 여러 번 선언되어 있습니다.</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>이름 '{0}'은(는) 이미 '{1}'이(가) 사용하고 있습니다. 식별자(작업 이름 또는 권한 코드)와 부여 키는 같은 네임스페이스를 공유하므로 하나의 이름에는 정책 하나만 둘 수 있습니다.</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>리소스 형식 '{0}'의 작업 {1}이(가) 행 수준 정책을 선언한 여러 허용 코드({2})로 확인됩니다. 작업의 허용 코드는 정책을 최대 하나만 선언해야 합니다.</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>이 범위에서 권한 데이터가 아직 확인되지 않았으며 동기 읽기는 이를 기다리지 않습니다. 비동기 진입점에서 먼저 '{0}'(또는 '{1}')을 await한 뒤 동기 판정을 수행하십시오.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>'{0}'의 정책이 여러 번 선언되어 있습니다.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All에는 최소 하나의 하위 정책이 필요합니다. "제한 없음"은 Where(_ =&gt; true)로 명시하십시오.</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>정책이 지정되지 않았습니다. 정책과 모델은 같은 선언 출처 형식에 기술해야 합니다. 둘 중 하나라도 빠지면 유효성 검사가 통과하지 않습니다.</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>허용 코드 '{0}'이(가) 선언되었지만 해당 정책이 지정되지 않았습니다.</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>허용 코드 '{0}'에 행 수준 정책이 선언되었지만 해당 코드로 확인되는 작업이 없습니다([Permission]의 코드가 Declare의 코드와 일치하는지 확인하십시오). 확인된 코드: {1}.</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>이 정책은 구조상 허용할 수 없습니다(Allow가 항상 false임). 일반적으로 Any 아래의 모든 분기가 거부 조건이라는 뜻입니다. 정책 구성을 확인하십시오.</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>리소스 형식이 데이터 범위로 제한되지만 개체의 범위에서 {0}을(를) 확인할 수 없습니다. AddPermission이(가) 호출되었는지 확인하십시오.</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>{0}회 시도 후에도 범위 정책 컴파일에서 안정적인 권한 데이터 스냅숏을 얻지 못했습니다. 동시 Refresh 호출이 계속되고 있습니다. 동일한 범위에서 IScopeGuard.Refresh를 반복 호출하는 코드가 있는지 확인하십시오.</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>{0}회 시도 후에도 권한 데이터 확인이 승인되지 않았습니다. 동시 Refresh 호출이 계속되고 있습니다. 동일한 범위에서 IScopeGuard.Refresh를 반복 호출하는 코드가 있는지 확인하십시오.</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1}은(는) 공유 읽기 전용 인스턴스이므로 부여를 추가할 수 없습니다. 수정 가능한 사본이 필요하면 먼저 Clone()을(를) 호출하십시오.</value>

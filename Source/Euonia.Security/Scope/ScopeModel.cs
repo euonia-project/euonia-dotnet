@@ -18,15 +18,23 @@ namespace Nerosoft.Euonia.Security;
 ///         =&gt; policies.For("order:delete", ScopePolicy&lt;Order&gt;.Grant("id"));
 /// }
 /// </code>
-/// 模型在程序集扫描时自动发现并在启动期校验；同一资源类型存在多个模型、或策略引用了未映射的维度都会导致启动失败（更多示例见 README §5.2）。
+/// 模型在程序集扫描时自动发现并在启动期校验；同一资源类型存在多个模型、策略引用了未映射的维度、
+/// 或两条声明抢同一个标识/授予键都会导致启动失败（更多示例见 README §5.2）。
 /// </remarks>
 public abstract class ScopeModel<T> : IScopeModel<T>
 	where T : class
 {
 	/// <summary>
-	/// 按权限码声明的策略集合，首次访问时构建。
+	/// 按授权标识声明的策略集合，首次访问时构建。
 	/// </summary>
 	private ScopePolicySet<T> _policies;
+
+	/// <summary>
+	/// 类型擦除后的只读视图，首次访问时构建。
+	/// </summary>
+	private IReadOnlyDictionary<string, object> _declaredPolicies;
+
+	private IReadOnlyDictionary<string, string> _declaredKeys;
 
 	/// <inheritdoc />
 	public Type ResourceType => typeof(T);
@@ -50,12 +58,13 @@ public abstract class ScopeModel<T> : IScopeModel<T>
 	public abstract ScopePolicy<T> Policy { get; }
 
 	/// <summary>
-	/// 按权限码声明行级策略（可选）。未声明的码一律使用 <see cref="Policy"/>。
+	/// 逐条声明行级策略（可选）。未声明的标识一律使用 <see cref="Policy"/>。
 	/// </summary>
 	/// <param name="policies">策略集合。</param>
 	/// <remarks>
-	/// 用于表达「同一用户、同一类型、不同行权限不同」：把资源标识也作为一个维度映射，
-	/// 再为不同权限码声明不同的行范围。
+	/// 用于表达「同一用户、同一类型、不同操作行权限不同」：把资源标识也作为一个维度映射，
+	/// 再为不同标识声明不同的行范围。<see cref="ScopePolicySet{T}.For"/> 按权限码声明（标识与授予键都是该码），
+	/// <see cref="ScopePolicySet{T}.ForOperation"/> 按操作名声明并可指定该操作的授予键。
 	/// </remarks>
 	public virtual void Declare(ScopePolicySet<T> policies)
 	{
@@ -64,26 +73,63 @@ public abstract class ScopeModel<T> : IScopeModel<T>
 	#region IScopeModel 显式实现
 
 	/// <inheritdoc />
-	object IScopeModel.PolicyFor(string code)
-	{
-		return GetPolicySet().TryGet(code, out var policy) ? policy : null;
-	}
+	IReadOnlyDictionary<string, object> IScopeModel.DeclaredPolicies => GetDeclaredPolicies();
 
 	/// <inheritdoc />
-	IReadOnlyCollection<string> IScopeModel.DeclaredCodes => GetPolicySet().Codes;
+	IReadOnlyDictionary<string, string> IScopeModel.DeclaredKeys => GetDeclaredKeys();
 
 	/// <summary>
-	/// 延迟构建并缓存按码声明的策略集合。
+	/// 延迟构建并缓存按标识声明的策略集合。
 	/// </summary>
+	/// <remarks>
+	/// <b>构建成功后才发布</b>：<see cref="Declare"/> 在声明互相冲突时会抛出，
+	/// 若先把空集合赋给字段再调用它，失败后字段会留下一个<b>半成品</b>——
+	/// 下次访问直接返回它而不再重试 <see cref="Declare"/>，冲突就此变成静默的缺失声明。
+	/// </remarks>
 	private ScopePolicySet<T> GetPolicySet()
 	{
 		if (_policies == null)
 		{
-			_policies = new ScopePolicySet<T>();
-			Declare(_policies);
+			var policies = new ScopePolicySet<T>();
+			Declare(policies);
+			_policies = policies;
 		}
 
 		return _policies;
+	}
+
+	private IReadOnlyDictionary<string, object> GetDeclaredPolicies()
+	{
+		if (_declaredPolicies == null)
+		{
+			var map = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var (identifier, _, policy) in GetPolicySet().Declarations)
+			{
+				map[identifier] = policy;
+			}
+
+			_declaredPolicies = map;
+		}
+
+		return _declaredPolicies;
+	}
+
+	private IReadOnlyDictionary<string, string> GetDeclaredKeys()
+	{
+		if (_declaredKeys == null)
+		{
+			var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+			foreach (var (identifier, key, _) in GetPolicySet().Declarations)
+			{
+				map[identifier] = key;
+			}
+
+			_declaredKeys = map;
+		}
+
+		return _declaredKeys;
 	}
 
 	#endregion

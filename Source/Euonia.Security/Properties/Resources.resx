@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>The permission configuration is empty: no operation entry rule was declared, and neither a code source / NoOperationCodes / NoModels was given nor a scanning assembly was added. Use OnAttribute / OnMethodName / OnAttributeOrName to declare the entry rule when there are method-level permission codes; give a code source via Source when the rules come from elsewhere; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
+    <value>The permission configuration is empty: no operation entry rule was declared, and neither a code source / NoOperationCodes / NoModels was given nor a scanning assembly was added. Use OnAttributeOrName / OnMethod to declare the entry rule when there are method-level permission codes; give a code source via Source when the rules come from elsewhere; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>The permission configuration contradicts itself: NoOperationCodes was asserted (no method-level permission codes) yet operation entry rules were declared. Only one of the two is allowed: declare rules when there are method-level permission codes, assert NoOperationCodes when there are none.</value>
@@ -142,49 +142,10 @@
     <value>The entry attribute type must be a non-null attribute type (a subclass of Attribute).</value>
   </data>
   <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
-    <value>No operation entry rule was declared. Call OnAttribute / OnMethodName / OnAttributeOrName / OnMethod at least once; if the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATIONS_NODE_MISSING" xml:space="preserve">
-    <value>The permission rule configuration is missing the '{0}' node (the section '{1}' was checked). Please pass the section that holds the rules, for example configuration.GetSection("Permission").</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_DUPLICATE_CASE" xml:space="preserve">
-    <value>The operation name '{0}' in the configuration differs from an earlier operation only by case. Operation names are case-sensitive, please unify the spelling.</value>
-  </data>
-  <data name="IDS_CONFIG_OPERATION_NO_RULES" xml:space="preserve">
-    <value>The operation '{0}' in the configuration declares no entry rule: give '{1}' (an array of entry attribute type names) or '{2}' (an array of entry method names); both may be given (an entry when either one matches).</value>
-  </data>
-  <data name="IDS_CONFIG_NO_OPERATIONS" xml:space="preserve">
-    <value>The '{0}' node of the permission rule configuration holds no operation at all. If the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
-  </data>
-  <data name="IDS_CONFIG_UNKNOWN_NODE" xml:space="preserve">
-    <value>The operation '{0}' in the configuration contains an unknown node '{1}'. Available nodes: '{2}' (entry attribute type names) and '{3}' (entry method names).</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_MUST_BE_ARRAY" xml:space="preserve">
-    <value>The '{0}' in the configuration must be written as an array (for example "{1}": ["…"]), not as a single string.</value>
-  </data>
-  <data name="IDS_CONFIG_VALUE_EMPTY" xml:space="preserve">
-    <value>The '{0}' in the configuration must be a non-empty string.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_UNRESOLVED" xml:space="preserve">
-    <value>The entry attribute type '{0}' ({1}) in the configuration cannot be resolved. Please use the full type name (namespace + type name), an assembly-qualified name ("Type, Assembly"), or give the method name directly through '{2}'.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_GENERIC" xml:space="preserve">
-    <value>The entry attribute type '{0}' in the configuration is a generic type: generic attributes cannot serve as entry markers.</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_NOT_ATTRIBUTE" xml:space="preserve">
-    <value>The entry attribute type '{0}' in the configuration is not an attribute (it should point at a subclass of Attribute).</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_LOAD_FAILED" xml:space="preserve">
-    <value>The entry attribute type '{0}' ({1}) in the configuration cannot be resolved: {2}</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_AMBIGUOUS" xml:space="preserve">
-    <value>The entry attribute type '{0}' ({1}) in the configuration matches multiple types with the same name in the scanning scope ({2}). Please use an assembly-qualified name ("Type, Assembly").</value>
-  </data>
-  <data name="IDS_CONFIG_TYPE_SHORT_NAME_AMBIGUOUS" xml:space="preserve">
-    <value>The entry attribute type '{0}' ({1}) in the configuration has an ambiguous short name in the scanning scope ({2}). Please use the full type name.</value>
+    <value>No operation entry rule was declared. Call OnAttributeOrName / OnMethod at least once; if the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
   </data>
   <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
-    <value>The operation name '{0}' uses the framework-reserved prefix '{1}'. The default policy key of an operation is derived from that prefix, so the operation name itself must not carry it.</value>
+    <value>The operation name '{0}' uses the framework-reserved prefix '{1}'. Names carrying that prefix belong to the framework; operations and permission codes defined by the application must not use it.</value>
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>The permission code '{0}' uses the framework-reserved prefix '{1}'. Please use a code without that prefix.</value>
@@ -192,11 +153,14 @@
   <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
     <value>A bare '*' permission code matches every permission and is therefore not allowed. Use a prefix wildcard with a non-empty prefix (for example 'repo:*'); granting everything must be expressed by granting the codes explicitly.</value>
   </data>
-  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
-    <value>The policy for permission code '{0}' is declared more than once.</value>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>The name '{0}' is already claimed by '{1}'. An identifier (an operation or a permission code) and a grant key share one namespace, so each name holds exactly one policy.</value>
   </data>
-  <data name="IDS_SCOPE_MULTIPLE_POLICY_CODES" xml:space="preserve">
-    <value>The operation {1} on resource type '{0}' resolves to multiple permission codes that declared a row-level policy ({2}). Please make sure at most one permission code of an operation declares a policy.</value>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>The authorization data has not been resolved in this scope yet, and synchronous reads never wait for it. Await '{0}' (or '{1}') on an asynchronous entry before any synchronous authorization check.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>The policy for '{0}' is declared more than once.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
     <value>All needs at least one sub-policy; "unconstrained" must be written explicitly as Where(_ =&gt; true).</value>
@@ -261,12 +225,6 @@
   <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
     <value>No policy was provided. The policy and the model must be written in the same declaring type; validation can not pass when either one is missing.</value>
   </data>
-  <data name="IDS_SCOPE_CODE_WITHOUT_POLICY" xml:space="preserve">
-    <value>Permission code '{0}' was declared but no policy was provided for it.</value>
-  </data>
-  <data name="IDS_SCOPE_CODE_NEVER_RESOLVED" xml:space="preserve">
-    <value>A row-level policy was declared for permission code '{0}', but no operation resolves to that code (please check that the codes on [Permission] match the codes in Declare). Resolved codes: {1}.</value>
-  </data>
   <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
     <value>The policy can never allow structurally (Allow is constantly false), which usually means every branch under Any is a deny condition. Please check the composition of the policy.</value>
   </data>
@@ -278,12 +236,6 @@
   </data>
   <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
     <value>The resource type is constrained by data scope, but {0} can not be resolved from the scope of the object. Please make sure AddPermission has been called.</value>
-  </data>
-  <data name="IDS_SCOPE_POLICY_SNAPSHOT_UNSTABLE" xml:space="preserve">
-    <value>Scope policy compilation still could not obtain a stable authorization-data snapshot after {0} attempts; concurrent Refresh calls keep occurring. Please check for code that repeatedly calls IScopeGuard.Refresh within the same scope.</value>
-  </data>
-  <data name="IDS_SCOPE_RESOLVE_UNSTABLE" xml:space="preserve">
-    <value>Authorization-data resolution still was not accepted after {0} attempts; concurrent Refresh calls keep occurring. Please check for code that repeatedly calls IScopeGuard.Refresh within the same scope.</value>
   </data>
   <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
     <value>{0}.{1} is a shared read-only instance and can not have grants added; call Clone() first when a mutable copy is needed.</value>

@@ -45,8 +45,8 @@ public class EfCoreCollectionDimensionTests
 	{
 		using var fixture = new Fixture();
 
-		// 按码声明的「拒绝成员」策略：下推时拒绝条件以 Not(Any(...)) 出现，即 NOT EXISTS
-		var query = fixture.Guard.Apply(fixture.Context.Workspaces, ScopeKeys.For(BusinessOperation.Delete));
+		// 按操作声明的「拒绝成员」策略：下推时拒绝条件以 Not(Any(...)) 出现，即 NOT EXISTS
+		var query = fixture.Guard.Apply(fixture.Context.Workspaces, BusinessOperation.Delete);
 		var sql = query.ToQueryString();
 
 		Assert.Contains("NOT EXISTS", sql, StringComparison.OrdinalIgnoreCase);
@@ -112,7 +112,7 @@ public class EfCoreCollectionDimensionTests
 			services.AddSingleton<IScopeSubjectResolver>(new MemberResolver());
 
 			_provider = services.BuildServiceProvider();
-			Guard = _provider.GetRequiredService<IScopeGuard>();
+			Guard = (IScopeGuard)_provider.Warm().GetRequiredService<IScopeGuard>();
 		}
 
 		public WorkspaceDbContext Context { get; }

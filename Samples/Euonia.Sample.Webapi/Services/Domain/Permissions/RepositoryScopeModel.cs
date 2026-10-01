@@ -38,26 +38,29 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 	{
 		// 读侧显式按码：已登录用户必须持有 repository:view（类型级闸门由工厂/控制器检查），
 		// 行范围 = 本人 / 本团队 / 单行授予；机密一律不可见。匿名走默认策略（公开行）。
-		policies.For(RepositoryPermissions.View,
+		policies.ForOperation(BusinessOperation.Read,
 			ScopePolicy<CodeRepository>.All(
 				ScopePolicy<CodeRepository>.Any(
 					ScopePolicy<CodeRepository>.Self(),
 					ScopePolicy<CodeRepository>.Grant(ScopeDimensions.Team),
 					ScopePolicy<CodeRepository>.Grant(RepositoryDimension)),
-				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))));
+				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))),
+			RepositoryPermissions.View);
 
 		// 推送 / 删除都是精确到行的操作：只有被单行授予了对应码的行可操作；
 		// 机密行即便被授予也一律否决。推送即工程的更新操作，码挂在工厂 UpdateAsync（见
 		// PERMISSION-SAMPLE.md 场景三），因此工厂更新与 PushRepositoryCommand 共用同一行级策略。
-		policies.For(RepositoryPermissions.Delete,
+		policies.ForOperation(BusinessOperation.Delete,
 			ScopePolicy<CodeRepository>.All(
 				ScopePolicy<CodeRepository>.Grant(RepositoryDimension),
-				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))));
+				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))),
+			RepositoryPermissions.Delete);
 
-		policies.For(RepositoryPermissions.Push,
+		policies.ForOperation(BusinessOperation.Update,
 			ScopePolicy<CodeRepository>.All(
 				ScopePolicy<CodeRepository>.Grant(RepositoryDimension),
-				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))));
+				ScopePolicy<CodeRepository>.Deny(ScopePolicy<CodeRepository>.Where(r => r.Level == RepositoryLevel.Secret))),
+			RepositoryPermissions.Push);
 	}
 }
 

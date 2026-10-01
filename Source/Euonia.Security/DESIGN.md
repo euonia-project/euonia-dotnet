@@ -9,26 +9,26 @@
 
 ## 库边界
 
-本库只依赖 `Euonia.Core` 与微软的 DI / 配置抽象包（`DependencyInjection.Abstractions`、
-`Configuration.Abstractions`——后者只为「规则可由配置节给出」这一载体存在，不引入任何配置实现），
-**不拦截任何调用**：它回答「能不能」，不回答「在哪里裁决」。强制执行点由使用方决定。
+本库只依赖 `Euonia.Core` 与 `Microsoft.Extensions.DependencyInjection.Abstractions`
+（`AddPermission` 这一注册入口所需），**不拦截任何调用**：它回答「能不能」，不回答「在哪里裁决」。
+强制执行点由使用方决定。
 
-**为什么要有两处接口**：权限要按「资源当前代表哪个业务操作」选策略键，而
+**为什么要有两处接口**：权限要按「资源当前代表哪个业务操作」选策略，而
 「资源类型 → 操作」的对应关系因框架而异（同一类型在不同框架下可能代表不同操作，
 也可能一个操作对应多个方法）。若引擎直接去猜，就等于把某个宿主框架的类型体系写进引擎，
-使引擎无法独立使用。因此引擎把这些判断定义成接口：
+使引擎无法独立使用。因此这些判断定义成接口（契约都在 Core）：
 
 | 接口 | 回答的问题 | 缺席时的行为 |
 |---|---|---|
 | `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明 |
-| `IScopeKeyResolver` | 「这个资源实例当前代表哪个操作」 | 未显式指定权限码的判定回落到 `ScopeKeys.Default` |
+| `IObjectOperationResolver` | 「这个资源实例当前代表哪个操作」 | 未显式给出操作的判定按默认策略（`ScopeKeys.Default`）判定 |
 | `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错 |
 
-**为什么不提供默认实现**：一个「猜错」的默认实现比没有实现更糟——它会静默地把键路由到
+**为什么不提供默认实现**：一个「猜错」的默认实现比没有实现更糟——它会静默地把判定路由到
 更宽松的策略上，且没有任何迹象。宁可让使用方显式回答。
 
-`IScopeKeyResolver` 缺席时的回落在使用方显式传入权限码的调用路径上是安全的：
-写侧总是由调用方**显式传入操作或权限码**，状态推断只服务于未指定权限码的行内断言。
+`IObjectOperationResolver` 缺席时的回落在使用方显式传入操作的调用路径上是安全的：
+写侧总是由调用方**显式传入操作**，状态推断只服务于未指定操作的单行判定。
 
 ---
 
@@ -39,7 +39,7 @@
 | | 操作权限 | 数据权限 |
 |---|---|---|
 | 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
-| 粒度 | 类型级（`[Permission]`）+ 行级（按权限码的策略） | 行级 |
+| 粒度 | 类型级（`[Permission]`）+ 行级（策略按授权标识声明） | 行级 |
 | 判定出口 | `IPermissionChecker` | `IScopeGuard`（读侧下推 + 单行判定） |
 
 二者共享同一份**授权数据**（`ScopeSubjectSet`）与同一套**表达式引擎**，
@@ -51,7 +51,7 @@
 graph TD
     subgraph A["① 声明层 · 使用方代码（静态、可预定义）"]
         A1["操作权限点<br/>PermissionAttribute（类级 / 方法级）"]
-        A2["数据权限模型 ScopeModel&lt;T&gt;<br/>Define：维度映射（行内列 Map / 子表 MapMany）· 分类属性<br/>Policy：默认策略 · Declare：按权限码行级策略"]
+        A2["数据权限模型 ScopeModel&lt;T&gt;<br/>Define：维度映射（行内列 Map / 子表 MapMany）· 分类属性<br/>Policy：默认策略 · Declare：按授权标识的行级策略"]
         A3["授权数据来源（使用方实现）<br/>IScopeSubjectResolver.ResolveAsync(user)"]
     end
 
@@ -62,13 +62,13 @@ graph TD
 
     subgraph C["③ 请求作用域"]
         C1["UserPrincipal<br/>当前用户主体（Claims 即 ClaimsPrincipal）"]
-        C2["IScopeGuard（Scoped · 按请求缓存）<br/>主体集合与已编译策略只解析/编译一次"]
-        C3["快照失效<br/>guard.Refresh() / RefreshAsync()"]
+        C2["IScopeGuard（Scoped · 按请求缓存）<br/>主体集合与已编译策略只解析/编译一次<br/>同步读只读快照 · 异步入口先预热"]
+        C3["快照失效<br/>guard.RefreshAsync()（失效 + 立即重新解析）"]
     end
 
     subgraph D["④ 判定引擎"]
         D1["ScopeSubjectSet<br/>Codes（类型级码）· Self（本人）<br/>维度值（Dept / Region / …）· AddGrant（行级码授予）"]
-        D2["ScopeKeyResolver<br/>操作 → 策略键<br/>（权限码 或 @default / @read / @create / …）"]
+        D2["操作解析与策略选取<br/>IObjectOperationResolver（宿主框架）：对象状态 → 操作<br/>模型：授权标识 → 策略与授予键（未声明 → 默认策略）"]
         D3["ScopePolicyCompiler<br/>策略 → (Allow, Deny) 一对表达式"]
         D4["IPermissionChecker<br/>SubjectPermissionChecker（默认 · 码来自授权数据）"]
     end
@@ -111,11 +111,12 @@ graph TD
   （`ScopeModel<T>`）由程序集扫描发现；授权数据来源 `IScopeSubjectResolver`
   由使用方实现，是**唯一**的数据入口。
 - **② 装配与启动**：扫描 + 注册期校验一体完成，配置错误全部 fail-fast
-  （键歧义 §1.7、保留前缀 / 死策略 §1.6；启动期校验清单见 README §5.6）。
-- **③ 请求作用域**：`IScopeGuard` 按请求缓存解析结果，读写路径共享同一份快照，
-  撤销生效于「下一次解析」（§1.8；缓存契约见 README §5.5）。
+  （保留前缀 §1.6、声明冲突 §1.7；启动期校验清单见 README §5.6）。
+- **③ 请求作用域**：`IScopeGuard` 按请求缓存解析结果，读写路径共享同一份快照；
+  同步读只读已解析快照（冷缓存报错），异步入口先预热；撤销生效于「下一次解析」
+  （§1.8；缓存契约见 README §5.5）。
 - **④ 判定引擎**：操作权限判定走 `IPermissionChecker`（码来自授权数据，§1.2）；
-  数据权限把策略编译成 **一对表达式**（§1.3/§1.4），键只由操作决定（§1.7）。
+  数据权限把策略编译成 **一对表达式**（§1.3/§1.4），策略与授予键按授权标识的声明选取（§1.7）。
 - **⑤ 判定出口**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
   该做法已被否决，见第 3 章）；单行 `Allows`/`Explain` 与查询共用同一棵表达式，
   结论不可能漂移。**本库不拦截任何调用**——在何处、以何种异常形态强制，是使用方的决定。
@@ -221,40 +222,54 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 | 规则 | 不这样做会怎样 |
 |---|---|
-| 保留前缀 `@`（`@default`/`@read`/…），不用字面量 `*` 作通配键 | `*` 在本仓已表示「权限码前缀通配」、也曾表示「维度值通配」。再加第三个含义会让排障变成猜谜 |
+| 保留前缀 `@`（其中只有 `@default` 一个有意义的名字），不用字面量 `*` 作通配键 | `*` 在本仓已表示「权限码前缀通配」、也曾表示「维度值通配」。再加第三个含义会让排障变成猜谜 |
 | 码级授予**覆盖**默认键，不做并集 | 默认授予会把某码上被收窄的行集合重新撑开，行级差异失效。用例：`RowLevel_CodeGrantShouldOverrideDefault_NotUnion` |
 | 通配**不参与**维度查找 | 持有 `repo:*` 会顺带拿到 `(repo:*, repo)` 的授予，管理员无法把某个具体码收窄 |
 
-**依据这三条做启动期校验**：同一操作解析出多个有策略的码 → 失败；
-声明了策略却没有任何操作会解析到该码（死策略）→ 失败。后者专治
-「`Declare` 里的码与方法上 `[Permission]` 的码拼写对不上」——
-那种情况下行级策略会静默失效、回落到默认策略，**很可能比作者本意更宽松**。
+**命名空间冲突在声明处拒绝**：标识与授予键共用一个命名空间——标识撞标识
+（`IDS_SCOPE_POLICY_DUPLICATE_DECLARED`），键与任何已有名字相撞、标识撞上已有的键
+（`IDS_SCOPE_KEY_DUPLICATE_DECLARED`），都在 `Declare` 处直接失败（注册期并入汇总诊断）——
+共用名字等于共用同一份行级授予，改一个等于改另一个。
+原先的「同一操作解析出多个有策略的码」与「死策略」两条校验随「策略按授权标识声明」消失：
+策略直接挂在标识上，这两种歧义在结构上不可能出现。
 
-### 1.7 策略键只由操作决定
+### 1.7 授权标识是策略的身份，授予键来自声明
 
-**问题**：键若受调用方状态影响，就可能把同一变更路由到更宽松的键。
+**问题**：判定入口要同时回答「用哪条策略」和「授予从哪读」。这两件事若受调用方状态影响，
+就可能把同一变更路由到更宽松的策略或更宽的授予上。
 
-**决策**：键只由**操作**决定；「资源当前代表哪个操作」由 `IScopeKeyResolver` 回答，
-「按操作取键」由 `ScopeKeyResolver.Resolve` 回答。写侧判定与单行/下推判定共用这一条路径——
-各写一遍必然漂移，而「一处按 Update 判、另一处按 Create 判」会让策略键静默错位。
+**决策**：策略的身份是判定入口传入的**授权标识**（操作名或权限码），没有声明过的标识回落到
+模型默认策略。「资源当前代表哪个操作」由宿主框架实现的 `IObjectOperationResolver` 回答（引擎只消费）；
+「标识 → 策略 + 授予键」由模型注册项（`ScopeModelRegistration.TryResolve`）回答——先查声明的标识，
+再查声明的**授予键**（键与标识共用命名空间），都没命中则用默认策略、以标识自身为键。
+写侧判定与单行/下推判定共用这一条路径——各写一遍必然漂移，
+而「一处按 Update 判、另一处按 Create 判」会让策略静默错位。
 
-资源状态改变的是**实际执行的操作**，每个操作各自应用自己的策略，不存在越权通道。
+资源状态改变的是**实际执行的操作**，每条标识各自应用自己的策略，不存在越权通道。
 
-同一操作若解析出多个「声明了策略」的权限码 → 启动期失败，不允许靠猜。
+授予键默认取标识自身、不落保留前缀：`@` 下写不进授予（`AddGrant` 拒绝保留键），
+派生键只会让这条策略的授予永远取不到；以自身为键则宿主在 `approve` 这类操作下写的授予会被读到。
+
+同一模型内两条声明占用同一个名字（标识或键，任意方向）→ 在 `Declare` 处失败，不允许靠猜。
 
 ### 1.8 缓存失效不可被在途解析回滚
 
-**问题**：授权数据按请求缓存（`ScopeGuard`），解析是异步查库。若「解析进行中」时发生
-`Refresh()`（典型场景：刚撤销完授权，显式失效），而在途的那次解析读到的是**撤销前**的数据，
+**问题**：授权数据按请求缓存（`ScopeGuard`），解析是异步查库。若「解析进行中」时发生失效
+（典型场景：刚撤销完授权，显式刷新），而在途的那次解析读到的是**撤销前**的数据，
 它返回后若无条件发布，就会把刚做的失效覆盖掉——**一次撤销被静默回滚**。这是一条真实的安全缺口，
 且只在竞态下出现，靠常规测试发现不了。
 
-**决策**：引入失效代数（`_version`）。每次失效自增；解析开始时记下代数，发布前比对，
-不一致就丢弃结果并重来。另用 `SemaphoreSlim` 串行化解析，使并发的首次访问只真正解析一次，
-兑现「每请求只解析一次」的承诺。
+**决策**：解析闸门（`SemaphoreSlim`）把解析与重新解析串行化，使并发的首次访问只真正解析一次
+（兑现「每请求只解析一次」的承诺），并让「失效」与「在途解析」不可能交错——上述竞态
+**在结构上不存在**。失效入口只有 `RefreshAsync()`，它把「失效」与「立即重新解析」合成一步，
+不再留下「已失效、尚未解析」的空窗。
 
-**回归护栏**：`Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` 用可控时机的
-解析器精确构造该竞态——**关掉版本校验它就会转红**（已验证）。
+失效代数（`_version`）只剩一个用途：编译在闸门之外进行（`ScopeGuard.GetPolicy`），
+若编译期间发生过一次重新解析，本次基于旧授权数据算出的策略不得写回缓存——
+否则撤销会在本作用域内被静默回滚。
+
+**回归护栏**：`Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes`（`ScopeTests`）
+用可控时机的解析器精确构造该竞态。
 
 ### 1.9 子表维度：关系表作为取值来源
 
@@ -300,14 +315,14 @@ query            ≡ source.Where(Allow).Where(!Deny)
    README §3.2 的合并语义因此显得多余。
 
 **决策**：规则成为注册调用**接受的配置**——`AddPermission(o => o.Scan(assemblies).OnAttributeOrName(…))`（回调）
-与 `AddPermission(configuration.GetSection("Permission"), assemblies)`（配置节）。两者与自定义
-`IPermissionCodeSource` 产出**同一套规则**（同一份编译、同一份注册期校验、同一套合并），可混用并取并集。
+或回调内 `Source(...)` 指定自定义 `IPermissionCodeSource`。两种载体产出**同一套规则**
+（同一份编译、同一份注册期校验、同一套合并），可混用并取并集。
 
 **收益**：
 
 - 一次注册调用即可「声明规则 + 注册引擎」，模块各自贡献并自动合并；
-- **配置错误仍在注册处抛出**：回调在注册处编译、配置在注册处读取，都不推迟到容器构建或首次判定；
-- 载体选择成为显式取舍：规则放代码（推荐）、放配置（部署期换约定）、放别处（自定义来源）。
+- **配置错误仍在注册处抛出**：回调在注册处编译，不推迟到容器构建或首次判定；
+- 载体选择成为显式取舍：规则放代码（推荐），或放别处（自定义来源）。
 
 **被否决的方案**：
 
@@ -317,19 +332,21 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `IOptions<T>` / `Configure<T>` 延迟绑定 | 同上：容器构建期才报错；且多次调用的合并顺序不再由调用方决定 |
 | 维持现状（只能传构造好的来源对象） | 见「问题」：形态误导 + 模块化无处贡献 |
 | 删掉 `AddPermission(IPermissionCodeSource, …)` 只留回调（当时被否决，后来仍采纳） | 当时理由是：它是已发布的公开 API，且是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口。后来该重载仍被删除，来源改由回调内的 `Source(...)` 指定——出口保留，形态统一 |
+| 配置节载体（`AddPermission(configuration.GetSection(…), assemblies)` 与 `ConfigurationRuleBinder`，**已整体删除**） | 它把鉴权口径搬进可被部署改动的地方，表达力也小于回调（只能承载类型名 + 方法名）；删除后本库不再需要 `Microsoft.Extensions.Configuration.Abstractions` 依赖。规则来自配置的宿主改为实现 `IPermissionCodeSource` 自定义来源——出口保留，形态统一 |
 
-**已知边界**：配置节载体把**鉴权口径**搬进了可被部署改动的地方——把某个方法从「需要审批码」改成「无码」
-只是一次配置改动。因此文档要求配置文件与代码走同一套评审与发布流程，且特性类型与自定义谓词仍应留在代码里
-（README §3.4）。配置节只承载「类型名 + 方法名」，表达力小于回调——这是有意的：数据能表达的只有这些。
+**已知边界（配置节载体，已随本轮删除）**：配置节曾把**鉴权口径**搬进可被部署改动的地方——把某个方法
+从「需要审批码」改成「无码」只是一次配置改动。该载体与 `ConfigurationRuleBinder`、相应的
+`AddPermission` 重载已全部删除，规则只能来自回调或自定义 `IPermissionCodeSource`；规则不在代码里时，
+同样要求它与代码走同一套评审与发布流程（README §3.4）。
 
 ---
 
 ### 1.11 运行期判定与注册期校验用同一个来源
 
-**问题**：`Euonia.Osba` 的运行期判定（操作权限闸门、数据权限的策略键解析）原先直接使用它自己的
+**问题**：`Euonia.Osba` 的运行期判定（操作权限闸门、数据权限的策略选取）原先直接使用它自己的
 约定来源，而注册期校验用的是容器里注册的 `IPermissionCodeSource`（宿主补充的规则都在里面）。
-两者分叉的后果是：宿主通过回调 / 配置节 / 自定义来源补充的规则**只在启动期生效**——被它识别为入口的方法上的
-`[Permission]` 不进判定、为该码声明的行级策略不生效、策略键回落到 `@<operation>`，而启动期**不报错**。
+两者分叉的后果是：宿主通过回调 / 自定义来源补充的规则**只在启动期生效**——被它识别为入口的方法上的
+`[Permission]` 不进判定、为该码声明的行级策略不生效、判定退回默认策略（键落到操作名自身），而启动期**不报错**。
 表现为「闸门比配置写的更宽松」，正是本库最不能接受的一类失败。
 
 **决策**：运行期与注册期问**同一个来源**。为此：
@@ -342,8 +359,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
   `AddPermission` 注册），缺席（对象未接线）或来源回答不了要求时回落到 Osba 自己的约定来源。
 
 **收益**：宿主的补充规则在运行期同样生效（与 Osba 自己的工厂约定取并集）；
-注册期校验、操作权限闸门、策略键解析三处对「某操作解析到哪些要求」不可能得出不同答案
-（这条原先只对前两者成立）。
+注册期校验与操作权限闸门两处对「某操作解析到哪些要求」不可能得出不同答案。
+策略的选取则完全与来源无关——它按**授权标识**进行，授予键来自模型声明，没有去问来源的解析层。
 
 **回归护栏**：`Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing`——
 **还原旧行为它就会转红**（已验证：宿主规则被忽略时该用例报「没有抛出异常」）。
@@ -452,9 +469,10 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` | §1.2 撤销立即生效 |
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
 | `GuardResolution_ShouldFailWhenResolverMissing` | §3 启动期校验 |
-| `Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` | §1.8 缓存失效不可被回滚 |
-| `PolicySet_ShouldRejectReservedPermissionCode` / `PolicySet_ShouldAllowFrameworkDefaultKeys` | §1.6 保留命名空间 |
-| `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
+| `Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes` | §1.8 缓存失效不可被回滚（解析闸门串行化） |
+| `PolicySet_ShouldRejectReservedScopeKey` / `PolicySet_ShouldAllowFrameworkDefaultKeys` / `PolicySet_ShouldRejectDuplicateOperation` | §1.6 保留命名空间；§1.7 一个标识一个声明位 |
+| `Declared_Grant_Key_Should_Be_Addressable_As_An_Identifier` / `Identifier_And_Grant_Key_Should_Share_One_Namespace` / `For_Should_Declare_A_Code_As_Both_Identifier_And_Grant_Key` | §1.7 标识与授予键共用命名空间；按码声明等价于按操作声明并指定同名键 |
+| `AddPermission_Should_Key_Execute_From_Model_Declaration` / `_From_Operation_When_Model_Declares_None` / `_Not_Key_Declared_Operation_From_Other_Declarations` | §1.7 键随声明给出（未声明则以标识自身为键） |
 | `AddCode_Should_Reject_Reserved_Namespace` | §1.6 保留命名空间（授权数据这一侧同样不得携带保留码） |
 | `Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance` | §1.3 两个单行判定入口对同一实例结论一致；派生/代理实例不得 fail-open |
 | `MapMany_ShouldCompileTo_AnyOverContains_NotProjectedAny` / `MapMany_UnsupportedShape_ShouldFail_AtRegistration` | §1.9 只产出确定可下推的形状，其余在注册期拒绝 |
@@ -464,9 +482,12 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything` | §1.4 fail-closed（子表维度同样适用） |
 | `MapMany_Apply_ShouldTranslateTo_Exists_Subquery` / `MapMany_Apply_ForDeclaredKey_ShouldTranslateTo_NotExists`（EF Core + SQLite） | §1.9 可下推：真实提供程序必须产出 `EXISTS` / `NOT EXISTS` |
 | `MapMany_Sqlite_ShouldAgree_With_InMemory` | §1.3 下推与内存判定一致（真实提供程序，非 LINQ-to-Objects） |
-| `Callback_Should_Declare_Rules_Inline` / `Callbacks_From_Different_Modules_Should_Merge` / `Callback_And_Custom_Source_Should_Merge` | §1.10 回调载体与三种载体的并集合并 |
+| `Callback_Should_Declare_Rules_Inline` / `Callbacks_From_Different_Modules_Should_Merge` / `Callback_And_Custom_Source_Should_Merge` | §1.10 回调载体与自定义来源的并集合并 |
 | `Callback_Without_Rules_Should_Fail_At_Registration` | §1.10 忘了给规则必须是错误，不是静默放行 |
-| `Configuration_Should_Declare_Rules_By_*` / `Configuration_And_Callback_Should_Merge` | §1.10 配置载体与回调等价 |
-| `Configuration_Should_Reject_Root_Node` / `_Operation_Without_Rules` / `_Unresolvable_Attribute_Type` / `_Ambiguous_Attribute_Type` / `_Non_Attribute_Type` | §1.10 配置的全部错误形态都在注册期暴露 |
 | `Merged_Sources_Should_Expose_Requirements_From_Every_Source` | §1.11 合并来源能回答「要求」（含角色）；只给码的来源折算为「有码、无角色」 |
 | `Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing` | §1.11 运行期与注册期用同一个来源——**还原旧行为即转红**（已验证） |
+
+> 配置节载体、`IScopeKeyResolver` 解析层与死策略/歧义校验被删除时，钉住它们的用例
+> （`Configuration_*`、`ValidateKeyResolution` 等）随各自被替换的结构一并删除；
+> 「在途解析」那条竞态用例改为 `Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes`
+> （语义从「失效打断在途解析」变为「刷新排在在途解析之后」）——本表只列**当前存在**的护栏。

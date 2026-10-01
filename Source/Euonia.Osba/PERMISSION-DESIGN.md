@@ -85,7 +85,7 @@
   `InvalidOperationException`）；
 - **跨边界的契约全部下沉到 Core**（`IPermissionCodeSource`、`IPermissionChecker`、`IObjectScopeAuthorizer`、
   `IObjectOperationResolver`），**由两边各自实现自己懂的那一半**：Osba 提供来源的默认实现与
-  「对象状态 → 操作」，引擎提供策略编译、行级判定与按操作解析策略键。
+  「对象状态 → 操作」，引擎提供策略编译、行级判定与按操作选取行级策略。
   `Euonia.Osba` 与 `Euonia.Security` 之间没有边，**也不再需要任何适配包**——这正是本条判据的由来
   （跨边界契约放在中间某一侧，就必然长出一个翻译者）。
 
@@ -119,6 +119,28 @@
 | 契约留在引擎、Osba 实现（现状的反向版） | 契约是「对象模型的知识」（对象状态 → 操作），放在引擎里等于引擎继续认识对象模型 |
 | 只把 `Permission/` 拆成新包、不反转依赖 | `BusinessObject` / `BusinessObjectFactory` 里的调用点仍在 Osba，包拆分减少不了耦合，只是把引用换了地方 |
 | Osba 自定义一套标记、由适配层翻译 | 全库会出现两个 `[Permission]`（业务对象用一个、引擎模型可能用另一个），多一层映射与两套文档；下沉到 Core 只有一个 |
+
+---
+
+### 1.4 等待点放在宿主入口，不藏在判定路径深处
+
+**问题**：引擎的同步读若在冷缓存时隐式等待解析，等待就发生在**判定路径深处**——工厂的异步入口
+会因此退化成 sync-over-async，且「哪里可能阻塞线程」不可枚举。
+
+**决策**：引擎的同步读**只读已解析的快照**，冷缓存时抛 `InvalidOperationException`（绝不阻塞）；
+「什么时候可以等」交给宿主入口，由 `AuthorizationWarmup` 统一处理：
+
+- **异步入口**（`BusinessObjectFactory` 的 `*Async`）`await` 预热（`EnsureResolvedAsync`），全链路不阻塞；
+- **同步入口**（`Create` / `Fetch` 等同步重载）本就运行在同步契约上，在入口用 `AsyncContext.Run`
+  阻塞一次（每作用域仅一次）——等待点可枚举，且只出现在宿主自己的入口。
+
+**收益**：判定路径不再隐含 I/O 等待（负载下不再表现为线程池饥饿）。预热入口刻意放在 Core 的契约上
+（`IPermissionChecker.EnsureResolvedAsync` / `IObjectScopeAuthorizer.EnsureResolvedAsync`），
+Osba 不引用引擎也能做到。
+
+**回归护栏**：`EnsureAuthorized_Sync_Should_Warm_At_The_Entry` /
+`ScopeAuthorization_Sync_Should_Warm_At_The_Entry`（`AuthorizationWarmupTests`），
+钉住「同步入口在进入判定前预热一次」。
 
 ---
 
@@ -179,4 +201,4 @@
 | §1.2 越权一律 `SecurityException` | 引擎侧的 `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
 | §1.3 权限契约 | 四个跨边界契约都在 Core：`IPermissionCodeSource` / `IPermissionChecker`（引擎与 Osba 各自实现一半）、`IObjectScopeAuthorizer` ↔ `IScopeGuard`（引擎实现）、`IObjectOperationResolver` ↔ `ScopeOperationMap`（Osba 实现）。任一都可替换为宿主自己的实现 |
 | §2.1 后置检查 | `AllowsOperation` 的调用时机由本库决定 |
-| §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete`（本库公开的类型，适配包也用它） |
+| §2.2 删除路径 | `ScopeOperationMap` 把删除状态映射为 `BusinessOperation.Delete`（本库公开的类型，引擎经 `IObjectOperationResolver` 消费它） |

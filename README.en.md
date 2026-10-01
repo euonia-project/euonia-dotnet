@@ -258,7 +258,8 @@ protected override void AddRules()
 The policy engine ships as its own library, `Euonia.Security` (depends on `Euonia.Core` only).
 `Euonia.Osba` does **not** reference it: Osba implements its own half of the Core-level permission
 contracts (object state to operation, requirement source, enforcement at the factory boundary) while
-the engine implements the other half (policy compilation, row scope, scope-key resolution).
+the engine implements the other half (policy compilation, row scope, policy selection by
+authorization identifier — an operation name or a permission code).
 There is **no adapter package** between them: a host wires the engine with two lines —
 `AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })` —
 or registers its own implementations and skips the engine entirely. The two are
@@ -268,7 +269,7 @@ application data — never baked into tokens.**
 | | Operation Permission | Data Permission |
 |---|---|---|
 | Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
-| Granularity | Type-level `[Permission]` + **row-level** (per permission code) | Row-level |
+| Granularity | Type-level `[Permission]` + **row-level** (policy declared by authorization identifier, grants written under the permission code) | Row-level |
 | Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
 | Failure | `SecurityException` | Row excluded / `SecurityException` on save |
 
@@ -296,7 +297,7 @@ public sealed class RepoScope : ScopeModel<Repo>
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
 
     public override void Declare(ScopePolicySet<Repo> policies)
-        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // row-level operation permission
+        => policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");  // row-level operation permission
 }
 
 // 3) Enforcement
@@ -306,9 +307,10 @@ var provider = services.BuildServiceProvider();
 provider.GetRequiredService<IScopeGuard>();  // resolving the guard runs startup validation: missing resolver fails immediately
 
 var guard = provider.GetRequiredService<IScopeGuard>();
-var visible = guard.Apply(dbContext.Repos);  // pushed down to the database
-guard.Allows(repo, "repo:delete");           // single-row check
-guard.Explain(repo, "repo:delete");          // audit: which policy matched
+await guard.EnsureResolvedAsync();             // warm up before synchronous checks (idempotent)
+var visible = guard.Apply(dbContext.Repos);    // pushed down to the database
+guard.Allows(repo, BusinessOperation.Delete);  // single-row check
+guard.Explain(repo, BusinessOperation.Delete); // audit: which policy matched
 ```
 
 **Key design points**:
@@ -316,8 +318,9 @@ guard.Explain(repo, "repo:delete");          // audit: which policy matched
 - **Permission codes come from data, not tokens** — a large code set never bloats the token, and
   **revocation takes effect immediately** without reissuing tokens.
 - **Row-level operation permissions**: map the resource identity as a dimension and declare a
-  different row range per permission code, so "A1 allows push+delete, A2 allows push only" is
-  directly expressible.
+  different row range per authorization identifier (the grant key defaults to the identifier
+  itself, or is an explicit permission code), so
+  "A1 allows push+delete, A2 allows push only" is directly expressible.
 - **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
   (deny wins).
 - **Permission and validation are two separate lines**: permission is decided solely at the

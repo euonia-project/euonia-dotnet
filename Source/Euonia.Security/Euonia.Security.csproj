@@ -12,12 +12,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!--
-		  DI.Abstractions：AddPermission 这一注册入口所需。
-		  Configuration.Abstractions：权限码识别规则可以由配置节给出（AddPermission(configuration, …)），
-		  不引入 Configuration 实现包——读取由宿主的配置系统提供。
-		-->
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<!-- DI.Abstractions：AddPermission 这一注册入口所需。 -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 	</ItemGroup>
 

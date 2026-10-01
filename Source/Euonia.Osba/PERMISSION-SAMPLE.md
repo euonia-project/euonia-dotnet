@@ -14,7 +14,7 @@
 |---|---|---|
 | [一、后台管理](#场景一后台管理操作权限) | 管理员操作后台，运营按模块细分 | 操作权限：类级 / 方法级、多码 AND、角色 OR、通配 |
 | [二、组织部门树](#场景二组织部门树数据可见范围) | 按部门与区域看仓库 | 数据权限：层级展开、跨维度 OR、读侧下推 |
-| [三、行级资源授权](#场景三行级资源授权同一类型不同行权限不同) | 同一仓库，push 与 delete 权限因人而异 | 数据权限：`AddGrant` 行级、`Declare` 按码策略、写侧强制 |
+| [三、行级资源授权](#场景三行级资源授权同一类型不同行权限不同) | 同一仓库，push 与 delete 权限因人而异 | 数据权限：`AddGrant` 行级、`Declare` 按授权标识的策略、写侧强制 |
 | [四、个人数据](#场景四个人数据self--可撤销) | 自己创建的内容自己可见 | `Self()`、所有者可撤销、缓存失效 |
 | [五、机密与公开](#场景五机密与公开deny--匿名公开) | 公开的匿名可见，机密的连本人也不见 | `Deny` 全局否决、`Where(IsPublic)`、匿名 fail-closed |
 | [六、命令对象](#场景六命令对象--授权变更实时生效) | 导出报表是允许就执行、撤销立即生效 | 命令对象权限、撤销 vs Token、移除即生效 |
@@ -34,7 +34,7 @@ using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务对象（不启用权限）
-services.AddPermission(p =>                                     // 显式启用权限：Osba 的码来源 + 策略键推断
+services.AddPermission(p =>                                     // 显式启用权限：Osba 的码来源 + 对象操作推断
 {
     p.Scan(typeof(Order).Assembly);
     p.Source(ObjectPermissionRequirementProvider.Instance);
@@ -51,6 +51,9 @@ _ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();   // 首次解析�
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard   = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
+
+await guard.EnsureResolvedAsync();                              // 同步判定前预热（工厂入口自带这一步；
+                                                                // 这里直接调守卫，所以要手动预热）
 ```
 
 > 每段场景的装配不同点只有一处：**注册哪个解析器**。直接对照各场景替换上面那行。
@@ -236,7 +239,7 @@ var list = await visible.ToListAsync();     // select * from repos where dept in
 // 单行判定（与查询过滤共用同一棵表达式，结论必然一致）
 guard.Allows(repoInTeamA);                                  // true（部门命中）
 guard.Allows(repoInTeamC);                                  // false（部门 & 区域都不命中）
-guard.Allows(repoInTeamC, "repo:delete");                   // 指定权限码的单行判定
+guard.Allows(repoInTeamC, BusinessOperation.Delete);        // 显式指定操作的单行判定
 
 // 审计：为什么被拒绝
 Console.WriteLine(guard.Explain(repoInTeamC));              // 判定：拒绝；成立的允许条件：…
@@ -277,8 +280,8 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 ## 场景三：行级资源授权（同一类型、不同行权限不同）
 
 **需求**：仓库级 ACL——`a1` 可 push + delete，`a2` 仅可 push，`a3` 都不可；
-同一用户、同一类型，**按行**给出不同结论。这就是 `[Permission]` 的码同时充当
-**行级策略的键**的用法。
+同一用户、同一类型，**按行**给出不同结论。行级策略按**授权标识**声明：
+用 `ForOperation` 把操作与权限码连起来（该码就是行级授予写下的键）。
 
 ```csharp
 public sealed class Repo : EditableObject<Repo>
@@ -301,14 +304,15 @@ public sealed class RepoScope : ScopeModel<Repo>
                .Map(ScopeDimensions.Dept, x => x.TeamId);
     }
 
-    // 默认策略：未单独声明的操作都用它
+    // 默认策略：未单独声明的标识都用它
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant("repo");
 
-    // 按权限码声明各自的行范围
+    // 按操作声明各自的行范围：第三个参数是该操作的授予键（权限码），
+    // 解析器把 ACL 授予写在这个键下
     public override void Declare(ScopePolicySet<Repo> policies)
     {
-        policies.For("repo:push",   ScopePolicy<Repo>.Grant("repo"));
-        policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));
+        policies.ForOperation(BusinessOperation.Update, ScopePolicy<Repo>.Grant("repo"), "repo:push");
+        policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");
     }
 }
 ```
@@ -330,11 +334,11 @@ public sealed class AclResolver(RepoAcl acl) : IScopeSubjectResolver
                                      .AddCodes(["repo:create", "repo:push", "repo:delete"])   // 类型级闸门
                                      .AddSelf(userId);
 
-        foreach (var operation in new[] { "repo:push", "repo:delete" })
+        foreach (var key in new[] { "repo:push", "repo:delete" })
         {
-            builder.AddGrant(operation, "repo",
-                acl.Entries.Where(e => e.UserId == userId && e.Operation == operation)
-                   .Select(e => e.RepoId));              // 这个用户在这枚码下行级可碰的 id
+            builder.AddGrant(key, "repo",
+                acl.Entries.Where(e => e.UserId == userId && e.Operation == key)
+                   .Select(e => e.RepoId));              // 这个用户在该授予键下行级可碰的 id
         }
 
         return ValueTask.FromResult(builder.Build());
@@ -345,12 +349,12 @@ public sealed class AclResolver(RepoAcl acl) : IScopeSubjectResolver
 判定与结果（`dev` 的 ACL 里：a1 push/delete，a2 push）：
 
 ```csharp
-guard.Allows(a2, "repo:push");       // True
-guard.Allows(a2, "repo:delete");     // False  ← 同一用户、同一对象类型、不同行的「行级操作权限」
+guard.Allows(a2, BusinessOperation.Update);       // True（push 即工厂的更新操作）
+guard.Allows(a2, BusinessOperation.Delete);       // False  ← 同一用户、同一对象类型、不同行的「行级操作权限」
 
 // 读侧：push 视图与 delete 视图各自过滤
-var pushable   = await guard.Apply(dbContext.Repos, "repo:push").ToListAsync();     // a1, a2
-var deletable  = await guard.Apply(dbContext.Repos, "repo:delete").ToListAsync();   // a1
+var pushable   = await guard.Apply(dbContext.Repos, BusinessOperation.Update).ToListAsync();     // a1, a2
+var deletable  = await guard.Apply(dbContext.Repos, BusinessOperation.Delete).ToListAsync();     // a1
 
 // 写侧：越权删除被工厂边界拦下 → SecurityException
 try
@@ -360,7 +364,7 @@ try
 }
 catch (SecurityException ex)
 {
-    // Data scope denied. Delete (before): Repo. [code=repo:delete] …
+    // Data scope denied. Delete (before): Repo. [scope=delete] …
 }
 
 // 越权新增/更新同样走工厂边界 → SecurityException（形态与删除完全一致）
@@ -375,10 +379,12 @@ await stealing.SaveAsync();                             // SecurityException（�
 - **越权形态一致**：新增、更新、删除、命令执行一律 `SecurityException`。
   早前靠 `ScopePolicyRule` 注入让新增/更新抛 `ValidationException` 的做法已移除
   （见 [PERMISSION-DESIGN §1.2](PERMISSION-DESIGN.md#12-权限与验证是两条线越权一律抛-securityexception)）。
-- **`[Permission]` 的码就是行级策略的键**：`DeleteAsync` 上若漏写 `[Permission("repo:delete")]`，
-  删除会解析到默认键 `@delete` 并回落到模型的 `Policy`——你在 `Declare` 里为
-  `"repo:delete"` 写的行级策略**根本不生效**。
-- **码级授予是「覆盖」默认键，不是并集**——否则默认授予会把某枚码上被收窄的行集合重新撑开。
+- **行级策略的授予键在 `Declare` 里声明**：`ForOperation` 省略第三个参数时，键取操作名自身；
+  解析器写在权限码 `"repo:delete"` 下的行级授予只有在键也是 `"repo:delete"` 时才会被查到——
+  否则该操作改用默认键上的授予（或没有任何授予），行级收窄静默失效。
+  另一种写法是 `For("repo:delete", …)`：标识与键都是这个码，调用点直接用码寻址。
+  `[Permission]` 的码只决定类型级闸门，不参与策略选取。
+- **按键授予是「覆盖」默认键，不是并集**——否则默认授予会把某个键上被收窄的行集合重新撑开。
 - **通配不发维度**：持 `repo:*` 能过 `repo:push` 的类型级闸门，但不会把
   `(repo:*, repo)` 的行级授予落到 `(repo:push, repo)`——否则给整个命名空间授权会顺带泄漏行级数据。
 - ACL 表大时建议授「组 id」而非「行 id」，行数巨大时改用 `Where(x => aclQuery.Contains(x.Id))`。
@@ -434,7 +440,7 @@ guard.Allows(devTicket);              // True（本人持有 owner 授予）
 
 // 撤销：授权数据里删掉该用户（管理员操作），不用改代码、不用重签令牌
 authz.RemoveSelf("dev");
-guard.Refresh();                      // 长作用域需显式失效；新请求自动是新快照
+await guard.RefreshAsync();           // 长作用域需显式刷新；新请求自动是新快照
 guard.Allows(devTicket);              // False ← 本人也不可见（fail-closed，不会反向放行）
 ```
 
@@ -442,10 +448,10 @@ guard.Allows(devTicket);              // False ← 本人也不可见（fail-clo
 
 - **`Self()` 并不特殊**，它等价于 `Grant(owner)`；解析器必须 `AddSelf(userId)` 才成立。
   「所有者一定能看自己的数据」不是内置保证——这正是它**可撤销**的原因。
-- **缓存生效时机是「下一次解析」**：同一作用域内授权数据变了要 `guard.Refresh()`
-  （同步清缓存）或 `await guard.RefreshAsync(ct)`（清缓存并立即重新解析）。
-- **并发安全**：首次访问只解析一次；若解析在途时发生撤销 + `Refresh()`，那份「撤销前读到」
-  的陈旧结果会被丢弃，不会覆盖失效。
+- **缓存生效时机是「下一次解析」**：同一作用域内授权数据变了要 `await guard.RefreshAsync(ct)`
+  （唯一失效入口：失效并立即重新解析）。
+- **并发安全**：首次访问只解析一次；若解析在途时发生撤销 + 刷新，刷新会排在在途解析之后、
+  以撤销后的数据重新发布——陈旧结果不会覆盖失效。
 
 ---
 
@@ -566,7 +572,7 @@ Console.WriteLine(command.Executed);              // True（持 report:export）
 
 // —— 授权数据变了：把 dev 的 report:export 从库里删掉 ——
 authz.RevokeCode("dev", "report:export");
-guard.Refresh();                                  // 长作用域显式失效（新请求自动失效）
+await guard.RefreshAsync();                       // 长作用域显式刷新（新请求自动失效）
 
 var again = new ExportReportCommand { BusinessContext = ctx };
 try
@@ -698,7 +704,7 @@ var visible = await guard.Apply(dbContext.Teams).ToListAsync();
 guard.Allows(await LoadWithMembersAsync("t1"));      // True
 guard.Allows(await LoadWithMembersAsync("t3"));      // False
 
-// 子表是实时求值的：删掉 t1 里 dev 的那行关系，下一次判定即变，不需要 Refresh()
+// 子表是实时求值的：删掉 t1 里 dev 的那行关系，下一次判定即变，不需要刷新授权数据
 membership.Leave("t1", "dev");
 guard.Allows(await LoadWithMembersAsync("t1"));      // False
 
@@ -719,7 +725,7 @@ await team.SaveAsync();                              // InvalidOperationExceptio
   `Grant(member[])`，先核对这一点。
 - **解析器不需要反向展开**：关系表有多大都与解析成本无关（对比场景二的部门树展开）。
 - **子表属性（`status`）由数据库实时求值**：它写在选择器里，而不是在解析期过滤成快照；
-  成员关系一改，下一次查询即生效，**不需要 `Refresh()`**。
+  成员关系一改，下一次查询即生效，**不需要刷新授权数据**。
 - **单行判定要求子集合已加载**：`Allows` 与工厂边界在内存中求值同一棵表达式，未加载时抛
   `InvalidOperationException`（**不是** `SecurityException`，别混捕）；实体把集合初始化成 `= []` 时会
   退化成**静默拒绝**（已知边界，见 DESIGN §2.5）。
@@ -737,7 +743,8 @@ await team.SaveAsync();                              // InvalidOperationExceptio
 ## 7. 组合使用：操作权限 × 数据权限
 
 两套权限回答不同问题，通常**同时启用**：场景三就是典型——`[Permission("repo:delete")]`
-管“用户能不能做删除”，`Declare("repo:delete", Grant("repo"))` 管“能删哪些行”。
+管“用户能不能做删除”，`Declare` 里 `ForOperation(BusinessOperation.Delete, Grant("repo"), "repo:delete")`
+管“能删哪些行”。
 
 业务方法内可以在**操作权限闸门之外**再做条件分支：
 
@@ -751,7 +758,7 @@ protected async Task ArchiveAsync(CancellationToken cancellationToken)
 
     var guard = BusinessContext.GetRequiredService<IScopeGuard>();
     await guard.EnsureResolvedAsync(cancellationToken);     // 行级判定前先预热授权数据
-    if (!guard.AllowsObject(this, "repo:delete"))           // 行级：本行在不在该码的范围内
+    if (!guard.AllowsObject(this, BusinessOperation.Delete))   // 行级：本行在不在该操作的范围内
     {
         throw new InvalidOperationException("无权归档该仓库。");
     }

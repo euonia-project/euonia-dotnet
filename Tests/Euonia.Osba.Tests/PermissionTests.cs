@@ -255,6 +255,7 @@ public class PermissionTests
 		var built = services.BuildServiceProvider();
 		using var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+		scope.ServiceProvider.Warm();
 
 		var obj = new SecuredEditableObject
 		{
@@ -337,7 +338,7 @@ public class PermissionTests
 		var built = services.BuildServiceProvider();
 		var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = scope.ServiceProvider.Warm();
 		return scope;
 	}
 

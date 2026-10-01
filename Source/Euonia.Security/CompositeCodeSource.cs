@@ -32,8 +32,8 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 	/// <inheritdoc />
 	/// <remarks>
 	/// 权限码按 <see cref="StringComparer.OrdinalIgnoreCase"/> 去重：两个模块分别声明
-	/// <c>repo:delete</c> 与 <c>Repo:Delete</c> 时必须收敛成一个码，否则既绕过去重，
-	/// 也让 <see cref="ScopeKeyResolver"/> 的「同一操作最多一个有策略的码」校验误报歧义。
+	/// <c>repo:delete</c> 与 <c>Repo:Delete</c> 时必须收敛成一个码，否则同一个判定会看到两条只差大小写的
+	/// 要求，既绕过去重，也让「用户到底持没持有这个码」取决于字符串比对的运气。
 	/// </remarks>
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{

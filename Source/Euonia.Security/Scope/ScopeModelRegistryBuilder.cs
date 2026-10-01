@@ -53,14 +53,10 @@ internal sealed class ScopeModelRegistryBuilder
 	}
 
 	/// <summary>完成注册期校验并构建注册表。</summary>
-	/// <param name="codeSource">权限码来源，用于校验策略键解析。</param>
 	/// <returns>构建好的注册表；没有任何模型时返回 <see cref="ScopeModelRegistry.Empty"/>。</returns>
-	/// <exception cref="ArgumentNullException"><paramref name="codeSource"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="ScopeModelValidationException">存在配置问题时抛出，携带全部诊断。</exception>
-	public ScopeModelRegistry Build(IPermissionCodeSource codeSource)
+	public ScopeModelRegistry Build()
 	{
-		ArgumentNullException.ThrowIfNull(codeSource);
-
 		var problems = new List<ScopeModelDiagnostic>();
 		var registrations = new Dictionary<Type, ScopeModelRegistration>();
 
@@ -99,7 +95,21 @@ internal sealed class ScopeModelRegistryBuilder
 			}
 
 			var registration = new ScopeModelRegistration(descriptor, model);
-			var modelProblems = ValidateModel(name, registration, codeSource);
+
+			List<ScopeModelDiagnostic> modelProblems;
+
+			try
+			{
+				modelProblems = ValidateModel(name, registration);
+			}
+			catch (Exception exception)
+			{
+				// 模型在 Declare 里自报冲突（标识或授予键被两条声明抢占）时是「抛出」而不是「返回诊断」的，
+				// 而 Declare 正是首次读取模型声明时被调用的。捕获后并入诊断：
+				// 否则整个 Build 会在第一个冲突处中断，用户得改一处跑一次。
+				problems.Add(new ScopeModelDiagnostic(name, exception.Message));
+				continue;
+			}
 
 			if (modelProblems.Count > 0)
 			{
@@ -120,7 +130,7 @@ internal sealed class ScopeModelRegistryBuilder
 			: ScopeModelRegistry.Create(registrations);
 	}
 
-	private static List<ScopeModelDiagnostic> ValidateModel(string name, ScopeModelRegistration registration, IPermissionCodeSource codeSource)
+	private static List<ScopeModelDiagnostic> ValidateModel(string name, ScopeModelRegistration registration)
 	{
 		var problems = new List<ScopeModelDiagnostic>();
 
@@ -135,20 +145,14 @@ internal sealed class ScopeModelRegistryBuilder
 			Collect(problems, name, TryValidatePolicy(name, registration.Descriptor, policy, ScopeKeys.Default));
 		}
 
-		foreach (var code in registration.DeclaredCodes)
+		// 每条声明各自编译校验：引用了未映射的维度、或恒不允许配置，
+		// 都在注册期报出来，而不是等到某次请求踩上去。
+		// 键在这里直接取声明值（而不是经 TryResolve 反查）：遍历的本来就是标识，不存在寻址问题；
+		// 「标识与键互相抢占」已在 Declare 处拒绝，到不了这里。
+		foreach (var (identifier, scopedPolicy) in registration.Model.DeclaredPolicies)
 		{
-			var scopedPolicy = registration.Model.PolicyFor(code);
-
-			if (scopedPolicy == null)
-			{
-				problems.Add(new ScopeModelDiagnostic(name, string.Format(Resources.IDS_SCOPE_CODE_WITHOUT_POLICY, code)));
-				continue;
-			}
-
-			Collect(problems, name, TryValidatePolicy(name, registration.Descriptor, scopedPolicy, code));
+			Collect(problems, name, TryValidatePolicy(name, registration.Descriptor, scopedPolicy, registration.Model.DeclaredKeys[identifier]));
 		}
-
-		Collect(problems, name, ValidateKeyResolution(name, registration, codeSource));
 
 		return problems;
 
@@ -159,37 +163,6 @@ internal sealed class ScopeModelRegistryBuilder
 				target.Add(new ScopeModelDiagnostic(name, problem));
 			}
 		}
-	}
-
-	private static string ValidateKeyResolution(string name, ScopeModelRegistration registration, IPermissionCodeSource codeSource)
-	{
-		// 与 ScopePolicySet 的忽略大小写口径一致：否则 Declare("Repo:Push") + [Permission("repo:push")] 
-		// 会因解析结果与声明键仅差大小写而被误判为「没有任何操作会解析到该码」。
-		var resolved = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-		foreach (var operation in codeSource.AllOperations)
-		{
-			try
-			{
-				resolved.Add(ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation, codeSource));
-			}
-			catch (InvalidOperationException exception)
-			{
-				return exception.Message;
-			}
-		}
-
-		foreach (var code in registration.DeclaredCodes)
-		{
-			if (ScopeKeys.IsReserved(code) || resolved.Contains(code))
-			{
-				continue;
-			}
-
-						return string.Format(Resources.IDS_SCOPE_CODE_NEVER_RESOLVED, code, resolved.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", resolved));
-		}
-
-		return null;
 	}
 
 	private static string TryValidatePolicy(string name, ScopeModelDescriptor descriptor, object policy, string scopeKey)

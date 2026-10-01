@@ -36,10 +36,13 @@ internal static class ObjectAuthorization
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	internal static void EnsureAuthorized(object target, string operation)
 	{
-		if (!TryPrepare(target, operation, out var businessObject, out _))
+		if (!TryPrepare(target, operation, out var businessObject, out var checker))
 		{
 			return;
 		}
+
+		// 同步入口：等待点只在这里（见 AuthorizationWarmup 的说明）
+		AuthorizationWarmup.Warm(checker);
 
 		Enforce(businessObject, operation);
 	}

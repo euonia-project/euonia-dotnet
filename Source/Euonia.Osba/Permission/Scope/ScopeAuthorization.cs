@@ -88,6 +88,9 @@ internal static class ScopeAuthorization
 			return;
 		}
 
+		// 同步入口：等待点只在这里（见 AuthorizationWarmup 的说明）
+		AuthorizationWarmup.Warm(authorizer, context.CurrentServiceProvider);
+
 		Enforce(target, operation, stage, context, authorizer);
 	}
 

@@ -58,7 +58,7 @@ public class AuthorizationWarmupTests
 	}
 
 	[Fact]
-	public void EnsureAuthorized_Sync_Should_Not_Warm()
+	public void EnsureAuthorized_Sync_Should_Warm_At_The_Entry()
 	{
 		var checker = new RecordingPermissionChecker(granted: true);
 		using var scope = CreateScope(services => services.AddSingleton<IPermissionChecker>(checker), out var provider);
@@ -70,8 +70,9 @@ public class AuthorizationWarmupTests
 
 		ObjectAuthorization.EnsureAuthorized(obj, BusinessOperation.Create);
 
-		// 同步入口本就运行在同步契约上，阻塞是其既定语义；预热只会带来一次多余的异步调度
-		Assert.Equal(0, checker.WarmupCount);
+		// 引擎的同步读只读已解析的快照，不替任何人等待；于是这次等待被挪到同步入口，
+		// 由宿主框架显式做一次——等待点因此可枚举，不在判定路径的深处。
+		Assert.Equal(1, checker.WarmupCount);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -119,7 +120,7 @@ public class AuthorizationWarmupTests
 	}
 
 	[Fact]
-	public void ScopeAuthorization_Sync_Should_Not_Warm()
+	public void ScopeAuthorization_Sync_Should_Warm_At_The_Entry()
 	{
 		var authorizer = new RecordingScopeAuthorizer(allowed: true);
 		using var scope = CreateScope(services => services.AddSingleton<IObjectScopeAuthorizer>(authorizer), out var provider);
@@ -131,7 +132,10 @@ public class AuthorizationWarmupTests
 
 		ScopeAuthorization.EnsureAuthorizedBefore(obj, BusinessOperation.Create);
 
-		Assert.Equal(0, authorizer.WarmupCount);
+		Assert.Equal(1, authorizer.WarmupCount);
+
+		// 预热与判定必须是同一个作用域
+		Assert.Same(provider, authorizer.LastWarmupScope);
 
 		BusinessContextAccessor.Clear();
 	}
