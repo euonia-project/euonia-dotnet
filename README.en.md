@@ -260,7 +260,7 @@ The policy engine ships as its own library, `Euonia.Security` (depends on `Euoni
 contracts (object state to operation, requirement source, enforcement at the factory boundary) while
 the engine implements the other half (policy compilation, row scope, scope-key resolution).
 There is **no adapter package** between them: a host wires the engine with two lines —
-`AddBusinessObject(asm)` plus `AddPermission(ObjectPermissionRequirementProvider.Instance, asm)` —
+`AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })` —
 or registers its own implementations and skips the engine entirely. The two are
 complementary. **Grants are always resolved live from
 application data — never baked into tokens.**
@@ -303,7 +303,7 @@ public sealed class RepoScope : ScopeModel<Repo>
 services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();          // fails at startup when the resolver is missing
+provider.GetRequiredService<IScopeGuard>();  // resolving the guard runs startup validation: missing resolver fails immediately
 
 var guard = provider.GetRequiredService<IScopeGuard>();
 var visible = guard.Apply(dbContext.Repos);  // pushed down to the database

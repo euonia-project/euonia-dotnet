@@ -106,9 +106,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
     <value>無効な状態です。</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>データ スコープが有効になっていません。</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>リソース型 '{0}' はデータ スコープ モデルを宣言していますが、対象のオブジェクトが BusinessContext に接続されていないため、{1} を判定できません。ファクトリを使用してオブジェクトを作成または読み込むか、呼び出しの前に BusinessContext を設定してください。</value>
   </data>

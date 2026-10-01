@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>La configuración de permisos está vacía: no se declaró ninguna regla de entrada de operaciones y no se afirmó NoOperationCodes / NoModels ni se dio un ensamblado para escanear. Use OnAttribute / OnMethodName / OnAttributeOrName para declarar la regla de entrada cuando haya códigos de permiso a nivel de método; afirme NoOperationCodes cuando no los haya; afirme NoModels cuando la aplicación realmente no tenga modelo de permisos ni declaración.</value>
+    <value>La configuración de permisos está vacía: no se declaró ninguna regla de entrada de operaciones y no se dio un origen de códigos / NoOperationCodes / NoModels ni un ensamblado para escanear. Use OnAttribute / OnMethodName / OnAttributeOrName para declarar la regla de entrada cuando haya códigos de permiso a nivel de método; indique un origen de códigos con Source cuando las reglas vengan de otro sitio; afirme NoOperationCodes cuando no los haya; afirme NoModels cuando la aplicación realmente no tenga modelo de permisos ni declaración.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>La configuración de permisos de acceso es contradictoria: indicó NoOperationCodes (sin códigos de permiso en el nivel del método), pero declaró reglas de entrada para la operación. Solo se permite una de las dos. Si hay códigos de permiso en el nivel del método, declare las reglas; si no los hay, indique NoOperationCodes.</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>El código de permiso '{0}' usa el prefijo reservado del marco '{1}'. Use un código que no contenga ese prefijo.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>Un código de permiso '*' simple coincide con todos los permisos y no está permitido. Use un comodín de prefijo con un prefijo no vacío (por ejemplo, 'repo:*'); conceder todo debe expresarse concediendo los códigos explícitamente.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>La política del código de permiso '{0}' se declaró más de una vez.</value>

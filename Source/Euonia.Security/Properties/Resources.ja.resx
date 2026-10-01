@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>権限の構成が空です。操作エントリの規則が宣言されておらず、NoOperationCodes / NoModels も表明されておらず、スキャン対象アセンブリも指定されていません。メソッドレベルの権限コードがある場合は OnAttribute / OnMethodName / OnAttributeOrName でエントリ規則を宣言してください。ない場合は NoOperationCodes を、権限モデルと宣言が一切ない場合は NoModels を表明してください。</value>
+    <value>権限の構成が空です。操作エントリの規則が宣言されておらず、権限コードのソース / NoOperationCodes / NoModels も指定されておらず、スキャン対象アセンブリも追加されていません。メソッドレベルの権限コードがある場合は OnAttribute / OnMethodName / OnAttributeOrName でエントリ規則を宣言してください。規則が別のところにある場合は Source で権限コードのソースを指定してください。コードがない場合は NoOperationCodes を、権限モデルと宣言が一切ない場合は NoModels を表明してください。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>アクセス許可の構成が矛盾しています。NoOperationCodes (メソッド レベルのアクセス許可コードなし) を表明しているのに、操作のエントリー ルールが宣言されています。どちらか一方のみが許可されます。メソッド レベルのアクセス許可コードがある場合はルールを宣言し、ない場合は NoOperationCodes を表明してください。</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>アクセス許可コード '{0}' がフレームワーク予約のプレフィックス '{1}' を使用しています。そのプレフィックスを含まないコードを使用してください。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>裸の '*' 権限コードはすべての権限に一致するため使用できません。空でないプレフィックスを持つプレフィックス ワイルドカード（例: 'repo:*'）を使用してください。「すべて」は権限コードを明示的に付与して表現する必要があります。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>アクセス許可コード '{0}' のポリシーが複数回宣言されています。</value>

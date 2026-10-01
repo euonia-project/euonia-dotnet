@@ -5,35 +5,13 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// <summary>
 /// 资源本地化回归护栏。
 /// <para>
-/// <c>ExplainRowAccess</c> 的「未启用数据权限」与三处配置错误提示此前是硬编码中文字面量，
-/// 英文宿主拿到的异常消息无法翻译。收敛到 <c>Properties/Resources.resx</c> 后，
-/// 文案必须随当前 UI 文化切换：回退成中文字面量时，英文分支会立刻变红。
+/// 三处配置错误提示此前是硬编码中文字面量，英文宿主拿到的异常消息无法翻译。
+/// 收敛到 <c>Properties/Resources.resx</c> 后，文案必须随当前 UI 文化切换：
+/// 回退成中文字面量时，英文分支会立刻变红。
 /// </para>
 /// </summary>
 public class ResourceLocalizationRegressionTests
 {
-	private const string ScopeNotEnabledEn = "Data scope is not enabled.";
-	private const string ScopeNotEnabledZh = "未启用数据权限";
-
-	[Fact]
-	public void ExplainRowAccess_Without_Data_Scope_Should_Follow_The_Ui_Culture()
-	{
-		var target = new UnscopedProbe();
-		var original = CultureInfo.CurrentUICulture;
-		try
-		{
-			CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-US");
-			Assert.Equal(ScopeNotEnabledEn, target.Explain());
-
-			CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("zh-CN");
-			Assert.Equal(ScopeNotEnabledZh, target.Explain());
-		}
-		finally
-		{
-			CultureInfo.CurrentUICulture = original;
-		}
-	}
-
 	[Fact]
 	public void Configuration_Error_Keys_Should_Exist_In_Both_Cultures()
 	{
@@ -42,7 +20,6 @@ public class ResourceLocalizationRegressionTests
 		{
 			var keys = new[]
 			{
-				"IDS_SCOPE_NOT_ENABLED",
 				"IDS_SCOPE_CONTEXT_MISSING",
 				"IDS_OBJECT_CONTEXT_MISSING",
 				"IDS_PERMISSION_CHECKER_MISSING"
@@ -56,7 +33,7 @@ public class ResourceLocalizationRegressionTests
 				Assert.DoesNotContain('一', en);
 			}
 
-			// 4 个键在两个文化下都必须解析得到，且英文文案不含 CJK ——
+			// 3 个键在两个文化下都必须解析得到，且英文文案不含 CJK ——
 			// 说明 .resx 与 .zh-CN.resx 成对齐全、卫星程序集可用
 			CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("zh-CN");
 			foreach (var key in keys)
@@ -93,17 +70,5 @@ public class ResourceLocalizationRegressionTests
 		}
 
 		return count;
-	}
-
-	/// <summary>
-	/// 未接入 <c>BusinessContext</c> 的业务对象：拿不到 <c>IObjectScopeAuthorizer</c>，
-	/// <c>ExplainRowAccess</c> 走「未启用数据权限」这一支。
-	/// </summary>
-	private sealed class UnscopedProbe : EditableObject<UnscopedProbe>
-	{
-		public string Explain()
-		{
-			return ExplainRowAccess();
-		}
 	}
 }

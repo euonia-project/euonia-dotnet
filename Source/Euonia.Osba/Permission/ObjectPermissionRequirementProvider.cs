@@ -90,7 +90,7 @@ public sealed class ObjectPermissionRequirementProvider : IPermissionCodeSource
 	{
 		var requirements = new List<PermissionAttribute>();
 
-		// 类型级要求适用于该类型支持的全部操作（inhehit: true，派生类型同样适用）
+		// 类型级要求适用于该类型支持的全部操作（inherit: true，派生类型同样适用）
 		requirements.AddRange(type.GetCustomAttributes<PermissionAttribute>(true));
 
 		foreach (var attributeType in attributeTypes)

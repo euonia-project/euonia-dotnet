@@ -204,7 +204,7 @@ public class ScopeRowPermissionTests
 
 		var user = provider.GetRequiredService<UserPrincipal>();
 
-		Assert.Empty(user.FindClaims(UserClaimTypes.Permission));
+		Assert.Empty(user.FindClaims("permission"));
 
 		Assert.Contains("repo:push", provider.GetRequiredService<IScopeGuard>().Permissions);
 
@@ -233,7 +233,7 @@ public class ScopeRowPermissionTests
 	}
 
 	[Fact]
-	public void CanAccessRow_ShouldAllowBranchingInsideBusinessMethods()
+	public void Row_Visible_Check_ShouldAllowBranchingInsideBusinessMethods()
 	{
 		using var scope = CreateScope(new AclResolver(), out var provider);
 
@@ -255,7 +255,7 @@ public class ScopeRowPermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 
 		var provider = services.BuildServiceProvider();
 
@@ -269,7 +269,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddSingleton<IScopeSubjectResolver>(new AclResolver());
 		var identity = new ClaimsIdentity(
 			[new Claim(ClaimTypes.Name, "tester")],
@@ -322,7 +322,7 @@ public class ScopeRowPermissionTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopeRowPermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopeRowPermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ScopeRowPermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddSingleton(resolver);
 		services.AddSingleton(User("dev"));
 
@@ -478,7 +478,15 @@ public sealed class GrantRepoModel : ScopeModel<GrantRepo>
 
 public class GrantRepoProbe : GrantRepo
 {
-	public bool ProbeRowAccess(string scopeKey) => CanAccessRow(scopeKey);
+	/// <summary>
+	/// 业务方法内部的行级分支：直接问 <c>IScopeGuard</c> 本行是否可见（查询语义，不抛异常）。
+	/// </summary>
+	public bool ProbeRowAccess(string scopeKey)
+	{
+		var guard = BusinessContext?.CurrentServiceProvider.GetService<IScopeGuard>();
+
+		return guard == null || guard.AllowsObject(this, scopeKey);
+	}
 }
 
 public class MultiModulePermissionTests
@@ -510,7 +518,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
@@ -526,7 +534,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var identity = new ClaimsIdentity(
@@ -550,7 +558,7 @@ public class MultiModulePermissionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MultiModulePermissionTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MultiModulePermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddPermission(p => { p.Scan(typeof(MultiModulePermissionTests).Assembly); p.NoOperationCodes(); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();

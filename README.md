@@ -257,7 +257,7 @@ protected override void AddRules()
 权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`）。`Euonia.Osba` **不引用引擎**：
 它实现 Core 里权限契约的自己那一半（对象状态 → 操作、来源、工厂边界的强制），引擎实现另一半
 （策略编译、行级判定、策略键解析）。**两者之间不需要适配包**：宿主用
-`AddBusinessObject(asm)` + `AddPermission(ObjectPermissionRequirementProvider.Instance, asm)` 两行接上，
+`AddBusinessObject(asm)` + `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })` 两行接上，
 也可以只注册自己的实现。
 两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
 
@@ -298,7 +298,7 @@ public sealed class RepoScope : ScopeModel<Repo>
 services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();          // 缺解析器即启动失败
+provider.GetRequiredService<IScopeGuard>();  // 首次解析守卫即执行启动校验：缺解析器马上失败
 
 var guard = provider.GetRequiredService<IScopeGuard>();
 var visible = guard.Apply(dbContext.Repos);  // 下推到数据库

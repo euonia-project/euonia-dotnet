@@ -106,9 +106,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
     <value>État non valide.</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>La portée des données n'est pas activée.</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>Le type de ressource '{0}' déclare un modèle de portée de données, mais l'objet cible n'est pas relié à BusinessContext, ce qui empêche de déterminer {1}. Créez ou lisez l'objet via la factory, ou définissez BusinessContext avant l'appel.</value>
   </data>

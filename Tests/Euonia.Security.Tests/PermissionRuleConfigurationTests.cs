@@ -62,7 +62,7 @@ public class PermissionRuleConfigurationTests
 		// 两种载体并存：回调贴在自己的模块里，自定义来源交给框架无关的既有实现
 		var services = new ServiceCollection();
 
-		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); });
 		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
@@ -169,7 +169,7 @@ public class PermissionRuleConfigurationTests
 		// 否则强制点只能看到权限码、看不到角色。
 		var services = new ServiceCollection();
 
-		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);                                                  // 只给码
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); });                                                  // 只给码
 		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttribute(BusinessOperation.Read, typeof(AssetApproveAttribute)); });       // 能回答要求
 
 		var source = Assert.IsAssignableFrom<IPermissionCodeSource>(

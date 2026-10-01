@@ -144,7 +144,7 @@ public class AuthorizationWarmupTests
 
 		// 走真实的注册路径：权限检查器、数据权限守卫与模型注册表都由 AddBusinessObject/AddPermission 装配
 		services.AddBusinessObject(typeof(AuthorizationWarmupTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(AuthorizationWarmupTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(AuthorizationWarmupTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver("order:create"));
 		services.AddSingleton(new UserPrincipal(new ClaimsPrincipal(new ClaimsIdentity("Bearer"))));
@@ -185,10 +185,6 @@ public class AuthorizationWarmupTests
 		public bool Allows(object target, string operation, IServiceProvider scope) => allowed;
 
 		public string Explain(object target, string operation, IServiceProvider scope) => "test verdict";
-
-		public bool AllowsRow(object target, string scopeKey, IServiceProvider scope) => allowed;
-
-		public string ExplainRow(object target, string scopeKey, IServiceProvider scope) => "test verdict";
 
 		public ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
 		{

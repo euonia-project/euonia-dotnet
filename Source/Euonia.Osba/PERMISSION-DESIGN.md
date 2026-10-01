@@ -26,7 +26,7 @@
 **边界**：只对**声明了要求**的类型生效——没有任何 `[Permission]`、也没有 `ScopeModel<T>` 的类型
 不强制接线，避免给不关心权限的应用加无谓约束。
 
-**注意**：`BusinessObject.CanUpdateObject()` 之类的虚方法**仍是查询**（无从判定时返回
+**注意**：`BusinessObject.CanPerformOperation(...)` **仍是查询**（无从判定时返回
 `true`，不抛异常）；闸门在强制点。这与数据权限侧的分工相同。
 
 ### 1.2 权限与验证是两条线，越权一律抛 `SecurityException`
@@ -58,7 +58,7 @@
 §2.2 的形态不对称随之消失；「权限可以被绕过」这个提法本身不再成立。
 
 **代价**（有意的）：越权不再出现在 `ValidationException.Errors` 里。需要「表单预提示」的场景，
-在调用侧显式捕获 `SecurityException`，或先用 `CanAccessRow` / `CheckPermissionAsync` 查再跳。
+在调用侧显式捕获 `SecurityException`，或先用 `CanPerformOperation` / `IScopeGuard.AllowsObject` 查再跳。
 这是把一条**静默的口头约定**换成**显式的 API**。
 
 ---
@@ -77,7 +77,8 @@
 - **「要求从哪来」与「操作权限判定」下沉到 Core**（`IPermissionCodeSource`、`IPermissionChecker`），
   与 `[Permission]`、`BusinessOperation` 同层：它们是两边共同的基础概念，各只声明一次——若宿主与引擎
   各定义一遍形状相同的接口，中间就得有胶水来回翻译，那是抽象放错了层。
-  两个接口都只要求实现**必需成员**（来源给权限码、判定给「持有/属于」），组合语义与异步入口由默认实现覆盖；
+  两个接口都只要求实现必需成员（来源给 `AllOperations` / `CodesFor`，判定给 `IsGranted` /
+  `IsInRole` / `EnsureResolvedAsync`），默认实现只覆盖来源的要求折算与判定的异步入口；
   Osba 只提供来源的**默认实现**（按工厂约定扫描，兜底静态单例，见 §1.1）；
 - **只有行级判定留在 Osba**（`IObjectScopeAuthorizer`）：它要读宿主的作用域（`BusinessContext`）与对象
   状态，引擎无法实现；工厂边界保留**强制**（`SecurityException` / 判定不了抛
@@ -92,7 +93,8 @@
 可运行证明）；依赖方向变成 `适配包 → (Osba, Security)`，两边谁都不认识谁。
 
 **代价（需要使用者动作）**：宿主把 `AddObjectPermission(asm)` 换成
-`AddPermission(ObjectPermissionRequirementProvider.Instance, asm)`（两行，各自属于一个库）；
+`AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionRequirementProvider.Instance); })`
+（两行，各自属于一个库）；
 `[Permission]`、`BusinessOperation` 的命名空间不变，因此**源码兼容**，但二进制不兼容（类型换了程序集）。
 
 **判据（评审时用）**：适配代码可以存在，但要盯住两类信号——
@@ -173,7 +175,7 @@
 
 | 本文的决策 | 引擎侧的对应物 |
 |---|---|
-| §1.1 无法判定即失败 | `IScopeSubjectResolver` 缺席时 `IScopeGuard` 拒绝；`PermissionSetup` + `ValidatePermissionSetup()` |
+| §1.1 无法判定即失败 | `IScopeSubjectResolver` 缺席时 `IScopeGuard` 拒绝；首次解析 `IScopeGuard` 时的启动校验 |
 | §1.2 越权一律 `SecurityException` | 引擎侧的 `IScopeGuard` / `IPermissionChecker` 只返回结论，形态由本库的 `ObjectAuthorization` / `ScopeAuthorization` 决定 |
 | §1.3 权限契约 | 四个跨边界契约都在 Core：`IPermissionCodeSource` / `IPermissionChecker`（引擎与 Osba 各自实现一半）、`IObjectScopeAuthorizer` ↔ `IScopeGuard`（引擎实现）、`IObjectOperationResolver` ↔ `ScopeOperationMap`（Osba 实现）。任一都可替换为宿主自己的实现 |
 | §2.1 后置检查 | `AllowsOperation` 的调用时机由本库决定 |

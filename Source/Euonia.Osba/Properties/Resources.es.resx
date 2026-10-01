@@ -106,9 +106,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
     <value>El estado no es válido.</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>El ámbito de datos no está habilitado.</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>El tipo de recurso '{0}' declara un modelo de ámbito de datos, pero no se puede evaluar {1} porque el objeto de destino no está conectado a un BusinessContext. Cree o cargue el objeto con una fábrica, o defina el BusinessContext antes de la llamada.</value>
   </data>

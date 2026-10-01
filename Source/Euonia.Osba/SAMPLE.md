@@ -49,12 +49,12 @@ services.AddSingleton(DemoUser.Dev);                                 // 当前�
 
 var provider = services.BuildServiceProvider();
 
-// 启动期校验：声明了权限模型或 [Permission] 却忘了注册解析器时，在这里失败
-provider.ValidatePermissionSetup();
-
 // 建立请求作用域并设置上下文
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+
+// 首次解析守卫：启动期校验（声明了权限模型或 [Permission] 却忘了注册解析器时在这里失败）
+_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
@@ -241,7 +241,8 @@ repo.AcceptChanges();       // 同上
 >
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
-> 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`。
+> 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`；
+> 未接线的对象直接 `SaveAsync` 会抛 `InvalidOperationException`（消息含类型名与操作名），而不是放任空引用往下走。
 
 ### 2.2 只回写改过的属性
 
@@ -750,7 +751,8 @@ guard.Explain(repo, "repo:delete");                  // 审计：命中了哪条
 // 业务对象内部
 protected bool CanDelete()
 {
-    return CanAccessRow("repo:delete") && HasPermission("repo:delete");
+    return CanPerformOperation(BusinessOperation.Delete)                                             // 操作级
+        && BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, "repo:delete");      // 行级
 }
 ```
 
@@ -790,8 +792,8 @@ catch (ValidationException ex)          // 数据不合法，与权限无关
 > criteria 低层入口不做**验证规则**判定（调用前对象为空，无从校验），但**权限仍然强制**。
 
 > **不要把权限断言写进 `AddRules()`**。规则可被绕过、`Rules.RunAsync` 又把所有异常转成错误，
-> 规则在结构上就抛不出 `SecurityException`。需要条件分支请用 `CanAccessRow` /
-> `CheckPermissionAsync`，需要「越权即拒」交给工厂边界即可。
+> 规则在结构上就抛不出 `SecurityException`。需要条件分支请用 `CanPerformOperation` /
+> `IScopeGuard.AllowsObject`，需要「越权即拒」交给工厂边界即可。
 
 ---
 
@@ -802,17 +804,21 @@ catch (ValidationException ex)          // 数据不合法，与权限无关
 ```csharp
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Repo).Assembly);
-services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Repo).Assembly);   // 显式接入引擎
+services.AddPermission(p =>                                                                     // 显式接入引擎
+{
+    p.Scan(typeof(Repo).Assembly);
+    p.Source(ObjectPermissionRequirementProvider.Instance);
+});
 services.AddSingleton<RepoStore>();
 services.AddSingleton<RepoAcl>();
 services.AddSingleton<IScopeSubjectResolver, DemoSubjectResolver>();
 services.AddSingleton(DemoUser.Dev);
 
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();
 
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();   // 首次解析守卫：启动期校验在此执行
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
@@ -961,7 +967,7 @@ BusinessContextAccessor.Clear();
 ### 权限
 
 46. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
-    启动期 `ValidatePermissionSetup()` 失败（不调用它，首次判定也会报错，不会静默放行）。
+    首次解析 `IScopeGuard` 时启动期校验失败（守卫是判定入口，首次判定前必然先解析它，不会静默放行）。
 47. **`[Permission]` 的码同时是行级策略的键**：漏写就会解析到 `@delete` 之类的默认键，
     你在 `Declare` 里写的行级策略不会生效。
 48. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。

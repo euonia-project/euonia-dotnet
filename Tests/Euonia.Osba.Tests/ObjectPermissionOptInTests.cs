@@ -61,7 +61,7 @@ public class ObjectPermissionOptInTests
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 
 		var provider = services.BuildServiceProvider();
 
@@ -77,7 +77,7 @@ public class ObjectPermissionOptInTests
 		var services = NewServicesWithUser();
 		services.AddSingleton<IScopeSubjectResolver>(new FixedSubjectResolver());
 
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
 
 		var provider = services.BuildServiceProvider();
@@ -91,7 +91,7 @@ public class ObjectPermissionOptInTests
 	{
 		var services = NewServices();
 
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddSingleton<IScopeKeyResolver, FixedKeyResolver>();
 
 		var provider = services.BuildServiceProvider();
@@ -105,7 +105,7 @@ public class ObjectPermissionOptInTests
 		var services = NewServices();
 
 		services.AddBusinessObject(typeof(ObjectPermissionOptInTests).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ObjectPermissionOptInTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ObjectPermissionOptInTests).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		var provider = services.BuildServiceProvider();
 
 		var ex = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);

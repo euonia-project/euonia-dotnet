@@ -9,8 +9,8 @@ namespace Nerosoft.Euonia.Osba;
 /// <para>
 /// 这条映射是策略键解析的根：键只由操作决定，操作只由本映射决定。
 /// 工厂边界（<see cref="ObjectAuthorization"/> / <see cref="ScopeAuthorization"/>）、
-/// <c>CanXObject()</c> 与单行/下推判定必须共用本类——若各自实现一遍，
-/// 「工厂按 Update 判、CanXObject 按 Create 判」这类漂移会让策略键静默错位。
+/// <c>IObjectOperationResolver</c>（把对象状态交给引擎解析策略键）与单行/下推判定必须共用本类——
+/// 若各自实现一遍，「工厂按 Update 判、单行判定按 Create 判」这类漂移会让策略键静默错位。
 /// </para>
 /// <para>
 /// 注意 <see cref="ObjectEditState"/> 由调用方通过公开的 <c>MarkAsNew</c>/<c>MarkAsChanged</c>/
@@ -44,8 +44,8 @@ public static class ScopeOperationMap
 	/// <param name="operation">解析出的业务操作。</param>
 	/// <returns>可解析则返回 <see langword="true"/>；目标无可执行操作（如未变更的可编辑对象、只读对象）时返回 <see langword="false"/>。</returns>
 	/// <remarks>
-	/// 供行级断言（<c>CanAccessRow</c>）等「非保存」场景使用：那里对象状态通常为
-	/// <see cref="ObjectEditState.None"/>，应当回落到默认键而不是抛异常。
+	/// 供「非保存」场景使用——业务方法内部直接问 <c>IScopeGuard</c> 某一行是否可见时，
+	/// 对象状态通常为 <see cref="ObjectEditState.None"/>，应当回落到默认键而不是抛异常。
 	/// </remarks>
 	public static bool TryResolve(object target, out string operation)
 	{

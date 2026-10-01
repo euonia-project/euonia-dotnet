@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>The permission configuration is empty: no operation entry rule was declared, and neither NoOperationCodes / NoModels was asserted nor a scanning assembly was given. Use OnAttribute / OnMethodName / OnAttributeOrName to declare the entry rule when there are method-level permission codes; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
+    <value>The permission configuration is empty: no operation entry rule was declared, and neither a code source / NoOperationCodes / NoModels was given nor a scanning assembly was added. Use OnAttribute / OnMethodName / OnAttributeOrName to declare the entry rule when there are method-level permission codes; give a code source via Source when the rules come from elsewhere; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>The permission configuration contradicts itself: NoOperationCodes was asserted (no method-level permission codes) yet operation entry rules were declared. Only one of the two is allowed: declare rules when there are method-level permission codes, assert NoOperationCodes when there are none.</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>The permission code '{0}' uses the framework-reserved prefix '{1}'. Please use a code without that prefix.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>A bare '*' permission code matches every permission and is therefore not allowed. Use a prefix wildcard with a non-empty prefix (for example 'repo:*'); granting everything must be expressed by granting the codes explicitly.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>The policy for permission code '{0}' is declared more than once.</value>

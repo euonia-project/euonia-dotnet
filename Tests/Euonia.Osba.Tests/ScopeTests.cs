@@ -600,7 +600,7 @@ public class ScopeTests
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopedRepo).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(ScopedRepo).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ScopedRepo).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddSingleton(resolver);
 		if (user != null)
 		{

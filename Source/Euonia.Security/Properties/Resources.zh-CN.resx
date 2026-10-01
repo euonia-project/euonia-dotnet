@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>权限配置是空的：没有声明操作入口规则，也没有断言 NoOperationCodes / NoModels 或给出扫描程序集。有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；没有方法级权限码请断言 NoOperationCodes；确实没有任何权限模型与声明请断言 NoModels。</value>
+    <value>权限配置是空的：没有声明操作入口规则，也没有给出权限码来源 / 断言 NoOperationCodes / NoModels 或扫描程序集。有方法级权限码请用 OnAttribute / OnMethodName / OnAttributeOrName 声明入口规则；规则来自别处请用 Source 给出权限码来源；没有方法级权限码请断言 NoOperationCodes；确实没有任何权限模型与声明请断言 NoModels。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>权限配置自相矛盾：已断言 NoOperationCodes（没有方法级权限码），却又声明了操作入口规则。两者只能取其一：有方法级权限码就声明规则，没有就断言 NoOperationCodes。</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>权限码 '{0}' 使用了框架保留前缀 '{1}'。请改用不含该前缀的码。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>裸 '*' 权限码会匹配全部权限，因此不允许使用。请改用带非空前缀的通配（例如 'repo:*'）；「全部」必须通过逐个授予权限码来显式表达。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>权限码 '{0}' 的策略被重复声明。</value>

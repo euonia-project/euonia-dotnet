@@ -34,16 +34,20 @@ using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Order).Assembly);             // 扫描业务对象（不启用权限）
-services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Order).Assembly);           // 显式启用权限：Osba 的码来源 + 策略键推断
+services.AddPermission(p =>                                     // 显式启用权限：Osba 的码来源 + 策略键推断
+{
+    p.Scan(typeof(Order).Assembly);
+    p.Source(ObjectPermissionRequirementProvider.Instance);
+});
 services.AddSingleton<AuthzStore>();                            // 授权数据（模拟数据库表，见各场景）
 services.AddScoped<IScopeSubjectResolver, /* 各场景的解析器 */>();  // 授权值来源
 services.AddSingleton(DemoUser.Dev);                            // 当前用户（UserPrincipal）
 
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();        // 声明了权限/模型却忘了接解析器 → 启动即失败
 
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);     // 先设上下文，再取服务
+_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();   // 首次解析守卫：声明了权限/模型却忘了接解析器 → 此处失败
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard   = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
@@ -152,8 +156,8 @@ await order.SaveAsync();                  // SecurityException（order:cancel �
   类型级闸门（`*` 只能作为后缀）。
 - **判定不了就失败**：目标没接 `BusinessContext` 时抛 `InvalidOperationException` 并指明，
   不会静默放行；没有任何要求的类型则不受影响。
-- 业务方法内可用 `HasPermission(code)` / `HasRole(role)` 做细粒度分支（见场景三的
-  `CanAccessRow` 用法）。
+- 业务方法内可用 `CanPerformOperation(operation)` 做操作级条件分支；行级可见性用
+  `BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, code)` 查询（见 §7）。
 
 ---
 
@@ -740,21 +744,23 @@ await team.SaveAsync();                              // InvalidOperationExceptio
 ```csharp
 protected async Task ArchiveAsync(CancellationToken cancellationToken)
 {
-    if (!CanAccessRow("repo:delete"))                       // 本行在不在该码的范围内
+    if (!CanPerformOperation(BusinessOperation.Update))     // 操作级：本对象当前操作是否被允许
     {
         throw new InvalidOperationException("无权归档该仓库。");
     }
 
-    if (!await CheckPermissionAsync("repo:admin", cancellationToken))
+    var guard = BusinessContext.GetRequiredService<IScopeGuard>();
+    await guard.EnsureResolvedAsync(cancellationToken);     // 行级判定前先预热授权数据
+    if (!guard.AllowsObject(this, "repo:delete"))           // 行级：本行在不在该码的范围内
     {
-        throw new InvalidOperationException("需要 repo:admin 权限。");
+        throw new InvalidOperationException("无权归档该仓库。");
     }
 }
 ```
 
 **不要把权限断言写进 `AddRules()`**。规则属于验证线，失败形态是 `ValidationException`，
 且可被 `SuspendRuleChecking()` / `BypassRuleChecks()` 绕过——用它做授权等于留了一条旁路。
-需要「先查再跳」的分支，用上面 `CanAccessRow` / `CheckPermissionAsync`；
+需要「先查再跳」的分支，用上面 `CanPerformOperation` / `IScopeGuard.AllowsObject`；
 需要「越权即拒」，交给工厂边界即可。
 
 写侧失败形态小结（**只有一条强制线**）：

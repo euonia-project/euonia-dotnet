@@ -41,22 +41,9 @@ internal sealed class ObjectScopeAuthorizer(ScopeModelRegistry registry, IPermis
 	}
 
 	/// <inheritdoc />
-	public bool AllowsRow(object target, string scopeKey, IServiceProvider scope)
-	{
-		// 传入的是权限码：为空时由 IScopeKeyResolver 按对象状态推断
-		return Guard(scope).AllowsObject(target, scopeKey);
-	}
-
-	/// <inheritdoc />
-	public string ExplainRow(object target, string scopeKey, IServiceProvider scope)
-	{
-		return Guard(scope).ExplainObject(target, scopeKey);
-	}
-
-	/// <inheritdoc />
 	/// <remarks>
-	/// 覆写默认（空操作）实现：判定要读授权数据（<see cref="AllowsObject"/> → <c>GetSubjects</c>），
-	/// 异步授权路径先预热，避免冷缓存时阻塞调用线程。作用域取调用方传入的那一个，与 <see cref="Allows"/> 同口径。
+	/// 判定要读授权数据（<c>AllowsObject</c> → <c>GetSubjects</c>），异步授权路径先预热，
+	/// 避免冷缓存时阻塞调用线程。作用域取调用方传入的那一个，与 <see cref="Allows"/> 同口径。
 	/// </remarks>
 	public async ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
 	{

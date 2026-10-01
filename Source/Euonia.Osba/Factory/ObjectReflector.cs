@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -24,7 +25,6 @@ public class ObjectReflector
 
 	private static readonly ConcurrentDictionary<Type, List<Tuple<PropertyInfo, Type, bool, object>>> _propertyCache = new();
 	private static readonly ConcurrentDictionary<string, MethodInfo> _factoryMethods = new();
-	private static readonly ConcurrentDictionary<Type, string[]> _conventionalMethodNames = new();
 
 	internal static List<Tuple<PropertyInfo, Type, bool, object>> GetAutoInjectProperties(Type objectType)
 	{
@@ -481,26 +481,15 @@ public class ObjectReflector
 	/// <param name="attributeType">特性类型。</param>
 	/// <returns>约定的方法名称数组。</returns>
 	/// <remarks>
-	/// 特性名本身带有 <c>Factory</c> 前缀（如 <see cref="FactoryUpdateAttribute"/>），
-	/// 需先去前缀再展开，否则会得到 <c>FactoryFactoryUpdate</c> 这类永不匹配的名称，
-	/// 使 <c>Update</c> / <c>UpdateAsync</c> 这一半约定形同虚设。
+	/// 推导逻辑归 <see cref="OperationConventions.Names"/> 独有：它是<b>工厂查找</b>与<b>权限入口规则</b>
+	/// 共用的那一份，分叉会让「工厂会调用的方法」与「权限扫描会看的方法」静默错开。
 	/// 对 <see cref="FactoryUpdateAttribute"/> 返回
 	/// <c>Update</c>、<c>UpdateAsync</c>、<c>FactoryUpdate</c>、<c>FactoryUpdateAsync</c>。
 	/// </remarks>
 	internal static string[] GetConventionalMethodNames(Type attributeType)
 	{
-		return _conventionalMethodNames.GetOrAdd(attributeType, static type =>
-		{
-			// FactoryUpdateAttribute -> FactoryUpdate
-			var name = type.Name.Replace(nameof(Attribute), string.Empty);
-
-			// FactoryUpdate -> Update（前缀后为空时保持不变，避免生成空前缀名称）
-			var operation = name.StartsWith(FactoryPrefix, StringComparison.Ordinal) && name.Length > FactoryPrefix.Length
-				? name[FactoryPrefix.Length..]
-				: name;
-
-			return (string[])[operation, $"{operation}Async", name, $"{name}Async"];
-		});
+		// 缓存由 OperationConventions 自己按（特性类型，前缀）维护，这里不再套一层
+		return OperationConventions.Names(attributeType, FactoryPrefix);
 	}
 
 	/// <summary>

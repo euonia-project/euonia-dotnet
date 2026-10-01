@@ -62,7 +62,7 @@ public class PermissionWithoutEngineTests
 	[Fact]
 	public async Task Requirements_Without_Checker_Should_FailLoudly_Not_Silently_Allow()
 	{
-		// 声明了要求却没人判定 —— 必须报错；CanUpdateObject 仍是查询（返回 true），闸门才是判定
+		// 声明了要求却没人判定 —— 必须报错；CanPerformOperation 仍是查询（返回 true），闸门才是判定
 		using var scope = CreateScope(codes: null, out var provider);
 
 		var factory = provider.GetRequiredService<IObjectFactory>();
@@ -72,7 +72,7 @@ public class PermissionWithoutEngineTests
 
 		entity.BusinessContext = provider.GetRequiredService<BusinessContext>();
 
-		Assert.True(entity.CanUpdateObject());   // 查询语义：无从判定时返回 true
+		Assert.True(entity.CanPerformOperation(BusinessOperation.Update));   // 查询语义：无从判定时返回 true
 
 		var exception = await Assert.ThrowsAsync<InvalidOperationException>(
 			() => factory.SaveAsync(entity, TestContext.Current.CancellationToken));
@@ -125,8 +125,8 @@ public class PermissionWithoutEngineTests
 		var visible = GroundedEntity("host:read");
 		visible.BusinessContext = provider.GetRequiredService<BusinessContext>();
 
-		Assert.True(visible.CanSeeOwnRow());                  // 授权器放行
-		Assert.Equal("可见", visible.ExplainOwnRow());
+		Assert.True(visible.CanSeeOwnRow(BusinessOperation.Read));                  // 授权器放行
+		Assert.Equal("可见", visible.ExplainOwnRow(BusinessOperation.Read));
 
 		// 工厂边界同样走授权器：受约束的对象没接线时必须报错，而不是静默放行
 		var unwired = GroundedEntity("host:read");
@@ -225,11 +225,29 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 	/// <summary>本实体在更新操作上要求的权限码，由宿主的要求来源读取。</summary>
 	public string RequiredCode { get; set; }
 
-	/// <summary>业务方法内的行级分支：protected 的 CanAccessRow 只能在派生类型里调用。</summary>
-	public bool CanSeeOwnRow() => CanAccessRow();
+	/// <summary>
+	/// 业务方法内的行级分支：直接问宿主自己的行级授权器（无引擎场景，没有 <c>IScopeGuard</c>）。
+	/// </summary>
+	/// <param name="operation">当前操作；行级策略由它决定。</param>
+	/// <returns>可访问则返回 <c>true</c>；未接入上下文或未注册授权器时（查询语义）返回 <c>true</c>。</returns>
+	public bool CanSeeOwnRow(string operation)
+	{
+		var context = BusinessContext;
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
+
+		return authorizer == null || authorizer.Allows(this, operation, context.CurrentServiceProvider);
+	}
 
 	/// <summary>业务方法内的行级判定说明。</summary>
-	public string ExplainOwnRow() => ExplainRowAccess();
+	/// <param name="operation">当前操作；行级策略由它决定。</param>
+	/// <returns>判定说明。</returns>
+	public string ExplainOwnRow(string operation)
+	{
+		var context = BusinessContext;
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
+
+		return authorizer == null ? "Data scope is not enabled." : authorizer.Explain(this, operation, context.CurrentServiceProvider);
+	}
 
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
@@ -273,7 +291,7 @@ internal sealed class TableRequirementProvider : IPermissionCodeSource
 /// <summary>
 /// 按当前用户持有的权限码集合判定（支持末尾 <c>*</c> 通配）。
 /// </summary>
-/// <remarks>只实现两个必需成员：任一/要求整体/异步入口都由 <see cref="IPermissionChecker"/> 的默认实现覆盖。</remarks>
+/// <remarks>授权数据就在内存里，预热无事可做，直接返回已完成的 <see cref="ValueTask"/>。</remarks>
 internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 {
 	public bool IsGranted(string permission)
@@ -290,6 +308,11 @@ internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 	public bool IsInRole(string role)
 	{
 		return string.IsNullOrEmpty(role);
+	}
+
+	public ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)
+	{
+		return default;
 	}
 }
 
@@ -311,14 +334,9 @@ internal sealed class VisibleScopeAuthorizer : IObjectScopeAuthorizer
 		return "可见";
 	}
 
-	public bool AllowsRow(object target, string scopeKey, IServiceProvider scope)
+	public ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
 	{
-		return true;
-	}
-
-	public string ExplainRow(object target, string scopeKey, IServiceProvider scope)
-	{
-		return "可见";
+		return default;
 	}
 }
 

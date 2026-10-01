@@ -5,9 +5,12 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// <see cref="ScopeModelRegistry"/> 的构造器：程序化地声明要注册哪些权限模型。
+/// <see cref="ScopeModelRegistry"/> 的构造器：从程序集扫描权限模型并完成注册期校验。
 /// </summary>
-public sealed class ScopeModelRegistryBuilder
+/// <remarks>
+/// 使用方经由 <c>ScopeModelRegistry.Create</c> 触达本类型，不直接使用。
+/// </remarks>
+internal sealed class ScopeModelRegistryBuilder
 {
 	private readonly List<(string Name, Func<IScopeModel> Factory)> _entries = [];
 

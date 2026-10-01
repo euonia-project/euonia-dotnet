@@ -29,7 +29,7 @@ public class PhaseOneRegressionTests
 		// 而不再登记 —— 于是第二个模块的模型被判为「不受约束」，行级数据权限被静默跳过（fail-open）。
 		var services = new ServiceCollection();
 
-		services.AddPermission(RunCodeSource(), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.Source(RunCodeSource()); });
 		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		using var provider = services.BuildServiceProvider();
@@ -183,7 +183,7 @@ public class PhaseOneRegressionTests
 		var registry = third.GetRequiredService<ScopeModelRegistry>();
 
 		Assert.True(registry.IsDeclared(typeof(Asset)));
-		Assert.True(third.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
+		Assert.True(third.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 	}
 
 	[Fact]
@@ -192,7 +192,7 @@ public class PhaseOneRegressionTests
 		// 反向护栏：签名跳过只覆盖「输入没变」，新增模块必须照常重建
 		var services = new ServiceCollection();
 
-		services.AddPermission(RunCodeSource(), TestAssembly);
+		services.AddPermission(p => { p.Scan(TestAssembly); p.Source(RunCodeSource()); });
 
 		using var before = services.BuildServiceProvider();
 		var registryBefore = before.GetRequiredService<ScopeModelRegistry>();

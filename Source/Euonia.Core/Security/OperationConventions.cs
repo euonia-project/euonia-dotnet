@@ -11,6 +11,11 @@ namespace Nerosoft.Euonia.Security;
 /// 绝大多数框架的「操作入口」有两条并行约定：打特性或按名字匹配；本类把后者做成可复用的推导（见 README §3.3）。
 /// </para>
 /// <para>
+/// <b>本类型位于 <c>Euonia.Core</c> 程序集</b>：宿主框架的工厂方法查找（「调用哪个方法」）与
+/// 鉴权侧的入口规则声明（「看哪些方法上的权限声明」）必须用同一套推导——两处各写一份，
+/// 一旦分叉就会出现「声明了权限却从不生效」的静默缺口。
+/// </para>
+/// <para>
 /// 推导规则：以 <c>FetchAttribute</c>、可选前缀 <c>Factory</c> 为例，得到 <c>Fetch</c>、<c>FetchAsync</c>、
 /// <c>FactoryFetch</c>、<c>FactoryFetchAsync</c>；许多框架的约定不含前缀。
 /// </para>
@@ -36,7 +41,8 @@ public static class OperationConventions
 	/// </remarks>
 	public static string[] Names(Type attributeType, string prefix = null)
 	{
-		ArgumentNullException.ThrowIfNull(attributeType);
+		// netstandard2.1 没有 ArgumentNullException.ThrowIfNull
+		ArgumentAssert.ThrowIfNull(attributeType, nameof(attributeType));
 
 		return _cache.GetOrAdd((attributeType, prefix ?? string.Empty), static key =>
 		{

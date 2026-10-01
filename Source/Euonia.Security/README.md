@@ -52,12 +52,12 @@
 ```csharp
 var services = new ServiceCollection();
 
-// 注册策略引擎并声明操作入口规则：数据权限模型注册表（注册期即完成全部校验）、
-// IPermissionChecker、IScopeGuard、PermissionSetup
-services.AddPermission(options => options
+// 注册策略引擎并声明扫描范围与操作入口规则：数据权限模型注册表（注册期即完成全部校验）、
+// IPermissionChecker、IScopeGuard；启动期校验在首次解析 IScopeGuard 时自动执行
+services.AddPermission(permission => permission
+        .Scan(typeof(Order).Assembly)
         .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
-        .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)),
-    typeof(Order).Assembly);
+        .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
 
 // 当前用户主体（判定主体）：由宿主注册，取其 Claims 即 ClaimsPrincipal
 services.AddSingleton(UserPrincipal.Current);
@@ -67,14 +67,14 @@ services.AddSingleton(UserPrincipal.Current);
 
 | 载体 | 用法 | 何时用 |
 |---|---|---|
-| **回调**（推荐） | `AddPermission(o => o.OnAttributeOrName(…), assemblies)` | 绝大多数情况：规则与代码同源、可导航、随代码评审发布；模块可各自贡献（[§3.2](#32-多个模块各自注册按并集合并)） |
+| **回调**（推荐） | `AddPermission(o => o.Scan(…).OnAttributeOrName(…))` | 绝大多数情况：规则与代码同源、可导航、随代码评审发布；模块可各自贡献（[§3.2](#32-多个模块各自注册按并集合并)） |
 | **配置节** | `AddPermission(configuration.GetSection("Permission"), assemblies)` | 部署期要换命名约定时（[§3.4](#34-规则的载体回调--配置节--自定义来源)） |
-| **自定义来源** | `AddPermission(new MyCodeSource(), assemblies)` | 规则不在代码也不在配置里（例如来自数据库） |
+| **自定义来源** | `AddPermission(o => o.Scan(…).Source(new MyCodeSource()))` | 规则不在代码也不在配置里（例如来自数据库） |
 
 确实**没有方法级权限码**时，在回调里断言 `p.NoOperationCodes()`——那是显式的
 「本应用没有方法级权限码」，不是默认值（见 [3.1](#31-为什么必须显式给出规则)）。
 
-`IPermissionCodeSource` 与 `IScopeKeyResolver` 都是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
+`IPermissionCodeSource` 完全由回调决定：各次注册的来源按并集合并后注入，会替换宿主另行注册的描述符——想换来源请在回调里 `Source(...)`。`IObjectScopeAuthorizer` 与 `IScopeKeyResolver` 是 `TryAdd` 语义：宿主已注册的实现不会被覆盖。
 
 若使用了权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [4.2](#42-用户侧授权值从数据实时解析)）。框架不提供默认实现，以免把授权值固化。
@@ -117,12 +117,12 @@ _ = provider.GetRequiredService<IScopeGuard>();   // 缺少 IScopeSubjectResolve
 
 ```csharp
 // 订单模块
-services.AddPermission(o => o.OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)),
-                       typeof(Order).Assembly);
+services.AddPermission(o => o.Scan(typeof(Order).Assembly)
+                             .OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)));
 
 // 报表模块
-services.AddPermission(o => o.OnAttributeOrName(BusinessOperation.Read, "Report", typeof(ReportFetchAttribute)),
-                       typeof(Report).Assembly);
+services.AddPermission(o => o.Scan(typeof(Report).Assembly)
+                             .OnAttributeOrName(BusinessOperation.Read, "Report", typeof(ReportFetchAttribute)));
 ```
 
 合并规则：权限码来源合成一个（操作取并集，权限码取并集去重），程序集取并集，
@@ -162,11 +162,11 @@ services.AddPermission(p =>
 
 ```csharp
 services.AddPermission(options => options
+        .Scan(typeof(Order).Assembly)
         .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
         .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute))
         .OnAttributeOrName(BusinessOperation.Update, "Order", typeof(UpdateAttribute))
-        .OnAttributeOrName(BusinessOperation.Delete, "Order", typeof(DeleteAttribute)),
-    typeof(Order).Assembly);
+        .OnAttributeOrName(BusinessOperation.Delete, "Order", typeof(DeleteAttribute)));
 ```
 
 第二个参数是**要从特性名里剥离的类型前缀**（`OrderFetchAttribute` → 候选名 `Fetch` / `FetchAsync` /
@@ -182,8 +182,8 @@ services.AddPermission(options => options
 ```csharp
 const string approve = "approve";
 
-services.AddPermission(options => options.OnAttributeOrName(approve, "Order", typeof(ApproveAttribute)),
-    typeof(Order).Assembly);
+services.AddPermission(options => options.Scan(typeof(Order).Assembly)
+                                       .OnAttributeOrName(approve, "Order", typeof(ApproveAttribute)));
 ```
 
 每个操作的默认策略键由 `ScopeKeys.For(operation)` 派生为 `@<operation>`；操作名不得以保留前缀
@@ -236,13 +236,13 @@ services.AddPermission(configuration.GetSection("Permission"), typeof(Order).Ass
 > 特性类型与自定义谓词天然属于代码；请让配置文件与代码走**同一套评审与发布流程**，
 > 不要把它当成运维侧的可调开关。配置只在注册期读一次，**不订阅变更**——改配置不会改变门禁，需重启。
 
-> **Osba 宿主**：用 `AddPermission(ObjectPermissionRequirementProvider.Instance, assemblies)` 接入本引擎
+> **Osba 宿主**：用 `AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionRequirementProvider.Instance); })` 接入本引擎
 > （`Euonia.Osba` 自己不引用引擎，两者之间也没有适配包——契约都在 Core，各实现一半，见 [DESIGN §1.11](DESIGN.md)）。
 > 接入后，运行期判定与注册期校验用**同一个来源**：你在这里补充的规则，工厂边界同样生效
 > （与 Osba 自己的工厂约定取并集）。
 
 **自定义来源**：两种载体都表达不了时（例如规则来自数据库、或需要按租户分派），实现
-`IPermissionCodeSource` 并直接传入 `AddPermission(instance, assemblies)` 即可——它只回答
+`IPermissionCodeSource` 并在回调里 `p.Source(instance)`（同时用 `p.Scan(...)` 声明扫描范围）即可——它只回答
 「某类型在某操作上声明了哪些权限码」这一个问题。
 
 ---
@@ -266,8 +266,8 @@ public class Order
 
 未指定 `Permission` 时仅校验角色，未指定角色时仅校验权限；两者均未指定则视为放行。
 
-**权限码忽略大小写**：`order:read`、`Order:Read` 视为同一个码——判定（`ScopeSubjectSet.HoldsPermission`
-与 `ClaimPermissionChecker.Matches`）、去重（`CompositeCodeSource.CodesFor`）、行级策略表
+**权限码忽略大小写**：`order:read`、`Order:Read` 视为同一个码——判定（`ScopeSubjectSet.HoldsPermission`）、
+去重（`CompositeCodeSource.CodesFor`）、行级策略表
 （`ScopePolicySet`）与注册期死策略校验一律按忽略大小写比较。因此 `[Permission("repo:push")]` 配
 `Declare("Repo:Push", …)` 是合法的，不会被误报成「没有任何操作会解析到该码」。
 
@@ -298,27 +298,26 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 
 ```csharp
 var checker = provider.GetRequiredService<IPermissionChecker>();
-checker.EnsurePermission("order:cancel");
+var allowed = checker.IsGranted("order:cancel");   // 布尔结论，是否拦截由调用方裁决
 ```
 
-### 4.4 非默认回退：`ClaimPermissionChecker`
+### 4.4 替换判定实现
 
 默认实现是 `SubjectPermissionChecker`——权限码由 `IScopeSubjectResolver` 从**授权数据**实时解析，
 撤销改数据即可，下一次解析（通常是下一个请求）生效，**不需要重新签发令牌**。
 
-`ClaimPermissionChecker` 仍然保留，它读的是令牌里的 `"perm"` 声明。它**没有** `[Obsolete]`，
-不会产生任何编译或分析器警告；是否选用完全由宿主自行决定。不推荐用它承载细粒度授权：
-令牌里的权限码在过期前无法撤销。
-
-要切换，在 `AddPermission` **之后**注册即可（MS DI 取最后一个描述符，先后顺序不影响结果）：
+早期版本还有一个读令牌 `"permission"` 声明（`UserClaimTypes.Permission`）的 `ClaimPermissionChecker`，
+它已随本库**删除**：把权限码固化在令牌里，过期前无法撤销，框架不再提供这条回退路径。
+需要从别处取判定数据的宿主，自行实现 `IPermissionChecker`（`IsGranted` / `IsInRole` /
+`EnsureResolvedAsync` 三个必需成员），在 `AddPermission` **之后**注册即可（MS DI 取最后一个描述符）：
 
 ```csharp
 services.AddPermission(/* ... */);
-services.AddScoped<IPermissionChecker, ClaimPermissionChecker>();
+services.AddScoped<IPermissionChecker, MyChecker>();
 ```
 
-只需要容器里有 `UserPrincipal`。`AddPermission` 与 `Rebuild` 都不碰 `IPermissionChecker`
-（判定实现是 `TryAddScoped`，且 `Rebuild` 只重建模型注册表），因此不会把它覆盖回去。
+只需要容器里有 `UserPrincipal`。`AddPermission` 用 `TryAddScoped` 注册默认实现，
+不会覆盖宿主已注册的 `IPermissionChecker`，因此判定实现完全由宿主选用。
 
 ---
 
@@ -397,11 +396,11 @@ public sealed class OrderScope : ScopeModel<Order>
 
 | 诊断 | 含义与修法 |
 |---|---|
-| 模型无法实例化 | 程序集扫描要求模型有公共无参构造；需要构造参数的模型改用程序化注册（§5.7） |
+| 模型无法实例化 | 程序集扫描要求模型有公共无参构造；需要构造参数的模型无法注册（§5.7） |
 | 模型未声明任何维度 | `Define` 里至少调用一次 `ScopeModelBuilder<T>.Map`（取值来自子表时用 `MapMany`） |
 | 集合维度的取值形状不受支持 | `MapMany` 的选择器不是「导航集合（可带 `Where` 过滤）再取字符串值」。只有这一种形状能下推为 `EXISTS`，故注册期直接拒绝（§5.9） |
 | 同一维度被重复声明 | 同一个维度名被 `Map` 与 `MapMany`（或同名声明两次）声明——一个维度只能有一个取值来源 |
-| 同一资源类型存在多个模型 | 一个类型只能有一个 `ScopeModel<T>`；程序化注册同样参与检查 |
+| 同一资源类型存在多个模型 | 一个类型只能有一个 `ScopeModel<T>`；扫描到的全部模型都参与检查 |
 | 未提供策略 | `Policy` 返回 `null`。模型与策略必须写在同一个声明类型里 |
 | 声明了权限码但未提供策略 | `Declare` 里声明了该码，却没有对应的 `For(code, …)` |
 | 策略引用了未映射的维度 | 策略里的 `Grant(d)` 没有在 `Define` 中 `Map(d, …)`——这是「写了却没映射 ⇒ 静默放行」的根治点 |
@@ -415,8 +414,8 @@ public sealed class OrderScope : ScopeModel<Order>
 授权数据源与用户主体是否齐备由**首次解析 `IScopeGuard` 时的启动校验**检查（
 因为解析器的注册顺序不受约束）。若从未解析过守卫，首次判定时同样会以明确错误暴露。
 
-启动校验还会拒绝**一个程序集都没扫描过**的注册：`AddPermission` 省略
-`assemblies` 时扫描范围为空，行级数据权限必然静默失效，而「没有任何声明」又会让上面的
+启动校验还会拒绝**一个程序集都没扫描过**的注册：回调里一次 `p.Scan(...)` 都没有时扫描范围为空，
+行级数据权限必然静默失效，而「没有任何声明」又会让上面的
 `IScopeSubjectResolver` / `UserPrincipal` 检查一并短路——于是「能启动但什么都没生效」，无从察觉。
 这与 §3.1 的「空输入不是默认值」是**同一条规则：必须做出的显式选择**：
 
@@ -430,19 +429,12 @@ services.AddPermission(p => p.NoModels());           // 显式断言「本应用
 
 ### 5.7 模型的注册方式
 
-程序集扫描是默认路径（`AddPermission(codeSource, assemblies)`）。模型也可以**程序化注册**，
-适合模型需要构造参数、或按配置动态生成的宿主：
+模型只从**程序集扫描**发现——在 `AddPermission` 回调里 `p.Scan(assemblies)`。扫描要求模型有公共
+无参构造；需要构造参数的模型无法注册（框架不提供公开的程序化注册入口），请把参数改为运行期从
+容器或静态来源取得，或拆成无参声明 + 运行期数据。
 
-```csharp
-// 需要构造参数 ⇒ 用实例
-new ScopeModelRegistryBuilder()
-    .Add(new TenantModel(tenantId, departmentId))
-    .AddFrom(typeof(Order).Assembly)      // 两者可混用
-    .Build(codeSource);
-```
-
-两条路径走**同一套校验**（`Build` 是唯一校验入口），因此不存在「扫描进来的查得严、手动注册的查得松」。
-同一资源类型注册两个模型是**配置错误**（会在 `Build` 报出），而不是「后者胜出」——后者会让作者
+扫描进来的每个模型都走**同一套校验**（`Build` 是唯一校验入口），不存在「有的查得严、有的查得松」。
+同一资源类型注册两个模型是**配置错误**（会在注册期报出），而不是「后者胜出」——后者会让作者
 误以为先注册的那个生效了。
 
 ### 5.8 策略键的解析
@@ -578,7 +570,6 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 |---|---|
 | `ScopeModel<T>` | 数据权限模型基类，模型与策略写在一起 |
 | `ScopeModelBuilder<T>` | 声明维度取值（`Map` 行内列 / `MapMany` 子表）与分类属性 |
-| `ScopeModelRegistryBuilder` | 程序化注册模型（实例 / 类型 / 程序集） |
 | `OperationCodeSource` | 通用的「方法 → 业务操作」规则化来源（按特性或命名约定） |
 | `ScopePolicy<T>` | 策略组合：`Grant` / `Deny` / `Self` / `Any` / `All` / `Not` |
 | `ScopePolicySet<T>` | 按权限码声明行级策略 |
@@ -603,12 +594,11 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 |---|---|
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验；也是自定义规则的扩展点（§3.4） |
 | `IPermissionCodeSource`（Core） | 「要求 + 权限码」的唯一声明，宿主框架与引擎共用；只需实现 `AllOperations`/`CodesFor`，`RequirementsFor` 有默认实现（按权限码折算为「有码、无角色」） |
-| `IPermissionChecker`（Core） | 操作权限判定的唯一声明；只需实现 `IsGranted`/`IsInRole`，组合语义与异步入口有默认实现 |
+| `IPermissionChecker`（Core） | 操作权限判定的唯一声明；实现 `IsGranted`/`IsInRole`/`EnsureResolvedAsync` 三个必需成员，异步判定入口有默认实现 |
 | `IObjectScopeAuthorizer`（Core） | 行级数据权限的落地契约（宿主框架在工厂边界调用）；引擎提供基于 `IScopeGuard` 的实现，可按需替换 |
 | `IObjectOperationResolver`（Core） | 「资源实例当前代表哪个操作」；由宿主框架实现（引擎的 `IScopeKeyResolver` 实现会消费它） |
 | `IScopeKeyResolver` | 把资源实例解析为策略键（§5.8 的第 2 步） |
 | `ScopeKeyResolver.Resolve` | 由「注册项 + 操作 + 权限码来源」解析策略键（唯一出口，§5.8） |
-| `ScopeModelRegistryBuilder` | 换掉程序集扫描，改为程序化注册 |
 | `OperationCodeSourceBuilder` | 声明规则：`OnAttribute` / `OnMethodName` / `OnAttributeOrName` / `OnMethod`（§3.3） |
 | `OperationConventions` | 按特性名推导候选方法名（§3.3） |
 
@@ -626,11 +616,11 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | 「模型未声明任何维度」 | `Define` 里没有调用 `Map`；维度是策略的取值来源，缺了它策略无从表达 |
 | 「声明了权限码但未提供策略」 | `Declare` 里声明了该码，却没有对应的 `For(code, …)`；模型与策略必须写在一起 |
 | 「策略结构性恒不放行」 | 归约后 `Allow` 恒假，通常是 `Any` 之下全是拒绝条件——先确认这是本意还是漏写了允许条件 |
-| 「权限模型无法实例化」 | 程序集扫描要求模型有公共无参构造；需要构造参数时改用 §5.7 的程序化注册 |
+| 「权限模型无法实例化」 | 程序集扫描要求模型有公共无参构造；需要构造参数的模型请改为无参声明 + 运行期依赖（§5.7） |
 | 「集合维度的取值形状不受支持」 | `MapMany` 只接受「导航集合（可带 `Where` 过滤）再取字符串值」这一种形状，其余无法下推为 `EXISTS`（§5.9） |
 | 「维度 'x' 在类型 'Y' 的权限模型中重复声明」 | `Map` 与 `MapMany` 声明了同一个维度名——一个维度只能有一个取值来源 |
 | 「未注册 IScopeSubjectResolver」 | 声明了模型或权限码却没接授权数据源 |
-| 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（程序化注册同样参与检查） |
+| 「同一资源类型存在多个模型」 | 一个类型只能有一个模型（扫描到的全部模型都参与检查） |
 | 「未注册 UserPrincipal」 | 判定主体取自 `UserPrincipal`；不注册则取用 `IScopeGuard` 直接失败 |
 | 「权限模型注册期校验失败，共 N 处问题」 | 这是**汇总**异常，`Diagnostics` 列出了全部问题，按序号逐条修 |
 | 「没有声明任何操作入口规则」（回调载体） | 回调是空的：补规则；没有方法级权限码就断言 `p.NoOperationCodes()`；只想追加扫描就 `p.Scan(asm)`（§3.1） |

@@ -105,7 +105,7 @@ public class SubTableDimensionTests
 		var services = new ServiceCollection();
 
 		services.AddBusinessObject(typeof(MemberTeam).Assembly);
-		services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(MemberTeam).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(MemberTeam).Assembly); p.Source(ObjectPermissionRequirementProvider.Instance); });
 		services.AddSingleton<IScopeSubjectResolver>(new SelfMemberResolver());
 		services.AddSingleton(User("dev"));
 

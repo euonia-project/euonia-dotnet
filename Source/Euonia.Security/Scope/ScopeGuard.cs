@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Security;
 /// 缓存的生命周期与作用域一致。同一请求内反复判定只解析一次授权数据，
 /// 且已编译策略按（资源类型，权限码）缓存，读写路径共享同一份快照。
 /// </remarks>
-public sealed class ScopeGuard : IScopeGuard
+public sealed class ScopeGuard : IScopeGuard, IDisposable
 {
 	private readonly UserPrincipal _user;
 	private readonly ScopeModelRegistry _registry;
@@ -90,6 +90,15 @@ public sealed class ScopeGuard : IScopeGuard
 		}
 
 		await ResolveAsync(force: false, cancellationToken).ConfigureAwait(false);
+	}
+
+	/// <inheritdoc />
+	public async ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken cancellationToken = default)
+	{
+		await EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
+
+		// 此刻缓存已焐热：同步入口命中暖路径，不再触发 AsyncContext.Run
+		return GetSubjects();
 	}
 
 	/// <inheritdoc />
@@ -348,6 +357,18 @@ public sealed class ScopeGuard : IScopeGuard
 
 			// 解析期间被失效过：本次结果已过期，重来
 		}
+	}
+
+	/// <summary>
+	/// 释放解析闸门。
+	/// </summary>
+	/// <remarks>
+	/// <see cref="_resolveGate"/> 持有等待句柄，不释放就会随请求作用域的销毁而泄漏。
+	/// 本类型按请求（Scoped）注册，容器在作用域结束时负责调用本方法。
+	/// </remarks>
+	public void Dispose()
+	{
+		_resolveGate.Dispose();
 	}
 
 	/// <summary>

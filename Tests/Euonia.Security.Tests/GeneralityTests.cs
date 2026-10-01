@@ -401,7 +401,7 @@ public class GeneralityTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(RunCodeSource(), typeof(Asset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(Asset).Assembly); p.Source(RunCodeSource()); });
 		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		var registry = services.BuildServiceProvider().GetRequiredService<ScopeModelRegistry>();
@@ -415,7 +415,7 @@ public class GeneralityTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(RunCodeSource(), typeof(Asset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(Asset).Assembly); p.Source(RunCodeSource()); });
 		services.AddPermission(p => { p.Scan(FixturesAssembly); p.NoOperationCodes(); });
 
 		services.AddSingleton(User(authenticated: true));
@@ -441,8 +441,8 @@ public class GeneralityTests
 
 		var services = new ServiceCollection();
 
-		services.AddPermission(first, typeof(ApprovableAsset).Assembly);
-		services.AddPermission(second, typeof(ApprovableAsset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.Source(first); });
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.Source(second); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -463,8 +463,8 @@ public class GeneralityTests
 
 		var services = new ServiceCollection();
 
-		services.AddPermission(first);
-		services.AddPermission(second);
+		services.AddPermission(p => p.Source(first));
+		services.AddPermission(p => p.Source(second));
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -481,7 +481,7 @@ public class GeneralityTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => p.NoOperationCodes());
-		services.AddPermission(other, typeof(ApprovableAsset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.Source(other); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -490,16 +490,16 @@ public class GeneralityTests
 	}
 
 	[Fact]
-	public void PermissionSetup_Should_Cover_All_Modules_Declarations()
+	public void Registration_Should_Cover_All_Modules_Declarations()
 	{
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => p.NoOperationCodes());
 		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.NoOperationCodes(); });
 
-		var setup = services.BuildServiceProvider().GetRequiredService<PermissionSetup>();
+		var registration = services.BuildServiceProvider().GetRequiredService<PermissionRegistration>();
 
-		Assert.True(setup.RequiresSubjectResolver);
+		Assert.True(registration.RequiresSubjectResolver);
 	}
 
 	[Fact]
@@ -511,8 +511,8 @@ public class GeneralityTests
 
 		var services = new ServiceCollection();
 
-		services.AddPermission(source, typeof(ApprovableAsset).Assembly);
-		services.AddPermission(source, typeof(ApprovableAsset).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.Source(source); });
+		services.AddPermission(p => { p.Scan(typeof(ApprovableAsset).Assembly); p.Source(source); });
 
 		var merged = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 

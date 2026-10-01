@@ -118,6 +118,16 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 			await EnsureRulesAsync("Object not valid for save.", cancellationToken);
 		}
 
+		// 未接线时明确报错，而不是让 NullReferenceException 从 GetRequiredService 里冒出来：
+		// 后者既没有「哪个对象、哪个操作」的信息，也与工厂边界（ObjectAuthorization）的口径不一致。
+		if (BusinessContext == null)
+		{
+			throw new InvalidOperationException(string.Format(
+				Resources.IDS_OBJECT_CONTEXT_MISSING,
+				GetType().Name,
+				ScopeOperationMap.Resolve(this)));
+		}
+
 		var wasDeleted = IsDeleted;
 		MarkAsBusy();
 		try

@@ -106,9 +106,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
     <value>Ungültiger Zustand.</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>Der Datenbereich ist nicht aktiviert.</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>Der Ressourcentyp '{0}' deklariert ein Datenbereichsmodell, das Zielobjekt ist jedoch nicht mit dem BusinessContext verknüpft, daher kann {1} nicht ermittelt werden. Erstellen oder lesen Sie das Objekt über die Factory, oder legen Sie den BusinessContext vor dem Aufruf fest.</value>
   </data>

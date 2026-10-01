@@ -39,14 +39,12 @@ public static class ServiceCollectionExtensions
 		configure(options);
 		Validate(options);
 
-		// 什么都不说不是合法配置：没有任何规则，方法级 [Permission] 无从收集；
-		// 没有扫描范围也没有断言，行级数据权限会静默失效。两种「说清楚意图」的方式都拒绝空回调。
+		// 什么都不说不是合法配置：来源、规则、断言、扫描范围四者一个都没有时，回调没有表达任何意图。
 		Check.Ensure(
-			options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
+			options.ExplicitSource != null || options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
 			Resources.IDS_PERMISSION_CONFIG_EMPTY);
 
-		var (setup, validation) = GetOrCreateSetup(services);
-		Apply(services, setup, options, validation: validation);
+		Apply(services, GetOrCreateRegistration(services), options);
 		return services;
 	}
 
@@ -73,30 +71,7 @@ public static class ServiceCollectionExtensions
 		var options = new PermissionOptions().Scan(assemblies ?? []);
 		ConfigurationRuleBinder.Bind(configuration, options.RulesBuilder(), KnownAssemblies(services, assemblies));
 
-		var (setup, validation) = GetOrCreateSetup(services);
-		Apply(services, setup, options, validation: validation);
-		return services;
-	}
-
-	/// <summary>
-	/// 注册权限体系并使用给定的权限码来源。
-	/// </summary>
-	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="codeSource">权限码来源，回答「某类型在某操作上声明了哪些权限码」。</param>
-	/// <param name="assemblies">要扫描的程序集。</param>
-	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <remarks>
-	/// 规则不在代码也不在配置里（例如来自数据库）时的扩展点。
-	/// </remarks>
-	public static IServiceCollection AddPermission(this IServiceCollection services, IPermissionCodeSource codeSource, params Assembly[] assemblies)
-	{
-		ArgumentNullException.ThrowIfNull(services);
-		ArgumentNullException.ThrowIfNull(codeSource);
-
-		var options = new PermissionOptions().Scan(assemblies ?? []);
-		var (setup, validation) = GetOrCreateSetup(services);
-
-		Apply(services, setup, options, codeSource, validation);
+		Apply(services, GetOrCreateRegistration(services), options);
 		return services;
 	}
 
@@ -124,13 +99,14 @@ public static class ServiceCollectionExtensions
 	/// 把一份配置落到容器：累积来源与程序集，重建模型注册表，并注册引擎自身的服务。
 	/// </summary>
 	/// <remarks>
-	/// 重建只发生在本调用内（累积状态由 <see cref="PermissionModelSetup"/> 保存），
+	/// 重建只发生在本调用内（累积状态由 <see cref="PermissionRegistration"/> 保存），
 	/// 因此配置错误在注册处抛出而不是等到容器构建或首次判定。
 	/// </remarks>
-	private static void Apply(IServiceCollection services, PermissionModelSetup setup, PermissionOptions options, IPermissionCodeSource explicitSource = null, PermissionSetup validation = null)
+	private static void Apply(IServiceCollection services, PermissionRegistration registration, PermissionOptions options)
 	{
-		// 来源三选一：显式传入或 Source() 指定 > 配置/回调产出的规则 > 无码断言
-		IPermissionCodeSource source = explicitSource ?? options.ExplicitSource;
+		// 来源三选一：Source() 指定 > 回调产出的规则 > 无码断言
+		var source = options.ExplicitSource;
+
 		if (source == null && options.Rules != null)
 		{
 			source = options.Rules.Build();
@@ -141,40 +117,40 @@ public static class ServiceCollectionExtensions
 			source = EmptyCodeSource.Instance;
 		}
 
-		var nextSource = source ?? setup.CodeSource;
-		var assemblies = setup.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
+		var nextSource = source ?? registration.CodeSource;
+		var assemblies = registration.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
 
 		if (options.NoModelsAsserted)
 		{
-			setup.NoModelsAsserted = true;
+			registration.NoModelsAsserted = true;
 		}
 
 		if (source != null)
 		{
-			setup.AddSource(source);
+			registration.AddSource(source);
 		}
 
-		setup.AddAssemblies([.. options.Assemblies]);
+		registration.AddAssemblies([.. options.Assemblies]);
 
 		RegisterEngine(services);
 
 		// 输入没变时复用上一次的注册表：全量构建要重扫程序集并逐条编译校验，重复注册应当是空操作
 		ScopeModelRegistry registry;
-		if (setup.SameAsLastBuild(nextSource, assemblies))
+		if (registration.SameAsLastBuild(nextSource, assemblies))
 		{
-			registry = setup.LastRegistry;
+			registry = registration.LastRegistry;
 		}
 		else
 		{
-			registry = ScopeModelRegistry.Create(setup.CodeSource, [.. setup.Assemblies]);
-			setup.LastRegistry = registry;
+			registry = ScopeModelRegistry.Create(registration.CodeSource, [.. registration.Assemblies]);
+			registration.LastRegistry = registry;
 		}
 
 		services.RemoveAll<ScopeModelRegistry>();
 		services.AddSingleton(registry);
 
 		services.RemoveAll<IPermissionCodeSource>();
-		services.AddSingleton(setup.CodeSource);
+		services.AddSingleton(registration.CodeSource);
 
 		// 两个契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）；契约在 Core，无需适配包。
 		// 工厂委托延迟解析：注册表在容器里只保留最新一份，契约解析时取到的必然是它。
@@ -186,12 +162,8 @@ public static class ServiceCollectionExtensions
 			provider.GetRequiredService<IPermissionCodeSource>(),
 			provider.GetService<IObjectOperationResolver>()));
 
-		// 启动期校验要求按累积状态更新（可变单例，不再 RemoveAll + 重建快照）
-		validation ??= services.FirstOrDefault(d => d.ServiceType == typeof(PermissionSetup))?.ImplementationInstance as PermissionSetup;
-		if (validation != null)
-		{
-			validation.RequiresSubjectResolver = setup.HasDeclarations(registry);
-		}
+		// 启动期校验读取的是累计状态，故就地更新（同一实例，不再 RemoveAll + 重建快照）
+		registration.RequiresSubjectResolver = registration.HasDeclarations(registry);
 	}
 
 	/// <summary>
@@ -204,7 +176,6 @@ public static class ServiceCollectionExtensions
 		{
 			// 首次解析守卫时执行启动期校验：解析器、判定主体、扫描范围的缺漏
 			// 在此刻暴露，而不是等到首次权限判定甚至静默失效。
-			// 启动期校验（解析器 / 判定主体 / 扫描范围）随此次解析自动执行。
 			ValidateSetup(provider);
 
 			return new ScopeGuard(
@@ -227,9 +198,9 @@ public static class ServiceCollectionExtensions
 	/// </exception>
 	private static void ValidateSetup(IServiceProvider provider)
 	{
-		var setup = provider.GetService<PermissionSetup>();
+		var registration = provider.GetService<PermissionRegistration>();
 
-		if (setup == null)
+		if (registration == null)
 		{
 			return;
 		}
@@ -237,13 +208,11 @@ public static class ServiceCollectionExtensions
 		// 零程序集扫描必须显式断言（与 EmptyCodeSource 同一条规则：空输入不是默认值）。
 		// 这一条刻意排在 RequiresSubjectResolver 短路之前——零程序集时它恒为 false，
 		// 放在后面就永远检查不到，行级权限会静默失效。
-		var modelSetup = provider.GetService<PermissionModelSetup>();
-
 		Check.Ensure(
-				modelSetup == null || modelSetup.NoModelsAsserted || modelSetup.Assemblies.Count > 0,
+				registration.NoModelsAsserted || registration.Assemblies.Count > 0,
 				Resources.IDS_PERMISSION_NO_ASSEMBLY_SCANNED);
 
-		if (setup.RequiresSubjectResolver != true)
+		if (!registration.RequiresSubjectResolver)
 		{
 			return;
 		}
@@ -266,37 +235,32 @@ public static class ServiceCollectionExtensions
 	{
 		var known = assemblies ?? [];
 
-		return TryGetSetup(services) is { } setup
-				? [.. setup.Assemblies.Concat(known).Distinct()]
+		return TryGetRegistration(services) is { } registration
+				? [.. registration.Assemblies.Concat(known).Distinct()]
 				: known;
 	}
 
 	/// <summary>只读取已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>
-	private static PermissionModelSetup TryGetSetup(IServiceCollection services)
+	private static PermissionRegistration TryGetRegistration(IServiceCollection services)
 	{
-		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionModelSetup))
-					   ?.ImplementationInstance as PermissionModelSetup;
+		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionRegistration))
+					   ?.ImplementationInstance as PermissionRegistration;
 	}
 
 	/// <summary>
-	/// 取得累积状态；首次调用时创建并登记（同时登记供启动期校验读取的 <see cref="PermissionSetup"/>）。
+	/// 取得累积状态；首次调用时创建并登记（同一个实例同时供启动期校验读取）。
 	/// </summary>
-	private static (PermissionModelSetup Setup, PermissionSetup Validation) GetOrCreateSetup(IServiceCollection services)
+	private static PermissionRegistration GetOrCreateRegistration(IServiceCollection services)
 	{
-		if (TryGetSetup(services) is { } existing)
+		if (TryGetRegistration(services) is { } existing)
 		{
-			var validation = services.First(d => d.ServiceType == typeof(PermissionSetup))
-			                       .ImplementationInstance as PermissionSetup;
-			return (existing, validation!);
+			return existing;
 		}
 
-		var setup = new PermissionModelSetup();
-		var permissionSetup = new PermissionSetup();
-		services.AddSingleton(setup);
-		services.AddSingleton(permissionSetup);
-		return (setup, permissionSetup);
+		var registration = new PermissionRegistration();
+		services.AddSingleton(registration);
+		return registration;
 	}
-
 
 	/// <summary>
 	/// 判断给定程序集中是否存在权限声明（类型级 <see cref="PermissionAttribute"/> 或可解析的权限码）。
@@ -326,5 +290,4 @@ public static class ServiceCollectionExtensions
 
 		return false;
 	}
-
 }

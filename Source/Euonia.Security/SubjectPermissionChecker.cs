@@ -76,7 +76,7 @@ public class SubjectPermissionChecker : IPermissionChecker
 
 	/// <inheritdoc />
 	/// <remarks>
-	/// 覆写默认（空操作）实现：授权数据按请求异步解析，预热后再走同步判定，
+	/// 授权数据按请求异步解析：预热后再走同步判定，
 	/// 异步调用链就不会在首次判定时触发 <see cref="ScopeGuard.GetSubjects"/> 的 <c>AsyncContext.Run</c>。
 	/// </remarks>
 	public async ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)

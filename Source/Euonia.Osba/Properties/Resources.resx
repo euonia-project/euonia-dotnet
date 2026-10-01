@@ -126,9 +126,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
       <value>Invalid state.</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>Data scope is not enabled.</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>The resource type '{0}' declares a data scope model, but the target object is not wired to BusinessContext, so {1} can not be determined. Create or read the object through the factory, or set BusinessContext before calling.</value>
   </data>

@@ -31,22 +31,11 @@ public interface IScopeGuard
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>授权数据，含权限码与行级授予。</returns>
 	/// <remarks>
-	/// <para>
 	/// <see cref="GetSubjects"/> 在冷缓存时走 <c>AsyncContext.Run</c> 阻塞调用线程直到宿主解析器完成；
 	/// 异步调用链应改用本方法——它 <c>await</c> 解析完成后再读快照，因此<b>不会</b>阻塞线程。
-	/// </para>
-	/// <para>
-	/// 以<b>默认接口成员</b>（DIM）形式新增：默认实现为「<see cref="EnsureResolvedAsync"/> + <see cref="GetSubjects"/>」，
-	/// 既让第三方实现零改动即可编译，也保证行为与同步入口一致（同一快照、同一口径）。
-	/// </para>
+	/// 实现通常是 <see cref="EnsureResolvedAsync"/> + <see cref="GetSubjects"/>（同一快照、同一口径）。
 	/// </remarks>
-	async ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken cancellationToken = default)
-	{
-		await EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
-
-		// 此刻缓存已焐热：同步入口命中暖路径，不再触发 AsyncContext.Run
-		return GetSubjects();
-	}
+	ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 确保授权数据已解析（幂等；已解析时立即返回）。

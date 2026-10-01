@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>權限配置是空的：沒有聲明操作入口規則，也沒有斷言 NoOperationCodes / NoModels 或給出掃描程序集。有方法級權限碼請用 OnAttribute / OnMethodName / OnAttributeOrName 聲明入口規則；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
+    <value>權限配置是空的：沒有聲明操作入口規則，也沒有給出權限碼來源 / 斷言 NoOperationCodes / NoModels 或掃描程序集。有方法級權限碼請用 OnAttribute / OnMethodName / OnAttributeOrName 聲明入口規則；規則來自別處請用 Source 給出權限碼來源；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>權限設定自相矛盾：已斷言 NoOperationCodes（沒有方法層級的權限碼），卻又宣告了操作入口規則。兩者只能擇一：有方法層級的權限碼就宣告規則，沒有就斷言 NoOperationCodes。</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>權限碼 '{0}' 使用了框架保留的前置詞 '{1}'。請改用不含該前置詞的權限碼。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>裸 '*' 權限碼會匹配全部權限，因此不允許使用。請改用帶非空前置詞的通配（例如 'repo:*'）；「全部」必須透過逐個授予權限碼來明確表達。</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>權限碼 '{0}' 的策略被重複宣告。</value>

@@ -106,9 +106,6 @@
   <data name="IDS_INVALID_STATE" xml:space="preserve">
     <value>無效的狀態。</value>
   </data>
-  <data name="IDS_SCOPE_NOT_ENABLED" xml:space="preserve">
-    <value>未啟用資料範圍授權。</value>
-  </data>
   <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
     <value>資源類型 '{0}' 已宣告資料範圍模型，但目標物件未連接 BusinessContext，因此無法判定 {1}。請透過工廠建立/讀取該物件，或在呼叫前設定 BusinessContext。</value>
   </data>

@@ -118,7 +118,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Regel für Operationseingänge deklariert und weder NoOperationCodes / NoModels bestätigt noch eine zu scannende Assembly angegeben. Deklarieren Sie die Eingangsregel mit OnAttribute / OnMethodName / OnAttributeOrName, wenn es Methodenebene-Berechtigungscodes gibt; bestätigen Sie NoOperationCodes, wenn nicht; bestätigen Sie NoModels, wenn die Anwendung wirklich kein Berechtigungsmodell und keine Deklaration hat.</value>
+    <value>Die Berechtigungskonfiguration ist leer: Es wurde keine Regel für Operationseingänge deklariert und weder eine Codequelle / NoOperationCodes / NoModels angegeben noch eine zu scannende Assembly hinzugefügt. Deklarieren Sie die Eingangsregel mit OnAttribute / OnMethodName / OnAttributeOrName, wenn es Methodenebene-Berechtigungscodes gibt; geben Sie mit Source eine Codequelle an, wenn die Regeln woanders herkommen; bestätigen Sie NoOperationCodes, wenn es keine gibt; bestätigen Sie NoModels, wenn die Anwendung wirklich kein Berechtigungsmodell und keine Deklaration hat.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>Die Berechtigungskonfiguration widerspricht sich selbst: NoOperationCodes wurde bestätigt (keine Berechtigungscodes auf Methodenebene), es wurden jedoch Einstiegsregeln für Vorgänge deklariert. Nur eines von beidem ist zulässig: Deklarieren Sie Regeln, wenn es Berechtigungscodes auf Methodenebene gibt, und bestätigen Sie NoOperationCodes, wenn es keine gibt.</value>
@@ -188,6 +188,9 @@
   </data>
   <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
     <value>Der Berechtigungscode '{0}' verwendet das für das Framework reservierte Präfix '{1}'. Verwenden Sie einen Code ohne dieses Präfix.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>Ein reiner '*'-Berechtigungscode stimmt mit jeder Berechtigung überein und ist daher nicht zulässig. Verwenden Sie einen Präfix-Platzhalter mit nicht leerem Präfix (z. B. 'repo:*'); eine Vollberechtigung muss durch explizites Vergeben der Codes ausgedrückt werden.</value>
   </data>
   <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
     <value>Die Richtlinie für den Berechtigungscode '{0}' ist mehr als einmal deklariert.</value>

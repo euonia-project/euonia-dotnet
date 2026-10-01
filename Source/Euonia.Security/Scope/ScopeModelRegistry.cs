@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Security;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 由 <see cref="ScopeModelRegistryBuilder"/> 构建（程序集扫描或程序化注册），并在<b>注册期</b>完成校验。
+/// 由 <see cref="Create(IPermissionCodeSource, Assembly[])"/> 扫描程序集构建，并在<b>注册期</b>完成校验。
 /// 注册表按容器构建、不含进程级可变状态，因此不同的容器与测试之间天然隔离
 /// （共享的 <see cref="Empty"/> 是空表，不可变）。
 /// </para>
@@ -26,7 +26,7 @@ public sealed class ScopeModelRegistry
 	}
 
 	/// <summary>
-	/// 不含任何模型的共享空表（不可变）：<see cref="ScopeModelRegistryBuilder.Build"/> 未注册到模型时返回它，
+	/// 不含任何模型的共享空表（不可变）：<see cref="Create(IPermissionCodeSource, Assembly[])"/> 未扫描到模型时返回它，
 	/// 此时全部资源都不受数据权限约束。
 	/// </summary>
 	public static ScopeModelRegistry Empty { get; } = new([]);
@@ -118,7 +118,7 @@ public sealed class ScopeModelRegistry
 	}
 
 	/// <summary>
-	/// 供 <see cref="ScopeModelRegistryBuilder"/> 构建已校验的注册表。
+	/// 供模型扫描构建已校验的注册表。
 	/// </summary>
 	internal static ScopeModelRegistry Create(Dictionary<Type, ScopeModelRegistration> registrations)
 	{

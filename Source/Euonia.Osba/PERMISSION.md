@@ -29,19 +29,20 @@
 
 | 契约（共四个，全部在 Core） | Osba 自带 | 引擎提供 | 宿主自己实现 |
 |---|---|---|---|
-| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ 你传给 `AddPermission` 的就是它（含追加的规则） | 例如规则来自配置或权限表 |
+| `IPermissionCodeSource`（要求从哪来） | ✅ 工厂约定扫描（`ObjectPermissionRequirementProvider`） | ✅ 你在回调里 `Source(...)` 指定的就是它（含追加的规则） | 例如规则来自配置或权限表 |
 | `IPermissionChecker`（操作权限判定） | — | ✅ `SubjectPermissionChecker` | 例如按权限码集合判定 |
 | `IObjectScopeAuthorizer`（行级数据权限） | — | ✅ `IScopeGuard` + 行级模型 | 例如按租户/部门比较对象属性 |
 | `IObjectOperationResolver`（对象状态 → 操作） | ✅ `ObjectOperationResolver`（`AddBusinessObject` 注册） | 消费它 | — |
 
 四个契约都在 **Core**：Osba 与引擎各实现自己懂的那一半，因此**不需要适配包**。
-`IPermissionCodeSource` 与 `IPermissionChecker` 的**实现者只需实现必需成员**
-（来源给权限码、判定给「持有/属于」），组合语义与异步入口都有默认实现。
+`IPermissionCodeSource` 的实现者只需实现两个必需成员（`AllOperations` / `CodesFor`，
+`RequirementsFor` 有默认实现）；`IPermissionChecker` 需要 `IsGranted` / `IsInRole` /
+`EnsureResolvedAsync` 三个必需成员，异步判定入口有默认实现。
 
 **不装任何实现也能用**：声明了 `[Permission]` 的类型在工厂边界会因「无人判定」而**报错**，
 而不是静默放行——这是刻意的（fail-closed）。
 
-接引擎时 `AddPermission` 会注册引擎那两个契约的实现（来源由宿主显式传入），因此**不需要**手工注册它们；
+接引擎时 `AddPermission` 会注册引擎那两个契约的实现（来源由回调产出或 `Source(...)` 指定），因此**不需要**手工注册它们；
 它同时注册引擎的两个映射（`IPermissionCodeSource`、`IScopeKeyResolver`）。
 不调用它、也不注册自己的实现，就等于不启用操作权限与行内数据权限。
 
@@ -75,7 +76,11 @@ var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Order).Assembly);
 
 // 2) 启用权限（需要时才加）
-services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Order).Assembly);
+services.AddPermission(p =>
+{
+    p.Scan(typeof(Order).Assembly);
+    p.Source(ObjectPermissionRequirementProvider.Instance);
+});
 ```
 
 **这两步是分开的，是否启用由应用决定。**
@@ -93,17 +98,20 @@ services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Orde
 
 - 注册引擎那两个契约的**实现**：`IObjectScopeAuthorizer`（行级判定）、`IScopeKeyResolver`（按操作解析策略键——
   它会向容器里的 `IObjectOperationResolver` 问「当前是哪个操作」，而那是 `AddBusinessObject` 注册的）
-  （要求来源与操作权限判定不必注册：你传进去的来源与 `AddPermission` 注册的 `IPermissionChecker`
+  （要求来源与操作权限判定不必注册：你在回调里指定的来源与 `AddPermission` 注册的 `IPermissionChecker`
   就是那两个契约的实现）
-- `AddPermission(<Osba 的工厂约定来源>, assemblies)`——把「哪个工厂方法对应哪个操作」交给引擎
-  （宿主因此**不需要**自己声明操作入口规则；要补充规则用 `AddPermission` 追加，见 §0 末）
+- 回调里的 `p.Scan(assemblies)` + `p.Source(ObjectPermissionRequirementProvider.Instance)`——
+  把扫描范围与「哪个工厂方法对应哪个操作」交给引擎
+  （宿主因此**不需要**自己声明操作入口规则；要补充规则在同一个回调里继续声明，见 §0 末）
 
 引擎侧随之注册 `IPermissionChecker` → `SubjectPermissionChecker`（权限码来自授权数据，撤销立即生效）、
 `ScopeModelRegistry`（数据权限模型注册表，注册期即完成校验）、
-`IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）、`PermissionSetup`。
+`IScopeGuard` → `ScopeGuard`（数据权限判定入口，按请求缓存）。
 
-契约都是 `TryAdd` 语义：宿主可以先注册自己的实现，适配包不会覆盖它——
-这样「接引擎」与「用自己的实现」可以是同一个装配路径，甚至可以交替使用（例如行级用引擎、操作权限用自建表）。
+引擎对 `IObjectScopeAuthorizer` 与 `IScopeKeyResolver` 用 `TryAdd` 语义：宿主可以先注册自己的实现，
+不会被覆盖。`IPermissionCodeSource` 则完全由回调决定（各次注册的来源按并集合并后注入，会替换宿主
+另行注册的描述符）——想换来源请在回调里用 `Source(...)`。这样「接引擎」与「用自己的实现」可以是
+同一个装配路径，甚至可以交替使用（例如行级用引擎、操作权限用自建表）。
 
 两点使用说明：
 
@@ -123,11 +131,12 @@ Osba 宿主用 `AddPermission` 补充的规则在**运行期同样生效**：额
 若使用权限（操作权限的权限码或数据权限），还必须**由应用注册一个 `IScopeSubjectResolver`**
 （见 [3.2](#32-用户侧授权值从数据实时解析)），框架不提供默认实现，以免把授权值固化。
 
-容器构建后请调用一次启动期校验，使「声明了权限却忘了接解析器」在启动时失败：
+启动期校验在**首次解析 `IScopeGuard` 时自动执行**，无需任何手动步骤；想让
+「声明了权限却忘了接解析器」尽早失败，先解析一次守卫即可：
 
 ```csharp
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
+_ = provider.GetRequiredService<IScopeGuard>();   // 缺少 IScopeSubjectResolver 或 UserPrincipal 时在此抛出
 ```
 
 使用时机说明：`BusinessContext` 在构造时会捕获当前用户
@@ -181,13 +190,16 @@ public class AdminSettings : EditableObject<AdminSettings>
 
 工厂方法特性与业务操作的对应关系：
 
-| 操作 | 工厂方法特性 | 虚方法 |
+| 操作 | 工厂方法特性 | 操作名（`CanPerformOperation` 的参数） |
 |---|---|---|
-| 读取 | `[FactoryFetch]` | `CanReadObject()` |
-| 创建（Insert 态保存） | `[FactoryCreate]`、`[FactoryInsert]` | `CanCreateObject()` |
-| 更新 | `[FactoryUpdate]` | `CanUpdateObject()` |
-| 删除 | `[FactoryDelete]` | `CanDeleteObject()` |
-| 命令执行 | `[FactoryExecute]` | `CanExecuteObject()` |
+| 读取 | `[FactoryFetch]` | `BusinessOperation.Read`（`read`） |
+| 创建（Insert 态保存） | `[FactoryCreate]`、`[FactoryInsert]` | `BusinessOperation.Create`（`create`） |
+| 更新 | `[FactoryUpdate]` | `BusinessOperation.Update`（`update`） |
+| 删除 | `[FactoryDelete]` | `BusinessOperation.Delete`（`delete`） |
+| 命令执行 | `[FactoryExecute]` | `BusinessOperation.Execute`（`execute`） |
+
+操作权限的查询与派生类定制统一走 `BusinessObject.CanPerformOperation(string operation)`——
+内置操作与自定义操作一视同仁（见 §2.4）。
 
 ### 2.2 用户如何被授予
 
@@ -221,9 +233,10 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 **角色仍来自声明**（`UserPrincipal.IsInRole`）：角色数量少而稳定，不构成令牌膨胀问题。
 **细粒度授权一律使用权限码**，不要用角色承载。
 
-> `ClaimPermissionChecker`（读 `"perm"` 声明）仍保留、**没有** `[Obsolete]`、也不是默认实现；
-> 它只是显式回退。需要时在 `AddPermission` **之后** `AddScoped<IPermissionChecker, ClaimPermissionChecker>()`
-> 即可生效（MS DI 取最后一个描述符，先后顺序不影响结果），只需容器里有 `UserPrincipal`。
+> 早期版本还有一个读令牌 `"permission"` 声明（`UserClaimTypes.Permission`）的 `ClaimPermissionChecker`，
+> 它已**删除**——令牌里的权限码在过期前无法撤销，与「撤销立即生效」相悖。需要从别处取判定数据的
+> 宿主，自行实现 `IPermissionChecker`（`IsGranted` / `IsInRole` / `EnsureResolvedAsync`），
+> 在 `AddPermission` **之后** `AddScoped` 即可生效（MS DI 取最后一个描述符），只需容器里有 `UserPrincipal`。
 
 ### 2.3 强制执行
 
@@ -245,23 +258,25 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 
 ### 2.4 自定义授权逻辑
 
-重写 `BusinessObject` 的对象级虚方法，实现更细的控制；基类默认委托给类型/方法上的要求。
+操作权限的定制点是 `BusinessObject.CanPerformOperation(string operation)`：内置操作与自定义操作
+一视同仁，都按类型级/方法级 `[Permission]` 要求判定；基类默认委托给 `ObjectAuthorization`，
+派生类可重写它叠加业务判断。
 
 ```csharp
 public class Order : EditableObject<Order>
 {
-    public override bool CanDeleteObject()
+    public override bool CanPerformOperation(string operation)
     {
-        // 结合业务判断
-        return HasPermission("order:delete") && !_isArchived;
+        // 结合业务判断：归档后不允许删除
+        return (operation != BusinessOperation.Delete || !_isArchived)
+            && base.CanPerformOperation(operation);
     }
 }
 ```
 
-对象内部还可使用契约保护的辅助方法（在属性访问器或业务方法中）：
-
-- `protected bool HasPermission(string permission)`
-- `protected bool HasRole(string role)`
+它是**查询语义**（无从判定时返回 `true`，不抛异常），真正的拦截在工厂边界。
+业务方法内部要问「这一行数据我看不看得见」时，从 `BusinessContext` 取 `IScopeGuard`：
+`guard.AllowsObject(this, code)` / `guard.ExplainObject(this, code)`（见 §4.5）。
 
 ---
 
@@ -509,8 +524,8 @@ await guard.RefreshAsync(cancellationToken);  // 异步：清空并立即重新�
 
 校验只在「声明了模型」时生效：没有任何 `ScopeModel<T>` 的应用照常启动，只是全部资源都不受数据权限约束。
 
-未注册 `IScopeSubjectResolver` 但存在模型时，会在**首次判定**以明确错误抛出，绝不静默放行；
-调用 `ValidatePermissionSetup()` 可让它在启动时暴露。同理，「已声明模型或权限码却没注册 `UserPrincipal`」
+未注册 `IScopeSubjectResolver` 但存在模型时，会在**首次解析 `IScopeGuard`（守卫是判定的唯一入口）**
+以明确错误抛出，绝不静默放行。同理，「已声明模型或权限码却没注册 `UserPrincipal`」
 也会在启动期报错——其表现是所有人都被拒却毫无提示，最容易被误判成策略写错。
 
 ### 3.8 子表维度（关系表作为取值来源）
@@ -591,14 +606,16 @@ public sealed class TeamScope : ScopeModel<Team>
 ```csharp
 protected async Task CloseAsync(CancellationToken cancellationToken)
 {
-    if (!CanAccessRow("repo:delete"))          // 行级
+    if (!CanPerformOperation(BusinessOperation.Delete))   // 操作级：本对象当前操作是否被允许
     {
         throw new InvalidOperationException("无权关闭该仓库。");
     }
 
-    if (!await CheckPermissionAsync("repo:admin", cancellationToken))   // 权限码
+    var guard = BusinessContext.GetRequiredService<IScopeGuard>();
+    await guard.EnsureResolvedAsync(cancellationToken);   // 行级判定前先预热授权数据
+    if (!guard.AllowsObject(this, "repo:delete"))         // 行级：本行在不在该码的范围内
     {
-        // ...
+        throw new InvalidOperationException("无权关闭该仓库。");
     }
 }
 ```
@@ -609,7 +626,7 @@ protected async Task CloseAsync(CancellationToken cancellationToken)
 > 是只读属性，无法重写），或走执行器时加 `.WithRuleChecksOnDelete()`。
 
 > **越权不再出现在表单错误列表里**。需要「表单预提示」的场景，在调用侧显式捕获
-> `SecurityException`，或先用 `CanAccessRow` / `CheckPermissionAsync` 查再跳。
+> `SecurityException`，或先用 `CanPerformOperation` / `IScopeGuard.AllowsObject` 查再跳。
 
 > **范围列的"搬迁"不受保护**：业务方法可以把 `TeamId` 改到用户不属于的团队，
 > 后置检查能发现并抛出，但无法阻止已经发生的写入。
@@ -688,7 +705,11 @@ public sealed class TeamScopeResolver : IScopeSubjectResolver
 
 ```csharp
 services.AddBusinessObject(typeof(Repo).Assembly);
-services.AddPermission(ObjectPermissionRequirementProvider.Instance, typeof(Repo).Assembly);
+services.AddPermission(p =>
+{
+    p.Scan(typeof(Repo).Assembly);
+    p.Source(ObjectPermissionRequirementProvider.Instance);
+});
 services.AddScoped<IScopeSubjectResolver, TeamScopeResolver>();
 
 // 组织 DI + 用户后：
@@ -737,7 +758,7 @@ guard.Allows(repoInTeamC);                // → true
 | `PermissionAttribute` | 声明操作权限点（类级 / 方法级） |
 | `BusinessOperation` | 操作词汇（`read` / `create` / `update` / `delete` / `execute`，只是常量字符串） |
 | `IPermissionCodeSource` | **契约**：要求 + 权限码视图（`RequirementsFor` 有默认实现，按权限码折算） |
-| `IPermissionChecker` | **契约**：操作权限判定（`IsGranted` / `IsInRole` 之外都有默认实现） |
+| `IPermissionChecker` | **契约**：操作权限判定（`IsGranted` / `IsInRole` / `EnsureResolvedAsync` 为必需成员，异步判定入口有默认实现） |
 | `UserPrincipal` / `UserClaimTypes` | 判定主体与其声明类型 |
 
 ### `Euonia.Osba`（约定 + 契约 + 强制点，不引用引擎）
@@ -748,7 +769,7 @@ guard.Allows(repoInTeamC);                // → true
 | `IObjectScopeAuthorizer` | `Permission/` | 契约：行级数据权限判定（由宿主提供） |
 | `ScopeOperationMap` | `Permission/` | `ObjectEditState → BusinessOperation` 的唯一映射（适配包也用它） |
 | `ObjectAuthorization` / `ScopeAuthorization` | `Permission/` | 工厂边界的两个闸门（越权抛 `SecurityException`，判定不了抛 `InvalidOperationException`） |
-| `BusinessObject.CanXObject()` / `HasPermission` / `HasRole` / `CanAccessRow` / `ExplainRowAccess` / `CheckPermissionAsync` | `Core/BusinessObject.cs` | 业务对象内的权限查询（**查询语义**：无从判定时返回 `true`，拦截只在工厂边界） |
+| `BusinessObject.CanPerformOperation(string operation)` | `Core/BusinessObject.cs` | 业务对象内**唯一**的操作权限查询（**查询语义**：无从判定时返回 `true`，拦截只在工厂边界）；行级可见性经 `BusinessContext` 取 `IScopeGuard`（`Euonia.Security`）后调用 `AllowsObject` / `ExplainObject` |
 
 ### `Euonia.Security`（策略引擎）
 
@@ -759,12 +780,11 @@ guard.Allows(repoInTeamC);                // → true
 | `IScopeGuard` / `ScopeGuard` | 数据权限判定入口（按请求缓存） |
 | `IScopeSubjectResolver` / `ScopeSubjectSet` | 授权值来源与主体集合 |
 | `IPermissionChecker` / `SubjectPermissionChecker` | 操作权限判定与其默认实现（权限码来自授权数据） |
-| `ClaimPermissionChecker` | 非默认回退（无 `[Obsolete]`）：读 `"perm"` 声明，不推荐 |
 | `IPermissionCodeSource` | 要求与权限码来源（Core）；注册期校验与工厂边界都问它 |
 | `IScopeKeyResolver` / `ScopeKeyResolver` / `ScopeKeys` | 策略键的解析出口与保留命名空间 |
 | `ScopeFilter` / `CompiledScopePolicy<T>` / `ScopeDecision` | 下推、内存过滤、单行判定与审计 |
 | `ScopeDimensions` | 维度名常量（`Owner` / `Dept` / `Member` / `Region` / `Project`） |
-| `ScopeModelRegistry` / `PermissionSetup` / `ValidatePermissionSetup()` | 注册表与启动期校验 |
+| `ScopeModelRegistry` | 数据权限模型注册表（注册期构建并校验；解析器 / 用户主体的启动期校验在首次解析 `IScopeGuard` 时执行） |
 
 ### Core 里的跨边界契约
 
@@ -791,7 +811,7 @@ public interface IScopeSubjectResolver
 
 public sealed class ScopeSubjectSetBuilder
 {
-    ScopeSubjectSetBuilder AddCode(string code);                                  // 类型级权限码
+    ScopeSubjectSetBuilder AddCode(string code);                                  // 类型级权限码（通配须带前缀，如 repo:*；裸 "*" 会被拒绝）
     ScopeSubjectSetBuilder AddCodes(IEnumerable<string> codes);
     ScopeSubjectSetBuilder AddSelf(string userId);                                // = Add(owner, userId)
     ScopeSubjectSetBuilder Add(string dimension, string value);                   // 默认键上的维度授予
@@ -851,6 +871,7 @@ public abstract class ScopePolicy<T>
 public interface IScopeGuard
 {
     ScopeSubjectSet GetSubjects();
+    ValueTask<ScopeSubjectSet> GetSubjectsAsync(CancellationToken ct = default);
     IReadOnlyCollection<string> Permissions { get; }
     IQueryable<T> Apply<T>(IQueryable<T> source, string code = null);      // 读侧下推
     bool Allows<T>(T resource, string code = null);                        // 单行判定
@@ -863,14 +884,12 @@ public interface IScopeGuard
 }
 ```
 
-### 业务对象内的断言
+### 业务对象内的查询
 
 ```csharp
-protected bool HasPermission(string permission);            // 权限码（同步，可能阻塞一次）
-protected bool HasRole(string role);
-protected ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken ct = default);
-protected bool CanAccessRow(string code = null);            // 本行是否在范围内
-protected string ExplainRowAccess(string code = null);      // 判定原因
+public virtual bool CanPerformOperation(string operation);   // 操作级：无从判定时返回 true（查询语义）
+
+// 行级：BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, code) / ExplainObject(this, code)
 ```
 
 ---
@@ -890,14 +909,14 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | `维度 'x' 在类型 'Y' 的权限模型中重复声明` | 同一维度被 `Map` 与 `MapMany` 各声明了一次 | 一个维度只能有一个取值来源 |
 | `结构性恒不放行` | `Any` 之下全是 `Deny` 分支 | 补上 `Grant`/`Where`/`Self` 等允许条件 |
 | `存在多个权限模型` | 同一资源类型有两个 `ScopeModel<T>` | 合并为一个 |
-| `未注册 IScopeSubjectResolver` | 声明了模型或 `[Permission]` 却没接解析器 | 注册实现，并调用 `provider.ValidatePermissionSetup()` |
+| `未注册 IScopeSubjectResolver` | 声明了模型或 `[Permission]` 却没接解析器 | 注册实现；启动期校验在首次解析 `IScopeGuard` 时自动执行 |
 
 ### 运行期异常
 
 | 异常 | 含义 |
 |---|---|
-| `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验被跳过，首次判定时兜底暴露 |
-| `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext` |
+| `InvalidOperationException`：未注册 `IScopeSubjectResolver` | 启动期校验在首次解析 `IScopeGuard` 时执行，在此暴露；守卫是判定入口，首次判定前必然先解析它 |
+| `InvalidOperationException`：提示含 `BusinessContext` | 目标声明了权限要求/数据范围模型，却没接入 `BusinessContext`——多半是 `new` 出对象后忘了接线。请走工厂创建，或在调用前设置 `BusinessContext`；直接调用 `EditableObject<T>.SaveAsync` 而对象未接线时同样抛此异常（无论是否声明权限） |
 | `InvalidOperationException`：提示含「子表维度」 | 单行判定遇到未加载的子集合（§3.8）。它不是越权，**不要**当成 `SecurityException` 捕获；按下推/加载/去掉初始化器三条修法处理 |
 | `SecurityException` | 工厂边界判定越权——操作权限或数据范围不满足（新增/更新/删除/命令**一致**） |
 
@@ -948,7 +967,8 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 请在子表上建 `(父标识, 值)` 组合索引（例如 `(team_id, user_id)`），否则外层每一行都要扫一遍子表。
 
 **同步与异步**：`IPermissionChecker` 是同步接口，首次判定会走一次 sync-over-async
-（每作用域仅一次）。工厂的异步入口可优先用 `CheckPermissionAsync` 避免阻塞线程。
+（每作用域仅一次）。工厂的异步入口（`*Async`）在判定前先预热授权数据
+（`EnsureResolvedAsync`），因此不会在首次判定时阻塞线程。
 
 ## 11. 从旧数据权限迁移
 
@@ -968,7 +988,7 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
 | `IAnonymousAccessible` 特例接口 | 策略里的 `Where(x => x.IsPublic)`（显式、可审计） |
 | `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
 | `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
-| `ClaimPermissionChecker`（权限码读 `"perm"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类保留、**无** `[Obsolete]`、非默认 |
+| `ClaimPermissionChecker`（权限码读令牌 `"permission"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类**已删除**，需要自定义判定请自行实现 `IPermissionChecker` |
 | 类型级 `[Permission]` 唯一粒度 | 同一类型内可按权限码声明行级策略（`Declare`），行与行之间权限可不同 |
 
 **迁移检查项**：
@@ -977,8 +997,8 @@ protected string ExplainRowAccess(string code = null);      // 判定原因
   `Where(...)` 允许条件，将对匿名用户**完全不可见**——必须补上。
 - 旧的「所有者快速路径」无条件放行，新体系下需要解析器 `AddSelf(userId)` 才成立；漏了会导致
   「本人数据也不可见」（fail-closed，不会反向放行）。
-- **权限码必须改由解析器提供**：原先写在令牌 `"perm"` 声明里的码，若既不迁移到授权数据、
-  也不注册解析器，启动期校验会直接失败（不会静默放行）。
+- **权限码必须改由解析器提供**：原先写在令牌 `"permission"` 声明里的码，若既不迁移到授权数据、
+  也不注册解析器，启动期校验（首次解析 `IScopeGuard` 时）会直接失败（不会静默放行）。
 - **不要用规则做授权**：早前提供过 `PermissionRule` / `ScopePolicyRule` 让越权以
   `ValidationException` 暴露，两者已删除。捕获 `ValidationException` 的调用方需要改为捕获
   `SecurityException`——表单错误列表里不再含越权信息。

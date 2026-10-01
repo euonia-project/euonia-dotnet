@@ -28,7 +28,7 @@ public class AddPermissionTests
 		var provider = Build(s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
 		Assert.NotNull(provider.GetService<ScopeModelRegistry>());
-		Assert.NotNull(provider.GetService<PermissionSetup>());
+		Assert.NotNull(provider.GetService<PermissionRegistration>());
 		Assert.NotNull(provider.GetService<IPermissionChecker>());
 		Assert.NotNull(provider.GetService<IScopeGuard>());
 	}
@@ -72,7 +72,7 @@ public class AddPermissionTests
 	{
 		var services = new ServiceCollection();
 
-		Assert.Throws<ArgumentNullException>(() => services.AddPermission((IPermissionCodeSource)null, CleanAssembly));
+		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => p.Source(null)));
 	}
 
 	[Fact]
@@ -108,7 +108,7 @@ public class AddPermissionTests
 	{
 		// 只给权限码的来源折算成「有码、无角色」——回答不了角色不等于没有要求，
 		// 把它当成空要求会让闸门比来源本身更宽松
-		var provider = Build(s => s.AddPermission(new ConventionCodeSource(), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 
 		var requirements = provider.GetRequiredService<IPermissionCodeSource>()
 		                           .RequirementsFor(typeof(GuardedAsset), BusinessOperation.Execute);
@@ -142,7 +142,7 @@ public class AddPermissionTests
 	public void AddPermission_Should_Register_Code_Source()
 	{
 		var expected = new ConventionCodeSource();
-		var provider = Build(s => s.AddPermission(expected, TestAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.Source(expected); }));
 
 		Assert.Same(expected, provider.GetRequiredService<IPermissionCodeSource>());
 	}
@@ -172,7 +172,7 @@ public class AddPermissionTests
 	{
 		var provider = Build(s => s.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 
-		Assert.False(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
+		Assert.False(provider.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 		provider.GetRequiredService<IScopeGuard>();
 	}
 
@@ -223,7 +223,7 @@ public class AddPermissionTests
 	{
 		var provider = Build(s => s.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); }));
 
-		Assert.True(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
+		Assert.True(provider.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 	}
 
 	[Fact]
@@ -250,15 +250,15 @@ public class AddPermissionTests
 	[Fact]
 	public void AddPermission_Should_Detect_Method_Level_Permission_With_Code_Source()
 	{
-		var provider = Build(s => s.AddPermission(new ConventionCodeSource(), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 
-		Assert.True(provider.GetRequiredService<PermissionSetup>().RequiresSubjectResolver);
+		Assert.True(provider.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 	}
 
 	[Fact]
 	public void AddPermission_Should_Key_Execute_From_Code_Source()
 	{
-		var provider = Build(s => s.AddPermission(new ConventionCodeSource(), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 
 		Assert.Equal("guarded:run", ResolveExecuteKey(provider, typeof(GuardedAsset)));
 	}
@@ -287,7 +287,7 @@ public class AddPermissionTests
 	public void AddPermission_Should_Not_Key_Read_From_Code_Source()
 	{
 		// codeSource 只影响它声明了权限码的操作，其余操作一律走框架默认键。
-		var provider = Build(s => s.AddPermission(new ConventionCodeSource(), FixturesAssembly));
+		var provider = Build(s => s.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); }));
 		var registry = provider.GetRequiredService<ScopeModelRegistry>();
 		var codeSource = provider.GetRequiredService<IPermissionCodeSource>();
 
@@ -319,7 +319,7 @@ public class AddPermissionTests
 	#region 只追加扫描范围
 
 	[Fact]
-	public void AddPermissionModels_Should_Extend_Scan_Scope()
+	public void Scan_Should_Extend_Scan_Scope()
 	{
 		// 模型分散在多个程序集：Scan 可多次调用，程序集按并集累积。
 		var services = new ServiceCollection();
@@ -354,11 +354,11 @@ public class AddPermissionTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => { p.Scan(TestAssembly); p.NoOperationCodes(); });
-		services.AddPermission(new ConventionCodeSource(), FixturesAssembly);
+		services.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); });
 
 		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(ScopeModelRegistry)));
 		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(IPermissionCodeSource)));
-		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(PermissionSetup)));
+		Assert.Equal(1, services.Count(x => x.ServiceType == typeof(PermissionRegistration)));
 	}
 
 	#endregion

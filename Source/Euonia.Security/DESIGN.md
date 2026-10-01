@@ -56,8 +56,8 @@ graph TD
     end
 
     subgraph B["② 装配与启动"]
-        B1["注册<br/>ScopeModelRegistryBuilder：程序集扫描（AddFrom）或程序化注册（Add 实例/类型）<br/>两条路径共用 Build() 这一唯一校验入口"]
-        B2["启动期校验<br/>ScopeModelRegistryBuilder.Build：模型级校验项见 README §5.6<br/>一次报全 ScopeModelValidationException.Diagnostics<br/>provider.ValidatePermissionSetup()：缺解析器 / 缺用户主体"]
+        B1["注册<br/>ScopeModelRegistry.Create：程序集扫描<br/>Build() 是唯一校验入口"]
+        B2["启动期校验<br/>模型级：注册期 Build（校验项见 README §5.6），一次报全 ScopeModelValidationException.Diagnostics<br/>缺解析器 / 缺用户主体：首次解析 IScopeGuard 时的启动校验"]
     end
 
     subgraph C["③ 请求作用域"]
@@ -76,7 +76,7 @@ graph TD
     subgraph E["⑤ 判定出口（是否强制由使用方决定）"]
         E1["读侧 guard.Apply(query)<br/>表达式下推 → SQL WHERE"]
         E2["单行 guard.Allows / guard.AllowsObject<br/>审计 guard.Explain"]
-        E3["操作权限 guard.EnsurePermission(code)<br/>→ 布尔结果，越权形态由调用方裁决"]
+        E3["操作权限 checker.IsGranted(code)<br/>→ 布尔结果，越权形态由调用方裁决"]
     end
 
     subgraph F["⑥ 外部世界"]
@@ -151,7 +151,8 @@ graph TD
 2. 更严重的是**取消授权后，旧令牌在过期前一直有效**——撤销不生效。
 
 **决策**：权限码改由 `IScopeSubjectResolver` 从授权数据实时解析，随 `IScopeGuard` 按请求缓存。
-`ClaimPermissionChecker` 保留、**没有** `[Obsolete]`、且不再是默认实现——是否选用由宿主自行决定（在 `AddPermission` 之后 `AddScoped` 即可，见 README §4）。
+读令牌 `"permission"` 声明的 `ClaimPermissionChecker` 已**删除**——这条回退路径与「撤销必须立即生效」
+相悖；需要自定义判定数据的宿主自行实现 `IPermissionChecker`（在 `AddPermission` 之后 `AddScoped` 即可，见 README §4.4）。
 
 **收益**：撤销只需改数据，下一次解析即生效，**不需要重新签发令牌**。
 测试 `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` 用一个
@@ -290,7 +291,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ### 1.10 规则以「配置」形态声明，但校验仍在注册处
 
-**问题**：`AddPermission(IPermissionCodeSource, assemblies)` 要求使用方先**构造**一个来源对象
+**问题**：此前的 `AddPermission(IPermissionCodeSource, assemblies)` 要求使用方先**构造**一个来源对象
 （`OperationCodeSource.Create()…Build()`），再把对象传进注册调用。这个形态有两个实际后果：
 
 1. 它看起来像「注册引擎服务」，于是被当成一次性调用；而它的载荷其实是**业务配置**
@@ -298,7 +299,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 2. 模块化应用里，每个模块想贡献自己的操作入口约定时，只能「自己造一个来源」或「共享一个来源实例」，
    README §3.2 的合并语义因此显得多余。
 
-**决策**：规则成为注册调用**接受的配置**——`AddPermission(o => o.OnAttributeOrName(…), assemblies)`（回调）
+**决策**：规则成为注册调用**接受的配置**——`AddPermission(o => o.Scan(assemblies).OnAttributeOrName(…))`（回调）
 与 `AddPermission(configuration.GetSection("Permission"), assemblies)`（配置节）。两者与自定义
 `IPermissionCodeSource` 产出**同一套规则**（同一份编译、同一份注册期校验、同一套合并），可混用并取并集。
 
@@ -315,7 +316,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `services.ConfigurePermissionRules(...)` 之类的分离式注册 | 配置可能被遗忘（注册了引擎却没声明规则），且校验被推迟到容器构建——本库的既有性质是「配置错误在注册处抛出」，这条不能为了形态好看而放弃 |
 | `IOptions<T>` / `Configure<T>` 延迟绑定 | 同上：容器构建期才报错；且多次调用的合并顺序不再由调用方决定 |
 | 维持现状（只能传构造好的来源对象） | 见「问题」：形态误导 + 模块化无处贡献 |
-| 删掉 `AddPermission(IPermissionCodeSource, …)` 只留回调 | 它是已发布的公开 API，且是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口 |
+| 删掉 `AddPermission(IPermissionCodeSource, …)` 只留回调（当时被否决，后来仍采纳） | 当时理由是：它是已发布的公开 API，且是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口。后来该重载仍被删除，来源改由回调内的 `Source(...)` 指定——出口保留，形态统一 |
 
 **已知边界**：配置节载体把**鉴权口径**搬进了可被部署改动的地方——把某个方法从「需要审批码」改成「无码」
 只是一次配置改动。因此文档要求配置文件与代码走同一套评审与发布流程，且特性类型与自定义谓词仍应留在代码里
@@ -429,8 +430,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | **通用表达式 DSL**（策略写成字符串再解析，类似 Rego） | 会引入解析器 + 求值器 + 翻译器三份实现，正是本设计要消灭的漂移源 |
 | **同步的解析器接口** | 解析器必然查库；同步签名会把同步 I/O 带进请求链路。用 `ValueTask` + 单次解析已足够 |
 | **引用 `Euonia.Linq` 复用表达式组合子** | 其承重的 `ParameterRebinder` 是 `internal`，外部用不上；且 `Source/` 下没有任何项目在用该组合子。为三个方法引入 ProjectReference 不划算，改为 25 行的内部参数替换 + body 层归并 |
-| **在注册服务的过程中直接检查解析器是否已注册** | 解析器通常在那之后才注册，在那里检查会误报。改为记录 `PermissionSetup`，由容器构建后的 `ValidatePermissionSetup()` 检查 |
-| **删除 `ClaimPermissionChecker`** | 它是已发布的公开 API。改为保留 + 不再是默认实现——同等达成「默认路径不依赖令牌」，且不破坏使用方。（当初同时计划的 `[Obsolete]` 后来**未采纳**：类保持无警告，由宿主自行启用，见 §1.2） |
+| **在注册服务的过程中直接检查解析器是否已注册** | 解析器通常在那之后才注册，在那里检查会误报。改为在注册时记录状态（内部的注册登记），由首次解析 `IScopeGuard` 时的启动校验检查 |
+| **删除 `ClaimPermissionChecker`**（当初保留，后来仍删除） | 当初的理由：它是已发布的公开 API，改为保留 + 不再是默认实现即可达成「默认路径不依赖令牌」且不破坏使用方（同期计划的 `[Obsolete]` 未采纳）。后续版本仍决定删除——「读令牌」这条回退路径与「撤销必须立即生效」相悖，自定义需求由宿主自建 `IPermissionChecker` 承接，见 §1.2 |
 
 ---
 
@@ -450,7 +451,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `RowLevel_CodeGrantShouldOverrideDefault_NotUnion` | §1.6 覆盖而非并集 |
 | `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` | §1.2 撤销立即生效 |
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
-| `ValidatePermissionSetup_ShouldFailWhenResolverMissing` | §3 启动期校验 |
+| `GuardResolution_ShouldFailWhenResolverMissing` | §3 启动期校验 |
 | `Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot` | §1.8 缓存失效不可被回滚 |
 | `PolicySet_ShouldRejectReservedPermissionCode` / `PolicySet_ShouldAllowFrameworkDefaultKeys` | §1.6 保留命名空间 |
 | `ScopeKeys` 相关的 `ValidateKeyResolution` 启动校验 | §1.7 键歧义即失败 |
