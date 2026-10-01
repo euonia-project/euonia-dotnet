@@ -7,7 +7,7 @@
 > 体系架构总览（图）见 [`Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) §0.1。
 
 **文中 API 与框架实现一致，判定语义均与单元测试（`PermissionTests`、`ScopeTests`、
-`ScopeRowPermissionTests`、`SubTableDimensionTests`）验证过的行为对齐**。示例里的存储与授权数据是内存模拟
+`ScopeRowPermissionTests`、`SubTableDimensionTests`）钉住的行为一致**。示例里的存储与授权数据是内存模拟
 （真实系统里是数据库表），请替换为你自己的数据访问层。
 
 | 场景 | 需求一句话 | 主要能力 |
@@ -376,8 +376,7 @@ await stealing.SaveAsync();                             // SecurityException（�
 
 要点：
 
-- **越权形态一致**：新增、更新、删除、命令执行一律 `SecurityException`。
-  早前靠 `ScopePolicyRule` 注入让新增/更新抛 `ValidationException` 的做法已移除
+- **越权形态一致**：新增、更新、删除、命令执行一律 `SecurityException`
   （见 [PERMISSION-DESIGN §1.2](PERMISSION-DESIGN.md#12-权限与验证是两条线越权一律抛-securityexception)）。
 - **行级策略的授予键在 `Declare` 里声明**：`ForOperation` 省略第三个参数时，键取操作名自身；
   解析器写在权限码 `"repo:delete"` 下的行级授予只有在键也是 `"repo:delete"` 时才会被查到——
@@ -517,8 +516,7 @@ guard.Allows(mySecretDoc);          // false  ← 作者本人也不行：Deny �
 
 - **`Deny` 是「否决」，不是布尔取反**，而且**一律上浮**：策略树任意位置的 `Deny` 作用于
   整个策略，`All(Any(...), Deny(p))` 是「符合任一允许条件 **且** 不命中 p」，不是去重合并。
-- **匿名可读不要用专门的特例接口**，用策略里的 `Where(x => x.IsPublic)` 显式表达——
-  可审计、可组合。旧的 `IAnonymousAccessible` 已移除。
+- **匿名可读不要用专门的特例接口**，用策略里的 `Where(x => x.IsPublic)` 显式表达——可审计、可组合。
 - 空授予时生成的是**恒假常量**（不会产生空 `IN ()`）；「全部放行」要显式 `Where(_ => true)`。
 
 ---

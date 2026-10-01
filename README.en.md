@@ -326,9 +326,8 @@ guard.Explain(repo, BusinessOperation.Delete); // audit: which policy matched
 - **Permission and validation are two separate lines**: permission is decided solely at the
   factory boundary, and a denial (insert / update / delete / command) always throws
   `SecurityException` with **no way to bypass it**. The rule channel does data validation only
-  and throws `ValidationException`. The former `PermissionRule` / `ScopePolicyRule` and their
-  automatic injection have been removed (see
-  [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)).
+  and throws `ValidationException`
+  (see [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)).
 
 Engine usage and troubleshooting:
 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md).
@@ -620,16 +619,14 @@ services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
 app.MapBusEndpoint();   // POST /bus/call
 ```
 
-Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
-
 ### Bus gRPC (`Euonia.Bus.Grpc`)
 > gRPC remote-transport adapter. The client uses **generic (universal) invocation** — it constructs
 > `Method<GrpcRequest, GrpcResponse>` at runtime and executes it via `CallInvoker`, with the
 > service/method names supplied dynamically through `GrpcBusOptions` (defaulting to
 > `nerorsoft.bus.ReplierService/Call`), so no generated service stub is required on the client. The
 > server processes messages in `RemoteMessageService`. Reuses the `RemoteReply<TResult>` protocol.
-> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were
-> consolidated into this project (the former `Euonia.Grpc` project was removed).
+> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) live
+> in this project.
 
 | Type | Kind | Purpose |
 |------|------|---------|
@@ -865,13 +862,13 @@ A store that is not registered simply does not take part in the verdict and does
 | `[DailyTimeIntervalSchedule]` | attribute | Daily time interval trigger |
 | `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
 
-### gRPC (consolidated into `Euonia.Bus.Grpc`)
-> gRPC integration (the former `Euonia.Grpc` project was consolidated into `Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
+### gRPC (`Euonia.Bus.Grpc`)
+> gRPC integration (`Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
 
 | Type | Kind | Purpose |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | class (partial) | Protobuf extensions with JSON serialization and typed data accessors |
-| `ReplierService` | service (proto) | New unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
+| `ReplierService` | service (proto) | Unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
 | `ExceptionHandlingInterceptor` | class | Maps .NET exceptions to gRPC status codes |
 | `RequestTraceInterceptor` | class | Propagates `x-request-trace-id` in gRPC calls |
 | `MapGrpcServices()` | extension | Auto-discovers and maps all gRPC services from the entry assembly |

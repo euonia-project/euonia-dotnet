@@ -131,8 +131,8 @@ services.AddPermission(o => o.Scan(typeof(Report).Assembly)
 > 因此通过 `p.Source(...)` 传入的共享单例可以被每个模块放心共用。
 > 同一个程序集被多个模块传入同样只扫一次。
 
-注意「某个资源实例当前代表哪个操作」由 Core 的 `IObjectOperationResolver` 回答，引擎只消费它
-（Osba 宿主已由 `AddBusinessObject` 注册）：这属于**全局**语义，多个模块给出不同答案本身就是配置错误。
+注意「某个资源实例当前代表哪个操作」由 Core 的 `IObjectOperationResolver` 回答，引擎只消费它：
+这属于**全局**语义，多个模块给出不同答案本身就是配置错误。
 需要按模块区分时，自行实现一个带分派的 `IObjectOperationResolver` 即可。
 
 **来源只有一处、模型却分散在多个程序集**时，在同一回调里 `Source` 一次、`Scan` 多次即可：
@@ -209,10 +209,9 @@ services.AddPermission(options => options.Scan(typeof(Order).Assembly)
 > 把某个方法从「需要审批码」改成「无码」只是数据侧的一次改动。请让来源与代码走**同一套评审与发布流程**，
 > 不要把它当成运维侧的可调开关。
 
-> **Osba 宿主**：用 `AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })` 接入本引擎
-> （`Euonia.Osba` 自己不引用引擎，两者之间也没有适配包——契约都在 Core，各实现一半，见 [DESIGN §1.11](DESIGN.md)）。
-> 接入后，运行期判定与注册期校验用**同一个来源**：你在这里补充的规则，工厂边界同样生效
-> （与 Osba 自己的工厂约定取并集）。
+> **接入本引擎的宿主**：`p.Source(...)` 指定的来源同时用于注册期校验与运行期判定——
+> 你在回调里补充的规则，宿主自己的判定入口同样生效（与宿主原有的约定来源取并集）。
+> 宿主与引擎之间不需要适配包：契约都在 `Euonia.Core`，两侧各实现自己懂的那一半，见 [DESIGN §1.11](DESIGN.md)。
 
 ---
 
@@ -275,9 +274,9 @@ var allowed = checker.IsGranted("order:cancel");   // 布尔结论，是否拦�
 默认实现是 `SubjectPermissionChecker`——权限码由 `IScopeSubjectResolver` 从**授权数据**实时解析，
 撤销改数据即可，下一次解析（通常是下一个请求）生效，**不需要重新签发令牌**。
 
-早期版本还有一个读令牌 `"permission"` 声明（`UserClaimTypes.Permission`）的 `ClaimPermissionChecker`，
-它已随本库**删除**：把权限码固化在令牌里，过期前无法撤销，框架不再提供这条回退路径。
-需要从别处取判定数据的宿主，自行实现 `IPermissionChecker`（`IsGranted` / `IsInRole` /
+本库**不提供**读令牌声明（`UserClaimTypes.Permission`）的判定实现：把权限码固化在令牌里，
+过期前无法撤销，与上面的生效时机相悖。需要从别处取判定数据的宿主，自行实现
+`IPermissionChecker`（`IsGranted` / `IsInRole` /
 `EnsureResolvedAsync` 三个必需成员），在 `AddPermission` **之后**注册即可（MS DI 取最后一个描述符）：
 
 ```csharp
@@ -356,8 +355,8 @@ public sealed class OrderScope : ScopeModel<Order>
 `GetPolicy` / `Apply` / `Explain*` 抛 `InvalidOperationException`（`IDS_SCOPE_NOT_RESOLVED`），
 不会阻塞调用线程去跑解析器——在判定路径里藏一次 I/O 等待，负载下就是线程池饥饿。
 异步入口负责预热：先 `await guard.EnsureResolvedAsync(ct)`（或 `await guard.GetSubjectsAsync(ct)`），
-之后的同步读一律命中暖路径。Osba 宿主把这次等待放在**它自己的入口**（同步入口阻塞一次、
-异步入口 `await`，见 [PERMISSION.md §10](../Euonia.Osba/PERMISSION.md)）。
+之后的同步读一律命中暖路径。这次等待由**宿主的入口**承担：异步入口 `await` 一次，
+同步入口在边界上阻塞一次——引擎只负责把「还没预热」明确说出来，不替任何人做这个取舍。
 
 因此**撤销授权的生效时机是「下一次解析」**：唯一失效入口是 `RefreshAsync()`——它把「失效」与
 「立即重新解析」合成一步，在长生命周期作用域（例如后台 worker）中授权数据变化后必须调用它。
@@ -422,7 +421,7 @@ services.AddPermission(p => p.NoModels());           // 显式断言「本应用
 
 | 写法 | 标识与授予键 | 适用形态 |
 |---|---|---|
-| `ForOperation(operation, policy, scopeKey = null)` | 标识是**操作名**；授予键默认取操作名自身，显式给出时通常写字面权限码（如 `"order:delete"`） | 宿主框架能把「目标当前代表哪个操作」说出来（工厂边界、命令对象），行级授予写在操作对应的权限码下 |
+| `ForOperation(operation, policy, scopeKey = null)` | 标识是**操作名**；授予键默认取操作名自身，显式给出时通常写字面权限码（如 `"order:delete"`） | 宿主框架能把「目标当前代表哪个操作」说出来（对象状态、命令对象），行级授予写在操作对应的权限码下 |
 | `For(code, policy)` | 标识与授予键都是这个**权限码**（等价于 `ForOperation(code, policy, code)`） | 调用方本来就按权限码寻址（`Apply(query, RepositoryPermissions.View)`、`AllowsObject(row, RepositoryPermissions.Delete)`），或领域动作没有对应的宿主操作名 |
 
 授予键默认**取标识自身**（`ForOperation` 省略第三个参数时即操作名自身），而不是派生成带保留前缀的
@@ -435,7 +434,7 @@ services.AddPermission(p => p.NoModels());           // 显式断言「本应用
 | 顺序 | 来源 | 说明 |
 |---|---|---|
 | 1 | 调用方显式传入的标识 | `guard.Allows(entity, BusinessOperation.Delete)` 这类入口；非空即直接采用 |
-| 2 | `IObjectOperationResolver`（Core，宿主框架实现） | 由使用方回答「这个资源实例当前代表哪个操作」（Osba 宿主已注册）。缺席或解析不出时跳过本步 |
+| 2 | `IObjectOperationResolver`（Core，宿主框架实现） | 由使用方回答「这个资源实例当前代表哪个操作」。缺席或解析不出时跳过本步 |
 | 3 | 无标识 | 按模型默认策略判定，键取 `ScopeKeys.Default`（`@default`）。`Apply` / `GetPolicy` 不传标识时同理，因为查询没有「当前操作」这一上下文（§5.1） |
 
 模型注册项按固定次序把标识解析成「策略 + 授予键」：
@@ -586,8 +585,8 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | `IPermissionCodeSource` | 提供「某类型在某操作上声明了哪些权限码」，用于注册期校验；也是自定义规则的扩展点（§3.4） |
 | `IPermissionCodeSource`（Core） | 「要求 + 权限码」的唯一声明，宿主框架与引擎共用；只需实现 `AllOperations`/`CodesFor`，`RequirementsFor` 有默认实现（按权限码折算为「有码、无角色」） |
 | `IPermissionChecker`（Core） | 操作权限判定的唯一声明；实现 `IsGranted`/`IsInRole`/`EnsureResolvedAsync` 三个必需成员，异步判定入口有默认实现 |
-| `IObjectScopeAuthorizer`（Core） | 行级数据权限的落地契约（宿主框架在工厂边界调用）；引擎提供基于 `IScopeGuard` 的实现，可按需替换 |
-| `IObjectOperationResolver`（Core） | 「资源实例当前代表哪个操作」；由宿主框架实现（Osba 宿主已注册），引擎直接消费它来推断资源当前的操作（§5.8 的第 2 步） |
+| `IObjectScopeAuthorizer`（Core） | 行级数据权限的落地契约（宿主框架在对象边界调用）；引擎提供基于 `IScopeGuard` 的实现，可按需替换 |
+| `IObjectOperationResolver`（Core） | 「资源实例当前代表哪个操作」；由宿主框架实现，引擎直接消费它来推断资源当前的操作（§5.8 的第 2 步） |
 | `OperationConventions` | 按特性名推导候选方法名（§3.3） |
 
 ---

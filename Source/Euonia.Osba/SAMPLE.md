@@ -6,7 +6,7 @@
 > 接线决策见 [PERMISSION-DESIGN.md](PERMISSION-DESIGN.md)，
 > 引擎自身的语义与取舍见 [Euonia.Security/DESIGN.md](../Euonia.Security/DESIGN.md)。
 
-**本文的全部代码经过编译并实际运行验证**（端到端断言通过），可以直接放进项目使用。
+**本文的全部代码可以直接放进项目使用。**
 
 ---
 
@@ -800,7 +800,7 @@ catch (ValidationException ex)          // 数据不合法，与权限无关
 
 ## 7. 端到端
 
-把上面的片段串起来，一次完整流程（这段代码已实际运行验证）：
+把上面的片段串起来，一次完整流程：
 
 ```csharp
 var services = new ServiceCollection();
@@ -978,8 +978,8 @@ BusinessContextAccessor.Clear();
 49. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
 50. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
 51. **越权一律抛 `SecurityException`**——新增/更新/删除/命令执行形态完全一致。
-    越权**不会**出现在 `ValidationException.Errors` 里：早前的 `PermissionRule` / `ScopePolicyRule`
-    与自动注入均已删除，规则集合里只应有数据校验规则（见 §6.5）。
+    越权**不会**出现在 `ValidationException.Errors` 里：权限不走规则通道，
+    规则集合里只应有数据校验规则（见 §6.5）。
 52. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
     （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
     `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，

@@ -226,7 +226,7 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 
 - 权限码数量可能很大，放进令牌会**撑爆 Token**；
 - 更关键的是**取消授权必须立即生效**。令牌在过期前一直有效，把权限固化在里面意味着
-  **撤销后旧令牌仍可通行**。改为数据来源后，撤销只需改数据，下一次解析（通常是下一个请求）即生效，
+  **撤销后旧令牌仍可通行**；权限码取自数据时，撤销只需改数据，下一次解析（通常是下一个请求）即生效，
   **不需要重新签发令牌**。
 
 支持以 `*` 结尾的前缀通配（持有 `order:*` 可通过 `order:create`），大小写不敏感。
@@ -234,10 +234,9 @@ public sealed class MySubjectResolver : IScopeSubjectResolver
 **角色仍来自声明**（`UserPrincipal.IsInRole`）：角色数量少而稳定，不构成令牌膨胀问题。
 **细粒度授权一律使用权限码**，不要用角色承载。
 
-> 早期版本还有一个读令牌 `"permission"` 声明（`UserClaimTypes.Permission`）的 `ClaimPermissionChecker`，
-> 它已**删除**——令牌里的权限码在过期前无法撤销，与「撤销立即生效」相悖。需要从别处取判定数据的
-> 宿主，自行实现 `IPermissionChecker`（`IsGranted` / `IsInRole` / `EnsureResolvedAsync`），
-> 在 `AddPermission` **之后** `AddScoped` 即可生效（MS DI 取最后一个描述符），只需容器里有 `UserPrincipal`。
+> 需要从别处取判定数据的宿主，自行实现 `IPermissionChecker`（`IsGranted` / `IsInRole` /
+> `EnsureResolvedAsync`），在 `AddPermission` **之后** `AddScoped` 即可生效
+> （MS DI 取最后一个描述符），只需容器里有 `UserPrincipal`。
 
 ### 2.3 强制执行
 
@@ -277,7 +276,7 @@ public class Order : EditableObject<Order>
 
 它是**查询语义**（无从判定时返回 `true`，不抛异常），真正的拦截在工厂边界。
 业务方法内部要问「这一行数据我看不看得见」时，从 `BusinessContext` 取 `IScopeGuard`：
-`guard.AllowsObject(this, operation)` / `guard.ExplainObject(this, operation)`（见 §4.5）。
+`guard.AllowsObject(this, operation)` / `guard.ExplainObject(this, operation)`（见 §4.1）。
 
 ---
 
@@ -604,13 +603,13 @@ public sealed class TeamScope : ScopeModel<Team>
 > 而不是「越权数据写入」。真正的预提交强制应由持久化层（例如 EF 的 `SaveChanges` 拦截器）
 > 或数据库约束保证，`Euonia.Osba` 不提供这一层。
 
-### 4.5 与 Rule 体系的边界
+### 4.1 与 Rule 体系的边界
 
-**权限不通过规则表达**。早期版本有 `PermissionRule` / `ScopePolicyRule` 并对已声明模型的类型
-自动注入，让越权以 `ValidationException` 的表单错误出现；这两者均已删除。理由见
-[PERMISSION-DESIGN §1.2](PERMISSION-DESIGN.md#12-权限与验证是两条线越权一律抛-securityexception)。
+**权限不通过规则表达**：越权若走规则通道，会以 `ValidationException` 的表单错误出现，
+而规则本身可被 `SuspendRuleChecking()` / `BypassRuleChecks()` 整体绕过——权限线必须不可绕过
+（理由见 [PERMISSION-DESIGN §1.2](PERMISSION-DESIGN.md#12-权限与验证是两条线越权一律抛-securityexception)）。
 
-现在两条线各管一件事，互不相干：
+两条线各管一件事，互不相干：
 
 | | 验证线（`Rules`） | 权限线（工厂边界） |
 |---|---|---|
@@ -1000,36 +999,3 @@ Osba 因此把「等待」挪到**自己的入口**：
 - 异步入口（`*Async`）在判定前 `await` 预热（`EnsureResolvedAsync`），整条链路不阻塞线程；
 - 同步入口（`Create` / `Fetch` 等）本就运行在同步契约上，由 `AuthorizationWarmup` 在入口阻塞一次
   （`AsyncContext.Run`，每作用域仅一次）——等待点可枚举，不在判定路径深处。
-
-## 11. 从旧数据权限迁移
-
-旧的一套（`ScopeTag` / `IDataScoped` / `IUserScopeProvider` / `IDataScopeService` / `DataScopeRule` /
-`ClaimsUserScopeProvider` / `IAnonymousAccessible`）已被**整体替换**，不再提供。对照关系：
-
-| 旧 | 新 |
-|---|---|
-| `IDataScoped.ScopeTags` 运行时拼标签 | `ScopeModel<T>.Define` 声明维度 → 属性**表达式**（可下推） |
-| `IDataScoped.OwnerId` 硬编码特例 | `ScopeDimensions.Owner` 普通维度；`Self()` 是其语法糖，可撤销 |
-| `IUserScopeProvider.ResolveScopes(user)` | `IScopeSubjectResolver.ResolveAsync(ClaimsPrincipal, ct)`（异步、可取消） |
-| `IDataScopeService.CanAccess(row)` | `IScopeGuard.Allows(row)` |
-| `IDataScopeService.CreateScopePredicate<T>()` / `Filter<T>()`（仅内存） | `IScopeGuard.Apply(IQueryable<T>)`（下推）+ `ScopeFilter.Filter`（内存） |
-| 固定「跨维度 AND / 同维度 OR」 | `All` / `Any` 任意嵌套 + `Deny` |
-| 无 deny | `Deny` 一等公民，拒绝优先 |
-| `DataScopeRule`（需手工 `AddRule` 注册） | 工厂边界**自动**强制（`SaveAsync` 前置+后置），不再需要注册任何规则 |
-| `IAnonymousAccessible` 特例接口 | 策略里的 `Where(x => x.IsPublic)`（显式、可审计） |
-| `"*"` 通配（占用值空间） | 已移除；用 `Where(_ => true)` 或解析器返回全集 |
-| `ClaimsUserScopeProvider`（从声明解析） | 已移除；请实现基于授权数据的 `IScopeSubjectResolver` |
-| `ClaimPermissionChecker`（权限码读令牌 `"permission"` 声明） | `SubjectPermissionChecker`（权限码读授权数据，撤销立即生效）；旧类**已删除**，需要自定义判定请自行实现 `IPermissionChecker` |
-| 类型级 `[Permission]` 唯一粒度 | 同一类型内可按授权标识声明行级策略（`Declare` + `For` / `ForOperation`），行与行之间权限可不同 |
-
-**迁移检查项**：
-
-- 旧实现里「实现 `IAnonymousAccessible` 即可匿名读取」的类型，在新体系下若没有显式的
-  `Where(...)` 允许条件，将对匿名用户**完全不可见**——必须补上。
-- 旧的「所有者快速路径」无条件放行，新体系下需要解析器 `AddSelf(userId)` 才成立；漏了会导致
-  「本人数据也不可见」（fail-closed，不会反向放行）。
-- **权限码必须改由解析器提供**：原先写在令牌 `"permission"` 声明里的码，若既不迁移到授权数据、
-  也不注册解析器，启动期校验（首次解析 `IScopeGuard` 时）会直接失败（不会静默放行）。
-- **不要用规则做授权**：早前提供过 `PermissionRule` / `ScopePolicyRule` 让越权以
-  `ValidationException` 暴露，两者已删除。捕获 `ValidationException` 的调用方需要改为捕获
-  `SecurityException`——表单错误列表里不再含越权信息。

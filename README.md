@@ -314,9 +314,8 @@ guard.Explain(repo, BusinessOperation.Delete); // 审计：命中了哪条策略
   也可以显式写字面权限码），于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
 - **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
 - **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
-  `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`。
-  早前的权限规则与自动注入已删除（见
-  [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)）。
+  `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`
+  （见 [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)）。
 
 引擎的用法与故障排查见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md)，
 引擎的设计取舍见 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md)；
@@ -604,13 +603,11 @@ services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
 app.MapBusEndpoint();   // POST /bus/call
 ```
 
-详细实现与测试见 [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md)。
-
 ### Bus gRPC（Euonia.Bus.Grpc）
 > gRPC 远程传输适配器。客户端采用**泛化调用**——运行时构造 `Method<GrpcRequest, GrpcResponse>` 经
 > `CallInvoker` 执行，服务名/方法名由 `GrpcBusOptions` 动态指定（默认 `nerorsoft.bus.ReplierService/Call`），
 > 不依赖生成的服务桩代码；服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。
-> 协议定义与通用 gRPC 工具（拦截器等）已并入本项目（原 `Euonia.Grpc` 项目已移除）。
+> 协议定义与通用 gRPC 工具（拦截器等）位于本项目。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
@@ -846,13 +843,13 @@ app.MapHealthChecks("/health");
 | `[DailyTimeIntervalSchedule]` | 特性 | 每日时间间隔触发器 |
 | `BackgroundBuildOptions` | 类 | 流式 Job 与调度器配置 |
 
-### gRPC（并入 Euonia.Bus.Grpc）
-> gRPC 集成（原 `Euonia.Grpc` 项目已并入 `Euonia.Bus.Grpc`）：拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
+### gRPC（Euonia.Bus.Grpc）
+> gRPC 集成（`Euonia.Bus.Grpc`）：拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | 类（partial） | Protobuf 扩展，含 JSON 序列化与类型化数据访问器 |
-| `ReplierService` | 服务（proto） | `nerorsoft.bus` 包中新增的 unary 服务：`rpc Call(GrpcRequest) returns (GrpcResponse)`，由 `Euonia.Bus.Grpc` 提供服务端基类与客户端 |
+| `ReplierService` | 服务（proto） | `nerorsoft.bus` 包中的 unary 服务：`rpc Call(GrpcRequest) returns (GrpcResponse)`，由 `Euonia.Bus.Grpc` 提供服务端基类与客户端 |
 | `ExceptionHandlingInterceptor` | 类 | 将 .NET 异常映射为 gRPC 状态码 |
 | `RequestTraceInterceptor` | 类 | 在 gRPC 调用中传播 `x-request-trace-id` |
 | `MapGrpcServices()` | 扩展 | 自动发现并映射入口程序集中所有 gRPC 服务 |

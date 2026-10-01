@@ -230,8 +230,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 （`IDS_SCOPE_POLICY_DUPLICATE_DECLARED`），键与任何已有名字相撞、标识撞上已有的键
 （`IDS_SCOPE_KEY_DUPLICATE_DECLARED`），都在 `Declare` 处直接失败（注册期并入汇总诊断）——
 共用名字等于共用同一份行级授予，改一个等于改另一个。
-原先的「同一操作解析出多个有策略的码」与「死策略」两条校验随「策略按授权标识声明」消失：
-策略直接挂在标识上，这两种歧义在结构上不可能出现。
+策略直接挂在标识上，「同一操作解析出多个有策略的码」与「声明了策略却无人寻址」这两种歧义
+在结构上不可能出现，因此也不需要对应的校验。
 
 ### 1.7 授权标识是策略的身份，授予键来自声明
 
@@ -306,8 +306,8 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ### 1.10 规则以「配置」形态声明，但校验仍在注册处
 
-**问题**：此前的 `AddPermission(IPermissionCodeSource, assemblies)` 要求使用方先**构造**一个来源对象
-（`OperationCodeSource.Create()…Build()`），再把对象传进注册调用。这个形态有两个实际后果：
+**问题**：若注册调用要求使用方先**构造**一个来源对象（`OperationCodeSource.Create()…Build()`）再传进来，
+会带来两个实际后果：
 
 1. 它看起来像「注册引擎服务」，于是被当成一次性调用；而它的载荷其实是**业务配置**
    （「哪个方法对应哪个操作」）——配置与注册绑在一起，配置本身却无处安放；
@@ -330,23 +330,17 @@ query            ≡ source.Where(Allow).Where(!Deny)
 |---|---|
 | `services.ConfigurePermissionRules(...)` 之类的分离式注册 | 配置可能被遗忘（注册了引擎却没声明规则），且校验被推迟到容器构建——本库的既有性质是「配置错误在注册处抛出」，这条不能为了形态好看而放弃 |
 | `IOptions<T>` / `Configure<T>` 延迟绑定 | 同上：容器构建期才报错；且多次调用的合并顺序不再由调用方决定 |
-| 维持现状（只能传构造好的来源对象） | 见「问题」：形态误导 + 模块化无处贡献 |
-| 删掉 `AddPermission(IPermissionCodeSource, …)` 只留回调（当时被否决，后来仍采纳） | 当时理由是：它是已发布的公开 API，且是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口。后来该重载仍被删除，来源改由回调内的 `Source(...)` 指定——出口保留，形态统一 |
-| 配置节载体（`AddPermission(configuration.GetSection(…), assemblies)` 与 `ConfigurationRuleBinder`，**已整体删除**） | 它把鉴权口径搬进可被部署改动的地方，表达力也小于回调（只能承载类型名 + 方法名）；删除后本库不再需要 `Microsoft.Extensions.Configuration.Abstractions` 依赖。规则来自配置的宿主改为实现 `IPermissionCodeSource` 自定义来源——出口保留，形态统一 |
-
-**已知边界（配置节载体，已随本轮删除）**：配置节曾把**鉴权口径**搬进可被部署改动的地方——把某个方法
-从「需要审批码」改成「无码」只是一次配置改动。该载体与 `ConfigurationRuleBinder`、相应的
-`AddPermission` 重载已全部删除，规则只能来自回调或自定义 `IPermissionCodeSource`；规则不在代码里时，
-同样要求它与代码走同一套评审与发布流程（README §3.4）。
+| 保留一个接收「构造好的来源对象」的 `AddPermission` 重载 | 看似是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口；实际上回调内的 `Source(...)` 已覆盖同一出口，多留一个重载只会让来源有两种形态、合并语义多一条分叉 |
+| 配置节载体（`AddPermission(configuration.GetSection(…), assemblies)` 与 `ConfigurationRuleBinder`） | 它把鉴权口径搬进可被部署改动的地方——把某个方法从「需要审批码」改成「无码」只是一次配置改动；表达力也小于回调（只能承载类型名 + 方法名），且会给本库引入 `Microsoft.Extensions.Configuration.Abstractions` 依赖。规则来自配置的宿主应实现 `IPermissionCodeSource` 自定义来源：出口保留，形态统一 |
 
 ---
 
 ### 1.11 运行期判定与注册期校验用同一个来源
 
-**问题**：`Euonia.Osba` 的运行期判定（操作权限闸门、数据权限的策略选取）原先直接使用它自己的
-约定来源，而注册期校验用的是容器里注册的 `IPermissionCodeSource`（宿主补充的规则都在里面）。
-两者分叉的后果是：宿主通过回调 / 自定义来源补充的规则**只在启动期生效**——被它识别为入口的方法上的
-`[Permission]` 不进判定、为该码声明的行级策略不生效、判定退回默认策略（键落到操作名自身），而启动期**不报错**。
+**问题**：宿主框架的运行期判定（操作权限闸门、数据权限的策略选取）若直接使用它自己的约定来源，
+而注册期校验用的是容器里注册的 `IPermissionCodeSource`（宿主补充的规则都在里面），两者就会分叉——
+后果是：宿主通过回调 / 自定义来源补充的规则**只在启动期生效**，被它识别为入口的方法上的
+`[Permission]` 不进判定、为该码声明的行级策略不生效、判定退回默认策略，而启动期**不报错**。
 表现为「闸门比配置写的更宽松」，正是本库最不能接受的一类失败。
 
 **决策**：运行期与注册期问**同一个来源**。为此：
@@ -355,21 +349,21 @@ query            ≡ source.Where(Allow).Where(!Deny)
   「有码、无角色」——把只给码的来源的码整个丢掉会让闸门比来源本身更宽松，而角色要求本就不在这类来源的
   表达力之内（能表达角色的实现覆写它即可）；
 - 合并来源对每个成员取要求并去重，不再需要「能回答要求的来源」这类能力判定；
-- Osba 的运行期从容器解析该来源（Osba 本身不引用引擎：契约在 Core，模型注册表由宿主用
-  `AddPermission` 注册），缺席（对象未接线）或来源回答不了要求时回落到 Osba 自己的约定来源。
+- 宿主框架的运行期从容器解析该来源（宿主本身不引用引擎：契约在 Core，模型注册表由宿主用
+  `AddPermission` 注册），来源缺席或回答不了要求时回落到宿主自己的约定来源。
 
-**收益**：宿主的补充规则在运行期同样生效（与 Osba 自己的工厂约定取并集）；
+**收益**：宿主的补充规则在运行期同样生效（与宿主自己的约定来源取并集）；
 注册期校验与操作权限闸门两处对「某操作解析到哪些要求」不可能得出不同答案。
 策略的选取则完全与来源无关——它按**授权标识**进行，授予键来自模型声明，没有去问来源的解析层。
 
 **回归护栏**：`Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing`——
-**还原旧行为它就会转红**（已验证：宿主规则被忽略时该用例报「没有抛出异常」）。
+一旦宿主规则在运行期被忽略，该用例即报「没有抛出异常」而转红。
 
 **被否决的方案**：
 
 | 方案 | 否决理由 |
 |---|---|
-| 让 Osba 直接用容器里的 `IPermissionCodeSource` | 它回答不了角色（只有 `CodesFor`），会把「带角色要求」的规则降级成只看权限码 |
+| 宿主的判定只查容器里的 `IPermissionCodeSource.CodesFor` | 它回答不了角色，会把「带角色要求」的规则降级成只看权限码 |
 | 两个来源各自查询、结果在调用点取并集 | 并集与去重会散落到每个调用点；「谁先谁后」成为新的分叉点，合并逻辑应当只有一处 |
 | 不修，只在文档里写清楚 | 这是一条 fail-open 的静默路径，与「配置写了却不生效」等价；文档不能替代修复 |
 
@@ -409,7 +403,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ### 2.5 子表维度的单行判定要求对象图完整
 
-内存判定（`Allows` / `AllowsObject` / `Filter` / `Explain`，以及 Osba 的工厂边界）在**实例上**求值，
+内存判定（`Allows` / `AllowsObject` / `Filter` / `Explain`，以及宿主的对象边界）在**实例上**求值，
 而集合维度的取值来自子集合：子集合未加载（空引用）时判定不了，框架抛
 `InvalidOperationException` 并指明维度、路径与三条修法。这是**有意的**——
 静默判为拒绝会把「没加载」伪装成「无权限」，在写侧表现为合法用户被拒且毫无线索。
@@ -448,7 +442,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | **同步的解析器接口** | 解析器必然查库；同步签名会把同步 I/O 带进请求链路。用 `ValueTask` + 单次解析已足够 |
 | **引用 `Euonia.Linq` 复用表达式组合子** | 其承重的 `ParameterRebinder` 是 `internal`，外部用不上；且 `Source/` 下没有任何项目在用该组合子。为三个方法引入 ProjectReference 不划算，改为 25 行的内部参数替换 + body 层归并 |
 | **在注册服务的过程中直接检查解析器是否已注册** | 解析器通常在那之后才注册，在那里检查会误报。改为在注册时记录状态（内部的注册登记），由首次解析 `IScopeGuard` 时的启动校验检查 |
-| **删除 `ClaimPermissionChecker`**（当初保留，后来仍删除） | 当初的理由：它是已发布的公开 API，改为保留 + 不再是默认实现即可达成「默认路径不依赖令牌」且不破坏使用方（同期计划的 `[Obsolete]` 未采纳）。后续版本仍决定删除——「读令牌」这条回退路径与「撤销必须立即生效」相悖，自定义需求由宿主自建 `IPermissionChecker` 承接，见 §1.2 |
+| **保留一个读令牌声明的 `ClaimPermissionChecker`**（默认实现之外的备选） | 「读令牌」这条回退路径与「撤销必须立即生效」相悖：权限码固化在令牌里，过期前无法撤销。自定义需求由宿主自建 `IPermissionChecker` 承接即可，见 §1.2 |
 
 ---
 
@@ -485,7 +479,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `Callback_Should_Declare_Rules_Inline` / `Callbacks_From_Different_Modules_Should_Merge` / `Callback_And_Custom_Source_Should_Merge` | §1.10 回调载体与自定义来源的并集合并 |
 | `Callback_Without_Rules_Should_Fail_At_Registration` | §1.10 忘了给规则必须是错误，不是静默放行 |
 | `Merged_Sources_Should_Expose_Requirements_From_Every_Source` | §1.11 合并来源能回答「要求」（含角色）；只给码的来源折算为「有码、无角色」 |
-| `Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing` | §1.11 运行期与注册期用同一个来源——**还原旧行为即转红**（已验证） |
+| `Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing` | §1.11 运行期与注册期用同一个来源——宿主规则一旦被忽略即转红 |
 
 > 配置节载体、`IScopeKeyResolver` 解析层与死策略/歧义校验被删除时，钉住它们的用例
 > （`Configuration_*`、`ValidateKeyResolution` 等）随各自被替换的结构一并删除；
