@@ -2,6 +2,8 @@
 using Nerosoft.Euonia.Sample.Business.Rules;
 using Nerosoft.Euonia.Sample.Domain.Events;
 using Nerosoft.Euonia.Sample.Domain.Repositories;
+using Nerosoft.Euonia.Sample.Persist.Entities;
+using Nerosoft.Euonia.Sample.Toolkit;
 
 namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 
@@ -9,7 +11,7 @@ internal class User : EditableObjectBase<User, string>
 {
 	public static readonly PropertyInfo<string> UsernameProperty = RegisterProperty<string>(p => p.Username);
 	public static readonly PropertyInfo<string> PasswordProperty = RegisterProperty<string>(p => p.Password);
-	public static readonly PropertyInfo<string> PasswordChangedTimeProperty = RegisterProperty<string>(p => p.PasswordChangedTime);
+	public static readonly PropertyInfo<DateTime?> PasswordChangedTimeProperty = RegisterProperty<DateTime?>(p => p.PasswordChangedTime);
 	public static readonly PropertyInfo<string> NicknameProperty = RegisterProperty<string>(p => p.Nickname);
 	public static readonly PropertyInfo<string> EmailProperty = RegisterProperty<string>(p => p.Email);
 	public static readonly PropertyInfo<string> PhoneProperty = RegisterProperty<string>(p => p.Phone);
@@ -104,6 +106,7 @@ internal class User : EditableObjectBase<User, string>
 	private async Task CreateAsync(string username, CancellationToken cancellationToken = default)
 	{
 		Username = username;
+		Id = Guid.NewGuid().ToString("N");
 		await Task.CompletedTask;
 	}
 
@@ -123,6 +126,12 @@ internal class User : EditableObjectBase<User, string>
 	[FactoryInsert]
 	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
+		// 聚合只暂持明文口令以便强度规则校验；落库时重新加盐取哈希，明文不进入持久层。
+		var salt = RandomUtility.GenerateRandomString(64);
+		var entity = UserEntity.Create(Id, Username, Nickname, Cryptography.SHA.Encrypt(salt + Password), salt);
+		entity.SetEmail(Email);
+		entity.SetPhone(Phone);
+		await BusinessContext.GetRequiredService<IUserRepository>().InsertAsync(entity, true, cancellationToken);
 	}
 
 	[FactoryUpdate]

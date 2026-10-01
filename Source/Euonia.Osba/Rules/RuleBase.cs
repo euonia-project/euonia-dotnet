@@ -54,9 +54,9 @@ public abstract class RuleBase : IRuleBase
 	/// <param name="context">规则上下文。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步规则执行操作的任务。</returns>
-	public virtual async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
+	public virtual Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
-		await Task.CompletedTask;
+		return Task.CompletedTask;
 	}
 
 	/// <summary>

@@ -17,7 +17,7 @@ public static class EnumParser<T>
         var type = typeof(T);
         if (!type.GetTypeInfo().IsEnum)
         {
-            throw new InvalidCastException($"The type {type.FullName} is not enum.");
+            throw new InvalidCastException(string.Format(Resources.IDS_TYPE_NOT_ENUM, type.FullName));
         }
 
         var names = Enum.GetNames(type);

@@ -98,4 +98,16 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_UOW_ALREADY_INITIALIZED" xml:space="preserve">
+    <value>This unit of work is already initialized before!</value>
+  </data>
+  <data name="IDS_UOW_CONTEXT_KEY_ALREADY_EXISTS" xml:space="preserve">
+    <value>This unit of work already already contains a context with the key: {0}</value>
+  </data>
+  <data name="IDS_UOW_ADD_CONTEXT_FAILED" xml:space="preserve">
+    <value>Failed to add context with the key: {0}</value>
+  </data>
+  <data name="IDS_UOW_COMPLETION_ALREADY_REQUESTED" xml:space="preserve">
+    <value>Completion has already been requested for this unit of work.</value>
+  </data>
 </root>

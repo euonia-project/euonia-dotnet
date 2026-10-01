@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_TYPE_CANNOT_NULL" xml:space="preserve">
+    <value>類型不能為 null。</value>
+  </data>
+  <data name="IDS_CONVENTION_PROVIDER_REQUIRED" xml:space="preserve">
+    <value>至少需要提供一個慣例。</value>
+  </data>
+  <data name="IDS_NO_HANDLER_REGISTERED" xml:space="preserve">
+    <value>通道 {1} 上沒有為訊息 {0} 註冊任何處理常式</value>
+  </data>
+  <data name="IDS_INBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>已啟用收件匣，但尚未註冊收件匣儲存區。請註冊 IInboxStore 實作（例如 services.AddInMemoryInbox()）。</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
+    <value>方法不存在。</value>
+  </data>
+  <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
+    <value>處理常式方法至少必須包含一個參數</value>
+  </data>
+  <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
+    <value>處理常式方法的第一個參數必須是訊息類型</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
+    <value>當方法包含 2 個參數時，第二個參數必須是 MessageContext 或 CancellationToken</value>
+  </data>
+  <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
+    <value>當方法包含 3 個參數時，第二、三個參數必須依序是 MessageContext 與 CancellationToken</value>
+  </data>
+  <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
+    <value>處理常式方法不得帶有名稱為空的 SubscribeAttribute</value>
+  </data>
+  <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
+    <value>無法自動載入 '{1}:AutoLoadAssemblies' 中設定的組件 '{0}'。</value>
+  </data>
+  <data name="IDS_CHANNEL_ALREADY_REGISTERED" xml:space="preserve">
+    <value>通道 '{0}' 已註冊，且繫結的訊息類型不同。</value>
+  </data>
+  <data name="IDS_CONFIGURATOR_BUILDER_CANNOT_NULL" xml:space="preserve">
+    <value>Configurator 建構器不能為 null。</value>
+  </data>
+  <data name="IDS_ASSEMBLIES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>組件集合不能為 null 或空白。</value>
+  </data>
+  <data name="IDS_HANDLER_TYPES_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>處理常式類型集合不能為 null 或空白。</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER" xml:space="preserve">
+    <value>類型 {0} 未實作任何 IHandler&lt;,&gt; 介面。</value>
+  </data>
+  <data name="IDS_HANDLER_TYPE_MUST_BE_CONCRETE" xml:space="preserve">
+    <value>類型 {0} 必須是非抽象類別。</value>
+  </data>
+  <data name="IDS_TRANSPORT_NOT_REGISTERED" xml:space="preserve">
+    <value>傳輸器 '{0}' 尚未註冊。</value>
+  </data>
+  <data name="IDS_MULTIPLE_TRANSPORTS_FOR_UNICAST" xml:space="preserve">
+    <value>同一個單播訊息類型設定了多個傳輸器。</value>
+  </data>
+  <data name="IDS_NO_TRANSPORT_FOR_MESSAGE_TYPE" xml:space="preserve">
+    <value>通道 '{1}' 上的訊息類型 '{0}' 未設定傳輸器，也未設定預設傳輸器。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_MULTICAST" xml:space="preserve">
+    <value>該訊息類型不是多播類型。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_UNICAST" xml:space="preserve">
+    <value>該訊息類型不是單播類型。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_REQUEST" xml:space="preserve">
+    <value>該訊息類型不是請求類型。</value>
+  </data>
+  <data name="IDS_OUTBOX_STORE_NOT_REGISTERED" xml:space="preserve">
+    <value>尚未註冊寄件匣儲存區，但訊息 '{0}' 需要寄件匣持久化。請註冊 IOutboxStore 實作（例如 services.AddInMemoryOutbox()）。</value>
+  </data>
+  <data name="IDS_OUTBOX_MESSAGE_ALREADY_EXISTS" xml:space="preserve">
+    <value>識別碼為 '{0}' 的寄件匣訊息已存在。</value>
+  </data>
+  <data name="IDS_DELAY_TOO_LARGE" xml:space="preserve">
+    <value>延遲不得超過 {0} 毫秒（約 49.7 天）。</value>
+  </data>
+  <data name="IDS_CALL_TIMEOUT" xml:space="preserve">
+    <value>呼叫未在設定的逾時時間（{0} 毫秒）內完成。</value>
+  </data>
+  <data name="IDS_CHANNEL_NAME_REQUIRED" xml:space="preserve">
+    <value>訊息類型 '{0}' 的通道名稱不能為 null 或空白。請在選項中指定通道，或為該訊息類型設定預設通道。</value>
+  </data>
+  <data name="IDS_STRATEGY_REQUIRED" xml:space="preserve">
+    <value>至少需要一個策略。</value>
+  </data>
+  <data name="IDS_REMOTE_PAYLOAD_INVALID_TYPE_NAME" xml:space="preserve">
+    <value>遠端訊息載荷中沒有有效的訊息類型名稱。</value>
+  </data>
+  <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
+    <value>解析訊息類型 '{0}' 失敗。</value>
+  </data>
+</root>

@@ -88,7 +88,7 @@ public class AuthorizationInterceptor : IInterceptor
 		var roles = attribute.Roles.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
 		if (!user.IsInRoles(roles))
 		{
-			throw new UnauthorizedAccessException("Unauthorized");
+			throw new UnauthorizedAccessException(Resources.IDS_UNAUTHORIZED);
 		}
 	}
 }

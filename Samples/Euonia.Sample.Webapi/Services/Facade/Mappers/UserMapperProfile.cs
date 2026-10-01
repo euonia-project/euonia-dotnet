@@ -12,7 +12,8 @@ public class UserMapperProfile : Profile
 		CreateMap<UserCreateDto, UserCreateCommand>();
 		CreateMap<UserUpdateDto, UserUpdateCommand>();
 
-		CreateMap<UserEntity, UserDetailDto>();
+		CreateMap<UserEntity, UserDetailDto>()
+			.ForMember(dto => dto.Roles, opt => opt.MapFrom(entity => entity.Roles.Select(role => role.Name)));
 		CreateMap<UserEntity, UserListDto>();
 	}
 }

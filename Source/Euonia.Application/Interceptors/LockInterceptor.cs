@@ -131,7 +131,7 @@ public class LockInterceptor : IInterceptor
 				return factory.Create(token).Acquire(TimeSpan.FromMilliseconds(distributed.Timeout));
 			}
 			default:
-				throw new NotSupportedException($"Unsupported lock attribute '{attribute.GetType().Name}'.");
+				throw new NotSupportedException(string.Format(Resources.IDS_UNSUPPORTED_LOCK_ATTRIBUTE, attribute.GetType().Name));
 		}
 	}
 
@@ -155,7 +155,7 @@ public class LockInterceptor : IInterceptor
 				return await factory.Create(token).AcquireAsync(TimeSpan.FromMilliseconds(distributed.Timeout)).ConfigureAwait(false);
 			}
 			default:
-				throw new NotSupportedException($"Unsupported lock attribute '{attribute.GetType().Name}'.");
+				throw new NotSupportedException(string.Format(Resources.IDS_UNSUPPORTED_LOCK_ATTRIBUTE, attribute.GetType().Name));
 		}
 	}
 
@@ -169,8 +169,7 @@ public class LockInterceptor : IInterceptor
 		var factory = _serviceProvider.GetService<ILockFactory>();
 		if (factory == null)
 		{
-			throw new InvalidOperationException(
-				$"No {nameof(ILockFactory)} is registered. Register a distributed lock module (e.g. Nerosoft.Euonia.Concurrency.Redis.RedisLockModule) to enable distributed locking.");
+			throw new InvalidOperationException(Resources.IDS_LOCK_FACTORY_NOT_REGISTERED);
 		}
 
 		return factory;
@@ -274,7 +273,7 @@ public class LockInterceptor : IInterceptor
 			if (property == null)
 			{
 				throw new InvalidOperationException(
-					$"Property '{part}' was not found on type '{current.GetType().FullName}' while resolving the lock token placeholder '{{{parameterName}.{propertyPath}}}'.");
+					string.Format(Resources.IDS_LOCK_TOKEN_PROPERTY_NOT_FOUND, part, current.GetType().FullName, parameterName, propertyPath));
 			}
 
 			current = property.GetValue(current);
@@ -339,7 +338,7 @@ internal static class SemaphoreLockStore
 		if (!entry.Semaphore.Wait(timeout))
 		{
 			Release(entry, key, releaseSemaphore: false);
-			throw new TimeoutException($"Failed to acquire the local lock '{key}' within {timeout.TotalMilliseconds} milliseconds.");
+			throw new TimeoutException(string.Format(Resources.IDS_LOCAL_LOCK_TIMEOUT, key, timeout.TotalMilliseconds));
 		}
 
 		return AnonymousDisposable.Create(() => Release(entry, key, releaseSemaphore: true));
@@ -371,7 +370,7 @@ internal static class SemaphoreLockStore
 		if (!acquired)
 		{
 			Release(entry, key, releaseSemaphore: false);
-			throw new TimeoutException($"Failed to acquire the local lock '{key}' within {timeout.TotalMilliseconds} milliseconds.");
+			throw new TimeoutException(string.Format(Resources.IDS_LOCAL_LOCK_TIMEOUT, key, timeout.TotalMilliseconds));
 		}
 
 		return AnonymousDisposable.Create(() => Release(entry, key, releaseSemaphore: true));

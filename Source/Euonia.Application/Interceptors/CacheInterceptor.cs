@@ -22,13 +22,13 @@ namespace Nerosoft.Euonia.Application;
 public class CacheInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _tryServeMethod = typeof(CacheInterceptor).GetMethod(nameof(TryServeFromCache), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                       ?? throw new InvalidOperationException("CacheInterceptor.TryServeFromCache not found.");
+	                                                       ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CacheInterceptor), nameof(TryServeFromCache)));
 
 	private static readonly MethodInfo _writeAsyncMethod = typeof(CacheInterceptor).GetMethod(nameof(WriteBackAsync), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                       ?? throw new InvalidOperationException("CacheInterceptor.WriteBackAsync not found.");
+	                                                       ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CacheInterceptor), nameof(WriteBackAsync)));
 
 	private static readonly MethodInfo _writeSyncMethod = typeof(CacheInterceptor).GetMethod(nameof(WriteBackSync), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                       ?? throw new InvalidOperationException("CacheInterceptor.WriteBackSync not found.");
+	                                                       ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CacheInterceptor), nameof(WriteBackSync)));
 
 	private readonly IServiceProvider _serviceProvider;
 

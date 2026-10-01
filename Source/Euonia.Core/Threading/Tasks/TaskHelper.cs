@@ -96,7 +96,7 @@ public static class TaskHelper
         {
             if (cancellationToken.WaitHandle.WaitOne(timeout.InMilliseconds))
             {
-                throw new OperationCanceledException("delay was canceled", cancellationToken);
+                throw new OperationCanceledException(Resources.IDS_DELAY_CANCELED, cancellationToken);
             }
         }
         else

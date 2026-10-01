@@ -1,6 +1,6 @@
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证命令对象（<see cref="CommandObject{T}"/>）通过执行器（<see cref="IActuator"/>）执行的完整流程：
@@ -50,7 +50,7 @@ public class ActuatorTestCommand : CommandObject<ActuatorTestCommand>
 	public bool Executed { get; private set; }
 
 	[FactoryCreate]
-	protected override Task CreateAsync(CancellationToken cancellationToken = default)
+	protected internal override Task CreateAsync(CancellationToken cancellationToken = default)
 	{
 		Created = true;
 		Step = 1;
@@ -58,7 +58,7 @@ public class ActuatorTestCommand : CommandObject<ActuatorTestCommand>
 	}
 
 	[FactoryExecute]
-	protected override Task ExecuteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = Step == 2;
 		return base.ExecuteAsync(cancellationToken);

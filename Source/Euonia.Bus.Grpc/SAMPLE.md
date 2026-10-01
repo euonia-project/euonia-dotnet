@@ -3,7 +3,7 @@
 > 一份「gRPC 远程调用」完整示例：`ReplierService.Call` 一元方法承载信封、
 > `RemoteReceiver` 按通道派发；客户端**不再依赖 Grpc.Tools 生成的桩**——运行时用
 > `GrpcMethodFactory` 构造方法描述符，经 `CallInvoker` 发起调用，服务名/方法名可由
-> `GrpcBusOptions` 动态指定（泛化调用）。同时覆盖并入的 gRPC 工具链
+> `GrpcBusOptions` 动态指定（泛化调用）。同时覆盖 gRPC 工具链
 > （拦截器、反射、健康检查、`AddGrpcService`/`MapGrpcServices`）。
 
 **示例代码与仓库内 `Euonia.Bus.Grpc.Tests`（11 例全部通过）同构，API 按源码逐一核对。**
@@ -134,7 +134,7 @@ public sealed class CountRequest : IRequest<int>
 > `RemoteMessageService`。`MapGrpcBusService` 前的“提前构造 `IHandlerContext`”与 HTTP 版
 > `MapBusEndpoint` 同理——都是为了让“启动阶段注册通道”不漏处理（见易错点 3）。
 
-### 2.1 并入的 gRPC 工具链（原 `Euonia.Grpc`）
+### 2.1 gRPC 工具链
 
 | 工具 | 说明 | 用法 |
 |---|---|---|

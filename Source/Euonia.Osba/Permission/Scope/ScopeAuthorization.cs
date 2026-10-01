@@ -1,5 +1,6 @@
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -40,7 +41,7 @@ internal static class ScopeAuthorization
 	/// <param name="target">目标对象（已由调用方填充）。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
-	internal static void EnsureAuthorizedBefore(object target, BusinessOperation operation)
+	internal static void EnsureAuthorizedBefore(object target, string operation)
 	{
 		Ensure(target, operation, "before");
 	}
@@ -51,63 +52,111 @@ internal static class ScopeAuthorization
 	/// <param name="target">目标对象（已由业务方法填充）。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
-	internal static void EnsureAuthorizedAfter(object target, BusinessOperation operation)
+	internal static void EnsureAuthorizedAfter(object target, string operation)
 	{
 		Ensure(target, operation, "after");
 	}
 
-	private static void Ensure(object target, BusinessOperation operation, string stage)
+	/// <summary>
+	/// 异步版本的 <see cref="EnsureAuthorizedBefore"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
+	/// </summary>
+	/// <param name="target">目标对象（已由调用方填充）。</param>
+	/// <param name="operation">要执行的操作。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
+	internal static ValueTask EnsureAuthorizedBeforeAsync(object target, string operation, CancellationToken cancellationToken = default)
 	{
+		return EnsureAsync(target, operation, "before", cancellationToken);
+	}
+
+	/// <summary>
+	/// 异步版本的 <see cref="EnsureAuthorizedAfter"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
+	/// </summary>
+	/// <param name="target">目标对象（已由工厂方法填充）。</param>
+	/// <param name="operation">要执行的操作。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="SecurityException">目标越出当前用户的数据范围时抛出。</exception>
+	internal static ValueTask EnsureAuthorizedAfterAsync(object target, string operation, CancellationToken cancellationToken = default)
+	{
+		return EnsureAsync(target, operation, "after", cancellationToken);
+	}
+
+	private static void Ensure(object target, string operation, string stage)
+	{
+		if (!TryPrepare(target, operation, out var context, out var authorizer))
+		{
+			return;
+		}
+
+		// 同步入口：等待点只在这里（见 AuthorizationWarmup 的说明）
+		AuthorizationWarmup.Warm(authorizer, context.CurrentServiceProvider);
+
+		Enforce(target, operation, stage, context, authorizer);
+	}
+
+	private static async ValueTask EnsureAsync(object target, string operation, string stage, CancellationToken cancellationToken)
+	{
+		if (!TryPrepare(target, operation, out var context, out var authorizer))
+		{
+			return;
+		}
+
+		// 判定与策略键解析都要读授权数据（GetPolicy → GetSubjects），冷缓存会阻塞调用线程；
+		// 作用域必须用判定时那一个（与 Allows 传参同源），不能退化成环境上下文
+		await AuthorizationWarmup.WarmAsync(authorizer, context.CurrentServiceProvider, cancellationToken).ConfigureAwait(false);
+
+		Enforce(target, operation, stage, context, authorizer);
+	}
+
+	/// <summary>
+	/// 判定前的全部前置条件：不受数据权限约束直接放行；受约束却拿不到上下文则视为配置错误。
+	/// </summary>
+	private static bool TryPrepare(object target, string operation, out BusinessContext context, out IObjectScopeAuthorizer authorizer)
+	{
+		context = null;
+		authorizer = null;
+
 		if (target is not IBusinessObject businessObject)
 		{
-			return;
+			return false;
 		}
 
-		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」。
-		// 这一步只用于诊断，不能用于判定——对象自己没接线就取不到 IScopeGuard。
-		var context = businessObject.BusinessContext;
-		var registry = context?.GetService<ScopeModelRegistry>()
-		               ?? BusinessContextAccessor.Current?.GetService<ScopeModelRegistry>();
+		// 未接入业务上下文时，退而用环境上下文（AsyncLocal）查明「这个类型是否受数据权限约束」——
+		// 该查询必须能在没有请求作用域时回答（见 IObjectScopeAuthorizer.IsConstrained）。
+		context = businessObject.BusinessContext;
+		authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>()
+		             ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
 
-		if (registry == null || !registry.HasDeclarations)
+		if (authorizer == null || !authorizer.IsConstrained(target.GetType()))
 		{
-			return;
-		}
-
-		// 未声明权限模型的资源类型不受数据权限约束
-		var rowType = target.GetType();
-		if (!registry.IsDeclared(rowType))
-		{
-			return;
+			// 未启用数据权限，或该类型未声明权限模型：不受数据权限约束
+			context = null;
+			return false;
 		}
 
 		// 已声明模型却拿不到上下文：无法判定，属配置错误（多半是忘了接线），不能静默放行
 		Check.Ensure(
 			context != null,
-			"资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。"
-			+ "请通过工厂创建/读取对象，或在调用前设置 BusinessContext。",
-			rowType.Name,
+			Resources.IDS_SCOPE_CONTEXT_MISSING,
+			target.GetType().Name,
 			operation);
 
-		var guard = context.GetService<IScopeGuard>();
+		return true;
+	}
 
-		// 已声明模型却拿不到判定入口属配置错误：必须暴露，不能静默放行
-		Check.Ensure(
-			guard != null,
-			"资源类型 '{0}' 已声明数据权限模型，但无法解析 {1}。请确认已调用 AddBusinessObject。",
-			rowType.FullName,
-			nameof(IScopeGuard));
-
-		// 按操作解析策略键（声明了权限码且模型为该码声明了策略时用该码，否则用操作默认键）。
-		// 与规则共用 ScopeKeyResolver，两处不可能对「当前是哪个键」得出不同答案。
-		registry.TryGetInherited(rowType, out var registration);
-
-		var scopeKey = ScopeKeyResolver.Resolve(registration, registration.Descriptor.ResourceType, operation);
-
-		if (!guard.AllowsObject(target, scopeKey))
+	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
+	{
+		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）；
+		// 作用域用对象自己的那一个，实现不得依赖环境上下文
+		if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))
 		{
 			throw new SecurityException(
-				$"Data scope denied. {operation} ({stage}): {rowType.Name}. {guard.ExplainObject(target, scopeKey)}");
+				string.Format(
+					Resources.IDS_SCOPE_DENIED,
+					operation,
+					stage,
+					target.GetType().Name,
+					authorizer.Explain(target, operation, context.CurrentServiceProvider)));
 		}
 	}
 }

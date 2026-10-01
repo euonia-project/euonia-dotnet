@@ -98,4 +98,10 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_OPTIONS_NOT_CONFIGURED" xml:space="preserve">
+    <value>未配置 ActiveMqBusOptions。</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
+    <value>消息类型 {0} 不是队列/主题/请求类型。</value>
+  </data>
 </root>

@@ -143,7 +143,7 @@ public class ConfigurationBuilderCachePart
 
         if (isBackplaneSource && Configuration.CacheHandleConfigurations.Any(p => p.IsBackplaneSource))
         {
-            throw new InvalidOperationException("Only one cache handle can be the backplane's source.");
+            throw new InvalidOperationException(Resources.IDS_ONLY_ONE_BACKPLANE_SOURCE);
         }
 
         Configuration.CacheHandleConfigurations.Add(handleCfg);

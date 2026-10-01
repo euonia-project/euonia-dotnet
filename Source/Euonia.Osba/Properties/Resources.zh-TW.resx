@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+		Microsoft ResX Schema
+
+		Version 1.3
+
+		The primary goals of this format is to allow a simple XML format 
+		that is mostly human readable. The generation and parsing of the 
+		various data types are done through the TypeConverter classes 
+		associated with the data types.
+
+		Example:
+
+		... ado.net/XML headers & schema ...
+		<resheader name="resmimetype">text/microsoft-resx</resheader>
+		<resheader name="version">1.3</resheader>
+		<resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+		<resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+		<data name="Name1">this is my long string</data>
+		<data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+		<data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+			[base64 mime encoded serialized .NET Framework object]
+		</data>
+		<data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+			[base64 mime encoded string representing a byte array form of the .NET Framework object]
+		</data>
+
+		There are any number of "resheader" rows that contain simple 
+		name/value pairs.
+
+		Each data row contains a name, and value. The row also contains a 
+		type or mimetype. Type corresponds to a .NET class that support 
+		text/value conversion through the TypeConverter architecture. 
+		Classes that don't support this are serialized and stored with the 
+		mimetype set.
+
+		The mimetype is used for serialized objects, and tells the 
+		ResXResourceReader how to depersist the object. This is currently not 
+		extensible. For a given mimetype the value must be set accordingly:
+
+		Note - application/x-microsoft.net.object.binary.base64 is the format 
+		that the ResXResourceWriter will generate, however the reader can 
+		read any of the formats listed below.
+
+		mimetype: application/x-microsoft.net.object.binary.base64
+		value   : The object must be serialized with 
+			: System.Serialization.Formatters.Binary.BinaryFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.soap.base64
+		value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.bytearray.base64
+		value   : The object must be serialized into a byte array 
+			: using a System.ComponentModel.TypeConverter
+			: and then encoded with base64 encoding.
+	-->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_MULTIPLE_METHOD_MATCHED" xml:space="preserve">
+    <value>指定的操作找到多個方法。</value>
+  </data>
+  <data name="IDS_RULE_MESSAGE_REQUIRED" xml:space="preserve">
+    <value>規則訊息為必要項目。</value>
+  </data>
+  <data name="IDS_INVALID_STATE" xml:space="preserve">
+    <value>無效的狀態。</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>資源類型 '{0}' 已宣告資料範圍模型，但目標物件未連接 BusinessContext，因此無法判定 {1}。請透過工廠建立/讀取該物件，或在呼叫前設定 BusinessContext。</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>業務物件 '{0}' 宣告了權限需求，但未連接 BusinessContext，因此無法判定 {1}。請透過工廠建立/讀取該物件，或在呼叫前設定 BusinessContext。</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>業務物件 '{0}' 宣告了權限需求，但容器中未註冊 {1}。請呼叫 AddPermission 接上授權實作，或註冊您自己的 IPermissionChecker。</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_REGISTERED" xml:space="preserve">
+    <value>屬性 '{0}' 尚未註冊。</value>
+  </data>
+  <data name="IDS_PROPERTY_TYPE_MISMATCH" xml:space="preserve">
+    <value>屬性 '{0}' 註冊為 '{1}'，與預期的類型 '{2}' 不相符。</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_NOT_REGISTERED" xml:space="preserve">
+    <value>屬性名稱 '{0}' 尚未註冊</value>
+  </data>
+  <data name="IDS_PROPERTY_LIST_LOCKED" xml:space="preserve">
+    <value>類型 '{0}' 的屬性清單已鎖定，無法修改。</value>
+  </data>
+  <data name="IDS_PROPERTY_ALREADY_REGISTERED" xml:space="preserve">
+    <value>屬性 '{0}' 已在類型 '{1}' 上註冊過。</value>
+  </data>
+  <data name="IDS_PROPERTY_GET_NOT_ALLOWED" xml:space="preserve">
+    <value>不允許讀取屬性。{0}</value>
+  </data>
+  <data name="IDS_PROPERTY_SET_NOT_ALLOWED" xml:space="preserve">
+    <value>不允許寫入屬性。{0}</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_ALLOWED" xml:space="preserve">
+    <value>不允許執行此操作。{0}：{1}。</value>
+  </data>
+  <data name="IDS_SCOPE_DENIED" xml:space="preserve">
+    <value>資料範圍授權遭拒。{0}（{1}）：{2}。{3}</value>
+  </data>
+  <data name="IDS_REGULAR_NOT_ON_STRING_PROPERTY" xml:space="preserve">
+    <value>正規表示式不能套用於屬性 '{0}'。</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_APPLY_READONLY" xml:space="preserve">
+    <value>此操作不適用於 ReadOnlyObject。</value>
+  </data>
+  <data name="IDS_NO_PENDING_CHANGE" xml:space="preserve">
+    <value>物件沒有待儲存的變更。</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_MATCHED_ARGUMENTS" xml:space="preserve">
+    <value>找不到符合指定引數的方法。</value>
+  </data>
+  <data name="IDS_MULTIPLE_METHODS_MATCHED" xml:space="preserve">
+    <value>找到多個方法。</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_WITH_ATTRIBUTE" xml:space="preserve">
+    <value>{1} 上缺少帶有特性 '{0}' 的方法</value>
+  </data>
+  <data name="IDS_INJECT_PRIMITIVE_PROPERTY" xml:space="preserve">
+    <value>無法植入基本類型屬性。</value>
+  </data>
+  <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>無法植入屬性 '{0}'，其類型 {1} 不受支援。</value>
+  </data>
+  <data name="IDS_INJECT_ENUMERABLE_AS_SINGLE" xml:space="preserve">
+    <value>無法植入屬性 '{0}'，其可列舉類型 {1} 不能作為單一服務植入。</value>
+  </data>
+  <data name="IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE" xml:space="preserve">
+    <value>無法植入屬性 '{0}'，其陣列類型 {1} 未實作任何受支援的集合介面。</value>
+  </data>
+  <data name="IDS_INJECT_GENERIC_ARGUMENT_COUNT" xml:space="preserve">
+    <value>無法植入屬性 '{0}'，其泛型類型 {1} 必須恰好宣告一個泛型引數，但宣告了 {2} 個。</value>
+  </data>
+  <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
+    <value>屬性植入需要索引鍵服務（serviceKey = '{0}'），但目前的容器（{1}）未實作 IKeyedServiceProvider。</value>
+  </data>
+</root>

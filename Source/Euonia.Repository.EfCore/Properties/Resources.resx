@@ -98,4 +98,13 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_REPOSITORY_CONTEXT_NOT_DBCONTEXT" xml:space="preserve">
+    <value>The repository context is not a DbContext.</value>
+  </data>
+  <data name="IDS_INVALID_CONNECTION_STRING" xml:space="preserve">
+    <value>Invalid connection string format.</value>
+  </data>
+  <data name="IDS_DATABASE_PROVIDER_NOT_SUPPORTED" xml:space="preserve">
+    <value>The database provider '{0}' is not supported.</value>
+  </data>
 </root>

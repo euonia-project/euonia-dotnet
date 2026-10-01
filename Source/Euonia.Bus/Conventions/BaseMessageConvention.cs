@@ -143,7 +143,7 @@ public class BaseMessageConvention : IMessageConvention
 	{
 		if (conventions == null || conventions.Length == 0)
 		{
-			throw new ArgumentException(@"At least one convention must be provided.", nameof(conventions));
+			throw new ArgumentException(Resources.IDS_CONVENTION_PROVIDER_REQUIRED, nameof(conventions));
 		}
 
 		_conventions.AddRange(conventions);

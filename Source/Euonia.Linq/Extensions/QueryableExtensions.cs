@@ -174,7 +174,7 @@ public static class QueryableExtensions
         }
         if (Lambda.GetConditionCount(predicate) > 1)
         {
-            throw new InvalidOperationException($"Only one predicate is allowed: {predicate}");
+            throw new InvalidOperationException(string.Format(Resources.IDS_ONLY_ONE_PREDICATE_ALLOWED, predicate));
         }
         var value = predicate.Value();
         if (string.IsNullOrWhiteSpace(value?.ToString()))

@@ -636,7 +636,9 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		{
 			if (_invalid)
 			{
-				static void Throw() => throw new InvalidOperationException("The current collection is in a corrupted state.");
+				// 本文件位于 System.Runtime.CompilerServices 命名空间，此处 Resources 会被解析为
+				// System.Resources，因此必须写全限定名。
+				static void Throw() => throw new InvalidOperationException(Nerosoft.Euonia.Bus.InMemory.Properties.Resources.IDS_COLLECTION_CORRUPTED_STATE);
 
 				Throw();
 			}

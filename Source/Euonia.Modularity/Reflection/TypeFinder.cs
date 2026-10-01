@@ -39,7 +39,7 @@ public class TypeFinder : ITypeFinder
         {
             try
             {
-                var typesInThisAssembly = AssemblyHelper.GetAllTypes(assembly);
+                var typesInThisAssembly = AssemblyHelper.LoadTypes(assembly);
 
                 if (!typesInThisAssembly.Any())
                 {

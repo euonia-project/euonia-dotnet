@@ -116,7 +116,7 @@ public static class ExpressionExtensions
 
         if (string.IsNullOrWhiteSpace(propertyName))
         {
-            throw new ArgumentException("Property name can not be empty.");
+            throw new ArgumentException(Resources.IDS_PROPERTY_NAME_CAN_NOT_BE_EMPTY);
         }
 
         if (!propertyName.Contains('.'))
@@ -471,9 +471,9 @@ public static class ExpressionExtensions
             QueryOperator.Contains => left.Contains(value),
             QueryOperator.NotContains => Expression.Not(left.Contains(value)),
             QueryOperator.Is => Expression.Equal(left, Expression.Constant(null, left.Type)),
-            QueryOperator.Like => throw new NotImplementedException("The LIKE operator requires support from the query provider."),
-            QueryOperator.NotLike => throw new NotImplementedException("The NOT LIKE operator requires support from the query provider."),
-            _ => throw new NotImplementedException($"Unsupported query operator: {@operator}")
+            QueryOperator.Like => throw new NotImplementedException(Resources.IDS_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT),
+            QueryOperator.NotLike => throw new NotImplementedException(Resources.IDS_NOT_LIKE_OPERATOR_REQUIRES_QUERY_PROVIDER_SUPPORT),
+            _ => throw new NotImplementedException(string.Format(Resources.IDS_UNSUPPORTED_QUERY_OPERATOR, @operator))
         };
     }
 
@@ -506,7 +506,7 @@ public static class ExpressionExtensions
 
         if (method == null)
         {
-            throw new NullReferenceException($"Method {methodName} not found.");
+            throw new NullReferenceException(string.Format(Resources.IDS_METHOD_NOT_FOUND, methodName));
         }
 
         return Expression.Call(instance, method, values);
@@ -537,7 +537,7 @@ public static class ExpressionExtensions
 
         if (method == null)
         {
-            throw new NullReferenceException($"Method {methodName} not found.");
+            throw new NullReferenceException(string.Format(Resources.IDS_METHOD_NOT_FOUND, methodName));
         }
 
         if (values == null || values.Length == 0)
@@ -569,7 +569,7 @@ public static class ExpressionExtensions
 
         if (method == null)
         {
-            throw new NullReferenceException($"Method {methodName} not found.");
+            throw new NullReferenceException(string.Format(Resources.IDS_METHOD_NOT_FOUND, methodName));
         }
 
         if (values == null || values.Length == 0)

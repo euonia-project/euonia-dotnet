@@ -1,11 +1,13 @@
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 为 <see cref="ActuatorBuilder{TTarget}"/> 提供操作执行器创建扩展方法，按目标类型约束区分可编辑对象与命令对象。
+/// 为 <see cref="ActuatorBuilder{TTarget}"/> 提供操作执行器创建扩展方法，按目标类型约束区分操作。
 /// </summary>
 /// <remarks>
 /// 可编辑对象（<see cref="EditableObject{T}"/>）使用 <see cref="Update{TTarget}(ActuatorBuilder{TTarget}, object[])"/>、
-/// <see cref="Create{TTarget}(ActuatorBuilder{TTarget}, object[])"/>、<see cref="Delete{TTarget}(ActuatorBuilder{TTarget}, object[])"/>；
+/// <see cref="Delete{TTarget}(ActuatorBuilder{TTarget}, object[])"/>；
+/// <see cref="Create{TTarget}(ActuatorBuilder{TTarget}, object[])"/> 支持任意业务对象类型
+/// （可编辑对象创建后标记新增并保存，其余类型仅构造实例）；
 /// 命令对象（<see cref="CommandObject{T}"/>）使用 <see cref="Execute{TTarget}(ActuatorBuilder{TTarget}, object[])"/>。
 /// </remarks>
 public static class ActuatorBuilderExtensions
@@ -26,12 +28,17 @@ public static class ActuatorBuilderExtensions
 	/// <summary>
 	/// 创建用于新建目标对象的 <see cref="CreateActuator{TTarget}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TTarget">可编辑对象的具体类型，必须继承自 <see cref="EditableObject{TTarget}"/>。</typeparam>
+	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
 	/// <param name="builder">执行器构建器。</param>
 	/// <param name="criteria">用于创建对象的初始化参数。</param>
 	/// <returns>创建执行器实例。</returns>
+	/// <remarks>
+	/// 通过对象工厂的 <see cref="IObjectFactory.CreateAsync{TTarget}(object[])"/> 构造目标实例；
+	/// 可编辑对象（<see cref="EditableObject{T}"/>）创建后标记为新增并保存（插入语义），
+	/// 只读对象、命令对象等不可持久化类型仅执行创建工厂方法、不做落库。
+	/// </remarks>
 	public static CreateActuator<TTarget> Create<TTarget>(this ActuatorBuilder<TTarget> builder, params object[] criteria)
-		where TTarget : EditableObject<TTarget>
+		where TTarget : BusinessObject<TTarget>
 	{
 		return new CreateActuator<TTarget>(builder, () => builder.ObjectFactory.CreateAsync<TTarget>(criteria));
 	}

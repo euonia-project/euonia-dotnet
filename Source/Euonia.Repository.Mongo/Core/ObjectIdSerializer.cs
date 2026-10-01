@@ -60,7 +60,7 @@ public class ObjectIdSerializer : IBsonSerializer
                 return new MongoDB.Bson.ObjectId(bytes);
         }
 
-        throw new NotSupportedException($"The key value '{value}' of type '{value.GetType()}' cannot be represented as a MongoDB ObjectId. Use MongoDB.Bson.ObjectId, a 24-character hexadecimal string, or a 12-byte array, or configure a different key type for this model.");
+        throw new NotSupportedException(string.Format(Resources.IDS_KEY_NOT_REPRESENTABLE_AS_OBJECT_ID, value, value.GetType()));
     }
 
     /// <inheritdoc />

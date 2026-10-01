@@ -132,7 +132,7 @@ public sealed class AsyncProducerConsumerQueue<T>
 
 			// 如果队列已被标记为完成，则中止。
 			if (_completed)
-				throw new InvalidOperationException("Enqueue failed; the producer/consumer queue has completed adding.");
+				throw new InvalidOperationException(Resources.IDS_QUEUE_ENQUEUE_COMPLETED);
 
 			_queue.Enqueue(item);
 			_completedOrNotEmpty.Notify();
@@ -296,7 +296,7 @@ public sealed class AsyncProducerConsumerQueue<T>
 		var result = await TryDoDequeueAsync(cancellationToken, sync).ConfigureAwait(false);
 		if (result.Item1)
 			return result.Item2;
-		throw new InvalidOperationException("Dequeue failed; the producer/consumer queue has completed adding and is empty.");
+		throw new InvalidOperationException(Resources.IDS_QUEUE_DEQUEUE_COMPLETED_AND_EMPTY);
 	}
 
 	/// <summary>

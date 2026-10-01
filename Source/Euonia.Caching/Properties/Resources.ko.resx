@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_DATE_KIND_OF_PARAMETER_MUST_BE" xml:space="preserve">
+    <value>매개변수 {0}의 DateKind는 {1}이어야 합니다.</value>
+  </data>
+  <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_BETWEEN" xml:space="preserve">
+    <value>만료 시간 초과는 {0}과(와) {1} 사이여야 합니다.</value>
+  </data>
+  <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_GREATER_THAN_ZERO_IF_EXPIRATION_MODE_IS_DEFINED" xml:space="preserve">
+    <value>만료 모드가 정의된 경우 만료 시간 초과는 0보다 커야 합니다.</value>
+  </data>
+  <data name="IDS_EXPIRATION_VALUE_MUST_BE_GREATER_THAN_ZERO" xml:space="preserve">
+    <value>만료 값은 0보다 커야 합니다.</value>
+  </data>
+  <data name="IDS_VALUE_MUST_BE_GREATER_THAN" xml:space="preserve">
+    <value>값은 {0}보다 커야 합니다.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>추가할 CacheItem은 null일 수 없습니다.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL" xml:space="preserve">
+    <value>값 팩토리가 null을(를) 반환하여 '{0}:{1}' 업데이트에 실패했습니다.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_TOO_MANY_RETRIES" xml:space="preserve">
+    <value>재시도 횟수가 너무 많아 '{0}:{1}' 업데이트에 실패했습니다: {2}.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_REGION_KEY_NOT_FOUND" xml:space="preserve">
+    <value>리전 또는 키가 존재하지 않아 '{0}:{1}' 업데이트에 실패했습니다.</value>
+  </data>
+  <data name="IDS_TIMEOUT_CANNOT_BE_ZERO" xml:space="preserve">
+    <value>만료 모드가 'None'으로 설정되지 않은 경우 시간 초과를 0으로 설정할 수 없습니다.</value>
+  </data>
+  <data name="IDS_ONLY_ONE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>백플레인 소스는 하나의 캐시 핸들만 될 수 있습니다.</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE" xml:space="preserve">
+    <value>잘못된 메시지입니다</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE_TYPE" xml:space="preserve">
+    <value>잘못된 메시지 형식입니다</value>
+  </data>
+  <data name="IDS_INVALID_V2_BACKPLANE_MESSAGE" xml:space="preserve">
+    <value>잘못된 v2 백플레인 메시지입니다</value>
+  </data>
+  <data name="IDS_CANNOT_READ_INT32" xml:space="preserve">
+    <value>INT32를 읽을 수 없습니다. 추가 바이트가 없습니다.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTE" xml:space="preserve">
+    <value>바이트를 읽을 수 없습니다. 추가 바이트가 없습니다.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTES" xml:space="preserve">
+    <value>바이트를 읽을 수 없습니다. 추가 바이트가 없습니다.</value>
+  </data>
+  <data name="IDS_INVALID_LENGTH_FOR_STRING" xml:space="preserve">
+    <value>문자열 길이가 올바르지 않습니다</value>
+  </data>
+  <data name="IDS_CANNOT_READ_STRING" xml:space="preserve">
+    <value>문자열을 읽을 수 없습니다. 추가 바이트가 없습니다.</value>
+  </data>
+  <data name="IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT" xml:space="preserve">
+    <value>만료 모드가 시간 초과 없이 정의되었습니다.</value>
+  </data>
+  <data name="IDS_COULD_NOT_INITIALIZE_HANDLE" xml:space="preserve">
+    <value>형식 {0}의 핸들을 초기화할 수 없습니다</value>
+  </data>
+  <data name="IDS_NO_CACHE_HANDLES_DEFINED" xml:space="preserve">
+    <value>캐시 핸들이 정의되지 않았습니다.</value>
+  </data>
+  <data name="IDS_LAST_HANDLE_MUST_BE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>마지막 캐시 핸들이 백플레인 소스여야 합니다.</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_EXTEND_FROM" xml:space="preserve">
+    <value>형식 {0}은(는) {1}에서 파생되지 않습니다.</value>
+  </data>
+  <data name="IDS_COULD_NOT_LOAD_TYPE" xml:space="preserve">
+    <value>형식 '{0}'을(를) 로드할 수 없습니다. 확인이 계속 실패하면 TypeCache.RegisterResolveType을(를) 추가하여 형식을 확인하십시오.</value>
+  </data>
+  <data name="IDS_BACKPLANE_REQUIRES_SOURCE_HANDLE" xml:space="preserve">
+    <value>구성에 백플레인이 정의된 경우 캐시 핸들을 하나 이상 백플레인 소스로 표시해야 합니다.</value>
+  </data>
+  <data name="IDS_NO_MATCHING_CONSTRUCTOR" xml:space="preserve">
+    <value>형식 '{0}'에 일치하는 생성자를 찾을 수 없습니다. [{1}]과의 일치를 시도했지만 {2}이(가) 없습니다</value>
+  </data>
+  <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
+    <value>형식 '{0}'에 일치하는 생성자 또는 빈 생성자를 찾을 수 없습니다.</value>
+  </data>
+</root>

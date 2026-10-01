@@ -35,7 +35,7 @@ internal class HttpTransporter : ITransporter, IDisposable
 	{
 		_options = options.Value;
 		_logger = logger;
-		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider) ?? throw new InvalidOperationException($"Message serializer '{_options.SerializerProvider}' is not registered.");
+		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider) ?? throw new InvalidOperationException(string.Format(Resources.IDS_SERIALIZER_NOT_REGISTERED, _options.SerializerProvider));
 
 		Name = _options.Name ?? "http";
 
@@ -74,13 +74,13 @@ internal class HttpTransporter : ITransporter, IDisposable
 
 		if (!response.IsSuccessStatusCode)
 		{
-			throw new MessageDeliverException($"Remote call failed with status code {(int)response.StatusCode} {response.ReasonPhrase}.");
+			throw new MessageDeliverException(string.Format(Resources.IDS_REMOTE_CALL_FAILED_STATUS, (int)response.StatusCode, response.ReasonPhrase));
 		}
 
 		var reply = _serializer.Deserialize<RemoteReply<TResponse>>(content);
 		if (reply == null)
 		{
-			throw new MessageDeliverException("Remote call failed: the response payload could not be parsed.");
+			throw new MessageDeliverException(Resources.IDS_RESPONSE_PAYLOAD_UNPARSABLE);
 		}
 
 		if (!reply.IsSuccess)

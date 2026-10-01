@@ -1,9 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <Import Project="..\common.props" />
+    <Import Project="..\resource.props" />
 
     <PropertyGroup>
         <RootNamespace>Nerosoft.Euonia.Bus</RootNamespace>
+        <!-- 与 Euonia.Bus 共用根命名空间，此处单独隔离资源类以避免 CS0436 同名冲突。 -->
+        <ResourcesNamespace>Nerosoft.Euonia.Bus.Abstract.Properties</ResourcesNamespace>
     </PropertyGroup>
     
     <ItemGroup>
@@ -12,6 +15,21 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Core\Euonia.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="Properties\Resources.Designer.cs">
+            <DesignTime>True</DesignTime>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Resources.resx</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Update="Properties\Resources.resx">
+            <Generator>ResXFileCodeGenerator</Generator>
+            <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+        </EmbeddedResource>
     </ItemGroup>
 
 </Project>

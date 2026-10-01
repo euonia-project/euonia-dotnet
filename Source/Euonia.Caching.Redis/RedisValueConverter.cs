@@ -230,7 +230,7 @@ internal class RedisValueConverter : IRedisValueConverter,
 		var type = TypeCache.GetType(valueType);
 		if (type == null)
 		{
-			throw new NullReferenceException($"Type could not be loaded, {valueType}.");
+			throw new NullReferenceException(string.Format(Resources.IDS_TYPE_COULD_NOT_BE_LOADED, valueType));
 		}
 
 		return JsonSerializer.Deserialize(value, type);

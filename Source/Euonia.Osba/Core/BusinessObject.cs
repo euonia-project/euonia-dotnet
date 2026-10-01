@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Security;
 using Nerosoft.Euonia.Reflection;
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -45,11 +47,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
-
-			// 数据权限规则按实例注入，且每次接线都判定一次：是否需要它取决于「本容器是否声明了
-			// 该类型的权限模型」（按容器的事实），而 InitializeRules 的结果按类型进程级缓存，
-			// 两者粒度不同，放一起会让规则取决于哪个容器先初始化了这个类型。
-			InjectScopePolicyRule();
 		}
 	}
 
@@ -105,7 +102,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 恰挂起所有规则检查，稍后可恢复。
+	/// 暂停所有规则检查，稍后可恢复。
 	/// </summary>
 	public void SuspendRuleChecking()
 	{
@@ -139,20 +136,29 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <summary>
 	/// 获取此业务对象的规则对象。
 	/// </summary>
+	/// <remarks>
+	/// 惰性初始化在临界区内完成：无锁的双重创建会让并发首访产生两个 <see cref="Rules"/> 实例，
+	/// 后写者胜出、先者上累积的 <see cref="Rules.BrokenRules"/> 与 <see cref="Rules.RunningRules"/>
+	/// 被整体丢弃——表现为偶发「违规列表为空但对象实际不合法」。锁复用既有的
+	/// <see cref="_changedPropertiesLock"/>（该锁只护各自字段的短临界区，锁序无环）。
+	/// </remarks>
 	protected Rules Rules
 	{
 		get
 		{
-			if (field == null)
+			lock (_changedPropertiesLock)
 			{
-				field = new Rules(this);
-			}
-			else if (field.Target == null)
-			{
-				field.SetTarget(this);
-			}
+				if (field == null)
+				{
+					field = new Rules(this);
+				}
+				else if (field.Target == null)
+				{
+					field.SetTarget(this);
+				}
 
-			return field;
+				return field;
+			}
 		}
 	}
 
@@ -253,6 +259,30 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 异步检查指定属性的规则（O-4 方案 B 的公共出口）。
+	/// </summary>
+	/// <param name="property">目标属性。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步检查操作的任务。</returns>
+	/// <remarks>
+	/// <para>
+	/// 与 <see cref="CheckPropertyRules(IPropertyInfo)"/>（同步、阻塞、供 setter 热路径）相对：
+	/// 本方法在<b>异步流程里</b> <c>await</c> 属性级规则——含 I/O 的校验（查库、调远端）
+	/// 不再阻塞线程池线程。典型用法是 <c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型
+	/// 在保存前的异步管线里逐属性校验；「推迟到保存时」的路径
+	/// （<see cref="EnsureRulesAsync(string, CancellationToken)"/>）内部走的就是同一异步内核。
+	/// </para>
+	/// <para>
+	/// 与保存路径的差别：本方法<b>只跑指定属性</b>、不清对象级违规、不抛
+	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>——结论仍经 <see cref="IsValid"/> 读取。
+	/// </para>
+	/// </remarks>
+	internal async Task CheckPropertyRulesAsync(IPropertyInfo property, CancellationToken cancellationToken = default)
+	{
+		await Rules.CheckRulesAsync(property, cancellationToken);
+	}
+
+	/// <summary>
 	/// 当验证完成时调用。
 	/// </summary>
 	/// <remarks>
@@ -294,53 +324,6 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 				RuleManager.CleanRules(GetType());
 				throw;
 			}
-		}
-	}
-
-	/// <summary>
-	/// 若<b>本容器</b>为本类型声明了数据权限模型，则为本对象注入 <see cref="ScopePolicyRule"/>。
-	/// </summary>
-	/// <remarks>
-	/// <para>
-	/// 注入使越权保存在保存前以验证错误暴露，无需使用方手工 <c>AddRule</c>，
-	/// 从而消除「漏加规则 = 静默无保护」。
-	/// </para>
-	/// <para>
-	/// 注入的是<b>实例级</b>规则而非类型级，且每次接线都判定一次。这是必需的：
-	/// 「是否声明了模型」是<b>按容器</b>的事实（注册表是容器内的单例），而类型级注册会被
-	/// <c>RuleManager</c> 按类型进程级缓存——两者粒度不同，规则的有无不能取决于哪个容器先
-	/// 初始化了这个类型。
-	/// </para>
-	/// <para>
-	/// <b>本方法绝不抛异常</b>：注册表缺失、环境态未建立、类型未声明模型等情况一律静默跳过。
-	/// 规则是补充信号而非强制点，让它在属性 setter 上抛出会把配置问题伪装成难以定位的异常。
-	/// </para>
-	/// <para>
-	/// 规则本身仍是<b>无状态桥</b>，执行时才从业务上下文解析注册表与授权数据。
-	/// </para>
-	/// </remarks>
-	private void InjectScopePolicyRule()
-	{
-		try
-		{
-			var registry = BusinessContext?.GetService<ScopeModelRegistry>();
-
-			if (registry == null || !registry.IsDeclared(GetType()))
-			{
-				return;
-			}
-
-			// 幂等：上下文被重复赋值时不得叠加；使用方手工注册过同类型规则时也不重复注入
-			if (Rules.ContainsRule(typeof(ScopePolicyRule)))
-			{
-				return;
-			}
-
-			Rules.AddInstanceRule(new ScopePolicyRule());
-		}
-		catch
-		{
-			// 环境态未建立时 GetService 会抛：静默跳过，规则不是强制点
 		}
 	}
 
@@ -544,9 +527,45 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Property Checks
 
 	/// <summary>
-	/// 获取或设置一个值，指示对象是否应绕过属性检查。
+	/// 绕过规则检查的<b>异步流作用域</b>开关（每实例一份 <see cref="AsyncLocal{T}"/> 容器）。
 	/// </summary>
-	protected virtual bool IsBypassingRuleChecks { get; set; }
+	/// <remarks>
+	/// <para>
+	/// <b>BREAKING 变更（原为对象级 <c>bool</c>）</b>：标志挂在当前 <see cref="AsyncLocal{T}"/>（逻辑执行流）上，
+	/// 而不是对象字段上。
+	/// </para>
+	/// <para>
+	/// 原对象级布尔有两个可证明的缺陷：
+	/// ① <c>using (target.BypassRuleChecks) { await handler(target); }</c> 期间标志<b>跨 await 存活在对象上</b>，
+	/// 异步 handler 执行期间同实例的<b>并发</b> setter 会被一并跳过写权限检查、变更追踪与通知——
+	/// 其中 <c>PropertyHasChanged</c> 是唯一写入 <c>_changedProperties</c> 的路径，被跳过即<b>静默不持久化</b>；
+	/// ② 并发进出 <c>using</c> 会让先退出的调用方把还在线程上的后一个调用方的绕过状态一并还原。
+	/// 改为 AsyncLocal 后：绕过只影响<b>发起它的逻辑流及其派生流</b>，并发调用方互不可见；
+	/// <c>using</c> 退出时恢复的是<b>本流</b>进入前的值（嵌套绕过正确叠加/还原）。
+	/// </para>
+	/// <para>
+	/// 保留 <c>virtual</c>（派生类如需「永不绕过」可整体覆盖为恒 <see langword="false"/>），
+	/// 但 setter 语义从「写对象状态」变为「写本异步流的值」，覆写时请保持流作用域语义。
+	/// </para>
+	/// </remarks>
+	protected virtual bool IsBypassingRuleChecks
+	{
+		get => (_bypassScope?.Value ?? false);
+		set
+		{
+			_bypassScope ??= new AsyncLocal<bool>();
+			_bypassScope.Value = value;
+		}
+	}
+
+	/// <summary>
+	/// 本实例的绕过开关容器；<see langword="null"/> 表示从未在本流的任何位置置位（读侧零分配）。
+	/// </summary>
+	/// <remarks>
+	/// 状态按<b>实例</b>隔离，流内传播由 <see cref="AsyncLocal{T}"/> 自己负责，因此这里不加
+	/// <c>[ThreadStatic]</c>：该特性只对静态字段生效，写在实例字段上既无效，又会让人误以为存在线程亲和。
+	/// </remarks>
+	private AsyncLocal<bool> _bypassScope;
 
 	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
 
@@ -560,14 +579,20 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 用于创建绕过规则检查的对象，允许设置某些即使不是严格有效的值。
 	/// 该对象还允许开发者在任何时候检查某些规则是否正在被绕过。
 	/// </summary>
+	/// <remarks>
+	/// <see cref="Dispose"/> 还原的是<b>进入时捕获的本流旧值</b>而不是恒 <see langword="false"/>：
+	/// 嵌套 <c>using</c>（例如 lambda 规则内再嵌一层绕过）退出时不会关闭外层的绕过状态。
+	/// </remarks>
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
 		private BusinessObject _target;
+		private readonly bool _captured;
 		private static readonly Lock _lock = new();
 
 		private BypassRuleChecksObject(BusinessObject target)
 		{
 			_target = target;
+			_captured = target.IsBypassingRuleChecks;
 			_target.IsBypassingRuleChecks = true;
 		}
 
@@ -586,30 +611,54 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		/// </summary>
 		/// <param name="target">业务对象。</param>
 		/// <returns>绕过规则检查的管理器对象。</returns>
+		/// <remarks>
+		/// 必须<strong>在锁内</strong>取定返回值：字段在 <see cref="DeRef"/> 归零时会被置空，
+		/// 若在解锁之后再回读一次 <see cref="BusinessObject.InternalBypassRuleChecks"/>，
+		/// 中途并发的 <c>Dispose</c> 就能让这里返回 <see langword="null"/>——
+		/// 调用方拿到 null 后 <c>using</c> 形同虚设，而刚建立的绕过状态已被对方还原。
+		/// </remarks>
 		public static BypassRuleChecksObject GetManager(BusinessObject target)
 		{
 			lock (_lock)
 			{
 				target.InternalBypassRuleChecks ??= new BypassRuleChecksObject(target);
 
-				target.InternalBypassRuleChecks.AddRef();
+				var manager = target.InternalBypassRuleChecks;
+				manager.AddRef();
+				return manager;
 			}
-
-			return target.InternalBypassRuleChecks;
 		}
 
 		#region Reference counting
 
+		/// <summary>
+		/// 当前引用计数。读写都在 <see cref="_lock"/> 内完成——
+		/// <see cref="Dispose"/> 可能来自与 <see cref="GetManager"/> 完全不同的线程。
+		/// </summary>
 		private int _refCount;
 
 		/// <summary>
 		/// 获取此对象的当前引用计数。
 		/// </summary>
-		public int RefCount => _refCount;
+		public int RefCount
+		{
+			get
+			{
+				lock (_lock)
+				{
+					return _refCount;
+				}
+			}
+		}
 
 		private void AddRef()
 		{
-			_refCount += 1;
+			// 自己加锁，不依赖调用方：把「必须先持锁」变成方法自身的契约，
+			// 否则漏了锁的调用方会得到一个毫无保护的非原子自增。
+			lock (_lock)
+			{
+				_refCount += 1;
+			}
 		}
 
 		private void DeRef()
@@ -618,7 +667,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			{
 				if (_refCount == 0)
 				{
-					// 已经释放，防止重复释放导致引用计数为负或空引用
+					// 已经释放，防止重复释放导致引用计数为负或空引用。
+					// 归零后 _target 同步置空，这里必须一并挡住，避免对空目标动刀。
 					return;
 				}
 
@@ -628,7 +678,15 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 					return;
 				}
 
-				_target.IsBypassingRuleChecks = false;
+				if (_target == null)
+				{
+					return;
+				}
+
+				// 还原「进入时捕获的旧值」而不是恒 false：嵌套 using 退出时不关闭外层绕过。
+				// AsyncLocal 语义下这写的是本异步流的值——并发的其他流不受影响，
+				// 也不再把对象级标志误还原给正在别处绕过的调用方。
+				_target.IsBypassingRuleChecks = _captured;
 				_target.InternalBypassRuleChecks = null;
 				_target = null;
 			}
@@ -656,7 +714,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Fields
 
 	/// <inheritdoc/>
-	public FieldDataManager FieldManager => field ??= new FieldDataManager(GetType());
+	/// <remarks>
+	/// 惰性初始化在临界区内完成：无锁的双重创建会让并发首访产生两个
+	/// <see cref="FieldDataManager"/>，两份 <c>_fieldData</c> 各自维护变更历史——
+	/// <see cref="HasChangedProperties"/> 与 <see cref="ReadProperty{TValue}(PropertyInfo{TValue})"/> 会在
+	/// 线程间给出分歧答案。锁复用 <see cref="_changedPropertiesLock"/>，与 <see cref="Rules"/> 同一口径。
+	/// </remarks>
+	public FieldDataManager FieldManager
+	{
+		get
+		{
+			lock (_changedPropertiesLock)
+			{
+				return field ??= new FieldDataManager(GetType());
+			}
+		}
+	}
 
 	#endregion
 
@@ -728,7 +801,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var propertyInfo = FieldManager.GetRegisteredProperty(propertyName);
 		if (propertyInfo == null)
 		{
-			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_NOT_REGISTERED, propertyName));
 		}
 
 		return ReadProperty(propertyInfo);
@@ -749,14 +822,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 
 		if (propertyInfo == null)
 		{
-			throw new InvalidOperationException($"Property {propertyName} is not registered.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_NOT_REGISTERED, propertyName));
 		}
 
 		if (propertyInfo is not PropertyInfo<TValue> property)
 		{
-			throw new InvalidOperationException($"Property '{propertyName}' is registered as '{propertyInfo.Type.Name}', which does not match the expected type '{typeof(TValue).Name}'.");
+			throw new InvalidOperationException(string.Format(Resources.IDS_PROPERTY_TYPE_MISMATCH, propertyName, propertyInfo.Type.Name, typeof(TValue).Name));
 		}
-		
+
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
@@ -777,21 +850,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <inheritdoc />
 	public void LoadProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
-		TValue oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				_ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TValue> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TValue)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		LoadPropertyValue(propertyInfo, oldValue, newValue, false);
 	}
@@ -987,7 +1046,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var result = CanReadProperty(property);
 		if (throwOnFalse && !result)
 		{
-			throw new SecurityException($"Property get not allowed. {property.Name}");
+			throw new SecurityException(string.Format(Resources.IDS_PROPERTY_GET_NOT_ALLOWED, property.Name));
 		}
 
 		return result;
@@ -1012,9 +1071,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return true;
 		}
 
-		// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		{
+			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
+
 		return CanReadProperty(propertyInfo, throwOnFalse);
 	}
 
@@ -1040,7 +1100,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		var result = CanWriteProperty(property);
 		if (throwOnFalse && result == false)
 		{
-			throw new SecurityException($"Property set not allowed. {property.Name}");
+			throw new SecurityException(string.Format(Resources.IDS_PROPERTY_SET_NOT_ALLOWED, property.Name));
 		}
 
 		return result;
@@ -1075,171 +1135,28 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
-	/// 确定是否允许当前用户读取此业务对象。
+	/// 确定当前用户是否被允许对本对象执行指定的业务操作。
 	/// </summary>
-	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
+	/// <param name="operation">操作标识；既包括 <see cref="BusinessOperation"/> 的 5 个内置操作，
+	/// 也包括宿主自定义的操作（如 <c>approve</c>、<c>order:archive</c>）。</param>
+	/// <returns>允许则返回 <c>true</c>；无权限要求或无从判定时同样返回 <c>true</c>。</returns>
 	/// <remarks>
-	/// 基类默认根据类型与方法上的 <see cref="PermissionAttribute"/> 要求委托给权限检查器；
-	/// 派生类可重写以实现自定义操作权限逻辑。
+	/// <para>
+	/// 这是操作级权限<b>唯一的判定入口</b>，也是派生类唯一的定制点：内置操作与自定义操作一视同仁，
+	/// 都按类型级与方法级 <see cref="PermissionAttribute"/> 要求委托给宿主注册的
+	/// <see cref="IPermissionChecker"/>。判定逻辑本身归 <c>ObjectAuthorization</c>，
+	/// 本方法只是它暴露在对象上的那一面。
+	/// </para>
+	/// <para>
+	/// <b>查询语义</b>：本方法不抛异常，无从判定（未接入 <see cref="BusinessContext"/>、未注册判定实现）
+	/// 时返回 <c>true</c>。<b>真正的拦截在工厂边界</b>（<c>ObjectAuthorization.EnsureAuthorized</c>），
+	/// 那里有要求却判定不了会抛 <see cref="InvalidOperationException"/>，拒绝会抛
+	/// <see cref="SecurityException"/>。业务方法内部做条件分支用本方法。
+	/// </para>
 	/// </remarks>
-	public virtual bool CanReadObject()
+	public virtual bool CanPerformOperation(string operation)
 	{
-		return IsOperationGranted(BusinessOperation.Read);
-	}
-
-	/// <summary>
-	/// 确定是否允许当前用户创建此业务对象。
-	/// </summary>
-	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-	public virtual bool CanCreateObject()
-	{
-		return IsOperationGranted(BusinessOperation.Create);
-	}
-
-	/// <summary>
-	/// 确定是否允许当前用户更新此业务对象。
-	/// </summary>
-	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-	public virtual bool CanUpdateObject()
-	{
-		return IsOperationGranted(BusinessOperation.Update);
-	}
-
-	/// <summary>
-	/// 确定是否允许当前用户删除此业务对象。
-	/// </summary>
-	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-	public virtual bool CanDeleteObject()
-	{
-		return IsOperationGranted(BusinessOperation.Delete);
-	}
-
-	/// <summary>
-	/// 确定是否允许当前用户执行此命令对象。
-	/// </summary>
-	/// <returns>允许则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-	public virtual bool CanExecuteObject()
-	{
-		return IsOperationGranted(BusinessOperation.Execute);
-	}
-
-	/// <summary>
-	/// 判断当前用户是否拥有指定的权限。
-	/// </summary>
-	/// <param name="permission">权限名称，支持以 <c>*</c> 结尾的前缀通配符匹配。</param>
-	/// <returns>拥有该权限则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
-	protected bool HasPermission(string permission)
-	{
-		var checker = ResolvePermissionChecker();
-		return checker == null || checker.IsGranted(permission);
-	}
-
-	/// <summary>
-	/// 判断当前用户是否属于指定的角色。
-	/// </summary>
-	/// <param name="role">角色名称。</param>
-	/// <returns>属于该角色则返回 <c>true</c>；未注册权限检查器时视为拥有。</returns>
-	protected bool HasRole(string role)
-	{
-		var checker = ResolvePermissionChecker();
-		return checker == null || checker.IsInRole(role);
-	}
-
-	/// <summary>
-	/// 判断当前用户是否可访问<b>本对象这一行</b>（行级数据权限）。
-	/// </summary>
-	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
-	/// <returns>可访问则返回 <c>true</c>；本类型未声明权限模型时返回 <c>true</c>。</returns>
-	/// <remarks>
-	/// 供业务方法内部做条件分支使用（例如「本人可编辑，他人只读」）。
-	/// 本方法不抛异常——真正的越权拦截发生在工厂边界。
-	/// </remarks>
-	protected bool CanAccessRow(string scopeKey = null)
-	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
-
-		return guard == null || guard.AllowsObject(this, scopeKey);
-	}
-
-	/// <summary>
-	/// 判断当前用户是否可访问本对象这一行，并返回判定说明。
-	/// </summary>
-	/// <param name="scopeKey">权限码；为 <c>null</c> 时按本对象当前状态对应的操作解析。</param>
-	/// <returns>判定说明；未注册数据权限时返回未受约束的结论。</returns>
-	protected string ExplainRowAccess(string scopeKey = null)
-	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
-
-		return guard == null ? "未启用数据权限" : guard.ExplainObject(this, scopeKey);
-	}
-
-	/// <summary>
-	/// 异步判断当前用户是否被授予指定权限码。
-	/// </summary>
-	/// <param name="permission">权限码。</param>
-	/// <param name="cancellationToken">用于取消操作的令牌。</param>
-	/// <returns>被授予则返回 <c>true</c>；未注册权限检查器时返回 <c>true</c>。</returns>
-	/// <remarks>
-	/// 权限码来自授权数据（按请求缓存），首次访问可能触发一次异步查询。
-	/// 与 <see cref="HasPermission"/> 等价，异步版本避免在同步路径上阻塞线程。
-	/// </remarks>
-	protected async ValueTask<bool> CheckPermissionAsync(string permission, CancellationToken cancellationToken = default)
-	{
-		var guard = BusinessContext?.GetService<IScopeGuard>();
-
-		if (guard == null)
-		{
-			return true;
-		}
-
-		await guard.EnsureResolvedAsync(cancellationToken).ConfigureAwait(false);
-
-		return guard.GetSubjects().HoldsPermission(permission);
-	}
-
-	/// <summary>
-	/// 依据类型级与方法级 <see cref="PermissionAttribute"/> 要求判断是否放行指定操作。
-	/// </summary>
-	/// <param name="operation">当前操作。</param>
-	/// <returns>无要求或要求全部满足时返回 <c>true</c>。</returns>
-	private bool IsOperationGranted(BusinessOperation operation)
-	{
-		var requirements = GetPermissionRequirements(operation);
-		if (requirements.Count == 0)
-		{
-			return true;
-		}
-
-		var checker = ResolvePermissionChecker();
-		if (checker == null)
-		{
-			return true;
-		}
-
-		return requirements.All(requirement => checker.IsRequirementSatisfied(requirement.Permission, requirement.Roles));
-	}
-
-	/// <summary>
-	/// 收集类型级与执行指定操作的工厂方法上的权限要求。
-	/// </summary>
-	/// <param name="operation">当前操作。</param>
-	/// <returns>权限要求列表；结果按（类型，操作）缓存。</returns>
-	/// <remarks>
-	/// 委托给 <see cref="PermissionRequirements"/>：运行期判定与启动期校验共用同一实现，
-	/// 确保两处对「某个操作声明了哪些权限码」不会得出不同答案。
-	/// </remarks>
-	private IReadOnlyList<PermissionAttribute> GetPermissionRequirements(BusinessOperation operation)
-	{
-		return PermissionRequirements.For(GetType(), operation);
-	}
-
-	/// <summary>
-	/// 从当前业务上下文解析权限检查器。
-	/// </summary>
-	/// <returns>权限检查器实例；上下文缺失或服务未注册时返回 <c>null</c>。</returns>
-	private IPermissionChecker ResolvePermissionChecker()
-	{
-		return BusinessContext?.GetService<IPermissionChecker>();
+		return ObjectAuthorization.IsGranted(this, operation);
 	}
 
 	#endregion
@@ -1249,9 +1166,14 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private bool _disposedValue;
 
 	/// <summary>
-	/// 可释放模式的实现。
+	/// 可释放模式的实现。本类型当前不持有任何资源，此方法仅维护释放状态，
+	/// 供派生类重写并在其中按 <paramref name="disposing"/> 释放资源。
 	/// </summary>
-	/// <param name="disposing">指示是否正在释放托管资源。</param>
+	/// <param name="disposing">
+	/// <c><see langword="true"/></c> 表示由 <see cref="Dispose()"/> 显式释放（可安全访问托管资源）；
+	/// <c><see langword="false"/></c> 表示由终结器释放（不可访问托管资源）。
+	/// 本类型没有终结器，故该参数恒为 <c><see langword="true"/></c>。
+	/// </param>
 	protected virtual void Dispose(bool disposing)
 	{
 		if (_disposedValue)
@@ -1259,7 +1181,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			return;
 		}
 
-		// 当前无托管/非托管资源需要释放，保留该重写方法供派生类扩展
+		// 派生类引入资源时在此释放：托管资源只应在 disposing 为 true 时访问，非托管资源两种情况都要释放。
 		_disposedValue = true;
 	}
 
@@ -1267,6 +1189,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public void Dispose()
 	{
 		Dispose(disposing: true);
+		GC.SuppressFinalize(this);
 	}
 
 	#endregion

@@ -81,7 +81,7 @@ internal static class MessageHandlerFinder
 				var method = handlerType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)]);
 				if (method == null)
 				{
-					throw new MissingMethodException("The method doesn't exist.");
+					throw new MissingMethodException(Resources.IDS_HANDLER_METHOD_NOT_EXIST);
 				}
 
 				handlerInterfaceMethods.Add(method);
@@ -106,17 +106,17 @@ internal static class MessageHandlerFinder
 
 			if (parameters.Length == 0)
 			{
-				throw new InvalidOperationException("The handler method must contain at least one parameter");
+				throw new InvalidOperationException(Resources.IDS_HANDLER_METHOD_REQUIRES_PARAMETER);
 			}
 
 			switch (parameters.Length)
 			{
 				case 1 when parameters[0].ParameterType == typeof(IMessageContext) || parameters[0].ParameterType == typeof(CancellationToken):
-					throw new InvalidOperationException("The first parameter of handler method must be message type");
+					throw new InvalidOperationException(Resources.IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE);
 				case 2 when parameters[1].ParameterType != typeof(IMessageContext) && parameters[1].ParameterType != typeof(CancellationToken):
-					throw new InvalidOperationException("The second parameter of handler method must be MessageContext or CancellationToken if the method contains 2 parameters");
+					throw new InvalidOperationException(Resources.IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL);
 				case 3 when parameters[1].ParameterType != typeof(IMessageContext) || parameters[2].ParameterType != typeof(CancellationToken):
-					throw new InvalidOperationException("The second and third parameter of handler method must be MessageContext and CancellationToken if the method contains 3 parameters");
+					throw new InvalidOperationException(Resources.IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL);
 			}
 
 			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
@@ -124,7 +124,7 @@ internal static class MessageHandlerFinder
 			                       .ToList();
 			if (attributes.Any(a => string.IsNullOrWhiteSpace(a.Name)))
 			{
-				throw new InvalidOperationException("The handler method must not have any SubscribeAttribute with an empty name");
+				throw new InvalidOperationException(Resources.IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED);
 			}
 
 			foreach (var attribute in attributes)

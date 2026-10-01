@@ -37,7 +37,7 @@ internal static class ZooKeeperNodeCreator
                 // swallow the error and go around the loop again
                 if (!ensureDirectoryExists)
                 {
-                    throw new InvalidOperationException($"Node '{directory}' does not exist", ex);
+                    throw new InvalidOperationException(string.Format(Resources.IDS_NODE_DOES_NOT_EXIST, directory), ex);
                 }
             }
             catch
@@ -63,7 +63,7 @@ internal static class ZooKeeperNodeCreator
                 var directoryToCreate = toCreate.Peek();
                 if (directoryToCreate == ZooKeeperPath.Root)
                 {
-                    throw new InvalidOperationException($"Received {typeof(KeeperException.NoNodeException)} when creating child node of directory '{ZooKeeperPath.Root}'");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_UNEXPECTED_NO_NODE_WHEN_CREATING_CHILD, typeof(KeeperException.NoNodeException), ZooKeeperPath.Root));
                 }
 
                 try

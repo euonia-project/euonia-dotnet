@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
+    <value>The permission configuration is empty: no operation entry rule was declared, and neither a code source / NoOperationCodes / NoModels was given nor a scanning assembly was added. Use OnAttributeOrName / OnMethod to declare the entry rule when there are method-level permission codes; give a code source via Source when the rules come from elsewhere; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
+    <value>The permission configuration contradicts itself: NoOperationCodes was asserted (no method-level permission codes) yet operation entry rules were declared. Only one of the two is allowed: declare rules when there are method-level permission codes, assert NoOperationCodes when there are none.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
+    <value>The permission configuration contradicts itself: NoModels was asserted (no permission model and no declaration) yet scanning assemblies were given. Do not assert NoModels when there are assemblies to scan.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>The permission configuration contradicts itself: a permission code source was specified (Source) yet operation entry rules were declared. The two are mutually exclusive source shapes: the source itself answers which permission codes a type declares for an operation, and entry rules are just one of its implementations.</value>
+  </data>
+  <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
+    <value>AddPermission was called without any assembly to scan. Both permission models and [Permission] declarations come from assembly scanning: an empty scanning scope silently disables row-level data scope, and the start-up validation short-circuits as well because nothing was declared. Pass the assemblies to scan, for example permission.Scan(typeof(X).Assembly); if the application really has no permission model and no [Permission] declaration, assert permission.NoModels() explicitly.</value>
+  </data>
+  <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
+    <value>A permission model or [Permission] permission code was declared, but {0} is not registered. Permission codes and row-level grants must be resolved from authorization data in real time (freezing them into a token lets a revoked permission survive in stale tokens). Please register an implementation backed by authorization data, for example services.AddScoped&lt;{0}, YourResolver&gt;().</value>
+  </data>
+  <data name="IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED" xml:space="preserve">
+    <value>A permission model or [Permission] permission code was declared, but {0} is not registered. The evaluation subject is taken from UserPrincipal, so resolving IScopeGuard fails outright when it is not registered. Please supply the current user principal in the service registrations.</value>
+  </data>
+  <data name="IDS_OPERATION_ATTRIBUTE_TYPE_INVALID" xml:space="preserve">
+    <value>The entry attribute type must be a non-null attribute type (a subclass of Attribute).</value>
+  </data>
+  <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
+    <value>No operation entry rule was declared. Call OnAttributeOrName / OnMethod at least once; if the application really has no method-level permission codes, assert permission.NoOperationCodes() explicitly.</value>
+  </data>
+  <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
+    <value>The operation name '{0}' uses the framework-reserved prefix '{1}'. Names carrying that prefix belong to the framework; operations and permission codes defined by the application must not use it.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
+    <value>The permission code '{0}' uses the framework-reserved prefix '{1}'. Please use a code without that prefix.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>A bare '*' permission code matches every permission and is therefore not allowed. Use a prefix wildcard with a non-empty prefix (for example 'repo:*'); granting everything must be expressed by granting the codes explicitly.</value>
+  </data>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>The name '{0}' is already claimed by '{1}'. An identifier (an operation or a permission code) and a grant key share one namespace, so each name holds exactly one policy.</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>The authorization data has not been resolved in this scope yet, and synchronous reads never wait for it. Await '{0}' (or '{1}') on an asynchronous entry before any synchronous authorization check.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>The policy for '{0}' is declared more than once.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
+    <value>All needs at least one sub-policy; "unconstrained" must be written explicitly as Where(_ =&gt; true).</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_NULL" xml:space="preserve">
+    <value>The sub-policies of All can not be null.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_EMPTY" xml:space="preserve">
+    <value>Any needs at least one sub-policy; "unconstrained" must be written explicitly as Where(_ =&gt; true).</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_NULL" xml:space="preserve">
+    <value>The sub-policies of Any can not be null.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DENY_NOT_NESTABLE" xml:space="preserve">
+    <value>Deny can not be nested. Deny means "veto", not boolean negation; use Where(x =&gt; !...) when negation is meant.</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_DUPLICATED" xml:space="preserve">
+    <value>The dimension '{0}' is declared more than once in the permission model of type '{1}'.</value>
+  </data>
+  <data name="IDS_SCOPE_CLASSIFICATION_DUPLICATED" xml:space="preserve">
+    <value>The classification '{0}' is declared more than once in the permission model of type '{1}'.</value>
+  </data>
+  <data name="IDS_SCOPE_MODEL_NO_DIMENSION" xml:space="preserve">
+    <value>The permission model '{0}' declares no dimension at all: call ScopeModelBuilder.Map at least once (use MapMany when the value comes from a child table).</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
+    <value>The scope policy of resource type '{0}' references the unmapped dimension '{1}'. Please call Map("{1}", ...) in Define of the permission model (use MapMany("{1}", ...) when the value comes from a child table); mapped dimensions: {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>The permission code source has already been specified; it can only be specified once.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Permission model registration validation failed.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Permission model registration validation failed with {0} problems:</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>Failed to instantiate the permission model: {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>Resource is null; cannot make a decision (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>No permission model registered; not constrained by data scope</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(none)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Decision: {0}; scope key: {1}; matched allows: {2}; matched denies: {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>allow</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>deny</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
+    <value>The value expression '{1}' of dimension '{0}' is not supported. A collection dimension only supports the shape "a navigation collection of the resource (optionally filtered by Where) then its string value", for example x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId), or x =&gt; x.MemberIds when the element itself is a string; every other shape can not be pushed down into an EXISTS sub-query and is therefore rejected here. Use Map for a single value that lives on the row itself.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
+    <value>No policy was provided. The policy and the model must be written in the same declaring type; validation can not pass when either one is missing.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
+    <value>The policy can never allow structurally (Allow is constantly false), which usually means every branch under Any is a deny condition. Please check the composition of the policy.</value>
+  </data>
+  <data name="IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE" xml:space="preserve">
+    <value>Resource type '{0}' has more than one permission model (another one is '{1}'). Please make sure each resource type declares exactly one permission model.</value>
+  </data>
+  <data name="IDS_SCOPE_SUBJECT_RESOLVER_MISSING" xml:space="preserve">
+    <value>Data scope is enabled (a scope model or a [Permission] declaration exists) but {0} is not registered. Please provide an implementation backed by authorization data in the service registrations.</value>
+  </data>
+  <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
+    <value>The resource type is constrained by data scope, but {0} can not be resolved from the scope of the object. Please make sure AddPermission has been called.</value>
+  </data>
+  <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
+    <value>{0}.{1} is a shared read-only instance and can not have grants added; call Clone() first when a mutable copy is needed.</value>
+  </data>
+  <data name="IDS_SCOPE_SUBCOLLECTION_NOT_LOADED" xml:space="preserve">
+    <value>Data scope evaluation failed: the child table dimension '{0}' of resource type '{1}' (value source: {2}) is unavailable during single row evaluation — the corresponding child collection is not loaded (null reference). Single row evaluation computes the same expression tree in memory and needs a complete object graph; because an undecidable result is a failure, this throws instead of silently denying. How to fix: ① use IScopeGuard.Apply for pushdown on the read side (EXISTS on the database side, recommended); ② load the child collection together with the object (for example Include in EF Core); ③ remove the initializer of the collection property (for example = []) — otherwise "not loaded" turns into "empty collection" and is silently denied.</value>
+  </data>
+</root>

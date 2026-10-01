@@ -17,6 +17,11 @@
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 	</ItemGroup>
 
+	<!--
+	  刻意不引用 Euonia.Security：Osba 只面对 Core 里的权限契约（来源 / 判定 / 行级判定 / 状态→操作），
+	  并实现自己懂的那一半；接引擎由宿主用 AddPermission 一行完成，不需要任何适配包。
+	  反向依赖会让「对象模型」被「策略引擎」绑死，宿主也就无法换用自己的鉴权实现。
+	-->
 	<ItemGroup>
 		<ProjectReference Include="..\Euonia.Core\Euonia.Core.csproj" />
 		<ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />

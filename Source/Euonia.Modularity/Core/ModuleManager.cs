@@ -45,7 +45,7 @@ public class ModuleManager : IModuleManager, ISingletonDependency
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"An error occurred during the initialize {contributor.GetType().FullName} phase of the module {module.Type.AssemblyQualifiedName}: {ex.Message}. See the inner exception for details.", ex);
+                    throw new Exception(string.Format(Resources.IDS_MODULE_INITIALIZE_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, ex.Message), ex);
                 }
             }
         }
@@ -70,7 +70,7 @@ public class ModuleManager : IModuleManager, ISingletonDependency
                 }
                 catch (Exception ex)
                 {
-                    throw new Exception($"An error occurred during the shutdown {contributor.GetType().FullName} phase of the module {module.Type.AssemblyQualifiedName}: {ex.Message}. See the inner exception for details.", ex);
+                    throw new Exception(string.Format(Resources.IDS_MODULE_SHUTDOWN_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, ex.Message), ex);
                 }
             }
         }

@@ -254,14 +254,19 @@ protected override void AddRules()
 
 #### 权限体系
 
-`Euonia.Osba` 提供两套相辅相成的权限控制，**授权值一律从应用数据实时解析，不固化在令牌里**：
+权限策略引擎独立成 `Euonia.Security`（只依赖 `Euonia.Core`）。`Euonia.Osba` **不引用引擎**：
+它实现 Core 里权限契约的自己那一半（对象状态 → 操作、来源、工厂边界的强制），引擎实现另一半
+（策略编译、行级判定、按授权标识选取行级策略）。**两者之间不需要适配包**：宿主用
+`AddBusinessObject(asm)` + `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionCodeSource.Instance); })` 两行接上，
+也可以只注册自己的实现。
+两者相辅相成，**授权值一律从应用数据实时解析，不固化在令牌里**：
 
 | | 操作权限 | 数据权限 |
 |---|---|---|
 | 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
-| 粒度 | 类型级 `[Permission]` + **行级**（按权限码的策略） | 行级 |
+| 粒度 | 类型级 `[Permission]` + **行级**（策略按授权标识声明，授予写在权限码下） | 行级 |
 | 强制点 | `BusinessObjectFactory` 调用边界 | 查询下推 + 工厂保存边界 |
-| 失败形态 | `SecurityException`／规则阶段为 `ValidationException` | 排除该行／同上 |
+| 失败形态 | `SecurityException` | 查询排除该行／保存抛 `SecurityException` |
 
 数据权限的判定**只有一处实现**：策略编译成 `Allow`/`Deny` 一对表达式，读侧下推与单行判定共用它。
 
@@ -286,32 +291,37 @@ public sealed class RepoScope : ScopeModel<Repo>
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
 
     public override void Declare(ScopePolicySet<Repo> policies)
-        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // 行级操作权限
+        => policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");  // 行级操作权限
 }
 
 // 3) 判定
 services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();          // 缺解析器即启动失败
+provider.GetRequiredService<IScopeGuard>();  // 首次解析守卫即执行启动校验：缺解析器马上失败
 
 var guard = provider.GetRequiredService<IScopeGuard>();
-var visible = guard.Apply(dbContext.Repos);  // 下推到数据库
-guard.Allows(repo, "repo:delete");           // 单行判定
-guard.Explain(repo, "repo:delete");          // 审计：命中了哪条策略
+await guard.EnsureResolvedAsync();             // 同步判定前预热（幂等）
+var visible = guard.Apply(dbContext.Repos);    // 下推到数据库
+guard.Allows(repo, BusinessOperation.Delete);  // 单行判定
+guard.Explain(repo, BusinessOperation.Delete); // 审计：命中了哪条策略
 ```
 
 **关键设计**：
 
 - **权限码来自数据而非令牌**——权限码多时不撑爆 Token，且**取消授权立即生效**（无需重签令牌）。
-- **行级操作权限**：把资源标识也映射为维度，按权限码声明不同的行范围，
-  于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
+- **行级操作权限**：把资源标识也映射为维度，按授权标识声明不同的行范围（授予键默认取标识自身，
+  也可以显式写字面权限码），于是「A1 可 push+delete、A2 仅可 push」可以直接表达。
 - **`Deny` 是一家公民**：`Allow && !Deny`，且 deny 一律上浮（拒绝优先）。
-- **与规则体系互通**：已声明模型的类型自动注入范围规则，越权以 `ValidationException` 暴露；
-  也可手工 `Rules.AddRule(new PermissionRule("repo:push"))`。
+- **权限与验证是两条线**：权限只由工厂边界裁决，越权（新增/更新/删除/命令）一律
+  `SecurityException`，**不可绕过**；规则通道只做数据校验，失败 `ValidationException`
+  （见 [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)）。
 
-完整用法、故障排查与性能注意事项见 [`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md)，
-设计动因与取舍见 [`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md)。
+引擎的用法与故障排查见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md)，
+引擎的设计取舍见 [`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md)；
+接线的完整用法与多场景示例见 [`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md)
+与 [`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md)，
+接线决策见 [`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md)。
 
 ### Bus Abstract（Euonia.Bus.Abstract）
 > 消息总线抽象契约层：定义消息信封、上下文、约定、传输策略、注解、抽象传输接口与事件体系。所有总线模块的扩展基础。
@@ -593,13 +603,11 @@ services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
 app.MapBusEndpoint();   // POST /bus/call
 ```
 
-详细实现与测试见 [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md)。
-
 ### Bus gRPC（Euonia.Bus.Grpc）
 > gRPC 远程传输适配器。客户端采用**泛化调用**——运行时构造 `Method<GrpcRequest, GrpcResponse>` 经
 > `CallInvoker` 执行，服务名/方法名由 `GrpcBusOptions` 动态指定（默认 `nerorsoft.bus.ReplierService/Call`），
 > 不依赖生成的服务桩代码；服务端以 `RemoteMessageService` 接收处理。同样复用 `RemoteReply<TResult>` 协议。
-> 协议定义与通用 gRPC 工具（拦截器等）已并入本项目（原 `Euonia.Grpc` 项目已移除）。
+> 协议定义与通用 gRPC 工具（拦截器等）位于本项目。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
@@ -835,13 +843,13 @@ app.MapHealthChecks("/health");
 | `[DailyTimeIntervalSchedule]` | 特性 | 每日时间间隔触发器 |
 | `BackgroundBuildOptions` | 类 | 流式 Job 与调度器配置 |
 
-### gRPC（并入 Euonia.Bus.Grpc）
-> gRPC 集成（原 `Euonia.Grpc` 项目已并入 `Euonia.Bus.Grpc`）：拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
+### gRPC（Euonia.Bus.Grpc）
+> gRPC 集成（`Euonia.Bus.Grpc`）：拦截器、健康检查、自动发现与消息总线远程调用服务（`ReplierService`）。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | 类（partial） | Protobuf 扩展，含 JSON 序列化与类型化数据访问器 |
-| `ReplierService` | 服务（proto） | `nerorsoft.bus` 包中新增的 unary 服务：`rpc Call(GrpcRequest) returns (GrpcResponse)`，由 `Euonia.Bus.Grpc` 提供服务端基类与客户端 |
+| `ReplierService` | 服务（proto） | `nerorsoft.bus` 包中的 unary 服务：`rpc Call(GrpcRequest) returns (GrpcResponse)`，由 `Euonia.Bus.Grpc` 提供服务端基类与客户端 |
 | `ExceptionHandlingInterceptor` | 类 | 将 .NET 异常映射为 gRPC 状态码 |
 | `RequestTraceInterceptor` | 类 | 在 gRPC 调用中传播 `x-request-trace-id` |
 | `MapGrpcServices()` | 扩展 | 自动发现并映射入口程序集中所有 gRPC 服务 |
@@ -903,6 +911,9 @@ app.MapHealthChecks("/health");
 
 <!-- 业务对象（OSBA） -->
 <PackageReference Include="Euonia.Osba" Version="10.0.0" />
+
+<!-- 权限体系：策略引擎（Osba 不引用它；接与不接由宿主决定，不需要适配包） -->
+<PackageReference Include="Euonia.Security" Version="10.0.0" />
 
 <!-- 领域驱动设计 -->
 <PackageReference Include="Euonia.Domain" Version="10.0.0" />

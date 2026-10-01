@@ -169,7 +169,7 @@ public static partial class Extensions
 	{
 		if (method == null)
 		{
-			throw new NullReferenceException("The method instance is null.");
+			throw new NullReferenceException(Resources.IDS_METHOD_INSTANCE_IS_NULL);
 		}
 
 		var returnType = method.ReturnType;

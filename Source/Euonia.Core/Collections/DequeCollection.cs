@@ -873,7 +873,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	public T RemoveFromBack()
 	{
 		if (IsEmpty)
-			throw new InvalidOperationException("The deque is empty.");
+			throw new InvalidOperationException(Resources.IDS_DEQUE_EMPTY);
 
 		return DoRemoveFromBack();
 	}
@@ -887,7 +887,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	{
 		if (IsEmpty)
 		{
-			throw new InvalidOperationException("The deque is empty.");
+			throw new InvalidOperationException(Resources.IDS_DEQUE_EMPTY);
 		}
 
 		return DoRemoveFromFront();

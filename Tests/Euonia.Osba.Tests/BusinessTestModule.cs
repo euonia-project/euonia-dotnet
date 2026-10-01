@@ -1,6 +1,6 @@
 using Nerosoft.Euonia.Modularity;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 internal class BusinessTestModule : ModuleContextBase
 {

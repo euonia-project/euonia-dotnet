@@ -1,6 +1,8 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -13,50 +15,26 @@ public static class ServiceCollectionExtensions
 	/// 向指定的 <see cref="IServiceCollection" /> 添加业务对象相关服务。
 	/// </summary>
 	/// <param name="services">要注册业务对象服务的 <see cref="IServiceCollection" />。</param>
-	/// <param name="assemblies">要扫描业务对象类型与数据权限模型的程序集数组。</param>
+	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
 	/// <remarks>
-	/// <para>
-	/// 权限（操作权限的权限码、数据权限的行级授予）需要应用提供 <see cref="IScopeSubjectResolver" />：
-	/// 授权值必须从应用数据运行期解析，框架不提供任何默认实现，以防把值固化——
-	/// 固化在令牌里会导致「取消授权后旧令牌仍然有效」。
-	/// </para>
-	/// <para>
-	/// 权限模型在<b>注册期</b>完成校验（重复声明、未映射维度、恒不放行、策略键歧义等），
-	/// 因此配置错误会在启动时失败，而不是等到运行期。
-	/// </para>
-	/// <para>
-	/// 解析器本身允许在 <see cref="AddBusinessObject"/> 之后再注册，因此这里只记录「是否需要解析器」
-	/// （见 <see cref="PermissionSetup"/>）。应用应在构建容器后调用
-	/// <c>provider.ValidatePermissionSetup()</c> 完成启动期检查；
-	/// 若遗漏，首次判定时也会以明确错误暴露，不会静默放行。
-	/// </para>
+	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
+	/// 需要权限时，接引擎用
+	/// <c>AddPermission(p =&gt; { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })</c>
+	/// （规则来源就用 Osba 的工厂约定），或注册自己的
+	/// <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
 	public static void AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{
 		services.TryAddScoped<IActuator, Actuator>();
+
+		// 「对象状态 → 业务操作」是对象模型自己的知识，与是否启用鉴权无关：
+		// 这里注册一次，任何鉴权实现（引擎或宿主自建）都能直接消费，不必再写适配
+		services.TryAddSingleton<IObjectOperationResolver, ObjectOperationResolver>();
 		services.TryAddScoped<BusinessContextAccessor>();
 		services.TryAddScoped<BusinessContext>();
 		services.TryAddScoped<IObjectFactory, BusinessObjectFactory>();
 
-		// 权限码来自授权数据，而非令牌声明（见 SubjectPermissionChecker 的备注）
-		services.TryAddScoped<IPermissionChecker, SubjectPermissionChecker>();
-
-		// 权限模型注册表是实例而非进程级静态状态，容器与测试之间天然隔离。
-		// 校验不依赖容器，因此可以在这里（注册期）立即完成。
-		var registry = ScopeModelRegistry.Create(assemblies);
-		services.TryAddSingleton(registry);
-
-		var businessObjectTypes = GetBusinessObjectTypes(assemblies);
-
-		services.TryAddSingleton(new PermissionSetup(registry.HasDeclarations || HasPermissionDeclarations(businessObjectTypes)));
-
-		// IScopeSubjectResolver 允许缺席：只有真正声明了模型或权限码并发生判定时才会要求它。
-		services.TryAddScoped<IScopeGuard>(provider => new ScopeGuard(
-			provider.GetRequiredService<BusinessContext>(),
-			provider.GetRequiredService<ScopeModelRegistry>(),
-			provider.GetService<IScopeSubjectResolver>()));
-
-		foreach (var type in businessObjectTypes)
+		foreach (var type in GetBusinessObjectTypes(assemblies))
 		{
 			services.TryAddTransient(type);
 		}
@@ -64,35 +42,6 @@ public static class ServiceCollectionExtensions
 		{
 			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
-	}
-
-	/// <summary>
-	/// 判断给定类型中是否存在 <see cref="PermissionAttribute" /> 声明。
-	/// </summary>
-	/// <param name="types">业务对象类型。</param>
-	/// <returns>存在声明则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	/// <remarks>
-	/// 只检查类型级声明与工厂方法上的声明：只要出现权限码，就需要解析器提供「用户持有哪些码」。
-	/// </remarks>
-	private static bool HasPermissionDeclarations(IEnumerable<Type> types)
-	{
-		foreach (var type in types)
-		{
-			if (type.GetCustomAttributes<PermissionAttribute>(true).Any())
-			{
-				return true;
-			}
-
-			foreach (var operation in PermissionRequirements.AllOperations)
-			{
-				if (PermissionRequirements.CodesFor(type, operation).Count > 0)
-				{
-					return true;
-				}
-			}
-		}
-
-		return false;
 	}
 
 	/// <summary>
@@ -118,6 +67,12 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	/// <param name="assembly">目标程序集。</param>
 	/// <returns>可加载的类型序列。</returns>
+	/// <remarks>
+	/// 跳过不可加载的类型是刻意的降级，但<b>不能零痕迹</b>：
+	/// <see cref="ReflectionTypeLoadException.LoaderExceptions"/> 是唯一能报告
+	/// 「哪个类型因缺哪个依赖而加载失败」的地方，丢弃它会让拼错依赖表现为
+	/// 「扫描什么都没找到」。这里逐条写入 <see cref="Trace"/>（Release 也可用）。
+	/// </remarks>
 	private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
 	{
 		try
@@ -126,6 +81,11 @@ public static class ServiceCollectionExtensions
 		}
 		catch (ReflectionTypeLoadException ex)
 		{
+			foreach (var loaderException in ex.LoaderExceptions ?? [])
+			{
+				Trace.WriteLine($"[AddBusinessObject] 程序集 '{assembly.FullName}' 中有类型无法加载，已跳过：{loaderException?.Message}");
+			}
+
 			return ex.Types.Where(t => t != null);
 		}
 	}

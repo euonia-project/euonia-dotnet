@@ -27,7 +27,7 @@ public partial class CommonRule
         }
 
         /// <inheritdoc />
-        public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
+        public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
         {
             if (context.Target is IBusinessObject target)
             {
@@ -39,7 +39,7 @@ public partial class CommonRule
                 }
             }
 
-            await Task.CompletedTask;
+            return Task.CompletedTask;
         }
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 Euonia.Osba 的<b>操作权限</b>：
@@ -128,10 +128,10 @@ public class PermissionTests
 			BusinessContext = provider.GetRequiredService<BusinessContext>()
 		};
 
-		Assert.False(obj.CanReadObject());
-		Assert.False(obj.CanCreateObject());
-		Assert.False(obj.CanUpdateObject());
-		Assert.False(obj.CanDeleteObject());
+		Assert.False(obj.CanPerformOperation(BusinessOperation.Read));
+		Assert.False(obj.CanPerformOperation(BusinessOperation.Create));
+		Assert.False(obj.CanPerformOperation(BusinessOperation.Update));
+		Assert.False(obj.CanPerformOperation(BusinessOperation.Delete));
 
 		BusinessContextAccessor.Clear();
 	}
@@ -146,10 +146,10 @@ public class PermissionTests
 			BusinessContext = provider.GetRequiredService<BusinessContext>()
 		};
 
-		Assert.True(obj.CanReadObject());
-		Assert.True(obj.CanCreateObject());
-		Assert.True(obj.CanUpdateObject());
-		Assert.True(obj.CanDeleteObject());
+		Assert.True(obj.CanPerformOperation(BusinessOperation.Read));
+		Assert.True(obj.CanPerformOperation(BusinessOperation.Create));
+		Assert.True(obj.CanPerformOperation(BusinessOperation.Update));
+		Assert.True(obj.CanPerformOperation(BusinessOperation.Delete));
 
 		BusinessContextAccessor.Clear();
 	}
@@ -169,16 +169,16 @@ public class PermissionTests
 	}
 
 	[Fact]
-	public void HasPermission_HasRole_ShouldReflectClaims()
+	public void Permission_Checker_Should_Reflect_Grants_And_Roles()
 	{
 		using var scope = CreatePermissionScope(UserWith((UserClaimTypes.Role, "operator")), out var provider, "order:create");
 
-		var obj = new ProbeObject { BusinessContext = provider.GetRequiredService<BusinessContext>() };
+		var checker = provider.GetRequiredService<IPermissionChecker>();
 
-		Assert.True(obj.ProbePermission("order:create"));
-		Assert.False(obj.ProbePermission("order:delete"));
-		Assert.True(obj.ProbeRole("operator"));
-		Assert.False(obj.ProbeRole("admin"));
+		Assert.True(checker.IsGranted("order:create"));
+		Assert.False(checker.IsGranted("order:delete"));
+		Assert.True(checker.IsInRole("operator"));
+		Assert.False(checker.IsInRole("admin"));
 
 		BusinessContextAccessor.Clear();
 	}
@@ -247,6 +247,7 @@ public class PermissionTests
 		var activator = new RecordingObjectActivator();
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(PermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(PermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddSingleton<IObjectActivator>(activator);
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver("order:update"));
 		services.AddSingleton(UserWith());
@@ -254,6 +255,7 @@ public class PermissionTests
 		var built = services.BuildServiceProvider();
 		using var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+		scope.ServiceProvider.Warm();
 
 		var obj = new SecuredEditableObject
 		{
@@ -324,6 +326,7 @@ public class PermissionTests
 
 		// 走真实的注册路径：权限检查器、数据权限守卫与模型注册表都由 AddBusinessObject 装配
 		services.AddBusinessObject(typeof(PermissionTests).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(PermissionTests).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 
 		// 权限码来自授权数据（解析器），而不是令牌声明
 		services.AddSingleton<IScopeSubjectResolver>(new TestSubjectResolver(permissions));
@@ -335,7 +338,7 @@ public class PermissionTests
 		var built = services.BuildServiceProvider();
 		var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = scope.ServiceProvider.Warm();
 		return scope;
 	}
 
@@ -359,21 +362,21 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 {
 	[FactoryInsert]
 	[Permission("order:create")]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
 	[Permission("order:update")]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
 	[Permission("order:delete")]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -386,19 +389,19 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 public class AdminEditableObject : EditableObject<AdminEditableObject>
 {
 	[FactoryInsert]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -431,7 +434,7 @@ public class PlainNamedSecuredObject : EditableObject<PlainNamedSecuredObject>
 	/// </summary>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[Permission("order:update")]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -449,32 +452,11 @@ public class SecuredCommand : CommandObject<SecuredCommand>
 
 	[FactoryExecute]
 	[Permission("report:export")]
-	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = true;
 		await Task.CompletedTask;
 	}
-}
-
-/// <summary>
-/// 用于访问 <see cref="BusinessObject"/> 受保护的权限辅助方法的测试对象。
-/// </summary>
-public class ProbeObject : ObservableObject<ProbeObject>
-{
-	/// <summary>
-	/// 公开规则集合以便测试调用。
-	/// </summary>
-	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
-
-	/// <summary>
-	/// 调用 <see cref="BusinessObject.HasPermission(string)"/>。
-	/// </summary>
-	public bool ProbePermission(string permission) => HasPermission(permission);
-
-	/// <summary>
-	/// 调用 <see cref="BusinessObject.HasRole(string)"/>。
-	/// </summary>
-	public bool ProbeRole(string role) => HasRole(role);
 }
 
 /// <summary>
@@ -528,7 +510,7 @@ public class TestSubjectResolver : IScopeSubjectResolver
 public class UnsecuredEditableObject : EditableObject<UnsecuredEditableObject>
 {
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

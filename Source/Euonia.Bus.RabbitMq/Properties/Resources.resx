@@ -123,4 +123,19 @@
   <data name="IDS_EXCHANGE_TYPE_IS_REQUIRED" xml:space="preserve">
     <value>Exchange type is required.</value>
   </data>
+  <data name="IDS_CHANNEL_NOT_INITIALIZED" xml:space="preserve">
+    <value>The RabbitMQ channel is not initialized.</value>
+  </data>
+  <data name="IDS_OPTIONS_NOT_CONFIGURED" xml:space="preserve">
+    <value>RabbitMqMessageBusOptions was not configured.</value>
+  </data>
+  <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
+    <value>The message type {0} is not a queue/topic/request type.</value>
+  </data>
+  <data name="IDS_CHANNEL_NOT_FOUND_IN_VHOST" xml:space="preserve">
+    <value>Channel not found in vhost '/'.</value>
+  </data>
+  <data name="IDS_NO_CONSUMER_FOUND_FOR_CHANNEL" xml:space="preserve">
+    <value>No consumer found for the channel.</value>
+  </data>
 </root>

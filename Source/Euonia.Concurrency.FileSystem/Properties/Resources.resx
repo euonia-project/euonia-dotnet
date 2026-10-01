@@ -98,4 +98,19 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_LOCK_FILE_NAME_TOO_LONG" xml:space="preserve">
+    <value>Unable to construct lock file name because the base directory (length = {0}) does not leave enough room for a {1} lock name</value>
+  </data>
+  <data name="IDS_LOCK_FILE_EMPTY_NAME" xml:space="preserve">
+    <value>lockFile: may not have an empty file name</value>
+  </data>
+  <data name="IDS_LOCK_FILE_IS_DIRECTORY" xml:space="preserve">
+    <value>Failed to create lock file '{0}' because it is already the name of a directory</value>
+  </data>
+  <data name="IDS_LOCK_FILE_READ_ONLY" xml:space="preserve">
+    <value>Locking on read-only file '{0}' is not supported</value>
+  </data>
+  <data name="IDS_LOCK_FILE_DIRECTORY_CREATE_FAILED" xml:space="preserve">
+    <value>Failed to ensure that lock file directory {0} exists</value>
+  </data>
 </root>

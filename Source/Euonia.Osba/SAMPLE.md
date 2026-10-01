@@ -1,10 +1,12 @@
 # Euonia.Osba 全景示例
 
 > 一份从零到可运行的完整示例，覆盖业务对象、工厂、状态机、规则、执行器与权限体系。
-> 权限的深入说明见 [Permission/README.md](Permission/README.md)，
-> 设计动因与取舍见 [Permission/DESIGN.md](Permission/DESIGN.md)。
+> 权限的深入说明见 [PERMISSION.md](PERMISSION.md)，
+> 多种业务场景的权限示例见 [PERMISSION-SAMPLE.md](PERMISSION-SAMPLE.md)，
+> 接线决策见 [PERMISSION-DESIGN.md](PERMISSION-DESIGN.md)，
+> 引擎自身的语义与取舍见 [Euonia.Security/DESIGN.md](../Euonia.Security/DESIGN.md)。
 
-**本文的全部代码经过编译并实际运行验证**（端到端断言通过），可以直接放进项目使用。
+**本文的全部代码可以直接放进项目使用。**
 
 ---
 
@@ -32,6 +34,7 @@
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 
@@ -46,12 +49,12 @@ services.AddSingleton(DemoUser.Dev);                                 // 当前�
 
 var provider = services.BuildServiceProvider();
 
-// 启动期校验：声明了权限模型或 [Permission] 却忘了注册解析器时，在这里失败
-provider.ValidatePermissionSetup();
-
 // 建立请求作用域并设置上下文
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+
+// 首次解析守卫：启动期校验（声明了权限模型或 [Permission] 却忘了注册解析器时在这里失败）
+_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
@@ -62,8 +65,9 @@ BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
 ```
 
 `AddBusinessObject` 会注册：`IActuator`、`BusinessContext` 与 `BusinessContextAccessor`、
-`IObjectFactory`、`IPermissionChecker`、权限模型注册表、`IScopeGuard`，
-并把扫描到的每个业务对象类型注册为 Transient。全部使用 `TryAdd*`——已注册的服务不会被覆盖。
+`IObjectFactory`，并把扫描到的每个业务对象类型注册为 Transient。
+全部使用 `TryAdd*`——已注册的服务不会被覆盖。**它不注册任何权限服务**：
+是否启用权限由应用决定，需要时再用引擎的 `AddPermission` 接上（规则来源用 Osba 的工厂约定，见下文）。
 
 > **两个容易踩的点**
 > 1. `AddBusinessObject(...)` 的返回类型是 **`void`**，不能链式调用。
@@ -98,6 +102,7 @@ public static class DemoUser
 using System.ComponentModel.DataAnnotations;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Security;
 
 public sealed class Repo : EditableObject<Repo>
 {
@@ -236,7 +241,8 @@ repo.AcceptChanges();       // 同上
 >
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
-> 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`。
+> 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`；
+> 未接线的对象直接 `SaveAsync` 会抛 `InvalidOperationException`（消息含类型名与操作名），而不是放任空引用往下走。
 
 ### 2.2 只回写改过的属性
 
@@ -422,13 +428,15 @@ public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(propert
 
 ### 4.1 规则的触发与结果
 
+> 本节只讲**验证规则**。权限由工厂边界裁决，不在此表内，失败一律 `SecurityException`（见 §6.5）。
+
 | 路径 | 是否执行**对象级**规则 | 失败形态 |
 |---|---|---|
 | `EditableObject.SaveAsync`（直接调用） | ✅ | `ValidationException` |
 | `UpdateActuator` / `CreateActuator` | ✅（经 `SaveAsync`） | `ValidationException` |
-| `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | 越权时 `SecurityException`（规则被跳过，工厂兜住） |
+| `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | `ValidationException`（**验证**失败；越权由权限线抛 `SecurityException`，与规则无关） |
 | `ExecuteActuator`（命令对象） | ✅（工厂边界在**命令体之前**裁决） | `ValidationException` |
-| `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | — |
+| `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | —（权限仍然强制） |
 | 任意 `SetProperty`（属性变更） | 执行该**属性级**规则（该类型把检查推迟时为挂起） | 违规落进 `BrokenRules`，`IsValid` 转 `false` |
 | `CheckRuleOnPropertyChanged => false` 的类型 | 保存/命令执行时补跑：**先属性级（仅变更过的属性）→ 再对象级** | `ValidationException`，错误列表「先字段、后整体」 |
 
@@ -500,7 +508,7 @@ await actuator.For<Repo>()
              .WithRules(ruleEnumerable)                              // 批量
              .BypassRule<SlowRule>()                                 // 本次绕过这条类型级规则
              .BypassRule("rule://nerosoft.../repo/name")             // 按 Name 绕过
-             .WithoutRuleChecks()                                    // 本次完全跳过规则检查
+             .BypassRuleChecks()                                    // 本次完全跳过规则检查
              .ExecuteAsync(cancellationToken);
 ```
 
@@ -513,8 +521,10 @@ await actuator.For<Repo>()
   无论它有没有绑定属性——所以附加在某个属性上的规则不会因为「那个属性这次没改」而被跳过，
   语义就是「本次操作必须满足它」。失败时按该属性归因（`BrokenRule.Property`）。
 - `BypassRule<T>()` 按**精确类型**匹配，不含派生类型——避免 `BypassRule<RuleBase>()`
-  一次笔误就关掉框架自动注入的数据权限规则。
-- `WithoutRuleChecks()` 只跳过**规则**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`。
+  一次笔误就关掉所有数据校验规则。
+- **规则属于验证线，权限不属于规则**：`BypassRuleChecks()`、`.BypassRule<T>()`、
+  `SuspendRuleChecking()` 只跳过**校验**，不解除**权限**：越权仍由工厂边界抛 `SecurityException`，
+  没有开关能关掉它。规则集合里也不应再出现权限类规则。
 - **删除默认不跑规则**。`.Delete(id).WithRule(...)` 要让附加规则真正执行，须同时 `.WithRuleChecksOnDelete()`。
 - 若 `Handle` 什么也没改、对象又是干净的，`SaveAsync` 会直接返回（无事可保存），规则那一轮不会发生。
 
@@ -586,7 +596,7 @@ await actuator.For<PushCommand>()
 >
 > 执行器**没有 `Fetch`**——读取请直接用 `IObjectFactory.FetchAsync` 或 `BusinessContext.FetchAsync`。
 >
-> 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `WithoutRuleChecks`），
+> 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `BypassRuleChecks`），
 > 见 [§4.2](#42-按操作指定规则)。
 
 自定义管道行为：
@@ -621,7 +631,7 @@ services.AddScoped<IActuatorBehavior<Repo>, AuditBehavior<Repo>>();
 protected override Task InsertAsync(CancellationToken cancellationToken = default) { ... }   // 无权限码
 
 [FactoryUpdate]
-[Permission("repo:push")]                     // ← 这个码同时决定「类型级闸门」与「行级策略的键」
+[Permission("repo:push")]                     // ← 类型级闸门：做这个操作必须持有该码
 protected override Task UpdateAsync(CancellationToken cancellationToken = default) { ... }
 
 [FactoryDelete]
@@ -629,9 +639,10 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 protected override Task DeleteAsync(CancellationToken cancellationToken = default) { ... }
 ```
 
-> **`[Permission]` 的码不只是「有没有这个权限」，它还是行级策略的键。**
-> 如果 `DeleteAsync` 上没有 `[Permission("repo:delete")]`，删除操作会解析到默认键 `@delete`
-> 并回落到模型的默认策略——你在 `Declare` 里为 `"repo:delete"` 写的行级策略**根本不会生效**。
+> **`[Permission]` 的码只决定类型级闸门，不参与行级策略的选取。**
+> 行级策略按**授权标识**声明：`ForOperation` 的第三个参数是授予键，`For(...)` 则用权限码同时作
+> 标识与键（见 §6.3）——方法上的 `[Permission]` 与模型里的键写同一个字面量只是惯例，
+> 两者对不上时策略照样按模型声明执行。
 
 ### 6.2 授权数据来源
 
@@ -689,19 +700,19 @@ public sealed class RepoScope : ScopeModel<Repo>
                .Classify("level", r => r.Level);          // 分类属性：不参与授权
     }
 
-    // 默认策略：未单独声明的操作都用它
+    // 默认策略：未单独声明的标识都用它
     public override ScopePolicy<Repo> Policy =>
         ScopePolicy<Repo>.Any(
             ScopePolicy<Repo>.Self(),
             ScopePolicy<Repo>.Grant(ScopeDimensions.Dept));
 
-    // 按权限码声明行级策略
+    // 按操作声明行级策略：第三个参数是该操作的授予键（权限码）
     public override void Declare(ScopePolicySet<Repo> policies)
     {
         // 注意：Create 不需要单独声明。保存新行时默认策略一样适用，而且此时字段已由调用方填完，
         // 于是「本人创建的、或建在自己团队下的」才允许落库——这正是想要的效果。
-        policies.For("repo:push", ScopePolicy<Repo>.Grant("repo"));
-        policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));
+        policies.ForOperation(BusinessOperation.Update, ScopePolicy<Repo>.Grant("repo"), "repo:push");
+        policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");
     }
 }
 
@@ -722,7 +733,7 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 ```
 
 **模型与策略写在同一个类型里**，所以结构上不可能出现「有模型没策略」。
-模型由 `AddBusinessObject` 的扫描发现，并在**注册期**完成校验（未映射维度、策略键歧义等都会启动即失败）。
+模型由 `AddPermission` 的扫描发现，并在**注册期**完成校验（未映射维度、策略恒不放行、重复授予键等都会启动即失败）。
 
 > **未声明模型的类型不受任何数据权限约束**——这是当前边界。所以查询用的读模型也要单独声明，
 > 否则 `guard.Apply` 会原样返回。
@@ -734,14 +745,15 @@ public sealed class RepoRecordScope : ScopeModel<RepoRecord>
 var visible = await guard.Apply(dbContext.Repos).ToListAsync();
 
 // 单行判定
-guard.Allows(repo);                                  // 按当前对象状态对应的操作解析键
-guard.Allows(repo, "repo:delete");                   // 指定权限码
-guard.Explain(repo, "repo:delete");                  // 审计：命中了哪条策略
+guard.Allows(repo);                                  // 按当前对象状态对应的操作解析
+guard.Allows(repo, BusinessOperation.Delete);        // 显式指定操作
+guard.Explain(repo, BusinessOperation.Delete);       // 审计：命中了哪条策略
 
 // 业务对象内部
 protected bool CanDelete()
 {
-    return CanAccessRow("repo:delete") && HasPermission("repo:delete");
+    return CanPerformOperation(BusinessOperation.Delete)                                                    // 操作级
+        && BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, BusinessOperation.Delete);  // 行级
 }
 ```
 
@@ -749,18 +761,17 @@ protected bool CanDelete()
 `Deny` 是**否决**（压过一切、且一律上浮），不是布尔取反——需要取反请用
 `ScopePolicy<Repo>.Where(r => !...)`。
 
-### 6.5 写侧强制与规则互通
+### 6.5 权限与规则：两条线，互不相干
 
-写路径有两道关卡：
+| | 权限线（工厂边界） | 验证线（规则） |
+|---|---|---|
+| 回答 | 这个用户**能不能**做这件事 / 碰这行 | 这份数据**合不合法** |
+| 位置 | `ObjectAuthorization` + `ScopeAuthorization`，在 `BusinessObjectFactory` 调用边界 | `EditableObject.SaveAsync`；命令对象由 `ObjectRuleGuard` 在命令体之前 |
+| 结果 | `SecurityException` | `ValidationException`（`Errors` 带属性名） |
+| 可否绕过 | **不可**，无任何开关 | 可（`SuspendRuleChecking` / `BypassRuleChecks` / `WithRuleChecksOnDelete`） |
 
-| 时机 | 结果 |
-|---|---|
-| 规则阶段（框架对已声明模型的类型**自动注入**范围规则） | `ValidationException` |
-| 工厂边界（criteria 入口、或规则被跳过时） | `SecurityException` |
-
-> 命令对象（`CommandObject`）也在规则阶段受检：`ExecuteActuator` 的对象级规则由工厂边界在
-> **命令体之前**裁决，不通过则命令根本不执行。而 `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、
-> `ExecuteAsync(criteria)` 这些 criteria 低层入口不做规则判定（调用前对象为空，无从校验）。
+**新增、更新、删除、命令执行的越权一律 `SecurityException`**——没有形态差异。
+`EditableObject<T>` 在 `IsDeleted` 时默认跳过的是**验证规则**，与权限无关。
 
 ```csharp
 try
@@ -768,55 +779,54 @@ try
     repo.MarkAsChanged();
     await repo.SaveAsync();
 }
-catch (ValidationException ex)          // 规则阶段拦下（新增/更新）
-{
-    foreach (var error in ex.Errors) { Console.WriteLine(error.ErrorMessage); }
-}
-catch (SecurityException ex)            // 工厂边界拦下（越权删除走这里）
+catch (SecurityException ex)            // 越权：新增/更新/删除/命令 都走这里
 {
     Console.WriteLine($"越权：{ex.Message}");
 }
-```
-
-> 越权**删除**抛的是 `SecurityException` 而不是 `ValidationException`：
-> `EditableObject<T>` 在 `IsDeleted` 时**默认跳过对象级规则**。
-> 需要让规则覆盖删除时，用执行器的 `WithRuleChecksOnDelete()`，或在派生类里让
-> `MarkAsDeleted(true)` 被调用（`CheckObjectRulesOnDelete` 是只读属性，不能重写）。
-
-也可以把权限断言写进自己的规则：
-
-```csharp
-protected override void AddRules()
+catch (ValidationException ex)          // 数据不合法，与权限无关
 {
-    Rules.AddRule(new PermissionRule("repo:force-push"));   // 缺码即报验证错误
-    // ScopePolicyRule 已自动注入，无需手工添加
+    foreach (var error in ex.Errors) { Console.WriteLine(error.ErrorMessage); }
 }
 ```
+
+> `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、`ExecuteAsync(criteria)` 这些
+> criteria 低层入口不做**验证规则**判定（调用前对象为空，无从校验），但**权限仍然强制**。
+
+> **不要把权限断言写进 `AddRules()`**。规则可被绕过、`Rules.RunAsync` 又把所有异常转成错误，
+> 规则在结构上就抛不出 `SecurityException`。需要条件分支请用 `CanPerformOperation` /
+> `IScopeGuard.AllowsObject`，需要「越权即拒」交给工厂边界即可。
 
 ---
 
 ## 7. 端到端
 
-把上面的片段串起来，一次完整流程（这段代码已实际运行验证）：
+把上面的片段串起来，一次完整流程：
 
 ```csharp
 var services = new ServiceCollection();
 services.AddBusinessObject(typeof(Repo).Assembly);
+services.AddPermission(p =>                                                                     // 显式接入引擎
+{
+    p.Scan(typeof(Repo).Assembly);
+    p.Source(ObjectPermissionCodeSource.Instance);
+});
 services.AddSingleton<RepoStore>();
 services.AddSingleton<RepoAcl>();
 services.AddSingleton<IScopeSubjectResolver, DemoSubjectResolver>();
 services.AddSingleton(DemoUser.Dev);
 
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();
 
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
+_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();   // 首次解析守卫：启动期校验在此执行
 
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 var store = scope.ServiceProvider.GetRequiredService<RepoStore>();
 var acl = scope.ServiceProvider.GetRequiredService<RepoAcl>();
+
+await guard.EnsureResolvedAsync();                 // 同步判定前预热（工厂入口自带；直接调守卫需手动预热）
 
 // 1. 造两个属于 TeamA、所有者为 dev 的仓库
 async Task<Repo> CreateAsync(string name, string teamId, string ownerId)
@@ -840,15 +850,15 @@ store.Repos["repo-b1"] = new RepoRecord("repo-b1", "repo-b1", "TeamB", "someone"
 acl.Entries.Add((a1.Id, "dev", "repo:push"));
 acl.Entries.Add((a2.Id, "dev", "repo:push"));
 acl.Entries.Add((a1.Id, "dev", "repo:delete"));
-guard.Refresh();                                   // 授权数据变了，让本作用域的缓存失效
+await guard.RefreshAsync();                        // 授权数据变了：失效并立即重新解析
 
 // 3. 读侧：只有本团队/本人的仓库可见
 var visible = guard.Apply(store.Repos.Values.AsQueryable()).ToList();
 Console.WriteLine(string.Join(", ", visible.Select(r => r.Name)));   // repo-a1, repo-a2
 
 // 4. 行级操作权限：同一用户、同一类型，不同仓库结论不同
-Console.WriteLine(guard.Allows(a2, "repo:push"));     // True
-Console.WriteLine(guard.Allows(a2, "repo:delete"));   // False ← 这就是「行级操作权限」
+Console.WriteLine(guard.Allows(a2, BusinessOperation.Update));   // True（push 即更新操作）
+Console.WriteLine(guard.Allows(a2, BusinessOperation.Delete));   // False ← 这就是「行级操作权限」
 
 // 5. 越权删除被工厂边界拦下
 try
@@ -859,7 +869,7 @@ try
 catch (SecurityException ex)
 {
     Console.WriteLine($"越权删除被拒绝：{ex.Message}");
-    // Data scope denied. Delete (before): Repo. [code=repo:delete] 判定：拒绝；…
+    // Data scope denied. Delete (before): Repo. [scope=delete] 判定：拒绝；…
 }
 
 // 6. 命令对象走执行器
@@ -942,7 +952,7 @@ BusinessContextAccessor.Clear();
 35. `AddErrorResult` 收到 `null`/空白描述时会用占位消息补上，**不会**被静默当成通过；
     但反过来，报错却不给消息本身就是缺陷，别依赖这个兜底。
 36. **删除默认不跑对象级规则**，`.Delete(id).WithRule(...)` 需同时 `.WithRuleChecksOnDelete()` 才会执行。
-37. `BypassRule<T>()` 按**精确类型**匹配；`WithoutRuleChecks()` 只跳规则、**不**解除权限。
+37. `BypassRule<T>()` 按**精确类型**匹配；`BypassRuleChecks()` 只跳规则、**不**解除权限。
 38. **命令对象也会跑对象级规则**，且由工厂边界在命令体之前裁决——规则失败时命令体不会执行。
     但 `IObjectFactory` 的 criteria 低层入口（`ExecuteAsync(criteria)` 等）不做规则判定。
 39. `ValidateAsync(cascade, ct)` 只管**对象级**规则且不抛异常（返回 bool）；
@@ -960,13 +970,16 @@ BusinessContextAccessor.Clear();
 ### 权限
 
 46. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
-    启动期 `ValidatePermissionSetup()` 失败（不调用它，首次判定也会报错，不会静默放行）。
-47. **`[Permission]` 的码同时是行级策略的键**：漏写就会解析到 `@delete` 之类的默认键，
-    你在 `Declare` 里写的行级策略不会生效。
+    首次解析 `IScopeGuard` 时启动期校验失败（守卫是判定入口，首次判定前必然先解析它，不会静默放行）。
+47. **行级策略按授权标识声明，不在 `[Permission]` 上**：`ForOperation` 的第三个参数是授予键，
+    省略时取操作名自身；`For(code, …)` 则让标识与键同为权限码。授予键与 `[Permission]` 对不上时，
+    解析器写在权限码下的行级授予不会被查到——该操作改用默认键上的授予（或没有授予），行级收窄静默失效。
 48. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
 49. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
 50. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
-51. 越权新增/更新抛 `ValidationException`，越权删除抛 `SecurityException`（删除默认跳过对象级规则）。
+51. **越权一律抛 `SecurityException`**——新增/更新/删除/命令执行形态完全一致。
+    越权**不会**出现在 `ValidationException.Errors` 里：权限不走规则通道，
+    规则集合里只应有数据校验规则（见 §6.5）。
 52. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
     （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
     `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，

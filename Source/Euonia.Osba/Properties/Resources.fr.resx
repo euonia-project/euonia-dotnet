@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+		Microsoft ResX Schema
+
+		Version 1.3
+
+		The primary goals of this format is to allow a simple XML format 
+		that is mostly human readable. The generation and parsing of the 
+		various data types are done through the TypeConverter classes 
+		associated with the data types.
+
+		Example:
+
+		... ado.net/XML headers & schema ...
+		<resheader name="resmimetype">text/microsoft-resx</resheader>
+		<resheader name="version">1.3</resheader>
+		<resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+		<resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+		<data name="Name1">this is my long string</data>
+		<data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+		<data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+			[base64 mime encoded serialized .NET Framework object]
+		</data>
+		<data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+			[base64 mime encoded string representing a byte array form of the .NET Framework object]
+		</data>
+
+		There are any number of "resheader" rows that contain simple 
+		name/value pairs.
+
+		Each data row contains a name, and value. The row also contains a 
+		type or mimetype. Type corresponds to a .NET class that support 
+		text/value conversion through the TypeConverter architecture. 
+		Classes that don't support this are serialized and stored with the 
+		mimetype set.
+
+		The mimetype is used for serialized objects, and tells the 
+		ResXResourceReader how to depersist the object. This is currently not 
+		extensible. For a given mimetype the value must be set accordingly:
+
+		Note - application/x-microsoft.net.object.binary.base64 is the format 
+		that the ResXResourceWriter will generate, however the reader can 
+		read any of the formats listed below.
+
+		mimetype: application/x-microsoft.net.object.binary.base64
+		value   : The object must be serialized with 
+			: System.Serialization.Formatters.Binary.BinaryFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.soap.base64
+		value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.bytearray.base64
+		value   : The object must be serialized into a byte array 
+			: using a System.ComponentModel.TypeConverter
+			: and then encoded with base64 encoding.
+	-->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_MULTIPLE_METHOD_MATCHED" xml:space="preserve">
+    <value>Plusieurs méthodes ont été trouvées pour l'opération spécifiée.</value>
+  </data>
+  <data name="IDS_RULE_MESSAGE_REQUIRED" xml:space="preserve">
+    <value>Le message de règle est requis.</value>
+  </data>
+  <data name="IDS_INVALID_STATE" xml:space="preserve">
+    <value>État non valide.</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>Le type de ressource '{0}' déclare un modèle de portée de données, mais l'objet cible n'est pas relié à BusinessContext, ce qui empêche de déterminer {1}. Créez ou lisez l'objet via la factory, ou définissez BusinessContext avant l'appel.</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>L'objet métier '{0}' déclare des exigences d'autorisation, mais n'est pas relié à BusinessContext, ce qui empêche de déterminer {1}. Créez ou lisez l'objet via la factory, ou définissez BusinessContext avant l'appel.</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>L'objet métier '{0}' déclare des exigences d'autorisation, mais {1} n'est pas enregistré dans le conteneur. Appelez AddPermission pour brancher une implémentation d'autorisation, ou enregistrez votre propre IPermissionChecker.</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_REGISTERED" xml:space="preserve">
+    <value>La propriété '{0}' n'est pas enregistrée.</value>
+  </data>
+  <data name="IDS_PROPERTY_TYPE_MISMATCH" xml:space="preserve">
+    <value>La propriété '{0}' est enregistrée en tant que '{1}', ce qui ne correspond pas au type attendu '{2}'.</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_NOT_REGISTERED" xml:space="preserve">
+    <value>Le nom de propriété '{0}' n'est pas enregistré</value>
+  </data>
+  <data name="IDS_PROPERTY_LIST_LOCKED" xml:space="preserve">
+    <value>La liste des propriétés du type '{0}' est verrouillée et ne peut pas être modifiée.</value>
+  </data>
+  <data name="IDS_PROPERTY_ALREADY_REGISTERED" xml:space="preserve">
+    <value>La propriété '{0}' a déjà été enregistrée pour le type '{1}'.</value>
+  </data>
+  <data name="IDS_PROPERTY_GET_NOT_ALLOWED" xml:space="preserve">
+    <value>La lecture de la propriété n'est pas autorisée. {0}</value>
+  </data>
+  <data name="IDS_PROPERTY_SET_NOT_ALLOWED" xml:space="preserve">
+    <value>L'écriture de la propriété n'est pas autorisée. {0}</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_ALLOWED" xml:space="preserve">
+    <value>Opération non autorisée. {0} : {1}.</value>
+  </data>
+  <data name="IDS_SCOPE_DENIED" xml:space="preserve">
+    <value>Portée des données refusée. {0} ({1}) : {2}. {3}</value>
+  </data>
+  <data name="IDS_REGULAR_NOT_ON_STRING_PROPERTY" xml:space="preserve">
+    <value>L'expression régulière ne peut pas être appliquée à la propriété '{0}'.</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_APPLY_READONLY" xml:space="preserve">
+    <value>L'opération ne peut pas être appliquée à ReadOnlyObject.</value>
+  </data>
+  <data name="IDS_NO_PENDING_CHANGE" xml:space="preserve">
+    <value>L'objet n'a aucune modification en attente à enregistrer.</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_MATCHED_ARGUMENTS" xml:space="preserve">
+    <value>Aucune méthode ne correspond aux arguments spécifiés.</value>
+  </data>
+  <data name="IDS_MULTIPLE_METHODS_MATCHED" xml:space="preserve">
+    <value>Plusieurs méthodes correspondent.</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_WITH_ATTRIBUTE" xml:space="preserve">
+    <value>Méthode avec l'attribut '{0}' introuvable sur {1}</value>
+  </data>
+  <data name="IDS_INJECT_PRIMITIVE_PROPERTY" xml:space="preserve">
+    <value>Impossible d'injecter une propriété de type primitif.</value>
+  </data>
+  <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Impossible d'injecter la propriété '{0}', le type de propriété {1} n'est pas pris en charge.</value>
+  </data>
+  <data name="IDS_INJECT_ENUMERABLE_AS_SINGLE" xml:space="preserve">
+    <value>Impossible d'injecter la propriété '{0}', le type de propriété énumérable {1} ne peut pas être injecté comme service unique.</value>
+  </data>
+  <data name="IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE" xml:space="preserve">
+    <value>Impossible d'injecter la propriété '{0}', le type de tableau {1} n'implémente aucune interface de collection prise en charge.</value>
+  </data>
+  <data name="IDS_INJECT_GENERIC_ARGUMENT_COUNT" xml:space="preserve">
+    <value>Impossible d'injecter la propriété '{0}', le type générique {1} doit déclarer exactement un argument générique, mais en déclare {2}.</value>
+  </data>
+  <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
+    <value>L'injection de propriété nécessite un service à clé (serviceKey = '{0}'), mais le conteneur actuel ({1}) n'implémente pas IKeyedServiceProvider.</value>
+  </data>
+</root>

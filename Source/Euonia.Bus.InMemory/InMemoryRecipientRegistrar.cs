@@ -115,7 +115,7 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 			}
 			else
 			{
-				throw new MessageTypeException($"The message type {registration.MessageType.AssemblyQualifiedName} is not a queue/topic/request type.");
+				throw new MessageTypeException(string.Format(Resources.IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST, registration.MessageType.AssemblyQualifiedName));
 			}
 		}
 

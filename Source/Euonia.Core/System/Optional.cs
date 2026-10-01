@@ -310,6 +310,6 @@ public sealed class Optional<T>
     [DoesNotReturn]
     private static void ThrowNoValueException()
     {
-        throw new InvalidOperationException("Optional 不包含任何值。");
+        throw new InvalidOperationException(Nerosoft.Euonia.Core.Properties.Resources.IDS_OPTIONAL_CONTAINS_NO_VALUE);
     }
 }

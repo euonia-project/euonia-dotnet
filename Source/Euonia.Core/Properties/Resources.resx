@@ -198,4 +198,97 @@
   <data name="IDS_PARAMETER_LENGTH_MUST_BE_EQUAL_OR_LOWER_THAN" xml:space="preserve">
     <value>{0} length must be equal to or lower than {1}.</value>
   </data>
+  <data name="IDS_TARGET_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>targetIndex should be between 0 and {0}</value>
+  </data>
+  <data name="IDS_CYCLIC_DEPENDENCY_FOUND" xml:space="preserve">
+    <value>Cyclic dependency found! Item: {0}</value>
+  </data>
+  <data name="IDS_ENUM_FIELD_NOT_DEFINED" xml:space="preserve">
+    <value>Field '{0}' not defined.</value>
+  </data>
+  <data name="IDS_RESOURCE_PROPERTY_NOT_DEFINED" xml:space="preserve">
+    <value>Property '{0}' not defined in resource type '{1}'.</value>
+  </data>
+  <data name="IDS_REQUESTED_KEY_NOT_PRESENT" xml:space="preserve">
+    <value>The requested key was not present in the collection</value>
+  </data>
+  <data name="IDS_LENGTH_GREATER_THAN_STRING_LENGTH" xml:space="preserve">
+    <value>length argument can not be bigger than given string's length!</value>
+  </data>
+  <data name="IDS_METHOD_INSTANCE_IS_NULL" xml:space="preserve">
+    <value>The method instance is null.</value>
+  </data>
+  <data name="IDS_TYPE_SHOULD_BE_ASSIGNABLE_TO" xml:space="preserve">
+    <value>{0} (type of {1}) should be assignable to the {2}!</value>
+  </data>
+  <data name="IDS_OPTIONAL_CONTAINS_NO_VALUE" xml:space="preserve">
+    <value>The optional does not contain any value.</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_CHARS" xml:space="preserve">
+    <value>The alphabet must contain at least {0:N0} unique characters.</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_NON_SEPARATOR_CHARS" xml:space="preserve">
+    <value>The alphabet must contain at least {0:N0} unique characters that are not separators.</value>
+  </data>
+  <data name="IDS_HASH_PRODUCED_NO_RESULT" xml:space="preserve">
+    <value>The provided hash produced no results.</value>
+  </data>
+  <data name="IDS_MACHINE_ID_INVALID" xml:space="preserve">
+    <value>The machine ID is invalid.</value>
+  </data>
+  <data name="IDS_DATA_CENTER_ID_INVALID" xml:space="preserve">
+    <value>The data center ID is invalid.</value>
+  </data>
+  <data name="IDS_TIMESTAMP_EARLIER_THAN_LAST" xml:space="preserve">
+    <value>The timestamp is earlier than the timestamp of the last generated ID.</value>
+  </data>
+  <data name="IDS_INFINITE_TIMEOUT_CANNOT_CONVERT_TO_SECONDS" xml:space="preserve">
+    <value>infinite timeout cannot be converted to seconds</value>
+  </data>
+  <data name="IDS_DELAY_CANCELED" xml:space="preserve">
+    <value>The delay was canceled.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_ALREADY_COMPLETED" xml:space="preserve">
+    <value>Add failed; the producer/consumer collection has completed adding.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_FAILED" xml:space="preserve">
+    <value>Add failed; the add to the underlying collection failed.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>Take failed; the producer/consumer collection has completed adding and is empty.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_FAILED" xml:space="preserve">
+    <value>Take failed; the take from the underlying collection failed.</value>
+  </data>
+  <data name="IDS_NOT_YET_CREATED" xml:space="preserve">
+    <value>Not yet created.</value>
+  </data>
+  <data name="IDS_QUEUE_ENQUEUE_COMPLETED" xml:space="preserve">
+    <value>Enqueue failed; the producer/consumer queue has completed adding.</value>
+  </data>
+  <data name="IDS_QUEUE_DEQUEUE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>Dequeue failed; the producer/consumer queue has completed adding and is empty.</value>
+  </data>
+  <data name="IDS_DEQUE_EMPTY" xml:space="preserve">
+    <value>The deque is empty.</value>
+  </data>
+  <data name="IDS_TYPE_NOT_ENUM" xml:space="preserve">
+    <value>The type {0} is not enum.</value>
+  </data>
+  <data name="IDS_EXPRESSION_DOES_NOT_REFER_TO_PROPERTY" xml:space="preserve">
+    <value>Expression '{0}' does not refer to a property.</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_FOUND_ON_TYPE" xml:space="preserve">
+    <value>Property {0} not found on type {1}.</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>Method {0} not found</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_PROPERTY" xml:space="preserve">
+    <value>Member is not a property</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
+    <value>Member is not a field</value>
+  </data>
 </root>

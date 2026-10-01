@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Reflection;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -24,7 +25,6 @@ public class ObjectReflector
 
 	private static readonly ConcurrentDictionary<Type, List<Tuple<PropertyInfo, Type, bool, object>>> _propertyCache = new();
 	private static readonly ConcurrentDictionary<string, MethodInfo> _factoryMethods = new();
-	private static readonly ConcurrentDictionary<Type, string[]> _conventionalMethodNames = new();
 
 	internal static List<Tuple<PropertyInfo, Type, bool, object>> GetAutoInjectProperties(Type objectType)
 	{
@@ -208,7 +208,7 @@ public class ObjectReflector
 		                             .ToList();
 		if (methods is not { Count: > 0 })
 		{
-			throw new MissingMethodException($"Missing method with attribute '{attributeType.Name}' on {typeof(TTarget).FullName}");
+			throw new MissingMethodException(string.Format(Resources.IDS_MISSING_METHOD_WITH_ATTRIBUTE, attributeType.Name, typeof(TTarget).FullName));
 		}
 
 		var matches = new List<MethodInfo>();
@@ -237,9 +237,9 @@ public class ObjectReflector
 
 		return matches.Count switch
 		{
-			0 => throw new MissingMethodException("Missing method matched the specified arguments."),
+			0 => throw new MissingMethodException(Resources.IDS_MISSING_METHOD_MATCHED_ARGUMENTS),
 			1 => matches[0],
-			_ => throw new AmbiguousMatchException("Multiple methods matched.")
+			_ => throw new AmbiguousMatchException(Resources.IDS_MULTIPLE_METHODS_MATCHED)
 		};
 	}
 
@@ -247,22 +247,16 @@ public class ObjectReflector
 	{
 		var validNames = GetConventionalMethodNames(attributeType);
 
-		var result = new List<Tuple<MethodInfo, int>>();
 		var methods = targetType.GetMethods(BINDING_FLAGS)
 		                        .Where(t => t.GetCustomAttribute(attributeType) != null || validNames.Contains(t.Name));
 
-		// ReSharper disable once LoopCanBeConvertedToQuery
-		foreach (var method in methods)
-		{
-			result.Add(Tuple.Create(method, level));
-		}
+		var result = methods.Select(method => Tuple.Create(method, level)).ToList();
 
 		if (result.Count == 0 && targetType.BaseType != null && targetType.BaseType != typeof(object) && !targetType.BaseType.IsInterface)
 		{
 			level--;
 			result.AddRange(GetCandidateMethods(targetType.BaseType, attributeType, level));
 		}
-
 
 		return result;
 	}
@@ -272,38 +266,42 @@ public class ObjectReflector
 	/// </summary>
 	/// <param name="name">属性名称。</param>
 	/// <param name="type">属性类型。</param>
-	/// <param name="multiple">服务是否有多个实现。</param>
 	/// <returns>包含服务类型和是否为多实现的元组。</returns>
 	/// <exception cref="NotSupportedException">当属性类型不受支持时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当属性类型无效时抛出。</exception>
-	private static Tuple<Type, bool> FindServiceType(string name, Type type, bool? multiple = null)
+	private static Tuple<Type, bool> FindServiceType(string name, Type type)
 	{
+		// multiple 是下钻收集状态（遇到集合即置位），不是入参：调用方只关心最终结果。
+		var multiple = false;
+
 		while (true)
 		{
 			if (type.IsPrimitive)
 			{
-				throw new NotSupportedException("Can not inject primitive type property.");
+				throw new NotSupportedException(Resources.IDS_INJECT_PRIMITIVE_PROPERTY);
 			}
 
 			if (!type.IsClass && !type.IsInterface)
 			{
-				throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 			}
 
 			if (type == typeof(object))
 			{
-				throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 			}
 
 			var @interface = type.GetInterface(nameof(IEnumerable));
 			if (@interface == null)
 			{
-				return Tuple.Create(type, multiple ?? false);
+				return Tuple.Create(type, multiple);
 			}
 
-			if (multiple == true)
+			// 只解一层集合：进入第二层（T[][]、IEnumerable<List<T>> 等）说明属性本身是嵌套集合，
+			// 必须在此终止，否则会退化成元素类型 + 多实现的错误组合，晚爆于 PropertyInfo.SetValue。
+			if (multiple)
 			{
-				throw new NotSupportedException();
+				throw new NotSupportedException(string.Format(Resources.IDS_INJECT_ENUMERABLE_AS_SINGLE, name, type.FullName));
 			}
 
 			if (type.IsArray)
@@ -311,7 +309,7 @@ public class ObjectReflector
 				var interfaces = type.FindInterfaces(HandlerInterfaceFilter, null);
 				if (interfaces == null || interfaces.Length == 0)
 				{
-					throw new InvalidOperationException();
+					throw new InvalidOperationException(string.Format(Resources.IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE, name, type.FullName));
 				}
 
 				type = interfaces[0].GenericTypeArguments[0];
@@ -321,12 +319,14 @@ public class ObjectReflector
 
 			if (type.IsGenericType)
 			{
+				// _collectionTypesName 列出的三种集合接口都按同一方式解出元素类型，
+				// 否则常量宣称支持的 IList<> / ICollection<> 会在下一行抛出 NotSupportedException。
 				var propertyTypeFullname = $"{type.Namespace}.{type.Name}";
-				if (propertyTypeFullname == typeof(IEnumerable<>).FullName)
+				if (_collectionTypesName.Contains(propertyTypeFullname))
 				{
 					if (type.GenericTypeArguments.Length != 1)
 					{
-						throw new InvalidOperationException("");
+						throw new InvalidOperationException(string.Format(Resources.IDS_INJECT_GENERIC_ARGUMENT_COUNT, name, type.FullName, type.GenericTypeArguments.Length));
 					}
 
 					var genericArgumentType = type.GenericTypeArguments[0];
@@ -338,7 +338,7 @@ public class ObjectReflector
 			}
 
 
-			throw new NotSupportedException($"Can not inject property '{name}', the property type {type.FullName} is not supported.");
+			throw new NotSupportedException(string.Format(Resources.IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED, name, type.FullName));
 		}
 	}
 
@@ -369,14 +369,11 @@ public class ObjectReflector
 		var parameterTypeNames = new List<string>();
 		if (criteria.GetType() == typeof(object[]))
 		{
-			// ReSharper disable once LoopCanBeConvertedToQuery
-			foreach (var item in criteria)
-			{
-				parameterTypeNames.Add(item == null ? "null" : GetTypeName(item.GetType()));
-			}
+			parameterTypeNames.AddRange(criteria.Select(item => item == null ? "null" : GetTypeName(item.GetType())));
 		}
 		else
 		{
+			// 协变场景（如传入 string[]）只登记数组类型本身，而不是逐个展开元素类型。
 			parameterTypeNames.Add(GetTypeName(criteria.GetType()));
 		}
 
@@ -484,47 +481,30 @@ public class ObjectReflector
 	/// <param name="attributeType">特性类型。</param>
 	/// <returns>约定的方法名称数组。</returns>
 	/// <remarks>
-	/// 特性名本身带有 <c>Factory</c> 前缀（如 <see cref="FactoryUpdateAttribute"/>），
-	/// 需先去前缀再展开，否则会得到 <c>FactoryFactoryUpdate</c> 这类永不匹配的名称，
-	/// 使 <c>Update</c> / <c>UpdateAsync</c> 这一半约定形同虚设。
+	/// 推导逻辑归 <see cref="OperationConventions.Names"/> 独有：它是<b>工厂查找</b>与<b>权限入口规则</b>
+	/// 共用的那一份，分叉会让「工厂会调用的方法」与「权限扫描会看的方法」静默错开。
 	/// 对 <see cref="FactoryUpdateAttribute"/> 返回
 	/// <c>Update</c>、<c>UpdateAsync</c>、<c>FactoryUpdate</c>、<c>FactoryUpdateAsync</c>。
 	/// </remarks>
 	internal static string[] GetConventionalMethodNames(Type attributeType)
 	{
-		return _conventionalMethodNames.GetOrAdd(attributeType, static type =>
-		{
-			// FactoryUpdateAttribute -> FactoryUpdate
-			var name = type.Name.Replace(nameof(Attribute), string.Empty);
-
-			// FactoryUpdate -> Update（前缀后为空时保持不变，避免生成空前缀名称）
-			var operation = name.StartsWith(FactoryPrefix, StringComparison.Ordinal) && name.Length > FactoryPrefix.Length
-				? name[FactoryPrefix.Length..]
-				: name;
-
-			return (string[])[operation, $"{operation}Async", name, $"{name}Async"];
-		});
+		// 缓存由 OperationConventions 自己按（特性类型，前缀）维护，这里不再套一层
+		return OperationConventions.Names(attributeType, FactoryPrefix);
 	}
 
 	/// <summary>
-	/// 判断方法是否为指定操作对应的工厂方法：标记了对应的工厂方法特性，或符合约定的方法名。
+	/// 枚举类型上「属于指定工厂操作」的方法：与 <c>FindMatchedMethod</c> 共用同一套候选口径
+	/// （<see cref="BindingFlags.DeclaredOnly"/> 逐层查找，当前层没有候选才上溯基类）。
 	/// </summary>
-	/// <param name="method">待判断的方法。</param>
-	/// <param name="attributeType">工厂方法特性类型。</param>
-	/// <returns>是工厂方法则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
+	/// <param name="targetType">业务对象类型。</param>
+	/// <param name="attributeType">工厂方法特性类型（如 <c>FactoryUpdateAttribute</c>）。</param>
+	/// <returns>候选方法；没有则返回空列表。</returns>
 	/// <remarks>
-	/// <para>
-	/// 判定规则：标记了工厂方法特性的方法不限定名称；未标记的方法必须严格匹配约定名称
-	/// （<see cref="GetConventionalMethodNames"/>，大小写敏感），拼写不符即不予识别。
-	/// </para>
-	/// <para>
-	/// 该方法与工厂方法查找（<see cref="FindFactoryMethod{TTarget}(Type, object[])"/>）使用同一套判定规则，
-	/// 确保"能被工厂调用的方法"与"参与权限要求收集的方法"始终一致。
-	/// </para>
+	/// 权限扫描必须用本方法而不是自己走一遍反射：「工厂会调用哪些方法」与「权限声明从哪些方法上收集」
+	/// 只要分叉，就会出现声明了权限却从不生效（或反之）的静默缺口。
 	/// </remarks>
-	internal static bool IsFactoryMethod(MethodInfo method, Type attributeType)
+	internal static IReadOnlyList<MethodInfo> GetFactoryMethods(Type targetType, Type attributeType)
 	{
-		return method.IsDefined(attributeType, true)
-		       || GetConventionalMethodNames(attributeType).Contains(method.Name);
+		return [.. GetCandidateMethods(targetType, attributeType).Select(candidate => candidate.Item1).Distinct()];
 	}
 }

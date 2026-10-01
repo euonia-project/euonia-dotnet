@@ -70,7 +70,7 @@ public static class Reflect
 			return result;
 		}
 
-		throw new ArgumentException($"Expression '{expression}' does not refer to a property.");
+		throw new ArgumentException(string.Format(Resources.IDS_EXPRESSION_DOES_NOT_REFER_TO_PROPERTY, expression));
 	}
 
 	/// <summary>
@@ -387,7 +387,7 @@ public static class Reflect
 			property = objectType.GetProperty(properties.First());
 			if (property == null)
 			{
-				throw new MissingMemberException($"Property {properties.First()} not found on type {objectType.FullName}.");
+				throw new MissingMemberException(string.Format(Resources.IDS_PROPERTY_NOT_FOUND_ON_TYPE, properties.First(), objectType.FullName));
 			}
 
 			property.SetValue(obj, value);
@@ -399,7 +399,7 @@ public static class Reflect
 			property = currentType.GetProperty(properties[i]);
 			if (property == null)
 			{
-				throw new MissingMemberException($"Property {properties[i]} not found on type {currentType.FullName}.");
+				throw new MissingMemberException(string.Format(Resources.IDS_PROPERTY_NOT_FOUND_ON_TYPE, properties[i], currentType.FullName));
 			}
 
 			obj = property.GetValue(obj, null);
@@ -409,7 +409,7 @@ public static class Reflect
 		property = currentType.GetProperty(properties.Last());
 		if (property == null)
 		{
-			throw new MissingMemberException($"Property {properties.Last()} not found on type {currentType.FullName}.");
+			throw new MissingMemberException(string.Format(Resources.IDS_PROPERTY_NOT_FOUND_ON_TYPE, properties.Last(), currentType.FullName));
 		}
 
 		property.SetValue(obj, value);
@@ -464,7 +464,7 @@ public static class Reflect
 		var method = obj.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
 		if (method == null)
 		{
-			throw new ArgumentNullException($"Method {methodName} not found");
+			throw new ArgumentNullException(string.Format(Resources.IDS_METHOD_NOT_FOUND, methodName));
 		}
 
 		var genericMethod = method.MakeGenericMethod(genericTypes);
@@ -680,7 +680,7 @@ public static class Reflect<TTarget>
 	{
 		var info = Reflect.GetMemberInfo(expression) as PropertyInfo;
 		if (info == null)
-			throw new ArgumentException("Member is not a property");
+			throw new ArgumentException(Resources.IDS_MEMBER_NOT_A_PROPERTY);
 
 		return info;
 	}
@@ -698,7 +698,7 @@ public static class Reflect<TTarget>
 		var info = Reflect.GetMemberInfo(expression) as PropertyInfo;
 		if (info == null)
 		{
-			throw new ArgumentException("Member is not a property");
+			throw new ArgumentException(Resources.IDS_MEMBER_NOT_A_PROPERTY);
 		}
 
 		return info;
@@ -716,7 +716,7 @@ public static class Reflect<TTarget>
 		var info = Reflect.GetMemberInfo(expression) as FieldInfo;
 		if (info == null)
 		{
-			throw new ArgumentException("Member is not a field");
+			throw new ArgumentException(Resources.IDS_MEMBER_NOT_A_FIELD);
 		}
 
 		return info;

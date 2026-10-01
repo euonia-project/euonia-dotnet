@@ -18,6 +18,29 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	}
 
 	/// <summary>
+	/// Creates a user account with the given credentials. The caller is responsible for persisting it.
+	/// </summary>
+	/// <param name="userId">The user identifier.</param>
+	/// <param name="username">The login username.</param>
+	/// <param name="nickname">The display name.</param>
+	/// <param name="passwordHash">The hash of the salted password (见 <c>Cryptography.SHA.Encrypt(salt + password)</c>).</param>
+	/// <param name="passwordSalt">The salt used when hashing the password.</param>
+	/// <returns>A new user account instance.</returns>
+	internal static UserEntity Create(string userId, string username, string nickname, string passwordHash, string passwordSalt)
+	{
+		return new UserEntity
+		{
+			Id = userId,
+			Username = username,
+			Nickname = nickname,
+			PasswordHash = passwordHash,
+			PasswordSalt = passwordSalt,
+			CreatedAt = DateTime.UtcNow,
+			UpdatedAt = DateTime.UtcNow
+		};
+	}
+
+	/// <summary>
 	/// Gets or sets the username.
 	/// </summary>
 	public string Username { get; set; }

@@ -23,7 +23,7 @@ public abstract class ModuleContextBase : IModuleContext
         {
             if (_configurationContext == null)
             {
-                throw new Exception($"{nameof(ConfigurationContext)} is only available in the {nameof(ConfigureServices)} methods.");
+                throw new Exception(string.Format(Resources.IDS_CONFIGURATION_CONTEXT_UNAVAILABLE, nameof(ConfigurationContext), nameof(ConfigureServices)));
             }
 
             return _configurationContext;

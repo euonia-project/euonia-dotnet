@@ -21,17 +21,17 @@ namespace Nerosoft.Euonia.Application;
 public class CircuitBreakerInterceptor : IInterceptor
 {
 	private static readonly MethodInfo _handleTypedMethod = typeof(CircuitBreakerInterceptor).GetMethod(nameof(HandleTypedAsync), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                         ?? throw new InvalidOperationException("CircuitBreakerInterceptor.HandleTypedAsync not found.");
+	                                                         ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CircuitBreakerInterceptor), nameof(HandleTypedAsync)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _handleTypedMethods = new();
 
 	private static readonly MethodInfo _failFastTypedMethod = typeof(CircuitBreakerInterceptor).GetMethod(nameof(FailFastTyped), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                          ?? throw new InvalidOperationException("CircuitBreakerInterceptor.FailFastTyped not found.");
+	                                                          ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CircuitBreakerInterceptor), nameof(FailFastTyped)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _failFastTypedMethods = new();
 
 	private static readonly MethodInfo _wrapValueTaskMethod = typeof(CircuitBreakerInterceptor).GetMethod(nameof(WrapValueTask), BindingFlags.NonPublic | BindingFlags.Static)
-	                                                          ?? throw new InvalidOperationException("CircuitBreakerInterceptor.WrapValueTask not found.");
+	                                                          ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(CircuitBreakerInterceptor), nameof(WrapValueTask)));
 
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapValueTaskMethods = new();
 

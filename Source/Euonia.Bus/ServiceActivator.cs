@@ -102,7 +102,7 @@ public class ServiceActivator : BackgroundService
 			}
 			catch (Exception exception)
 			{
-				throw new InvalidOperationException($"Failed to auto-load the assembly '{assemblyName}' configured in '{Constants.ConfigurationSection}:AutoLoadAssemblies'.", exception);
+				throw new InvalidOperationException(string.Format(Resources.IDS_AUTO_LOAD_ASSEMBLY_FAILED, assemblyName, Constants.ConfigurationSection), exception);
 			}
 
 			types.AddRange(assembly.DefinedTypes);

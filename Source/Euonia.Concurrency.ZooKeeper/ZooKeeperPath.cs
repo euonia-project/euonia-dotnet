@@ -22,7 +22,7 @@ public readonly struct ZooKeeperPath : IEquatable<ZooKeeperPath>
 		if (path == null) { throw new ArgumentNullException(paramName ?? nameof(path)); }
 		if (checkPath && ValidatePath(path) is { } error)
 		{
-			throw new FormatException($"{paramName ?? nameof(path)} {error.Reason}{(error.Index.HasValue ? $" (index {error.Index})" : string.Empty)}");
+			throw new FormatException(string.Format(Resources.IDS_PATH_VALIDATION_ERROR, paramName ?? nameof(path), error.Reason, error.Index.HasValue ? string.Format(Resources.IDS_PATH_VALIDATION_ERROR_INDEX, error.Index.Value) : string.Empty));
 		}
 		_path = path;
 	}

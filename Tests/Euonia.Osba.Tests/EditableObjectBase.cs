@@ -1,6 +1,6 @@
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// Base class for editable business objects that supports lazy service resolution.

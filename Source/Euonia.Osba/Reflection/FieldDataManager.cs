@@ -9,10 +9,8 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 public class FieldDataManager
 {
-	private const string RESOURCE_PROPERTY_NAME_NOT_REGISTERED = "Property name '{0}' not registered";
-
 	/// <summary>
-	/// 存储字段数据的字典（以属性名称为键）。
+	/// 管理给定业务对象的字段和属性。
 	/// </summary>
 	private readonly ConcurrentDictionary<string, IFieldData> _fieldData = new();
 
@@ -24,8 +22,15 @@ public class FieldDataManager
 	/// <summary>
 	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
 	/// </summary>
+	/// <remarks>
+	/// <c>_properties</c> 必须在此初始化为空列表：公开无参构造若留 <see langword="null"/>，
+	/// <see cref="GetRegisteredProperty"/> 会在「属性未注册」之前先抛
+	/// <see cref="NullReferenceException"/>，违背其文档承诺的
+	/// <see cref="ArgumentOutOfRangeException"/>。
+	/// </remarks>
 	public FieldDataManager()
 	{
+		_properties = [];
 	}
 
 	/// <summary>
@@ -61,9 +66,8 @@ public class FieldDataManager
 		// 从顶层到底层遍历，构建合并列表
 		for (var index = hierarchy.Count - 1; index >= 0; index--)
 		{
-			var source = PropertyInfoManager.GetPropertyListCache(hierarchy[index]);
-			source.IsLocked = true;
-			result.AddRange(source);
+			// 取快照（锁内置 IsLocked + 复制），避免另一个线程此刻正往这条列表里注册属性。
+			result.AddRange(PropertyInfoManager.GetLockedSnapshot(hierarchy[index]));
 		}
 
 		return result;
@@ -75,7 +79,7 @@ public class FieldDataManager
 	/// <returns>已注册属性的列表。</returns>
 	public List<IPropertyInfo> GetRegisteredProperties()
 	{
-		return [.._properties];
+		return [.. _properties];
 	}
 
 	/// <summary>
@@ -89,7 +93,7 @@ public class FieldDataManager
 		var result = _properties.FirstOrDefault(c => c.Name == propertyName);
 		if (result == null)
 		{
-			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(RESOURCE_PROPERTY_NAME_NOT_REGISTERED, propertyName));
+			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(Resources.IDS_PROPERTY_NAME_NOT_REGISTERED, propertyName));
 		}
 
 		return result;
@@ -212,15 +216,47 @@ public class FieldDataManager
 	}
 
 	/// <summary>
+	/// 读取属性的当前旧值；尚无字段数据时按注册的默认值初始化，并返回该默认值。
+	/// </summary>
+	/// <typeparam name="TValue">值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>属性的当前旧值。</returns>
+	/// <remarks>
+	/// 写入路径（<c>SetProperty</c> / <c>LoadProperty</c>）必须先拿到旧值，再决定是否标脏，
+	/// 于是这段三分支曾在 <c>BusinessObject</c>、<c>ObservableObject</c>、<c>ReadOnlyObject</c> 各手抄一遍。
+	/// 任何一处调整 <c>null</c> 分支的副作用顺序（先 <see cref="LoadFieldData{TValue}"/> 再比较），
+	/// 其余几处都不会跟着改——收敛到这里后只有一个地方需要维护。
+	/// </remarks>
+	internal TValue GetExistingOrInit<TValue>(PropertyInfo<TValue> property)
+	{
+		var fieldData = GetFieldData(property);
+		switch (fieldData)
+		{
+			case null:
+				var value = property.DefaultValue;
+				LoadFieldData(property, value);
+				return value;
+			case IFieldData<TValue> fd:
+				return fd.Value;
+			default:
+				return (TValue)fieldData.Value;
+		}
+	}
+
+	/// <summary>
 	/// 移除属性的字段数据。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
+	/// <remarks>
+	/// 名称承诺「移除」，因此真正删除条目而不是置 <see langword="null"/>：
+	/// 置 null 会让 <see cref="FieldExists"/> 仍返回 <see langword="true"/>、
+	/// <see cref="BusinessObject.ReadProperty{TValue}(PropertyInfo{TValue})"/> 返回 <see langword="null"/>
+	/// 而不是注册的 <see cref="IPropertyInfo.DefaultValue"/>——三者口径互相矛盾。
+	/// 本方法当前在仓库内零调用；保留但修正语义，供派生/宿主场景使用。
+	/// </remarks>
 	internal void RemoveField(IPropertyInfo property)
 	{
-		if (_fieldData.TryGetValue(property.Name, out var field))
-		{
-			field.Value = null;
-		}
+		_fieldData.TryRemove(property.Name, out _);
 	}
 
 	/// <summary>
@@ -239,22 +275,32 @@ public class FieldDataManager
 	/// 强制初始化类型及其所有基类类型声明的静态字段。
 	/// </summary>
 	/// <param name="type">要初始化的对象类型。</param>
+	/// <remarks>
+	/// <para>
+	/// <b>不要在这里对 <paramref name="type"/> 加锁</b>：CLR 的类型初始化锁已经保证每个类型的静态初始化
+	/// 只执行一次（并发调用会被串行化到同一个初始化器上），这里的 <c>GetValue</c> 只是「主动踩一脚」，
+	/// 并不需要互斥来保证正确性。
+	/// </para>
+	/// <para>
+	/// 而加锁会造出一条可证明的 ABBA 锁序反转：本方法被 <c>PropertyInfoManager.CreateAndPublish</c>
+	/// 在持有 <c>_publishLock</c> 时调用（A→B），而本方法一旦触发类型的静态初始化器，
+	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</c>（B→A）。
+	/// 早期版本在 B 段额外拿 <c>lock(type)</c> 时，两个入口并发即可能互等。
+	/// </para>
+	/// </remarks>
 	public static void ForceStaticFieldInit(Type type)
 	{
 		const BindingFlags attr = BindingFlags.Static |
-		                          BindingFlags.Public |
-		                          BindingFlags.DeclaredOnly |
-		                          BindingFlags.NonPublic;
-		lock (type)
+								  BindingFlags.Public |
+								  BindingFlags.DeclaredOnly |
+								  BindingFlags.NonPublic;
+		var t = type;
+		while (t != null)
 		{
-			var t = type;
-			while (t != null)
-			{
-				var fields = t.GetFields(attr);
-				if (fields.Length > 0)
-					fields[0].GetValue(null);
-				t = t.BaseType;
-			}
+			var fields = t.GetFields(attr);
+			if (fields.Length > 0)
+				fields[0].GetValue(null);
+			t = t.BaseType;
 		}
 	}
 

@@ -48,7 +48,7 @@ public class DefaultAutomaticRegistration : AutomaticRegistrationBase
 
                 if (!type.IsAssignableFrom(serviceType))
                 {
-                    throw new InvalidOperationException($"The implementation type '{type.FullName}' is not inherits from service type '{serviceType.FullName}'");
+                    throw new InvalidOperationException(string.Format(Resources.IDS_IMPLEMENTATION_NOT_INHERIT_SERVICE, type.FullName, serviceType.FullName));
                 }
             }
         }

@@ -77,7 +77,7 @@ public class Rules : IRules
 	/// <remarks>
 	/// <para>
 	/// 两个来源：调用方显式 <see cref="SuppressRuleChecking"/>（<c>SuspendRuleChecking</c>），
-	/// 或本次操作声明跳过检查（<c>ActuatorBase.WithoutRuleChecks</c>）。两者语义一致，故合并成一个判定入口。
+	/// 或本次操作声明跳过检查（<c>ActuatorBase.BypassRuleChecks</c>）。两者语义一致，故合并成一个判定入口。
 	/// </para>
 	/// <para>
 	/// <b>挂起不等于「对象有效」</b>：挂起期间既不跑规则、也不读陈旧的 <see cref="BrokenRules"/>——
@@ -173,29 +173,6 @@ public class Rules : IRules
 		foreach (var rule in rules)
 		{
 			AddInstanceRule(rule);
-		}
-	}
-
-	/// <summary>
-	/// 判断指定类型的规则是否已在规则解析范围内（类型级、实例级或本次操作级）。
-	/// </summary>
-	/// <param name="ruleType">规则类型，按精确类型匹配。</param>
-	/// <returns>已存在则返回 <see langword="true"/>。</returns>
-	/// <remarks>
-	/// 供框架做「幂等注入」用（避免同一规则被注册两次、错误重复）。
-	/// 只判类型不判实例：同名不同参数的规则（如两条消息不同的 <see cref="CommonRule.Required"/>）
-	/// 是合法用法，本方法不用于去重它们。
-	/// </remarks>
-	internal bool ContainsRule(Type ruleType)
-	{
-		// 先取共享快照再进本对象的锁，避免与 InitializeRules 的锁序相互等待
-		var shared = RuleManager.Snapshot();
-
-		lock (_lockObject)
-		{
-			return shared.Any(rule => rule.GetType() == ruleType)
-			       || _instanceRules.Any(rule => rule.GetType() == ruleType)
-			       || (_operationScope != null && _operationScope.Rules.Any(rule => rule.GetType() == ruleType));
 		}
 	}
 
@@ -349,6 +326,21 @@ public class Rules : IRules
 	/// </summary>
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
+	/// <remarks>
+	/// <para>
+	/// <b>同步契约的固有阻塞</b>：本方法与 <see cref="CheckRules(IPropertyInfo)"/> 一样运行在
+	/// 调用线程上——这是同步 API 的既定代价，不是缺陷（O-4 方案 A 的 fail-fast 曾试过
+	/// 把「未同步完成的异步规则」变成异常，因破坏既有契约被否决并回滚）。
+	/// </para>
+	/// <para>
+	/// <b>异步调用方请改走 <see cref="CheckObjectRulesAsync"/>（O-4 方案 B）</b>：
+	/// 它是本方法的异步对等物（同一解析、同一裁决、同一通知），只是 <c>await</c> 而不是
+	/// <c>Task.WaitAll</c>——不会阻塞线程池线程，也就不存在「并发下线程池饥饿」。
+	/// 生产代码中的保存（<c>EditableObject.SaveAsync</c>）、命令执行（<c>ObjectRuleGuard</c>）
+	/// 与 <c>BusinessObject.ValidateAsync</c> 全部已经走异步入口；
+	/// 本方法保留给纯同步宿主（WPF/WinForms 命令处理器等）使用。
+	/// </para>
+	/// </remarks>
 	public List<string> CheckObjectRules(bool cascade)
 	{
 		if (IsRuleCheckingSuspended)
@@ -460,9 +452,11 @@ public class Rules : IRules
 
 		BrokenRules.ClearRules(null);
 
+		// 比较口径必须与 BrokenRuleCollection.ClearRules(string) 的序数相等保持一致，
+		// 否则仅大小写不同的两个属性只会清理其中一个，陈旧条目跨轮累积导致 IsValid 失真。
 		foreach (var property in rules.Select(rule => rule.Property)
 		                              .Where(property => property != null)
-		                              .DistinctBy(property => property.Name, StringComparer.OrdinalIgnoreCase))
+		                              .DistinctBy(property => property.Name))
 		{
 			BrokenRules.ClearRules(property);
 		}
@@ -476,6 +470,18 @@ public class Rules : IRules
 	/// <param name="property">要检查规则的属性。</param>
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 <c>null</c> 时抛出。</exception>
+	/// <remarks>
+	/// <para>
+	/// <b>setter 热路径的同步契约</b>：本方法由 <c>BusinessObject.CheckPropertyRules</c> 在属性变更时调用，
+	/// 阻塞调用线程是同步 API 的既定代价（也是 <c>CheckRuleOnPropertyChanged</c> 约束的来源：
+	/// 属性级规则应当是同步即可完成的纯校验）。
+	/// </para>
+	/// <para>
+	/// <b>含 I/O 的属性级校验请改走 <see cref="CheckRulesAsync(IPropertyInfo, CancellationToken)"/>（O-4 方案 B）</b>：
+	/// 那条路径把属性检查推迟到保存时（<c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型），
+	/// 在异步流程里 <c>await</c> 而不是 <c>Task.WaitAll</c>——不阻塞线程池线程。
+	/// </para>
+	/// </remarks>
 	public List<string> CheckRules(IPropertyInfo property)
 	{
 		if (property == null)
@@ -640,6 +646,8 @@ public class Rules : IRules
 
 			var context = new RuleContext(ruleContext =>
 			{
+				List<IPropertyInfo> notify = [];
+
 				lock (_lockObject)
 				{
 					BrokenRules.Add(ruleContext.Results, ruleContext.Rule.Property?.Name);
@@ -655,13 +663,24 @@ public class Rules : IRules
 
 					properties = properties.Concat(ruleContext.Rule.RelatedProperties);
 
+					// 「该通知谁」这个判断必须在锁内（要读 RunningRules 的一致快照），
+					// 但通知本身不能在锁内做——见下面。
 					foreach (var property in properties)
 					{
 						if (RunningRules.All(r => r.Property != property))
 						{
-							_target.RuleCheckComplete(property);
+							notify.Add(property);
 						}
 					}
+				}
+
+				// RuleCheckComplete 是用户可重写的成员（会走 PropertyChanged → 用户事件处理器），
+				// 把任意用户代码放进 _lockObject 的临界区，等于让外部代码握着本锁去等它自己的锁：
+				// 一旦另一条线程反过来先拿外层锁再来要 _lockObject，就是互相咬死。
+				// 判定已经原子完成，这里只负责把结果发出去。
+				foreach (var property in notify)
+				{
+					_target.RuleCheckComplete(property);
 				}
 			})
 			{
@@ -700,20 +719,51 @@ public class Rules : IRules
 	/// <param name="rule">要执行的规则。</param>
 	/// <param name="context">规则上下文。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <exception cref="OperationCanceledException">操作被取消时原样上抛——取消不是规则失败。</exception>
 	private static async Task RunAsync(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			await rule.ExecuteAsync(context, cancellationToken);
 		}
+		catch (OperationCanceledException)
+		{
+			// 取消必须原样传播：若把它收敛成一条错误结果，
+			// 调用方看到的就是「校验不通过」，而实际是「操作已被取消」，
+			// 两者的处置方式完全不同（前者重填数据，后者直接返回）。
+			throw;
+		}
 		catch (Exception ex)
 		{
-			context.AddErrorResult($"{rule.Name}: {ex.Message}");
+			// 规则自身抛出的异常仍然收敛为错误结果（规则检查不该让整个保存流程直接崩掉），
+			// 但描述里必须带上异常类型与内部异常，否则 NRE 之类的编程错误会被伪装成
+			// 一句孤零零的业务提示，线上根本无法定位。
+			context.AddErrorResult(Describe(rule, ex));
 		}
 		finally
 		{
 			context.Complete();
 		}
+	}
+
+	/// <summary>
+	/// 把规则抛出的异常渲染成错误结果描述，保留异常类型与内部异常信息。
+	/// </summary>
+	/// <param name="rule">抛出异常的规则。</param>
+	/// <param name="exception">规则抛出的异常。</param>
+	/// <returns>错误描述。</returns>
+	private static string Describe(IRuleBase rule, Exception exception)
+	{
+		var description = $"{rule.Name}: [{exception.GetType().Name}] {exception.Message}";
+
+		var inner = exception.InnerException;
+		while (inner != null)
+		{
+			description += $" -> [{inner.GetType().Name}] {inner.Message}";
+			inner = inner.InnerException;
+		}
+
+		return description;
 	}
 
 	#endregion

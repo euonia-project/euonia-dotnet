@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
+    <value>權限配置是空的：沒有聲明操作入口規則，也沒有給出權限碼來源 / 斷言 NoOperationCodes / NoModels 或掃描程序集。有方法級權限碼請用 OnAttributeOrName / OnMethod 聲明入口規則；規則來自別處請用 Source 給出權限碼來源；沒有方法級權限碼請斷言 NoOperationCodes；確實沒有任何權限模型與聲明請斷言 NoModels。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
+    <value>權限設定自相矛盾：已斷言 NoOperationCodes（沒有方法層級的權限碼），卻又宣告了操作入口規則。兩者只能擇一：有方法層級的權限碼就宣告規則，沒有就斷言 NoOperationCodes。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
+    <value>權限設定自相矛盾：已斷言 NoModels（沒有任何權限模型與宣告），卻又傳入了掃描組件。有組件要掃描時請不要斷言 NoModels。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>權限配置自相矛盾：已指定權限碼來源（Source），卻又聲明了操作入口規則。兩者是互斥的來源形態：來源自己回答「某類型在某操作上聲明了哪些權限碼」，入口規則只是其中一種實現。</value>
+  </data>
+  <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
+    <value>呼叫 AddPermission 時沒有指定任何要掃描的組件。權限模型與 [Permission] 宣告都來自組件掃描：掃描範圍為空會讓資料列層級資料權限靜默失效，而啟動期驗證也會因「沒有宣告」一併短路。請傳入要掃描的組件，例如 permission.Scan(typeof(X).Assembly)；若本應用確實沒有任何權限模型與 [Permission] 宣告，請明確斷言 permission.NoModels()。</value>
+  </data>
+  <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
+    <value>已宣告權限模型或 [Permission] 權限碼，但未註冊 {0}。權限碼與列層級授予必須即時從授權資料解析（若固化在權杖中，取消授權後舊權杖仍會有效）。請註冊一個以授權資料為後端的實作，例如 services.AddScoped&lt;{0}, YourResolver&gt;()。</value>
+  </data>
+  <data name="IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED" xml:space="preserve">
+    <value>已宣告權限模型或 [Permission] 權限碼，但未註冊 {0}。判定主體取自 UserPrincipal，未註冊時取用 IScopeGuard 會直接失敗。請在服務註冊中提供目前的使用者主體。</value>
+  </data>
+  <data name="IDS_OPERATION_ATTRIBUTE_TYPE_INVALID" xml:space="preserve">
+    <value>入口特性類型必須是非 null 的特性類型（Attribute 的衍生類別）。</value>
+  </data>
+  <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
+    <value>沒有宣告任何操作入口規則。請至少呼叫一次 OnAttributeOrName / OnMethod；若本應用確實沒有方法級權限碼，請明確斷言 permission.NoOperationCodes()。</value>
+  </data>
+  <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
+    <value>操作名稱 '{0}' 使用了框架保留的前置詞 '{1}'。該前置詞下的名稱歸框架所有，應用定義的操作名稱與權限碼都不得帶上前置詞。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
+    <value>權限碼 '{0}' 使用了框架保留的前置詞 '{1}'。請改用不含該前置詞的權限碼。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>裸 '*' 權限碼會匹配全部權限，因此不允許使用。請改用帶非空前置詞的通配（例如 'repo:*'）；「全部」必須透過逐個授予權限碼來明確表達。</value>
+  </data>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>名稱 '{0}' 已被 '{1}' 佔用。授權標識（操作名稱或權限碼）與授予鍵共用同一個命名空間，一個名字上只能有一條策略。</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>本作用域內尚未解析授權資料，而同步讀不會為它等待。請在非同步入口先 await '{0}'（或 '{1}'），再進入同步判定。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>標識 '{0}' 的策略被重複宣告。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
+    <value>All 至少需要一個子策略；「無限制」必須明確寫成 Where(_ =&gt; true)。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_NULL" xml:space="preserve">
+    <value>All 的子策略不能為 null。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_EMPTY" xml:space="preserve">
+    <value>Any 至少需要一個子策略；「無限制」必須明確寫成 Where(_ =&gt; true)。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_NULL" xml:space="preserve">
+    <value>Any 的子策略不能為 null。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DENY_NOT_NESTABLE" xml:space="preserve">
+    <value>Deny 不可巢狀。Deny 表示「否決」，不是布林取反；若要取反請用 Where(x =&gt; !...)。</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_DUPLICATED" xml:space="preserve">
+    <value>維度 '{0}' 在類型 '{1}' 的權限模型中被重複宣告。</value>
+  </data>
+  <data name="IDS_SCOPE_CLASSIFICATION_DUPLICATED" xml:space="preserve">
+    <value>分類 '{0}' 在類型 '{1}' 的權限模型中被重複宣告。</value>
+  </data>
+  <data name="IDS_SCOPE_MODEL_NO_DIMENSION" xml:space="preserve">
+    <value>權限模型 '{0}' 完全沒有宣告任何維度：請至少呼叫一次 ScopeModelBuilder.Map（值來自子表格時請用 MapMany）。</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
+    <value>資源類型 '{0}' 的權限策略參照了未對應的維度 '{1}'。請在權限模型的 Define 中呼叫 Map("{1}", ...)（值來自子表格時請用 MapMany("{1}", ...)）；已對應的維度：{2}。</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>權限配置中權限碼來源只能指定一次。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>權限模型註冊期校驗失敗。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>權限模型註冊期校驗失敗，共 {0} 處問題：</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>無法實例化權限模型：{0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>資源為 null，無法判定（fail-closed）</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>未註冊權限模型，不受資料權限約束</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>（無）</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>判定：{0}；策略鍵：{1}；成立的允許條件：{2}；成立的拒絕條件：{3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>允許</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>拒絕</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
+    <value>維度 '{0}' 的取值運算式 '{1}' 不受支援。集合維度只支援「資源的導覽集合（可加 Where 篩選）再取其字串值」這種形式，例如 x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)，或元素本身就是字串的 x =&gt; x.MemberIds；其他形式無法下推成 EXISTS 子查詢，因此在此直接拒絕。若要使用資料列本身的單一值，請改用 Map。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
+    <value>未提供策略。策略與模型必須寫在同一個宣告類型中，缺少任何一個都無法通過驗證。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
+    <value>此策略在結構上永遠不會放行（Allow 恆為 false），通常代表 Any 底下全都是拒絕條件。請檢查策略的組成。</value>
+  </data>
+  <data name="IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE" xml:space="preserve">
+    <value>資源類型 '{0}' 存在多個權限模型（另有 '{1}'）。請確保每個資源類型只宣告一個權限模型。</value>
+  </data>
+  <data name="IDS_SCOPE_SUBJECT_RESOLVER_MISSING" xml:space="preserve">
+    <value>權限體系已啟用（存在權限模型或 [Permission] 宣告），但未註冊 {0}。請在服務註冊中提供一個以授權資料為後端的實作。</value>
+  </data>
+  <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
+    <value>資源類型受資料範圍授權約束，但無法從物件的範圍解析 {0}。請確認已呼叫 AddPermission。</value>
+  </data>
+  <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
+    <value>{0}.{1} 是共用的唯讀執行個體，無法加入授予；需要可變更的複本時請先呼叫 Clone()。</value>
+  </data>
+  <data name="IDS_SCOPE_SUBCOLLECTION_NOT_LOADED" xml:space="preserve">
+    <value>資料範圍授權判定失敗：資源類型 '{1}' 的子表格維度 '{0}'（取值來源：{2}）在單列判定時無法使用——對應的子集合尚未載入（為 null 參考）。單列判定會在記憶體中計算同一棵運算式，需要完整的物件圖；無法判定即視為失敗，因此這裡會拋出例外，而不是靜默拒絕。修正方式：① 讀取端改用 IScopeGuard.Apply 下推（資料庫端使用 EXISTS，建議採用）；② 載入物件時一併載入該子集合（例如 EF Core 的 Include）；③ 移除集合屬性的初始化程式（例如 = []）——否則「未載入」會變成「空集合」而遭到靜默拒絕。</value>
+  </data>
+</root>

@@ -192,7 +192,7 @@ public sealed class AsyncLazy<T>
             get
             {
                 if (!_lazy._instance.IsValueCreated)
-                    throw new InvalidOperationException("Not yet created.");
+                    throw new InvalidOperationException(Resources.IDS_NOT_YET_CREATED);
                 return _lazy._instance.Value;
             }
         }
@@ -202,7 +202,7 @@ public sealed class AsyncLazy<T>
             get
             {
                 if (!_lazy._instance.IsValueCreated || !_lazy._instance.Value.IsCompleted)
-                    throw new InvalidOperationException("Not yet created.");
+                    throw new InvalidOperationException(Resources.IDS_NOT_YET_CREATED);
                 return _lazy._instance.Value.Result;
             }
         }

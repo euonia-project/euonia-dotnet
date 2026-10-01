@@ -1,3 +1,5 @@
+using Nerosoft.Euonia.Security;
+
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
@@ -6,8 +8,9 @@ namespace Nerosoft.Euonia.Osba;
 /// <remarks>
 /// <para>
 /// 这条映射是策略键解析的根：键只由操作决定，操作只由本映射决定。
-/// 工厂、规则、<c>CanXObject()</c> 必须共用本类——若各自实现一遍，
-/// 「规则按 Update 判、工厂按 Create 判」这类漂移会使规则静默失效。
+/// 工厂边界（<see cref="ObjectAuthorization"/> / <see cref="ScopeAuthorization"/>）、
+/// <c>IObjectOperationResolver</c>（把对象状态交给引擎解析策略键）与单行/下推判定必须共用本类——
+/// 若各自实现一遍，「工厂按 Update 判、单行判定按 Create 判」这类漂移会让策略键静默错位。
 /// </para>
 /// <para>
 /// 注意 <see cref="ObjectEditState"/> 由调用方通过公开的 <c>MarkAsNew</c>/<c>MarkAsChanged</c>/
@@ -15,7 +18,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 而每个操作各自应用自己的策略，不存在「把同一变更路由到更宽松的键」。
 /// </para>
 /// </remarks>
-internal static class ScopeOperationMap
+public static class ScopeOperationMap
 {
 	/// <summary>
 	/// 依据目标对象的类型与状态解析要执行的业务操作。
@@ -23,13 +26,13 @@ internal static class ScopeOperationMap
 	/// <param name="target">目标对象。</param>
 	/// <returns>业务操作。</returns>
 	/// <exception cref="InvalidOperationException">可编辑对象的状态为 <see cref="ObjectEditState.None"/>，或目标为只读对象时抛出。</exception>
-	internal static BusinessOperation Resolve(object target)
+	public static string Resolve(object target)
 	{
 		return target switch
 		{
 			IEditableObject editable => FromEditState(editable.State),
 			ICommandObject => BusinessOperation.Execute,
-			IReadOnlyObject => throw new InvalidOperationException("The operation can not apply for ReadOnlyObject."),
+			IReadOnlyObject => throw new InvalidOperationException(Resources.IDS_OPERATION_NOT_APPLY_READONLY),
 			_ => BusinessOperation.Update
 		};
 	}
@@ -41,10 +44,10 @@ internal static class ScopeOperationMap
 	/// <param name="operation">解析出的业务操作。</param>
 	/// <returns>可解析则返回 <see langword="true"/>；目标无可执行操作（如未变更的可编辑对象、只读对象）时返回 <see langword="false"/>。</returns>
 	/// <remarks>
-	/// 供行级断言（<c>CanAccessRow</c>）等「非保存」场景使用：那里对象状态通常为
-	/// <see cref="ObjectEditState.None"/>，应当回落到默认键而不是抛异常。
+	/// 供「非保存」场景使用——业务方法内部直接问 <c>IScopeGuard</c> 某一行是否可见时，
+	/// 对象状态通常为 <see cref="ObjectEditState.None"/>，应当回落到默认键而不是抛异常。
 	/// </remarks>
-	internal static bool TryResolve(object target, out BusinessOperation operation)
+	public static bool TryResolve(object target, out string operation)
 	{
 		switch (target)
 		{
@@ -73,14 +76,14 @@ internal static class ScopeOperationMap
 	/// <param name="state">对象状态。</param>
 	/// <returns>业务操作。</returns>
 	/// <exception cref="InvalidOperationException">状态为 <see cref="ObjectEditState.None"/> 时抛出。</exception>
-	internal static BusinessOperation FromEditState(ObjectEditState state)
+	public static string FromEditState(ObjectEditState state)
 	{
 		return state switch
 		{
 			ObjectEditState.New => BusinessOperation.Create,
 			ObjectEditState.Changed => BusinessOperation.Update,
 			ObjectEditState.Deleted => BusinessOperation.Delete,
-			_ => throw new InvalidOperationException("The object has no pending change to save.")
+			_ => throw new InvalidOperationException(Resources.IDS_NO_PENDING_CHANGE)
 		};
 	}
 }

@@ -28,7 +28,7 @@ internal static class MemoryCacheExtensions
 
 		if (keys is not ConcurrentDictionary<object, bool> keySet)
 		{
-			throw new InvalidOperationException("The parent key is not a valid key set.");
+			throw new InvalidOperationException(Resources.IDS_PARENT_KEY_NOT_VALID);
 		}
 
 		keySet.TryAdd(childKey, true);

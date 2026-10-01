@@ -120,4 +120,19 @@
   <data name="IDS_PATH_CAN_NOT_BE_THE_ROOT" xml:space="preserve">
     <value>Path can not be the root.</value>
   </data>
+  <data name="IDS_PATH_VALIDATION_ERROR" xml:space="preserve">
+    <value>{0} {1}{2}</value>
+  </data>
+  <data name="IDS_PATH_VALIDATION_ERROR_INDEX" xml:space="preserve">
+    <value> (index {0})</value>
+  </data>
+  <data name="IDS_NODE_DOES_NOT_EXIST" xml:space="preserve">
+    <value>Node '{0}' does not exist</value>
+  </data>
+  <data name="IDS_UNEXPECTED_NO_NODE_WHEN_CREATING_CHILD" xml:space="preserve">
+    <value>Received {0} when creating child node of directory '{1}'</value>
+  </data>
+  <data name="IDS_NODE_CREATED_BUT_NO_LONGER_EXISTS" xml:space="preserve">
+    <value>Node '{0}' was created, but no longer exists</value>
+  </data>
 </root>

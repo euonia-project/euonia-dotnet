@@ -24,7 +24,7 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 	{
 		_handler = handler;
 		_serializer = provider.GetKeyedService<IMessageSerializer>(options.Value.SerializerProvider)
-		             ?? throw new InvalidOperationException($"Message serializer '{options.Value.SerializerProvider}' is not registered.");
+		             ?? throw new InvalidOperationException(string.Format(Resources.IDS_SERIALIZER_NOT_REGISTERED, options.Value.SerializerProvider));
 		_logger = logger;
 	}
 
@@ -39,7 +39,7 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 		var payload = request.Data;
 		if (string.IsNullOrWhiteSpace(payload))
 		{
-			throw new RpcException(new Status(StatusCode.InvalidArgument, "The request payload is empty."));
+			throw new RpcException(new Status(StatusCode.InvalidArgument, Resources.IDS_REQUEST_PAYLOAD_EMPTY));
 		}
 
 		_logger.LogDebug("Received remote gRPC request '{RequestId}'", request.RequestId);

@@ -137,7 +137,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
             }
             catch (Exception exception)
             {
-                throw new Exception($"An error occurred during {nameof(ModuleContextBase.AheadConfigureServices)} phase of the module {module.Type.AssemblyQualifiedName}. See the inner exception for details.", exception);
+                throw new Exception(string.Format(Resources.IDS_MODULE_LIFECYCLE_PHASE_FAILED, nameof(ModuleContextBase.AheadConfigureServices), module.Type.AssemblyQualifiedName), exception);
             }
         }
 
@@ -154,7 +154,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
             }
             catch (Exception exception)
             {
-                throw new Exception($"An error occurred during {nameof(ModuleContextBase.ConfigureServices)} phase of the module {module.Type.AssemblyQualifiedName}. See the inner exception for details.", exception);
+                throw new Exception(string.Format(Resources.IDS_MODULE_LIFECYCLE_PHASE_FAILED, nameof(ModuleContextBase.ConfigureServices), module.Type.AssemblyQualifiedName), exception);
             }
         }
 
@@ -166,7 +166,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
             }
             catch (Exception exception)
             {
-                throw new Exception($"An error occurred during {nameof(ModuleContextBase.AfterConfigureServices)} phase of the module {module.Type.AssemblyQualifiedName}. See the inner exception for details.", exception);
+                throw new Exception(string.Format(Resources.IDS_MODULE_LIFECYCLE_PHASE_FAILED, nameof(ModuleContextBase.AfterConfigureServices), module.Type.AssemblyQualifiedName), exception);
             }
         }
 

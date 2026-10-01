@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <!--
+      本项目刻意只引用 Euonia.Security，不引用 Euonia.Osba。
+      编译通过即证明权限引擎可以脱离对象模型独立使用，且依赖方向未被回退。
+    -->
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Security.Tests.BrokenFixtures\Euonia.Security.Tests.BrokenFixtures.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Security\Euonia.Security.csproj" />
+        <ProjectReference Include="..\Euonia.Security.Tests.Fixtures\Euonia.Security.Tests.Fixtures.csproj" />
+    </ItemGroup>
+
+    <!--
+      权限码识别规则的配置载体需要真正的配置实现（ConfigurationBuilder / AddInMemoryCollection）。
+      虽然 Tests/common.props 的 Hosting 会传递带进来，但直接使用就应直接引用。
+    -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Extensions.Configuration" />
+    </ItemGroup>
+
+</Project>

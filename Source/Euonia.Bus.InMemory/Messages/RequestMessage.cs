@@ -68,7 +68,7 @@ public class RequestMessage<T>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForNoResponseReceived()
 	{
-		throw new InvalidOperationException("No response was received for the given request message.");
+		throw new InvalidOperationException(Resources.IDS_NO_RESPONSE_RECEIVED);
 	}
 
 	/// <summary>
@@ -77,6 +77,6 @@ public class RequestMessage<T>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForDuplicateReply()
 	{
-		throw new InvalidOperationException("A response has already been issued for the current message.");
+		throw new InvalidOperationException(Resources.IDS_RESPONSE_ALREADY_ISSUED);
 	}
 }

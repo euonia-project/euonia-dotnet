@@ -2,7 +2,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 ObservableList 的子项事件钩子管理与更改通知逻辑。

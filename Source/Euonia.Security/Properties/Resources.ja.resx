@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
+    <value>権限の構成が空です。操作エントリの規則が宣言されておらず、権限コードのソース / NoOperationCodes / NoModels も指定されておらず、スキャン対象アセンブリも追加されていません。メソッドレベルの権限コードがある場合は OnAttributeOrName / OnMethod でエントリ規則を宣言してください。規則が別のところにある場合は Source で権限コードのソースを指定してください。コードがない場合は NoOperationCodes を、権限モデルと宣言が一切ない場合は NoModels を表明してください。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
+    <value>アクセス許可の構成が矛盾しています。NoOperationCodes (メソッド レベルのアクセス許可コードなし) を表明しているのに、操作のエントリー ルールが宣言されています。どちらか一方のみが許可されます。メソッド レベルのアクセス許可コードがある場合はルールを宣言し、ない場合は NoOperationCodes を表明してください。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
+    <value>アクセス許可の構成が矛盾しています。NoModels (アクセス許可モデルも宣言もなし) を表明しているのに、スキャン対象のアセンブリが指定されています。スキャン対象のアセンブリがある場合は NoModels を表明しないでください。</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>アクセス許可の構成に矛盾があります: アクセス許可コードのソース (Source) が指定されているのに、操作エントリの規則が宣言されています。両者は相互に排他的なソース形式です。ソース自体が「ある型がある操作に対して宣言するアクセス許可コード」に答え、エントリ規則はその実装の一つにすぎません。</value>
+  </data>
+  <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
+    <value>AddPermission がスキャン対象アセンブリなしで呼び出されました。権限モデルと [Permission] 宣言はどちらもアセンブリのスキャンから取得されます。スキャン範囲が空だと行レベルのデータスコープが暗黙的に無効になり、何も宣言されていないため起動時検証も短絡します。スキャンするアセンブリを指定してください（例：permission.Scan(typeof(X).Assembly)）。アプリケーションに権限モデルと [Permission] 宣言が本当にない場合は、permission.NoModels() を明示的に表明してください。</value>
+  </data>
+  <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
+    <value>アクセス許可モデルまたは [Permission] アクセス許可コードが宣言されましたが、{0} が登録されていません。アクセス許可コードと行レベルの付与は、認可データからリアルタイムに解決する必要があります (トークンに固定すると、取消されたアクセス許可が古いトークンに残り続けます)。認可データに基づく実装を登録してください (例: services.AddScoped&lt;{0}, YourResolver&gt;()。</value>
+  </data>
+  <data name="IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED" xml:space="preserve">
+    <value>アクセス許可モデルまたは [Permission] アクセス許可コードが宣言されましたが、{0} が登録されていません。評価対象は UserPrincipal から取得されるため、登録されていないと IScopeGuard の解決が完全に失敗します。サービス登録で現在のユーザープリンシパルを指定してください。</value>
+  </data>
+  <data name="IDS_OPERATION_ATTRIBUTE_TYPE_INVALID" xml:space="preserve">
+    <value>エントリー属性の型は null でない属性型 (Attribute の派生クラス) でなければなりません。</value>
+  </data>
+  <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
+    <value>操作エントリの規則が宣言されていません。OnAttributeOrName / OnMethod を少なくとも一度呼び出してください。メソッドレベルの権限コードが本当にない場合は、permission.NoOperationCodes() を明示的に表明してください。</value>
+  </data>
+  <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
+    <value>操作名 '{0}' がフレームワーク予約のプレフィックス '{1}' を使用しています。このプレフィックスを持つ名前はフレームワークに属し、アプリケーション定義の操作名や権限コードに含めることはできません。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
+    <value>アクセス許可コード '{0}' がフレームワーク予約のプレフィックス '{1}' を使用しています。そのプレフィックスを含まないコードを使用してください。</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>裸の '*' 権限コードはすべての権限に一致するため使用できません。空でないプレフィックスを持つプレフィックス ワイルドカード（例: 'repo:*'）を使用してください。「すべて」は権限コードを明示的に付与して表現する必要があります。</value>
+  </data>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>名前 '{0}' は既に '{1}' が使用しています。識別子（操作名または権限コード）と付与キーは同じ名前空間を共有するため、1 つの名前に付けられるポリシーは 1 つだけです。</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>このスコープでは認可データがまだ解決されておらず、同期読み取りは待機しません。非同期の入口で先に '{0}'（または '{1}'）を await してから同期判定を行ってください。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>'{0}' のポリシーが複数回宣言されています。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
+    <value>All には少なくとも 1 つのサブポリシーが必要です。「無制限」は Where(_ =&gt; true) と明示的に記述してください。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_NULL" xml:space="preserve">
+    <value>All のサブポリシーを null にすることはできません。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_EMPTY" xml:space="preserve">
+    <value>Any には少なくとも 1 つのサブポリシーが必要です。「無制限」は Where(_ =&gt; true) と明示的に記述してください。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_NULL" xml:space="preserve">
+    <value>Any のサブポリシーを null にすることはできません。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DENY_NOT_NESTABLE" xml:space="preserve">
+    <value>Deny を入れ子にすることはできません。Deny はブール値の否定ではなく「拒否」を意味します。否定を表す場合は Where(x =&gt; !...) を使用してください。</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_DUPLICATED" xml:space="preserve">
+    <value>次元 '{0}' が型 '{1}' のアクセス許可モデルで複数回宣言されています。</value>
+  </data>
+  <data name="IDS_SCOPE_CLASSIFICATION_DUPLICATED" xml:space="preserve">
+    <value>分類 '{0}' が型 '{1}' のアクセス許可モデルで複数回宣言されています。</value>
+  </data>
+  <data name="IDS_SCOPE_MODEL_NO_DIMENSION" xml:space="preserve">
+    <value>アクセス許可モデル '{0}' が次元を 1 つも宣言していません。ScopeModelBuilder.Map を少なくとも 1 回呼び出してください (値が子テーブルに由来する場合は MapMany を使用します)。</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
+    <value>リソース型 '{0}' のスコープポリシーが未マップの次元 '{1}' を参照しています。アクセス許可モデルの Define で Map("{1}", ...) を呼び出してください (値が子テーブルに由来する場合は MapMany("{1}", ...) を使用します)。マップ済みの次元: {2}。</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>アクセス許可コードのソースは既に指定されています。指定できるのは一度だけです。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>権限モデルの登録検証に失敗しました。</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>権限モデルの登録検証に失敗しました（{0} 件の問題）：</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>権限モデルをインスタンス化できませんでした：{0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>リソースが null のため判定できません（fail-closed）</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>権限モデルが未登録のため、データスコープの制約を受けません</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>（なし）</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>判定：{0}；ポリシーキー：{1}；成立した許可条件：{2}；成立した拒否条件：{3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>許可</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>拒否</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
+    <value>次元 '{0}' の値式 '{1}' はサポートされていません。コレクション次元がサポートするのは「リソースのナビゲーション コレクション (必要に応じて Where でフィルター) の文字列値」という形式のみです。例: x =&gt; x.Members.Select(m =&gt; m.UserId)、x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId)、または要素自体が文字列の場合は x =&gt; x.MemberIds。その他の形式は EXISTS サブクエリにプッシュダウンできないため、ここでは拒否されます。行自体に存在する単一の値には Map を使用してください。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
+    <value>ポリシーが指定されていません。ポリシーとモデルは同じ宣言元の型に記述する必要があります。どちらか一方でも欠けていると検証は成功しません。</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
+    <value>このポリシーは構造的に許可することができません (Allow が常に false)。通常は Any の下のすべてのブランチが拒否条件であることを意味します。ポリシーの構成を確認してください。</value>
+  </data>
+  <data name="IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE" xml:space="preserve">
+    <value>リソース型 '{0}' に複数のアクセス許可モデルがあります (別のものは '{1}')。各リソース型がアクセス許可モデルをちょうど 1 つ宣言するようにしてください。</value>
+  </data>
+  <data name="IDS_SCOPE_SUBJECT_RESOLVER_MISSING" xml:space="preserve">
+    <value>データ スコープは有効になっています (スコープ モデルまたは [Permission] 宣言が存在します) が、{0} が登録されていません。サービス登録で認可データに基づく実装を指定してください。</value>
+  </data>
+  <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
+    <value>リソース型はデータ スコープによって制約されていますが、オブジェクトのスコープから {0} を解決できません。AddPermission が呼び出されていることを確認してください。</value>
+  </data>
+  <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
+    <value>{0}.{1} は共有の読み取り専用インスタンスであり、付与を追加できません。変更可能なコピーが必要な場合は、先に Clone() を呼び出してください。</value>
+  </data>
+  <data name="IDS_SCOPE_SUBCOLLECTION_NOT_LOADED" xml:space="preserve">
+    <value>データ スコープの評価に失敗しました。リソース型 '{1}' の子テーブル次元 '{0}' (値の取得元: {2}) は、単一行の評価では利用できません。対応する子コレクションが読み込まれていません (null 参照)。単一行の評価はメモリ上で同じ式ツリーを計算するため、完全なオブジェクト グラフが必要です。判定できない結果は失敗として扱うため、黙って拒否するのではなくここで例外をスローします。対処方法: ① 読み取り側でプッシュダウンに IScopeGuard.Apply を使用してください (データベース 側は EXISTS、推奨); ② オブジェクトと一緒に子コレクションを読み込んでください (EF Core の Include など); ③ コレクション プロパティの初期化子を削除してください (例: = [])。そうしないと「未読み込み」が「空のコレクション」になり、黙って拒否されます。</value>
+  </data>
+</root>

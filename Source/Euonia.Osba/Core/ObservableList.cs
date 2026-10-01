@@ -44,10 +44,16 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	}
 
 	/// <summary>
-	/// 记录已经附加过事件钩子的项，防止同一实例被重复订阅。
+	/// 记录已附加事件钩子的项及其在集合中的实例数（按引用计数）。
 	/// </summary>
-	private readonly HashSet<TItem> _hookedItems = new(new ReferenceEqualityComparer<TItem>());
-
+	/// <remarks>
+	/// 同一实例可以被多次加入集合（<c>list.Add(x); list.Add(x);</c>）。
+	/// 若只维护去重集合，从其中一个索引移除该实例就会整体退订——另一个索引上的同
+	/// 一实例将<b>静默丢失钩子</b>（其后续变更不再触发 ChildChanged/BusyChanged）。
+	/// 因此这里按「引用 → 出现次数」计数：0→1 订阅、1→0 退订，中间增减均不动事件。
+	/// 计数器用引用相等比较（<see cref="ReferenceEqualityComparer{TItem}"/>），与去重语义一致。
+	/// </remarks>
+	private readonly Dictionary<TItem, int> _hookedItems = new(new ReferenceEqualityComparer<TItem>());
 	/// <summary>
 	/// 将集合物化为列表，确保只枚举一次。
 	/// </summary>
@@ -59,19 +65,17 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		return collection.ToList();
 	}
 
-	private EventHandler<ObjectChangedEventArgs> _childChanged;
-
 	/// <summary>
 	/// 当集合中的子对象被更改时发生，通过事件参数提供有关更改的详细信息。
 	/// </summary>
 	/// <remarks>订阅此事件可在子对象被更新、移除或以其他方式修改时收到通知。
 	/// 关联的 ObjectChangedEventArgs 实例包含有关特定更改的信息，例如受影响的对象和更改类型。
 	/// 事件处理程序应检查事件参数以确定更改的性质并做出相应响应。</remarks>
-	public event EventHandler<ObjectChangedEventArgs> ChildChanged
-	{
-		add => _childChanged = (EventHandler<ObjectChangedEventArgs>)Delegate.Combine(_childChanged, value);
-		remove => _childChanged = (EventHandler<ObjectChangedEventArgs>)Delegate.Remove(_childChanged, value);
-	}
+	/// <remarks>
+	/// 采用字段式事件（编译器生成 <c>Interlocked.CompareExchange</c> 循环）：
+	/// 手写 <c>Delegate.Combine/Remove</c> 的读-改-写不是原子的，并发订阅/退订会静默丢失处理器。
+	/// </remarks>
+	public event EventHandler<ObjectChangedEventArgs> ChildChanged;
 
 	/// <summary>
 	/// 获取或设置一个值，指示列表在其内容被修改时是否引发更改通知事件。
@@ -83,16 +87,14 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 
 	#region BusyChanged
 
-	private BusyChangedEventHandler _busyChanged;
-
 	/// <summary>
 	/// 指示对象繁忙状态已改变的事件。
 	/// </summary>
-	public event BusyChangedEventHandler BusyChanged
-	{
-		add => _busyChanged = (BusyChangedEventHandler)Delegate.Combine(_busyChanged, value);
-		remove => _busyChanged = (BusyChangedEventHandler)Delegate.Remove(_busyChanged, value);
-	}
+	/// <remarks>
+	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
+	/// 并发订阅不会静默丢失处理器。
+	/// </remarks>
+	public event BusyChangedEventHandler BusyChanged;
 
 	/// <summary>
 	/// 重写此方法以在 IsBusy 属性改变时收到通知。
@@ -100,7 +102,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// <param name="args">事件参数。</param>
 	protected virtual void OnBusyChanged(BusyChangedEventArgs args)
 	{
-		_busyChanged?.Invoke(this, args);
+		BusyChanged?.Invoke(this, args);
 	}
 
 	/// <summary>
@@ -216,6 +218,9 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// 从项中移除事件挂钩。
 	/// </summary>
 	/// <param name="item">要移除事件挂钩的项。</param>
+	/// <remarks>
+	/// 按引用计数退订：只有该实例的最后一个引用被移出集合时才真正解除事件订阅。
+	/// </remarks>
 	protected virtual void RemoveEventHooks(TItem item)
 	{
 		if (item == null)
@@ -223,10 +228,18 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 			return;
 		}
 
-		if (!_hookedItems.Remove(item))
+		if (!_hookedItems.TryGetValue(item, out var count))
 		{
 			return;
 		}
+
+		if (count > 1)
+		{
+			_hookedItems[item] = count - 1;
+			return;
+		}
+
+		_hookedItems.Remove(item);
 
 		if (item is INotifyBusy busy)
 		{
@@ -244,7 +257,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// </summary>
 	/// <remarks>如果项实现 INotifyBusy，此方法订阅 BusyChanged 事件；如果项实现 INotifyPropertyChanged，
 	/// 则订阅 PropertyChanged 事件。这些订阅使系统能够响应项状态或属性的更改。
-	/// 同一实例的重复添加只订阅一次钩子。</remarks>
+	/// 同一实例的重复添加只在首个引用进入集合时订阅一次（按引用计数）。</remarks>
 	/// <param name="item">要添加事件处理程序的项。此参数不能为 <c>null</c>；如果为 <c>null</c>，则不附加任何处理程序。</param>
 	protected virtual void AddEventHooks(TItem item)
 	{
@@ -253,8 +266,9 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 			return;
 		}
 
-		if (!_hookedItems.Add(item))
+		if (!_hookedItems.TryAdd(item, 1))
 		{
+			_hookedItems[item]++;
 			return;
 		}
 
@@ -310,7 +324,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// <param name="args">包含子对象更改信息的 <see cref="ObjectChangedEventArgs"/> 实例。</param>
 	protected virtual void OnChildChanged(ObjectChangedEventArgs args)
 	{
-		_childChanged?.Invoke(this, args);
+		ChildChanged?.Invoke(this, args);
 	}
 
 	#region Event Subscriptions

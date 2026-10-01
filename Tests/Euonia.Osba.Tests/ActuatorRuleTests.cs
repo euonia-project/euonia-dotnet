@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Validation;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证执行器按操作指定规则的能力：追加、排除、跳过，及其作用域边界。
@@ -202,7 +202,7 @@ public class ActuatorRuleTests
 	[Fact]
 	public async Task Update_BypassRule_ExactTypeMatch_ShouldNotExcludeDerivedRules()
 	{
-		// 按精确类型匹配：排除基类不得连带排除派生规则（否则一次笔误会关掉框架自动注入的规则）
+		// 按精确类型匹配：排除基类不得连带排除派生规则（否则一次笔误会关掉所有数据校验规则）
 		using var scope = RuleTestHarness.CreateScope(out var provider);
 		var actuator = provider.GetRequiredService<IActuator>();
 
@@ -229,7 +229,7 @@ public class ActuatorRuleTests
 		var result = await actuator.For<RuleFailEditable>()
 		                           .Update("id")
 		                           .Handle(editable => editable.Name = "changed")
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		// 保存确实发生了，说明跳过检查后终结步骤照常执行
@@ -247,7 +247,7 @@ public class ActuatorRuleTests
 		await actuator.For<RuleFailEditable>()
 		             .Update("id")
 		             .Handle(editable => editable.Name = "changed")
-		             .WithoutRuleChecks()
+		             .BypassRuleChecks()
 		             .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		await Assert.ThrowsAsync<ValidationException>(async () =>
@@ -273,7 +273,7 @@ public class ActuatorRuleTests
 		var target = await actuator.For<RuleCleanEditable>()
 		                           .Update("id")
 		                           .Handle(item => item.Name = "changed")
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		Assert.NotSame(editable, target);
@@ -293,7 +293,7 @@ public class ActuatorRuleTests
 
 		var result = await actuator.For<RuleFailCommand>()
 		                           .Execute()
-		                           .WithoutRuleChecks()
+		                           .BypassRuleChecks()
 		                           .ExecuteAsync(TestContext.Current.CancellationToken);
 
 		Assert.True(result.Executed);

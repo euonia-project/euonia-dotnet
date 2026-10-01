@@ -123,4 +123,7 @@
   <data name="IDS_MUST_BE_INFINITE_OR_IN" xml:space="preserve">
     <value>Must be infinite or in [{0}].</value>
   </data>
+  <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
+    <value>Blob {0} does not exist and could not be created. See inner exceptions for details</value>
+  </data>
 </root>

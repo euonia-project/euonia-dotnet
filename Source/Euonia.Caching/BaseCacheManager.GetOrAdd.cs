@@ -183,7 +183,7 @@ public partial class BaseCacheManager<TValue>
             // 显式抛出异常以保持行为一致；否则稍后最终也会抛出。
             if (newItem == null)
             {
-                throw new InvalidOperationException("The CacheItem which should be added must not be null.");
+                throw new InvalidOperationException(Resources.IDS_CACHE_ITEM_MUST_NOT_BE_NULL);
             }
 
             if (AddInternal(newItem))

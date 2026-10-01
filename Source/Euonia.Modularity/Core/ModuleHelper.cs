@@ -28,7 +28,7 @@ public static class ModuleHelper
 	{
 		if (!IsModule(moduleType))
 		{
-			throw new ArgumentException("Given type is not an module: " + moduleType.AssemblyQualifiedName);
+			throw new ArgumentException(string.Format(Resources.IDS_TYPE_NOT_A_MODULE, moduleType.AssemblyQualifiedName));
 		}
 	}
 

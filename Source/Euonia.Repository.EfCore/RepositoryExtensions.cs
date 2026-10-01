@@ -143,7 +143,7 @@ public static class RepositoryExtensions
 	{
 		if (repository.Context is not DbContext context)
 		{
-			throw new InvalidOperationException("The repository context is not a DbContext.");
+			throw new InvalidOperationException(Resources.IDS_REPOSITORY_CONTEXT_NOT_DBCONTEXT);
 		}
 
 		var entry = context.Attach(entity);

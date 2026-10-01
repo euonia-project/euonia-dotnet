@@ -9,10 +9,11 @@ public class CredentialIncorrectException : CredentialException
 	/// 使用指定的凭据初始化 <see cref="CredentialIncorrectException"/> 类的新实例。
 	/// </summary>
 	/// <param name="credential">被确定为不正确的凭据对象。</param>
-	public CredentialIncorrectException(object credential)
-		: base(credential)
-	{
-	}
+        /// <remarks>默认消息不携带凭据内容（避免泄漏敏感信息；异常→状态码管道读取 <see cref="Exception.Message"/>，无参消息会停留在 BCL 默认值）。</remarks>
+        public CredentialIncorrectException(object credential)
+                : base(credential, "Incorrect credential.")
+        {
+        }
 
 	/// <summary>
 	/// 使用指定的凭据和自定义错误消息初始化 <see cref="CredentialIncorrectException"/> 类的新实例。

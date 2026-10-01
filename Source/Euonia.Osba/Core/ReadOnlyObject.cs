@@ -10,12 +10,22 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 	where T : ReadOnlyObject<T>
 {
 	/// <summary>
-	/// 重写 IsBypassingRuleChecks 以防止 PropertyChanged 事件被引发。
+	/// 只读对象拒绝任何属性写入。
 	/// </summary>
-	protected override bool IsBypassingRuleChecks
+	/// <remarks>
+	/// <para>
+	/// 「只读」由本覆盖表达：所有写入路径经 <c>SetProperty</c> 入口的
+	/// <c>CanWriteProperty(property, true)</c> 统一裁决，拒绝时抛
+	/// <see cref="System.Security.SecurityException"/>；
+	/// 显式的 <c>BypassRuleChecks</c> 仍然可以写（那是调用方主动声明的绕过，
+	/// 语义由 <c>ObservableObject</c> 统一定义）；读取权限由 <c>CanReadProperty</c> 正常判定。
+	/// </para>
+	/// </remarks>
+	public override bool CanWriteProperty(IPropertyInfo property)
 	{
-		get => true;
+		return false;
 	}
+
 
 	#region Get Properties
 
@@ -286,21 +296,7 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 			return;
 		}
 
-		TField oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TField> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TField)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		if (typeof(TValue) == typeof(string) && newValue == null)
 		{
@@ -323,21 +319,7 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 			return;
 		}
 
-		TValue oldValue;
-		var fieldData = FieldManager.GetFieldData(propertyInfo);
-		switch (fieldData)
-		{
-			case null:
-				oldValue = propertyInfo.DefaultValue;
-				var _ = FieldManager.LoadFieldData(propertyInfo, oldValue);
-				break;
-			case IFieldData<TValue> fd:
-				oldValue = fd.Value;
-				break;
-			default:
-				oldValue = (TValue)fieldData.Value;
-				break;
-		}
+		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		if (typeof(TValue) == typeof(string) && newValue == null)
 		{

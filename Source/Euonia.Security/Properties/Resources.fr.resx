@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
+    <value>La configuration des autorisations est vide : aucune règle d'entrée d'opération n'a été déclarée, et ni une source de codes / NoOperationCodes / NoModels n'a été fournie ni un assemblage à scanner n'a été ajouté. Utilisez OnAttributeOrName / OnMethod pour déclarer la règle d'entrée lorsqu'il y a des codes d'autorisation au niveau méthode ; fournissez une source de codes via Source lorsque les règles viennent d'ailleurs ; affirmez NoOperationCodes s'il n'y en a pas ; affirmez NoModels lorsque l'application n'a vraiment aucun modèle d'autorisation ni déclaration.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
+    <value>La configuration des autorisations se contredit : NoOperationCodes a été affirmé (aucun code d'autorisation au niveau des méthodes), alors que des règles d'entrée d'opération ont été déclarées. Une seule des deux options est autorisée : déclarez des règles lorsqu'il existe des codes d'autorisation au niveau des méthodes, et affirmez NoOperationCodes lorsqu'il n'y en a pas.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS" xml:space="preserve">
+    <value>La configuration des autorisations se contredit : NoModels a été affirmé (aucun modèle d'autorisation ni déclaration), alors que des assemblies à analyser ont été fournies. N'affirmez pas NoModels lorsqu'il y a des assemblies à analyser.</value>
+  </data>
+  <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_SOURCE" xml:space="preserve">
+    <value>La configuration des autorisations se contredit : une source de codes d'autorisation a été spécifiée (Source) et des règles d'entrée d'opération ont été déclarées. Les deux formes sont mutuellement exclusives : la source répond elle-même aux codes d'autorisation qu'un type déclare pour une opération ; les règles d'entrée ne sont que l'une de ses implémentations.</value>
+  </data>
+  <data name="IDS_PERMISSION_NO_ASSEMBLY_SCANNED" xml:space="preserve">
+    <value>AddPermission a été appelé sans aucun assemblage à analyser. Les modèles d'autorisation et les déclarations [Permission] proviennent de l'analyse des assemblages : une portée d'analyse vide désactive silencieusement la portée des données au niveau ligne, et la validation de démarrage est également court-circuitée car rien n'a été déclaré. Passez les assemblages à analyser, par exemple permission.Scan(typeof(X).Assembly) ; si l'application n'a vraiment aucun modèle d'autorisation ni déclaration [Permission], affirmez explicitement permission.NoModels().</value>
+  </data>
+  <data name="IDS_PERMISSION_SUBJECT_RESOLVER_NOT_REGISTERED" xml:space="preserve">
+    <value>Un modèle d'autorisation ou un code d'autorisation [Permission] a été déclaré, mais {0} n'est pas enregistré. Les codes d'autorisation et les attributions au niveau des lignes doivent être résolus en temps réel à partir des données d'autorisation (les figer dans un jeton permet à une autorisation révoquée de survivre dans des jetons obsolètes). Veuillez enregistrer une implémentation adossée aux données d'autorisation, par exemple services.AddScoped&lt;{0}, YourResolver&gt;().</value>
+  </data>
+  <data name="IDS_PERMISSION_USER_PRINCIPAL_NOT_REGISTERED" xml:space="preserve">
+    <value>Un modèle d'autorisation ou un code d'autorisation [Permission] a été déclaré, mais {0} n'est pas enregistré. Le sujet d'évaluation est obtenu depuis UserPrincipal, si bien que la résolution de IScopeGuard échoue complètement lorsqu'il n'est pas enregistré. Veuillez fournir le principal utilisateur courant dans les enregistrements de services.</value>
+  </data>
+  <data name="IDS_OPERATION_ATTRIBUTE_TYPE_INVALID" xml:space="preserve">
+    <value>Le type de l'attribut d'entrée doit être un type d'attribut non nul (une sous-classe de Attribute).</value>
+  </data>
+  <data name="IDS_OPERATION_RULE_REQUIRED" xml:space="preserve">
+    <value>Aucune règle d'entrée d'opération n'a été déclarée. Appelez OnAttributeOrName / OnMethod au moins une fois ; si l'application n'a vraiment pas de codes d'autorisation au niveau méthode, affirmez explicitement permission.NoOperationCodes().</value>
+  </data>
+  <data name="IDS_SCOPE_OPERATION_RESERVED_PREFIX" xml:space="preserve">
+    <value>Le nom d'opération '{0}' utilise le préfixe '{1}' réservé par l'infrastructure. Les noms portant ce préfixe appartiennent à l'infrastructure ; les opérations et codes de permission définis par l'application ne doivent pas le porter.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_RESERVED_PREFIX" xml:space="preserve">
+    <value>Le code d'autorisation '{0}' utilise le préfixe '{1}' réservé par l'infrastructure. Veuillez utiliser un code dépourvu de ce préfixe.</value>
+  </data>
+  <data name="IDS_SCOPE_CODE_WILDCARD_ALL" xml:space="preserve">
+    <value>Un code d'autorisation « * » seul correspond à toutes les autorisations et n'est donc pas autorisé. Utilisez un joker de préfixe avec un préfixe non vide (par exemple « repo:* ») ; l'octroi de tout doit être exprimé en accordant explicitement les codes.</value>
+  </data>
+  <data name="IDS_SCOPE_KEY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>Le nom « {0} » est déjà revendiqué par « {1} ». Un identifiant (nom d'opération ou code de permission) et une clé d'octroi partagent le même espace de noms ; un nom ne peut porter qu'une seule politique.</value>
+  </data>
+  <data name="IDS_SCOPE_NOT_RESOLVED" xml:space="preserve">
+    <value>Les données d'autorisation ne sont pas encore résolues dans cette portée, et les lectures synchrones n'attendent jamais après elles. Attendez d'abord « {0} » (ou « {1} ») sur un point d'entrée asynchrone avant tout contrôle synchrone.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DUPLICATE_DECLARED" xml:space="preserve">
+    <value>La politique de « {0} » est déclarée plus d'une fois.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_EMPTY" xml:space="preserve">
+    <value>All nécessite au moins une sous-politique ; « sans contrainte » doit être écrit explicitement sous la forme Where(_ =&gt; true).</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ALL_NULL" xml:space="preserve">
+    <value>Les sous-politiques de All ne peuvent pas être nulles.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_EMPTY" xml:space="preserve">
+    <value>Any nécessite au moins une sous-politique ; « sans contrainte » doit être écrit explicitement sous la forme Where(_ =&gt; true).</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_ANY_NULL" xml:space="preserve">
+    <value>Les sous-politiques de Any ne peuvent pas être nulles.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_DENY_NOT_NESTABLE" xml:space="preserve">
+    <value>Deny ne peut pas être imbriqué. Deny signifie « veto », et non la négation booléenne ; utilisez Where(x =&gt; !...) lorsque la négation est voulue.</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_DUPLICATED" xml:space="preserve">
+    <value>La dimension '{0}' est déclarée plus d'une fois dans le modèle d'autorisation du type '{1}'.</value>
+  </data>
+  <data name="IDS_SCOPE_CLASSIFICATION_DUPLICATED" xml:space="preserve">
+    <value>La classification '{0}' est déclarée plus d'une fois dans le modèle d'autorisation du type '{1}'.</value>
+  </data>
+  <data name="IDS_SCOPE_MODEL_NO_DIMENSION" xml:space="preserve">
+    <value>Le modèle d'autorisation '{0}' ne déclare aucune dimension : appelez ScopeModelBuilder.Map au moins une fois (utilisez MapMany lorsque la valeur provient d'une table enfant).</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_NOT_MAPPED" xml:space="preserve">
+    <value>La politique de portée du type de ressource '{0}' référence la dimension non mappée '{1}'. Veuillez appeler Map("{1}", ...) dans Define du modèle d'autorisation (utilisez MapMany("{1}", ...) lorsque la valeur provient d'une table enfant) ; dimensions mappées : {2}.</value>
+  </data>
+  <data name="IDS_PERMISSION_SOURCE_DUPLICATED" xml:space="preserve">
+    <value>La source de codes d'autorisation a déjà été spécifiée ; elle ne peut être spécifiée qu'une seule fois.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_SINGLE" xml:space="preserve">
+    <value>Échec de la validation d'enregistrement du modèle d'autorisation.</value>
+  </data>
+  <data name="IDS_VALIDATION_FAILED_MULTIPLE" xml:space="preserve">
+    <value>Échec de la validation d'enregistrement du modèle d'autorisation avec {0} problèmes :</value>
+  </data>
+  <data name="IDS_MODEL_INSTANTIATE_FAILED" xml:space="preserve">
+    <value>Impossible d'instancier le modèle d'autorisation : {0}</value>
+  </data>
+  <data name="IDS_DECISION_NULL_RESOURCE" xml:space="preserve">
+    <value>La ressource est null ; décision impossible (fail-closed)</value>
+  </data>
+  <data name="IDS_DECISION_UNMODELED" xml:space="preserve">
+    <value>Aucun modèle d'autorisation enregistré ; non soumis à la contrainte de portée de données</value>
+  </data>
+  <data name="IDS_COMMON_NONE" xml:space="preserve">
+    <value>(aucun)</value>
+  </data>
+  <data name="IDS_DECISION_SUMMARY" xml:space="preserve">
+    <value>Décision : {0} ; clé de portée : {1} ; autorisations correspondantes : {2} ; refus correspondants : {3}</value>
+  </data>
+  <data name="IDS_DECISION_ALLOW" xml:space="preserve">
+    <value>autoriser</value>
+  </data>
+  <data name="IDS_DECISION_DENY" xml:space="preserve">
+    <value>refuser</value>
+  </data>
+  <data name="IDS_SCOPE_DIMENSION_EXPRESSION_UNSUPPORTED" xml:space="preserve">
+    <value>L'expression de valeur '{1}' de la dimension '{0}' n'est pas prise en charge. Une dimension de collection ne prend en charge que la forme « une collection de navigation de la ressource (éventuellement filtrée par Where) puis sa valeur de chaîne », par exemple x =&gt; x.Members.Select(m =&gt; m.UserId), x =&gt; x.Members.Where(m =&gt; m.Status == "active").Select(m =&gt; m.UserId), ou x =&gt; x.MemberIds lorsque l'élément est lui-même une chaîne ; toute autre forme ne peut pas être déplacée dans une sous-requête EXISTS et est donc rejetée ici. Utilisez Map pour une valeur unique portée par la ligne elle-même.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NOT_PROVIDED" xml:space="preserve">
+    <value>Aucune politique n'a été fournie. La politique et le modèle doivent être écrits dans le même type déclarant ; la validation ne peut pas aboutir si l'un des deux est absent.</value>
+  </data>
+  <data name="IDS_SCOPE_POLICY_NEVER_ALLOW" xml:space="preserve">
+    <value>La politique ne peut structurellement jamais autoriser (Allow est en permanence faux), ce qui signifie généralement que chaque branche sous Any est une condition de refus. Veuillez vérifier la composition de la politique.</value>
+  </data>
+  <data name="IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE" xml:space="preserve">
+    <value>Le type de ressource '{0}' possède plus d'un modèle d'autorisation (un autre est '{1}'). Veuillez vous assurer que chaque type de ressource déclare exactement un modèle d'autorisation.</value>
+  </data>
+  <data name="IDS_SCOPE_SUBJECT_RESOLVER_MISSING" xml:space="preserve">
+    <value>La portée des données est activée (un modèle de portée ou une déclaration [Permission] existe) mais {0} n'est pas enregistré. Veuillez fournir une implémentation adossée aux données d'autorisation dans les enregistrements de services.</value>
+  </data>
+  <data name="IDS_SCOPE_GUARD_NOT_RESOLVED" xml:space="preserve">
+    <value>Le type de ressource est contraint par la portée des données, mais {0} ne peut pas être résolu depuis la portée de l'objet. Veuillez vous assurer que AddPermission a été appelée.</value>
+  </data>
+  <data name="IDS_SCOPE_EMPTY_SUBJECT_READONLY" xml:space="preserve">
+    <value>{0}.{1} est une instance partagée en lecture seule à laquelle aucune attribution ne peut être ajoutée ; appelez d'abord Clone() lorsqu'une copie modifiable est nécessaire.</value>
+  </data>
+  <data name="IDS_SCOPE_SUBCOLLECTION_NOT_LOADED" xml:space="preserve">
+    <value>Échec de l'évaluation de la portée des données : la dimension de table enfant '{0}' du type de ressource '{1}' (source de la valeur : {2}) est indisponible lors de l'évaluation d'une seule ligne — la collection enfant correspondante n'est pas chargée (référence null). L'évaluation d'une seule ligne calcule le même arbre d'expression en mémoire et nécessite un graphe d'objets complet ; comme un résultat indécidable constitue un échec, une exception est levée ici au lieu d'un refus silencieux. Comment corriger : ① utilisez IScopeGuard.Apply pour le pushing vers le bas côté lecture (EXISTS côté base de données, recommandé) ; ② chargez la collection enfant avec l'objet (par exemple Include dans EF Core) ; ③ supprimez l'initialiseur de la propriété de collection (par exemple = []) — sinon « non chargée » devient « collection vide » et est refusé silencieusement.</value>
+  </data>
+</root>

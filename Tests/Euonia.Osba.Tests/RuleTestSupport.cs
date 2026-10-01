@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 规则体系测试的公共脚手架与测试用业务对象。
@@ -72,7 +72,7 @@ public abstract class RuleTestCommand<T> : CommandObject<T>
 	}
 
 	[FactoryExecute]
-	protected override Task ExecuteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
 		Executed = true;
 		return Task.CompletedTask;
@@ -158,20 +158,20 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 	}
 
 	[FactoryInsert]
-	protected override Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		UpdateCount++;
 		return Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		DeleteCount++;
 		return Task.CompletedTask;
@@ -217,7 +217,7 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 	}
 
 	[FactoryUpdate]
-	protected override Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		UpdateCount++;
 		return Task.CompletedTask;
@@ -253,7 +253,7 @@ public class RulePropertyBoundEditable : EditableObject<RulePropertyBoundEditabl
 	}
 
 	[FactoryUpdate]
-	protected override Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
@@ -319,7 +319,7 @@ public class RuleDeleteEditable : EditableObject<RuleDeleteEditable>
 	}
 
 	[FactoryDelete]
-	protected override Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		DeleteCount++;
 		return Task.CompletedTask;

@@ -120,4 +120,19 @@
   <data name="IDS_PATH_CAN_NOT_BE_THE_ROOT" xml:space="preserve">
     <value>路径不能是根目录。</value>
   </data>
+  <data name="IDS_PATH_VALIDATION_ERROR" xml:space="preserve">
+    <value>{0} 无效：{1}{2}</value>
+  </data>
+  <data name="IDS_PATH_VALIDATION_ERROR_INDEX" xml:space="preserve">
+    <value>（索引 {0}）</value>
+  </data>
+  <data name="IDS_NODE_DOES_NOT_EXIST" xml:space="preserve">
+    <value>节点 '{0}' 不存在</value>
+  </data>
+  <data name="IDS_UNEXPECTED_NO_NODE_WHEN_CREATING_CHILD" xml:space="preserve">
+    <value>创建目录 '{1}' 的子节点时收到了 {0}</value>
+  </data>
+  <data name="IDS_NODE_CREATED_BUT_NO_LONGER_EXISTS" xml:space="preserve">
+    <value>节点 '{0}' 已创建，但已不存在</value>
+  </data>
 </root>

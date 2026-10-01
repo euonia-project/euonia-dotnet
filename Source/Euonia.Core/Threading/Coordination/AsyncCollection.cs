@@ -130,10 +130,10 @@ public sealed class AsyncCollection<T>
 
 			// 如果队列已被标记为完成，则中止。
 			if (_completed)
-				throw new InvalidOperationException("Add failed; the producer/consumer collection has completed adding.");
+				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_ADD_ALREADY_COMPLETED);
 
 			if (!_collection.TryAdd(item))
-				throw new InvalidOperationException("Add failed; the add to the underlying collection failed.");
+				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_ADD_FAILED);
 
 			_completedOrNotEmpty.Notify();
 		}
@@ -257,10 +257,10 @@ public sealed class AsyncCollection<T>
 			}
 
 			if (_completed && Empty)
-				throw new InvalidOperationException("Take failed; the producer/consumer collection has completed adding and is empty.");
+				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY);
 
 			if (!_collection.TryTake(out T item))
-				throw new InvalidOperationException("Take failed; the take from the underlying collection failed.");
+				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_TAKE_FAILED);
 
 			_completedOrNotFull.Notify();
 			return item;

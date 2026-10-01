@@ -100,7 +100,7 @@ public static class ServiceCollectionCommonExtensions
 			var service = services.GetSingletonInstanceOrNull<T>();
 			if (service == null)
 			{
-				throw new InvalidOperationException("Could not find singleton service: " + typeof(T).AssemblyQualifiedName);
+				throw new InvalidOperationException(string.Format(Resources.IDS_SINGLETON_SERVICE_NOT_FOUND, typeof(T).AssemblyQualifiedName));
 			}
 
 			return service;
@@ -248,7 +248,7 @@ public static class ServiceCollectionCommonExtensions
 		{
 			if (services.Any(s => s.ServiceType == typeof(ObjectAccessor<T>)))
 			{
-				throw new Exception("An object accessor is registered before for type: " + typeof(T).AssemblyQualifiedName);
+				throw new Exception(string.Format(Resources.IDS_OBJECT_ACCESSOR_ALREADY_REGISTERED, typeof(T).AssemblyQualifiedName));
 			}
 
 			//Add to the beginning for fast retrieve
@@ -278,7 +278,7 @@ public static class ServiceCollectionCommonExtensions
 		public T GetObject<T>()
 			where T : class
 		{
-			return services.GetObjectOrNull<T>() ?? throw new Exception($"Could not find an object of {typeof(T).AssemblyQualifiedName} in services. Be sure that you have used AddObjectAccessor before!");
+			return services.GetObjectOrNull<T>() ?? throw new Exception(string.Format(Resources.IDS_OBJECT_NOT_FOUND_IN_SERVICES, typeof(T).AssemblyQualifiedName));
 		}
 
 		/// <summary>
@@ -636,7 +636,7 @@ public static class ServiceCollectionCommonExtensions
 		{
 			if (!Singleton<NamedServiceContainer<TService>>.Instance.TryAdd(name, typeof(TImplementation)))
 			{
-				throw new InvalidOperationException($"{nameof(TService)} with name '{name}' already registered.");
+				throw new InvalidOperationException(string.Format(Resources.IDS_NAMED_SERVICE_ALREADY_REGISTERED, nameof(TService), name));
 			}
 
 			services.AddNamedService((key, provider) =>
@@ -666,7 +666,7 @@ public static class ServiceCollectionCommonExtensions
 		{
 			if (!Singleton<NamedServiceContainer<TService>>.Instance.TryAdd(name, typeof(TImplementation)))
 			{
-				throw new InvalidOperationException($"{nameof(TService)} with name '{name}' already registered.");
+				throw new InvalidOperationException(string.Format(Resources.IDS_NAMED_SERVICE_ALREADY_REGISTERED, nameof(TService), name));
 			}
 
 			services.AddNamedService((key, provider) =>
@@ -696,7 +696,7 @@ public static class ServiceCollectionCommonExtensions
 		{
 			if (!Singleton<NamedServiceContainer<TService>>.Instance.TryAdd(name, typeof(TImplementation)))
 			{
-				throw new InvalidOperationException($"{nameof(TService)} with name '{name}' already registered.");
+				throw new InvalidOperationException(string.Format(Resources.IDS_NAMED_SERVICE_ALREADY_REGISTERED, nameof(TService), name));
 			}
 
 			services.AddNamedService((key, provider) =>

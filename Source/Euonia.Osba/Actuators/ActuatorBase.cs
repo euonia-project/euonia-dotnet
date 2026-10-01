@@ -12,7 +12,8 @@ namespace Nerosoft.Euonia.Osba;
 /// 构建器配置与对象工厂委托，并通过 <see cref="Handle(System.Func{TTarget,System.Threading.Tasks.Task})"/> 或
 /// <see cref="Handle(Action{TTarget})"/> 注册处理逻辑；调用 <see cref="ExecuteAsync(CancellationToken)"/> 触发完整流程。
 /// 终步骤 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 由派生类实现：
-/// 可编辑对象（<see cref="EditableActuator{TTarget}"/>）执行保存，命令对象（<see cref="ExecuteActuator{TTarget}"/>）执行命令体。
+/// <see cref="EditableActuator{TTarget}"/> 对可编辑对象执行保存，<see cref="CreateActuator{TTarget}"/>
+/// 对可保存目标执行插入保存、其余类型原样返回，<see cref="ExecuteActuator{TTarget}"/> 对命令对象执行命令体。
 /// </para>
 /// <para>
 /// 规则可由调用方按操作指定（<see cref="WithRule(IRuleBase)"/> 等）。附加的规则只挂在本次操作取到的
@@ -186,9 +187,10 @@ public abstract class ActuatorBase<TTarget>
 	/// <returns>当前执行器，用于链式调用。</returns>
 	/// <remarks>
 	/// 按<b>精确类型</b>匹配（<c>rule.GetType() == typeof(TRule)</c>），不含派生类型：
-	/// 若按可赋值性匹配，<c>BypassRule&lt;RuleBase&gt;()</c> 会连带命中框架自动注入的
-	/// <see cref="ScopePolicyRule"/> 等规则，一次笔误就把数据权限信号整体关掉。
-	/// 绕过只作用于本对象实例，不影响同类型的其他对象。
+	/// 绕过声明的是「这一条规则整体」，若按可赋值性匹配，<c>BypassRule&lt;RuleBase&gt;()</c> 会把所有
+	/// 派生规则一并排除——「排除一条」变成「关掉一批」。绕过只作用于本对象实例，
+	/// 不影响同类型的其他对象。<b>权限无关</b>：权限由工厂边界独立裁决（<see cref="ObjectAuthorization"/>
+	/// / <see cref="ScopeAuthorization"/>），本方法影响不了它。
 	/// </remarks>
 	public ActuatorBase<TTarget> BypassRule<TRule>()
 		where TRule : IRuleBase
@@ -224,7 +226,7 @@ public abstract class ActuatorBase<TTarget>
 	/// 与 <see cref="BusinessObject.SuspendRuleChecking"/> 分开记录，因此不会覆盖调用方自己挂起的检查状态。
 	/// </para>
 	/// </remarks>
-	public ActuatorBase<TTarget> WithoutRuleChecks()
+	public ActuatorBase<TTarget> BypassRuleChecks()
 	{
 		RuleScope.SkipAllChecks();
 		return this;
@@ -238,9 +240,10 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// <para>
 	/// 默认<b>不</b>检查，与 <see cref="ObservableObject{T}.MarkAsDeleted(bool)"/> 的默认值一致：
-	/// 越权删除由工厂边界抛 <see cref="System.Security.SecurityException"/>，
-	/// 而不是以验证错误的形式出现。开启后删除将改抛
-	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>——这是有意的行为切换。
+	/// 删除时的数据校验规则默认不执行。越权删除由<b>权限线</b>（工厂边界）抛
+	/// <see cref="System.Security.SecurityException"/>——它不受本开关影响；开启本开关改变的只是
+	/// 「删除是否跑验证规则」：存在 Error 级验证违规时抛
+	/// <see cref="Nerosoft.Euonia.Validation.ValidationException"/>。
 	/// </para>
 	/// <para>
 	/// 需要它的场景：<c>Delete(id).WithRule(...)</c> 附加的规则若要真正执行，必须同时开启本开关，
@@ -267,7 +270,6 @@ public abstract class ActuatorBase<TTarget>
 	/// 整个流程通过 <see cref="ActuatorBuilder{TTarget}"/> 的执行管道运行；若构建器启用了工作单元，
 	/// 处理逻辑将在事务边界内执行。终结步骤由 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 决定：
 	/// 可编辑对象在状态发生变更（<see cref="ObservableObject{T}.IsChanged"/>）时才保存，命令对象则执行命令体。
-	/// 领域事件的自动发布逻辑当前已注释停用。
 	/// </remarks>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>处理完成并终结后的目标对象。</returns>

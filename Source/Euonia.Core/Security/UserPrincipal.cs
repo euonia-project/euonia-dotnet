@@ -1,8 +1,5 @@
 using System.Security.Claims;
 
-// ReSharper disable UnusedMember.Global
-// ReSharper disable MemberCanBePrivate.Global
-
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
@@ -50,10 +47,8 @@ public class UserPrincipal
 				null or "Anonymous" => null,
 				// 对于 JWT/Bearer，优先使用 'sub' 声明
 				"Jwt" or "Bearer" or "JwtBearer" => Claims.FindFirst(UserClaimTypes.Subject)?.Value,
-				// 对于 Windows 身份验证，优先使用 NameIdentifier 声明
-				"Windows" => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-				// 对于 Cookie 身份验证，优先使用 NameIdentifier 声明
-				"Cookies" or "Cookie" => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+				// 对于 Windows、Cookie 身份验证，优先使用 NameIdentifier 声明
+				"Windows" or "Cookies" or "Cookie"  => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
 #if NET8_0_OR_GREATER
 				_ => PriorityValueFinder.Find<string>(queue =>
 				{
@@ -77,16 +72,22 @@ public class UserPrincipal
 	{
 		get
 		{
-			return Claims.Identity?.AuthenticationType switch
+			return Claims?.Identity?.AuthenticationType switch
 			{
 				null or "Anonymous" => null,
 				// 对于 JWT/Bearer，优先使用 'name' 声明
-				"Jwt" or "Bearer" => Claims?.FindFirst(UserClaimTypes.Name)?.Value,
-				// 对于 Windows 身份验证，优先使用 Name 声明
-				"Windows" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
-				// 对于 Cookie 身份验证，优先使用 Name 声明
-				"Cookies" or "Cookie" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
-				_ => null
+				"Jwt" or "Bearer" or "JwtBearer" => Claims?.FindFirst(UserClaimTypes.Name)?.Value,
+				// 对于 Windows、Cookie 身份验证，优先使用 Name 声明
+				"Windows" or "Cookies" or "Cookie" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
+#if NET8_0_OR_GREATER
+				_ => PriorityValueFinder.Find<string>(queue =>
+				{
+					queue.Enqueue(() => Claims.FindFirst(UserClaimTypes.Name)?.Value, 1);
+					queue.Enqueue(() => Claims.FindFirst(ClaimTypes.Name)?.Value, 2);
+				}, value => !string.IsNullOrEmpty(value))
+#else
+				_ => (Claims.FindFirst(UserClaimTypes.Name) ?? Claims.FindFirst(ClaimTypes.Name))?.Value
+#endif
 			};
 		}
 	}

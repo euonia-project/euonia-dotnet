@@ -467,7 +467,7 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	/// </summary>
 	private static void ThrowArgumentExceptionForKeyNotFound(TKey key)
 	{
-		throw new ArgumentException($"The target key {key} was not present in the dictionary");
+		throw new ArgumentException(string.Format(Resources.IDS_KEY_NOT_PRESENT, key));
 	}
 }
 #pragma warning restore CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type

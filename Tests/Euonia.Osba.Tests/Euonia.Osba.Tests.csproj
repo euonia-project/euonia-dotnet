@@ -2,8 +2,21 @@
 
     <Import Project="..\common.props" />
 
+    <!--
+      Osba 本身不引用引擎（见 Euonia.Osba.csproj 的说明）；本测试项目要跑「接引擎」的行为，
+      因此自己引用引擎。想验证「不接引擎也能用权限」的用例在 Euonia.Osba.Standalone.Tests。
+    -->
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Osba\Euonia.Osba.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Security\Euonia.Security.csproj" />
+    </ItemGroup>
+
+    <!--
+      数据权限的「可下推」承诺只能在真实提供程序上证明：子表维度是否真的翻译成 EXISTS 相关子查询，
+      表达式形状的断言回答不了（译器/提供程序才是裁判）。故这里引入 EF Core + SQLite 做翻译与执行验证。
+    -->
+    <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     </ItemGroup>
 
     <ItemGroup>

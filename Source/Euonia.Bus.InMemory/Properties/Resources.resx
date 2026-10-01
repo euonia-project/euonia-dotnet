@@ -98,4 +98,31 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_MESSAGE_TYPE_NOT_QUEUE_TOPIC_REQUEST" xml:space="preserve">
+    <value>The message type {0} is not a queue/topic/request type.</value>
+  </data>
+  <data name="IDS_NO_RESPONSE_RECEIVED" xml:space="preserve">
+    <value>No response was received for the given request message.</value>
+  </data>
+  <data name="IDS_RESPONSE_ALREADY_ISSUED" xml:space="preserve">
+    <value>A response has already been issued for the current message.</value>
+  </data>
+  <data name="IDS_KEY_NOT_PRESENT" xml:space="preserve">
+    <value>The target key {0} was not present in the dictionary</value>
+  </data>
+  <data name="IDS_COLLECTION_CORRUPTED_STATE" xml:space="preserve">
+    <value>The current collection is in a corrupted state.</value>
+  </data>
+  <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
+    <value>No recipients registered for the input message type.</value>
+  </data>
+  <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
+    <value>No recipients registered for the input message type '{0}' and token.</value>
+  </data>
+  <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
+    <value>No recipients registered for the input message type '{0}' and token to deliver.</value>
+  </data>
+  <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
+    <value>The target recipient has already subscribed to the target message.</value>
+  </data>
 </root>

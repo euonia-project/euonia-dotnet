@@ -37,7 +37,7 @@ public interface IBusinessObject : IUseBusinessContext, INotifyPropertyChanged, 
 	/// 确保 propertyInfo 参数引用的是可读的有效属性。此方法不会设置或修改属性值。
 	/// </remarks>
 	/// <param name="propertyInfo">提供要读取属性元数据的对象。必须表示可读属性；否则结果可能为 <c>null</c>。</param>
-	/// <returns>指定属性的值；如果属性尚未设置，则为 <c>null</c>。</returns>
+	/// <returns>指定属性的值；如果属性尚未设置，则返回该属性注册的默认值（<see cref="IPropertyInfo.DefaultValue"/>，例如字符串为空串、数值为 0，而非 <c>null</c>）。</returns>
 	object ReadProperty(IPropertyInfo propertyInfo);
 
 	/// <summary>
@@ -48,7 +48,7 @@ public interface IBusinessObject : IUseBusinessContext, INotifyPropertyChanged, 
 	/// 确保提供的属性名称对应一个可读的有效属性。此方法不会设置或修改属性值。
 	/// </remarks>
 	/// <param name="propertyName">要读取的属性名称。必须表示可读属性。</param>
-	/// <returns>指定属性的值；如果属性尚未设置，则为 <c>null</c>。</returns>
+	/// <returns>指定属性的值；如果属性尚未设置，则返回该属性注册的默认值（<see cref="IPropertyInfo.DefaultValue"/>，而非 <c>null</c>）。</returns>
 	object ReadProperty(string propertyName);
 	
 	/// <summary>

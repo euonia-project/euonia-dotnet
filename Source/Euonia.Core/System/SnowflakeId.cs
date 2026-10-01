@@ -72,7 +72,7 @@ internal class SnowflakeId
         {
             if (machineId > MAX_MACHINE_ID)
             {
-                throw new Exception("机器码ID非法");
+                throw new Exception(Nerosoft.Euonia.Core.Properties.Resources.IDS_MACHINE_ID_INVALID);
             }
 
             _machineId = machineId;
@@ -82,7 +82,7 @@ internal class SnowflakeId
         {
             if (datacenterId > MAX_DATACENTER_ID)
             {
-                throw new Exception("数据中心ID非法");
+                throw new Exception(Nerosoft.Euonia.Core.Properties.Resources.IDS_DATA_CENTER_ID_INVALID);
             }
 
             _datacenterId = datacenterId;
@@ -142,7 +142,7 @@ internal class SnowflakeId
 
             if (timestamp < _lastTimestamp)
             {
-                throw new Exception("时间戳比上一次生成ID时时间戳还小，故异常");
+                throw new Exception(Nerosoft.Euonia.Core.Properties.Resources.IDS_TIMESTAMP_EARLIER_THAN_LAST);
             }
 
             _lastTimestamp = timestamp; //把当前时间戳保存为最后生成ID的时间戳

@@ -98,4 +98,16 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_BEHAVIOR_TYPE_NOT_INJECTED" xml:space="preserve">
+    <value>The type of {0} not injected.</value>
+  </data>
+  <data name="IDS_MULTIPLE_METHODS" xml:space="preserve">
+    <value>Multiple methods.</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>Method not found.</value>
+  </data>
+  <data name="IDS_CANCELLATION_TOKEN_NOT_SUPPORTED" xml:space="preserve">
+    <value>Please remove the CancellationToken parameter from handle method.</value>
+  </data>
 </root>

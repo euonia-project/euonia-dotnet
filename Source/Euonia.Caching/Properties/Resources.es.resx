@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_DATE_KIND_OF_PARAMETER_MUST_BE" xml:space="preserve">
+    <value>El DateKind del parámetro {0} debe ser {1}.</value>
+  </data>
+  <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_BETWEEN" xml:space="preserve">
+    <value>El tiempo de espera de expiración debe estar entre {0} y {1}.</value>
+  </data>
+  <data name="IDS_EXPIRATION_TIMEOUT_MUST_BE_GREATER_THAN_ZERO_IF_EXPIRATION_MODE_IS_DEFINED" xml:space="preserve">
+    <value>Si se define el modo de expiración, el tiempo de espera de expiración debe ser mayor que cero.</value>
+  </data>
+  <data name="IDS_EXPIRATION_VALUE_MUST_BE_GREATER_THAN_ZERO" xml:space="preserve">
+    <value>El valor de expiración debe ser mayor que cero.</value>
+  </data>
+  <data name="IDS_VALUE_MUST_BE_GREATER_THAN" xml:space="preserve">
+    <value>El valor debe ser mayor que {0}.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>El CacheItem que se va a agregar no puede ser null.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL" xml:space="preserve">
+    <value>No se pudo actualizar '{0}:{1}' porque la fábrica de valores devolvió null.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_TOO_MANY_RETRIES" xml:space="preserve">
+    <value>No se pudo actualizar '{0}:{1}' tras demasiados reintentos: {2}.</value>
+  </data>
+  <data name="IDS_UPDATE_FAILED_REGION_KEY_NOT_FOUND" xml:space="preserve">
+    <value>No se pudo actualizar '{0}:{1}' porque no existían la región o la clave.</value>
+  </data>
+  <data name="IDS_TIMEOUT_CANNOT_BE_ZERO" xml:space="preserve">
+    <value>El tiempo de espera no puede ser cero si el modo de expiración no está definido en 'None'.</value>
+  </data>
+  <data name="IDS_ONLY_ONE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>Solo un manipulador de caché puede ser el origen del backplane.</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE" xml:space="preserve">
+    <value>Mensaje no válido</value>
+  </data>
+  <data name="IDS_INVALID_MESSAGE_TYPE" xml:space="preserve">
+    <value>Tipo de mensaje no válido</value>
+  </data>
+  <data name="IDS_INVALID_V2_BACKPLANE_MESSAGE" xml:space="preserve">
+    <value>Mensaje de backplane v2 no válido</value>
+  </data>
+  <data name="IDS_CANNOT_READ_INT32" xml:space="preserve">
+    <value>No se puede leer INT32. No hay bytes adicionales.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTE" xml:space="preserve">
+    <value>No se puede leer el byte. No hay bytes adicionales.</value>
+  </data>
+  <data name="IDS_CANNOT_READ_BYTES" xml:space="preserve">
+    <value>No se pueden leer los bytes. No hay bytes adicionales.</value>
+  </data>
+  <data name="IDS_INVALID_LENGTH_FOR_STRING" xml:space="preserve">
+    <value>Longitud no válida para la cadena de caracteres</value>
+  </data>
+  <data name="IDS_CANNOT_READ_STRING" xml:space="preserve">
+    <value>No se puede leer la cadena de caracteres. No hay bytes adicionales.</value>
+  </data>
+  <data name="IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT" xml:space="preserve">
+    <value>El modo de expiración se definió sin tiempo de espera.</value>
+  </data>
+  <data name="IDS_COULD_NOT_INITIALIZE_HANDLE" xml:space="preserve">
+    <value>No se pudo inicializar el manipulador del tipo {0}</value>
+  </data>
+  <data name="IDS_NO_CACHE_HANDLES_DEFINED" xml:space="preserve">
+    <value>No se definió ningún manipulador de caché.</value>
+  </data>
+  <data name="IDS_LAST_HANDLE_MUST_BE_BACKPLANE_SOURCE" xml:space="preserve">
+    <value>El último manipulador de caché debe ser el origen del backplane.</value>
+  </data>
+  <data name="IDS_TYPE_DOES_NOT_EXTEND_FROM" xml:space="preserve">
+    <value>El tipo {0} no deriva de {1}.</value>
+  </data>
+  <data name="IDS_COULD_NOT_LOAD_TYPE" xml:space="preserve">
+    <value>No se pudo cargar el tipo '{0}'. Si la resolución sigue fallando, agregue TypeCache.RegisterResolveType para resolver el tipo.</value>
+  </data>
+  <data name="IDS_BACKPLANE_REQUIRES_SOURCE_HANDLE" xml:space="preserve">
+    <value>Si la configuración define un backplane, al menos un manipulador de caché debe marcarse como origen del backplane.</value>
+  </data>
+  <data name="IDS_NO_MATCHING_CONSTRUCTOR" xml:space="preserve">
+    <value>No se encontró ningún constructor que coincida con el tipo '{0}'. Se intentó coincidir con [{1}], pero no hay {2}.</value>
+  </data>
+  <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
+    <value>No se encontró ningún constructor que coincida con el tipo '{0}', ni un constructor vacío.</value>
+  </data>
+</root>

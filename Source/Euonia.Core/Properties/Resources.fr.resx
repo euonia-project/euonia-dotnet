@@ -1,0 +1,274 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+		Microsoft ResX Schema
+
+		Version 1.3
+
+		The primary goals of this format is to allow a simple XML format 
+		that is mostly human readable. The generation and parsing of the 
+		various data types are done through the TypeConverter classes 
+		associated with the data types.
+
+		Example:
+
+		... ado.net/XML headers & schema ...
+		<resheader name="resmimetype">text/microsoft-resx</resheader>
+		<resheader name="version">1.3</resheader>
+		<resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+		<resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+		<data name="Name1">this is my long string</data>
+		<data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+		<data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+			[base64 mime encoded serialized .NET Framework object]
+		</data>
+		<data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+			[base64 mime encoded string representing a byte array form of the .NET Framework object]
+		</data>
+
+		There are any number of "resheader" rows that contain simple 
+		name/value pairs.
+
+		Each data row contains a name, and value. The row also contains a 
+		type or mimetype. Type corresponds to a .NET class that support 
+		text/value conversion through the TypeConverter architecture. 
+		Classes that don't support this are serialized and stored with the 
+		mimetype set.
+
+		The mimetype is used for serialized objects, and tells the 
+		ResXResourceReader how to depersist the object. This is currently not 
+		extensible. For a given mimetype the value must be set accordingly:
+
+		Note - application/x-microsoft.net.object.binary.base64 is the format 
+		that the ResXResourceWriter will generate, however the reader can 
+		read any of the formats listed below.
+
+		mimetype: application/x-microsoft.net.object.binary.base64
+		value   : The object must be serialized with 
+			: System.Serialization.Formatters.Binary.BinaryFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.soap.base64
+		value   : The object must be serialized with 
+			: System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+			: and then encoded with base64 encoding.
+
+		mimetype: application/x-microsoft.net.object.bytearray.base64
+		value   : The object must be serialized into a byte array 
+			: using a System.ComponentModel.TypeConverter
+			: and then encoded with base64 encoding.
+	-->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>1.3</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="IDS_CANNOT_LOCK_MUTEX_WITH_EXPIRED_STATE" xml:space="preserve">
+    <value>Impossible de verrouiller un mutex dont l'état a expiré.</value>
+  </data>
+  <data name="IDS_PARAMETER_CANNOT_NULL_OR_EMPTY" xml:space="preserve">
+    <value>{0} ne peut pas être nul ni vide.</value>
+  </data>
+  <data name="IDS_CAPACITY_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>La capacité ne peut pas être négative.</value>
+  </data>
+  <data name="IDS_VALUE_CANNOT_BE_NULL" xml:space="preserve">
+    <value>La valeur ne peut pas être nulle.</value>
+  </data>
+  <data name="IDS_VALUE_IS_OF_INCORRECT_TYPE" xml:space="preserve">
+    <value>La valeur est d'un type incorrect.</value>
+  </data>
+  <data name="IDS_CAPACITY_CANNOT_BE_SET_TO_A_VALUE_LESS_THAN_COUNT" xml:space="preserve">
+    <value>La capacité ne peut pas être définie sur une valeur inférieure à Count.</value>
+  </data>
+  <data name="IDS_GIVEN_TYPE_SHOULD_BE_INSTANCE_OF_TYPE" xml:space="preserve">
+    <value>Le type fourni ({0}) doit être une instance de {1}.</value>
+  </data>
+  <data name="IDS_EXPRESSION_IS_NOT_A_MEMBER_ACCESS_EXPRESSION" xml:space="preserve">
+    <value>L'expression n'est pas une expression d'accès à un membre.</value>
+  </data>
+  <data name="IDS_MEMBER_ACCESS_EXPRESSION_DOES_NOT_ACCESS_A_PROPERTY" xml:space="preserve">
+    <value>L'expression d'accès à un membre n'accède pas à une propriété.</value>
+  </data>
+  <data name="IDS_NOT_A_LAMBDA_EXPRESSION" xml:space="preserve">
+    <value>Ce n'est pas une expression lambda.</value>
+  </data>
+  <data name="IDS_NOT_A_METHOD_CALL" xml:space="preserve">
+    <value>Ce n'est pas un appel de méthode.</value>
+  </data>
+  <data name="IDS_NOT_A_MEMBER_ACCESS" xml:space="preserve">
+    <value>Ce n'est pas un accès à un membre.</value>
+  </data>
+  <data name="IDS_DESTINATION_ARRAY_CANNOT_BE_NULL" xml:space="preserve">
+    <value>Le tableau de destination ne peut pas être nul.</value>
+  </data>
+  <data name="IDS_DESTINATION_ARRAY_IS_OF_INCORRECT_TYPE" xml:space="preserve">
+    <value>Le tableau de destination est d'un type incorrect.</value>
+  </data>
+  <data name="IDS_DESTINATION_ARRAY_MUST_BE_SINGLE_DIMENSIONAL" xml:space="preserve">
+    <value>Le tableau de destination doit être à une seule dimension.</value>
+  </data>
+  <data name="IDS_INVALID_COUNT" xml:space="preserve">
+    <value>Nombre {0} non valide.</value>
+  </data>
+  <data name="IDS_INVALID_EXISTING_INDEX_FOR_SOURCE_LENGTH" xml:space="preserve">
+    <value>Index existant {0} non valide pour une longueur source de {1}.</value>
+  </data>
+  <data name="IDS_INVALID_NEW_INDEX_FOR_SOURCE_LENGTH" xml:space="preserve">
+    <value>Nouvel index {0} non valide pour une longueur source de {1}.</value>
+  </data>
+  <data name="IDS_INVALID_OFFSET" xml:space="preserve">
+    <value>Décalage {0} non valide.</value>
+  </data>
+  <data name="IDS_INVALID_OFFSET_OR_COUNT_FOR_SOURCE_LENGTH" xml:space="preserve">
+    <value>Décalage ({0}) ou nombre ({1}) non valide pour une longueur source de {2}.</value>
+  </data>
+  <data name="IDS_MAXIMUM_COUNT_CANNOT_BE_LESS_THAN_THE_NUMBER_OF_ELEMENTS_IN_THE_COLLECTION" xml:space="preserve">
+    <value>Le nombre maximal ne peut pas être inférieur au nombre d'éléments de la collection.</value>
+  </data>
+  <data name="IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_ZERO" xml:space="preserve">
+    <value>Le nombre maximal doit être supérieur à zéro.</value>
+  </data>
+  <data name="IDS_PARAMETER_CANNOT_NULL_OR_WHITE_SPACE" xml:space="preserve">
+    <value>{0} ne peut pas être nul, vide ou composé uniquement d'espaces blancs.</value>
+  </data>
+  <data name="IDS_PARAMETER_CAN_NOT_BE_NULL" xml:space="preserve">
+    <value>{0} ne peut pas être nul.</value>
+  </data>
+  <data name="IDS_PARAMETER_IS_NOT_MATCH_WITH_PATTERN" xml:space="preserve">
+    <value>{0} ne correspond pas à {1}.</value>
+  </data>
+  <data name="IDS_PARAMETER_LENGTH_MUST_BE_EQUAL_OR_GREATER_THAN" xml:space="preserve">
+    <value>La longueur de {0} doit être égale ou supérieure à {1}.</value>
+  </data>
+  <data name="IDS_PARAMETER_LENGTH_MUST_BE_EQUAL_OR_LOWER_THAN" xml:space="preserve">
+    <value>La longueur de {0} doit être égale ou inférieure à {1}.</value>
+  </data>
+  <data name="IDS_TARGET_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>targetIndex doit être compris entre 0 et {0}</value>
+  </data>
+  <data name="IDS_CYCLIC_DEPENDENCY_FOUND" xml:space="preserve">
+    <value>Dépendance cyclique détectée ! Élément : {0}</value>
+  </data>
+  <data name="IDS_ENUM_FIELD_NOT_DEFINED" xml:space="preserve">
+    <value>Le champ '{0}' n'est pas défini.</value>
+  </data>
+  <data name="IDS_RESOURCE_PROPERTY_NOT_DEFINED" xml:space="preserve">
+    <value>La propriété '{0}' n'est pas définie dans le type de ressource '{1}'.</value>
+  </data>
+  <data name="IDS_REQUESTED_KEY_NOT_PRESENT" xml:space="preserve">
+    <value>La clé demandée était absente de la collection</value>
+  </data>
+  <data name="IDS_LENGTH_GREATER_THAN_STRING_LENGTH" xml:space="preserve">
+    <value>L'argument length ne peut pas être supérieur à la longueur de la chaîne fournie !</value>
+  </data>
+  <data name="IDS_METHOD_INSTANCE_IS_NULL" xml:space="preserve">
+    <value>L'instance de méthode est nulle.</value>
+  </data>
+  <data name="IDS_TYPE_SHOULD_BE_ASSIGNABLE_TO" xml:space="preserve">
+    <value>{0} (type de {1}) doit être assignable à {2} !</value>
+  </data>
+  <data name="IDS_OPTIONAL_CONTAINS_NO_VALUE" xml:space="preserve">
+    <value>L'Optional ne contient aucune valeur.</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_CHARS" xml:space="preserve">
+    <value>L'alphabet doit contenir au moins {0:N0} caractères uniques.</value>
+  </data>
+  <data name="IDS_ALPHABET_MIN_UNIQUE_NON_SEPARATOR_CHARS" xml:space="preserve">
+    <value>L'alphabet doit contenir au moins {0:N0} caractères uniques qui ne sont pas des séparateurs.</value>
+  </data>
+  <data name="IDS_HASH_PRODUCED_NO_RESULT" xml:space="preserve">
+    <value>Le hachage fourni n'a produit aucun résultat.</value>
+  </data>
+  <data name="IDS_MACHINE_ID_INVALID" xml:space="preserve">
+    <value>L'identifiant de machine n'est pas valide.</value>
+  </data>
+  <data name="IDS_DATA_CENTER_ID_INVALID" xml:space="preserve">
+    <value>L'identifiant du centre de données n'est pas valide.</value>
+  </data>
+  <data name="IDS_TIMESTAMP_EARLIER_THAN_LAST" xml:space="preserve">
+    <value>L'horodatage est antérieur à celui du dernier identifiant généré.</value>
+  </data>
+  <data name="IDS_INFINITE_TIMEOUT_CANNOT_CONVERT_TO_SECONDS" xml:space="preserve">
+    <value>un délai d'attente infini ne peut pas être converti en secondes</value>
+  </data>
+  <data name="IDS_DELAY_CANCELED" xml:space="preserve">
+    <value>Le délai a été annulé.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_ALREADY_COMPLETED" xml:space="preserve">
+    <value>Échec de l'ajout ; la collection producteur/consommateur a terminé l'ajout.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_ADD_FAILED" xml:space="preserve">
+    <value>Échec de l'ajout ; l'ajout à la collection sous-jacente a échoué.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>Échec de l'extraction ; la collection producteur/consommateur a terminé l'ajout et est vide.</value>
+  </data>
+  <data name="IDS_ASYNC_COLLECTION_TAKE_FAILED" xml:space="preserve">
+    <value>Échec de l'extraction ; l'extraction depuis la collection sous-jacente a échoué.</value>
+  </data>
+  <data name="IDS_NOT_YET_CREATED" xml:space="preserve">
+    <value>Pas encore créé.</value>
+  </data>
+  <data name="IDS_QUEUE_ENQUEUE_COMPLETED" xml:space="preserve">
+    <value>Échec de l'ajout à la file d'attente ; la file d'attente producteur/consommateur a terminé l'ajout.</value>
+  </data>
+  <data name="IDS_QUEUE_DEQUEUE_COMPLETED_AND_EMPTY" xml:space="preserve">
+    <value>Échec du retrait de la file d'attente ; la file d'attente producteur/consommateur a terminé l'ajout et est vide.</value>
+  </data>
+  <data name="IDS_DEQUE_EMPTY" xml:space="preserve">
+    <value>La file d'attente double est vide.</value>
+  </data>
+  <data name="IDS_TYPE_NOT_ENUM" xml:space="preserve">
+    <value>Le type {0} n'est pas une énumération.</value>
+  </data>
+  <data name="IDS_EXPRESSION_DOES_NOT_REFER_TO_PROPERTY" xml:space="preserve">
+    <value>L'expression '{0}' ne fait pas référence à une propriété.</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_FOUND_ON_TYPE" xml:space="preserve">
+    <value>Propriété {0} introuvable sur le type {1}.</value>
+  </data>
+  <data name="IDS_METHOD_NOT_FOUND" xml:space="preserve">
+    <value>Méthode {0} introuvable</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_PROPERTY" xml:space="preserve">
+    <value>Le membre n'est pas une propriété</value>
+  </data>
+  <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
+    <value>Le membre n'est pas un champ</value>
+  </data>
+</root>

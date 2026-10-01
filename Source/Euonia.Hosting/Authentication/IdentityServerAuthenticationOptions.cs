@@ -232,7 +232,7 @@ public class IdentityServerAuthenticationOptions : AuthenticationSchemeOptions
 
 		if (string.IsNullOrWhiteSpace(ApiName))
 		{
-			throw new ArgumentException("ApiName must be configured if ApiSecret is set.");
+			throw new ArgumentException(Resources.IDS_API_NAME_REQUIRED_WHEN_SECRET_SET);
 		}
 
 		introspectionOptions.Authority = Authority;

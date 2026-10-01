@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
 		Microsoft ResX Schema
@@ -105,5 +105,77 @@
   </data>
   <data name="IDS_RULE_MESSAGE_REQUIRED" xml:space="preserve">
     <value>规则消息必需。</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>资源类型 '{0}' 已声明数据权限模型，但目标对象未接入 BusinessContext，无法判定 {1}。请通过工厂创建/读取对象，或在调用前设置 BusinessContext。</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>业务对象 '{0}' 声明了权限要求，但未接入 BusinessContext，无法判定 {1}。请通过工厂创建/读取对象，或在调用前设置 BusinessContext。</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>业务对象 '{0}' 声明了权限要求，但容器中未注册 {1}。请调用 AddPermission 接入鉴权实现，或注册你自己的 IPermissionChecker。</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_REGISTERED" xml:space="preserve">
+    <value>属性 '{0}' 未注册。</value>
+  </data>
+  <data name="IDS_PROPERTY_TYPE_MISMATCH" xml:space="preserve">
+    <value>属性 '{0}' 注册为 '{1}'，与期望的类型 '{2}' 不匹配。</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_NOT_REGISTERED" xml:space="preserve">
+    <value>属性名 '{0}' 未注册</value>
+  </data>
+  <data name="IDS_PROPERTY_LIST_LOCKED" xml:space="preserve">
+    <value>类型 '{0}' 的属性列表已锁定，不能修改。</value>
+  </data>
+  <data name="IDS_PROPERTY_ALREADY_REGISTERED" xml:space="preserve">
+    <value>属性 '{0}' 已在类型 '{1}' 上注册过了。</value>
+  </data>
+  <data name="IDS_PROPERTY_GET_NOT_ALLOWED" xml:space="preserve">
+    <value>不允许读取属性。{0}</value>
+  </data>
+  <data name="IDS_PROPERTY_SET_NOT_ALLOWED" xml:space="preserve">
+    <value>不允许写入属性。{0}</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_ALLOWED" xml:space="preserve">
+    <value>操作未被允许。{0}：{1}。</value>
+  </data>
+  <data name="IDS_SCOPE_DENIED" xml:space="preserve">
+    <value>数据权限拒绝。{0}（{1}）：{2}。{3}</value>
+  </data>
+  <data name="IDS_REGULAR_NOT_ON_STRING_PROPERTY" xml:space="preserve">
+    <value>正则表达式不能应用于属性 '{0}'。</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_APPLY_READONLY" xml:space="preserve">
+    <value>该操作不适用于 ReadOnlyObject。</value>
+  </data>
+  <data name="IDS_NO_PENDING_CHANGE" xml:space="preserve">
+    <value>对象没有待保存的变更。</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_MATCHED_ARGUMENTS" xml:space="preserve">
+    <value>没有匹配到指定参数的方法。</value>
+  </data>
+  <data name="IDS_MULTIPLE_METHODS_MATCHED" xml:space="preserve">
+    <value>匹配到多个方法。</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_WITH_ATTRIBUTE" xml:space="preserve">
+    <value>{1} 上缺少带特性 '{0}' 的方法</value>
+  </data>
+  <data name="IDS_INJECT_PRIMITIVE_PROPERTY" xml:space="preserve">
+    <value>不能注入基本类型属性。</value>
+  </data>
+  <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>不能注入属性 '{0}'，其类型 {1} 不受支持。</value>
+  </data>
+  <data name="IDS_INJECT_ENUMERABLE_AS_SINGLE" xml:space="preserve">
+    <value>不能注入属性 '{0}'，其可枚举类型 {1} 不能作为单个服务注入。</value>
+  </data>
+  <data name="IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE" xml:space="preserve">
+    <value>不能注入属性 '{0}'，其数组类型 {1} 未实现任何受支持的集合接口。</value>
+  </data>
+  <data name="IDS_INJECT_GENERIC_ARGUMENT_COUNT" xml:space="preserve">
+    <value>不能注入属性 '{0}'，其泛型类型 {1} 必须恰好声明一个泛型参数，实际声明了 {2} 个。</value>
+  </data>
+  <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
+    <value>属性注入需要键控服务（serviceKey = '{0}'），但当前容器（{1}）不支持 IKeyedServiceProvider。</value>
   </data>
 </root>

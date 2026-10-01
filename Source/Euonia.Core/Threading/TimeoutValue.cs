@@ -40,7 +40,7 @@ public readonly struct TimeoutValue : IEquatable<TimeoutValue>, IComparable<Time
     /// <summary>
     /// 获取以秒为单位的超时值。
     /// </summary>
-    public int InSeconds => IsInfinite ? throw new InvalidOperationException("infinite timeout cannot be converted to seconds") : InMilliseconds / 1000;
+    public int InSeconds => IsInfinite ? throw new InvalidOperationException(Resources.IDS_INFINITE_TIMEOUT_CANNOT_CONVERT_TO_SECONDS) : InMilliseconds / 1000;
 
     /// <summary>
     /// 获取一个值，指示超时是否为无限。

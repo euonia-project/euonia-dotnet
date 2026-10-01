@@ -112,7 +112,7 @@ public static partial class Extensions
 
 			if (source.Length < length)
 			{
-				throw new ArgumentException("length argument can not be bigger than given string's length!");
+				throw new ArgumentException(Resources.IDS_LENGTH_GREATER_THAN_STRING_LENGTH);
 			}
 
 			return source[..length];
@@ -131,7 +131,7 @@ public static partial class Extensions
 
 			if (source.Length < length)
 			{
-				throw new ArgumentException("length argument can not be bigger than given string's length!");
+				throw new ArgumentException(Resources.IDS_LENGTH_GREATER_THAN_STRING_LENGTH);
 			}
 
 			return source.Substring(source.Length - length, length);

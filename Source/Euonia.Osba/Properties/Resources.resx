@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -125,5 +125,77 @@
   </data>
   <data name="IDS_INVALID_STATE" xml:space="preserve">
       <value>Invalid state.</value>
+  </data>
+  <data name="IDS_SCOPE_CONTEXT_MISSING" xml:space="preserve">
+    <value>The resource type '{0}' declares a data scope model, but the target object is not wired to BusinessContext, so {1} can not be determined. Create or read the object through the factory, or set BusinessContext before calling.</value>
+  </data>
+  <data name="IDS_OBJECT_CONTEXT_MISSING" xml:space="preserve">
+    <value>The business object '{0}' declares permission requirements, but is not wired to BusinessContext, so {1} can not be determined. Create or read the object through the factory, or set BusinessContext before calling.</value>
+  </data>
+  <data name="IDS_PERMISSION_CHECKER_MISSING" xml:space="preserve">
+    <value>The business object '{0}' declares permission requirements, but {1} is not registered in the container. Call AddPermission to wire up an authorization implementation, or register your own IPermissionChecker.</value>
+  </data>
+  <data name="IDS_PROPERTY_NOT_REGISTERED" xml:space="preserve">
+    <value>Property '{0}' is not registered.</value>
+  </data>
+  <data name="IDS_PROPERTY_TYPE_MISMATCH" xml:space="preserve">
+    <value>Property '{0}' is registered as '{1}', which does not match the expected type '{2}'.</value>
+  </data>
+  <data name="IDS_PROPERTY_NAME_NOT_REGISTERED" xml:space="preserve">
+    <value>Property name '{0}' not registered</value>
+  </data>
+  <data name="IDS_PROPERTY_LIST_LOCKED" xml:space="preserve">
+    <value>Property list for type '{0}' is locked and cannot be modified.</value>
+  </data>
+  <data name="IDS_PROPERTY_ALREADY_REGISTERED" xml:space="preserve">
+    <value>Property '{0}' has already been registered for type '{1}'.</value>
+  </data>
+  <data name="IDS_PROPERTY_GET_NOT_ALLOWED" xml:space="preserve">
+    <value>Property get not allowed. {0}</value>
+  </data>
+  <data name="IDS_PROPERTY_SET_NOT_ALLOWED" xml:space="preserve">
+    <value>Property set not allowed. {0}</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_ALLOWED" xml:space="preserve">
+    <value>Operation not allowed. {0}: {1}.</value>
+  </data>
+  <data name="IDS_SCOPE_DENIED" xml:space="preserve">
+    <value>Data scope denied. {0} ({1}): {2}. {3}</value>
+  </data>
+  <data name="IDS_REGULAR_NOT_ON_STRING_PROPERTY" xml:space="preserve">
+    <value>The regular expression can not use on property '{0}'.</value>
+  </data>
+  <data name="IDS_OPERATION_NOT_APPLY_READONLY" xml:space="preserve">
+    <value>The operation can not apply for ReadOnlyObject.</value>
+  </data>
+  <data name="IDS_NO_PENDING_CHANGE" xml:space="preserve">
+    <value>The object has no pending change to save.</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_MATCHED_ARGUMENTS" xml:space="preserve">
+    <value>Missing method matched the specified arguments.</value>
+  </data>
+  <data name="IDS_MULTIPLE_METHODS_MATCHED" xml:space="preserve">
+    <value>Multiple methods matched.</value>
+  </data>
+  <data name="IDS_MISSING_METHOD_WITH_ATTRIBUTE" xml:space="preserve">
+    <value>Missing method with attribute '{0}' on {1}</value>
+  </data>
+  <data name="IDS_INJECT_PRIMITIVE_PROPERTY" xml:space="preserve">
+    <value>Can not inject primitive type property.</value>
+  </data>
+  <data name="IDS_INJECT_PROPERTY_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Can not inject property '{0}', the property type {1} is not supported.</value>
+  </data>
+  <data name="IDS_INJECT_ENUMERABLE_AS_SINGLE" xml:space="preserve">
+    <value>Can not inject property '{0}', the enumerable property type {1} can not be injected as a single service.</value>
+  </data>
+  <data name="IDS_INJECT_ARRAY_WITHOUT_COLLECTION_INTERFACE" xml:space="preserve">
+    <value>Can not inject property '{0}', the array type {1} does not implement any supported collection interface.</value>
+  </data>
+  <data name="IDS_INJECT_GENERIC_ARGUMENT_COUNT" xml:space="preserve">
+    <value>Can not inject property '{0}', the generic type {1} must declare exactly one generic argument, but declares {2}.</value>
+  </data>
+  <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Property injection requires a keyed service (serviceKey = '{0}'), but the current container ({1}) does not implement IKeyedServiceProvider.</value>
   </data>
 </root>

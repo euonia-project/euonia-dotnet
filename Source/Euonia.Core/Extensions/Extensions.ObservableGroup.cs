@@ -425,6 +425,6 @@ public static partial class Extensions
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private static void ThrowArgumentExceptionForKeyNotFound()
 	{
-		throw new InvalidOperationException("The requested key was not present in the collection");
+		throw new InvalidOperationException(Resources.IDS_REQUESTED_KEY_NOT_PRESENT);
 	}
 }

@@ -46,6 +46,7 @@
         <Project Path="Source/Euonia.Quartz/Euonia.Quartz.csproj" />
         <Project Path="Source/Euonia.Validation/Euonia.Validation.csproj" />
         <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
+        <Project Path="Source/Euonia.Security/Euonia.Security.csproj" />
     </Folder>
     <Folder Name="/Source/Domain/">
         <Project Path="Source/Euonia.Application/Euonia.Application.csproj" />
@@ -65,6 +66,10 @@
         <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
         <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
+        <Project Path="Tests/Euonia.Osba.Standalone.Tests/Euonia.Osba.Standalone.Tests.csproj" />
+        <Project Path="Tests/Euonia.Security.Tests/Euonia.Security.Tests.csproj" />
+            <Project Path="Tests/Euonia.Security.Tests.BrokenFixtures/Euonia.Security.Tests.BrokenFixtures.csproj" />
+    <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj" />
         <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Caching/">

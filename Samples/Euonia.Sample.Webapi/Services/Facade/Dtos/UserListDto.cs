@@ -5,6 +5,11 @@ public class UserListDto
 	/// <summary>
 	/// Unique identifier of the user.
 	/// </summary>
+	public string Id { get; set; }
+
+	/// <summary>
+	/// Unique identifier of the user.
+	/// </summary>
 	public string Username { get; set; }
 
 	/// <summary>

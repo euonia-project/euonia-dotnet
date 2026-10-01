@@ -98,4 +98,13 @@
 	<resheader name="writer">
 		<value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=2.0.3500.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
 	</resheader>
+  <data name="IDS_REPEAT_COUNT_MUST_BE_NON_NEGATIVE" xml:space="preserve">
+    <value>RepeatCount must be greater than or equal to 0. Leave it null if you want to repeat forever.</value>
+  </data>
+  <data name="IDS_TYPE_MUST_BE_JOB_TYPE" xml:space="preserve">
+    <value>The type {0} must be a job type.</value>
+  </data>
+  <data name="IDS_NO_TRIGGER_CONFIGURATION" xml:space="preserve">
+    <value>No trigger configuration found.</value>
+  </data>
 </root>

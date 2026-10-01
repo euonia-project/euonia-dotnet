@@ -255,15 +255,23 @@ protected override void AddRules()
 
 #### Permission System
 
-`Euonia.Osba` ships two complementary permission layers. **Grants are always resolved live from
+The policy engine ships as its own library, `Euonia.Security` (depends on `Euonia.Core` only).
+`Euonia.Osba` does **not** reference it: Osba implements its own half of the Core-level permission
+contracts (object state to operation, requirement source, enforcement at the factory boundary) while
+the engine implements the other half (policy compilation, row scope, policy selection by
+authorization identifier — an operation name or a permission code).
+There is **no adapter package** between them: a host wires the engine with two lines —
+`AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionCodeSource.Instance); })` —
+or registers its own implementations and skips the engine entirely. The two are
+complementary. **Grants are always resolved live from
 application data — never baked into tokens.**
 
 | | Operation Permission | Data Permission |
 |---|---|---|
 | Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
-| Granularity | Type-level `[Permission]` + **row-level** (per permission code) | Row-level |
+| Granularity | Type-level `[Permission]` + **row-level** (policy declared by authorization identifier, grants written under the permission code) | Row-level |
 | Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
-| Failure | `SecurityException` / `ValidationException` at the rule stage | Row excluded / same |
+| Failure | `SecurityException` | Row excluded / `SecurityException` on save |
 
 Data permission has **exactly one implementation**: a policy compiles to a single
 `Allow`/`Deny` expression pair shared by query pushdown and single-row checks.
@@ -289,19 +297,20 @@ public sealed class RepoScope : ScopeModel<Repo>
     public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
 
     public override void Declare(ScopePolicySet<Repo> policies)
-        => policies.For("repo:delete", ScopePolicy<Repo>.Grant("repo"));    // row-level operation permission
+        => policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");  // row-level operation permission
 }
 
 // 3) Enforcement
 services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 var provider = services.BuildServiceProvider();
-provider.ValidatePermissionSetup();          // fails at startup when the resolver is missing
+provider.GetRequiredService<IScopeGuard>();  // resolving the guard runs startup validation: missing resolver fails immediately
 
 var guard = provider.GetRequiredService<IScopeGuard>();
-var visible = guard.Apply(dbContext.Repos);  // pushed down to the database
-guard.Allows(repo, "repo:delete");           // single-row check
-guard.Explain(repo, "repo:delete");          // audit: which policy matched
+await guard.EnsureResolvedAsync();             // warm up before synchronous checks (idempotent)
+var visible = guard.Apply(dbContext.Repos);    // pushed down to the database
+guard.Allows(repo, BusinessOperation.Delete);  // single-row check
+guard.Explain(repo, BusinessOperation.Delete); // audit: which policy matched
 ```
 
 **Key design points**:
@@ -309,18 +318,26 @@ guard.Explain(repo, "repo:delete");          // audit: which policy matched
 - **Permission codes come from data, not tokens** — a large code set never bloats the token, and
   **revocation takes effect immediately** without reissuing tokens.
 - **Row-level operation permissions**: map the resource identity as a dimension and declare a
-  different row range per permission code, so "A1 allows push+delete, A2 allows push only" is
-  directly expressible.
+  different row range per authorization identifier (the grant key defaults to the identifier
+  itself, or is an explicit permission code), so
+  "A1 allows push+delete, A2 allows push only" is directly expressible.
 - **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
   (deny wins).
-- **Rule system integration**: types with a declared model get a scope rule injected
-  automatically, surfacing violations as `ValidationException`; manual registration via
-  `Rules.AddRule(new PermissionRule("repo:push"))` is also supported.
+- **Permission and validation are two separate lines**: permission is decided solely at the
+  factory boundary, and a denial (insert / update / delete / command) always throws
+  `SecurityException` with **no way to bypass it**. The rule channel does data validation only
+  and throws `ValidationException`
+  (see [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)).
 
-Full usage, troubleshooting, and performance notes:
-[`Source/Euonia.Osba/Permission/README.md`](Source/Euonia.Osba/Permission/README.md).
-Design rationale and trade-offs:
-[`Source/Euonia.Osba/Permission/DESIGN.md`](Source/Euonia.Osba/Permission/DESIGN.md).
+Engine usage and troubleshooting:
+[`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md).
+Engine design rationale and trade-offs:
+[`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md).
+Full wiring usage and multi-scenario examples:
+[`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md) and
+[`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md);
+wiring decisions:
+[`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md).
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
 > Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.
@@ -602,16 +619,14 @@ services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
 app.MapBusEndpoint();   // POST /bus/call
 ```
 
-Implementation and test details: [`docs/Euonia.Bus-RemoteCallAsync-Report.md`](docs/Euonia.Bus-RemoteCallAsync-Report.md).
-
 ### Bus gRPC (`Euonia.Bus.Grpc`)
 > gRPC remote-transport adapter. The client uses **generic (universal) invocation** — it constructs
 > `Method<GrpcRequest, GrpcResponse>` at runtime and executes it via `CallInvoker`, with the
 > service/method names supplied dynamically through `GrpcBusOptions` (defaulting to
 > `nerorsoft.bus.ReplierService/Call`), so no generated service stub is required on the client. The
 > server processes messages in `RemoteMessageService`. Reuses the `RemoteReply<TResult>` protocol.
-> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) were
-> consolidated into this project (the former `Euonia.Grpc` project was removed).
+> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) live
+> in this project.
 
 | Type | Kind | Purpose |
 |------|------|---------|
@@ -847,13 +862,13 @@ A store that is not registered simply does not take part in the verdict and does
 | `[DailyTimeIntervalSchedule]` | attribute | Daily time interval trigger |
 | `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
 
-### gRPC (consolidated into `Euonia.Bus.Grpc`)
-> gRPC integration (the former `Euonia.Grpc` project was consolidated into `Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
+### gRPC (`Euonia.Bus.Grpc`)
+> gRPC integration (`Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
 
 | Type | Kind | Purpose |
 |------|------|---------|
 | `GrpcRequest` / `GrpcResponse` | class (partial) | Protobuf extensions with JSON serialization and typed data accessors |
-| `ReplierService` | service (proto) | New unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
+| `ReplierService` | service (proto) | Unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
 | `ExceptionHandlingInterceptor` | class | Maps .NET exceptions to gRPC status codes |
 | `RequestTraceInterceptor` | class | Propagates `x-request-trace-id` in gRPC calls |
 | `MapGrpcServices()` | extension | Auto-discovers and maps all gRPC services from the entry assembly |

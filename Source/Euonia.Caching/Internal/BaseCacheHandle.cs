@@ -275,7 +275,7 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
         }
         else if (expirationTimeout == TimeSpan.Zero)
         {
-            throw new InvalidOperationException("Expiration mode is defined without timeout.");
+            throw new InvalidOperationException(Resources.IDS_EXPIRATION_MODE_WITHOUT_TIMEOUT);
         }
 
         return item.WithExpiration(expirationMode, expirationTimeout, !useItemExpiration);

@@ -72,7 +72,7 @@ public sealed class ConfigurationBuilderCacheHandlePart
         // fixed #192 (was missing check for "Default" mode)
         if (expirationMode != CacheExpirationMode.None && expirationMode != CacheExpirationMode.Default && timeout == TimeSpan.Zero)
         {
-            throw new InvalidOperationException("If expiration mode is not set to 'None', timeout cannot be zero.");
+            throw new InvalidOperationException(Resources.IDS_TIMEOUT_CANNOT_BE_ZERO);
         }
 
         Configuration.ExpirationMode = expirationMode;

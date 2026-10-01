@@ -6,7 +6,7 @@ using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 using Nerosoft.Euonia.Validation;
 
-namespace Nerosoft.Euonia.Core.Tests;
+namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
 /// 验证 Euonia.Osba 的数据权限（ScopePolicy / IScopeModel / ScopeSubjectSet）：
@@ -305,7 +305,7 @@ public class ScopeTests
 	}
 
 	[Fact]
-	public void Guard_Refresh_ShouldPickUpAuthorizationChanges()
+	public async Task Guard_Refresh_ShouldPickUpAuthorizationChanges()
 	{
 		var resolver = new CountingScopeResolver();
 		using var scope = CreateScope(User("dev"), resolver, out var provider);
@@ -316,7 +316,7 @@ public class ScopeTests
 
 		// 授权数据变化：改数据即可，无需改代码
 		resolver.Grant(ScopeDimensions.Dept, "team-c");
-		guard.Refresh();
+		await guard.RefreshAsync(TestContext.Current.CancellationToken);
 
 		Assert.True(guard.Allows(Repo("team-c")));
 		Assert.Equal(2, resolver.CallCount);
@@ -374,28 +374,28 @@ public class ScopeTests
 
 		repo.TeamId = "team-c";      // 不在授予范围内
 
-		// 落库前被拦下（新增路径：自动注入的范围规则先命中，故为验证错误）
-		var exception = await Assert.ThrowsAsync<ValidationException>(
+		// 落库前被拦下（新增路径同样由工厂边界的权限线裁决，抛 SecurityException）
+		var exception = await Assert.ThrowsAsync<SecurityException>(
 			() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
-		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+		Assert.Contains("Data scope denied", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
 
 	[Fact]
-	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithValidationException()
+	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithSecurityException()
 	{
-		// 框架对已声明模型的类型自动注入范围规则，越权「更新」在规则阶段即以验证错误暴露。
+		// 越权更新与新增/删除同形：权限不再经规则通道，统一由工厂边界抛 SecurityException。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var repo = Repo("team-c");
 		repo.BusinessContext = provider.GetRequiredService<BusinessContext>();
 		repo.MarkAsChanged();
 
-		var exception = await Assert.ThrowsAsync<ValidationException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
+		var exception = await Assert.ThrowsAsync<SecurityException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
-		Assert.Contains(exception.Errors, error => error.ErrorMessage.Contains("数据范围"));
+		Assert.Contains("Data scope denied", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -403,9 +403,8 @@ public class ScopeTests
 	[Fact]
 	public async Task SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException()
 	{
-		// 不对称是既有事实：EditableObject 在 IsDeleted 时默认跳过对象级规则，
-		// 因此越权「删除」由工厂边界兜住，抛的是 SecurityException。
-		// 这条断言把该行为钉住——若哪天规则覆盖了删除，这里会红，提醒同步更新文档。
+		// 越权删除由工厂边界兜住（权限线不依赖对象级规则），抛的是 SecurityException。
+		// EditableObject 在 IsDeleted 时默认跳过的是<b>验证</b>规则，与权限无关。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var repo = Repo("team-c");
@@ -415,7 +414,7 @@ public class ScopeTests
 		var exception = await Assert.ThrowsAsync<SecurityException>(() => repo.SaveAsync(cancellationToken: TestContext.Current.CancellationToken));
 
 		Assert.Contains("Data scope denied", exception.Message);
-		Assert.Contains("code=", exception.Message);
+		Assert.Contains("[scope=delete]", exception.Message);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -523,23 +522,24 @@ public class ScopeTests
 
 
 	[Fact]
-	public async Task Refresh_DuringInFlightResolve_ShouldNotBeUndoneByStaleSnapshot()
+	public async Task Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes()
 	{
-		// 竞态：解析在途时发生撤销 + Refresh。若陈旧快照仍被发布，撤销就被回滚了。
+		// 竞态：解析在途时发生撤销 + 刷新。刷新必须排在在途解析之后、以撤销后的数据重新发布，
+		// 否则撤销会被在途的旧快照回滚。
 		var resolver = new GatedScopeResolver();
-		using var scope = CreateScope(User("dev"), resolver, out var provider);
+		using var scope = CreateScope(User("dev"), resolver, out var provider, warm: false);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
 		// 首次解析在 resolver 里阻塞（已读到「撤销前」的授权数据）
 		var pending = guard.EnsureResolvedAsync(TestContext.Current.CancellationToken).AsTask();
 
-		// 数据侧撤销，并显式失效
+		// 数据侧撤销，并请求刷新（刷新会等在途解析让出解析闸门）
 		resolver.Revoked = true;
-		guard.Refresh();
+		var refresh = guard.RefreshAsync(TestContext.Current.CancellationToken).AsTask();
 
-		// 放行：在途结果不得覆盖那次失效
 		resolver.Release();
 		await pending;
+		await refresh;
 
 		Assert.False(guard.Allows(Repo("team-a")));
 
@@ -599,8 +599,18 @@ public class ScopeTests
 
 	private static IServiceScope CreateScope(UserPrincipal user, IScopeSubjectResolver resolver, out IServiceProvider provider)
 	{
+		return CreateScope(user, resolver, out provider, warm: true);
+	}
+
+	/// <summary>
+	/// 建作用域。<paramref name="warm"/> 为 <see langword="false"/> 时不预热：
+	/// 「解析在途」这类竞态用例要自己控制第一次解析的时机。
+	/// </summary>
+	private static IServiceScope CreateScope(UserPrincipal user, IScopeSubjectResolver resolver, out IServiceProvider provider, bool warm)
+	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject(typeof(ScopedRepo).Assembly);
+		services.AddPermission(p => { p.Scan(typeof(ScopedRepo).Assembly); p.Source(ObjectPermissionCodeSource.Instance); });
 		services.AddSingleton(resolver);
 		if (user != null)
 		{
@@ -610,7 +620,7 @@ public class ScopeTests
 		var built = services.BuildServiceProvider();
 		var scope = built.CreateScope();
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-		provider = scope.ServiceProvider;
+		provider = warm ? scope.ServiceProvider.Warm() : scope.ServiceProvider;
 		return scope;
 	}
 
@@ -659,13 +669,13 @@ internal sealed class ForbiddenNodeVisitor : ExpressionVisitor
 /// </summary>
 public class CountingScopeResolver : IScopeSubjectResolver
 {
-	private readonly List<ScopeSubject> _subjects = [];
+	private readonly List<(string Dimension, string Value)> _subjects = [];
 
 	public int CallCount { get; private set; }
 
 	public void Grant(string dimension, string value)
 	{
-		_subjects.Add(new ScopeSubject(dimension, value));
+		_subjects.Add((dimension, value));
 	}
 
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
@@ -701,19 +711,19 @@ public class ScopedRepo : EditableObject<ScopedRepo>
 	public string Level { get; set; }
 
 	[FactoryInsert]
-	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
 	[FactoryDelete]
-	protected override async Task DeleteAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
@@ -727,7 +737,7 @@ public class ScopedRepoOther : EditableObject<ScopedRepoOther>
 	public string TeamId { get; set; }
 
 	[FactoryUpdate]
-	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}

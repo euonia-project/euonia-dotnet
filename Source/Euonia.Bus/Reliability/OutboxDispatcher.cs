@@ -207,7 +207,7 @@ internal sealed class OutboxDispatcher : IDisposable
 		pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, Unit>), transportName);
 		pipeline.UseOf(envelope.Payload.GetType(), true);
 
-		var transport = _accessor.GetKeyedService<ITransporter>(transportName) ?? throw new MessageTransportException($"The transport '{transportName}' is not registered.");
+		var transport = _accessor.GetKeyedService<ITransporter>(transportName) ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, transportName));
 		await pipeline.RunAsync((IMessageEnvelope<TMessage>)envelope, message => transport.PublishAsync(message, CancellationToken.None).ContinueWith(_ => Unit.Value, CancellationToken.None));
 	}
 

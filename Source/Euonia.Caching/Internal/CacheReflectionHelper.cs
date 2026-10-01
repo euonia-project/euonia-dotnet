@@ -20,8 +20,7 @@ internal static class CacheReflectionHelper
 		{
 			if (!configuration.CacheHandleConfigurations.Any(p => p.IsBackplaneSource))
 			{
-				throw new InvalidOperationException(
-					"At least one cache handle must be marked as the backplane source if a backplane is defined via configuration.");
+				throw new InvalidOperationException(Resources.IDS_BACKPLANE_REQUIRES_SOURCE_HANDLE);
 			}
 
 			CheckExtends<CacheBackplane>(configuration.BackplaneType);
@@ -78,7 +77,7 @@ internal static class CacheReflectionHelper
 
 			if (CreateInstance(instanceType, types.ToArray()) is not BaseCacheHandle<TCacheValue> instance)
 			{
-				throw new InvalidOperationException("Couldn't initialize handle of type " + instanceType.FullName);
+				throw new InvalidOperationException(string.Format(Resources.IDS_COULD_NOT_INITIALIZE_HANDLE, instanceType.FullName));
 			}
 
 			handles.Add(instance);
@@ -86,7 +85,7 @@ internal static class CacheReflectionHelper
 
 		if (handles.Count == 0)
 		{
-			throw new InvalidOperationException("No cache handles defined.");
+			throw new InvalidOperationException(Resources.IDS_NO_CACHE_HANDLES_DEFINED);
 		}
 
 		// 验证背板是缓存管理器中的最后一个句柄（仅在配置了背板时检查）
@@ -94,7 +93,7 @@ internal static class CacheReflectionHelper
 		{
 			if (!handles.Last().Configuration.IsBackplaneSource)
 			{
-				throw new InvalidOperationException("The last cache handle should be the backplane source.");
+				throw new InvalidOperationException(Resources.IDS_LAST_HANDLE_MUST_BE_BACKPLANE_SOURCE);
 			}
 		}
 
@@ -191,15 +190,14 @@ internal static class CacheReflectionHelper
 		{
 			var ctorTypes = string.Join(", ", lastCtor.GetParameters().Select(p => p.ParameterType.Name).ToArray());
 
-			throw new InvalidOperationException(
-				$"Could not find a matching constructor for type '{lastCtor.DeclaringType?.Name}'. Trying to match [{ctorTypes}] but missing {lastParamMiss.ParameterType.Name}");
+			throw new InvalidOperationException(string.Format(Resources.IDS_NO_MATCHING_CONSTRUCTOR, lastCtor.DeclaringType?.Name, ctorTypes, lastParamMiss.ParameterType.Name));
 		}
 
 		{
 		}
 
 		throw new InvalidOperationException(
-			$"Could not find a matching or empty constructor for type '{lastCtor?.DeclaringType?.Name}'.");
+			string.Format(Resources.IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR, lastCtor?.DeclaringType?.Name));
 	}
 
 	/// <summary>
@@ -261,6 +259,6 @@ internal static class CacheReflectionHelper
 			return;
 		}
 
-		throw new InvalidOperationException($"Type {type.FullName} does not extend from {typeof(TValid).Name}.");
+		throw new InvalidOperationException(string.Format(Resources.IDS_TYPE_DOES_NOT_EXTEND_FROM, type.FullName, typeof(TValid).Name));
 	}
 }

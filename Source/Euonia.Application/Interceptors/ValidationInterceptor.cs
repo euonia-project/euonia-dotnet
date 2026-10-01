@@ -55,7 +55,7 @@ public class ValidationInterceptor : IInterceptor
 
 			if (parameter.NotNullAttribute != null && argument == null)
 			{
-				throw new ValidationException($"Parameter '{parameter.Name}' is required in method '{method.Name}'.");
+				throw new ValidationException(string.Format(Resources.IDS_PARAMETER_REQUIRED, parameter.Name, method.Name));
 			}
 
 			// null 实参与任何引用类型都不匹配（IsInstanceOfType(null) 恒为 false）；
