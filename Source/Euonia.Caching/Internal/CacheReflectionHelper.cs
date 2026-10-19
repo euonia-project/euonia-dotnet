@@ -164,6 +164,14 @@ internal static class CacheReflectionHelper
 
 				if (paramValue == null)
 				{
+					// 可选参数（如 RuntimeCacheOptions options = null）没有显式配置时应取默认值，
+					// 否则 WithRuntimeCacheHandle 这类不带 options 的重载永远匹配不到构造函数。
+					if (param.HasDefaultValue)
+					{
+						args.Add(param.DefaultValue);
+						continue;
+					}
+
 					lastParamMiss = param;
 					break;
 				}

@@ -137,7 +137,12 @@ public static class RedisConfigurationBuilderExtensions
     {
         Check.EnsureNotNull(part, nameof(part));
 
-        return part.WithBackplane(typeof(RedisCacheBackplane), redisConfigurationKey, channelName);
+        var configuration = RedisConfigurations.GetConfiguration(redisConfigurationKey)
+            ?? throw new InvalidOperationException(string.Format(Resources.IDS_NO_REDIS_CONFIG_FOR_BACKPLANE, redisConfigurationKey));
+
+        // 连接字符串必须作为构造参数传入：RedisCacheBackplane 的构造函数为
+        // (CacheManagerConfiguration, string connectionString)，不会自行查配置注册表。
+        return part.WithBackplane(typeof(RedisCacheBackplane), redisConfigurationKey, channelName, (object)configuration.ConnectionString);
     }
         
     /// <summary>

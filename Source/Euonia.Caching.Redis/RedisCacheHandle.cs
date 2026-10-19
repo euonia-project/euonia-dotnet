@@ -463,8 +463,8 @@ return result";
 			? (bool)values[6] // if flag is set, all good...
 			: !expirationModeItem.HasValue || !timeoutItem.HasValue; // otherwise fall back to use default expiration from config
 
-		if (!item.HasValue || !valueTypeItem.HasValue /* partially removed? */
-		                   || item.IsNullOrEmpty || item.IsNull)
+		// 注意不能把空字符串/空字节数组当作“不存在”，否则 Put(key, "") 后 Get 会返回 null。
+		if (!item.HasValue || !valueTypeItem.HasValue /* partially removed? */ || item.IsNull)
 		{
 			return null;
 		}
@@ -544,7 +544,7 @@ return result";
 				: !expirationModeItem.HasValue || !timeoutItem.HasValue; // otherwise fall back to use default expiration from config
 
 			if (!item.HasValue || !valueTypeItem.HasValue /* partially removed? */
-			                   || item.IsNullOrEmpty || item.IsNull)
+			                   || item.IsNull)
 			{
 				return null;
 			}
@@ -745,7 +745,7 @@ return result";
 
 	private TValue FromRedisValue(RedisValue value, string valueType)
 	{
-		if (value.IsNull || value.IsNullOrEmpty || !value.HasValue)
+		if (value.IsNull || !value.HasValue)
 		{
 			return default;
 		}
@@ -814,7 +814,8 @@ return result";
 			result = Eval(ScriptType.Put, fullKey, parameters, flags);
 		}
 
-		if (result == null)
+		// StackExchange.Redis 在 FireAndForget 下返回的不是 null，而是 IsNull == true 的 RedisResult。
+		if (result == null || result.IsNull)
 		{
 			if (flags.HasFlag(CommandFlags.FireAndForget))
 			{
@@ -828,16 +829,16 @@ return result";
 				return true;
 			}
 
+			if (when == When.NotExists)
+			{
+				return false;
+			}
+
 			// should never happen, something went wrong with the script
 			throw new InvalidOperationException(Resources.IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL);
 		}
 		else
 		{
-			if (result.IsNull && when == When.NotExists)
-			{
-				return false;
-			}
-
 			var resultValue = (RedisValue)result;
 
 			if (resultValue.HasValue && resultValue.ToString().Equals("OK", StringComparison.OrdinalIgnoreCase))

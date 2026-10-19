@@ -202,8 +202,13 @@ public partial class BaseCacheManager<TValue>
                 AddToHandlesBelow(result.Value, handleIndex);
                 TriggerOnUpdate(key, region);
                 break;
-            case CacheItemUpdateResultState.FactoryReturnedNull when throwOnFailure:
-                throw new InvalidOperationException(string.Format(Resources.IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL, region, key));
+            case CacheItemUpdateResultState.FactoryReturnedNull:
+                if (throwOnFailure)
+                {
+                    throw new InvalidOperationException(string.Format(Resources.IDS_UPDATE_FAILED_VALUE_FACTORY_RETURNED_NULL, region, key));
+                }
+
+                break;
             case CacheItemUpdateResultState.TooManyRetries:
             {
                 // 如果重试次数过多，这基本上表明缓存处于无效状态：

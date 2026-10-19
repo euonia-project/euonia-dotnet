@@ -12,11 +12,16 @@ internal class MemoryCacheManager
     {
         var configuration = ConfigurationBuilder.BuildConfiguration(settings =>
         {
-            settings.WithUpdateMode(options.UpdateMode)
-                    .WithMaxRetries(options.MaxRetries)
-                    .WithRetryTimeout(options.RetryTimeout)
-                    .WithMemoryCacheHandle(options.InstanceName, options)
-                    .WithExpiration(CacheExpirationMode.Default, options.Expires ?? TimeSpan.MaxValue);
+            var handle = settings.WithUpdateMode(options.UpdateMode)
+                                 .WithMaxRetries(options.MaxRetries)
+                                 .WithRetryTimeout(options.RetryTimeout)
+                                 .WithMemoryCacheHandle(options.InstanceName, options);
+
+            // Default 模式会被 GetItemExpiration 当作“无过期”，必须用 Absolute 才会真正应用 Expires。
+            if (options.Expires.HasValue)
+            {
+                handle.WithExpiration(CacheExpirationMode.Absolute, options.Expires.Value);
+            }
         });
 
         _configuration = configuration;
