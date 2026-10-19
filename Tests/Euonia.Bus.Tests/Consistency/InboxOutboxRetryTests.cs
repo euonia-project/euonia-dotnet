@@ -17,10 +17,10 @@ public class InboxOutboxRetryTests
 		services.AddLogging();
 		services.AddOptions();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "test");
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter(delivered));
@@ -32,7 +32,6 @@ public class InboxOutboxRetryTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 		IOutboxStore store = provider.GetRequiredService<IOutboxStore>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-retry-1");
@@ -40,7 +39,7 @@ public class InboxOutboxRetryTests
 		var failed = store.Get("outbox-retry-1").GetTransport("test");
 		failed.MarkAsFailed("first attempt failed");
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions());
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions());
 		await dispatcher.RetryAllAsync();
 
 		Assert.Contains("outbox-retry-1", delivered);
@@ -91,7 +90,6 @@ public class InboxOutboxRetryTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-retry-2");
 		IOutboxStore store = new InMemoryOutboxStore();
@@ -100,7 +98,7 @@ public class InboxOutboxRetryTests
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 1 });
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 1 });
 		await dispatcher.RetryAllAsync();
 
 		Assert.DoesNotContain("outbox-retry-2", delivered);
@@ -117,13 +115,12 @@ public class InboxOutboxRetryTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-inflight-1");
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(envelope, ["test"]);
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions());
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions());
 		await dispatcher.RetryAllAsync();
 
 		Assert.Empty(delivered);
@@ -137,7 +134,6 @@ public class InboxOutboxRetryTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-abandoned-1");
 		IOutboxStore store = new InMemoryOutboxStore();
@@ -146,7 +142,7 @@ public class InboxOutboxRetryTests
 		// 模拟进程在延迟分发期间崩溃：记录停留在 Pending 且创建时间早于调度器启动。
 		store.Get("outbox-abandoned-1").CreatedAt = DateTime.Now.AddMinutes(-10);
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 5 });
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 5 });
 		await dispatcher.RetryAllAsync();
 
 		Assert.Contains("outbox-abandoned-1", delivered);

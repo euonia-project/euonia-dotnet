@@ -11,6 +11,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Bus.InMemory\Euonia.Bus.InMemory.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Bus\Euonia.Bus.csproj" />
     </ItemGroup>

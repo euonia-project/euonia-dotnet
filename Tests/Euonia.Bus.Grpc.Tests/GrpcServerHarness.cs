@@ -53,11 +53,11 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		});
 
 		var services = builder.Services;
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddGrpc();
 		services.AddGrpcBusServer();
 
@@ -93,11 +93,11 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddGrpcBus("grpc", options =>
 		{
 			options.Endpoint = endpoint;

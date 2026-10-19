@@ -21,15 +21,15 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options =>
 		{
 			options.DefaultTransporter = "test";
 			options.Outbox.Enabled = true;
 		});
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter(delivered));
@@ -65,11 +65,11 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "test");
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter([]));
@@ -95,11 +95,11 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "test");
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter([]));
@@ -126,11 +126,11 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options => options.Inbox.Enabled = true);
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IInboxStore, InMemoryInboxStore>();
 
@@ -165,10 +165,10 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 
 		await using var provider = services.BuildServiceProvider();
@@ -194,15 +194,15 @@ public class InboxOutboxIntegrationTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options =>
 		{
 			options.DefaultTransporter = "test";
 			options.Outbox.Enabled = true;
 		});
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter([]));
 
@@ -225,8 +225,8 @@ public class InboxOutboxIntegrationTests
 		services.AddLogging();
 		services.AddOptions();
 		services.Configure<MessageBusOptions>(options => options.Inbox.Enabled = true);
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 
 		await using var provider = services.BuildServiceProvider();

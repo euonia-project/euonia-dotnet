@@ -34,12 +34,9 @@ public class MessageRequestContextTests
 		var registrar = provider.GetRequiredService<IRecipientRegistrar>();
 		await registrar.RegisterAsync(configurator.Registrations, "InMemory", TestContext.Current.CancellationToken);
 
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
-		var requestContext = provider.GetRequiredService<DefaultRequestContextAccessor>();
-		var bus = provider.GetRequiredService<IBus>();
-
 		using var scope = provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-		accessor.ServiceProvider = scope.ServiceProvider;
+		var requestContext = scope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>();
+		var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 
 		// A 阻塞后台泵；B 在泵运行期间入队，两者共享同一个泵的执行流。
 		requestContext.Context = CreateContext("trace-A");
@@ -63,6 +60,10 @@ public class MessageRequestContextTests
 		Assert.Equal("trace-B", state.CorrelationIds["B"]);
 		Assert.True(state.RequestServicesBound["A"]);
 		Assert.True(state.RequestServicesBound["B"]);
+
+		// 多播发布使用消息专用作用域，不复用发布方请求作用域。
+		Assert.NotSame(scope.ServiceProvider, state.RequestServices["A"]);
+		Assert.NotSame(scope.ServiceProvider, state.RequestServices["B"]);
 	}
 
 	[Fact]
@@ -81,11 +82,8 @@ public class MessageRequestContextTests
 		var registrar = provider.GetRequiredService<IRecipientRegistrar>();
 		await registrar.RegisterAsync(configurator.Registrations, "InMemory", TestContext.Current.CancellationToken);
 
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
-		var bus = provider.GetRequiredService<IBus>();
-
 		using var scope = provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-		accessor.ServiceProvider = scope.ServiceProvider;
+		var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 		state.PublisherProvider = scope.ServiceProvider;
 		state.PublisherProbe = scope.ServiceProvider.GetRequiredService<ScopedProbe>();
 
@@ -114,7 +112,8 @@ public class MessageRequestContextTests
 		configurator.RegisterChannel(typeof(EnvelopeObservingHandler));
 
 		// 消费者流中没有发布方上下文（模拟跨进程消费）。
-		provider.GetRequiredService<DefaultRequestContextAccessor>().Context = null;
+		using var consumerScope = provider.CreateScope();
+		consumerScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>().Context = null;
 
 		var payload = new EnvelopeOnlyEvent();
 		var envelope = new RoutedMessage<EnvelopeOnlyEvent>(payload, typeof(EnvelopeOnlyEvent).FullName)
@@ -187,11 +186,11 @@ public class MessageRequestContextTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
 		services.Configure<RequestContextAccessorOptions>(options => options.UseDefaultAccessor = !useDelegate);
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => useDelegate ? null : new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => useDelegate ? null : new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		return services;
 	}
 
@@ -208,6 +207,8 @@ public class MessageRequestContextTests
 		public ConcurrentDictionary<string, string> CorrelationIds { get; } = new();
 
 		public ConcurrentDictionary<string, bool> RequestServicesBound { get; } = new();
+
+		public ConcurrentDictionary<string, IServiceProvider> RequestServices { get; } = new();
 
 		public TaskCompletionSource FirstHandled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -301,6 +302,7 @@ public class MessageRequestContextTests
 				                                  ? correlationId
 				                                  : null;
 			state.RequestServicesBound[message.Id] = current?.RequestServices != null;
+			state.RequestServices[message.Id] = current?.RequestServices;
 
 			if (message.Id == "A")
 			{

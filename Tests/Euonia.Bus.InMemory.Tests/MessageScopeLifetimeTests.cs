@@ -34,14 +34,11 @@ public class MessageScopeLifetimeTests
 		var registrar = provider.GetRequiredService<IRecipientRegistrar>();
 		await registrar.RegisterAsync(configurator.Registrations, "InMemory", TestContext.Current.CancellationToken);
 
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
-		var bus = provider.GetRequiredService<IBus>();
-
 		// 模拟 HTTP 请求：在请求作用域内发布事件（与 HostingModule 的中间件行为一致），
 		// 随后作用域随请求结束而释放；后台泵中的处理程序此刻才真正开始执行。
 		using (var scope = provider.GetRequiredService<IServiceScopeFactory>().CreateScope())
 		{
-			accessor.ServiceProvider = scope.ServiceProvider;
+			var bus = scope.ServiceProvider.GetRequiredService<IBus>();
 			await bus.PublishAsync(new ScopeProbeEvent(), TestContext.Current.CancellationToken);
 		}
 
@@ -83,10 +80,10 @@ public class MessageScopeLifetimeTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "InMemory");
 		services.AddEuoniaBus();
 		services.AddInMemoryBus("InMemory");
