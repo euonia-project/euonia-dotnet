@@ -7,6 +7,37 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+## [2026.4.5] - 2026-10-19
+
+修复内存总线后台处理继承已释放的发布方作用域导致订阅者抛出 `ObjectDisposedException` 的缺陷。
+变更规模：1 个源文件，+40 余行；新增回归测试 1 个。
+
+### 修复
+
+- **消息处理不再继承已释放的发布方作用域**（`Euonia.Bus`）：
+  `IServiceAccessor` 以 `AsyncLocal` 保存当前作用域的 `IServiceProvider`，由宿主中间件在请求开始时
+  写入请求作用域。内存总线的接收者把处理投递到后台泵（`InMemoryRecipient`），处理程序真正执行时，
+  发布方（如 HTTP 请求）的作用域往往已随请求结束而释放；处理程序内任何经由该访问器的服务解析
+  ——包括订阅者发送后续命令时 `MessageBus`/`RequestContextAccessor` 读取请求上下文——
+  都会抛出 `ObjectDisposedException`，其后续命令被静默丢弃。
+  现在 `DefaultHandlerContext.HandleAsync` 与 `ReplayDeadLetterAsync` 在处理开始时
+  将环境服务提供程序绑定到本次处理专用的作用域（每个消息独立作用域，处理结束后释放），处理结束后恢复原绑定。
+  对所有传输（内存、RabbitMQ、ActiveMQ、gRPC、HTTP）及发件箱/收件箱重投递统一生效。
+
+### 行为说明
+
+- 消息处理程序与处理程序内部继续发出的消息，经由 `IServiceAccessor` 的环境解析
+  （如 `RequestContextAccessor.Context`）现在指向本次处理专用的作用域，
+  而非发布方请求的作用域。发布方请求的作用域在后台处理开始时通常已释放，
+  此前继承到的只是失效引用；需要发布方请求信息（用户身份、跟踪标识）时，
+  仍可从 `MessageEnvelope` 携带的 `User`/`RequestTraceId` 获取。
+  发布方的 `RequestContext`（如用户身份）在事件发布时仍会随执行流传播到处理程序，不受影响。
+
+### 测试
+
+- 新增 `MessageScopeLifetimeTests`：复现"请求作用域内发布事件 → 请求结束 → 后台泵处理 →
+  订阅者解析服务并发送嵌套命令"的完整链路，验证处理程序不再解析到已释放的发布方作用域。
+
 ## [2026.4.4] - 2026-10-19
 
 对 32 个源项目完成缺陷扫描，共修复 60 余处可复现缺陷；无新功能主线。

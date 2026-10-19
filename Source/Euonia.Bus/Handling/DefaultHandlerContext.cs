@@ -228,11 +228,20 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		}
 
 		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-		var invoker = registration.Factory(scope.ServiceProvider);
-		var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
-		context.Response(result);
-		context.Complete(null);
-		_inboxStore?.MarkAsSuccess(context.MessageId, registration.Name);
+		var restoreProvider = BindAmbientServiceProvider(scope);
+
+		try
+		{
+			var invoker = registration.Factory(scope.ServiceProvider);
+			var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
+			context.Response(result);
+			context.Complete(null);
+			_inboxStore?.MarkAsSuccess(context.MessageId, registration.Name);
+		}
+		finally
+		{
+			restoreProvider();
+		}
 	}
 
 	#endregion
@@ -253,100 +262,114 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 
 		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
 
-		List<HandlerRegistration> registrations;
-		lock (_registrationLock)
+		// 消息处理并不总在发布方的调用链内执行（内存总线的后台泵、发件箱/收件箱重投递）：
+		// 处理真正开始时，发布方（如 HTTP 请求）的作用域往往已随请求结束而释放，
+		// 而 IServiceAccessor 经由 AsyncLocal 继承的正是该已释放的提供程序。
+		// 处理程序内任何经由它的服务解析（如 MessageBus.SendAsync 读取请求上下文）
+		// 都会抛出 ObjectDisposedException，因此绑定到本次处理专用的作用域，结束后恢复原绑定。
+		var restoreProvider = BindAmbientServiceProvider(scope);
+
+		try
 		{
-			if (!_handlerContainer.TryGetValue(channel, out var registered) || registered == null || registered.Count == 0)
+			List<HandlerRegistration> registrations;
+			lock (_registrationLock)
 			{
-				throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
-			}
-
-			registrations = [.. registered];
-		}
-
-		// 从服务提供程序获取处理程序实例
-		_logger.LogInformation("Message {Id} is being handled", context.MessageId);
-
-		// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
-		var useInbox = _inboxOptions.Enabled;
-		if (useInbox && _inboxStore == null)
-		{
-			throw new MessagePersistentException(Resources.IDS_INBOX_STORE_NOT_REGISTERED);
-		}
-
-		object result;
-
-		var handlers = registrations.Select(registration => (Name: registration.Name, Handler: registration.Factory(scope.ServiceProvider))).ToList();
-
-		if (!Convention.IsMulticast(channel, message.GetType()))
-		{
-			// 单播语义只允许一个处理程序，但注册侧并不阻止在同一个通道上注册多个。
-			// 静默丢弃多余的处理器会让"注册了却没生效"极难排查，因此显式告警。
-			if (handlers.Count > 1)
-			{
-				_logger.LogWarning("Channel {Channel} is a unicast channel but has {Count} handlers registered; only the first one ({Handler}) will be invoked. Ignored handlers: {Ignored}", channel, handlers.Count, handlers[0].Name, string.Join(", ", handlers.Skip(1).Select(item => item.Name)));
-			}
-
-			// 单播：执行第一个处理程序；启用收件箱时标记执行结果（不做去重跳过 —— 与 Java 版本保持一致）。
-			var (name, handler) = handlers[0];
-			if (useInbox)
-			{
-				try
+				if (!_handlerContainer.TryGetValue(channel, out var registered) || registered == null || registered.Count == 0)
 				{
-					result = await handler(message, context, cancellationToken);
-					_inboxStore.MarkAsSuccess(context.MessageId, name);
+					throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
 				}
-				catch (Exception exception)
-				{
-					_inboxStore.MarkAsFailed(context.MessageId, name, exception.Message);
-					throw;
-				}
-			}
-			else
-			{
-				result = await handler(message, context, cancellationToken);
-			}
-		}
-		else
-		{
-			// 多播：启用收件箱时先写入去重记录；若记录已存在（消息被重复投递）则直接跳过；
-			// 否则并行执行所有处理程序，并逐处理程序标记执行结果。
-			var names = handlers.Select(handler => handler.Name).ToArray();
 
-			if (useInbox && !_inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
-			{
-				_logger.LogInformation("Message {Id} was already handled and will be skipped", context.MessageId);
-				result = Unit.Value;
+				registrations = [.. registered];
 			}
-			else
+
+			// 从服务提供程序获取处理程序实例
+			_logger.LogInformation("Message {Id} is being handled", context.MessageId);
+
+			// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
+			var useInbox = _inboxOptions.Enabled;
+			if (useInbox && _inboxStore == null)
 			{
-				result = await Parallel.ForEachAsync(handlers, cancellationToken, async (handler, token) =>
+				throw new MessagePersistentException(Resources.IDS_INBOX_STORE_NOT_REGISTERED);
+			}
+
+			object result;
+
+			var handlers = registrations.Select(registration => (Name: registration.Name, Handler: registration.Factory(scope.ServiceProvider))).ToList();
+
+			if (!Convention.IsMulticast(channel, message.GetType()))
+			{
+				// 单播语义只允许一个处理程序，但注册侧并不阻止在同一个通道上注册多个。
+				// 静默丢弃多余的处理器会让"注册了却没生效"极难排查，因此显式告警。
+				if (handlers.Count > 1)
+				{
+					_logger.LogWarning("Channel {Channel} is a unicast channel but has {Count} handlers registered; only the first one ({Handler}) will be invoked. Ignored handlers: {Ignored}", channel, handlers.Count, handlers[0].Name, string.Join(", ", handlers.Skip(1).Select(item => item.Name)));
+				}
+
+				// 单播：执行第一个处理程序；启用收件箱时标记执行结果（不做去重跳过 —— 与 Java 版本保持一致）。
+				var (name, handler) = handlers[0];
+				if (useInbox)
 				{
 					try
 					{
-						await handler.Handler(message, context, token);
-						if (useInbox)
-						{
-							_inboxStore.MarkAsSuccess(context.MessageId, handler.Name);
-						}
+						result = await handler(message, context, cancellationToken);
+						_inboxStore.MarkAsSuccess(context.MessageId, name);
 					}
 					catch (Exception exception)
 					{
-						if (useInbox)
-						{
-							_inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
-						}
-
-						// 多播不因单个处理器失败而中断，但必须留下日志，否则失败会被完全吞掉。
-						_logger.LogError(exception, "Handler {Handler} failed while handling message {Id} on channel {Channel}", handler.Name, context.MessageId, channel);
+						_inboxStore.MarkAsFailed(context.MessageId, name, exception.Message);
+						throw;
 					}
-				}).ContinueWith(_ => Unit.Value, cancellationToken);
+				}
+				else
+				{
+					result = await handler(message, context, cancellationToken);
+				}
 			}
+			else
+			{
+				// 多播：启用收件箱时先写入去重记录；若记录已存在（消息被重复投递）则直接跳过；
+				// 否则并行执行所有处理程序，并逐处理程序标记执行结果。
+				var names = handlers.Select(handler => handler.Name).ToArray();
+
+				if (useInbox && !_inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
+				{
+					_logger.LogInformation("Message {Id} was already handled and will be skipped", context.MessageId);
+					result = Unit.Value;
+				}
+				else
+				{
+					result = await Parallel.ForEachAsync(handlers, cancellationToken, async (handler, token) =>
+					{
+						try
+						{
+							await handler.Handler(message, context, token);
+							if (useInbox)
+							{
+								_inboxStore.MarkAsSuccess(context.MessageId, handler.Name);
+							}
+						}
+						catch (Exception exception)
+						{
+							if (useInbox)
+							{
+								_inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
+							}
+
+							// 多播不因单个处理器失败而中断，但必须留下日志，否则失败会被完全吞掉。
+							_logger.LogError(exception, "Handler {Handler} failed while handling message {Id} on channel {Channel}", handler.Name, context.MessageId, channel);
+						}
+					}).ContinueWith(_ => Unit.Value, cancellationToken);
+				}
+			}
+
+			_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
+
+			return result;
 		}
-
-		_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
-
-		return result;
+		finally
+		{
+			restoreProvider();
+		}
 	}
 
 	/// <inheritdoc/>
@@ -365,6 +388,31 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	#endregion
 
 	#region Supports
+
+	/// <summary>
+	/// 将环境服务提供程序（<see cref="IServiceAccessor"/>）绑定到指定服务作用域，并返回恢复先前绑定的委托。
+	/// </summary>
+	/// <param name="scope">本次消息处理专用的服务作用域。</param>
+	/// <returns>将环境提供程序恢复为先前绑定的委托；访问器未注册时返回空操作。</returns>
+	/// <remarks>
+	/// <see cref="IServiceAccessor"/> 以 <c>AsyncLocal</c> 保存当前作用域的 <see cref="IServiceProvider"/>，
+	/// 异步派生任务（如内存总线接收者的后台泵）会继承发布方写入的值。当发布方是 HTTP 请求时，
+	/// 该值指向的请求作用域会在请求结束时被释放；此后处理程序内经由它的任何服务解析都会抛出
+	/// <see cref="ObjectDisposedException"/>。消息处理必须绑定到本次处理专用的作用域，
+	/// 以保证处理程序与处理程序内部继续发出的消息（如订阅者发送命令）始终解析到有效作用域。
+	/// </remarks>
+	private Action BindAmbientServiceProvider(IServiceScope scope)
+	{
+		var accessor = _provider.GetService<IServiceAccessor>();
+		if (accessor == null)
+		{
+			return static () => { };
+		}
+
+		var inherited = accessor.ServiceProvider;
+		accessor.ServiceProvider = scope.ServiceProvider;
+		return () => accessor.ServiceProvider = inherited;
+	}
 
 	/// <summary>
 	/// 为指定的处理程序方法构建一次性编译的调用器。
