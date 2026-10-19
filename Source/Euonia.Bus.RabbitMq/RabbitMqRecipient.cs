@@ -205,7 +205,10 @@ internal abstract class RabbitMqRecipient : DisposableObject
 
 		var props = args.BasicProperties;
 
-		var context = new MessageContext(message);
+		var context = new MessageContext(message)
+		{
+			ExecutionDescriptor = MessageExecutionDescriptor.DistributedInbound,
+		};
 		// {
 		// 	MessageId = props.MessageId,
 		// 	ConversationId = props.Headers?.GetValueOrDefault(MessageHeaders.ConversationId) as string,

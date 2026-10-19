@@ -15,6 +15,7 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 {
 	private readonly IHandlerContext _handler;
 	private readonly IMessageSerializer _serializer;
+	private readonly IServiceProvider _provider;
 	private readonly ILogger<RemoteMessageService> _logger;
 
 	/// <summary>
@@ -23,6 +24,7 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 	public RemoteMessageService(IHandlerContext handler, IServiceProvider provider, IOptions<GrpcBusOptions> options, ILogger<RemoteMessageService> logger)
 	{
 		_handler = handler;
+		_provider = provider;
 		_serializer = provider.GetKeyedService<IMessageSerializer>(options.Value.SerializerProvider)
 		             ?? throw new InvalidOperationException(string.Format(Resources.IDS_SERIALIZER_NOT_REGISTERED, options.Value.SerializerProvider));
 		_logger = logger;
@@ -44,7 +46,8 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 
 		_logger.LogDebug("Received remote gRPC request '{RequestId}'", request.RequestId);
 
-		var reply = await RemoteReceiver.ReceiveAsync(_serializer, _handler, payload, context.CancellationToken);
+		// 服务注册为 Scoped：provider 即本次 gRPC 调用的作用域，处理时复用它。
+		var reply = await RemoteReceiver.ReceiveAsync(_serializer, _handler, payload, _provider, context.CancellationToken);
 
 		return new Google.Protobuf.GrpcResponse
 		{

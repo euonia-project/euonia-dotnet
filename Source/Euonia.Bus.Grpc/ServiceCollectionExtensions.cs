@@ -54,7 +54,7 @@ public static class ServiceCollectionExtensions
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
-			services.TryAddSingleton<RemoteMessageService>();
+			services.TryAddScoped<RemoteMessageService>();
 			return services;
 		}
 	}

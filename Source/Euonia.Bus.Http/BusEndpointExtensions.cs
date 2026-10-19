@@ -47,7 +47,7 @@ public static class BusEndpointExtensions
 			string reply;
 			try
 			{
-				reply = await RemoteReceiver.ReceiveAsync(serializer, handler, body, context.RequestAborted);
+				reply = await RemoteReceiver.ReceiveAsync(serializer, handler, body, context.RequestServices, context.RequestAborted);
 			}
 			catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
 			{

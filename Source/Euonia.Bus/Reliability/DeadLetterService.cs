@@ -1,6 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Nerosoft.Euonia.Modularity;
+using Microsoft.Extensions.Logging;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -10,13 +10,20 @@ internal sealed class DeadLetterService : IDeadLetterService
 	private static readonly MethodInfo _redeliverMethod
 		= typeof(DeadLetterService).GetMethod(nameof(RedeliverAsync), BindingFlags.Instance | BindingFlags.NonPublic)!;
 
-	private readonly IServiceAccessor _accessor;
+	private readonly IServiceProvider _provider;
 	private readonly IDeadLetterStore _store;
+	private readonly MessageExecutionEnvironment _execution;
 
-	public DeadLetterService(IServiceAccessor accessor, IDeadLetterStore store)
+	/// <summary>
+	/// 初始化 <see cref="DeadLetterService"/> 类的新实例。
+	/// </summary>
+	/// <param name="store">死信存储。</param>
+	/// <param name="provider">当前作用域的服务提供程序。</param>
+	public DeadLetterService(IDeadLetterStore store, IServiceProvider provider)
 	{
-		_accessor = accessor;
 		_store = store;
+		_provider = provider;
+		_execution = new MessageExecutionEnvironment(provider, provider.GetService<ILoggerFactory>()?.CreateLogger<DeadLetterService>());
 	}
 
 	/// <inheritdoc/>
@@ -77,8 +84,13 @@ internal sealed class DeadLetterService : IDeadLetterService
 	/// </summary>
 	private async Task ReplayInboxAsync(DeadLetterEntry entry, CancellationToken cancellationToken)
 	{
-		var handlerContext = _accessor.GetRequiredService<IHandlerContext>();
-		using var context = new MessageContext(entry.Content);
+		var handlerContext = _provider.GetService<IHandlerContext>()
+		                    ?? throw new InvalidOperationException($"Cannot replay dead letter '{entry.MessageId}': no {nameof(IHandlerContext)} is registered.");
+
+		using var context = new MessageContext(entry.Content)
+		{
+			ExecutionDescriptor = MessageExecutionDescriptor.Replay,
+		};
 
 		// 重放必须绕过收件箱去重：原条目仍以 DeadLettered 状态存在，
 		// 走 HandleAsync 会因 Insert 返回 false 而跳过所有处理器，然后死信却被删除。
@@ -105,11 +117,17 @@ internal sealed class DeadLetterService : IDeadLetterService
 		return (Task)method.Invoke(this, [entry, cancellationToken])!;
 	}
 
-	private async Task RedeliverAsync<TMessage>(DeadLetterEntry entry, CancellationToken cancellationToken)
+	private Task RedeliverAsync<TMessage>(DeadLetterEntry entry, CancellationToken cancellationToken)
 	{
-		var transporter = _accessor.GetKeyedService<ITransporter>(entry.Target)
-		                  ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, entry.Target));
+		return _execution.RunAsync(
+			MessageExecutionDescriptor.OutboxDispatch,
+			null,
+			async provider =>
+			{
+				var transporter = provider.GetKeyedService<ITransporter>(entry.Target)
+				                  ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, entry.Target));
 
-		await transporter.PublishAsync((IMessageEnvelope<TMessage>)entry.Content, cancellationToken);
+				await transporter.PublishAsync((IMessageEnvelope<TMessage>)entry.Content, cancellationToken).ConfigureAwait(false);
+			});
 	}
 }

@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.InMemory;
+using Nerosoft.Euonia.Modularity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -37,12 +40,18 @@ public static class ServiceCollectionExtensions
 			// 每个容器独立的一对信使；传输器与接收者注册器必须共享同一对实例。
 			services.TryAddSingleton<InMemoryMessengerProvider>();
 
-			// 将内存传输器注册为单例服务。
-			services.TryAddSingleton<InMemoryTransporter>();
+			// 内存传输器是作用域服务：单播/请求需要读取调用方作用域以复用其服务。
+			// 使用显式工厂，避免多个公开构造函数导致 DI 选中缺少访问器的重载。
+			services.TryAddScoped<InMemoryTransporter>(provider => new InMemoryTransporter(
+				provider.GetRequiredService<IOptions<InMemoryBusOptions>>(),
+				provider.GetRequiredService<ILoggerFactory>(),
+				provider.GetRequiredService<InMemoryMessengerProvider>(),
+				provider.GetService<IServiceAccessor>(),
+				provider.GetService<IRequestContextAccessor>()));
 
 			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<InMemoryTransporter>());
+				services.AddKeyedScoped<ITransporter>(name, (provider, _) => provider.GetRequiredService<InMemoryTransporter>());
 			}
 
 			// 将内存接收者注册器注册为单例服务，实现 IRecipientRegistrar 接口。

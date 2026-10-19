@@ -92,11 +92,20 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 	/// <summary>
 	/// 在泵未运行时启动它。
 	/// </summary>
+	/// <remarks>
+	/// <see cref="Task.Run(Action)"/> 会捕获当前 <see cref="System.Threading.ExecutionContext"/>：
+	/// 若首次投递发生在某个请求内，泵会继承该请求的异步状态。处理作用域虽按消息描述符
+	/// 安装/恢复上下文，但长驻泵不应携带任何请求环境，因此统一抑制执行流启动，
+	/// 与总线后台重试调度器的做法保持一致。
+	/// </remarks>
 	private void EnsurePumpRunning()
 	{
 		if (Interlocked.CompareExchange(ref _pumping, 1, 0) == 0)
 		{
-			_ = Task.Run(PumpAsync);
+			using (ExecutionContext.SuppressFlow())
+			{
+				_ = Task.Run(PumpAsync);
+			}
 		}
 	}
 

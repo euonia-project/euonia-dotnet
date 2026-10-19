@@ -23,17 +23,16 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// 保护处理器列表的注册与快照，避免注册与消息处理并发时枚举到正在修改的列表。
 	/// </summary>
 	private readonly object _registrationLock = new();
-	private readonly IServiceProvider _provider;
 	private readonly ILogger<DefaultHandlerContext> _logger;
+	private readonly MessageExecutionEnvironment _execution;
 	private readonly IConfigurator _configurator;
 
-	private readonly IInboxStore _inboxStore;
 	private readonly InboxOptions _inboxOptions;
 	private readonly InboxDispatcher _inboxDispatcher;
 
 	private bool _disposed;
 
-	private IMessageConvention Convention => field ??= new Lazy<IMessageConvention>(() => _configurator?.Convention ?? new BaseMessageConvention()).Value;
+	private IMessageConvention Convention => field ??= _configurator?.Convention ?? new BaseMessageConvention();
 
 	/// <summary>
 	/// 初始化 <see cref="DefaultHandlerContext"/> 类的新实例。
@@ -42,14 +41,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// <param name="configurator">用于配置消息总线的配置器。</param>
 	public DefaultHandlerContext(IServiceProvider provider, IConfigurator configurator)
 	{
-		_provider = provider;
 		_configurator = configurator;
 		_logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger<DefaultHandlerContext>();
+		_execution = new MessageExecutionEnvironment(provider, _logger);
 		_configurator.ChannelRegistered += OnChannelRegistered;
 
-		_inboxStore = provider.GetService<IInboxStore>();
 		_inboxOptions = provider.GetService<IOptions<MessageBusOptions>>()?.Value?.Inbox ?? new InboxOptions();
-		_inboxDispatcher = new InboxDispatcher(provider, _inboxStore, _inboxOptions, _handlerContainer);
+		// 收件箱存储按轮询/处理作用域解析；单例构造期不捕获可能为 scoped 的存储。
+		_inboxDispatcher = new InboxDispatcher(provider, null, _inboxOptions, _handlerContainer);
 		_inboxDispatcher.Start();
 	}
 
@@ -227,16 +226,18 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
 		}
 
-		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-		using var ambient = AmbientServiceProviderBinding.Bind(_provider, scope);
 		// 重放按原消息的身份执行，而不是触发重放的管理请求身份。
-		using var requestContext = MessageRequestContextScope.Establish(scope.ServiceProvider, context, overwrite: true);
-
-		var invoker = registration.Factory(scope.ServiceProvider);
-		var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
-		context.Response(result);
-		context.Complete(null);
-		_inboxStore?.MarkAsSuccess(context.MessageId, registration.Name);
+		await _execution.RunAsync(
+			MessageExecutionDescriptor.Replay,
+			context,
+			async provider =>
+			{
+				var invoker = registration.Factory(provider);
+				var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
+				context.Response(result);
+				context.Complete(null);
+				provider.GetService<IInboxStore>()?.MarkAsSuccess(context.MessageId, registration.Name);
+			}).ConfigureAwait(false);
 	}
 
 	#endregion
@@ -251,25 +252,27 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// <param name="context">消息上下文。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示消息处理异步操作的任务。</returns>
-	public async Task<object> HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
+	public Task<object> HandleAsync(string channel, object message, MessageContext context, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(message);
 
-		// 进程内单播/请求复用调用方作用域；其余场景（多播发布、网络传输、后台重试）
-		// 创建本次处理专用的作用域。
-		var handlingProvider = ResolveHandlingServiceProvider(context);
-		using var ownedScope = handlingProvider == null
-			                       ? _provider.GetRequiredService<IServiceScopeFactory>().CreateScope()
-			                       : null;
-		handlingProvider ??= ownedScope.ServiceProvider;
+		return _execution.RunAsync(
+			context.ExecutionDescriptor,
+			context,
+			provider => HandleCoreAsync(channel, message, context, provider, cancellationToken));
+	}
 
-		// 后台泵、broker 消费者与发件箱/收件箱重试可能在发布方作用域释放后才执行，
-		// 继承的环境提供程序已失效；绑定到本次处理使用的作用域。
-		using var ambient = AmbientServiceProviderBinding.Bind(_provider, handlingProvider);
-
-		// 网络传输的发布方与处理方不在同一个请求中，身份与跟踪信息只能从消息信封恢复。
-		using var requestContext = MessageRequestContextScope.Establish(handlingProvider, context);
-
+	/// <summary>
+	/// 在已建立的执行作用域中查找并调用处理程序。
+	/// </summary>
+	/// <param name="channel">消息通道。</param>
+	/// <param name="message">要处理的消息。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="provider">本次处理实际使用的服务提供程序。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示消息处理异步操作的任务。</returns>
+	private async Task<object> HandleCoreAsync(string channel, object message, MessageContext context, IServiceProvider provider, CancellationToken cancellationToken)
+	{
 		List<HandlerRegistration> registrations;
 		lock (_registrationLock)
 		{
@@ -286,14 +289,15 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 
 		// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
 		var useInbox = _inboxOptions.Enabled;
-		if (useInbox && _inboxStore == null)
+		var inboxStore = useInbox ? provider.GetService<IInboxStore>() : null;
+		if (useInbox && inboxStore == null)
 		{
 			throw new MessagePersistentException(Resources.IDS_INBOX_STORE_NOT_REGISTERED);
 		}
 
 		object result;
 
-		var handlers = registrations.Select(registration => (Name: registration.Name, Handler: registration.Factory(handlingProvider))).ToList();
+		var handlers = registrations.Select(registration => (Name: registration.Name, Handler: registration.Factory(provider))).ToList();
 
 		if (!Convention.IsMulticast(channel, message.GetType()))
 		{
@@ -311,11 +315,11 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 				try
 				{
 					result = await handler(message, context, cancellationToken);
-					_inboxStore.MarkAsSuccess(context.MessageId, name);
+					inboxStore.MarkAsSuccess(context.MessageId, name);
 				}
 				catch (Exception exception)
 				{
-					_inboxStore.MarkAsFailed(context.MessageId, name, exception.Message);
+					inboxStore.MarkAsFailed(context.MessageId, name, exception.Message);
 					throw;
 				}
 			}
@@ -330,7 +334,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			// 否则并行执行所有处理程序，并逐处理程序标记执行结果。
 			var names = handlers.Select(handler => handler.Name).ToArray();
 
-			if (useInbox && !_inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
+			if (useInbox && !inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
 			{
 				_logger.LogInformation("Message {Id} was already handled and will be skipped", context.MessageId);
 				result = Unit.Value;
@@ -344,14 +348,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 						await handler.Handler(message, context, token);
 						if (useInbox)
 						{
-							_inboxStore.MarkAsSuccess(context.MessageId, handler.Name);
+							inboxStore.MarkAsSuccess(context.MessageId, handler.Name);
 						}
 					}
 					catch (Exception exception)
 					{
 						if (useInbox)
 						{
-							_inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
+							inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
 						}
 
 						// 多播不因单个处理器失败而中断，但必须留下日志，否则失败会被完全吞掉。
@@ -382,34 +386,6 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	#endregion
 
 	#region Supports
-
-	/// <summary>
-	/// 解析本次处理应复用的服务提供程序；无法复用时返回 <c>null</c>，由调用方创建新作用域。
-	/// </summary>
-	/// <param name="context">消息上下文。</param>
-	/// <returns>可复用的服务提供程序；发布方作用域已释放或消息未携带时返回 <c>null</c>。</returns>
-	private IServiceProvider ResolveHandlingServiceProvider(MessageContext context)
-	{
-		var provider = context.HandlingServiceProvider;
-
-		// 根容器不是请求/处理作用域：复用它会从根解析 scoped 服务，因此仍创建新作用域。
-		if (provider == null || ReferenceEquals(provider, _provider))
-		{
-			return null;
-		}
-
-		try
-		{
-			// 探测提供程序是否已释放：已释放的作用域在解析服务时会抛出 ObjectDisposedException。
-			_ = provider.GetService<IServiceScopeFactory>();
-			return provider;
-		}
-		catch (ObjectDisposedException exception)
-		{
-			_logger.LogWarning(exception, "Handling service provider for message {Id} has already been disposed; a new scope will be created.", context.MessageId);
-			return null;
-		}
-	}
 
 	/// <summary>
 	/// 为指定的处理程序方法构建一次性编译的调用器。

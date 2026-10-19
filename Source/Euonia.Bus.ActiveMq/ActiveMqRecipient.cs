@@ -94,7 +94,10 @@ internal abstract class ActiveMqRecipient : DisposableObject
 
 		var envelope = _serializer.DeserializeEnvelope(textMessage.Text, MessageType);
 
-		var context = new MessageContext(envelope);
+		var context = new MessageContext(envelope)
+		{
+			ExecutionDescriptor = MessageExecutionDescriptor.DistributedInbound,
+		};
 
 		MessageReceived?.Invoke(this, new MessageReceivedEventArgs(envelope.Payload, context));
 

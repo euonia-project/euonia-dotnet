@@ -25,46 +25,39 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	private readonly StrongReferenceMessenger _strongMessenger;
 
 	/// <summary>
-	/// 用于在发布时读取发布方请求上下文；手动构造时未提供。
+	/// 当前调用方作用域的服务访问器；手动构造时未提供。
 	/// </summary>
 	private readonly IServiceAccessor _accessor;
 
 	/// <summary>
-	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
+	/// 当前调用方作用域的请求上下文访问器；手动构造时未提供。
 	/// </summary>
-	/// <param name="options">内存总线选项。</param>
-	/// <param name="logger">日志工厂。</param>
-	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
-		: this(options, logger, new InMemoryMessengerProvider())
-	{
-	}
+	private readonly IRequestContextAccessor _requestContextAccessor;
 
 	/// <summary>
 	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
 	/// </summary>
 	/// <param name="options">内存总线选项。</param>
 	/// <param name="logger">日志工厂。</param>
-	/// <param name="messengers">与接收者注册器共享的信使实例。</param>
-	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers)
+	/// <param name="messengers">与接收者注册器共享的信使实例；为 <c>null</c> 时创建独立实例（手动构造场景）。</param>
+	/// <param name="accessor">当前调用方作用域的服务访问器；为 <c>null</c> 时不复用调用方作用域。</param>
+	/// <param name="requestContextAccessor">当前调用方作用域的请求上下文访问器；为 <c>null</c> 时不保留发布方上下文。</param>
+	public InMemoryTransporter(
+		IOptions<InMemoryBusOptions> options,
+		ILoggerFactory logger,
+		InMemoryMessengerProvider messengers = null,
+		IServiceAccessor accessor = null,
+		IRequestContextAccessor requestContextAccessor = null)
 	{
 		var opts = options.Value;
 		Name = opts.Name ?? Constants.DefaultTransportName;
 		_logger = logger.CreateLogger<InMemoryTransporter>();
-		_weakMessenger = messengers.Weak;
-		_strongMessenger = messengers.Strong;
-	}
 
-	/// <summary>
-	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例，并在发布时保留发布方请求上下文。
-	/// </summary>
-	/// <param name="options">内存总线选项。</param>
-	/// <param name="logger">日志工厂。</param>
-	/// <param name="messengers">与接收者注册器共享的信使实例。</param>
-	/// <param name="accessor">用于读取发布方请求上下文的访问器。</param>
-	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers, IServiceAccessor accessor)
-		: this(options, logger, messengers)
-	{
+		var provider = messengers ?? new InMemoryMessengerProvider();
+		_weakMessenger = provider.Weak;
+		_strongMessenger = provider.Strong;
 		_accessor = accessor;
+		_requestContextAccessor = requestContextAccessor;
 	}
 
 	/// <summary>
@@ -76,7 +69,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>表示异步发布操作的任务。</returns>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var context = CreateMessageContext(message);
+		var context = CreateMessageContext(message, borrowCallerScope: false);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -97,7 +90,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public async Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
 		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
-		var context = CreateMessageContext(message, GetHandlingServiceProvider());
+		var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -147,7 +140,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
 		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
-		using var context = CreateMessageContext(message, GetHandlingServiceProvider());
+		using var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -212,7 +205,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
 		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
-		using var context = CreateMessageContext(message, GetHandlingServiceProvider());
+		using var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -265,60 +258,41 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	}
 
 	/// <summary>
-	/// 创建消息上下文，并捕获发布方请求上下文快照。
+	/// 创建消息上下文，并填写本次消息的执行环境描述符。
 	/// </summary>
 	/// <param name="message">消息信封。</param>
-	/// <param name="handlingServiceProvider">处理时复用的服务提供程序；多播发布时为 <c>null</c>。</param>
-	/// <returns>携带发布方上下文快照的消息上下文。</returns>
-	private MessageContext CreateMessageContext(IMessageEnvelope message, IServiceProvider handlingServiceProvider = null)
+	/// <param name="borrowCallerScope">
+	/// <c>true</c> 表示单播/请求由调用方等待处理完成，可复用其显式绑定的作用域；
+	/// <c>false</c> 表示多播发布（fire-and-forget），处理时创建新作用域。
+	/// </param>
+	/// <returns>携带执行环境描述符的消息上下文。</returns>
+	private MessageContext CreateMessageContext(IMessageEnvelope message, bool borrowCallerScope)
 	{
 		return new MessageContext(message)
 		{
-			PublisherContext = CapturePublisherContext(message.MessageId),
-			HandlingServiceProvider = handlingServiceProvider,
+			ExecutionDescriptor = CreateExecutionDescriptor(borrowCallerScope),
 		};
 	}
 
 	/// <summary>
-	/// 获取当前调用方显式绑定的服务提供程序，供单播/请求处理复用。
+	/// 生成执行环境描述符；网络传输不经过该路径。
 	/// </summary>
-	/// <returns>调用方的服务提供程序；未显式绑定或传输器为手动构造时返回 <c>null</c>。</returns>
-	private IServiceProvider GetHandlingServiceProvider()
-	{
-		return _accessor != null && _accessor.TryGetServiceProvider(out var provider)
-			       ? provider
-			       : null;
-	}
-
-	/// <summary>
-	/// 捕获当前发布方的请求上下文；网络传输不经过该路径。
-	/// </summary>
-	/// <param name="messageId">消息标识符，用于记录捕获失败的上下文。</param>
-	/// <returns>发布方上下文快照；手动构造的传输器不做捕获。</returns>
-	private PublisherContextSnapshot CapturePublisherContext(string messageId)
+	/// <param name="borrowCallerScope">是否复用调用方作用域（单播/请求）。</param>
+	/// <returns>本次消息的执行环境描述符。</returns>
+	private MessageExecutionDescriptor CreateExecutionDescriptor(bool borrowCallerScope)
 	{
 		if (_accessor == null)
 		{
-			return PublisherContextSnapshot.NotCaptured;
+			return MessageExecutionDescriptor.RemoteInbound;
 		}
 
-		if (!_accessor.TryGetServiceProvider(out var provider))
-		{
-			// 发布方没有显式绑定服务提供程序，视为没有请求上下文；
-			// 仍然标记为已捕获，以便处理时清除后台泵继承自其他消息的上下文。
-			return PublisherContextSnapshot.Capture(null);
-		}
+		// 访问器是作用域服务：其提供程序就是当前调用方作用域，调用方等待处理完成时必然存活。
+		var callerProvider = _accessor.ServiceProvider;
+		var publisherContext = _requestContextAccessor?.Context;
 
-		try
-		{
-			return PublisherContextSnapshot.Capture(provider.GetService<DefaultRequestContextAccessor>()?.Context);
-		}
-		catch (ObjectDisposedException exception)
-		{
-			// 发布方作用域已释放：消息仍可投递，但无法保留发布方上下文。
-			_logger.LogWarning(exception, "Publisher scope was already disposed while capturing context for message {MessageId}; publisher context will not be preserved.", messageId);
-			return PublisherContextSnapshot.Capture(null);
-		}
+		return borrowCallerScope
+			       ? MessageExecutionDescriptor.InProcessCall(callerProvider, publisherContext)
+			       : MessageExecutionDescriptor.InProcessPublish(publisherContext);
 	}
 
 	/// <summary>
