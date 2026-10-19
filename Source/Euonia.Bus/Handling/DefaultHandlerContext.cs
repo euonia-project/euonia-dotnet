@@ -89,7 +89,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		var invoker = BuildHandlerInvoker(method);
 		if (invoker == null)
 		{
-			_logger.LogWarning("Handler method {Method} on channel {Channel} has more than three parameters and cannot be registered", method.Name, channel);
+			_logger.LogWarning("Handler method {HandlerType}.{Method} on channel {Channel} has more than three parameters and cannot be registered", type.FullName, method.Name, channel);
 			return;
 		}
 
@@ -146,7 +146,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			var invoker = BuildHandlerInvoker(channelHandler.Method);
 			if (invoker == null)
 			{
-				_logger.LogWarning("Handler method {Method} on channel {Channel} has more than three parameters and cannot be registered", channelHandler.Method.Name, channel);
+				_logger.LogWarning("Handler method {HandlerType}.{Method} on channel {Channel} has more than three parameters and cannot be registered", channelHandler.HandlerType.FullName, channelHandler.Method.Name, channel);
 				return;
 			}
 
@@ -257,7 +257,8 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 							_inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
 						}
 
-						// 忽略多播处理程序中的错误
+						// 多播不因单个处理器失败而中断，但必须留下日志，否则失败会被完全吞掉。
+						_logger.LogError(exception, "Handler {Handler} failed while handling message {Id} on channel {Channel}", handler.Name, context.MessageId, channel);
 					}
 				}).ContinueWith(_ => Unit.Value, cancellationToken);
 			}

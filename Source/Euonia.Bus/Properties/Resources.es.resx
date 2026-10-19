@@ -130,22 +130,22 @@
     <value>La bandeja de entrada está habilitada, pero no hay ningún almacén de bandeja de entrada registrado. Registre una implementación de IInboxStore (por ejemplo, services.AddInMemoryInbox()).</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>El método no existe.</value>
+    <value>El tipo de manejador {0} no declara el método {1}({2}, IMessageContext, CancellationToken) requerido por la interfaz IHandler&lt;,&gt;.</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>El método del manejador debe tener al menos un parámetro</value>
+    <value>El método del manejador {0}.{1} debe tener al menos un parámetro.</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>El primer parámetro del método del manejador debe ser el tipo de mensaje</value>
+    <value>El primer parámetro del método del manejador {0}.{1} debe ser el tipo de mensaje; los tipos de parámetro declarados son ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>Si el método tiene dos parámetros, el segundo parámetro del método del manejador debe ser MessageContext o CancellationToken</value>
+    <value>Si el método del manejador {0}.{1} tiene dos parámetros, el segundo debe ser IMessageContext o CancellationToken; los tipos de parámetro declarados son ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>Si el método tiene tres parámetros, el segundo y el tercer parámetro del método del manejador deben ser MessageContext y CancellationToken</value>
+    <value>Si el método del manejador {0}.{1} tiene tres parámetros, el segundo y el tercero deben ser IMessageContext y CancellationToken; los tipos de parámetro declarados son ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>El método del manejador no puede contener un SubscribeAttribute con el nombre vacío</value>
+    <value>El método del manejador {0}.{1} declara un SubscribeAttribute sin nombre; cada SubscribeAttribute debe especificar un nombre de canal.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>No se pudo cargar automáticamente el ensamblado '{0}' configurado en '{1}:AutoLoadAssemblies'.</value>
