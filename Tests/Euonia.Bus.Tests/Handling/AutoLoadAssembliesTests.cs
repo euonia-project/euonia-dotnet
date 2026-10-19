@@ -91,7 +91,10 @@ public class AutoLoadAssembliesTests
 		configurator.RegisterChannel(typeof(AutoLoadProbeHandler));
 
 		var registration = configurator.Registrations[typeof(TestMessages.OrderPlacedEvent).FullName];
-		Assert.Single(registration.Handlers);
+
+		// 测试程序集中有多个 IHandler<OrderPlacedEvent> 实现（接口处理器现在支持多播扇出），
+		// 只断言自动装配与显式注册的目标处理程序没有产生第二份注册。
+		Assert.Single(registration.Handlers, handler => handler.ImplementationType == typeof(AutoLoadProbeHandler));
 	}
 
 	private static async Task StartActivatorAsync(ServiceProvider provider)

@@ -42,8 +42,6 @@ public class ReadOnlyObjectRegressionTests
 	public async Task Concurrent_Bypass_Blocks_Should_Restore_The_Target_Completely()
 	{
 		var target = new ReadOnlyProbe();
-		var managerProperty = typeof(BusinessObject)
-			.GetProperty("InternalBypassRuleChecks", BindingFlags.Instance | BindingFlags.NonPublic);
 
 		var failures = new ConcurrentBag<Exception>();
 
@@ -68,7 +66,40 @@ public class ReadOnlyObjectRegressionTests
 		await Task.WhenAll(threads);
 
 		Assert.Empty(failures);
-		Assert.Null(managerProperty.GetValue(target));
+
+		var bypassProperty = typeof(BusinessObject)
+			.GetProperty("IsBypassingRuleChecks", BindingFlags.Instance | BindingFlags.NonPublic);
+		Assert.False((bool)bypassProperty!.GetValue(target));
+	}
+
+	[Fact]
+	public async Task Concurrent_Flows_Should_Each_Bypass_Independently()
+	{
+		var target = new ReadOnlyProbe();
+		var firstEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var secondEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		var first = Task.Run(() =>
+		{
+			using (target.BypassRuleChecks)
+			{
+				firstEntered.SetResult();
+				secondEntered.Task.Wait();
+				target.Name = "first";
+			}
+		}, TestContext.Current.CancellationToken);
+
+		var second = Task.Run(() =>
+		{
+			firstEntered.Task.Wait();
+			using (target.BypassRuleChecks)
+			{
+				secondEntered.SetResult();
+				target.Name = "second";
+			}
+		}, TestContext.Current.CancellationToken);
+
+		await Task.WhenAll(first, second);
 	}
 }
 

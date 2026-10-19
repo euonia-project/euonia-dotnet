@@ -51,6 +51,27 @@ public class RuntimeRequirementSourceTests
 	}
 
 	[Fact]
+	public async Task SaveAsync_OnDerivedType_ShouldEnforceHiddenBaseMethodRequirement()
+	{
+		using var scope = CreateScope(codes: [], out var provider);
+
+		// DerivedScopedEntity 用 new 遮蔽了 BaseScopedEntity 的 UpdateAsync；
+		// 继承自 EditableObject<BaseScopedEntity> 的 SaveAsync 会以基类为静态类型调用工厂，
+		// 因此必须按基类方法上的 [Permission] 判定，而不能按运行时派生类型放行。
+		var target = new DerivedScopedEntity
+		{
+			BusinessContext = new BusinessContext(provider.GetRequiredService<BusinessContextAccessor>())
+		};
+		target.MarkAsChanged();
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		await Assert.ThrowsAsync<SecurityException>(
+			() => factory.SaveAsync<BaseScopedEntity>(target, TestContext.Current.CancellationToken));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
 	public async Task Factory_Boundary_Should_Allow_When_Host_Declared_Requirement_Is_Granted()
 	{
 		using var scope = CreateScope(codes: ["host:update"], out var provider);
