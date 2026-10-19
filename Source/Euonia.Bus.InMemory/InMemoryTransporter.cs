@@ -152,7 +152,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		void OnFailed(object sender, Exception exception)
 		{
-			_logger.LogError(exception, "Message '{MessageId}' failed with exception", message.MessageId);
+			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 
@@ -215,7 +215,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		void OnFailed(object sender, Exception exception)
 		{
-			_logger.LogError(exception, "Message '{MessageId}' failed with exception", message.MessageId);
+			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 

@@ -133,13 +133,13 @@
     <value>現在のコレクションが破損した状態です。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>受信メッセージの型に対応する受信者が登録されていません。</value>
+    <value>メッセージ {0} に対応する受信者が登録されていません。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>受信メッセージの型 '{0}' とトークンに対応する受信者が登録されていません。</value>
+    <value>メッセージ {0} とトークン '{1}' に対応する受信者が登録されていません。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>配信する受信メッセージの型 '{0}' とトークンに対応する受信者が登録されていません。</value>
+    <value>トークン '{1}' を使用してメッセージ {0} を配信する受信者が登録されていません。</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>対象の受信者は、対象メッセージに既に購読しています。</value>

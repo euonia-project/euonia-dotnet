@@ -133,13 +133,13 @@
     <value>현재 컬렉션이 손상된 상태입니다.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>수신 메시지 형식에 해당하는 수신자가 등록되지 않았습니다.</value>
+    <value>메시지 {0}에 해당하는 수신자가 등록되지 않았습니다.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>수신 메시지 형식 '{0}' 및 토큰에 해당하는 수신자가 등록되지 않았습니다.</value>
+    <value>메시지 {0} 및 토큰 '{1}'에 해당하는 수신자가 등록되지 않았습니다.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>배달할 수신 메시지 형식 '{0}' 및 토큰에 해당하는 수신자가 등록되지 않았습니다.</value>
+    <value>토큰 '{1}'(으)로 메시지 {0}을(를) 배달할 수신자가 등록되지 않았습니다.</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>대상 수신자는 대상 메시지를 이미 구독하고 있습니다.</value>

@@ -133,13 +133,13 @@
     <value>La colección actual está en un estado dañado.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>No hay ningún destinatario registrado para el tipo de mensaje entrante.</value>
+    <value>No hay ningún destinatario registrado para el mensaje {0}.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>No hay ningún destinatario registrado para el tipo de mensaje entrante '{0}' y el token.</value>
+    <value>No hay ningún destinatario registrado para el mensaje {0} y el token '{1}'.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>No hay ningún destinatario registrado para el tipo de mensaje entrante '{0}' y el token que se van a entregar.</value>
+    <value>No hay ningún destinatario registrado para entregar el mensaje {0} con el token '{1}'.</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>El destinatario de destino ya está suscrito al mensaje de destino.</value>

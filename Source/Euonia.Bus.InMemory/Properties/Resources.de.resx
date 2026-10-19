@@ -133,13 +133,13 @@
     <value>Die aktuelle Auflistung ist in einem beschädigten Zustand.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>Für den Typ der Eingangsnachricht sind keine Empfänger registriert.</value>
+    <value>Für die Nachricht {0} sind keine Empfänger registriert.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>Für den Typ der Eingangsnachricht '{0}' und das Token sind keine Empfänger registriert.</value>
+    <value>Für die Nachricht {0} und das Token '{1}' sind keine Empfänger registriert.</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>Für den Typ der zu übermittelnden Eingangsnachricht '{0}' und das Token sind keine Empfänger registriert.</value>
+    <value>Es sind keine Empfänger registriert, um die Nachricht {0} mit dem Token '{1}' zu übermitteln.</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>Der Zielempfänger hat die Zielnachricht bereits abonniert.</value>
