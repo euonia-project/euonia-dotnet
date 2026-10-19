@@ -15,9 +15,9 @@ namespace Nerosoft.Euonia.Modularity;
 /// 同时隔离不同请求/线程之间的数据，避免并发冲突。
 /// </para>
 /// <para>
-/// 由于 <see cref="AsyncLocal{T}"/> 的特性，本类型可安全地注册为任意生命周期
-/// （Singleton、Scoped 或 Transient）。在单例场景下，每个异步执行流
-/// 仍然拥有各自独立的 <see cref="RequestContext"/> 值。
+/// 本类型按 Scoped 注册，但存储是静态的：同一异步执行流中的嵌套作用域
+/// （如用例执行、工作单元、管道行为创建的作用域）共享同一个 <see cref="RequestContext"/> 值。
+/// 因此它只承载“流级信息”，不承担服务定位职责；服务生命周期由各自作用域显式管理。
 /// </para>
 /// </remarks>
 /// <seealso cref="IRequestContextAccessor"/>
