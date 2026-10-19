@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Modularity;
+using ServiceMapper = MapsterMapper.ServiceMapper;
+using TypeAdapterConfig = Mapster.TypeAdapterConfig;
 
 namespace Nerosoft.Euonia.Mapping;
 
@@ -19,7 +21,12 @@ public class MapsterModule : ModuleContextBase
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.AddMapster();
-		context.Services.TryAddKeyedSingleton<ITypeAdapterFactory, MapsterTypeAdapterFactory>(SERVICE_KEY);
+
+		// 不能按类型注册为单例：MapsterTypeAdapterFactory 依赖作用域的 IMapper，
+		// 单例会在 ValidateScopes 下启动失败，并捕获根作用域的映射器。
+		// ServiceMapper 本身只持有单例 TypeAdapterConfig，可安全地按单例构造。
+		context.Services.TryAddKeyedSingleton<ITypeAdapterFactory>(SERVICE_KEY,
+			(provider, _) => new MapsterTypeAdapterFactory(new ServiceMapper(provider, provider.GetRequiredService<TypeAdapterConfig>())));
 	}
 
 	/// <inheritdoc />

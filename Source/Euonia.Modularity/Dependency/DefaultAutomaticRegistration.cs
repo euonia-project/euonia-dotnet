@@ -46,7 +46,7 @@ public class DefaultAutomaticRegistration : AutomaticRegistrationBase
                     continue;
                 }
 
-                if (!type.IsAssignableFrom(serviceType))
+                if (!serviceType.IsAssignableFrom(type))
                 {
                     throw new InvalidOperationException(string.Format(Resources.IDS_IMPLEMENTATION_NOT_INHERIT_SERVICE, type.FullName, serviceType.FullName));
                 }

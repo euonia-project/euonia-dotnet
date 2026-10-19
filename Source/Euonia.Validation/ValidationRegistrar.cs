@@ -35,7 +35,7 @@ public class ValidationRegistrar : DefaultAutomaticRegistration
     {
         const int maxFindDepth = 8;
 
-        if (depth >= maxFindDepth)
+        if (type == null || depth >= maxFindDepth)
         {
             return null;
         }
@@ -43,6 +43,15 @@ public class ValidationRegistrar : DefaultAutomaticRegistration
         if (type.IsGenericType && type.GetGenericArguments().Length >= 1)
         {
             return type.GetGenericArguments()[0];
+        }
+
+        // 直接实现 IValidator<T> 的类型没有泛型基类（如 AbstractValidator<T>），
+        // 若只沿 BaseType 向上查找会走到 null。
+        var validatorInterface = type.GetInterfaces()
+                                     .FirstOrDefault(item => item.IsGenericType && item.GetGenericTypeDefinition() == typeof(IValidator<>));
+        if (validatorInterface != null)
+        {
+            return validatorInterface.GetGenericArguments()[0];
         }
 
         return GetFirstGenericArgument(type.BaseType, depth + 1);
