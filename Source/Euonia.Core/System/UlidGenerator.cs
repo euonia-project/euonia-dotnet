@@ -66,35 +66,42 @@ internal static class UlidGenerator
 	/// <returns>26 字符的 ULID 字符串。</returns>
 	private static string Encode(byte[] timestamp, byte[] randomBytes)
 	{
-		var ulid = new StringBuilder(26);
-
-		// 将 48 位时间戳（6 字节）和 80 位随机数据（10 字节）合并为 16 字节，
-		// 多分配 1 个字节用于容纳跨越字节边界、且已超出第 16 字节的低位补零位。
-		var ulidBytes = new byte[17]; // ULID 总共是 16 字节 + 1 字节补零
+		// 128 位值：高 48 位为毫秒时间戳，低 80 位为随机数。
+		var ulidBytes = new byte[16];
 		Array.Copy(timestamp, 0, ulidBytes, 0, 6);
 		Array.Copy(randomBytes, 0, ulidBytes, 6, 10);
 
-		// 将 128 位数据按每 5 位一组进行编码，共 26 个字符。
-		for (var bitIndex = 0; bitIndex < 128; bitIndex += 5)
+		var chars = new char[26];
+
+		// ULID 的 130 位布局（左侧补 2 个零位）等价于：
+		// 第 1 个字符编码最高的 3 位，其余 25 个字符各编码 5 位，
+		// 共 3 + 25 * 5 = 128 位。
+		chars[0] = CROCKFORD_BASE32[ulidBytes[0] >> 5];
+
+		var bitIndex = 125;
+		for (var charIndex = 1; charIndex < chars.Length; charIndex++)
 		{
-			var byteIndex = bitIndex >> 3;
-			var bitOffset = bitIndex & 0x7;
-			int index;
-			if (bitOffset <= 3)
+			var value = 0;
+			for (var bit = 0; bit < 5; bit++)
 			{
-				// 5 位全部落在当前字节内。
-				index = (ulidBytes[byteIndex] >> (3 - bitOffset)) & 0x1F;
-			}
-			else
-			{
-				// 5 位跨越当前字节与下一个字节（高位优先）。
-				index = ((ulidBytes[byteIndex] >> bitOffset) << (bitOffset - 3))
-				        | (ulidBytes[byteIndex + 1] >> (11 - bitOffset));
+				bitIndex--;
+				value = (value << 1) | GetBit(ulidBytes, bitIndex);
 			}
 
-			ulid.Append(CROCKFORD_BASE32[index]);
+			chars[charIndex] = CROCKFORD_BASE32[value];
 		}
 
-		return ulid.ToString();
+		return new string(chars);
+	}
+
+	/// <summary>
+	/// 读取大端字节数组中从最低位开始计数的指定位。
+	/// </summary>
+	/// <param name="bytes">大端字节数组。</param>
+	/// <param name="bitIndex">位索引，0 表示最低位。</param>
+	/// <returns>位值（0 或 1）。</returns>
+	private static int GetBit(byte[] bytes, int bitIndex)
+	{
+		return (bytes[bytes.Length - 1 - (bitIndex >> 3)] >> (bitIndex & 0x7)) & 1;
 	}
 }
