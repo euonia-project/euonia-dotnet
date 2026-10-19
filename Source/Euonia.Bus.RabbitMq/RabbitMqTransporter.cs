@@ -73,7 +73,7 @@ internal class RabbitMqTransporter : ITransporter
 			            _logger.LogDebug("Publishing message to channel '{Channel}' with routing key '{RoutingKey}'", message.Channel, $"{message.Channel}@{_options.RoutingKey}");
 			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 			            await channel.ExchangeDeclareAsync(message.Channel, ExchangeType.Fanout, cancellationToken: cancellationToken);
-			            await channel.BasicPublishAsync(message.Channel, $"{message.Channel}@{_options.RoutingKey}", true, props, messageBody, cancellationToken: cancellationToken);
+			            await channel.BasicPublishAsync(message.Channel, $"{message.Channel}@{_options.RoutingKey}", _options.Mandatory, props, messageBody, cancellationToken: cancellationToken);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 		            });
@@ -116,22 +116,25 @@ internal class RabbitMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<SocketException>()
-			            .Or<TimeoutException>()
-			            .Or<BrokerUnreachableException>()
-			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-			            {
-				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-			            })
-			            .ExecuteAsync(async () =>
-			            {
-				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+			var retryPolicy = Policy.Handle<SocketException>()
+			                         .Or<TimeoutException>()
+			                         .Or<BrokerUnreachableException>()
+			                         .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			                         {
+				                         _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			                         });
 
-				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-			            });
+			// 发布与订阅各自重试：订阅失败若重跑整个动作，会重复发布同一条请求。
+			await retryPolicy.ExecuteAsync(async () =>
+			{
+				_logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				await channel.BasicPublishAsync("", requestQueueName, _options.Mandatory, props, messageBody, cancellationToken);
+
+				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			});
+
+			await retryPolicy.ExecuteAsync(() => channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken));
 
 			return await task.Task;
 		}
@@ -224,22 +227,25 @@ internal class RabbitMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<SocketException>()
-			            .Or<TimeoutException>()
-			            .Or<BrokerUnreachableException>()
-			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
-			            {
-				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
-			            })
-			            .ExecuteAsync(async () =>
-			            {
-				            _logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
-				            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-				            await channel.BasicPublishAsync("", requestQueueName, true, props, messageBody, cancellationToken);
-				            await channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken);
+			var retryPolicy = Policy.Handle<SocketException>()
+			                         .Or<TimeoutException>()
+			                         .Or<BrokerUnreachableException>()
+			                         .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(1), (exception, _, retryCount, _) =>
+			                         {
+				                         _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
+			                         });
 
-				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
-			            });
+			// 发布与订阅各自重试：订阅失败若重跑整个动作，会重复发布同一条请求。
+			await retryPolicy.ExecuteAsync(async () =>
+			{
+				_logger.LogDebug("Sending message to queue '{QueueName}' with correlation ID '{CorrelationId}'", requestQueueName, message.CorrelationId);
+				var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
+				await channel.BasicPublishAsync("", requestQueueName, _options.Mandatory, props, messageBody, cancellationToken);
+
+				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			});
+
+			await retryPolicy.ExecuteAsync(() => channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken));
 
 			return await task.Task;
 		}
@@ -291,7 +297,9 @@ internal class RabbitMqTransporter : ITransporter
 			Type = message.TypeName,
 			ReplyTo = replyTo,
 			MessageId = message.MessageId,
-			UserId = message.User?.Identity?.Name,
+			// 不能用终端用户身份填充 user_id：RabbitMQ 会校验该值必须与连接用户名一致，
+			// 否则以 PRECONDITION_FAILED 关闭信道。用户身份已通过 Authorization 头传递。
+			DeliveryMode = _options.Persistent ? DeliveryModes.Persistent : DeliveryModes.Transient,
 			// 未启用优先级（MaxPriority <= 0）时返回 null，表示不设置该属性。
 			Priority = RabbitMqDelivery.ResolvePriority(message.GetPriority(), _options.MaxPriority) ?? 0,
 		};

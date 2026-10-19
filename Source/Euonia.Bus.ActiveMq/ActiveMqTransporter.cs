@@ -98,7 +98,7 @@ internal class ActiveMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<Exception>()
+			await Policy.Handle<Exception>(exception => exception is not OperationCanceledException)
 			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
 			            {
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
@@ -202,7 +202,7 @@ internal class ActiveMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<Exception>()
+			await Policy.Handle<Exception>(exception => exception is not OperationCanceledException)
 			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
 			            {
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);

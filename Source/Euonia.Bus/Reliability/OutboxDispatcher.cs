@@ -208,7 +208,12 @@ internal sealed class OutboxDispatcher : IDisposable
 		pipeline.UseOf(envelope.Payload.GetType(), true);
 
 		var transport = _accessor.GetKeyedService<ITransporter>(transportName) ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, transportName));
-		await pipeline.RunAsync((IMessageEnvelope<TMessage>)envelope, message => transport.PublishAsync(message, CancellationToken.None).ContinueWith(_ => Unit.Value, CancellationToken.None));
+		await pipeline.RunAsync((IMessageEnvelope<TMessage>)envelope, async message =>
+		{
+			// 重投递失败必须向上传播，否则发件箱会把该传输记录标记为成功并停止重试。
+			await transport.PublishAsync(message, CancellationToken.None).ConfigureAwait(false);
+			return Unit.Value;
+		});
 	}
 
 	/// <inheritdoc/>

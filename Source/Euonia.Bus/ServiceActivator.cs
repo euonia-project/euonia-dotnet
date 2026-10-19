@@ -55,13 +55,13 @@ public class ServiceActivator : BackgroundService
 	/// <returns>表示所有接收器注册操作并行执行的任务。</returns>
 	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		// 自动装配须在用户配置委托之前：这样同一处理器被显式再次注册时会被幂等去重，
-		// 而不是产生两份注册（多播场景下会被执行两次）。
-		AutoRegisterHandlers();
-
+		// 用户配置必须先执行：通道解析器（SetChannelResolver）等设置会影响自动扫描的注册结果，
+		// 且其后再自动装配时，同一处理器被显式注册过的记录仍会被 ChannelRegistrar 幂等去重。
 		var builder = _provider.GetService<ConfiguratorBuilder>();
 
 		builder?.Invoke(_configurator);
+
+		AutoRegisterHandlers();
 
 		var registrations = _configurator.Registrations;
 

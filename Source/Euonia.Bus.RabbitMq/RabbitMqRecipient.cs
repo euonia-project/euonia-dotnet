@@ -179,7 +179,29 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// <param name="args">包含投递消息数据的 RabbitMQ 事件参数。</param>
 	protected virtual async Task HandleMessageReceivedAsync(object sender, BasicDeliverEventArgs args)
 	{
-		var message = DeserializeMessage(args.Body.ToArray(), MessageType);
+		IMessageEnvelope message;
+		try
+		{
+			message = DeserializeMessage(args.Body.ToArray(), MessageType);
+		}
+		catch (Exception exception)
+		{
+			// 反序列化发生在确认/拒绝逻辑之前；不显式 nack 会留下一条永不确认的消息，
+			// 在 prefetch=1 下直接卡死整个消费者。毒消息不应重新入队。
+			if (!AutoAck)
+			{
+				try
+				{
+					await Channel.BasicNackAsync(args.DeliveryTag, false, false);
+				}
+				catch (Exception nackException)
+				{
+					throw new AggregateException(exception, nackException);
+				}
+			}
+
+			throw;
+		}
 
 		var props = args.BasicProperties;
 
@@ -203,6 +225,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		var shouldReply = !string.IsNullOrEmpty(props.CorrelationId) && !string.IsNullOrWhiteSpace(props.ReplyTo);
 
 		RabbitMqReply<object> reply;
+		var handlerFailed = false;
 
 		EventHandler<MessageRepliedEventArgs> onResponded = OnResponded;
 		EventHandler<Exception> onFailed = OnFailed;
@@ -221,6 +244,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		}
 		catch (Exception exception)
 		{
+			handlerFailed = true;
 			reply = RabbitMqReply<object>.Failure(exception);
 		}
 
@@ -241,7 +265,16 @@ internal abstract class RabbitMqRecipient : DisposableObject
 			// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
 			if (!AutoAck)
 			{
-				await Channel.BasicAckAsync(args.DeliveryTag, false);
+				// 纯订阅者（无回复通道）的处理失败不能 ACK，否则消息会被静默丢弃；
+				// nack(requeue: false) 交由队列的 DLX 处理。
+				if (handlerFailed && !shouldReply)
+				{
+					await Channel.BasicNackAsync(args.DeliveryTag, false, false);
+				}
+				else
+				{
+					await Channel.BasicAckAsync(args.DeliveryTag, false);
+				}
 			}
 
 			OnMessageAcknowledged(new MessageAcknowledgedEventArgs(message.Payload, context));
