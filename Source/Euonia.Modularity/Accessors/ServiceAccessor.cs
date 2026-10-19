@@ -48,6 +48,13 @@ public class ServiceAccessor(IServiceScopeFactory factory) : IServiceAccessor
 		set => _provider.Value = value;
 	}
 
+	/// <inheritdoc/>
+	public bool TryGetServiceProvider(out IServiceProvider serviceProvider)
+	{
+		serviceProvider = _provider.Value;
+		return serviceProvider != null;
+	}
+
 	/// <summary>
 	/// 获取当前异步执行流的兜底作用域；不存在时创建一次并缓存。
 	/// </summary>

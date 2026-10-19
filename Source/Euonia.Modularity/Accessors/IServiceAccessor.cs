@@ -23,7 +23,20 @@ public interface IServiceAccessor : ISingletonDependency
 	/// 获取或设置底层的 <see cref="IServiceProvider"/> 实例。
 	/// </summary>
 	/// <value>用于解析服务依赖的服务提供程序。</value>
+	/// <remarks>
+	/// 读取该属性时，若当前执行流未显式设置服务提供程序，实现可以返回按执行流缓存的兜底作用域。
+	/// 需要区分"显式设置"与"兜底"时使用 <see cref="TryGetServiceProvider"/>。
+	/// </remarks>
 	IServiceProvider ServiceProvider { get; set; }
+
+	/// <summary>
+	/// 尝试获取当前执行流**显式设置**的服务提供程序，不触发兜底作用域的创建。
+	/// </summary>
+	/// <param name="serviceProvider">
+	/// 当前执行流显式设置的服务提供程序；未显式设置时为 <c>null</c>。
+	/// </param>
+	/// <returns><c>true</c> 表示已显式设置；否则为 <c>false</c>。</returns>
+	bool TryGetServiceProvider(out IServiceProvider serviceProvider);
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中解析指定类型的服务实例。

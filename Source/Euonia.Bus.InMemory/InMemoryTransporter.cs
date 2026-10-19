@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Bus.InMemory;
 
@@ -21,6 +23,11 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	private readonly ILogger<InMemoryTransporter> _logger;
 	private readonly WeakReferenceMessenger _weakMessenger;
 	private readonly StrongReferenceMessenger _strongMessenger;
+
+	/// <summary>
+	/// 用于在发布时读取发布方请求上下文；手动构造时未提供。
+	/// </summary>
+	private readonly IServiceAccessor _accessor;
 
 	/// <summary>
 	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
@@ -48,6 +55,19 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	}
 
 	/// <summary>
+	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例，并在发布时保留发布方请求上下文。
+	/// </summary>
+	/// <param name="options">内存总线选项。</param>
+	/// <param name="logger">日志工厂。</param>
+	/// <param name="messengers">与接收者注册器共享的信使实例。</param>
+	/// <param name="accessor">用于读取发布方请求上下文的访问器。</param>
+	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers, IServiceAccessor accessor)
+		: this(options, logger, messengers)
+	{
+		_accessor = accessor;
+	}
+
+	/// <summary>
 	/// 发布（多播）消息，通过弱引用信使发送给所有订阅者。
 	/// </summary>
 	/// <typeparam name="TMessage">消息负载的类型，必须是引用类型。</typeparam>
@@ -56,7 +76,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>表示异步发布操作的任务。</returns>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var context = new MessageContext(message);
+		var context = CreateMessageContext(message);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -76,7 +96,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>表示异步发送操作的任务。</returns>
 	public async Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		var context = CreateMessageContext(message, GetHandlingServiceProvider());
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -125,7 +146,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>包含响应结果的任务。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		using var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		using var context = CreateMessageContext(message, GetHandlingServiceProvider());
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -189,7 +211,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>包含响应结果的任务。</returns>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		using var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		using var context = CreateMessageContext(message, GetHandlingServiceProvider());
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -238,6 +261,63 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		{
 			_logger.LogDebug("Message '{MessageId}' completed", message.MessageId);
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)));
+		}
+	}
+
+	/// <summary>
+	/// 创建消息上下文，并捕获发布方请求上下文快照。
+	/// </summary>
+	/// <param name="message">消息信封。</param>
+	/// <param name="handlingServiceProvider">处理时复用的服务提供程序；多播发布时为 <c>null</c>。</param>
+	/// <returns>携带发布方上下文快照的消息上下文。</returns>
+	private MessageContext CreateMessageContext(IMessageEnvelope message, IServiceProvider handlingServiceProvider = null)
+	{
+		return new MessageContext(message)
+		{
+			PublisherContext = CapturePublisherContext(message.MessageId),
+			HandlingServiceProvider = handlingServiceProvider,
+		};
+	}
+
+	/// <summary>
+	/// 获取当前调用方显式绑定的服务提供程序，供单播/请求处理复用。
+	/// </summary>
+	/// <returns>调用方的服务提供程序；未显式绑定或传输器为手动构造时返回 <c>null</c>。</returns>
+	private IServiceProvider GetHandlingServiceProvider()
+	{
+		return _accessor != null && _accessor.TryGetServiceProvider(out var provider)
+			       ? provider
+			       : null;
+	}
+
+	/// <summary>
+	/// 捕获当前发布方的请求上下文；网络传输不经过该路径。
+	/// </summary>
+	/// <param name="messageId">消息标识符，用于记录捕获失败的上下文。</param>
+	/// <returns>发布方上下文快照；手动构造的传输器不做捕获。</returns>
+	private PublisherContextSnapshot CapturePublisherContext(string messageId)
+	{
+		if (_accessor == null)
+		{
+			return PublisherContextSnapshot.NotCaptured;
+		}
+
+		if (!_accessor.TryGetServiceProvider(out var provider))
+		{
+			// 发布方没有显式绑定服务提供程序，视为没有请求上下文；
+			// 仍然标记为已捕获，以便处理时清除后台泵继承自其他消息的上下文。
+			return PublisherContextSnapshot.Capture(null);
+		}
+
+		try
+		{
+			return PublisherContextSnapshot.Capture(provider.GetService<DefaultRequestContextAccessor>()?.Context);
+		}
+		catch (ObjectDisposedException exception)
+		{
+			// 发布方作用域已释放：消息仍可投递，但无法保留发布方上下文。
+			_logger.LogWarning(exception, "Publisher scope was already disposed while capturing context for message {MessageId}; publisher context will not be preserved.", messageId);
+			return PublisherContextSnapshot.Capture(null);
 		}
 	}
 

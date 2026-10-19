@@ -24,18 +24,23 @@ public class RequestContextAccessor : IRequestContextAccessor
 	/// <summary>
 	/// Gets the current request context instance.
 	/// </summary>
+	/// <remarks>
+	/// 委托访问器在请求流之外（如消息消费者进程）可能返回 <c>null</c>；
+	/// 此时回退到默认访问器中由消息信封恢复的上下文。
+	/// </remarks>
 	public RequestContext Context
 	{
 		get
 		{
+			var defaultContext = _service.GetService<DefaultRequestContextAccessor>()?.Context;
+
 			if (_options.UseDefaultAccessor)
 			{
-				return _service.GetService<DefaultRequestContextAccessor>().Context;
+				return defaultContext;
 			}
-			else
-			{
-				return _service.GetService<DelegateRequestContextAccessor>().Invoke();
-			}
+
+			var delegateAccessor = _service.GetService<DelegateRequestContextAccessor>();
+			return delegateAccessor?.Invoke() ?? defaultContext;
 		}
 	}
 }

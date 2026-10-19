@@ -54,6 +54,28 @@ public class MessageScopeLifetimeTests
 
 		// 嵌套命令（订阅者在处理过程中继续发送命令）的处理同样必须解析到有效作用域。
 		await state.NestedCommandHandled.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+
+		// 作用域服务必须存活到处理结束，并在处理完成后释放。
+		Assert.True(await WaitAsync(() => state.Probe.Disposed, TimeSpan.FromSeconds(5)), "处理作用域必须在处理程序完成后释放");
+	}
+
+	/// <summary>
+	/// 轮询等待条件成立，用于观察作用域的释放时机。
+	/// </summary>
+	private static async Task<bool> WaitAsync(Func<bool> condition, TimeSpan timeout)
+	{
+		var deadline = DateTime.UtcNow + timeout;
+		while (!condition())
+		{
+			if (DateTime.UtcNow >= deadline)
+			{
+				return false;
+			}
+
+			await Task.Delay(20, TestContext.Current.CancellationToken);
+		}
+
+		return true;
 	}
 
 	private static ServiceProvider BuildProvider(ProbeState state)
@@ -75,10 +97,20 @@ public class MessageScopeLifetimeTests
 	}
 
 	/// <summary>
-	/// 用于探测当前环境服务提供程序是否有效的作用域标记服务。
+	/// 用于探测当前环境服务提供程序是否有效、以及作用域何时释放的作用域服务。
 	/// </summary>
-	private sealed class ScopedProbe
+	private sealed class ScopedProbe : IDisposable
 	{
+		/// <summary>
+		/// 获取作用域是否已释放该实例。
+		/// </summary>
+		public bool Disposed { get; private set; }
+
+		/// <inheritdoc/>
+		public void Dispose()
+		{
+			Disposed = true;
+		}
 	}
 
 	private sealed class ScopeProbeEvent : IMulticast
@@ -108,23 +140,45 @@ public class MessageScopeLifetimeTests
 		/// 嵌套命令已被成功处理的信号。
 		/// </summary>
 		public TaskCompletionSource NestedCommandHandled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		/// <summary>
+		/// 处理器构造时由处理作用域创建的作用域服务。
+		/// </summary>
+		public ScopedProbe Probe { get; set; }
 	}
 
 	/// <summary>
 	/// 事件订阅者：在发布方作用域释放后解析服务并继续发送命令，复刻订阅者的真实行为。
 	/// </summary>
-	private sealed class ScopeProbeSubscriber(IServiceAccessor accessor, IBus bus, ProbeState state) : IHandler<ScopeProbeEvent>
+	private sealed class ScopeProbeSubscriber(IServiceAccessor accessor, IBus bus, ProbeState state, ScopedProbe probe) : IHandler<ScopeProbeEvent>
 	{
 		public async Task HandleAsync(ScopeProbeEvent message, IMessageContext context, CancellationToken cancellationToken = default)
 		{
+			state.Probe = probe;
 			await state.Gate.Task;
 
 			try
 			{
 				// 修复前：环境提供程序仍指向已释放的发布方作用域，此处抛出 ObjectDisposedException。
-				_ = accessor.GetRequiredService<ScopedProbe>();
+				var resolved = accessor.GetRequiredService<ScopedProbe>();
+
+				// 环境解析与构造注入必须来自同一个处理作用域，且在处理期间保持存活。
+				if (!ReferenceEquals(probe, resolved))
+				{
+					throw new InvalidOperationException("环境解析与构造注入必须使用同一个处理作用域");
+				}
+
+				if (probe.Disposed)
+				{
+					throw new ObjectDisposedException(nameof(ScopedProbe), "处理事件期间作用域服务被提前释放");
+				}
 
 				await bus.SendAsync(new NestedCommand(), cancellationToken);
+
+				if (probe.Disposed)
+				{
+					throw new ObjectDisposedException(nameof(ScopedProbe), "处理嵌套命令期间作用域服务被提前释放");
+				}
 
 				state.Observed.TrySetResult(null);
 			}
@@ -138,11 +192,21 @@ public class MessageScopeLifetimeTests
 	/// <summary>
 	/// 嵌套命令的处理程序：同样验证其环境解析不指向已释放的发布方作用域。
 	/// </summary>
-	private sealed class NestedCommandHandler(IServiceAccessor accessor, ProbeState state) : IHandler<NestedCommand>
+	private sealed class NestedCommandHandler(IServiceAccessor accessor, ProbeState state, ScopedProbe probe) : IHandler<NestedCommand>
 	{
 		public Task HandleAsync(NestedCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 		{
-			_ = accessor.GetRequiredService<ScopedProbe>();
+			var resolved = accessor.GetRequiredService<ScopedProbe>();
+			if (!ReferenceEquals(probe, resolved))
+			{
+				throw new InvalidOperationException("嵌套命令的环境解析与构造注入必须使用同一个处理作用域");
+			}
+
+			if (probe.Disposed)
+			{
+				throw new ObjectDisposedException(nameof(ScopedProbe), "处理嵌套命令期间作用域服务被提前释放");
+			}
+
 			state.NestedCommandHandled.TrySetResult();
 			return Task.CompletedTask;
 		}

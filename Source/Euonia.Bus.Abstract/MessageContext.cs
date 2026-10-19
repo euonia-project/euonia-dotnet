@@ -109,6 +109,25 @@ public sealed class MessageContext : IMessageContext
 	public MessageMetadata Metadata { get; set; }
 
 	/// <summary>
+	/// 获取或设置发布方请求上下文快照；仅进程内传输在发布时填充。
+	/// </summary>
+	/// <remarks>
+	/// 处理程序应使用该快照恢复发布方上下文，而不是依赖后台泵启动时的异步状态继承；
+	/// 后者会让同一泵中的后续消息沿用第一条消息的上下文。
+	/// </remarks>
+	public PublisherContextSnapshot PublisherContext { get; set; }
+
+	/// <summary>
+	/// 获取或设置处理消息时可复用的现有服务提供程序；为 <c>null</c> 时处理方创建新作用域。
+	/// </summary>
+	/// <remarks>
+	/// 进程内单播/请求（<c>SendAsync</c>/<c>CallAsync</c>）由调用方等待处理完成，
+	/// 发布方作用域在整个处理期间存活，因此处理程序直接复用该作用域，不创建新作用域。
+	/// 多播发布（<c>PublishAsync</c>）是 fire-and-forget，不填充该属性。
+	/// </remarks>
+	public IServiceProvider HandlingServiceProvider { get; set; }
+
+	/// <summary>
 	/// 向消息分发器回复消息处理结果。
 	/// </summary>
 	/// <param name="message">要回复的消息。</param>

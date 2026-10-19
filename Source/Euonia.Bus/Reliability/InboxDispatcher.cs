@@ -63,7 +63,12 @@ internal sealed class InboxDispatcher : IDisposable
 			return;
 		}
 
-		_ = Task.Run(RetryAllAsync);
+		// 定时器在创建时捕获 ExecutionContext，可能携带某个请求的环境状态；
+		// 后台重试不应继承该状态，否则会解析到已释放的请求作用域。
+		using (ExecutionContext.SuppressFlow())
+		{
+			_ = Task.Run(RetryAllAsync);
+		}
 	}
 
 	/// <summary>
@@ -207,8 +212,12 @@ internal sealed class InboxDispatcher : IDisposable
 	private async Task ExecuteAsync(HandlerRegistration registration, InboxEntry entry)
 	{
 		using var scope = _provider.CreateScope();
+		using var ambient = AmbientServiceProviderBinding.Bind(_provider, scope);
+
 		var handler = registration.Factory(scope.ServiceProvider);
 		var context = new MessageContext(entry.Content);
+		// 重执行按原消息的身份进行，而不是触发本轮重试的调用方身份。
+		using var requestContext = MessageRequestContextScope.Establish(scope.ServiceProvider, context, overwrite: true);
 		try
 		{
 			await handler(entry.Content.Payload, context, CancellationToken.None);

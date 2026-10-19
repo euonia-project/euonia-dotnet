@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Bus.Telemetry;
@@ -21,6 +22,7 @@ internal sealed class OutboxDispatcher : IDisposable
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _redeliverMethods = new();
 
 	private readonly IServiceAccessor _accessor;
+	private readonly IServiceScopeFactory _scopeFactory;
 	private readonly IOutboxStore _store;
 	private readonly OutboxOptions _options;
 	private readonly IDeadLetterStore _deadLetterStore;
@@ -43,6 +45,7 @@ internal sealed class OutboxDispatcher : IDisposable
 	public OutboxDispatcher(IServiceAccessor accessor, IOutboxStore store, OutboxOptions options)
 	{
 		_accessor = accessor;
+		_scopeFactory = accessor.GetRequiredService<IServiceScopeFactory>();
 		_store = store;
 		_options = options ?? new OutboxOptions();
 		// 死信存储为可选依赖：未注册时保持原有的"记录警告并跳过"行为。
@@ -71,7 +74,12 @@ internal sealed class OutboxDispatcher : IDisposable
 			return;
 		}
 
-		_ = Task.Run(RetryAllAsync);
+		// 定时器在创建时捕获 ExecutionContext，可能携带某个请求的环境状态；
+		// 后台重试不应继承该状态，否则会解析到已释放的请求作用域。
+		using (ExecutionContext.SuppressFlow())
+		{
+			_ = Task.Run(RetryAllAsync);
+		}
 	}
 
 	/// <summary>
@@ -234,6 +242,9 @@ internal sealed class OutboxDispatcher : IDisposable
 
 	private async Task RedeliverCoreAsync<TMessage>(IMessageEnvelope envelope, string transportName)
 	{
+		using var scope = _scopeFactory.CreateScope();
+		using var ambient = AmbientServiceProviderBinding.Bind(_accessor, scope.ServiceProvider);
+
 		var pipeline = _accessor.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, Unit>>();
 		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, Unit>), transportName, _logger);
 		pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, Unit>), transportName);

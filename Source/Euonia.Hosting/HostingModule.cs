@@ -20,7 +20,10 @@ public class HostingModule : ModuleContextBase
 		context.Services.TryAddScoped<DefaultRequestContextAccessor>();
 		context.Services.TryAddScoped<DelegateRequestContextAccessor>(provider =>
 		{
-			return () => RequestContext.From(provider.GetService<IHttpContextAccessor>()?.HttpContext);
+			// 请求流之外（如 broker 消费者回调）没有 HttpContext，返回 null 由访问器回退处理。
+			return () => provider.GetService<IHttpContextAccessor>()?.HttpContext is { } httpContext
+				              ? RequestContext.From(httpContext)
+				              : null;
 		});
 		context.Services.AddScopeTransformation();
 		context.Services.AddUserPrincipal();
