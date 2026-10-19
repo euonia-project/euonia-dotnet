@@ -138,4 +138,7 @@
   <data name="IDS_PARAMETER_REQUIRED" xml:space="preserve">
     <value>方法 '{1}' 的參數 '{0}' 為必要項目。</value>
   </data>
+  <data name="IDS_CIRCUIT_OPEN" xml:space="preserve">
+    <value>斷路器 '{0}' 在 {1} 次失敗後已開啟，將在 {2} 秒後探測。</value>
+  </data>
 </root>

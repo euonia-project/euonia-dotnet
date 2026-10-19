@@ -45,10 +45,10 @@ public class BusinessObjectFactory : IObjectFactory
 			editable.MarkAsNew();
 		}
 
-		return WithActivator(target, () =>
+		return WithActivator(target, initialize =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
-			_activator?.InitializeInstance(target);
+			initialize();
 			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
@@ -71,10 +71,10 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		return WithActivator(target, () =>
+		return WithActivator(target, initialize =>
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
-			_activator?.InitializeInstance(target);
+			initialize();
 			var parameters = NormalizeParameters(method, criteria);
 			if (method.IsAsync())
 			{
@@ -101,10 +101,10 @@ public class BusinessObjectFactory : IObjectFactory
 			editable.MarkAsNew();
 		}
 
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// 同 Create：只构造不落库，不做数据范围判定
@@ -117,10 +117,10 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Read, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
@@ -134,10 +134,10 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
@@ -151,10 +151,10 @@ public class BusinessObjectFactory : IObjectFactory
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Update, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -177,14 +177,15 @@ public class BusinessObjectFactory : IObjectFactory
 			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
-		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken);
+		// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
+		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget));
 
 		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
 		await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken);
 
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, [cancellationToken]);
 
 			// 保存后再次判定：业务方法可能改动了范围列
@@ -198,14 +199,14 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]);
 
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken, typeof(TTarget));
 
 			// 目标由调用方提供：可以前置判定
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, BusinessOperation.Execute, cancellationToken);
 
-			_activator?.InitializeInstance(target);
+			initialize();
 
 			// 规则在命令体之前裁决（先属性级、再对象级）：不通过则命令根本不会执行。
 			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
@@ -223,10 +224,10 @@ public class BusinessObjectFactory : IObjectFactory
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 
-		return await WithActivatorAsync(target, async () =>
+		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -247,10 +248,10 @@ public class BusinessObjectFactory : IObjectFactory
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 
-		await WithActivatorAsync(target, async () =>
+		await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Delete, default);
-			_activator?.InitializeInstance(target);
+			initialize();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -270,32 +271,55 @@ public class BusinessObjectFactory : IObjectFactory
 	/// </remarks>
 	/// <typeparam name="TTarget">目标类型。</typeparam>
 	/// <param name="target">目标实例。</param>
-	/// <param name="body">授权、初始化与工厂方法调用。</param>
+	/// <param name="body">授权、初始化与工厂方法调用；只有在需要初始化时调用传入的 <c>initialize</c> 委托。</param>
 	/// <returns><paramref name="target"/> 本身。</returns>
-	private TTarget WithActivator<TTarget>(TTarget target, Action body)
+	private TTarget WithActivator<TTarget>(TTarget target, Action<Action> body)
 	{
+		var initialized = false;
+
+		void Initialize()
+		{
+			_activator?.InitializeInstance(target);
+			initialized = true;
+		}
+
 		try
 		{
-			body();
+			body(Initialize);
 			return target;
 		}
 		finally
 		{
-			_activator?.FinalizeInstance(target);
+			// 授权失败发生在初始化之前，此时不能调用 Finalize（否则会终结一个从未初始化的对象）。
+			if (initialized)
+			{
+				_activator?.FinalizeInstance(target);
+			}
 		}
 	}
 
 	/// <inheritdoc cref="WithActivator{TTarget}"/>
-	private async Task<TTarget> WithActivatorAsync<TTarget>(TTarget target, Func<Task> body)
+	private async Task<TTarget> WithActivatorAsync<TTarget>(TTarget target, Func<Action, Task> body)
 	{
+		var initialized = false;
+
+		void Initialize()
+		{
+			_activator?.InitializeInstance(target);
+			initialized = true;
+		}
+
 		try
 		{
-			await body();
+			await body(Initialize);
 			return target;
 		}
 		finally
 		{
-			_activator?.FinalizeInstance(target);
+			if (initialized)
+			{
+				_activator?.FinalizeInstance(target);
+			}
 		}
 	}
 
@@ -323,13 +347,46 @@ public class BusinessObjectFactory : IObjectFactory
 	private static object[] NormalizeParameters(MethodInfo method, object[] parameters)
 	{
 		var methodParameters = method.GetParameters();
+
+		// params 数组必须打包成一个数组实参；直接把调用参数原样传给反射会抛
+		// TargetParameterCountException / ArgumentException。
+		if (methodParameters.Length > 0)
+		{
+			var lastParameter = methodParameters[^1];
+			if (lastParameter.GetCustomAttributes<ParamArrayAttribute>().Any())
+			{
+				var fixedCount = methodParameters.Length - 1;
+				var normalized = new object[methodParameters.Length];
+
+				for (var index = 0; index < fixedCount; index++)
+				{
+					normalized[index] = index < parameters.Length ? parameters[index] : Type.Missing;
+				}
+
+				var extras = parameters.Length > fixedCount ? parameters[fixedCount..] : [];
+				if (extras.Length == 1 && lastParameter.ParameterType.IsInstanceOfType(extras[0]))
+				{
+					normalized[fixedCount] = extras[0];
+				}
+				else
+				{
+					var elementType = lastParameter.ParameterType.GetElementType() ?? typeof(object);
+					var array = Array.CreateInstance(elementType, extras.Length);
+					for (var index = 0; index < extras.Length; index++)
+					{
+						array.SetValue(extras[index], index);
+					}
+
+					normalized[fixedCount] = array;
+				}
+
+				return normalized;
+			}
+		}
+
 		if (methodParameters.Length <= parameters.Length)
 		{
 			return parameters;
-		}
-
-		{
-			// 空块：用于阻止 IDE 代码分析建议（勿删除）
 		}
 
 		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];

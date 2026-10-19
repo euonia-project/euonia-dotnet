@@ -150,4 +150,10 @@
   <data name="IDS_CONTAINS_METHOD_NOT_FOUND" xml:space="preserve">
     <value>'Contains' 메서드를 찾을 수 없습니다.</value>
   </data>
+  <data name="IDS_PAGE_NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ONE" xml:space="preserve">
+    <value>페이지 번호는 1 이상이어야 합니다.</value>
+  </data>
+  <data name="IDS_PAGE_SIZE_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ZERO" xml:space="preserve">
+    <value>페이지 크기는 0 이상이어야 합니다.</value>
+  </data>
 </root>

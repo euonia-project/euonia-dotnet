@@ -166,9 +166,12 @@ internal sealed class MessageBus : IBus, IDisposable
 
 			await Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
 			{
-				await RunWithPipelineAsync(pack, behavior, (transport, p) =>
+				await RunWithPipelineAsync(pack, behavior, async (transport, p) =>
 				{
-					return transport.PublishAsync(p, token).ContinueWith(_ => Unit.Value, token);
+					// 必须等待并传播传输异常：ContinueWith 会无视前序任务的故障，
+					// 使发件箱把发送失败误记为成功并停止重试。
+					await transport.PublishAsync(p, token).ConfigureAwait(false);
+					return Unit.Value;
 				}, name, useOutbox);
 			});
 		}
@@ -368,7 +371,9 @@ internal sealed class MessageBus : IBus, IDisposable
 		var startTimestamp = Stopwatch.GetTimestamp();
 		BusTelemetry.Called.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
 
-		var result = RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
+		var result = options.Delay > 0
+			             ? CallWithDelayAsync(pack, behavior, transportName, options.Delay, cancellationToken)
+			             : RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
 
 		return CompleteCallAsync(result, options.Timeout, cancellationToken, activity, startTimestamp, channel, messageType, transportName);
 	}

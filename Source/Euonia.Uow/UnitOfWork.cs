@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Threading;
 
 namespace Nerosoft.Euonia.Uow;
 
@@ -211,6 +212,16 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		{
 			_isCompleting = true;
 			await SaveChangesAsync(cancellationToken);
+
+			// 事务性工作单元在保存成功后提交；非事务性上下文依赖 SaveChanges 的自动提交。
+			if (Options.IsTransactional)
+			{
+				foreach (var (_, context) in Contexts)
+				{
+					await context.CommitAsync(cancellationToken);
+				}
+			}
+
 			IsCompleted = true;
 			await OnCompletedAsync();
 		}
@@ -275,6 +286,21 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	/// 若该工作单元尚未完成或完成过程存在异常，会先触发 <see cref="Failed"/> 事件，
 	/// 随后抛出释放通知。重复调用不会重复执行释放逻辑。
 	/// </remarks>
+	private int _disposedEventRaised;
+
+	/// <inheritdoc />
+	protected override void InvokeDisposedEvent(object sender, DisposedEventArgs args)
+	{
+		// 基类 Dispose() 每次调用都会触发该事件；工作单元会被 DI 作用域再次释放，
+		// 必须保证订阅者只收到一次通知。
+		if (Interlocked.Exchange(ref _disposedEventRaised, 1) != 0)
+		{
+			return;
+		}
+
+		base.InvokeDisposedEvent(sender, args);
+	}
+
 	protected override void Dispose(bool disposing)
 	{
 		if (IsDisposed)
@@ -283,6 +309,20 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		}
 
 		IsDisposed = true;
+
+		// 事务性工作单元未完成即被释放（异常/取消路径）：显式回滚，避免事务悬空。
+		// 终结器线程（disposing == false）不得访问托管对象。
+		if (disposing && Options is { IsTransactional: true } && !IsCompleted && !RolledBack)
+		{
+			try
+			{
+				AsyncContext.Run(() => RollbackAsync());
+			}
+			catch
+			{
+				// Dispose 不应抛出；回滚失败已由上下文自身负责记录。
+			}
+		}
 
 		foreach (var (_, _) in Contexts)
 		{
@@ -294,7 +334,8 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 			OnFailed();
 		}
 
-		InvokeDisposedEvent(this, new DisposedEventArgs());
+		// 不要在此触发 Disposed：基类 DisposableObject.Dispose() 已统一触发，
+		// 且该方法也会被终结器以 disposing=false 调用，终结器线程不得触发托管事件。
 	}
 
 	#endregion

@@ -140,6 +140,70 @@ public class DeadLetterTests
 		Assert.Null(service.Get("replay-inbox-1"));
 	}
 
+	/// <summary>
+	/// 收件箱启用时，原条目仍以 DeadLettered 状态存在；重放必须绕过去重，
+	/// 否则处理器会被当作“已处理”跳过，而死信却被删除。
+	/// </summary>
+	[Fact]
+	public async Task ReplayAsync_InboxSource_WithInboxEnabled_ShouldBypassDedupeAndReexecute()
+	{
+		ReplayHandler.Calls = 0;
+
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddSingleton<DefaultRequestContextAccessor>();
+		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.Configure<MessageBusOptions>(options =>
+		{
+			options.DefaultTransporter = "test";
+			options.Inbox.Enabled = true;
+		});
+		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddEuoniaBus();
+		services.AddInMemoryInbox();
+		services.AddInMemoryDeadLetters();
+		services.AddMessageHandler(ServiceLifetime.Transient, typeof(ReplayHandler));
+
+		await using var provider = services.BuildServiceProvider();
+
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
+
+		// 先解析上下文以订阅注册事件。
+		_ = provider.GetRequiredService<IHandlerContext>();
+		configurator.RegisterChannel(typeof(ReplayHandler));
+
+		var inbox = provider.GetRequiredService<IInboxStore>();
+		var deadLetters = provider.GetRequiredService<IDeadLetterService>();
+		var channel = typeof(ReplayEvent).FullName!;
+		var envelope = TestMessages.Envelope(new ReplayEvent(), channel, "replay-inbox-2");
+		var handlerName = typeof(ReplayHandler).FullName!;
+
+		inbox.Insert(channel, envelope, [handlerName]);
+		inbox.MarkAsDeadLettered("replay-inbox-2", handlerName, "boom");
+
+		provider.GetRequiredService<IDeadLetterStore>().Add(new DeadLetterEntry
+		{
+			MessageId = "replay-inbox-2",
+			Channel = channel,
+			MessageType = typeof(ReplayEvent).FullName,
+			Content = envelope,
+			Source = DeadLetterSource.Inbox,
+			Target = handlerName,
+			Error = "boom",
+			RetryAttempts = 3,
+		});
+
+		var replayed = await deadLetters.ReplayAsync("replay-inbox-2", TestContext.Current.CancellationToken);
+		Assert.True(replayed, deadLetters.Get("replay-inbox-2")?.Error);
+
+		Assert.Equal(1, ReplayHandler.Calls);
+		Assert.Null(deadLetters.Get("replay-inbox-2"));
+		Assert.Equal(InboxHandlerStatus.Success, inbox.Get("replay-inbox-2").GetHandler(handlerName).Status);
+	}
+
 	[Fact]
 	public async Task ReplayAsync_WhenTransportMissing_KeepsEntryAndRecordsError()
 	{
@@ -265,6 +329,21 @@ public class DeadLetterTests
 		services.AddSingleton<IHandlerContext>(_ => new DelegatingHandlerContext(onHandled));
 
 		return services.BuildServiceProvider();
+	}
+
+	private sealed class ReplayEvent : IMulticast
+	{
+	}
+
+	private sealed class ReplayHandler : IHandler<ReplayEvent>
+	{
+		public static int Calls;
+
+		public Task HandleAsync(ReplayEvent message, IMessageContext context, CancellationToken cancellationToken = default)
+		{
+			Interlocked.Increment(ref Calls);
+			return Task.CompletedTask;
+		}
 	}
 
 	/// <summary>

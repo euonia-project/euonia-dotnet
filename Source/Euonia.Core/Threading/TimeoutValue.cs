@@ -20,7 +20,7 @@ public readonly struct TimeoutValue : IEquatable<TimeoutValue>, IComparable<Time
             var totalMilliseconds = (long)timeoutValue.TotalMilliseconds;
             if (totalMilliseconds is < -1 or > int.MaxValue)
             {
-                var message = $"Must be {nameof(Timeout)}.{nameof(Timeout.InfiniteTimeSpan)} ({Timeout.InfiniteTimeSpan}) or a non-negative value <= {TimeSpan.FromMilliseconds(int.MaxValue)})";
+                var message = string.Format(Resources.IDS_TIMEOUT_OUT_OF_RANGE, Timeout.InfiniteTimeSpan, TimeSpan.FromMilliseconds(int.MaxValue));
                 throw new ArgumentOutOfRangeException(nameof(timeout), timeoutValue, message);
             }
 

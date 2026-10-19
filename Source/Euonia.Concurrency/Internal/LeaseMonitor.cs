@@ -69,7 +69,8 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
         {
             if (_cancellationTask != null)
             {
-                _ = _cancellationTask.ContinueWith((_, state) => ((CancellationTokenSource)state).Dispose(), state: _handleLostSource, cancellationToken: HandleLostToken);
+                // 不能传 HandleLostToken：该令牌正是前序任务取消时触发的，续延会被跳过而导致 CTS 泄漏。
+                _ = _cancellationTask.ContinueWith((_, state) => ((CancellationTokenSource)state).Dispose(), state: _handleLostSource);
             }
             else
             {
@@ -89,7 +90,9 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
     /// <returns>表示后台监控循环的任务。</returns>
     private static Task CreateMonitoringLoopTask(WeakReference<LeaseMonitor> weakMonitor, TimeoutValue monitoringCadence, CancellationToken disposalToken)
     {
-        return Task.Run(MonitoringLoop, disposalToken);
+        // 不能把 disposalToken 传给 Task.Run：若在委托入队前就被取消，任务直接变为 Canceled，
+        // DisposeAsync 等待时会抛 TaskCanceledException。循环内部会自行观察该令牌。
+        return Task.Run(MonitoringLoop);
 
         async Task MonitoringLoop()
         {

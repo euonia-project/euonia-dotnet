@@ -238,10 +238,13 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// 优先级最高（最后执行）的组件最先被包装，成为最内层；优先级最低（最先执行）的最后包装，成为最外层。
 	/// 必须在锁外调用：<c>Component</c> 的执行会触发反射与表达式编译，不适合持锁。
 	/// </remarks>
-	private static PipelineDelegate<TRequest, TResponse> Compose(IReadOnlyList<ComponentEntry> entries)
+	private static PipelineDelegate<TRequest, TResponse> Compose(IReadOnlyList<ComponentEntry> entries, Func<TRequest, Task<TResponse>> terminal = null)
 	{
-		// ReSharper disable once ConvertToLocalFunction
-		PipelineDelegate<TRequest, TResponse> app = _ => Task.FromResult(default(TResponse));
+		// 累积委托必须作为最内层终结点，而不是按优先级混入组件表：
+		// 否则任何优先级大于 0 的组件都会被它包住且永远不会执行。
+		PipelineDelegate<TRequest, TResponse> app = terminal != null
+			                                            ? request => terminal(request)
+			                                            : _ => Task.FromResult(default(TResponse));
 
 		return entries
 			.OrderByDescending(c => c.Priority)
@@ -291,18 +294,13 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 		{
 			entries = [.. _components];
 
-			if (accumulate != null)
-			{
-				entries.Add(new ComponentEntry(0, _sequence++, _ => request => accumulate(request)));
-			}
-
 			foreach (var (behaviorType, priority) in behaviors)
 			{
 				entries.Add(new ComponentEntry(priority, _sequence++, next => GetNext(next, behaviorType)));
 			}
 		}
 
-		return await Compose(entries)(context);
+		return await Compose(entries, accumulate)(context);
 	}
 
 	#endregion

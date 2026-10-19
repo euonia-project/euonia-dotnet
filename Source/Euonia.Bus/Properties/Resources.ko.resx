@@ -130,22 +130,22 @@
     <value>inbox가 활성화되어 있지만 inbox 저장소가 등록되지 않았습니다. IInboxStore 구현(예: services.AddInMemoryInbox())을 등록하십시오.</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>메서드가 존재하지 않습니다.</value>
+    <value>처리기 형식 {0}에 IHandler&lt;,&gt; 인터페이스가 요구하는 메서드 {1}({2}, IMessageContext, CancellationToken)이(가) 선언되어 있지 않습니다.</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>처리기 메서드에는 매개변수가 하나 이상 필요합니다</value>
+    <value>처리기 메서드 {0}.{1}에는 매개변수가 하나 이상 필요합니다.</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>처리기 메서드의 첫 번째 매개변수는 메시지 형식이어야 합니다</value>
+    <value>처리기 메서드 {0}.{1}의 첫 번째 매개변수는 메시지 형식이어야 합니다. 실제 매개변수 형식은 ({2})입니다.</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>메서드가 두 개의 매개변수를 갖는 경우 처리기 메서드의 두 번째 매개변수는 MessageContext 또는 CancellationToken이어야 합니다</value>
+    <value>처리기 메서드 {0}.{1}에 매개변수가 두 개 있는 경우 두 번째 매개변수는 IMessageContext 또는 CancellationToken이어야 합니다. 실제 매개변수 형식은 ({2})입니다.</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>메서드가 세 개의 매개변수를 갖는 경우 처리기 메서드의 두 번째와 세 번째 매개변수는 MessageContext와 CancellationToken이어야 합니다</value>
+    <value>처리기 메서드 {0}.{1}에 매개변수가 세 개 있는 경우 두 번째와 세 번째 매개변수는 IMessageContext와 CancellationToken이어야 합니다. 실제 매개변수 형식은 ({2})입니다.</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>처리기 메서드에 이름이 비어 있는 SubscribeAttribute를(을) 포함할 수 없습니다</value>
+    <value>처리기 메서드 {0}.{1}에 이름이 없는 SubscribeAttribute가 있습니다. 모든 SubscribeAttribute에 채널 이름을 지정해야 합니다.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>'{1}:AutoLoadAssemblies'에 구성된 어셈블리 '{0}'의(의) 자동 로드에 실패했습니다.</value>

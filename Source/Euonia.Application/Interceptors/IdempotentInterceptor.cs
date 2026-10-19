@@ -238,7 +238,8 @@ public class IdempotentInterceptor : IInterceptor
 		var requestKey = ResolveRequestKey(attribute);
 		if (requestKey != null)
 		{
-			return $"idem:{methodName}:{requestKey}";
+			// 必须包含服务标识：不同服务可能暴露同名方法，仅用方法名会让请求键互相覆盖/误判为重复。
+			return $"idem:{serviceType?.FullName}.{methodName}:{requestKey}";
 		}
 
 		var builder = new StringBuilder($"{serviceType?.FullName}.{methodName}:");

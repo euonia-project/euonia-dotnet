@@ -130,22 +130,22 @@
     <value>收件箱已启用，但未注册收件箱存储。请注册 IInboxStore 实现（例如 services.AddInMemoryInbox()）。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>方法不存在。</value>
+    <value>处理程序类型 {0} 未声明 IHandler&lt;,&gt; 接口要求的方法 {1}({2}, IMessageContext, CancellationToken)。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>处理程序方法必须至少包含一个参数。</value>
+    <value>处理程序方法 {0}.{1} 必须至少包含一个参数。</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>处理程序方法的第一个参数必须是消息类型。</value>
+    <value>处理程序方法 {0}.{1} 的第一个参数必须是消息类型，实际参数类型为 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>当方法包含 2 个参数时，第二个参数必须是 MessageContext 或 CancellationToken。</value>
+    <value>当处理程序方法 {0}.{1} 包含 2 个参数时，第二个参数必须是 IMessageContext 或 CancellationToken，实际参数类型为 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>当方法包含 3 个参数时，第二、三个参数必须依次是 MessageContext 与 CancellationToken。</value>
+    <value>当处理程序方法 {0}.{1} 包含 3 个参数时，第二、三个参数必须依次是 IMessageContext 与 CancellationToken，实际参数类型为 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>处理程序方法不能带有名称为空的 SubscribeAttribute。</value>
+    <value>处理程序方法 {0}.{1} 上的 SubscribeAttribute 未指定名称，每个 SubscribeAttribute 都必须指定通道名称。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>自动加载配置项 '{1}:AutoLoadAssemblies' 中指定的程序集 '{0}' 失败。</value>

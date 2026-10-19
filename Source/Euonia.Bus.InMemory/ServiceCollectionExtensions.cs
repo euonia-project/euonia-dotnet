@@ -34,6 +34,9 @@ public static class ServiceCollectionExtensions
 			// 将内存请求执行器注册为瞬态服务。
 			services.TryAddTransient<InMemoryExecutor>();
 
+			// 每个容器独立的一对信使；传输器与接收者注册器必须共享同一对实例。
+			services.TryAddSingleton<InMemoryMessengerProvider>();
+
 			// 将内存传输器注册为单例服务。
 			services.TryAddSingleton<InMemoryTransporter>();
 

@@ -70,6 +70,10 @@ internal static class MessageHandlerFinder
 		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
 		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		                            // IHandler<T> 继承 IHandler<T, Unit>：两者同时出现时只注册更具体的单参数接口，
+		                            // 否则同一个处理程序会在多播通道上被执行两次。
+		                            .GroupBy(x => x.GetGenericArguments()[0])
+		                            .Select(group => group.OrderBy(x => x.GetGenericArguments().Length).First())
 		                            .ToList();
 
 		var handlerInterfaceMethods = new HashSet<MethodInfo>();
@@ -78,10 +82,10 @@ internal static class MessageHandlerFinder
 			foreach (var @interface in interfaces)
 			{
 				var messageType = @interface.GetGenericArguments()[0];
-				var method = handlerType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)]);
+				var method = GetImplementationMethod(handlerType, @interface, messageType);
 				if (method == null)
 				{
-					throw new MissingMethodException(Resources.IDS_HANDLER_METHOD_NOT_EXIST);
+					throw new MissingMethodException(string.Format(Resources.IDS_HANDLER_METHOD_NOT_EXIST, handlerType.FullName, nameof(IHandler<,>.HandleAsync), messageType.FullName));
 				}
 
 				handlerInterfaceMethods.Add(method);
@@ -92,7 +96,7 @@ internal static class MessageHandlerFinder
 				var channel = channelResolver?.Invoke(messageType);
 
 				channel ??= messageType.FullName;
-				@delegate(channel, messageType, new ChannelHandler(@interface, null));
+				@delegate(channel, messageType, new ChannelHandler(@interface, null, ImplementationType: handlerType));
 			}
 		}
 
@@ -103,20 +107,21 @@ internal static class MessageHandlerFinder
 		foreach (var method in methods)
 		{
 			var parameters = method.GetParameters();
+			var parameterTypes = string.Join(", ", parameters.Select(parameter => parameter.ParameterType.FullName ?? parameter.ParameterType.Name));
 
 			if (parameters.Length == 0)
 			{
-				throw new InvalidOperationException(Resources.IDS_HANDLER_METHOD_REQUIRES_PARAMETER);
+				throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_METHOD_REQUIRES_PARAMETER, handlerType.FullName, method.Name));
 			}
 
 			switch (parameters.Length)
 			{
 				case 1 when parameters[0].ParameterType == typeof(IMessageContext) || parameters[0].ParameterType == typeof(CancellationToken):
-					throw new InvalidOperationException(Resources.IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE);
+					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE, handlerType.FullName, method.Name, parameterTypes));
 				case 2 when parameters[1].ParameterType != typeof(IMessageContext) && parameters[1].ParameterType != typeof(CancellationToken):
-					throw new InvalidOperationException(Resources.IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL);
+					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL, handlerType.FullName, method.Name, parameterTypes));
 				case 3 when parameters[1].ParameterType != typeof(IMessageContext) || parameters[2].ParameterType != typeof(CancellationToken):
-					throw new InvalidOperationException(Resources.IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL);
+					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL, handlerType.FullName, method.Name, parameterTypes));
 			}
 
 			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
@@ -124,7 +129,7 @@ internal static class MessageHandlerFinder
 			                       .ToList();
 			if (attributes.Any(a => string.IsNullOrWhiteSpace(a.Name)))
 			{
-				throw new InvalidOperationException(Resources.IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED);
+				throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED, handlerType.FullName, method.Name));
 			}
 
 			foreach (var attribute in attributes)
@@ -132,5 +137,29 @@ internal static class MessageHandlerFinder
 				@delegate(attribute.Name, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
 			}
 		}
+	}
+
+	/// <summary>
+	/// 获取处理程序类型对指定接口方法的实际实现。
+	/// </summary>
+	/// <param name="handlerType">处理程序类型。</param>
+	/// <param name="interfaceType">处理程序实现的 <see cref="IHandler{TMessage,TResult}"/> 接口。</param>
+	/// <param name="messageType">接口的消息类型。</param>
+	/// <returns>
+	/// 接口方法对应的实现方法；找不到时为 <c>null</c>。
+	/// 显式接口实现的方法名带有接口前缀，不能按简单名调用 <see cref="Type.GetMethod(string, Type[])"/> 查找，
+	/// 必须通过接口映射定位，否则合法的显式实现会被误判为缺少方法。
+	/// </returns>
+	private static MethodInfo GetImplementationMethod(Type handlerType, Type interfaceType, Type messageType)
+	{
+		var interfaceMethod = interfaceType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)]);
+		if (interfaceMethod == null)
+		{
+			return null;
+		}
+
+		var map = handlerType.GetInterfaceMap(interfaceType);
+		var index = Array.IndexOf(map.InterfaceMethods, interfaceMethod);
+		return index >= 0 ? map.TargetMethods[index] : null;
 	}
 }

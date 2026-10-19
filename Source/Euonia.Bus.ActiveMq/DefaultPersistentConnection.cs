@@ -91,7 +91,12 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <summary>
 	/// 获取一个值，指示当前 ActiveMQ 连接是否已建立且处于活动状态。
 	/// </summary>
-	public bool IsConnected => _connection is { IsStarted: true } && !IsDisposed;
+	public bool IsConnected => _connection is { IsStarted: true } && !_interrupted && !IsDisposed;
+
+	/// <summary>
+	/// 连接中断标志。
+	/// </summary>
+	private volatile bool _interrupted;
 
 	/// <summary>
 	/// 尝试建立 ActiveMQ 持久连接。
@@ -105,16 +110,38 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 				return;
 			}
 
+			if (_connection != null)
+			{
+				try
+				{
+					_connection.ConnectionInterruptedListener -= OnConnectionInterruptedAsync;
+					_connection.ExceptionListener -= OnConnectionExceptionAsync;
+					_connection.Dispose();
+				}
+				catch (Exception exception)
+				{
+					_logger.LogDebug(exception, "Failed to dispose the interrupted ActiveMQ connection.");
+				}
+
+				_connection = null;
+			}
+
+			_interrupted = false;
 			_logger.LogInformation("ActiveMQ Client is trying to connect");
 
-			_connection ??= await Policy.Handle<SocketException>()
-			                            .Or<Exception>()
-			                            .WaitAndRetryAsync(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
-			                            {
-				                            _logger.LogWarning(ex, "ActiveMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
-			                            })
-			                            .ExecuteAsync(() => _factory.CreateConnectionAsync());
-			await _connection.StartAsync();
+			var policy = Policy.Handle<SocketException>()
+			                   .Or<Exception>()
+			                   .WaitAndRetryAsync(_retryCount, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (ex, time) =>
+			                   {
+				                   _logger.LogWarning(ex, "ActiveMQ Client could not connect after {TimeOut}s ({ExceptionMessage})", $"{time.TotalSeconds:n1}", ex.Message);
+			                   });
+
+			_connection = await policy.ExecuteAsync(async () =>
+			{
+				var connection = await _factory.CreateConnectionAsync();
+				await connection.StartAsync();
+				return connection;
+			});
 
 			if (IsConnected)
 			{
@@ -136,6 +163,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <param name="exception">发生的异常。</param>
 	private void OnConnectionExceptionAsync(Exception exception)
 	{
+		_interrupted = true;
 		_logger.LogError(exception, "ActiveMQ connection exception occurred: {Message}", exception.Message);
 	}
 
@@ -149,6 +177,8 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			return;
 		}
 
+		_interrupted = true;
+		// 传输已中断：必须显式重建连接，NMS 不会自行恢复（未使用 failover URI 时）。
 		AsyncContext.Run(TryConnectAsync);
 	}
 

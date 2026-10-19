@@ -22,6 +22,75 @@ public class BugFixRegressionTests
 		return Enumerable.Range(1, 10).Select(x => new Item { Id = x, Name = "n" + x, Score = x }).ToList();
 	}
 
+	private class Owner
+	{
+		public string Name { get; set; }
+	}
+
+	private class OwnedItem
+	{
+		public int Id { get; set; }
+
+		public Owner Owner { get; set; }
+	}
+
+	[Fact]
+	public void QueryHandler_AddCriteria_Null_ShouldThrow()
+	{
+		// 回归测试：null 谓词在组合时被当作恒真条件忽略，会让查询静默失去过滤条件。
+		var handler = new QueryHandler<Item>(CreateItems().AsQueryable());
+
+		Assert.Throws<ArgumentNullException>(() => handler.AddCriteria(null));
+	}
+
+	[Fact]
+	public void QueryHandler_OrderBy_ShouldFilterBeforeSorting()
+	{
+		// 回归测试：排序曾直接作用于原始查询，LINQ to Objects 会对随后被谓词排除的行求值排序键，
+		// 当排序键路径包含 null 时会在排序阶段抛 NullReferenceException。
+		var items = new List<OwnedItem>
+		{
+			new() { Id = 1, Owner = null },
+			new() { Id = 2, Owner = new Owner { Name = "b" } },
+			new() { Id = 3, Owner = new Owner { Name = "a" } }
+		};
+
+		var result = new QueryHandler<OwnedItem>(items.AsQueryable())
+			.AddCriteria(x => x.Owner != null)
+			.OrderByAscending(x => x.Owner.Name)
+			.Query();
+
+		Assert.Equal(new[] { 3, 2 }, result.Select(x => x.Id));
+	}
+
+	[Fact]
+	public void PredicateExpressionBuilder_NestedProperty_ShouldBuildPredicate()
+	{
+		// 回归测试：旧实现只取叶成员并挂到 TEntity 参数上，x => x.Owner.Name 会被当成 TEntity.Name。
+		var builder = new PredicateExpressionBuilder<OwnedItem>();
+		builder.Append(x => x.Owner.Name, QueryOperator.Equal, "a");
+
+		var predicate = builder.ToLambda().Compile();
+
+		Assert.True(predicate(new OwnedItem { Owner = new Owner { Name = "a" } }));
+		Assert.False(predicate(new OwnedItem { Owner = new Owner { Name = "b" } }));
+	}
+
+	[Fact]
+	public void QueryHandler_NullQuery_ShouldThrow()
+	{
+		Assert.Throws<ArgumentNullException>(() => new QueryHandler<Item>(null));
+	}
+
+	[Fact]
+	public void QueryHandler_SetCollator_Null_ShouldThrow()
+	{
+		var handler = new QueryHandler<Item>(CreateItems().AsQueryable());
+
+		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Action<Orderable<Item>>)null));
+		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Func<IQueryable<Item>, IOrderedQueryable<Item>>)null));
+	}
+
 	[Fact]
 	public void QueryHandler_QueryThenGetCount_ShouldCountUnpagedResults()
 	{

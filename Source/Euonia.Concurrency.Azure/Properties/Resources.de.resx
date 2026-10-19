@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>Blob {0} ist nicht vorhanden und konnte nicht erstellt werden. Details finden Sie in den inneren Ausnahmen</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Mit dem Clienttyp {0} kann kein Sperr-Blob erstellt werden. Stellen Sie sicher, dass das Blob vorhanden ist, oder verwenden Sie einen Nicht-Basis-Clienttyp wie {1}, der den Typ des zu erstellenden Blobs angibt.</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>Unerwarteter Blob-Clienttyp {0}.</value>
+  </data>
 </root>

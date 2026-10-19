@@ -130,22 +130,22 @@
     <value>已啟用收件箱，但尚未註冊收件箱儲存區。請註冊 IInboxStore 實作（例如 services.AddInMemoryInbox()）。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>方法不存在。</value>
+    <value>處理常式類型 {0} 未宣告 IHandler&lt;,&gt; 介面要求的方法 {1}({2}, IMessageContext, CancellationToken)。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>處理常式方法至少必須包含一個參數</value>
+    <value>處理常式方法 {0}.{1} 至少必須包含一個參數。</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>處理常式方法的第一個參數必須是訊息類型</value>
+    <value>處理常式方法 {0}.{1} 的第一個參數必須是訊息類型，實際參數類型為 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>當方法包含 2 個參數時，第二個參數必須是 MessageContext 或 CancellationToken</value>
+    <value>當處理常式方法 {0}.{1} 包含 2 個參數時，第二個參數必須是 IMessageContext 或 CancellationToken，實際參數類型為 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>當方法包含 3 個參數時，第二、三個參數必須依序是 MessageContext 與 CancellationToken</value>
+    <value>當處理常式方法 {0}.{1} 包含 3 個參數時，第二、三個參數必須依序是 IMessageContext 與 CancellationToken，實際參數類型為 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>處理常式方法不得帶有名稱為空的 SubscribeAttribute</value>
+    <value>處理常式方法 {0}.{1} 上的 SubscribeAttribute 未指定名稱，每個 SubscribeAttribute 都必須指定通道名稱。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>無法自動載入 '{1}:AutoLoadAssemblies' 中設定的組件 '{0}'。</value>

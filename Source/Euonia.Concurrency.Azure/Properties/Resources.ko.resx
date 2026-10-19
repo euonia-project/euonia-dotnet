@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>Blob {0}이(가) 존재하지 않으며 생성할 수도 없습니다. 자세한 내용은 내부 예외를 참조하십시오</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>클라이언트 형식 {0}(으)로 잠금 Blob을 만들 수 없습니다. Blob이 존재하는지 확인하거나 만들 Blob 형식을 지정하는 {1} 같은 비기본 클라이언트 형식을 사용하세요.</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>예기치 않은 Blob 클라이언트 형식 {0}입니다.</value>
+  </data>
 </root>

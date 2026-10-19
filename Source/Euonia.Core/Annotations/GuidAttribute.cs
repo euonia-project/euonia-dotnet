@@ -28,7 +28,7 @@ public class GuidAttribute : ValidationAttribute
 			Guid guid when guid != Guid.Empty => ValidationResult.Success,
 			string str when Guid.TryParse(str, out _) => ValidationResult.Success,
 			_ => new ValidationResult(
-				ErrorMessage ?? $"{validationContext.MemberName} must be a valid GUID.",
+				ErrorMessage ?? string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_INVALID_GUID, validationContext.MemberName),
 				[validationContext.MemberName])
 		};
 	}

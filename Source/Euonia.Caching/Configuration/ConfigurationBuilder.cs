@@ -133,7 +133,7 @@ public class ConfigurationBuilder : ConfigurationBuilderCachePart
         if (!int.TryParse(hasSuffix ? normValue[..^1] : normValue, out var timeoutValue))
         {
             throw new InvalidOperationException(
-                string.Format(CultureInfo.InvariantCulture, "The value of the property '{1}' cannot be parsed [{0}].", timespanCfgValue, propName));
+                string.Format(CultureInfo.InvariantCulture, Resources.IDS_CONFIGURATION_PROPERTY_PARSE_FAILED, timespanCfgValue, propName));
         }
 
         // if minutes or no suffix is defined, we use minutes.

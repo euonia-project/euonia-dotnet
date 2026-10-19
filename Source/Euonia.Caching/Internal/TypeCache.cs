@@ -53,9 +53,18 @@ public static class TypeCache
 		return _types.GetOrAdd(type, t =>
 		{
 			Type typeResult = null;
-			if (_resolvers.Count > 0)
+
+			// 快照解析器列表：RegisterResolveType 可能在解析过程中修改 List，
+			// 直接枚举会抛“集合已修改”。
+			Func<string, Type>[] resolvers;
+			lock (_typesLock)
 			{
-				foreach (var resolver in _resolvers)
+				resolvers = _resolvers.ToArray();
+			}
+
+			if (resolvers.Length > 0)
+			{
+				foreach (var resolver in resolvers)
 				{
 					try
 					{

@@ -133,13 +133,13 @@
     <value>目前的集合狀態已損毀。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>輸入的訊息類型沒有註冊任何接收方。</value>
+    <value>訊息 {0} 沒有註冊任何接收方。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>輸入的訊息類型 '{0}' 與權杖沒有相符的接收方。</value>
+    <value>訊息 {0} 與權杖 '{1}' 沒有相符的接收方。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>輸入的訊息類型 '{0}' 沒有可用來投遞的權杖接收方。</value>
+    <value>沒有可用來投遞訊息 {0}（權杖 '{1}'）的接收方。</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>目標接收方已訂閱該目標訊息。</value>

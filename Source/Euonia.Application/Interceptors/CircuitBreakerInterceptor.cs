@@ -117,7 +117,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 
 	private static void FailFast(IInvocation invocation, string key, CircuitBreakerAttribute attribute)
 	{
-		var message = $"Circuit '{key}' is open after {attribute.MaxFailures} failures; probe after {attribute.ResetTimeoutSeconds} seconds.";
+		var message = string.Format(Resources.IDS_CIRCUIT_OPEN, key, attribute.MaxFailures, attribute.ResetTimeoutSeconds);
 		var exception = new CircuitBreakerOpenException(message);
 		var returnType = invocation.Method.ReturnType;
 

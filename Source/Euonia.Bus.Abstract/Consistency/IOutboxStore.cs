@@ -118,6 +118,20 @@ public interface IOutboxStore
 	IReadOnlyList<OutboxTransport> GetFailedMessages();
 
 	/// <summary>
+	/// 获取创建时间早于 <paramref name="cutoff"/> 且仍处于 <see cref="OutboxTransportStatus.Pending"/> 的传输记录。
+	/// </summary>
+	/// <param name="cutoff">创建时间截止值（本地时间）。</param>
+	/// <returns>可回收的待发送记录。</returns>
+	/// <remarks>
+	/// 默认实现为空操作，便于既有的持久化实现保持兼容；
+	/// 支持的实现应返回这些记录，使调度器能够回收崩溃/取消后遗留的 Pending 条目。
+	/// </remarks>
+	IReadOnlyList<OutboxTransport> GetPendingMessages(DateTime cutoff)
+	{
+		return [];
+	}
+
+	/// <summary>
 	/// 清理早于 <paramref name="cutoff"/> 且已终结（全部传输记录均为
 	/// <see cref="OutboxTransportStatus.Success"/> 或 <see cref="OutboxTransportStatus.DeadLettered"/>）的条目。
 	/// </summary>

@@ -170,6 +170,10 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
                         {
                             await BlobClient.DeleteIfExistsAsync().ConfigureAwait(false);
                         }
+                        catch (RequestFailedException deletionException) when (deletionException.ErrorCode == AzureErrors.LeaseIdMissing)
+                        {
+                            // 删除前已被其他客户端租用：属于正常竞争，保留原始异常。
+                        }
                         catch (Exception deletionException)
                         {
                             throw new AggregateException(retryException, deletionException);

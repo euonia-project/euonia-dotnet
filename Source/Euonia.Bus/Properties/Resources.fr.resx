@@ -130,22 +130,22 @@
     <value>Le magasin de boîte de réception n'est pas enregistré, alors que la boîte de réception est activée. Enregistrez une implémentation de IInboxStore (par exemple services.AddInMemoryInbox()).</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>La méthode n'existe pas.</value>
+    <value>Le type de gestionnaire {0} ne déclare pas la méthode {1}({2}, IMessageContext, CancellationToken) requise par l'interface IHandler&lt;,&gt;.</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>La méthode de gestion doit contenir au moins un paramètre</value>
+    <value>La méthode de gestion {0}.{1} doit contenir au moins un paramètre.</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>Le premier paramètre de la méthode de gestion doit être le type de message</value>
+    <value>Le premier paramètre de la méthode de gestion {0}.{1} doit être le type de message ; les types de paramètres déclarés sont ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>Le deuxième paramètre de la méthode de gestion doit être MessageContext ou CancellationToken si la méthode contient deux paramètres</value>
+    <value>Si la méthode de gestion {0}.{1} a deux paramètres, le deuxième doit être IMessageContext ou CancellationToken ; les types de paramètres déclarés sont ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>Les deuxième et troisième paramètres de la méthode de gestion doivent être MessageContext et CancellationToken si la méthode contient trois paramètres</value>
+    <value>Si la méthode de gestion {0}.{1} a trois paramètres, les deuxième et troisième doivent être IMessageContext et CancellationToken ; les types de paramètres déclarés sont ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>La méthode de gestion ne doit comporter aucun SubscribeAttribute dont le nom est vide</value>
+    <value>La méthode de gestion {0}.{1} déclare un SubscribeAttribute sans nom ; chaque SubscribeAttribute doit spécifier un nom de canal.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Échec du chargement automatique de l'assembly '{0}' configuré dans '{1}:AutoLoadAssemblies'.</value>

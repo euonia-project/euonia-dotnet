@@ -70,7 +70,9 @@ internal class ZooKeeperConnection : IDisposable
                     UserCount = 2
                 };
                 _connections.Add(connectionInfo, newEntry);
-                newConnectionTask.ContinueWith(OnConnectionTaskCompleted, cancellationToken);
+                // 不能把调用方的取消令牌传给池的簿记续延：调用方取消时续延会被跳过，
+                // 失败的连接会永久留在池中，之后同连接串的所有申请都会复用它并持续失败。
+                newConnectionTask.ContinueWith(OnConnectionTaskCompleted);
                 return ToResultAsync(newEntry);
 
                 void OnConnectionTaskCompleted(Task<InternalConnection> internalConnectionTask)
@@ -86,7 +88,7 @@ internal class ZooKeeperConnection : IDisposable
                     else
                     {
                         Task.Delay(_maxAge.TimeSpan, internalConnectionTask.Result.ConnectionLostToken)
-                            .ContinueWith(_ => ReleaseEntry(connectionInfo, newEntry, remove: true), cancellationToken);
+                            .ContinueWith(_ => ReleaseEntry(connectionInfo, newEntry, remove: true));
                     }
                 }
             }

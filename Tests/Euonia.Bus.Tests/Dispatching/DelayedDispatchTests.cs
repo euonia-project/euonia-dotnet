@@ -81,6 +81,22 @@ public class DelayedDispatchTests
 	}
 
 	/// <summary>
+	/// 传输失败必须传播给调用方；此前通过 ContinueWith 吞掉，发件箱会把失败误记为成功。
+	/// </summary>
+	[Fact]
+	public async Task PublishAsync_WhenTransporterFails_ShouldThrow()
+	{
+		await using var provider = BuildProvider(new List<string>(), new FailingTransporter());
+		var bus = provider.GetRequiredService<IBus>();
+
+		await Assert.ThrowsAsync<InvalidOperationException>(() => bus.PublishAsync(
+			new TestMessages.OrderPlacedEvent { OrderId = "orders/failing" },
+			new PublishOptions { Channel = "test.events", MessageId = "failing-1" },
+			null,
+			TestContext.Current.CancellationToken));
+	}
+
+	/// <summary>
 	/// 超出 <see cref="Task.Delay(TimeSpan, CancellationToken)"/> 支持范围时应给出清晰错误。
 	/// </summary>
 	[Fact]
@@ -97,7 +113,7 @@ public class DelayedDispatchTests
 			TestContext.Current.CancellationToken));
 	}
 
-	private static ServiceProvider BuildProvider(List<string> delivered)
+	private static ServiceProvider BuildProvider(List<string> delivered, ITransporter transporter = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -108,11 +124,37 @@ public class DelayedDispatchTests
 		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
-		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter(delivered));
+		services.AddKeyedSingleton<ITransporter>("test", (_, _) => transporter ?? new RecordingTransporter(delivered));
 
 		var provider = services.BuildServiceProvider();
 		provider.GetRequiredService<IConfigurator>().SetConvention(builder => builder.Add<DefaultMessageConvention>());
 		return provider;
+	}
+
+	private sealed class FailingTransporter : ITransporter
+	{
+		public string Name => "test";
+
+		public event EventHandler<MessageDeliveredEventArgs> Delivered
+		{
+			add { }
+			remove { }
+		}
+
+		public Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
+		{
+			return Task.FromException(new InvalidOperationException("broker is down"));
+		}
+
+		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
+		{
+			throw new NotSupportedException();
+		}
+
+		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
+		{
+			throw new NotSupportedException();
+		}
 	}
 
 	private sealed class RecordingTransporter : ITransporter

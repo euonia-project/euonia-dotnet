@@ -42,7 +42,21 @@ public class PredicateExpressionBuilder<TEntity>
     /// <param name="value">值。</param>
     public void Append<TProperty>(Expression<Func<TEntity, TProperty>> property, QueryOperator @operator, object value)
     {
-        _result = _result.And(_parameter.Property(Lambda.GetMember(property)).Operation(@operator, value));
+        // 不能只取叶成员再挂到 _parameter 上：x => x.Owner.Age 会变成对 TEntity 直接访问 Age。
+        // 这里把整个属性访问链的参数重绑定到当前参数，保留嵌套路径。
+        var body = property.Body;
+        while (body is UnaryExpression { NodeType: ExpressionType.Convert } conversion)
+        {
+            body = conversion.Operand;
+        }
+
+        var rebinder = new Dictionary<ParameterExpression, ParameterExpression>
+        {
+            [property.Parameters[0]] = _parameter
+        };
+        var access = ParameterRebinder.ReplaceParameters(rebinder, body);
+
+        _result = _result.And(access.Operation(@operator, value));
     }
 
     /// <summary>

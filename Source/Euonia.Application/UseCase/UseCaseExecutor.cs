@@ -54,36 +54,44 @@ public class UseCaseExecutor : IUseCaseExecutor
 	/// <inheritdoc />
 	public Task ExecuteAsync<TUseCase, TInput, TOutput>(TInput input, IUseCasePresenter<TOutput> presenter, CancellationToken cancellationToken = default)
 		where TUseCase : class, IUseCase<TInput, TOutput>
-		=> ExecuteCoreAsync(() => GetRequiredService<TUseCase>().ExecuteAsync(input, cancellationToken), presenter);
+		=> ExecuteCoreAsync(() => ExecuteInScopeAsync<TUseCase, TOutput>(useCase => useCase.ExecuteAsync(input, cancellationToken)), presenter);
 
 	/// <inheritdoc />
 	public Task ExecuteAsync<TUseCase, TInput>(TInput input, IUseCasePresenter<EmptyUseCaseOutput> presenter, CancellationToken cancellationToken = default)
 		where TUseCase : class, INonOutputUseCase<TInput>
-		=> ExecuteCoreAsync(async () =>
+		=> ExecuteCoreAsync(() => ExecuteInScopeAsync<TUseCase, EmptyUseCaseOutput>(async useCase =>
 		{
-			await GetRequiredService<TUseCase>().ExecuteAsync(input, cancellationToken);
+			await useCase.ExecuteAsync(input, cancellationToken).ConfigureAwait(false);
 			return EmptyUseCaseOutput.Instance;
-		}, presenter);
+		}), presenter);
 
 	/// <inheritdoc />
 	public Task ExecuteAsync<TUseCase, TOutput>(IUseCasePresenter<TOutput> presenter, CancellationToken cancellationToken = default)
 		where TUseCase : class, INonInputUseCase<TOutput>
-		=> ExecuteCoreAsync(() => GetRequiredService<TUseCase>().ExecuteAsync(cancellationToken), presenter);
+		=> ExecuteCoreAsync(() => ExecuteInScopeAsync<TUseCase, TOutput>(useCase => useCase.ExecuteAsync(cancellationToken)), presenter);
 
 	/// <inheritdoc />
 	public Task ExecuteAsync<TUseCase>(IUseCasePresenter<EmptyUseCaseOutput> presenter, CancellationToken cancellationToken = default)
 		where TUseCase : class, IParameterlessUseCase
-		=> ExecuteCoreAsync(async () =>
+		=> ExecuteCoreAsync(() => ExecuteInScopeAsync<TUseCase, EmptyUseCaseOutput>(async useCase =>
 		{
-			await GetRequiredService<TUseCase>().ExecuteAsync(cancellationToken);
+			await useCase.ExecuteAsync(cancellationToken).ConfigureAwait(false);
 			return EmptyUseCaseOutput.Instance;
-		}, presenter);
+		}), presenter);
 
-	private TUseCase GetRequiredService<TUseCase>()
+	/// <summary>
+	/// 在新的依赖注入作用域内解析并执行用例，确保作用域覆盖用例的完整执行过程。
+	/// </summary>
+	/// <remarks>
+	/// 作用域必须在用例执行完成后再释放：若只包住 <c>GetRequiredService</c> 的调用，
+	/// 用例依赖的 DbContext/仓储会在执行前就被释放。
+	/// </remarks>
+	private async Task<TOutput> ExecuteInScopeAsync<TUseCase, TOutput>(Func<TUseCase, Task<TOutput>> executor)
 		where TUseCase : class
 	{
 		using var scope = _scopeFactory.CreateScope();
-		return scope.ServiceProvider.GetRequiredService<TUseCase>();
+		var useCase = scope.ServiceProvider.GetRequiredService<TUseCase>();
+		return await executor(useCase).ConfigureAwait(false);
 	}
 
 	private static async Task ExecuteCoreAsync<TOutput>(Func<Task<TOutput>> executor, IUseCasePresenter<TOutput> presenter)

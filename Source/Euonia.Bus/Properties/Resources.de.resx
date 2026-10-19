@@ -130,22 +130,22 @@
     <value>Der Inbox-Speicher ist nicht registriert, obwohl die Inbox aktiviert ist. Registrieren Sie eine IInboxStore-Implementierung (z. B. services.AddInMemoryInbox()).</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>Die Methode existiert nicht.</value>
+    <value>Der Handlertyp {0} deklariert nicht die vom IHandler&lt;,&gt;-Interface geforderte Methode {1}({2}, IMessageContext, CancellationToken).</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>Die Handlermethode muss mindestens einen Parameter enthalten</value>
+    <value>Die Handlermethode {0}.{1} muss mindestens einen Parameter enthalten.</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>Der erste Parameter der Handlermethode muss der Nachrichtentyp sein</value>
+    <value>Der erste Parameter der Handlermethode {0}.{1} muss der Nachrichtentyp sein; die tatsächlichen Parametertypen sind ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>Der zweite Parameter der Handlermethode muss MessageContext oder CancellationToken sein, wenn die Methode zwei Parameter enthält</value>
+    <value>Wenn die Handlermethode {0}.{1} zwei Parameter enthält, muss der zweite Parameter IMessageContext oder CancellationToken sein; die tatsächlichen Parametertypen sind ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>Der zweite und der dritte Parameter der Handlermethode müssen MessageContext und CancellationToken sein, wenn die Methode drei Parameter enthält</value>
+    <value>Wenn die Handlermethode {0}.{1} drei Parameter enthält, müssen der zweite und dritte Parameter IMessageContext und CancellationToken sein; die tatsächlichen Parametertypen sind ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>Die Handlermethode darf kein SubscribeAttribute mit leerem Namen aufweisen</value>
+    <value>Die Handlermethode {0}.{1} deklariert ein SubscribeAttribute ohne Namen; jedes SubscribeAttribute muss einen Kanalnamen angeben.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Die in '{1}:AutoLoadAssemblies' konfigurierte Assembly '{0}' konnte nicht automatisch geladen werden.</value>

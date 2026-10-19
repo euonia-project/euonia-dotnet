@@ -271,4 +271,37 @@
   <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
     <value>成員不是欄位</value>
   </data>
+  <data name="IDS_MIN_HASH_LENGTH_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>最小雜湊長度必須為零或大於零。</value>
+  </data>
+  <data name="IDS_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>索引超出範圍。</value>
+  </data>
+  <data name="IDS_MINIMUM_COUNT_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>最小計數不能為負數。</value>
+  </data>
+  <data name="IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MINIMUM" xml:space="preserve">
+    <value>最大計數必須大於或等於最小計數。</value>
+  </data>
+  <data name="IDS_INVARIANT_VIOLATED" xml:space="preserve">
+    <value>不變量條件未滿足。</value>
+  </data>
+  <data name="IDS_TIMEOUT_OUT_OF_RANGE" xml:space="preserve">
+    <value>逾時值必須是 Timeout.InfiniteTimeSpan（{0}）或小於等於 {1} 的非負值。</value>
+  </data>
+  <data name="IDS_COLLECTION_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>集合不能為 null。</value>
+  </data>
+  <data name="IDS_VALUE_MUST_BE_COLLECTION" xml:space="preserve">
+    <value>{0} 必須是集合。</value>
+  </data>
+  <data name="IDS_COLLECTION_MINIMUM_COUNT" xml:space="preserve">
+    <value>{0} 必須至少包含 {1} 個項目。</value>
+  </data>
+  <data name="IDS_COLLECTION_MAXIMUM_COUNT" xml:space="preserve">
+    <value>{0} 最多只能包含 {1} 個項目。</value>
+  </data>
+  <data name="IDS_INVALID_GUID" xml:space="preserve">
+    <value>{0} 必須是有效的 GUID。</value>
+  </data>
 </root>

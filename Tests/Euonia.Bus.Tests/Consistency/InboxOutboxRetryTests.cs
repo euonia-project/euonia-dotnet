@@ -133,6 +133,31 @@ public class InboxOutboxRetryTests
 	}
 
 	[Fact]
+	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsAbandonedPendingMessages()
+	{
+		var delivered = new List<string>();
+		await using var provider = BuildOutboxProvider(delivered);
+		var accessor = provider.GetRequiredService<IServiceAccessor>();
+
+		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-abandoned-1");
+		IOutboxStore store = new InMemoryOutboxStore();
+		store.Insert(envelope, ["test"]);
+
+		// 模拟进程在延迟分发期间崩溃：记录停留在 Pending 且创建时间早于调度器启动。
+		store.Get("outbox-abandoned-1").CreatedAt = DateTime.Now.AddMinutes(-10);
+
+		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 5 });
+		await dispatcher.RetryAllAsync();
+
+		Assert.Contains("outbox-abandoned-1", delivered);
+
+		// 回收会把 Pending 标记为 Failed（计一次重试），随后由正常的重投递路径处理。
+		var transport = store.Get("outbox-abandoned-1").GetTransport("test");
+		Assert.Equal(1, transport.RetryAttempts);
+		Assert.NotEqual(OutboxTransportStatus.Pending, transport.Status);
+	}
+
+	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers()
 	{
 		var handled = 0;

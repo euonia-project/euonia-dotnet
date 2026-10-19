@@ -291,4 +291,37 @@
   <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
     <value>Member is not a field</value>
   </data>
+  <data name="IDS_MIN_HASH_LENGTH_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>The minimum hash length may not be negative.</value>
+  </data>
+  <data name="IDS_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>Index is out of range.</value>
+  </data>
+  <data name="IDS_MINIMUM_COUNT_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>The minimum count may not be negative.</value>
+  </data>
+  <data name="IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MINIMUM" xml:space="preserve">
+    <value>The maximum count must be greater than or equal to the minimum count.</value>
+  </data>
+  <data name="IDS_INVARIANT_VIOLATED" xml:space="preserve">
+    <value>Invariant violated.</value>
+  </data>
+  <data name="IDS_TIMEOUT_OUT_OF_RANGE" xml:space="preserve">
+    <value>Timeout must be Timeout.InfiniteTimeSpan ({0}) or a non-negative value less than or equal to {1}.</value>
+  </data>
+  <data name="IDS_COLLECTION_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>The collection must not be null.</value>
+  </data>
+  <data name="IDS_VALUE_MUST_BE_COLLECTION" xml:space="preserve">
+    <value>The {0} must be a collection.</value>
+  </data>
+  <data name="IDS_COLLECTION_MINIMUM_COUNT" xml:space="preserve">
+    <value>The {0} must contain at least {1} items.</value>
+  </data>
+  <data name="IDS_COLLECTION_MAXIMUM_COUNT" xml:space="preserve">
+    <value>The {0} must contain at most {1} items.</value>
+  </data>
+  <data name="IDS_INVALID_GUID" xml:space="preserve">
+    <value>{0} must be a valid GUID.</value>
+  </data>
 </root>

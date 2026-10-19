@@ -138,4 +138,7 @@
   <data name="IDS_PARAMETER_REQUIRED" xml:space="preserve">
     <value>Der Parameter '{0}' ist in der Methode '{1}' erforderlich.</value>
   </data>
+  <data name="IDS_CIRCUIT_OPEN" xml:space="preserve">
+    <value>Der Circuit '{0}' ist nach {1} Fehlern offen; Probe nach {2} Sekunden.</value>
+  </data>
 </root>

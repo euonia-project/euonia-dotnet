@@ -130,22 +130,22 @@
     <value>受信トレイは有効になっていますが、受信トレイ ストアが登録されていません。IInboxStore の実装 (例: services.AddInMemoryInbox()) を登録してください。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>メソッドが存在しません。</value>
+    <value>ハンドラー型 {0} は、IHandler&lt;,&gt; インターフェイスが要求するメソッド {1}({2}, IMessageContext, CancellationToken) を宣言していません。</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>ハンドラーメソッドには少なくとも 1 つのパラメーターが必要です</value>
+    <value>ハンドラーメソッド {0}.{1} には少なくとも 1 つのパラメーターが必要です。</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>ハンドラーメソッドの最初のパラメーターはメッセージ型でなければなりません</value>
+    <value>ハンドラーメソッド {0}.{1} の最初のパラメーターはメッセージ型でなければなりません。実際のパラメーター型は ({2}) です。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>メソッドが 2 つのパラメーターを持つ場合、ハンドラーメソッドの 2 番目のパラメーターは MessageContext または CancellationToken でなければなりません</value>
+    <value>ハンドラーメソッド {0}.{1} に 2 つのパラメーターがある場合、2 番目のパラメーターは IMessageContext または CancellationToken でなければなりません。実際のパラメーター型は ({2}) です。</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>メソッドが 3 つのパラメーターを持つ場合、ハンドラーメソッドの 2 番目と 3 番目のパラメーターは MessageContext と CancellationToken でなければなりません</value>
+    <value>ハンドラーメソッド {0}.{1} に 3 つのパラメーターがある場合、2 番目と 3 番目のパラメーターは IMessageContext と CancellationToken でなければなりません。実際のパラメーター型は ({2}) です。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>ハンドラーメソッドに名前が空の SubscribeAttribute を含めることはできません</value>
+    <value>ハンドラーメソッド {0}.{1} に名前のない SubscribeAttribute があります。すべての SubscribeAttribute にチャネル名を指定してください。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>'{1}:AutoLoadAssemblies' で構成されたアッセンブリ '{0}' の自動読み込みに失敗しました。</value>

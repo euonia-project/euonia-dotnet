@@ -95,12 +95,12 @@ public class CollectionCountAttribute : ValidationAttribute
 	{
 		if (minimumCount < 0)
 		{
-			throw new ArgumentOutOfRangeException(nameof(minimumCount), "Minimum count must not be negative.");
+			throw new ArgumentOutOfRangeException(nameof(minimumCount), Nerosoft.Euonia.Core.Properties.Resources.IDS_MINIMUM_COUNT_MAY_NOT_BE_NEGATIVE);
 		}
 
 		if (maximumCount.HasValue && maximumCount.Value < minimumCount)
 		{
-			throw new ArgumentOutOfRangeException(nameof(maximumCount), "Maximum count must be greater than or equal to the minimum count.");
+			throw new ArgumentOutOfRangeException(nameof(maximumCount), Nerosoft.Euonia.Core.Properties.Resources.IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MINIMUM);
 		}
 	}
 
@@ -141,7 +141,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	{
 		if (value == null)
 		{
-			return AllowNull ? ValidationResult.Success : new ValidationResult(ErrorMessage ?? $"The collection must not be null.");
+			return AllowNull ? ValidationResult.Success : new ValidationResult(ErrorMessage ?? Nerosoft.Euonia.Core.Properties.Resources.IDS_COLLECTION_MUST_NOT_BE_NULL);
 		}
 
 		// 字符串不是集合，保持原有行为：不按字符数校验。
@@ -152,17 +152,23 @@ public class CollectionCountAttribute : ValidationAttribute
 
 		if (!TryGetCount(value, out var count))
 		{
-			return new ValidationResult(ErrorMessage ?? $"The {validationContext.DisplayName} must be a collection.");
+			return new ValidationResult(ErrorMessage ?? string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_VALUE_MUST_BE_COLLECTION, validationContext.DisplayName));
 		}
 
 		if (count < MinimumCount)
 		{
-			return new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at least {MinimumCount} items.", validationContext.DisplayName), [validationContext.MemberName]);
+			var message = ErrorMessage != null
+				? FormatErrorMessage(ErrorMessage)
+				: string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_COLLECTION_MINIMUM_COUNT, validationContext.DisplayName, MinimumCount);
+			return new ValidationResult(message, [validationContext.MemberName]);
 		}
 
 		if (MaximumCount.HasValue && count > MaximumCount.Value)
 		{
-			return new ValidationResult(FormatErrorMessage(ErrorMessage ?? $"The {0} must contain at most {MaximumCount.Value} items.", validationContext.DisplayName), [validationContext.MemberName]);
+			var message = ErrorMessage != null
+				? FormatErrorMessage(ErrorMessage)
+				: string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_COLLECTION_MAXIMUM_COUNT, validationContext.DisplayName, MaximumCount.Value);
+			return new ValidationResult(message, [validationContext.MemberName]);
 		}
 
 		return ValidationResult.Success;

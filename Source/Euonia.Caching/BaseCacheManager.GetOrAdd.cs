@@ -196,6 +196,6 @@ public partial class BaseCacheManager<TValue>
         // 通常不应发生，但在极端情况下（例如最大重试次数为 1 且某项恰好在获取与添加之间被添加）可能出现。
         // 此情况非常罕见，因此将最大重试次数保持在 50 左右。
         throw new InvalidOperationException(
-            string.Format("Could not get nor add the item {0} {1}", key, region));
+            string.Format(Resources.IDS_CACHE_ITEM_GET_OR_ADD_FAILED, key, region));
     }
 }

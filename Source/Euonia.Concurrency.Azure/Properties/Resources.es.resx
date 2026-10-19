@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>El blob {0} no existe y no se pudo crear. Consulte la excepción interna para obtener más detalles</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>No se puede crear un blob de bloqueo con el tipo de cliente {0}. Asegúrese de que el blob exista o use un tipo de cliente no base como {1}, que especifica el tipo de blob que se va a crear.</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>Tipo de cliente de blob inesperado {0}.</value>
+  </data>
 </root>

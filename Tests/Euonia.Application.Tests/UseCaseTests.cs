@@ -375,6 +375,21 @@ public class UseCaseExecutorTests
 		Assert.Equal("scoped", presenter.Output);
 	}
 
+	[Fact]
+	public async Task ScopedDisposableDependency_ShouldRemainAliveDuringUseCaseExecution()
+	{
+		// 回归测试：作用域曾在 GetRequiredService 返回后立即释放，
+		// 导致用例执行时依赖（如 DbContext）已经被 Dispose。
+		var executor = CreateExecutor(
+			ServiceDescriptor.Scoped<DisposableDependency, DisposableDependency>(),
+			ServiceDescriptor.Scoped<DisposableDependencyUseCase, DisposableDependencyUseCase>());
+		var presenter = new DefaultUseCasePresenter<string>();
+
+		await executor.ExecuteAsync<DisposableDependencyUseCase, GreetingInput, string>(new GreetingInput("a"), presenter, TestContext.Current.CancellationToken);
+
+		Assert.Equal("alive", presenter.Output);
+	}
+
 	private sealed class ThrowingUseCase : IUseCase<GreetingInput, string>
 	{
 		public Task<string> ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
@@ -402,6 +417,26 @@ public class UseCaseExecutorTests
 
 	private sealed class ScopedCounter
 	{
+	}
+
+	private sealed class DisposableDependency : IDisposable
+	{
+		public bool IsDisposed { get; private set; }
+
+		public void Dispose() => IsDisposed = true;
+	}
+
+	private sealed class DisposableDependencyUseCase : IUseCase<GreetingInput, string>
+	{
+		private readonly DisposableDependency _dependency;
+
+		public DisposableDependencyUseCase(DisposableDependency dependency)
+		{
+			_dependency = dependency;
+		}
+
+		public Task<string> ExecuteAsync(GreetingInput input, CancellationToken cancellationToken = default)
+			=> Task.FromResult(_dependency.IsDisposed ? "disposed" : "alive");
 	}
 
 	private sealed class ScopedDependencyUseCase : IUseCase<GreetingInput, string>

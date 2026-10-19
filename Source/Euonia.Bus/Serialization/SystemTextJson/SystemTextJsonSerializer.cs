@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.SystemTextJson;
@@ -47,11 +48,33 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <param name="source">要序列化的对象。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>序列化后的 UTF-8 字节数组。</returns>
-	public async Task<byte[]> SerializeAsync<T>(T source, CancellationToken cancellationToken = default)
+	public Task<byte[]> SerializeAsync<T>(T source, CancellationToken cancellationToken = default)
 	{
-		await using var stream = new MemoryStream();
-		await JsonSerializer.SerializeAsync(stream, source, _options, cancellationToken: cancellationToken);
-		return stream.ToArray();
+		cancellationToken.ThrowIfCancellationRequested();
+		return Task.FromResult(Encoding.UTF8.GetBytes(Serialize(source)));
+	}
+
+	/// <summary>
+	/// 将源对象序列化为 JSON 节点；对消息信封按负载的运行时类型写入 payload。
+	/// </summary>
+	/// <remarks>
+	/// System.Text.Json 按属性<b>声明类型</b>序列化。装载消息的泛型参数可能是
+	/// <c>IRequest&lt;T&gt;</c> 之类的空接口（如 <c>CallAsync(IRequest&lt;T&gt;)</c> 重载），
+	/// 直接序列化会得到 <c>"payload": {}</c>。这里把 payload 节点替换为按运行时类型的序列化结果。
+	/// </remarks>
+	private JsonNode SerializeToNode<T>(T source)
+	{
+		if (source is IMessageEnvelope { Payload: not null } envelope)
+		{
+			if (JsonSerializer.SerializeToNode(source, source.GetType(), _options) is JsonObject node)
+			{
+				// 该序列化器的命名策略固定为 CamelCase。
+				node["payload"] = JsonSerializer.SerializeToNode(envelope.Payload, envelope.Payload.GetType(), _options);
+				return node;
+			}
+		}
+
+		return JsonSerializer.SerializeToNode(source, _options);
 	}
 
 	/// <summary>
@@ -120,7 +143,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>序列化后的 JSON 字符串。</returns>
 	public string Serialize<T>(T source)
 	{
-		return JsonSerializer.Serialize(source, _options);
+		return SerializeToNode(source)?.ToJsonString(_options) ?? "null";
 	}
 
 	/// <summary>

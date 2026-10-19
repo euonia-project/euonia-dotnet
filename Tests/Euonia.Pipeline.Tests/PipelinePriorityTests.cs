@@ -85,6 +85,25 @@ public class PipelinePriorityTests
 	}
 
 	[Fact]
+	public async Task RunAsync_WithAccumulate_ShouldStillExecutePositivePriorityComponents()
+	{
+		// 回归测试：累积委托曾被按优先级 0 混入组件表，导致优先级 > 0 的组件被它包住而永不执行。
+		var pipeline = new TestPipeline();
+		var context = new Request();
+
+		pipeline.Use(next => ctx => { ctx.Executed.Add("Component"); return next(ctx); }, 10);
+
+		var result = await pipeline.RunAsync(context, ctx =>
+		{
+			ctx.Executed.Add("Accumulate");
+			return Task.FromResult(1);
+		});
+
+		Assert.Equal(1, result);
+		Assert.Equal(new[] { "Component", "Accumulate" }, context.Executed);
+	}
+
+	[Fact]
 	public async Task Build_keeps_registration_order_for_equal_priority()
 	{
 		var pipeline = new TestPipeline();

@@ -146,8 +146,9 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
             }
             // This can indicate either a transient failure during concurrent creation/deletion or a permissions issue.
             // If we encounter it, assume it is transient unless it persists.
-            catch (UnauthorizedAccessException) when (++retryCount <= MAX_UNAUTHORIZED_ACCESS_EXCEPTION_RETRIES)
+            catch (Exception ex) when ((ex is UnauthorizedAccessException || ex is IOException) && ++retryCount <= MAX_UNAUTHORIZED_ACCESS_EXCEPTION_RETRIES)
             {
+                // 并发创建/删除目录时可能瞬时抛出 IOException（上游同样按瞬态错误重试）。
             }
             catch (Exception ex)
             {

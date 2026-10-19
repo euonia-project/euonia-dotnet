@@ -124,6 +124,10 @@ public static class ServiceCollectionExtensions
 				                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
 				                            .ToList();
 
+				// 同时注册具体类型：同一接口的多个实现必须能按各自类型独立解析，
+				// GetRequiredService(interface) 只会返回最后一个实现。
+				services.TryAdd(new ServiceDescriptor(handlerType, handlerType, lifetime));
+
 				foreach (var @interface in interfaces)
 				{
 					services.Add(new ServiceDescriptor(@interface, handlerType, lifetime));
@@ -151,6 +155,8 @@ public static class ServiceCollectionExtensions
 			{
 				throw new ArgumentException(string.Format(Resources.IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER, handlerType.FullName));
 			}
+
+			services.TryAdd(new ServiceDescriptor(handlerType, handlerType, lifetime));
 
 			foreach (var @interface in interfaces)
 			{
@@ -189,6 +195,8 @@ public static class ServiceCollectionExtensions
 				{
 					throw new ArgumentException(string.Format(Resources.IDS_TYPE_DOES_NOT_IMPLEMENT_HANDLER, handlerType.FullName));
 				}
+
+				services.TryAdd(new ServiceDescriptor(handlerType, handlerType, lifetime));
 
 				foreach (var @interface in interfaces)
 				{

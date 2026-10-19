@@ -157,7 +157,8 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		{
 			// 代数已变：本次编译基于陈旧授权数据，只返回给调用方本次使用、不进缓存。
 			// 下一次调用会重新走这条路径并拿到新的授权数据。
-			if (version == _version && _compiledPolicies.Count < MaxCacheEntries)
+			// subjects 为 null 表示快照落在失效与重新解析之间，不能缓存（否则 deny-all 会长期驻留）。
+			if (version == _version && subjects != null && _compiledPolicies.Count < MaxCacheEntries)
 			{
 				_compiledPolicies[(typeof(T), key)] = compiled;
 			}
@@ -278,6 +279,11 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 
 				_resolved = false;
 				_subjects = null;
+
+				// 在失效时（而不是解析完成时）就推进代数：否则一个在失效前取快照、
+				// 在解析期间完成编译的调用仍会看到版本未变，从而把旧授权写回缓存。
+				_version++;
+
 				_compiledPolicies.Clear();
 				_evaluators.Clear();
 			}

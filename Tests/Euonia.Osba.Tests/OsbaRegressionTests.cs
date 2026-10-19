@@ -46,6 +46,26 @@ public class OsbaRegressionTests
 	}
 
 	[Fact]
+	public void Undo_AfterHistoryTrim_ShouldRestoreNewestValuesFirst()
+	{
+		// 回归测试：裁剪最旧历史时曾把整个栈倒置，导致撤销顺序反向。
+		var field = new FieldData<int>("Number") { HistoryDepth = 3 };
+		field.Value = 1;
+		field.Value = 2;
+		field.Value = 3;
+		field.Value = 4;
+
+		field.Undo();
+		Assert.Equal(3, field.Value);
+
+		field.Undo();
+		Assert.Equal(2, field.Value);
+
+		field.Undo();
+		Assert.Equal(1, field.Value);
+	}
+
+	[Fact]
 	public void MarkAsUnchanged_ShouldClearHistory()
 	{
 		var field = new FieldData<string>("Name");

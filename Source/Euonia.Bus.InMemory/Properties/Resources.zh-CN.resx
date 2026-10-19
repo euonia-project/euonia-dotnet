@@ -133,13 +133,13 @@
     <value>当前集合处于损坏状态。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE" xml:space="preserve">
-    <value>输入的消息类型没有注册任何接收方。</value>
+    <value>消息 {0} 没有注册任何接收方。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN" xml:space="preserve">
-    <value>输入的消息类型 '{0}' 与令牌没有匹配的接收方。</value>
+    <value>消息 {0} 与令牌 '{1}' 没有匹配的接收方。</value>
   </data>
   <data name="IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER" xml:space="preserve">
-    <value>输入的消息类型 '{0}' 没有可用于投递的令牌接收方。</value>
+    <value>没有可用于投递消息 {0}（令牌 '{1}'）的接收方。</value>
   </data>
   <data name="IDS_RECIPIENT_ALREADY_SUBSCRIBED" xml:space="preserve">
     <value>目标接收方已订阅该目标消息。</value>

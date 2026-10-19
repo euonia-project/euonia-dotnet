@@ -24,8 +24,11 @@ internal class BlobClientWrapper
     public async ValueTask<IDictionary<string, string>> GetMetadataAsync(string leaseId, CancellationToken cancellationToken)
     {
         var conditions = new BlobRequestConditions { LeaseId = leaseId };
+
+        // 同步路径必须调用同步 API：同步阻塞等待异步调用会把续延投递回已被阻塞的
+        // SynchronizationContext，在 WinForms/WPF 等环境下造成死锁。
         var properties = TaskHelper.IsSynchronous
-            ? await _blobClient.GetPropertiesAsync(conditions, cancellationToken)
+            ? _blobClient.GetProperties(conditions, cancellationToken)
             : await _blobClient.GetPropertiesAsync(conditions, cancellationToken).ConfigureAwait(false);
         return properties.Value.Metadata;
     }
@@ -69,9 +72,8 @@ internal class BlobClientWrapper
             default:
                 throw new InvalidOperationException(
                     _blobClient.GetType() == typeof(BlobBaseClient)
-                        ? $"Unable to create a lock blob given client type {typeof(BlobBaseClient)}. Either ensure that the blob exists or use a non-base client type such as {typeof(BlobClient)}"
-                          + " which specifies the type of blob to create"
-                        : $"Unexpected blob client type {_blobClient.GetType()}"
+                        ? string.Format(Resources.IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED, typeof(BlobBaseClient), typeof(BlobClient))
+                        : string.Format(Resources.IDS_UNEXPECTED_BLOB_CLIENT_TYPE, _blobClient.GetType())
                 );
         }
     }

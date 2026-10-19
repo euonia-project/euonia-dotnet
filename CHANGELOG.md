@@ -7,6 +7,174 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+## [2026.4.4] - 2026-10-19
+
+对 32 个源项目完成缺陷扫描，共修复 60 余处可复现缺陷；无新功能主线。
+变更规模：21 个提交，180 个文件，+3,100 余 / −500 余行。
+
+### 概要
+
+最值得关注的变化：
+
+- **消息不再静默丢失**：发布与 outbox 重投递失败会正确重试；inbox 死信可真正重放；
+  进程崩溃遗留的 `Pending` 发件箱记录会被自动回收并重试。
+- **多播处理器真正扇形执行**：同一 `IHandler<T,R>` 的多个实现都会收到消息；
+  升级时注意 inbox/死信记录中的处理器名已改为具体实现类型。
+- **事务边界生效**：`[UnitOfWork(IsTransactional = true)]` 现在会开启真实事务并在完成后提交、
+  异常时回滚。
+- **权限判定收紧**：派生类用 `new` 遮蔽基类工厂方法不再绕过 `[Permission]`；
+  缺少 `BusinessContext` 时 fail-closed。
+- **传输与缓存可靠性**：RabbitMQ 持久化、毒消息 `nack` 与自动恢复；ActiveMQ 断线重连；
+  Redis 空值、过期与 region 索引修复。
+- **一批影响正确性的基础缺陷**：ULID 时间戳编码、分页整数溢出、嵌套属性表达式、
+  `ShortUniqueId` 边界、管道优先级与执行顺序。
+- **升级必读**：接口处理器在持久化 inbox/死信中的名称由接口全名改为具体实现全名，旧记录需要迁移。
+
+### 破坏性变更
+
+升级前请重点关注本节。
+
+#### 接口处理器与收件箱记录名
+
+- `ChannelHandler` 新增 `ImplementationType` 参数。同一 `IHandler<T,R>` 的多个实现现在按具体类型分别注册，
+  多播通道会依次执行全部实现（此前第二个实现会被去重丢弃，或只能解析到 DI 中最后注册的实现）。
+- 接口处理器在收件箱/死信中的名称由**接口全名**改为**具体实现全名**。
+  升级后旧持久化 inbox / 死信记录中的处理器名可能无法匹配，需要迁移或重新登记。
+
+#### `BypassRuleChecks` 管理器 API
+
+`BypassRuleChecksObject.GetManager(...)` 与 `RefCount` 已删除。`BypassRuleChecks` 每次访问返回独立的
+流级作用域对象，修复并发异步流共享引用计数导致的绕过状态失效；调用方只需保持 `using` 用法不变。
+
+#### 事务性工作单元
+
+`IsTransactional = true` 的 `[UnitOfWork]` 现在会真正开启数据库事务，并在 `CompleteAsync` 时提交、
+未完成释放时回滚。此前该标志不生效，每次 `SaveChanges` 都自动提交；升级后中途异常将按事务语义回滚。
+
+#### MongoDB
+
+- `AssignIdOnInsert` 改为 `true`：模型配置中的 Id 生成器恢复生效；手动赋值的 Id 不受影响。
+- `ModelProfileContainer` 改为按数据上下文类型缓存，避免第二个上下文的 `OnModelCreating` 被忽略。
+
+#### 授权
+
+`BusinessObjectFactory.SaveAsync` / `ExecuteAsync(target)` 按**工厂使用的静态类型**收集权限要求。
+派生类型用 `new` 遮蔽基类工厂方法时，基类方法上的 `[Permission]` 现在会生效（此前可被绕过）。
+
+#### 管道与缓存
+
+- 静态 `Pipeline.RunAsync` 的行为执行顺序与 `PipelineBase` 一致（按枚举顺序，从外到内）；
+  同步重载不再重复调用下游委托。
+- `MemoryCacheOptions.Expires` / `RedisCacheOptions.Expires` / `RuntimeCacheOptions.Expires`
+  改为绝对过期并真正生效（此前因 `CacheExpirationMode.Default` 被忽略）。
+- `RuntimeCacheManager` 对默认实例名不再传入 options，修复 `"default"` 实例首次操作抛异常。
+
+#### 传输层
+
+- RabbitMQ 不再在连接关闭时销毁并重建自动恢复连接；连接、通道与消费者交由客户端自动恢复。
+- RabbitMQ `user_id` 不再使用终端用户身份（避免 broker 以 `PRECONDITION_FAILED` 关闭信道）。
+- ActiveMQ 重试仅覆盖连接级异常（`SocketException` / `IOException` / `NMSConnectionException`），
+  超时与取消不再重试，降低重复发送风险。
+
+### 新增
+
+- `IOutboxStore.GetPendingMessages(cutoff)`（默认空实现）：调度器据此回收进程崩溃/取消后遗留的
+  `Pending` 发件箱记录，避免消息永远不重试也不清理。
+- `IRepositoryContext.BeginTransactionAsync`（默认实现）：EF Core 与 MongoDB 分别提供事务开启实现。
+- `InMemoryMessengerProvider`：每个服务容器使用独立的一对信使，避免进程级静态 Messenger
+  在多容器之间串消息。
+- `EnvelopeTypeResolver`：按信封声明的泛型类型（而非负载运行时类型）执行 outbox 重投递。
+- 新增测试项目 `Euonia.Repository.Tests`。
+
+### 修复
+
+#### 消息总线与可靠性
+
+- 发布与 outbox 重投递的异常不再被 `ContinueWith(_ => Unit.Value)` 吞掉，失败会正确标记并重试。
+- 收件箱死信重放现在绕过 inbox 去重、只执行目标处理器，并在成功后标记为 `Success`。
+- 同一接口的多个处理器实现可正确多播扇出，不再被去重或只解析最后一个实现。
+- 同类型 Lambda 处理器的收件箱记录名冲突：重名时追加稳定序号。
+- `CallOptions.Delay` / `WithDelay` 对请求-响应调用生效（此前被忽略）。
+- 自动装配（`AutoLoadAssemblies`）使用用户配置的通道解析器。
+- System.Text.Json 序列化接口声明类型的负载时按运行时类型写入 `payload`，
+  修复 `CallAsync(IRequest<T>)` 经 HTTP/gRPC 丢失请求字段。
+- 超出 `MaxRetryAttempts` 的死信、Pending 回收与重试状态现在保持一致。
+
+#### 传输层
+
+- RabbitMQ：消息持久化（`DeliveryMode`）与 `Mandatory` 配置生效；反序列化失败的毒消息会 `nack`，
+  处理失败且无回复通道时不再错误 `ACK`；请求发布与回复订阅分开重试，避免重复发布。
+- ActiveMQ：断线后 `IsConnected` 正确复位并重建连接；取消不再触发重试。
+- InMemory：传输器与接收者注册器共享容器级信使，避免跨容器投递和重复执行。
+
+#### 缓存
+
+- Redis FireAndForget 正确识别 `RedisResult.IsNull`，region 索引不再丢失。
+- `TryUpdate` / `AddOrUpdate` 在 `FactoryReturnedNull` 且不抛错时返回而非落空异常。
+- 反射构造支持带默认值的可选参数，`WithRuntimeCacheHandle` 无 options 重载恢复可用。
+- Redis 背板三参重载补齐连接字符串参数。
+- 空字符串/空字节数组不再被当作“不存在”。
+- `GetOrAdd` / `GetOrAddAsync` 与 `TryGet` 一致地检查 token 失效。
+- 过期扫描只删除仍指向快照实例的条目，避免误删同键新值。
+- `TypeCache` 在解析时快照解析器列表，避免并发注册导致“集合已修改”。
+
+#### 并发与后台任务
+
+- ZooKeeper 池的簿记续延不再使用调用方取消令牌，失败的连接不会永久滞留。
+- `LeaseMonitor` 的监控任务与 CTS 释放续延不再被取消令牌跳过。
+- Azure 删除锁 Blob 时忽略 `LeaseIdMissing` 竞争；同步路径改用同步 API，避免同步上下文死锁。
+- FileSystem 目录创建同时重试瞬时 `IOException`。
+- Quartz 的 `StartDelay` / `WaitForJobsToComplete` / `AwaitApplicationStarted` 配置生效。
+
+#### Core / LINQ / Pipeline / Validation
+
+- ULID 编码按标准 130 位布局重写，时间戳与字典序恢复正确。
+- `ShortUniqueId` 修复守卫字符输入的索引越界，以及小字符集编码缓冲区溢出。
+- `AsyncManualResetEvent.Wait(pre-canceled)` 正确抛出取消异常。
+- 管道累积终结点不再按优先级混入组件表，正优先级组件不会被跳过。
+- 嵌套属性表达式（`x => x.Owner.Name`）保留完整访问链。
+- 直接实现 `IValidator<T>` 的验证器不再在扫描时抛 `NullReferenceException`。
+- `QueryHandler`：`AddCriteria(null)` 立即失败；排序在过滤之后执行；`GetCount` 不再应用排序。
+- `RepositoryExtensions.Paginate` 使用 `long` 计算偏移，修复 `page * size` 整数溢出。
+
+#### 应用、仓储与宿主
+
+- `UseCaseExecutor` 的 DI 作用域覆盖用例完整执行过程，修复 scoped 依赖（如 DbContext）在用例执行前被释放。
+- Mongo 更新操作从 `$set` 中移除不可变的 `_id`，批量更新用序列化后的 `_id` 匹配。
+- `UseCulture` 正确解析带权重的 `Accept-Language`，设置并还原 `CurrentCulture` / `CurrentUICulture`。
+- `DefaultAutomaticRegistration` 的可赋值性判断方向修正，显式服务类型不再导致启动失败。
+- Hosting 将框架自身的 `ValidationException` 映射为 400 并返回字段明细。
+- 幂等键包含服务标识，避免不同服务的同名方法互相误判。
+- `[UnitOfWork]` 支持 `ValueTask` / `ValueTask<T>`，不再提前提交。
+- `UnitOfWork.Disposed` 单次释放只触发一次，且终结器线程不再触发托管事件。
+
+#### 诊断与本地化
+
+- 处理程序发现、无接收方与传输失败等异常/日志补充处理程序类型、方法名、消息类型、通道与消息 ID 等上下文。
+- 验证消息、连接字符串与数据库提供程序错误迁移到 `Resources.*.resx`，补齐 8 个文化的本地化文案。
+
+#### Osba / Security / Mapping
+
+- 无 `BusinessContext` 的手工构造对象仍使用宿主注册的权限来源（无上下文时 fail-closed）。
+- `ScopeGuard` 在失效阶段推进代数，避免旧授权快照写回缓存。
+- `FieldData.TrimOldest` 不再反转撤销历史。
+- 工厂方法的 `params object[]` 回退正确打包实参。
+- 授权失败时不再 `FinalizeInstance` 一个从未初始化的对象。
+- Mapster 键控工厂改为单例安全的 `ServiceMapper` 构造，`ValidateScopes` 下可正常启动。
+
+### 测试
+
+- 全量回归：18 个测试套件、912 项测试通过；`Euonia.slnx` 与 `Euonia.Test.slnx` 构建 0 errors。
+- 新增覆盖：接口处理器扇出、收件箱死信重放、Pending 发件箱回收、基类类型 outbox 重投递、
+  ULID、ShortUniqueId 边界、管道优先级与静态门面、ValueTask UoW、隐藏基类权限、并发绕过、
+  Mapster 作用域校验、分页溢出等。
+- 需要外部服务的 Redis（配置端口 6399）、RabbitMQ / ActiveMQ 集成测试未在本次环境运行。
+
+### 文档
+
+- 补充 `ObjectAuthorization`、`ModelProfileContainer`、`BypassRuleChecksObject` 等新增/变更成员的
+  XML 注释，并消除空文档标签。
+
 ## [2026.4.3] - 2026-10-01
 
 本版以**权限体系解耦**为主线：策略引擎从 `Euonia.Osba` 剥离为独立的 `Euonia.Security`；同时完成全模块异常消息的
@@ -337,8 +505,9 @@ Actuator 支持任意业务对象类型，小幅重构。
 - 新增 `ScopePolicy` 单元测试、缓存分组失效测试、缓存类型无关性测试、Redis 缓存服务测试、
   重试组合测试、熔断半开探测测试、UoW 作用域回归测试等。
 
-[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.4.3...HEAD
+[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.4.4...HEAD
 [2026.4.0]: https://github.com/Nerosoft/Euonia/compare/v2026.3.16...v2026.4.0
 [2026.4.1]: https://github.com/Nerosoft/Euonia/compare/v2026.4.0...v2026.4.1
 [2026.4.2]: https://github.com/Nerosoft/Euonia/compare/v2026.4.1...v2026.4.2
 [2026.4.3]: https://github.com/Nerosoft/Euonia/compare/v2026.4.2...v2026.4.3
+[2026.4.4]: https://github.com/Nerosoft/Euonia/compare/v2026.4.3...v2026.4.4

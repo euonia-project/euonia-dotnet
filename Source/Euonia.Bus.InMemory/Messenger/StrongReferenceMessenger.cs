@@ -624,7 +624,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 				// Check whether there are any registered recipients
 				if (!TryGetMapping<TMessage>(out var mapping))
 				{
-					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
+					throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE, DescribeMessage(message)));
 				}
 
 				// Check the number of remaining handlers, see below
@@ -632,7 +632,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				if (totalHandlersCount == 0)
 				{
-					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
+					throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE, DescribeMessage(message)));
 				}
 
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
@@ -652,7 +652,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 				// Check whether there are any registered recipients
 				if (!TryGetMapping<TMessage, TToken>(out var mapping))
 				{
-					throw new InvalidOperationException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN, typeof(TMessage).FullName));
+					throw new InvalidOperationException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN, DescribeMessage(message), token));
 				}
 
 				// We need to make a local copy of the currently registered handlers, since users might
@@ -670,7 +670,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				if (totalHandlersCount == 0)
 				{
-					throw new MessageDeliverException(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE);
+					throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE, DescribeMessage(message)));
 				}
 
 				// Rent the array and also assign it to a span, which will be used to access values.
@@ -709,7 +709,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 			Array.Clear(rentedArray, 0, 0);
 			ArrayPool<object>.Shared.Return(rentedArray);
 
-			throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER, typeof(TMessage).FullName));
+			throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN_TO_DELIVER, DescribeMessage(message), token));
 		}
 
 		try
@@ -978,5 +978,23 @@ public sealed class StrongReferenceMessenger : IMessenger
 	private static void ThrowInvalidOperationExceptionForDuplicateRegistration()
 	{
 		throw new InvalidOperationException(Resources.IDS_RECIPIENT_ALREADY_SUBSCRIBED);
+	}
+
+	/// <summary>
+	/// 构造用于异常消息的消息描述。
+	/// </summary>
+	/// <param name="message">正在投递的消息。</param>
+	/// <typeparam name="TMessage">消息的 CLR 类型。</typeparam>
+	/// <returns>包含业务消息类型、消息 ID 与通道的描述文本。</returns>
+	/// <remarks>
+	/// 内存总线统一用 <see cref="MessagePack"/> 包装消息，直接输出 <typeparamref name="TMessage"/>
+	/// 只能看到包装类型，无法判断是哪条业务消息缺少订阅者。
+	/// </remarks>
+	private static string DescribeMessage<TMessage>(TMessage message)
+		where TMessage : class
+	{
+		return message is MessagePack pack
+			? $"'{pack.Message.TypeName}' (message id: '{pack.Message.MessageId}', channel: '{pack.Message.Channel}')"
+			: $"'{typeof(TMessage).FullName}'";
 	}
 }

@@ -258,7 +258,13 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 				continue;
 			}
 
-			RemoveInternal(item.Key, item.Region);
+			// 快照与删除之间可能已有同键新值写入；只有仍是被扫描的这个实例时才移除，
+			// 否则会把刚写入的新值误删并报告为“已过期”。
+			var fullKey = GetKey(item.Key, item.Region);
+			if (!((ICollection<KeyValuePair<string, CacheItem<TValue>>>)_cache).Remove(new KeyValuePair<string, CacheItem<TValue>>(fullKey, item)))
+			{
+				continue;
+			}
 
 			// 触发全局逐出事件
 			TriggerCacheSpecificRemove(item.Key, item.Region, CacheItemRemovedReason.Expired, item.Value);

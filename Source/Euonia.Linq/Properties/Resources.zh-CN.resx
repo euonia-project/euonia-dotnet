@@ -150,4 +150,10 @@
   <data name="IDS_CONTAINS_METHOD_NOT_FOUND" xml:space="preserve">
     <value>未找到 'Contains' 方法。</value>
   </data>
+  <data name="IDS_PAGE_NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ONE" xml:space="preserve">
+    <value>页码必须大于或等于 1。</value>
+  </data>
+  <data name="IDS_PAGE_SIZE_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ZERO" xml:space="preserve">
+    <value>页大小必须大于或等于 0。</value>
+  </data>
 </root>

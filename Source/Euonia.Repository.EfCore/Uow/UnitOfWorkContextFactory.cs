@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Threading;
 using Nerosoft.Euonia.Uow;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
@@ -77,7 +78,10 @@ internal class UnitOfWorkContextFactory : IContextFactory
 
 		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>();
 
-		//var transaction = dbContext.GetConnection().BeginTransaction(unitOfWork.Options.IsolationLevel ?? IsolationLevel.Unspecified);
+		// 事务性工作单元必须在上下文首次使用时开启事务，否则 SaveChanges 会逐次自动提交，
+		// IsTransactional 形同虚设，RollbackAsync 也无法撤销已写入的数据。
+		AsyncContext.Run(() => dbContext.BeginTransactionAsync());
+
 		uowContext = new UnitOfWorkContext(dbContext);
 		unitOfWork.AddContext(key, uowContext);
 		return dbContext;

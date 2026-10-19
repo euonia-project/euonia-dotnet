@@ -130,22 +130,22 @@
     <value>The inbox store is not registered, but inbox is enabled. Please register an IInboxStore implementation (e.g. services.AddInMemoryInbox()).</value>
   </data>
   <data name="IDS_HANDLER_METHOD_NOT_EXIST" xml:space="preserve">
-    <value>The method doesn't exist.</value>
+    <value>Handler type '{0}' does not declare method '{1}({2}, IMessageContext, CancellationToken)' required by the IHandler&lt;,&gt; interface.</value>
   </data>
   <data name="IDS_HANDLER_METHOD_REQUIRES_PARAMETER" xml:space="preserve">
-    <value>The handler method must contain at least one parameter</value>
+    <value>Handler method '{0}.{1}' must contain at least one parameter.</value>
   </data>
   <data name="IDS_HANDLER_FIRST_PARAMETER_IS_MESSAGE" xml:space="preserve">
-    <value>The first parameter of handler method must be message type</value>
+    <value>The first parameter of handler method '{0}.{1}' must be the message type, but the declared parameter types are ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_PARAMETER_IS_CONTEXT_OR_CANCEL" xml:space="preserve">
-    <value>The second parameter of handler method must be MessageContext or CancellationToken if the method contains 2 parameters</value>
+    <value>The second parameter of handler method '{0}.{1}' must be IMessageContext or CancellationToken when the method has 2 parameters, but the declared parameter types are ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL" xml:space="preserve">
-    <value>The second and third parameter of handler method must be MessageContext and CancellationToken if the method contains 3 parameters</value>
+    <value>The second and third parameters of handler method '{0}.{1}' must be IMessageContext and CancellationToken when the method has 3 parameters, but the declared parameter types are ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>The handler method must not have any SubscribeAttribute with an empty name</value>
+    <value>Handler method '{0}.{1}' declares a SubscribeAttribute without a name; every SubscribeAttribute must specify a channel name.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Failed to auto-load the assembly '{0}' configured in '{1}:AutoLoadAssemblies'.</value>

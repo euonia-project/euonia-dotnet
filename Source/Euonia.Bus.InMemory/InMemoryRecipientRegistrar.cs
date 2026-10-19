@@ -37,6 +37,11 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	private readonly ILogger<InMemoryRecipientRegistrar> _logger;
 
 	/// <summary>
+	/// 与传输器共享的容器级信使实例。
+	/// </summary>
+	private readonly InMemoryMessengerProvider _messengers;
+
+	/// <summary>
 	/// 按接收者类型复用的接收者实例（当 <see cref="InMemoryBusOptions.MultipleSubscriberInstance"/> 为 <c>false</c> 时）。
 	/// </summary>
 	/// <remarks>
@@ -58,13 +63,15 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// <param name="provider">用于创建接收者并解析依赖项的服务提供程序。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 <see cref="InMemoryBusOptions"/> 配置。</param>
 	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
-	public InMemoryRecipientRegistrar(IConfigurator configurator, IServiceProvider provider, IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
+	/// <param name="messengers">与传输器共享的信使实例。</param>
+	public InMemoryRecipientRegistrar(IConfigurator configurator, IServiceProvider provider, IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers)
 	{
 		_options = options.Value;
 		_convention = configurator.Convention;
 		_provider = provider;
 		_strategy = configurator.GetStrategy(_options.Name);
 		_logger = logger.CreateLogger<InMemoryRecipientRegistrar>();
+		_messengers = messengers;
 	}
 
 	/// <summary>
@@ -98,19 +105,19 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 			if (_convention.IsUnicast(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemoryConsumer>();
-				StrongReferenceMessenger.Default.Register(recipient, channel);
+				_messengers.Strong.Register(recipient, channel);
 				_logger.LogInformation("[InMemoryRecipientRegistrar] Registering {MessageType} as unicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
 			else if (_convention.IsMulticast(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemorySubscriber>();
-				WeakReferenceMessenger.Default.Register(recipient, channel);
+				_messengers.Weak.Register(recipient, channel);
 				_logger.LogInformation("[InMemoryRecipientRegistrar] Registering {MessageType} as multicast type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
 			else if (_convention.IsRequest(channel, registration.MessageType))
 			{
 				var recipient = GetRecipient<InMemoryExecutor>();
-				StrongReferenceMessenger.Default.Register(recipient, channel);
+				_messengers.Strong.Register(recipient, channel);
 				_logger.LogInformation("[InMemoryRecipientRegistrar] Registering {MessageType} as request type on channel {Channel}", registration.MessageType.FullName, channel);
 			}
 			else
@@ -147,8 +154,8 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	{
 		while (_aliveRecipients.TryDequeue(out var recipient))
 		{
-			StrongReferenceMessenger.Default.UnregisterAll(recipient);
-			WeakReferenceMessenger.Default.UnregisterAll(recipient);
+			_messengers.Strong.UnregisterAll(recipient);
+			_messengers.Weak.UnregisterAll(recipient);
 		}
 
 		_recipients.Clear();

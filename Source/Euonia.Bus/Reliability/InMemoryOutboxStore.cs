@@ -67,6 +67,16 @@ public class InMemoryOutboxStore : IOutboxStore
 	}
 
 	/// <inheritdoc/>
+	public IReadOnlyList<OutboxTransport> GetPendingMessages(DateTime cutoff)
+	{
+		return _entries.Values
+		               .Where(entry => entry.CreatedAt <= cutoff)
+		               .SelectMany(entry => entry.Transports)
+		               .Where(transport => transport.Status == OutboxTransportStatus.Pending)
+		               .ToList();
+	}
+
+	/// <inheritdoc/>
 	public void Cleanup(DateTime cutoff)
 	{
 		// 只清理已终结的条目：任何传输记录仍为 Pending / Failed 的条目都要保留，否则会丢失待重试的消息。

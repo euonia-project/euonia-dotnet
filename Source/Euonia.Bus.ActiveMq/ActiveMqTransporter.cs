@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using Apache.NMS;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -98,7 +99,10 @@ internal class ActiveMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<Exception>()
+			// 只重试连接级故障：请求超时时 broker 可能已经接收消息，重试会产生重复投递。
+			await Policy.Handle<SocketException>()
+			            .Or<IOException>()
+			            .Or<NMSConnectionException>()
 			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
 			            {
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);
@@ -202,7 +206,10 @@ internal class ActiveMqTransporter : ITransporter
 
 		try
 		{
-			await Policy.Handle<Exception>()
+			// 只重试连接级故障：请求超时时 broker 可能已经接收消息，重试会产生重复投递。
+			await Policy.Handle<SocketException>()
+			            .Or<IOException>()
+			            .Or<NMSConnectionException>()
 			            .WaitAndRetryAsync(_options.MaxFailureRetries, _ => TimeSpan.FromSeconds(3), (exception, _, retryCount, _) =>
 			            {
 				            _logger.LogError(exception, "Retry:{RetryCount}, {Message}", retryCount, exception.Message);

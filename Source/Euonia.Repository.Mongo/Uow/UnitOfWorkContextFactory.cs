@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Threading;
 using Nerosoft.Euonia.Uow;
 
 namespace Nerosoft.Euonia.Repository.Mongo;
@@ -72,7 +73,9 @@ internal class UnitOfWorkContextFactory : IContextFactory
 
 		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>();
 
-		//var transaction = dbContext.GetConnection().BeginTransaction(unitOfWork.Options.IsolationLevel ?? IsolationLevel.Unspecified);
+		// 事务性工作单元必须显式开启 Mongo 会话事务。
+		AsyncContext.Run(() => dbContext.BeginTransactionAsync());
+
 		uowContext = new UnitOfWorkContext(dbContext);
 		unitOfWork.AddContext(key, uowContext);
 		return dbContext;

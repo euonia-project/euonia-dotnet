@@ -60,7 +60,7 @@ public sealed class ShortUniqueId
 		if (salt == null)
 			throw new ArgumentNullException(nameof(salt));
 		if (minHashLength < 0)
-			throw new ArgumentOutOfRangeException(nameof(minHashLength), "值必须为零或大于零。");
+			throw new ArgumentOutOfRangeException(nameof(minHashLength), Nerosoft.Euonia.Core.Properties.Resources.IDS_MIN_HASH_LENGTH_MAY_NOT_BE_NEGATIVE);
 		if (string.IsNullOrWhiteSpace(alphabet))
 			throw new ArgumentNullException(nameof(alphabet));
 		if (string.IsNullOrWhiteSpace(seps))
@@ -70,9 +70,6 @@ public sealed class ShortUniqueId
 		_minHashLength = minHashLength;
 		_alphabet = alphabet.ToCharArray().Distinct().ToArray();
 		_seps = seps.ToCharArray();
-
-		// 使用最小缓冲区大小 20，比最大 64 位整数（long.MaxValue = 9223372036854775807）多 1 位
-		_minBufferSize = Math.Max(20, minHashLength);
 
 		if (_alphabet.Length < MIN_ALPHABET_LENGTH)
 			throw new ArgumentException(string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_ALPHABET_MIN_UNIQUE_CHARS, MIN_ALPHABET_LENGTH), paramName: nameof(alphabet));
@@ -124,6 +121,11 @@ public sealed class ShortUniqueId
 			_guards = SubArray(_alphabet, index: 0, length: guardCount);
 			_alphabet = SubArray(_alphabet, index: guardCount);
 		}
+
+		// 缓冲区必须覆盖“lottery 字符 + long.MaxValue 在最终字符集下的最多位数”。
+		// 固定写 20 只在默认字符集下成立；较小字符集（如 9 个可用字符）需要 20 位数字。
+		var maxDigits = _alphabet.Length <= 1 ? 64 : (int)Math.Ceiling(64.0 / Math.Log(_alphabet.Length, 2.0));
+		_minBufferSize = Math.Max(20, Math.Max(minHashLength, maxDigits + 1));
 	}
 
 	/// <summary>
@@ -173,7 +175,8 @@ public sealed class ShortUniqueId
 	/// <returns>编码后的哈希字符串。</returns>
 	public string EncodeInt64(params long[] numbers)
 	{
-		var numbersLength = _minBufferSize * numbers.Length;
+		// 每个数字占 _minBufferSize（含 lottery），数字之间还会插入分隔符。
+		var numbersLength = Math.Max(_minHashLength, (_minBufferSize * numbers.Length) + Math.Max(0, numbers.Length - 1));
 		var result = numbersLength < MAX_STACKALLOC_SIZE ? stackalloc char[numbersLength] : new char[numbersLength];
 		var length = GenerateHashFrom(numbers, ref result);
 		return length == -1 ? string.Empty : result[..length].ToString();
@@ -560,17 +563,33 @@ public sealed class ShortUniqueId
 		var guardedHash = hash.AsSpan();
 		var (count, ranges) = Split(guardedHash, _guards);
 
-		var unguardedIndex = count is 3 or 2 ? 1 : 0;
-		var (start, offset) = ranges[unguardedIndex];
-		var hashBreakdown = guardedHash.Slice(start, offset);
+		try
+		{
+			// 仅由守卫字符组成的哈希会得到 count == 0；未受信任的输入不得让解码抛索引越界。
+			if (count == 0)
+			{
+				return -1;
+			}
 
-		ArrayPool<(int, int)>.Shared.Return(ranges);
+			var unguardedIndex = count is 3 or 2 ? 1 : 0;
+			if (unguardedIndex >= count)
+			{
+				return -1;
+			}
 
-		var lottery = hashBreakdown[0];
-		if (lottery == '\0')
-			return -1;
+			var (start, offset) = ranges[unguardedIndex];
+			if (offset <= 0)
+			{
+				return -1;
+			}
 
-		var hashBuffer = hashBreakdown.Slice(1);
+			var hashBreakdown = guardedHash.Slice(start, offset);
+
+			var lottery = hashBreakdown[0];
+			if (lottery == '\0')
+				return -1;
+
+			var hashBuffer = hashBreakdown.Slice(1);
 
 		Span<char> alphabet = _alphabet.Length < MAX_STACKALLOC_SIZE ? stackalloc char[_alphabet.Length] : new char[_alphabet.Length];
 		_alphabet.CopyTo(alphabet);
@@ -598,6 +617,11 @@ public sealed class ShortUniqueId
 			return result;
 
 		return -1;
+		}
+		finally
+		{
+			ArrayPool<(int, int)>.Shared.Return(ranges);
+		}
 	}
 
 	private long[] GetNumbersFrom(string hash)

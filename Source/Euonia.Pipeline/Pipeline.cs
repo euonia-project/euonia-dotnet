@@ -20,7 +20,8 @@ public class Pipeline
         return await Task.Run(async () =>
         {
             Task<TResponse> Accumulate(TRequest _) => handler(context);
-            var response = behaviors.Aggregate((PipelineDelegate<TRequest, TResponse>)Accumulate, (@delegate, behavior) => request => behavior.HandleAsync(request, @delegate));
+            // Aggregate 会让第一个元素成为最内层；反转枚举后，behaviors 的第一个元素才是最外层（最先执行）。
+            var response = behaviors.Reverse().Aggregate((PipelineDelegate<TRequest, TResponse>)Accumulate, (@delegate, behavior) => request => behavior.HandleAsync(request, @delegate));
             return await response(context);
         }, cancellationToken);
     }
@@ -38,10 +39,26 @@ public class Pipeline
     /// <returns>管道运行产生的响应。</returns>
     public static TResponse Run<TRequest, TResponse>(TRequest context, Func<TRequest, TResponse> accumulate, IEnumerable<IDelegateBehavior<TRequest>> behaviors)
     {
-        var @delegate = behaviors.Aggregate((Delegate)accumulate, (@delegate, behavior) => (Func<TRequest, TResponse>)(request =>
+        var @delegate = behaviors.Reverse().Aggregate((Delegate)accumulate, (@delegate, behavior) => (Func<TRequest, TResponse>)(request =>
         {
-            behavior.HandleAsync(request, @delegate, default).GetAwaiter().GetResult();
-            return ((Func<TRequest, TResponse>)@delegate)(request);
+            var invokedNext = false;
+            var result = default(TResponse);
+            var next = (Func<TRequest, TResponse>)(value =>
+            {
+                invokedNext = true;
+                result = ((Func<TRequest, TResponse>)@delegate)(value);
+                return result;
+            });
+
+            behavior.HandleAsync(request, next, default).GetAwaiter().GetResult();
+
+            // 约定：行为调用 next 时只执行一次；未调用 next 时保持旧行为，自动执行下游。
+            if (!invokedNext)
+            {
+                result = ((Func<TRequest, TResponse>)@delegate)(request);
+            }
+
+            return result;
         }));
 
         return ((Func<TRequest, TResponse>)@delegate)(context);
@@ -56,10 +73,22 @@ public class Pipeline
     /// <param name="behaviors">要在管道中执行的委托行为集合。</param>
     public static void Run<TRequest>(TRequest context, Action<TRequest> accumulate, IEnumerable<IDelegateBehavior<TRequest>> behaviors)
     {
-        var @delegate = behaviors.Aggregate((Delegate)accumulate, (@delegate, behavior) => (Action<TRequest>)(request =>
+        var @delegate = behaviors.Reverse().Aggregate((Delegate)accumulate, (@delegate, behavior) => (Action<TRequest>)(request =>
         {
-            behavior.HandleAsync(request, @delegate, default).GetAwaiter().GetResult();
-            ((Action<TRequest>)@delegate)(request);
+            var invokedNext = false;
+            var next = (Action<TRequest>)(value =>
+            {
+                invokedNext = true;
+                ((Action<TRequest>)@delegate)(value);
+            });
+
+            behavior.HandleAsync(request, next, default).GetAwaiter().GetResult();
+
+            // 约定：行为调用 next 时只执行一次；未调用 next 时保持旧行为，自动执行下游。
+            if (!invokedNext)
+            {
+                ((Action<TRequest>)@delegate)(request);
+            }
         }));
 
         ((Action<TRequest>)@delegate)(context);

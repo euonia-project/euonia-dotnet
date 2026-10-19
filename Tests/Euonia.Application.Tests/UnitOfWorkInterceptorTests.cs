@@ -12,6 +12,8 @@ public interface IUowTestService
 	Task<int> FailAsync();
 	int WorkSync();
 	Task<int> NoUowAsync();
+	ValueTask<int> WorkValueTaskAsync();
+	ValueTask WorkValueTaskVoidAsync();
 }
 
 /// <summary>
@@ -44,6 +46,23 @@ public class UowTestService : BaseApplicationService, IUowTestService
 	{
 		await Task.Delay(10, TestContext.Current.CancellationToken);
 		return 2;
+	}
+
+	public static bool ValueTaskBodyCompleted;
+
+	[UnitOfWork]
+	public async ValueTask<int> WorkValueTaskAsync()
+	{
+		ValueTaskBodyCompleted = false;
+		await Task.Delay(50, TestContext.Current.CancellationToken);
+		ValueTaskBodyCompleted = true;
+		return 43;
+	}
+
+	[UnitOfWork]
+	public async ValueTask WorkValueTaskVoidAsync()
+	{
+		await Task.Delay(10, TestContext.Current.CancellationToken);
 	}
 }
 
@@ -112,6 +131,38 @@ public class UnitOfWorkInterceptorTests
 
 		Assert.Equal(42, result);
 		Assert.True(completedAt != DateTime.MinValue);
+	}
+
+	[Fact]
+	public async Task ValueTaskUow_ShouldCompleteAfterTargetMethodFinishes()
+	{
+		// 回归测试：ValueTask/ValueTask<T> 曾被当作同步方法，工作单元在方法体完成前就被 Complete。
+		var harness = new Harness();
+		var completedAfterBody = false;
+		harness.Uow.Setup(u => u.CompleteAsync(It.IsAny<CancellationToken>()))
+			.Callback(() => completedAfterBody = UowTestService.ValueTaskBodyCompleted)
+			.Returns(Task.CompletedTask);
+
+		using var scope = harness.Provider.CreateScope();
+		var svc = scope.ServiceProvider.GetRequiredService<IUowTestService>();
+
+		var result = await svc.WorkValueTaskAsync();
+
+		Assert.Equal(43, result);
+		Assert.True(completedAfterBody, "CompleteAsync 必须在 ValueTask 方法体执行完成后调用");
+	}
+
+	[Fact]
+	public async Task ValueTaskVoidUow_ShouldCompleteAfterTargetMethodFinishes()
+	{
+		var harness = new Harness();
+
+		using var scope = harness.Provider.CreateScope();
+		var svc = scope.ServiceProvider.GetRequiredService<IUowTestService>();
+
+		await svc.WorkValueTaskVoidAsync();
+
+		harness.Uow.Verify(u => u.CompleteAsync(It.IsAny<CancellationToken>()), Times.Once);
 	}
 
 	[Fact]

@@ -47,7 +47,7 @@ public class ModelBuilder
             foreach (var (name, property) in profile.Properties)
             {
                 var member = map.MapProperty(name);
-                if (string.IsNullOrEmpty(property.ElementName))
+                if (!string.IsNullOrEmpty(property.ElementName))
                 {
                     member.SetElementName(property.ElementName);
                 }

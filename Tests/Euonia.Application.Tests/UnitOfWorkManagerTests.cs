@@ -59,6 +59,21 @@ public class UnitOfWorkManagerTests
 		Assert.Equal(1, ProbeDisposable.DisposedCount);
 	}
 
+	[Fact]
+	public void Dispose_RaisesDisposedEventOnce()
+	{
+		// 回归测试：UnitOfWork.Dispose(bool) 与基类各触发一次 Disposed，单次 Dispose 会通知两遍。
+		using var provider = BuildProvider();
+		var manager = provider.GetRequiredService<IUnitOfWorkManager>();
+		var uow = manager.Begin(new UnitOfWorkOptions());
+
+		var raised = 0;
+		uow.Disposed += (_, _) => raised++;
+		uow.Dispose();
+
+		Assert.Equal(1, raised);
+	}
+
 	private static ServiceProvider BuildProvider()
 	{
 		var services = new ServiceCollection();

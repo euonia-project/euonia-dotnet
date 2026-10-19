@@ -38,6 +38,13 @@ internal class CacheItem<TKey, TResult>
 
     public TResult GetOrAdd(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
     {
+        // 与 TryGet 保持一致：token 失效的条目视为不存在，必须重新获取。
+        if (_entries.TryGetValue(key, out var stale) && !stale.Tokens.All(t => t.IsCurrent))
+        {
+            // netstandard2.1 没有 TryRemove(KeyValuePair)；ICollection.Remove 提供原子的“值相同才删除”。
+            ((ICollection<KeyValuePair<TKey, CacheEntry>>)_entries).Remove(new KeyValuePair<TKey, CacheEntry>(key, stale));
+        }
+
         var entry = _entries.GetOrAdd(key, _ =>
         {
             var entry = CreateEntry(key, acquire);
@@ -65,7 +72,7 @@ internal class CacheItem<TKey, TResult>
 
     public async Task<TResult> GetOrAddAsync(TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
-        if (_entries.TryGetValue(key, out var entry))
+        if (_entries.TryGetValue(key, out var entry) && entry.Tokens.All(t => t.IsCurrent))
         {
             return entry.Result;
         }
@@ -75,11 +82,20 @@ internal class CacheItem<TKey, TResult>
         await semaphoreSlim.WaitAsync();
         try
         {
-            if (!_entries.TryGetValue(key, out entry))
+            if (_entries.TryGetValue(key, out entry) && !entry.Tokens.All(t => t.IsCurrent))
             {
-                entry = await CreateEntryAsync(key, acquire);
-                PropagateTokens(entry);
-                _entries.TryAdd(key, entry);
+                ((ICollection<KeyValuePair<TKey, CacheEntry>>)_entries).Remove(new KeyValuePair<TKey, CacheEntry>(key, entry));
+                entry = null;
+            }
+
+            if (entry == null)
+            {
+                var created = await CreateEntryAsync(key, acquire);
+                PropagateTokens(created);
+                // 并发写入时优先使用已经落库的当前条目。
+                entry = _entries.TryAdd(key, created)
+                        ? created
+                        : _entries.TryGetValue(key, out var existing) ? existing : created;
             }
 
             return entry.Result;

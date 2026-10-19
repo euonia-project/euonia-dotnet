@@ -138,4 +138,7 @@
   <data name="IDS_PARAMETER_REQUIRED" xml:space="preserve">
     <value>El parámetro '{0}' es obligatorio para el método '{1}'.</value>
   </data>
+  <data name="IDS_CIRCUIT_OPEN" xml:space="preserve">
+    <value>El circuito '{0}' está abierto tras {1} errores; se sondeará después de {2} segundos.</value>
+  </data>
 </root>

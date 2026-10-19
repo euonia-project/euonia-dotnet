@@ -20,12 +20,20 @@ public static class ServiceCollectionExtensions
 	/// <returns></returns>
 	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<QuartzOptions> options, Action<IServiceCollectionQuartzConfigurator> configure)
 	{
+		var buildOptions = Singleton<BackgroundBuildOptions>.Instance;
+
 		services.Configure(options);
 		services.AddQuartz(configure);
 		services.AddQuartzHostedService(host =>
 		{
-			host.WaitForJobsToComplete = true;
-			host.AwaitApplicationStarted = true;
+			// 这些选项此前被硬编码，用户配置的 BackgroundBuildOptions 从未生效。
+			host.WaitForJobsToComplete = buildOptions.WaitForJobsToComplete;
+			host.AwaitApplicationStarted = buildOptions.AwaitApplicationStarted;
+
+			if (buildOptions.StartDelay.HasValue)
+			{
+				host.StartDelay = buildOptions.StartDelay.Value;
+			}
 		});
 		return services;
 	}
@@ -91,8 +99,14 @@ public static class ServiceCollectionExtensions
 		});
 		services.AddQuartzHostedService(host =>
 		{
-			host.WaitForJobsToComplete = true;
-			host.AwaitApplicationStarted = true;
+			// 这些选项此前被硬编码，用户配置的 BackgroundBuildOptions 从未生效。
+			host.WaitForJobsToComplete = buildOptions.WaitForJobsToComplete;
+			host.AwaitApplicationStarted = buildOptions.AwaitApplicationStarted;
+
+			if (buildOptions.StartDelay.HasValue)
+			{
+				host.StartDelay = buildOptions.StartDelay.Value;
+			}
 		});
 		return services;
 	}

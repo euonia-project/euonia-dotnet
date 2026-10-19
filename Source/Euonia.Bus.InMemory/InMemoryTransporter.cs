@@ -19,6 +19,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public event EventHandler<MessageDeliveredEventArgs> Delivered;
 
 	private readonly ILogger<InMemoryTransporter> _logger;
+	private readonly WeakReferenceMessenger _weakMessenger;
+	private readonly StrongReferenceMessenger _strongMessenger;
 
 	/// <summary>
 	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
@@ -26,10 +28,23 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <param name="options">内存总线选项。</param>
 	/// <param name="logger">日志工厂。</param>
 	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
+		: this(options, logger, new InMemoryMessengerProvider())
+	{
+	}
+
+	/// <summary>
+	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
+	/// </summary>
+	/// <param name="options">内存总线选项。</param>
+	/// <param name="logger">日志工厂。</param>
+	/// <param name="messengers">与接收者注册器共享的信使实例。</param>
+	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers)
 	{
 		var opts = options.Value;
 		Name = opts.Name ?? Constants.DefaultTransportName;
 		_logger = logger.CreateLogger<InMemoryTransporter>();
+		_weakMessenger = messengers.Weak;
+		_strongMessenger = messengers.Strong;
 	}
 
 	/// <summary>
@@ -46,7 +61,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		{
 			Aborted = cancellationToken
 		};
-		WeakReferenceMessenger.Default.Send(pack, message.Channel);
+		_weakMessenger.Send(pack, message.Channel);
 		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 		await Task.CompletedTask;
 	}
@@ -85,7 +100,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			taskCompletion.TrySetResult();
 		};
 
-		StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+		_strongMessenger.UnsafeSend(pack, message.Channel);
 
 		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
@@ -130,7 +145,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			context.Failed += OnFailed;
 			context.Completed += OnCompleted;
 
-			StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+			_strongMessenger.UnsafeSend(pack, message.Channel);
 			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
 			var result = await taskCompletion.Task;
@@ -152,7 +167,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		void OnFailed(object sender, Exception exception)
 		{
-			_logger.LogError(exception, "Message '{MessageId}' failed with exception", message.MessageId);
+			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 
@@ -194,7 +209,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		try
 		{
-			StrongReferenceMessenger.Default.UnsafeSend(pack, message.Channel);
+			_strongMessenger.UnsafeSend(pack, message.Channel);
 			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
 
 			return await taskCompletion.Task;
@@ -215,7 +230,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 
 		void OnFailed(object sender, Exception exception)
 		{
-			_logger.LogError(exception, "Message '{MessageId}' failed with exception", message.MessageId);
+			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 

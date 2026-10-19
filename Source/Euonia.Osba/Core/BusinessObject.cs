@@ -567,13 +567,15 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// </remarks>
 	private AsyncLocal<bool> _bypassScope;
 
-	private BypassRuleChecksObject InternalBypassRuleChecks { get; set; }
-
 	/// <summary>
 	/// 通过将此属性包裹在 Using 块中，可以在不引发 PropertyChanged 事件
 	/// 和不检查用户权限的情况下，为当前业务对象设置属性值。
 	/// </summary>
-	protected internal BypassRuleChecksObject BypassRuleChecks => BypassRuleChecksObject.GetManager(this);
+	/// <remarks>
+	/// 每次访问都返回独立的流级作用域对象：绕过标志存放在 AsyncLocal 中，
+	/// 共享管理器无法为并发流分别设置/还原各自的值。
+	/// </remarks>
+	protected internal BypassRuleChecksObject BypassRuleChecks => new(this);
 
 	/// <summary>
 	/// 用于创建绕过规则检查的对象，允许设置某些即使不是严格有效的值。
@@ -587,9 +589,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	{
 		private BusinessObject _target;
 		private readonly bool _captured;
-		private static readonly Lock _lock = new();
+		private bool _disposed;
 
-		private BypassRuleChecksObject(BusinessObject target)
+		/// <summary>
+		/// 在当前异步流中开启规则检查绕过，并捕获进入时的旧值以便还原。
+		/// </summary>
+		/// <param name="target">要绕过规则检查的业务对象。</param>
+		internal BypassRuleChecksObject(BusinessObject target)
 		{
 			_target = target;
 			_captured = target.IsBypassingRuleChecks;
@@ -599,100 +605,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		#region IDisposable Members
 
 		/// <summary>
-		/// 释放对象。
+		/// 还原进入本流时的旧值。
 		/// </summary>
 		public void Dispose()
 		{
-			DeRef();
-		}
-
-		/// <summary>
-		/// 获取 BypassPropertyChecks 对象。
-		/// </summary>
-		/// <param name="target">业务对象。</param>
-		/// <returns>绕过规则检查的管理器对象。</returns>
-		/// <remarks>
-		/// 必须<strong>在锁内</strong>取定返回值：字段在 <see cref="DeRef"/> 归零时会被置空，
-		/// 若在解锁之后再回读一次 <see cref="BusinessObject.InternalBypassRuleChecks"/>，
-		/// 中途并发的 <c>Dispose</c> 就能让这里返回 <see langword="null"/>——
-		/// 调用方拿到 null 后 <c>using</c> 形同虚设，而刚建立的绕过状态已被对方还原。
-		/// </remarks>
-		public static BypassRuleChecksObject GetManager(BusinessObject target)
-		{
-			lock (_lock)
+			if (_disposed)
 			{
-				target.InternalBypassRuleChecks ??= new BypassRuleChecksObject(target);
-
-				var manager = target.InternalBypassRuleChecks;
-				manager.AddRef();
-				return manager;
+				return;
 			}
+
+			_disposed = true;
+
+			// AsyncLocal 的值属于当前异步流，每个 using 实例独立还原即可，
+			// 不需要也不应在并发流之间共享引用计数。
+			_target.IsBypassingRuleChecks = _captured;
+			_target = null;
 		}
-
-		#region Reference counting
-
-		/// <summary>
-		/// 当前引用计数。读写都在 <see cref="_lock"/> 内完成——
-		/// <see cref="Dispose"/> 可能来自与 <see cref="GetManager"/> 完全不同的线程。
-		/// </summary>
-		private int _refCount;
-
-		/// <summary>
-		/// 获取此对象的当前引用计数。
-		/// </summary>
-		public int RefCount
-		{
-			get
-			{
-				lock (_lock)
-				{
-					return _refCount;
-				}
-			}
-		}
-
-		private void AddRef()
-		{
-			// 自己加锁，不依赖调用方：把「必须先持锁」变成方法自身的契约，
-			// 否则漏了锁的调用方会得到一个毫无保护的非原子自增。
-			lock (_lock)
-			{
-				_refCount += 1;
-			}
-		}
-
-		private void DeRef()
-		{
-			lock (_lock)
-			{
-				if (_refCount == 0)
-				{
-					// 已经释放，防止重复释放导致引用计数为负或空引用。
-					// 归零后 _target 同步置空，这里必须一并挡住，避免对空目标动刀。
-					return;
-				}
-
-				_refCount -= 1;
-				if (_refCount != 0)
-				{
-					return;
-				}
-
-				if (_target == null)
-				{
-					return;
-				}
-
-				// 还原「进入时捕获的旧值」而不是恒 false：嵌套 using 退出时不关闭外层绕过。
-				// AsyncLocal 语义下这写的是本异步流的值——并发的其他流不受影响，
-				// 也不再把对象级标志误还原给正在别处绕过的调用方。
-				_target.IsBypassingRuleChecks = _captured;
-				_target.InternalBypassRuleChecks = null;
-				_target = null;
-			}
-		}
-
-		#endregion
 
 		#endregion
 	}

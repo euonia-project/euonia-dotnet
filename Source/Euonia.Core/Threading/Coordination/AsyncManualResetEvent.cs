@@ -113,7 +113,9 @@ public sealed class AsyncManualResetEvent
     public void Wait(CancellationToken cancellationToken)
     {
         var ret = WaitAsync(cancellationToken);
-        if (ret.IsCompleted)
+        // 不能用 IsCompleted：预先取消的令牌会产生已取消（IsCompleted == true）的任务，
+        // 那样会把“未设置且已取消”误判为“事件已设置”。
+        if (ret.IsCompletedSuccessfully)
             return;
         ret.WaitAndUnwrapException(cancellationToken);
     }
