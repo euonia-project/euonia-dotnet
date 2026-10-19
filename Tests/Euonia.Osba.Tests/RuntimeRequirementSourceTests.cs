@@ -32,6 +32,25 @@ public class RuntimeRequirementSourceTests
 	}
 
 	[Fact]
+	public async Task Factory_Boundary_Should_Use_Ambient_Source_When_Target_Has_No_BusinessContext()
+	{
+		using var scope = CreateScope(codes: [], out var provider);
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+
+		// 手工构造的对象的 BusinessContext 为 null；宿主注册的来源仍必须生效，
+		// 否则工厂边界会静默放行本应被拒绝的更新。
+		var target = new AmbientTask();
+		target.MarkAsChanged();
+
+		// 宿主来源能查到要求后，缺少 BusinessContext 属于配置错误，必须 fail-closed 而非放行。
+		await Assert.ThrowsAsync<InvalidOperationException>(
+			() => factory.SaveAsync(target, TestContext.Current.CancellationToken));
+
+		BusinessContextAccessor.Clear();
+	}
+
+	[Fact]
 	public async Task Factory_Boundary_Should_Allow_When_Host_Declared_Requirement_Is_Granted()
 	{
 		using var scope = CreateScope(codes: ["host:update"], out var provider);
@@ -84,8 +103,20 @@ public class RuntimeRequirementSourceTests
 }
 
 /// <summary>
+/// 用于验证「目标没有 BusinessContext 时仍使用环境来源」的简单可编辑对象。
+/// </summary>
+public class AmbientTask : EditableObject<AmbientTask>
+{
+	[FactoryUpdate]
+	protected Task UpdateAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
+	}
+}
+
+/// <summary>
 /// 宿主补充的要求来源：只给权限码（要求由 <see cref="IPermissionCodeSource"/> 的默认实现折算），
-/// 对 <see cref="ScopedTask"/> 的更新操作额外要求 <c>host:update</c>。
+/// 对 <see cref="ScopedTask"/> / <see cref="AmbientTask"/> 的更新操作额外要求 <c>host:update</c>。
 /// </summary>
 internal sealed class HostUpdateRequirementSource : IPermissionCodeSource
 {
@@ -95,7 +126,7 @@ internal sealed class HostUpdateRequirementSource : IPermissionCodeSource
 
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{
-		return type == typeof(ScopedTask) && operation == BusinessOperation.Update ? [Code] : [];
+		return (type == typeof(ScopedTask) || type == typeof(AmbientTask)) && operation == BusinessOperation.Update ? [Code] : [];
 	}
 }
 

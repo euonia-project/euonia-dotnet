@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Modularity;
@@ -52,6 +53,28 @@ public class CallAsyncTests
 		Assert.Equal("call-msg-1", envelope.MessageId);
 		Assert.Equal("corr-1", envelope.CorrelationId);
 		Assert.Equal("trace-1", envelope.RequestTraceId);
+	}
+
+	[Fact]
+	public async Task IRequestOverload_WithDelay_WaitsBeforeTransport()
+	{
+		var transport = new StubTransporter(_ => Task.FromResult(7));
+		await using var provider = CreateProvider(transport);
+		var bus = provider.GetRequiredService<IBus>();
+
+		const long delay = 300;
+		var stopwatch = Stopwatch.StartNew();
+
+		var result = await bus.CallAsync(
+			new CountRequest(),
+			new CallOptions { Channel = "call.delayed", Delay = delay },
+			null,
+			TestContext.Current.CancellationToken);
+
+		stopwatch.Stop();
+
+		Assert.Equal(7, result);
+		Assert.True(stopwatch.ElapsedMilliseconds >= delay * 0.8, $"expected to wait at least {delay * 0.8} ms, waited {stopwatch.ElapsedMilliseconds} ms");
 	}
 
 	[Fact]

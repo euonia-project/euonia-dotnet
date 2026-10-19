@@ -58,6 +58,23 @@ public class AutoLoadAssembliesTests
 	}
 
 	/// <summary>
+	/// 自动装配必须使用用户在配置委托中设置的通道解析器，而不是默认解析器。
+	/// </summary>
+	[Fact]
+	public async Task ExecuteAsync_WithCustomChannelResolver_RegistersAutoLoadedHandlerOnResolvedChannel()
+	{
+		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name], services =>
+		{
+			services.AddConfiguratorBuilder(configurator => configurator.SetChannelResolver(type => $"custom.{type.Name}", replaceDefault: true));
+		});
+
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		await StartActivatorAsync(provider);
+
+		Assert.Contains($"custom.{nameof(TestMessages.OrderPlacedEvent)}", configurator.Registrations.Keys);
+	}
+
+	/// <summary>
 	/// 自动装配与用户显式注册同一处理器时不得产生重复注册（多播场景下会被执行两次）。
 	/// </summary>
 	[Fact]
@@ -87,7 +104,7 @@ public class AutoLoadAssembliesTests
 		await activator.ExecuteTask;
 	}
 
-	private static ServiceProvider BuildProvider(string[] autoLoadAssemblies)
+	private static ServiceProvider BuildProvider(string[] autoLoadAssemblies, Action<IServiceCollection> configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -103,6 +120,7 @@ public class AutoLoadAssembliesTests
 		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddMessageHandler(ServiceLifetime.Transient, typeof(AutoLoadProbeHandler));
+		configure?.Invoke(services);
 
 		return services.BuildServiceProvider();
 	}

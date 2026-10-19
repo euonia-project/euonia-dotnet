@@ -64,6 +64,19 @@ public class BugFixRegressionTests
 	}
 
 	[Fact]
+	public void PredicateExpressionBuilder_NestedProperty_ShouldBuildPredicate()
+	{
+		// 回归测试：旧实现只取叶成员并挂到 TEntity 参数上，x => x.Owner.Name 会被当成 TEntity.Name。
+		var builder = new PredicateExpressionBuilder<OwnedItem>();
+		builder.Append(x => x.Owner.Name, QueryOperator.Equal, "a");
+
+		var predicate = builder.ToLambda().Compile();
+
+		Assert.True(predicate(new OwnedItem { Owner = new Owner { Name = "a" } }));
+		Assert.False(predicate(new OwnedItem { Owner = new Owner { Name = "b" } }));
+	}
+
+	[Fact]
 	public void QueryHandler_NullQuery_ShouldThrow()
 	{
 		Assert.Throws<ArgumentNullException>(() => new QueryHandler<Item>(null));
