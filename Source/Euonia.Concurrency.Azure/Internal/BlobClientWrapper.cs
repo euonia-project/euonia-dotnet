@@ -24,8 +24,11 @@ internal class BlobClientWrapper
     public async ValueTask<IDictionary<string, string>> GetMetadataAsync(string leaseId, CancellationToken cancellationToken)
     {
         var conditions = new BlobRequestConditions { LeaseId = leaseId };
+
+        // 同步路径必须调用同步 API：同步阻塞等待异步调用会把续延投递回已被阻塞的
+        // SynchronizationContext，在 WinForms/WPF 等环境下造成死锁。
         var properties = TaskHelper.IsSynchronous
-            ? await _blobClient.GetPropertiesAsync(conditions, cancellationToken)
+            ? _blobClient.GetProperties(conditions, cancellationToken)
             : await _blobClient.GetPropertiesAsync(conditions, cancellationToken).ConfigureAwait(false);
         return properties.Value.Metadata;
     }
