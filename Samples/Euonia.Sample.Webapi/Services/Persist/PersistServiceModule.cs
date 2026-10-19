@@ -58,7 +58,8 @@ public class PersistServiceModule : ModuleContextBase
 		context.Services.AddKeyedSingleton<ConnectionConfigurator>("inmemory", (builder, connectionString) => builder.UseInMemoryDatabase(connectionString));
 		context.Services.AddKeyedSingleton<ConnectionConfigurator>("sqlite", (builder, connectionString) => builder.UseSqlite(connectionString));
 		context.Services.AddKeyedSingleton<ConnectionConfigurator>("sqlserver", (builder, connectionString) => builder.UseSqlServer(connectionString));
-		context.Services.AddDataContextFactory<SampleDataContext>();
+		// 数据上下文注入 scoped 的 IBus/IRequestContextAccessor，工厂必须与请求同生命周期。
+		context.Services.AddDataContextFactory<SampleDataContext>(lifetime: ServiceLifetime.Scoped);
 		// 每个请求共享一个数据上下文，作为仓储与授权数据的访问入口
 		context.Services.AddScoped<IApplicationDataContext>(provider => provider.GetRequiredService<IDbContextFactory<SampleDataContext>>().CreateDbContext());
 	}
