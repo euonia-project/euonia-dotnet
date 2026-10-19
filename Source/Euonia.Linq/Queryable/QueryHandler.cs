@@ -118,7 +118,7 @@ public class QueryHandler<TEntity>
     {
         if (page < 1)
         {
-            throw new ArgumentOutOfRangeException(nameof(page), "Page number must be greater than or equal to 1.");
+            throw new ArgumentOutOfRangeException(nameof(page), Resources.IDS_PAGE_NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ONE);
         }
 
         _page = page;
@@ -135,7 +135,7 @@ public class QueryHandler<TEntity>
     {
         if (size < 0)
         {
-            throw new ArgumentOutOfRangeException(nameof(size), "Page size must be greater than or equal to 0.");
+            throw new ArgumentOutOfRangeException(nameof(size), Resources.IDS_PAGE_SIZE_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ZERO);
         }
 
         _size = size;

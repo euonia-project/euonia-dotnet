@@ -69,9 +69,8 @@ internal class BlobClientWrapper
             default:
                 throw new InvalidOperationException(
                     _blobClient.GetType() == typeof(BlobBaseClient)
-                        ? $"Unable to create a lock blob given client type {typeof(BlobBaseClient)}. Either ensure that the blob exists or use a non-base client type such as {typeof(BlobClient)}"
-                          + " which specifies the type of blob to create"
-                        : $"Unexpected blob client type {_blobClient.GetType()}"
+                        ? string.Format(Resources.IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED, typeof(BlobBaseClient), typeof(BlobClient))
+                        : string.Format(Resources.IDS_UNEXPECTED_BLOB_CLIENT_TYPE, _blobClient.GetType())
                 );
         }
     }

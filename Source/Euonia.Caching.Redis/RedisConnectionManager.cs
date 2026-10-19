@@ -175,7 +175,7 @@ internal class RedisConnectionManager
             throw new InvalidOperationException(
                 string.Format(
                     CultureInfo.InvariantCulture,
-                    "Couldn't establish a connection for '{0}'.",
+                    Resources.IDS_CONNECTION_FAILED,
                     RemoveCredentials(_connectionString)));
         }
 

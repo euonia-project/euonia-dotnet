@@ -201,4 +201,22 @@
   <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
     <value>형식 '{0}'에 일치하는 생성자 또는 빈 생성자를 찾을 수 없습니다.</value>
   </data>
+  <data name="IDS_NO_PUBLIC_NON_STATIC_CONSTRUCTOR" xml:space="preserve">
+    <value>형식 '{0}'에 대해 일치하는 public 비정적 생성자를 찾을 수 없습니다.</value>
+  </data>
+  <data name="IDS_INSTANCE_INITIALIZATION_FAILED" xml:space="preserve">
+    <value>형식 '{0}'의 인스턴스를 초기화하지 못했습니다.</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_DOES_NOT_IMPLEMENT_BASE_CACHE_HANDLE" xml:space="preserve">
+    <value>구성된 캐시 처리기가 기본 캐시 처리기 [{0}]를 구현하지 않습니다.</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_MUST_NOT_HAVE_GENERIC_ARGUMENTS" xml:space="preserve">
+    <value>캐시 처리기 형식 [{0}]에는 제네릭 인수를 정의하지 않아야 합니다.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_GET_OR_ADD_FAILED" xml:space="preserve">
+    <value>영역 '{1}'의 항목 '{0}'을(를) 가져오거나 추가할 수 없습니다.</value>
+  </data>
+  <data name="IDS_CONFIGURATION_PROPERTY_PARSE_FAILED" xml:space="preserve">
+    <value>속성 '{1}'의 값 [{0}]을(를) 구문 분석할 수 없습니다.</value>
+  </data>
 </root>

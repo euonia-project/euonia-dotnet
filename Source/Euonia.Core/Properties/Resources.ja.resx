@@ -271,4 +271,37 @@
   <data name="IDS_MEMBER_NOT_A_FIELD" xml:space="preserve">
     <value>メンバーはフィールドではありません</value>
   </data>
+  <data name="IDS_MIN_HASH_LENGTH_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>最小ハッシュ長は 0 以上である必要があります。</value>
+  </data>
+  <data name="IDS_INDEX_OUT_OF_RANGE" xml:space="preserve">
+    <value>インデックスが範囲外です。</value>
+  </data>
+  <data name="IDS_MINIMUM_COUNT_MAY_NOT_BE_NEGATIVE" xml:space="preserve">
+    <value>最小数は負の値にできません。</value>
+  </data>
+  <data name="IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_OR_EQUAL_TO_MINIMUM" xml:space="preserve">
+    <value>最大数は最小数以上である必要があります。</value>
+  </data>
+  <data name="IDS_INVARIANT_VIOLATED" xml:space="preserve">
+    <value>不変条件に違反しました。</value>
+  </data>
+  <data name="IDS_TIMEOUT_OUT_OF_RANGE" xml:space="preserve">
+    <value>タイムアウトは Timeout.InfiniteTimeSpan ({0}) または {1} 以下の非負の値である必要があります。</value>
+  </data>
+  <data name="IDS_COLLECTION_MUST_NOT_BE_NULL" xml:space="preserve">
+    <value>コレクションを null にすることはできません。</value>
+  </data>
+  <data name="IDS_VALUE_MUST_BE_COLLECTION" xml:space="preserve">
+    <value>{0} はコレクションである必要があります。</value>
+  </data>
+  <data name="IDS_COLLECTION_MINIMUM_COUNT" xml:space="preserve">
+    <value>{0} には少なくとも {1} 個の項目を含める必要があります。</value>
+  </data>
+  <data name="IDS_COLLECTION_MAXIMUM_COUNT" xml:space="preserve">
+    <value>{0} に含めることができる項目は最大 {1} 個です。</value>
+  </data>
+  <data name="IDS_INVALID_GUID" xml:space="preserve">
+    <value>{0} は有効な GUID である必要があります。</value>
+  </data>
 </root>

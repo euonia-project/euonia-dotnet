@@ -201,4 +201,22 @@
   <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
     <value>Für den Typ '{0}' wurde kein passender oder leerer Konstruktor gefunden.</value>
   </data>
+  <data name="IDS_NO_PUBLIC_NON_STATIC_CONSTRUCTOR" xml:space="preserve">
+    <value>Für den Typ '{0}' wurde kein passender öffentlicher nicht statischer Konstruktor gefunden.</value>
+  </data>
+  <data name="IDS_INSTANCE_INITIALIZATION_FAILED" xml:space="preserve">
+    <value>Fehler beim Initialisieren einer Instanz des Typs '{0}'.</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_DOES_NOT_IMPLEMENT_BASE_CACHE_HANDLE" xml:space="preserve">
+    <value>Der konfigurierte Cache-Handle implementiert nicht den Basis-Cache-Handle [{0}].</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_MUST_NOT_HAVE_GENERIC_ARGUMENTS" xml:space="preserve">
+    <value>Der Cache-Handle-Typ [{0}] sollte keine generischen Argumente definieren.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_GET_OR_ADD_FAILED" xml:space="preserve">
+    <value>Das Element '{0}' in der Region '{1}' konnte weder abgerufen noch hinzugefügt werden.</value>
+  </data>
+  <data name="IDS_CONFIGURATION_PROPERTY_PARSE_FAILED" xml:space="preserve">
+    <value>Der Wert der Eigenschaft '{1}' kann nicht analysiert werden [{0}].</value>
+  </data>
 </root>

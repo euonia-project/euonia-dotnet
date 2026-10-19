@@ -17,7 +17,7 @@ public static class Invariant
     {
         if (!condition)
         {
-            throw new InvalidOperationException(message ?? "invariant violated");
+            throw new InvalidOperationException(message ?? Nerosoft.Euonia.Core.Properties.Resources.IDS_INVARIANT_VIOLATED);
         }
     }
 }

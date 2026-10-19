@@ -201,4 +201,22 @@
   <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
     <value>Could not find a matching or empty constructor for type '{0}'.</value>
   </data>
+  <data name="IDS_NO_PUBLIC_NON_STATIC_CONSTRUCTOR" xml:space="preserve">
+    <value>No matching public non-static constructor found for type '{0}'.</value>
+  </data>
+  <data name="IDS_INSTANCE_INITIALIZATION_FAILED" xml:space="preserve">
+    <value>Failed to initialize an instance of type '{0}'.</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_DOES_NOT_IMPLEMENT_BASE_CACHE_HANDLE" xml:space="preserve">
+    <value>Configured cache handle does not implement base cache handle [{0}].</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_MUST_NOT_HAVE_GENERIC_ARGUMENTS" xml:space="preserve">
+    <value>Cache handle type [{0}] should not have any generic arguments defined.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_GET_OR_ADD_FAILED" xml:space="preserve">
+    <value>Could not get or add the item '{0}' in region '{1}'.</value>
+  </data>
+  <data name="IDS_CONFIGURATION_PROPERTY_PARSE_FAILED" xml:space="preserve">
+    <value>The value of the property '{1}' cannot be parsed [{0}].</value>
+  </data>
 </root>

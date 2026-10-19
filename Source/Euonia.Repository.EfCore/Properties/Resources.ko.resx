@@ -126,4 +126,7 @@
   <data name="IDS_DATABASE_PROVIDER_NOT_SUPPORTED" xml:space="preserve">
     <value>데이터베이스 공급자 '{0}'은(는) 지원되지 않습니다.</value>
   </data>
+  <data name="IDS_CONNECTION_STRING_NOT_RESOLVED" xml:space="preserve">
+    <value>유효한 연결 문자열을 확인할 수 없습니다. 구성 또는 등록된 IConnectionStringResolver를 확인하세요.</value>
+  </data>
 </root>

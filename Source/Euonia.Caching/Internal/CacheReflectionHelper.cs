@@ -120,7 +120,7 @@ internal static class CacheReflectionHelper
 
 		if (!constructors.Any())
 		{
-			throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, "No matching public non static constructor found for type {0}.", instanceType.FullName));
+			throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, Resources.IDS_NO_PUBLIC_NON_STATIC_CONSTRUCTOR, instanceType.FullName));
 		}
 
 		var args = MatchArguments(constructors, knownInstances);
@@ -133,7 +133,7 @@ internal static class CacheReflectionHelper
 		{
 			var exception = ex.InnerException ?? ex;
 
-			throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, "Failed to initialize instance of type {0}.", instanceType), exception);
+			throw new InvalidOperationException(string.Format(CultureInfo.InvariantCulture, Resources.IDS_INSTANCE_INITIALIZATION_FAILED, instanceType), exception);
 		}
 	}
 
@@ -231,7 +231,7 @@ internal static class CacheReflectionHelper
 			throw new InvalidOperationException(
 				string.Format(
 					CultureInfo.InvariantCulture,
-					"Configured cache handle does not implement base cache handle [{0}].",
+					Resources.IDS_CACHE_HANDLE_DOES_NOT_IMPLEMENT_BASE_CACHE_HANDLE,
 					handle.ToString()));
 		}
 
@@ -240,7 +240,7 @@ internal static class CacheReflectionHelper
 			throw new InvalidOperationException(
 				string.Format(
 					CultureInfo.InvariantCulture,
-					"Cache handle type [{0}] should not have any generic arguments defined.",
+					Resources.IDS_CACHE_HANDLE_MUST_NOT_HAVE_GENERIC_ARGUMENTS,
 					handle.ToString()));
 		}
 	}

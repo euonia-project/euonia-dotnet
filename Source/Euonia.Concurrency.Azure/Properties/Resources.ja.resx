@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>Blob {0} は存在せず、作成することもできませんでした。詳細は内側の例外を参照してください</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>クライアントの種類 {0} ではロック BLOB を作成できません。BLOB が存在することを確認するか、作成する BLOB の種類を指定する {1} などの非基底クライアントの種類を使用してください。</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>予期しない BLOB クライアントの種類 {0} です。</value>
+  </data>
 </root>

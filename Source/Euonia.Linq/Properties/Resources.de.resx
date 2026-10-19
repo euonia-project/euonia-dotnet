@@ -150,4 +150,10 @@
   <data name="IDS_CONTAINS_METHOD_NOT_FOUND" xml:space="preserve">
     <value>Die Methode 'Contains' wurde nicht gefunden.</value>
   </data>
+  <data name="IDS_PAGE_NUMBER_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ONE" xml:space="preserve">
+    <value>Die Seitenzahl muss größer oder gleich 1 sein.</value>
+  </data>
+  <data name="IDS_PAGE_SIZE_MUST_BE_GREATER_THAN_OR_EQUAL_TO_ZERO" xml:space="preserve">
+    <value>Die Seitengröße muss größer oder gleich 0 sein.</value>
+  </data>
 </root>

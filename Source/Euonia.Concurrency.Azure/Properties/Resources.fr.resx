@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>Le blob {0} n'existe pas et n'a pas pu être créé. Consultez les exceptions internes pour plus de détails</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>Impossible de créer un blob de verrouillage avec le type de client {0}. Vérifiez que le blob existe ou utilisez un type de client non de base tel que {1}, qui spécifie le type de blob à créer.</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>Type de client blob inattendu {0}.</value>
+  </data>
 </root>

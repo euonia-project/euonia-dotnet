@@ -201,4 +201,22 @@
   <data name="IDS_NO_MATCHING_OR_EMPTY_CONSTRUCTOR" xml:space="preserve">
     <value>Aucun constructeur correspondant ou vide n'a été trouvé pour le type '{0}'.</value>
   </data>
+  <data name="IDS_NO_PUBLIC_NON_STATIC_CONSTRUCTOR" xml:space="preserve">
+    <value>Aucun constructeur public non statique correspondant n'a été trouvé pour le type '{0}'.</value>
+  </data>
+  <data name="IDS_INSTANCE_INITIALIZATION_FAILED" xml:space="preserve">
+    <value>Échec de l'initialisation d'une instance du type '{0}'.</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_DOES_NOT_IMPLEMENT_BASE_CACHE_HANDLE" xml:space="preserve">
+    <value>Le handle de cache configuré n'implémente pas le handle de cache de base [{0}].</value>
+  </data>
+  <data name="IDS_CACHE_HANDLE_MUST_NOT_HAVE_GENERIC_ARGUMENTS" xml:space="preserve">
+    <value>Le type de handle de cache [{0}] ne doit pas définir d'arguments génériques.</value>
+  </data>
+  <data name="IDS_CACHE_ITEM_GET_OR_ADD_FAILED" xml:space="preserve">
+    <value>Impossible d'obtenir ou d'ajouter l'élément '{0}' dans la région '{1}'.</value>
+  </data>
+  <data name="IDS_CONFIGURATION_PROPERTY_PARSE_FAILED" xml:space="preserve">
+    <value>La valeur de la propriété '{1}' ne peut pas être analysée [{0}].</value>
+  </data>
 </root>

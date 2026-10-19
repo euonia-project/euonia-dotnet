@@ -399,7 +399,7 @@ public static partial class Extensions
 			{
 				if (index < 0 || index >= group.Count)
 				{
-					throw new ArgumentOutOfRangeException(nameof(index), "Index is out of range.");
+					throw new ArgumentOutOfRangeException(nameof(index), Resources.IDS_INDEX_OUT_OF_RANGE);
 				}
 
 				group.RemoveAt(index);

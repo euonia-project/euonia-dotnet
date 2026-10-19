@@ -60,7 +60,7 @@ public sealed class ShortUniqueId
 		if (salt == null)
 			throw new ArgumentNullException(nameof(salt));
 		if (minHashLength < 0)
-			throw new ArgumentOutOfRangeException(nameof(minHashLength), "值必须为零或大于零。");
+			throw new ArgumentOutOfRangeException(nameof(minHashLength), Nerosoft.Euonia.Core.Properties.Resources.IDS_MIN_HASH_LENGTH_MAY_NOT_BE_NEGATIVE);
 		if (string.IsNullOrWhiteSpace(alphabet))
 			throw new ArgumentNullException(nameof(alphabet));
 		if (string.IsNullOrWhiteSpace(seps))

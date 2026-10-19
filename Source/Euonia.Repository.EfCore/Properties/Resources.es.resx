@@ -126,4 +126,7 @@
   <data name="IDS_DATABASE_PROVIDER_NOT_SUPPORTED" xml:space="preserve">
     <value>El proveedor de base de datos '{0}' no es compatible.</value>
   </data>
+  <data name="IDS_CONNECTION_STRING_NOT_RESOLVED" xml:space="preserve">
+    <value>No se pudo resolver ninguna cadena de conexión válida. Compruebe la configuración o el IConnectionStringResolver registrado.</value>
+  </data>
 </root>

@@ -181,13 +181,23 @@ public static class ServiceCollectionExtensions
 					queue.Enqueue(() =>
 					{
 						var connectionStringResolver = provider.GetService<IConnectionStringResolver<TContext>>();
-						return AsyncContext.Run(() => connectionStringResolver?.GetConnectionStringAsync());
+						if (connectionStringResolver == null)
+						{
+							// 未注册解析器时直接返回 null。若不判空而调用
+							// `connectionStringResolver?.GetConnectionStringAsync()`，会得到一个值为 null 的
+							// Task<string>，随后 AsyncContext.Run 内部的 StartNew(...).Unwrap() 会将其转为
+							// 已取消任务，导致抛出误导性的 TaskCanceledException，
+							// 而不是落到后续设计好的 InvalidOperationException。
+							return null;
+						}
+
+						return AsyncContext.Run(() => connectionStringResolver.GetConnectionStringAsync());
 					}, 5);
 				}, t => !string.IsNullOrWhiteSpace(t));
 
 				if (string.IsNullOrWhiteSpace(connection))
 				{
-					throw new InvalidOperationException();
+					throw new InvalidOperationException(Resources.IDS_CONNECTION_STRING_NOT_RESOLVED);
 				}
 
 				ConfigureDataContext(connection, provider, options, seeding);

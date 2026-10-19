@@ -126,4 +126,10 @@
   <data name="IDS_BLOB_DOES_NOT_EXIST_AND_COULD_NOT_BE_CREATED" xml:space="preserve">
     <value>Blob {0} 不存在且无法创建。详情请查看内部异常</value>
   </data>
+  <data name="IDS_LOCK_BLOB_BASE_CLIENT_TYPE_NOT_SUPPORTED" xml:space="preserve">
+    <value>无法使用客户端类型 {0} 创建锁 Blob。请确保 Blob 已存在，或使用 {1} 等指定了 Blob 类型的非基类客户端类型。</value>
+  </data>
+  <data name="IDS_UNEXPECTED_BLOB_CLIENT_TYPE" xml:space="preserve">
+    <value>意外的 Blob 客户端类型 {0}。</value>
+  </data>
 </root>

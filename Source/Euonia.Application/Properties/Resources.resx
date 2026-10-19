@@ -119,4 +119,7 @@
   <data name="IDS_PARAMETER_REQUIRED" xml:space="preserve">
     <value>Parameter '{0}' is required in method '{1}'.</value>
   </data>
+  <data name="IDS_CIRCUIT_OPEN" xml:space="preserve">
+    <value>Circuit '{0}' is open after {1} failures; probe after {2} seconds.</value>
+  </data>
 </root>
