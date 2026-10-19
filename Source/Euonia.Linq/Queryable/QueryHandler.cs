@@ -10,7 +10,9 @@ public class QueryHandler<TEntity>
 {
     private readonly List<Expression<Func<TEntity, bool>>> _predicates;
 
-    private IQueryable<TEntity> _query;
+    private readonly IQueryable<TEntity> _query;
+
+    private Func<IQueryable<TEntity>, IQueryable<TEntity>> _ordering;
 
     private int _page = 1;
     private int _size = int.MaxValue;
@@ -19,8 +21,14 @@ public class QueryHandler<TEntity>
     /// 初始化 <see cref="QueryHandler{TEntity}"/> 类的新实例。
     /// </summary>
     /// <param name="query">要处理的查询。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="query"/> 为 <see langword="null"/>。</exception>
     public QueryHandler(IQueryable<TEntity> query)
     {
+        if (query == null)
+        {
+            throw new ArgumentNullException(nameof(query));
+        }
+
         _predicates = new List<Expression<Func<TEntity, bool>>>();
         _query = query;
     }
@@ -30,8 +38,18 @@ public class QueryHandler<TEntity>
     /// </summary>
     /// <param name="predicate">要添加的谓词表达式。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="predicate"/> 为 <see langword="null"/>。</exception>
+    /// <remarks>
+    /// 不允许传入 <see langword="null"/>：组合谓词时 <see langword="null"/> 会被当作恒真条件忽略，
+    /// 从而让查询静默失去过滤条件。
+    /// </remarks>
     public QueryHandler<TEntity> AddCriteria(Expression<Func<TEntity, bool>> predicate)
     {
+        if (predicate == null)
+        {
+            throw new ArgumentNullException(nameof(predicate));
+        }
+
         _predicates.Add(predicate);
         return this;
     }
@@ -60,7 +78,7 @@ public class QueryHandler<TEntity>
     /// <returns>符合当前查询条件的元素个数。</returns>
     public int GetCount()
     {
-        return BuildQuery().Count();
+        return BuildQuery(applyOrdering: false).Count();
     }
 
     /// <summary>
@@ -68,36 +86,54 @@ public class QueryHandler<TEntity>
     /// </summary>
     /// <param name="action">用于对查询执行异步操作并返回结果列表的委托。</param>
     /// <returns>符合条件并按当前分页设置返回的元素列表。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> 为 <see langword="null"/>。</exception>
     public async Task<IList<TEntity>> QueryAsync(Func<IQueryable<TEntity>, Task<IList<TEntity>>> action)
     {
+        if (action == null)
+        {
+            throw new ArgumentNullException(nameof(action));
+        }
+
         var query = BuildQuery()
                     .Skip(GetSkipCount())
                     .Take(_size);
-        return await action(query);
+        return await action(query).ConfigureAwait(false);
     }
 
     /// <summary>
     /// 获取序列中的元素个数。
     /// </summary>
+    /// <remarks>
+    /// 基于未分页的查询计算总数，不受 <see cref="SetPage"/> 与 <see cref="SetSize"/> 影响。
+    /// </remarks>
     /// <param name="action">用于对查询执行异步计数操作的委托。</param>
     /// <returns>符合当前查询条件的元素个数。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="action"/> 为 <see langword="null"/>。</exception>
     public async Task<int> GetCountAsync(Func<IQueryable<TEntity>, Task<int>> action)
     {
-        return await action(BuildQuery());
+        if (action == null)
+        {
+            throw new ArgumentNullException(nameof(action));
+        }
+
+        return await action(BuildQuery(applyOrdering: false)).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// 构建应用了全部查询条件的查询。
+    /// 构建应用了全部查询条件（并按需排序）的查询。
     /// </summary>
-    /// <returns>未分页、未排序的查询。</returns>
-    private IQueryable<TEntity> BuildQuery()
+    /// <param name="applyOrdering">是否应用当前排序设置；统计总数时应传 <see langword="false"/>。</param>
+    /// <returns>未分页的查询。</returns>
+    private IQueryable<TEntity> BuildQuery(bool applyOrdering = true)
     {
-        if (_predicates.Count == 0)
+        var query = _predicates.Count == 0 ? _query : _query.Where(_predicates.Compose());
+
+        if (applyOrdering && _ordering != null)
         {
-            return _query;
+            query = _ordering(query);
         }
 
-        return _query.Where(_predicates.Compose());
+        return query;
     }
 
     /// <summary>
@@ -148,10 +184,17 @@ public class QueryHandler<TEntity>
     /// <typeparam name="TResult">排序键的类型。</typeparam>
     /// <param name="keySelector">用于提取排序键的表达式。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> 为 <see langword="null"/>。</exception>
     public QueryHandler<TEntity> OrderByAscending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
-        _query = _query.OrderBy(keySelector);
+        if (keySelector == null)
+        {
+            throw new ArgumentNullException(nameof(keySelector));
+        }
 
+        // 排序延迟到构建查询时执行，确保先过滤再排序：
+        // 否则 LINQ to Objects 会对随后会被谓词排除的行求值排序键。
+        _ordering = query => query.OrderBy(keySelector);
         return this;
     }
 
@@ -161,9 +204,15 @@ public class QueryHandler<TEntity>
     /// <typeparam name="TResult">排序键的类型。</typeparam>
     /// <param name="keySelector">用于提取排序键的表达式。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="keySelector"/> 为 <see langword="null"/>。</exception>
     public QueryHandler<TEntity> OrderByDescending<TResult>(Expression<Func<TEntity, TResult>> keySelector)
     {
-        _query = _query.OrderByDescending(keySelector);
+        if (keySelector == null)
+        {
+            throw new ArgumentNullException(nameof(keySelector));
+        }
+
+        _ordering = query => query.OrderByDescending(keySelector);
         return this;
     }
 
@@ -172,11 +221,20 @@ public class QueryHandler<TEntity>
     /// </summary>
     /// <param name="order">用于配置排序的委托。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="order"/> 为 <see langword="null"/>。</exception>
     public QueryHandler<TEntity> SetCollator(Action<Orderable<TEntity>> order)
     {
-        var orderable = new Orderable<TEntity>(_query);
-        order(orderable);
-        _query = orderable.Queryable;
+        if (order == null)
+        {
+            throw new ArgumentNullException(nameof(order));
+        }
+
+        _ordering = query =>
+        {
+            var orderable = new Orderable<TEntity>(query);
+            order(orderable);
+            return orderable.Queryable;
+        };
         return this;
     }
 
@@ -185,10 +243,15 @@ public class QueryHandler<TEntity>
     /// </summary>
     /// <param name="order">用于对查询进行排序并返回有序查询的委托。</param>
     /// <returns>当前实例，以便继续链式调用。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="order"/> 为 <see langword="null"/>。</exception>
     public QueryHandler<TEntity> SetCollator(Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> order)
     {
-        var orderable = new Orderable<TEntity>(_query);
-        _query = order(orderable.Queryable);
+        if (order == null)
+        {
+            throw new ArgumentNullException(nameof(order));
+        }
+
+        _ordering = order;
         return this;
     }
 }

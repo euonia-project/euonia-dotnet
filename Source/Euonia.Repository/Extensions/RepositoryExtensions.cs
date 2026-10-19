@@ -119,17 +119,20 @@ public static class RepositoryExtensions
     /// </summary>
     /// <param name="source">要分页的数据源。</param>
     /// <param name="page">页码（从 1 开始）；小于 1 时按 1 处理。</param>
-    /// <param name="size">每页大小。</param>
+    /// <param name="size">每页大小；小于 0 时按 0 处理。</param>
     /// <typeparam name="TEntity">实体类型。</typeparam>
     /// <returns>分页后的查询。</returns>
+    /// <remarks>
+    /// 偏移量使用 <see cref="long"/> 计算后限制在 <see cref="int.MaxValue"/> 以内，
+    /// 避免 <c>page * size</c> 在 <see cref="int"/> 上溢出为负数。
+    /// </remarks>
     public static IQueryable<TEntity> Paginate<TEntity>(this IQueryable<TEntity> source, int page, int size)
     {
         var pageIndex = Math.Max(1, page) - 1;
-        var pageSize = Math.Min(int.MaxValue, size);
+        var pageSize = Math.Max(0, size);
+        var offset = (long)pageIndex * pageSize;
 
-        var offset = pageIndex * pageSize;
-
-        return source.Skip(offset).Take(pageSize);
+        return source.Skip((int)Math.Min(int.MaxValue, offset)).Take(pageSize);
     }
 
     /// <summary>

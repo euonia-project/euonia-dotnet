@@ -71,6 +71,7 @@
             <Project Path="Tests/Euonia.Security.Tests.BrokenFixtures/Euonia.Security.Tests.BrokenFixtures.csproj" />
     <Project Path="Tests/Euonia.Security.Tests.Fixtures/Euonia.Security.Tests.Fixtures.csproj" />
         <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
+        <Project Path="Tests/Euonia.Repository.Tests/Euonia.Repository.Tests.csproj" />
     </Folder>
     <Folder Name="/Tests/Caching/">
         <Project Path="Tests/Euonia.Caching.Tests.Shared/Euonia.Caching.Tests.Shared.shproj" Type="C#">
