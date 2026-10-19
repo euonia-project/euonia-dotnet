@@ -89,6 +89,13 @@ public abstract class DataContextBase<TContext> : MongoDbContext, IRepositoryCon
 	}
 
 	/// <inheritdoc />
+	public Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+	{
+		Session.StartTransaction();
+		return Task.CompletedTask;
+	}
+
+	/// <inheritdoc />
 	public Task CommitAsync(CancellationToken cancellationToken = default)
 	{
 		return Session.CommitTransactionAsync(cancellationToken);

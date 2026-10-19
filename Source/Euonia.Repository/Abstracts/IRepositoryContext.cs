@@ -52,6 +52,21 @@ public interface IRepositoryContext : IDisposable
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// 以异步方式开始一个数据库事务。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步操作的任务。</returns>
+	/// <remarks>
+	/// 默认实现基于 <see cref="GetConnection"/>；不支持关系型事务的提供程序（如 MongoDB）应重写。
+	/// </remarks>
+	Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+	{
+		var transaction = GetConnection().BeginTransaction();
+		_ = transaction;
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
 	/// 以异步方式提交当前事务。
 	/// </summary>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>

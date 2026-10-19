@@ -16,7 +16,9 @@ public abstract class MongoDbContext
 
     private readonly ModelProfileContainer _container;
 
-    private readonly MongoCollectionSettings _collectionSettings = new() { AssignIdOnInsert = false };
+    // 必须允许驱动在插入时分配 Id：ModelBuilder 注册的 Id 生成器只会在此开关为 true 时生效。
+    // 手动赋值的 Id 不会被覆盖，驱动仅在 Id 为默认值时生成。
+    private readonly MongoCollectionSettings _collectionSettings = new() { AssignIdOnInsert = true };
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MongoDbContext"/> class.
@@ -24,7 +26,7 @@ public abstract class MongoDbContext
     /// <param name="database"></param>
     protected MongoDbContext(IMongoDatabase database)
     {
-        _container = ModelProfileContainer.GetInstance(OnModelCreating);
+        _container = ModelProfileContainer.GetInstance(GetType(), OnModelCreating);
         Database = database;
     }
 

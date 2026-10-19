@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Threading;
 
 namespace Nerosoft.Euonia.Uow;
 
@@ -211,6 +212,16 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		{
 			_isCompleting = true;
 			await SaveChangesAsync(cancellationToken);
+
+			// 事务性工作单元在保存成功后提交；非事务性上下文依赖 SaveChanges 的自动提交。
+			if (Options.IsTransactional)
+			{
+				foreach (var (_, context) in Contexts)
+				{
+					await context.CommitAsync(cancellationToken);
+				}
+			}
+
 			IsCompleted = true;
 			await OnCompletedAsync();
 		}
@@ -298,6 +309,20 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		}
 
 		IsDisposed = true;
+
+		// 事务性工作单元未完成即被释放（异常/取消路径）：显式回滚，避免事务悬空。
+		// 终结器线程（disposing == false）不得访问托管对象。
+		if (disposing && Options is { IsTransactional: true } && !IsCompleted && !RolledBack)
+		{
+			try
+			{
+				AsyncContext.Run(() => RollbackAsync());
+			}
+			catch
+			{
+				// Dispose 不应抛出；回滚失败已由上下文自身负责记录。
+			}
+		}
 
 		foreach (var (_, _) in Contexts)
 		{
