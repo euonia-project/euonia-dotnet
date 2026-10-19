@@ -275,6 +275,21 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	/// 若该工作单元尚未完成或完成过程存在异常，会先触发 <see cref="Failed"/> 事件，
 	/// 随后抛出释放通知。重复调用不会重复执行释放逻辑。
 	/// </remarks>
+	private int _disposedEventRaised;
+
+	/// <inheritdoc />
+	protected override void InvokeDisposedEvent(object sender, DisposedEventArgs args)
+	{
+		// 基类 Dispose() 每次调用都会触发该事件；工作单元会被 DI 作用域再次释放，
+		// 必须保证订阅者只收到一次通知。
+		if (Interlocked.Exchange(ref _disposedEventRaised, 1) != 0)
+		{
+			return;
+		}
+
+		base.InvokeDisposedEvent(sender, args);
+	}
+
 	protected override void Dispose(bool disposing)
 	{
 		if (IsDisposed)
@@ -294,7 +309,8 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 			OnFailed();
 		}
 
-		InvokeDisposedEvent(this, new DisposedEventArgs());
+		// 不要在此触发 Disposed：基类 DisposableObject.Dispose() 已统一触发，
+		// 且该方法也会被终结器以 disposing=false 调用，终结器线程不得触发托管事件。
 	}
 
 	#endregion

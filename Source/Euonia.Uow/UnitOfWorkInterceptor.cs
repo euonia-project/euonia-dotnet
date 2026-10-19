@@ -54,15 +54,24 @@ public class UnitOfWorkInterceptor : IInterceptor
 			// 必须在拦截器链展开前同步捕获 Proceed 信息：Castle 的拦截器索引在链展开后会复位，
 			// 若在异步续延中直接调用 invocation.Proceed()，会重新派发整个拦截器链。
 			var proceedInfo = invocation.CaptureProceedInfo();
+			var returnType = method.ReturnType;
+			var isValueTask = returnType == typeof(ValueTask);
+			var isGenericValueTask = returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(ValueTask<>);
 
 			if (resultType == null)
 			{
-				invocation.ReturnValue = InterceptAsync(invocation, proceedInfo, attribute);
+				var task = InterceptAsync(invocation, proceedInfo, attribute);
+				// 代理方法的返回类型必须精确匹配：ValueTask 不能直接接收 Task。
+				invocation.ReturnValue = isValueTask ? new ValueTask(task) : task;
 			}
 			else
 			{
-				invocation.ReturnValue = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
-					.Invoke(this, new object[] { invocation, proceedInfo, attribute });
+				var task = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
+				                            .Invoke(this, new object[] { invocation, proceedInfo, attribute });
+
+				invocation.ReturnValue = isGenericValueTask
+					                         ? Activator.CreateInstance(returnType, task)
+					                         : task;
 			}
 		}
 		else
@@ -106,7 +115,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 		using var uow = manager.Begin(isTransactional);
 		proceedInfo.Invoke();
 		// 目标方法抛出异常时在此传播，工作单元不 Complete，由 Dispose 触发 Failed/回滚语义。
-		await (Task)invocation.ReturnValue;
+		await AwaitReturnValueAsync(invocation.ReturnValue);
 
 		var cancellationToken = timeout.HasValue ? new CancellationTokenSource(timeout.Value).Token : CancellationToken.None;
 		await uow.CompleteAsync(cancellationToken);
@@ -126,7 +135,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 
 		using var uow = manager.Begin(isTransactional);
 		proceedInfo.Invoke();
-		var result = await (Task<T>)invocation.ReturnValue;
+		var result = await AwaitReturnValueAsync<T>(invocation.ReturnValue);
 
 		var cancellationToken = timeout.HasValue ? new CancellationTokenSource(timeout.Value).Token : CancellationToken.None;
 		await uow.CompleteAsync(cancellationToken);
@@ -164,14 +173,45 @@ public class UnitOfWorkInterceptor : IInterceptor
 	}
 
 	/// <summary>
-	/// 判断指定方法是否返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/>。
+	/// 等待目标方法返回的 <see cref="Task"/> 或 <see cref="ValueTask"/>。
+	/// </summary>
+	private static async Task AwaitReturnValueAsync(object returnValue)
+	{
+		switch (returnValue)
+		{
+			case Task task:
+				await task.ConfigureAwait(false);
+				break;
+			case ValueTask valueTask:
+				await valueTask.ConfigureAwait(false);
+				break;
+			default:
+				throw new InvalidOperationException($"Unsupported asynchronous return type '{returnValue?.GetType().FullName}'.");
+		}
+	}
+
+	/// <summary>
+	/// 等待目标方法返回的 <see cref="Task{TResult}"/> 或 <see cref="ValueTask{TResult}"/>。
+	/// </summary>
+	private static async Task<T> AwaitReturnValueAsync<T>(object returnValue)
+	{
+		return returnValue switch
+		{
+			Task<T> task => await task.ConfigureAwait(false),
+			ValueTask<T> valueTask => await valueTask.ConfigureAwait(false),
+			_ => throw new InvalidOperationException($"Unsupported asynchronous return type '{returnValue?.GetType().FullName}'.")
+		};
+	}
+
+	/// <summary>
+	/// 判断指定方法是否返回 <see cref="Task"/>、<see cref="Task{TResult}"/>、<see cref="ValueTask"/> 或 <see cref="ValueTask{TResult}"/>。
 	/// </summary>
 	/// <param name="method">要判断的方法。</param>
-	/// <param name="resultType">输出参数：<see cref="Task{TResult}"/> 的结果类型；非泛型 <see cref="Task"/> 或非任务方法时为 <c>null</c>。</param>
+	/// <param name="resultType">输出参数：泛型任务的结果类型；非泛型任务或非任务方法时为 <c>null</c>。</param>
 	/// <returns>若为任务返回类型则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
 	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
 	{
-		if (method.ReturnType == typeof(Task))
+		if (method.ReturnType == typeof(Task) || method.ReturnType == typeof(ValueTask))
 		{
 			resultType = null;
 			return true;
@@ -179,7 +219,8 @@ public class UnitOfWorkInterceptor : IInterceptor
 
 		if (method.ReturnType.IsGenericType
 		    && !method.ReturnType.IsGenericTypeDefinition
-		    && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+		    && (method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>)
+		        || method.ReturnType.GetGenericTypeDefinition() == typeof(ValueTask<>)))
 		{
 			resultType = method.ReturnType.GetGenericArguments()[0];
 			return true;
