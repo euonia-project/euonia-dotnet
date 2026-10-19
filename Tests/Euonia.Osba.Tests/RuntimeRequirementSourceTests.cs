@@ -129,7 +129,7 @@ public class RuntimeRequirementSourceTests
 public class AmbientTask : EditableObject<AmbientTask>
 {
 	[FactoryUpdate]
-	protected Task UpdateAsync(CancellationToken cancellationToken = default)
+	protected new Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}

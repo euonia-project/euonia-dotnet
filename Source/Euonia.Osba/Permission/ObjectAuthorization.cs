@@ -32,6 +32,10 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="target">目标业务对象；非 <see cref="BusinessObject"/> 类型时自动放行。</param>
 	/// <param name="operation">要执行的操作。</param>
+	/// <param name="requirementType">
+	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
+	/// 工厂按静态类型查找并调用方法时应传入该静态类型，以覆盖被 <c>new</c> 遮蔽的基类方法上的要求。
+	/// </param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	internal static void EnsureAuthorized(object target, string operation, Type requirementType = null)
@@ -53,6 +57,10 @@ internal static class ObjectAuthorization
 	/// <param name="target">目标业务对象；非 <see cref="BusinessObject"/> 类型时自动放行。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <param name="requirementType">
+	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
+	/// 工厂按静态类型查找并调用方法时应传入该静态类型，以覆盖被 <c>new</c> 遮蔽的基类方法上的要求。
+	/// </param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	/// <remarks>
@@ -101,8 +109,12 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="target">目标对象。</param>
 	/// <param name="operation">要执行的操作。</param>
+	/// <param name="requirementType">
+	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
+	/// </param>
 	/// <param name="businessObject">需要继续判定的业务对象。</param>
 	/// <param name="checker">判定实现。</param>
+	/// <param name="requirements">为目标收集到的权限要求。</param>
 	/// <returns>需要判定则返回 <see langword="true"/>。</returns>
 	private static bool TryPrepare(object target, string operation, Type requirementType, out BusinessObject businessObject, out IPermissionChecker checker, out IReadOnlyList<PermissionAttribute> requirements)
 	{
@@ -143,6 +155,14 @@ internal static class ObjectAuthorization
 		return true;
 	}
 
+	/// <summary>
+	/// 强制校验目标是否满足操作要求，不满足时抛出 <see cref="SecurityException"/>。
+	/// </summary>
+	/// <param name="businessObject">目标业务对象。</param>
+	/// <param name="operation">要执行的操作。</param>
+	/// <param name="requirements">按调用方静态类型收集到的权限要求。</param>
+	/// <param name="checker">判定实现。</param>
+	/// <exception cref="SecurityException">目标不满足任一权限要求时抛出。</exception>
 	private static void Enforce(BusinessObject businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
 		// 唯一入口：内置操作与自定义操作都走 CanPerformOperation（派生类可重写它来定制），
@@ -178,6 +198,9 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="businessObject">目标业务对象。</param>
 	/// <param name="operation">业务操作。</param>
+	/// <param name="requirementType">
+	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
+	/// </param>
 	/// <returns>权限要求列表。</returns>
 	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation, Type requirementType = null)
 	{

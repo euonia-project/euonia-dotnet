@@ -21,7 +21,9 @@ public class UlidTests
 		long timestamp = 0;
 		for (var index = 0; index < 10; index++)
 		{
-			timestamp = (timestamp << 5) | ALPHABET.IndexOf(ulid[index]);
+			var digit = ALPHABET.IndexOf(ulid[index]);
+			Assert.True(digit >= 0, $"invalid ULID character '{ulid[index]}'");
+			timestamp = (timestamp << 5) | (uint)digit;
 		}
 
 		Assert.InRange(timestamp, before, after);

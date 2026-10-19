@@ -591,6 +591,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		private readonly bool _captured;
 		private bool _disposed;
 
+		/// <summary>
+		/// 在当前异步流中开启规则检查绕过，并捕获进入时的旧值以便还原。
+		/// </summary>
+		/// <param name="target">要绕过规则检查的业务对象。</param>
 		internal BypassRuleChecksObject(BusinessObject target)
 		{
 			_target = target;
