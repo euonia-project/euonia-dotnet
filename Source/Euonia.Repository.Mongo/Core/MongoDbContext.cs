@@ -288,7 +288,10 @@ public abstract class MongoDbContext
         var profile = _container.GetProfile<T>();
         var collection = Database.GetCollection<T>(profile.CollectionName ?? type.Name);
         var filter = Builders<T>.Filter.Eq("_id", id);
-        var result = collection.UpdateOne(filter, new BsonDocumentUpdateDefinition<T>(model.ToBsonDocument()));
+        var document = model.ToBsonDocument();
+        // _id 是不可变字段，不能出现在 $set 中；其值已用于构造过滤器。
+        document.Remove("_id");
+        var result = collection.UpdateOne(filter, new BsonDocument("$set", document));
         return (int)result.ModifiedCount;
     }
 
@@ -306,7 +309,10 @@ public abstract class MongoDbContext
         var profile = _container.GetProfile<T>();
         var collection = Database.GetCollection<T>(profile.CollectionName ?? type.Name, _collectionSettings);
         var filter = Builders<T>.Filter.Eq("_id", id);
-        var result = await collection.UpdateOneAsync(filter, new BsonDocument("$set", model.ToBsonDocument()), cancellationToken: cancellationToken);
+        var document = model.ToBsonDocument();
+        // _id 是不可变字段，不能出现在 $set 中；其值已用于构造过滤器。
+        document.Remove("_id");
+        var result = await collection.UpdateOneAsync(filter, new BsonDocument("$set", document), cancellationToken: cancellationToken);
         return (int)result.ModifiedCount;
     }
 
@@ -321,6 +327,7 @@ public abstract class MongoDbContext
     {
         var collection = Database.GetCollection<BsonDocument>(collectionName);
         var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
+        document.Remove("_id");
         var result = collection.UpdateOne(filter, new BsonDocument("$set", document));
         return (int)result.ModifiedCount;
     }
@@ -337,6 +344,7 @@ public abstract class MongoDbContext
     {
         var collection = Database.GetCollection<BsonDocument>(collectionName, _collectionSettings);
         var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
+        document.Remove("_id");
         var result = await collection.UpdateOneAsync(filter, new BsonDocument("$set", document), cancellationToken: cancellationToken);
         return (int)result.ModifiedCount;
     }
@@ -358,9 +366,14 @@ public abstract class MongoDbContext
         var count = 0;
         foreach (var model in models)
         {
-            var id = keyGetter(model);
+            var document = model.ToBsonDocument();
+
+            // 以序列化后的 _id 构造过滤器：调用方传入的 key 可能是 string，而库中存的是 ObjectId。
+            var id = document.TryGetValue("_id", out var idValue) ? idValue : BsonValue.Create(keyGetter(model));
+            document.Remove("_id");
+
             var filter = Builders<BsonDocument>.Filter.Eq("_id", id);
-            var result = await collection.UpdateOneAsync(filter, new BsonDocument("$set", model.ToBsonDocument()), cancellationToken: cancellationToken);
+            var result = await collection.UpdateOneAsync(filter, new BsonDocument("$set", document), cancellationToken: cancellationToken);
             count += (int)result.ModifiedCount;
         }
 
