@@ -177,7 +177,8 @@ public class BusinessObjectFactory : IObjectFactory
 			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
-		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken);
+		// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
+		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget));
 
 		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
 		await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken);
@@ -200,7 +201,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken, typeof(TTarget));
 
 			// 目标由调用方提供：可以前置判定
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, BusinessOperation.Execute, cancellationToken);

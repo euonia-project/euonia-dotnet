@@ -34,9 +34,9 @@ internal static class ObjectAuthorization
 	/// <param name="operation">要执行的操作。</param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
-	internal static void EnsureAuthorized(object target, string operation)
+	internal static void EnsureAuthorized(object target, string operation, Type requirementType = null)
 	{
-		if (!TryPrepare(target, operation, out var businessObject, out var checker))
+		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
 		{
 			return;
 		}
@@ -44,7 +44,7 @@ internal static class ObjectAuthorization
 		// 同步入口：等待点只在这里（见 AuthorizationWarmup 的说明）
 		AuthorizationWarmup.Warm(checker);
 
-		Enforce(businessObject, operation);
+		Enforce(businessObject, operation, requirements, checker);
 	}
 
 	/// <summary>
@@ -60,16 +60,16 @@ internal static class ObjectAuthorization
 	/// 这里只把 <see cref="AuthorizationWarmup"/> 挪到判定之前——授权数据命中暖路径后不再走
 	/// <c>AsyncContext.Run</c>，因此整条异步链路不再退化成 sync-over-async。
 	/// </remarks>
-	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default)
+	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, Type requirementType = null)
 	{
-		if (!TryPrepare(target, operation, out var businessObject, out var checker))
+		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
 		{
 			return;
 		}
 
 		await AuthorizationWarmup.WarmAsync(checker, cancellationToken).ConfigureAwait(false);
 
-		Enforce(businessObject, operation);
+		Enforce(businessObject, operation, requirements, checker);
 	}
 
 	/// <summary>
@@ -104,9 +104,10 @@ internal static class ObjectAuthorization
 	/// <param name="businessObject">需要继续判定的业务对象。</param>
 	/// <param name="checker">判定实现。</param>
 	/// <returns>需要判定则返回 <see langword="true"/>。</returns>
-	private static bool TryPrepare(object target, string operation, out BusinessObject businessObject, out IPermissionChecker checker)
+	private static bool TryPrepare(object target, string operation, Type requirementType, out BusinessObject businessObject, out IPermissionChecker checker, out IReadOnlyList<PermissionAttribute> requirements)
 	{
 		checker = null;
+		requirements = [];
 
 		if (target is not BusinessObject candidate)
 		{
@@ -114,7 +115,7 @@ internal static class ObjectAuthorization
 			return false;
 		}
 
-		var requirements = Requirements(candidate, operation);
+		requirements = Requirements(candidate, operation, requirementType);
 
 		if (requirements.Count == 0)
 		{
@@ -142,13 +143,17 @@ internal static class ObjectAuthorization
 		return true;
 	}
 
-	private static void Enforce(BusinessObject businessObject, string operation)
+	private static void Enforce(BusinessObject businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
 		// 唯一入口：内置操作与自定义操作都走 CanPerformOperation（派生类可重写它来定制），
 		// 其默认实现即本类的查询判定。此前这里对 5 个内置常量之外的操作写的是 _ => true ——
 		// requirements 已收集却从不交给 IPermissionChecker，等于自定义操作（README §3.3 的
 		// approve / order:archive 等）没有鉴权。
-		if (!businessObject.CanPerformOperation(operation))
+		//
+		// 还必须显式复核 requirements：CanPerformOperation 按运行时类型重新收集要求，
+		// 派生类型用 new 遮蔽基类工厂方法时会得到空集合而放行，尽管实际调用的是基类方法。
+		if (!businessObject.CanPerformOperation(operation) ||
+		    !requirements.All(requirement => IsSatisfied(checker, requirement)))
 		{
 			throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
 		}
@@ -174,7 +179,7 @@ internal static class ObjectAuthorization
 	/// <param name="businessObject">目标业务对象。</param>
 	/// <param name="operation">业务操作。</param>
 	/// <returns>权限要求列表。</returns>
-	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation)
+	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation, Type requirementType = null)
 	{
 		// 不能只看业务对象自身的上下文：手工构造/反序列化的对象没有 BusinessContext，
 		// 但宿主注册的来源仍应生效；与 ScopeAuthorization 一致地回退到环境作用域。
@@ -182,6 +187,8 @@ internal static class ObjectAuthorization
 		               ?? BusinessContextAccessor.Current?.GetService<IPermissionCodeSource>()
 		               ?? ObjectPermissionCodeSource.Instance;
 
-		return provider.RequirementsFor(businessObject.GetType(), operation);
+		// 工厂按静态类型查找并调用方法；若目标是派生类型且用 new 遮蔽了基类方法，
+		// 按运行时类型收集会漏掉实际被调用的基类方法上的要求。调用方应传入工厂使用的静态类型。
+		return provider.RequirementsFor(requirementType ?? businessObject.GetType(), operation);
 	}
 }
