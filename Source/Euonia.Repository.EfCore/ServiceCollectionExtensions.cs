@@ -124,12 +124,13 @@ public static class ServiceCollectionExtensions
 		/// <typeparam name="TContext">数据上下文类型。</typeparam>
 		/// <param name="connectionString">连接字符串；为 <c>null</c> 时将回退到其它解析来源（如 <see cref="ConnectionStringAttribute"/> 或配置）。</param>
 		/// <param name="seeding">可选的数据初始化委托，参数依次为数据上下文、是否为新库以及取消令牌。</param>
+		/// <param name="lifetime">数据上下文工厂的生命周期；注入 scoped 服务时应使用 <see cref="ServiceLifetime.Scoped"/>。</param>
 		/// <returns>注册完成后的 <paramref name="services"/>，以便链式调用。</returns>
 		/// <exception cref="InvalidOperationException">无法解析到任何有效连接字符串时抛出。</exception>
-		public IServiceCollection AddDataContextFactory<TContext>(string connectionString = null, Func<DbContext, bool, CancellationToken, Task> seeding = null)
+		public IServiceCollection AddDataContextFactory<TContext>(string connectionString = null, Func<DbContext, bool, CancellationToken, Task> seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
 			where TContext : DataContextBase<TContext>
 		{
-			return services.AddDataContextFactory<TContext>(_ => connectionString, seeding);
+			return services.AddDataContextFactory<TContext>(_ => connectionString, seeding, lifetime);
 		}
 
 		/// <summary>
@@ -138,6 +139,7 @@ public static class ServiceCollectionExtensions
 		/// <typeparam name="TContext">数据上下文类型。</typeparam>
 		/// <param name="connectionStringFactory">根据服务提供程序返回连接字符串的工厂委托。</param>
 		/// <param name="seeding">可选的数据初始化委托，参数依次为数据上下文、是否为新库以及取消令牌。</param>
+		/// <param name="lifetime">数据上下文工厂的生命周期；注入 scoped 服务时应使用 <see cref="ServiceLifetime.Scoped"/>。</param>
 		/// <returns>注册完成后的 <paramref name="services"/>，以便链式调用。</returns>
 		/// <exception cref="InvalidOperationException">无法解析到任何有效连接字符串时抛出。</exception>
 		/// <remarks>
@@ -151,7 +153,7 @@ public static class ServiceCollectionExtensions
 		/// </list>
 		/// 连接字符串需包含 <c>{provider}://{connection}</c> 格式的提供程序前缀，用于选择已注册的 <see cref="ConnectionConfigurator"/>。
 		/// </remarks>
-		public IServiceCollection AddDataContextFactory<TContext>(Func<IServiceProvider, string> connectionStringFactory, Func<DbContext, bool, CancellationToken, Task> seeding = null)
+		public IServiceCollection AddDataContextFactory<TContext>(Func<IServiceProvider, string> connectionStringFactory, Func<DbContext, bool, CancellationToken, Task> seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
 			where TContext : DataContextBase<TContext>
 		{
 			services.AddDbContextFactory<TContext>((provider, options) =>
@@ -201,7 +203,7 @@ public static class ServiceCollectionExtensions
 				}
 
 				ConfigureDataContext(connection, provider, options, seeding);
-			});
+			}, lifetime);
 			return services;
 		}
 	}
