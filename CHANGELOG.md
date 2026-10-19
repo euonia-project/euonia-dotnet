@@ -9,66 +9,73 @@
 
 ## [2026.4.5] - 2026-10-19
 
-修复后台消息处理继承已释放的发布方作用域、以及跨进程消息处理丢失请求上下文的缺陷。
-变更规模：13 个源文件（含 3 个新增），新增回归测试 8 个。
+从根上重构消息处理的生命周期：服务提供程序不再通过异步流环境隐式传递，改为显式作用域；
+请求上下文仍作为流级信息传播，但不再承担服务定位职责。
+变更规模：28 个源文件（含 6 个新增、3 个删除）、示例与测试同步迁移；新增回归测试 19 个。
 
-### 修复
+### 变更
 
-- **消息处理不再继承已释放的发布方作用域**（`Euonia.Bus` / `Euonia.Modularity`）：
-  `IServiceAccessor` 以 `AsyncLocal` 保存当前作用域的服务提供程序，由宿主中间件在请求开始时
-  写入请求作用域。后台泵、broker 消费者以及发件箱/收件箱重试可能在发布方作用域释放后才执行，
-  继承到的提供程序已失效；处理程序内任何经由该访问器的服务解析——包括订阅者发送后续命令时
-  `MessageBus`/`RequestContextAccessor` 读取请求上下文——都会抛出 `ObjectDisposedException`。
-  现在 `DefaultHandlerContext.HandleAsync`/`ReplayDeadLetterAsync`、`InboxDispatcher.ExecuteAsync`、
-  `OutboxDispatcher.RedeliverCoreAsync` 统一将访问器绑定到本次执行使用的作用域，执行结束后恢复原绑定。
-- **进程内单播/请求复用调用方作用域**：内存传输的 `SendAsync`/`CallAsync`（含处理器内继续发送的嵌套命令）
-  由调用方等待处理完成，发布方作用域在整个处理期间存活，因此处理程序直接复用该作用域，
-  不创建新作用域；处理器与调用方共享 scoped 服务（如 `DbContext`/事务）。
-  若捕获的作用域已释放（异常的后台调用方），探测到后回退为新作用域并记录警告。
-  多播发布（`PublishAsync`）仍是 fire-and-forget，使用消息专用作用域。
-- **进程内传输按消息保留发布方上下文**：内存传输器在发布时复制发布方请求的完整信息
-  （连接信息、用户、授权、请求头、方法、协议、主机、路径、取消令牌、跟踪标识等；
-  `RequestServices` 除外）为 `PublisherContextSnapshot`，随消息一起入队；处理时按消息恢复，
-  并把 `RequestServices` 重新绑定到本次处理作用域。修复了后台泵只继承启动时第一条消息的上下文、
-  导致同一泵中的后续消息沿用前一条消息身份的问题；发布方没有上下文时也会清除继承值，
-  仅在信封携带身份时（如发件箱重投）回退到信封。
-- **跨进程消息处理从信封恢复请求上下文**：网络传输（RabbitMQ、ActiveMQ、HTTP、gRPC）的发布与处理
-  不属于同一个请求，处理器流中不存在发布方的请求上下文。当处理流尚无上下文时，
-  `DefaultHandlerContext.HandleAsync`/`ReplayDeadLetterAsync` 与 `InboxDispatcher.ExecuteAsync`
-  使用信封携带的 `User`/`Authorization`/`RequestTraceId` 创建 `RequestContext`，
-  使处理器内的 `IRequestContextAccessor`、跟踪行为以及处理器继续发送的消息获得一致的用户身份与跟踪标识；
-  HTTP 入站请求或进程内发布方的原有上下文不会被覆盖。死信重放与收件箱重执行则以**原消息身份**
-  覆盖触发方（如管理请求）的上下文，避免重放后的嵌套消息沿用管理用户身份。
-- **后台调度器不再继承创建时的请求上下文**：`InboxDispatcher`/`OutboxDispatcher` 的定时任务
-  在 `ExecutionContext.SuppressFlow()` 下启动，避免解析到创建定时器时所在的请求作用域。
-- **`IServiceAccessor.TryGetServiceProvider`**：读取显式绑定而不触发兜底作用域的创建，
-  避免后台消息处理隐式创建并丢弃无人释放的兜底作用域。
-- **`DefaultRequestContextAccessor` 默认注册**：模块化应用基类以 Scoped 生命周期注册该类型，
-  使非 Web 宿主（消息消费者、后台工作者）也能使用默认请求上下文存储。
-- **委托访问器回退**：`RequestContextAccessor` 在委托访问器返回 `null` 时回退到默认访问器中
-  由消息信封恢复的上下文；`HostingModule` 的委托在请求流之外（无 `HttpContext`）返回 `null`
-  而不是抛出空引用异常。
+- **服务访问器改为作用域服务**：`IServiceAccessor` 注入当前作用域的 `IServiceProvider`，
+  删除 `AsyncLocal`、兜底作用域、`ServiceProvider` setter 与 `TryGetServiceProvider`。
+  单例组件不再可能捕获某个请求的 provider，未释放的兜底作用域随之消失。
+- **请求上下文访问器改为作用域服务**：`IRequestContextAccessor`/`RequestContextAccessor`
+  直接解析当前作用域的 `DefaultRequestContextAccessor`，不再依赖服务访问器。
+  `DefaultRequestContextAccessor` 保持静态存储，使嵌套作用域（用例、工作单元、管道行为）
+  仍能读取同一异步流的上下文；它只承载信息，不参与服务定位。
+- **`IBus`/`MessageBus` 改为作用域服务**：从所在作用域解析 pipeline、transporter、logger 与 store；
+  不再创建/持有 `OutboxDispatcher`。`OutboxDispatcher` 改为激活单例，每次轮询与重投递创建独立作用域，
+  支持单例或 scoped 的存储实现。`InboxDispatcher` 同样按轮询周期解析存储。
+- **统一执行模型**：`MessageContext.ExecutionDescriptor` + `MessageExecutionDescriptor`
+  描述“provider 是新作用域还是复用调用方作用域”“请求上下文来自发布方快照、信封、覆盖信封还是不修改”；
+  `MessageExecutionScope` 只负责获取/借用 provider、安装请求上下文、释放自有作用域，不再绑定任何环境访问器。
+- **进程内单播/请求复用调用方作用域**：`SendAsync`/`CallAsync`（含嵌套发送）由调用方等待处理完成，
+  处理程序复用调用方作用域，共享 scoped 服务（如 `DbContext`/事务）；内存传输器改为作用域服务以读取调用方作用域。
+  多播 `PublishAsync` 仍是 fire-and-forget，使用消息专用作用域，并按消息保留发布方完整请求信息
+  （`RequestServices` 除外，指向实际执行作用域）。
+- **入站请求复用请求作用域**：HTTP/gRPC 入站处理不再创建新作用域，而是复用请求作用域；
+  已有请求上下文时保留，否则从消息信封恢复。gRPC 远程服务改为作用域服务。
+- **跨进程消费与重放使用信封身份**：RabbitMQ/ActiveMQ 消费者始终以信封中的
+  `User`/`Authorization`/`RequestTraceId` 为准；死信重放与收件箱重执行以原消息身份覆盖触发方身份。
+- **后台调度器不继承创建时的执行流**：后台任务统一经 `BackgroundExecution.Run`
+  在 `ExecutionContext.SuppressFlow()` 下启动。
+- **EF 数据上下文工厂可指定生命周期**：`AddDataContextFactory` 新增 `ServiceLifetime` 参数，
+  示例使用 Scoped，避免单例工厂从根容器解析 `IBus` 等 scoped 服务。
+
+### 破坏性变更
+
+- `IServiceAccessor`、`IRequestContextAccessor`、`IBus`、`IDeadLetterService`、
+  `InMemoryTransporter` 及其 keyed `ITransporter` 注册改为 Scoped；
+  根容器解析在启用作用域校验时失败，单例捕获这些服务会成为 captive dependency。
+- `IServiceAccessor.ServiceProvider` 改为只读；删除 `TryGetServiceProvider`；`ServiceAccessor` 构造签名变化。
+- `HostingModule` 不再为 `IServiceAccessor` 绑定请求 provider；自定义代码应通过作用域解析。
+- 删除 `PublisherContextSnapshot`、`MessageContext.PublisherContext`、`MessageContext.HandlingServiceProvider`，
+  使用 `MessageContext.ExecutionDescriptor` 与 `MessageExecutionDescriptor` 的语义化工厂迁移。
+- `MessageBus` 不再实现 `IDisposable`，不再在首次解析时启动发件箱轮询（改由宿主激活）。
+- `RemoteReceiver` 新增接收请求作用域的重载；`RemoteMessageService` 改为 Scoped。
 
 ### 行为说明
 
-- 消息处理程序与处理程序内部继续发出的消息，经由 `IServiceAccessor` 的环境解析
-  （如 `RequestContextAccessor.Context`）与处理程序的构造注入使用同一个作用域：
-  进程内 `SendAsync`/`CallAsync` 使用调用方作用域，多播发布、网络传输与后台重试使用消息专用作用域。
-  发布方请求的作用域在后台处理开始时通常已释放，此前继承到的只是失效引用。
-  需要发布方请求信息时：网络传输可从 `MessageEnvelope` 携带的 `User`/`RequestTraceId` 获取；
-  内存传输则按消息保留发布方请求的完整信息（`RequestServices` 除外，始终指向实际处理作用域）。
+- 处理器与处理程序内部继续发出的消息，经由 `IServiceAccessor`/`IRequestContextAccessor`
+  看到的服务与上下文都来自当前执行作用域：进程内 `SendAsync`/`CallAsync` 与 HTTP/gRPC 入站使用调用方作用域；
+  多播发布、跨进程消费与后台重试使用消息专用作用域。嵌套作用域共享同一流级请求上下文。
 - 处理器内启动的 fire-and-forget 任务会捕获本次处理作用域，并在处理器返回后随作用域释放；
   需要延后执行的后台工作应自行创建作用域。
 
 ### 测试
 
-- 新增 `MessageScopeLifetimeTests`：复现"请求作用域内发布事件 → 请求结束 → 后台泵处理 →
-  订阅者解析服务并发送嵌套命令"的完整链路，验证处理程序不再解析到已释放的发布方作用域。
-- 新增 `AmbientServiceProviderBindingTests`：分别覆盖发件箱重投递、收件箱重执行与死信重放
-  在继承已释放提供程序时仍使用本次执行作用域的回归场景。
+- 新增 `MessageScopeLifetimeTests`：复现“请求作用域内发布事件 → 请求结束 → 后台泵处理 →
+  订阅者解析服务并发送嵌套命令”的完整链路，验证处理程序不再解析到已释放的发布方作用域。
+- 新增 `MessageExecutionScopeTests`：覆盖发件箱重投递、收件箱重执行与死信重放始终使用本次执行作用域；
+  并直接验证统一作用域的语义——已释放/根容器提供程序回退、信封覆盖清空触发方身份、
+  发布方快照每次执行独立副本且 `RequestServices` 重绑到执行作用域。
 - 新增 `MessageRequestContextTests`：验证内存传输中同一后台泵处理多条消息时各自保留自己的
-  发布方上下文（先到的消息阻塞泵、后续消息在泵运行期间入队），以及无发布方上下文时
-  从信封恢复身份、授权与跟踪标识；信封恢复路径同时覆盖默认访问器与委托访问器两种模式。
+  发布方上下文，`SendAsync` 复用调用方作用域，多播发布使用独立作用域，
+  以及无发布方上下文时从信封恢复身份、授权与跟踪标识。
+- 新增 `ScopedLifetimeTests`：在 `ValidateScopes = true` 下验证服务访问器与总线只能从作用域解析、
+  激活单例构造期不解析 scoped 服务，以及入站 `RemoteInboundBorrowed` 复用请求作用域。
+- 新增 `DatabaseLifetimeTests`：使用 EF Core InMemory 数据库，验证多轮 `Send`/`Call`/`Publish`
+  以及连续发布批次之后，调用方的 `DbContext` 仍可正常查询与写入、新作用域能看到全部已提交数据；
+  同时断言命令/请求复用调用方作用域、发布使用独立作用域。
 
 ## [2026.4.4] - 2026-10-19
 
