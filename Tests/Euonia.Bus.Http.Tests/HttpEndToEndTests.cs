@@ -100,11 +100,11 @@ public class HttpEndToEndTests
 
 	private static void ConfigureServer(IServiceCollection services)
 	{
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddHttpBus("http");
 	}
 
@@ -113,11 +113,11 @@ public class HttpEndToEndTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddHttpBus("http", options =>
 		{
 			options.Endpoint = endpoint;

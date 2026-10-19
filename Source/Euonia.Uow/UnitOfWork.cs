@@ -301,6 +301,10 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 		base.InvokeDisposedEvent(sender, args);
 	}
 
+	/// <summary>
+	/// 释放工作单元持有的资源。
+	/// </summary>
+	/// <param name="disposing">指示是否由显式调用触发释放。</param>
 	protected override void Dispose(bool disposing)
 	{
 		if (IsDisposed)

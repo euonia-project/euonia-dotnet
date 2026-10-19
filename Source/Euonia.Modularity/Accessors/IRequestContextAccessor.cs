@@ -9,9 +9,9 @@
 /// <see cref="DelegateRequestContextAccessor"/>）。
 /// </para>
 /// <para>
-/// 实现类型以 <see cref="ISingletonDependency"/> 生命周期注册，因此访问器实例本身在整个应用生命周期内共享。
-/// 线程安全与请求级隔离由底层存储（通常为 <c>AsyncLocal&lt;T&gt;</c>）保障，
-/// 而非通过每次请求创建新的访问器实例来实现。
+/// 实现类型以 <see cref="IScopedDependency"/> 生命周期注册：访问器与其所在作用域同生命周期。
+/// 线程安全与执行流隔离由底层存储（通常为 <c>AsyncLocal&lt;T&gt;</c>）保障，
+/// 因此嵌套作用域仍能读取同一条异步流的上下文。
 /// </para>
 /// <para>
 /// 典型用法：中间件或拦截器在请求开始时设置上下文，应用/领域代码通过 getter 读取上下文。
@@ -20,7 +20,7 @@
 /// <seealso cref="DefaultRequestContextAccessor"/>
 /// <seealso cref="DelegateRequestContextAccessor"/>
 /// <seealso cref="RequestContext"/>
-public interface IRequestContextAccessor : ISingletonDependency
+public interface IRequestContextAccessor : IScopedDependency
 {
 	/// <summary>
 	/// 获取当前异步执行流绑定的 <see cref="RequestContext"/>。

@@ -16,7 +16,6 @@ public class DeadLetterTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 		var deadLetters = provider.GetRequiredService<IDeadLetterStore>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/dead" }, "test.events", "dead-outbox-1");
@@ -26,7 +25,7 @@ public class DeadLetterTests
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 1 });
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 1 });
 		await dispatcher.RetryAllAsync();
 
 		// 不再重投递，且已从失败集合中移除（否则每轮轮询都会重复扫描）。
@@ -48,7 +47,6 @@ public class DeadLetterTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered, registerDeadLetters: false);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/dead" }, "test.events", "dead-outbox-2");
 		IOutboxStore store = new InMemoryOutboxStore();
@@ -58,7 +56,7 @@ public class DeadLetterTests
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 1 });
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 1 });
 		await dispatcher.RetryAllAsync();
 
 		// 未注册死信存储时保持原有的"跳过"语义，但状态仍转为终态，避免被反复扫描。
@@ -152,15 +150,15 @@ public class DeadLetterTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options =>
 		{
 			options.DefaultTransporter = "test";
 			options.Inbox.Enabled = true;
 		});
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddInMemoryInbox();
 		services.AddInMemoryDeadLetters();
@@ -254,7 +252,6 @@ public class DeadLetterTests
 	{
 		var delivered = new List<string>();
 		await using var provider = BuildOutboxProvider(delivered);
-		var accessor = provider.GetRequiredService<IServiceAccessor>();
 
 		// 用接口类型调用：Insert(信封, 传输器名) 是默认接口方法，只能经接口访问。
 		IOutboxStore store = new DetachedOutboxStore();
@@ -263,7 +260,7 @@ public class DeadLetterTests
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
-		var dispatcher = new OutboxDispatcher(accessor, store, new OutboxOptions { MaxRetryAttempts = 1 });
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 1 });
 		await dispatcher.RetryAllAsync();
 
 		// 若实现改为直接修改 GetFailedMessages 返回的对象，此处仍会返回该记录（状态未落库）。
@@ -296,10 +293,10 @@ public class DeadLetterTests
 		services.AddLogging();
 		services.AddOptions();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "test");
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddSingleton<IOutboxStore, InMemoryOutboxStore>();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => new RecordingTransporter(delivered));
@@ -320,10 +317,10 @@ public class DeadLetterTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddInMemoryDeadLetters();
 		services.AddSingleton<IHandlerContext>(_ => new DelegatingHandlerContext(onHandled));

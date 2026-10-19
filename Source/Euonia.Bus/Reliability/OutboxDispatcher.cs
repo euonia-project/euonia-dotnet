@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Bus.Telemetry;
 using Nerosoft.Euonia.Pipeline;
@@ -12,19 +14,21 @@ namespace Nerosoft.Euonia.Bus;
 /// 发件箱（Outbox）后台调度器，定期扫描发送失败的传输记录并重新投递。
 /// </summary>
 /// <remarks>
-/// 调度器由 <see cref="MessageBus"/> 在构造时创建并启动；依赖 <see cref="System.Threading.Timer"/> 定时轮询
-/// <see cref="IOutboxStore.GetFailedMessages"/>，使用互斥锁保证同一时刻只有一个扫描周期在运行。
-/// 同一批失败记录彼此独立，采用并行重投递以缩短恢复时间。
+/// 调度器以单例激活，每个轮询周期创建独立作用域并从中解析存储与传输器，自身不捕获 scoped 服务。
+/// 依赖 <see cref="System.Threading.Timer"/> 定时轮询 <see cref="IOutboxStore.GetFailedMessages"/>，
+/// 使用互斥锁保证同一时刻只有一个扫描周期在运行；同一批失败记录并行重投递。
 /// </remarks>
 internal sealed class OutboxDispatcher : IDisposable
 {
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _redeliverMethods = new();
 
-	private readonly IServiceAccessor _accessor;
-	private readonly IOutboxStore _store;
+	private readonly IServiceProvider _provider;
+	private readonly IOutboxStore _storeOverride;
+	private readonly IDeadLetterStore _deadLetterStoreOverride;
 	private readonly OutboxOptions _options;
-	private readonly IDeadLetterStore _deadLetterStore;
 	private readonly ILogger _logger;
+	private readonly MessageExecutionEnvironment _execution;
+	private readonly IServiceProviderIsService _serviceProbe;
 	private readonly DateTime _startedAt = DateTime.Now;
 
 	/// <summary>
@@ -37,25 +41,39 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// <summary>
 	/// 初始化 <see cref="OutboxDispatcher"/> 类的新实例。
 	/// </summary>
-	/// <param name="accessor">用于解析管道与传输器服务的访问器。</param>
-	/// <param name="store">发件箱存储。</param>
-	/// <param name="options">发件箱配置选项。</param>
-	public OutboxDispatcher(IServiceAccessor accessor, IOutboxStore store, OutboxOptions options)
+	/// <param name="provider">宿主容器，用于创建轮询与重投递作用域。</param>
+	/// <param name="options">消息总线配置选项。</param>
+	/// <param name="loggerFactory">日志工厂。</param>
+	public OutboxDispatcher(IServiceProvider provider, IOptions<MessageBusOptions> options, ILoggerFactory loggerFactory)
+		: this(provider, options?.Value?.Outbox ?? new OutboxOptions(), loggerFactory?.CreateLogger<OutboxDispatcher>(), null, null)
 	{
-		_accessor = accessor;
-		_store = store;
-		_options = options ?? new OutboxOptions();
-		// 死信存储为可选依赖：未注册时保持原有的"记录警告并跳过"行为。
-		_deadLetterStore = accessor.GetService<IDeadLetterStore>();
-		_logger = accessor.GetService<ILoggerFactory>()?.CreateLogger<OutboxDispatcher>();
 	}
 
 	/// <summary>
-	/// 启动轮询定时器。存储未注册时不执行任何操作。
+	/// 使用显式存储创建调度器的测试/直接构造入口。
+	/// </summary>
+	internal OutboxDispatcher(IServiceProvider provider, IOutboxStore store, OutboxOptions options, IDeadLetterStore deadLetterStore = null, ILogger logger = null)
+		: this(provider, options ?? new OutboxOptions(), logger ?? provider.GetService<ILoggerFactory>()?.CreateLogger<OutboxDispatcher>(), store, deadLetterStore)
+	{
+	}
+
+	private OutboxDispatcher(IServiceProvider provider, OutboxOptions options, ILogger logger, IOutboxStore storeOverride, IDeadLetterStore deadLetterStoreOverride)
+	{
+		_provider = provider;
+		_options = options;
+		_logger = logger;
+		_storeOverride = storeOverride;
+		_deadLetterStoreOverride = deadLetterStoreOverride;
+		_execution = new MessageExecutionEnvironment(provider, logger);
+		_serviceProbe = provider.GetService<IServiceProviderIsService>();
+	}
+
+	/// <summary>
+	/// 启动轮询定时器。无法确定发件箱存储注册时不执行任何操作。
 	/// </summary>
 	public void Start()
 	{
-		if (_store == null)
+		if (_storeOverride == null && _serviceProbe != null && !_serviceProbe.IsService(typeof(IOutboxStore)))
 		{
 			return;
 		}
@@ -71,7 +89,7 @@ internal sealed class OutboxDispatcher : IDisposable
 			return;
 		}
 
-		_ = Task.Run(RetryAllAsync);
+		BackgroundExecution.Run(RetryAllAsync);
 	}
 
 	/// <summary>
@@ -79,16 +97,20 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// </summary>
 	public async Task RetryAllAsync()
 	{
+		using var scope = _provider.CreateScope();
+		var store = _storeOverride ?? scope.ServiceProvider.GetService<IOutboxStore>();
+		var deadLetterStore = _deadLetterStoreOverride ?? scope.ServiceProvider.GetService<IDeadLetterStore>();
+
 		try
 		{
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
-			CleanupExpired();
+			CleanupExpired(store);
 
 			// 回收本进程启动前遗留的 Pending 记录：它们对应的分发流程已不存在，
 			// 不回收就会永远停留在 Pending（既不重试也不清理）。
-			ReclaimAbandonedPending();
+			ReclaimAbandonedPending(store);
 
-			var items = _store?.GetFailedMessages();
+			var items = store?.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
 				return;
@@ -97,7 +119,7 @@ internal sealed class OutboxDispatcher : IDisposable
 			var tasks = new List<Task>(items.Count);
 			foreach (var item in items)
 			{
-				var entry = _store.GetAndCache(item.MessageId);
+				var entry = store.GetAndCache(item.MessageId);
 				if (entry == null)
 				{
 					continue;
@@ -105,7 +127,7 @@ internal sealed class OutboxDispatcher : IDisposable
 
 				if (!CanRetry(item))
 				{
-					DeadLetter(entry, item);
+					DeadLetter(store, deadLetterStore, entry, item);
 					continue;
 				}
 
@@ -123,7 +145,7 @@ internal sealed class OutboxDispatcher : IDisposable
 		}
 		finally
 		{
-			_store?.ClearCache();
+			store?.ClearCache();
 			Interlocked.Exchange(ref _running, 0);
 		}
 	}
@@ -149,9 +171,9 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// 只回收 <see cref="_startedAt"/> 之前的记录：本进程内正在等待延迟分发的 Pending 记录
 	/// 创建时间晚于该时刻，不会被误判为“已放弃”。
 	/// </remarks>
-	private void ReclaimAbandonedPending()
+	private void ReclaimAbandonedPending(IOutboxStore store)
 	{
-		var pending = _store?.GetPendingMessages(_startedAt - _pendingGracePeriod);
+		var pending = store?.GetPendingMessages(_startedAt - _pendingGracePeriod);
 		if (pending == null || pending.Count == 0)
 		{
 			return;
@@ -159,7 +181,7 @@ internal sealed class OutboxDispatcher : IDisposable
 
 		foreach (var item in pending)
 		{
-			_store.MarkAsFailed(item.MessageId, item.Name, "Pending dispatch was abandoned before the dispatcher started; reclaimed for retry.");
+			store.MarkAsFailed(item.MessageId, item.Name, "Pending dispatch was abandoned before the dispatcher started; reclaimed for retry.");
 			_logger?.LogWarning("Reclaimed abandoned pending outbox message {MessageId} on transport {Transport}.", item.MessageId, item.Name);
 		}
 	}
@@ -175,16 +197,16 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// <remarks>
 	/// 清理失败不应影响本轮重投递，因此仅记录警告。
 	/// </remarks>
-	private void CleanupExpired()
+	private void CleanupExpired(IOutboxStore store)
 	{
-		if (_store == null || _options.RetentionPeriod <= TimeSpan.Zero)
+		if (store == null || _options.RetentionPeriod <= TimeSpan.Zero)
 		{
 			return;
 		}
 
 		try
 		{
-			_store.Cleanup(DateTime.Now - _options.RetentionPeriod);
+			store.Cleanup(DateTime.Now - _options.RetentionPeriod);
 		}
 		catch (Exception exception)
 		{
@@ -197,20 +219,20 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// （从而被 <see cref="IOutboxStore.GetFailedMessages"/> 排除，不再被每轮轮询重复扫描），
 	/// 并在已注册死信存储时写入一条死信记录。
 	/// </summary>
-	private void DeadLetter(OutboxEntry entry, OutboxTransport item)
+	private void DeadLetter(IOutboxStore store, IDeadLetterStore deadLetterStore, OutboxEntry entry, OutboxTransport item)
 	{
 		// 必须经存储接口持久化终态：item 只是 GetFailedMessages 返回的快照，
 		// 直接调用 item.MarkAsDeadLettered 在持久化实现中不会落库，记录会每轮被重复扫描。
-		_store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
+		store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
 		BusTelemetry.OutboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel }, { "messaging.destination.name", item.Name } });
 
-		if (_deadLetterStore == null)
+		if (deadLetterStore == null)
 		{
 			_logger?.LogWarning("Outbox message {MessageId} on transport {Transport} has exceeded the maximum retry attempts ({Attempts}) and will be skipped. Register an IDeadLetterStore (e.g. services.AddInMemoryDeadLetters()) to capture dead letters.", item.MessageId, item.Name, item.RetryAttempts);
 			return;
 		}
 
-		_deadLetterStore.Add(new DeadLetterEntry
+		deadLetterStore.Add(new DeadLetterEntry
 		{
 			MessageId = entry.MessageId,
 			Channel = entry.Channel,
@@ -232,20 +254,26 @@ internal sealed class OutboxDispatcher : IDisposable
 		return (Task)method.Invoke(this, [envelope, transportName])!;
 	}
 
-	private async Task RedeliverCoreAsync<TMessage>(IMessageEnvelope envelope, string transportName)
+	private Task RedeliverCoreAsync<TMessage>(IMessageEnvelope envelope, string transportName)
 	{
-		var pipeline = _accessor.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, Unit>>();
-		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, Unit>), transportName, _logger);
-		pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, Unit>), transportName);
-		pipeline.UseOf(envelope.Payload.GetType(), true);
+		return _execution.RunAsync(
+			MessageExecutionDescriptor.OutboxDispatch,
+			null,
+			async provider =>
+			{
+				var pipeline = provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, Unit>>();
+				pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, Unit>), transportName, _logger);
+				pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, Unit>), transportName);
+				pipeline.UseOf(envelope.Payload.GetType(), true);
 
-		var transport = _accessor.GetKeyedService<ITransporter>(transportName) ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, transportName));
-		await pipeline.RunAsync((IMessageEnvelope<TMessage>)envelope, async message =>
-		{
-			// 重投递失败必须向上传播，否则发件箱会把该传输记录标记为成功并停止重试。
-			await transport.PublishAsync(message, CancellationToken.None).ConfigureAwait(false);
-			return Unit.Value;
-		});
+				var transport = provider.GetKeyedService<ITransporter>(transportName) ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, transportName));
+				await pipeline.RunAsync((IMessageEnvelope<TMessage>)envelope, async message =>
+				{
+					// 重投递失败必须向上传播，否则发件箱会把该传输记录标记为成功并停止重试。
+					await transport.PublishAsync(message, CancellationToken.None).ConfigureAwait(false);
+					return Unit.Value;
+				}).ConfigureAwait(false);
+			});
 	}
 
 	/// <inheritdoc/>

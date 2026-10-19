@@ -31,8 +31,10 @@ public static class ServiceCollectionExtensions
 			// 启用管道（Pipeline）支持
 			services.AddPipeline();
 			services.TryAddActivatedSingleton<IHandlerContext, DefaultHandlerContext>();
-			services.TryAddSingleton<IBus, MessageBus>();
+			services.TryAddScoped<IBus, MessageBus>();
 			services.TryAddSingleton<IDispatcher, StrategicDispatcher>();
+			// 发件箱轮询是独立后台组件：单例激活，每次轮询自行创建作用域，避免每个作用域各起一个定时器。
+			services.TryAddActivatedSingleton<OutboxDispatcher>();
 			services.AddHostedService<ServiceActivator>();
 
 			return services;
@@ -75,7 +77,7 @@ public static class ServiceCollectionExtensions
 		public IServiceCollection AddInMemoryDeadLetters()
 		{
 			services.TryAddSingleton<IDeadLetterStore, InMemoryDeadLetterStore>();
-			services.TryAddSingleton<IDeadLetterService, DeadLetterService>();
+			services.TryAddScoped<IDeadLetterService, DeadLetterService>();
 			return services;
 		}
 

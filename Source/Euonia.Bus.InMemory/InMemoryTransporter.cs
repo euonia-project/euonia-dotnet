@@ -1,5 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Bus.InMemory;
 
@@ -23,28 +25,39 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	private readonly StrongReferenceMessenger _strongMessenger;
 
 	/// <summary>
-	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
+	/// 当前调用方作用域的服务访问器；手动构造时未提供。
 	/// </summary>
-	/// <param name="options">内存总线选项。</param>
-	/// <param name="logger">日志工厂。</param>
-	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger)
-		: this(options, logger, new InMemoryMessengerProvider())
-	{
-	}
+	private readonly IServiceAccessor _accessor;
+
+	/// <summary>
+	/// 当前调用方作用域的请求上下文访问器；手动构造时未提供。
+	/// </summary>
+	private readonly IRequestContextAccessor _requestContextAccessor;
 
 	/// <summary>
 	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
 	/// </summary>
 	/// <param name="options">内存总线选项。</param>
 	/// <param name="logger">日志工厂。</param>
-	/// <param name="messengers">与接收者注册器共享的信使实例。</param>
-	public InMemoryTransporter(IOptions<InMemoryBusOptions> options, ILoggerFactory logger, InMemoryMessengerProvider messengers)
+	/// <param name="messengers">与接收者注册器共享的信使实例；为 <c>null</c> 时创建独立实例（手动构造场景）。</param>
+	/// <param name="accessor">当前调用方作用域的服务访问器；为 <c>null</c> 时不复用调用方作用域。</param>
+	/// <param name="requestContextAccessor">当前调用方作用域的请求上下文访问器；为 <c>null</c> 时不保留发布方上下文。</param>
+	public InMemoryTransporter(
+		IOptions<InMemoryBusOptions> options,
+		ILoggerFactory logger,
+		InMemoryMessengerProvider messengers = null,
+		IServiceAccessor accessor = null,
+		IRequestContextAccessor requestContextAccessor = null)
 	{
 		var opts = options.Value;
 		Name = opts.Name ?? Constants.DefaultTransportName;
 		_logger = logger.CreateLogger<InMemoryTransporter>();
-		_weakMessenger = messengers.Weak;
-		_strongMessenger = messengers.Strong;
+
+		var provider = messengers ?? new InMemoryMessengerProvider();
+		_weakMessenger = provider.Weak;
+		_strongMessenger = provider.Strong;
+		_accessor = accessor;
+		_requestContextAccessor = requestContextAccessor;
 	}
 
 	/// <summary>
@@ -56,7 +69,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>表示异步发布操作的任务。</returns>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var context = new MessageContext(message);
+		var context = CreateMessageContext(message, borrowCallerScope: false);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -76,7 +89,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>表示异步发送操作的任务。</returns>
 	public async Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -125,7 +139,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>包含响应结果的任务。</returns>
 	public async Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		using var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		using var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -189,7 +204,8 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <returns>包含响应结果的任务。</returns>
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
-		using var context = new MessageContext(message);
+		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
+		using var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -239,6 +255,44 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			_logger.LogDebug("Message '{MessageId}' completed", message.MessageId);
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)));
 		}
+	}
+
+	/// <summary>
+	/// 创建消息上下文，并填写本次消息的执行环境描述符。
+	/// </summary>
+	/// <param name="message">消息信封。</param>
+	/// <param name="borrowCallerScope">
+	/// <c>true</c> 表示单播/请求由调用方等待处理完成，可复用其显式绑定的作用域；
+	/// <c>false</c> 表示多播发布（fire-and-forget），处理时创建新作用域。
+	/// </param>
+	/// <returns>携带执行环境描述符的消息上下文。</returns>
+	private MessageContext CreateMessageContext(IMessageEnvelope message, bool borrowCallerScope)
+	{
+		return new MessageContext(message)
+		{
+			ExecutionDescriptor = CreateExecutionDescriptor(borrowCallerScope),
+		};
+	}
+
+	/// <summary>
+	/// 生成执行环境描述符；网络传输不经过该路径。
+	/// </summary>
+	/// <param name="borrowCallerScope">是否复用调用方作用域（单播/请求）。</param>
+	/// <returns>本次消息的执行环境描述符。</returns>
+	private MessageExecutionDescriptor CreateExecutionDescriptor(bool borrowCallerScope)
+	{
+		if (_accessor == null)
+		{
+			return MessageExecutionDescriptor.RemoteInbound;
+		}
+
+		// 访问器是作用域服务：其提供程序就是当前调用方作用域，调用方等待处理完成时必然存活。
+		var callerProvider = _accessor.ServiceProvider;
+		var publisherContext = _requestContextAccessor?.Context;
+
+		return borrowCallerScope
+			       ? MessageExecutionDescriptor.InProcessCall(callerProvider, publisherContext)
+			       : MessageExecutionDescriptor.InProcessPublish(publisherContext);
 	}
 
 	/// <summary>

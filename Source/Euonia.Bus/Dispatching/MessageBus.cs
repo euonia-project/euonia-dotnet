@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reactive.Subjects;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
@@ -28,7 +29,7 @@ namespace Nerosoft.Euonia.Bus;
 /// </list>
 /// </para>
 /// </remarks>
-internal sealed class MessageBus : IBus, IDisposable
+internal sealed class MessageBus : IBus
 {
 	/// <summary>
 	/// 负责确定给定消息类型应使用哪些传输器的分发器。
@@ -41,9 +42,9 @@ internal sealed class MessageBus : IBus, IDisposable
 	private readonly IRequestContextAccessor _requestAccessor;
 
 	/// <summary>
-	/// 用于依赖解析的服务访问器，提供对服务提供程序的访问。
+	/// 当前消息总线所在作用域的服务提供程序。
 	/// </summary>
-	private readonly IServiceAccessor _accessor;
+	private readonly IServiceProvider _provider;
 
 	/// <summary>
 	/// 消息总线配置器，提供消息约定、注册信息和默认传输器配置。
@@ -66,30 +67,21 @@ internal sealed class MessageBus : IBus, IDisposable
 	private readonly OutboxOptions _outboxOptions;
 
 	/// <summary>
-	/// 发件箱（Outbox）后台调度器，负责重试发送失败的消息。
-	/// </summary>
-	private readonly OutboxDispatcher _outboxDispatcher;
-
-	private bool _disposed;
-
-	/// <summary>
 	/// 初始化 <see cref="MessageBus"/> 类的新实例，并支持请求上下文。
 	/// </summary>
-	/// <param name="accessor">用于依赖解析的服务访问器。</param>
+	/// <param name="provider">当前作用域的服务提供程序。</param>
 	/// <param name="configurator">消息总线设置的配置器。</param>
 	/// <param name="dispatcher">用于确定消息传输的分发器。</param>
 	/// <param name="requestAccessor">用于检索当前请求上下文的访问器。</param>
-	public MessageBus(IServiceAccessor accessor, IConfigurator configurator, IDispatcher dispatcher, IRequestContextAccessor requestAccessor)
+	public MessageBus(IServiceProvider provider, IConfigurator configurator, IDispatcher dispatcher, IRequestContextAccessor requestAccessor)
 	{
 		_dispatcher = dispatcher;
-		_accessor = accessor;
+		_provider = provider;
 		_configurator = configurator;
 		_requestAccessor = requestAccessor;
 
-		_outboxStore = _accessor.GetService<IOutboxStore>();
-		_outboxOptions = _accessor.GetService<IOptions<MessageBusOptions>>()?.Value?.Outbox ?? new OutboxOptions();
-		_outboxDispatcher = new OutboxDispatcher(_accessor, _outboxStore, _outboxOptions);
-		_outboxDispatcher.Start();
+		_outboxStore = provider.GetService<IOutboxStore>();
+		_outboxOptions = provider.GetService<IOptions<MessageBusOptions>>()?.Value?.Outbox ?? new OutboxOptions();
 	}
 
 	/// <summary>
@@ -330,7 +322,7 @@ internal sealed class MessageBus : IBus, IDisposable
 	public async Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
-		return await handler(_accessor.ServiceProvider).WaitAsync(cancellationToken).ConfigureAwait(false);
+		return await handler(_provider).WaitAsync(cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -517,9 +509,9 @@ internal sealed class MessageBus : IBus, IDisposable
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
 	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName, bool useOutbox = false)
 	{
-		var pipeline = _accessor.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
+		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
-		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _accessor.GetService<ILogger<MessageBus>>());
+		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _provider.GetService<ILogger<MessageBus>>());
 
 		if (useOutbox)
 		{
@@ -534,7 +526,7 @@ internal sealed class MessageBus : IBus, IDisposable
 		{
 			var transport = _transporters.GetOrAdd(transportName, name =>
 			{
-				var service = _accessor.GetKeyedService<ITransporter>(name);
+				var service = _provider.GetKeyedService<ITransporter>(name);
 				return service ?? throw new MessageTransportException(string.Format(Resources.IDS_TRANSPORT_NOT_REGISTERED, name));
 			});
 			return await next(transport, message);
@@ -559,18 +551,5 @@ internal sealed class MessageBus : IBus, IDisposable
 		var channel = selector(messageType);
 
 		return !string.IsNullOrWhiteSpace(channel) ? channel : throw new MessageDeliverException(string.Format(Resources.IDS_CHANNEL_NAME_REQUIRED, messageType.FullName));
-	}
-
-	/// <inheritdoc/>
-	public void Dispose()
-	{
-		if (_disposed)
-		{
-			return;
-		}
-
-		_disposed = true;
-		_outboxDispatcher?.Dispose();
-		GC.SuppressFinalize(this);
 	}
 }

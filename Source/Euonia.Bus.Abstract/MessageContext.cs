@@ -109,6 +109,15 @@ public sealed class MessageContext : IMessageContext
 	public MessageMetadata Metadata { get; set; }
 
 	/// <summary>
+	/// 获取或设置本次消息处理的执行环境描述符，决定服务作用域与请求上下文的来源。
+	/// </summary>
+	/// <remarks>
+	/// 传输层在构造消息上下文时填写；未填写时使用
+	/// <see cref="MessageExecutionDescriptor.RemoteInbound"/>（新建作用域，仅在没有现有上下文时从信封恢复）。
+	/// </remarks>
+	public MessageExecutionDescriptor ExecutionDescriptor { get; set; } = MessageExecutionDescriptor.RemoteInbound;
+
+	/// <summary>
 	/// 向消息分发器回复消息处理结果。
 	/// </summary>
 	/// <param name="message">要回复的消息。</param>

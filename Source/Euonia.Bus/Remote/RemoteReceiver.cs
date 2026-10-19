@@ -23,7 +23,21 @@ public static class RemoteReceiver
 	/// <param name="payload">包含 <see cref="IMessageEnvelope"/> JSON 数据的请求负载。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>序列化后的 <see cref="RemoteReply{TResult}"/> JSON 字符串。</returns>
-	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, CancellationToken cancellationToken = default)
+	public static Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, CancellationToken cancellationToken = default)
+	{
+		return ReceiveAsync(serializer, handler, payload, null, cancellationToken);
+	}
+
+	/// <summary>
+	/// 处理远程请求负载，并复用入站请求作用域（HTTP/gRPC 入站）。
+	/// </summary>
+	/// <param name="serializer">用于反序列化请求与序列化回复的消息序列化器。</param>
+	/// <param name="handler">用于处理消息的处理器上下文。</param>
+	/// <param name="payload">包含 <see cref="IMessageEnvelope"/> JSON 数据的请求负载。</param>
+	/// <param name="requestServices">入站请求作用域的服务提供程序；为 <c>null</c> 时创建新作用域。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>序列化后的 <see cref="RemoteReply{TResult}"/> JSON 字符串。</returns>
+	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, IServiceProvider requestServices, CancellationToken cancellationToken = default)
 	{
 		IMessageEnvelope message;
 		MessageContext context;
@@ -31,7 +45,10 @@ public static class RemoteReceiver
 		try
 		{
 			message = DeserializeMessage(serializer, payload);
-			context = new MessageContext(message);
+			context = new MessageContext(message)
+			{
+				ExecutionDescriptor = MessageExecutionDescriptor.RemoteInboundBorrowed(requestServices),
+			};
 		}
 		catch (OperationCanceledException)
 		{

@@ -20,7 +20,10 @@ public class HostingModule : ModuleContextBase
 		context.Services.TryAddScoped<DefaultRequestContextAccessor>();
 		context.Services.TryAddScoped<DelegateRequestContextAccessor>(provider =>
 		{
-			return () => RequestContext.From(provider.GetService<IHttpContextAccessor>()?.HttpContext);
+			// 请求流之外（如 broker 消费者回调）没有 HttpContext，返回 null 由访问器回退处理。
+			return () => provider.GetService<IHttpContextAccessor>()?.HttpContext is { } httpContext
+				              ? RequestContext.From(httpContext)
+				              : null;
 		});
 		context.Services.AddScopeTransformation();
 		context.Services.AddUserPrincipal();
@@ -29,7 +32,7 @@ public class HostingModule : ModuleContextBase
 	}
 
 	/// <summary>
-	/// 应用程序初始化完成后执行：注册请求追踪中间件，并为 <see cref="IServiceAccessor"/> 设置服务提供程序。
+	/// 应用程序初始化完成后执行：注册请求追踪中间件，并把请求上下文安装到请求作用域。
 	/// </summary>
 	/// <param name="context">应用程序初始化上下文。</param>
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
@@ -44,13 +47,7 @@ public class HostingModule : ModuleContextBase
 
 		app.UseMiddleware<RequestTraceMiddleware>();
 
-		// 为 IServiceAccessor 设置 ServiceProvider。
-		app.Use((httpContext, next) =>
-		   {
-			   var accessor = httpContext.RequestServices.GetService<IServiceAccessor>();
-			   accessor?.ServiceProvider = httpContext.RequestServices;
-			   return next();
-		   })
-		   .UseDefaultRequestContextAccessor();
+		// 请求上下文安装到请求作用域的访问器实例；服务访问器已是作用域服务，无需额外绑定。
+		app.UseDefaultRequestContextAccessor();
 	}
 }

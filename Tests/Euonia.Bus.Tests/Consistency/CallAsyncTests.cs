@@ -238,11 +238,11 @@ public class CallAsyncTests
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddOptions();
-		services.AddSingleton<DefaultRequestContextAccessor>();
-		services.AddSingleton<DelegateRequestContextAccessor>(_ => () => new RequestContext());
+		services.AddScoped<DefaultRequestContextAccessor>();
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => new RequestContext());
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "test");
-		services.AddSingleton<IServiceAccessor, ServiceAccessor>();
-		services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
+		services.AddScoped<IServiceAccessor, ServiceAccessor>();
+		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.AddEuoniaBus();
 		services.AddKeyedSingleton<ITransporter>("test", (_, _) => transporter);
 		configure?.Invoke(services);

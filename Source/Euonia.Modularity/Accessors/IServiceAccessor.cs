@@ -11,19 +11,20 @@ namespace System;
 /// 避免在业务代码中直接依赖 <see cref="IServiceProvider"/>。
 /// </para>
 /// <para>
-/// 实现类型注册为 <see cref="ISingletonDependency"/>，
-/// 因此在应用的整个生命周期内共享同一个实例。
+/// 实现类型注册为 <see cref="IScopedDependency"/>：访问器与创建它的服务作用域同生命周期，
+/// 其 <see cref="ServiceProvider"/> 就是该作用域的服务提供程序。
+/// 不使用异步流缓存，也不创建兜底作用域；需要服务时请从当前作用域解析本访问器。
 /// </para>
 /// </remarks>
 /// <seealso cref="IServiceProvider"/>
-/// <seealso cref="ISingletonDependency"/>
-public interface IServiceAccessor : ISingletonDependency
+/// <seealso cref="IScopedDependency"/>
+public interface IServiceAccessor : IScopedDependency
 {
 	/// <summary>
-	/// 获取或设置底层的 <see cref="IServiceProvider"/> 实例。
+	/// 获取当前作用域的服务提供程序。
 	/// </summary>
 	/// <value>用于解析服务依赖的服务提供程序。</value>
-	IServiceProvider ServiceProvider { get; set; }
+	IServiceProvider ServiceProvider { get; }
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中解析指定类型的服务实例。

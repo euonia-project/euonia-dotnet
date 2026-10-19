@@ -50,6 +50,12 @@ public class ServiceActivator : BackgroundService
 	/// 注册器实例被保留至 <see cref="StopAsync"/>：它们负责创建传输层接收者（broker 消费者 / 订阅者 / 请求执行器），
 	/// 必须在停机时释放，否则其持有的连接、通道与会话将随进程存活而泄漏。
 	/// 为此注册器应以单例生命周期注册（见各传输的 <c>AddXxxBus</c> 扩展）。
+	/// <para>
+	/// 发件箱轮询调度器（<see cref="OutboxDispatcher"/>）是宿主激活的单例，
+	/// 在接收器启动后调用 <see cref="OutboxDispatcher.Start"/>：此前该调度器由
+	/// <see cref="MessageBus"/> 构造函数启动，重构为单例后若无人调用 <c>Start</c>，
+	/// 轮询定时器永远不会运行，发件箱失败记录将只堆积而不重试。
+	/// </para>
 	/// </remarks>
 	/// <param name="stoppingToken">应用程序关闭时触发的取消令牌。</param>
 	/// <returns>表示所有接收器注册操作并行执行的任务。</returns>
@@ -66,6 +72,9 @@ public class ServiceActivator : BackgroundService
 		var registrations = _configurator.Registrations;
 
 		_registrars = [.. _provider.GetServices<IRecipientRegistrar>()];
+
+		// 调度器内部会探测发件箱存储是否注册：未注册时 Start 为空操作，不会空转。
+		_provider.GetService<OutboxDispatcher>()?.Start();
 
 		return Task.WhenAll(_registrars.Select(x => x.RegisterAsync(registrations, _options.DefaultTransporter, stoppingToken)));
 	}

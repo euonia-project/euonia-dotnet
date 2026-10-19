@@ -12,42 +12,49 @@ namespace Nerosoft.Euonia.Bus;
 /// <remarks>
 /// 调度器由 <see cref="DefaultHandlerContext"/> 在构造时创建并启动；依赖 <see cref="System.Threading.Timer"/> 定时轮询
 /// <see cref="IInboxStore.GetFailedMessages"/>，使用互斥锁保证同一时刻只有一个扫描周期在运行。
+/// 每个轮询周期与每次重执行都创建独立作用域并从中解析存储，调度器本身不捕获 scoped 服务。
 /// </remarks>
 internal sealed class InboxDispatcher : IDisposable
 {
 	private readonly IServiceProvider _provider;
-	private readonly IInboxStore _store;
+	private readonly IInboxStore _storeOverride;
 	private readonly InboxOptions _options;
 	private readonly ConcurrentDictionary<string, List<HandlerRegistration>> _container;
-	private readonly IDeadLetterStore _deadLetterStore;
 	private readonly ILogger _logger;
+	private readonly MessageExecutionEnvironment _execution;
+	private readonly IServiceProviderIsService _serviceProbe;
 	private Timer _timer;
 	private int _running;
 
 	/// <summary>
 	/// 初始化 <see cref="InboxDispatcher"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">用于解析处理程序实例的服务提供程序。</param>
-	/// <param name="store">收件箱存储。</param>
+	/// <param name="provider">宿主容器，用于创建轮询与执行作用域。</param>
+	/// <param name="store">收件箱存储覆盖；传 <c>null</c> 时按作用域解析。</param>
 	/// <param name="options">收件箱配置选项。</param>
 	/// <param name="container">已注册处理程序的容器（与 <see cref="DefaultHandlerContext"/> 共享）。</param>
 	public InboxDispatcher(IServiceProvider provider, IInboxStore store, InboxOptions options, ConcurrentDictionary<string, List<HandlerRegistration>> container)
 	{
 		_provider = provider;
-		_store = store;
+		_storeOverride = store;
 		_options = options ?? new InboxOptions();
 		_container = container;
-		// 死信存储为可选依赖：未注册时保持原有的"记录警告并跳过"行为。
-		_deadLetterStore = provider.GetService<IDeadLetterStore>();
 		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger<InboxDispatcher>();
+		_execution = new MessageExecutionEnvironment(provider, _logger);
+		_serviceProbe = provider.GetService<IServiceProviderIsService>();
 	}
 
 	/// <summary>
-	/// 启动轮询定时器。存储未注册或未启用时不执行任何操作。
+	/// 启动轮询定时器。收件箱未启用或无法确定存储注册时不执行任何操作。
 	/// </summary>
 	public void Start()
 	{
-		if (_store == null || !_options.Enabled)
+		if (!_options.Enabled)
+		{
+			return;
+		}
+
+		if (_storeOverride == null && _serviceProbe != null && !_serviceProbe.IsService(typeof(IInboxStore)))
 		{
 			return;
 		}
@@ -63,7 +70,7 @@ internal sealed class InboxDispatcher : IDisposable
 			return;
 		}
 
-		_ = Task.Run(RetryAllAsync);
+		BackgroundExecution.Run(RetryAllAsync);
 	}
 
 	/// <summary>
@@ -71,12 +78,16 @@ internal sealed class InboxDispatcher : IDisposable
 	/// </summary>
 	public async Task RetryAllAsync()
 	{
+		using var scope = _provider.CreateScope();
+		var store = _storeOverride ?? scope.ServiceProvider.GetService<IInboxStore>();
+		var deadLetterStore = scope.ServiceProvider.GetService<IDeadLetterStore>();
+
 		try
 		{
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
-			CleanupExpired();
+			CleanupExpired(store);
 
-			var items = _store?.GetFailedMessages();
+			var items = store?.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
 				return;
@@ -85,7 +96,7 @@ internal sealed class InboxDispatcher : IDisposable
 			var tasks = new List<Task>(items.Count);
 			foreach (var item in items)
 			{
-				var entry = _store.GetAndCache(item.MessageId);
+				var entry = store.GetAndCache(item.MessageId);
 				if (entry == null)
 				{
 					continue;
@@ -106,7 +117,7 @@ internal sealed class InboxDispatcher : IDisposable
 
 				if (!CanRetry(item))
 				{
-					DeadLetter(entry, item);
+					DeadLetter(store, deadLetterStore, entry, item);
 					continue;
 				}
 
@@ -124,7 +135,7 @@ internal sealed class InboxDispatcher : IDisposable
 		}
 		finally
 		{
-			_store?.ClearCache();
+			store?.ClearCache();
 			Interlocked.Exchange(ref _running, 0);
 		}
 	}
@@ -154,16 +165,16 @@ internal sealed class InboxDispatcher : IDisposable
 	/// <remarks>
 	/// 清理失败不应影响本轮重执行，因此仅记录警告。
 	/// </remarks>
-	private void CleanupExpired()
+	private void CleanupExpired(IInboxStore store)
 	{
-		if (_store == null || _options.RetentionPeriod <= TimeSpan.Zero)
+		if (store == null || _options.RetentionPeriod <= TimeSpan.Zero)
 		{
 			return;
 		}
 
 		try
 		{
-			_store.Cleanup(DateTime.Now - _options.RetentionPeriod);
+			store.Cleanup(DateTime.Now - _options.RetentionPeriod);
 		}
 		catch (Exception exception)
 		{
@@ -176,20 +187,20 @@ internal sealed class InboxDispatcher : IDisposable
 	/// （从而被 <see cref="IInboxStore.GetFailedMessages"/> 排除，不再被每轮轮询重复扫描），
 	/// 并在已注册死信存储时写入一条死信记录。
 	/// </summary>
-	private void DeadLetter(InboxEntry entry, InboxHandler item)
+	private void DeadLetter(IInboxStore store, IDeadLetterStore deadLetterStore, InboxEntry entry, InboxHandler item)
 	{
 		// 必须经存储接口持久化终态：item 只是 GetFailedMessages 返回的快照，
 		// 直接调用 item.MarkAsDeadLettered 在持久化实现中不会落库，记录会每轮被重复扫描。
-		_store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
+		store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
 		BusTelemetry.InboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel } });
 
-		if (_deadLetterStore == null)
+		if (deadLetterStore == null)
 		{
 			_logger?.LogWarning("Inbox message {MessageId} for handler {Handler} has exceeded the maximum retry attempts ({Attempts}) and will be skipped. Register an IDeadLetterStore (e.g. services.AddInMemoryDeadLetters()) to capture dead letters.", item.MessageId, item.Name, item.RetryAttempts);
 			return;
 		}
 
-		_deadLetterStore.Add(new DeadLetterEntry
+		deadLetterStore.Add(new DeadLetterEntry
 		{
 			MessageId = entry.MessageId,
 			Channel = entry.Channel,
@@ -206,18 +217,26 @@ internal sealed class InboxDispatcher : IDisposable
 
 	private async Task ExecuteAsync(HandlerRegistration registration, InboxEntry entry)
 	{
-		using var scope = _provider.CreateScope();
-		var handler = registration.Factory(scope.ServiceProvider);
 		var context = new MessageContext(entry.Content);
-		try
-		{
-			await handler(entry.Content.Payload, context, CancellationToken.None);
-			_store.MarkAsSuccess(entry.MessageId, registration.Name);
-		}
-		catch (Exception exception)
-		{
-			_store.MarkAsFailed(entry.MessageId, registration.Name, exception.Message);
-		}
+
+		// 重执行按原消息的身份进行，而不是触发本轮重试的调用方身份。
+		await _execution.RunAsync(
+			MessageExecutionDescriptor.Replay,
+			context,
+			async provider =>
+			{
+				var store = _storeOverride ?? provider.GetService<IInboxStore>();
+				var handler = registration.Factory(provider);
+				try
+				{
+					await handler(entry.Content.Payload, context, CancellationToken.None);
+					store?.MarkAsSuccess(entry.MessageId, registration.Name);
+				}
+				catch (Exception exception)
+				{
+					store?.MarkAsFailed(entry.MessageId, registration.Name, exception.Message);
+				}
+			}).ConfigureAwait(false);
 	}
 
 	/// <inheritdoc/>
