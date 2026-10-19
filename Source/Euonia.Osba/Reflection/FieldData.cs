@@ -85,8 +85,9 @@ public class FieldData<T> : IFieldData<T>
 		var items = _histories.ToArray();
 		_histories.Clear();
 
-		// ToArray 返回栈顶在前的数组；丢弃最后一条（栈底 = 最旧），其余按原序压回
-		for (var index = 0; index < items.Length - 1; index++)
+		// ToArray 返回栈顶在前的数组。压栈会反转顺序，必须从栈底（最旧）开始压回，
+		// 否则第一次裁剪后整个撤销历史会被倒置。
+		for (var index = items.Length - 2; index >= 0; index--)
 		{
 			_histories.Push(items[index]);
 		}

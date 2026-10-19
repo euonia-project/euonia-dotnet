@@ -30,12 +30,40 @@ public static class ApplicationBuilderExtensions
 		{
 			app.Use(async (context, next) =>
 			{
-				if (context.Request.Headers.TryGetValue(HeaderNames.AcceptLanguage, out var values))
+				var originalCulture = CultureInfo.CurrentCulture;
+				var originalUiCulture = CultureInfo.CurrentUICulture;
+
+				// Accept-Language 通常是带 q 权重的列表（如 "en-US,en;q=0.9"），
+				// 整体传给 GetCultureInfo 会抛 CultureNotFoundException；这里只取权重最高的语言标签。
+				if (context.Request.Headers.TryGetValue(HeaderNames.AcceptLanguage, out var values)
+				    && StringWithQualityHeaderValue.TryParseList(values, out var languages))
 				{
-					Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo(values);
+					var language = languages.OrderByDescending(value => value.Quality ?? 1.0).FirstOrDefault();
+					if (language != null)
+					{
+						try
+						{
+							var culture = CultureInfo.GetCultureInfo(language.Value.Value);
+							CultureInfo.CurrentCulture = culture;
+							CultureInfo.CurrentUICulture = culture;
+						}
+						catch (CultureNotFoundException)
+						{
+							// 未安装的区域设置回退到服务器默认区域性。
+						}
+					}
 				}
 
-				await next();
+				try
+				{
+					await next();
+				}
+				finally
+				{
+					// CurrentCulture 是 AsyncLocal 流式的，不还原会污染同一线程上的后续请求。
+					CultureInfo.CurrentCulture = originalCulture;
+					CultureInfo.CurrentUICulture = originalUiCulture;
+				}
 			});
 			return app;
 		}

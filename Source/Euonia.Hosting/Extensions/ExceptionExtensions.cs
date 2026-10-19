@@ -15,6 +15,7 @@ internal static class ExceptionExtensions
 			{
 				HttpStatusException ex => ex.StatusCode,
 				ValidationException => HttpStatusCode.BadRequest,
+				Nerosoft.Euonia.Validation.ValidationException => HttpStatusCode.BadRequest,
 				AuthenticationException => HttpStatusCode.Unauthorized,
 				UnauthorizedAccessException => HttpStatusCode.Forbidden,
 				NotImplementedException => HttpStatusCode.NotImplemented,
@@ -34,6 +35,14 @@ internal static class ExceptionExtensions
 				{
 					ex = ex.InnerException;
 					continue;
+				}
+
+				if (ex is Nerosoft.Euonia.Validation.ValidationException euoniaValidationException)
+				{
+					return euoniaValidationException.Errors
+					                                 .Where(result => !string.IsNullOrWhiteSpace(result.PropertyName))
+					                                 .GroupBy(result => result.PropertyName)
+					                                 .ToDictionary(group => group.Key, group => group.Select(result => result.ErrorMessage).ToArray());
 				}
 
 				if (ex is not ValidationException validationException)

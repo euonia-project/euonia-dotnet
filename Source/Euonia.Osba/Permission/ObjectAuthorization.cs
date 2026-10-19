@@ -176,7 +176,10 @@ internal static class ObjectAuthorization
 	/// <returns>权限要求列表。</returns>
 	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation)
 	{
+		// 不能只看业务对象自身的上下文：手工构造/反序列化的对象没有 BusinessContext，
+		// 但宿主注册的来源仍应生效；与 ScopeAuthorization 一致地回退到环境作用域。
 		var provider = businessObject.BusinessContext?.GetService<IPermissionCodeSource>()
+		               ?? BusinessContextAccessor.Current?.GetService<IPermissionCodeSource>()
 		               ?? ObjectPermissionCodeSource.Instance;
 
 		return provider.RequirementsFor(businessObject.GetType(), operation);
