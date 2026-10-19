@@ -18,6 +18,11 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	public event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
 
 	private readonly ConcurrentDictionary<string, List<HandlerRegistration>> _handlerContainer = new();
+
+	/// <summary>
+	/// 保护处理器列表的注册与快照，避免注册与消息处理并发时枚举到正在修改的列表。
+	/// </summary>
+	private readonly object _registrationLock = new();
 	private readonly IServiceProvider _provider;
 	private readonly ILogger<DefaultHandlerContext> _logger;
 	private readonly IConfigurator _configurator;
@@ -54,8 +59,12 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	{
 		if (args.Handler.HandlerType.IsInterface && args.Handler.HandlerType.IsGenericType && args.Handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		{
+			// 以具体实现类型注册：同一个接口的多个实现必须各自成为独立的处理器，
+			// 否则去重逻辑会把它们合并，且 DI 的 GetRequiredService(interface) 只能解析到最后一个实现。
+			var implementationType = args.Handler.ImplementationType ?? args.Handler.HandlerType;
+
 			typeof(DefaultHandlerContext).GetMethod(nameof(Register), 3, BindingFlags.Instance | BindingFlags.NonPublic, [typeof(string)])
-			                             ?.MakeGenericMethod(args.Type, args.Handler.HandlerType.GenericTypeArguments[1], args.Handler.HandlerType)
+			                             ?.MakeGenericMethod(args.Type, args.Handler.HandlerType.GenericTypeArguments[1], implementationType)
 			                             .Invoke(this, [args.Channel]);
 		}
 		else
@@ -76,11 +85,12 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	{
 		HandlerDelegate Handling(IServiceProvider provider)
 		{
-			var handler = provider.GetRequiredService<THandler>();
+			// 容器里可能未注册具体实现类型（仅通过 configurator 扫描时），回退到运行时创建。
+			var handler = ActivatorUtilities.GetServiceOrCreateInstance<THandler>(provider);
 			return async (message, context, token) => await handler.HandleAsync((TMessage)message, context, token);
 		}
 
-		_handlerContainer.GetOrAdd(channel, _ => []).Add(new HandlerRegistration(typeof(THandler).FullName, Handling));
+		AddRegistration(channel, typeof(THandler).FullName, Handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, typeof(TMessage), typeof(THandler)));
 	}
 
@@ -100,7 +110,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			return (message, context, token) => invoker(handler, message, context, token);
 		}
 
-		_handlerContainer.GetOrAdd(channel, _ => []).Add(new HandlerRegistration(type.FullName, Handling));
+		AddRegistration(channel, type.FullName, Handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, type));
 	}
 
@@ -158,8 +168,71 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			};
 		}
 
-		_handlerContainer.GetOrAdd(channel, _ => []).Add(new HandlerRegistration(channelHandler.HandlerType.FullName, handling));
+		AddRegistration(channel, (channelHandler.ImplementationType ?? channelHandler.HandlerType).FullName, handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, channelHandler.HandlerType));
+	}
+
+	/// <summary>
+	/// 向通道追加一个处理器注册记录；同名记录自动追加序号，避免同类型 Lambda 处理器互相覆盖。
+	/// </summary>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="name">处理器名称。</param>
+	/// <param name="factory">处理器工厂。</param>
+	private void AddRegistration(string channel, string name, HandlerFactory factory)
+	{
+		var registrations = _handlerContainer.GetOrAdd(channel, _ => []);
+
+		lock (_registrationLock)
+		{
+			var uniqueName = name;
+			var suffix = 2;
+
+			while (registrations.Any(item => string.Equals(item.Name, uniqueName, StringComparison.Ordinal)))
+			{
+				uniqueName = $"{name}#{suffix}";
+				suffix++;
+			}
+
+			registrations.Add(new HandlerRegistration(uniqueName, factory));
+		}
+	}
+
+	/// <summary>
+	/// 重放一条收件箱死信：只执行指定处理器，跳过收件箱去重，并在成功后标记该处理器为成功。
+	/// </summary>
+	/// <param name="channel">消息通道。</param>
+	/// <param name="message">消息负载。</param>
+	/// <param name="context">消息上下文。</param>
+	/// <param name="handler">处理器名称（死信记录的 <c>Target</c>）。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示重放操作的任务。</returns>
+	internal async Task ReplayDeadLetterAsync(string channel, object message, MessageContext context, string handler, CancellationToken cancellationToken)
+	{
+		ArgumentNullException.ThrowIfNull(message);
+		ArgumentException.ThrowIfNullOrWhiteSpace(handler);
+
+		HandlerRegistration registration;
+		lock (_registrationLock)
+		{
+			if (!_handlerContainer.TryGetValue(channel, out var registrations) || registrations == null)
+			{
+				throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
+			}
+
+			registration = registrations.FirstOrDefault(item => string.Equals(item.Name, handler, StringComparison.Ordinal));
+		}
+
+		if (registration == null)
+		{
+			throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
+		}
+
+		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+		var invoker = registration.Factory(scope.ServiceProvider);
+		var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
+		context.Response(result);
+		context.Complete(null);
+		_inboxStore?.MarkAsSuccess(context.MessageId, registration.Name);
 	}
 
 	#endregion
@@ -179,9 +252,16 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		ArgumentNullException.ThrowIfNull(message);
 
 		using var scope = _provider.GetRequiredService<IServiceScopeFactory>().CreateScope();
-		if (!_handlerContainer.TryGetValue(channel, out var registrations) || registrations == null || registrations.Count == 0)
+
+		List<HandlerRegistration> registrations;
+		lock (_registrationLock)
 		{
-			throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
+			if (!_handlerContainer.TryGetValue(channel, out var registered) || registered == null || registered.Count == 0)
+			{
+				throw new InvalidOperationException(string.Format(Resources.IDS_NO_HANDLER_REGISTERED, context.MessageId, channel));
+			}
+
+			registrations = [.. registered];
 		}
 
 		// 从服务提供程序获取处理程序实例

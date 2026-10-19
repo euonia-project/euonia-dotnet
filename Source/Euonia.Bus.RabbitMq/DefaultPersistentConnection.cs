@@ -124,13 +124,25 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// </remarks>
 	public async Task<IChannel> CreateChannelAsync()
 	{
-		while (!IsConnected)
+		while (true)
 		{
 			ObjectDisposedException.ThrowIf(IsDisposed, this);
-			await TryConnectAsync();
-		}
 
-		return await _connection.CreateChannelAsync();
+			if (_connection is { IsOpen: true })
+			{
+				return await _connection.CreateChannelAsync();
+			}
+
+			if (_connection == null)
+			{
+				await TryConnectAsync();
+				continue;
+			}
+
+			// 连接对象存在但暂时不可用：交给客户端自动恢复机制。
+			// 绝不能在这里销毁并重建连接——那会取消自动恢复，且已启动的消费者不会重新创建。
+			await Task.Delay(TimeSpan.FromSeconds(1));
+		}
 	}
 
 	/// <summary>
@@ -138,16 +150,15 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// </summary>
 	/// <param name="sender">事件发送方。</param>
 	/// <param name="e">包含连接阻塞信息的事件参数。</param>
-	private async Task OnConnectionBlockedAsync(object sender, ConnectionBlockedEventArgs e)
+	private Task OnConnectionBlockedAsync(object sender, ConnectionBlockedEventArgs e)
 	{
-		if (IsDisposed)
+		if (!IsDisposed)
 		{
-			return;
+			// 阻塞是 broker 的流量控制，不是断线；重连反而会中断自动恢复。
+			_logger.LogWarning("RabbitMQ connection is blocked: {Reason}", e.Reason);
 		}
 
-		_logger.LogWarning("A RabbitMQ connection is shutdown. Trying to re-connect...");
-
-		await TryConnectAsync();
+		return Task.CompletedTask;
 	}
 
 	/// <summary>
@@ -155,16 +166,15 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// </summary>
 	/// <param name="sender">事件发送方。</param>
 	/// <param name="e">包含回调异常信息的事件参数。</param>
-	private async Task OnCallbackExceptionAsync(object sender, CallbackExceptionEventArgs e)
+	private Task OnCallbackExceptionAsync(object sender, CallbackExceptionEventArgs e)
 	{
-		if (IsDisposed)
+		if (!IsDisposed)
 		{
-			return;
+			// 通道/消费者回调异常由客户端的自动恢复处理；此处只负责留下日志。
+			_logger.LogWarning(e.Exception, "RabbitMQ callback exception occurred; automatic recovery will handle the channel.");
 		}
 
-		_logger.LogWarning("A RabbitMQ connection throw exception. Trying to re-connect...");
-
-		await TryConnectAsync();
+		return Task.CompletedTask;
 	}
 
 	/// <summary>
@@ -172,16 +182,16 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// </summary>
 	/// <param name="sender">事件发送方。</param>
 	/// <param name="reason">包含连接关闭原因的事件参数。</param>
-	private async Task OnConnectionShutdownAsync(object sender, ShutdownEventArgs reason)
+	private Task OnConnectionShutdownAsync(object sender, ShutdownEventArgs reason)
 	{
-		if (IsDisposed)
+		if (!IsDisposed)
 		{
-			return;
+			// 不要销毁并重建连接：客户端会自动恢复连接、通道与消费者；
+			// 手动重建会让既有消费者的通道永久失效。
+			_logger.LogWarning("RabbitMQ connection was shut down ({ReplyText}); automatic recovery will reconnect.", reason.ReplyText);
 		}
 
-		_logger.LogWarning("A RabbitMQ connection is on shutdown. Trying to re-connect...");
-
-		await TryConnectAsync();
+		return Task.CompletedTask;
 	}
 
 	/// <summary>

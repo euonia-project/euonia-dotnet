@@ -78,7 +78,15 @@ internal sealed class DeadLetterService : IDeadLetterService
 	private async Task ReplayInboxAsync(DeadLetterEntry entry, CancellationToken cancellationToken)
 	{
 		var handlerContext = _accessor.GetRequiredService<IHandlerContext>();
-		var context = new MessageContext(entry.Content);
+		using var context = new MessageContext(entry.Content);
+
+		// 重放必须绕过收件箱去重：原条目仍以 DeadLettered 状态存在，
+		// 走 HandleAsync 会因 Insert 返回 false 而跳过所有处理器，然后死信却被删除。
+		if (handlerContext is DefaultHandlerContext defaultContext && !string.IsNullOrWhiteSpace(entry.Target))
+		{
+			await defaultContext.ReplayDeadLetterAsync(entry.Channel, entry.Content.Payload, context, entry.Target, cancellationToken);
+			return;
+		}
 
 		await handlerContext.HandleAsync(entry.Channel, entry.Content.Payload, context, cancellationToken);
 	}
@@ -92,7 +100,7 @@ internal sealed class DeadLetterService : IDeadLetterService
 	/// </remarks>
 	private Task ReplayOutboxAsync(DeadLetterEntry entry, CancellationToken cancellationToken)
 	{
-		var payloadType = entry.Content?.Payload?.GetType() ?? typeof(object);
+		var payloadType = EnvelopeTypeResolver.GetMessageType(entry.Content);
 		var method = _redeliverMethod.MakeGenericMethod(payloadType);
 		return (Task)method.Invoke(this, [entry, cancellationToken])!;
 	}

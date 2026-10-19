@@ -25,6 +25,12 @@ internal sealed class OutboxDispatcher : IDisposable
 	private readonly OutboxOptions _options;
 	private readonly IDeadLetterStore _deadLetterStore;
 	private readonly ILogger _logger;
+	private readonly DateTime _startedAt = DateTime.Now;
+
+	/// <summary>
+	/// 回收启动前遗留 Pending 记录时的宽限期：避免把刚插入、仍在等待延迟分发的记录误判为已放弃。
+	/// </summary>
+	private static readonly TimeSpan _pendingGracePeriod = TimeSpan.FromMinutes(5);
 	private Timer _timer;
 	private int _running;
 
@@ -78,6 +84,10 @@ internal sealed class OutboxDispatcher : IDisposable
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
 			CleanupExpired();
 
+			// 回收本进程启动前遗留的 Pending 记录：它们对应的分发流程已不存在，
+			// 不回收就会永远停留在 Pending（既不重试也不清理）。
+			ReclaimAbandonedPending();
+
 			var items = _store?.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
@@ -129,6 +139,28 @@ internal sealed class OutboxDispatcher : IDisposable
 		catch (Exception exception)
 		{
 			_logger?.LogWarning(exception, "Failed to redeliver outbox message {MessageId} on transport {Transport}.", item.MessageId, item.Name);
+		}
+	}
+
+	/// <summary>
+	/// 将调度器启动前遗留的 Pending 传输记录标记为失败，使其进入正常重试流程。
+	/// </summary>
+	/// <remarks>
+	/// 只回收 <see cref="_startedAt"/> 之前的记录：本进程内正在等待延迟分发的 Pending 记录
+	/// 创建时间晚于该时刻，不会被误判为“已放弃”。
+	/// </remarks>
+	private void ReclaimAbandonedPending()
+	{
+		var pending = _store?.GetPendingMessages(_startedAt - _pendingGracePeriod);
+		if (pending == null || pending.Count == 0)
+		{
+			return;
+		}
+
+		foreach (var item in pending)
+		{
+			_store.MarkAsFailed(item.MessageId, item.Name, "Pending dispatch was abandoned before the dispatcher started; reclaimed for retry.");
+			_logger?.LogWarning("Reclaimed abandoned pending outbox message {MessageId} on transport {Transport}.", item.MessageId, item.Name);
 		}
 	}
 
@@ -195,7 +227,7 @@ internal sealed class OutboxDispatcher : IDisposable
 
 	private Task RedeliverAsync(IMessageEnvelope envelope, string transportName)
 	{
-		var payloadType = envelope.Payload?.GetType() ?? typeof(object);
+		var payloadType = EnvelopeTypeResolver.GetMessageType(envelope);
 		var method = _redeliverMethods.GetOrAdd(payloadType, type => typeof(OutboxDispatcher).GetMethod(nameof(RedeliverCoreAsync), BindingFlags.Instance | BindingFlags.NonPublic)!.MakeGenericMethod(type));
 		return (Task)method.Invoke(this, [envelope, transportName])!;
 	}

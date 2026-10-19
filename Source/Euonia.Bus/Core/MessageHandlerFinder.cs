@@ -70,6 +70,10 @@ internal static class MessageHandlerFinder
 		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
 		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+		                            // IHandler<T> 继承 IHandler<T, Unit>：两者同时出现时只注册更具体的单参数接口，
+		                            // 否则同一个处理程序会在多播通道上被执行两次。
+		                            .GroupBy(x => x.GetGenericArguments()[0])
+		                            .Select(group => group.OrderBy(x => x.GetGenericArguments().Length).First())
 		                            .ToList();
 
 		var handlerInterfaceMethods = new HashSet<MethodInfo>();
@@ -92,7 +96,7 @@ internal static class MessageHandlerFinder
 				var channel = channelResolver?.Invoke(messageType);
 
 				channel ??= messageType.FullName;
-				@delegate(channel, messageType, new ChannelHandler(@interface, null));
+				@delegate(channel, messageType, new ChannelHandler(@interface, null, ImplementationType: handlerType));
 			}
 		}
 
