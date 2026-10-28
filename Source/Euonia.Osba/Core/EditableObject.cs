@@ -19,9 +19,22 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// </summary>
 	public event EventHandler<SavedEventArgs> Saved
 	{
-		add => Events.AddEventHandler(value);
-		remove => Events.RemoveEventHandler(value);
+		add
+		{
+			Events.AddEventHandler(value);
+			Interlocked.Increment(ref _savedSubscribers);
+		}
+		remove
+		{
+			Events.RemoveEventHandler(value);
+			Interlocked.Decrement(ref _savedSubscribers);
+		}
 	}
+
+	/// <summary>
+	/// <see cref="Saved"/> 的订阅者数量；为 0 时保存路径不构造事件参数。
+	/// </summary>
+	private int _savedSubscribers;
 
 	/// <summary>
 	/// 当对象已被保存时调用。
@@ -128,17 +141,25 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 				ScopeOperationMap.Resolve(this)));
 		}
 
-		var wasDeleted = IsDeleted;
 		MarkAsBusy();
 		try
 		{
-			var result = await BusinessContext.GetRequiredService<IObjectFactory>().SaveAsync((T)this, cancellationToken);
-			if (ReferenceEquals(result, this) && !wasDeleted)
+			// BusinessContext.ObjectFactory 会缓存解析结果；这里不必每次走 DI。
+			var result = await BusinessContext.ObjectFactory.SaveAsync((T)this, cancellationToken);
+
+			// 保存成功（含删除）后把对象复位为干净状态：删除后仍停在 Deleted 会让下一次
+			// SaveAsync 再执行一次 Delete。工厂返回不同实例时不动 this，交给调用方使用返回值。
+			if (ReferenceEquals(result, this))
 			{
 				MarkAsClean();
 			}
 
-			OnSaved(result, null, userState);
+			// 无订阅者时不构造 SavedEventArgs、也不走弱事件管理器。
+			if (Volatile.Read(ref _savedSubscribers) > 0)
+			{
+				OnSaved(result, null, userState);
+			}
+
 			return result;
 		}
 		finally
