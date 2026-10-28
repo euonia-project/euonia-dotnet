@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
 /// 业务对象操作工厂。
@@ -106,7 +106,7 @@ public interface IObjectFactory
 	/// 方法应命名为 Execute、ExecuteAsync、FactoryExecute、FactoryExecuteAsync，或使用 <see cref="FactoryExecuteAttribute"/> 特性标记。
 	/// </remarks>
 	Task<TTarget> ExecuteAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
-		where TTarget : ICommandObject;
+		where TTarget : IServiceObject;
 
 	/// <summary>
 	/// 创建 <typeparamref name="TTarget"/> 的新实例并调用执行方法。
@@ -120,7 +120,7 @@ public interface IObjectFactory
 	/// </remarks>
 	[Obsolete("Prefer CreateAsync + validation + ExecuteAsync(target); criteria-based execute cannot enforce pre-write rules.")]
 	Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
-		where TTarget : ICommandObject;
+		where TTarget : IServiceObject;
 
 	/// <summary>
 	/// 创建 <typeparamref name="TTarget"/> 的新实例并调用删除方法。

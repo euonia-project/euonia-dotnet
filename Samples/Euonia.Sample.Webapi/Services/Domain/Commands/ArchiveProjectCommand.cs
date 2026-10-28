@@ -15,7 +15,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// 归档后经 <see cref="ProjectStore"/> 落库，聚合上挂起的 <see cref="Events.ProjectArchivedEvent"/>
 /// 随保存经总线自动分发。
 /// </summary>
-public sealed class ArchiveProjectCommand : CommandObjectBase<ArchiveProjectCommand>
+public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectCommand>
 {
 	/// <summary>目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
 	public string ProjectId { get; set; }

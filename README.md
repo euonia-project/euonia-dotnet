@@ -205,10 +205,10 @@ ObjectBase                       —— 公共根：属性、规则、上下文�
      │    ├── ObservableObject<T>—— NEW / CHANGED / DELETED 状态
      │    │    └── EditableObject<T> —— 异步规则校验与保存
      │    └── ReadOnlyObject<T>  —— 只读对象（工厂装载作用域内可填充）
-     └── CommandObject<T>        —— 独立业务操作；有属性和规则，但无变更追踪
+     └── ServiceObject<T>        —— 独立业务操作；有属性和规则，但无变更追踪
 ```
 
-> `ICommandObject` 只组合 `IOsbaObject`（Osba 对象公共契约：属性存储 + 上下文）与 `IHasRuleCheck`，
+> `IServiceObject` 只组合 `IOsbaObject`（Osba 对象公共契约：属性存储 + 上下文）与 `IHasRuleCheck`，
 > **不继承 `IBusinessObject`**；`IBusinessObject` 才承诺 `INotifyPropertyChanged/Changing` 等可编辑对象契约。
 
 #### 核心概念

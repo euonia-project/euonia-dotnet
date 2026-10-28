@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// <summary>
 /// 验证 <see cref="CreateActuator{TTarget}"/> 支持任意 <see cref="ObjectBase{T}"/> 类型：
 /// 可编辑对象（<see cref="EditableObject{T}"/>）创建后标记新增并保存（插入语义）；
-/// 命令对象（<see cref="CommandObject{T}"/>）、普通业务对象等不可持久化类型仅构造实例、不做落库。
+/// 命令对象（<see cref="ServiceObject{T}"/>）、普通业务对象等不可持久化类型仅构造实例、不做落库。
 /// </summary>
 public class CreateActuatorTests
 {
@@ -104,7 +104,7 @@ public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 /// <summary>
 /// 命令对象（不可持久化类型），用于验证创建执行器只构造、不执行命令体。
 /// </summary>
-public class CreateProbeCommand : CommandObject<CreateProbeCommand>
+public class CreateProbeCommand : ServiceObject<CreateProbeCommand>
 {
 	/// <summary>
 	/// 指示创建工厂方法（<c>FactoryCreateAsync</c>，标有 <see cref="FactoryCreateAttribute"/>）是否已执行。

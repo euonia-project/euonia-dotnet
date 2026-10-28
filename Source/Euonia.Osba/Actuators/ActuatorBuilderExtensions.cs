@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <see cref="Delete{TTarget}(ActuatorBuilder{TTarget}, object[])"/>；
 /// <see cref="Create{TTarget}(ActuatorBuilder{TTarget}, object[])"/> 支持任意业务对象类型
 /// （可编辑对象创建后标记新增并保存，其余类型仅构造实例）；
-/// 命令对象（<see cref="CommandObject{T}"/>）使用 <see cref="Execute{TTarget}(ActuatorBuilder{TTarget}, object[])"/>。
+/// 命令对象（<see cref="ServiceObject{T}"/>）使用 <see cref="Execute{TTarget}(ActuatorBuilder{TTarget}, object[])"/>。
 /// </remarks>
 public static class ActuatorBuilderExtensions
 {
@@ -59,7 +59,7 @@ public static class ActuatorBuilderExtensions
 	/// <summary>
 	/// 创建用于执行目标命令对象的 <see cref="ExecuteActuator{TTarget}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TTarget">命令对象的具体类型，必须继承自 <see cref="CommandObject{TTarget}"/>。</typeparam>
+	/// <typeparam name="TTarget">命令对象的具体类型，必须继承自 <see cref="ServiceObject{TTarget}"/>。</typeparam>
 	/// <param name="builder">执行器构建器。</param>
 	/// <param name="criteria">用于创建命令对象的初始化参数。</param>
 	/// <returns>命令执行器实例。</returns>
@@ -68,7 +68,7 @@ public static class ActuatorBuilderExtensions
 	/// 命令体在 <see cref="ExecuteActuator{TTarget}"/> 的终结阶段执行。
 	/// </remarks>
 	public static ExecuteActuator<TTarget> Execute<TTarget>(this ActuatorBuilder<TTarget> builder, params object[] criteria)
-		where TTarget : CommandObject<TTarget>
+		where TTarget : ServiceObject<TTarget>
 	{
 		return new ExecuteActuator<TTarget>(builder, () => builder.ObjectFactory.CreateAsync<TTarget>(criteria));
 	}

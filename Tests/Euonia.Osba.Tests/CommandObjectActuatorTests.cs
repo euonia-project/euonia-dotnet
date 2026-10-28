@@ -3,14 +3,14 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
-/// 验证命令对象（<see cref="CommandObject{T}"/>）通过执行器（<see cref="IActuator"/>）执行的完整流程：
+/// 验证命令对象（<see cref="ServiceObject{T}"/>）通过执行器（<see cref="IActuator"/>）执行的完整流程：
 /// <c>For&lt;TCommand&gt;().Execute(criteria).Handle(...).ExecuteAsync()</c>。
 /// </summary>
-public class CommandObjectActuatorTests
+public class ServiceObjectActuatorTests
 {
 	private readonly IActuator _actuator;
 
-	public CommandObjectActuatorTests(IActuator actuator)
+	public ServiceObjectActuatorTests(IActuator actuator)
 	{
 		_actuator = actuator;
 	}
@@ -32,7 +32,7 @@ public class CommandObjectActuatorTests
 /// <summary>
 /// 用于验证执行器命令流程的测试命令对象。
 /// </summary>
-public class ActuatorTestCommand : CommandObject<ActuatorTestCommand>
+public class ActuatorTestCommand : ServiceObject<ActuatorTestCommand>
 {
 	/// <summary>
 	/// 指示创建步骤（<see cref="CreateAsync(CancellationToken)"/>）是否已执行。

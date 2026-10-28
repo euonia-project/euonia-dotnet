@@ -527,7 +527,7 @@ guard.Allows(mySecretDoc);          // false  ← 作者本人也不行：Deny �
 只改授权数据，**不重新签发令牌**，下一次解析立即生效。
 
 ```csharp
-public sealed class ExportReportCommand : CommandObject<ExportReportCommand>
+public sealed class ExportReportCommand : ServiceObject<ExportReportCommand>
 {
     public bool Executed { get; private set; }
 
@@ -586,7 +586,7 @@ catch (System.Security.SecurityException)
 带业务入参的命令走执行器链时，需要**同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**：
 
 ```csharp
-public sealed class ExportReportCommand : CommandObject<ExportReportCommand>
+public sealed class ExportReportCommand : ServiceObject<ExportReportCommand>
 {
     public string ReportId { get; private set; }
     public bool   Executed { get; private set; }

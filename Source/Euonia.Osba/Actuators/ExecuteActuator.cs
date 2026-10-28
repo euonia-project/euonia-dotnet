@@ -3,14 +3,14 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 用于执行目标命令对象的执行器。
 /// </summary>
-/// <typeparam name="TTarget">命令对象的具体类型，必须继承自 <see cref="CommandObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">命令对象的具体类型，必须继承自 <see cref="ServiceObject{T}"/>。</typeparam>
 /// <remarks>
 /// 在基类执行流程的终结阶段，通过构建器关联的对象工厂调用
 /// <see cref="IObjectFactory.ExecuteAsync{TTarget}(TTarget, CancellationToken)"/>，
 /// 将命令分派到目标命令对象上以 <see cref="FactoryExecuteAttribute"/> 标记的方法（或按约定命名的 Execute/ExecuteAsync 方法）。
 /// </remarks>
 public class ExecuteActuator<TTarget> : ActuatorBase<TTarget>
-	where TTarget : CommandObject<TTarget>
+	where TTarget : ServiceObject<TTarget>
 {
 	/// <summary>
 	/// 初始化命令执行器。

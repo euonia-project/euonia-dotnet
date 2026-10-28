@@ -52,7 +52,7 @@ internal static class RuleTestHarness
 /// 断言 <c>Executed</c> 标记与调用次数的基础命令对象。
 /// </summary>
 /// <typeparam name="T">命令对象的具体类型。</typeparam>
-public abstract class RuleTestCommand<T> : CommandObject<T>
+public abstract class RuleTestCommand<T> : ServiceObject<T>
 	where T : RuleTestCommand<T>
 {
 	/// <summary>

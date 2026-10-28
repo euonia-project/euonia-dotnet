@@ -31,7 +31,7 @@ public static class ScopeOperationMap
 		return target switch
 		{
 			IEditableObject editable => FromEditState(editable.State),
-			ICommandObject => BusinessOperation.Execute,
+			IServiceObject => BusinessOperation.Execute,
 			IReadOnlyObject => throw new InvalidOperationException(Resources.IDS_OPERATION_NOT_APPLY_READONLY),
 			_ => BusinessOperation.Update
 		};
@@ -54,7 +54,7 @@ public static class ScopeOperationMap
 			case IEditableObject editable when editable.State != ObjectEditState.None:
 				operation = FromEditState(editable.State);
 				return true;
-			case ICommandObject:
+			case IServiceObject:
 				operation = BusinessOperation.Execute;
 				return true;
 			case IReadOnlyObject:

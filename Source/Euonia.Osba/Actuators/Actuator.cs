@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <remarks>
 /// 可通过构造函数注入或静态方法直接使用。静态方法 <see cref="For{TTarget}(IServiceProvider)"/> 支持从 <see cref="IServiceProvider"/> 中自动解析依赖，
 /// 并将已注册的 <c>IActuatorBehavior&lt;TTarget&gt;</c> 服务自动接入执行管道。
-/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与命令对象（<see cref="CommandObject{T}"/>）两种目标类型。
+/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与命令对象（<see cref="ServiceObject{T}"/>）两种目标类型。
 /// </remarks>
 /// <param name="provider">用于解析 <see cref="IObjectFactory"/> 与执行管道（<c>IPipeline&lt;TTarget, TTarget&gt;</c>）的服务提供程序。</param>
 internal sealed class Actuator(IServiceProvider provider) : IActuator

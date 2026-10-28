@@ -216,7 +216,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 	/// <inheritdoc/>
 	public async Task<TTarget> ExecuteAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
-		where TTarget : ICommandObject
+		where TTarget : IServiceObject
 	{
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]);
 		EnsurePersistenceMethod<TTarget>(method);
@@ -242,7 +242,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	[Obsolete("Prefer CreateAsync + validation + ExecuteAsync(target); criteria-based execute cannot enforce pre-write rules.")]
 	public async Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
-		where TTarget : ICommandObject
+		where TTarget : IServiceObject
 	{
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>(criteria);
@@ -477,7 +477,7 @@ public class BusinessObjectFactory : IObjectFactory
 		}
 
 		var definition = declaringType.GetGenericTypeDefinition();
-		if (definition != typeof(EditableObject<>) && definition != typeof(CommandObject<>))
+		if (definition != typeof(EditableObject<>) && definition != typeof(ServiceObject<>))
 		{
 			return;
 		}

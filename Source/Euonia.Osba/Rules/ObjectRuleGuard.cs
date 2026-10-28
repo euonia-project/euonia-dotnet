@@ -18,7 +18,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <c>BypassRuleChecks()</c> 之类规则绕过机制的影响——本类只是验证线的强制点，不是安全闸门。
 /// </para>
 /// <para>
-/// 目标不是 <see cref="ObjectBase"/>（自定义 <see cref="ICommandObject"/> 实现）时直接放行：它们不持有 <see cref="Rules"/>，无从运行规则。
+/// 目标不是 <see cref="ObjectBase"/>（自定义 <see cref="IServiceObject"/> 实现）时直接放行：它们不持有 <see cref="Rules"/>，无从运行规则。
 /// </para>
 /// </remarks>
 internal static class ObjectRuleGuard

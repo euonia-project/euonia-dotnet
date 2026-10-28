@@ -10,7 +10,7 @@
 ### Euonia.Osba
 
 - **严格化工厂边界**：工厂方法返回 `ValueTask`/`ValueTask<T>` 时会被真正等待；
-  解析到 `EditableObject<T>`/`CommandObject<T>` 的基类空实现时抛 `NotSupportedException`，
+  解析到 `EditableObject<T>`/`ServiceObject<T>` 的基类空实现时抛 `NotSupportedException`，
   不再“保存成功但什么也没做”；反射调用抛出的业务异常不再被 `TargetInvocationException` 包裹。
 - **统一字段视图**：`ref` 字段写入同步到 `FieldData`，规则与 DataAnnotations 通过 `ReadProperty`
   能读到真实值；字段装载不再记录历史，装载后 `IsChanged` 正确复位。
@@ -47,23 +47,25 @@
   删除幂等、`ValueTask` 工厂与启动期校验说明。
 - **测试**：M4 新增 5 个回归用例，`Euonia.Osba.Tests` 总计 259 个。
 
-#### CommandObject 从变更追踪层级拆出
+#### ServiceObject：从 CommandObject 重命名并拆出变更追踪层级
 
+- **`CommandObject<T>` / `ICommandObject` 重命名为 `ServiceObject<T>` / `IServiceObject`**：
+  名字直接对应“封装一次独立业务操作”的定位。
 - 公共根由 `BusinessObject` 重命名为 **`ObjectBase`**；`ObjectBase<T>` 只负责属性注册
   （`RegisterProperty`）与公共对象能力。
 - `BusinessObject<T>` 作为 `ObjectBase<T>` 的派生类，独占变更追踪
   （`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `PropertyHasChanged`）。
   非泛型 `BusinessObject` 已移除；需要公共能力的代码改用 `ObjectBase`。
-- **`CommandObject<T>` 改为直接继承 `ObjectBase<T>`**，不再继承 `BusinessObject<T>`：
+- **`ServiceObject<T>` 改为直接继承 `ObjectBase<T>`**，不再继承 `BusinessObject<T>`：
   保留属性、规则、上下文与权限能力，但没有脏状态/变更追踪/`SaveAsync`，
   与“独立业务操作对象”的定位一致。
 - 执行器/构建器/行为（`ActuatorBase`、`ActuatorBuilder`、`IActuatorBehavior`、
   `Actuator.For`、`CreateActuator`）的泛型约束从 `BusinessObject<T>` 放宽为 `ObjectBase<T>`，
-  命令对象与可编辑对象共用同一条管道，但生命周期语义分离。
+  服务对象与可编辑对象共用同一条管道，但生命周期语义分离。
 - 新增 `IOsbaObject`（所有 Osba 对象的公共契约：属性存储 + `IUseBusinessContext`）。`IBusinessObject` 改为
   `IOsbaObject + INotifyPropertyChanged + INotifyPropertyChanging`；
-  **`ICommandObject` 改为 `IOsbaObject + IHasRuleCheck`**，不再继承 `IBusinessObject`，
-  因此命令对象不承诺属性变更通知，也不暴露可编辑对象契约。
+  **`IServiceObject` 改为 `IOsbaObject + IHasRuleCheck`**，不再继承 `IBusinessObject`，
+  因此服务对象不承诺属性变更通知，也不暴露可编辑对象契约。
 
 ## [2026.4.5] - 2026-10-19
 
@@ -485,7 +487,7 @@ Actuator 支持任意业务对象类型，小幅重构。
 - `CreateActuator<TTarget>` 的类型约束由 `EditableObject<TTarget>` 放宽为 **`BusinessObject<TTarget>`**，
   基类由 `EditableActuator<TTarget>` 改为直接继承 `ActuatorBase<TTarget>`。
 - `ActuatorBuilderExtensions.Create<TTarget>` 随之放宽约束：可编辑对象创建后标记新增并保存（插入语义），
-  只读对象、命令对象等不可持久化类型仅构造实例、不落库。
+  只读对象、服务对象等不可持久化类型仅构造实例、不落库。
 
 ### 变更
 

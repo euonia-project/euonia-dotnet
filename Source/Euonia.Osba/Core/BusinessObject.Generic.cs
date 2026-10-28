@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <see cref="ObservableObject{T}"/>、<see cref="EditableObject{T}"/>、<see cref="ReadOnlyObject{T}"/>。
 /// </para>
 /// <para>
-/// <see cref="CommandObject{T}"/> 直接继承 <see cref="ObjectBase{T}"/>，只保留属性与规则能力，
+/// <see cref="ServiceObject{T}"/> 直接继承 <see cref="ObjectBase{T}"/>，只保留属性与规则能力，
 /// 不继承本类，因此没有 <see cref="ChangedProperties"/> / <see cref="HasChangedProperties"/> 的脏语义。
 /// </para>
 /// </remarks>

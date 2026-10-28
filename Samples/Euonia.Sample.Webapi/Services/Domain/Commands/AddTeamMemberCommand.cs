@@ -17,7 +17,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// 因此「给自己加一行」等于给自己授权，这条路径必须由操作权限把守
 /// （见 Euonia.Security/README.md §5.9 的边界表）。
 /// </remarks>
-public sealed class AddTeamMemberCommand : CommandObjectBase<AddTeamMemberCommand>
+public sealed class AddTeamMemberCommand : ServiceObjectBase<AddTeamMemberCommand>
 {
 	/// <summary>目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
 	public string TeamId { get; set; }

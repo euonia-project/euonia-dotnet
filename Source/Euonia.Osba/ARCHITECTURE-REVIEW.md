@@ -130,7 +130,7 @@ A='123', ReadProperty='', valid=False, broken=2
 
 #### D4. 两套命令、两套状态、两套事件
 
-- `CommandObject<T>` 与 `Euonia.Domain.Command` / MediatR 的命令各成一套；
+- `ServiceObject<T>` 与 `Euonia.Domain.Command` / MediatR 的命令各成一套；
 - `ObjectEditState` + `FieldData.IsChanged` + `ChangedProperties` 三个“是否变更”的来源；
 - `EditableObject.Saved`（弱事件）与 `Euonia.Domain` 的 `DomainEvent` 各成一套；
 - 示例里的 `EditableObjectBase<TTarget,TKey>` 直接把 `Aggregate<TKey>` 的 `_handlers` / `_events` / `RaiseEvent` 复制了一遍（95 行），因为 C# 不支持多继承，`EditableObject<T>` 又要求 `T : EditableObject<T>`。
@@ -468,7 +468,7 @@ sync factory throw -> TargetInvocationException: Exception has been thrown by th
 | U9 | 缺少启动期诊断：忘记 `[Permission]`、缺少 ScopeModel、漏写工厂方法都晚爆 | `IOsbaStartupValidator` 聚合报告，`ValidateOnBuild` 风格 |
 | U10 | `[Inject]` 属性注入是隐藏依赖，且解析失败只 `Debug.WriteLine` | 支持构造函数注入；`[Inject]` 标 `[Obsolete]`；缺失时启动期失败 |
 | U11 | 诊断只有 `Debug`/`Trace`，Release 下可能零痕迹 | 接 `ILogger`；加 `ActivitySource` + `Meter`（save/rules/auth 三个维度） |
-| U12 | 文档与实现漂移：README 的继承图错误（`CommandObject`/`ReadOnlyObject` 并不继承 `EditableObject`）、文档说 .NET 8+ 实际 net9/net10、模块图说 Osba→Domain 实际不引用 | 文档按代码生成/CI 校验；补英文 README 与 API 示例 |
+| U12 | 文档与实现漂移：README 的继承图错误（`ServiceObject`/`ReadOnlyObject` 并不继承 `EditableObject`）、文档说 .NET 8+ 实际 net9/net10、模块图说 Osba→Domain 实际不引用 | 文档按代码生成/CI 校验；补英文 README 与 API 示例 |
 | U13 | `[Required]` 等 DataAnnotations 与 `CommonRule.Required` 两套校验入口 | 明确唯一推荐；或在 `AddDataAnnotations` 时去重 |
 | U14 | 8 种语言的资源文件，但多处异常消息是硬编码英文（`"Object not valid for save."`、`"Rule message is required"`） | 全部进 resx；CI 校验 key 完整性 |
 | U15 | `Resources.resources` 二进制被提交进源码，`Resources.Designer.cs` 依赖自定义 MSBuild target 生成 | 删除二进制；用标准 `EmbeddedResource` + `PublicResXFileCodeGenerator`；CI 校验生成物 |
@@ -799,7 +799,7 @@ static void Measure(string name, int n, Action<int> body)
 | 项 | 改动 |
 |---|---|
 | P0-1 | `BusinessObjectFactory` 改为直接检查返回值形态，支持 `Task` / `Task<T>` / `ValueTask` / `ValueTask<T>`；`TargetInvocationException` 用 `ExceptionDispatchInfo` 解包 |
-| P0-2 | 解析到 `EditableObject<T>` / `CommandObject<T>` 的**基类空实现**时抛 `NotSupportedException`；`Create` 保留“空对象构造”语义 |
+| P0-2 | 解析到 `EditableObject<T>` / `ServiceObject<T>` 的**基类空实现**时抛 `NotSupportedException`；`Create` 保留“空对象构造”语义 |
 | P0-3 | `ref` 字段写入同步到 `FieldData`，规则/DataAnnotations 通过 `ReadProperty` 读到真实值（统一两种存储视图） |
 | P0-6 | `LoadProperty` 增加 `CanLoadProperty` 钩子；工厂方法执行期间自动进入装载作用域，只读对象仅在作用域内允许装载，外部写入抛 `SecurityException` |
 | P0-7 | `RuleScope` 由单槽位改为栈：嵌套执行器/并发操作先结束的一层不会清掉其他层 |
@@ -872,23 +872,23 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 | P2-9 | `ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")`、保存/授权/规则耗时与失败计数；`ILoggerFactory` 优先、`Trace` 回退 |
 | P2-10 | README/SAMPLE/CHANGELOG 更新：继承图、规则边界、显式上下文、删除幂等、ValueTask 工厂、启动校验 |
 
-### 12.2 `CommandObject` 与变更追踪解耦
+### 12.2 `ServiceObject` 与变更追踪解耦
 
 | 类型 | 职责 |
 |---|---|
 | `IOsbaObject` | 所有 Osba 对象的公共契约：`FieldManager`、`ReadProperty`、`LoadProperty`、`BusinessContext` |
 | `IBusinessObject` | `IOsbaObject` + `INotifyPropertyChanged` + `INotifyPropertyChanging` |
-| `ICommandObject` | `IOsbaObject` + `IHasRuleCheck`；**不再继承 `IBusinessObject`** |
+| `IServiceObject` | `IOsbaObject` + `IHasRuleCheck`；**不再继承 `IBusinessObject`** |
 | `ObjectBase` | 公共根：属性、规则、上下文、权限、装载作用域 |
 | `ObjectBase<T>` | 泛型属性注册（`RegisterProperty`） |
 | `BusinessObject<T>` | 变更追踪：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `PropertyHasChanged` |
-| `CommandObject<T>` | **直接继承 `ObjectBase<T>`**：保留属性与规则，但没有脏状态/变更追踪/`SaveAsync` |
+| `ServiceObject<T>` | **直接继承 `ObjectBase<T>`**：保留属性与规则，但没有脏状态/变更追踪/`SaveAsync` |
 | `ObservableObject<T>` | 状态机；继续继承 `BusinessObject<T>` |
 | `EditableObject<T>` | 保存/规则；继续继承 `ObservableObject<T>` |
 | `ReadOnlyObject<T>` | 只读对象；继续继承 `BusinessObject<T>` |
 
-执行器泛型约束从 `BusinessObject<TTarget>` 放宽到 `ObjectBase<TTarget>`，命令对象与可编辑对象共用管道
-但不再共享生命周期语义。新增回归断言：`CommandObject<T>` 的基类是 `ObjectBase<T>`，属性变更后
+执行器泛型约束从 `BusinessObject<TTarget>` 放宽到 `ObjectBase<TTarget>`，服务对象与可编辑对象共用管道
+但不再共享生命周期语义。新增回归断言：`ServiceObject<T>` 的基类是 `ObjectBase<T>`，属性变更后
 `HasChangedProperties=false`、`ChangedProperties` 为空、且不是 `IEditableObject`。
 
 ### 12.3 暂缓
@@ -908,7 +908,7 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 ```
 
 新增 M4 覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断、
-`CommandObject` 不进入变更追踪层级。
+`ServiceObject` 不进入变更追踪层级。
 
 ---
 

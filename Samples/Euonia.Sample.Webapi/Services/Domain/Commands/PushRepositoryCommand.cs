@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// <see cref="BusinessOperation.Execute"/> 的类型级闸门（<see cref="RepositoryPermissions.Push"/> 与角色），
 /// 行级判定（单行授予 <c>repository:push</c>）在命令体内做，避免「先 push 后判定、拒了也 push」。
 /// </summary>
-public sealed class PushRepositoryCommand : CommandObjectBase<PushRepositoryCommand>
+public sealed class PushRepositoryCommand : ServiceObjectBase<PushRepositoryCommand>
 {
 	/// <summary>目标仓库标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
 	public string RepoId { get; set; }

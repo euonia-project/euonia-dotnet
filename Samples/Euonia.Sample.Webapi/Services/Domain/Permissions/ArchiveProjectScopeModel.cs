@@ -11,7 +11,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// <para>
 /// 行级策略挂在「资源类型 + 业务操作」上，一个操作一个声明位。Project 聚合的 Update
 /// 已经被 <c>project:edit</c> 占用，归档是命令对象上的独立操作，因此它的行级策略必须以
-/// 命令对象为资源来声明——命令对象是 <c>ICommandObject</c>，解析出的操作是 Execute，
+/// 命令对象为资源来声明——命令对象是 <c>IServiceObject</c>，解析出的操作是 Execute，
 /// 正好对上它自己的 <c>[Permission(project:archive)]</c>。
 /// </para>
 /// <para>

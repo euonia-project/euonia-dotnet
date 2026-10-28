@@ -304,7 +304,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// 未修改（乃至未装载）的属性不参与校验，也就不会因为「读出来是默认值」而被凭空拦下。
 	/// </para>
 	/// <para>
-	/// 那一遍属性级检查对命令对象自然为空：<see cref="CommandObject{T}"/> 是<b>无状态</b>的
+	/// 那一遍属性级检查对命令对象自然为空：<see cref="ServiceObject{T}"/> 是<b>无状态</b>的
 	/// （只表达「要执行某种操作」，不持有属性），没有变更追踪，
 	/// 它也不参与变更追踪。命令的校验一律写成<b>对象级</b>规则，对象级那一遍照常执行。
 	/// </para>

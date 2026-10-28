@@ -144,18 +144,18 @@ public class StrictnessRegressionTests
 	}
 
 	[Fact]
-	public void CommandObject_Should_Not_Carry_Edit_State_Or_Change_Tracking()
+	public void ServiceObject_Should_Not_Carry_Edit_State_Or_Change_Tracking()
 	{
-		// CommandObject 直接继承 ObjectBase<T>，不进入 BusinessObject<T>（变更追踪）层级。
-		Assert.Equal(typeof(CommandObject<TrackingCommand>), typeof(TrackingCommand).BaseType);
-		Assert.Equal(typeof(ObjectBase<TrackingCommand>), typeof(CommandObject<TrackingCommand>).BaseType);
+		// ServiceObject 直接继承 ObjectBase<T>，不进入 BusinessObject<T>（变更追踪）层级。
+		Assert.Equal(typeof(ServiceObject<TrackingCommand>), typeof(TrackingCommand).BaseType);
+		Assert.Equal(typeof(ObjectBase<TrackingCommand>), typeof(ServiceObject<TrackingCommand>).BaseType);
 
 		var command = new TrackingCommand { Name = "changed" };
 
 		// 命令对象没有变更追踪成员，而不是“有一个恒为空的列表”。
 		Assert.Null(typeof(TrackingCommand).GetProperty("HasChangedProperties"));
 		Assert.Null(typeof(TrackingCommand).GetProperty("ChangedProperties"));
-		Assert.True((object)command is ICommandObject);
+		Assert.True((object)command is IServiceObject);
 		Assert.True((object)command is IOsbaObject);
 		Assert.False((object)command is IBusinessObject);
 		Assert.False((object)command is INotifyPropertyChanged);
@@ -342,7 +342,7 @@ public class ThrowingInsertObject : EditableObject<ThrowingInsertObject>
 }
 
 /// <summary>没有实现 Execute 的命令：执行必须失败，而不是静默 no-op。</summary>
-public class NoExecuteCommand : CommandObject<NoExecuteCommand>
+public class NoExecuteCommand : ServiceObject<NoExecuteCommand>
 {
 	[FactoryCreate]
 	private Task CreateAsync()
@@ -423,7 +423,7 @@ public sealed class AlwaysPassRule : RuleBase
 }
 
 /// <summary>命令对象不跟踪属性变化。</summary>
-public sealed class TrackingCommand : CommandObject<TrackingCommand>
+public sealed class TrackingCommand : ServiceObject<TrackingCommand>
 {
 	public string Name { get; set; }
 }

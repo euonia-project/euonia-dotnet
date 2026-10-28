@@ -215,7 +215,7 @@ public static class OsbaStartupValidator
 	}
 
 	/// <summary>
-	/// 判断方法是否为 <see cref="EditableObject{T}"/> / <see cref="CommandObject{T}"/> 的基类空实现。
+	/// 判断方法是否为 <see cref="EditableObject{T}"/> / <see cref="ServiceObject{T}"/> 的基类空实现。
 	/// </summary>
 	private static bool IsBaseNoOp(MethodInfo method)
 	{
@@ -226,7 +226,7 @@ public static class OsbaStartupValidator
 		}
 
 		var definition = declaringType.GetGenericTypeDefinition();
-		return definition == typeof(EditableObject<>) || definition == typeof(CommandObject<>);
+		return definition == typeof(EditableObject<>) || definition == typeof(ServiceObject<>);
 	}
 
 	private static OsbaDiagnostic Error(string code, string message, Type type)

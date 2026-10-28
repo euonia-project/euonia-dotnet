@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 所有 Osba 对象的公共契约：字段数据、属性读取/装载，以及业务上下文。
 /// </summary>
 /// <remarks>
-/// 这是 <see cref="IBusinessObject"/> 与 <see cref="ICommandObject"/> 的公共部分：
+/// 这是 <see cref="IBusinessObject"/> 与 <see cref="IServiceObject"/> 的公共部分：
 /// 它只承诺“有属性和上下文”，<b>不承诺</b>变更通知、变更追踪或可保存生命周期。
 /// </remarks>
 public interface IOsbaObject : IUseBusinessContext

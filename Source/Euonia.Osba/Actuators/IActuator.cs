@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// 实现类负责提供用于解析 <see cref="ActuatorBuilder{TTarget}"/> 所依赖服务（如对象工厂与执行管道）的服务提供程序。
-/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与命令对象（<see cref="CommandObject{T}"/>）两种目标类型。
+/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与命令对象（<see cref="ServiceObject{T}"/>）两种目标类型。
 /// </remarks>
 public interface IActuator
 {

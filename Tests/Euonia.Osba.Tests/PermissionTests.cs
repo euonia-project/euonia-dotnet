@@ -443,7 +443,7 @@ public class PlainNamedSecuredObject : EditableObject<PlainNamedSecuredObject>
 /// <summary>
 /// 带权限要求的命令对象。
 /// </summary>
-public class SecuredCommand : CommandObject<SecuredCommand>
+public class SecuredCommand : ServiceObject<SecuredCommand>
 {
 	/// <summary>
 	/// 指示命令是否已执行。
