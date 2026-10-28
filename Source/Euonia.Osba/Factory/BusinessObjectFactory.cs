@@ -15,6 +15,7 @@ public class BusinessObjectFactory : IObjectFactory
 {
 	private readonly IServiceProvider _provider;
 	private readonly IObjectActivator _activator;
+	private readonly OsbaOptions _options;
 
 	/// <summary>
 	/// 初始化 <see cref="BusinessObjectFactory"/> 的新实例。
@@ -23,6 +24,7 @@ public class BusinessObjectFactory : IObjectFactory
 	public BusinessObjectFactory(IServiceProvider provider)
 	{
 		_provider = provider;
+		_options = provider.GetService<OsbaOptions>() ?? OsbaOptions.Default;
 	}
 
 	/// <summary>
@@ -34,6 +36,7 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		_provider = provider;
 		_activator = activator;
+		_options = provider.GetService<OsbaOptions>() ?? OsbaOptions.Default;
 	}
 
 	/// <inheritdoc/>
@@ -119,6 +122,7 @@ public class BusinessObjectFactory : IObjectFactory
 	}
 
 	/// <inheritdoc/>
+	[Obsolete("Use CreateAsync + SaveAsync. Criteria-based insert cannot enforce pre-write data scope checks.")]
 	public async Task<TTarget> InsertAsync<TTarget>(params object[] criteria)
 	{
 		criteria ??= [null];
@@ -175,26 +179,39 @@ public class BusinessObjectFactory : IObjectFactory
 
 		EnsurePersistenceMethod<TTarget>(method);
 
-		// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
-		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget));
-
-		// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
-		await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken);
-
-		return await WithActivatorAsync(target, async initialize =>
+		var started = Stopwatch.GetTimestamp();
+		using var activity = OsbaDiagnostics.StartSave(typeof(TTarget).Name, operation);
+		var succeeded = false;
+		try
 		{
-			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
-			await InvokeAsync(method, target, [cancellationToken]);
+			// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
+			await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget));
 
-			// 保存后再次判定：业务方法可能改动了范围列。
-			// Delete / Execute 不需要复核：删除后行已不存在，命令执行前后判定的对象相同；
-			// 对它们再做一次完整授权链只会增加延迟，不会增加安全性。
-			if (operation is BusinessOperation.Create or BusinessOperation.Update)
+			// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
+			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken);
+
+			var result = await WithActivatorAsync(target, async initialize =>
 			{
-				await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken);
-			}
-		});
+				initialize();
+				using var loadScope = (target as BusinessObject)?.BeginLoad();
+				await InvokeAsync(method, target, [cancellationToken]);
+
+				// 保存后再次判定：业务方法可能改动了范围列。
+				// Delete / Execute 不需要复核：删除后行已不存在，命令执行前后判定的对象相同；
+				// 对它们再做一次完整授权链只会增加延迟，不会增加安全性。
+				if (operation is BusinessOperation.Create or BusinessOperation.Update)
+				{
+					await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken);
+				}
+			});
+
+			succeeded = true;
+			return result;
+		}
+		finally
+		{
+			OsbaDiagnostics.RecordSave(started, typeof(TTarget).Name, operation, succeeded);
+		}
 	}
 
 	/// <inheritdoc/>
@@ -223,6 +240,7 @@ public class BusinessObjectFactory : IObjectFactory
 	}
 
 	/// <inheritdoc/>
+	[Obsolete("Prefer CreateAsync + validation + ExecuteAsync(target); criteria-based execute cannot enforce pre-write rules.")]
 	public async Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
 		where TTarget : ICommandObject
 	{
@@ -445,8 +463,13 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <typeparam name="TTarget">目标类型。</typeparam>
 	/// <param name="method">解析到的工厂方法。</param>
 	/// <exception cref="NotSupportedException">解析到的是基类空实现时抛出。</exception>
-	private static void EnsurePersistenceMethod<TTarget>(MethodInfo method)
+	private void EnsurePersistenceMethod<TTarget>(MethodInfo method)
 	{
+		if (!_options.StrictFactoryMethods)
+		{
+			return;
+		}
+
 		var declaringType = method.DeclaringType;
 		if (declaringType == null || !declaringType.IsGenericType)
 		{
@@ -595,9 +618,11 @@ public class BusinessObjectFactory : IObjectFactory
 				// 但零诊断的 null 会让 NRE 爆在远离病因处——这里按 Debug 级别留下线索，指明属性、类型与修法。
 				if (implement == null)
 				{
-					Debug.WriteLine(
-							$"[BusinessObjectFactory] 属性 '{property.Name}'（{type.FullName}）的 [Inject] 服务未注册，已赋 null。" +
-							$"若该属性是必需的，请在容器中注册 {type.FullName}。");
+					OsbaDiagnostics.Log(
+						_provider,
+						_options.DiagnosticLevel == OsbaDiagnosticLevel.None ? OsbaDiagnosticLevel.None : OsbaDiagnosticLevel.Warning,
+						$"属性 '{property.Name}'（{type.FullName}）的 [Inject] 服务未注册，已赋 null。" +
+						$"若该属性是必需的，请在容器中注册 {type.FullName}。");
 				}
 
 				property.SetValue(@object, implement);

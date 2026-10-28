@@ -171,24 +171,37 @@ internal static class ScopeAuthorization
 			return;
 		}
 
-		Trace.TraceWarning(
-			$"[Euonia.Osba] {target.GetType().Name}.{operation} 通过 criteria 入口写入：行级权限只能在写入后判定。" +
+		OsbaDiagnostics.Log(
+			context?.CurrentServiceProvider ?? BusinessContextAccessor.Current,
+			OsbaDiagnosticLevel.Warning,
+			$"{target.GetType().Name}.{operation} 通过 criteria 入口写入：行级权限只能在写入后判定。" +
 			"请改用 Fetch → IScopeGuard.AllowsObject → Save，或在工厂方法内部先完成判定，避免“先写后验”。");
 	}
 
 	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
 	{
-		// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）；
-		// 作用域用对象自己的那一个，实现不得依赖环境上下文
-		if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))
+		var started = Stopwatch.GetTimestamp();
+		var succeeded = false;
+		try
 		{
-			throw new SecurityException(
-				string.Format(
-					Resources.IDS_SCOPE_DENIED,
-					operation,
-					stage,
-					target.GetType().Name,
-					authorizer.Explain(target, operation, context.CurrentServiceProvider)));
+			// 判定与策略键解析都在实现里（操作是权威，不从对象状态推断——判定可能发生在业务方法返回之后）；
+			// 作用域用对象自己的那一个，实现不得依赖环境上下文
+			if (!authorizer.Allows(target, operation, context.CurrentServiceProvider))
+			{
+				throw new SecurityException(
+					string.Format(
+						Resources.IDS_SCOPE_DENIED,
+						operation,
+						stage,
+						target.GetType().Name,
+						authorizer.Explain(target, operation, context.CurrentServiceProvider)));
+			}
+
+			succeeded = true;
+		}
+		finally
+		{
+			OsbaDiagnostics.RecordAuthorization(started, "scope", operation, succeeded);
 		}
 	}
 }

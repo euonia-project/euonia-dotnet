@@ -200,10 +200,10 @@ await pipeline.RunAsync(new MyContext());
 
 ```
 BusinessObject<T>              —— 核心：规则、上下文、属性管理
-    └── ObservableObject<T>    —— 变更追踪：NEW / CHANGED / DELETED 状态
-        └── EditableObject<T>  —— 支持异步规则校验与保存
-        ├── CommandObject<T>   —— 命令式对象，含 ExecuteAsync
-        └── ReadOnlyObject<T>  —— 带权限控制的只读对象
+├── ObservableObject<T>        —— 变更追踪：NEW / CHANGED / DELETED 状态
+│     └── EditableObject<T>    —— 支持异步规则校验与保存
+├── CommandObject<T>           —— 命令式对象，含 ExecuteAsync
+└── ReadOnlyObject<T>          —— 带权限控制的只读对象（工厂装载作用域内可填充）
 ```
 
 #### 核心概念
@@ -213,10 +213,26 @@ BusinessObject<T>              —— 核心：规则、上下文、属性管理
 | **`BusinessContext`** | 环境上下文，包装 `IServiceProvider` 与 `UserPrincipal` |
 | **`PropertyInfo<T>`** | 强类型属性元数据：名称、类型、友好名、默认值、字段引用 |
 | **`FieldDataManager`** | 实例级反射字段值管理，支持撤销历史 |
-| **规则系统** | 异步规则校验，基于 `RuleManager`（类型级单例）与 `Rules`（实例级执行器） |
+| **规则系统** | 异步规则校验，基于容器级 `IRuleRegistry`（默认 `RuleRegistry`）与 `Rules`（实例级执行器）；无 DI 时回退到进程级 `RuleManager` |
 | **权限体系** | 操作权限（类型级 + 行级）与数据权限，授权值从应用数据实时解析 |
 | **`ObjectEditState`** | 生命周期状态机：`None → New → Changed → Deleted` |
 | **`IObjectFactory`** | 反射驱动 CRUD 工厂：`[FactoryCreate]`、`[FactoryFetch]`、`[FactoryInsert]`、`[FactoryUpdate]`、`[FactoryDelete]`、`[FactoryExecute]` |
+
+#### 装配与诊断
+
+```csharp
+services.AddBusinessObject(options =>
+{
+    // 生产宿主建议开启：启动期检查工厂方法签名、[Inject] 可解析性、属性元数据
+    options.ValidateOnStartup = true;
+    options.StrictFactoryMethods = true;   // 缺 Insert/Update/Delete 时保存直接失败
+    options.EnableDiagnostics = true;      // ActivitySource / Meter
+});
+```
+
+`AddBusinessObject` 返回 `IServiceCollection`，可链式调用。容器级规则注册表（`IRuleRegistry`）让不同容器/租户/测试宿主的规则互不可见；诊断通过 `ActivitySource("Euonia.Osba")` 与 `Meter("Euonia.Osba")` 暴露，日志优先走宿主的 `ILoggerFactory`。
+
+`BusinessContextAccessor` 不再在解析时自动写环境上下文；ASP.NET 中间件或手动作用域请显式 `SetCurrent(...)`，并在 `finally` 中 `Clear()`。`ValidationState` 用来区分“未校验 / 通过 / 失败”，`IsValid` 首次校验前仍为 `true`。
 
 #### 规则系统
 

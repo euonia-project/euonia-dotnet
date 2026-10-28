@@ -14,6 +14,7 @@
 	<ItemGroup>
 		<!-- FieldData 已改为内置的按需可观察对象；Osba 不再需要 Rx / Interactive。 -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
 	</ItemGroup>
 
 	<!--

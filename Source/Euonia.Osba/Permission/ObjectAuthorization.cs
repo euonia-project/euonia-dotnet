@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -166,22 +167,33 @@ internal static class ObjectAuthorization
 	/// <exception cref="SecurityException">目标不满足任一权限要求时抛出。</exception>
 	private static void Enforce(BusinessObject businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
-		// 先按调用方传入的 requirements 判定一次：这是权威集合，能覆盖「派生类型用 new 遮蔽
-		// 基类工厂方法」的运行时类型收集缺口。
-		foreach (var requirement in requirements)
+		var started = Stopwatch.GetTimestamp();
+		var succeeded = false;
+		try
 		{
-			if (!IsSatisfied(checker, requirement))
+			// 先按调用方传入的 requirements 判定一次：这是权威集合，能覆盖「派生类型用 new 遮蔽
+			// 基类工厂方法」的运行时类型收集缺口。
+			foreach (var requirement in requirements)
+			{
+				if (!IsSatisfied(checker, requirement))
+				{
+					throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
+				}
+			}
+
+			// 仅当派生类真的重写了 CanPerformOperation 时才再调用一次：默认实现会重新收集
+			// requirements 并逐条判定，等于把整条规则再跑一遍（授权数据未命中缓存时就是两倍 I/O）。
+			if (IsCanPerformOperationOverridden(businessObject.GetType()) &&
+			    !businessObject.CanPerformOperation(operation))
 			{
 				throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
 			}
-		}
 
-		// 仅当派生类真的重写了 CanPerformOperation 时才再调用一次：默认实现会重新收集
-		// requirements 并逐条判定，等于把整条规则再跑一遍（授权数据未命中缓存时就是两倍 I/O）。
-		if (IsCanPerformOperationOverridden(businessObject.GetType()) &&
-		    !businessObject.CanPerformOperation(operation))
+			succeeded = true;
+		}
+		finally
 		{
-			throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
+			OsbaDiagnostics.RecordAuthorization(started, "object", operation, succeeded);
 		}
 	}
 

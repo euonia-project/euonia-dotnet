@@ -70,7 +70,8 @@ BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
 是否启用权限由应用决定，需要时再用引擎的 `AddPermission` 接上（规则来源用 Osba 的工厂约定，见下文）。
 
 > **两个容易踩的点**
-> 1. `AddBusinessObject(...)` 的返回类型是 **`void`**，不能链式调用。
+> 1. `AddBusinessObject(...)` 返回 `IServiceCollection`，可以链式调用；需要启动期校验时用
+>    `AddBusinessObject(o => o.ValidateOnStartup = true, assemblies)`。
 > 2. 手动 `CreateScope()` 的场景必须**先** `SetCurrent(scope.ServiceProvider)`，**再**解析
 >    `BusinessContext`/工厂；用完 `Clear()`。ASP.NET Core 下由中间件自动完成，无需手写。
 
@@ -241,6 +242,8 @@ repo.AcceptChanges();       // 同上
 >
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
+> 删除成功后对象会复位为 `None`，重复 `SaveAsync` 是幂等 no-op；不要再依赖“删除后仍是 Deleted”。
+>
 > 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`；
 > 未接线的对象直接 `SaveAsync` 会抛 `InvalidOperationException`（消息含类型名与操作名），而不是放任空引用往下走。
 
@@ -290,9 +293,11 @@ loaded.MarkAsChanged();
 await factory.SaveAsync(loaded);
 
 // 直接指定操作（目标对象由工厂内部创建并填充）
-await factory.InsertAsync<Repo>(repoId);
+// 注意：criteria 写入口无法在写入前判定行级权限；受数据权限约束的类型请用
+// Fetch → IScopeGuard.AllowsObject → Save，或在工厂方法内先判定。
 await factory.UpdateAsync<Repo>(repoId);
 await factory.DeleteAsync<Repo>(repoId);     // 返回 Task，无结果
+// factory.InsertAsync<Repo>(repoId) 已标记 [Obsolete]：改用 CreateAsync + SaveAsync
 
 // 命令对象
 await factory.ExecuteAsync(command);
@@ -335,13 +340,17 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
   能同时服务 `InsertAsync()` 与 `InsertAsync(ct)`；
 - 参数**精确匹配**的重载优先于靠可选参数凑上的重载；
 - 拼错名字 → `MissingMethodException`；加了 `[FactoryXxx]` 则不限名字。
+- **漏写 `[FactoryInsert]/[FactoryUpdate]/[FactoryDelete]/[FactoryExecute]` 会在保存/执行时抛
+  `NotSupportedException`**，不再调用基类空实现“静默成功”；迁移期可用
+  `AddBusinessObject(o => o.StrictFactoryMethods = false, assemblies)` 临时回退。
+- 工厂方法可以返回 `Task`、`Task<T>`、`ValueTask`、`ValueTask<T>`，都会被等待。
 
 ---
 
 ## 4. 规则体系
 
 规则分两类：**对象级**（`Property == null`）与**属性级**（绑定到某个已注册属性）；
-按作用域又分**类型级**（`AddRule`，进程级共享）与**实例级 / 操作级**（`AddInstanceRule`、
+按作用域又分**类型级**（`AddRule`，容器级共享；无 DI 时回退到进程级）与**实例级 / 操作级**（`AddInstanceRule`、
 执行器的 `WithRule`，随对象或操作消失）。四个组合如下表。
 
 | | 类型级 `AddRule` | 实例级 `AddInstanceRule` / 操作级 `WithRule` |
@@ -441,7 +450,8 @@ public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(propert
 | `CheckRuleOnPropertyChanged => false` 的类型 | 保存/命令执行时补跑：**先属性级（仅变更过的属性）→ 再对象级** | `ValidationException`，错误列表「先字段、后整体」 |
 
 ```csharp
-repo.IsValid;                                   // ErrorCount == 0
+repo.ValidationState;                           // NotValidated / Valid / Invalid（补上三态语义）
+repo.IsValid;                                   // ErrorCount == 0（首次校验前恒为 true）
 repo.GetBrokenRules();                          // BrokenRuleCollection（Error/Warning/Information）
 
 await repo.SaveAsync();                         // 内部先跑对象级规则；有 Error → 抛 ValidationException
@@ -888,7 +898,8 @@ BusinessContextAccessor.Clear();
 
 ### 装配
 
-1. `AddBusinessObject(...)` 返回 **`void`**，不能链式调用；它用 `TryAdd*`，已注册的服务不会被覆盖。
+1. `AddBusinessObject(...)` 返回 `IServiceCollection`，可链式调用；它用 `TryAdd*`，已注册的服务不会被覆盖。
+   启动期校验默认关闭，生产宿主应显式 `AddBusinessObject(o => o.ValidateOnStartup = true, assemblies)`。
 2. 它**不注册** `IObjectActivator` 与 `ILazyServiceProvider`。要用 `IHasLazyServiceProvider`，
    需先有 `ILazyServiceProvider`（由 `Euonia.Modularity` 的 `AddModularityApplication` 提供）。
 3. 手动作用域：**先** `BusinessContextAccessor.SetCurrent(...)`，**再**解析 `BusinessContext`/工厂；用完 `Clear()`。
@@ -928,7 +939,8 @@ BusinessContextAccessor.Clear();
 18. 工厂方法约定名**大小写敏感**，拼错即 `MissingMethodException`；加 `[FactoryXxx]` 则不限名字。
 19. 目标方法多出的尾部参数**必须有默认值**；精确长度匹配优先。
 20. `IObjectFactory.Create<T>` 会自动 `MarkAsNew()`——不要重复调用。
-21. 同步的 `Create`/`Fetch` 内部用 `AsyncContext.Run` 阻塞执行异步工厂方法，避免在同步 API 里放重活。
+21. 同步的 `Create`/`Fetch` 在没有同步上下文时直接等待；只有在 UI 等同步上下文里才用
+    `AsyncContext.Run` 避免死锁。服务端应优先使用 `*Async` 入口。
 22. **只有经工厂创建的对象才会被注入**（`[Inject]` 属性、`BusinessContext`）；`new` 出来的不会。
 23. **命令对象走执行器时要同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**——
     执行器先 `CreateAsync` 造实例，再在终结阶段调 `ExecuteAsync`。

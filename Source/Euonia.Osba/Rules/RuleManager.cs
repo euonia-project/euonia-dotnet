@@ -21,6 +21,15 @@ public class RuleManager
 	}
 
 	/// <summary>
+	/// 创建一个新的规则管理器；供容器级 <see cref="RuleRegistry"/> 使用。
+	/// </summary>
+	/// <returns>规则管理器。</returns>
+	internal static RuleManager Create()
+	{
+		return new RuleManager();
+	}
+
+	/// <summary>
 	/// 获取或设置一个值，指示此 <see cref="RuleManager"/> 是否已初始化。
 	/// </summary>
 	public bool Initialized { get; set; }

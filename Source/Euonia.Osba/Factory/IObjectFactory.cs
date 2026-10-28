@@ -57,6 +57,7 @@ public interface IObjectFactory
 	/// 方法应命名为 Insert、InsertAsync、FactoryInsert、FactoryInsertAsync，或使用 <see cref="FactoryInsertAttribute"/> 特性标记。
 	/// 每个条件项必须与方法参数类型匹配。
 	/// </remarks>
+	[Obsolete("Use CreateAsync + SaveAsync. Criteria-based insert cannot enforce pre-write data scope checks.")]
 	Task<TTarget> InsertAsync<TTarget>(params object[] criteria);
 
 	/// <summary>
@@ -117,6 +118,7 @@ public interface IObjectFactory
 	/// 执行方法应命名为 Execute、ExecuteAsync、FactoryExecute、FactoryExecuteAsync，或使用 <see cref="FactoryExecuteAttribute"/> 特性标记。
 	/// 每个条件项必须与方法参数类型匹配。
 	/// </remarks>
+	[Obsolete("Prefer CreateAsync + validation + ExecuteAsync(target); criteria-based execute cannot enforce pre-write rules.")]
 	Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
 		where TTarget : ICommandObject;
 

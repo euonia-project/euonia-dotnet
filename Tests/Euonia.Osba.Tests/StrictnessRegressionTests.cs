@@ -143,6 +143,81 @@ public class StrictnessRegressionTests
 	}
 
 	[Fact]
+	public async Task ValidationState_Should_Track_NotValidated_Valid_Invalid()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var context = provider.GetRequiredService<BusinessContext>();
+
+		var target = new NonGenericSetObject { BusinessContext = context };
+		Assert.Equal(ValidationState.NotValidated, target.ValidationState);
+
+		Assert.True(await target.ValidateAsync(cancellationToken: TestContext.Current.CancellationToken));
+		Assert.Equal(ValidationState.Valid, target.ValidationState);
+
+		target.Name = "changed";
+		Assert.Equal(ValidationState.NotValidated, target.ValidationState);
+
+		var invalid = new RefBackedRuleObject { BusinessContext = context };
+		invalid.Name = "abc";
+
+		Assert.False(invalid.IsValid);
+		Assert.Equal(ValidationState.Invalid, invalid.ValidationState);
+	}
+
+	[Fact]
+	public void RuleRegistry_Should_Be_Isolated_Per_Container()
+	{
+		var servicesA = new ServiceCollection();
+		servicesA.AddBusinessObject();
+		using var providerA = servicesA.BuildServiceProvider();
+
+		var servicesB = new ServiceCollection();
+		servicesB.AddBusinessObject();
+		using var providerB = servicesB.BuildServiceProvider();
+
+		var registryA = providerA.GetRequiredService<IRuleRegistry>();
+		var registryB = providerB.GetRequiredService<IRuleRegistry>();
+
+		Assert.NotSame(registryA.GetRules(typeof(NonGenericSetObject)), registryB.GetRules(typeof(NonGenericSetObject)));
+		Assert.NotSame(registryA.GetRules(typeof(NonGenericSetObject)), RuleManager.GetRules(typeof(NonGenericSetObject)));
+	}
+
+	[Fact]
+	public void AddBusinessObject_Should_Return_ServiceCollection_And_Register_Options()
+	{
+		var services = new ServiceCollection();
+
+		var returned = services.AddBusinessObject(options => options.StrictFactoryMethods = false);
+
+		Assert.Same(services, returned);
+		using var provider = services.BuildServiceProvider();
+		Assert.False(provider.GetRequiredService<OsbaOptions>().StrictFactoryMethods);
+	}
+
+	[Fact]
+	public async Task Factory_Should_Use_Constructor_Injection()
+	{
+		var services = new ServiceCollection();
+		services.AddSingleton<SampleDependency>();
+		services.AddBusinessObject();
+		using var provider = services.BuildServiceProvider();
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var created = await factory.CreateAsync<ConstructorInjectedObject>();
+
+		Assert.NotNull(created.Dependency);
+	}
+
+	[Fact]
+	public void StartupValidator_Should_Report_Unresolvable_Inject_Property()
+	{
+		var diagnostics = OsbaStartupValidator.Validate([typeof(BadInjectObject).Assembly]);
+
+		Assert.Contains(diagnostics, diagnostic =>
+			diagnostic.Code == "OSBA-I001" && diagnostic.Type == typeof(BadInjectObject));
+	}
+
+	[Fact]
 	public void FieldData_ObservableValue_Should_Publish_Current_And_Subsequent_Values()
 	{
 		var field = new FieldData<int>("Number") { Value = 1 };
@@ -325,6 +400,29 @@ public sealed class AlwaysPassRule : RuleBase
 	{
 		return Task.CompletedTask;
 	}
+}
+
+/// <summary>构造注入依赖。</summary>
+public sealed class SampleDependency
+{
+}
+
+/// <summary>通过构造函数获取依赖的业务对象。</summary>
+public sealed class ConstructorInjectedObject : EditableObject<ConstructorInjectedObject>
+{
+	public ConstructorInjectedObject(SampleDependency dependency)
+	{
+		Dependency = dependency;
+	}
+
+	public SampleDependency Dependency { get; }
+}
+
+/// <summary>用于启动期校验的非法 [Inject] 属性。</summary>
+public class BadInjectObject : BusinessObject<BadInjectObject>
+{
+	[Inject]
+	public int Number { get; set; }
 }
 
 /// <summary>记录收到值的观察者。</summary>

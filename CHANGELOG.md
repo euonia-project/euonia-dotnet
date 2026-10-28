@@ -26,7 +26,26 @@
   （原 2.18 µs / 1.5 KB），无持久化 `SaveAsync` 约 **2.25 µs / 1.14 KB**（原 4.53 µs / 2.6 KB）。
 - **基准**：新增 `Benchmarks/Euonia.Osba.Benchmarks`；新增 13 个回归测试（共 253 个）。
 - **未包含**：EF Core 物化拦截器与部分更新（不引入 EF Core 依赖）；criteria 写入口在无持久化
-  抽象时仍只能后置判定，已通过 `Trace` 告警提示改用 `Fetch → 判定 → Save`。
+  抽象时仍只能后置判定，已通过诊断告警提示改用 `Fetch → 判定 → Save`。
+
+#### M4：装配、诊断与易用性
+
+- **`AddBusinessObject` 返回 `IServiceCollection`**，新增 `AddOsbaOptions` 风格的
+  `AddBusinessObject(Action<OsbaOptions>, params Assembly[])`；`OsbaOptions` 提供
+  `ValidateOnStartup`、`StrictFactoryMethods`、`EnableDiagnostics`、`DiagnosticLevel`。
+- **启动期校验**：`OsbaStartupValidator` 检查工厂方法签名、`[Inject]` 可解析性、属性元数据与
+  缺失的持久化方法；`OsbaConfigurationException` 聚合 Error 级诊断。默认关闭，生产宿主显式开启。
+- **容器级规则注册表**：新增 `IRuleRegistry`/`RuleRegistry`，每个容器独立；无 `BusinessContext`
+  时回退到进程级 `RuleManager`。测试、租户、插件之间不再共享类型级规则。
+- **`ValidationState`**：新增 `NotValidated / Valid / Invalid` 三态；属性变更会将其置回
+  `NotValidated`，避免把“没校验过”误当“通过”。
+- **API 收敛**：`IObjectFactory.InsertAsync(criteria)` 与 `ExecuteAsync(criteria)` 标记为
+  `[Obsolete]`，提示改用 `CreateAsync + SaveAsync` / `CreateAsync + ExecuteAsync(target)`。
+- **可观测性**：新增 `ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")` 与
+  `ILoggerFactory` 回退；指标覆盖保存、授权、规则耗时与失败次数。
+- **文档**：修正 README 继承图、规则共享边界、`BusinessContextAccessor` 显式上下文、
+  删除幂等、`ValueTask` 工厂与启动期校验说明。
+- **测试**：M4 新增 5 个回归用例，`Euonia.Osba.Tests` 总计 258 个。
 
 ## [2026.4.5] - 2026-10-19
 

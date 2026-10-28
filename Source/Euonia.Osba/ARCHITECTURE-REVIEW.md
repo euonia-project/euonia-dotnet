@@ -833,12 +833,12 @@ static void Measure(string name, int n, Action<int> body)
 ### 11.3 回归结果
 
 ```text
-Euonia.Osba.Tests            253 passed (原 240 + 13 新增)
+Euonia.Osba.Tests            258 passed（M1+M3 为 253，M4 新增 5）
 Euonia.Osba.Standalone.Tests   7 passed
 Euonia.slnx                  Build succeeded, 0 CS warning
 ```
 
-新增回归覆盖：ValueTask 工厂、缺失 Insert/Execute、异常解包、字段模式规则、非泛型同值写入、只读对象装载作用域、规则范围嵌套。
+新增回归覆盖：ValueTask 工厂、缺失 Insert/Execute、异常解包、字段模式规则、非泛型同值写入、只读对象装载作用域、规则范围嵌套、历史深度收缩、`LoadProperty` 复位、`ObservableValue`、三态校验、容器级规则隔离、选项注册、启动期 `[Inject]` 诊断。
 
 ### 11.4 性能复测（同一基准程序，稳态）
 
@@ -856,7 +856,43 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 
 ---
 
-## 12. 最终建议
+## 12. 实施记录（M4）
+
+### 12.1 已完成
+
+| 项 | 改动 |
+|---|---|
+| P2-1 | `AddBusinessObject` 返回 `IServiceCollection`；新增 `AddBusinessObject(Action<OsbaOptions>, params Assembly[])` |
+| P2-2 | `OsbaOptions`：`ValidateOnStartup`、`StrictFactoryMethods`、`EnableDiagnostics`、`DiagnosticLevel`；`BusinessObjectFactory` 读取容器选项 |
+| P2-3 | `OsbaStartupValidator`：工厂签名、`[Inject]` 可解析性、属性元数据、缺失持久化方法；`OsbaConfigurationException` 聚合 Error |
+| P2-4 | 构造函数注入由 `ActivatorUtilities` 原生支持；新增回归测试；`[Inject]` 保留兼容，文档改为“优先构造注入” |
+| P2-5 | `ValidationState` 三态；`ValidateAsync`/`EnsureValidAsync`/`EnsureRulesAsync`/属性变更维护状态 |
+| P2-6 | `InsertAsync(criteria)`、`ExecuteAsync(criteria)` 标记 `[Obsolete]`，引导 `Create + Save` / `Create + Execute(target)` |
+| P2-7 | 新增 `IRuleRegistry`/`RuleRegistry`：规则共享边界改为容器；无 `BusinessContext` 回退进程级 `RuleManager` |
+| P2-9 | `ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")`、保存/授权/规则耗时与失败计数；`ILoggerFactory` 优先、`Trace` 回退 |
+| P2-10 | README/SAMPLE/CHANGELOG 更新：继承图、规则边界、显式上下文、删除幂等、ValueTask 工厂、启动校验 |
+
+### 12.2 暂缓
+
+- **P2-8 公共 API 收窄**（把 `FieldDataManager`/`RuleManager`/`PropertyInfoList`/`BrokenRuleCollection` 改为 internal）：
+  这些类型已经通过 `IBusinessObject.FieldManager`、`GetBrokenRules()`、`PropertyInfoManager` 暴露，
+  直接收窄是二进制破坏性变更；建议下一个 major 版本配合 `PublicAPI.Shipped.txt` 一起做。
+- **Source Generator / Analyzer**：属于 P4 工具链，本轮未做。
+- **`[Inject]` 标记 Obsolete**：会波及 Modularity 与其他模块的编译警告；先通过启动校验与文档引导。
+
+### 12.3 验证
+
+```text
+Euonia.Osba.Tests            258 passed（原 240 + 18 新增）
+Euonia.Osba.Standalone.Tests   7 passed
+Euonia.slnx                  Build succeeded, 0 CS warning
+```
+
+新增 M4 覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断。
+
+---
+
+## 13. 最终建议
 
 1. **短期（下一个 minor）**：先修 C1/C2/C3/C6/C7/C8/C9，并把 `dotnet test` 修好；这些是“静默错误/数据丢失/越权已落库”级别的问题，优先级高于任何重构。
 2. **中期（下一个 minor）**：做 D1 的存储模型决策与 P1 的性能收敛。没有这一步，Osba 不适合高吞吐服务端；做了之后，它可以进入“每个请求几十个对象”的舒适区。

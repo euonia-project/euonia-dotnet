@@ -1,10 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-// 本文件已导入 System.ComponentModel.DataAnnotations（AddDataAnnotations 需要 ValidationAttribute），
-// 该命名空间下同样有 ValidationResult / ValidationException，但签名不同且不含属性名。
-// 这里要的是框架自己的验证类型，故显式取别名，避免误解析。
 using ValidationException = Nerosoft.Euonia.Validation.ValidationException;
 using ValidationResult = Nerosoft.Euonia.Validation.ValidationResult;
 
@@ -45,12 +43,12 @@ public class Rules : IRules
 	{
 		get
 		{
-			if (field == null && Target != null)
+			if (Target is BusinessObject businessObject)
 			{
-				field = RuleManager.GetRules(Target.GetType());
+				return businessObject.GetRuleManager();
 			}
 
-			return field;
+			return Nerosoft.Euonia.Osba.RuleManager.GetRules(Target.GetType());
 		}
 	}
 
@@ -881,6 +879,7 @@ public class Rules : IRules
 	/// <returns>规则任务。</returns>
 	private static Task RunRule(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken)
 	{
+		var started = Stopwatch.GetTimestamp();
 		Task task;
 		try
 		{
@@ -888,23 +887,27 @@ public class Rules : IRules
 		}
 		catch (OperationCanceledException)
 		{
+			OsbaDiagnostics.RecordRule(started, rule.Name, false);
 			context.Complete();
 			throw;
 		}
 		catch (Exception ex)
 		{
 			context.AddErrorResult(Describe(rule, ex));
+			OsbaDiagnostics.RecordRule(started, rule.Name, false);
 			context.Complete();
 			return Task.CompletedTask;
 		}
 
 		if (task == null || task.IsCompletedSuccessfully)
 		{
+			var succeeded = !context.Results.Any(result => result.Severity == RuleSeverity.Error);
+			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
 			context.Complete();
 			return Task.CompletedTask;
 		}
 
-		return AwaitRuleAsync(rule, task, context);
+		return AwaitRuleAsync(rule, task, context, started);
 	}
 
 	/// <summary>
@@ -913,12 +916,15 @@ public class Rules : IRules
 	/// <param name="rule">规则。</param>
 	/// <param name="task">规则任务。</param>
 	/// <param name="context">上下文。</param>
+	/// <param name="started">起始时间戳。</param>
 	/// <returns>规则任务。</returns>
-	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context)
+	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context, long started)
 	{
+		var succeeded = false;
 		try
 		{
 			await task.ConfigureAwait(false);
+			succeeded = !context.Results.Any(result => result.Severity == RuleSeverity.Error);
 		}
 		catch (OperationCanceledException)
 		{
@@ -936,6 +942,7 @@ public class Rules : IRules
 		}
 		finally
 		{
+			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
 			context.Complete();
 		}
 	}

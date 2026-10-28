@@ -46,6 +46,25 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private FieldDataManager _fieldManager;
 
 	/// <summary>
+	/// 当前对象解析到的规则管理器；由业务上下文决定是容器级还是进程级默认。
+	/// </summary>
+	private RuleManager _ruleManager;
+
+	/// <summary>
+	/// 校验状态；用整数保存以支持无锁读写。
+	/// </summary>
+	private int _validationState = (int)ValidationState.NotValidated;
+
+	/// <summary>
+	/// 获取当前对象的校验状态。
+	/// </summary>
+	/// <remarks>
+	/// <see cref="ValidationState.NotValidated"/> 表示“没有结论”：首次校验之前，
+	/// 或对象在最近一次完整校验后又发生了属性变更。
+	/// </remarks>
+	public ValidationState ValidationState => (ValidationState)Volatile.Read(ref _validationState);
+
+	/// <summary>
 	/// 装载作用域计数（按异步流隔离）；工厂方法执行期间允许写入只读对象。
 	/// </summary>
 	private AsyncLocal<int> _loadScope;
@@ -64,6 +83,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		set
 		{
 			field = value;
+			// 上下文可能从“无”变为“容器作用域”：重新解析规则注册表。
+			Volatile.Write(ref _ruleManager, null);
 			OnBusinessContextSet();
 			Initialize();
 			InitializeRules();
@@ -235,6 +256,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	public virtual async Task<bool> ValidateAsync(bool cascade = true, CancellationToken cancellationToken = default)
 	{
 		await Rules.CheckObjectRulesAsync(cascade, cancellationToken);
+		RefreshValidationState(completed: !Rules.IsRuleCheckingSuspended);
 		return IsValid;
 	}
 
@@ -249,9 +271,16 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 规则检查被挂起（<see cref="SuspendRuleChecking"/>）时不给出结论、也不抛出。
 	/// </remarks>
 	/// <exception cref="Nerosoft.Euonia.Validation.ValidationException">存在 Error 级违规时抛出。</exception>
-	public Task EnsureValidAsync(CancellationToken cancellationToken = default)
+	public async Task EnsureValidAsync(CancellationToken cancellationToken = default)
 	{
-		return Rules.EnsureObjectRulesAsync(cascade: true, "Object not valid.", cancellationToken);
+		try
+		{
+			await Rules.EnsureObjectRulesAsync(cascade: true, "Object not valid.", cancellationToken);
+		}
+		finally
+		{
+			RefreshValidationState(completed: !Rules.IsRuleCheckingSuspended);
+		}
 	}
 
 	/// <summary>
@@ -289,12 +318,19 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <exception cref="Nerosoft.Euonia.Validation.ValidationException">存在 Error 级违规时抛出。</exception>
 	internal async Task EnsureRulesAsync(string message, CancellationToken cancellationToken = default)
 	{
-		if (!CheckRuleOnPropertyChanged)
+		try
 		{
-			await Rules.CheckRulesAsync(ChangedProperties, cancellationToken);
-		}
+			if (!CheckRuleOnPropertyChanged)
+			{
+				await Rules.CheckRulesAsync(ChangedProperties, cancellationToken);
+			}
 
-		await Rules.EnsureObjectRulesAsync(cascade: true, message, cancellationToken);
+			await Rules.EnsureObjectRulesAsync(cascade: true, message, cancellationToken);
+		}
+		finally
+		{
+			RefreshValidationState(completed: !Rules.IsRuleCheckingSuspended);
+		}
 	}
 
 	/// <summary>
@@ -333,13 +369,55 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	}
 
 	/// <summary>
+	/// 按当前违规集合刷新校验状态。
+	/// </summary>
+	/// <param name="completed">是否完成了一轮完整检查；挂起时传 <see langword="false"/>。</param>
+	private void RefreshValidationState(bool completed)
+	{
+		if (!completed)
+		{
+			Volatile.Write(ref _validationState, (int)ValidationState.NotValidated);
+			return;
+		}
+
+		Volatile.Write(ref _validationState, (int)(IsValid ? ValidationState.Valid : ValidationState.Invalid));
+	}
+
+	/// <summary>
+	/// 解析当前对象应使用的规则管理器：有业务上下文时使用容器级 <see cref="IRuleRegistry"/>，
+	/// 否则回退到进程级默认注册表。
+	/// </summary>
+	/// <returns>规则管理器。</returns>
+	internal RuleManager GetRuleManager()
+	{
+		var manager = Volatile.Read(ref _ruleManager);
+		if (manager != null)
+		{
+			return manager;
+		}
+
+		var resolved = ResolveRuleManager();
+		return Interlocked.CompareExchange(ref _ruleManager, resolved, null) ?? resolved;
+	}
+
+	/// <summary>
+	/// 从业务上下文解析规则注册表。
+	/// </summary>
+	/// <returns>规则管理器。</returns>
+	private RuleManager ResolveRuleManager()
+	{
+		var registry = BusinessContext?.GetService<IRuleRegistry>();
+		return registry?.GetRules(GetType()) ?? RuleManager.GetRules(GetType());
+	}
+
+	/// <summary>
 	/// 初始化当前类型的验证规则，确保在使用前设置好所有必需的规则。
 	/// </summary>
 	/// <remarks>此方法线程安全，可防止同一类型的规则被并发初始化。如果初始化期间发生错误，
 	/// 任何部分初始化的规则都会被清理以保持一致性。在依赖类型验证规则的操作之前调用此方法。</remarks>
 	private void InitializeRules()
 	{
-		var rules = RuleManager.GetRules(GetType());
+		var rules = GetRuleManager();
 		if (rules.Initialized)
 		{
 			return;
@@ -513,9 +591,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		if (CheckRuleOnPropertyChanged && HasAnyRulesFor(property))
 		{
 			CheckPropertyRules(property);
+			Volatile.Write(ref _validationState, (int)(IsValid ? ValidationState.NotValidated : ValidationState.Invalid));
 		}
 		else
 		{
+			Volatile.Write(ref _validationState, (int)ValidationState.NotValidated);
 			OnPropertyChanged(property);
 		}
 	}
@@ -527,7 +607,7 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <returns>存在类型级、实例级或操作级规则时返回 <see langword="true"/>。</returns>
 	private bool HasAnyRulesFor(IPropertyInfo property)
 	{
-		if (RuleManager.GetRules(GetType()).RulesFor(property).Count > 0)
+		if (GetRuleManager().RulesFor(property).Count > 0)
 		{
 			return true;
 		}
@@ -603,6 +683,9 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		}
 
 		_fieldManager?.MarkAllAsUnchanged();
+
+		// 干净对象还没有本轮校验结论；需要结论请调用 ValidateAsync/EnsureValidAsync。
+		Volatile.Write(ref _validationState, (int)ValidationState.NotValidated);
 	}
 
 	#endregion
