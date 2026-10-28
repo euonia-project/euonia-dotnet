@@ -417,7 +417,7 @@ wiring decisions:
 
 | Type | Purpose |
 |------|---------|
-| `IRecipientRegistrar` | Registers transport-level recipients; implements `IAsyncDisposable` so they are released on shutdown |
+| `IRecipientRegistrar` | Registers transport-level recipients; extends `IDisposable` / `IAsyncDisposable`, with `DisposeAsync` defaulting to `Dispose`, so they are released on shutdown |
 | `IRecipient` / `IConsumer` / `ISubscriber` / `IExecutor` | Recipient and its unicast/multicast/request role interfaces |
 
 **Event System**

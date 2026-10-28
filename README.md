@@ -401,7 +401,7 @@ guard.Explain(repo, BusinessOperation.Delete); // 审计：命中了哪条策略
 
 | 类型 | 作用 |
 |------|---------|
-| `IRecipientRegistrar` | 注册传输层接收者；实现 `IAsyncDisposable`，停机时释放其创建的接收者 |
+| `IRecipientRegistrar` | 注册传输层接收者；继承 `IDisposable` / `IAsyncDisposable`，`DisposeAsync` 默认转调 `Dispose`，停机时释放其创建的接收者 |
 | `IRecipient` / `IConsumer` / `ISubscriber` / `IExecutor` | 接收者及其按单播/多播/请求区分的角色接口 |
 
 **事件体系**
