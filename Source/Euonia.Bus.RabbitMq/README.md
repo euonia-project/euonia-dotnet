@@ -28,11 +28,11 @@ To get started with the RabbitMQ transport in Euonia.Bus, follow these steps:
       "Enabled": true,
       "Name": "RabbitMq",
       "Connection": "amqp://user:password@host:port",
-      "ExchangeNamePrefix": "$nerosoft.euonia.exchange",
-      "QueueNamePrefix": "$nerosoft.euonia.queue",
+      "ExchangeNamePrefix": "",
+      "QueueNamePrefix": "",
       "RoutingKey": "*",
       "Persistent": true,
-      "AutoAck": true,
+      "AutoAck": false,
       "Mandatory": true,
       "MaxFailureRetries": 3,
       "SubscriptionId": "my-subscription"
@@ -40,6 +40,10 @@ To get started with the RabbitMQ transport in Euonia.Bus, follow these steps:
   }
 }
 ```
+
+> `ExchangeNamePrefix` / `QueueNamePrefix` 默认为空（不改变现有名称）；配置后分别生成
+> `{prefix}:{channel}` 交换机名与 `{prefix}:{channel}@{subscription}` 队列名。
+> `AutoAck` 默认 `false`：处理成功后才确认，失败消息由队列的 DLX 配置接管。
 3. **Add Module Dependency**: Add the RabbitMQ transport module dependency in your service module:
 ```csharp
 [DependsOn(typeof(RabbitMqBusModule))]

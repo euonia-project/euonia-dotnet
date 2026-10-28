@@ -16,13 +16,26 @@ public class InMemoryDeadLetterStore : IDeadLetterStore
 	public bool Add(DeadLetterEntry entry)
 	{
 		ArgumentNullException.ThrowIfNull(entry);
-		return _entries.TryAdd(entry.MessageId, entry);
+		return _entries.TryAdd(entry.Id, entry);
 	}
 
 	/// <inheritdoc/>
 	public DeadLetterEntry Get(string messageId)
 	{
-		return _entries.GetValueOrDefault(messageId);
+		return _entries.Values.FirstOrDefault(entry => string.Equals(entry.MessageId, messageId, StringComparison.Ordinal));
+	}
+
+	/// <inheritdoc/>
+	public DeadLetterEntry GetById(string id)
+	{
+		return _entries.GetValueOrDefault(id);
+	}
+
+	/// <inheritdoc/>
+	public void Update(DeadLetterEntry entry)
+	{
+		ArgumentNullException.ThrowIfNull(entry);
+		_entries[entry.Id] = entry;
 	}
 
 	/// <inheritdoc/>
@@ -34,6 +47,13 @@ public class InMemoryDeadLetterStore : IDeadLetterStore
 	/// <inheritdoc/>
 	public bool Remove(string messageId)
 	{
-		return _entries.TryRemove(messageId, out _);
+		var entry = Get(messageId);
+		return entry != null && _entries.TryRemove(entry.Id, out _);
+	}
+
+	/// <inheritdoc/>
+	public bool RemoveById(string id)
+	{
+		return _entries.TryRemove(id, out _);
 	}
 }

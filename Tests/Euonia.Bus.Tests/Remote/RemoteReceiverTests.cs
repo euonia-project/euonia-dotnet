@@ -49,6 +49,15 @@ public class RemoteReceiverTests
 		Assert.Equal("handler exploded", parsed.Error.Message);
 	}
 
+	[Fact]
+	public void RemoteError_DoesNotExposeStackTrace()
+	{
+		var error = RemoteError.Create(new InvalidOperationException("boom"));
+
+		Assert.Equal("boom", error.Message);
+		Assert.Null(error.StackTrace);
+	}
+
 	/// <summary>
 	/// 在返回结果前强制触发一次完整 GC 的处理器上下文，用于模拟处理器执行期间发生垃圾回收。
 	/// </summary>

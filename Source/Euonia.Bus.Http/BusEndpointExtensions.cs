@@ -22,15 +22,15 @@ public static class BusEndpointExtensions
 	/// <returns>原始端点构建器，以支持链式调用。</returns>
 	public static IEndpointRouteBuilder MapBusEndpoint(this IEndpointRouteBuilder endpoints)
 	{
-		var route = ResolveRoute(endpoints);
+		var options = endpoints.ServiceProvider?.GetService<IOptions<HttpBusOptions>>()?.Value ?? new HttpBusOptions();
+		var route = string.IsNullOrWhiteSpace(options.Route) ? "/bus/call" : options.Route;
 
 		// 提前构造 IHandlerContext（DefaultHandlerContext 仅在构造时订阅渠道注册事件），
 		// 使应用启动阶段（模块初始化）的 RegisterChannel 注册不会被遗漏。
 		_ = endpoints.ServiceProvider?.GetService<IHandlerContext>();
 
-		endpoints.MapPost(route, async (HttpContext context) =>
+		var endpoint = endpoints.MapPost(route, async (HttpContext context) =>
 		{
-			var options = context.RequestServices.GetRequiredService<IOptions<HttpBusOptions>>().Value;
 			var serializer = context.RequestServices.GetKeyedService<IMessageSerializer>(options.SerializerProvider);
 			if (serializer == null)
 			{
@@ -64,12 +64,11 @@ public static class BusEndpointExtensions
 			await context.Response.WriteAsync(reply, context.RequestAborted);
 		});
 
-		return endpoints;
-	}
+		if (options.RequireAuthorization)
+		{
+			endpoint.RequireAuthorization();
+		}
 
-	private static string ResolveRoute(IEndpointRouteBuilder endpoints)
-	{
-		var options = endpoints.ServiceProvider?.GetService<IOptions<HttpBusOptions>>()?.Value;
-		return string.IsNullOrWhiteSpace(options?.Route) ? "/bus/call" : options.Route;
+		return endpoints;
 	}
 }

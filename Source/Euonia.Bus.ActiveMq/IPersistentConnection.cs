@@ -8,6 +8,15 @@ namespace Nerosoft.Euonia.Bus.ActiveMq;
 public interface IPersistentConnection : IDisposable
 {
 	/// <summary>
+	/// 在底层连接重新建立后触发；接收者应据此重建会话与消费者。
+	/// </summary>
+	event EventHandler Reconnected
+	{
+		add { }
+		remove { }
+	}
+
+	/// <summary>
 	/// 获取一个值，指示连接是否已建立。
 	/// </summary>
 	bool IsConnected { get; }

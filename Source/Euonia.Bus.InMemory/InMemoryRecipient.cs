@@ -129,7 +129,14 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 					Logger.LogError(exception, "Message '{Id}' pump error: {Message}", pack.Context?.MessageId, exception.Message);
 				}
 
-				MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
+				try
+				{
+					MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(pack.Message, pack.Context));
+				}
+				finally
+				{
+					pack.Context?.Dispose();
+				}
 			}
 		}
 		finally

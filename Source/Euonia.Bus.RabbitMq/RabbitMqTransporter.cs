@@ -39,10 +39,11 @@ internal class RabbitMqTransporter : ITransporter
 	/// <param name="logger">用于创建类型化日志记录器的日志工厂。</param>
 	public RabbitMqTransporter(IServiceProvider provider, IPersistentConnection connection, IOptions<RabbitMqBusOptions> options, ILoggerFactory logger)
 	{
-		_serializer = provider.GetKeyedService<IMessageSerializer>(options.Value.SerializerProvider);
+		_options = options.Value;
+		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider)
+		              ?? throw new InvalidOperationException($"Message serializer '{_options.SerializerProvider}' is not registered.");
 		_logger = logger.CreateLogger<RabbitMqTransporter>();
 		_connection = connection;
-		_options = options.Value;
 		Name = _options.Name ?? Constants.DefaultTransportName;
 	}
 
@@ -57,9 +58,11 @@ internal class RabbitMqTransporter : ITransporter
 	/// <returns>表示异步发布操作的任务。</returns>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
-		await using var channel = await _connection.CreateChannelAsync();
+		await using var channel = await _connection.CreateChannelAsync(new CreateChannelOptions(publisherConfirmationsEnabled: true, publisherConfirmationTrackingEnabled: true));
+		channel.BasicReturnAsync += OnBasicReturnAsync;
 
 		var props = BuildProperties(message);
+		var exchangeName = RabbitMqDelivery.ResolveExchangeName(_options, message.Channel);
 
 		await Policy.Handle<SocketException>()
 		            .Or<TimeoutException>()
@@ -70,13 +73,22 @@ internal class RabbitMqTransporter : ITransporter
 		            })
 		            .ExecuteAsync(async () =>
 		            {
-			            _logger.LogDebug("Publishing message to channel '{Channel}' with routing key '{RoutingKey}'", message.Channel, $"{message.Channel}@{_options.RoutingKey}");
+			            _logger.LogDebug("Publishing message to exchange '{Exchange}' with routing key '{RoutingKey}'", exchangeName, $"{exchangeName}@{_options.RoutingKey}");
 			            var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
-			            await channel.ExchangeDeclareAsync(message.Channel, ExchangeType.Fanout, cancellationToken: cancellationToken);
-			            await channel.BasicPublishAsync(message.Channel, $"{message.Channel}@{_options.RoutingKey}", _options.Mandatory, props, messageBody, cancellationToken: cancellationToken);
+			            await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
+			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@{_options.RoutingKey}", _options.Mandatory, props, messageBody, cancellationToken: cancellationToken);
 
 			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
 		            });
+	}
+
+	/// <summary>
+	/// 记录 broker 退回的不可路由消息。
+	/// </summary>
+	private Task OnBasicReturnAsync(object sender, BasicReturnEventArgs args)
+	{
+		_logger.LogWarning("Message {MessageId} was returned by RabbitMQ as unroutable: exchange '{Exchange}', routing key '{RoutingKey}', reply {ReplyCode} {ReplyText}", args.BasicProperties?.MessageId, args.Exchange, args.RoutingKey, args.ReplyCode, args.ReplyText);
+		return Task.CompletedTask;
 	}
 
 	/// <summary>
@@ -172,7 +184,7 @@ internal class RabbitMqTransporter : ITransporter
 				}
 				else
 				{
-					task.TrySetException(response.Error);
+					task.TrySetException(response.ToException());
 				}
 			}
 			else
@@ -184,7 +196,7 @@ internal class RabbitMqTransporter : ITransporter
 				}
 				else
 				{
-					task.TrySetException(response.Error);
+					task.TrySetException(response.ToException());
 				}
 			}
 
@@ -280,7 +292,7 @@ internal class RabbitMqTransporter : ITransporter
 			}
 			else
 			{
-				task.TrySetException(response.Error);
+				task.TrySetException(response.ToException());
 			}
 
 			await Task.CompletedTask;

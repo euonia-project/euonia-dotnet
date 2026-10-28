@@ -76,7 +76,7 @@ internal sealed class DefaultConfigurator : IConfigurator
 	public Func<Type, string> ChannelResolver { get; private set; } = MessageChannelResolver.Default.GetOrAddChannel;
 
 	/// <summary>
-	/// 设置用于选择通道的委托函数。可以选择替换默认的通道解析逻辑，或者在默认逻辑之后使用自定义逻辑。
+	/// 设置用于选择通道的委托函数。可以选择替换默认的通道解析逻辑，或在自定义逻辑返回空值时回退到默认逻辑。
 	/// </summary>
 	/// <param name="channelResolver">用于选择通道的委托函数。</param>
 	/// <param name="replaceDefault">是否替换默认的通道解析逻辑；为 <c>true</c> 时，以该委托覆盖默认解析器。</param>
@@ -85,7 +85,7 @@ internal sealed class DefaultConfigurator : IConfigurator
 	public IConfigurator SetChannelResolver(Func<Type, string> channelResolver, bool replaceDefault = false)
 	{
 		ArgumentNullException.ThrowIfNull(channelResolver);
-		ChannelResolver = replaceDefault ? channelResolver : type => MessageChannelResolver.Default.GetOrAddChannel(type) ?? channelResolver(type);
+		ChannelResolver = replaceDefault ? channelResolver : type => channelResolver(type) ?? MessageChannelResolver.Default.GetOrAddChannel(type);
 
 		return this;
 	}

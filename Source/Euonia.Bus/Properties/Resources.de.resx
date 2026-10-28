@@ -210,4 +210,7 @@
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>Der Nachrichtentyp '{0}' konnte nicht aufgelöst werden.</value>
   </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>Der Nachrichtentyp '{0}' ist auf diesem Endpunkt nicht registriert und kann nicht deserialisiert werden.</value>
+  </data>
 </root>

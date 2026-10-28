@@ -38,6 +38,16 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	private IConnection _connection;
 
 	/// <summary>
+	/// 是否已经成功建立过连接；用于区分首次连接与重连。
+	/// </summary>
+	private bool _hasConnected;
+
+	/// <summary>
+	/// 底层连接重新建立后触发，接收者据此重建会话与消费者。
+	/// </summary>
+	public event EventHandler Reconnected;
+
+	/// <summary>
 	/// 初始化 <see cref="DefaultPersistentConnection"/> 类的新实例。
 	/// </summary>
 	/// <param name="factory">ActiveMQ 连接工厂实例。</param>
@@ -149,6 +159,13 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 				_connection.ExceptionListener += OnConnectionExceptionAsync;
 
 				_logger.LogInformation("ActiveMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.ClientId);
+
+				if (_hasConnected)
+				{
+					Reconnected?.Invoke(this, EventArgs.Empty);
+				}
+
+				_hasConnected = true;
 			}
 			else
 			{
@@ -165,10 +182,11 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	{
 		_interrupted = true;
 		_logger.LogError(exception, "ActiveMQ connection exception occurred: {Message}", exception.Message);
+		_ = ReconnectAsync();
 	}
 
 	/// <summary>
-	/// 处理连接中断事件，尝试重新连接。
+	/// 处理连接中断事件，异步重建连接。
 	/// </summary>
 	private void OnConnectionInterruptedAsync()
 	{
@@ -178,8 +196,21 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 		}
 
 		_interrupted = true;
-		// 传输已中断：必须显式重建连接，NMS 不会自行恢复（未使用 failover URI 时）。
-		AsyncContext.Run(TryConnectAsync);
+
+		// 不能在 NMS 回调线程上同步等待异步重连；后台执行并记录失败。
+		_ = ReconnectAsync();
+	}
+
+	private async Task ReconnectAsync()
+	{
+		try
+		{
+			await TryConnectAsync();
+		}
+		catch (Exception exception)
+		{
+			_logger.LogError(exception, "ActiveMQ reconnection failed: {Message}", exception.Message);
+		}
 	}
 
 	/// <summary>
@@ -199,6 +230,6 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			await TryConnectAsync();
 		}
 
-		return await _connection.CreateSessionAsync();
+		return await _connection.CreateSessionAsync(AcknowledgementMode.ClientAcknowledge);
 	}
 }

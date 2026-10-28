@@ -210,4 +210,7 @@
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>解析消息类型 '{0}' 失败。</value>
   </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>消息类型“{0}”未在端点注册，无法反序列化。</value>
+  </data>
 </root>

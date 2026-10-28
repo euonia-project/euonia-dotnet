@@ -45,7 +45,7 @@ internal sealed class MessageExecutionEnvironment
 	{
 		ArgumentNullException.ThrowIfNull(execute);
 
-		using var scope = new MessageExecutionScope(_container, _scopeFactory, descriptor, message, _logger);
+		await using var scope = new MessageExecutionScope(_container, _scopeFactory, descriptor, message, _logger);
 		return await execute(scope.ServiceProvider).ConfigureAwait(false);
 	}
 
@@ -63,7 +63,7 @@ internal sealed class MessageExecutionEnvironment
 	{
 		ArgumentNullException.ThrowIfNull(execute);
 
-		using var scope = new MessageExecutionScope(_container, _scopeFactory, descriptor, message, _logger);
+		await using var scope = new MessageExecutionScope(_container, _scopeFactory, descriptor, message, _logger);
 		await execute(scope.ServiceProvider).ConfigureAwait(false);
 	}
 }

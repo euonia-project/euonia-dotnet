@@ -522,7 +522,7 @@ builder.AddOpenTelemetry()
 
 | 类型 | 作用 |
 |------|---------|
-| `NewtonsoftJsonSerializer` | 基于 Newtonsoft.Json 的序列化器（含 `ClaimsPrincipal` 转换器） |
+| `NewtonsoftJsonSerializer` | 基于 Newtonsoft.Json 的序列化器（含 `ClaimsPrincipal` 转换器；`TypeNameHandling.None`，不信任 JSON 中的 `$type`） |
 | `SystemTextJsonSerializer` | 基于 System.Text.Json 的序列化器 |
 | `MessageSerializerOptions` | 引用循环处理、编码、null 处理 |
 
@@ -562,7 +562,7 @@ builder.AddOpenTelemetry()
 | `RabbitMqRecipientRegistrar` | 类 | 创建并启动接收者；释放时逐个释放（持有其通道） |
 | `RabbitMqDelivery` | 静态类 | 队列名、订阅标识、优先级计算的**纯逻辑**（发布端与消费端共用同一份规则） |
 | `DefaultPersistentConnection` | 类 | 连接生命周期管理，含 `AsyncLock`、指数退避、自动重连；释放后立即失败而非自旋 |
-| `RabbitMqBusOptions` | 类 | 选项：连接 URI、交换器/队列前缀、持久化、自动确认、最大重试次数、**`MaxPriority`** |
+| `RabbitMqBusOptions` | 类 | 选项：连接 URI、交换器/队列前缀（默认空）、持久化、自动确认（默认 `false`）、最大重试次数、**`MaxPriority`** |
 
 **映射规则：** `IUnicast` → `RabbitMqConsumer`；`IMulticast` → `RabbitMqSubscriber`；`IRequest<>` → `RabbitMqExecutor`。
 
@@ -580,7 +580,7 @@ builder.AddOpenTelemetry()
 | 类型 | 种类 | 作用 |
 |------|------|---------|
 | `HttpTransporter` | 类（internal） | `ITransporter` 实现：`CallAsync` → HTTP POST（透传 `x-*` 消息头），解析 `RemoteReply<T>` 并还原异常；`Send/Publish` → `NotSupportedException` |
-| `HttpBusOptions` | 类 | 选项：`Endpoint`、`Route`（默认 `/bus/call`）、`SerializerProvider`（默认 `SystemTestJson`）、`RequestTimeout`、`MessageHandlerFactory` |
+| `HttpBusOptions` | 类 | 选项：`Endpoint`、`Route`（默认 `/bus/call`）、`SerializerProvider`（默认 `SystemTestJson`）、`RequestTimeout`、`RequireAuthorization`（默认 `true`）、`MessageHandlerFactory` |
 | `AddHttpBus(name, configure)` | 扩展 | 注册 Options + `HttpTransporter` 单例 + 按名称的 keyed `ITransporter` |
 | `MapBusEndpoint()` | 扩展 | 服务端映射端点：解析序列化器与 `IHandlerContext`，调用 `RemoteReceiver` 并回写 JSON 响应 |
 
@@ -614,7 +614,7 @@ app.MapBusEndpoint();   // POST /bus/call
 | `GrpcTransporter` | 类（internal） | `ITransporter` 实现：`GrpcChannel.CreateCallInvoker()` + 运行时构造的 `Method`（`GrpcMethodFactory`），`Data` 承载序列化信封、属性携带消息头；`Send/Publish` → `NotSupportedException` |
 | `GrpcMethodFactory` | 类（internal） | 运行时构造 `Method<GrpcRequest, GrpcResponse>`（含手写 protobuf `Marshaller`），支持动态服务名/方法名 |
 | `RemoteMessageService` | 类 | `ReplierService.ReplierServiceBase`：校验负载（空 → `InvalidArgument`）→ `RemoteReceiver` → 回传 `GrpcResponse` |
-| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider`、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`） |
+| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider`、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`）、`RequireAuthorization`（默认 `true`） |
 | `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | 扩展 | 客户端 keyed `ITransporter` 注册；服务端注册 `RemoteMessageService` |
 | `MapGrpcBusService()` | 扩展 | 服务端映射 `MapGrpcService<RemoteMessageService>()` |
 

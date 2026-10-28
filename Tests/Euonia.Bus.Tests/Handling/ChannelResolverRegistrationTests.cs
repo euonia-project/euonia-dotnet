@@ -32,6 +32,21 @@ public class ChannelResolverRegistrationTests
 		Assert.Contains(CustomChannel, configurator.Registrations.Keys);
 	}
 
+	[Fact]
+	public void RegisterChannel_WithNonReplacingResolver_UsesCustomResolverFirst()
+	{
+		CountingHandler.Invocations = 0;
+
+		using var provider = BuildProvider();
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
+		configurator.SetChannelResolver(_ => "custom.fallback.channel");
+
+		configurator.RegisterChannel(typeof(CountingHandler));
+
+		Assert.Contains("custom.fallback.channel", configurator.Registrations.Keys);
+	}
+
 	/// <summary>
 	/// 端到端：注册后能从自定义通道分发到处理器。
 	/// </summary>

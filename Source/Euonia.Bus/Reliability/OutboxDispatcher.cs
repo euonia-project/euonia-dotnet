@@ -29,12 +29,7 @@ internal sealed class OutboxDispatcher : IDisposable
 	private readonly ILogger _logger;
 	private readonly MessageExecutionEnvironment _execution;
 	private readonly IServiceProviderIsService _serviceProbe;
-	private readonly DateTime _startedAt = DateTime.Now;
 
-	/// <summary>
-	/// 回收启动前遗留 Pending 记录时的宽限期：避免把刚插入、仍在等待延迟分发的记录误判为已放弃。
-	/// </summary>
-	private static readonly TimeSpan _pendingGracePeriod = TimeSpan.FromMinutes(5);
 	private Timer _timer;
 	private int _running;
 
@@ -97,12 +92,15 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// </summary>
 	public async Task RetryAllAsync()
 	{
-		using var scope = _provider.CreateScope();
-		var store = _storeOverride ?? scope.ServiceProvider.GetService<IOutboxStore>();
-		var deadLetterStore = _deadLetterStoreOverride ?? scope.ServiceProvider.GetService<IDeadLetterStore>();
+		IServiceScope scope = null;
+		IOutboxStore store = null;
 
 		try
 		{
+			scope = _provider.CreateScope();
+			store = _storeOverride ?? scope.ServiceProvider.GetService<IOutboxStore>();
+			var deadLetterStore = _deadLetterStoreOverride ?? scope.ServiceProvider.GetService<IDeadLetterStore>();
+
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
 			CleanupExpired(store);
 
@@ -145,8 +143,17 @@ internal sealed class OutboxDispatcher : IDisposable
 		}
 		finally
 		{
-			store?.ClearCache();
 			Interlocked.Exchange(ref _running, 0);
+
+			try
+			{
+				store?.ClearCache();
+				scope?.Dispose();
+			}
+			catch (Exception exception)
+			{
+				_logger?.LogWarning(exception, "Failed to release the outbox retry scope.");
+			}
 		}
 	}
 
@@ -165,15 +172,19 @@ internal sealed class OutboxDispatcher : IDisposable
 	}
 
 	/// <summary>
-	/// 将调度器启动前遗留的 Pending 传输记录标记为失败，使其进入正常重试流程。
+	/// 将长时间停留在 Pending 的传输记录标记为失败，使其重新进入正常重试流程。
 	/// </summary>
 	/// <remarks>
-	/// 只回收 <see cref="_startedAt"/> 之前的记录：本进程内正在等待延迟分发的 Pending 记录
-	/// 创建时间晚于该时刻，不会被误判为“已放弃”。
+	/// 使用「相对当前时间」的宽限期而不是「相对进程启动时间」：这样崩溃前最后几分钟写入的记录
+	/// 会在宽限期结束后被回收，不会像旧实现那样永久滞留；同时也不会误判本进程内正在等待
+	/// 延迟分发的记录。
 	/// </remarks>
 	private void ReclaimAbandonedPending(IOutboxStore store)
 	{
-		var pending = store?.GetPendingMessages(_startedAt - _pendingGracePeriod);
+		var cutoff = _options.PendingReclaimGracePeriod > TimeSpan.Zero
+			             ? DateTime.Now - _options.PendingReclaimGracePeriod
+			             : DateTime.Now;
+		var pending = store?.GetPendingMessages(cutoff);
 		if (pending == null || pending.Count == 0)
 		{
 			return;

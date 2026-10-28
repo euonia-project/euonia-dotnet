@@ -40,6 +40,30 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("orders.created@sub", RabbitMqDelivery.ResolveQueueName(options, "orders.created", "   "));
 	}
 
+	[Fact]
+	public void ResolveQueueName_WithPrefix_AppliesPrefix()
+	{
+		var options = new RabbitMqBusOptions { SubscriptionId = "sub", QueueNamePrefix = "tenant-a" };
+
+		Assert.Equal("tenant-a:orders.created@sub", RabbitMqDelivery.ResolveQueueName(options, "orders.created"));
+	}
+
+	[Fact]
+	public void ResolveExchangeName_WithPrefix_AppliesPrefix()
+	{
+		var options = new RabbitMqBusOptions { ExchangeNamePrefix = "tenant-a" };
+
+		Assert.Equal("tenant-a:orders.created", RabbitMqDelivery.ResolveExchangeName(options, "orders.created"));
+	}
+
+	[Fact]
+	public void ResolveExchangeName_WithoutPrefix_UsesChannel()
+	{
+		var options = new RabbitMqBusOptions();
+
+		Assert.Equal("orders.created", RabbitMqDelivery.ResolveExchangeName(options, "orders.created"));
+	}
+
 	/// <summary>
 	/// 订阅标识的回退链：显式配置 → 入口程序集简单名称 → 通道名称。
 	/// 关键在于必须用**简单名称**，否则发布端与消费端的队列名不一致。

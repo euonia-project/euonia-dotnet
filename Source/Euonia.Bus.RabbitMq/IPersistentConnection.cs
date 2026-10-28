@@ -23,4 +23,15 @@ public interface IPersistentConnection : IDisposable
 	/// </summary>
 	/// <returns></returns>
 	Task<IChannel> CreateChannelAsync();
+
+	/// <summary>
+	/// Creates a channel with explicit options (for example publisher confirmations).
+	/// </summary>
+	/// <param name="options">Channel creation options.</param>
+	/// <returns>表示异步操作的任务，包含创建的通道。</returns>
+	/// <remarks>默认实现忽略选项并调用无参重载，便于既有自定义实现保持兼容。</remarks>
+	Task<IChannel> CreateChannelAsync(CreateChannelOptions options)
+	{
+		return CreateChannelAsync();
+	}
 }

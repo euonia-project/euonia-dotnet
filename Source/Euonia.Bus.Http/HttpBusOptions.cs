@@ -37,6 +37,13 @@ public class HttpBusOptions
 	public TimeSpan? RequestTimeout { get; set; }
 
 	/// <summary>
+	/// 获取或设置一个值，指示远程调用端点是否要求授权。
+	/// 默认 <c>true</c>：端点映射后默认应用授权策略，避免消息总线端点被匿名调用。
+	/// 测试或受控内网环境可显式设为 <c>false</c>。
+	/// </summary>
+	public bool RequireAuthorization { get; set; } = true;
+
+	/// <summary>
 	/// 获取或设置 <see cref="HttpMessageHandler"/> 工厂。
 	/// 主要用于测试场景（例如使用 <see cref="HttpClientHandler"/> 的替代实现）。
 	/// </summary>

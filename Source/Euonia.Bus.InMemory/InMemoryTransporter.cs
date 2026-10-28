@@ -90,7 +90,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public async Task SendAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
 		// 调用方会等待处理完成，发布方作用域在整条链路中存活，处理时直接复用。
-		var context = CreateMessageContext(message, borrowCallerScope: true);
+		using var context = CreateMessageContext(message, borrowCallerScope: true);
 		var pack = new MessagePack(message, context)
 		{
 			Aborted = cancellationToken
@@ -114,12 +114,12 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			taskCompletion.TrySetResult();
 		};
 
-		_strongMessenger.UnsafeSend(pack, message.Channel);
-
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
-
 		try
 		{
+			_strongMessenger.UnsafeSend(pack, message.Channel);
+
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+
 			await taskCompletion.Task;
 		}
 		finally

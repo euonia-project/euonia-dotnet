@@ -16,7 +16,7 @@ namespace Nerosoft.Euonia.Bus;
 /// 需要延后执行的工作应自行创建作用域。
 /// </para>
 /// </remarks>
-internal sealed class MessageExecutionScope : IDisposable
+internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 {
 	private readonly DefaultRequestContextAccessor _requestContextAccessor;
 	private readonly RequestContext _inheritedRequestContext;
@@ -98,6 +98,27 @@ internal sealed class MessageExecutionScope : IDisposable
 		_disposed = true;
 		RestoreRequestContext();
 		_ownedScope?.Dispose();
+	}
+
+	/// <inheritdoc/>
+	public async ValueTask DisposeAsync()
+	{
+		if (_disposed)
+		{
+			return;
+		}
+
+		_disposed = true;
+		RestoreRequestContext();
+
+		if (_ownedScope is IAsyncDisposable asyncScope)
+		{
+			await asyncScope.DisposeAsync().ConfigureAwait(false);
+		}
+		else
+		{
+			_ownedScope?.Dispose();
+		}
 	}
 
 	/// <summary>

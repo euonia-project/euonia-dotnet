@@ -538,7 +538,7 @@ builder.AddOpenTelemetry()
 
 | Type | Purpose |
 |------|---------|
-| `NewtonsoftJsonSerializer` | Newtonsoft.Json-based serializer (with `ClaimsPrincipal` converters) |
+| `NewtonsoftJsonSerializer` | Newtonsoft.Json-based serializer (with `ClaimsPrincipal` converters; `TypeNameHandling.None`, so JSON `$type` is never trusted) |
 | `SystemTextJsonSerializer` | System.Text.Json-based serializer |
 | `MessageSerializerOptions` | Reference loop handling, encoding, null handling |
 
@@ -578,7 +578,7 @@ builder.AddOpenTelemetry()
 | `RabbitMqRecipientRegistrar` | class | Creates and starts recipients; disposes each one (and its channel) on shutdown |
 | `RabbitMqDelivery` | class | Pure logic for queue name, subscription id and priority — **shared by publisher and consumers** |
 | `DefaultPersistentConnection` | class | Connection lifecycle with `AsyncLock`, exponential backoff, auto-reconnect; fails fast after disposal instead of spinning |
-| `RabbitMqBusOptions` | class | Options: connection URI, exchange/queue prefixes, persistence, auto-ack, max retries, **`MaxPriority`** |
+| `RabbitMqBusOptions` | class | Options: connection URI, exchange/queue prefixes (empty by default), persistence, auto-ack (default `false`), max retries, **`MaxPriority`** |
 
 **Mapping rules:** `IUnicast` → `RabbitMqConsumer`; `IMulticast` → `RabbitMqSubscriber`; `IRequest<>` → `RabbitMqExecutor`.
 
@@ -596,7 +596,7 @@ builder.AddOpenTelemetry()
 | Type | Kind | Purpose |
 |------|------|---------|
 | `HttpTransporter` | class (internal) | `ITransporter` implementation: `CallAsync` → HTTP POST (propagates `x-*` headers), parses `RemoteReply<T>` and rehydrates exceptions; `Send`/`Publish` → `NotSupportedException` |
-| `HttpBusOptions` | class | Options: `Endpoint`, `Route` (default `/bus/call`), `SerializerProvider` (default `SystemTestJson`), `RequestTimeout`, `MessageHandlerFactory` |
+| `HttpBusOptions` | class | Options: `Endpoint`, `Route` (default `/bus/call`), `SerializerProvider` (default `SystemTestJson`), `RequestTimeout`, `RequireAuthorization` (default `true`), `MessageHandlerFactory` |
 | `AddHttpBus(name, configure)` | extension | Registers Options + `HttpTransporter` singleton + named keyed `ITransporter` |
 | `MapBusEndpoint()` | extension | Maps the server endpoint: resolves the serializer and `IHandlerContext`, invokes `RemoteReceiver`, writes the JSON reply |
 
@@ -633,7 +633,7 @@ app.MapBusEndpoint();   // POST /bus/call
 | `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.CreateCallInvoker()` + runtime-built `Method` (`GrpcMethodFactory`); `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
 | `GrpcMethodFactory` | class (internal) | Builds `Method<GrpcRequest, GrpcResponse>` at runtime (hand-written protobuf `Marshaller`s); supports dynamic service/method names |
 | `RemoteMessageService` | class | `ReplierService.ReplierServiceBase`: validates the payload (empty → `InvalidArgument`) → `RemoteReceiver` → returns `GrpcResponse` |
-| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider`, `ServiceName` (default `nerorsoft.bus.ReplierService`), `MethodName` (default `Call`) |
+| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider`, `ServiceName` (default `nerorsoft.bus.ReplierService`), `MethodName` (default `Call`), `RequireAuthorization` (default `true`) |
 | `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | extension | Client keyed `ITransporter` registration; server `RemoteMessageService` registration |
 | `MapGrpcBusService()` | extension | Maps `MapGrpcService<RemoteMessageService>()` on the server |
 

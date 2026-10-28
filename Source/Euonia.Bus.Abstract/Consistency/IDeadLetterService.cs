@@ -20,11 +20,21 @@ public interface IDeadLetterService
 	IReadOnlyList<DeadLetterEntry> GetAll();
 
 	/// <summary>
-	/// 根据消息标识符获取死信记录；未找到时返回 <c>null</c>。
+	/// 根据消息标识符获取第一条死信记录；未找到时返回 <c>null</c>。
 	/// </summary>
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>对应的死信记录；未找到时返回 <c>null</c>。</returns>
 	DeadLetterEntry Get(string messageId);
+
+	/// <summary>
+	/// 根据死信记录唯一标识获取记录；未找到时返回 <c>null</c>。
+	/// </summary>
+	/// <param name="id">死信记录唯一标识（<see cref="DeadLetterEntry.Id"/>）。</param>
+	/// <returns>对应的死信记录；未找到时返回 <c>null</c>。</returns>
+	DeadLetterEntry GetById(string id)
+	{
+		return GetAll().FirstOrDefault(entry => string.Equals(entry.Id, id, StringComparison.Ordinal));
+	}
 
 	/// <summary>
 	/// 重放指定的死信记录。
@@ -35,9 +45,32 @@ public interface IDeadLetterService
 	Task<bool> ReplayAsync(string messageId, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// 按死信记录唯一标识重放记录。
+	/// </summary>
+	/// <param name="id">死信记录唯一标识（<see cref="DeadLetterEntry.Id"/>）。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>重放成功并已移除记录返回 <c>true</c>；记录不存在或重放失败返回 <c>false</c>。</returns>
+	Task<bool> ReplayByIdAsync(string id, CancellationToken cancellationToken = default)
+	{
+		var entry = GetById(id);
+		return entry == null ? Task.FromResult(false) : ReplayAsync(entry.MessageId, cancellationToken);
+	}
+
+	/// <summary>
 	/// 丢弃指定的死信记录（不做重放，直接移除）。
 	/// </summary>
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>移除成功返回 <c>true</c>；记录不存在时返回 <c>false</c>。</returns>
 	bool Discard(string messageId);
+
+	/// <summary>
+	/// 按死信记录唯一标识丢弃记录。
+	/// </summary>
+	/// <param name="id">死信记录唯一标识（<see cref="DeadLetterEntry.Id"/>）。</param>
+	/// <returns>移除成功返回 <c>true</c>；记录不存在时返回 <c>false</c>。</returns>
+	bool DiscardById(string id)
+	{
+		var entry = GetById(id);
+		return entry != null && Discard(entry.MessageId);
+	}
 }

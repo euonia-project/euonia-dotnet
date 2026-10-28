@@ -210,4 +210,7 @@
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>No se pudo resolver el tipo de mensaje '{0}'.</value>
   </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>El tipo de mensaje '{0}' no está registrado en este punto de conexión y no se puede deserializar.</value>
+  </data>
 </root>

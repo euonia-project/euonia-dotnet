@@ -43,6 +43,24 @@ public class DeadLetterTests
 	}
 
 	[Fact]
+	public void InMemoryDeadLetterStore_KeepsSameMessageWithDifferentTargets()
+	{
+		var store = new InMemoryDeadLetterStore();
+		var first = new DeadLetterEntry { MessageId = "multi-target-1", Source = DeadLetterSource.Inbox, Target = "HandlerA" };
+		var second = new DeadLetterEntry { MessageId = "multi-target-1", Source = DeadLetterSource.Inbox, Target = "HandlerB" };
+
+		store.Add(first);
+		store.Add(second);
+
+		Assert.Equal(2, store.GetAll().Count);
+		Assert.NotNull(store.GetById(first.Id));
+		Assert.NotNull(store.GetById(second.Id));
+
+		Assert.True(store.RemoveById(first.Id));
+		Assert.Single(store.GetAll());
+	}
+
+	[Fact]
 	public async Task OutboxDispatcher_WhenRetriesExhaustedWithoutDeadLetterStore_StillMarksDeadLettered()
 	{
 		var delivered = new List<string>();
@@ -105,6 +123,28 @@ public class DeadLetterTests
 		Assert.NotNull(entry);
 		Assert.Equal(DeadLetterSource.Inbox, entry.Source);
 		Assert.Equal("MyHandler", entry.Target);
+	}
+
+	[Fact]
+	public async Task InboxDispatcher_WhenHandlerMissing_MovesRecordToDeadLetters()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddInMemoryDeadLetters();
+		await using var provider = services.BuildServiceProvider();
+		var deadLetters = provider.GetRequiredService<IDeadLetterStore>();
+
+		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/missing" }, "test.events", "missing-handler-1");
+		IInboxStore store = new InMemoryInboxStore();
+		store.Insert("test.events", envelope, ["MissingHandler"]);
+		store.Get("missing-handler-1").GetHandler("MissingHandler")!.MarkAsFailed("boom");
+
+		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true, MaxRetryAttempts = 1 }, new ConcurrentDictionary<string, List<HandlerRegistration>>());
+		await dispatcher.RetryAllAsync();
+
+		Assert.Equal(InboxHandlerStatus.DeadLettered, store.Get("missing-handler-1").GetHandler("MissingHandler")!.Status);
+		Assert.Empty(store.GetFailedMessages());
+		Assert.NotNull(deadLetters.Get("missing-handler-1"));
 	}
 
 	[Fact]

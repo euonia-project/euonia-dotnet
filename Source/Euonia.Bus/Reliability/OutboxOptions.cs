@@ -36,6 +36,16 @@ public class OutboxOptions
 	public int MaxRetryAttempts { get; set; }
 
 	/// <summary>
+	/// 获取或设置回收长时间停留在 Pending 状态的发送记录的宽限期。
+	/// </summary>
+	/// <remarks>
+	/// 调度器会把创建时间早于「当前时间 - 宽限期」且仍为 Pending 的记录标记为失败并重新投递。
+	/// 默认 5 分钟；<c>0</c> 或负数表示不设宽限，所有早于当前时间的 Pending 记录都会被回收。
+	/// 宽限期用于避免误判本进程内仍在等待延迟分发的记录。
+	/// </remarks>
+	public TimeSpan PendingReclaimGracePeriod { get; set; } = TimeSpan.FromMinutes(5);
+
+	/// <summary>
 	/// 获取或设置已完成（或已转入死信）条目的保留时长，超期后在调度器轮询时清理。
 	/// </summary>
 	/// <remarks>

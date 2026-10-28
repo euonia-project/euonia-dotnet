@@ -10,6 +10,11 @@ public sealed class ChannelRegistration
 	private readonly List<ChannelHandler> _handlers = [];
 
 	/// <summary>
+	/// 保护处理器列表的读写，避免注册与快照并发时枚举到正在修改的集合。
+	/// </summary>
+	private readonly object _sync = new();
+
+	/// <summary>
 	/// 使用指定的消息类型构造通道注册信息
 	/// </summary>
 	/// <param name="messageType">消息类型</param>
@@ -25,10 +30,19 @@ public sealed class ChannelRegistration
 	public Type MessageType { get; }
 
 	/// <summary>
-	/// 获取处理器列表
+	/// 获取处理器列表的快照。
 	/// </summary>
-	/// <returns>处理器列表</returns>
-	public IList<ChannelHandler> Handlers => _handlers.AsReadOnly();
+	/// <returns>处理器列表的只读快照</returns>
+	public IList<ChannelHandler> Handlers
+	{
+		get
+		{
+			lock (_sync)
+			{
+				return Array.AsReadOnly(_handlers.ToArray());
+			}
+		}
+	}
 
 	/// <summary>
 	/// 添加一个通道处理器。
@@ -39,7 +53,12 @@ public sealed class ChannelRegistration
 	public ChannelRegistration AddHandler(ChannelHandler handler)
 	{
 		ArgumentNullException.ThrowIfNull(handler);
-		_handlers.Add(handler);
+
+		lock (_sync)
+		{
+			_handlers.Add(handler);
+		}
+
 		return this;
 	}
 

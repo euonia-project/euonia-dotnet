@@ -210,4 +210,7 @@
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>Échec de la résolution du type de message '{0}'.</value>
   </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>Le type de message '{0}' n'est pas inscrit sur ce point de terminaison et ne peut pas être désérialisé.</value>
+  </data>
 </root>

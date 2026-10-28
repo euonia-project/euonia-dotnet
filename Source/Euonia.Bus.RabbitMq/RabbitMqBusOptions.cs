@@ -22,17 +22,16 @@ public class RabbitMqBusOptions
 	public string Connection { get; set; }
 
 	/// <summary>
-	/// 获取或设置交换机名称前缀。
+	/// 获取或设置交换机名称前缀；为空时不添加前缀。
+	/// 配置后发布端与订阅端都会使用 <c>{前缀}:{消息通道}</c> 作为交换机名。
 	/// </summary>
-	public string ExchangeNamePrefix { get; set; } = Constants.DefaultExchangeNamePrefix;
+	public string ExchangeNamePrefix { get; set; } = string.Empty;
 
 	/// <summary>
-	/// 获取或设置用于构建队列名称的前缀字符串。
+	/// 获取或设置用于构建队列名称的前缀字符串；为空时不添加前缀。
+	/// 配置后单播/订阅队列名称为 <c>{前缀}:{消息通道}@{SubscriptionId}</c>。
 	/// </summary>
-	/// <remarks>
-	/// 对于单播消息，队列名称将构建为 {QueueNamePrefix}:{MessageChannelName}@{SubscriptionId}。
-	/// </remarks>
-	public string QueueNamePrefix { get; set; } = Constants.DefaultQueueNamePrefix;
+	public string QueueNamePrefix { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 获取或设置路由键。
@@ -46,8 +45,9 @@ public class RabbitMqBusOptions
 
 	/// <summary>
 	/// 获取或设置一个值，指示消息是否应自动确认。
+	/// 默认 <c>false</c>：处理成功后才确认；处理失败时可通过队列的死信配置转入 DLQ。
 	/// </summary>
-	public bool AutoAck { get; set; } = true;
+	public bool AutoAck { get; set; }
 
 	/// <summary>
 	/// 获取或设置一个值，指示消息是否应为强制性的。

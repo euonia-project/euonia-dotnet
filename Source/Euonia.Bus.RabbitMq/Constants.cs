@@ -16,21 +16,6 @@ internal static class Constants
 	public const string ConfigurationSection = "Euonia:Bus:RabbitMq";
 
 	/// <summary>
-	/// 默认交换机名称前缀。
-	/// </summary>
-	public const string DefaultExchangeNamePrefix = "$nerosoft.euonia.exchange";
-
-	/// <summary>
-	/// 默认队列名称前缀。
-	/// </summary>
-	public const string DefaultQueueNamePrefix = "$nerosoft.euonia.queue";
-
-	/// <summary>
-	/// 默认主题名称。
-	/// </summary>
-	public const string DefaultTopicName = "$nerosoft.euonia.topic";
-
-	/// <summary>
 	/// 默认的死信队列（DLX）路由键。
 	/// </summary>
 	public const string DefaultDlxRoutingKey = "$nerosoft.euonia.dead-letter";

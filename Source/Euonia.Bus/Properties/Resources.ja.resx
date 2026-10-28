@@ -210,4 +210,7 @@
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>メッセージ型 '{0}' を解決できませんでした。</value>
   </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>メッセージ型 '{0}' はこのエンドポイントに登録されていないため、逆シリアル化できません。</value>
+  </data>
 </root>

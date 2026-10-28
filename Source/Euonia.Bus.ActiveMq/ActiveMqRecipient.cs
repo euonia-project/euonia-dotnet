@@ -1,6 +1,7 @@
 using System.Reflection;
 using Apache.NMS;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus.ActiveMq;
@@ -27,6 +28,11 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	private readonly IMessageSerializer _serializer;
 
 	/// <summary>
+	/// 当前接收器的日志记录器。
+	/// </summary>
+	private readonly ILogger _logger;
+
+	/// <summary>
 	/// 初始化 <see cref="ActiveMqRecipient"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析依赖项的服务提供程序。</param>
@@ -39,7 +45,11 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		Connection = provider.GetRequiredService<IPersistentConnection>();
 		ChannelName = channelName;
 		MessageType = messageType;
-		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider);
+		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider)
+		              ?? throw new InvalidOperationException($"Message serializer '{Options.SerializerProvider}' is not registered.");
+		_logger = provider.GetService<ILoggerFactory>()?.CreateLogger(GetType());
+
+		Connection.Reconnected += OnReconnected;
 	}
 
 	/// <summary>
@@ -89,10 +99,21 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	{
 		if (message is not ITextMessage textMessage || string.IsNullOrEmpty(textMessage.Text))
 		{
+			await AcknowledgeAsync(message);
 			return;
 		}
 
-		var envelope = _serializer.DeserializeEnvelope(textMessage.Text, MessageType);
+		IMessageEnvelope envelope;
+		try
+		{
+			envelope = _serializer.DeserializeEnvelope(textMessage.Text, MessageType);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogError(exception, "Failed to deserialize ActiveMQ message on channel {Channel}; the message will be recovered.", ChannelName);
+			await RecoverAsync();
+			return;
+		}
 
 		var context = new MessageContext(envelope)
 		{
@@ -115,6 +136,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		context.Completed += onCompleted;
 
 		ActiveMqReply<object> reply;
+		var handlerFailed = false;
 
 		try
 		{
@@ -125,6 +147,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		}
 		catch (Exception exception)
 		{
+			handlerFailed = true;
 			reply = ActiveMqReply<object>.Failure(exception);
 		}
 		finally
@@ -136,21 +159,39 @@ internal abstract class ActiveMqRecipient : DisposableObject
 			context.Completed -= onCompleted;
 		}
 
-		if (message.NMSReplyTo != null)
+		try
 		{
-			var response = _serializer.Serialize(reply);
+			if (message.NMSReplyTo != null)
+			{
+				var response = _serializer.Serialize(reply);
 
-			using var responder = await Session.CreateProducerAsync(message.NMSReplyTo);
-			var responseMessage = await Session.CreateTextMessageAsync(response);
+				using var responder = await Session.CreateProducerAsync(message.NMSReplyTo);
+				var responseMessage = await Session.CreateTextMessageAsync(response);
 
-			// 建立关联 ID，使请求方能够将回复与原始请求消息进行对应。
-			responseMessage.NMSCorrelationID = message.NMSCorrelationID;
+				// 建立关联 ID，使请求方能够将回复与原始请求消息进行对应。
+				responseMessage.NMSCorrelationID = message.NMSCorrelationID;
 
-			// 发送回复消息。
-			await responder.SendAsync(responseMessage);
+				await responder.SendAsync(responseMessage);
+				await AcknowledgeAsync(message);
+			}
+			else if (handlerFailed)
+			{
+				// 纯消费者处理失败：保留消息供 broker 按重投策略再次投递，而不是静默确认丢失。
+				await RecoverAsync();
+			}
+			else
+			{
+				await AcknowledgeAsync(message);
+			}
+
+			MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(envelope.Payload, context));
 		}
-
-		MessageAcknowledged?.Invoke(this, new MessageAcknowledgedEventArgs(envelope.Payload, context));
+		catch (Exception exception)
+		{
+			_logger?.LogError(exception, "Failed to complete ActiveMQ message on channel {Channel}; the message will be recovered.", ChannelName);
+			await RecoverAsync();
+			throw;
+		}
 
 		void OnResponded(object s, MessageRepliedEventArgs e)
 		{
@@ -170,6 +211,72 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		void OnCompleted(object s, MessageHandledEventArgs e)
 		{
 			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
+		}
+	}
+
+	/// <summary>
+	/// 确认消息；确认失败仅记录日志，避免在回调线程上抛出二次异常。
+	/// </summary>
+	private async Task AcknowledgeAsync(IMessage message)
+	{
+		try
+		{
+			await message.AcknowledgeAsync();
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to acknowledge ActiveMQ message on channel {Channel}.", ChannelName);
+		}
+	}
+
+	/// <summary>
+	/// 触发会话恢复，使未确认消息按 broker 的重投策略再次投递。
+	/// </summary>
+	private async Task RecoverAsync()
+	{
+		if (Session == null)
+		{
+			return;
+		}
+
+		try
+		{
+			await Session.RecoverAsync();
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogWarning(exception, "Failed to recover ActiveMQ session on channel {Channel}.", ChannelName);
+		}
+	}
+
+	/// <summary>
+	/// 连接重建后重新创建会话与消费者。
+	/// </summary>
+	private void OnReconnected(object sender, EventArgs e)
+	{
+		_ = RestartAsync();
+	}
+
+	private async Task RestartAsync()
+	{
+		try
+		{
+			if (Consumer != null)
+			{
+				Consumer.AsyncListener -= HandleMessageReceivedAsync;
+				Consumer.Dispose();
+				Consumer = null;
+			}
+
+			Session?.Dispose();
+			Session = null;
+
+			await StartAsync(CancellationToken.None);
+			_logger?.LogInformation("ActiveMQ recipient for channel {Channel} was restarted after reconnection.", ChannelName);
+		}
+		catch (Exception exception)
+		{
+			_logger?.LogError(exception, "Failed to restart ActiveMQ recipient for channel {Channel}.", ChannelName);
 		}
 	}
 
@@ -225,6 +332,8 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		{
 			return;
 		}
+
+		Connection.Reconnected -= OnReconnected;
 
 		// 这里不要通过属性访问消费者，以避免在会话未初始化时触发额外异常。
 		if (Consumer != null)

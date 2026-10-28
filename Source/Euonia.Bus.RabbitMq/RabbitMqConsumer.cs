@@ -38,6 +38,9 @@ internal class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 	/// </summary>
 	public string Name => nameof(RabbitMqConsumer);
 
+	/// <inheritdoc />
+	protected override bool AutoAck => Options.AutoAck;
+
 	/// <summary>
 	/// 启动消费者，在指定通道上声明队列并开始消费消息。
 	/// </summary>
@@ -48,11 +51,13 @@ internal class RabbitMqConsumer : RabbitMqRecipient, IConsumer
 
 		Channel = await Connection.CreateChannelAsync();
 
-		// 启用优先级队列时附加 x-max-priority；未启用则为 null。
-		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority);
+		// 单播队列也必须声明死信路由：处理失败时使用 nack(requeue:false)，
+		// 没有 DLX 的消息会被 broker 直接丢弃。
+		var dlxArguments = await DeclareDeadLetterAsync(Channel, queueName);
+		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority, dlxArguments);
 		await Channel.QueueDeclareAsync(queueName, true, false, false, queueArguments, cancellationToken: cancellationToken);
-		await Channel.BasicQosAsync(0, 1, false, cancellationToken: cancellationToken);
+		await Channel.BasicQosAsync((uint)Math.Max(0, Options.PrefetchSize), (ushort)Math.Clamp(Options.PrefetchCount, 0, ushort.MaxValue), false, cancellationToken: cancellationToken);
 
-		await Channel.BasicConsumeAsync(queueName, false, Consumer, cancellationToken: cancellationToken);
+		await Channel.BasicConsumeAsync(queueName, Options.AutoAck, Consumer, cancellationToken: cancellationToken);
 	}
 }
