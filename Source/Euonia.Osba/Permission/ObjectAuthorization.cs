@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -165,19 +166,43 @@ internal static class ObjectAuthorization
 	/// <exception cref="SecurityException">目标不满足任一权限要求时抛出。</exception>
 	private static void Enforce(BusinessObject businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
-		// 唯一入口：内置操作与自定义操作都走 CanPerformOperation（派生类可重写它来定制），
-		// 其默认实现即本类的查询判定。此前这里对 5 个内置常量之外的操作写的是 _ => true ——
-		// requirements 已收集却从不交给 IPermissionChecker，等于自定义操作（README §3.3 的
-		// approve / order:archive 等）没有鉴权。
-		//
-		// 还必须显式复核 requirements：CanPerformOperation 按运行时类型重新收集要求，
-		// 派生类型用 new 遮蔽基类工厂方法时会得到空集合而放行，尽管实际调用的是基类方法。
-		if (!businessObject.CanPerformOperation(operation) ||
-		    !requirements.All(requirement => IsSatisfied(checker, requirement)))
+		// 先按调用方传入的 requirements 判定一次：这是权威集合，能覆盖「派生类型用 new 遮蔽
+		// 基类工厂方法」的运行时类型收集缺口。
+		foreach (var requirement in requirements)
+		{
+			if (!IsSatisfied(checker, requirement))
+			{
+				throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
+			}
+		}
+
+		// 仅当派生类真的重写了 CanPerformOperation 时才再调用一次：默认实现会重新收集
+		// requirements 并逐条判定，等于把整条规则再跑一遍（授权数据未命中缓存时就是两倍 I/O）。
+		if (IsCanPerformOperationOverridden(businessObject.GetType()) &&
+		    !businessObject.CanPerformOperation(operation))
 		{
 			throw new SecurityException(string.Format(Resources.IDS_OPERATION_NOT_ALLOWED, operation, businessObject.GetType().Name));
 		}
 	}
+
+	/// <summary>
+	/// 判断类型是否重写了 <see cref="BusinessObject.CanPerformOperation(string)"/>。
+	/// </summary>
+	/// <param name="type">业务对象类型。</param>
+	/// <returns>重写则返回 <see langword="true"/>。</returns>
+	private static bool IsCanPerformOperationOverridden(Type type)
+	{
+		return _canPerformOverrides.GetOrAdd(type, static candidate =>
+		{
+			var method = candidate.GetMethod(nameof(BusinessObject.CanPerformOperation), [typeof(string)]);
+			return method != null && method.DeclaringType != typeof(BusinessObject);
+		});
+	}
+
+	/// <summary>
+	/// <see cref="BusinessObject.CanPerformOperation(string)"/> 是否被重写的缓存。
+	/// </summary>
+	private static readonly ConcurrentDictionary<Type, bool> _canPerformOverrides = new();
 
 	/// <summary>
 	/// 单条要求的满足判定：权限码与角色两部分各自为空表示该项不作要求，角色之间是「或」。

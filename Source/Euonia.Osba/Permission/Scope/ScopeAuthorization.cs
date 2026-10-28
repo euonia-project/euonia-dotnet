@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -142,6 +143,37 @@ internal static class ScopeAuthorization
 			operation);
 
 		return true;
+	}
+
+	/// <summary>
+	/// 对「criteria 驱动的写入口」发出诊断：这类入口在调用工厂方法前没有可判定的行，
+	/// 行级权限只能在写入后复核——若工厂方法内部已经落库，拒绝就来得太晚。
+	/// </summary>
+	/// <param name="target">目标对象。</param>
+	/// <param name="operation">操作。</param>
+	/// <remarks>
+	/// 这不是强制点（行为保持向后兼容），而是把隐性风险变为可观测的告警。
+	/// 需要“写入前拒绝”的宿主应改用 <c>Fetch → 判定 → Save</c>，或在工厂方法内先判定。
+	/// </remarks>
+	internal static void WarnIfWriteBeforeCheck(object target, string operation)
+	{
+		if (target is not IBusinessObject businessObject)
+		{
+			return;
+		}
+
+		var context = businessObject.BusinessContext;
+		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>()
+		                 ?? BusinessContextAccessor.Current?.GetService<IObjectScopeAuthorizer>();
+
+		if (authorizer == null || !authorizer.IsConstrained(target.GetType()))
+		{
+			return;
+		}
+
+		Trace.TraceWarning(
+			$"[Euonia.Osba] {target.GetType().Name}.{operation} 通过 criteria 入口写入：行级权限只能在写入后判定。" +
+			"请改用 Fetch → IScopeGuard.AllowsObject → Save，或在工厂方法内部先完成判定，避免“先写后验”。");
 	}
 
 	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
