@@ -67,6 +67,17 @@
   **`IServiceObject` 改为 `IOsbaObject + IHasRuleCheck`**，不再继承 `IBusinessObject`，
   因此服务对象不承诺属性变更通知，也不暴露可编辑对象契约。
 
+#### 子对象图：父对象通知与规则绕过传播
+
+- `ObjectBase` 增加父子链接：子对象属性变化时，父对象上持有该子对象的属性会被标脏并发出
+  `PropertyChanged`；变更沿父链逐级上浮，支持多父对象与祖父层级。
+- `BypassRuleChecks` 沿父链向下穿透：父对象进入绕过作用域时，子对象（含 `ObservableList` 中的元素）
+  同样处于绕过状态；子对象自身的绕过不会反向影响父对象。嵌套 `using` 只恢复“自身”的绕过值，
+  不会把父对象传播的绕过状态固化为自身状态。
+- `ObservableList<T>` / `ObservableDictionary<TKey,TValue>` 实现 `IChildGraphNode`：元素/值自动挂到父对象；
+  元素属性变化直接通知父对象，集合增删/字典项变化同样通知父对象。替换/移除子对象或容器时自动解除链接，
+  `Dispose` 会清理父链。
+
 ## [2026.4.5] - 2026-10-19
 
 从根上重构消息处理的生命周期：服务提供程序不再通过异步流环境隐式传递，改为显式作用域；

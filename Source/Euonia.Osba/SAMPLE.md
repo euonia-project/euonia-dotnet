@@ -244,6 +244,9 @@ repo.AcceptChanges();       // 同上
 >
 > 删除成功后对象会复位为 `None`，重复 `SaveAsync` 是幂等 no-op；不要再依赖“删除后仍是 Deleted”。
 >
+> **子对象属性变化会向上通知父对象**：父对象上持有该子对象的属性会被标脏并发出 `PropertyChanged`，
+> 变更沿父链逐级上浮；`ObservableList<T>` 的元素变化与集合增删、`ObservableDictionary<TKey,TValue>` 的项变化也会通知父对象。
+>
 > 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`；
 > 未接线的对象直接 `SaveAsync` 会抛 `InvalidOperationException`（消息含类型名与操作名），而不是放任空引用往下走。
 
@@ -973,6 +976,7 @@ BusinessContextAccessor.Clear();
     但反过来，报错却不给消息本身就是缺陷，别依赖这个兜底。
 36. **删除默认不跑对象级规则**，`.Delete(id).WithRule(...)` 需同时 `.WithRuleChecksOnDelete()` 才会执行。
 37. `BypassRule<T>()` 按**精确类型**匹配；`BypassRuleChecks()` 只跳规则、**不**解除权限。
+    绕过会沿父子链向下穿透到子对象（含 `ObservableList` 元素）；子对象自身的绕过不会反向影响父对象。
 38. **服务对象也会跑对象级规则**，且由工厂边界在执行体之前裁决——规则失败时执行体不会执行。
     但 `IObjectFactory` 的 criteria 低层入口（`ExecuteAsync(criteria)` 等）不做规则判定。
 39. `ValidateAsync(cascade, ct)` 只管**对象级**规则且不抛异常（返回 bool）；

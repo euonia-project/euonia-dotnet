@@ -891,7 +891,20 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 但不再共享生命周期语义。新增回归断言：`ServiceObject<T>` 的基类是 `ObjectBase<T>`，属性变更后
 `HasChangedProperties=false`、`ChangedProperties` 为空、且不是 `IEditableObject`。
 
-### 12.3 暂缓
+### 12.3 子对象图：父通知与绕过穿透
+
+- `ObjectBase` 维护父链接（父对象 + 持有子对象的属性），不依赖事件订阅：
+  - 子对象 `PropertyChanged` → 父对象对应属性 `PropertyHasChanged` → 继续向祖父上浮；
+  - 支持同一子对象被多个父对象持有；
+  - 子对象替换/移除、父对象 `Dispose` 时自动解链。
+- `BypassRuleChecks` 的 effective 值 = 自身绕过 OR 任一父对象的 effective 值：
+  - 父对象进入绕过，子对象（任意层级）直接可见；
+  - 子对象自身的绕过不会反向影响父对象；
+  - `BypassRuleChecksObject` 只捕获/恢复“自身”值，避免父对象绕过退出后被错误固化。
+- `ObservableList<T>` / `ObservableDictionary<TKey,TValue>` 实现 `IChildGraphNode`：元素/值挂到父对象、
+  集合增删或字典项变化通知父对象；绕过状态随父链穿透到容器元素。
+
+### 12.4 暂缓
 
 - **P2-8 公共 API 收窄**（把 `FieldDataManager`/`RuleManager`/`PropertyInfoList`/`BrokenRuleCollection` 改为 internal）：
   这些类型已经通过 `IBusinessObject.FieldManager`、`GetBrokenRules()`、`PropertyInfoManager` 暴露，
@@ -899,16 +912,17 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 - **Source Generator / Analyzer**：属于 P4 工具链，本轮未做。
 - **`[Inject]` 标记 Obsolete**：会波及 Modularity 与其他模块的编译警告；先通过启动校验与文档引导。
 
-### 12.4 验证
+### 12.5 验证
 
 ```text
-Euonia.Osba.Tests            259 passed（原 240 + 19 新增）
+Euonia.Osba.Tests            275 passed（原 240 + 35 新增）
 Euonia.Osba.Standalone.Tests   7 passed
 Euonia.slnx                  Build succeeded, 0 CS warning
 ```
 
-新增 M4 覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断、
-`ServiceObject` 不进入变更追踪层级。
+新增覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断、
+`ServiceObject` 不进入变更追踪层级、父子对象属性通知、多父对象/祖父层级、`ObservableList`/`ObservableDictionary` 元素通知、
+父对象绕过向子对象/集合元素穿透、替换/释放后的解链。
 
 ---
 

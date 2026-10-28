@@ -228,6 +228,7 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 				OnPropertyChanging(propertyName);
 			}
 
+			AttachChild(propertyInfo, field, newValue);
 			field = newValue;
 			if (!IsBypassingRuleChecks)
 			{
@@ -285,7 +286,9 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 				OnPropertyChanging(propertyName);
 			}
 
-			field = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			var converted = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			AttachChild(propertyInfo, field, converted);
+			field = converted;
 			if (!IsBypassingRuleChecks)
 			{
 				PropertyHasChanged(propertyName);
@@ -353,6 +356,7 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 			OnPropertyChanging(propertyInfo);
 		}
 
+		AttachChild(propertyInfo, ReadProperty(propertyInfo), newValue);
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
 		if (!IsBypassingRuleChecks)

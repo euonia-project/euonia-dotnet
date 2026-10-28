@@ -527,6 +527,8 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			handler(this, new PropertyChangedEventArgs(propertyName));
 		}
+
+		NotifyParents(propertyName);
 	}
 
 	/// <summary>
@@ -572,6 +574,8 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			handler(this, new PropertyChangedEventArgs(name));
 		}
+
+		NotifyParents(name);
 	}
 
 	/// <summary>
@@ -665,12 +669,224 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </remarks>
 	protected virtual bool IsBypassingRuleChecks
 	{
-		get => (_bypassScope?.Value ?? false);
-		set
+		get
 		{
-			_bypassScope ??= new AsyncLocal<bool>();
-			_bypassScope.Value = value;
+			if (OwnBypassRuleChecks || Volatile.Read(ref _hasParents) == 0)
+			{
+				return OwnBypassRuleChecks;
+			}
+
+			var parents = GetParentLinks();
+			if (parents.Length == 0)
+			{
+				return false;
+			}
+
+			// 防御对象图里意外的环：超过深度后按“不绕过”处理。
+			if (_bypassTraversalDepth >= MaxBypassTraversalDepth)
+			{
+				return false;
+			}
+
+			_bypassTraversalDepth++;
+			try
+			{
+				foreach (var link in parents)
+				{
+					if (link.Parent.IsBypassingRuleChecks)
+					{
+						return true;
+					}
+				}
+			}
+			finally
+			{
+				_bypassTraversalDepth--;
+			}
+
+			return false;
 		}
+		set => OwnBypassRuleChecks = value;
+	}
+
+	/// <summary>
+	/// 父对象链的遍历深度上限，避免异常对象图（环）导致栈溢出。
+	/// </summary>
+	private const int MaxBypassTraversalDepth = 32;
+
+	/// <summary>
+	/// 当前线程的父链遍历深度。
+	/// </summary>
+	[ThreadStatic]
+	private static int _bypassTraversalDepth;
+
+	/// <summary>
+	/// 本对象作为子对象时登记的父对象链接。
+	/// </summary>
+	private List<ChildLink> _parentLinks;
+
+	/// <summary>
+	/// 父链接数量；用于热路径上无锁判断“本对象是否是子对象”。
+	/// </summary>
+	private int _hasParents;
+
+	/// <summary>
+	/// 保护 <see cref="_parentLinks"/> 的同步锁。
+	/// </summary>
+	private readonly Lock _parentLock = new();
+
+	/// <summary>
+	/// 登记父对象及其持有本对象的属性；重复登记按引用去重。
+	/// </summary>
+	/// <param name="parent">父对象。</param>
+	/// <param name="property">父对象上持有本对象的属性。</param>
+	internal void AddParent(ObjectBase parent, IPropertyInfo property)
+	{
+		if (parent == null || ReferenceEquals(parent, this))
+		{
+			return;
+		}
+
+		lock (_parentLock)
+		{
+			_parentLinks ??= [];
+			foreach (var link in _parentLinks)
+			{
+				if (ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property))
+				{
+					return;
+				}
+			}
+
+			_parentLinks.Add(new ChildLink(parent, property));
+			Volatile.Write(ref _hasParents, _parentLinks.Count);
+		}
+	}
+
+	/// <summary>
+	/// 移除父对象链接。
+	/// </summary>
+	/// <param name="parent">父对象。</param>
+	/// <param name="property">父对象上持有本对象的属性。</param>
+	internal void RemoveParent(ObjectBase parent, IPropertyInfo property)
+	{
+		lock (_parentLock)
+		{
+			if (_parentLinks == null)
+			{
+				return;
+			}
+
+			for (var index = _parentLinks.Count - 1; index >= 0; index--)
+			{
+				var link = _parentLinks[index];
+				if (ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property))
+				{
+					_parentLinks.RemoveAt(index);
+					Volatile.Write(ref _hasParents, _parentLinks.Count);
+					return;
+				}
+			}
+		}
+	}
+
+	/// <summary>
+	/// 取父链快照；无父对象时返回空数组。
+	/// </summary>
+	/// <returns>父链快照。</returns>
+	private ChildLink[] GetParentLinks()
+	{
+		if (Volatile.Read(ref _hasParents) == 0)
+		{
+			return Array.Empty<ChildLink>();
+		}
+
+		lock (_parentLock)
+		{
+			return _parentLinks is { Count: > 0 } ? [.. _parentLinks] : Array.Empty<ChildLink>();
+		}
+	}
+
+	/// <summary>
+	/// 把子对象变更通知给所有父对象。
+	/// </summary>
+	/// <param name="propertyName">子对象上发生变化的属性名。</param>
+	private void NotifyParents(string propertyName)
+	{
+		if (Volatile.Read(ref _hasParents) == 0)
+		{
+			return;
+		}
+
+		var links = GetParentLinks();
+		foreach (var link in links)
+		{
+			link.Parent.OnChildPropertyChanged(link.Property, this, propertyName);
+		}
+	}
+
+	/// <summary>
+	/// 子对象属性变化时的父对象回调：默认把父对象上持有该子对象的属性标脏并通知。
+	/// </summary>
+	/// <param name="property">父对象上持有子对象的属性。</param>
+	/// <param name="child">发生变化的子对象。</param>
+	/// <param name="childPropertyName">子对象上发生变化的属性名。</param>
+	protected virtual void OnChildPropertyChanged(IPropertyInfo property, ObjectBase child, string childPropertyName)
+	{
+		PropertyHasChanged(property);
+	}
+
+	/// <summary>
+	/// 供子容器（如 <see cref="ObservableList{T}"/>）通知父对象：容器内容发生变化。
+	/// </summary>
+	/// <param name="property">父对象上持有容器的属性。</param>
+	internal void NotifyChildChanged(IPropertyInfo property)
+	{
+		PropertyHasChanged(property);
+	}
+
+	/// <summary>
+	/// 建立/解除父子链接：用于子对象属性变更通知与规则绕过传播。
+	/// </summary>
+	/// <param name="property">父对象上的属性。</param>
+	/// <param name="oldValue">旧值。</param>
+	/// <param name="newValue">新值。</param>
+	protected void AttachChild(IPropertyInfo property, object oldValue, object newValue)
+	{
+		if (ReferenceEquals(oldValue, newValue))
+		{
+			return;
+		}
+
+		if (oldValue is ObjectBase oldChild)
+		{
+			oldChild.RemoveParent(this, property);
+		}
+		else if (oldValue is IChildGraphNode oldNode)
+		{
+			oldNode.RemoveParent(this, property);
+		}
+
+		if (newValue is ObjectBase newChild)
+		{
+			newChild.AddParent(this, property);
+		}
+		else if (newValue is IChildGraphNode newNode)
+		{
+			newNode.AddParent(this, property);
+		}
+	}
+
+	/// <summary>
+	/// 父子链接：父对象 + 父对象上持有子对象的属性。
+	/// </summary>
+	private sealed class ChildLink(ObjectBase parent, IPropertyInfo property)
+	{
+		/// <summary>父对象。</summary>
+		public ObjectBase Parent { get; } = parent;
+
+		/// <summary>父对象上持有子对象的属性。</summary>
+		public IPropertyInfo Property { get; } = property;
 	}
 
 	/// <summary>
@@ -681,6 +897,19 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// <c>[ThreadStatic]</c>：该特性只对静态字段生效，写在实例字段上既无效，又会让人误以为存在线程亲和。
 	/// </remarks>
 	private AsyncLocal<bool> _bypassScope;
+
+	/// <summary>
+	/// 获取本实例自身的绕过值（不含父对象传播）。
+	/// </summary>
+	private bool OwnBypassRuleChecks
+	{
+		get => _bypassScope?.Value ?? false;
+		set
+		{
+			_bypassScope ??= new AsyncLocal<bool>();
+			_bypassScope.Value = value;
+		}
+	}
 
 	/// <summary>
 	/// 通过将此属性包裹在 Using 块中，可以在不引发 PropertyChanged 事件
@@ -713,8 +942,11 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		internal BypassRuleChecksObject(ObjectBase target)
 		{
 			_target = target;
-			_captured = target.IsBypassingRuleChecks;
-			_target.IsBypassingRuleChecks = true;
+
+			// 只捕获/恢复“自身”的绕过值：父对象传播的绕过不属于本实例，
+			// 否则父对象退出绕过时，子对象会被错误地永久置为绕过。
+			_captured = target.OwnBypassRuleChecks;
+			_target.OwnBypassRuleChecks = true;
 		}
 
 		#region IDisposable Members
@@ -812,6 +1044,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			result = propertyInfo.DefaultValue;
 			FieldManager.LoadFieldData(propertyInfo, result);
+			AttachChild(propertyInfo, null, result);
 		}
 
 		return result;
@@ -834,6 +1067,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			result = propertyInfo.DefaultValue;
 			FieldManager.LoadFieldData(propertyInfo, result);
+			AttachChild(propertyInfo, null, result);
 		}
 
 		return result;
@@ -1004,6 +1238,8 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			return;
 		}
+
+		AttachChild(propertyInfo, oldValue, newValue);
 
 		if (markAsChanged)
 		{
@@ -1308,6 +1544,33 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		if (_disposedValue)
 		{
 			return;
+		}
+
+		if (disposing)
+		{
+			// 断开父子链接：避免子对象继续向已释放的父对象发通知/读取绕过状态。
+			var manager = FieldManagerOrNull;
+			if (manager != null)
+			{
+				foreach (var property in manager.GetRegisteredProperties())
+				{
+					var value = manager.GetFieldData(property)?.Value;
+					if (value is ObjectBase child)
+					{
+						child.RemoveParent(this, property);
+					}
+					else if (value is IChildGraphNode node)
+					{
+						node.RemoveParent(this, property);
+					}
+				}
+			}
+
+			lock (_parentLock)
+			{
+				_parentLinks?.Clear();
+				Volatile.Write(ref _hasParents, 0);
+			}
 		}
 
 		// 派生类引入资源时在此释放：托管资源只应在 disposing 为 true 时访问，非托管资源两种情况都要释放。

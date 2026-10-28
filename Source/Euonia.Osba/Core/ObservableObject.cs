@@ -322,6 +322,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			OnPropertyChanging(propertyInfo);
 		}
 
+		AttachChild(propertyInfo, field, newValue);
 		field = newValue;
 
 		// 字段模式与字典模式共用同一份“可被规则读取”的值：
@@ -365,6 +366,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			OnPropertyChanging(propertyInfo);
 		}
 
+		AttachChild(propertyInfo, field, converted);
 		field = converted;
 		FieldManager.SetFieldData(propertyInfo, converted);
 
@@ -422,6 +424,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			OnPropertyChanging(propertyName);
 		}
 
+		AttachChild(propertyInfo, field, newValue);
 		field = newValue;
 		FieldManager.SetFieldData(propertyInfo, newValue);
 		if (!IsBypassingRuleChecks)
@@ -479,7 +482,9 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 				OnPropertyChanging(propertyName);
 			}
 
-			field = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			var converted = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			AttachChild(propertyInfo, field, converted);
+			field = converted;
 			FieldManager.SetFieldData(propertyInfo, field);
 			if (!IsBypassingRuleChecks)
 			{
@@ -574,6 +579,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			OnPropertyChanging(propertyInfo);
 		}
 
+		AttachChild(propertyInfo, currentValue, newValue);
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
 		if (!IsBypassingRuleChecks)
