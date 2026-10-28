@@ -915,7 +915,7 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 ### 12.5 验证
 
 ```text
-Euonia.Osba.Tests            275 passed（原 240 + 35 新增）
+Euonia.Osba.Tests            276 passed（原 240 + 36 新增）
 Euonia.Osba.Standalone.Tests   7 passed
 Euonia.slnx                  Build succeeded, 0 CS warning
 ```

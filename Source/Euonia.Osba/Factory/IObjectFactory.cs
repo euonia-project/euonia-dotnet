@@ -96,10 +96,10 @@ public interface IObjectFactory
 	Task<TTarget> UpdateAsync<TTarget>(params object[] criteria);
 
 	/// <summary>
-	/// 调用 <typeparamref name="TTarget"/> 现有命令对象的执行方法。
+	/// 调用 <typeparamref name="TTarget"/> 现有服务对象的执行方法。
 	/// </summary>
 	/// <typeparam name="TTarget">目标对象的类型。</typeparam>
-	/// <param name="target">要执行的目标命令对象。</param>
+	/// <param name="target">要执行的目标服务对象。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步执行操作的任务，包含执行后的对象实例。</returns>
 	/// <remarks>

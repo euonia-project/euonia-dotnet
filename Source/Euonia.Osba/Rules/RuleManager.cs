@@ -38,7 +38,7 @@ public class RuleManager
 	/// 获取规则列表。
 	/// </summary>
 	/// <remarks>
-	/// 请勿直接修改此列表：写入请走 <see cref="Add"/>，读取请走 <see cref="Snapshot"/>。
+	/// 请勿直接修改此列表：写入请走 <see cref="Add"/>，读取请走 <see cref="ObjectRules"/> / <see cref="RulesFor"/>。
 	/// 本列表按类型进程级共享，直接枚举的同时若发生写入会抛出
 	/// <see cref="InvalidOperationException"/>（集合已被修改）。
 	/// </remarks>
@@ -94,8 +94,8 @@ public class RuleManager
 	/// 获取对象级（无属性绑定）的类型级规则，按优先级升序；无规则时返回空集合。
 	/// </summary>
 	/// <remarks>
-	/// 对象级检查是保存/命令执行的热路径：此前每次都要 <c>Snapshot()</c> + <c>Where</c> + <c>OrderBy</c>；
-	/// 现在按类型缓存，<c>Add</c> 时失效。命中路径无锁、无分配。
+	/// 对象级检查是保存/操作执行的热路径：结果按类型缓存，<c>Add</c> 时失效；
+	/// 命中路径无锁、无分配。
 	/// </remarks>
 	internal IReadOnlyList<IRuleBase> ObjectRules
 	{
@@ -150,18 +150,6 @@ public class RuleManager
 		return Rules.Where(rule => rule.Property != null)
 					.GroupBy(rule => rule.Property)
 					.ToDictionary(group => group.Key, group => group.OrderBy(rule => rule.Priority).ToArray());
-	}
-
-	/// <summary>
-	/// 获取当前规则列表的线程安全快照。
-	/// </summary>
-	/// <returns>规则列表的副本。</returns>
-	internal IReadOnlyList<IRuleBase> Snapshot()
-	{
-		lock (_sync)
-		{
-			return [.. Rules];
-		}
 	}
 
 	/// <summary>

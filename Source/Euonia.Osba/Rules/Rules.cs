@@ -477,19 +477,8 @@ public class Rules : IRules
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	/// <remarks>
-	/// <para>
-	/// <b>同步契约的固有阻塞</b>：本方法与 <see cref="CheckRules(IPropertyInfo)"/> 一样运行在
-	/// 调用线程上——这是同步 API 的既定代价，不是缺陷（O-4 方案 A 的 fail-fast 曾试过
-	/// 把「未同步完成的异步规则」变成异常，因破坏既有契约被否决并回滚）。
-	/// </para>
-	/// <para>
-	/// <b>异步调用方请改走 <see cref="CheckObjectRulesAsync"/>（O-4 方案 B）</b>：
-	/// 它是本方法的异步对等物（同一解析、同一裁决、同一通知），只是 <c>await</c> 而不是
-	/// <c>Task.WaitAll</c>——不会阻塞线程池线程，也就不存在「并发下线程池饥饿」。
-	/// 生产代码中的保存（<c>EditableObject.SaveAsync</c>）、命令执行（<c>ObjectRuleGuard</c>）
-	/// 与 <c>ObjectBase.ValidateAsync</c> 全部已经走异步入口；
-	/// 本方法保留给纯同步宿主（WPF/WinForms 命令处理器等）使用。
-	/// </para>
+	/// 本方法是同步入口，会阻塞调用线程直到规则完成；异步流程应使用
+	/// <see cref="CheckObjectRulesAsync"/>。
 	/// </remarks>
 	public List<string> CheckObjectRules(bool cascade)
 	{
@@ -569,7 +558,7 @@ public class Rules : IRules
 	/// <returns>表示异步检查操作的任务。</returns>
 	/// <remarks>
 	/// <para>
-	/// 保存与命令执行两条路径的<b>唯一</b>裁决实现（分别由 <c>EditableObject.SaveAsync</c> 与
+	/// 保存与操作执行两条路径的<b>唯一</b>裁决实现（分别由 <c>EditableObject.SaveAsync</c> 与
 	/// <c>ObjectRuleGuard</c> 调用），避免两处各写一遍必然漂移。
 	/// </para>
 	/// <para>
@@ -648,16 +637,9 @@ public class Rules : IRules
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 <c>null</c> 时抛出。</exception>
 	/// <remarks>
-	/// <para>
-	/// <b>setter 热路径的同步契约</b>：本方法由 <c>ObjectBase.CheckPropertyRules</c> 在属性变更时调用，
-	/// 阻塞调用线程是同步 API 的既定代价（也是 <c>CheckRuleOnPropertyChanged</c> 约束的来源：
-	/// 属性级规则应当是同步即可完成的纯校验）。
-	/// </para>
-	/// <para>
-	/// <b>含 I/O 的属性级校验请改走 <see cref="CheckRulesAsync(IPropertyInfo, CancellationToken)"/>（O-4 方案 B）</b>：
-	/// 那条路径把属性检查推迟到保存时（<c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型），
-	/// 在异步流程里 <c>await</c> 而不是 <c>Task.WaitAll</c>——不阻塞线程池线程。
-	/// </para>
+	/// 本方法由属性 setter 调用，会同步阻塞调用线程；属性级规则应是同步即可完成的纯校验。
+	/// 需要 I/O 的校验请使用 <see cref="CheckRulesAsync(IPropertyInfo, CancellationToken)"/>，
+	/// 并把类型配置为 <c>CheckRuleOnPropertyChanged =&gt; false</c>。
 	/// </remarks>
 	public List<string> CheckRules(IPropertyInfo property)
 	{

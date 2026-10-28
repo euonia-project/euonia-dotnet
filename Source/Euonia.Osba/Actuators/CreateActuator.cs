@@ -13,7 +13,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 后续处理阶段，目标是 <see cref="IEditableObject"/> 时将其标记为新增（<see cref="IEditableObject.MarkAsNew"/>）；
 /// 终结阶段，目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时
 /// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存（插入语义），
-/// 其余类型（只读对象、命令对象等不可持久化对象）构造完成即原样返回、不做落库。
+/// 其余类型（只读对象、服务对象等不可持久化对象）构造完成即原样返回、不做落库。
 /// </para>
 /// </remarks>
 public class CreateActuator<TTarget> : ActuatorBase<TTarget>
@@ -58,7 +58,7 @@ public class CreateActuator<TTarget> : ActuatorBase<TTarget>
 	/// <remarks>
 	/// 当目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时，
 	/// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存，与 <see cref="EditableActuator{TTarget}"/> 的保存语义一致；
-	/// 不可保存类型（只读对象、命令对象等）创建即完成，直接返回目标。
+	/// 不可保存类型（只读对象、服务对象等）创建即完成，直接返回目标。
 	/// </remarks>
 	protected override async Task<TTarget> FinalizeAsync(TTarget target, CancellationToken cancellationToken)
 	{

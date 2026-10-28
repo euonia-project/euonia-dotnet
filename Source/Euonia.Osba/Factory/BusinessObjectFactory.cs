@@ -197,7 +197,7 @@ public class BusinessObjectFactory : IObjectFactory
 				await InvokeAsync(method, target, [cancellationToken]);
 
 				// 保存后再次判定：业务方法可能改动了范围列。
-				// Delete / Execute 不需要复核：删除后行已不存在，命令执行前后判定的对象相同；
+				// Delete / Execute 不需要复核：删除后行已不存在，操作执行前后判定的对象相同；
 				// 对它们再做一次完整授权链只会增加延迟，不会增加安全性。
 				if (operation is BusinessOperation.Create or BusinessOperation.Update)
 				{
@@ -230,7 +230,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 			initialize();
 
-			// 规则在命令体之前裁决（先属性级、再对象级）：不通过则命令根本不会执行。
+			// 规则在执行体之前裁决（先属性级、再对象级）：不通过则命令根本不会执行。
 			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
 			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
 
@@ -260,7 +260,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
 			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Execute, default);
 
-			// 本重载刻意不做对象级规则判定：这里 criteria 驱动的工厂方法**就是命令体**，
+			// 本重载刻意不做对象级规则判定：这里 criteria 驱动的工厂方法**就是执行体**，
 			// 调用前对象还是空的、调用后命令已经执行完，不存在「可校验且来得及拦截」的时点；
 			// 事后补一次判定只能「报告」而无法「阻止」，反而让调用方以为命令没跑。
 			// 需要规则裁决请走 ExecuteAsync(target, ct)：执行器正是这条路径
@@ -296,8 +296,6 @@ public class BusinessObjectFactory : IObjectFactory
 	/// </summary>
 	/// <remarks>
 	/// <c>InitializeInstance</c> 与 <c>FinalizeInstance</c> 必须成对，且终结必须覆盖所有异常路径。
-	/// 此前本类型的每个入口都各手写一份 try/finally——新增入口时漏掉 <c>finally</c> 不会有任何
-	/// 编译期或测试期信号，只会静默泄漏未终结的对象。收敛到这里后，配对关系只声明一次。
 	/// </remarks>
 	/// <typeparam name="TTarget">目标类型。</typeparam>
 	/// <param name="target">目标实例。</param>
@@ -358,8 +356,8 @@ public class BusinessObjectFactory : IObjectFactory
 	/// 异步调用工厂方法，并等待其返回的 <see cref="Task"/> / <see cref="ValueTask"/> / <see cref="ValueTask{T}"/>。
 	/// </summary>
 	/// <remarks>
-	/// 不再依赖 <c>MethodInfo.IsAsync</c>：<c>ValueTask</c> 不满足旧判定，会被当成同步方法直接丢弃，
-	/// 表现为“保存返回成功但数据没落库”。这里直接检查返回值形态，覆盖所有 awaitable。
+	/// 直接检查返回值形态，覆盖 <c>Task</c> / <c>Task{T}</c> / <c>ValueTask</c> / <c>ValueTask{T}</c>；
+	/// 仅依赖 <c>MethodInfo.IsAsync</c> 会把 <c>ValueTask</c> 当成同步方法，表现为“保存成功但数据没落库”。
 	/// 反射调用抛出的 <see cref="TargetInvocationException"/> 会解包，避免业务异常被包一层。
 	/// </remarks>
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
@@ -457,8 +455,8 @@ public class BusinessObjectFactory : IObjectFactory
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _valueTaskAsTask = new();
 
 	/// <summary>
-	/// 拒绝基类提供的“空实现”持久化方法：忘记写 <c>[FactoryInsert]</c> 等特性时，
-	/// 旧行为会调用基类的 <c>Task.CompletedTask</c>，保存/删除看似成功但什么也没做。
+	/// 拒绝基类提供的空实现持久化方法：缺少 <c>[FactoryInsert]</c> 等特性时，
+	/// 保存/删除不能静默成功。
 	/// </summary>
 	/// <typeparam name="TTarget">目标类型。</typeparam>
 	/// <param name="method">解析到的工厂方法。</param>

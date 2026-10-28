@@ -278,6 +278,21 @@ public class ChildGraphTests
 	}
 
 	[Fact]
+	public void Bidirectional_References_Should_Not_Recurse_Notifications()
+	{
+		var parent = new CyclicParentProbe();
+		var child = new CyclicChildProbe();
+
+		parent.Child = child;
+		child.Parent = parent;
+		parent.AcceptChanges();
+
+		child.Name = "changed";
+
+		Assert.True(parent.HasChangedProperties);
+	}
+
+	[Fact]
 	public void Parent_Dispose_Should_Detach_Child_Notifications()
 	{
 		var parent = new ParentProbe();
@@ -326,6 +341,37 @@ public sealed class ParentProbe : ObservableObject<ParentProbe>
 
 	/// <summary>供测试开启绕过。</summary>
 	public IDisposable Bypass() => BypassRuleChecks;
+}
+
+/// <summary>双向引用父对象探针。</summary>
+public sealed class CyclicParentProbe : ObservableObject<CyclicParentProbe>
+{
+	public static readonly PropertyInfo<CyclicChildProbe> ChildProperty = RegisterProperty<CyclicChildProbe>(p => p.Child);
+
+	public CyclicChildProbe Child
+	{
+		get => GetProperty(ChildProperty);
+		set => SetProperty(ChildProperty, value);
+	}
+}
+
+/// <summary>双向引用子对象探针。</summary>
+public sealed class CyclicChildProbe : ObservableObject<CyclicChildProbe>
+{
+	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+	public static readonly PropertyInfo<CyclicParentProbe> ParentProperty = RegisterProperty<CyclicParentProbe>(p => p.Parent);
+
+	public string Name
+	{
+		get => GetProperty(NameProperty);
+		set => SetProperty(NameProperty, value);
+	}
+
+	public CyclicParentProbe Parent
+	{
+		get => GetProperty(ParentProperty);
+		set => SetProperty(ParentProperty, value);
+	}
 }
 
 /// <summary>持有子集合的父对象探针。</summary>

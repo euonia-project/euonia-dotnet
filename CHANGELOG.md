@@ -45,7 +45,7 @@
   `ILoggerFactory` 回退；指标覆盖保存、授权、规则耗时与失败次数。
 - **文档**：修正 README 继承图、规则共享边界、`BusinessContextAccessor` 显式上下文、
   删除幂等、`ValueTask` 工厂与启动期校验说明。
-- **测试**：M4 新增 5 个回归用例，`Euonia.Osba.Tests` 总计 259 个。
+- **测试**：`Euonia.Osba.Tests` 当前总计 276 个（含 M4 与子对象图回归）。
 
 #### ServiceObject：从 CommandObject 重命名并拆出变更追踪层级
 

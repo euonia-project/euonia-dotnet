@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Nerosoft.Euonia.Security;
 
@@ -35,8 +35,8 @@ public class ObjectReflector
 	/// 单参工厂方法缓存：键为（目标类型，特性类型，实参运行时类型）。
 	/// </summary>
 	/// <remarks>
-	/// 保存/创建/读取绝大多数只有一个实参（id、名称或取消令牌）。此前每次调用都要
-	/// 拼一段包含泛型全名的字符串再做字典查找，是反射路径上的固定分配。
+	/// 保存/创建/读取绝大多数只有一个实参（id、名称或取消令牌），用强类型键避免
+	/// 每次调用拼字符串。
 	/// </remarks>
 	private static readonly ConcurrentDictionary<(Type Target, Type Attribute, Type Argument, bool IsNull), MethodInfo> _singleArgFactoryMethods = new();
 

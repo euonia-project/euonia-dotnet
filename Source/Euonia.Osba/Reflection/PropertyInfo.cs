@@ -37,7 +37,6 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	public PropertyInfo(string name)
 		: this(name, null, null)
 	{
-		Name = name;
 	}
 
 	/// <inheritdoc />

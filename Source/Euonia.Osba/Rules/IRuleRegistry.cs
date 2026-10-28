@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>
 /// 没有 <see cref="BusinessContext"/> 的对象（手工 <c>new</c>、静态初始化期）回退到
-/// <see cref="RuleManager"/> 的进程级默认注册表，保持旧用法可用。
+/// <see cref="RuleManager"/> 的进程级默认注册表，保持无 DI 场景可用。
 /// </para>
 /// </remarks>
 public interface IRuleRegistry
@@ -50,8 +50,4 @@ public sealed class RuleRegistry : IRuleRegistry
 		_rules.TryRemove(type, out _);
 	}
 
-	/// <summary>
-	/// 静态默认注册表：无 DI / 无业务上下文时使用。
-	/// </summary>
-	internal static RuleRegistry Default { get; } = new();
 }

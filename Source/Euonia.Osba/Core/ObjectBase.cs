@@ -3,8 +3,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Security;
-using Nerosoft.Euonia.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Reflection;
 using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
@@ -16,7 +16,7 @@ namespace Nerosoft.Euonia.Osba;
 /// ObjectBase 实现了属性更改通知（INotifyPropertyChanged、INotifyPropertyChanging）、
 /// 规则检查（IHasRuleCheck）和资源管理（IDisposable）的接口。派生类应重写相关方法以
 /// 实现自定义业务逻辑和验证规则。该类管理规则检查、属性存储、业务上下文与装载作用域；
-/// <b>变更追踪</b>由 <see cref="BusinessObject{T}"/> 提供，命令对象不参与。
+/// <b>变更追踪</b>由 <see cref="BusinessObject{T}"/> 提供，服务对象不参与。
 /// </remarks>
 public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 {
@@ -25,7 +25,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </summary>
 	/// <remarks>
 	/// <b>变更追踪</b>（已更改属性列表、脏状态）在泛型 <see cref="ObjectBase{T}"/> 中，
-	/// 不在这里：命令对象只保留属性与规则能力，不应背负数仓对象的生命周期语义。
+	/// 不在这里：服务对象只保留属性与规则能力，不应背负数仓对象的生命周期语义。
 	/// </remarks>
 	private readonly Lock _sync = new();
 
@@ -211,11 +211,6 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	internal Rules RuleSet => Rules;
 
 	/// <summary>
-	/// 获取当前对象是否已有规则实例；没有实例时表示没有实例级/操作级规则。
-	/// </summary>
-	internal Rules RuleSetOrNull => Volatile.Read(ref _rules);
-
-	/// <summary>
 	/// 获取当前对象是否有正在运行的规则；不会创建规则实例。
 	/// </summary>
 	protected bool HasRunningRules => _rules?.HasRunningRules ?? false;
@@ -261,7 +256,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步检查操作的任务。</returns>
 	/// <remarks>
-	/// 与保存、命令执行共用同一套检查与异常形态（见 <see cref="ObjectRuleGuard"/>）。
+	/// 与保存、操作执行共用同一套检查与异常形态（见 <see cref="ObjectRuleGuard"/>）。
 	/// 规则检查被挂起（<see cref="SuspendRuleChecking"/>）时不给出结论、也不抛出。
 	/// </remarks>
 	/// <exception cref="Nerosoft.Euonia.Validation.ValidationException">存在 Error 级违规时抛出。</exception>
@@ -278,7 +273,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
-	/// 落库（保存 / 命令执行）前的完整校验：<b>先属性级，再对象级</b>。
+	/// 落库（保存 / 操作执行）前的完整校验：<b>先属性级，再对象级</b>。
 	/// </summary>
 	/// <param name="message">验证异常的说明。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
@@ -304,7 +299,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// 未修改（乃至未装载）的属性不参与校验，也就不会因为「读出来是默认值」而被凭空拦下。
 	/// </para>
 	/// <para>
-	/// 那一遍属性级检查对命令对象自然为空：<see cref="ServiceObject{T}"/> 是<b>无状态</b>的
+	/// 那一遍属性级检查对服务对象自然为空：<see cref="ServiceObject{T}"/> 是<b>无状态</b>的
 	/// （只表达「要执行某种操作」，不持有属性），没有变更追踪，
 	/// 它也不参与变更追踪。命令的校验一律写成<b>对象级</b>规则，对象级那一遍照常执行。
 	/// </para>
@@ -328,7 +323,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
-	/// 异步检查指定属性的规则（O-4 方案 B 的公共出口）。
+	/// 异步检查指定属性的规则。
 	/// </summary>
 	/// <param name="property">目标属性。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
@@ -448,15 +443,6 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
-	/// 获取业务对象的已注册属性检查规则。
-	/// </summary>
-	/// <returns>规则管理器。</returns>
-	protected RuleManager GetRegisteredRules()
-	{
-		return Rules.RuleManager;
-	}
-
-	/// <summary>
 	/// 向当前上下文添加验证规则。派生类应重写此方法以指定自定义验证逻辑。
 	/// </summary>
 	/// <remarks>
@@ -464,6 +450,15 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </remarks>
 	protected virtual void AddRules()
 	{
+	}
+
+	/// <summary>
+	/// 获取当前对象的规则管理器。
+	/// </summary>
+	/// <returns>规则管理器。</returns>
+	protected RuleManager GetRegisteredRules()
+	{
+		return Rules.RuleManager;
 	}
 
 	/// <summary>
@@ -541,6 +536,16 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
+	/// 为指定属性和值引发 PropertyChanged 事件。
+	/// </summary>
+	/// <param name="name">属性名。</param>
+	/// <param name="value">属性值。</param>
+	protected virtual void OnPropertyChanged(string name, object value)
+	{
+		OnPropertyChanged(name);
+	}
+
+	/// <summary>
 	/// 通知属性值即将更改。
 	/// </summary>
 	/// <param name="propertyName">即将更改的属性的名称。</param>
@@ -563,28 +568,12 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
-	/// 为指定属性和值引发 PropertyChanged 事件。
-	/// </summary>
-	/// <param name="name">已更改属性的名称。</param>
-	/// <param name="value">属性的新值。</param>
-	protected virtual void OnPropertyChanged(string name, object value)
-	{
-		var handler = PropertyChanged;
-		if (handler != null)
-		{
-			handler(this, new PropertyChangedEventArgs(name));
-		}
-
-		NotifyParents(name);
-	}
-
-	/// <summary>
 	/// 将指定属性标记为脏的或已更改。
 	/// </summary>
 	/// <param name="property">要标记的属性信息。</param>
 	protected virtual void PropertyHasChanged(IPropertyInfo property)
 	{
-		// 公共基类不做变更追踪：命令对象等“操作对象”没有对象生命周期。
+		// 公共基类不做变更追踪：服务对象等“操作对象”没有对象生命周期。
 		// 需要追踪的派生类（BusinessObject<T>）重写本方法。
 		SetValidationState(ValidationState.NotValidated);
 		OnPropertyChanged(property);
@@ -620,8 +609,8 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </summary>
 	/// <remarks>
 	/// 只有带变更追踪的对象（<see cref="BusinessObject{T}"/>）才有“本次变更过的属性”；
-	/// 命令对象没有变更追踪，因此默认为空。属性级规则在 setter 上触发，
-	/// 命令对象应使用对象级规则。
+	/// 服务对象没有变更追踪，因此默认为空。属性级规则在 setter 上触发，
+	/// 服务对象应使用对象级规则。
 	/// </remarks>
 	protected virtual IReadOnlyList<IPropertyInfo> RulesPropertiesToCheck => Array.Empty<IPropertyInfo>();
 
@@ -646,26 +635,12 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	#region Property Checks
 
 	/// <summary>
-	/// 绕过规则检查的<b>异步流作用域</b>开关（每实例一份 <see cref="AsyncLocal{T}"/> 容器）。
+	/// 绕过规则检查的异步流作用域开关。
 	/// </summary>
 	/// <remarks>
-	/// <para>
-	/// <b>BREAKING 变更（原为对象级 <c>bool</c>）</b>：标志挂在当前 <see cref="AsyncLocal{T}"/>（逻辑执行流）上，
-	/// 而不是对象字段上。
-	/// </para>
-	/// <para>
-	/// 原对象级布尔有两个可证明的缺陷：
-	/// ① <c>using (target.BypassRuleChecks) { await handler(target); }</c> 期间标志<b>跨 await 存活在对象上</b>，
-	/// 异步 handler 执行期间同实例的<b>并发</b> setter 会被一并跳过写权限检查、变更追踪与通知——
-	/// 其中 <c>PropertyHasChanged</c> 是唯一写入 <c>_changedProperties</c> 的路径，被跳过即<b>静默不持久化</b>；
-	/// ② 并发进出 <c>using</c> 会让先退出的调用方把还在线程上的后一个调用方的绕过状态一并还原。
-	/// 改为 AsyncLocal 后：绕过只影响<b>发起它的逻辑流及其派生流</b>，并发调用方互不可见；
-	/// <c>using</c> 退出时恢复的是<b>本流</b>进入前的值（嵌套绕过正确叠加/还原）。
-	/// </para>
-	/// <para>
-	/// 保留 <c>virtual</c>（派生类如需「永不绕过」可整体覆盖为恒 <see langword="false"/>），
-	/// 但 setter 语义从「写对象状态」变为「写本异步流的值」，覆写时请保持流作用域语义。
-	/// </para>
+	/// 绕过状态存放在 <see cref="AsyncLocal{T}"/> 中，只影响发起它的逻辑流及其派生流；
+	/// 并发流互不可见，<c>using</c> 退出时恢复本流进入前的值。
+	/// 父对象的绕过会沿父子链向下穿透到子对象。
 	/// </remarks>
 	protected virtual bool IsBypassingRuleChecks
 	{
@@ -819,11 +794,40 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		}
 
 		var links = GetParentLinks();
-		foreach (var link in links)
+		if (links.Length == 0)
 		{
-			link.Parent.OnChildPropertyChanged(link.Property, this, propertyName);
+			return;
+		}
+
+		// 防止父子双向引用形成通知环。
+		var notifying = _notifyingParents ??= [];
+		if (!notifying.Add(this))
+		{
+			return;
+		}
+
+		try
+		{
+			foreach (var link in links)
+			{
+				link.Parent.OnChildPropertyChanged(link.Property, this, propertyName);
+			}
+		}
+		finally
+		{
+			notifying.Remove(this);
+			if (notifying.Count == 0)
+			{
+				_notifyingParents = null;
+			}
 		}
 	}
+
+	/// <summary>
+	/// 当前通知链上的对象集合，用于阻断父子双向引用形成的环。
+	/// </summary>
+	[ThreadStatic]
+	private static HashSet<ObjectBase> _notifyingParents;
 
 	/// <summary>
 	/// 子对象属性变化时的父对象回调：默认把父对象上持有该子对象的属性标脏并通知。
@@ -837,7 +841,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	}
 
 	/// <summary>
-	/// 供子容器（如 <see cref="ObservableList{T}"/>）通知父对象：容器内容发生变化。
+	/// 供子容器（如 <see cref="ObservableList{T}"/> / <see cref="ObservableDictionary{TKey,TValue}"/>）通知父对象：容器内容发生变化。
 	/// </summary>
 	/// <param name="property">父对象上持有容器的属性。</param>
 	internal void NotifyChildChanged(IPropertyInfo property)
@@ -1016,18 +1020,6 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 
 	#region Read Properties
 
-	/// <summary>
-	/// 从托管字段值列表中获取属性值，并将值转换为适当的类型。
-	/// </summary>
-	/// <param name="propertyInfo">包含属性元数据的 PropertyInfo 对象。</param>
-	/// <typeparam name="TValue">字段的类型。</typeparam>
-	/// <typeparam name="TProperty">属性的类型。</typeparam>
-	/// <returns>转换后的属性值。</returns>
-	protected TProperty ReadPropertyConvert<TValue, TProperty>(PropertyInfo<TValue> propertyInfo)
-	{
-		return TypeHelper.CoerceValue<TProperty>(typeof(TValue), ReadProperty(propertyInfo));
-	}
-
 	/// <inheritdoc />
 	public TValue ReadProperty<TValue>(PropertyInfo<TValue> propertyInfo)
 	{
@@ -1118,6 +1110,18 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		}
 
 		return ReadProperty(property);
+	}
+
+	/// <summary>
+	/// 读取指定属性并转换为目标类型。
+	/// </summary>
+	/// <typeparam name="TValue">字段的类型。</typeparam>
+	/// <typeparam name="TProperty">属性的类型。</typeparam>
+	/// <param name="propertyInfo">属性元数据。</param>
+	/// <returns>转换后的属性值。</returns>
+	protected TProperty ReadPropertyConvert<TValue, TProperty>(PropertyInfo<TValue> propertyInfo)
+	{
+		return TypeHelper.CoerceValue<TProperty>(typeof(TValue), ReadProperty(propertyInfo));
 	}
 
 	#endregion
@@ -1258,64 +1262,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	public virtual void LoadProperty(IPropertyInfo propertyInfo, object newValue)
 	{
 		EnsureCanLoadProperty(propertyInfo);
-
-#if IOS
-        // 如果类型为可空类型，则手动调用 LoadProperty<T>，否则将发生 JIT 错误
-        if (propertyInfo.Type == typeof(int?))
-        {
-            LoadProperty((PropertyInfo<int?>)propertyInfo, (int?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(bool?))
-        {
-            LoadProperty((PropertyInfo<bool?>)propertyInfo, (bool?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(DateTime?))
-        {
-            LoadProperty((PropertyInfo<DateTime?>)propertyInfo, (DateTime?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(decimal?))
-        {
-            LoadProperty((PropertyInfo<decimal?>)propertyInfo, (decimal?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(double?))
-        {
-            LoadProperty((PropertyInfo<double?>)propertyInfo, (double?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(long?))
-        {
-            LoadProperty((PropertyInfo<long?>)propertyInfo, (long?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(byte?))
-        {
-            LoadProperty((PropertyInfo<byte?>)propertyInfo, (byte?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(char?))
-        {
-            LoadProperty((PropertyInfo<char?>)propertyInfo, (char?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(short?))
-        {
-            LoadProperty((PropertyInfo<short?>)propertyInfo, (short?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(uint?))
-        {
-            LoadProperty((PropertyInfo<uint?>)propertyInfo, (uint?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(ulong?))
-        {
-            LoadProperty((PropertyInfo<ulong?>)propertyInfo, (ulong?)newValue);
-        }
-        else if (propertyInfo.Type == typeof(ushort?))
-        {
-            LoadProperty((PropertyInfo<ushort?>)propertyInfo, (ushort?)newValue);
-        }
-        else
-        {
-            LoadPropertyByReflection(nameof(LoadProperty), propertyInfo, newValue);
-        }
-#else
 		_ = LoadPropertyByReflection(nameof(LoadProperty), propertyInfo, newValue);
-#endif
 	}
 
 	/// <summary>

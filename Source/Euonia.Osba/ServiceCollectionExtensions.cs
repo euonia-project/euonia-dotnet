@@ -1,4 +1,3 @@
-﻿using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Osba;
@@ -41,8 +40,6 @@ public static class ServiceCollectionExtensions
 
 		var options = new OsbaOptions();
 		configure?.Invoke(options);
-		options.Assemblies.AddRange(assemblies ?? []);
-
 		// 第一次注册为准；重复调用不会覆盖宿主已经做出的选择。
 		services.TryAddSingleton(options);
 
@@ -69,7 +66,7 @@ public static class ServiceCollectionExtensions
 		// 启动期校验是显式选项：默认关闭，避免测试程序集中的半成品类型让 Host 启动失败。
 		if (options.ValidateOnStartup)
 		{
-			var diagnostics = OsbaStartupValidator.Validate(assemblies, options);
+			var diagnostics = OsbaStartupValidator.Validate(assemblies);
 			OsbaStartupValidator.ThrowIfErrors(diagnostics);
 		}
 

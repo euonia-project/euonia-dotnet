@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -81,9 +80,8 @@ public static class OsbaStartupValidator
 	/// 校验指定程序集中的业务对象。
 	/// </summary>
 	/// <param name="assemblies">程序集。</param>
-	/// <param name="options">选项；为 <see langword="null"/> 时使用默认值。</param>
 	/// <returns>诊断集合；无问题时为空。</returns>
-	public static IReadOnlyList<OsbaDiagnostic> Validate(IEnumerable<Assembly> assemblies, OsbaOptions options = null)
+	public static IReadOnlyList<OsbaDiagnostic> Validate(IEnumerable<Assembly> assemblies)
 	{
 		var results = new List<OsbaDiagnostic>();
 		var assemblyArray = assemblies?.Where(assembly => assembly != null).ToArray() ?? [];

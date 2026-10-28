@@ -10,8 +10,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <remarks>
 /// <para>
 /// 属性元数据（合并后的属性列表与名称索引）按<b>类型</b>缓存，所有实例共享同一份只读快照；
-/// 实例只持有字段值数组。此前的实现会在每个对象实例上重新遍历继承链、复制属性列表，
-/// 一个空对象的首次属性访问就要分配 1.6 KB。
+/// 实例只持有字段值数组。
 /// </para>
 /// <para>
 /// 字段值按属性在元数据中的稳定索引存放在 <see cref="IFieldData"/> 数组里，
@@ -210,24 +209,21 @@ public class FieldDataManager
 	internal IFieldData LoadFieldData<TValue>(IPropertyInfo property, TValue value)
 	{
 		var field = GetOrCreateFieldData(property);
-		if (field is IFieldData<TValue> fd)
+
+		if (field is IFieldDataInternal internalField)
 		{
-			if (field is IFieldDataInternal internalField)
-			{
-				internalField.SetValue(value, trackHistory: false);
-				field.MarkAsUnchanged();
-			}
-			else
-			{
-				fd.Value = value;
-				field.MarkAsUnchanged();
-			}
+			internalField.SetValue(value, trackHistory: false);
+		}
+		else if (field is IFieldData<TValue> typedField)
+		{
+			typedField.Value = value;
 		}
 		else
 		{
-			SetLoadedValue(field, value);
+			field.Value = value;
 		}
 
+		field.MarkAsUnchanged();
 		return field;
 	}
 
@@ -269,26 +265,6 @@ public class FieldDataManager
 			default:
 				return (TValue)fieldData.Value;
 		}
-	}
-
-	/// <summary>
-	/// 移除属性的字段数据。
-	/// </summary>
-	/// <param name="property">属性。</param>
-	internal void RemoveField(IPropertyInfo property)
-	{
-		var index = GetIndex(property);
-		if (index >= 0)
-		{
-			if (_fields != null && index < _fields.Length)
-			{
-				_fields[index] = null;
-			}
-
-			return;
-		}
-
-		_unindexed?.TryRemove(property.Name, out _);
 	}
 
 	/// <summary>
@@ -460,7 +436,7 @@ public class FieldDataManager
 		var properties = new List<IPropertyInfo>();
 		var indices = new Dictionary<string, int>(StringComparer.Ordinal);
 
-		// 从顶层到底层遍历，子类同名属性先到先得（与旧实现的 FirstOrDefault 语义一致）。
+		// 从顶层到底层遍历，同名属性先到先得。
 		for (var index = hierarchy.Count - 1; index >= 0; index--)
 		{
 			foreach (var property in PropertyInfoManager.GetLockedSnapshot(hierarchy[index]))

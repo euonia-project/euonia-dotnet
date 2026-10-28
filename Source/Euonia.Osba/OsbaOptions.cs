@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
@@ -17,11 +15,6 @@ public sealed class OsbaOptions
 	public static OsbaOptions Default { get; } = new();
 
 	/// <summary>
-	/// 扫描到的程序集；由 <c>AddBusinessObject</c> 填充。
-	/// </summary>
-	internal List<Assembly> Assemblies { get; } = [];
-
-	/// <summary>
 	/// 获取或设置是否在 <c>AddBusinessObject</c> 时执行启动期校验。
 	/// </summary>
 	/// <remarks>
@@ -34,7 +27,7 @@ public sealed class OsbaOptions
 	/// 获取或设置是否对缺少持久化工厂方法（Insert/Update/Delete）的对象抛错。
 	/// </summary>
 	/// <remarks>
-	/// 默认开启。关闭后回退到旧行为（调用基类空实现），只建议在迁移期临时使用。
+	/// 默认开启。关闭后允许缺少持久化方法时调用基类空实现，只应在迁移期临时使用。
 	/// </remarks>
 	public bool StrictFactoryMethods { get; set; } = true;
 

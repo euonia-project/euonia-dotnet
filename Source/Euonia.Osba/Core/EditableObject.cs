@@ -1,4 +1,4 @@
-﻿using Nerosoft.Euonia.Validation;
+using Nerosoft.Euonia.Validation;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -126,7 +126,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 
 		if (!IsDeleted || CheckObjectRulesOnDelete)
 		{
-			// 与命令执行路径共用的强制点：先属性级（该类型把检查推迟到这里时），再对象级；
+			// 与操作执行路径共用的强制点：先属性级（该类型把检查推迟到这里时），再对象级；
 			// 有 Error 级违规则抛 ValidationException。检查被挂起时不给结论也不抛出。
 			await EnsureRulesAsync("Object not valid for save.", cancellationToken);
 		}
