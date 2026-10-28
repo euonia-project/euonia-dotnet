@@ -28,7 +28,7 @@ public static class ActuatorBuilderExtensions
 	/// <summary>
 	/// 创建用于新建目标对象的 <see cref="CreateActuator{TTarget}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 	/// <param name="builder">执行器构建器。</param>
 	/// <param name="criteria">用于创建对象的初始化参数。</param>
 	/// <returns>创建执行器实例。</returns>
@@ -38,7 +38,7 @@ public static class ActuatorBuilderExtensions
 	/// 只读对象、命令对象等不可持久化类型仅执行创建工厂方法、不做落库。
 	/// </remarks>
 	public static CreateActuator<TTarget> Create<TTarget>(this ActuatorBuilder<TTarget> builder, params object[] criteria)
-		where TTarget : BusinessObject<TTarget>
+		where TTarget : ObjectBase<TTarget>
 	{
 		return new CreateActuator<TTarget>(builder, () => builder.ObjectFactory.CreateAsync<TTarget>(criteria));
 	}

@@ -1,4 +1,4 @@
-﻿using Nerosoft.Euonia.Reflection;
+using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -68,7 +68,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// 提交当前更改，将对象状态重置为 <see cref="ObjectEditState.None"/>。
 	/// </summary>
 	/// <remarks>
-	/// 在清除已更改属性跟踪与字段修改历史（由 <see cref="BusinessObject.AcceptChanges"/> 完成）的同时，
+	/// 在清除已更改属性跟踪与字段修改历史（由 <see cref="ObjectBase.AcceptChanges"/> 完成）的同时，
 	/// 将对象状态重置为 <see cref="ObjectEditState.None"/> 并清除删除时的对象规则检查标记，
 	/// 令 <see cref="IsChanged"/> 返回 <see langword="false"/>。
 	/// </remarks>
@@ -84,7 +84,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <see cref="ObjectEditState.None"/>。
 	/// </summary>
 	/// <remarks>
-	/// 通常在对象被成功保存或加载后调用，使 <see cref="IsChanged"/>、<see cref="BusinessObject.HasChangedProperties"/> 和
+	/// 通常在对象被成功保存或加载后调用，使 <see cref="IsChanged"/>、<see cref="BusinessObject{T}.HasChangedProperties"/> 和
 	/// <see cref="IsSavable"/> 恢复初始状态。对象状态非 <see cref="ObjectEditState.None"/> 时也可显式调用，
 	/// 用于放弃未保存的更改。
 	/// </remarks>
@@ -596,7 +596,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			return newValue != null;
 		}
 
-		if (typeof(IBusinessObject).IsAssignableFrom(propertyInfo.Type))
+		if (typeof(IOsbaObject).IsAssignableFrom(propertyInfo.Type))
 		{
 			return !ReferenceEquals(oldValue, newValue);
 		}

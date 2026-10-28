@@ -1,9 +1,9 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 用于创建目标对象的执行器，支持任意 <see cref="BusinessObject{T}"/> 类型。
+/// 用于创建目标对象的执行器，支持任意 <see cref="ObjectBase{T}"/> 类型。
 /// </summary>
-/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 /// <remarks>
 /// <para>
 /// 创建流程：通过对象工厂调用目标的创建工厂方法构造实例，随后由执行管道处理
@@ -17,7 +17,7 @@
 /// </para>
 /// </remarks>
 public class CreateActuator<TTarget> : ActuatorBase<TTarget>
-	where TTarget : BusinessObject<TTarget>
+	where TTarget : ObjectBase<TTarget>
 {
 	/// <summary>
 	/// 初始化创建执行器。

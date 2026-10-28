@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -48,7 +48,7 @@ public class RuleManager
 	/// 保护 <see cref="Rules"/> 列表读写的锁。
 	/// </summary>
 	/// <remarks>
-	/// 刻意<b>不用实例自身</b>作为锁：<c>BusinessObject.InitializeRules</c> 会持有 <c>lock (rules)</c>
+	/// 刻意<b>不用实例自身</b>作为锁：<c>ObjectBase.InitializeRules</c> 会持有 <c>lock (rules)</c>
 	/// 并调用使用方代码（<c>AddRules()</c>），而那可能回调进 <c>Rules</c> 的实例级规则集合；
 	/// 规则检查路径则反向（持有 <c>Rules._lockObject</c> 时经通知回调触发 <see cref="Add"/>）。
 	/// 两者用同一把锁就会形成锁序环。分开之后，本锁只在极短的列表读写期间被持有，环不存在。

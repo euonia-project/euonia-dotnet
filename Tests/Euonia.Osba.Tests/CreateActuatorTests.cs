@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
-/// 验证 <see cref="CreateActuator{TTarget}"/> 支持任意 <see cref="BusinessObject{T}"/> 类型：
+/// 验证 <see cref="CreateActuator{TTarget}"/> 支持任意 <see cref="ObjectBase{T}"/> 类型：
 /// 可编辑对象（<see cref="EditableObject{T}"/>）创建后标记新增并保存（插入语义）；
 /// 命令对象（<see cref="CommandObject{T}"/>）、普通业务对象等不可持久化类型仅构造实例、不做落库。
 /// </summary>

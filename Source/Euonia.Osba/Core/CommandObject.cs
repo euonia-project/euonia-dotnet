@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
 /// 命令对象。
@@ -9,14 +9,14 @@
 /// <b>命令对象是无状态的</b>：它只表达「要执行某种操作」，原则上不持有属性。执行所需的输入
 /// 由工厂方法的参数（执行器的 <c>criteria</c>）带入，而不是先写进对象属性再校验——
 /// 因此它不与变更追踪（<see cref="ObservableObject{T}"/> 的 <c>SetProperty</c>）耦合，
-/// <see cref="BusinessObject.ChangedProperties"/> 恒为空。
+/// 不提供 <c>ChangedProperties</c> / <c>HasChangedProperties</c>（没有变更追踪）。
 /// </para>
 /// <para>
 /// 与之相应，<b>属性级规则对命令对象无从触发</b>（那是「某个字段值合不合格」的模型），
 /// 命令的校验请写成<b>对象级</b>规则——它在命令体之前由工厂边界裁决，不通过则命令不执行。
 /// </para>
 /// </remarks>
-public abstract class CommandObject<T> : BusinessObject<T>, ICommandObject
+public abstract class CommandObject<T> : ObjectBase<T>, ICommandObject
 	where T : CommandObject<T>
 {
 	/// <summary>

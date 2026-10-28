@@ -5,8 +5,8 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 定义业务对象的执行器行为接口，继承自通用的管道行为接口 <see cref="IPipelineBehavior{TRequest, TResponse}"/>，用于在处理业务对象时实现特定的业务逻辑。
 /// </summary>
-/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 public interface IActuatorBehavior<TTarget> : IPipelineBehavior<TTarget, TTarget>
-	where TTarget : BusinessObject<TTarget>
+	where TTarget : ObjectBase<TTarget>
 {
 }

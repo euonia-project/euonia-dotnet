@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 public partial class CommonRule
 {
@@ -29,7 +29,7 @@ public partial class CommonRule
         /// <inheritdoc />
         public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
         {
-            if (context.Target is IBusinessObject target)
+            if (context.Target is IOsbaObject target)
             {
                 var value = target.ReadProperty(Property);
                 if (value == null || string.IsNullOrWhiteSpace(value.ToString()))

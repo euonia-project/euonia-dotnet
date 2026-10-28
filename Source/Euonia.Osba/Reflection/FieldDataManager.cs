@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using Nerosoft.Euonia.Reflection;
 
@@ -455,7 +455,7 @@ public class FieldDataManager
 			hierarchy.Add(current);
 			current = current.BaseType;
 		}
-		while (current != null && current != typeof(BusinessObject));
+		while (current != null && current != typeof(ObjectBase));
 
 		var properties = new List<IPropertyInfo>();
 		var indices = new Dictionary<string, int>(StringComparer.Ordinal);

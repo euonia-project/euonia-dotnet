@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
@@ -54,7 +54,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
 
 			// 此处刻意不做数据范围判定：Create 只构造对象、不落库，且按设计由调用方在之后
@@ -73,7 +73,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
@@ -96,7 +96,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 同 Create：只构造不落库，不做数据范围判定
@@ -113,7 +113,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Read, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
@@ -134,7 +134,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
@@ -154,7 +154,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Update, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -193,7 +193,7 @@ public class BusinessObjectFactory : IObjectFactory
 			var result = await WithActivatorAsync(target, async initialize =>
 			{
 				initialize();
-				using var loadScope = (target as BusinessObject)?.BeginLoad();
+				using var loadScope = (target as ObjectBase)?.BeginLoad();
 				await InvokeAsync(method, target, [cancellationToken]);
 
 				// 保存后再次判定：业务方法可能改动了范围列。
@@ -234,7 +234,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
 			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
 
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, [cancellationToken]);
 		});
 	}
@@ -254,7 +254,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -281,7 +281,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Delete, default);
 			initialize();
-			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定

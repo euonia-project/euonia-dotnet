@@ -375,7 +375,7 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 ```csharp
 protected override bool CheckRuleOnPropertyChanged => false;   // 变更时挂起，改到保存时统一检查
 
-// 保存时的实际顺序（EditableObject.SaveAsync → BusinessObject.EnsureRulesAsync）：
+// 保存时的实际顺序（EditableObject.SaveAsync → ObjectBase.EnsureRulesAsync）：
 //   1. 属性级：只跑 ChangedProperties 里那些属性 —— 它们才是本次要落库的字段
 //   2. 对象级：整体一致性 / 跨字段校验（它可能依赖一个或多个属性值）
 //
@@ -500,7 +500,7 @@ public sealed class RepoCreateOnlyRule : RuleBase { /* ... */ }
 > **规则只在 `BusinessContext` 被赋值后才初始化**：setter 会触发 `AddRules()` 与 `AddDataAnnotations()`。
 > 直接 `new` 出来的对象若从不接线，`AddRules()` 永不执行。
 >
-> `BusinessObject.Rules` 是 **`protected`**。要从外部驱动规则用 `ValidateAsync()` / `EnsureValidAsync()`；
+> `ObjectBase.Rules` 是 **`protected`**。要从外部驱动规则用 `ValidateAsync()` / `EnsureValidAsync()`；
 > 要在派生类里暴露规则集合（例如运行期加实例级规则）：
 > `public Rules PublicRules => Rules;`
 
@@ -572,6 +572,8 @@ await actuator.For<Repo>()
 
 ```csharp
 // 命令对象是「无状态」的：只表达要执行什么，不承载可校验、可持久化的状态。
+// 它继承 ObjectBase<T>（属性 + 规则），不继承 BusinessObject<T>（变更追踪），
+// 因此没有脏状态、ChangedProperties 恒为空、也没有 SaveAsync。
 // 下面的属性是操作入参/出参，不是被校验的字段——命令的校验请写成对象级规则。
 public sealed class PushCommand : CommandObject<PushCommand>
 {
@@ -609,11 +611,16 @@ await actuator.For<PushCommand>()
 > 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `BypassRuleChecks`），
 > 见 [§4.2](#42-按操作指定规则)。
 
+> **`CommandObject` 的定位**：它封装一次**独立业务操作**——可以协调多个业务对象、访问数据、
+> 执行不属于单个实体生命周期的逻辑。因此它不继承 `BusinessObject<T>` 的变更追踪，
+> 也不参与 `SaveAsync`；它是“操作对象”，不是可编辑实体。若操作需要跨聚合/直接访问数据，
+> 优先把依赖通过构造函数注入，并让应用层负责事务边界。
+
 自定义管道行为：
 
 ```csharp
 public sealed class AuditBehavior<TTarget> : IActuatorBehavior<TTarget>
-    where TTarget : BusinessObject<TTarget>
+    where TTarget : ObjectBase<TTarget>
 {
     public async Task<TTarget> HandleAsync(TTarget context, PipelineDelegate<TTarget, TTarget> next)
     {
@@ -912,7 +919,7 @@ BusinessContextAccessor.Clear();
 7. 加载数据用 `LoadProperty`（不标脏），用户改动用 `SetProperty`（标脏）——不要混用。
 8. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` **不是 virtual**；只有 `MarkAsClean` 是。
 9. `MarkAsDeleted(true)` 才让删除也执行对象级规则，默认**不执行**；走执行器时用 `WithRuleChecksOnDelete()`。
-10. `BusinessObject.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
+10. `ObjectBase.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
     外部可读 `IsValid` / `GetBrokenRules()`，并用 `ValidateAsync()` / `EnsureValidAsync()` 驱动检查；
     要直接操作规则集合（例如加实例级规则）请在派生类里暴露它。
 11. `CheckRuleOnPropertyChanged` 默认 **`true`**：属性变更即触发该属性的**属性级**规则检查。
@@ -927,8 +934,9 @@ BusinessContextAccessor.Clear();
     持久化只取 `ChangedProperties`。
 14. **命令对象是无状态的**：它只表达「要执行某种操作」，原则上不持有属性；输入由工厂方法的参数
     （执行器 `criteria`）带入，而不是先写进对象属性再校验。因此它不参与变更追踪
-    （`SetProperty` 在 `ObservableObject<T>` 上，`CommandObject<T>` 只继承 `BusinessObject<T>`），
-    `ChangedProperties` 恒为空，**属性级规则对它也无从触发**。命令的校验请写成**对象级**规则。
+    （`SetProperty` 在 `ObservableObject<T>` 上，`CommandObject<T>` 继承 `ObjectBase<T>`，
+    不进入 `BusinessObject<T>` 的变更追踪层级），`ChangedProperties` 恒为空，
+    **属性级规则对它也无从触发**。命令的校验请写成**对象级**规则。
 15. 跨程序集重写工厂方法时用 **`protected override`**（不是 `protected internal override`）。
 
 ### 工厂

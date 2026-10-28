@@ -42,7 +42,7 @@ internal static class RuleTestHarness
 	/// <param name="provider">服务提供程序。</param>
 	/// <returns>已接线的业务对象。</returns>
 	internal static T Create<T>(IServiceProvider provider)
-		where T : BusinessObject, new()
+		where T : ObjectBase, new()
 	{
 		return new T { BusinessContext = provider.GetRequiredService<BusinessContext>() };
 	}

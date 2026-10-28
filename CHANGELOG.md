@@ -45,7 +45,25 @@
   `ILoggerFactory` 回退；指标覆盖保存、授权、规则耗时与失败次数。
 - **文档**：修正 README 继承图、规则共享边界、`BusinessContextAccessor` 显式上下文、
   删除幂等、`ValueTask` 工厂与启动期校验说明。
-- **测试**：M4 新增 5 个回归用例，`Euonia.Osba.Tests` 总计 258 个。
+- **测试**：M4 新增 5 个回归用例，`Euonia.Osba.Tests` 总计 259 个。
+
+#### CommandObject 从变更追踪层级拆出
+
+- 公共根由 `BusinessObject` 重命名为 **`ObjectBase`**；`ObjectBase<T>` 只负责属性注册
+  （`RegisterProperty`）与公共对象能力。
+- `BusinessObject<T>` 作为 `ObjectBase<T>` 的派生类，独占变更追踪
+  （`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `PropertyHasChanged`）。
+  非泛型 `BusinessObject` 已移除；需要公共能力的代码改用 `ObjectBase`。
+- **`CommandObject<T>` 改为直接继承 `ObjectBase<T>`**，不再继承 `BusinessObject<T>`：
+  保留属性、规则、上下文与权限能力，但没有脏状态/变更追踪/`SaveAsync`，
+  与“独立业务操作对象”的定位一致。
+- 执行器/构建器/行为（`ActuatorBase`、`ActuatorBuilder`、`IActuatorBehavior`、
+  `Actuator.For`、`CreateActuator`）的泛型约束从 `BusinessObject<T>` 放宽为 `ObjectBase<T>`，
+  命令对象与可编辑对象共用同一条管道，但生命周期语义分离。
+- 新增 `IOsbaObject`（所有 Osba 对象的公共契约：属性存储 + `IUseBusinessContext`）。`IBusinessObject` 改为
+  `IOsbaObject + INotifyPropertyChanged + INotifyPropertyChanging`；
+  **`ICommandObject` 改为 `IOsbaObject + IHasRuleCheck`**，不再继承 `IBusinessObject`，
+  因此命令对象不承诺属性变更通知，也不暴露可编辑对象契约。
 
 ## [2026.4.5] - 2026-10-19
 

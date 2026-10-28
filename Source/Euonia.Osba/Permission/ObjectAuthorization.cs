@@ -17,7 +17,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <list type="bullet">
 /// <item><description><b>查询</b>（<see cref="IsGranted"/>）：不抛异常，无从判定时返回 <see langword="true"/>。
-/// <see cref="BusinessObject.CanPerformOperation"/> 用的就是它。</description></item>
+/// <see cref="ObjectBase.CanPerformOperation"/> 用的就是它。</description></item>
 /// <item><description><b>闸门</b>（<see cref="EnsureAuthorized"/> / <see cref="EnsureAuthorizedAsync"/>）：
 /// 拒绝抛 <see cref="SecurityException"/>，判定不了抛 <see cref="InvalidOperationException"/>。</description></item>
 /// </list>
@@ -32,7 +32,7 @@ internal static class ObjectAuthorization
 	/// <summary>
 	/// 校验当前用户是否被允许对目标执行业务操作，拒绝时抛出 <see cref="SecurityException"/>。
 	/// </summary>
-	/// <param name="target">目标业务对象；非 <see cref="BusinessObject"/> 类型时自动放行。</param>
+	/// <param name="target">目标业务对象；非 <see cref="ObjectBase"/> 类型时自动放行。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <param name="requirementType">
 	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
@@ -56,7 +56,7 @@ internal static class ObjectAuthorization
 	/// <summary>
 	/// 异步版本的 <see cref="EnsureAuthorized"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
 	/// </summary>
-	/// <param name="target">目标业务对象；非 <see cref="BusinessObject"/> 类型时自动放行。</param>
+	/// <param name="target">目标业务对象；非 <see cref="ObjectBase"/> 类型时自动放行。</param>
 	/// <param name="operation">要执行的操作。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <param name="requirementType">
@@ -92,7 +92,7 @@ internal static class ObjectAuthorization
 	/// 真正的拦截在工厂边界的闸门（<see cref="EnsureAuthorized"/>），本方法供业务方法内部做条件分支使用。
 	/// 无从判定返回 <see langword="true"/> 是刻意的查询口径——它不构成放行通道。
 	/// </remarks>
-	internal static bool IsGranted(BusinessObject target, string operation)
+	internal static bool IsGranted(ObjectBase target, string operation)
 	{
 		var requirements = Requirements(target, operation);
 
@@ -118,12 +118,12 @@ internal static class ObjectAuthorization
 	/// <param name="checker">判定实现。</param>
 	/// <param name="requirements">为目标收集到的权限要求。</param>
 	/// <returns>需要判定则返回 <see langword="true"/>。</returns>
-	private static bool TryPrepare(object target, string operation, Type requirementType, out BusinessObject businessObject, out IPermissionChecker checker, out IReadOnlyList<PermissionAttribute> requirements)
+	private static bool TryPrepare(object target, string operation, Type requirementType, out ObjectBase businessObject, out IPermissionChecker checker, out IReadOnlyList<PermissionAttribute> requirements)
 	{
 		checker = null;
 		requirements = [];
 
-		if (target is not BusinessObject candidate)
+		if (target is not ObjectBase candidate)
 		{
 			businessObject = null;
 			return false;
@@ -165,7 +165,7 @@ internal static class ObjectAuthorization
 	/// <param name="requirements">按调用方静态类型收集到的权限要求。</param>
 	/// <param name="checker">判定实现。</param>
 	/// <exception cref="SecurityException">目标不满足任一权限要求时抛出。</exception>
-	private static void Enforce(BusinessObject businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
+	private static void Enforce(ObjectBase businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
 		var started = Stopwatch.GetTimestamp();
 		var succeeded = false;
@@ -198,7 +198,7 @@ internal static class ObjectAuthorization
 	}
 
 	/// <summary>
-	/// 判断类型是否重写了 <see cref="BusinessObject.CanPerformOperation(string)"/>。
+	/// 判断类型是否重写了 <see cref="ObjectBase.CanPerformOperation(string)"/>。
 	/// </summary>
 	/// <param name="type">业务对象类型。</param>
 	/// <returns>重写则返回 <see langword="true"/>。</returns>
@@ -206,13 +206,13 @@ internal static class ObjectAuthorization
 	{
 		return _canPerformOverrides.GetOrAdd(type, static candidate =>
 		{
-			var method = candidate.GetMethod(nameof(BusinessObject.CanPerformOperation), [typeof(string)]);
-			return method != null && method.DeclaringType != typeof(BusinessObject);
+			var method = candidate.GetMethod(nameof(ObjectBase.CanPerformOperation), [typeof(string)]);
+			return method != null && method.DeclaringType != typeof(ObjectBase);
 		});
 	}
 
 	/// <summary>
-	/// <see cref="BusinessObject.CanPerformOperation(string)"/> 是否被重写的缓存。
+	/// <see cref="ObjectBase.CanPerformOperation(string)"/> 是否被重写的缓存。
 	/// </summary>
 	private static readonly ConcurrentDictionary<Type, bool> _canPerformOverrides = new();
 
@@ -239,7 +239,7 @@ internal static class ObjectAuthorization
 	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
 	/// </param>
 	/// <returns>权限要求列表。</returns>
-	private static IReadOnlyList<PermissionAttribute> Requirements(BusinessObject businessObject, string operation, Type requirementType = null)
+	private static IReadOnlyList<PermissionAttribute> Requirements(ObjectBase businessObject, string operation, Type requirementType = null)
 	{
 		// 不能只看业务对象自身的上下文：手工构造/反序列化的对象没有 BusinessContext，
 		// 但宿主注册的来源仍应生效；与 ScopeAuthorization 一致地回退到环境作用域。

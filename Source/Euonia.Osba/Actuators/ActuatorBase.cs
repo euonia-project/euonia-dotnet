@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 执行器抽象基类，封装了业务对象的获取、处理、终结（保存或执行）的通用流程。
 /// </summary>
-/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 /// <remarks>
 /// <para>
 /// 派生类通过 <see cref="ActuatorBase{TTarget}(ActuatorBuilder{TTarget}, Func{Task{TTarget}})"/> 构造函数接收
@@ -22,7 +22,7 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// </remarks>
 public abstract class ActuatorBase<TTarget>
-	where TTarget : BusinessObject<TTarget>
+	where TTarget : ObjectBase<TTarget>
 {
 	/// <summary>
 	/// 初始化执行器基类，保存构建器配置和对象工厂委托。
@@ -223,7 +223,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <see cref="System.Security.SecurityException"/>。
 	/// </para>
 	/// <para>
-	/// 与 <see cref="BusinessObject.SuspendRuleChecking"/> 分开记录，因此不会覆盖调用方自己挂起的检查状态。
+	/// 与 <see cref="ObjectBase.SuspendRuleChecking"/> 分开记录，因此不会覆盖调用方自己挂起的检查状态。
 	/// </para>
 	/// </remarks>
 	public ActuatorBase<TTarget> BypassRuleChecks()

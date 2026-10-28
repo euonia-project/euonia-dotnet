@@ -756,7 +756,7 @@ static void Measure(string name, int n, Action<int> body)
 
 | 主题 | 文件 |
 |---|---|
-| 对象基类/属性存储 | `Core/BusinessObject.cs`、`Core/ObservableObject.cs`、`Core/ReadOnlyObject.cs` |
+| 对象基类/属性存储 | `Core/ObjectBase.cs`、`Core/ObjectBase<T>.cs`、`Core/BusinessObject.Generic.cs`、`Core/ObservableObject.cs`、`Core/ReadOnlyObject.cs` |
 | 字段/历史/Rx | `Reflection/FieldData.cs`、`Reflection/FieldDataManager.cs` |
 | 工厂/反射 | `Factory/BusinessObjectFactory.cs`、`Factory/ObjectReflector.cs` |
 | 规则 | `Rules/Rules.cs`、`Rules/RuleManager.cs`、`Rules/RuleContext.cs`、`Rules/BrokenRuleCollection.cs` |
@@ -872,7 +872,26 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 | P2-9 | `ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")`、保存/授权/规则耗时与失败计数；`ILoggerFactory` 优先、`Trace` 回退 |
 | P2-10 | README/SAMPLE/CHANGELOG 更新：继承图、规则边界、显式上下文、删除幂等、ValueTask 工厂、启动校验 |
 
-### 12.2 暂缓
+### 12.2 `CommandObject` 与变更追踪解耦
+
+| 类型 | 职责 |
+|---|---|
+| `IOsbaObject` | 所有 Osba 对象的公共契约：`FieldManager`、`ReadProperty`、`LoadProperty`、`BusinessContext` |
+| `IBusinessObject` | `IOsbaObject` + `INotifyPropertyChanged` + `INotifyPropertyChanging` |
+| `ICommandObject` | `IOsbaObject` + `IHasRuleCheck`；**不再继承 `IBusinessObject`** |
+| `ObjectBase` | 公共根：属性、规则、上下文、权限、装载作用域 |
+| `ObjectBase<T>` | 泛型属性注册（`RegisterProperty`） |
+| `BusinessObject<T>` | 变更追踪：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `PropertyHasChanged` |
+| `CommandObject<T>` | **直接继承 `ObjectBase<T>`**：保留属性与规则，但没有脏状态/变更追踪/`SaveAsync` |
+| `ObservableObject<T>` | 状态机；继续继承 `BusinessObject<T>` |
+| `EditableObject<T>` | 保存/规则；继续继承 `ObservableObject<T>` |
+| `ReadOnlyObject<T>` | 只读对象；继续继承 `BusinessObject<T>` |
+
+执行器泛型约束从 `BusinessObject<TTarget>` 放宽到 `ObjectBase<TTarget>`，命令对象与可编辑对象共用管道
+但不再共享生命周期语义。新增回归断言：`CommandObject<T>` 的基类是 `ObjectBase<T>`，属性变更后
+`HasChangedProperties=false`、`ChangedProperties` 为空、且不是 `IEditableObject`。
+
+### 12.3 暂缓
 
 - **P2-8 公共 API 收窄**（把 `FieldDataManager`/`RuleManager`/`PropertyInfoList`/`BrokenRuleCollection` 改为 internal）：
   这些类型已经通过 `IBusinessObject.FieldManager`、`GetBrokenRules()`、`PropertyInfoManager` 暴露，
@@ -880,15 +899,16 @@ Euonia.slnx                  Build succeeded, 0 CS warning
 - **Source Generator / Analyzer**：属于 P4 工具链，本轮未做。
 - **`[Inject]` 标记 Obsolete**：会波及 Modularity 与其他模块的编译警告；先通过启动校验与文档引导。
 
-### 12.3 验证
+### 12.4 验证
 
 ```text
-Euonia.Osba.Tests            258 passed（原 240 + 18 新增）
+Euonia.Osba.Tests            259 passed（原 240 + 19 新增）
 Euonia.Osba.Standalone.Tests   7 passed
 Euonia.slnx                  Build succeeded, 0 CS warning
 ```
 
-新增 M4 覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断。
+新增 M4 覆盖：三态校验、容器级规则隔离、`AddBusinessObject` 链式返回与选项、启动期 `[Inject]` 诊断、
+`CommandObject` 不进入变更追踪层级。
 
 ---
 

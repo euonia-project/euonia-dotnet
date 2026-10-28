@@ -199,12 +199,17 @@ await pipeline.RunAsync(new MyContext());
 #### 业务对象层级
 
 ```
-BusinessObject<T>              —— 核心：规则、上下文、属性管理
-├── ObservableObject<T>        —— 变更追踪：NEW / CHANGED / DELETED 状态
-│     └── EditableObject<T>    —— 支持异步规则校验与保存
-├── CommandObject<T>           —— 命令式对象，含 ExecuteAsync
-└── ReadOnlyObject<T>          —— 带权限控制的只读对象（工厂装载作用域内可填充）
+ObjectBase                       —— 公共根：属性、规则、上下文、权限
+└── ObjectBase<T>                —— 属性注册（RegisterProperty）
+     ├── BusinessObject<T>       —— 变更追踪（ChangedProperties / AcceptChanges）
+     │    ├── ObservableObject<T>—— NEW / CHANGED / DELETED 状态
+     │    │    └── EditableObject<T> —— 异步规则校验与保存
+     │    └── ReadOnlyObject<T>  —— 只读对象（工厂装载作用域内可填充）
+     └── CommandObject<T>        —— 独立业务操作；有属性和规则，但无变更追踪
 ```
+
+> `ICommandObject` 只组合 `IOsbaObject`（Osba 对象公共契约：属性存储 + 上下文）与 `IHasRuleCheck`，
+> **不继承 `IBusinessObject`**；`IBusinessObject` 才承诺 `INotifyPropertyChanged/Changing` 等可编辑对象契约。
 
 #### 核心概念
 

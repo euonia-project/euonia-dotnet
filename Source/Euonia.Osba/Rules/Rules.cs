@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
@@ -43,7 +43,7 @@ public class Rules : IRules
 	{
 		get
 		{
-			if (Target is BusinessObject businessObject)
+			if (Target is ObjectBase businessObject)
 			{
 				return businessObject.GetRuleManager();
 			}
@@ -274,7 +274,7 @@ public class Rules : IRules
 	/// <param name="property">目标属性。</param>
 	/// <returns>存在规则则返回 <see langword="true"/>。</returns>
 	/// <remarks>
-	/// 供 <c>BusinessObject.PropertyHasChanged</c> 在属性 setter 上做快速短路：
+	/// 供 <c>ObjectBase.PropertyHasChanged</c> 在属性 setter 上做快速短路：
 	/// 没有规则的属性走普通变更通知即可，不必进入规则检查。因此本方法必须廉价。
 	/// </remarks>
 	internal bool HasRulesFor(IPropertyInfo property)
@@ -293,7 +293,7 @@ public class Rules : IRules
 	/// <param name="property">属性。</param>
 	/// <returns>存在则返回 <see langword="true"/>。</returns>
 	/// <remarks>
-	/// 供 <c>BusinessObject.PropertyHasChanged</c> 在未创建实例级规则集合时短路：
+	/// 供 <c>ObjectBase.PropertyHasChanged</c> 在未创建实例级规则集合时短路：
 	/// 先查类型级索引，再只在需要时进入本对象。
 	/// </remarks>
 	internal bool HasInstanceRulesFor(IPropertyInfo property)
@@ -330,11 +330,11 @@ public class Rules : IRules
 	/// <remarks>
 	/// <para>
 	/// <b>对象级检查只跑「无属性绑定」的类型级规则</b>：属性级规则在<b>属性变更时</b>触发检查
-	/// （见 <c>BusinessObject.PropertyHasChanged</c>），其违规已按属性归因落进
+	/// （见 <c>ObjectBase.PropertyHasChanged</c>），其违规已按属性归因落进
 	/// <see cref="BrokenRules"/>，保存时通过 <see cref="IsValid"/> 生效，因此在这里再跑一遍没有意义。
 	/// 更重要的是，在这里跑就等于校验「本次根本没改、甚至没装载」的属性——未装载的属性读出来是
 	/// 默认值（空字符串），会凭空拦下正常保存。类型把属性检查推迟到保存时的情况由
-	/// <c>BusinessObject.EnsureRulesAsync</c> 在调用本方法<b>之前</b>单独处理（只跑变更过的属性）。
+	/// <c>ObjectBase.EnsureRulesAsync</c> 在调用本方法<b>之前</b>单独处理（只跑变更过的属性）。
 	/// </para>
 	/// <para>
 	/// <b>实例级与操作级规则不按 <see cref="IRuleBase.Property"/> 过滤，全部纳入对象级检查</b>：
@@ -487,7 +487,7 @@ public class Rules : IRules
 	/// 它是本方法的异步对等物（同一解析、同一裁决、同一通知），只是 <c>await</c> 而不是
 	/// <c>Task.WaitAll</c>——不会阻塞线程池线程，也就不存在「并发下线程池饥饿」。
 	/// 生产代码中的保存（<c>EditableObject.SaveAsync</c>）、命令执行（<c>ObjectRuleGuard</c>）
-	/// 与 <c>BusinessObject.ValidateAsync</c> 全部已经走异步入口；
+	/// 与 <c>ObjectBase.ValidateAsync</c> 全部已经走异步入口；
 	/// 本方法保留给纯同步宿主（WPF/WinForms 命令处理器等）使用。
 	/// </para>
 	/// </remarks>
@@ -649,7 +649,7 @@ public class Rules : IRules
 	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 <c>null</c> 时抛出。</exception>
 	/// <remarks>
 	/// <para>
-	/// <b>setter 热路径的同步契约</b>：本方法由 <c>BusinessObject.CheckPropertyRules</c> 在属性变更时调用，
+	/// <b>setter 热路径的同步契约</b>：本方法由 <c>ObjectBase.CheckPropertyRules</c> 在属性变更时调用，
 	/// 阻塞调用线程是同步 API 的既定代价（也是 <c>CheckRuleOnPropertyChanged</c> 约束的来源：
 	/// 属性级规则应当是同步即可完成的纯校验）。
 	/// </para>
@@ -677,7 +677,7 @@ public class Rules : IRules
 		// 属性 setter 是热路径，绝大多数属性没有规则，这里必须能直接返回。
 		//
 		// 返回本属性名而不是空集合，是为了与下面的「挂起」分支口径一致：两种情况都表示
-		// 「本次没有规则检查来驱动变更通知」，调用方（BusinessObject.CheckPropertyRules）
+		// 「本次没有规则检查来驱动变更通知」，调用方（ObjectBase.CheckPropertyRules）
 		// 据此补发一次普通通知——否则被排除的属性会在 setter 上悄悄丢掉 PropertyChanged。
 		if (rules.Count == 0)
 		{
@@ -761,7 +761,7 @@ public class Rules : IRules
 	/// <returns>受规则影响且发生变化的属性名称列表。</returns>
 	/// <remarks>
 	/// 属性 setter 上会<b>阻塞</b>调用线程——这是同步 API 的固有代价，也是
-	/// <c>BusinessObject.CheckRuleOnPropertyChanged</c> 约束的来源：属性级规则应当是
+	/// <c>ObjectBase.CheckRuleOnPropertyChanged</c> 约束的来源：属性级规则应当是
 	/// 同步即可完成的纯校验；需要 I/O 的校验请放对象级规则（保存走异步路径）。
 	/// </remarks>
 	private List<string> RunPropertyRules(IPropertyInfo property, IReadOnlyList<IRuleBase> rules)
@@ -1063,7 +1063,7 @@ public class Rules : IRules
 	/// </summary>
 	public void AddDataAnnotations()
 	{
-		var registeredProperties = ((IBusinessObject)_target).FieldManager.GetRegisteredProperties();
+		var registeredProperties = ((IOsbaObject)_target).FieldManager.GetRegisteredProperties();
 
 		if (registeredProperties == null || registeredProperties.Count == 0)
 		{

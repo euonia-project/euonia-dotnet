@@ -397,7 +397,7 @@ public class OsbaFeatureTests
 	#region Helpers
 
 	private static IServiceScope BeginRuleScope<T>(out T obj)
-		where T : BusinessObject, new()
+		where T : ObjectBase, new()
 	{
 		var scope = CreateScope(out var provider);
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);

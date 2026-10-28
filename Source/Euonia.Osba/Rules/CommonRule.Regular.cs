@@ -1,4 +1,4 @@
-﻿using System.Text.RegularExpressions;
+using System.Text.RegularExpressions;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -69,7 +69,7 @@ public partial class CommonRule
 		/// <inheritdoc />
 		public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 		{
-			if (context.Target is IBusinessObject target)
+			if (context.Target is IOsbaObject target)
 			{
 				var value = target.ReadProperty(Property);
 

@@ -1,18 +1,22 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 表示作为命令对象的业务对象契约，继承自 <see cref="IBusinessObject"/>。
+/// 命令对象契约：一次独立业务操作。
 /// </summary>
 /// <remarks>
-/// <b>命令对象是无状态的</b>：它只表达「要执行某种操作」，原则上不持有属性，
-/// 也不承载可校验、可持久化的状态。因此它：
+/// <para>
+/// 命令对象只承诺<b>属性存储</b>（<see cref="IOsbaObject"/>）与<b>规则检查</b>
+/// （<see cref="IHasRuleCheck"/>）；它<b>不</b>承诺：
+/// </para>
 /// <list type="bullet">
-/// <item><description>不参与变更追踪（没有 <c>SetProperty</c> 那种「用户修改」语义），
-/// <see cref="BusinessObject.ChangedProperties"/> 恒为空；</description></item>
-/// <item><description>不适用<b>属性级</b>规则——没有「某个字段值合不合格」这回事；</description></item>
-/// <item><description>校验一律用<b>对象级</b>规则，在命令体之前由工厂边界裁决。</description></item>
+/// <item><description><c>INotifyPropertyChanged</c> / <c>INotifyPropertyChanging</c>：属性变化不跟踪、不通知；</description></item>
+/// <item><description><c>ChangedProperties</c> / <c>HasChangedProperties</c>：没有对象生命周期脏状态；</description></item>
+/// <item><description><c>SaveAsync</c> / <c>ObjectEditState</c>：命令不是可编辑实体。</description></item>
 /// </list>
+/// <para>
+/// 命令的校验使用<b>对象级</b>规则；属性级规则依赖 setter 变更通知，不适用于命令对象。
+/// </para>
 /// </remarks>
-public interface ICommandObject : IBusinessObject
+public interface ICommandObject : IOsbaObject, IHasRuleCheck
 {
 }

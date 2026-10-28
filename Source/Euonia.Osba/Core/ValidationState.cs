@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 业务对象的校验状态。
 /// </summary>
 /// <remarks>
-/// <see cref="BusinessObject.IsValid"/> 是布尔值，首次校验之前恒为 <see langword="true"/>，
+/// <see cref="ObjectBase.IsValid"/> 是布尔值，首次校验之前恒为 <see langword="true"/>，
 /// 无法区分“没校验过”和“校验通过”。本枚举补上这个语义：
 /// <see cref="NotValidated"/> 表示结论未知，<see cref="Valid"/> / <see cref="Invalid"/> 才是结论。
 /// </remarks>

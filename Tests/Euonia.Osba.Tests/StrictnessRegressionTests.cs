@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
@@ -140,6 +141,25 @@ public class StrictnessRegressionTests
 			() => target.EnsureValidAsync(TestContext.Current.CancellationToken));
 
 		rules.DetachOperationRules(outer);
+	}
+
+	[Fact]
+	public void CommandObject_Should_Not_Carry_Edit_State_Or_Change_Tracking()
+	{
+		// CommandObject 直接继承 ObjectBase<T>，不进入 BusinessObject<T>（变更追踪）层级。
+		Assert.Equal(typeof(CommandObject<TrackingCommand>), typeof(TrackingCommand).BaseType);
+		Assert.Equal(typeof(ObjectBase<TrackingCommand>), typeof(CommandObject<TrackingCommand>).BaseType);
+
+		var command = new TrackingCommand { Name = "changed" };
+
+		// 命令对象没有变更追踪成员，而不是“有一个恒为空的列表”。
+		Assert.Null(typeof(TrackingCommand).GetProperty("HasChangedProperties"));
+		Assert.Null(typeof(TrackingCommand).GetProperty("ChangedProperties"));
+		Assert.True((object)command is ICommandObject);
+		Assert.True((object)command is IOsbaObject);
+		Assert.False((object)command is IBusinessObject);
+		Assert.False((object)command is INotifyPropertyChanged);
+		Assert.False((object)command is IEditableObject);
 	}
 
 	[Fact]
@@ -400,6 +420,12 @@ public sealed class AlwaysPassRule : RuleBase
 	{
 		return Task.CompletedTask;
 	}
+}
+
+/// <summary>命令对象不跟踪属性变化。</summary>
+public sealed class TrackingCommand : CommandObject<TrackingCommand>
+{
+	public string Name { get; set; }
 }
 
 /// <summary>构造注入依赖。</summary>

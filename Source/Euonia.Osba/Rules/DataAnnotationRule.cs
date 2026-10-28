@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 using ValidationResult = System.ComponentModel.DataAnnotations.ValidationResult;
 
@@ -38,7 +38,7 @@ public class DataAnnotationRule : RuleBase
     public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
         ValidationResult result;
-        if (context.Target is IBusinessObject target)
+        if (context.Target is IOsbaObject target)
         {
             var value = target.ReadProperty(Property);
             var serviceProvider = target.BusinessContext?.CurrentServiceProvider;

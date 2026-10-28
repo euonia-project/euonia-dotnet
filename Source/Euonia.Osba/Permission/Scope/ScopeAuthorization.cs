@@ -117,7 +117,7 @@ internal static class ScopeAuthorization
 		context = null;
 		authorizer = null;
 
-		if (target is not IBusinessObject businessObject)
+		if (target is not IOsbaObject businessObject)
 		{
 			return false;
 		}
@@ -157,7 +157,7 @@ internal static class ScopeAuthorization
 	/// </remarks>
 	internal static void WarnIfWriteBeforeCheck(object target, string operation)
 	{
-		if (target is not IBusinessObject businessObject)
+		if (target is not IOsbaObject businessObject)
 		{
 			return;
 		}

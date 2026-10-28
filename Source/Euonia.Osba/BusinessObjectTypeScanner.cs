@@ -23,7 +23,7 @@ internal static class BusinessObjectTypeScanner
 
 		return assemblies
 		       .SelectMany(GetLoadableTypes)
-		       .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IBusinessObject)))
+		       .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IOsbaObject)))
 		       .ToArray();
 	}
 

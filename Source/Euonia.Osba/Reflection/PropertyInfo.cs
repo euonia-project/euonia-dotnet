@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
@@ -146,7 +146,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// <summary>
 	/// 获取一个值，指示此属性是否为子对象。
 	/// </summary>
-	public bool IsChild => typeof(IBusinessObject).IsAssignableFrom(typeof(T));
+	public bool IsChild => typeof(IOsbaObject).IsAssignableFrom(typeof(T));
 
 	private readonly PropertyInfo _propertyInfo;
 
