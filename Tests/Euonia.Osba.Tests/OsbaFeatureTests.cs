@@ -123,7 +123,7 @@ public class OsbaFeatureTests
 	}
 
 	[Fact]
-	public async Task SaveDeleted_ShouldNotResetState()
+	public async Task SaveDeleted_ShouldResetState_AndBeIdempotent()
 	{
 		using var scope = CreateScope(out var provider);
 		BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
@@ -136,9 +136,14 @@ public class OsbaFeatureTests
 
 		await obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
 
-		// 已删除对象的保存不应把状态复位为干净
-		Assert.Equal(ObjectEditState.Deleted, obj.State);
+		// 删除成功后对象应复位为干净状态：否则下一次 SaveAsync 会再执行一次删除。
+		Assert.Equal(ObjectEditState.None, obj.State);
 		Assert.True(SaveEditableObject.DeleteCalled);
+		Assert.Equal(1, SaveEditableObject.DeleteCount);
+
+		// 第二次保存没有待执行的操作，必须是幂等的 no-op。
+		await obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
+		Assert.Equal(1, SaveEditableObject.DeleteCount);
 
 		BusinessContextAccessor.Clear();
 	}
@@ -480,11 +485,13 @@ public class SaveEditableObject : EditableObject<SaveEditableObject>
 
 	public static bool UpdateCalled { get; private set; }
 	public static bool DeleteCalled { get; private set; }
+	public static int DeleteCount { get; private set; }
 
 	internal static void Reset()
 	{
 		UpdateCalled = false;
 		DeleteCalled = false;
+		DeleteCount = 0;
 	}
 
 	public string Name
@@ -510,6 +517,7 @@ public class SaveEditableObject : EditableObject<SaveEditableObject>
 	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
 		DeleteCalled = true;
+		DeleteCount++;
 		await Task.CompletedTask;
 	}
 }

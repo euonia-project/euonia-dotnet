@@ -1,6 +1,7 @@
 <Solution>
     <Folder Name="/Benchmarks/">
         <Project Path="Benchmarks/Euonia.Bus.Benchmarks/Euonia.Bus.Benchmarks.csproj" />
+        <Project Path="Benchmarks/Euonia.Osba.Benchmarks/Euonia.Osba.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/Samples/">
         <Project Path="Samples/Euonia.Sample.Webapi/Euonia.Sample.Webapi.csproj" />

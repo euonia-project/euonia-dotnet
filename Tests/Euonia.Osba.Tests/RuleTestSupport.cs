@@ -216,6 +216,12 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 		AcceptChanges();
 	}
 
+	[FactoryInsert]
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
+	}
+
 	[FactoryUpdate]
 	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{

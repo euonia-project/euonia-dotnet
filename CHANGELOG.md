@@ -7,6 +7,27 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### Euonia.Osba
+
+- **严格化工厂边界**：工厂方法返回 `ValueTask`/`ValueTask<T>` 时会被真正等待；
+  解析到 `EditableObject<T>`/`CommandObject<T>` 的基类空实现时抛 `NotSupportedException`，
+  不再“保存成功但什么也没做”；反射调用抛出的业务异常不再被 `TargetInvocationException` 包裹。
+- **统一字段视图**：`ref` 字段写入同步到 `FieldData`，规则与 DataAnnotations 通过 `ReadProperty`
+  能读到真实值；字段装载不再记录历史，装载后 `IsChanged` 正确复位。
+- **只读对象装载边界**：`LoadProperty` 增加 `CanLoadProperty` 钩子；工厂方法执行期间自动进入
+  按异步流隔离的装载作用域，外部对只读对象的装载抛 `SecurityException`。
+- **删除幂等**：删除成功后对象复位为 `None`，重复 `SaveAsync` 不再重复删除。
+- **规则范围栈**：嵌套/并发执行器的操作级规则范围不再互相覆盖；同步规则走无状态机快路径。
+- **环境上下文去副作用**：`BusinessContextAccessor` 构造函数不再写静态 `AsyncLocal`，
+  必须显式 `SetCurrent`/`Clear`。
+- **性能**：移除 Rx 依赖与每字段 `BehaviorSubject`；撤销历史改为环形缓冲区；属性元数据按类型缓存、
+  字段值改为索引数组；工厂方法缓存改为强类型键；属性通知无订阅者时零分配。
+  稳态属性写约 **0.24 µs / 24 B**（原 0.66 µs / 464 B），带一条规则的写约 **0.79 µs / 0.30 KB**
+  （原 2.18 µs / 1.5 KB），无持久化 `SaveAsync` 约 **2.25 µs / 1.14 KB**（原 4.53 µs / 2.6 KB）。
+- **基准**：新增 `Benchmarks/Euonia.Osba.Benchmarks`；新增 13 个回归测试（共 253 个）。
+- **未包含**：EF Core 物化拦截器与部分更新（不引入 EF Core 依赖）；criteria 写入口在无持久化
+  抽象时仍只能后置判定，已通过 `Trace` 告警提示改用 `Fetch → 判定 → Save`。
+
 ## [2026.4.5] - 2026-10-19
 
 从根上重构消息处理的生命周期：服务提供程序不再通过异步流环境隐式传递，改为显式作用域；
