@@ -67,7 +67,7 @@ public class ReadOnlyObjectRegressionTests
 
 		Assert.Empty(failures);
 
-		var bypassProperty = typeof(BusinessObject)
+		var bypassProperty = typeof(ObjectBase)
 			.GetProperty("IsBypassingRuleChecks", BindingFlags.Instance | BindingFlags.NonPublic);
 		Assert.False((bool)bypassProperty!.GetValue(target));
 	}
@@ -213,7 +213,7 @@ public class BypassRuleChecksFlowScopeTests
 	/// <summary>
 	/// 绕过语义探针：暴露当前流的绕过状态与变更追踪。
 	/// 继承 <see cref="ObservableObject{T}"/>（可写）——并发写用例需要能真实落进
-	/// <see cref="BusinessObject.ChangedProperties"/>；只读探针（<see cref="ReadOnlyProbe"/>）
+	/// <see cref="ObjectBase.ChangedProperties"/>；只读探针（<see cref="ReadOnlyProbe"/>）
 	/// 的写入会被 <c>CanWriteProperty</c> 拒绝，握手完成源永不置位会让用例挂起。
 	/// </summary>
 	private sealed class BypassProbe : ObservableObject<BypassProbe>

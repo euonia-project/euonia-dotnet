@@ -18,12 +18,12 @@ public class PermissionWithoutEngineTests
 	[Fact]
 	public void Osba_Assembly_Should_Not_Reference_Security()
 	{
-		var referenced = typeof(BusinessObject).Assembly.GetReferencedAssemblies().Select(assembly => assembly.Name).ToArray();
+		var referenced = typeof(ObjectBase).Assembly.GetReferencedAssemblies().Select(assembly => assembly.Name).ToArray();
 
 		Assert.DoesNotContain("Euonia.Security", referenced);
 
 		// 直接引用之外，间接引用同样会把它拖回来（例如某个依赖突然引用了引擎）
-		Assert.DoesNotContain("Euonia.Security", TransitiveReferences(typeof(BusinessObject).Assembly));
+		Assert.DoesNotContain("Euonia.Security", TransitiveReferences(typeof(ObjectBase).Assembly));
 	}
 
 	[Fact]

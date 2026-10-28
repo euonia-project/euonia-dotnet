@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -18,7 +18,7 @@ public static class RulesExtensions
 		/// <param name="handler">验证处理函数。</param>
 		/// <param name="message">规则的错误消息。</param>
 		public void AddRule<T>(IPropertyInfo property, [NotNull] Func<T, Task<bool>> handler, string message)
-			where T : BusinessObject
+			where T : ObjectBase
 		{
 			var rule = new CommonRule.Lambda(property, async (_, context) =>
 			{
@@ -43,7 +43,7 @@ public static class RulesExtensions
 		/// <param name="handler">验证处理函数。</param>
 		/// <param name="message">生成规则消息的委托。</param>
 		public void AddRule<T>(IPropertyInfo property, [NotNull] Func<T, Task<bool>> handler, Func<string> message)
-			where T : BusinessObject
+			where T : ObjectBase
 		{
 			var rule = new CommonRule.Lambda(property, async (_, context) =>
 			{
@@ -68,7 +68,7 @@ public static class RulesExtensions
 		/// <param name="handler">同步验证处理函数。</param>
 		/// <param name="message">规则的错误消息。</param>
 		public void AddRule<T>(IPropertyInfo property, [NotNull] Func<T, bool> handler, string message)
-			where T : BusinessObject
+			where T : ObjectBase
 		{
 			var rule = new CommonRule.Lambda(property, (_, context) =>
 			{
@@ -90,7 +90,7 @@ public static class RulesExtensions
 		/// <param name="handler">同步验证处理函数。</param>
 		/// <param name="message">生成规则消息的委托。</param>
 		public void AddRule<T>(IPropertyInfo property, [NotNull] Func<T, bool> handler, Func<string> message)
-			where T : BusinessObject
+			where T : ObjectBase
 		{
 			var rule = new CommonRule.Lambda(property, (_, context) =>
 			{

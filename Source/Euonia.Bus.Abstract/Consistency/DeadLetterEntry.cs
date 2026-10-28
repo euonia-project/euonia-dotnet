@@ -59,6 +59,12 @@ public class DeadLetterEntry
 	public DateTime DeadLetteredAt { get; set; } = DateTime.Now;
 
 	/// <summary>
+	/// 获取死信记录的唯一标识：消息标识符 + 来源 + 目标。
+	/// 同一条消息可能有多个失败目标（多个传输器或多个处理程序），因此不能只用消息标识符作为键。
+	/// </summary>
+	public string Id => $"{MessageId}\u001F{Source}\u001F{Target}";
+
+	/// <summary>
 	/// 返回当前实例的字符串表示形式。
 	/// </summary>
 	/// <returns>包含消息标识符、来源与目标的字符串。</returns>

@@ -34,7 +34,9 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 			ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
 			ConstructorHandling = ConstructorHandling.Default,
 			MetadataPropertyHandling = MetadataPropertyHandling.ReadAhead,
-			TypeNameHandling = TypeNameHandling.Auto,
+			// 消息体可能来自 broker 或远程端，绝不能信任 JSON 中的 $type。
+			// 多态负载由信封的 typeName + 已注册消息类型的白名单决定，而不是由序列化器自行解析类型。
+			TypeNameHandling = TypeNameHandling.None,
 			Converters =
 			[
 				new ClaimsPrincipalJsonConverter(),

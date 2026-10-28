@@ -105,8 +105,9 @@ internal class ActiveMqRecipientRegistrar : IRecipientRegistrar
 	/// </summary>
 	/// <remarks>
 	/// 单个接收器释放失败不影响其余接收器：停机路径上应尽量完成清理，失败仅记录警告。
+	/// 异步释放由 <see cref="IRecipientRegistrar"/> 的默认实现转调本方法。
 	/// </remarks>
-	public ValueTask DisposeAsync()
+	public void Dispose()
 	{
 		foreach (var recipient in _recipients)
 		{
@@ -121,6 +122,5 @@ internal class ActiveMqRecipientRegistrar : IRecipientRegistrar
 		}
 
 		_recipients.Clear();
-		return ValueTask.CompletedTask;
 	}
 }

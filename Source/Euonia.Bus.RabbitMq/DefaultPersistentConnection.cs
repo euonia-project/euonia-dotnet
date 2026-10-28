@@ -122,7 +122,18 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <see cref="TryConnectAsync"/> 会在每轮重新建立并丢弃一个到 broker 的 TCP 连接，
 	/// 且循环没有延迟、永不终止。因此这里在已释放时立即失败。
 	/// </remarks>
-	public async Task<IChannel> CreateChannelAsync()
+	public Task<IChannel> CreateChannelAsync()
+	{
+		return CreateChannelAsync(null);
+	}
+
+	/// <summary>
+	/// 在持久连接上创建一个新的 RabbitMQ 通道，可指定发布确认等选项。
+	/// </summary>
+	/// <param name="options">通道创建选项；为 <c>null</c> 时使用客户端默认值。</param>
+	/// <returns>表示异步操作的任务，包含创建的 <see cref="IChannel"/> 实例。</returns>
+	/// <exception cref="ObjectDisposedException">当连接对象已被释放时抛出。</exception>
+	public async Task<IChannel> CreateChannelAsync(CreateChannelOptions options)
 	{
 		while (true)
 		{
@@ -130,7 +141,9 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 
 			if (_connection is { IsOpen: true })
 			{
-				return await _connection.CreateChannelAsync();
+				return options == null
+					       ? await _connection.CreateChannelAsync()
+					       : await _connection.CreateChannelAsync(options);
 			}
 
 			if (_connection == null)

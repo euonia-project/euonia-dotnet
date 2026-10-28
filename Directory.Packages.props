@@ -2,63 +2,64 @@
     <PropertyGroup>
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <EnablePackageVersionOverride>true</EnablePackageVersionOverride>
-        <ExtensionsPackageVersion>10.0.12</ExtensionsPackageVersion>
+        <ExtensionsPackageVersion>10.0.14</ExtensionsPackageVersion>
         <GrpcAspNetCoreVersion>2.84.0</GrpcAspNetCoreVersion>
         <QuartzVersion>3.19.1</QuartzVersion>
+        <RefitVersion>16.4.0</RefitVersion>
     </PropertyGroup>
     <PropertyGroup>
         <EntityFrameworkCoreVersionPrevious>9.0.19</EntityFrameworkCoreVersionPrevious>
-        <EntityFrameworkCoreVersionCurrent>10.0.12</EntityFrameworkCoreVersionCurrent>
+        <EntityFrameworkCoreVersionCurrent>10.0.14</EntityFrameworkCoreVersionCurrent>
         <EntityFrameworkCoreVersionNext>11.0.0</EntityFrameworkCoreVersionNext>
     </PropertyGroup>
     <PropertyGroup>
         <AspNetCoreVersionPrevious>9.0.19</AspNetCoreVersionPrevious>
-        <AspNetCoreVersionCurrent>10.0.12</AspNetCoreVersionCurrent>
+        <AspNetCoreVersionCurrent>10.0.14</AspNetCoreVersionCurrent>
         <AspNetCoreVersionNext>11.0.0</AspNetCoreVersionNext>
     </PropertyGroup>
     <ItemGroup>
-        <PackageVersion Include="Apache.NMS.ActiveMQ" Version="2.2.0" />
-        <PackageVersion Include="Autofac" Version="9.3.2" />
+        <PackageVersion Include="Apache.NMS.ActiveMQ" Version="2.3.0" />
+        <PackageVersion Include="Autofac" Version="9.3.4" />
         <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
         <PackageVersion Include="Autofac.Extras.DynamicProxy" Version="8.1.0" />
         <PackageVersion Include="AutoMapper" Version="16.2.0" />
-        <PackageVersion Include="Azure.Storage.Blobs" Version="12.29.2" />
+        <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
         <PackageVersion Include="Castle.Core" Version="5.2.1" />
-        <PackageVersion Include="Consul" Version="1.6.10.9" />
-        <PackageVersion Include="FluentValidation" Version="12.1.1" />
+        <PackageVersion Include="Consul" Version="1.8.0" />
+        <PackageVersion Include="FluentValidation" Version="12.2.0" />
         <PackageVersion Include="Duende.IdentityModel" Version="8.1.0" />
-        <PackageVersion Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="7.0.1" />
-        <PackageVersion Include="Mapster" Version="10.0.12" />
-        <PackageVersion Include="Mapster.DependencyInjection" Version="10.0.12" />
-        <PackageVersion Include="MediatR" Version="12.1.1" />
+        <PackageVersion Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="7.0.2" />
+        <PackageVersion Include="Mapster" Version="10.0.13" />
+        <PackageVersion Include="Mapster.DependencyInjection" Version="10.0.13" />
+        <PackageVersion Include="MediatR" Version="14.2.0" />
         <PackageVersion Include="MediatR.Contracts" Version="2.0.1" />
-        <PackageVersion Include="MongoDB.Driver" Version="3.12.0" />
+        <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageVersion Include="Polly" Version="8.8.0" />
-        <PackageVersion Include="protobuf-net" Version="3.1.33" />
+        <PackageVersion Include="Polly" Version="8.8.1" />
+        <PackageVersion Include="protobuf-net" Version="3.4.40" />
         <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
         <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="$(QuartzVersion)" />
         <PackageVersion Include="Quartz.Extensions.Hosting" Version="$(QuartzVersion)" />
         <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
-        <PackageVersion Include="Refit" Version="6.3.2" />
-        <PackageVersion Include="Refit.HttpClientFactory" Version="6.3.2" />
-        <PackageVersion Include="Refit.Newtonsoft.Json" Version="6.3.2" />
+        <PackageVersion Include="Refit" Version="$(RefitVersion)" />
+        <PackageVersion Include="Refit.HttpClientFactory" Version="$(RefitVersion)" />
+        <PackageVersion Include="Refit.Newtonsoft.Json" Version="$(RefitVersion)" />
         <PackageVersion Include="Serilog" Version="4.4.0" />
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageVersion Include="StackExchange.Redis" Version="3.3.1" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
-        <PackageVersion Include="System.Collections.Immutable" Version="10.0.11" />
-        <PackageVersion Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
+        <PackageVersion Include="StackExchange.Redis" Version="3.4.20" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
+        <PackageVersion Include="System.Collections.Immutable" Version="10.0.14" />
+        <PackageVersion Include="System.Configuration.ConfigurationManager" Version="10.0.14" />
         <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
         <PackageVersion Include="System.Interactive" Version="7.0.1" />
-        <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="10.0.12" />
+        <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="10.0.14" />
         <PackageVersion Include="System.Reactive" Version="7.0.0" />
-        <PackageVersion Include="System.Runtime.Caching" Version="10.0.12" />
+        <PackageVersion Include="System.Runtime.Caching" Version="10.0.14" />
         <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
-        <PackageVersion Include="System.Text.Json" Version="10.0.12" />
-        <PackageVersion Include="Winton.Extensions.Configuration.Consul" Version="3.2.0" />
+        <PackageVersion Include="System.Text.Json" Version="10.0.14" />
+        <PackageVersion Include="Winton.Extensions.Configuration.Consul" Version="3.4.0" />
         <PackageVersion Include="ZooKeeperNetEx" Version="3.4.12.4" />
     </ItemGroup>
     <!-- Microsoft.Extensions -->
@@ -71,7 +72,7 @@
         <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="$(ExtensionsPackageVersion)" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.9.0" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.AutoActivation" Version="10.11.0" />
         <PackageVersion Include="Microsoft.Extensions.Hosting" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Http" Version="$(ExtensionsPackageVersion)" />
@@ -123,7 +124,7 @@
     </ItemGroup>
     <!-- Grpc -->
     <ItemGroup>
-        <PackageVersion Include="Google.Api.CommonProtos" Version="2.12.0" />
+        <PackageVersion Include="Google.Api.CommonProtos" Version="2.17.0" />
         <PackageVersion Include="Google.Protobuf" Version="3.36.2" />
         <PackageVersion Include="Grpc" Version="2.46.6" />
         <PackageVersion Include="Grpc.Net.Client" Version="$(GrpcAspNetCoreVersion)" />
@@ -138,19 +139,19 @@
     </ItemGroup>
     <!-- Tests -->
     <ItemGroup>
-        <PackageVersion Include="BenchmarkDotNet" Version="0.13.4" />
-        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-        <PackageVersion Include="xunit.v3" Version="4.0.0" />
-        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0">
+        <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+        <PackageVersion Include="xunit.v3" Version="4.0.2" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageVersion>
-        <PackageVersion Include="coverlet.collector" Version="10.0.1">
+        <PackageVersion Include="coverlet.collector" Version="10.1.0">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageVersion>
-        <PackageVersion Include="Xunit.DependencyInjection" Version="12.0.0" />
+        <PackageVersion Include="Xunit.DependencyInjection" Version="12.0.1" />
         <PackageVersion Include="Xunit.DependencyInjection.Logging" Version="12.0.0" />
-        <PackageVersion Include="Moq" Version="4.20.72" />
+        <PackageVersion Include="Moq" Version="4.21.0" />
     </ItemGroup>
 </Project>

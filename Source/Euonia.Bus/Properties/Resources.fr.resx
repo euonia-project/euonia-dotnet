@@ -145,7 +145,7 @@
     <value>Si la méthode de gestion {0}.{1} a trois paramètres, les deuxième et troisième doivent être IMessageContext et CancellationToken ; les types de paramètres déclarés sont ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>La méthode de gestion {0}.{1} déclare un SubscribeAttribute sans nom ; chaque SubscribeAttribute doit spécifier un nom de canal.</value>
+    <value>La méthode de gestion {0}.{1} déclare un SubscribeAttribute sans nom, mais son type de message est un type primitif ; spécifiez un nom de canal ou utilisez un type de message non primitif.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Échec du chargement automatique de l'assembly '{0}' configuré dans '{1}:AutoLoadAssemblies'.</value>
@@ -209,5 +209,8 @@
   </data>
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>Échec de la résolution du type de message '{0}'.</value>
+  </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>Le type de message '{0}' n'est pas inscrit sur ce point de terminaison et ne peut pas être désérialisé.</value>
   </data>
 </root>

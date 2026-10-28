@@ -11,7 +11,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// 把账号移出团队的命令对象。裁决路径与 <see cref="AddTeamMemberCommand"/> 完全一致
 /// （同一枚 <see cref="TeamPermissions.Edit"/> 码 + 同一行级策略），只是把成员关系置为失效。
 /// </summary>
-public sealed class RemoveTeamMemberCommand : CommandObjectBase<RemoveTeamMemberCommand>
+public sealed class RemoveTeamMemberCommand : ServiceObjectBase<RemoveTeamMemberCommand>
 {
 	/// <summary>目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
 	public string TeamId { get; set; }

@@ -43,6 +43,19 @@ internal static class RabbitMqDelivery
 	}
 
 	/// <summary>
+	/// 解析消息的目标交换机名称。
+	/// </summary>
+	/// <param name="options">RabbitMQ 总线选项。</param>
+	/// <param name="channel">消息通道名称。</param>
+	/// <returns>交换机名称；配置了前缀时返回 <c>{前缀}:{通道}</c>。</returns>
+	public static string ResolveExchangeName(RabbitMqBusOptions options, string channel)
+	{
+		return string.IsNullOrWhiteSpace(options.ExchangeNamePrefix)
+			       ? channel
+			       : $"{options.ExchangeNamePrefix}:{channel}";
+	}
+
+	/// <summary>
 	/// 解析消息的目标队列名称。
 	/// </summary>
 	/// <param name="options">RabbitMQ 总线选项。</param>
@@ -56,7 +69,10 @@ internal static class RabbitMqDelivery
 			return queueOverride;
 		}
 
-		return $"{channel}@{ResolveSubscriptionId(options, channel)}";
+		var queueName = $"{channel}@{ResolveSubscriptionId(options, channel)}";
+		return string.IsNullOrWhiteSpace(options.QueueNamePrefix)
+			       ? queueName
+			       : $"{options.QueueNamePrefix}:{queueName}";
 	}
 
 	/// <summary>

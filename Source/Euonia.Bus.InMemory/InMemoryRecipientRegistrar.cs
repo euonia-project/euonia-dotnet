@@ -149,8 +149,9 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// </summary>
 	/// <remarks>
 	/// 只影响本注册器创建的接收者，不会像此前的进程级 <c>Reset()</c> 那样清空其他内存总线实例的注册。
+	/// 异步释放由 <see cref="IRecipientRegistrar"/> 的默认实现转调本方法。
 	/// </remarks>
-	public ValueTask DisposeAsync()
+	public void Dispose()
 	{
 		while (_aliveRecipients.TryDequeue(out var recipient))
 		{
@@ -159,6 +160,5 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 		}
 
 		_recipients.Clear();
-		return ValueTask.CompletedTask;
 	}
 }

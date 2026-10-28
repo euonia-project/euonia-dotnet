@@ -3,13 +3,13 @@ using Nerosoft.Euonia.Validation;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 规则在「保存」与「命令执行」两条路径上的统一强制点，属于<b>验证线</b>——只做数据校验，
+/// 规则在「保存」与「操作执行」两条路径上的统一强制点，属于<b>验证线</b>——只做数据校验，
 /// 与工厂边界的 <see cref="ObjectAuthorization"/>（操作权限）、<see cref="ScopeAuthorization"/>（数据权限）<b>互不相干</b>。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 两条路径共用 <see cref="BusinessObject.EnsureRulesAsync"/>，因此失败形态一致：<see cref="ValidationException"/> 且 <c>Errors</c> 携带逐条违规
-/// （属性名 + 消息）。可编辑对象在 <see cref="EditableObject{T}.SaveAsync(bool, CancellationToken)"/> 内调用，命令对象在命令体之前调用——命令体不会执行到一半才发现对象不合法。
+/// 两条路径共用 <see cref="ObjectBase.EnsureRulesAsync"/>，因此失败形态一致：<see cref="ValidationException"/> 且 <c>Errors</c> 携带逐条违规
+/// （属性名 + 消息）。可编辑对象在 <see cref="EditableObject{T}.SaveAsync(bool, CancellationToken)"/> 内调用，服务对象在执行体之前调用——执行体不会执行到一半才发现对象不合法。
 /// </para>
 /// <para>
 /// <b>权限线完全不在本类内</b>：规则集合里只有数据校验规则。越权（操作权限 / 数据范围）
@@ -18,7 +18,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <c>BypassRuleChecks()</c> 之类规则绕过机制的影响——本类只是验证线的强制点，不是安全闸门。
 /// </para>
 /// <para>
-/// 目标不是 <see cref="BusinessObject"/>（自定义 <see cref="ICommandObject"/> 实现）时直接放行：它们不持有 <see cref="Rules"/>，无从运行规则。
+/// 目标不是 <see cref="ObjectBase"/>（自定义 <see cref="IServiceObject"/> 实现）时直接放行：它们不持有 <see cref="Rules"/>，无从运行规则。
 /// </para>
 /// </remarks>
 internal static class ObjectRuleGuard
@@ -35,7 +35,7 @@ internal static class ObjectRuleGuard
 	/// </remarks>
 	internal static Task EnsureRulesAsync(object target, string message, CancellationToken cancellationToken = default)
 	{
-		return target is BusinessObject businessObject
+		return target is ObjectBase businessObject
 			       ? businessObject.EnsureRulesAsync(message, cancellationToken)
 			       : Task.CompletedTask;
 	}

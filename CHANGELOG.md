@@ -7,6 +7,77 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### Euonia.Osba
+
+- **严格化工厂边界**：工厂方法返回 `ValueTask`/`ValueTask<T>` 时会被真正等待；
+  解析到 `EditableObject<T>`/`ServiceObject<T>` 的基类空实现时抛 `NotSupportedException`，
+  不再“保存成功但什么也没做”；反射调用抛出的业务异常不再被 `TargetInvocationException` 包裹。
+- **统一字段视图**：`ref` 字段写入同步到 `FieldData`，规则与 DataAnnotations 通过 `ReadProperty`
+  能读到真实值；字段装载不再记录历史，装载后 `IsChanged` 正确复位。
+- **只读对象装载边界**：`LoadProperty` 增加 `CanLoadProperty` 钩子；工厂方法执行期间自动进入
+  按异步流隔离的装载作用域，外部对只读对象的装载抛 `SecurityException`。
+- **删除幂等**：删除成功后对象复位为 `None`，重复 `SaveAsync` 不再重复删除。
+- **规则范围栈**：嵌套/并发执行器的操作级规则范围不再互相覆盖；同步规则走无状态机快路径。
+- **环境上下文去副作用**：`BusinessContextAccessor` 构造函数不再写静态 `AsyncLocal`，
+  必须显式 `SetCurrent`/`Clear`。
+- **性能**：移除 Rx 依赖与每字段 `BehaviorSubject`；撤销历史改为环形缓冲区；属性元数据按类型缓存、
+  字段值改为索引数组；工厂方法缓存改为强类型键；属性通知无订阅者时零分配。
+  稳态属性写约 **0.24 µs / 24 B**（原 0.66 µs / 464 B），带一条规则的写约 **0.79 µs / 0.30 KB**
+  （原 2.18 µs / 1.5 KB），无持久化 `SaveAsync` 约 **2.25 µs / 1.14 KB**（原 4.53 µs / 2.6 KB）。
+- **基准**：新增 `Benchmarks/Euonia.Osba.Benchmarks`；新增 13 个回归测试（共 253 个）。
+- **未包含**：EF Core 物化拦截器与部分更新（不引入 EF Core 依赖）；criteria 写入口在无持久化
+  抽象时仍只能后置判定，已通过诊断告警提示改用 `Fetch → 判定 → Save`。
+
+#### M4：装配、诊断与易用性
+
+- **`AddBusinessObject` 返回 `IServiceCollection`**，新增 `AddOsbaOptions` 风格的
+  `AddBusinessObject(Action<OsbaOptions>, params Assembly[])`；`OsbaOptions` 提供
+  `ValidateOnStartup`、`StrictFactoryMethods`、`EnableDiagnostics`、`DiagnosticLevel`。
+- **启动期校验**：`OsbaStartupValidator` 检查工厂方法签名、`[Inject]` 可解析性、属性元数据与
+  缺失的持久化方法；`OsbaConfigurationException` 聚合 Error 级诊断。默认关闭，生产宿主显式开启。
+- **容器级规则注册表**：新增 `IRuleRegistry`/`RuleRegistry`，每个容器独立；无 `BusinessContext`
+  时回退到进程级 `RuleManager`。测试、租户、插件之间不再共享类型级规则。
+- **`ValidationState`**：新增 `NotValidated / Valid / Invalid` 三态；属性变更会将其置回
+  `NotValidated`，避免把“没校验过”误当“通过”。
+- **API 收敛**：`IObjectFactory.InsertAsync(criteria)` 与 `ExecuteAsync(criteria)` 标记为
+  `[Obsolete]`，提示改用 `CreateAsync + SaveAsync` / `CreateAsync + ExecuteAsync(target)`。
+- **可观测性**：新增 `ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")` 与
+  `ILoggerFactory` 回退；指标覆盖保存、授权、规则耗时与失败次数。
+- **文档**：修正 README 继承图、规则共享边界、`BusinessContextAccessor` 显式上下文、
+  删除幂等、`ValueTask` 工厂与启动期校验说明。
+- **测试**：`Euonia.Osba.Tests` 当前总计 276 个（含 M4 与子对象图回归）。
+
+#### ServiceObject：从 CommandObject 重命名并拆出变更追踪层级
+
+- **`CommandObject<T>` / `ICommandObject` 重命名为 `ServiceObject<T>` / `IServiceObject`**：
+  名字直接对应“封装一次独立业务操作”的定位。
+- 公共根由 `BusinessObject` 重命名为 **`ObjectBase`**；`ObjectBase<T>` 只负责属性注册
+  （`RegisterProperty`）与公共对象能力。
+- `BusinessObject<T>` 作为 `ObjectBase<T>` 的派生类，独占变更追踪
+  （`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `PropertyHasChanged`）。
+  非泛型 `BusinessObject` 已移除；需要公共能力的代码改用 `ObjectBase`。
+- **`ServiceObject<T>` 改为直接继承 `ObjectBase<T>`**，不再继承 `BusinessObject<T>`：
+  保留属性、规则、上下文与权限能力，但没有脏状态/变更追踪/`SaveAsync`，
+  与“独立业务操作对象”的定位一致。
+- 执行器/构建器/行为（`ActuatorBase`、`ActuatorBuilder`、`IActuatorBehavior`、
+  `Actuator.For`、`CreateActuator`）的泛型约束从 `BusinessObject<T>` 放宽为 `ObjectBase<T>`，
+  服务对象与可编辑对象共用同一条管道，但生命周期语义分离。
+- 新增 `IOsbaObject`（所有 Osba 对象的公共契约：属性存储 + `IUseBusinessContext`）。`IBusinessObject` 改为
+  `IOsbaObject + INotifyPropertyChanged + INotifyPropertyChanging`；
+  **`IServiceObject` 改为 `IOsbaObject + IHasRuleCheck`**，不再继承 `IBusinessObject`，
+  因此服务对象不承诺属性变更通知，也不暴露可编辑对象契约。
+
+#### 子对象图：父对象通知与规则绕过传播
+
+- `ObjectBase` 增加父子链接：子对象属性变化时，父对象上持有该子对象的属性会被标脏并发出
+  `PropertyChanged`；变更沿父链逐级上浮，支持多父对象与祖父层级。
+- `BypassRuleChecks` 沿父链向下穿透：父对象进入绕过作用域时，子对象（含 `ObservableList` 中的元素）
+  同样处于绕过状态；子对象自身的绕过不会反向影响父对象。嵌套 `using` 只恢复“自身”的绕过值，
+  不会把父对象传播的绕过状态固化为自身状态。
+- `ObservableList<T>` / `ObservableDictionary<TKey,TValue>` 实现 `IChildGraphNode`：元素/值自动挂到父对象；
+  元素属性变化直接通知父对象，集合增删/字典项变化同样通知父对象。替换/移除子对象或容器时自动解除链接，
+  `Dispose` 会清理父链。
+
 ## [2026.4.5] - 2026-10-19
 
 从根上重构消息处理的生命周期：服务提供程序不再通过异步流环境隐式传递，改为显式作用域；
@@ -427,7 +498,7 @@ Actuator 支持任意业务对象类型，小幅重构。
 - `CreateActuator<TTarget>` 的类型约束由 `EditableObject<TTarget>` 放宽为 **`BusinessObject<TTarget>`**，
   基类由 `EditableActuator<TTarget>` 改为直接继承 `ActuatorBase<TTarget>`。
 - `ActuatorBuilderExtensions.Create<TTarget>` 随之放宽约束：可编辑对象创建后标记新增并保存（插入语义），
-  只读对象、命令对象等不可持久化类型仅构造实例、不落库。
+  只读对象、服务对象等不可持久化类型仅构造实例、不落库。
 
 ### 变更
 

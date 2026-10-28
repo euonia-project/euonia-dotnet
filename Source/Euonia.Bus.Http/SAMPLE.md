@@ -43,6 +43,10 @@ builder.Services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor
 // 默认传输器：没分配策略的消息都走 http（供客户端侧路由；服务端用于 IBus 自举）
 builder.Services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
 
+// 示例省略了 ASP.NET Core 认证配置，因此显式关闭端点授权。
+// 生产环境必须保留默认值 true，并为端点配置认证/授权中间件。
+builder.Services.Configure<HttpBusOptions>(options => options.RequireAuthorization = false);
+
 // 一条调用即登记核心总线 + keyed ITransporter("http") + HttpTransporter（重复调用安全）
 builder.Services.AddHttpBus("http");
 
@@ -163,6 +167,7 @@ builder.Services.AddHttpBus("http");
 | `Route` | `"/bus/call"` | 远程调用路由 |
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名（内置 `SystemTestJson` / `NewtonsoftJson`） |
 | `RequestTimeout` | `null` | 请求超时（`HttpClient.Timeout`），`null` 不限制 |
+| `RequireAuthorization` | `true` | 端点是否要求授权；生产环境保持 `true` 并配置认证中间件 |
 | `MessageHandlerFactory` | `null` | `HttpMessageHandler` 工厂（测试用，如自定义 `HttpClientHandler`） |
 
 ---

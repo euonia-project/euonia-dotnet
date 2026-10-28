@@ -285,7 +285,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		}
 
 		// 从服务提供程序获取处理程序实例
-		_logger.LogInformation("Message {Id} is being handled", context.MessageId);
+		_logger.LogDebug("Message {Id} is being handled", context.MessageId);
 
 		// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
 		var useInbox = _inboxOptions.Enabled;
@@ -365,7 +365,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			}
 		}
 
-		_logger.LogInformation("Message {Id} was completed handled", context.MessageId);
+		_logger.LogDebug("Message {Id} was completed handled", context.MessageId);
 
 		return result;
 	}

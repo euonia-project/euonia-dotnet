@@ -153,7 +153,7 @@ public class OsbaRegressionTests
 	}
 
 	[Fact]
-	public async Task BusinessContextAccessor_ShouldFlowProviderAcrossAsyncBoundary()
+	public async Task BusinessContextAccessor_ShouldFlowExplicitlySetProviderAcrossAsyncBoundary()
 	{
 		var provider = new ServiceCollection()
 		               .AddScoped<BusinessContextAccessor>()
@@ -161,8 +161,11 @@ public class OsbaRegressionTests
 		using var scope = provider.CreateScope();
 		var scopedProvider = scope.ServiceProvider;
 
-		// 作用域内首次解析访问器会将该作用域的 provider 写入当前异步流
+		// 解析 Scoped 服务本身不再产生环境上下文副作用；上下文必须显式建立。
 		_ = scopedProvider.GetRequiredService<BusinessContextAccessor>();
+		Assert.Null(BusinessContextAccessor.Current);
+
+		BusinessContextAccessor.SetCurrent(scopedProvider);
 
 		// 派生任务通过 ExecutionContext 继承当前异步流的 provider
 		var flowed = await Task.Run(() => BusinessContextAccessor.Current);

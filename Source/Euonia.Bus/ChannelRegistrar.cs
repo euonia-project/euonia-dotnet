@@ -15,6 +15,11 @@ internal sealed class ChannelRegistrar
 {
 	private readonly ConcurrentDictionary<string, ChannelRegistration> _registrations = new();
 
+	/// <summary>
+	/// 保护同一通道的注册判定与处理器追加，避免并发扫描时重复或丢失处理器。
+	/// </summary>
+	private readonly object _registrationSync = new();
+
 	private readonly Action<string, Type, ChannelHandler> _registerAction;
 
 	private readonly ILogger<ChannelRegistrar> _logger;
@@ -84,23 +89,28 @@ internal sealed class ChannelRegistrar
 		ArgumentNullException.ThrowIfNull(handler);
 
 		var registration = _registrations.GetOrAdd(channel, _ => new ChannelRegistration(messageType));
-		if (registration.MessageType != messageType)
-		{
-			throw new InvalidOperationException(string.Format(Resources.IDS_CHANNEL_ALREADY_REGISTERED, channel));
-		}
 
-		// 幂等：同一个通道上重复注册同一个处理器（相同处理器类型 + 相同方法；lambda 注册时实例不同，
-		// 仍视为不同处理器）应被忽略。否则多播通道会把同一条消息交给同一处理器执行多次——
-		// 例如宿主被启动两次，或两个模块扫描了同一个程序集。
-		if (registration.Handlers.Contains(handler))
+		lock (_registrationSync)
 		{
-			_logger.LogDebug("[ChannelRegistrar] Skipping duplicate handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
-			return;
+			if (registration.MessageType != messageType)
+			{
+				throw new InvalidOperationException(string.Format(Resources.IDS_CHANNEL_ALREADY_REGISTERED, channel));
+			}
+
+			// 幂等：同一个通道上重复注册同一个处理器（相同处理器类型 + 相同方法；lambda 注册时实例不同，
+			// 仍视为不同处理器）应被忽略。否则多播通道会把同一条消息交给同一处理器执行多次——
+			// 例如宿主被启动两次，或两个模块扫描了同一个程序集。
+			if (registration.Handlers.Contains(handler))
+			{
+				_logger.LogDebug("[ChannelRegistrar] Skipping duplicate handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
+				return;
+			}
+
+			registration.AddHandler(handler);
 		}
 
 		_logger.LogInformation("[ChannelRegistrar] Registering handler {HandlerType} for message type {MessageType} on channel {Channel}", handler.HandlerType.FullName, messageType.FullName, channel);
 
-		registration.AddHandler(handler);
 		_registerAction?.Invoke(channel, messageType, handler);
 	}
 

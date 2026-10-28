@@ -18,7 +18,7 @@
 |---|---|
 | `Repo` | 仓库（业务对象）：名称、所属团队、所有者、密级、是否公开 |
 | `RepoRecord` | 仓库的读模型（查询用） |
-| `PushCommand` | 命令对象：对某个仓库执行 push |
+| `PushService` | 服务对象：对某个仓库执行 push |
 
 需要的能力：
 
@@ -70,7 +70,8 @@ BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
 是否启用权限由应用决定，需要时再用引擎的 `AddPermission` 接上（规则来源用 Osba 的工厂约定，见下文）。
 
 > **两个容易踩的点**
-> 1. `AddBusinessObject(...)` 的返回类型是 **`void`**，不能链式调用。
+> 1. `AddBusinessObject(...)` 返回 `IServiceCollection`，可以链式调用；需要启动期校验时用
+>    `AddBusinessObject(o => o.ValidateOnStartup = true, assemblies)`。
 > 2. 手动 `CreateScope()` 的场景必须**先** `SetCurrent(scope.ServiceProvider)`，**再**解析
 >    `BusinessContext`/工厂；用完 `Clear()`。ASP.NET Core 下由中间件自动完成，无需手写。
 
@@ -241,6 +242,11 @@ repo.AcceptChanges();       // 同上
 >
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
+> 删除成功后对象会复位为 `None`，重复 `SaveAsync` 是幂等 no-op；不要再依赖“删除后仍是 Deleted”。
+>
+> **子对象属性变化会向上通知父对象**：父对象上持有该子对象的属性会被标脏并发出 `PropertyChanged`，
+> 变更沿父链逐级上浮；`ObservableList<T>` 的元素变化与集合增删、`ObservableDictionary<TKey,TValue>` 的项变化也会通知父对象。
+>
 > 直接 `new` 出来的对象**不会**被注入依赖，必须手工设置 `BusinessContext`，否则 `AddRules()` 永不执行、`IsValid` 恒为 `true`；
 > 未接线的对象直接 `SaveAsync` 会抛 `InvalidOperationException`（消息含类型名与操作名），而不是放任空引用往下走。
 
@@ -290,11 +296,13 @@ loaded.MarkAsChanged();
 await factory.SaveAsync(loaded);
 
 // 直接指定操作（目标对象由工厂内部创建并填充）
-await factory.InsertAsync<Repo>(repoId);
+// 注意：criteria 写入口无法在写入前判定行级权限；受数据权限约束的类型请用
+// Fetch → IScopeGuard.AllowsObject → Save，或在工厂方法内先判定。
 await factory.UpdateAsync<Repo>(repoId);
 await factory.DeleteAsync<Repo>(repoId);     // 返回 Task，无结果
+// factory.InsertAsync<Repo>(repoId) 已标记 [Obsolete]：改用 CreateAsync + SaveAsync
 
-// 命令对象
+// 服务对象
 await factory.ExecuteAsync(command);
 ```
 
@@ -335,13 +343,17 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
   能同时服务 `InsertAsync()` 与 `InsertAsync(ct)`；
 - 参数**精确匹配**的重载优先于靠可选参数凑上的重载；
 - 拼错名字 → `MissingMethodException`；加了 `[FactoryXxx]` 则不限名字。
+- **漏写 `[FactoryInsert]/[FactoryUpdate]/[FactoryDelete]/[FactoryExecute]` 会在保存/执行时抛
+  `NotSupportedException`**，不再调用基类空实现“静默成功”；迁移期可用
+  `AddBusinessObject(o => o.StrictFactoryMethods = false, assemblies)` 临时回退。
+- 工厂方法可以返回 `Task`、`Task<T>`、`ValueTask`、`ValueTask<T>`，都会被等待。
 
 ---
 
 ## 4. 规则体系
 
 规则分两类：**对象级**（`Property == null`）与**属性级**（绑定到某个已注册属性）；
-按作用域又分**类型级**（`AddRule`，进程级共享）与**实例级 / 操作级**（`AddInstanceRule`、
+按作用域又分**类型级**（`AddRule`，容器级共享；无 DI 时回退到进程级）与**实例级 / 操作级**（`AddInstanceRule`、
 执行器的 `WithRule`，随对象或操作消失）。四个组合如下表。
 
 | | 类型级 `AddRule` | 实例级 `AddInstanceRule` / 操作级 `WithRule` |
@@ -366,7 +378,7 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 ```csharp
 protected override bool CheckRuleOnPropertyChanged => false;   // 变更时挂起，改到保存时统一检查
 
-// 保存时的实际顺序（EditableObject.SaveAsync → BusinessObject.EnsureRulesAsync）：
+// 保存时的实际顺序（EditableObject.SaveAsync → ObjectBase.EnsureRulesAsync）：
 //   1. 属性级：只跑 ChangedProperties 里那些属性 —— 它们才是本次要落库的字段
 //   2. 对象级：整体一致性 / 跨字段校验（它可能依赖一个或多个属性值）
 //
@@ -435,13 +447,14 @@ public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(propert
 | `EditableObject.SaveAsync`（直接调用） | ✅ | `ValidationException` |
 | `UpdateActuator` / `CreateActuator` | ✅（经 `SaveAsync`） | `ValidationException` |
 | `DeleteActuator` | 默认❌；`MarkAsDeleted(true)` / 执行器 `WithRuleChecksOnDelete()` 才执行 | `ValidationException`（**验证**失败；越权由权限线抛 `SecurityException`，与规则无关） |
-| `ExecuteActuator`（命令对象） | ✅（工厂边界在**命令体之前**裁决） | `ValidationException` |
+| `ExecuteActuator`（服务对象） | ✅（工厂边界在**执行体之前**裁决） | `ValidationException` |
 | `IObjectFactory.*Async(criteria)` 低层入口 | ❌ | —（权限仍然强制） |
 | 任意 `SetProperty`（属性变更） | 执行该**属性级**规则（该类型把检查推迟时为挂起） | 违规落进 `BrokenRules`，`IsValid` 转 `false` |
 | `CheckRuleOnPropertyChanged => false` 的类型 | 保存/命令执行时补跑：**先属性级（仅变更过的属性）→ 再对象级** | `ValidationException`，错误列表「先字段、后整体」 |
 
 ```csharp
-repo.IsValid;                                   // ErrorCount == 0
+repo.ValidationState;                           // NotValidated / Valid / Invalid（补上三态语义）
+repo.IsValid;                                   // ErrorCount == 0（首次校验前恒为 true）
 repo.GetBrokenRules();                          // BrokenRuleCollection（Error/Warning/Information）
 
 await repo.SaveAsync();                         // 内部先跑对象级规则；有 Error → 抛 ValidationException
@@ -490,7 +503,7 @@ public sealed class RepoCreateOnlyRule : RuleBase { /* ... */ }
 > **规则只在 `BusinessContext` 被赋值后才初始化**：setter 会触发 `AddRules()` 与 `AddDataAnnotations()`。
 > 直接 `new` 出来的对象若从不接线，`AddRules()` 永不执行。
 >
-> `BusinessObject.Rules` 是 **`protected`**。要从外部驱动规则用 `ValidateAsync()` / `EnsureValidAsync()`；
+> `ObjectBase.Rules` 是 **`protected`**。要从外部驱动规则用 `ValidateAsync()` / `EnsureValidAsync()`；
 > 要在派生类里暴露规则集合（例如运行期加实例级规则）：
 > `public Rules PublicRules => Rules;`
 
@@ -558,12 +571,14 @@ await actuator.For<Repo>()
               .ExecuteAsync(CancellationToken.None);
 ```
 
-命令对象——**它需要同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**：
+服务对象——**它需要同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**：
 
 ```csharp
-// 命令对象是「无状态」的：只表达要执行什么，不承载可校验、可持久化的状态。
-// 下面的属性是操作入参/出参，不是被校验的字段——命令的校验请写成对象级规则。
-public sealed class PushCommand : CommandObject<PushCommand>
+// 服务对象不是可编辑实体：属性只承载操作入参/出参，不参与变更追踪与保存。
+// 它继承 ObjectBase<T>（属性 + 规则），不继承 BusinessObject<T>（变更追踪），
+// 因此没有脏状态、ChangedProperties 恒为空、也没有 SaveAsync。
+// 下面的属性是操作入参/出参，不是被校验的字段——服务对象的校验请写成对象级规则。
+public sealed class PushService : ServiceObject<PushService>
 {
     public string RepoId { get; set; }
     public string Note { get; set; }
@@ -576,7 +591,7 @@ public sealed class PushCommand : CommandObject<PushCommand>
         return Task.CompletedTask;
     }
 
-    [FactoryExecute]    // 命令体
+    [FactoryExecute]    // 执行体
     protected override Task ExecuteAsync(CancellationToken cancellationToken = default)
     {
         Pushed = true;
@@ -585,7 +600,7 @@ public sealed class PushCommand : CommandObject<PushCommand>
 }
 
 // 用法
-await actuator.For<PushCommand>()
+await actuator.For<PushService>()
               .Execute(repoId, CancellationToken.None)
               .Handle(command => command.Note = "first")
               .ExecuteAsync(CancellationToken.None);
@@ -599,11 +614,16 @@ await actuator.For<PushCommand>()
 > 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `BypassRuleChecks`），
 > 见 [§4.2](#42-按操作指定规则)。
 
+> **`ServiceObject` 的定位**：它封装一次**独立业务操作**——可以协调多个业务对象、访问数据、
+> 执行不属于单个实体生命周期的逻辑。因此它不继承 `BusinessObject<T>` 的变更追踪，
+> 也不参与 `SaveAsync`；它是“操作对象”，不是可编辑实体。若操作需要跨聚合/直接访问数据，
+> 优先把依赖通过构造函数注入，并让应用层负责事务边界。
+
 自定义管道行为：
 
 ```csharp
 public sealed class AuditBehavior<TTarget> : IActuatorBehavior<TTarget>
-    where TTarget : BusinessObject<TTarget>
+    where TTarget : ObjectBase<TTarget>
 {
     public async Task<TTarget> HandleAsync(TTarget context, PipelineDelegate<TTarget, TTarget> next)
     {
@@ -766,7 +786,7 @@ protected bool CanDelete()
 | | 权限线（工厂边界） | 验证线（规则） |
 |---|---|---|
 | 回答 | 这个用户**能不能**做这件事 / 碰这行 | 这份数据**合不合法** |
-| 位置 | `ObjectAuthorization` + `ScopeAuthorization`，在 `BusinessObjectFactory` 调用边界 | `EditableObject.SaveAsync`；命令对象由 `ObjectRuleGuard` 在命令体之前 |
+| 位置 | `ObjectAuthorization` + `ScopeAuthorization`，在 `BusinessObjectFactory` 调用边界 | `EditableObject.SaveAsync`；服务对象由 `ObjectRuleGuard` 在执行体之前 |
 | 结果 | `SecurityException` | `ValidationException`（`Errors` 带属性名） |
 | 可否绕过 | **不可**，无任何开关 | 可（`SuspendRuleChecking` / `BypassRuleChecks` / `WithRuleChecksOnDelete`） |
 
@@ -872,9 +892,9 @@ catch (SecurityException ex)
     // Data scope denied. Delete (before): Repo. [scope=delete] 判定：拒绝；…
 }
 
-// 6. 命令对象走执行器
+// 6. 服务对象走执行器
 var actuator = scope.ServiceProvider.GetRequiredService<IActuator>();
-await actuator.For<PushCommand>()
+await actuator.For<PushService>()
               .Execute(a1.Id, CancellationToken.None)
               .Handle(command => command.Note = "first")
               .ExecuteAsync(CancellationToken.None);
@@ -888,7 +908,8 @@ BusinessContextAccessor.Clear();
 
 ### 装配
 
-1. `AddBusinessObject(...)` 返回 **`void`**，不能链式调用；它用 `TryAdd*`，已注册的服务不会被覆盖。
+1. `AddBusinessObject(...)` 返回 `IServiceCollection`，可链式调用；它用 `TryAdd*`，已注册的服务不会被覆盖。
+   启动期校验默认关闭，生产宿主应显式 `AddBusinessObject(o => o.ValidateOnStartup = true, assemblies)`。
 2. 它**不注册** `IObjectActivator` 与 `ILazyServiceProvider`。要用 `IHasLazyServiceProvider`，
    需先有 `ILazyServiceProvider`（由 `Euonia.Modularity` 的 `AddModularityApplication` 提供）。
 3. 手动作用域：**先** `BusinessContextAccessor.SetCurrent(...)`，**再**解析 `BusinessContext`/工厂；用完 `Clear()`。
@@ -901,7 +922,7 @@ BusinessContextAccessor.Clear();
 7. 加载数据用 `LoadProperty`（不标脏），用户改动用 `SetProperty`（标脏）——不要混用。
 8. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` **不是 virtual**；只有 `MarkAsClean` 是。
 9. `MarkAsDeleted(true)` 才让删除也执行对象级规则，默认**不执行**；走执行器时用 `WithRuleChecksOnDelete()`。
-10. `BusinessObject.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
+10. `ObjectBase.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
     外部可读 `IsValid` / `GetBrokenRules()`，并用 `ValidateAsync()` / `EnsureValidAsync()` 驱动检查；
     要直接操作规则集合（例如加实例级规则）请在派生类里暴露它。
 11. `CheckRuleOnPropertyChanged` 默认 **`true`**：属性变更即触发该属性的**属性级**规则检查。
@@ -914,10 +935,11 @@ BusinessContextAccessor.Clear();
     其结果经 `BrokenRules` / `IsValid` 在保存时生效；推迟模式（第 11 条）下保存时只补跑变更过的属性。
     两种模式都不会去校验本次没改的属性——否则只装载部分字段的对象会被 `[Required]` 凭空拦下。
     持久化只取 `ChangedProperties`。
-14. **命令对象是无状态的**：它只表达「要执行某种操作」，原则上不持有属性；输入由工厂方法的参数
+14. **服务对象不是可编辑实体**：它只表达「要执行某种操作」，属性只承载入参/出参；输入也可以由工厂方法的参数
     （执行器 `criteria`）带入，而不是先写进对象属性再校验。因此它不参与变更追踪
-    （`SetProperty` 在 `ObservableObject<T>` 上，`CommandObject<T>` 只继承 `BusinessObject<T>`），
-    `ChangedProperties` 恒为空，**属性级规则对它也无从触发**。命令的校验请写成**对象级**规则。
+    （`SetProperty` 在 `ObservableObject<T>` 上，`ServiceObject<T>` 继承 `ObjectBase<T>`，
+    不进入 `BusinessObject<T>` 的变更追踪层级），`ChangedProperties` 恒为空，
+    **属性级规则对它也无从触发**。服务对象的校验请写成**对象级**规则。
 15. 跨程序集重写工厂方法时用 **`protected override`**（不是 `protected internal override`）。
 
 ### 工厂
@@ -928,9 +950,10 @@ BusinessContextAccessor.Clear();
 18. 工厂方法约定名**大小写敏感**，拼错即 `MissingMethodException`；加 `[FactoryXxx]` 则不限名字。
 19. 目标方法多出的尾部参数**必须有默认值**；精确长度匹配优先。
 20. `IObjectFactory.Create<T>` 会自动 `MarkAsNew()`——不要重复调用。
-21. 同步的 `Create`/`Fetch` 内部用 `AsyncContext.Run` 阻塞执行异步工厂方法，避免在同步 API 里放重活。
+21. 同步的 `Create`/`Fetch` 在没有同步上下文时直接等待；只有在 UI 等同步上下文里才用
+    `AsyncContext.Run` 避免死锁。服务端应优先使用 `*Async` 入口。
 22. **只有经工厂创建的对象才会被注入**（`[Inject]` 属性、`BusinessContext`）；`new` 出来的不会。
-23. **命令对象走执行器时要同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**——
+23. **服务对象走执行器时要同时提供 `[FactoryCreate]` 与 `[FactoryExecute]`**——
     执行器先 `CreateAsync` 造实例，再在终结阶段调 `ExecuteAsync`。
 
 ### 规则
@@ -953,7 +976,8 @@ BusinessContextAccessor.Clear();
     但反过来，报错却不给消息本身就是缺陷，别依赖这个兜底。
 36. **删除默认不跑对象级规则**，`.Delete(id).WithRule(...)` 需同时 `.WithRuleChecksOnDelete()` 才会执行。
 37. `BypassRule<T>()` 按**精确类型**匹配；`BypassRuleChecks()` 只跳规则、**不**解除权限。
-38. **命令对象也会跑对象级规则**，且由工厂边界在命令体之前裁决——规则失败时命令体不会执行。
+    绕过会沿父子链向下穿透到子对象（含 `ObservableList` 元素）；子对象自身的绕过不会反向影响父对象。
+38. **服务对象也会跑对象级规则**，且由工厂边界在执行体之前裁决——规则失败时执行体不会执行。
     但 `IObjectFactory` 的 criteria 低层入口（`ExecuteAsync(criteria)` 等）不做规则判定。
 39. `ValidateAsync(cascade, ct)` 只管**对象级**规则且不抛异常（返回 bool）；
     要抛异常用 `EnsureValidAsync()`。二者都不修改对象状态。

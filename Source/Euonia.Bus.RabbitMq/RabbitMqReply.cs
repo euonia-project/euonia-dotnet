@@ -14,12 +14,21 @@ internal class RabbitMqReply<TResult>
 	/// <summary>
 	/// 获取或设置错误信息。
 	/// </summary>
-	public Exception Error { get; set; }
+	public TransportError Error { get; set; }
 
 	/// <summary>
 	/// 获取一个值，指示此消息处理是否成功。
 	/// </summary>
 	public bool IsSuccess => Error == null;
+
+	/// <summary>
+	/// 获取用于在调用方还原的异常。
+	/// </summary>
+	/// <returns>失败时返回携带原始错误消息的异常；成功时返回通用失败异常。</returns>
+	public Exception ToException()
+	{
+		return Error?.ToException() ?? new MessageDeliverException("Remote call failed without detailed error information.");
+	}
 
 	/// <summary>
 	/// 获取回复结果的状态。
@@ -43,7 +52,7 @@ internal class RabbitMqReply<TResult>
 	{
 		return new RabbitMqReply<TResult>
 		{
-			Error = error
+			Error = TransportError.From(error)
 		};
 	}
 }

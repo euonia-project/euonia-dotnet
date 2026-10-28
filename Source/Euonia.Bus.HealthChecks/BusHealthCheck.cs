@@ -29,14 +29,28 @@ public sealed class BusHealthCheck : IHealthCheck
 	}
 
 	/// <inheritdoc/>
-	public Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+	public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
+	{
+		// 存储可能注册为 Scoped：健康检查运行在根容器上下文，必须在独立作用域中解析，
+		// 否则会触发作用域校验异常或错误复用根实例。
+		var scopeFactory = _provider.GetService<IServiceScopeFactory>();
+		if (scopeFactory == null)
+		{
+			return CheckHealth(_provider);
+		}
+
+		await using var scope = scopeFactory.CreateAsyncScope();
+		return CheckHealth(scope.ServiceProvider);
+	}
+
+	private HealthCheckResult CheckHealth(IServiceProvider services)
 	{
 		var data = new Dictionary<string, object>();
 		var failures = new List<string>();
 
 		// 用 IConfigurator 而非 IBus 判断总线是否装配：解析 IBus 会真正构造 MessageBus，
 		// 从而启动发件箱轮询定时器等后台工作——健康检查不应产生这种副作用。
-		var configurator = _provider.GetService<IConfigurator>();
+		var configurator = services.GetService<IConfigurator>();
 		if (configurator == null)
 		{
 			failures.Add(Resources.IDS_BUS_NOT_REGISTERED);
@@ -51,7 +65,7 @@ public sealed class BusHealthCheck : IHealthCheck
 		}
 
 		// 死信是重试耗尽的终态，默认只要出现即视为不健康。
-		var deadLetters = _provider.GetService<IDeadLetterStore>()?.GetAll().Count;
+		var deadLetters = services.GetService<IDeadLetterStore>()?.GetAll().Count;
 		if (deadLetters.HasValue)
 		{
 			data["deadLetters"] = deadLetters.Value;
@@ -62,7 +76,7 @@ public sealed class BusHealthCheck : IHealthCheck
 			}
 		}
 
-		var outboxFailed = _provider.GetService<IOutboxStore>()?.GetFailedMessages().Count;
+		var outboxFailed = services.GetService<IOutboxStore>()?.GetFailedMessages().Count;
 		if (outboxFailed.HasValue)
 		{
 			data["outbox.failed"] = outboxFailed.Value;
@@ -73,7 +87,7 @@ public sealed class BusHealthCheck : IHealthCheck
 			}
 		}
 
-		var inboxFailed = _provider.GetService<IInboxStore>()?.GetFailedMessages().Count;
+		var inboxFailed = services.GetService<IInboxStore>()?.GetFailedMessages().Count;
 		if (inboxFailed.HasValue)
 		{
 			data["inbox.failed"] = inboxFailed.Value;
@@ -84,11 +98,8 @@ public sealed class BusHealthCheck : IHealthCheck
 			}
 		}
 
-		if (failures.Count > 0)
-		{
-			return Task.FromResult(HealthCheckResult.Unhealthy(string.Join(" ", failures), data: data));
-		}
-
-		return Task.FromResult(HealthCheckResult.Healthy(Resources.IDS_BUS_HEALTHY, data));
+		return failures.Count > 0
+			       ? HealthCheckResult.Unhealthy(string.Join(" ", failures), data: data)
+			       : HealthCheckResult.Healthy(Resources.IDS_BUS_HEALTHY, data);
 	}
 }

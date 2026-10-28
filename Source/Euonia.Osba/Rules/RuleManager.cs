@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -21,6 +21,15 @@ public class RuleManager
 	}
 
 	/// <summary>
+	/// 创建一个新的规则管理器；供容器级 <see cref="RuleRegistry"/> 使用。
+	/// </summary>
+	/// <returns>规则管理器。</returns>
+	internal static RuleManager Create()
+	{
+		return new RuleManager();
+	}
+
+	/// <summary>
 	/// 获取或设置一个值，指示此 <see cref="RuleManager"/> 是否已初始化。
 	/// </summary>
 	public bool Initialized { get; set; }
@@ -29,7 +38,7 @@ public class RuleManager
 	/// 获取规则列表。
 	/// </summary>
 	/// <remarks>
-	/// 请勿直接修改此列表：写入请走 <see cref="Add"/>，读取请走 <see cref="Snapshot"/>。
+	/// 请勿直接修改此列表：写入请走 <see cref="Add"/>，读取请走 <see cref="ObjectRules"/> / <see cref="RulesFor"/>。
 	/// 本列表按类型进程级共享，直接枚举的同时若发生写入会抛出
 	/// <see cref="InvalidOperationException"/>（集合已被修改）。
 	/// </remarks>
@@ -39,7 +48,7 @@ public class RuleManager
 	/// 保护 <see cref="Rules"/> 列表读写的锁。
 	/// </summary>
 	/// <remarks>
-	/// 刻意<b>不用实例自身</b>作为锁：<c>BusinessObject.InitializeRules</c> 会持有 <c>lock (rules)</c>
+	/// 刻意<b>不用实例自身</b>作为锁：<c>ObjectBase.InitializeRules</c> 会持有 <c>lock (rules)</c>
 	/// 并调用使用方代码（<c>AddRules()</c>），而那可能回调进 <c>Rules</c> 的实例级规则集合；
 	/// 规则检查路径则反向（持有 <c>Rules._lockObject</c> 时经通知回调触发 <see cref="Add"/>）。
 	/// 两者用同一把锁就会形成锁序环。分开之后，本锁只在极短的列表读写期间被持有，环不存在。
@@ -63,6 +72,11 @@ public class RuleManager
 	private Dictionary<IPropertyInfo, IRuleBase[]> _propertyRules;
 
 	/// <summary>
+	/// 对象级（无属性绑定）的类型级规则缓存，按优先级升序。
+	/// </summary>
+	private IRuleBase[] _objectRules;
+
+	/// <summary>
 	/// 向规则列表添加规则。
 	/// </summary>
 	/// <param name="rule">要添加的规则。</param>
@@ -72,6 +86,33 @@ public class RuleManager
 		{
 			Rules.Add(rule);
 			_propertyRules = null;
+			_objectRules = null;
+		}
+	}
+
+	/// <summary>
+	/// 获取对象级（无属性绑定）的类型级规则，按优先级升序；无规则时返回空集合。
+	/// </summary>
+	/// <remarks>
+	/// 对象级检查是保存/操作执行的热路径：结果按类型缓存，<c>Add</c> 时失效；
+	/// 命中路径无锁、无分配。
+	/// </remarks>
+	internal IReadOnlyList<IRuleBase> ObjectRules
+	{
+		get
+		{
+			var rules = Volatile.Read(ref _objectRules);
+			if (rules != null)
+			{
+				return rules;
+			}
+
+			lock (_sync)
+			{
+				return _objectRules ??= Rules.Where(rule => rule.Property == null)
+				                             .OrderBy(rule => rule.Priority)
+				                             .ToArray();
+			}
 		}
 	}
 
@@ -97,7 +138,7 @@ public class RuleManager
 			}
 		}
 
-		return index.TryGetValue(property, out var rules) ? rules : [];
+		return index.TryGetValue(property, out var rules) ? rules : Array.Empty<IRuleBase>();
 	}
 
 	/// <summary>
@@ -109,18 +150,6 @@ public class RuleManager
 		return Rules.Where(rule => rule.Property != null)
 					.GroupBy(rule => rule.Property)
 					.ToDictionary(group => group.Key, group => group.OrderBy(rule => rule.Priority).ToArray());
-	}
-
-	/// <summary>
-	/// 获取当前规则列表的线程安全快照。
-	/// </summary>
-	/// <returns>规则列表的副本。</returns>
-	internal IReadOnlyList<IRuleBase> Snapshot()
-	{
-		lock (_sync)
-		{
-			return [.. Rules];
-		}
 	}
 
 	/// <summary>

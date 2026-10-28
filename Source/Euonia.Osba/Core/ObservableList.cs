@@ -17,7 +17,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 确保被移出集合的元素不再引发通知，也不会泄漏对集合的引用。
 /// </remarks>
 /// <typeparam name="TItem">可观察列表中包含的元素类型。</typeparam>
-public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
+public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, IChildGraphNode
 {
 	/// <summary>
 	/// 初始化 ObservableList 的新实例，该实例为空且具有默认的初始容量。
@@ -54,6 +54,104 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 	/// 计数器用引用相等比较（<see cref="ReferenceEqualityComparer{TItem}"/>），与去重语义一致。
 	/// </remarks>
 	private readonly Dictionary<TItem, int> _hookedItems = new(new ReferenceEqualityComparer<TItem>());
+
+	/// <summary>
+	/// 父对象链接；集合作为另一对象的属性时，集合变化与元素变化都要通知父对象。
+	/// </summary>
+	private readonly List<ChildGraphLink> _parentLinks = [];
+
+	/// <summary>
+	/// 父对象 + 父对象上持有本集合的属性。
+	/// </summary>
+	private sealed record ChildGraphLink(ObjectBase Parent, IPropertyInfo Property);
+
+	/// <inheritdoc />
+	public void AddParent(ObjectBase parent, IPropertyInfo property)
+	{
+		if (parent == null)
+		{
+			return;
+		}
+
+		if (_parentLinks.Any(link => ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property)))
+		{
+			return;
+		}
+
+		_parentLinks.Add(new ChildGraphLink(parent, property));
+
+		foreach (var item in Items)
+		{
+			AttachItemToParent(item, parent, property);
+		}
+	}
+
+	/// <inheritdoc />
+	public void RemoveParent(ObjectBase parent, IPropertyInfo property)
+	{
+		if (parent == null)
+		{
+			return;
+		}
+
+		for (var index = _parentLinks.Count - 1; index >= 0; index--)
+		{
+			var link = _parentLinks[index];
+			if (ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property))
+			{
+				_parentLinks.RemoveAt(index);
+				break;
+			}
+		}
+
+		foreach (var item in Items)
+		{
+			DetachItemFromParent(item, parent, property);
+		}
+	}
+
+	/// <summary>
+	/// 把元素挂到父对象上；元素本身是对象或嵌套容器时递归处理。
+	/// </summary>
+	private static void AttachItemToParent(TItem item, ObjectBase parent, IPropertyInfo property)
+	{
+		switch (item)
+		{
+			case ObjectBase child:
+				child.AddParent(parent, property);
+				break;
+			case IChildGraphNode node:
+				node.AddParent(parent, property);
+				break;
+		}
+	}
+
+	/// <summary>
+	/// 从父对象上摘下元素。
+	/// </summary>
+	private static void DetachItemFromParent(TItem item, ObjectBase parent, IPropertyInfo property)
+	{
+		switch (item)
+		{
+			case ObjectBase child:
+				child.RemoveParent(parent, property);
+				break;
+			case IChildGraphNode node:
+				node.RemoveParent(parent, property);
+				break;
+		}
+	}
+
+	/// <summary>
+	/// 集合内容变化时通知所有父对象。
+	/// </summary>
+	private void NotifyParents()
+	{
+		foreach (var link in _parentLinks)
+		{
+			link.Parent.NotifyChildChanged(link.Property);
+		}
+	}
 	/// <summary>
 	/// 将集合物化为列表，确保只枚举一次。
 	/// </summary>
@@ -197,6 +295,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		if (RaiseListChangedEvents)
 		{
 			base.OnCollectionChanged(e);
+			NotifyParents();
 		}
 	}
 
@@ -250,6 +349,11 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		{
 			notifyPropertyChanged.PropertyChanged -= OnItemPropertyChanged;
 		}
+
+		foreach (var link in _parentLinks)
+		{
+			DetachItemFromParent(item, link.Parent, link.Property);
+		}
 	}
 
 	/// <summary>
@@ -280,6 +384,11 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy
 		if (item is INotifyPropertyChanged notifyPropertyChanged)
 		{
 			notifyPropertyChanged.PropertyChanged += OnItemPropertyChanged;
+		}
+
+		foreach (var link in _parentLinks)
+		{
+			AttachItemToParent(item, link.Parent, link.Property);
 		}
 	}
 

@@ -10,6 +10,11 @@
 		  .NET 10 起 MTP 项目不再支持 VSTest 目标，故不再引用 Microsoft.NET.Test.Sdk / xunit.runner.visualstudio。
 		-->
 		<OutputType>Exe</OutputType>
+		<!--
+		  让 `dotnet test` 通过 Microsoft.Testing.Platform 发现并运行 xunit.v3 测试。
+		  缺少该属性时 dotnet test 会报告 "Zero tests ran"，CI 因此出现绿色假象。
+		-->
+		<TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
     </PropertyGroup>
 
 	<ItemGroup>

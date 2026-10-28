@@ -199,12 +199,17 @@ await pipeline.RunAsync(new MyContext());
 #### 业务对象层级
 
 ```
-BusinessObject<T>              —— 核心：规则、上下文、属性管理
-    └── ObservableObject<T>    —— 变更追踪：NEW / CHANGED / DELETED 状态
-        └── EditableObject<T>  —— 支持异步规则校验与保存
-        ├── CommandObject<T>   —— 命令式对象，含 ExecuteAsync
-        └── ReadOnlyObject<T>  —— 带权限控制的只读对象
+ObjectBase                       —— 公共根：属性、规则、上下文、权限
+└── ObjectBase<T>                —— 属性注册（RegisterProperty）
+     ├── BusinessObject<T>       —— 变更追踪（ChangedProperties / AcceptChanges）
+     │    ├── ObservableObject<T>—— NEW / CHANGED / DELETED 状态
+     │    │    └── EditableObject<T> —— 异步规则校验与保存
+     │    └── ReadOnlyObject<T>  —— 只读对象（工厂装载作用域内可填充）
+     └── ServiceObject<T>        —— 独立业务操作；有属性和规则，但无变更追踪
 ```
+
+> `IServiceObject` 只组合 `IOsbaObject`（Osba 对象公共契约：属性存储 + 上下文）与 `IHasRuleCheck`，
+> **不继承 `IBusinessObject`**；`IBusinessObject` 才承诺 `INotifyPropertyChanged/Changing` 等可编辑对象契约。
 
 #### 核心概念
 
@@ -213,10 +218,26 @@ BusinessObject<T>              —— 核心：规则、上下文、属性管理
 | **`BusinessContext`** | 环境上下文，包装 `IServiceProvider` 与 `UserPrincipal` |
 | **`PropertyInfo<T>`** | 强类型属性元数据：名称、类型、友好名、默认值、字段引用 |
 | **`FieldDataManager`** | 实例级反射字段值管理，支持撤销历史 |
-| **规则系统** | 异步规则校验，基于 `RuleManager`（类型级单例）与 `Rules`（实例级执行器） |
+| **规则系统** | 异步规则校验，基于容器级 `IRuleRegistry`（默认 `RuleRegistry`）与 `Rules`（实例级执行器）；无 DI 时回退到进程级 `RuleManager` |
 | **权限体系** | 操作权限（类型级 + 行级）与数据权限，授权值从应用数据实时解析 |
 | **`ObjectEditState`** | 生命周期状态机：`None → New → Changed → Deleted` |
 | **`IObjectFactory`** | 反射驱动 CRUD 工厂：`[FactoryCreate]`、`[FactoryFetch]`、`[FactoryInsert]`、`[FactoryUpdate]`、`[FactoryDelete]`、`[FactoryExecute]` |
+
+#### 装配与诊断
+
+```csharp
+services.AddBusinessObject(options =>
+{
+    // 生产宿主建议开启：启动期检查工厂方法签名、[Inject] 可解析性、属性元数据
+    options.ValidateOnStartup = true;
+    options.StrictFactoryMethods = true;   // 缺 Insert/Update/Delete 时保存直接失败
+    options.EnableDiagnostics = true;      // ActivitySource / Meter
+});
+```
+
+`AddBusinessObject` 返回 `IServiceCollection`，可链式调用。容器级规则注册表（`IRuleRegistry`）让不同容器/租户/测试宿主的规则互不可见；诊断通过 `ActivitySource("Euonia.Osba")` 与 `Meter("Euonia.Osba")` 暴露，日志优先走宿主的 `ILoggerFactory`。
+
+`BusinessContextAccessor` 不再在解析时自动写环境上下文；ASP.NET 中间件或手动作用域请显式 `SetCurrent(...)`，并在 `finally` 中 `Clear()`。`ValidationState` 用来区分“未校验 / 通过 / 失败”，`IsValid` 首次校验前仍为 `true`。
 
 #### 规则系统
 
@@ -401,7 +422,7 @@ guard.Explain(repo, BusinessOperation.Delete); // 审计：命中了哪条策略
 
 | 类型 | 作用 |
 |------|---------|
-| `IRecipientRegistrar` | 注册传输层接收者；实现 `IAsyncDisposable`，停机时释放其创建的接收者 |
+| `IRecipientRegistrar` | 注册传输层接收者；继承 `IDisposable` / `IAsyncDisposable`，`DisposeAsync` 默认转调 `Dispose`，停机时释放其创建的接收者 |
 | `IRecipient` / `IConsumer` / `ISubscriber` / `IExecutor` | 接收者及其按单播/多播/请求区分的角色接口 |
 
 **事件体系**
@@ -522,7 +543,7 @@ builder.AddOpenTelemetry()
 
 | 类型 | 作用 |
 |------|---------|
-| `NewtonsoftJsonSerializer` | 基于 Newtonsoft.Json 的序列化器（含 `ClaimsPrincipal` 转换器） |
+| `NewtonsoftJsonSerializer` | 基于 Newtonsoft.Json 的序列化器（含 `ClaimsPrincipal` 转换器；`TypeNameHandling.None`，不信任 JSON 中的 `$type`） |
 | `SystemTextJsonSerializer` | 基于 System.Text.Json 的序列化器 |
 | `MessageSerializerOptions` | 引用循环处理、编码、null 处理 |
 
@@ -562,7 +583,7 @@ builder.AddOpenTelemetry()
 | `RabbitMqRecipientRegistrar` | 类 | 创建并启动接收者；释放时逐个释放（持有其通道） |
 | `RabbitMqDelivery` | 静态类 | 队列名、订阅标识、优先级计算的**纯逻辑**（发布端与消费端共用同一份规则） |
 | `DefaultPersistentConnection` | 类 | 连接生命周期管理，含 `AsyncLock`、指数退避、自动重连；释放后立即失败而非自旋 |
-| `RabbitMqBusOptions` | 类 | 选项：连接 URI、交换器/队列前缀、持久化、自动确认、最大重试次数、**`MaxPriority`** |
+| `RabbitMqBusOptions` | 类 | 选项：连接 URI、交换器/队列前缀（默认空）、持久化、自动确认（默认 `false`）、最大重试次数、**`MaxPriority`** |
 
 **映射规则：** `IUnicast` → `RabbitMqConsumer`；`IMulticast` → `RabbitMqSubscriber`；`IRequest<>` → `RabbitMqExecutor`。
 
@@ -580,7 +601,7 @@ builder.AddOpenTelemetry()
 | 类型 | 种类 | 作用 |
 |------|------|---------|
 | `HttpTransporter` | 类（internal） | `ITransporter` 实现：`CallAsync` → HTTP POST（透传 `x-*` 消息头），解析 `RemoteReply<T>` 并还原异常；`Send/Publish` → `NotSupportedException` |
-| `HttpBusOptions` | 类 | 选项：`Endpoint`、`Route`（默认 `/bus/call`）、`SerializerProvider`（默认 `SystemTestJson`）、`RequestTimeout`、`MessageHandlerFactory` |
+| `HttpBusOptions` | 类 | 选项：`Endpoint`、`Route`（默认 `/bus/call`）、`SerializerProvider`（默认 `SystemTestJson`）、`RequestTimeout`、`RequireAuthorization`（默认 `true`）、`MessageHandlerFactory` |
 | `AddHttpBus(name, configure)` | 扩展 | 注册 Options + `HttpTransporter` 单例 + 按名称的 keyed `ITransporter` |
 | `MapBusEndpoint()` | 扩展 | 服务端映射端点：解析序列化器与 `IHandlerContext`，调用 `RemoteReceiver` 并回写 JSON 响应 |
 
@@ -614,7 +635,7 @@ app.MapBusEndpoint();   // POST /bus/call
 | `GrpcTransporter` | 类（internal） | `ITransporter` 实现：`GrpcChannel.CreateCallInvoker()` + 运行时构造的 `Method`（`GrpcMethodFactory`），`Data` 承载序列化信封、属性携带消息头；`Send/Publish` → `NotSupportedException` |
 | `GrpcMethodFactory` | 类（internal） | 运行时构造 `Method<GrpcRequest, GrpcResponse>`（含手写 protobuf `Marshaller`），支持动态服务名/方法名 |
 | `RemoteMessageService` | 类 | `ReplierService.ReplierServiceBase`：校验负载（空 → `InvalidArgument`）→ `RemoteReceiver` → 回传 `GrpcResponse` |
-| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider`、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`） |
+| `GrpcBusOptions` | 类 | 选项：`Endpoint`、`SerializerProvider`、`ServiceName`（默认 `nerorsoft.bus.ReplierService`）、`MethodName`（默认 `Call`）、`RequireAuthorization`（默认 `true`） |
 | `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | 扩展 | 客户端 keyed `ITransporter` 注册；服务端注册 `RemoteMessageService` |
 | `MapGrpcBusService()` | 扩展 | 服务端映射 `MapGrpcService<RemoteMessageService>()` |
 

@@ -154,6 +154,26 @@ public class InboxOutboxRetryTests
 	}
 
 	[Fact]
+	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsPendingAfterConfiguredGracePeriod()
+	{
+		var delivered = new List<string>();
+		await using var provider = BuildOutboxProvider(delivered);
+
+		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-abandoned-2");
+		IOutboxStore store = new InMemoryOutboxStore();
+		store.Insert(envelope, ["test"]);
+
+		// 记录只比当前时间早一分钟：默认 5 分钟宽限期内不会回收，
+		// 配置为 0 后应立即进入重试流程。
+		store.Get("outbox-abandoned-2").CreatedAt = DateTime.Now.AddMinutes(-1);
+
+		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 5, PendingReclaimGracePeriod = TimeSpan.Zero });
+		await dispatcher.RetryAllAsync();
+
+		Assert.Contains("outbox-abandoned-2", delivered);
+	}
+
+	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers()
 	{
 		var handled = 0;

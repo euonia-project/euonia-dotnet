@@ -42,7 +42,8 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		Handler = handler;
 		Options = options.Value;
 		Connection = factory;
-		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider);
+		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider)
+		              ?? throw new InvalidOperationException($"Message serializer '{Options.SerializerProvider}' is not registered.");
 	}
 
 	/// <summary>
@@ -58,7 +59,8 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		Connection = provider.GetRequiredService<IPersistentConnection>();
 		ChannelName = channelName;
 		MessageType = messageType;
-		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider);
+		_serializer = provider.GetKeyedService<IMessageSerializer>(Options.SerializerProvider)
+		              ?? throw new InvalidOperationException($"Message serializer '{Options.SerializerProvider}' is not registered.");
 	}
 
 	/// <summary>

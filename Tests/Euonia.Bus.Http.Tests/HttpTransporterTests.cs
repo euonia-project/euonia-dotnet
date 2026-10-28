@@ -29,6 +29,12 @@ public class HttpTransporterTests
 	}
 
 	[Fact]
+	public void HttpBusOptions_RequireAuthorization_DefaultsToTrue()
+	{
+		Assert.True(new HttpBusOptions().RequireAuthorization);
+	}
+
+	[Fact]
 	public async Task CallAsync_ReturnsResult()
 	{
 		var handler = new FakeBusServerHandler(HttpTestFactory.CreateSerializer(), new StubHandlerContext());
@@ -110,6 +116,28 @@ public class HttpTransporterTests
 		var parsed = serializer.Deserialize<RemoteReply<object>>(reply);
 		Assert.False(parsed.IsSuccess);
 		Assert.NotNull(parsed.Error);
+	}
+
+	[Fact]
+	public async Task RemoteReceiver_RejectsUnregisteredMessageType_WhenRequestServicesProvided()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddOptions();
+		services.AddEuoniaBus();
+
+		await using var provider = services.BuildServiceProvider();
+		var configurator = provider.GetRequiredService<IConfigurator>();
+		configurator.RegisterChannel<CountRequest, int>("count", (_, _) => Task.FromResult(0));
+
+		var serializer = HttpTestFactory.CreateSerializer();
+		var payload = serializer.Serialize(new RoutedMessage<FailingRequest>(new FailingRequest { Text = "unregistered" }, "fail"));
+
+		var reply = await RemoteReceiver.ReceiveAsync(serializer, new StubHandlerContext(), payload, provider, TestContext.Current.CancellationToken);
+		var parsed = serializer.Deserialize<RemoteReply<object>>(reply);
+
+		Assert.False(parsed.IsSuccess);
+		Assert.Contains("not registered", parsed.Error!.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
 	[Fact]

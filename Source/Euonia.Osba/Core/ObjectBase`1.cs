@@ -4,11 +4,11 @@ using Nerosoft.Euonia.Reflection;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 作为所有业务对象基类的抽象类。
+/// 业务对象的公共泛型基类：只承载属性注册等与“是否跟踪变更”无关的能力。
 /// </summary>
 /// <typeparam name="T">业务对象的具体类型。</typeparam>
-public abstract class BusinessObject<T> : BusinessObject
-	where T : BusinessObject<T>
+public abstract class ObjectBase<T> : ObjectBase
+	where T : ObjectBase<T>
 {
 	/// <summary>
 	/// 注册一个属性。

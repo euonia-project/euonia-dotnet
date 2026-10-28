@@ -19,6 +19,9 @@ public class RemoteError
 	/// <summary>
 	/// 获取或设置异常堆栈跟踪。
 	/// </summary>
+	/// <remarks>
+	/// 出于安全考虑，<see cref="Create"/> 不再填充该字段；保留属性仅为兼容既有序列化契约。
+	/// </remarks>
 	public string StackTrace { get; set; }
 
 	/// <summary>
@@ -26,13 +29,15 @@ public class RemoteError
 	/// </summary>
 	/// <param name="exception">要封装的异常。</param>
 	/// <returns>表示异常信息的 <see cref="RemoteError"/> 实例。</returns>
+	/// <remarks>
+	/// 只回传异常类型与消息，不回传堆栈，避免向远程调用方泄漏服务端内部实现细节。
+	/// </remarks>
 	public static RemoteError Create(Exception exception)
 	{
 		return new RemoteError
 		{
 			Type = exception?.GetType().FullName,
 			Message = exception?.Message,
-			StackTrace = exception?.StackTrace,
 		};
 	}
 
@@ -44,7 +49,7 @@ public class RemoteError
 	public Exception ToException()
 	{
 		var type = TryResolveType(Type);
-		if (type == null || !typeof(Exception).IsAssignableFrom(type) || type.GetConstructor(new[] { typeof(string) }) == null)
+		if (type == null || !IsSafeExceptionType(type) || type.GetConstructor([typeof(string)]) == null)
 		{
 			return new MessageDeliverException(Message ?? "Remote call failed without detailed error information.");
 		}
@@ -64,6 +69,12 @@ public class RemoteError
 		}
 
 		return new MessageDeliverException(Message ?? "Remote call failed without detailed error information.");
+	}
+
+	private static bool IsSafeExceptionType(Type type)
+	{
+		return typeof(Exception).IsAssignableFrom(type)
+		       && (type.Assembly == typeof(Exception).Assembly || typeof(MessageBusException).IsAssignableFrom(type));
 	}
 
 	private static Type TryResolveType(string typeName)

@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 执行器抽象基类，封装了业务对象的获取、处理、终结（保存或执行）的通用流程。
 /// </summary>
-/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 /// <remarks>
 /// <para>
 /// 派生类通过 <see cref="ActuatorBase{TTarget}(ActuatorBuilder{TTarget}, Func{Task{TTarget}})"/> 构造函数接收
@@ -13,16 +13,16 @@ namespace Nerosoft.Euonia.Osba;
 /// <see cref="Handle(Action{TTarget})"/> 注册处理逻辑；调用 <see cref="ExecuteAsync(CancellationToken)"/> 触发完整流程。
 /// 终步骤 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 由派生类实现：
 /// <see cref="EditableActuator{TTarget}"/> 对可编辑对象执行保存，<see cref="CreateActuator{TTarget}"/>
-/// 对可保存目标执行插入保存、其余类型原样返回，<see cref="ExecuteActuator{TTarget}"/> 对命令对象执行命令体。
+/// 对可保存目标执行插入保存、其余类型原样返回，<see cref="ExecuteActuator{TTarget}"/> 对服务对象执行执行体。
 /// </para>
 /// <para>
 /// 规则可由调用方按操作指定（<see cref="WithRule(IRuleBase)"/> 等）。附加的规则只挂在本次操作取到的
-/// 对象上，不写入按类型共享的规则管理器；终结步骤（保存 / 命令执行）才是规则唯一的裁决点，
+/// 对象上，不写入按类型共享的规则管理器；终结步骤（保存 / 操作执行）才是规则唯一的裁决点，
 /// 因此规则看到的必然是 <see cref="Handle(Action{TTarget})"/> 处理之后的对象状态。
 /// </para>
 /// </remarks>
 public abstract class ActuatorBase<TTarget>
-	where TTarget : BusinessObject<TTarget>
+	where TTarget : ObjectBase<TTarget>
 {
 	/// <summary>
 	/// 初始化执行器基类，保存构建器配置和对象工厂委托。
@@ -70,7 +70,7 @@ public abstract class ActuatorBase<TTarget>
 	}
 
 	/// <summary>
-	/// 执行终结步骤：对已处理的目标对象执行最终操作（可编辑对象保存、命令对象执行）。
+	/// 执行终结步骤：对已处理的目标对象执行最终操作（可编辑对象保存、服务对象执行）。
 	/// </summary>
 	/// <param name="target">已处理的目标对象。</param>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
@@ -223,7 +223,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <see cref="System.Security.SecurityException"/>。
 	/// </para>
 	/// <para>
-	/// 与 <see cref="BusinessObject.SuspendRuleChecking"/> 分开记录，因此不会覆盖调用方自己挂起的检查状态。
+	/// 与 <see cref="ObjectBase.SuspendRuleChecking"/> 分开记录，因此不会覆盖调用方自己挂起的检查状态。
 	/// </para>
 	/// </remarks>
 	public ActuatorBase<TTarget> BypassRuleChecks()
@@ -269,7 +269,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// 整个流程通过 <see cref="ActuatorBuilder{TTarget}"/> 的执行管道运行；若构建器启用了工作单元，
 	/// 处理逻辑将在事务边界内执行。终结步骤由 <see cref="FinalizeAsync(TTarget, CancellationToken)"/> 决定：
-	/// 可编辑对象在状态发生变更（<see cref="ObservableObject{T}.IsChanged"/>）时才保存，命令对象则执行命令体。
+	/// 可编辑对象在状态发生变更（<see cref="ObservableObject{T}.IsChanged"/>）时才保存，服务对象则执行执行体。
 	/// </remarks>
 	/// <param name="cancellationToken">取消操作的令牌。</param>
 	/// <returns>处理完成并终结后的目标对象。</returns>
@@ -290,8 +290,8 @@ public abstract class ActuatorBase<TTarget>
 			{
 				await ContinueHandleAsync(result, cancellationToken);
 
-				// 规则写在终结步骤（保存 / 命令执行）之前，是因为那一步才是规则的权威裁决点：
-				// 可编辑对象由 SaveAsync 裁决，命令对象由工厂边界裁决。此处只负责「挂规则」，
+				// 规则写在终结步骤（保存 / 操作执行）之前，是因为那一步才是规则的权威裁决点：
+				// 可编辑对象由 SaveAsync 裁决，服务对象由工厂边界裁决。此处只负责「挂规则」，
 				// 让规则进入那一次检查，而不是另跑一遍再把结果并进去——
 				// 后者会被 ClearRules 清掉，也会让规则执行两次。
 				return await FinalizeAsync(result, cancellationToken);
@@ -301,7 +301,7 @@ public abstract class ActuatorBase<TTarget>
 		{
 			if (_ruleScope != null)
 			{
-				target.RuleSet.DetachOperationRules();
+				target.RuleSet.DetachOperationRules(_ruleScope);
 			}
 		}
 	}

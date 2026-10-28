@@ -42,7 +42,7 @@ internal static class RuleTestHarness
 	/// <param name="provider">服务提供程序。</param>
 	/// <returns>已接线的业务对象。</returns>
 	internal static T Create<T>(IServiceProvider provider)
-		where T : BusinessObject, new()
+		where T : ObjectBase, new()
 	{
 		return new T { BusinessContext = provider.GetRequiredService<BusinessContext>() };
 	}
@@ -52,7 +52,7 @@ internal static class RuleTestHarness
 /// 断言 <c>Executed</c> 标记与调用次数的基础命令对象。
 /// </summary>
 /// <typeparam name="T">命令对象的具体类型。</typeparam>
-public abstract class RuleTestCommand<T> : CommandObject<T>
+public abstract class RuleTestCommand<T> : ServiceObject<T>
 	where T : RuleTestCommand<T>
 {
 	/// <summary>
@@ -214,6 +214,12 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 	{
 		Name = "initial";
 		AcceptChanges();
+	}
+
+	[FactoryInsert]
+	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
 	}
 
 	[FactoryUpdate]

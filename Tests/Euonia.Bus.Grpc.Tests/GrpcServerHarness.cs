@@ -58,6 +58,7 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
 		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
+		services.Configure<GrpcBusOptions>(options => options.RequireAuthorization = false);
 		services.AddGrpc();
 		services.AddGrpcBusServer();
 

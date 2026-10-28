@@ -49,19 +49,23 @@ internal class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 	{
 		Channel = await Connection.CreateChannelAsync();
 
+		var exchangeName = RabbitMqDelivery.ResolveExchangeName(Options, ChannelName);
+
 		// 为主题订阅者声明 Fanout 交换机和队列。
 		// 发布到该交换机的所有消息都会路由到绑定该交换机的所有队列。
-		await Channel.ExchangeDeclareAsync(ChannelName, ExchangeType.Fanout, cancellationToken: cancellationToken);
+		await Channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
 
 		// 每个订阅者拥有自己的队列来接收消息，
 		// 同一订阅者的所有实例将共享同一个队列。
 		var subscriptionQueueName = RabbitMqDelivery.ResolveQueueName(Options, ChannelName);
-		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority);
-		var queueName = await Channel.QueueDeclareAsync(subscriptionQueueName, true, false, false, queueArguments, cancellationToken: cancellationToken)
-		                             .ContinueWith(task => task.Result.QueueName);
+		var dlxArguments = await DeclareDeadLetterAsync(Channel, subscriptionQueueName);
+		var queueArguments = RabbitMqDelivery.BuildQueueArguments(Options.MaxPriority, dlxArguments);
+		var queue = await Channel.QueueDeclareAsync(subscriptionQueueName, true, false, false, queueArguments, cancellationToken: cancellationToken);
 
-		await Channel.QueueBindAsync(queueName, ChannelName, Options.RoutingKey ?? "*", cancellationToken: cancellationToken);
+		await Channel.QueueBindAsync(queue.QueueName, exchangeName, Options.RoutingKey ?? "*", cancellationToken: cancellationToken);
+		await Channel.BasicQosAsync((uint)Math.Max(0, Options.PrefetchSize), (ushort)Math.Clamp(Options.PrefetchCount, 0, ushort.MaxValue), false, cancellationToken: cancellationToken);
+
 		// Consume from the declared queue (use the generated queueName) instead of an empty name.
-		await Channel.BasicConsumeAsync(queueName, Options.AutoAck, Consumer, cancellationToken: cancellationToken);
+		await Channel.BasicConsumeAsync(queue.QueueName, Options.AutoAck, Consumer, cancellationToken: cancellationToken);
 	}
 }

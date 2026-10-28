@@ -124,6 +124,26 @@ public class CallAsyncTests
 	}
 
 	[Fact]
+	public async Task Timeout_CancelsTransportOperation()
+	{
+		var transport = new StubTransporter(async cancellationToken =>
+		{
+			await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+			return 1;
+		});
+		await using var provider = CreateProvider(transport);
+		var bus = provider.GetRequiredService<IBus>();
+
+		await Assert.ThrowsAnyAsync<TimeoutException>(() => bus.CallAsync(
+			new CountRequest(),
+			new CallOptions { Channel = "call.timeout.cancel", Timeout = 100 },
+			null,
+			TestContext.Current.CancellationToken));
+
+		Assert.True(transport.LastCallToken.IsCancellationRequested, "the timeout token must be propagated to the transporter");
+	}
+
+	[Fact]
 	public async Task CallBuilder_WithTimeout_ThrowsTimeoutException()
 	{
 		var transport = new StubTransporter(_ => SlowAsync());
@@ -293,6 +313,8 @@ public class CallAsyncTests
 
 		public IMessageEnvelope LastCallEnvelope { get; private set; }
 
+		public CancellationToken LastCallToken { get; private set; }
+
 		public event EventHandler<MessageDeliveredEventArgs> Delivered
 		{
 			add { }
@@ -312,6 +334,7 @@ public class CallAsyncTests
 		public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 		{
 			LastCallEnvelope = message;
+			LastCallToken = cancellationToken;
 			var result = await _onCall(cancellationToken).ConfigureAwait(false);
 			return (TResponse)(object)result!;
 		}

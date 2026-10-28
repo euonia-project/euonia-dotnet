@@ -99,6 +99,10 @@ builder.Services.AddSingleton<System.IServiceAccessor, ServiceAccessor>();
 builder.Services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "grpc");
 builder.Services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor>();
 
+// 示例省略了 ASP.NET Core 认证配置，因此显式关闭端点授权。
+// 生产环境必须保留默认值 true，并为 gRPC 服务配置认证/授权。
+builder.Services.Configure<GrpcBusOptions>(options => options.RequireAuthorization = false);
+
 // ① gRPC 工具链：AddGrpc + MaxReceiveMessageSize/DetailedErrors + 内置拦截器 + 反射
 builder.Services.AddGrpcService();
 
@@ -192,6 +196,7 @@ configurator.SetConvention(convention => convention.Add<DefaultMessageConvention
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名 |
 | `ServiceName` | `"nerorsoft.bus.ReplierService"` | 泛化调用服务全名（§4） |
 | `MethodName` | `"Call"` | 泛化调用一元方法名（§4） |
+| `RequireAuthorization` | `true` | 服务端端点是否要求授权；生产环境保持 `true` 并配置认证 |
 
 ---
 

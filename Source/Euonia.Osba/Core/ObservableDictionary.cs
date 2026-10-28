@@ -14,12 +14,126 @@ namespace Nerosoft.Euonia.Osba;
 /// </remarks>
 /// <typeparam name="TKey">字典中键的类型。</typeparam>
 /// <typeparam name="TValue">字典中值的类型。</typeparam>
-public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INotifyBusy
+public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INotifyBusy, IChildGraphNode
 {
 	/// <summary>
 	/// 获取或设置一个值，指示 ObservableDictionary 在子项被修改时是否应引发更改通知。
 	/// </summary>
 	public bool RaiseItemChangedEvents { get; set; } = true;
+
+	/// <summary>
+	/// 父对象链接；字典作为另一对象的属性时，字典变化与值变化都要通知父对象。
+	/// </summary>
+	private readonly List<ChildGraphLink> _parentLinks = [];
+
+	/// <summary>
+	/// 父对象 + 父对象上持有本字典的属性。
+	/// </summary>
+	private sealed record ChildGraphLink(ObjectBase Parent, IPropertyInfo Property);
+
+	/// <inheritdoc />
+	public void AddParent(ObjectBase parent, IPropertyInfo property)
+	{
+		if (parent == null)
+		{
+			return;
+		}
+
+		if (_parentLinks.Any(link => ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property)))
+		{
+			return;
+		}
+
+		_parentLinks.Add(new ChildGraphLink(parent, property));
+
+		foreach (var value in Values)
+		{
+			AttachValue(value, parent, property);
+		}
+	}
+
+	/// <inheritdoc />
+	public void RemoveParent(ObjectBase parent, IPropertyInfo property)
+	{
+		if (parent == null)
+		{
+			return;
+		}
+
+		for (var index = _parentLinks.Count - 1; index >= 0; index--)
+		{
+			var link = _parentLinks[index];
+			if (ReferenceEquals(link.Parent, parent) && ReferenceEquals(link.Property, property))
+			{
+				_parentLinks.RemoveAt(index);
+				break;
+			}
+		}
+
+		foreach (var value in Values)
+		{
+			DetachValue(value, parent, property);
+		}
+	}
+
+	/// <summary>
+	/// 把值挂到父对象上；值本身是对象或嵌套容器时递归处理。
+	/// </summary>
+	private static void AttachValue(TValue value, ObjectBase parent, IPropertyInfo property)
+	{
+		switch (value)
+		{
+			case ObjectBase child:
+				child.AddParent(parent, property);
+				break;
+			case IChildGraphNode node:
+				node.AddParent(parent, property);
+				break;
+		}
+	}
+
+	/// <summary>
+	/// 从父对象上摘下值。
+	/// </summary>
+	private static void DetachValue(TValue value, ObjectBase parent, IPropertyInfo property)
+	{
+		switch (value)
+		{
+			case ObjectBase child:
+				child.RemoveParent(parent, property);
+				break;
+			case IChildGraphNode node:
+				node.RemoveParent(parent, property);
+				break;
+		}
+	}
+
+	/// <summary>
+	/// 判断值是否仍被其他键引用；同一实例放在多个键下时不能提前解链。
+	/// </summary>
+	private bool ContainsValueReference(TValue value)
+	{
+		foreach (var candidate in Values)
+		{
+			if (ReferenceEquals(candidate, value))
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// 字典内容变化时通知所有父对象。
+	/// </summary>
+	private void NotifyParents()
+	{
+		foreach (var link in _parentLinks)
+		{
+			link.Parent.NotifyChildChanged(link.Property);
+		}
+	}
 
 	/// <summary>
 	/// 当字典中的项被添加、移除或更新时发生。
@@ -43,12 +157,13 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <param name="newValue">更改后与键关联的值。</param>
 	protected virtual void OnItemChanged(TKey key, DictionaryChangedAction action, TValue oldValue, TValue newValue)
 	{
-		if (!RaiseItemChangedEvents)
+		if (RaiseItemChangedEvents)
 		{
-			return;
+			ItemChanged?.Invoke(this, new DictionaryChangedEventArgs<TKey, TValue>(key, action, oldValue, newValue));
 		}
 
-		ItemChanged?.Invoke(this, new DictionaryChangedEventArgs<TKey, TValue>(key, action, oldValue, newValue));
+		// 父对象脏状态与 UI 通知是两件事：即使调用方抑制了 ItemChanged，父对象仍应知道字典变了。
+		NotifyParents();
 	}
 
 	#region BusyChanged
@@ -125,7 +240,19 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 				eventArgs = new DictionaryChangedEventArgs<TKey, TValue>(key, DictionaryChangedAction.Add, default, value);
 			}
 
+			var replaced = eventArgs.Action == DictionaryChangedAction.Update;
 			base[key] = value;
+
+			foreach (var link in _parentLinks)
+			{
+				if (replaced && !ContainsValueReference(eventArgs.OldValue))
+				{
+					DetachValue(eventArgs.OldValue, link.Parent, link.Property);
+				}
+
+				AttachValue(value, link.Parent, link.Property);
+			}
+
 			OnItemChanged(eventArgs.Key, eventArgs.Action, eventArgs.OldValue, eventArgs.NewValue);
 		}
 	}
@@ -139,6 +266,12 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	public new void Add(TKey key, TValue value)
 	{
 		base.Add(key, value);
+
+		foreach (var link in _parentLinks)
+		{
+			AttachValue(value, link.Parent, link.Property);
+		}
+
 		OnItemChanged(key, DictionaryChangedAction.Add, default, value);
 	}
 
@@ -157,6 +290,11 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 			return false;
 		}
 
+		foreach (var link in _parentLinks)
+		{
+			AttachValue(value, link.Parent, link.Property);
+		}
+
 		OnItemChanged(key, DictionaryChangedAction.Add, default, value);
 		return true;
 	}
@@ -172,6 +310,14 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 		var result = base.Remove(key, out var value);
 		if (result)
 		{
+			if (!ContainsValueReference(value))
+			{
+				foreach (var link in _parentLinks)
+				{
+					DetachValue(value, link.Parent, link.Property);
+				}
+			}
+
 			OnItemChanged(key, DictionaryChangedAction.Remove, value, default);
 		}
 
@@ -190,6 +336,14 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 		var result = base.Remove(key, out value);
 		if (result)
 		{
+			if (!ContainsValueReference(value))
+			{
+				foreach (var link in _parentLinks)
+				{
+					DetachValue(value, link.Parent, link.Property);
+				}
+			}
+
 			OnItemChanged(key, DictionaryChangedAction.Remove, value, default);
 		}
 
@@ -205,6 +359,14 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 		if (Count == 0)
 		{
 			return;
+		}
+
+		foreach (var value in Values)
+		{
+			foreach (var link in _parentLinks)
+			{
+				DetachValue(value, link.Parent, link.Property);
+			}
 		}
 
 		base.Clear();

@@ -35,4 +35,11 @@ public class GrpcBusOptions
 	/// 获取或设置调用的 gRPC 一元方法名。
 	/// </summary>
 	public string MethodName { get; set; } = "Call";
+
+	/// <summary>
+	/// 获取或设置一个值，指示 gRPC 远程调用端点是否要求授权。
+	/// 默认 <c>true</c>：端点映射后默认应用授权策略，避免消息总线端点被匿名调用。
+	/// 测试或受控内网环境可显式设为 <c>false</c>。
+	/// </summary>
+	public bool RequireAuthorization { get; set; } = true;
 }

@@ -12,6 +12,12 @@ namespace Nerosoft.Euonia.Bus.Grpc.Tests;
 public class GrpcTransporterTests
 {
 	[Fact]
+	public void GrpcBusOptions_RequireAuthorization_DefaultsToTrue()
+	{
+		Assert.True(new GrpcBusOptions().RequireAuthorization);
+	}
+
+	[Fact]
 	public void AddGrpcBus_SelfRegistersCoreServices()
 	{
 		var services = new ServiceCollection();

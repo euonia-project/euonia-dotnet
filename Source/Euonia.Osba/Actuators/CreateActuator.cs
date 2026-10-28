@@ -1,9 +1,9 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 用于创建目标对象的执行器，支持任意 <see cref="BusinessObject{T}"/> 类型。
+/// 用于创建目标对象的执行器，支持任意 <see cref="ObjectBase{T}"/> 类型。
 /// </summary>
-/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{T}"/>。</typeparam>
+/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
 /// <remarks>
 /// <para>
 /// 创建流程：通过对象工厂调用目标的创建工厂方法构造实例，随后由执行管道处理
@@ -13,11 +13,11 @@
 /// 后续处理阶段，目标是 <see cref="IEditableObject"/> 时将其标记为新增（<see cref="IEditableObject.MarkAsNew"/>）；
 /// 终结阶段，目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时
 /// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存（插入语义），
-/// 其余类型（只读对象、命令对象等不可持久化对象）构造完成即原样返回、不做落库。
+/// 其余类型（只读对象、服务对象等不可持久化对象）构造完成即原样返回、不做落库。
 /// </para>
 /// </remarks>
 public class CreateActuator<TTarget> : ActuatorBase<TTarget>
-	where TTarget : BusinessObject<TTarget>
+	where TTarget : ObjectBase<TTarget>
 {
 	/// <summary>
 	/// 初始化创建执行器。
@@ -58,7 +58,7 @@ public class CreateActuator<TTarget> : ActuatorBase<TTarget>
 	/// <remarks>
 	/// 当目标同时实现 <see cref="ISavable"/> 与 <see cref="ITrackableObject"/> 时，
 	/// 按 <see cref="ITrackableObject.IsChanged"/> 触发保存，与 <see cref="EditableActuator{TTarget}"/> 的保存语义一致；
-	/// 不可保存类型（只读对象、命令对象等）创建即完成，直接返回目标。
+	/// 不可保存类型（只读对象、服务对象等）创建即完成，直接返回目标。
 	/// </remarks>
 	protected override async Task<TTarget> FinalizeAsync(TTarget target, CancellationToken cancellationToken)
 	{

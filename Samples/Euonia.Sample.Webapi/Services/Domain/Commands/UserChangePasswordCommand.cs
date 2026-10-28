@@ -15,7 +15,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// 因此「知道旧密码」本身就是前提；命令成功后经总线发布 <see cref="UserPasswordChangedEvent"/>，
 /// 供订阅方（审计、异地登录提醒等）消费。
 /// </remarks>
-public sealed class UserChangePasswordCommand : CommandObjectBase<UserChangePasswordCommand>
+public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePasswordCommand>
 {
 	/// <summary>新密码的最小长度。</summary>
 	public const int MinPasswordLength = 8;

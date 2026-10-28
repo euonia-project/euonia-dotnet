@@ -5,15 +5,15 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// 实现类负责提供用于解析 <see cref="ActuatorBuilder{TTarget}"/> 所依赖服务（如对象工厂与执行管道）的服务提供程序。
-/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与命令对象（<see cref="CommandObject{T}"/>）两种目标类型。
+/// 支持可编辑对象（<see cref="EditableObject{T}"/>）与服务对象（<see cref="ServiceObject{T}"/>）两种目标类型。
 /// </remarks>
 public interface IActuator
 {
 	/// <summary>
 	/// 为指定类型的业务对象创建执行器构建器。
 	/// </summary>
-	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="BusinessObject{TTarget}"/>。</typeparam>
+	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{TTarget}"/>。</typeparam>
 	/// <returns>用于配置和执行操作的 <see cref="ActuatorBuilder{TTarget}"/> 实例。</returns>
 	ActuatorBuilder<TTarget> For<TTarget>()
-		where TTarget : BusinessObject<TTarget>;
+		where TTarget : ObjectBase<TTarget>;
 }

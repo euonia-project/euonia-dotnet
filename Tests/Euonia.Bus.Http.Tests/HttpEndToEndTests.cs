@@ -105,6 +105,7 @@ public class HttpEndToEndTests
 		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "http");
 		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
+		services.Configure<HttpBusOptions>(options => options.RequireAuthorization = false);
 		services.AddHttpBus("http");
 	}
 

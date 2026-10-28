@@ -99,7 +99,7 @@ internal sealed class MessageBus : IBus
 	/// 此方法验证消息类型，创建带有追踪标识符的路由消息，可选择性地通过管道处理消息，
 	/// 并将其并行发布到所有确定的传输器。
 	/// </remarks>
-	public Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
+	public async Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new PublishOptions();
 
@@ -111,11 +111,12 @@ internal sealed class MessageBus : IBus
 		}
 
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TMessage, Unit>(message, channel)
+		var pack = new RoutedMessage<TMessage, Unit>(message, channel, messageId, null, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -123,7 +124,7 @@ internal sealed class MessageBus : IBus
 		options.MetadataSetter?.Invoke(pack.Metadata);
 		ApplyDeliveryProperties(pack, options);
 
-		var transports = _dispatcher.Determine(channel, messageType);
+		var transports = _dispatcher.Determine(channel, messageType).ToArray();
 
 		using var activity = BusTelemetry.StartActivity("bus.publish", pack);
 		var startTimestamp = Stopwatch.GetTimestamp();
@@ -138,25 +139,25 @@ internal sealed class MessageBus : IBus
 				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_STORE_NOT_REGISTERED, message.GetType().FullName));
 			}
 
-			if (!_outboxStore.Insert(pack, transports.ToArray()))
+			if (!_outboxStore.Insert(pack, transports))
 			{
 				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_MESSAGE_ALREADY_EXISTS, pack.MessageId));
 			}
 		}
 
-		return PublishCoreAsync(transports, pack, behavior, useOutbox, channel, messageType, options.Delay, startTimestamp, activity, cancellationToken);
+		await PublishCoreAsync(transports, pack, behavior, useOutbox, channel, messageType, options.Delay, startTimestamp, activity, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
-	/// 执行实际的并行分发并记录耗时与失败指标。
+	/// 执行实际的分发并记录耗时与失败指标。单传输器走直接调用，多传输器才并行。
 	/// </summary>
-	private async Task PublishCoreAsync<TMessage>(IEnumerable<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
+	private async Task PublishCoreAsync<TMessage>(IReadOnlyList<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
 	{
 		try
 		{
 			await DelayDispatchAsync(delay, cancellationToken).ConfigureAwait(false);
 
-			await Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
+			async ValueTask PublishToTransportAsync(string name, CancellationToken token)
 			{
 				await RunWithPipelineAsync(pack, behavior, async (transport, p) =>
 				{
@@ -164,8 +165,19 @@ internal sealed class MessageBus : IBus
 					// 使发件箱把发送失败误记为成功并停止重试。
 					await transport.PublishAsync(p, token).ConfigureAwait(false);
 					return Unit.Value;
-				}, name, useOutbox);
-			});
+				}, name, useOutbox).ConfigureAwait(false);
+			}
+
+			// 单个传输器的 Parallel.ForEachAsync 固定开销约 2µs，远大于直接调用；
+			// 只有多传输器时才值得并行。
+			if (transports.Count == 1)
+			{
+				await PublishToTransportAsync(transports[0], cancellationToken).ConfigureAwait(false);
+			}
+			else
+			{
+				await Parallel.ForEachAsync(transports, cancellationToken, PublishToTransportAsync).ConfigureAwait(false);
+			}
 		}
 		catch (Exception exception)
 		{
@@ -208,12 +220,13 @@ internal sealed class MessageBus : IBus
 		}
 
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var correlationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TMessage, TResult>(message, channel)
+		var pack = new RoutedMessage<TMessage, TResult>(message, channel, messageId, correlationId, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -229,6 +242,8 @@ internal sealed class MessageBus : IBus
 		var startTimestamp = Stopwatch.GetTimestamp();
 		BusTelemetry.Sent.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
 
+		var terminalEventRaised = false;
+
 		try
 		{
 			await DelayDispatchAsync(options.Delay, cancellationToken).ConfigureAwait(false);
@@ -243,6 +258,8 @@ internal sealed class MessageBus : IBus
 
 			if (callback != null)
 			{
+				// OnError 已经是该订阅序列的终结事件，finally 中不能再发 OnCompleted。
+				terminalEventRaised = true;
 				callback.OnError(exception);
 			}
 			else
@@ -253,7 +270,11 @@ internal sealed class MessageBus : IBus
 		finally
 		{
 			BusTelemetry.Duration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds, BusTelemetry.Tags(channel, messageType, transportName));
-			callback?.OnCompleted();
+
+			if (!terminalEventRaised)
+			{
+				callback?.OnCompleted();
+			}
 		}
 	}
 
@@ -327,7 +348,7 @@ internal sealed class MessageBus : IBus
 
 	/// <summary>
 	/// 请求-响应调用的共享内部实现：构造路由消息、确定传输器并通过管道执行调用，
-	/// 最后应用 <see cref="ExtendableOptions.Timeout"/> 指定的超时约束。
+	/// 并应用 <see cref="ExtendableOptions.Timeout"/> 指定的超时约束。
 	/// </summary>
 	/// <typeparam name="TRequest">请求消息的类型。</typeparam>
 	/// <typeparam name="TResponse">响应的类型。</typeparam>
@@ -339,15 +360,17 @@ internal sealed class MessageBus : IBus
 	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
 	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
 	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
-	private Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken)
+	/// <exception cref="TimeoutException">当调用在限定时间内未完成时抛出。</exception>
+	private async Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken)
 	{
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var correlationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TRequest>(message, channel)
+		var pack = new RoutedMessage<TRequest>(message, channel, messageId, correlationId, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -356,28 +379,41 @@ internal sealed class MessageBus : IBus
 		ApplyDeliveryProperties(pack, options);
 
 		var transports = _dispatcher.Determine(channel, messageType);
-
 		var transportName = transports!.First();
 
-		var activity = BusTelemetry.StartActivity("bus.call", pack, transportName);
+		using var activity = BusTelemetry.StartActivity("bus.call", pack, transportName);
 		var startTimestamp = Stopwatch.GetTimestamp();
 		BusTelemetry.Called.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
 
-		var result = options.Delay > 0
-			             ? CallWithDelayAsync(pack, behavior, transportName, options.Delay, cancellationToken)
-			             : RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName);
+		using var timeoutSource = options.Timeout > 0
+			                          ? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)
+			                          : null;
+		if (timeoutSource != null)
+		{
+			timeoutSource.CancelAfter(TimeSpan.FromMilliseconds(options.Timeout));
+		}
 
-		return CompleteCallAsync(result, options.Timeout, cancellationToken, activity, startTimestamp, channel, messageType, transportName);
-	}
+		// 超时令牌必须传给传输器本身，而不只是取消 WaitAsync 的等待；
+		// 否则超时后底层调用仍会继续执行并占用连接、作用域等资源。
+		var operationToken = timeoutSource?.Token ?? cancellationToken;
+		Task<TResponse> callTask = null;
 
-	/// <summary>
-	/// 为调用结果应用超时约束，并记录耗时与失败指标。
-	/// </summary>
-	private async Task<TResponse> CompleteCallAsync<TResponse>(Task<TResponse> task, long timeout, CancellationToken cancellationToken, Activity activity, long startTimestamp, string channel, Type messageType, string transportName)
-	{
 		try
 		{
-			return await ApplyTimeoutAsync(task, timeout, cancellationToken).ConfigureAwait(false);
+			if (options.Delay > 0)
+			{
+				await DelayDispatchAsync(options.Delay, operationToken).ConfigureAwait(false);
+			}
+
+			callTask = RunWithPipelineAsync(pack, behavior, (transport, envelope) => transport.CallAsync<TRequest, TResponse>(envelope, operationToken), transportName);
+			return await callTask.WaitAsync(operationToken).ConfigureAwait(false);
+		}
+		catch (OperationCanceledException) when (timeoutSource != null && !cancellationToken.IsCancellationRequested)
+		{
+			ObserveAbandonedCall(callTask);
+			BusTelemetry.Failed.Add(1, BusTelemetry.Tags(channel, messageType, transportName));
+			activity?.SetStatus(ActivityStatusCode.Error, string.Format(Resources.IDS_CALL_TIMEOUT, options.Timeout));
+			throw new TimeoutException(string.Format(Resources.IDS_CALL_TIMEOUT, options.Timeout));
 		}
 		catch (Exception exception)
 		{
@@ -388,18 +424,23 @@ internal sealed class MessageBus : IBus
 		finally
 		{
 			BusTelemetry.Duration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds, BusTelemetry.Tags(channel, messageType, transportName));
-			activity?.Dispose();
 		}
 	}
 
 	/// <summary>
-	/// 先按延迟设置等待，再执行实际的调用。
+	/// 观察超时后仍在执行的调用任务，避免其异常成为未观察异常。
 	/// </summary>
-	private async Task<TResponse> CallWithDelayAsync<TRequest, TResponse>(RoutedMessage<TRequest> pack, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, string transportName, long delay, CancellationToken cancellationToken)
+	private static void ObserveAbandonedCall(Task task)
 	{
-		await DelayDispatchAsync(delay, cancellationToken).ConfigureAwait(false);
+		if (task == null)
+		{
+			return;
+		}
 
-		return await RunWithPipelineAsync(pack, behavior, (transport, p) => transport.CallAsync<TRequest, TResponse>(p, cancellationToken), transportName).ConfigureAwait(false);
+		_ = task.ContinueWith(static completed => _ = completed.Exception,
+		                      CancellationToken.None,
+		                      TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
+		                      TaskScheduler.Default);
 	}
 
 	/// <summary>
@@ -462,38 +503,6 @@ internal sealed class MessageBus : IBus
 	private const long MaxDelayMilliseconds = uint.MaxValue - 1;
 
 	/// <summary>
-	/// 为调用结果应用超时约束。
-	/// </summary>
-	/// <remarks>
-	/// 当 <paramref name="timeout"/>（毫秒）大于 0 时，通过链接的取消令牌实现超时控制：
-	/// 限时内未完成则抛出 <see cref="TimeoutException"/>；由调用方取消产生的取消操作会原样保留。
-	/// </remarks>
-	/// <typeparam name="TResponse">响应的类型。</typeparam>
-	/// <param name="task">调用任务。</param>
-	/// <param name="timeout">超时时间（毫秒），小于等于 0 表示不启用超时。</param>
-	/// <param name="cancellationToken">调用方提供的取消令牌。</param>
-	/// <returns>包含调用结果的任务。</returns>
-	/// <exception cref="TimeoutException">当调用在限定时间内未完成时抛出。</exception>
-	private async Task<TResponse> ApplyTimeoutAsync<TResponse>(Task<TResponse> task, long timeout, CancellationToken cancellationToken)
-	{
-		if (timeout <= 0)
-		{
-			return await task.ConfigureAwait(false);
-		}
-
-		using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-		cts.CancelAfter(TimeSpan.FromMilliseconds(timeout));
-		try
-		{
-			return await task.WaitAsync(cts.Token).ConfigureAwait(false);
-		}
-		catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-		{
-			throw new TimeoutException(string.Format(Resources.IDS_CALL_TIMEOUT, timeout));
-		}
-	}
-
-	/// <summary>
 	/// 通过管道执行消息处理流程
 	/// </summary>
 	/// <remarks>
@@ -511,7 +520,11 @@ internal sealed class MessageBus : IBus
 	{
 		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
-		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _provider.GetService<ILogger<MessageBus>>());
+		var logger = _provider.GetService<ILogger<MessageBus>>();
+		if (logger?.IsEnabled(LogLevel.Debug) == true)
+		{
+			pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, logger);
+		}
 
 		if (useOutbox)
 		{

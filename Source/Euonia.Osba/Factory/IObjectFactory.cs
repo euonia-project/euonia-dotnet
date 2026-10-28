@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
 /// 业务对象操作工厂。
@@ -57,6 +57,7 @@ public interface IObjectFactory
 	/// 方法应命名为 Insert、InsertAsync、FactoryInsert、FactoryInsertAsync，或使用 <see cref="FactoryInsertAttribute"/> 特性标记。
 	/// 每个条件项必须与方法参数类型匹配。
 	/// </remarks>
+	[Obsolete("Use CreateAsync + SaveAsync. Criteria-based insert cannot enforce pre-write data scope checks.")]
 	Task<TTarget> InsertAsync<TTarget>(params object[] criteria);
 
 	/// <summary>
@@ -95,17 +96,17 @@ public interface IObjectFactory
 	Task<TTarget> UpdateAsync<TTarget>(params object[] criteria);
 
 	/// <summary>
-	/// 调用 <typeparamref name="TTarget"/> 现有命令对象的执行方法。
+	/// 调用 <typeparamref name="TTarget"/> 现有服务对象的执行方法。
 	/// </summary>
 	/// <typeparam name="TTarget">目标对象的类型。</typeparam>
-	/// <param name="target">要执行的目标命令对象。</param>
+	/// <param name="target">要执行的目标服务对象。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>表示异步执行操作的任务，包含执行后的对象实例。</returns>
 	/// <remarks>
 	/// 方法应命名为 Execute、ExecuteAsync、FactoryExecute、FactoryExecuteAsync，或使用 <see cref="FactoryExecuteAttribute"/> 特性标记。
 	/// </remarks>
 	Task<TTarget> ExecuteAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
-		where TTarget : ICommandObject;
+		where TTarget : IServiceObject;
 
 	/// <summary>
 	/// 创建 <typeparamref name="TTarget"/> 的新实例并调用执行方法。
@@ -117,8 +118,9 @@ public interface IObjectFactory
 	/// 执行方法应命名为 Execute、ExecuteAsync、FactoryExecute、FactoryExecuteAsync，或使用 <see cref="FactoryExecuteAttribute"/> 特性标记。
 	/// 每个条件项必须与方法参数类型匹配。
 	/// </remarks>
+	[Obsolete("Prefer CreateAsync + validation + ExecuteAsync(target); criteria-based execute cannot enforce pre-write rules.")]
 	Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
-		where TTarget : ICommandObject;
+		where TTarget : IServiceObject;
 
 	/// <summary>
 	/// 创建 <typeparamref name="TTarget"/> 的新实例并调用删除方法。

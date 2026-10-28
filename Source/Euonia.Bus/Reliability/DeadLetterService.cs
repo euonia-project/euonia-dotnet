@@ -39,19 +39,37 @@ internal sealed class DeadLetterService : IDeadLetterService
 	}
 
 	/// <inheritdoc/>
-	public async Task<bool> ReplayAsync(string messageId, CancellationToken cancellationToken = default)
+	public DeadLetterEntry GetById(string id)
+	{
+		return string.IsNullOrWhiteSpace(id) ? null : _store.GetById(id);
+	}
+
+	/// <inheritdoc/>
+	public Task<bool> ReplayAsync(string messageId, CancellationToken cancellationToken = default)
 	{
 		if (string.IsNullOrWhiteSpace(messageId))
 		{
-			return false;
+			return Task.FromResult(false);
 		}
 
 		var entry = _store.Get(messageId);
-		if (entry == null)
+		return entry == null ? Task.FromResult(false) : ReplayEntryAsync(entry, cancellationToken);
+	}
+
+	/// <inheritdoc/>
+	public Task<bool> ReplayByIdAsync(string id, CancellationToken cancellationToken = default)
+	{
+		if (string.IsNullOrWhiteSpace(id))
 		{
-			return false;
+			return Task.FromResult(false);
 		}
 
+		var entry = _store.GetById(id);
+		return entry == null ? Task.FromResult(false) : ReplayEntryAsync(entry, cancellationToken);
+	}
+
+	private async Task<bool> ReplayEntryAsync(DeadLetterEntry entry, CancellationToken cancellationToken)
+	{
 		try
 		{
 			if (entry.Source == DeadLetterSource.Inbox)
@@ -66,10 +84,11 @@ internal sealed class DeadLetterService : IDeadLetterService
 		catch (Exception exception)
 		{
 			entry.Error = exception.Message;
+			_store.Update(entry);
 			return false;
 		}
 
-		_store.Remove(messageId);
+		_store.RemoveById(entry.Id);
 		return true;
 	}
 
@@ -77,6 +96,12 @@ internal sealed class DeadLetterService : IDeadLetterService
 	public bool Discard(string messageId)
 	{
 		return !string.IsNullOrWhiteSpace(messageId) && _store.Remove(messageId);
+	}
+
+	/// <inheritdoc/>
+	public bool DiscardById(string id)
+	{
+		return !string.IsNullOrWhiteSpace(id) && _store.RemoveById(id);
 	}
 
 	/// <summary>

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
 using System.Reflection;
@@ -9,8 +9,20 @@ namespace Nerosoft.Euonia.Osba;
 /// <see cref="PropertyInfo{T}"/> 类为 <see cref="PropertyInfo"/> 提供强类型包装。
 /// </summary>
 /// <typeparam name="T">属性的类型。</typeparam>
-public sealed class PropertyInfo<T> : IPropertyInfo
+public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 {
+	/// <summary>
+	/// 属性在所属类型元数据中的稳定索引；-1 表示尚未分配。
+	/// </summary>
+	private int _index = -1;
+
+	int IIndexedPropertyInfo.Index
+	{
+		get => _index;
+		set => _index = value;
+	}
+
+
 	/// <summary>
 	/// 注册时指定的静态默认值。
 	/// </summary>
@@ -25,7 +37,6 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	public PropertyInfo(string name)
 		: this(name, null, null)
 	{
-		Name = name;
 	}
 
 	/// <inheritdoc />
@@ -134,7 +145,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo
 	/// <summary>
 	/// 获取一个值，指示此属性是否为子对象。
 	/// </summary>
-	public bool IsChild => typeof(IBusinessObject).IsAssignableFrom(typeof(T));
+	public bool IsChild => typeof(IOsbaObject).IsAssignableFrom(typeof(T));
 
 	private readonly PropertyInfo _propertyInfo;
 

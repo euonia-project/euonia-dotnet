@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -18,6 +19,10 @@ public static class RemoteReceiver
 	/// 处理远程请求负载并返回序列化后的回复 JSON 字符串。
 	/// 负载反序列化失败或消息处理失败时，统一以 <see cref="RemoteReply{TResult}.Failure"/> 形式返回。
 	/// </summary>
+	/// <remarks>
+	/// 此重载不启用消息类型白名单，仅用于可信的内部调用；HTTP / gRPC 等不可信入口
+	/// 应使用带 <c>requestServices</c> 的重载，以便从已注册处理器推导允许的消息类型。
+	/// </remarks>
 	/// <param name="serializer">用于反序列化请求与序列化回复的消息序列化器。</param>
 	/// <param name="handler">用于处理消息的处理器上下文。</param>
 	/// <param name="payload">包含 <see cref="IMessageEnvelope"/> JSON 数据的请求负载。</param>
@@ -44,7 +49,7 @@ public static class RemoteReceiver
 
 		try
 		{
-			message = DeserializeMessage(serializer, payload);
+			message = DeserializeMessage(serializer, payload, ResolveAllowedMessageTypes(requestServices));
 			context = new MessageContext(message)
 			{
 				ExecutionDescriptor = MessageExecutionDescriptor.RemoteInboundBorrowed(requestServices),
@@ -146,8 +151,9 @@ public static class RemoteReceiver
 	/// </summary>
 	/// <param name="serializer">消息序列化器。</param>
 	/// <param name="payload">包含消息信封 JSON 数据的字符串。</param>
+	/// <param name="allowedTypes">允许反序列化的消息类型集合；为 <c>null</c> 时不启用白名单。</param>
 	/// <returns>反序列化后的 <see cref="IMessageEnvelope"/> 实例。</returns>
-	private static IMessageEnvelope DeserializeMessage(IMessageSerializer serializer, string payload)
+	private static IMessageEnvelope DeserializeMessage(IMessageSerializer serializer, string payload, ISet<Type> allowedTypes)
 	{
 		var typeName = ReadTypeName(payload);
 		if (string.IsNullOrWhiteSpace(typeName))
@@ -161,7 +167,37 @@ public static class RemoteReceiver
 			throw new MessageDeliverException(string.Format(Resources.IDS_REMOTE_TYPE_RESOLVE_FAILED, typeName));
 		}
 
+		// HTTP / gRPC 入口会传入服务端已注册处理器的消息类型；未注册类型一律拒绝，
+		// 避免远程调用方借 typeName 加载任意类型并交给序列化器处理。
+		if (allowedTypes != null && !allowedTypes.Contains(messageType))
+		{
+			throw new MessageDeliverException(string.Format(Resources.IDS_REMOTE_TYPE_NOT_ALLOWED, typeName));
+		}
+
 		return serializer.DeserializeEnvelope(payload, messageType);
+	}
+
+	/// <summary>
+	/// 解析当前服务端允许反序列化的消息类型。
+	/// </summary>
+	/// <param name="requestServices">入站请求作用域；为 <c>null</c> 时不启用白名单。</param>
+	/// <returns>已注册处理器的消息类型集合；无法取得配置器时返回空集合（失败关闭）。</returns>
+	private static ISet<Type> ResolveAllowedMessageTypes(IServiceProvider requestServices)
+	{
+		if (requestServices == null)
+		{
+			return null;
+		}
+
+		var configurator = requestServices.GetService<IConfigurator>();
+		if (configurator == null)
+		{
+			return new HashSet<Type>();
+		}
+
+		return configurator.Registrations.Values
+		                   .Select(registration => registration.MessageType)
+		                   .ToHashSet();
 	}
 
 	/// <summary>

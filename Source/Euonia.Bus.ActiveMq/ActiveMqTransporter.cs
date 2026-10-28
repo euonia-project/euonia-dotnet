@@ -36,9 +36,10 @@ internal class ActiveMqTransporter : ITransporter
 	/// <param name="logger">用于记录日志的日志工厂。</param>
 	public ActiveMqTransporter(IServiceProvider provider, IPersistentConnection connection, IOptions<ActiveMqBusOptions> options, ILoggerFactory logger)
 	{
-		_serializer = provider.GetKeyedService<IMessageSerializer>(options.Value.SerializerProvider);
-		_logger = logger.CreateLogger<ActiveMqTransporter>();
 		_options = options.Value;
+		_serializer = provider.GetKeyedService<IMessageSerializer>(_options.SerializerProvider)
+		              ?? throw new InvalidOperationException($"Message serializer '{_options.SerializerProvider}' is not registered.");
+		_logger = logger.CreateLogger<ActiveMqTransporter>();
 		_connection = connection;
 		Name = _options.Name ?? Constants.DefaultTransportName;
 	}
@@ -144,6 +145,8 @@ internal class ActiveMqTransporter : ITransporter
 				return;
 			}
 
+			reply.Acknowledge();
+
 			if (typeof(TResponse).IsIn(typeof(Unit), typeof(Task), typeof(ValueTask), typeof(void)))
 			{
 				var response = _serializer.Deserialize<ActiveMqReply<object>>(reply.Text);
@@ -153,7 +156,7 @@ internal class ActiveMqTransporter : ITransporter
 				}
 				else
 				{
-					task.TrySetException(response.Error);
+					task.TrySetException(response.ToException());
 				}
 			}
 			else
@@ -165,7 +168,7 @@ internal class ActiveMqTransporter : ITransporter
 				}
 				else
 				{
-					task.TrySetException(response.Error);
+					task.TrySetException(response.ToException());
 				}
 			}
 		}
@@ -251,6 +254,8 @@ internal class ActiveMqTransporter : ITransporter
 				return;
 			}
 
+			reply.Acknowledge();
+
 			var response = _serializer.Deserialize<ActiveMqReply<TResponse>>(reply.Text);
 			if (response.IsSuccess)
 			{
@@ -258,7 +263,7 @@ internal class ActiveMqTransporter : ITransporter
 			}
 			else
 			{
-				task.TrySetException(response.Error);
+				task.TrySetException(response.ToException());
 			}
 		}
 	}

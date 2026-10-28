@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -11,9 +11,7 @@ public static class PropertyInfoManager
 	/// 存储对象类型与其属性列表映射的缓存。
 	/// </summary>
 	/// <remarks>
-	/// 用 <see cref="ConcurrentDictionary{TKey,TValue}"/> 是因为快路径（已初始化的类型）是完全无锁的读；
-	/// 普通 <see cref="Dictionary{TKey,TValue}"/> 在一个线程 <c>Add</c> 时被另一个线程 <c>TryGetValue</c>
-	/// 会直接损坏内部状态（原实现第 25 行的读就在锁外）。
+	/// 使用 <see cref="ConcurrentDictionary{TKey,TValue}"/> 支持已初始化类型的无锁读。
 	/// </remarks>
 	private static readonly ConcurrentDictionary<Type, PropertyInfoList> _propertyCache = new();
 

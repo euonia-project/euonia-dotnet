@@ -1,4 +1,4 @@
-﻿using Nerosoft.Euonia.Osba;
+using Nerosoft.Euonia.Osba;
 using Nerosoft.Euonia.Security;
 using Nerosoft.Euonia.Domain;
 
@@ -7,9 +7,9 @@ namespace Nerosoft.Euonia.Sample.Domain;
 /// <summary>
 /// Base class for command objects that require access to a lazy service provider and the current user principal.
 /// </summary>
-/// <typeparam name="T">The concrete command object type deriving from <see cref="CommandObjectBase{T}"/>.</typeparam>
-public abstract class CommandObjectBase<T> : CommandObject<T>, IHasLazyServiceProvider, IDomainService
-	where T : CommandObjectBase<T>
+/// <typeparam name="T">The concrete command object type deriving from <see cref="ServiceObjectBase{T}"/>.</typeparam>
+public abstract class ServiceObjectBase<T> : ServiceObject<T>, IHasLazyServiceProvider, IDomainService
+	where T : ServiceObjectBase<T>
 {
 	/// <summary>
 	/// Gets or sets the lazy service provider used to resolve services on demand.

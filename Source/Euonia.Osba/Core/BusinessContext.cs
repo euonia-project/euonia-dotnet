@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
 
@@ -112,11 +112,7 @@ public class BusinessContext
 	/// <exception cref="NullReferenceException">当 <see cref="CurrentServiceProvider"/> 为 <c>null</c> 时抛出。</exception>
 	public T GetKeyedService<T>(object key)
 	{
-#if NET5_0_OR_GREATER
 		ArgumentNullException.ThrowIfNull(key);
-#else
-		ArgumentAssert.ThrowIfNull(key, nameof(key));
-#endif
 		if (CurrentServiceProvider == null)
 		{
 			throw new NullReferenceException(nameof(CurrentServiceProvider));

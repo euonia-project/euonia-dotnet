@@ -145,7 +145,7 @@
     <value>当处理程序方法 {0}.{1} 包含 3 个参数时，第二、三个参数必须依次是 IMessageContext 与 CancellationToken，实际参数类型为 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>处理程序方法 {0}.{1} 上的 SubscribeAttribute 未指定名称，每个 SubscribeAttribute 都必须指定通道名称。</value>
+    <value>处理程序方法 {0}.{1} 上的 SubscribeAttribute 未指定名称，且消息类型为基础类型；请指定通道名称，或使用非基础类型作为消息类型。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>自动加载配置项 '{1}:AutoLoadAssemblies' 中指定的程序集 '{0}' 失败。</value>
@@ -209,5 +209,8 @@
   </data>
   <data name="IDS_REMOTE_TYPE_RESOLVE_FAILED" xml:space="preserve">
     <value>解析消息类型 '{0}' 失败。</value>
+  </data>
+  <data name="IDS_REMOTE_TYPE_NOT_ALLOWED" xml:space="preserve">
+    <value>消息类型“{0}”未在端点注册，无法反序列化。</value>
   </data>
 </root>
