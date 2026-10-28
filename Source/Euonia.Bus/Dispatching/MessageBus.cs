@@ -111,11 +111,12 @@ internal sealed class MessageBus : IBus
 		}
 
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TMessage, Unit>(message, channel)
+		var pack = new RoutedMessage<TMessage, Unit>(message, channel, messageId, null, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -123,7 +124,7 @@ internal sealed class MessageBus : IBus
 		options.MetadataSetter?.Invoke(pack.Metadata);
 		ApplyDeliveryProperties(pack, options);
 
-		var transports = _dispatcher.Determine(channel, messageType);
+		var transports = _dispatcher.Determine(channel, messageType).ToArray();
 
 		using var activity = BusTelemetry.StartActivity("bus.publish", pack);
 		var startTimestamp = Stopwatch.GetTimestamp();
@@ -138,7 +139,7 @@ internal sealed class MessageBus : IBus
 				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_STORE_NOT_REGISTERED, message.GetType().FullName));
 			}
 
-			if (!_outboxStore.Insert(pack, transports.ToArray()))
+			if (!_outboxStore.Insert(pack, transports))
 			{
 				throw new MessagePersistentException(string.Format(Resources.IDS_OUTBOX_MESSAGE_ALREADY_EXISTS, pack.MessageId));
 			}
@@ -148,15 +149,15 @@ internal sealed class MessageBus : IBus
 	}
 
 	/// <summary>
-	/// 执行实际的并行分发并记录耗时与失败指标。
+	/// 执行实际的分发并记录耗时与失败指标。单传输器走直接调用，多传输器才并行。
 	/// </summary>
-	private async Task PublishCoreAsync<TMessage>(IEnumerable<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
+	private async Task PublishCoreAsync<TMessage>(IReadOnlyList<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
 	{
 		try
 		{
 			await DelayDispatchAsync(delay, cancellationToken).ConfigureAwait(false);
 
-			await Parallel.ForEachAsync(transports, cancellationToken, async (name, token) =>
+			async ValueTask PublishToTransportAsync(string name, CancellationToken token)
 			{
 				await RunWithPipelineAsync(pack, behavior, async (transport, p) =>
 				{
@@ -164,8 +165,19 @@ internal sealed class MessageBus : IBus
 					// 使发件箱把发送失败误记为成功并停止重试。
 					await transport.PublishAsync(p, token).ConfigureAwait(false);
 					return Unit.Value;
-				}, name, useOutbox);
-			});
+				}, name, useOutbox).ConfigureAwait(false);
+			}
+
+			// 单个传输器的 Parallel.ForEachAsync 固定开销约 2µs，远大于直接调用；
+			// 只有多传输器时才值得并行。
+			if (transports.Count == 1)
+			{
+				await PublishToTransportAsync(transports[0], cancellationToken).ConfigureAwait(false);
+			}
+			else
+			{
+				await Parallel.ForEachAsync(transports, cancellationToken, PublishToTransportAsync).ConfigureAwait(false);
+			}
 		}
 		catch (Exception exception)
 		{
@@ -208,12 +220,13 @@ internal sealed class MessageBus : IBus
 		}
 
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var correlationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TMessage, TResult>(message, channel)
+		var pack = new RoutedMessage<TMessage, TResult>(message, channel, messageId, correlationId, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -351,12 +364,13 @@ internal sealed class MessageBus : IBus
 	private async Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken)
 	{
 		var context = _requestAccessor?.Context;
+		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var correlationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+		var requestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N");
 
-		var pack = new RoutedMessage<TRequest>(message, channel)
+		var pack = new RoutedMessage<TRequest>(message, channel, messageId, correlationId, null)
 		{
-			MessageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			CorrelationId = options.CorrelationId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString(),
-			RequestTraceId = context?.TraceIdentifier ?? options.RequestTraceId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString("N"),
+			RequestTraceId = requestTraceId,
 			Authorization = context?.Authorization,
 			User = context?.User,
 		};
@@ -506,7 +520,11 @@ internal sealed class MessageBus : IBus
 	{
 		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
-		pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, _provider.GetService<ILogger<MessageBus>>());
+		var logger = _provider.GetService<ILogger<MessageBus>>();
+		if (logger?.IsEnabled(LogLevel.Debug) == true)
+		{
+			pipeline.Use(typeof(OutgoingLoggingBehavior<TMessage, TResult>), transportName, logger);
+		}
 
 		if (useOutbox)
 		{

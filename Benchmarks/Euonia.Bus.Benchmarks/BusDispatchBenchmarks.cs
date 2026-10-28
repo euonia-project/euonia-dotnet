@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Pipeline;
 
 namespace Euonia.Bus.Benchmarks;
 
@@ -15,6 +16,8 @@ public class BusDispatchBenchmarks
 {
 	private ServiceProvider _provider;
 	private IBus _bus;
+	private NoopTransporter _transporter;
+	private IMessageEnvelope<BenchEvent> _envelope;
 
 	[GlobalSetup]
 	public void Setup()
@@ -28,12 +31,14 @@ public class BusDispatchBenchmarks
 		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "bench");
 		services.AddEuoniaBus();
-		services.AddKeyedSingleton<ITransporter>("bench", (_, _) => new NoopTransporter());
+		_transporter = new NoopTransporter();
+		services.AddKeyedSingleton<ITransporter>("bench", (_, _) => _transporter);
 
 		_provider = services.BuildServiceProvider();
 		var configurator = _provider.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 		_bus = _provider.GetRequiredService<IBus>();
+		_envelope = new RoutedMessage<BenchEvent>(new BenchEvent(), "bench.channel");
 	}
 
 	[GlobalCleanup]
@@ -58,6 +63,42 @@ public class BusDispatchBenchmarks
 	public Task<int> CallAsync()
 	{
 		return _bus.CallAsync<BenchRequest, int>(new BenchRequest());
+	}
+
+	/// <summary>
+	/// 绕过 MessageBus 的 pipeline/路由，直接调用传输器，用于衡量总线框架开销。
+	/// </summary>
+	[Benchmark]
+	public Task DirectTransportPublish()
+	{
+		return _transporter.PublishAsync(_envelope);
+	}
+
+	/// <summary>
+	/// 每次分发都会从 DI 解析一个新的 pipeline；该基准衡量解析与行为装配的成本。
+	/// </summary>
+	[Benchmark]
+	public object ResolvePipeline()
+	{
+		return _provider.GetRequiredService<IPipeline<IMessageEnvelope<BenchEvent>, Unit>>();
+	}
+
+	/// <summary>
+	/// 构造消息信封的成本（包含默认 ID/元数据初始化）。
+	/// </summary>
+	[Benchmark]
+	public object CreateEnvelope()
+	{
+		return new RoutedMessage<BenchEvent>(new BenchEvent(), "bench.channel");
+	}
+
+	/// <summary>
+	/// 单元素 Parallel.ForEachAsync 的固定开销，用于验证单传输器是否值得并行。
+	/// </summary>
+	[Benchmark]
+	public Task ParallelOne()
+	{
+		return Parallel.ForEachAsync(new[] { "bench" }, async (_, _) => await Task.CompletedTask);
 	}
 
 	private sealed class BenchEvent : IMulticast;

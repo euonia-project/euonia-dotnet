@@ -3,6 +3,7 @@
 基于 [BenchmarkDotNet](https://benchmarkdotnet.org/) 的性能基准，覆盖：
 
 - `BusDispatchBenchmarks`：`PublishAsync`、`SendAsync`、`CallAsync` 的分发开销与分配；
+  以及信封构造、单元素 `Parallel.ForEachAsync`、pipeline 解析、直接传输器调用等开销基准；
 - `SerializationBenchmarks`：System.Text.Json 与 Newtonsoft.Json 的序列化/反序列化开销。
 
 ## 运行

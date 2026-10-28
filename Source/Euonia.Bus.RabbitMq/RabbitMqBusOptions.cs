@@ -99,6 +99,8 @@ public class RabbitMqBusOptions
 
 	/// <summary>
 	/// 获取或设置序列化器提供程序名称。
+	/// 默认使用 System.Text.Json：相较 Newtonsoft.Json，反序列化更快、分配更低。
+	/// 需要 Newtonsoft 专有特性时可显式设为 <c>"NewtonsoftJson"</c>。
 	/// </summary>
-	public string SerializerProvider { get; set; } = "NewtonsoftJson";
+	public string SerializerProvider { get; set; } = "SystemTestJson";
 }

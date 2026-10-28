@@ -1,5 +1,6 @@
 ﻿using System.Runtime.Serialization;
 using System.Security.Claims;
+using System.Text.Json.Serialization;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -14,6 +15,30 @@ public abstract class RoutedMessage
 	/// </summary>
 	protected RoutedMessage()
 	{
+		MessageId = NewId();
+		CorrelationId = NewId();
+		ConversationId = NewId();
+	}
+
+	/// <summary>
+	/// 使用显式身份初始化路由消息。
+	/// </summary>
+	/// <param name="messageId">消息标识符。</param>
+	/// <param name="correlationId">关联标识符。</param>
+	/// <param name="conversationId">会话标识符。</param>
+	protected RoutedMessage(string messageId, string correlationId, string conversationId)
+	{
+		MessageId = messageId;
+		CorrelationId = correlationId;
+		ConversationId = conversationId;
+	}
+
+	/// <summary>
+	/// 生成新的顺序字符串 ID。
+	/// </summary>
+	protected static string NewId()
+	{
+		return ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
 	}
 
 	/// <summary>
@@ -25,19 +50,19 @@ public abstract class RoutedMessage
 	/// 获取或设置消息标识符。
 	/// </summary>
 	[DataMember]
-	public virtual string MessageId { get; set; } = ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+	public virtual string MessageId { get; set; }
 
 	/// <summary>
 	/// 获取或设置关联标识符。
 	/// </summary>
 	[DataMember]
-	public virtual string CorrelationId { get; set; } = ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+	public virtual string CorrelationId { get; set; }
 
 	/// <summary>
 	/// 获取或设置会话标识符。
 	/// </summary>
 	[DataMember]
-	public virtual string ConversationId { get; set; } = ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
+	public virtual string ConversationId { get; set; }
 
 	/// <summary>
 	/// 获取或设置请求追踪标识符。
@@ -100,7 +125,22 @@ public class RoutedMessage<T> : RoutedMessage, IMessageEnvelope<T>
 	/// </summary>
 	/// <param name="payload">消息负载数据。</param>
 	/// <param name="channel">消息通道名称。</param>
+	[JsonConstructor]
 	public RoutedMessage(T payload, string channel)
+		: this(payload, channel, null, null, null)
+	{
+	}
+
+	/// <summary>
+	/// 使用指定的负载、通道和消息身份初始化 <see cref="RoutedMessage{T}"/> 类的新实例。
+	/// </summary>
+	/// <param name="payload">消息负载数据。</param>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="messageId">消息标识符；为 <c>null</c> 时自动生成。</param>
+	/// <param name="correlationId">关联标识符；为 <c>null</c> 时自动生成。</param>
+	/// <param name="conversationId">会话标识符；为 <c>null</c> 时自动生成。</param>
+	public RoutedMessage(T payload, string channel, string messageId, string correlationId, string conversationId)
+		: base(messageId ?? NewId(), correlationId ?? NewId(), conversationId ?? NewId())
 	{
 		Payload = payload;
 		Channel = channel;
@@ -148,8 +188,22 @@ public class RoutedMessage<TData, TResponse> : RoutedMessage<TData>
 	/// </summary>
 	/// <param name="payload">消息负载数据。</param>
 	/// <param name="channel">消息通道名称。</param>
+	[JsonConstructor]
 	public RoutedMessage(TData payload, string channel)
 		: base(payload, channel)
+	{
+	}
+
+	/// <summary>
+	/// 使用指定的负载、通道和消息身份初始化 <see cref="RoutedMessage{TData,TResponse}"/> 类的新实例。
+	/// </summary>
+	/// <param name="payload">消息负载数据。</param>
+	/// <param name="channel">消息通道名称。</param>
+	/// <param name="messageId">消息标识符；为 <c>null</c> 时自动生成。</param>
+	/// <param name="correlationId">关联标识符；为 <c>null</c> 时自动生成。</param>
+	/// <param name="conversationId">会话标识符；为 <c>null</c> 时自动生成。</param>
+	public RoutedMessage(TData payload, string channel, string messageId, string correlationId, string conversationId)
+		: base(payload, channel, messageId, correlationId, conversationId)
 	{
 	}
 }
