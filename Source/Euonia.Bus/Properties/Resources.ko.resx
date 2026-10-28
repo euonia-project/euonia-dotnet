@@ -145,7 +145,7 @@
     <value>처리기 메서드 {0}.{1}에 매개변수가 세 개 있는 경우 두 번째와 세 번째 매개변수는 IMessageContext와 CancellationToken이어야 합니다. 실제 매개변수 형식은 ({2})입니다.</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>처리기 메서드 {0}.{1}에 이름이 없는 SubscribeAttribute가 있습니다. 모든 SubscribeAttribute에 채널 이름을 지정해야 합니다.</value>
+    <value>처리기 메서드 {0}.{1}의 SubscribeAttribute에 이름이 없지만 메시지 형식이 기본 형식입니다. 채널 이름을 지정하거나 기본 형식이 아닌 메시지 형식을 사용하세요.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>'{1}:AutoLoadAssemblies'에 구성된 어셈블리 '{0}'의(의) 자동 로드에 실패했습니다.</value>

@@ -145,7 +145,7 @@
     <value>Wenn die Handlermethode {0}.{1} drei Parameter enthält, müssen der zweite und dritte Parameter IMessageContext und CancellationToken sein; die tatsächlichen Parametertypen sind ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>Die Handlermethode {0}.{1} deklariert ein SubscribeAttribute ohne Namen; jedes SubscribeAttribute muss einen Kanalnamen angeben.</value>
+    <value>Die Handlermethode {0}.{1} deklariert ein SubscribeAttribute ohne Namen, aber ihr Nachrichtentyp ist ein primitiver Typ; geben Sie einen Kanalnamen an oder verwenden Sie einen nicht primitiven Nachrichtentyp.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Die in '{1}:AutoLoadAssemblies' konfigurierte Assembly '{0}' konnte nicht automatisch geladen werden.</value>

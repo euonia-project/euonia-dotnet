@@ -145,7 +145,7 @@
     <value>ハンドラーメソッド {0}.{1} に 3 つのパラメーターがある場合、2 番目と 3 番目のパラメーターは IMessageContext と CancellationToken でなければなりません。実際のパラメーター型は ({2}) です。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>ハンドラーメソッド {0}.{1} に名前のない SubscribeAttribute があります。すべての SubscribeAttribute にチャネル名を指定してください。</value>
+    <value>ハンドラーメソッド {0}.{1} の SubscribeAttribute に名前がありませんが、メッセージ型がプリミティブ型です。チャネル名を指定するか、プリミティブ型以外のメッセージ型を使用してください。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>'{1}:AutoLoadAssemblies' で構成されたアッセンブリ '{0}' の自動読み込みに失敗しました。</value>

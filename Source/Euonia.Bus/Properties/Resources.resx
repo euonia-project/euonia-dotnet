@@ -145,7 +145,7 @@
     <value>The second and third parameters of handler method '{0}.{1}' must be IMessageContext and CancellationToken when the method has 3 parameters, but the declared parameter types are ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>Handler method '{0}.{1}' declares a SubscribeAttribute without a name; every SubscribeAttribute must specify a channel name.</value>
+    <value>Handler method '{0}.{1}' declares a SubscribeAttribute without a name, but its message type is a primitive type; specify a channel name or use a non-primitive message type.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>Failed to auto-load the assembly '{0}' configured in '{1}:AutoLoadAssemblies'.</value>

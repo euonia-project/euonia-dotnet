@@ -59,7 +59,7 @@ internal static class MessageHandlerFinder
 	/// <param name="channelResolver">用于把消息类型解析为通道名称的委托；须与分发时使用的解析器一致。</param>
 	/// <param name="handlerType">要解析的处理程序类型。</param>
 	/// <exception cref="MissingMethodException">当在类型中找不到处理方法时抛出。</exception>
-	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求或订阅特性未指定通道名称时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当处理程序方法的参数签名不符合要求，或订阅特性未指定通道名称且无法按消息类型推导时抛出。</exception>
 	private static void Resolve(Delegate @delegate, Func<Type, string> channelResolver, Type handlerType)
 	{
 		if (handlerType.IsPrimitive || !handlerType.IsClass || handlerType.IsInterface || handlerType.IsAbstract)
@@ -69,12 +69,12 @@ internal static class MessageHandlerFinder
 
 		// 仅解析 IHandler<,> 接口，以获得处理程序声明的消息类型，用于确定消息路由。
 		var interfaces = handlerType.GetInterfaces()
-		                            .Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
-		                            // IHandler<T> 继承 IHandler<T, Unit>：两者同时出现时只注册更具体的单参数接口，
-		                            // 否则同一个处理程序会在多播通道上被执行两次。
-		                            .GroupBy(x => x.GetGenericArguments()[0])
-		                            .Select(group => group.OrderBy(x => x.GetGenericArguments().Length).First())
-		                            .ToList();
+									.Where(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IHandler<,>))
+									// IHandler<T> 继承 IHandler<T, Unit>：两者同时出现时只注册更具体的单参数接口，
+									// 否则同一个处理程序会在多播通道上被执行两次。
+									.GroupBy(x => x.GetGenericArguments()[0])
+									.Select(group => group.OrderBy(x => x.GetGenericArguments().Length).First())
+									.ToList();
 
 		var handlerInterfaceMethods = new HashSet<MethodInfo>();
 		if (interfaces.Count > 0)
@@ -101,8 +101,8 @@ internal static class MessageHandlerFinder
 		}
 
 		var methods = handlerType.GetMethods(BINDING_FLAGS)
-		                         .Where(t => t.GetCustomAttributes<SubscribeAttribute>(false).Any() && !handlerInterfaceMethods.Contains(t))
-		                         .ToList();
+								 .Where(t => t.GetCustomAttributes<SubscribeAttribute>(false).Any() && !handlerInterfaceMethods.Contains(t))
+								 .ToList();
 
 		foreach (var method in methods)
 		{
@@ -124,18 +124,27 @@ internal static class MessageHandlerFinder
 					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL, handlerType.FullName, method.Name, parameterTypes));
 			}
 
-			var attributes = method.GetCustomAttributes<SubscribeAttribute>(false)
-			                       .DistinctBy(t => t.Name)
-			                       .ToList();
-			if (attributes.Any(a => string.IsNullOrWhiteSpace(a.Name)))
+			var attribute = method.GetCustomAttribute<SubscribeAttribute>(false);
+			var messageType = parameters[0].ParameterType;
+			string channel;
+			// 通道名可省略：消息类型不是基础类型时，按消息类型推导通道
+			// （与 IHandler<,> 及分发阶段使用同一个解析器），保证注册与分发落在同一个通道上。
+			if (string.IsNullOrWhiteSpace(attribute.Name))
 			{
-				throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED, handlerType.FullName, method.Name));
+				if (messageType.IsPrimitiveType())
+				{
+					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED, handlerType.FullName, method.Name));
+				}
+
+				channel = channelResolver?.Invoke(messageType);
+				channel ??= messageType.FullName;
+			}
+			else
+			{
+				channel = attribute.Name;
 			}
 
-			foreach (var attribute in attributes)
-			{
-				@delegate(attribute.Name, parameters[0].ParameterType, new ChannelHandler(handlerType, method));
-			}
+			@delegate(channel, messageType, new ChannelHandler(handlerType, method));
 		}
 	}
 

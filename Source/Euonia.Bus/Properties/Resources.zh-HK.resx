@@ -145,7 +145,7 @@
     <value>當處理常式方法 {0}.{1} 包含 3 個參數時，第二、三個參數必須依序是 IMessageContext 與 CancellationToken，實際參數類型為 ({2})。</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>處理常式方法 {0}.{1} 上的 SubscribeAttribute 未指定名稱，每個 SubscribeAttribute 都必須指定通道名稱。</value>
+    <value>處理常式方法 {0}.{1} 上的 SubscribeAttribute 未指定名稱，且訊息類型為基礎類型；請指定通道名稱，或使用非基礎類型作為訊息類型。</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>無法自動載入 '{1}:AutoLoadAssemblies' 中設定的組件 '{0}'。</value>

@@ -3,7 +3,10 @@
 /// <summary>
 /// 表示被标记的方法将订阅并处理消息。
 /// </summary>
-[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = true)]
+/// <remarks>
+/// 同一方法只能声明一个 <see cref="SubscribeAttribute"/>；需要多通道别名时请在路由层处理。
+/// </remarks>
+[AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
 public sealed class SubscribeAttribute : Attribute
 {
 	/// <summary>

@@ -184,6 +184,14 @@ public sealed class OrderWatcher
     {
         // ...
     }
+
+    // 每个方法只能声明一个 [Subscribe]；消息类型不是基础类型时可省略通道名，
+    // 此时按消息类型推导（与 IHandler<,> / 分发阶段使用同一解析器）。
+    [Subscribe]
+    public Task OnOrderPaid(OrderPaidEvent message)
+    {
+        // ...
+    }
 }
 ```
 

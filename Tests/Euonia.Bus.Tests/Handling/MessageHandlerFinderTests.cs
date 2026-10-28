@@ -60,6 +60,39 @@ public class MessageHandlerFinderTests
 	}
 
 	[Fact]
+	public void Find_SingleSubscribeAttributeWithoutName_InfersChannelFromMessageType()
+	{
+		var handlerType = DefineHandler("InferredChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var registrations = new List<(string Channel, Type MessageType)>();
+
+		MessageHandlerFinder.Find((channel, messageType, _) => registrations.Add((channel, messageType)), type => type.FullName!, handlerType);
+
+		var registration = Assert.Single(registrations);
+		Assert.Equal(typeof(InferredChannelMessage).FullName, registration.Channel);
+		Assert.Equal(typeof(InferredChannelMessage), registration.MessageType);
+	}
+
+	[Fact]
+	public void Find_SingleSubscribeAttributeWithoutName_UsesChannelResolver()
+	{
+		var handlerType = DefineHandler("InferredCustomChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var channels = new List<string>();
+
+		MessageHandlerFinder.Find((channel, _, _) => channels.Add(channel), _ => "custom-channel", handlerType);
+
+		Assert.Equal(["custom-channel"], channels);
+	}
+
+	[Fact]
+	public void SubscribeAttribute_DoesNotAllowMultipleDeclarations()
+	{
+		var usage = typeof(SubscribeAttribute).GetCustomAttribute<AttributeUsageAttribute>();
+
+		Assert.NotNull(usage);
+		Assert.False(usage.AllowMultiple);
+	}
+
+	[Fact]
 	public void Find_ExplicitInterfaceImplementation_IsDiscovered()
 	{
 		var channels = new List<string>();
@@ -75,6 +108,10 @@ public class MessageHandlerFinderTests
 	}
 
 	private sealed class ExplicitImplementationMessage
+	{
+	}
+
+	private sealed class InferredChannelMessage
 	{
 	}
 

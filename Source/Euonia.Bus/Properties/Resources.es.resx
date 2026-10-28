@@ -145,7 +145,7 @@
     <value>Si el método del manejador {0}.{1} tiene tres parámetros, el segundo y el tercero deben ser IMessageContext y CancellationToken; los tipos de parámetro declarados son ({2}).</value>
   </data>
   <data name="IDS_HANDLER_SUBSCRIBE_NAME_REQUIRED" xml:space="preserve">
-    <value>El método del manejador {0}.{1} declara un SubscribeAttribute sin nombre; cada SubscribeAttribute debe especificar un nombre de canal.</value>
+    <value>El método del manejador {0}.{1} declara un SubscribeAttribute sin nombre, pero su tipo de mensaje es un tipo primitivo; especifique un nombre de canal o use un tipo de mensaje no primitivo.</value>
   </data>
   <data name="IDS_AUTO_LOAD_ASSEMBLY_FAILED" xml:space="preserve">
     <value>No se pudo cargar automáticamente el ensamblado '{0}' configurado en '{1}:AutoLoadAssemblies'.</value>
