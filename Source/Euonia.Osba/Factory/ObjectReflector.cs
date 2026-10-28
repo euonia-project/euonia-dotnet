@@ -26,6 +26,20 @@ public class ObjectReflector
 	private static readonly ConcurrentDictionary<Type, List<Tuple<PropertyInfo, Type, bool, object>>> _propertyCache = new();
 	private static readonly ConcurrentDictionary<string, MethodInfo> _factoryMethods = new();
 
+	/// <summary>
+	/// 无参工厂方法缓存：键为（目标类型，特性类型）。
+	/// </summary>
+	private static readonly ConcurrentDictionary<(Type Target, Type Attribute), MethodInfo> _noArgFactoryMethods = new();
+
+	/// <summary>
+	/// 单参工厂方法缓存：键为（目标类型，特性类型，实参运行时类型）。
+	/// </summary>
+	/// <remarks>
+	/// 保存/创建/读取绝大多数只有一个实参（id、名称或取消令牌）。此前每次调用都要
+	/// 拼一段包含泛型全名的字符串再做字典查找，是反射路径上的固定分配。
+	/// </remarks>
+	private static readonly ConcurrentDictionary<(Type Target, Type Attribute, Type Argument, bool IsNull), MethodInfo> _singleArgFactoryMethods = new();
+
 	internal static List<Tuple<PropertyInfo, Type, bool, object>> GetAutoInjectProperties(Type objectType)
 	{
 		return _propertyCache.GetOrAdd(objectType, type =>
@@ -59,6 +73,23 @@ public class ObjectReflector
 
 	internal static MethodInfo FindFactoryMethod<TTarget>(Type attributeType, object[] criteria)
 	{
+		var targetType = typeof(TTarget);
+		var length = criteria?.Length ?? 0;
+
+		if (length == 0)
+		{
+			return _noArgFactoryMethods.GetOrAdd((targetType, attributeType),
+				_ => FindMatchedMethod<TTarget>(attributeType, Array.Empty<object>()));
+		}
+
+		if (length == 1)
+		{
+			var argument = criteria![0];
+			var argumentType = argument?.GetType() ?? typeof(object);
+			return _singleArgFactoryMethods.GetOrAdd((targetType, attributeType, argumentType, argument == null),
+				_ => FindMatchedMethod<TTarget>(attributeType, criteria));
+		}
+
 		var name = GetMethodName<TTarget>(attributeType, criteria);
 		return _factoryMethods.GetOrAdd(name, () => FindMatchedMethod<TTarget>(attributeType, criteria));
 	}

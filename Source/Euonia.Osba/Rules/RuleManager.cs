@@ -63,6 +63,11 @@ public class RuleManager
 	private Dictionary<IPropertyInfo, IRuleBase[]> _propertyRules;
 
 	/// <summary>
+	/// 对象级（无属性绑定）的类型级规则缓存，按优先级升序。
+	/// </summary>
+	private IRuleBase[] _objectRules;
+
+	/// <summary>
 	/// 向规则列表添加规则。
 	/// </summary>
 	/// <param name="rule">要添加的规则。</param>
@@ -72,6 +77,33 @@ public class RuleManager
 		{
 			Rules.Add(rule);
 			_propertyRules = null;
+			_objectRules = null;
+		}
+	}
+
+	/// <summary>
+	/// 获取对象级（无属性绑定）的类型级规则，按优先级升序；无规则时返回空集合。
+	/// </summary>
+	/// <remarks>
+	/// 对象级检查是保存/命令执行的热路径：此前每次都要 <c>Snapshot()</c> + <c>Where</c> + <c>OrderBy</c>；
+	/// 现在按类型缓存，<c>Add</c> 时失效。命中路径无锁、无分配。
+	/// </remarks>
+	internal IReadOnlyList<IRuleBase> ObjectRules
+	{
+		get
+		{
+			var rules = Volatile.Read(ref _objectRules);
+			if (rules != null)
+			{
+				return rules;
+			}
+
+			lock (_sync)
+			{
+				return _objectRules ??= Rules.Where(rule => rule.Property == null)
+				                             .OrderBy(rule => rule.Priority)
+				                             .ToArray();
+			}
 		}
 	}
 
@@ -97,7 +129,7 @@ public class RuleManager
 			}
 		}
 
-		return index.TryGetValue(property, out var rules) ? rules : [];
+		return index.TryGetValue(property, out var rules) ? rules : Array.Empty<IRuleBase>();
 	}
 
 	/// <summary>

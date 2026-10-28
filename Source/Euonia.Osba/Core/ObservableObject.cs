@@ -101,12 +101,12 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <summary>
 	/// 获取一个值，指示对象是否繁忙。
 	/// </summary>
-	public virtual bool IsBusy => IsSelfBusy || (FieldManager != null && FieldManager.IsBusy());
+	public virtual bool IsBusy => IsSelfBusy || (FieldManagerOrNull?.IsBusy() ?? false);
 
 	/// <summary>
 	/// 获取一个值，指示对象本身是否繁忙。
 	/// </summary>
-	public virtual bool IsSelfBusy => _isBusyCounter > 0 || Rules.HasRunningRules;
+	public virtual bool IsSelfBusy => _isBusyCounter > 0 || HasRunningRules;
 
 	/// <summary>
 	/// 获取一个值，指示对象是否可保存。
@@ -138,7 +138,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	{
 		var updatedValue = Interlocked.Increment(ref _isBusyCounter);
 
-		if (updatedValue == 1)
+		if (updatedValue == 1 && BusyChanged != null)
 		{
 			OnBusyChanged(new BusyChangedEventArgs(string.Empty, true));
 		}
@@ -156,7 +156,11 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 				_ = Interlocked.CompareExchange(ref _isBusyCounter, 0, updatedValue);
 				break;
 			case 0:
-				OnBusyChanged(new BusyChangedEventArgs("", false));
+				if (BusyChanged != null)
+				{
+					OnBusyChanged(new BusyChangedEventArgs("", false));
+				}
+
 				break;
 		}
 	}
@@ -192,7 +196,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field)
 	{
-		return GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue);
+		return IsBypassingRuleChecks || CanReadProperty(propertyInfo, true) ? field : propertyInfo.DefaultValue;
 	}
 
 	/// <summary>
@@ -205,7 +209,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <returns>属性值。</returns>
 	protected TValue GetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue field, TValue defaultValue)
 	{
-		return GetProperty(propertyInfo.Name, field, defaultValue);
+		return IsBypassingRuleChecks || CanReadProperty(propertyInfo, true) ? field : defaultValue;
 	}
 
 	/// <summary>
@@ -218,7 +222,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <returns>转换后的属性值。</returns>
 	protected TValue GetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TField field)
 	{
-		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo.Name, field, propertyInfo.DefaultValue));
+		return TypeHelper.CoerceValue<TValue>(typeof(TField), GetProperty(propertyInfo, field, propertyInfo.DefaultValue));
 	}
 
 	/// <summary>
@@ -298,7 +302,36 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected virtual void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, ref TValue field, TValue newValue)
 	{
-		SetProperty(propertyInfo.Name, ref field, newValue);
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
+
+		if (typeof(TValue) == typeof(string) && newValue == null)
+		{
+			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+		}
+
+		if (!ValuesDiffer(propertyInfo, newValue, field))
+		{
+			return;
+		}
+
+		if (!IsBypassingRuleChecks)
+		{
+			OnPropertyChanging(propertyInfo);
+		}
+
+		field = newValue;
+
+		// 字段模式与字典模式共用同一份“可被规则读取”的值：
+		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步一份，避免它们读到默认值。
+		FieldManager.SetFieldData(propertyInfo, newValue);
+
+		if (!IsBypassingRuleChecks)
+		{
+			PropertyHasChanged(propertyInfo);
+		}
 	}
 
 	/// <summary>
@@ -311,7 +344,34 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected virtual void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, ref TField field, TValue newValue)
 	{
-		SetPropertyConvert(propertyInfo.Name, ref field, newValue);
+		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
+		{
+			return;
+		}
+
+		if (typeof(TValue) == typeof(string) && newValue == null)
+		{
+			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
+		}
+
+		var converted = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+		if (EqualityComparer<TField>.Default.Equals(field, converted))
+		{
+			return;
+		}
+
+		if (!IsBypassingRuleChecks)
+		{
+			OnPropertyChanging(propertyInfo);
+		}
+
+		field = converted;
+		FieldManager.SetFieldData(propertyInfo, converted);
+
+		if (!IsBypassingRuleChecks)
+		{
+			PropertyHasChanged(propertyInfo);
+		}
 	}
 
 	/// <summary>
@@ -363,6 +423,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 		}
 
 		field = newValue;
+		FieldManager.SetFieldData(propertyInfo, newValue);
 		if (!IsBypassingRuleChecks)
 		{
 			PropertyHasChanged(propertyName);
@@ -419,6 +480,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			}
 
 			field = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+			FieldManager.SetFieldData(propertyInfo, field);
 			if (!IsBypassingRuleChecks)
 			{
 				PropertyHasChanged(propertyName);
@@ -495,6 +557,18 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 			return;
 		}
 
+		if (propertyInfo.Type == typeof(string) && newValue == null)
+		{
+			newValue = string.Empty;
+		}
+
+		// 与泛型入口保持一致：赋同一个值不算变更，不标脏、不触发规则、不发出通知。
+		var currentValue = ReadProperty(propertyInfo);
+		if (!ValuesDiffer(propertyInfo, newValue, currentValue))
+		{
+			return;
+		}
+
 		if (!IsBypassingRuleChecks)
 		{
 			OnPropertyChanging(propertyInfo);
@@ -506,6 +580,28 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 		{
 			PropertyHasChanged(propertyInfo);
 		}
+	}
+
+	/// <summary>
+	/// 比较非泛型入口的新旧值；业务对象按引用比较，其余按值比较。
+	/// </summary>
+	/// <param name="propertyInfo">属性。</param>
+	/// <param name="newValue">新值。</param>
+	/// <param name="oldValue">旧值。</param>
+	/// <returns>不同则返回 <see langword="true"/>。</returns>
+	private static bool ValuesDiffer(IPropertyInfo propertyInfo, object newValue, object oldValue)
+	{
+		if (oldValue == null)
+		{
+			return newValue != null;
+		}
+
+		if (typeof(IBusinessObject).IsAssignableFrom(propertyInfo.Type))
+		{
+			return !ReferenceEquals(oldValue, newValue);
+		}
+
+		return !Equals(oldValue, newValue);
 	}
 
 	/// <summary>

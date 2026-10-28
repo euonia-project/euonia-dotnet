@@ -7,30 +7,49 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 管理给定业务对象的字段和属性。
 /// </summary>
+/// <remarks>
+/// <para>
+/// 属性元数据（合并后的属性列表与名称索引）按<b>类型</b>缓存，所有实例共享同一份只读快照；
+/// 实例只持有字段值数组。此前的实现会在每个对象实例上重新遍历继承链、复制属性列表，
+/// 一个空对象的首次属性访问就要分配 1.6 KB。
+/// </para>
+/// <para>
+/// 字段值按属性在元数据中的稳定索引存放在 <see cref="IFieldData"/> 数组里，
+/// 不再为每个对象分配一个 <see cref="ConcurrentDictionary{TKey,TValue}"/>。
+/// 未在元数据中注册的自定义 <see cref="IPropertyInfo"/> 仍走按名称的兜底字典，保持兼容。
+/// </para>
+/// </remarks>
 public class FieldDataManager
 {
 	/// <summary>
-	/// 管理给定业务对象的字段和属性。
+	/// 按类型缓存的属性元数据。
 	/// </summary>
-	private readonly ConcurrentDictionary<string, IFieldData> _fieldData = new();
+	private static readonly ConcurrentDictionary<Type, TypeMetadata> _metadataCache = new();
 
 	/// <summary>
-	/// 合并后的属性列表。
+	/// 当前对象类型的属性元数据。
 	/// </summary>
-	private readonly List<IPropertyInfo> _properties;
+	private readonly TypeMetadata _metadata;
+
+	/// <summary>
+	/// 按属性索引存放的字段值；首次写入/读取时才分配。
+	/// </summary>
+	private IFieldData[] _fields;
+
+	/// <summary>
+	/// 未注册属性的兜底存储（仅自定义 <see cref="IPropertyInfo"/> 会用到）。
+	/// </summary>
+	private ConcurrentDictionary<string, IFieldData> _unindexed;
 
 	/// <summary>
 	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
 	/// </summary>
 	/// <remarks>
-	/// <c>_properties</c> 必须在此初始化为空列表：公开无参构造若留 <see langword="null"/>，
-	/// <see cref="GetRegisteredProperty"/> 会在「属性未注册」之前先抛
-	/// <see cref="NullReferenceException"/>，违背其文档承诺的
-	/// <see cref="ArgumentOutOfRangeException"/>。
+	/// 公开无参构造保留给派生/宿主场景；没有类型元数据时，所有属性走兜底字典。
 	/// </remarks>
 	public FieldDataManager()
 	{
-		_properties = [];
+		_metadata = TypeMetadata.Empty;
 	}
 
 	/// <summary>
@@ -38,39 +57,8 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="businessObjectType">业务对象的类型。</param>
 	public FieldDataManager(Type businessObjectType)
-		: this()
 	{
-		_properties = CreateConsolidatedList(businessObjectType);
-	}
-
-	/// <summary>
-	/// 创建合并的属性列表，包含继承层次结构中所有已注册的属性。
-	/// </summary>
-	/// <param name="type">业务对象类型。</param>
-	/// <returns>合并的属性列表。</returns>
-	private static List<IPropertyInfo> CreateConsolidatedList(Type type)
-	{
-		ForceStaticFieldInit(type);
-		var result = new List<IPropertyInfo>();
-
-		// 获取继承层次结构
-		var current = type;
-		var hierarchy = new List<Type>();
-		do
-		{
-			hierarchy.Add(current);
-			current = current.BaseType;
-		}
-		while (current != null && !(current == typeof(BusinessObject)));
-
-		// 从顶层到底层遍历，构建合并列表
-		for (var index = hierarchy.Count - 1; index >= 0; index--)
-		{
-			// 取快照（锁内置 IsLocked + 复制），避免另一个线程此刻正往这条列表里注册属性。
-			result.AddRange(PropertyInfoManager.GetLockedSnapshot(hierarchy[index]));
-		}
-
-		return result;
+		_metadata = GetMetadata(businessObjectType);
 	}
 
 	/// <summary>
@@ -79,7 +67,7 @@ public class FieldDataManager
 	/// <returns>已注册属性的列表。</returns>
 	public List<IPropertyInfo> GetRegisteredProperties()
 	{
-		return [.. _properties];
+		return [.. _metadata.Properties];
 	}
 
 	/// <summary>
@@ -90,7 +78,7 @@ public class FieldDataManager
 	/// <exception cref="ArgumentOutOfRangeException">当属性未注册时抛出。</exception>
 	public IPropertyInfo GetRegisteredProperty(string propertyName)
 	{
-		var result = _properties.FirstOrDefault(c => c.Name == propertyName);
+		var result = _metadata.Find(propertyName);
 		if (result == null)
 		{
 			throw new ArgumentOutOfRangeException(nameof(propertyName), string.Format(Resources.IDS_PROPERTY_NAME_NOT_REGISTERED, propertyName));
@@ -106,7 +94,7 @@ public class FieldDataManager
 	/// <returns>匹配的属性信息；如果未注册则为 <see langword="null"/>。</returns>
 	internal IPropertyInfo FindRegisteredProperty(string propertyName)
 	{
-		return _properties.FirstOrDefault(c => c.Name == propertyName);
+		return _metadata.Find(propertyName);
 	}
 
 	#region Get/Set/Find fields
@@ -118,7 +106,14 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	public IFieldData GetFieldData(IPropertyInfo property)
 	{
-		return _fieldData.TryGetValue(property.Name, out var field) ? field : null;
+		var index = GetIndex(property);
+		if (index >= 0)
+		{
+			var fields = _fields;
+			return fields != null && index < fields.Length ? fields[index] : null;
+		}
+
+		return GetUnindexed(property.Name);
 	}
 
 	/// <summary>
@@ -128,7 +123,14 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	public IFieldData GetFieldData(string propertyName)
 	{
-		return _fieldData.TryGetValue(propertyName, out var field) ? field : null;
+		var index = _metadata.IndexOf(propertyName);
+		if (index >= 0)
+		{
+			var fields = _fields;
+			return fields != null && index < fields.Length ? fields[index] : null;
+		}
+
+		return GetUnindexed(propertyName);
 	}
 
 	/// <summary>
@@ -138,8 +140,15 @@ public class FieldDataManager
 	/// <returns>字段数据。</returns>
 	private IFieldData GetOrCreateFieldData(IPropertyInfo property)
 	{
-		// NewFieldData 是幂等操作（创建独立实例），即使 valueFactory 被并发调用多次也只会保留一个实例
-		return _fieldData.GetOrAdd(property.Name, _ => property.NewFieldData(property.Name));
+		var index = GetIndex(property);
+		if (index >= 0)
+		{
+			var fields = _fields ??= new IFieldData[_metadata.Count];
+			return fields[index] ??= property.NewFieldData(property.Name);
+		}
+
+		_unindexed ??= new ConcurrentDictionary<string, IFieldData>(StringComparer.Ordinal);
+		return _unindexed.GetOrAdd(property.Name, name => property.NewFieldData(name));
 	}
 
 	/// <summary>
@@ -187,8 +196,7 @@ public class FieldDataManager
 
 		value = TypeHelper.CoerceValue(property.Type, valueType, value);
 		var field = GetOrCreateFieldData(property);
-		field.Value = value;
-		field.MarkAsUnchanged();
+		SetLoadedValue(field, value);
 		return field;
 	}
 
@@ -204,29 +212,49 @@ public class FieldDataManager
 		var field = GetOrCreateFieldData(property);
 		if (field is IFieldData<TValue> fd)
 		{
-			fd.Value = value;
+			if (field is IFieldDataInternal internalField)
+			{
+				internalField.SetValue(value, trackHistory: false);
+				field.MarkAsUnchanged();
+			}
+			else
+			{
+				fd.Value = value;
+				field.MarkAsUnchanged();
+			}
 		}
 		else
 		{
-			field.Value = value;
+			SetLoadedValue(field, value);
 		}
 
-		field.MarkAsUnchanged();
 		return field;
+	}
+
+	/// <summary>
+	/// 以“装载”语义写入字段值：不记录历史，并清空历史。
+	/// </summary>
+	/// <param name="field">字段数据。</param>
+	/// <param name="value">值。</param>
+	private static void SetLoadedValue(IFieldData field, object value)
+	{
+		if (field is IFieldDataInternal internalField)
+		{
+			internalField.SetValue(value, trackHistory: false);
+			field.MarkAsUnchanged();
+			return;
+		}
+
+		field.Value = value;
+		field.MarkAsUnchanged();
 	}
 
 	/// <summary>
 	/// 读取属性的当前旧值；尚无字段数据时按注册的默认值初始化，并返回该默认值。
 	/// </summary>
 	/// <typeparam name="TValue">值的类型。</typeparam>
-	/// <param name="property">属性信息。</param>
+	/// <param name="property">属性。</param>
 	/// <returns>属性的当前旧值。</returns>
-	/// <remarks>
-	/// 写入路径（<c>SetProperty</c> / <c>LoadProperty</c>）必须先拿到旧值，再决定是否标脏，
-	/// 于是这段三分支曾在 <c>BusinessObject</c>、<c>ObservableObject</c>、<c>ReadOnlyObject</c> 各手抄一遍。
-	/// 任何一处调整 <c>null</c> 分支的副作用顺序（先 <see cref="LoadFieldData{TValue}"/> 再比较），
-	/// 其余几处都不会跟着改——收敛到这里后只有一个地方需要维护。
-	/// </remarks>
 	internal TValue GetExistingOrInit<TValue>(PropertyInfo<TValue> property)
 	{
 		var fieldData = GetFieldData(property);
@@ -246,17 +274,21 @@ public class FieldDataManager
 	/// <summary>
 	/// 移除属性的字段数据。
 	/// </summary>
-	/// <param name="property">属性信息。</param>
-	/// <remarks>
-	/// 名称承诺「移除」，因此真正删除条目而不是置 <see langword="null"/>：
-	/// 置 null 会让 <see cref="FieldExists"/> 仍返回 <see langword="true"/>、
-	/// <see cref="BusinessObject.ReadProperty{TValue}(PropertyInfo{TValue})"/> 返回 <see langword="null"/>
-	/// 而不是注册的 <see cref="IPropertyInfo.DefaultValue"/>——三者口径互相矛盾。
-	/// 本方法当前在仓库内零调用；保留但修正语义，供派生/宿主场景使用。
-	/// </remarks>
+	/// <param name="property">属性。</param>
 	internal void RemoveField(IPropertyInfo property)
 	{
-		_fieldData.TryRemove(property.Name, out _);
+		var index = GetIndex(property);
+		if (index >= 0)
+		{
+			if (_fields != null && index < _fields.Length)
+			{
+				_fields[index] = null;
+			}
+
+			return;
+		}
+
+		_unindexed?.TryRemove(property.Name, out _);
 	}
 
 	/// <summary>
@@ -266,7 +298,41 @@ public class FieldDataManager
 	/// <returns>如果字段存在，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool FieldExists(IPropertyInfo property)
 	{
-		return _fieldData.ContainsKey(property.Name);
+		return GetFieldData(property) != null;
+	}
+
+	/// <summary>
+	/// 获取未注册属性的兜底字段。
+	/// </summary>
+	/// <param name="propertyName">属性名称。</param>
+	/// <returns>字段数据或 <see langword="null"/>。</returns>
+	private IFieldData GetUnindexed(string propertyName)
+	{
+		return _unindexed != null && _unindexed.TryGetValue(propertyName, out var field) ? field : null;
+	}
+
+	/// <summary>
+	/// 解析属性在当前元数据中的索引。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>索引；未注册时返回 -1。</returns>
+	private int GetIndex(IPropertyInfo property)
+	{
+		if (property == null)
+		{
+			return -1;
+		}
+
+		if (property is IIndexedPropertyInfo indexed && indexed.Index >= 0 && indexed.Index < _metadata.Count)
+		{
+			var candidate = _metadata[indexed.Index];
+			if (string.Equals(candidate.Name, property.Name, StringComparison.Ordinal))
+			{
+				return indexed.Index;
+			}
+		}
+
+		return _metadata.IndexOf(property.Name);
 	}
 
 	#endregion
@@ -299,7 +365,10 @@ public class FieldDataManager
 		{
 			var fields = t.GetFields(attr);
 			if (fields.Length > 0)
+			{
 				fields[0].GetValue(null);
+			}
+
 			t = t.BaseType;
 		}
 	}
@@ -307,23 +376,200 @@ public class FieldDataManager
 	/// <summary>
 	/// 检查字段数据中是否有任何项处于繁忙状态。
 	/// </summary>
-	/// <returns>如果有项繁忙，则为 <c>true</c>；否则为 <c>false</c>。</returns>
+	/// <returns>如果有项繁忙，则为 <c>true</c>。</returns>
 	internal bool IsBusy()
 	{
-		return _fieldData.Values.Any(t => t.IsBusy);
+		if (_fields != null)
+		{
+			foreach (var field in _fields)
+			{
+				if (field != null && field.IsBusy)
+				{
+					return true;
+				}
+			}
+		}
+
+		if (_unindexed != null)
+		{
+			foreach (var field in _unindexed.Values)
+			{
+				if (field.IsBusy)
+				{
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/// <summary>
 	/// 将所有字段数据标记为未更改，清除每个字段的修改历史。
 	/// </summary>
-	/// <remarks>
-	/// 在对象被成功保存或加载后调用，使字段的撤销历史失效，令字段的 <see cref="FieldData{T}.IsChanged"/> 属性返回 <see langword="false"/>。
-	/// </remarks>
 	public void MarkAllAsUnchanged()
 	{
-		foreach (var field in _fieldData.Values)
+		if (_fields != null)
 		{
-			field.MarkAsUnchanged();
+			foreach (var field in _fields)
+			{
+				field?.MarkAsUnchanged();
+			}
+		}
+
+		if (_unindexed != null)
+		{
+			foreach (var field in _unindexed.Values)
+			{
+				field.MarkAsUnchanged();
+			}
 		}
 	}
+
+	#region Metadata
+
+	/// <summary>
+	/// 获取指定类型的元数据；首次访问时构建并缓存。
+	/// </summary>
+	/// <param name="type">业务对象类型。</param>
+	/// <returns>元数据。</returns>
+	private static TypeMetadata GetMetadata(Type type)
+	{
+		ArgumentNullException.ThrowIfNull(type);
+		return _metadataCache.GetOrAdd(type, BuildMetadata);
+	}
+
+	/// <summary>
+	/// 构建类型元数据：合并继承链上的属性、去重、分配稳定索引。
+	/// </summary>
+	/// <param name="type">业务对象类型。</param>
+	/// <returns>元数据。</returns>
+	private static TypeMetadata BuildMetadata(Type type)
+	{
+		ForceStaticFieldInit(type);
+
+		var hierarchy = new List<Type>();
+		var current = type;
+		do
+		{
+			hierarchy.Add(current);
+			current = current.BaseType;
+		}
+		while (current != null && current != typeof(BusinessObject));
+
+		var properties = new List<IPropertyInfo>();
+		var indices = new Dictionary<string, int>(StringComparer.Ordinal);
+
+		// 从顶层到底层遍历，子类同名属性先到先得（与旧实现的 FirstOrDefault 语义一致）。
+		for (var index = hierarchy.Count - 1; index >= 0; index--)
+		{
+			foreach (var property in PropertyInfoManager.GetLockedSnapshot(hierarchy[index]))
+			{
+				if (indices.TryGetValue(property.Name, out var existing))
+				{
+					if (property is IIndexedPropertyInfo duplicate)
+					{
+						duplicate.Index = existing;
+					}
+
+					continue;
+				}
+
+				var slot = properties.Count;
+				indices[property.Name] = slot;
+				properties.Add(property);
+				if (property is IIndexedPropertyInfo indexed)
+				{
+					indexed.Index = slot;
+				}
+			}
+		}
+
+		return new TypeMetadata([.. properties], indices);
+	}
+
+	/// <summary>
+	/// 类型元数据：属性列表 + 名称索引。
+	/// </summary>
+	private sealed class TypeMetadata
+	{
+		/// <summary>
+		/// 空元数据（无参构造使用）。
+		/// </summary>
+		public static readonly TypeMetadata Empty = new([], new Dictionary<string, int>(StringComparer.Ordinal));
+
+		private readonly Dictionary<string, int> _indices;
+
+		public TypeMetadata(IReadOnlyList<IPropertyInfo> properties, Dictionary<string, int> indices)
+		{
+			Properties = properties;
+			_indices = indices;
+		}
+
+		/// <summary>
+		/// 属性列表。
+		/// </summary>
+		public IReadOnlyList<IPropertyInfo> Properties { get; }
+
+		/// <summary>
+		/// 属性数量。
+		/// </summary>
+		public int Count => Properties.Count;
+
+		/// <summary>
+		/// 按索引取属性。
+		/// </summary>
+		/// <param name="index">索引。</param>
+		/// <returns>属性。</returns>
+		public IPropertyInfo this[int index] => Properties[index];
+
+		/// <summary>
+		/// 按名称查找属性。
+		/// </summary>
+		/// <param name="name">名称。</param>
+		/// <returns>属性或 <see langword="null"/>。</returns>
+		public IPropertyInfo Find(string name)
+		{
+			return name != null && _indices.TryGetValue(name, out var index) ? Properties[index] : null;
+		}
+
+		/// <summary>
+		/// 按名称取索引。
+		/// </summary>
+		/// <param name="name">名称。</param>
+		/// <returns>索引或 -1。</returns>
+		public int IndexOf(string name)
+		{
+			return name != null && _indices.TryGetValue(name, out var index) ? index : -1;
+		}
+	}
+
+	#endregion
+}
+
+/// <summary>
+/// 带稳定索引的属性元数据。
+/// </summary>
+/// <remarks>
+/// 由 <see cref="FieldDataManager"/> 在构建类型元数据时写入；只在 Osba 内部使用。
+/// </remarks>
+internal interface IIndexedPropertyInfo
+{
+	/// <summary>
+	/// 获取或设置属性在该类型元数据中的索引；-1 表示尚未分配。
+	/// </summary>
+	int Index { get; set; }
+}
+
+/// <summary>
+/// 字段数据的内部写入入口：装载与用户写入需要不同的历史语义。
+/// </summary>
+internal interface IFieldDataInternal
+{
+	/// <summary>
+	/// 写入字段值。
+	/// </summary>
+	/// <param name="value">值。</param>
+	/// <param name="trackHistory">是否记录旧值。</param>
+	void SetValue(object value, bool trackHistory);
 }

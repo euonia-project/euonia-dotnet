@@ -1,5 +1,7 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.ExceptionServices;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Threading;
 using Nerosoft.Euonia.Security;
@@ -49,15 +51,8 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
 			initialize();
-			var parameters = NormalizeParameters(method, criteria);
-			if (method.IsAsync())
-			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
-			}
-			else
-			{
-				method.Invoke(target, parameters: parameters);
-			}
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			InvokeSynchronously(method, target, criteria);
 
 			// 此处刻意不做数据范围判定：Create 只构造对象、不落库，且按设计由调用方在之后
 			// 填充字段（见框架自带示例 User.CreateAsync）。在字段尚不完整时判定会误杀正常流程，
@@ -75,15 +70,8 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
 			initialize();
-			var parameters = NormalizeParameters(method, criteria);
-			if (method.IsAsync())
-			{
-				AsyncContext.Run(() => (Task)method.Invoke(target, parameters: parameters));
-			}
-			else
-			{
-				method.Invoke(target, parameters: parameters);
-			}
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
+			InvokeSynchronously(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
 			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
@@ -105,6 +93,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 同 Create：只构造不落库，不做数据范围判定
@@ -121,6 +110,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Read, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
@@ -133,11 +123,14 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>(criteria);
+		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Create);
 		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
@@ -150,11 +143,14 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>(criteria);
+		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Update);
 		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Update, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -177,6 +173,8 @@ public class BusinessObjectFactory : IObjectFactory
 			_ => throw new ArgumentOutOfRangeException(nameof(target), Resources.IDS_INVALID_STATE)
 		};
 
+		EnsurePersistenceMethod<TTarget>(method);
+
 		// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
 		await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget));
 
@@ -186,10 +184,16 @@ public class BusinessObjectFactory : IObjectFactory
 		return await WithActivatorAsync(target, async initialize =>
 		{
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, [cancellationToken]);
 
-			// 保存后再次判定：业务方法可能改动了范围列
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken);
+			// 保存后再次判定：业务方法可能改动了范围列。
+			// Delete / Execute 不需要复核：删除后行已不存在，命令执行前后判定的对象相同；
+			// 对它们再做一次完整授权链只会增加延迟，不会增加安全性。
+			if (operation is BusinessOperation.Create or BusinessOperation.Update)
+			{
+				await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken);
+			}
 		});
 	}
 
@@ -198,6 +202,7 @@ public class BusinessObjectFactory : IObjectFactory
 		where TTarget : ICommandObject
 	{
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>([cancellationToken]);
+		EnsurePersistenceMethod<TTarget>(method);
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
@@ -212,6 +217,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 顺序刻意排在两个授权判定之后——授权是权威闸门，不该让未授权的调用方先看到字段级校验细节。
 			await ObjectRuleGuard.EnsureRulesAsync(target, "Object not valid for execute.", cancellationToken);
 
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, [cancellationToken]);
 		});
 	}
@@ -222,12 +228,15 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>(criteria);
+		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Execute);
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -246,12 +255,15 @@ public class BusinessObjectFactory : IObjectFactory
 	{
 		criteria ??= [null];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>(criteria);
+		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Delete);
 
 		await WithActivatorAsync(target, async initialize =>
 		{
 			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Delete, default);
 			initialize();
+			using var loadScope = (target as BusinessObject)?.BeginLoad();
 			await InvokeAsync(method, target, criteria);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
@@ -324,17 +336,133 @@ public class BusinessObjectFactory : IObjectFactory
 	}
 
 
+	/// <summary>
+	/// 异步调用工厂方法，并等待其返回的 <see cref="Task"/> / <see cref="ValueTask"/> / <see cref="ValueTask{T}"/>。
+	/// </summary>
+	/// <remarks>
+	/// 不再依赖 <c>MethodInfo.IsAsync</c>：<c>ValueTask</c> 不满足旧判定，会被当成同步方法直接丢弃，
+	/// 表现为“保存返回成功但数据没落库”。这里直接检查返回值形态，覆盖所有 awaitable。
+	/// 反射调用抛出的 <see cref="TargetInvocationException"/> 会解包，避免业务异常被包一层。
+	/// </remarks>
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
 	{
 		var normalized = NormalizeParameters(method, parameters);
-		if (method.IsAsync())
+		object result;
+		try
 		{
-			await ((Task)method.Invoke(target, parameters: normalized))!;
+			result = method.Invoke(target, normalized);
 		}
-		else
+		catch (TargetInvocationException exception) when (exception.InnerException != null)
 		{
-			method.Invoke(target, parameters: normalized);
+			ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+			return;
 		}
+
+		await AwaitResultAsync(result).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// 同步调用工厂方法；异步返回值在无同步上下文时直接阻塞等待，有同步上下文时走
+	/// <see cref="AsyncContext"/>，避免阻塞线程与需要回到该上下文的续体互等。
+	/// </summary>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <param name="method">工厂方法。</param>
+	/// <param name="target">目标实例。</param>
+	/// <param name="parameters">调用参数。</param>
+	private static void InvokeSynchronously<TTarget>(MethodInfo method, TTarget target, object[] parameters)
+	{
+		var normalized = NormalizeParameters(method, parameters);
+
+		if (SynchronizationContext.Current != null)
+		{
+			AsyncContext.Run(() => InvokeAndAwaitAsync(method, target, normalized));
+			return;
+		}
+
+		InvokeAndAwaitAsync(method, target, normalized).GetAwaiter().GetResult();
+	}
+
+	/// <summary>
+	/// 执行反射调用并等待可等待返回值。
+	/// </summary>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <param name="method">工厂方法。</param>
+	/// <param name="target">目标实例。</param>
+	/// <param name="normalized">已补齐的参数。</param>
+	/// <returns>调用完成的任务。</returns>
+	private static async Task InvokeAndAwaitAsync<TTarget>(MethodInfo method, TTarget target, object[] normalized)
+	{
+		object result;
+		try
+		{
+			result = method.Invoke(target, normalized);
+		}
+		catch (TargetInvocationException exception) when (exception.InnerException != null)
+		{
+			ExceptionDispatchInfo.Capture(exception.InnerException).Throw();
+			return;
+		}
+
+		await AwaitResultAsync(result).ConfigureAwait(false);
+	}
+
+	/// <summary>
+	/// 把工厂方法返回值转换为可等待任务；同步方法返回的非 awaitable 值直接视为完成。
+	/// </summary>
+	/// <param name="result">反射调用返回值。</param>
+	/// <returns>任务。</returns>
+	private static Task AwaitResultAsync(object result)
+	{
+		switch (result)
+		{
+			case null:
+				return Task.CompletedTask;
+			case Task task:
+				return task;
+			case ValueTask valueTask:
+				return valueTask.AsTask();
+			default:
+				var type = result.GetType();
+				if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ValueTask<>))
+				{
+					var asTask = _valueTaskAsTask.GetOrAdd(type, static t => t.GetMethod(nameof(ValueTask<int>.AsTask))!);
+					return (Task)asTask.Invoke(result, null)!;
+				}
+
+				return Task.CompletedTask;
+		}
+	}
+
+	/// <summary>
+	/// <see cref="ValueTask{T}.AsTask"/> 的反射缓存。
+	/// </summary>
+	private static readonly ConcurrentDictionary<Type, MethodInfo> _valueTaskAsTask = new();
+
+	/// <summary>
+	/// 拒绝基类提供的“空实现”持久化方法：忘记写 <c>[FactoryInsert]</c> 等特性时，
+	/// 旧行为会调用基类的 <c>Task.CompletedTask</c>，保存/删除看似成功但什么也没做。
+	/// </summary>
+	/// <typeparam name="TTarget">目标类型。</typeparam>
+	/// <param name="method">解析到的工厂方法。</param>
+	/// <exception cref="NotSupportedException">解析到的是基类空实现时抛出。</exception>
+	private static void EnsurePersistenceMethod<TTarget>(MethodInfo method)
+	{
+		var declaringType = method.DeclaringType;
+		if (declaringType == null || !declaringType.IsGenericType)
+		{
+			return;
+		}
+
+		var definition = declaringType.GetGenericTypeDefinition();
+		if (definition != typeof(EditableObject<>) && definition != typeof(CommandObject<>))
+		{
+			return;
+		}
+
+		throw new NotSupportedException(
+			$"Type '{typeof(TTarget).FullName}' does not implement '{method.Name}'. " +
+			"Add the corresponding [FactoryInsert]/[FactoryUpdate]/[FactoryDelete]/[FactoryExecute] method " +
+			"or override the base method; the base implementation is a no-op.");
 	}
 
 	/// <summary>
@@ -346,14 +474,15 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <returns>补齐后的参数数组。</returns>
 	private static object[] NormalizeParameters(MethodInfo method, object[] parameters)
 	{
-		var methodParameters = method.GetParameters();
+		var shape = GetMethodShape(method);
+		var methodParameters = shape.Parameters;
 
 		// params 数组必须打包成一个数组实参；直接把调用参数原样传给反射会抛
 		// TargetParameterCountException / ArgumentException。
 		if (methodParameters.Length > 0)
 		{
 			var lastParameter = methodParameters[^1];
-			if (lastParameter.GetCustomAttributes<ParamArrayAttribute>().Any())
+			if (shape.HasParamsArray)
 			{
 				var fixedCount = methodParameters.Length - 1;
 				var normalized = new object[methodParameters.Length];
@@ -390,6 +519,35 @@ public class BusinessObjectFactory : IObjectFactory
 		}
 
 		return [.. parameters, .. Enumerable.Repeat((object)Type.Missing, methodParameters.Length - parameters.Length)];
+	}
+
+	/// <summary>
+	/// 工厂方法参数形态（参数表 + 是否 params 数组），按方法缓存。
+	/// </summary>
+	/// <param name="Method">方法。</param>
+	/// <param name="Parameters">参数表。</param>
+	/// <param name="HasParamsArray">末位参数是否为 params 数组。</param>
+	private sealed record MethodShape(MethodInfo Method, ParameterInfo[] Parameters, bool HasParamsArray);
+
+	/// <summary>
+	/// 方法参数形态缓存。
+	/// </summary>
+	private static readonly ConcurrentDictionary<MethodInfo, MethodShape> _methodShapes = new();
+
+	/// <summary>
+	/// 获取方法参数形态；首次访问时解析并缓存，避免每次调用都走反射。
+	/// </summary>
+	/// <param name="method">方法。</param>
+	/// <returns>参数形态。</returns>
+	private static MethodShape GetMethodShape(MethodInfo method)
+	{
+		return _methodShapes.GetOrAdd(method, static candidate =>
+		{
+			var parameters = candidate.GetParameters();
+			var hasParamsArray = parameters.Length > 0 &&
+			                     parameters[^1].GetCustomAttributes<ParamArrayAttribute>().Any();
+			return new MethodShape(candidate, parameters, hasParamsArray);
+		});
 	}
 
 	/// <summary>

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 // 本文件已导入 System.ComponentModel.DataAnnotations（AddDataAnnotations 需要 ValidationAttribute），
@@ -16,9 +17,20 @@ public class Rules : IRules
 {
 	private readonly object _lockObject = new();
 
+	/// <summary>
+	/// 规则执行完成回调；缓存为实例字段，避免每条规则创建一个闭包。
+	/// </summary>
+	private readonly Action<IRuleContext> _ruleCompleted;
+
+	/// <summary>
+	/// 规则类型 → <see cref="ExecuteOnStateAttribute"/> 状态列表的缓存。
+	/// </summary>
+	private static readonly ConcurrentDictionary<Type, ObjectEditState[]> _ruleStates = new();
+
 	internal Rules(IHasRuleCheck @object)
 	{
 		_target = @object;
+		_ruleCompleted = OnRuleCompleted;
 	}
 
 	private IHasRuleCheck _target;
@@ -45,9 +57,23 @@ public class Rules : IRules
 	/// <summary>
 	/// 获取一个值，指示当前是否存在违规规则，存在则意味着对象无效。
 	/// </summary>
-	public bool IsValid => BrokenRules?.ErrorCount == 0;
+	/// <summary>
+	/// 获取一个值，指示当前是否存在 Error 级违规。
+	/// </summary>
+	/// <remarks>
+	/// 违规集合按需创建：从未校验过的对象读取 <see cref="IsValid"/> 时不分配集合。
+	/// </remarks>
+	public bool IsValid => _brokenRules == null || _brokenRules.ErrorCount == 0;
 
-	internal BrokenRuleCollection BrokenRules { get; } = new();
+	/// <summary>
+	/// 惰性创建的违规集合。
+	/// </summary>
+	private BrokenRuleCollection _brokenRules;
+
+	/// <summary>
+	/// 获取违规集合；首次访问时创建。
+	/// </summary>
+	internal BrokenRuleCollection BrokenRules => _brokenRules ??= new();
 
 	/// <summary>
 	/// 获取或设置一个值，指示是否抑制规则检查。
@@ -67,9 +93,19 @@ public class Rules : IRules
 	private readonly List<IRuleBase> _instanceRules = [];
 
 	/// <summary>
-	/// 本次操作挂上的规则范围（由执行器在操作开始时挂载、结束时卸下）。
+	/// 本次操作挂上的规则范围栈（由执行器在操作开始时挂载、结束时卸下）。
 	/// </summary>
-	private RuleScope _operationScope;
+	/// <remarks>
+	/// 用栈而不是单槽位：嵌套执行器（外层操作内部再启动一个执行器）与同一实例上的并发操作
+	/// 都必须各自保留自己的规则范围，先结束的内层不能把外层的范围一并清掉。
+	/// 所有访问都在 <see cref="_lockObject"/> 内。
+	/// </remarks>
+	private readonly List<RuleScope> _operationScopes = [];
+
+	/// <summary>
+	/// 操作范围数量；用于在热路径上无锁判断“是否存在操作级规则”。
+	/// </summary>
+	private int _operationScopeCount;
 
 	/// <summary>
 	/// 获取一个值，指示规则检查当前是否被挂起——即「本次不给出结论」。
@@ -85,7 +121,34 @@ public class Rules : IRules
 	/// 保存会按旧结论抛错的原因）。
 	/// </para>
 	/// </remarks>
-	internal bool IsRuleCheckingSuspended => SuppressRuleChecking || (_operationScope?.SkipChecks ?? false);
+	internal bool IsRuleCheckingSuspended
+	{
+		get
+		{
+			if (SuppressRuleChecking)
+			{
+				return true;
+			}
+
+			if (Volatile.Read(ref _operationScopeCount) == 0)
+			{
+				return false;
+			}
+
+			lock (_lockObject)
+			{
+				foreach (var scope in _operationScopes)
+				{
+					if (scope.SkipChecks)
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
+		}
+	}
 
 	/// <summary>
 	/// 挂上本次操作的规则范围。
@@ -97,16 +160,47 @@ public class Rules : IRules
 	/// </remarks>
 	internal void AttachOperationRules(RuleScope scope)
 	{
-		_operationScope = scope;
+		Check.EnsureNotNull(scope, nameof(scope));
+
+		lock (_lockObject)
+		{
+			_operationScopes.Add(scope);
+			Volatile.Write(ref _operationScopeCount, _operationScopes.Count);
+		}
 	}
 
 	/// <summary>
 	/// 卸下本次操作的规则范围。
 	/// </summary>
-	internal void DetachOperationRules()
+	/// <param name="scope">要卸下的范围。</param>
+	/// <remarks>
+	/// 按引用从栈顶向下查找并移除：嵌套/并发场景下先结束的范围不会误删其他范围。
+	/// </remarks>
+	internal void DetachOperationRules(RuleScope scope)
 	{
-		_operationScope = null;
+		if (scope == null)
+		{
+			return;
+		}
+
+		lock (_lockObject)
+		{
+			for (var index = _operationScopes.Count - 1; index >= 0; index--)
+			{
+				if (ReferenceEquals(_operationScopes[index], scope))
+				{
+					_operationScopes.RemoveAt(index);
+					Volatile.Write(ref _operationScopeCount, _operationScopes.Count);
+					return;
+				}
+			}
+		}
 	}
+
+	/// <summary>
+	/// 获取当前是否存在实例级或操作级规则。
+	/// </summary>
+	internal bool HasSupplementalRules => _instanceRules.Count > 0 || Volatile.Read(ref _operationScopeCount) > 0;
 
 	/// <summary>
 	/// 获取一个值，指示当前是否有正在运行的规则。
@@ -192,10 +286,41 @@ public class Rules : IRules
 			return true;
 		}
 
+		return HasInstanceRulesFor(property);
+	}
+
+	/// <summary>
+	/// 判断属性是否存在实例级或本次操作级规则（不含类型级共享规则）。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <returns>存在则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 供 <c>BusinessObject.PropertyHasChanged</c> 在未创建实例级规则集合时短路：
+	/// 先查类型级索引，再只在需要时进入本对象。
+	/// </remarks>
+	internal bool HasInstanceRulesFor(IPropertyInfo property)
+	{
+		if (_instanceRules.Count == 0 && Volatile.Read(ref _operationScopeCount) == 0)
+		{
+			return false;
+		}
+
 		lock (_lockObject)
 		{
-			return _instanceRules.Any(rule => ReferenceEquals(rule.Property, property))
-			       || (_operationScope != null && _operationScope.Rules.Any(rule => ReferenceEquals(rule.Property, property)));
+			if (_instanceRules.Any(rule => ReferenceEquals(rule.Property, property)))
+			{
+				return true;
+			}
+
+			foreach (var scope in _operationScopes)
+			{
+				if (scope.Rules.Any(rule => ReferenceEquals(rule.Property, property)))
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 	}
 
@@ -223,14 +348,19 @@ public class Rules : IRules
 	/// 共享集合取快照而非延迟枚举：它按类型进程级共享，边枚举边写入会抛「集合已被修改」。
 	/// </para>
 	/// </remarks>
-	private List<IRuleBase> ResolveObjectRules()
+	private IReadOnlyList<IRuleBase> ResolveObjectRules()
 	{
 		// 共享快照在 _lockObject 之外取：持 _lockObject 再去拿 RuleManager 的锁会与
 		// InitializeRules（持 RuleManager 锁 → 使用方 AddRules → 可能进实例规则集合）形成锁序环。
-		var shared = RuleManager.Snapshot().Where(rule => rule.Property == null);
-		var (supplemental, scope) = SupplementalRules();
+		var shared = RuleManager.ObjectRules;
+		var (supplemental, scopes) = SupplementalRules();
 
-		return FilterByScope(shared.Concat(supplemental), scope)
+		if (supplemental.Length == 0 && scopes.Length == 0)
+		{
+			return shared;
+		}
+
+		return FilterByScope(shared.Concat(supplemental), scopes)
 		       .OrderBy(rule => rule.Priority)
 		       .ToList();
 	}
@@ -244,19 +374,20 @@ public class Rules : IRules
 	/// 属性 setter 的热路径：类型级规则走 <see cref="RuleManager.RulesFor"/> 索引（无锁、无分配），
 	/// 没有实例级/操作级规则时直接返回索引结果，连列表都不重建。
 	/// </remarks>
-	private List<IRuleBase> ResolvePropertyRules(IPropertyInfo property)
+	private IReadOnlyList<IRuleBase> ResolvePropertyRules(IPropertyInfo property)
 	{
 		var typed = RuleManager.RulesFor(property);
-		var (supplemental, scope) = SupplementalRules();
+		var (supplemental, scopes) = SupplementalRules();
 
-		if (supplemental.Length == 0 && scope == null)
+		if (supplemental.Length == 0 && scopes.Length == 0)
 		{
-			return typed.Count == 0 ? [] : [.. typed];
+			// 热路径：无实例级/操作级规则时直接返回类型级索引，不复制列表。
+			return typed.Count == 0 ? Array.Empty<IRuleBase>() : typed;
 		}
 
 		var matched = supplemental.Where(rule => ReferenceEquals(rule.Property, property));
 
-		return FilterByScope(typed.Concat(matched), scope)
+		return FilterByScope(typed.Concat(matched), scopes)
 		       .OrderBy(rule => rule.Priority)
 		       .ToList();
 	}
@@ -265,36 +396,57 @@ public class Rules : IRules
 	/// 取实例级与操作级规则的合并快照，以及本次操作范围（用于排除项）。
 	/// </summary>
 	/// <returns>合并后的规则数组与操作范围。</returns>
-	private (IRuleBase[] Rules, RuleScope Scope) SupplementalRules()
+	private (IRuleBase[] Rules, RuleScope[] Scopes) SupplementalRules()
 	{
-		IRuleBase[] instance;
-		IRuleBase[] operationRules;
-		RuleScope scope;
+		if (_instanceRules.Count == 0 && Volatile.Read(ref _operationScopeCount) == 0)
+		{
+			return (Array.Empty<IRuleBase>(), Array.Empty<RuleScope>());
+		}
 
 		lock (_lockObject)
 		{
-			instance = [.. _instanceRules];
-			scope = _operationScope;
-			operationRules = scope == null ? [] : [.. scope.Rules];
+			if (_instanceRules.Count == 0 && _operationScopes.Count == 0)
+			{
+				return (Array.Empty<IRuleBase>(), Array.Empty<RuleScope>());
+			}
+
+			var scopes = _operationScopes.Count == 0 ? Array.Empty<RuleScope>() : [.. _operationScopes];
+			var count = _instanceRules.Count;
+			foreach (var scope in _operationScopes)
+			{
+				count += scope.Rules.Count;
+			}
+
+			var supplemental = new IRuleBase[count];
+			_instanceRules.CopyTo(supplemental, 0);
+
+			var offset = _instanceRules.Count;
+			foreach (var scope in _operationScopes)
+			{
+				foreach (var rule in scope.Rules)
+				{
+					supplemental[offset++] = rule;
+				}
+			}
+
+			return (supplemental, scopes);
 		}
-
-		// 实例级与操作级规则一视同仁：两者都「只对当前对象生效」，区别仅在生命周期
-		var supplemental = new IRuleBase[instance.Length + operationRules.Length];
-		instance.CopyTo(supplemental, 0);
-		operationRules.CopyTo(supplemental, instance.Length);
-
-		return (supplemental, scope);
 	}
 
 	/// <summary>
 	/// 剔除本次操作声明的排除项。
 	/// </summary>
 	/// <param name="rules">候选规则。</param>
-	/// <param name="scope">本次操作的规则范围；为 <c>null</c> 时不做剔除。</param>
+	/// <param name="scopes">本次操作的规则范围；为空时不做剔除。</param>
 	/// <returns>过滤后的规则。</returns>
-	private static IEnumerable<IRuleBase> FilterByScope(IEnumerable<IRuleBase> rules, RuleScope scope)
+	private static IEnumerable<IRuleBase> FilterByScope(IEnumerable<IRuleBase> rules, RuleScope[] scopes)
 	{
-		return scope == null ? rules : rules.Where(rule => !scope.IsExcluded(rule));
+		if (scopes.Length == 0)
+		{
+			return rules;
+		}
+
+		return rules.Where(rule => !scopes.Any(scope => scope.IsExcluded(rule)));
 	}
 
 	/// <summary>
@@ -367,9 +519,13 @@ public class Rules : IRules
 	{
 		var currentRunningState = HasRunningRules;
 		var rules = PrepareObjectRules();
-		var (properties, tasks) = RunRules(rules, cascade);
-		Task.WaitAll([.. tasks]);
-		if (tasks.Count > 0 && !currentRunningState)
+		var (properties, tasks) = RunRules(rules, cascade, out var executed);
+		if (tasks.Count > 0)
+		{
+			Task.WaitAll([.. tasks]);
+		}
+
+		if (executed > 0 && !currentRunningState)
 		{
 			_target.AllRulesComplete();
 		}
@@ -392,9 +548,13 @@ public class Rules : IRules
 
 		var currentRunningState = HasRunningRules;
 		var rules = PrepareObjectRules();
-		var (properties, tasks) = RunRules(rules, cascade, cancellationToken);
-		await Task.WhenAll(tasks);
-		if (tasks.Count > 0 && !currentRunningState)
+		var (properties, tasks) = RunRules(rules, cascade, out var executed, cancellationToken);
+		if (tasks.Count > 0)
+		{
+			await Task.WhenAll(tasks).ConfigureAwait(false);
+		}
+
+		if (executed > 0 && !currentRunningState)
 		{
 			_target.AllRulesComplete();
 		}
@@ -427,6 +587,19 @@ public class Rules : IRules
 			return;
 		}
 
+		// 没有对象级规则（也没有实例级/操作级规则）时不需要启动一轮规则执行：
+		// 属性级违规已经在变更时落进 BrokenRules，直接按当前结论裁决即可。
+		if (RuleManager.ObjectRules.Count == 0 && !HasSupplementalRules)
+		{
+			if (IsValid)
+			{
+				return;
+			}
+
+			var existing = BrokenRules.Select(t => new ValidationResult(t.Property, t.Description));
+			throw new ValidationException(message, existing);
+		}
+
 		await CheckObjectRulesAsync(cascade, cancellationToken);
 
 		if (IsValid)
@@ -446,9 +619,15 @@ public class Rules : IRules
 	/// 清理必须<b>定向</b>到本轮即将运行的规则所涉及的属性：实例级规则可以绑定属性，
 	/// 若只清 <c>null</c>，同一对象上的重复检查会逐轮累积重复条目。
 	/// </remarks>
-	private List<IRuleBase> PrepareObjectRules()
+	private IReadOnlyList<IRuleBase> PrepareObjectRules()
 	{
 		var rules = ResolveObjectRules();
+
+		// 没有对象级规则时不需要清空/创建违规集合：集合里不会有过期条目。
+		if (rules.Count == 0)
+		{
+			return rules;
+		}
 
 		BrokenRules.ClearRules(null);
 
@@ -548,7 +727,7 @@ public class Rules : IRules
 
 		BrokenRules.ClearRules(property);
 
-		var (_, tasks) = RunRules(rules, true, cancellationToken);
+		var (_, tasks) = RunRules(rules, true, out _, cancellationToken);
 
 		await Task.WhenAll(tasks);
 	}
@@ -587,18 +766,19 @@ public class Rules : IRules
 	/// <c>BusinessObject.CheckRuleOnPropertyChanged</c> 约束的来源：属性级规则应当是
 	/// 同步即可完成的纯校验；需要 I/O 的校验请放对象级规则（保存走异步路径）。
 	/// </remarks>
-	private List<string> RunPropertyRules(IPropertyInfo property, List<IRuleBase> rules)
+	private List<string> RunPropertyRules(IPropertyInfo property, IReadOnlyList<IRuleBase> rules)
 	{
 		BrokenRules.ClearRules(property);
 
-		var (properties, tasks) = RunRules(rules, true);
+		var (properties, tasks) = RunRules(rules, true, out _);
 
 		if (tasks.Count > 0)
 		{
 			Task.WaitAll([.. tasks]);
 		}
 
-		return properties.Distinct().ToList();
+		// CheckRules 是 public：调用方可能修改返回列表，不能返回共享实例。
+		return properties.Count == 0 ? new List<string>(0) : properties.Distinct().ToList();
 	}
 
 	/// <summary>
@@ -616,7 +796,7 @@ public class Rules : IRules
 
 		BrokenRules.ClearRules(property);
 
-		return RunRules(rules, cascade, cancellationToken);
+		return RunRules(rules, cascade, out _, cancellationToken);
 	}
 
 	/// <summary>
@@ -624,80 +804,55 @@ public class Rules : IRules
 	/// </summary>
 	/// <param name="rules">要运行的规则集合。</param>
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
+	/// <param name="executedCount">实际启动的规则数量（已按 <see cref="ExecuteOnStateAttribute"/> 过滤）。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
-	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade, CancellationToken cancellationToken = default)
+	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade, out int executedCount, CancellationToken cancellationToken = default)
 	{
-		var affectProperties = new List<string>();
-		var tasks = new List<Task>();
+		List<string> affectProperties = null;
+		List<Task> tasks = null;
+		var editableObject = Target as IEditableObject;
+		executedCount = 0;
+
 		foreach (var rule in rules)
 		{
-			if (Target is IEditableObject editableObject)
+			if (editableObject != null)
 			{
-				var attribute = rule.GetType().GetCustomAttribute<ExecuteOnStateAttribute>();
+				var states = GetRuleStates(rule.GetType());
 
 				// 空 States 视为「不限制」而不是「全都不匹配」：后者会让一个没填参数的特性
 				// 静默把规则彻底关掉（且毫无提示），而规则该跑起来才是安全的方向。
-				if (attribute?.States?.Any() == true && !attribute.States.Contains(editableObject.State))
+				if (states.Length > 0 && Array.IndexOf(states, editableObject.State) < 0)
 				{
 					continue;
 				}
 			}
 
-			var context = new RuleContext(ruleContext =>
-			{
-				List<IPropertyInfo> notify = [];
+			executedCount++;
 
-				lock (_lockObject)
-				{
-					BrokenRules.Add(ruleContext.Results, ruleContext.Rule.Property?.Name);
-
-					RunningRules.Remove(ruleContext.Rule);
-
-					var properties = Enumerable.Empty<IPropertyInfo>();
-
-					if (ruleContext.Rule.Property != null)
-					{
-						properties = properties.Append(ruleContext.Rule.Property);
-					}
-
-					properties = properties.Concat(ruleContext.Rule.RelatedProperties);
-
-					// 「该通知谁」这个判断必须在锁内（要读 RunningRules 的一致快照），
-					// 但通知本身不能在锁内做——见下面。
-					foreach (var property in properties)
-					{
-						if (RunningRules.All(r => r.Property != property))
-						{
-							notify.Add(property);
-						}
-					}
-				}
-
-				// RuleCheckComplete 是用户可重写的成员（会走 PropertyChanged → 用户事件处理器），
-				// 把任意用户代码放进 _lockObject 的临界区，等于让外部代码握着本锁去等它自己的锁：
-				// 一旦另一条线程反过来先拿外层锁再来要 _lockObject，就是互相咬死。
-				// 判定已经原子完成，这里只负责把结果发出去。
-				foreach (var property in notify)
-				{
-					_target.RuleCheckComplete(property);
-				}
-			})
+			var context = new RuleContext(_ruleCompleted)
 			{
 				Target = Target,
 				Rule = rule,
 				PropertyName = rule.Property?.Name
 			};
 
-			if (cascade)
+			if (cascade && rule.RelatedProperties.Count > 0)
 			{
 				lock (_lockObject)
 				{
 					foreach (var property in rule.RelatedProperties)
 					{
 						var (properties, cascadeTasks) = CheckRulesForProperty(property, false, cancellationToken);
-						affectProperties.AddRange(properties);
-						tasks.AddRange(cascadeTasks);
+						if (properties.Count > 0)
+						{
+							(affectProperties ??= []).AddRange(properties);
+						}
+
+						if (cascadeTasks.Count > 0)
+						{
+							(tasks ??= []).AddRange(cascadeTasks);
+						}
 					}
 				}
 			}
@@ -707,24 +862,63 @@ public class Rules : IRules
 				RunningRules.Add(rule);
 			}
 
-			tasks.Add(RunAsync(rule, context, cancellationToken));
+			var task = RunRule(rule, context, cancellationToken);
+			if (!task.IsCompletedSuccessfully)
+			{
+				(tasks ??= []).Add(task);
+			}
 		}
 
-		return Tuple.Create(affectProperties, tasks);
+		return Tuple.Create(affectProperties ?? EmptyAffectedProperties, tasks ?? EmptyTasks);
 	}
 
 	/// <summary>
-	/// 运行异步规则检查任务。
+	/// 运行单条规则；同步完成的规则走无状态机快路径。
 	/// </summary>
-	/// <param name="rule">要执行的规则。</param>
-	/// <param name="context">规则上下文。</param>
-	/// <param name="cancellationToken">用于取消操作的令牌。</param>
-	/// <exception cref="OperationCanceledException">操作被取消时原样上抛——取消不是规则失败。</exception>
-	private static async Task RunAsync(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken = default)
+	/// <param name="rule">规则。</param>
+	/// <param name="context">上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>规则任务。</returns>
+	private static Task RunRule(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken)
+	{
+		Task task;
+		try
+		{
+			task = rule.ExecuteAsync(context, cancellationToken);
+		}
+		catch (OperationCanceledException)
+		{
+			context.Complete();
+			throw;
+		}
+		catch (Exception ex)
+		{
+			context.AddErrorResult(Describe(rule, ex));
+			context.Complete();
+			return Task.CompletedTask;
+		}
+
+		if (task == null || task.IsCompletedSuccessfully)
+		{
+			context.Complete();
+			return Task.CompletedTask;
+		}
+
+		return AwaitRuleAsync(rule, task, context);
+	}
+
+	/// <summary>
+	/// 等待未同步完成的规则，并保持“取消原样上抛、其他异常转错误结果”的契约。
+	/// </summary>
+	/// <param name="rule">规则。</param>
+	/// <param name="task">规则任务。</param>
+	/// <param name="context">上下文。</param>
+	/// <returns>规则任务。</returns>
+	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context)
 	{
 		try
 		{
-			await rule.ExecuteAsync(context, cancellationToken);
+			await task.ConfigureAwait(false);
 		}
 		catch (OperationCanceledException)
 		{
@@ -745,6 +939,93 @@ public class Rules : IRules
 			context.Complete();
 		}
 	}
+
+	/// <summary>
+	/// 规则完成回调：写入违规、维护运行中规则集、发出属性变更通知。
+	/// </summary>
+	/// <param name="ruleContext">规则上下文。</param>
+	private void OnRuleCompleted(IRuleContext ruleContext)
+	{
+		List<IPropertyInfo> notify = null;
+
+		lock (_lockObject)
+		{
+			var results = ruleContext.Results;
+			if (results.Count > 0)
+			{
+				BrokenRules.Add(results, ruleContext.Rule.Property?.Name);
+			}
+
+			RunningRules.Remove(ruleContext.Rule);
+
+			var property = ruleContext.Rule.Property;
+			if (property != null && IsNotRunning(property))
+			{
+				(notify ??= []).Add(property);
+			}
+
+			foreach (var related in ruleContext.Rule.RelatedProperties)
+			{
+				if (IsNotRunning(related))
+				{
+					(notify ??= []).Add(related);
+				}
+			}
+		}
+
+		// RuleCheckComplete 是用户可重写的成员（会走 PropertyChanged → 用户事件处理器），
+		// 把任意用户代码放进 _lockObject 的临界区，等于让外部代码握着本锁去等它自己的锁：
+		// 一旦另一条线程反过来先拿外层锁再来要 _lockObject，就是互相咬死。
+		// 判定已经原子完成，这里只负责把结果发出去。
+		if (notify == null)
+		{
+			return;
+		}
+
+		foreach (var property in notify)
+		{
+			_target.RuleCheckComplete(property);
+		}
+	}
+
+	/// <summary>
+	/// 判断属性是否仍有规则在运行；调用方必须持有 <see cref="_lockObject"/>。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <returns>没有规则在运行则返回 <see langword="true"/>。</returns>
+	private bool IsNotRunning(IPropertyInfo property)
+	{
+		foreach (var running in RunningRules)
+		{
+			if (ReferenceEquals(running.Property, property))
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// 取规则类型上声明的执行状态；无特性或特性为空时返回空数组（表示不限制）。
+	/// </summary>
+	/// <param name="ruleType">规则类型。</param>
+	/// <returns>状态数组。</returns>
+	private static ObjectEditState[] GetRuleStates(Type ruleType)
+	{
+		return _ruleStates.GetOrAdd(ruleType, static type =>
+			type.GetCustomAttribute<ExecuteOnStateAttribute>()?.States?.ToArray() ?? Array.Empty<ObjectEditState>());
+	}
+
+	/// <summary>
+	/// 空的受影响属性列表（只读使用，不可修改）。
+	/// </summary>
+	private static readonly List<string> EmptyAffectedProperties = [];
+
+	/// <summary>
+	/// 空的任务列表（只读使用，不可修改）。
+	/// </summary>
+	private static readonly List<Task> EmptyTasks = [];
 
 	/// <summary>
 	/// 把规则抛出的异常渲染成错误结果描述，保留异常类型与内部异常信息。

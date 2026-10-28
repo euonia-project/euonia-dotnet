@@ -30,13 +30,15 @@ public class BusinessContextAccessor
 	/// </summary>
 	/// <param name="provider">用于提供服务解析的服务提供程序。</param>
 	/// <remarks>
-	/// 以 Scoped 注册时，本作用域首次解析访问器即把该作用域的 provider 写入当前异步流，
-	/// 使同一调用链上的派生任务/线程共享当前上下文。
+	/// <b>构造函数不写静态环境上下文</b>：解析一个 Scoped 服务不应产生跨请求副作用。
+	/// 需要环境上下文的宿主（ASP.NET 中间件、手动作用域）应显式调用
+	/// <see cref="SetCurrent"/>，并在 <c>finally</c> 中调用 <see cref="Clear"/>。
+	/// 实例方法 <see cref="ServiceProvider"/> 仍回退到本作用域捕获的 provider，
+	/// 因此“只在本作用域内使用”的路径不依赖环境上下文。
 	/// </remarks>
 	public BusinessContextAccessor(IServiceProvider provider)
 	{
 		_provider = provider;
-		_currentServiceProvider.Value = provider;
 	}
 
 	/// <summary>

@@ -9,9 +9,9 @@ public class RuleContext : IRuleContext
 	private readonly Action<IRuleContext> _completeAction;
 
 	/// <summary>
-	/// 存储规则结果的列表。
+	/// 存储规则结果的列表；规则通过（无结果）时不创建。
 	/// </summary>
-	private readonly List<RuleResult> _results = new();
+	private List<RuleResult> _results;
 
 	/// <summary>
 	/// 指示上下文是否已完成，防止重复完成导致规则结果被重复处理。
@@ -39,30 +39,30 @@ public class RuleContext : IRuleContext
 	public string PropertyName { get; internal set; }
 
 	/// <inheritdoc />
-	public IReadOnlyList<RuleResult> Results => _results;
+	public IReadOnlyList<RuleResult> Results => _results == null ? Array.Empty<RuleResult>() : _results;
 
 	/// <inheritdoc />
 	public void AddErrorResult(string description)
 	{
-		_results.Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Error));
+		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Error));
 	}
 
 	/// <inheritdoc />
 	public void AddWarningResult(string description)
 	{
-		_results.Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Warning));
+		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Warning));
 	}
 
 	/// <inheritdoc />
 	public void AddInformationResult(string description)
 	{
-		_results.Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Information));
+		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Information));
 	}
 
 	/// <inheritdoc />
 	public void AddSuccessResult()
 	{
-		_results.Add(new RuleResult(Rule.Name) { Severity = RuleSeverity.Success });
+		(_results ??= []).Add(new RuleResult(Rule.Name) { Severity = RuleSeverity.Success });
 	}
 
 	/// <summary>
@@ -93,12 +93,6 @@ public class RuleContext : IRuleContext
 		}
 
 		_completed = true;
-
-		if (Results.Count == 0)
-		{
-			_results.Add(new RuleResult(Rule.Name));
-		}
-	
 		_completeAction?.Invoke(this);
 	}
 }

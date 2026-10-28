@@ -26,6 +26,17 @@ public class ReadOnlyObject<T> : BusinessObject<T>, IReadOnlyObject, IOperablePr
 		return false;
 	}
 
+	/// <summary>
+	/// 只读对象只在<b>装载作用域</b>内允许 <c>LoadProperty</c>（工厂方法填充数据时），
+	/// 外部调用与显式 <c>BypassRuleChecks</c> 之外的写入仍然拒绝。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <returns>允许装载则返回 <see langword="true"/>。</returns>
+	protected internal override bool CanLoadProperty(IPropertyInfo property)
+	{
+		return IsLoading || IsBypassingRuleChecks;
+	}
+
 
 	#region Get Properties
 

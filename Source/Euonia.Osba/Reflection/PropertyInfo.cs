@@ -9,8 +9,20 @@ namespace Nerosoft.Euonia.Osba;
 /// <see cref="PropertyInfo{T}"/> 类为 <see cref="PropertyInfo"/> 提供强类型包装。
 /// </summary>
 /// <typeparam name="T">属性的类型。</typeparam>
-public sealed class PropertyInfo<T> : IPropertyInfo
+public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 {
+	/// <summary>
+	/// 属性在所属类型元数据中的稳定索引；-1 表示尚未分配。
+	/// </summary>
+	private int _index = -1;
+
+	int IIndexedPropertyInfo.Index
+	{
+		get => _index;
+		set => _index = value;
+	}
+
+
 	/// <summary>
 	/// 注册时指定的静态默认值。
 	/// </summary>

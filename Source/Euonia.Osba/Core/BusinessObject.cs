@@ -26,9 +26,29 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	private readonly List<IPropertyInfo> _changedProperties = [];
 
 	/// <summary>
+	/// 已更改属性的只读快照；集合变化时失效。
+	/// </summary>
+	private IReadOnlyList<IPropertyInfo> _changedPropertiesSnapshot;
+
+	/// <summary>
 	/// 保护 <see cref="_changedProperties"/> 并发访问的同步锁。
 	/// </summary>
 	private readonly Lock _changedPropertiesLock = new();
+
+	/// <summary>
+	/// 惰性创建的业务规则集合。
+	/// </summary>
+	private Rules _rules;
+
+	/// <summary>
+	/// 惰性创建的字段管理器。
+	/// </summary>
+	private FieldDataManager _fieldManager;
+
+	/// <summary>
+	/// 装载作用域计数（按异步流隔离）；工厂方法执行期间允许写入只读对象。
+	/// </summary>
+	private AsyncLocal<int> _loadScope;
 
 	/// <summary>
 	/// 业务对象的事件管理器。
@@ -131,7 +151,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	#region Rule check
 
 	/// <inheritdoc/>
-	public virtual bool IsValid => Rules.IsValid;
+	/// <remarks>
+	/// 首次检查之前恒为 <see langword="true"/>（违规集合尚未建立）。读取本属性<b>不会</b>
+	/// 创建规则集合，因此对从不校验的对象没有额外分配。
+	/// </remarks>
+	public virtual bool IsValid => _rules?.IsValid ?? true;
 
 	/// <summary>
 	/// 获取此业务对象的规则对象。
@@ -148,16 +172,16 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			lock (_changedPropertiesLock)
 			{
-				if (field == null)
+				if (_rules == null)
 				{
-					field = new Rules(this);
+					_rules = new Rules(this);
 				}
-				else if (field.Target == null)
+				else if (_rules.Target == null)
 				{
-					field.SetTarget(this);
+					_rules.SetTarget(this);
 				}
 
-				return field;
+				return _rules;
 			}
 		}
 	}
@@ -170,6 +194,21 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// 不把规则集合变成公开 API。程序集外的调用方请用 <see cref="ValidateAsync"/>。
 	/// </remarks>
 	internal Rules RuleSet => Rules;
+
+	/// <summary>
+	/// 获取当前对象是否已有规则实例；没有实例时表示没有实例级/操作级规则。
+	/// </summary>
+	internal Rules RuleSetOrNull => Volatile.Read(ref _rules);
+
+	/// <summary>
+	/// 获取当前对象是否有正在运行的规则；不会创建规则实例。
+	/// </summary>
+	protected bool HasRunningRules => _rules?.HasRunningRules ?? false;
+
+	/// <summary>
+	/// 获取当前对象是否已创建字段管理器；不会创建实例。
+	/// </summary>
+	protected internal FieldDataManager FieldManagerOrNull => Volatile.Read(ref _fieldManager);
 
 	/// <summary>
 	/// 运行对象级规则检查，并返回对象是否有效。
@@ -401,7 +440,12 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="propertyName">已更改属性的名称。</param>
 	protected virtual void OnPropertyChanged(string propertyName)
 	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+		// 无订阅者时不构造事件参数：属性 setter 是热路径，零订阅场景应零分配。
+		var handler = PropertyChanged;
+		if (handler != null)
+		{
+			handler(this, new PropertyChangedEventArgs(propertyName));
+		}
 	}
 
 	/// <summary>
@@ -419,7 +463,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="propertyName">即将更改的属性的名称。</param>
 	protected virtual void OnPropertyChanging(string propertyName)
 	{
-		PropertyChanging?.Invoke(this, new PropertyChangingEventArgs(propertyName));
+		var handler = PropertyChanging;
+		if (handler != null)
+		{
+			handler(this, new PropertyChangingEventArgs(propertyName));
+		}
 	}
 
 	/// <summary>
@@ -438,7 +486,11 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <param name="value">属性的新值。</param>
 	protected virtual void OnPropertyChanged(string name, object value)
 	{
-		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+		var handler = PropertyChanged;
+		if (handler != null)
+		{
+			handler(this, new PropertyChangedEventArgs(name));
+		}
 	}
 
 	/// <summary>
@@ -452,12 +504,13 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 			if (!_changedProperties.Contains(property))
 			{
 				_changedProperties.Add(property);
+				_changedPropertiesSnapshot = null;
 			}
 		}
 
 		// 该属性没有规则时退化为普通变更通知——绑定依赖这条通知，
 		// 不能因为「进了规则分支但无规则可跑」而丢掉它。
-		if (CheckRuleOnPropertyChanged && Rules.HasRulesFor(property))
+		if (CheckRuleOnPropertyChanged && HasAnyRulesFor(property))
 		{
 			CheckPropertyRules(property);
 		}
@@ -465,6 +518,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		{
 			OnPropertyChanged(property);
 		}
+	}
+
+	/// <summary>
+	/// 判断属性是否有可能适用的规则；不会创建本对象的 <see cref="Rules"/> 实例。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <returns>存在类型级、实例级或操作级规则时返回 <see langword="true"/>。</returns>
+	private bool HasAnyRulesFor(IPropertyInfo property)
+	{
+		if (RuleManager.GetRules(GetType()).RulesFor(property).Count > 0)
+		{
+			return true;
+		}
+
+		var rules = _rules;
+		return rules != null && rules.HasInstanceRulesFor(property);
 	}
 
 	/// <summary>
@@ -483,9 +552,22 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	{
 		get
 		{
+			var snapshot = Volatile.Read(ref _changedPropertiesSnapshot);
+			if (snapshot != null)
+			{
+				return snapshot;
+			}
+
 			lock (_changedPropertiesLock)
 			{
-				return [.. _changedProperties];
+				if (_changedPropertiesSnapshot == null)
+				{
+					_changedPropertiesSnapshot = _changedProperties.Count == 0
+						                             ? Array.Empty<IPropertyInfo>()
+						                             : [.. _changedProperties];
+				}
+
+				return _changedPropertiesSnapshot;
 			}
 		}
 	}
@@ -517,9 +599,10 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 		lock (_changedPropertiesLock)
 		{
 			_changedProperties.Clear();
+			_changedPropertiesSnapshot = Array.Empty<IPropertyInfo>();
 		}
 
-		FieldManager.MarkAllAsUnchanged();
+		_fieldManager?.MarkAllAsUnchanged();
 	}
 
 	#endregion
@@ -652,9 +735,15 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	{
 		get
 		{
+			var manager = Volatile.Read(ref _fieldManager);
+			if (manager != null)
+			{
+				return manager;
+			}
+
 			lock (_changedPropertiesLock)
 			{
-				return field ??= new FieldDataManager(GetType());
+				return _fieldManager ??= new FieldDataManager(GetType());
 			}
 		}
 	}
@@ -778,9 +867,87 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <inheritdoc />
 	public void LoadProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue)
 	{
+		EnsureCanLoadProperty(propertyInfo);
+
 		var oldValue = FieldManager.GetExistingOrInit(propertyInfo);
 
 		LoadPropertyValue(propertyInfo, oldValue, newValue, false);
+	}
+
+	/// <summary>
+	/// 开始一次装载作用域：期间允许通过 <see cref="LoadProperty(IPropertyInfo, object)"/> 写入
+	/// 通常拒绝写入的对象（例如只读对象）。工厂方法在调用业务方法时自动进入该作用域。
+	/// </summary>
+	/// <returns>作用域；释放后恢复进入前的状态。</returns>
+	/// <remarks>
+	/// 作用域按异步流隔离（<see cref="AsyncLocal{T}"/>），并发调用互不可见。
+	/// 这是<b>装载</b>入口，不是用户写入入口：它不会标记变更、不会触发规则。
+	/// </remarks>
+	internal IDisposable BeginLoad()
+	{
+		var scope = Volatile.Read(ref _loadScope) ?? Interlocked.CompareExchange(ref _loadScope, new AsyncLocal<int>(), null) ?? _loadScope;
+		return new LoadScope(scope);
+	}
+
+	/// <summary>
+	/// 获取当前异步流是否处于装载作用域。
+	/// </summary>
+	internal bool IsLoading => (_loadScope?.Value ?? 0) > 0;
+
+	/// <summary>
+	/// 判断当前是否允许装载指定属性；只读对象默认拒绝，除非处于装载作用域。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <returns>允许装载则返回 <see langword="true"/>。</returns>
+	protected internal virtual bool CanLoadProperty(IPropertyInfo property)
+	{
+		// 装载不是用户写入：工厂作用域内一律允许；作用域外退回“能否写入”的判定，
+		// 使限制了某些字段写入的派生对象不会因为 public LoadProperty 而被绕过。
+		return IsLoading || CanWriteProperty(property);
+	}
+
+	/// <summary>
+	/// 在装载前校验写权限；只读对象在非装载作用域下应拒绝。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <exception cref="SecurityException">当前不允许装载该属性时抛出。</exception>
+	private void EnsureCanLoadProperty(IPropertyInfo property)
+	{
+		if (!CanLoadProperty(property))
+		{
+			throw new SecurityException(string.Format(Resources.IDS_PROPERTY_SET_NOT_ALLOWED, property.Name));
+		}
+	}
+
+	/// <summary>
+	/// 装载作用域：进入时计数 +1，释放时 -1。
+	/// </summary>
+	private sealed class LoadScope : IDisposable
+	{
+		private readonly AsyncLocal<int> _scope;
+		private bool _disposed;
+
+		/// <summary>
+		/// 进入装载作用域。
+		/// </summary>
+		/// <param name="scope">当前实例的装载计数器。</param>
+		public LoadScope(AsyncLocal<int> scope)
+		{
+			_scope = scope;
+			scope.Value++;
+		}
+
+		/// <inheritdoc />
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			_scope.Value--;
+		}
 	}
 
 	/// <summary>
@@ -822,6 +989,8 @@ public abstract class BusinessObject : IBusinessObject, IHasRuleCheck, IDisposab
 	/// <inheritdoc/>
 	public virtual void LoadProperty(IPropertyInfo propertyInfo, object newValue)
 	{
+		EnsureCanLoadProperty(propertyInfo);
+
 #if IOS
         // 如果类型为可空类型，则手动调用 LoadProperty<T>，否则将发生 JIT 错误
         if (propertyInfo.Type == typeof(int?))
