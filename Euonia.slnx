@@ -1,4 +1,7 @@
 <Solution>
+    <Folder Name="/Benchmarks/">
+        <Project Path="Benchmarks/Euonia.Bus.Benchmarks/Euonia.Bus.Benchmarks.csproj" />
+    </Folder>
     <Folder Name="/Samples/">
         <Project Path="Samples/Euonia.Sample.Webapi/Euonia.Sample.Webapi.csproj" />
         <File Path="Samples/common.props" />
