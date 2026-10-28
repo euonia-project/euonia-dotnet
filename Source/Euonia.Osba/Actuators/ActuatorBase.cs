@@ -301,7 +301,7 @@ public abstract class ActuatorBase<TTarget>
 		{
 			if (_ruleScope != null)
 			{
-				target.RuleSet.DetachOperationRules();
+				target.RuleSet.DetachOperationRules(_ruleScope);
 			}
 		}
 	}
