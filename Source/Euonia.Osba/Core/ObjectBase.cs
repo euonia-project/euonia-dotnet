@@ -332,7 +332,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// <para>
 	/// 与 <see cref="CheckPropertyRules(IPropertyInfo)"/>（同步、阻塞、供 setter 热路径）相对：
 	/// 本方法在<b>异步流程里</b> <c>await</c> 属性级规则——含 I/O 的校验（查库、调远端）
-	/// 不再阻塞线程池线程。典型用法是 <c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型
+	/// 不会阻塞线程池线程。典型用法是 <c>CheckRuleOnPropertyChanged =&gt; false</c> 的类型
 	/// 在保存前的异步管线里逐属性校验；「推迟到保存时」的路径
 	/// （<see cref="EnsureRulesAsync(string, CancellationToken)"/>）内部走的就是同一异步内核。
 	/// </para>

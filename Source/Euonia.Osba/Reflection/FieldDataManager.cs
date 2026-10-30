@@ -14,8 +14,8 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>
 /// 字段值按属性在元数据中的稳定索引存放在 <see cref="IFieldData"/> 数组里，
-/// 不再为每个对象分配一个 <see cref="ConcurrentDictionary{TKey,TValue}"/>。
-/// 未在元数据中注册的自定义 <see cref="IPropertyInfo"/> 仍走按名称的兜底字典，保持兼容。
+/// 每个对象只分配这一个数组。
+/// 未在元数据中注册的自定义 <see cref="IPropertyInfo"/> 走按名称的兜底字典。
 /// </para>
 /// </remarks>
 public class FieldDataManager
@@ -327,7 +327,7 @@ public class FieldDataManager
 	/// 而加锁会造出一条可证明的 ABBA 锁序反转：本方法被 <c>PropertyInfoManager.CreateAndPublish</c>
 	/// 在持有 <c>_publishLock</c> 时调用（A→B），而本方法一旦触发类型的静态初始化器，
 	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</c>（B→A）。
-	/// 早期版本在 B 段额外拿 <c>lock(type)</c> 时，两个入口并发即可能互等。
+	/// 若在 B 段额外拿 <c>lock(type)</c>，两个入口并发即可能互等。
 	/// </para>
 	/// </remarks>
 	public static void ForceStaticFieldInit(Type type)

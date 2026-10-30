@@ -519,7 +519,7 @@ public class ObjectReflector
 	/// </remarks>
 	internal static string[] GetConventionalMethodNames(Type attributeType)
 	{
-		// 缓存由 OperationConventions 自己按（特性类型，前缀）维护，这里不再套一层
+		// 缓存由 OperationConventions 自己按（特性类型，前缀）维护，这里不重复缓存
 		return OperationConventions.Names(attributeType, FactoryPrefix);
 	}
 

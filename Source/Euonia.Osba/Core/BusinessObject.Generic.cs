@@ -284,7 +284,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		field = newValue;
 
 		// 字段模式与字典模式共用同一份“可被规则读取”的值：
-		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步一份，避免它们读到默认值。
+		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步写入字典。
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
 		if (!IsBypassingRuleChecks)

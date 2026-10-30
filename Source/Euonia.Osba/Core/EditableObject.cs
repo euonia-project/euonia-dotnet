@@ -147,8 +147,8 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 			// BusinessContext.ObjectFactory 会缓存解析结果；这里不必每次走 DI。
 			var result = await BusinessContext.ObjectFactory.SaveAsync((T)this, cancellationToken);
 
-			// 保存成功（含删除）后把对象复位为干净状态：删除后仍停在 Deleted 会让下一次
-			// SaveAsync 再执行一次 Delete。工厂返回不同实例时不动 this，交给调用方使用返回值。
+			// 保存成功后把对象复位为干净状态，使下一次 SaveAsync 不会重复执行 Delete。
+			// 工厂返回不同实例时不动 this，交给调用方使用返回值。
 			if (ReferenceEquals(result, this))
 			{
 				MarkAsClean();

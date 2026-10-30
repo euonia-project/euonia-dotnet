@@ -27,7 +27,7 @@ public sealed class OsbaOptions
 	/// 获取或设置是否对缺少持久化工厂方法（Insert/Update/Delete）的对象抛错。
 	/// </summary>
 	/// <remarks>
-	/// 默认开启。关闭后允许缺少持久化方法时调用基类空实现，只应在迁移期临时使用。
+	/// 默认开启。关闭后允许缺少持久化方法时调用基类空实现，只应在确有需要时临时使用。
 	/// </remarks>
 	public bool StrictFactoryMethods { get; set; } = true;
 
