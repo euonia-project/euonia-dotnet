@@ -19,7 +19,7 @@ public static class ActuatorExtensions
 		/// <returns>包含转换结果的 <see cref="Task{TResult}"/>。</returns>
 		public async Task<TResult> ReturnAsync<TResult>([NotNull] Func<TTarget, TResult> selector)
 		{
-			var result = await source;
+			var result = await source.ConfigureAwait(false);
 			return selector(result);
 		}
 
@@ -32,7 +32,7 @@ public static class ActuatorExtensions
 		/// <returns>表示操作完成的 <see cref="Task"/>。</returns>
 		public async Task NextAsync<TResult>([NotNull] Func<TTarget, TResult> selector, [NotNull] Action<TResult> action)
 		{
-			var result = await source;
+			var result = await source.ConfigureAwait(false);
 			action(selector(result));
 		}
 
@@ -43,7 +43,7 @@ public static class ActuatorExtensions
 		/// <returns>表示操作完成的 <see cref="Task"/>。</returns>
 		public async Task NextAsync([NotNull] Action<TTarget> action)
 		{
-			var result = await source;
+			var result = await source.ConfigureAwait(false);
 			action(result);
 		}
 	}

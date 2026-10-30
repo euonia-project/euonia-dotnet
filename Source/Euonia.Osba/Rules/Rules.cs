@@ -587,7 +587,7 @@ public class Rules : IRules
 			throw new ValidationException(message, existing);
 		}
 
-		await CheckObjectRulesAsync(cascade, cancellationToken);
+		await CheckObjectRulesAsync(cascade, cancellationToken).ConfigureAwait(false);
 
 		if (IsValid)
 		{
@@ -709,7 +709,7 @@ public class Rules : IRules
 
 		var (_, tasks) = RunRules(rules, true, out _, cancellationToken);
 
-		await Task.WhenAll(tasks);
+		await Task.WhenAll(tasks).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -731,7 +731,7 @@ public class Rules : IRules
 
 		foreach (var property in properties)
 		{
-			await CheckRulesAsync(property, cancellationToken);
+			await CheckRulesAsync(property, cancellationToken).ConfigureAwait(false);
 		}
 	}
 
@@ -770,7 +770,7 @@ public class Rules : IRules
 	/// <param name="cascade">是否级联检查相关属性的规则。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
-	private Tuple<List<string>, List<Task>> CheckRulesForProperty(IPropertyInfo property, bool cascade, CancellationToken cancellationToken = default)
+	private (List<string> Properties, List<Task> Tasks) CheckRulesForProperty(IPropertyInfo property, bool cascade, CancellationToken cancellationToken = default)
 	{
 		var rules = ResolvePropertyRules(property);
 
@@ -787,7 +787,7 @@ public class Rules : IRules
 	/// <param name="executedCount">实际启动的规则数量（已按 <see cref="ExecuteOnStateAttribute"/> 过滤）。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
-	private Tuple<List<string>, List<Task>> RunRules(IEnumerable<IRuleBase> rules, bool cascade, out int executedCount, CancellationToken cancellationToken = default)
+	private (List<string> Properties, List<Task> Tasks) RunRules(IEnumerable<IRuleBase> rules, bool cascade, out int executedCount, CancellationToken cancellationToken = default)
 	{
 		List<string> affectProperties = null;
 		List<Task> tasks = null;
@@ -849,7 +849,7 @@ public class Rules : IRules
 			}
 		}
 
-		return Tuple.Create(affectProperties ?? EmptyAffectedProperties, tasks ?? EmptyTasks);
+		return (affectProperties ?? EmptyAffectedProperties, tasks ?? EmptyTasks);
 	}
 
 	/// <summary>

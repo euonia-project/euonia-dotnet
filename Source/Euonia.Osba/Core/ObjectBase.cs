@@ -18,7 +18,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 实现自定义业务逻辑和验证规则。该类管理规则检查、属性存储、业务上下文与装载作用域；
 /// <b>变更追踪</b>由 <see cref="BusinessObject{T}"/> 提供，服务对象不参与。
 /// </remarks>
-public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
+public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle, IDisposable
 {
 	/// <summary>
 	/// 保护规则/字段管理器惰性初始化与校验状态读写的同步锁。
@@ -244,7 +244,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </remarks>
 	public virtual async Task<bool> ValidateAsync(bool cascade = true, CancellationToken cancellationToken = default)
 	{
-		await Rules.CheckObjectRulesAsync(cascade, cancellationToken);
+		await Rules.CheckObjectRulesAsync(cascade, cancellationToken).ConfigureAwait(false);
 		RefreshValidationState(completed: !Rules.IsRuleCheckingSuspended);
 		return IsValid;
 	}
@@ -264,7 +264,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	{
 		try
 		{
-			await Rules.EnsureObjectRulesAsync(cascade: true, "Object not valid.", cancellationToken);
+			await Rules.EnsureObjectRulesAsync(cascade: true, "Object not valid.", cancellationToken).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -311,10 +311,10 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 		{
 			if (!CheckRuleOnPropertyChanged)
 			{
-				await Rules.CheckRulesAsync(RulesPropertiesToCheck, cancellationToken);
+				await Rules.CheckRulesAsync(RulesPropertiesToCheck, cancellationToken).ConfigureAwait(false);
 			}
 
-			await Rules.EnsureObjectRulesAsync(cascade: true, message, cancellationToken);
+			await Rules.EnsureObjectRulesAsync(cascade: true, message, cancellationToken).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -343,7 +343,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// </remarks>
 	internal async Task CheckPropertyRulesAsync(IPropertyInfo property, CancellationToken cancellationToken = default)
 	{
-		await Rules.CheckRulesAsync(property, cancellationToken);
+		await Rules.CheckRulesAsync(property, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -628,6 +628,77 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 
 		// 干净对象还没有本轮校验结论；需要结论请调用 ValidateAsync/EnsureValidAsync。
 		SetValidationState(ValidationState.NotValidated);
+	}
+
+	#endregion
+
+	#region Lifecycle callbacks
+
+	/// <inheritdoc />
+	Task IObjectLifecycle.OnSavingAsync(CancellationToken cancellationToken)
+	{
+		return OnSavingAsync(cancellationToken);
+	}
+
+	/// <inheritdoc />
+	Task IObjectLifecycle.OnSavedAsync(object result, CancellationToken cancellationToken)
+	{
+		return OnSavedAsync(result, cancellationToken);
+	}
+
+	/// <inheritdoc />
+	Task IObjectLifecycle.OnExecutingAsync(CancellationToken cancellationToken)
+	{
+		return OnExecutingAsync(cancellationToken);
+	}
+
+	/// <inheritdoc />
+	Task IObjectLifecycle.OnExecutedAsync(CancellationToken cancellationToken)
+	{
+		return OnExecutedAsync(cancellationToken);
+	}
+
+	/// <summary>
+	/// 保存前回调；默认无操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步回调的任务。</returns>
+	/// <remarks>在规则校验通过之后、工厂方法执行之前调用。</remarks>
+	protected virtual Task OnSavingAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// 保存成功后回调；默认无操作。
+	/// </summary>
+	/// <param name="result">工厂返回的保存结果；可能与当前实例不同。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步回调的任务。</returns>
+	protected virtual Task OnSavedAsync(object result, CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// 执行体执行前回调；默认无操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步回调的任务。</returns>
+	/// <remarks>在授权与规则校验通过之后、执行体之前调用。</remarks>
+	protected virtual Task OnExecutingAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
+	}
+
+	/// <summary>
+	/// 执行体执行成功后回调；默认无操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示异步回调的任务。</returns>
+	protected virtual Task OnExecutedAsync(CancellationToken cancellationToken = default)
+	{
+		return Task.CompletedTask;
 	}
 
 	#endregion
@@ -1153,7 +1224,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// 作用域按异步流隔离（<see cref="AsyncLocal{T}"/>），并发调用互不可见。
 	/// 这是<b>装载</b>入口，不是用户写入入口：它不会标记变更、不会触发规则。
 	/// </remarks>
-	internal IDisposable BeginLoad()
+	protected internal IDisposable BeginLoad()
 	{
 		var scope = Volatile.Read(ref _loadScope) ?? Interlocked.CompareExchange(ref _loadScope, new AsyncLocal<int>(), null) ?? _loadScope;
 		return new LoadScope(scope);
@@ -1162,7 +1233,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IDisposable
 	/// <summary>
 	/// 获取当前异步流是否处于装载作用域。
 	/// </summary>
-	internal bool IsLoading => (_loadScope?.Value ?? 0) > 0;
+	protected internal bool IsLoading => (_loadScope?.Value ?? 0) > 0;
 
 	/// <summary>
 	/// 判断当前是否允许装载指定属性；只读对象默认拒绝，除非处于装载作用域。

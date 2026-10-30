@@ -9,6 +9,33 @@
 
 ### Euonia.Osba
 
+- **易用性：属性注册推断类型**：新增 `RegisterProperty(Expression<Func<T, TValue>>, ...)` 重载，
+  可直接写 `RegisterProperty(p => p.Name)`，无需显式泛型参数，值类型也不再装箱。
+- **易用性：读取执行器**：新增 `FetchActuator<T>` 与 `IActuator.For<T>().Fetch(...)`；
+  读取只调用工厂读取方法，不触发保存，便于把「读取 → 处理」也纳入执行器管道。
+- **扩展性：生命周期回调**：新增 `IObjectLifecycle` 与 `OnSavingAsync` / `OnSavedAsync` /
+  `OnExecutingAsync` / `OnExecutedAsync` 四个可覆写回调，用于审计、缓存失效、事件收集等横切逻辑。
+- **性能**：规则内部结果由 `Tuple` 改为 `ValueTuple`，减少属性检查路径的元组分配；
+  库内异步路径统一 `ConfigureAwait(false)`，避免同步上下文捕获与线程跳转。
+- **性能：执行器空管道快路径**：没有 `Handle` / `Behavior` / `IActuatorBehavior` 时，
+  执行器直接执行「后续处理 → 终结」，跳过管道组件快照与委托组合；`FetchActuator` 从
+  1.41 µs / 2.69 KB 降至 1.24 µs / 1.94 KB（ShortRun）。
+- **测试**：新增 19 个用例，覆盖属性类型推断、读取执行器、生命周期回调、领域对象控制、规则服务解析、外部规则注册、自定义工厂与旧公共 API 兼容性。
+- **API 兼容性**：新增 5 个回归测试，覆盖旧 `RegisterProperty` 表达式重载、`IFieldData` / `IRuleContext` 默认接口成员、旧 `BusinessObjectFactory` 构造函数，以及宿主注册的自定义 `IPipeline` 仍会执行。
+- **文档**：新增 `Source/Euonia.Osba/DESIGN.md`，集中记录业务模型定位、与 DDD/MVVM 的关系、对象模型、规则、工厂、执行器、性能与 API 兼容性设计。
+- **基准**：新增 `DomainControlBenchmarks` 与 `RuleAndFactoryBenchmarks.FetchActuator`；
+  ShortRun 参考值：属性写 37 ns / 24 B、带一条属性规则写 130 ns / 304 B、
+  `GetOriginalValue` 8 ns / 0 B、`RejectChanges` 94 ns / 112 B、`FetchFactory` 1.12 µs / 1.48 KB、`FetchActuator` 1.24 µs / 1.94 KB。
+- **领域对象控制：原始值与回滚**：`IFieldData` 增加 `OriginalValue`；`BusinessObject<T>` 增加
+  `GetOriginalValue` / `GetOriginalValues` / `GetChangedValues` / `IsDirty` / `RejectChanges`；
+  `FieldData<T>` 用独立的变更标记记录基线，历史深度为 0 时也能正确判断 `IsChanged`。
+- **领域对象控制：状态机**：`MarkAsNew/Changed/Deleted` 改为 virtual 并统一经过 `TransitionTo`；
+  派生类可重写 `CanTransitionTo` 禁止非法迁移，通过 `StateChanged` 观察状态变化。
+- **领域对象控制：装载与属性访问**：`IsLoading`、`BeginLoad` 开放给派生类；
+  `GetProperty(IPropertyInfo)` / `SetProperty(IPropertyInfo, object)` 改为 virtual，便于派生类完全接管属性访问。
+- **规则扩展**：`IRuleContext` 增加 `ServiceProvider` 与 `GetService<T>()`，规则可在执行时从目标对象的当前作用域解析服务，而不必把 Scoped 依赖塞进共享规则实例。
+- **规则扩展**：`RuleManager.AddRule(IRuleBase)` 公开，宿主/插件可通过 `IRuleRegistry.GetRules(type).AddRule(rule)` 在 `AddRules()` 之外注册类型级规则；线程安全，并使规则缓存失效。
+- **工厂扩展**：`BusinessObjectFactory` 的公开操作方法与 `GetObjectInstance` / `WithActivator` / `WithActivatorAsync` 改为 virtual，宿主可派生工厂接管实例创建、注入或操作流程。
 - **严格化工厂边界**：工厂方法返回 `ValueTask`/`ValueTask<T>` 时会被真正等待；
   解析到 `EditableObject<T>`/`ServiceObject<T>` 的基类空实现时抛 `NotSupportedException`，
   不再“保存成功但什么也没做”；反射调用抛出的业务异常不再被 `TargetInvocationException` 包裹。

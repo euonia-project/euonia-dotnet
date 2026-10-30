@@ -31,6 +31,16 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	private T _value;
 
 	/// <summary>
+	/// 自上次 <see cref="MarkAsUnchanged"/> 以来的原始值。
+	/// </summary>
+	private T _originalValue;
+
+	/// <summary>
+	/// 当前是否存在未提交的修改；独立于历史缓冲区，历史深度为 0 时也能正确判断。
+	/// </summary>
+	private bool _isChanged;
+
+	/// <summary>
 	/// 环形历史缓冲区；长度按需增长，最大不超过 <see cref="HistoryDepth"/>。
 	/// </summary>
 	private T[] _history;
@@ -107,6 +117,20 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	}
 
 	/// <summary>
+	/// 获取字段自上次 <see cref="MarkAsUnchanged"/> 以来的原始值。
+	/// </summary>
+	public T OriginalValue
+	{
+		get
+		{
+			lock (_sync)
+			{
+				return _originalValue;
+			}
+		}
+	}
+
+	/// <summary>
 	/// 设置字段值，并可选是否记录历史。
 	/// </summary>
 	/// <param name="value">新值。</param>
@@ -130,7 +154,19 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 			oldValue = _value;
 			if (trackHistory)
 			{
+				if (!_isChanged)
+				{
+					_originalValue = oldValue;
+					_isChanged = true;
+				}
+
 				PushHistory(oldValue);
+			}
+			else
+			{
+				// 装载语义：新值直接成为基线，不产生未提交修改。
+				_originalValue = value;
+				_isChanged = false;
 			}
 
 			_value = value;
@@ -172,6 +208,8 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 
 			_historyCount = 0;
 			_historyStart = 0;
+			_originalValue = _value;
+			_isChanged = false;
 		}
 	}
 
@@ -195,6 +233,7 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 			value = _history[index];
 			_historyCount--;
 			_value = value;
+			_isChanged = !EqualityComparer<T>.Default.Equals(_value, _originalValue);
 		}
 
 		_observable?.Publish(value);
@@ -205,6 +244,8 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 		get => Value;
 		set => SetValue(value == null ? default : (T)value, trackHistory: true);
 	}
+
+	object IFieldData.OriginalValue => OriginalValue;
 
 	void IFieldDataInternal.SetValue(object value, bool trackHistory)
 	{
@@ -234,7 +275,7 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 		{
 			lock (_sync)
 			{
-				return _historyCount > 0;
+				return _isChanged;
 			}
 		}
 	}

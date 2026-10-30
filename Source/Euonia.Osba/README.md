@@ -4,7 +4,9 @@
 >
 > 面向对象、可扩展的业务对象框架：把「一次业务操作」建模成对象，由框架在正确的时机完成属性存储、变更追踪、规则校验、工厂分派、执行器编排与权限裁决。
 
-`Euonia.Osba` 不是 ORM，也不是通用 DDD 聚合基类。它位于**应用层**，解决的是富业务对象在服务端落地时反复出现的几件事：
+`Euonia.Osba` 不是 ORM，也不是 DDD 专用框架。它的定位是**业务模型（Business Model）运行时**：对象拥有属性、行为、规则、状态、生命周期与权限边界，而不是贫血的数据容器。DDD、MVVM、CQRS、CRUD、低代码都可以在同一组原语上组合；DDD 只是其中一种可选投影。
+
+它解决的是富业务对象在服务端落地时反复出现的几件事：
 
 - 属性怎样声明、怎样读写、怎样知道「改了哪些字段」；
 - 一次创建 / 读取 / 保存 / 删除 / 命令执行怎样被统一编排；
@@ -12,7 +14,7 @@
 - 权限在哪个边界裁决，怎样保证「判定不了」时不会静默放行；
 - 上述能力怎样在不绑定具体数据库、不绑定具体鉴权引擎的前提下组合起来。
 
-本文包含**架构设计、使用方法、逐文件结构**。更长的端到端示例见 [`SAMPLE.md`](SAMPLE.md)，权限专题见 [`PERMISSION.md`](PERMISSION.md)、[`PERMISSION-SAMPLE.md`](PERMISSION-SAMPLE.md) 与 [`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)。
+本文包含**架构设计、使用方法、逐文件结构**。设计决策与取舍见 [`DESIGN.md`](DESIGN.md)；更长的端到端示例见 [`SAMPLE.md`](SAMPLE.md)，权限专题见 [`PERMISSION.md`](PERMISSION.md)、[`PERMISSION-SAMPLE.md`](PERMISSION-SAMPLE.md) 与 [`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)。
 
 ---
 
@@ -31,7 +33,20 @@
 
 ## 1. 定位与能力
 
-### 1.1 它解决什么问题
+### 1.1 定位：业务模型，而不是 DDD 专用框架
+
+Osba 的核心目标是提供**业务模型（Business Model）的运行时**，而不是实现某一套架构范式。
+
+- **不绑定 DDD**：不要求聚合根、实体身份、值对象、领域事件、仓储/UoW；这些是可选的上层设计。
+- **不绑定 MVVM**：但提供 `INotifyPropertyChanged` / `INotifyPropertyChanging`、`ObservableList/Dictionary`、`IsBusy`、`IsDirty`、`RejectChanges` 等 MVVM 友好能力。
+- **不绑定应用层或持久化**：持久化由工厂方法完成，事务边界由宿主决定。
+- **可选集成**：DDD、MVVM、CQRS、CRUD、低代码都可以在同一组原语上组合。
+
+与 DDD 的共同点是：都反对贫血模型，都强调行为、规则与生命周期；区别是 Osba 把「业务模型」做成更小的公共分母，DDD 是它的一种投影。
+
+> 因此 Osba **不直接引用 `Euonia.Domain`**：Domain 是可选的上层适配目标，而不是核心依赖。需要 DDD 时通过适配层/组合接入；需要 MVVM 时直接使用通知、集合与编辑状态能力。
+
+### 1.2 它解决什么问题
 
 Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
@@ -44,7 +59,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 框架负责在**工厂边界**（创建、读取、保存、执行）调用这些能力，并把「验证线」与「权限线」严格分开。
 
-### 1.2 三种对象
+### 1.3 三种对象
 
 | 类型 | 基类 | 有属性 | 变更追踪 | 有状态机 | 可保存 | 典型用途 |
 |---|---|:---:|:---:|:---:|:---:|---|
@@ -54,20 +69,23 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 > `ServiceObject<T>` 刻意不继承 `BusinessObject<T>`：它只保留属性存储与规则能力，没有 `ChangedProperties`、没有 `SaveAsync`、没有编辑状态。它的校验应写成**对象级规则**。
 
-### 1.3 能力清单
+### 1.4 能力清单
 
 - **属性系统**：静态注册、类型级元数据缓存、实例级字段数组、环形撤销历史、按需可观察值。
 - **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段。
+- **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态迁移（`CanTransitionTo` / `StateChanged`）。
 - **状态机**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted`，保存时由 `ScopeOperationMap` 唯一映射到业务操作。
 - **规则系统**：`RuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
 - **工厂**：约定名 + 特性双通道查找，支持可选参数、`params`、`Task` / `ValueTask`，并缓存反射结果。
-- **执行器**：`IActuator.For<T>().Create/Update/Delete/Execute(...)` 把「取对象 → Handle → 终结」串成管道，可挂 `IActuatorBehavior<T>`。
+- **执行器**：`IActuator.For<T>().Fetch/Create/Update/Delete/Execute(...)` 把「取对象 → Handle → 终结」串成管道，可挂 `IActuatorBehavior<T>`。
+- **生命周期回调**：`IObjectLifecycle` 在保存与执行边界提供 `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` 扩展点。
 - **权限**：操作权限与行级数据权限；契约在 `Euonia.Core`，Osba 只实现自己的一半，**不引用 `Euonia.Security`**。
 - **上下文**：`BusinessContext` / `BusinessContextAccessor`，按异步流传播；支持手动作用域，后台任务应使用 `IServiceScopeFactory` 新建作用域。
 - **可观测性**：`ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")`、`ILoggerFactory` 回退。
 - **启动期校验**：工厂签名、`[Inject]` 可解析性、属性元数据、缺失持久化方法。
+- **性能**：类型级元数据缓存、实例字段数组、规则同步快路径、反射结果缓存、库内 `ConfigureAwait(false)`。
 
-### 1.4 目标框架与依赖
+### 1.5 目标框架与依赖
 
 | 项目 | 值 |
 |---|---|
@@ -90,7 +108,7 @@ Euonia.Osba
 **刻意不引用**：
 
 - `Euonia.Security`：Osba 只面对 Core 里的权限契约（`IPermissionChecker`、`IPermissionCodeSource`、`IObjectScopeAuthorizer`、`IObjectOperationResolver`、`PermissionAttribute`），接引擎由宿主用 `AddPermission` 一行完成，不需要适配包。
-- `Euonia.Domain`：Osba 是「编辑模型 / 命令模型」，不是 DDD 聚合根基类。
+- `Euonia.Domain`：Osba 是业务模型运行时，DDD 只是可选投影；直接依赖会把所有宿主绑定到聚合、实体、领域事件与仓储/UoW 语义。需要 DDD 时通过适配层/组合接入；MVVM 则直接使用通知、集合与编辑状态能力。
 - EF Core / 任何具体数据库：持久化由业务对象的工厂方法通过 `BusinessContext` 自行完成。
 
 ---
@@ -298,6 +316,12 @@ public sealed class Repo : EditableObject<Repo>
 ```csharp
 var actuator = scope.ServiceProvider.GetRequiredService<IActuator>();
 
+// 读取
+var loaded = await actuator.For<Repo>()
+                           .Fetch("pay-web")
+                           .Handle(r => r.TeamId = "TeamA")
+                           .ExecuteAsync(cancellationToken);
+
 // 创建
 var repo = await actuator.For<Repo>()
                          .Create("pay-web")
@@ -316,7 +340,7 @@ await actuator.For<Repo>()
               .ExecuteAsync(cancellationToken);
 ```
 
-执行器没有 `Fetch`；读取请直接用 `IObjectFactory.FetchAsync<T>(...)` 或 `BusinessContext.FetchAsync<T>(...)`。
+读取执行器只调用工厂读取方法，不触发保存；需要更底层的读取时仍可直接使用 `IObjectFactory.FetchAsync<T>(...)` 或 `BusinessContext.FetchAsync<T>(...)`。
 
 ### 2.6 校验
 
@@ -566,10 +590,11 @@ classDiagram
 
 | 类型 | 职责 | 关键点 |
 |---|---|---|
-| `ObjectBase` | 公共根：属性存储、规则、上下文、权限钩子、装载作用域、父子图、`Dispose` | 不提供变更追踪；`Rules` 是 `protected` |
+| `ObjectBase` | 公共根：属性存储、规则、上下文、权限钩子、生命周期回调、装载作用域、父子图、`Dispose` | 不提供变更追踪；`Rules` 是 `protected` |
+| `IObjectLifecycle` | 保存 / 执行生命周期回调契约 | 由 `ObjectBase` 实现，派生类覆写 `OnSaving/OnSaved/OnExecuting/OnExecuted` |
 | `ObjectBase<T>` | 泛型属性注册入口 | `RegisterProperty` 的多种重载 |
-| `BusinessObject<T>` | 变更追踪 + 泛型 `Get/SetProperty` | `ChangedProperties`、`AcceptChanges`；字段模式与字典模式共用存储 |
-| `ObservableObject<T>` | 编辑状态机 + 繁忙状态 + `IsSavable` | `MarkAsNew/Changed/Deleted` 非 virtual；`MarkAsClean` 可重写 |
+| `BusinessObject<T>` | 变更追踪 + 泛型 `Get/SetProperty` + 原始值 / 回滚 | `ChangedProperties`、`GetOriginalValue`、`RejectChanges`；字段模式与字典模式共用存储 |
+| `ObservableObject<T>` | 编辑状态机 + 繁忙状态 + `IsSavable` | `MarkAsNew/Changed/Deleted` 可重写（`TransitionTo`）；`CanTransitionTo` / `StateChanged` 可控制迁移 |
 | `EditableObject<T>` | 保存流程 + `Saved` 事件 + 工厂方法空实现 | `SaveAsync` 先校验、再走 `IObjectFactory`；删除成功后复位为 `None` |
 | `ReadOnlyObject<T>` | 只读对象 | `CanWriteProperty => false`；`LoadProperty` 只在装载作用域或显式绕过时允许 |
 | `ServiceObject<T>` | 一次独立业务操作 | 只保留属性 + 规则；`ExecuteAsync` 是执行体 |
@@ -601,6 +626,8 @@ stateDiagram-v2
 | `IServiceObject` | `execute` | `[FactoryExecute]` | 命令执行 |
 
 > `ObjectEditState` 由调用方通过公开的 `MarkAsNew/Changed/Deleted` 设置。它改变的是**实际执行的操作**，每个操作各自应用自己的策略，不构成「把同一变更路由到更宽松的键」的越权通道。
+>
+> `MarkAsNew/Changed/Deleted` 是 `virtual`，统一经过 `TransitionTo`：派生类可重写 `CanTransitionTo` 表达领域状态机（例如禁止 `Deleted` 回到 `New`），并通过 `StateChanged` 观察迁移。`AcceptChanges` 是提交/复位，不经过 `CanTransitionTo`，但会触发 `StateChanged`。
 
 ### 3.4 属性存储与变更追踪
 
@@ -714,6 +741,8 @@ sequenceDiagram
 3. 若实现 `IUseBusinessContext`，注入 `BusinessContext`（触发规则初始化）。
 4. 扫描 `[Inject]` 属性：支持单个服务、`IEnumerable<T>` / `IList<T>` / `ICollection<T>` / 数组、键控服务；未注册的单值服务赋 `null` 并写诊断日志。
 
+`BusinessObjectFactory` 的公开操作方法（`Create` / `Fetch` / `SaveAsync` / `ExecuteAsync` 等）以及 `GetObjectInstance` / `WithActivator` / `WithActivatorAsync` 都是 `virtual`，宿主可派生工厂接管实例创建、注入或整个操作流程。
+
 #### 3.5.4 严格工厂方法与异步返回值
 
 - `OsbaOptions.StrictFactoryMethods` 默认 `true`。解析到的工厂方法如果声明类型是 `EditableObject<>` / `ServiceObject<>` 的基类空实现，抛 `NotSupportedException`，避免「保存成功但什么也没做」。
@@ -778,6 +807,8 @@ flowchart TB
 - 没有 `BusinessContext` 的对象（手工 `new`、静态初始化期）回退到 `RuleManager` 的**进程级**默认注册表。
 - `AddRules()` 对每个类型在每个规则管理器中只执行一次（`Initialized` 守卫）；`AddDataAnnotations()` 在 `AddRules()` 之前执行。
 - 类型级规则实例是**共享**的，规则字段里绝不能存请求态；一切从 `context.Target` 取。
+- 宿主/插件可以在 `AddRules()` 之外通过 `IRuleRegistry.GetRules(type).AddRule(rule)` 注册类型级规则；线程安全，已创建对象在下一次检查时生效。
+- 需要按请求解析服务时用 `context.GetService<T>()` 或 `context.ServiceProvider`；不要依赖规则构造函数注入的 Scoped 服务。
 
 #### 3.6.4 严重级别与绕过
 
@@ -823,6 +854,7 @@ sequenceDiagram
 
 | 执行器 | 获取目标 | `ContinueHandleAsync` | 终结 |
 |---|---|---|---|
+| `FetchActuator<T>` | `FetchAsync(criteria)` | 无 | 原样返回目标（不保存） |
 | `CreateActuator<T>` | `CreateAsync(criteria)` | 标记 `New` | 可保存对象 `SaveAsync(IsChanged)`；其余原样返回 |
 | `UpdateActuator<T>` | `FetchAsync(criteria)` | 有变更且状态 `None` 时标记 `Changed` | `SaveAsync(IsChanged)` |
 | `DeleteActuator<T>` | `FetchAsync(criteria)` | 标记 `Deleted`（可带规则检查开关） | `SaveAsync(IsChanged)` |
@@ -830,10 +862,11 @@ sequenceDiagram
 
 要点：
 
-- 执行器**没有 `Fetch`**；读取用 `IObjectFactory.FetchAsync`。
+- 读取用 `Fetch`；它只调用工厂读取方法，不触发保存。
 - `.Execute(ct)` 的参数进 `criteria`（用于定位工厂方法），`.ExecuteAsync(ct)` 的才是取消令牌。
 - `Handle` 注册的处理逻辑在**终结之前**执行，因此规则看到的是处理后的对象。
 - `WithRule` 附加的规则挂在目标对象上，不写入类型级共享集合；操作结束即卸下。
+- 没有 `Handle` / `Behavior` / `IActuatorBehavior` 时走空管道快路径：直接执行「后续处理 → 终结」，语义与管道一致，但少一次组件快照与委托组合。
 - `IActuatorBehavior<TTarget>` 注册到容器后会被自动追加到管道。
 
 ### 3.8 权限体系
@@ -975,7 +1008,7 @@ flowchart LR
 
 ### 3.11 关键设计取舍与边界
 
-1. **定位是应用层编辑模型，不是纯 DDD 聚合根**。持久化写在工厂方法里（Active Record 风格），事务边界应由应用层 / UoW 负责；Osba 不提供仓储、UoW、领域事件。
+1. **定位是业务模型运行时，不是 DDD 专用框架**。DDD、MVVM、CQRS、CRUD 都是可选投影；持久化写在工厂方法里（Active Record 风格），事务边界由宿主 / UoW 负责；Osba 核心不提供仓储、UoW、领域事件，但保留生命周期与原始值等扩展点供上层适配。
 2. **验证线与权限线分离**。规则可被绕过，不能承担不变量或安全边界；权限只由工厂边界裁决，失败一律 `SecurityException`。
 3. **规则按容器隔离，无 DI 时回退进程级**。`AddBusinessObject` 注册的 `IRuleRegistry` 是容器级；手工 `new` 的对象回退到 `RuleManager` 的静态容器。
 4. **业务对象默认不承诺线程安全**。`FieldData<T>` 的字段级读写有锁，但对象级状态、变更列表、规则集合不保证并发修改安全；一个对象实例应由一个逻辑流使用。
@@ -996,6 +1029,139 @@ flowchart LR
 | 工厂方法有多个同分匹配 | `AmbiguousMatchException` | `ObjectReflector` |
 | 启动期结构性问题 | `OsbaConfigurationException` | `OsbaStartupValidator` |
 | 只读对象被写入 / 装载越界 | `SecurityException` | `ObjectBase.SetProperty` / `LoadProperty` |
+
+### 3.13 生命周期回调
+
+`ObjectBase` 实现 `IObjectLifecycle`，在固定边界提供四个可覆写回调：
+
+| 回调 | 触发时机 | 典型用途 |
+|---|---|---|
+| `OnSavingAsync` | 规则校验通过后、工厂方法执行前 | 审计、补充不变量检查 |
+| `OnSavedAsync` | 工厂方法成功、对象复位为干净状态后 | 缓存失效、收集待发布事件 |
+| `OnExecutingAsync` | 授权与规则校验通过后、执行体执行前 | 命令审计、准备上下文 |
+| `OnExecutedAsync` | 执行体成功返回后 | 结果审计、清理临时状态 |
+
+```csharp
+public sealed class Repo : EditableObject<Repo>
+{
+    protected override async Task OnSavingAsync(CancellationToken cancellationToken = default)
+    {
+        await AuditAsync("repo.saving", cancellationToken);
+    }
+
+    protected override Task OnSavedAsync(object result, CancellationToken cancellationToken = default)
+    {
+        Cache.Remove($"repo:{Id}");
+        return Task.CompletedTask;
+    }
+}
+```
+
+回调默认全部为空，不改变规则与权限的裁决顺序；异常会原样向上抛出，由调用方决定回滚或重试。
+
+### 3.14 性能设计
+
+| 优化 | 说明 |
+|---|---|
+| 类型级元数据缓存 | `PropertyInfoManager` 按类型缓存属性列表；`FieldDataManager` 按类型缓存合并后的元数据与名称索引，实例只分配字段数组 |
+| 实例字段数组 | 字段值按稳定索引存放在 `IFieldData[]`，不再为每个对象分配字典；未注册属性才走兜底字典 |
+| 环形撤销历史 | `FieldData<T>` 使用环形缓冲区，入栈 / 裁剪 / 撤销 O(1)，历史长度有界 |
+| 按需可观察值 | `ObservableValue` 只在有订阅者时创建，未订阅路径不分配 |
+| 规则同步快路径 | 同步完成的规则不创建状态机、不进入 `Task.WhenAll`；规则解析走属性索引缓存 |
+| 规则返回值 | 内部 `RunRules` 使用 `ValueTuple`，减少每次属性检查的元组分配 |
+| 反射缓存 | 工厂方法、参数形态、`ValueTask<T>.AsTask`、`Inject` 属性均缓存；多参方法按类型组合缓存 |
+| 异步不捕获上下文 | 库内异步路径统一 `ConfigureAwait(false)`，避免同步上下文捕获与线程跳转 |
+| 零订阅优化 | `PropertyChanged` / `Saved` 无订阅者时不构造事件参数、不走弱事件管理器 |
+| 空管道快路径 | 执行器没有 `Handle` / `Behavior` / `IActuatorBehavior` 时跳过管道组件快照与委托组合，直接执行后续处理与终结 |
+
+参考值（Apple M4 Max / .NET 10.0.11 / BenchmarkDotNet ShortRun，仅用于量级判断，不是正式门禁）：
+
+| 场景 | 耗时 | 分配 |
+|---|---:|---:|
+| 属性写 | 37 ns | 24 B |
+| 带一条属性规则写 | 130 ns | 304 B |
+| `ValidateAsync` | 48 ns | 232 B |
+| `SaveAsync`（无持久化） | 323 ns | 936 B |
+| `FetchFactory`（直接工厂读取） | 1.12 µs | 1.48 KB |
+| `FetchActuator`（空管道快路径） | 1.24 µs | 1.94 KB |
+| `GetOriginalValue` | 8 ns | 0 B |
+| `RejectChanges` | 94 ns | 112 B |
+| `MarkAsChanged` + `AcceptChanges` | 8.9 ns | 0 B |
+
+性能基线可用基准项目验证：
+
+```bash
+dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
+```
+
+### 3.15 派生类对领域对象的控制
+
+`BusinessObject<T>` 及其派生类可以在不引入 Domain 层的前提下，控制领域对象的关键场景：
+
+| 场景 | 扩展点 |
+|---|---|
+| 属性读写权限 | `CanReadProperty` / `CanWriteProperty`；`GetProperty(IPropertyInfo)` / `SetProperty(IPropertyInfo, object)` 均可重写 |
+| 领域行为封装 | 属性 setter 可以是 `private` / `protected`，只暴露领域方法；领域方法内部调用 `SetProperty` |
+| 原始值与回滚 | `GetOriginalValue` / `GetOriginalValues` / `GetChangedValues` / `RejectChanges` / `IsDirty` |
+| 状态机 | `CanTransitionTo` / `TransitionTo` / `StateChanged`；`MarkAsNew/Changed/Deleted` 可重写 |
+| 装载与物化 | `IsLoading`、`BeginLoad()`（`protected internal`）、`CanLoadProperty` |
+| 保存 / 执行边界 | `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` |
+| 校验 | `AddRules`、`ValidateAsync`、`EnsureValidAsync`、`CheckRuleOnPropertyChanged` |
+
+```csharp
+public sealed class Order : EditableObject<Order>
+{
+    public static readonly PropertyInfo<decimal> AmountProperty = RegisterProperty(p => p.Amount);
+
+    public decimal Amount
+    {
+        get => GetProperty(AmountProperty);
+        private set => SetProperty(AmountProperty, value);
+    }
+
+    public void ChangeAmount(decimal amount)
+    {
+        if (amount < 0)
+        {
+            throw new InvalidOperationException("金额不能为负。");
+        }
+
+        Amount = amount;
+    }
+
+    protected override bool CanTransitionTo(ObjectEditState target)
+    {
+        // 已删除的订单不允许回到新增/修改状态
+        return State != ObjectEditState.Deleted || target == ObjectEditState.None;
+    }
+
+    protected override Task OnSavingAsync(CancellationToken cancellationToken = default)
+    {
+        // 保存前补充领域不变量
+        return Task.CompletedTask;
+    }
+}
+```
+
+```csharp
+var order = await factory.FetchAsync<Order>(id);
+order.ChangeAmount(120m);
+
+var original = order.GetOriginalValue(Order.AmountProperty);
+var changed = order.GetChangedValues();
+
+order.RejectChanges(); // 回到加载时的金额
+```
+
+### 3.16 公共 API 兼容性策略
+
+Osba 在增强时遵循以下约束：
+
+- **新增接口成员提供默认实现**：`IFieldData.OriginalValue`、`IRuleContext.ServiceProvider` / `GetService<T>()` 都有默认实现，旧的自定义实现无需修改即可编译。
+- **保留旧重载与构造函数**：`RegisterProperty` 的 `Expression<Func<T, object>>` 重载、`BusinessObjectFactory(IServiceProvider, IObjectActivator)` 构造函数仍然可用。
+- **不改变既有签名**：已有方法只做 `virtual` 化或内部实现优化，调用方代码无需调整。
+- **自定义管道不被跳过**：执行器空管道快路径只作用于框架默认管道；宿主注册的 `IPipeline` 与 `IActuatorBehavior` 始终执行。
+- **回归测试**：`PublicApiCompatibilityTests` 覆盖旧重载、默认接口成员、旧构造函数与自定义管道。
 
 ---
 
@@ -1028,16 +1194,16 @@ services.AddBusinessObject(options =>
 public sealed class Repo : EditableObject<Repo>
 {
     public static readonly PropertyInfo<string> NameProperty =
-        RegisterProperty<string>(p => p.Name);
+        RegisterProperty(p => p.Name);
 
     public static readonly PropertyInfo<string> CodeProperty =
         RegisterProperty<string>("Code", "编码");
 
     public static readonly PropertyInfo<int> CountProperty =
-        RegisterProperty<int>("Count", "数量", 0);
+        RegisterProperty(p => p.Count, "数量", 0);
 
     public static readonly PropertyInfo<List<string>> TagsProperty =
-        RegisterProperty<List<string>>("Tags", "标签", () => []);
+        RegisterProperty(p => p.Tags, "标签", () => []);
 
     public string Name
     {
@@ -1047,7 +1213,7 @@ public sealed class Repo : EditableObject<Repo>
 }
 ```
 
-- 表达式重载：`RegisterProperty<TValue>(Expression<Func<T, object>> expression, ...)`；`TValue` 必须显式。
+- 表达式重载：`RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, ...)` 会从属性推断 `TValue`，无需显式泛型，也不会为值类型装箱；旧的 `Expression<Func<T, object>>` 重载仍保留。
 - 名称重载：`RegisterProperty<TValue>(string propertyName, string friendlyName = null, TValue defaultValue = default)`。
 - 默认值工厂：`RegisterProperty<TValue>(string propertyName, string friendlyName, Func<TValue> defaultValue)`；每次读取 `DefaultValue` 都生成新实例，避免可变默认值在对象之间共享。
 - `PropertyInfo<T>.FriendlyName` 会优先读取 `[Display]` / `[DisplayName]`，否则回退到属性名。
@@ -1132,7 +1298,7 @@ public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
             return Task.CompletedTask;
         }
 
-        var store = ((IBusinessObject)target).BusinessContext?.GetService<RepoStore>();
+        var store = context.GetService<RepoStore>();
         var name = target.ReadProperty(Property)?.ToString();
 
         if (store != null && store.Repos.Values.Any(r => r.Name == name))
@@ -1150,12 +1316,18 @@ public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
 - `ExecuteOnStateAttribute` 标在规则类上，只对 `IEditableObject` 目标生效；不填状态视为不限制。
 - `AddErrorResult(null)` / 空白描述会用占位消息补上，不会被静默当成通过。
 - 只有 `Error` 让对象无效；`Warning` / `Information` 不阻断保存。
-- 类型级规则实例是共享的，**不能存请求态**。
+- 类型级规则实例是共享的，**不能存请求态**；需要按请求解析服务时用 `context.GetService<T>()`（或 `context.ServiceProvider`），不要依赖构造函数注入的 Scoped 服务。
 
 ### 4.6 执行器
 
 ```csharp
 var actuator = scope.ServiceProvider.GetRequiredService<IActuator>();
+
+// 读取 + 处理（不保存）
+var loaded = await actuator.For<Repo>()
+                           .Fetch("pay-web")
+                           .Handle(r => r.TeamId = "TeamA")
+                           .ExecuteAsync(cancellationToken);
 
 // 创建 + 处理 + 保存
 var repo = await actuator.For<Repo>()
@@ -1385,14 +1557,14 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks -- --filter '*
 flowchart TB
     Root["Euonia.Osba/"]
 
-    Root --> Docs["文档<br/>README.md / SAMPLE.md / PERMISSION*.md / ARCHITECTURE-REVIEW.md"]
+    Root --> Docs["文档<br/>README.md / DESIGN.md / SAMPLE.md / PERMISSION*.md / ARCHITECTURE-REVIEW.md"]
     Root --> Build["构建与装配<br/>Euonia.Osba.csproj / ServiceCollectionExtensions.cs / OsbaOptions.cs / OsbaStartupValidator.cs / BusinessObjectTypeScanner.cs"]
-    Root --> Contracts["Abstracts/ 契约层（12）"]
-    Root --> Model["Core/ 对象模型（20）"]
+    Root --> Contracts["Abstracts/ 契约层（13）"]
+    Root --> Model["Core/ 对象模型（21）"]
     Root --> Meta["Reflection/ 属性元数据与字段存储（9）"]
     Root --> Rules["Rules/ 规则系统（20）"]
     Root --> Factory["Factory/ 工厂与反射（5）"]
-    Root --> Actuators["Actuators/ 执行器与管道（12）"]
+    Root --> Actuators["Actuators/ 执行器与管道（13）"]
     Root --> Permission["Permission/ 权限边界（5 + Scope/ 1）"]
     Root --> Diagnostics["Diagnostics/ 可观测性（1）"]
     Root --> Resources["Properties/ 本地化资源（12）"]
@@ -1417,6 +1589,7 @@ flowchart TB
     R --> R9["PERMISSION-SAMPLE.md<br/>多业务场景权限示例"]
     R --> R10["PERMISSION-DESIGN.md<br/>权限接线设计决策"]
     R --> R11["ARCHITECTURE-REVIEW.md<br/>架构 / 性能 / 正确性评审报告（历史基线）"]
+    R --> R12["DESIGN.md<br/>设计决策：定位、对象模型、规则、工厂、执行器、性能与兼容性"]
 ```
 
 ### 5.3 `Abstracts/` 契约层
@@ -1429,6 +1602,7 @@ flowchart TB
     A --> A2["IChildGraphNode.cs<br/>可加入父子对象图的容器节点：AddParent / RemoveParent"]
     A --> A3["IEditableObject.cs<br/>可编辑对象：State、MarkAsNew / Changed / Deleted、删除时规则开关"]
     A --> A4["IHasRuleCheck.cs<br/>规则检查：IsValid、完成通知、挂起 / 恢复、GetBrokenRules"]
+    A --> A13["IObjectLifecycle.cs<br/>保存 / 执行生命周期回调契约：OnSaving / OnSaved / OnExecuting / OnExecuted"]
     A --> A5["INotifyBusy.cs<br/>繁忙状态：BusyChanged、IsBusy、IsSelfBusy"]
     A --> A6["IOperableProperty.cs<br/>非泛型属性读写：GetProperty / SetProperty"]
     A --> A7["IOsbaObject.cs<br/>所有 Osba 对象的公共契约：FieldManager、ReadProperty、LoadProperty、BusinessContext"]
@@ -1446,9 +1620,10 @@ flowchart TB
     A["Actuators/"]
 
     A --> A1["IActuator.cs<br/>执行器入口契约：For&lt;TTarget&gt;() 返回 ActuatorBuilder"]
+    A --> A13["FetchActuator.cs<br/>读取执行器：调用工厂读取方法，不触发保存"]
     A --> A2["Actuator.cs<br/>IActuator 默认实现（internal）：解析 IObjectFactory、IPipeline、IActuatorBehavior"]
     A --> A3["ActuatorBuilder.cs<br/>持有 IObjectFactory + IPipeline，提供 Behavior 配置"]
-    A --> A4["ActuatorBuilderExtensions.cs<br/>Create / Update / Delete / Execute 扩展方法，按目标类型约束"]
+    A --> A4["ActuatorBuilderExtensions.cs<br/>Fetch / Create / Update / Delete / Execute 扩展方法，按目标类型约束"]
     A --> A5["ActuatorBase.cs<br/>执行器模板：Handle、WithRule / BypassRule、ExecuteAsync 主流程"]
     A --> A6["EditableActuator.cs<br/>可编辑执行器基类：终结阶段调用 SaveAsync"]
     A --> A7["CreateActuator.cs<br/>创建流程：CreateAsync → Handle → 标记 New → SaveAsync（可保存时）"]
@@ -1501,6 +1676,7 @@ flowchart TB
     C --> C18["DictionaryChangedAction.cs<br/>字典变更类型：Add / Remove / Update / Clear"]
     C --> C19["DictionaryChangedEventArgs.cs<br/>字典变更事件参数：Key / Action / OldValue / NewValue"]
     C --> C20["DictionaryChangedEventHandler.cs<br/>字典变更事件委托"]
+    C --> C21["ObjectStateChangedEventArgs.cs<br/>编辑状态变化事件参数：OldState / NewState"]
 ```
 
 ### 5.7 `Diagnostics/` 可观测性
@@ -1620,7 +1796,7 @@ flowchart TB
 6. 必须使用 `RegisterProperty` 的返回值；不要自己 `new PropertyInfo<T>(...)`。
 7. `string` 默认值是 `string.Empty`，不是 `null`。
 8. 装载用 `LoadProperty`，用户改动用 `SetProperty`；不要混用。
-9. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` **不是 virtual**；`MarkAsClean` 与 `AcceptChanges` 是 virtual。
+9. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 都是 **virtual**，统一经过 `TransitionTo`；可重写 `CanTransitionTo` / `OnStateChanged`，并订阅 `StateChanged`。
 10. `MarkAsDeleted(true)` 才让删除也执行对象级规则；执行器用 `WithRuleChecksOnDelete()`。
 11. `ObjectBase.Rules` 是 `protected`；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。外部用 `IsValid` / `GetBrokenRules()` / `ValidateAsync()` / `EnsureValidAsync()`。
 12. `CheckRuleOnPropertyChanged` 默认 `true`；覆写为 `false` 表示**推迟到保存时**，不是不检查。
@@ -1664,7 +1840,7 @@ flowchart TB
 ### 6.5 执行器与权限
 
 41. `Actuator` 类是 `internal`；对外注入 `IActuator` 后 `For<T>()`。
-42. `ActuatorBuilderExtensions` 没有 `Fetch`。
+42. `ActuatorBuilderExtensions` 提供 `Fetch`；读取不保存，需要保存的修改请用 `Update`。
 43. `.Execute(ct)` 的参数进 `criteria`，`.ExecuteAsync(ct)` 的才是取消令牌。
 44. `IActuatorBehavior<T>` 需要注册到容器才会被自动接入管道。
 45. `WithRule` 附加的规则在 `Handle` 之后执行；不在 `Handle` 里设值，规则看不到变更。
@@ -1680,6 +1856,7 @@ flowchart TB
 
 | 文档 | 内容 |
 |---|---|
+| [`DESIGN.md`](DESIGN.md) | 设计决策：定位、对象模型、规则、工厂、执行器、性能与兼容性 |
 | [`SAMPLE.md`](SAMPLE.md) | 从零到运行的端到端示例：对象、工厂、状态机、规则、执行器、权限 |
 | [`PERMISSION.md`](PERMISSION.md) | 权限体系完整说明：声明、来源、行级策略、判定、故障排查 |
 | [`PERMISSION-SAMPLE.md`](PERMISSION-SAMPLE.md) | 多种业务场景的权限示例 |

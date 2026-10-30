@@ -91,6 +91,20 @@ public class RuleManager
 	}
 
 	/// <summary>
+	/// 向此规则管理器添加一条类型级规则。
+	/// </summary>
+	/// <param name="rule">要添加的规则。</param>
+	/// <remarks>
+	/// 供宿主或插件在对象的 <c>AddRules()</c> 之外注册规则；线程安全，并使属性级 / 对象级规则缓存失效。
+	/// 已经创建的对象会在下一次规则检查时看到新规则。
+	/// </remarks>
+	public void AddRule(IRuleBase rule)
+	{
+		ArgumentNullException.ThrowIfNull(rule);
+		Add(rule);
+	}
+
+	/// <summary>
 	/// 获取对象级（无属性绑定）的类型级规则，按优先级升序；无规则时返回空集合。
 	/// </summary>
 	/// <remarks>

@@ -235,10 +235,17 @@ repo.MarkAsChanged();       // → Changed   （保存时走 Update）
 repo.MarkAsDeleted();       // → Deleted   （保存时走 Delete）
 repo.MarkAsClean();         // → None，并清空变更记录（virtual，可重写）
 repo.AcceptChanges();       // 同上
+
+repo.GetOriginalValue(Repo.NameProperty); // 上次 AcceptChanges 时的值
+repo.GetChangedValues();                  // 已改属性的当前值
+repo.RejectChanges();                     // 回滚到原始值并清空变更记录
 ```
 
-> `MarkAsNew()` / `MarkAsChanged()` / `MarkAsDeleted(bool checkObjectRules = false)` **都不是 virtual**；
-> 只有 `MarkAsClean()` 可重写。
+> `MarkAsNew()` / `MarkAsChanged()` / `MarkAsDeleted(bool checkObjectRules = false)` 都是 **virtual**，
+> 统一经过 `TransitionTo`；派生类可重写 `CanTransitionTo` 表达领域状态机，并订阅 `StateChanged`。
+> `MarkAsClean()` / `AcceptChanges()` 也是 virtual。
+>
+> `RejectChanges()` 把已更改属性恢复到 `AcceptChanges()` 时的基线；`AcceptChanges()` 则把当前值当作新基线。
 >
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
@@ -609,7 +616,7 @@ await actuator.For<PushService>()
 > **两处 `ct` 的区别**：`.Execute(ct)` 的参数进 `criteria`（用于**定位**工厂方法），
 > `.ExecuteAsync(ct)` 的才是取消令牌。两处都要传。
 >
-> 执行器**没有 `Fetch`**——读取请直接用 `IObjectFactory.FetchAsync` 或 `BusinessContext.FetchAsync`。
+> 执行器提供 `Fetch`（只读取、不保存）；需要更底层的读取时也可直接用 `IObjectFactory.FetchAsync` 或 `BusinessContext.FetchAsync`。
 >
 > 执行器还能按操作指定规则（`WithRule` / `BypassRule` / `BypassRuleChecks`），
 > 见 [§4.2](#42-按操作指定规则)。
@@ -920,7 +927,8 @@ BusinessContextAccessor.Clear();
 5. **必须使用 `RegisterProperty` 的返回值**，不要自己 `new PropertyInfo<T>(...)`。
 6. `string` 属性的默认值是 `string.Empty`，不是 `null`。
 7. 加载数据用 `LoadProperty`（不标脏），用户改动用 `SetProperty`（标脏）——不要混用。
-8. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` **不是 virtual**；只有 `MarkAsClean` 是。
+8. `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 都是 **virtual**，统一经过 `TransitionTo`；
+   派生类可重写 `CanTransitionTo` / `TransitionTo` / `OnStateChanged`，并订阅 `StateChanged`。
 9. `MarkAsDeleted(true)` 才让删除也执行对象级规则，默认**不执行**；走执行器时用 `WithRuleChecksOnDelete()`。
 10. `ObjectBase.Rules` 是 **`protected`**；`Rules.RuleManager` / `Rules.BrokenRules` 是 `internal`。
     外部可读 `IsValid` / `GetBrokenRules()`，并用 `ValidateAsync()` / `EnsureValidAsync()` 驱动检查；
@@ -985,7 +993,7 @@ BusinessContextAccessor.Clear();
 ### 执行器
 
 40. `Actuator` 类是 `internal`；对外只能注入 `IActuator` 后 `For<T>()`。
-41. `ActuatorBuilderExtensions` **没有 `Fetch`**。
+41. `ActuatorBuilderExtensions` 提供 `Fetch`；它只读取，不触发保存。
 42. `.Execute(ct)` 的参数进 `criteria`，`.ExecuteAsync(ct)` 的才是取消令牌——两处都要传。
 43. `IActuatorBehavior<T>` 需要注册到容器才会被自动接入管道。
 44. `WithRule` 附加的规则**在 `Handle` 之后执行**：不在 `Handle` 里设值，规则看不到变更。

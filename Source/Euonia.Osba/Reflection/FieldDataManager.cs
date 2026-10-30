@@ -133,6 +133,29 @@ public class FieldDataManager
 	}
 
 	/// <summary>
+	/// 获取属性的原始值；字段尚未创建时返回注册的默认值。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public object GetOriginalValue(IPropertyInfo property)
+	{
+		var field = GetFieldData(property);
+		return field?.OriginalValue ?? property.DefaultValue;
+	}
+
+	/// <summary>
+	/// 获取属性的原始值（泛型版本）；字段尚未创建时返回注册的默认值。
+	/// </summary>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public TValue GetOriginalValue<TValue>(PropertyInfo<TValue> property)
+	{
+		var field = GetFieldData(property);
+		return field is IFieldData<TValue> typed ? typed.OriginalValue : property.DefaultValue;
+	}
+
+	/// <summary>
 	/// 获取或创建属性的字段数据。
 	/// </summary>
 	/// <param name="property">属性信息。</param>

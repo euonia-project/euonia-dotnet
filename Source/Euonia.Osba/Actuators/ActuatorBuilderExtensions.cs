@@ -4,6 +4,7 @@ namespace Nerosoft.Euonia.Osba;
 /// 为 <see cref="ActuatorBuilder{TTarget}"/> 提供操作执行器创建扩展方法，按目标类型约束区分操作。
 /// </summary>
 /// <remarks>
+/// 任意业务对象使用 <see cref="Fetch{TTarget}(ActuatorBuilder{TTarget}, object[])"/> 读取；
 /// 可编辑对象（<see cref="EditableObject{T}"/>）使用 <see cref="Update{TTarget}(ActuatorBuilder{TTarget}, object[])"/>、
 /// <see cref="Delete{TTarget}(ActuatorBuilder{TTarget}, object[])"/>；
 /// <see cref="Create{TTarget}(ActuatorBuilder{TTarget}, object[])"/> 支持任意业务对象类型
@@ -23,6 +24,23 @@ public static class ActuatorBuilderExtensions
 		where TTarget : EditableObject<TTarget>
 	{
 		return new UpdateActuator<TTarget>(builder, () => builder.ObjectFactory.FetchAsync<TTarget>(criteria));
+	}
+
+	/// <summary>
+	/// 创建用于读取目标对象的 <see cref="FetchActuator{TTarget}"/> 实例。
+	/// </summary>
+	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{T}"/>。</typeparam>
+	/// <param name="builder">执行器构建器。</param>
+	/// <param name="criteria">用于定位目标对象的查询条件。</param>
+	/// <returns>读取执行器实例。</returns>
+	/// <remarks>
+	/// 通过对象工厂的 <see cref="IObjectFactory.FetchAsync{TTarget}(object[])"/> 读取目标；
+	/// 读取不触发保存，也不改变对象状态。
+	/// </remarks>
+	public static FetchActuator<TTarget> Fetch<TTarget>(this ActuatorBuilder<TTarget> builder, params object[] criteria)
+		where TTarget : ObjectBase<TTarget>
+	{
+		return new FetchActuator<TTarget>(builder, () => builder.ObjectFactory.FetchAsync<TTarget>(criteria));
 	}
 
 	/// <summary>

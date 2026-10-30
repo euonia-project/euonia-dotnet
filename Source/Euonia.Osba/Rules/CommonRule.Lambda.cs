@@ -36,7 +36,7 @@ public partial class CommonRule
 			{
 				var value = target.ReadProperty(Property);
 
-				var result = await Handler(value, context);
+				var result = await Handler(value, context).ConfigureAwait(false);
 
 				if (!result)
 				{

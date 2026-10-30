@@ -15,6 +15,8 @@ public class RuleAndFactoryBenchmarks
 	private BusinessContext _context;
 	private RuledObject _ruled;
 	private PlainObject _plain;
+	private IActuator _actuator;
+	private IObjectFactory _factory;
 	private bool _toggle;
 
 	[GlobalSetup]
@@ -26,6 +28,8 @@ public class RuleAndFactoryBenchmarks
 		_scope = _provider.CreateScope();
 		BusinessContextAccessor.SetCurrent(_scope.ServiceProvider);
 		_context = _scope.ServiceProvider.GetRequiredService<BusinessContext>();
+		_actuator = _scope.ServiceProvider.GetRequiredService<IActuator>();
+		_factory = _scope.ServiceProvider.GetRequiredService<IObjectFactory>();
 
 		_ruled = new RuledObject { BusinessContext = _context };
 		_ruled.Name = "valid";
@@ -70,6 +74,18 @@ public class RuleAndFactoryBenchmarks
 		_plain.MarkAsChanged();
 		await _plain.SaveAsync();
 	}
+
+	[Benchmark]
+	public async Task<PlainObject> FetchFactory()
+	{
+		return await _factory.FetchAsync<PlainObject>("id");
+	}
+
+	[Benchmark]
+	public async Task<PlainObject> FetchActuator()
+	{
+		return await _actuator.For<PlainObject>().Fetch("id").ExecuteAsync();
+	}
 }
 
 /// <summary>无规则对象。</summary>
@@ -81,6 +97,13 @@ public sealed class PlainObject : EditableObject<PlainObject>
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
+	}
+
+	[FactoryFetch]
+	private void Fetch(string id)
+	{
+		LoadProperty(NameProperty, "valid");
+		AcceptChanges();
 	}
 
 	[FactoryInsert]

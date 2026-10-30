@@ -37,29 +37,79 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	public bool CheckObjectRulesOnDelete { get; private set; }
 
 	/// <summary>
+	/// 当对象编辑状态发生变化时发生。
+	/// </summary>
+	public event EventHandler<ObjectStateChangedEventArgs> StateChanged;
+
+	/// <summary>
 	/// 将对象状态标记为 <see cref="ObjectEditState.New"/>。
 	/// </summary>
-	public void MarkAsNew()
+	public virtual void MarkAsNew()
 	{
-		State = ObjectEditState.New;
+		TransitionTo(ObjectEditState.New);
 	}
 
 	/// <summary>
 	/// 将对象状态标记为 <see cref="ObjectEditState.Changed"/>。
 	/// </summary>
-	public void MarkAsChanged()
+	public virtual void MarkAsChanged()
 	{
-		State = ObjectEditState.Changed;
+		TransitionTo(ObjectEditState.Changed);
 	}
 
 	/// <summary>
 	/// 将对象状态标记为 <see cref="ObjectEditState.Deleted"/>。
 	/// </summary>
 	/// <param name="checkObjectRules">是否在删除时检查对象规则。</param>
-	public void MarkAsDeleted(bool checkObjectRules = false)
+	public virtual void MarkAsDeleted(bool checkObjectRules = false)
 	{
-		State = ObjectEditState.Deleted;
+		TransitionTo(ObjectEditState.Deleted);
 		CheckObjectRulesOnDelete = checkObjectRules;
+	}
+
+	/// <summary>
+	/// 判断是否允许从当前状态迁移到目标状态；默认允许所有迁移。
+	/// </summary>
+	/// <param name="target">目标状态。</param>
+	/// <returns>允许则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 派生类可重写以表达领域状态机，例如禁止已删除对象回到新增状态。
+	/// </remarks>
+	protected virtual bool CanTransitionTo(ObjectEditState target)
+	{
+		return true;
+	}
+
+	/// <summary>
+	/// 执行状态迁移；派生类可重写以替换迁移逻辑。
+	/// </summary>
+	/// <param name="target">目标状态。</param>
+	/// <exception cref="InvalidOperationException">当前状态不允许迁移到目标状态时抛出。</exception>
+	protected virtual void TransitionTo(ObjectEditState target)
+	{
+		var current = State;
+		if (current == target)
+		{
+			return;
+		}
+
+		if (!CanTransitionTo(target))
+		{
+			throw new InvalidOperationException($"Object state transition from '{current}' to '{target}' is not allowed.");
+		}
+
+		State = target;
+		OnStateChanged(current, target);
+	}
+
+	/// <summary>
+	/// 状态迁移完成后的回调；派生类可重写以附加领域行为。
+	/// </summary>
+	/// <param name="oldState">旧状态。</param>
+	/// <param name="newState">新状态。</param>
+	protected virtual void OnStateChanged(ObjectEditState oldState, ObjectEditState newState)
+	{
+		StateChanged?.Invoke(this, new ObjectStateChangedEventArgs(oldState, newState));
 	}
 
 	/// <summary>
@@ -72,9 +122,14 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// </remarks>
 	public override void AcceptChanges()
 	{
+		var previous = State;
 		base.AcceptChanges();
 		State = ObjectEditState.None;
 		CheckObjectRulesOnDelete = false;
+		if (previous != ObjectEditState.None)
+		{
+			OnStateChanged(previous, ObjectEditState.None);
+		}
 	}
 
 	/// <summary>

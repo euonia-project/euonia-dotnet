@@ -79,7 +79,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// </returns>
 	public async Task<T> SaveAsync(bool forceUpdate = false, CancellationToken cancellationToken = default)
 	{
-		return await SaveAsync(forceUpdate, null, cancellationToken);
+		return await SaveAsync(forceUpdate, null, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -95,7 +95,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// </returns>
 	async Task<object> ISavable.SaveAsync(bool forceUpdate, CancellationToken cancellationToken)
 	{
-		return await SaveAsync(forceUpdate, cancellationToken);
+		return await SaveAsync(forceUpdate, cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <summary>
@@ -128,7 +128,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 		{
 			// 与操作执行路径共用的强制点：先属性级（该类型把检查推迟到这里时），再对象级；
 			// 有 Error 级违规则抛 ValidationException。检查被挂起时不给结论也不抛出。
-			await EnsureRulesAsync("Object not valid for save.", cancellationToken);
+			await EnsureRulesAsync("Object not valid for save.", cancellationToken).ConfigureAwait(false);
 		}
 
 		// 未接线时明确报错，而不是让 NullReferenceException 从 GetRequiredService 里冒出来：
@@ -141,11 +141,13 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 				ScopeOperationMap.Resolve(this)));
 		}
 
+		await OnSavingAsync(cancellationToken).ConfigureAwait(false);
+
 		MarkAsBusy();
 		try
 		{
 			// BusinessContext.ObjectFactory 会缓存解析结果；这里不必每次走 DI。
-			var result = await BusinessContext.ObjectFactory.SaveAsync((T)this, cancellationToken);
+			var result = await BusinessContext.ObjectFactory.SaveAsync((T)this, cancellationToken).ConfigureAwait(false);
 
 			// 保存成功后把对象复位为干净状态，使下一次 SaveAsync 不会重复执行 Delete。
 			// 工厂返回不同实例时不动 this，交给调用方使用返回值。
@@ -153,6 +155,8 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 			{
 				MarkAsClean();
 			}
+
+			await OnSavedAsync(result, cancellationToken).ConfigureAwait(false);
 
 			// 无订阅者时不构造 SavedEventArgs、也不走弱事件管理器。
 			if (Volatile.Read(ref _savedSubscribers) > 0)

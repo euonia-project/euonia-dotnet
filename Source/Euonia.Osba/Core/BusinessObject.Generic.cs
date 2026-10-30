@@ -128,6 +128,84 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	}
 
 	/// <summary>
+	/// 获取一个值，指示对象是否存在未提交的修改。
+	/// </summary>
+	public virtual bool IsDirty => HasChangedProperties;
+
+	/// <summary>
+	/// 获取属性的原始值（自上次 <see cref="AcceptChanges"/> 以来的基线）。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public virtual object GetOriginalValue(IPropertyInfo property)
+	{
+		return FieldManager.GetOriginalValue(property);
+	}
+
+	/// <summary>
+	/// 获取属性的原始值（自上次 <see cref="AcceptChanges"/> 以来的基线）。
+	/// </summary>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public virtual TValue GetOriginalValue<TValue>(PropertyInfo<TValue> property)
+	{
+		return FieldManager.GetOriginalValue(property);
+	}
+
+	/// <summary>
+	/// 获取所有已更改属性的当前值。
+	/// </summary>
+	/// <returns>属性与当前值的只读字典。</returns>
+	public virtual IReadOnlyDictionary<IPropertyInfo, object> GetChangedValues()
+	{
+		var changed = ChangedProperties;
+		var values = new Dictionary<IPropertyInfo, object>(changed.Count);
+		foreach (var property in changed)
+		{
+			values[property] = ReadProperty(property);
+		}
+
+		return values;
+	}
+
+	/// <summary>
+	/// 获取所有已更改属性的原始值。
+	/// </summary>
+	/// <returns>属性与原始值的只读字典。</returns>
+	public virtual IReadOnlyDictionary<IPropertyInfo, object> GetOriginalValues()
+	{
+		var changed = ChangedProperties;
+		var values = new Dictionary<IPropertyInfo, object>(changed.Count);
+		foreach (var property in changed)
+		{
+			values[property] = GetOriginalValue(property);
+		}
+
+		return values;
+	}
+
+	/// <summary>
+	/// 放弃当前修改：把所有已更改属性恢复到原始值，并清除变更记录。
+	/// </summary>
+	/// <remarks>
+	/// 与 <see cref="AcceptChanges"/> 相反：前者把当前值当作新基线，后者回到旧基线。
+	/// 派生类可重写以处理子对象、集合或额外的领域状态。
+	/// </remarks>
+	public virtual void RejectChanges()
+	{
+		foreach (var property in ChangedProperties)
+		{
+			var current = ReadProperty(property);
+			var original = FieldManager.GetOriginalValue(property);
+			AttachChild(property, current, original);
+			FieldManager.LoadFieldData(property, original);
+		}
+
+		AcceptChanges();
+	}
+
+	/// <summary>
 	/// 获取属性值，首先检查授权。
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
@@ -218,7 +296,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// </summary>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <returns>属性值。</returns>
-	public object GetProperty(IPropertyInfo propertyInfo)
+	public virtual object GetProperty(IPropertyInfo propertyInfo)
 	{
 		object result;
 		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
@@ -511,7 +589,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
-	public void SetProperty(IPropertyInfo propertyInfo, object newValue)
+	public virtual void SetProperty(IPropertyInfo propertyInfo, object newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
