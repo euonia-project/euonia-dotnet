@@ -38,8 +38,6 @@
         <PackageVersion Include="Polly" Version="8.9.0" />
         <PackageVersion Include="protobuf-net" Version="3.4.40" />
         <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
-        <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="$(QuartzVersion)" />
-        <PackageVersion Include="Quartz.Extensions.Hosting" Version="$(QuartzVersion)" />
         <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
         <PackageVersion Include="Refit" Version="$(RefitVersion)" />
         <PackageVersion Include="Refit.HttpClientFactory" Version="$(RefitVersion)" />

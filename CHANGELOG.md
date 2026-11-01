@@ -7,6 +7,21 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### Euonia.Quartz
+
+- **Quartz.NET 4.6.2**：迁移到 Quartz 4 API。配置入口由 `IServiceCollectionQuartzConfigurator` 改为 `IQuartzBuilder`；
+  `QuartzOptions.Scheduling` 改为 `OverwriteExistingData`（原 `OverWriteExistingData`）；调度器设置移入 `QuartzSchedulerOptions`；
+  `IJob` / `IJobFactory` / `IJobStore` / `IThreadPool` / `ITypeLoader` 等 SPI 类型移至 `Quartz.Extensibility`。
+- **目标框架**：Quartz 4 仅提供 `net10.0` 资产，`Euonia.Quartz` 相应只面向 `net10.0`；面向 `net9.0` 的应用请继续使用 `2026.4.6`。
+- **依赖**：移除已合并进 `Quartz` 包的 `Quartz.Extensions.DependencyInjection` 与 `Quartz.Extensions.Hosting`。
+- **行为对齐**：`SchedulerId = "AUTO" / "SYS_PROP"` 映射为 `GenerateInstanceId`；两个 `InterruptJobsOnShutdown*` 标志合并为
+  `ShutdownJobInterruption`；`MisfireThreshold` 通过 `quartz.jobStore.misfireThreshold` 同时作用于内存与持久化存储；
+  `SetProperty` 改为在注册调度器前注入扁平属性，确保配置桥接真正生效。
+- **修复**：`BackgroundBuildOptions` 单例从未初始化导致 `AddQuartz` 抛 `KeyNotFoundException`；同时写入
+  `IgnoreDuplicates` 与 `OverWriteExistingData` 触发 Quartz 4 启动校验失败。
+- **移除/限制**：Quartz 4 不再提供专用线程池与零大小线程池，`UseDedicatedThreadPool` / `UseZeroSizeThreadPool` 会抛出
+  `NotSupportedException`，请改用 `UseDefaultThreadPool` 或 `UseThreadPool<T>`。
+
 ### Euonia.Osba
 
 - **易用性：属性注册推断类型**：新增 `RegisterProperty(Expression<Func<T, TValue>>, ...)` 重载，

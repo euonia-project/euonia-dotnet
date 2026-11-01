@@ -51,20 +51,13 @@ public class SimpleScheduleAttribute : BackgroundJobScheduleAttribute
 		var builder = SimpleScheduleBuilder.Create();
 
 		builder.WithInterval(Interval);
-		switch (RepeatCount)
+		if (RepeatCount.HasValue)
 		{
-			case null:
-				builder.RepeatForever();
-				break;
-			case >= 0:
-				builder.WithRepeatCount(RepeatCount.Value);
-				break;
-			case < 0:
+			if (RepeatCount.Value < 0)
+			{
 				throw new InvalidOperationException(Resources.IDS_REPEAT_COUNT_MUST_BE_NON_NEGATIVE);
-		}
+			}
 
-		if (RepeatCount >= 0)
-		{
 			builder.WithRepeatCount(RepeatCount.Value);
 		}
 		else
@@ -72,23 +65,9 @@ public class SimpleScheduleAttribute : BackgroundJobScheduleAttribute
 			builder.RepeatForever();
 		}
 
-		switch (MisfirePolicy)
+		if (MisfirePolicy.HasValue)
 		{
-			case MisfireInstruction.SimpleTrigger.FireNow:
-				builder.WithMisfireHandlingInstructionFireNow();
-				break;
-			case MisfireInstruction.SimpleTrigger.RescheduleNowWithExistingRepeatCount:
-				builder.WithMisfireHandlingInstructionNowWithExistingCount();
-				break;
-			case MisfireInstruction.SimpleTrigger.RescheduleNowWithRemainingRepeatCount:
-				builder.WithMisfireHandlingInstructionNowWithRemainingCount();
-				break;
-			case MisfireInstruction.SimpleTrigger.RescheduleNextWithRemainingCount:
-				builder.WithMisfireHandlingInstructionNextWithRemainingCount();
-				break;
-			case MisfireInstruction.SimpleTrigger.RescheduleNextWithExistingCount:
-				builder.WithMisfireHandlingInstructionNextWithExistingCount();
-				break;
+			builder.WithMisfireInstruction((SimpleTriggerMisfireInstruction)MisfirePolicy.Value);
 		}
 
 		return builder;

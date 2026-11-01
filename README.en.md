@@ -851,7 +851,7 @@ A store that is not registered simply does not take part in the verdict and does
 | `QueryableExtensions` | static class | `Where(specification)`, `WhereIf()`, `Between()`, `OrderBy(propertyName, sortType)` |
 
 ### Quartz (`Euonia.Quartz`)
-> Quartz.NET job scheduling integration with attribute-based configuration.
+> Quartz.NET 4 job scheduling integration with attribute-based configuration. Quartz 4 only ships `net10.0` assets, so this module targets `net10.0` only.
 
 | Type | Kind | Purpose |
 |------|------|---------|

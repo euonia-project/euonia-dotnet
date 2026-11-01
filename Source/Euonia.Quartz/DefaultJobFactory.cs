@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Quartz;
-using Quartz.Spi;
+using Quartz.Extensibility;
 
 namespace Nerosoft.Euonia.Quartz;
 
@@ -21,24 +21,27 @@ public class DefaultJobFactory : IJobFactory
     }
 
     /// <inheritdoc />
-    public IJob NewJob(TriggerFiredBundle bundle, IScheduler scheduler)
+    public ValueTask<JobScope> CreateJob(TriggerFiredBundle bundle, IScheduler scheduler, CancellationToken cancellationToken)
     {
-        var type = bundle.JobDetail.JobType;
+        var type = bundle.JobDetail.JobType.Type;
         if (type == null)
         {
             throw new NullReferenceException();
         }
 
-        return (IJob)ActivatorUtilities.GetServiceOrCreateInstance(_provider, type);
+        var job = (IJob)ActivatorUtilities.GetServiceOrCreateInstance(_provider, type);
+        return ValueTask.FromResult(new JobScope(job, state: null));
     }
 
     /// <inheritdoc />
-    public void ReturnJob(IJob job)
+    public ValueTask ReturnJob(JobScope scope, CancellationToken cancellationToken)
     {
         // ReSharper disable once SuspiciousTypeConversion.Global
-        if (job is IDisposable disposable)
+        if (scope.Job is IDisposable disposable)
         {
             disposable.Dispose();
         }
+
+        return ValueTask.CompletedTask;
     }
 }

@@ -853,7 +853,7 @@ app.MapHealthChecks("/health");
 | `QueryableExtensions` | 静态类 | `Where(specification)`、`WhereIf()`、`Between()`、`OrderBy(propertyName, sortType)` |
 
 ### Quartz（Euonia.Quartz）
-> Quartz.NET 任务调度集成，支持基于特性的配置。
+> Quartz.NET 4 任务调度集成，支持基于特性的配置。Quartz 4 仅提供 `net10.0` 资产，因此本模块仅面向 `net10.0`。
 
 | 类型 | 种类 | 作用 |
 |------|------|---------|

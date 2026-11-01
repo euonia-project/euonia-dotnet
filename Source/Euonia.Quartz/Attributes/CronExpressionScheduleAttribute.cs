@@ -35,8 +35,8 @@ public class CronExpressionScheduleAttribute : BackgroundJobScheduleAttribute
 	public CronExpressionScheduleAttribute(string identity, int hour, int minute, params DayOfWeek[] daysOfWeek)
 		: base(identity)
 	{
-		DateBuilder.ValidateHour(hour);
-		DateBuilder.ValidateMinute(minute);
+		ValidateHour(hour);
+		ValidateMinute(minute);
 
 		if (daysOfWeek?.Length > 0)
 		{
@@ -59,9 +59,9 @@ public class CronExpressionScheduleAttribute : BackgroundJobScheduleAttribute
 	public CronExpressionScheduleAttribute(string identity, int hour, int minute, int dayOfMonth)
 		: base(identity)
 	{
-		DateBuilder.ValidateDayOfMonth(dayOfMonth);
-		DateBuilder.ValidateHour(hour);
-		DateBuilder.ValidateMinute(minute);
+		ValidateDayOfMonth(dayOfMonth);
+		ValidateHour(hour);
+		ValidateMinute(minute);
 
 		CronExpression = $"0 {minute} {hour} {dayOfMonth} * ?";
 	}
@@ -81,7 +81,7 @@ public class CronExpressionScheduleAttribute : BackgroundJobScheduleAttribute
 	/// <inheritdoc/>
 	public override IScheduleBuilder Configure()
 	{
-		var builder = CronScheduleBuilder.CronSchedule(CronExpression);
+		var builder = CronScheduleBuilder.Create(CronExpression);
 
 		var timeZoneInfo = TimeZoneName.ToUpper(CultureInfo.CurrentCulture) switch
 		{
@@ -91,17 +91,9 @@ public class CronExpressionScheduleAttribute : BackgroundJobScheduleAttribute
 		};
 		builder.InTimeZone(timeZoneInfo);
 
-		switch (MisfirePolicy)
+		if (MisfirePolicy.HasValue)
 		{
-			case MisfireInstruction.IgnoreMisfirePolicy:
-				builder.WithMisfireHandlingInstructionIgnoreMisfires();
-				break;
-			case MisfireInstruction.CronTrigger.DoNothing:
-				builder.WithMisfireHandlingInstructionDoNothing();
-				break;
-			case MisfireInstruction.CronTrigger.FireOnceNow:
-				builder.WithMisfireHandlingInstructionFireAndProceed();
-				break;
+			builder.WithMisfireInstruction((CronTriggerMisfireInstruction)MisfirePolicy.Value);
 		}
 
 		return builder;
@@ -125,5 +117,29 @@ public class CronExpressionScheduleAttribute : BackgroundJobScheduleAttribute
 			DayOfWeek.Saturday => "SAT",
 			_ => ((int)dayOfWeek).ToString()
 		};
+	}
+
+	private static void ValidateHour(int hour)
+	{
+		if (hour is < 0 or > 23)
+		{
+			throw new ArgumentOutOfRangeException(nameof(hour), hour, "Hour of day must be between 0 and 23, inclusive.");
+		}
+	}
+
+	private static void ValidateMinute(int minute)
+	{
+		if (minute is < 0 or > 59)
+		{
+			throw new ArgumentOutOfRangeException(nameof(minute), minute, "Minute of hour must be between 0 and 59, inclusive.");
+		}
+	}
+
+	private static void ValidateDayOfMonth(int dayOfMonth)
+	{
+		if (dayOfMonth is < 1 or > 31)
+		{
+			throw new ArgumentOutOfRangeException(nameof(dayOfMonth), dayOfMonth, "Day of month must be between 1 and 31, inclusive.");
+		}
 	}
 }

@@ -47,18 +47,12 @@ public class CalendarIntervalScheduleAttribute : BackgroundJobScheduleAttribute
 	{
 		var builder = CalendarIntervalScheduleBuilder.Create();
 		builder.WithInterval(Interval, Unit);
-		switch (MisfirePolicy)
+
+		if (MisfirePolicy.HasValue)
 		{
-			case MisfireInstruction.IgnoreMisfirePolicy:
-				builder.WithMisfireHandlingInstructionIgnoreMisfires();
-				break;
-			case MisfireInstruction.CalendarIntervalTrigger.DoNothing:
-				builder.WithMisfireHandlingInstructionDoNothing();
-				break;
-			case MisfireInstruction.CalendarIntervalTrigger.FireOnceNow:
-				builder.WithMisfireHandlingInstructionFireAndProceed();
-				break;
+			builder.WithMisfireInstruction((CalendarIntervalTriggerMisfireInstruction)MisfirePolicy.Value);
 		}
+
 		if (SkipDayIfHourDoesNotExist.HasValue)
 		{
 			builder.SkipDayIfHourDoesNotExist(SkipDayIfHourDoesNotExist.Value);
