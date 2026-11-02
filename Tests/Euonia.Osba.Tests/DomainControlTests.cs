@@ -30,6 +30,124 @@ public class DomainControlTests
 	}
 
 	[Fact]
+	public void RevertingProperty_ShouldClearDirtyState()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		target.Name = "changed";
+		Assert.True(target.HasChangedProperties);
+
+		target.Name = string.Empty;
+
+		Assert.False(target.HasChangedProperties);
+		Assert.Empty(target.ChangedProperties);
+		Assert.False(target.IsDirty);
+		Assert.False(target.FieldManager.GetFieldData(DomainControlEditable.NameProperty).IsChanged);
+	}
+
+	[Fact]
+	public void RevertingOneProperty_ShouldKeepOtherPropertiesDirty()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		target.Name = "changed";
+		target.Code = "A";
+
+		target.Name = string.Empty;
+
+		Assert.True(target.HasChangedProperties);
+		Assert.Equal([DomainControlEditable.CodeProperty], target.ChangedProperties);
+
+		target.Code = string.Empty;
+
+		Assert.False(target.HasChangedProperties);
+		Assert.Empty(target.ChangedProperties);
+	}
+
+	[Fact]
+	public void BypassWrite_ShouldStillTrackDirtyState()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		using (target.BypassRuleChecks)
+		{
+			target.Name = "changed";
+		}
+
+		Assert.True(target.HasChangedProperties);
+
+		using (target.BypassRuleChecks)
+		{
+			target.Name = string.Empty;
+		}
+
+		Assert.False(target.HasChangedProperties);
+		Assert.False(target.IsDirty);
+
+		// 非泛型 SetProperty 的绕过路径也必须保留变更追踪。
+		using (target.BypassRuleChecks)
+		{
+			target.SetProperty(DomainControlEditable.NameProperty, "via-set");
+		}
+
+		Assert.True(target.HasChangedProperties);
+
+		using (target.BypassRuleChecks)
+		{
+			target.SetProperty(DomainControlEditable.NameProperty, string.Empty);
+		}
+
+		Assert.False(target.HasChangedProperties);
+	}
+
+	[Fact]
+	public void SetPropertyConvert_Reverting_ShouldClearDirtyState()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		target.SetCodeConverted("A");
+		Assert.True(target.HasChangedProperties);
+
+		target.SetCodeConverted(string.Empty);
+
+		Assert.False(target.HasChangedProperties);
+		Assert.Empty(target.ChangedProperties);
+	}
+
+	[Fact]
+	public void RefreshChangedProperties_ShouldReconcileLowLevelUndo()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		target.Name = "changed";
+		var field = target.FieldManager.GetFieldData(DomainControlEditable.NameProperty);
+		field.Undo();
+
+		Assert.True(target.HasChangedProperties);
+
+		target.RefreshChangedProperties();
+
+		Assert.False(target.HasChangedProperties);
+		Assert.False(field.IsChanged);
+
+		// 低层写入同样可以被 Refresh 重新纳入脏状态，再 Undo 后重新同步。
+		field.Value = "direct";
+		Assert.False(target.HasChangedProperties);
+
+		target.RefreshChangedProperties();
+		Assert.True(target.HasChangedProperties);
+
+		field.Undo();
+		target.RefreshChangedProperties();
+		Assert.False(target.HasChangedProperties);
+	}
+
+	[Fact]
 	public void RejectChanges_ShouldRestoreLoadedBaseline()
 	{
 		using var scope = RuleTestHarness.CreateScope(out var provider);
@@ -64,6 +182,10 @@ public class DomainControlTests
 		field.Value = 2;
 		Assert.Equal(0, field.OriginalValue);
 
+		field.Value = 0;
+		Assert.False(field.IsChanged);
+
+		field.Value = 2;
 		field.MarkAsUnchanged();
 		Assert.False(field.IsChanged);
 		Assert.Equal(2, field.OriginalValue);
@@ -108,10 +230,23 @@ public sealed class DomainControlEditable : EditableObject<DomainControlEditable
 {
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty(p => p.Name);
 
+	public static readonly PropertyInfo<string> CodeProperty = RegisterProperty(p => p.Code);
+
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
+	}
+
+	public string Code
+	{
+		get => GetProperty(CodeProperty);
+		set => SetProperty(CodeProperty, value);
+	}
+
+	public void SetCodeConverted(string code)
+	{
+		SetPropertyConvert(CodeProperty, code);
 	}
 
 	protected override bool CanTransitionTo(ObjectEditState target)

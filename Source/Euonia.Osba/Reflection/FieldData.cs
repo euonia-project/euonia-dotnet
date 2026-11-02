@@ -170,6 +170,10 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 			}
 
 			_value = value;
+
+			// 值可能被改回基线（例如先改成 "x" 再改回 ""）。IsChanged 必须反映
+			// 「当前值是否仍不同于基线」，否则对象会永远保持脏状态。
+			_isChanged = !EqualityComparer<T>.Default.Equals(_value, _originalValue);
 		}
 
 		_observable?.Publish(value);

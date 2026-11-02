@@ -40,14 +40,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="property">要标记的属性信息。</param>
 	protected override void PropertyHasChanged(IPropertyInfo property)
 	{
-		lock (_changedPropertiesLock)
-		{
-			if (!_changedProperties.Contains(property))
-			{
-				_changedProperties.Add(property);
-				_changedPropertiesSnapshot = null;
-			}
-		}
+		AddChangedProperty(property);
 
 		// 该属性没有规则时退化为普通变更通知——绑定依赖这条通知，
 		// 不能因为「进了规则分支但无规则可跑」而丢掉它。
@@ -60,6 +53,104 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		{
 			SetValidationState(ValidationState.NotValidated);
 			OnPropertyChanged(property);
+		}
+	}
+
+	/// <summary>
+	/// 属性直接赋值后的变更处理：先走常规的脏标记/规则/通知，再在字段回到基线时撤销脏标记。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <remarks>
+	/// 子对象属性变化与集合内容变化不走本方法，因此它们仍会保持父对象为脏状态。
+	/// </remarks>
+	protected override void OnPropertyValueChanged(IPropertyInfo property)
+	{
+		// 先走常规的脏标记/规则/通知；字段存在且已回到基线时再撤销脏标记。
+		// 正常变更路径不额外走 TrackPropertyValueChanged，避免每次写入多一次查重。
+		PropertyHasChanged(property);
+
+		var field = FieldManager.GetFieldData(property);
+		if (field != null && !field.IsChanged)
+		{
+			RemoveChangedProperty(property);
+		}
+	}
+
+	/// <summary>
+	/// 按字段的实际变更状态同步 <see cref="ChangedProperties"/>。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void TrackPropertyValueChanged(IPropertyInfo property)
+	{
+		var field = FieldManager.GetFieldData(property);
+
+		// 没有字段数据时无法判断，保守地保留为已更改。
+		if (field == null || field.IsChanged)
+		{
+			AddChangedProperty(property);
+			return;
+		}
+
+		RemoveChangedProperty(property);
+	}
+
+	/// <summary>
+	/// 将属性加入已更改集合，并去重。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void AddChangedProperty(IPropertyInfo property)
+	{
+		lock (_changedPropertiesLock)
+		{
+			if (!_changedProperties.Contains(property))
+			{
+				_changedProperties.Add(property);
+				_changedPropertiesSnapshot = null;
+			}
+		}
+	}
+
+	/// <summary>
+	/// 从已更改属性列表中移除指定属性，并使快照失效。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void RemoveChangedProperty(IPropertyInfo property)
+	{
+		lock (_changedPropertiesLock)
+		{
+			if (_changedProperties.Remove(property))
+			{
+				_changedPropertiesSnapshot = null;
+			}
+		}
+	}
+
+	/// <summary>
+	/// 按字段当前状态重新同步 <see cref="ChangedProperties"/>。
+	/// </summary>
+	/// <remarks>
+	/// 直接操作 <see cref="IFieldData"/>（例如 <see cref="IFieldData.Undo"/>）不会经过对象级属性通知；
+	/// 调用本方法可把这类低层修改重新纳入脏状态。子对象/集合属性保持原样，因为它们是否脏取决于子图。
+	/// </remarks>
+	public virtual void RefreshChangedProperties()
+	{
+		// 扫描全部已注册属性，而不是只扫描当前脏集合：低层 Undo/赋值既可能把属性改脏，
+		// 也可能把它改回基线。没有字段数据的属性不在这里凭空创建字段。
+		foreach (var property in FieldManager.GetRegisteredProperties())
+		{
+			if (typeof(IOsbaObject).IsAssignableFrom(property.Type) ||
+			    typeof(IChildGraphNode).IsAssignableFrom(property.Type))
+			{
+				continue;
+			}
+
+			if (FieldManager.GetFieldData(property) == null)
+			{
+				RemoveChangedProperty(property);
+				continue;
+			}
+
+			TrackPropertyValueChanged(property);
 		}
 	}
 
@@ -365,9 +456,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步写入字典。
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -406,9 +501,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		field = converted;
 		FieldManager.SetFieldData(propertyInfo, converted);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -463,9 +562,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		AttachChild(propertyInfo, field, newValue);
 		field = newValue;
 		FieldManager.SetFieldData(propertyInfo, newValue);
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyName);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -520,9 +623,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			AttachChild(propertyInfo, field, converted);
 			field = converted;
 			FieldManager.SetFieldData(propertyInfo, field);
-			if (!IsBypassingRuleChecks)
+			if (IsBypassingRuleChecks)
 			{
-				PropertyHasChanged(propertyName);
+				TrackPropertyValueChanged(propertyInfo);
+			}
+			else
+			{
+				OnPropertyValueChanged(propertyInfo);
 			}
 		}
 	}
@@ -549,7 +656,14 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks, onChanged);
+		var converted = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+		if (IsBypassingRuleChecks)
+		{
+			SetPropertyValueBypassingRules(propertyInfo, oldValue, converted);
+			return;
+		}
+
+		LoadPropertyValue(propertyInfo, oldValue, converted, true, onChanged);
 	}
 
 	/// <summary>
@@ -577,7 +691,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks, onChanged);
+		if (IsBypassingRuleChecks)
+		{
+			SetPropertyValueBypassingRules(propertyInfo, oldValue, newValue);
+			return;
+		}
+
+		LoadPropertyValue(propertyInfo, oldValue, newValue, true, onChanged);
 	}
 
 	/// <summary>
@@ -616,10 +736,32 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		AttachChild(propertyInfo, currentValue, newValue);
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
 		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
+		}
+	}
+
+	/// <summary>
+	/// 在绕过规则检查时写入属性：保留变更追踪，但不触发通知与规则。
+	/// </summary>
+	/// <param name="propertyInfo">属性。</param>
+	/// <param name="oldValue">旧值。</param>
+	/// <param name="newValue">新值。</param>
+	private void SetPropertyValueBypassingRules(IPropertyInfo propertyInfo, object oldValue, object newValue)
+	{
+		if (!ValuesDiffer(propertyInfo, newValue, oldValue))
+		{
+			return;
+		}
+
+		AttachChild(propertyInfo, oldValue, newValue);
+		FieldManager.SetFieldData(propertyInfo, newValue);
+		TrackPropertyValueChanged(propertyInfo);
 	}
 
 	/// <summary>

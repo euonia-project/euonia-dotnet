@@ -34,13 +34,17 @@
   库内异步路径统一 `ConfigureAwait(false)`，避免同步上下文捕获与线程跳转。
 - **性能：执行器空管道快路径**：没有 `Handle` / `Behavior` / `IActuatorBehavior` 时，
   执行器直接执行「后续处理 → 终结」，跳过管道组件快照与委托组合；`FetchActuator` 从
-  1.41 µs / 2.69 KB 降至 1.24 µs / 1.94 KB（ShortRun）。
-- **测试**：新增 19 个用例，覆盖属性类型推断、读取执行器、生命周期回调、领域对象控制、规则服务解析、外部规则注册、自定义工厂与旧公共 API 兼容性。
+  1.41 µs / 2.69 KB 降至 1.28 µs / 1.98 KB（ShortRun）。
+- **测试**：新增 24 个用例，覆盖属性类型推断、读取执行器、生命周期回调、领域对象控制、规则服务解析、外部规则注册、自定义工厂与旧公共 API 兼容性。
 - **API 兼容性**：新增 5 个回归测试，覆盖旧 `RegisterProperty` 表达式重载、`IFieldData` / `IRuleContext` 默认接口成员、旧 `BusinessObjectFactory` 构造函数，以及宿主注册的自定义 `IPipeline` 仍会执行。
 - **文档**：新增 `Source/Euonia.Osba/DESIGN.md`，集中记录业务模型定位、与 DDD/MVVM 的关系、对象模型、规则、工厂、执行器、性能与 API 兼容性设计。
 - **基准**：新增 `DomainControlBenchmarks` 与 `RuleAndFactoryBenchmarks.FetchActuator`；
-  ShortRun 参考值：属性写 37 ns / 24 B、带一条属性规则写 130 ns / 304 B、
-  `GetOriginalValue` 8 ns / 0 B、`RejectChanges` 94 ns / 112 B、`FetchFactory` 1.12 µs / 1.48 KB、`FetchActuator` 1.24 µs / 1.94 KB。
+  ShortRun 参考值：属性写 44 ns / 24 B、带一条属性规则写 134 ns / 304 B、
+  `GetOriginalValue` 8 ns / 0 B、`RejectChanges` 100 ns / 112 B、`FetchFactory` 1.09 µs / 1.52 KB、`FetchActuator` 1.28 µs / 1.98 KB。
+- **修复：属性改回原值后仍为脏**：`FieldData<T>.SetValue` 现在按当前值与基线重新计算 `IsChanged`；
+  直接赋值路径通过 `OnPropertyValueChanged` 在值回到基线时从 `ChangedProperties` 移除该属性，
+  子对象/集合内容变化仍保持父对象为脏；绕过规则检查的写入仍保留变更追踪，只是不触发通知/规则；
+  直接操作 `IFieldData` 后可用 `RefreshChangedProperties()` 重新同步脏状态。
 - **领域对象控制：原始值与回滚**：`IFieldData` 增加 `OriginalValue`；`BusinessObject<T>` 增加
   `GetOriginalValue` / `GetOriginalValues` / `GetChangedValues` / `IsDirty` / `RejectChanges`；
   `FieldData<T>` 用独立的变更标记记录基线，历史深度为 0 时也能正确判断 `IsChanged`。

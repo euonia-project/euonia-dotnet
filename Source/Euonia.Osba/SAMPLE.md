@@ -247,6 +247,8 @@ repo.RejectChanges();                     // 回滚到原始值并清空变更�
 >
 > `RejectChanges()` 把已更改属性恢复到 `AcceptChanges()` 时的基线；`AcceptChanges()` 则把当前值当作新基线。
 >
+> 属性被直接改回基线时（例如先改成 `"x"` 再改回 `""`），`FieldData.IsChanged` 会变回 `false`，该属性自动从 `ChangedProperties` 移除；子对象/集合内容变化仍保持父对象为脏。
+>
 > `MarkAsDeleted(true)` 才会让「删除」也执行对象级规则——默认**不**执行。
 >
 > 删除成功后对象会复位为 `None`，重复 `SaveAsync` 是幂等 no-op；不要再依赖“删除后仍是 Deleted”。

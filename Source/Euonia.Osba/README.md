@@ -72,7 +72,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 ### 1.4 能力清单
 
 - **属性系统**：静态注册、类型级元数据缓存、实例级字段数组、环形撤销历史、按需可观察值。
-- **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段。
+- **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段；属性直接改回基线后自动移出 `ChangedProperties`。
 - **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态迁移（`CanTransitionTo` / `StateChanged`）。
 - **状态机**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted`，保存时由 `ScopeOperationMap` 唯一映射到业务操作。
 - **规则系统**：`RuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
@@ -670,6 +670,7 @@ flowchart LR
 - `LoadProperty` 会检查 `CanLoadProperty`：只读对象只在**装载作用域**（工厂方法执行期间）或显式 `BypassRuleChecks` 时允许写入。
 - `SetProperty` 对 `string` 的 `null` 归一为 `string.Empty`；对 `IOsbaObject` 类型的属性按引用比较，其余按值比较。
 - `AcceptChanges()` 清除 `ChangedProperties`、把字段历史基线重置为当前值；`ObservableObject.AcceptChanges()` 还会把 `State` 复位为 `None`。
+- 属性被直接改回基线时，`FieldData.IsChanged` 变为 `false`，该属性会从 `ChangedProperties` 中移除；子对象属性变化与集合内容变化仍保持父对象为脏（字段引用未变）。
 
 #### 3.4.4 父子对象图
 
@@ -1078,14 +1079,14 @@ public sealed class Repo : EditableObject<Repo>
 
 | 场景 | 耗时 | 分配 |
 |---|---:|---:|
-| 属性写 | 37 ns | 24 B |
-| 带一条属性规则写 | 130 ns | 304 B |
-| `ValidateAsync` | 48 ns | 232 B |
-| `SaveAsync`（无持久化） | 323 ns | 936 B |
-| `FetchFactory`（直接工厂读取） | 1.12 µs | 1.48 KB |
-| `FetchActuator`（空管道快路径） | 1.24 µs | 1.94 KB |
+| 属性写 | 44 ns | 24 B |
+| 带一条属性规则写 | 134 ns | 304 B |
+| `ValidateAsync` | 50 ns | 232 B |
+| `SaveAsync`（无持久化） | 330 ns | 936 B |
+| `FetchFactory`（直接工厂读取） | 1.09 µs | 1.52 KB |
+| `FetchActuator`（空管道快路径） | 1.28 µs | 1.98 KB |
 | `GetOriginalValue` | 8 ns | 0 B |
-| `RejectChanges` | 94 ns | 112 B |
+| `RejectChanges` | 100 ns | 112 B |
 | `MarkAsChanged` + `AcceptChanges` | 8.9 ns | 0 B |
 
 性能基线可用基准项目验证：
@@ -1103,6 +1104,8 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 | 属性读写权限 | `CanReadProperty` / `CanWriteProperty`；`GetProperty(IPropertyInfo)` / `SetProperty(IPropertyInfo, object)` 均可重写 |
 | 领域行为封装 | 属性 setter 可以是 `private` / `protected`，只暴露领域方法；领域方法内部调用 `SetProperty` |
 | 原始值与回滚 | `GetOriginalValue` / `GetOriginalValues` / `GetChangedValues` / `RejectChanges` / `IsDirty` |
+| 脏状态撤销 | 直接赋值回到基线时自动移出 `ChangedProperties`；`OnPropertyValueChanged` 可重写以附加领域行为 |
+| 低层字段同步 | 直接操作 `IFieldData`（如 `Undo`）后调用 `RefreshChangedProperties()` 重新同步脏状态 |
 | 状态机 | `CanTransitionTo` / `TransitionTo` / `StateChanged`；`MarkAsNew/Changed/Deleted` 可重写 |
 | 装载与物化 | `IsLoading`、`BeginLoad()`（`protected internal`）、`CanLoadProperty` |
 | 保存 / 执行边界 | `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` |

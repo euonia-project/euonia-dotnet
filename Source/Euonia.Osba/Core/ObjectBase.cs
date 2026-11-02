@@ -580,6 +580,21 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	}
 
 	/// <summary>
+	/// 属性值已更改；与 <see cref="PropertyHasChanged(IPropertyInfo)"/> 的区别是调用方确认这是直接赋值，
+	/// 而不是子对象/集合内容变化。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <remarks>
+	/// 直接赋值路径（<c>SetProperty</c>、标记为更改的 <c>LoadPropertyValue</c>）调用本方法；
+	/// 子对象属性变化与集合内容变化仍调用 <see cref="PropertyHasChanged(IPropertyInfo)"/>。
+	/// 派生类可据此区分「字段值真的不同」和「子图内容变化」，在字段回到基线时撤销脏标记。
+	/// </remarks>
+	protected virtual void OnPropertyValueChanged(IPropertyInfo property)
+	{
+		PropertyHasChanged(property);
+	}
+
+	/// <summary>
 	/// 判断属性是否有可能适用的规则；不会创建本对象的 <see cref="Rules"/> 实例。
 	/// </summary>
 	/// <param name="property">属性。</param>
@@ -1320,7 +1335,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 		{
 			OnPropertyChanging(propertyInfo);
 			FieldManager.SetFieldData(propertyInfo, newValue);
-			PropertyHasChanged(propertyInfo);
+			OnPropertyValueChanged(propertyInfo);
 			onChanged?.Invoke(propertyInfo, oldValue, newValue);
 		}
 		else

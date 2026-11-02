@@ -228,7 +228,7 @@ classDiagram
 
 | API | 作用 |
 |---|---|
-| `ChangedProperties` / `HasChangedProperties` | 哪些属性被改过 |
+| `ChangedProperties` / `HasChangedProperties` | 哪些属性仍有未提交的实际值差异 |
 | `GetOriginalValue` / `GetOriginalValues` | 自上次 `AcceptChanges` 以来的基线值 |
 | `GetChangedValues` | 已更改属性的当前值 |
 | `IsDirty` | `HasChangedProperties` 的语义别名 |
@@ -241,7 +241,11 @@ classDiagram
 2. 后续多次修改始终保留第一次修改前的值；
 3. `AcceptChanges` 把当前值提交为新基线；
 4. `RejectChanges` 恢复旧基线，并复位状态；
-5. `FieldData<T>` 使用独立变更标记，`HistoryDepth = 0` 时 `IsChanged` 仍然正确。
+5. `FieldData<T>` 使用独立变更标记，`HistoryDepth = 0` 时 `IsChanged` 仍然正确；
+6. 直接赋值把值改回基线时，`IsChanged` 重新变为 `false`，属性从 `ChangedProperties` 移除；
+   子对象/集合内容变化仍保持父对象为脏（字段引用未变）；
+7. 绕过规则检查的写入仍保留变更追踪（只是不触发通知/规则）；
+8. 直接操作 `IFieldData` 后可用 `RefreshChangedProperties()` 重新同步脏状态。
 
 ### 4.3 状态机
 
@@ -475,15 +479,15 @@ ShortRun 参考值（Apple M4 Max / .NET 10.0.11 / BenchmarkDotNet）：
 
 | 场景 | 耗时 | 分配 |
 |---|---:|---:|
-| 属性写 | 37 ns | 24 B |
-| 带一条属性规则写 | 126–130 ns | 304 B |
-| `ValidateAsync` | 47–48 ns | 232 B |
-| `SaveAsync`（无持久化） | 323–328 ns | 936 B |
+| 属性写 | 44 ns | 24 B |
+| 带一条属性规则写 | 134 ns | 304 B |
+| `ValidateAsync` | 50 ns | 232 B |
+| `SaveAsync`（无持久化） | 330 ns | 936 B |
 | `GetOriginalValue` | 8 ns | 0 B |
-| `RejectChanges` | 94 ns | 112 B |
+| `RejectChanges` | 100 ns | 112 B |
 | `MarkAsChanged` + `AcceptChanges` | 8.9 ns | 0 B |
-| `FetchFactory`（直接工厂读取） | 1.12 µs | 1.48 KB |
-| `FetchActuator`（空管道快路径） | 1.24 µs | 1.94 KB |
+| `FetchFactory`（直接工厂读取） | 1.09 µs | 1.52 KB |
+| `FetchActuator`（空管道快路径） | 1.28 µs | 1.98 KB |
 
 > 这些数字用于量级判断，不是正式 CI 门禁。正式门禁建议在固定硬件上使用默认 BenchmarkDotNet Job，并对回归超过 20% 或分配翻倍的情况失败。
 
@@ -511,7 +515,7 @@ Osba 在增强时遵循以下约束：
 ### 11.1 测试
 
 ```text
-Euonia.Osba.Tests             295 passed
+Euonia.Osba.Tests             300 passed
 Euonia.Osba.Standalone.Tests    7 passed
 ```
 
