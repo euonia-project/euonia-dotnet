@@ -31,8 +31,7 @@ internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : RuleBase(pr
 		}
 
 		// Check if the phone property has been changed.
-		var field = target.FieldManager.GetFieldData(Property);
-		if (!field.IsChanged)
+		if (Equals(target.FieldManager.GetOriginalValue(Property), target.ReadProperty(Property)))
 		{
 			return;
 		}

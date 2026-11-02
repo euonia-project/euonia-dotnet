@@ -1105,7 +1105,8 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 | 领域行为封装 | 属性 setter 可以是 `private` / `protected`，只暴露领域方法；领域方法内部调用 `SetProperty` |
 | 原始值与回滚 | `GetOriginalValue` / `GetOriginalValues` / `GetChangedValues` / `RejectChanges` / `IsDirty` |
 | 脏状态撤销 | 直接赋值回到基线时自动移出 `ChangedProperties`；`OnPropertyValueChanged` 可重写以附加领域行为 |
-| 低层字段同步 | 直接操作 `IFieldData`（如 `Undo`）后调用 `RefreshChangedProperties()` 重新同步脏状态 |
+| 字段访问边界 | `FieldManager.GetFieldData` / `MarkAllAsUnchanged` 为 internal；外部读取原始值用 `GetOriginalValue`，判断字段是否存在用 `FieldExists` |
+| 低层字段同步 | Osba 内部修改真实字段后，可调用 `RefreshChangedProperties()` 重新同步脏状态 |
 | 状态机 | `CanTransitionTo` / `TransitionTo` / `StateChanged`；`MarkAsNew/Changed/Deleted` 可重写 |
 | 装载与物化 | `IsLoading`、`BeginLoad()`（`protected internal`）、`CanLoadProperty` |
 | 保存 / 执行边界 | `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` |

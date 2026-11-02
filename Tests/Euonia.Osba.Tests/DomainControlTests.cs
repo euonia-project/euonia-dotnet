@@ -8,6 +8,16 @@ namespace Nerosoft.Euonia.Osba.Tests;
 public class DomainControlTests
 {
 	[Fact]
+	public void FieldStorage_ShouldNotBePubliclyAccessible()
+	{
+		const System.Reflection.BindingFlags publicInstance =
+			System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance;
+
+		Assert.DoesNotContain(typeof(FieldDataManager).GetMethods(publicInstance), method => method.Name == "GetFieldData");
+		Assert.DoesNotContain(typeof(FieldDataManager).GetMethods(publicInstance), method => method.Name == "MarkAllAsUnchanged");
+	}
+
+	[Fact]
 	public void OriginalValues_ShouldKeepFirstValueAndRejectChanges()
 	{
 		using var scope = RuleTestHarness.CreateScope(out var provider);

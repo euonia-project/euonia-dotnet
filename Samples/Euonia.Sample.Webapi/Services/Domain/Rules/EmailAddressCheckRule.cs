@@ -38,9 +38,8 @@ internal sealed class EmailAddressCheckRule : RuleBase
 			return;
 		}
 
-		var field = target.FieldManager.GetFieldData(Property);
 		// Check if the email property has been changed.
-		if (!field.IsChanged)
+		if (Equals(target.FieldManager.GetOriginalValue(Property), target.ReadProperty(Property)))
 		{
 			return;
 		}

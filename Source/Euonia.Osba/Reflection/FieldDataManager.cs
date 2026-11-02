@@ -99,11 +99,11 @@ public class FieldDataManager
 	#region Get/Set/Find fields
 
 	/// <summary>
-	/// 获取属性的字段数据。
+	/// 获取属性的真实字段数据；仅供 Osba 内部使用。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
-	/// <returns>字段数据。</returns>
-	public IFieldData GetFieldData(IPropertyInfo property)
+	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
+	internal IFieldData GetFieldData(IPropertyInfo property)
 	{
 		var index = GetIndex(property);
 		if (index >= 0)
@@ -116,11 +116,11 @@ public class FieldDataManager
 	}
 
 	/// <summary>
-	/// 获取具有指定名称的属性的字段数据。
+	/// 获取具有指定名称的真实字段数据；仅供 Osba 内部使用。
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
-	/// <returns>字段数据。</returns>
-	public IFieldData GetFieldData(string propertyName)
+	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
+	internal IFieldData GetFieldData(string propertyName)
 	{
 		var index = _metadata.IndexOf(propertyName);
 		if (index >= 0)
@@ -406,7 +406,10 @@ public class FieldDataManager
 	/// <summary>
 	/// 将所有字段数据标记为未更改，清除每个字段的修改历史。
 	/// </summary>
-	public void MarkAllAsUnchanged()
+	/// <remarks>
+	/// 仅供对象级生命周期使用；外部应通过 <c>AcceptChanges</c> / <c>RejectChanges</c> 控制状态。
+	/// </remarks>
+	internal void MarkAllAsUnchanged()
 	{
 		if (_fields != null)
 		{

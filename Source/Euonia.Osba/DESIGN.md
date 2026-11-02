@@ -245,7 +245,8 @@ classDiagram
 6. 直接赋值把值改回基线时，`IsChanged` 重新变为 `false`，属性从 `ChangedProperties` 移除；
    子对象/集合内容变化仍保持父对象为脏（字段引用未变）；
 7. 绕过规则检查的写入仍保留变更追踪（只是不触发通知/规则）；
-8. 直接操作 `IFieldData` 后可用 `RefreshChangedProperties()` 重新同步脏状态。
+8. 字段访问入口为 internal；`FieldManager` 对外只暴露元数据、`FieldExists` 与 `GetOriginalValue`；
+   内部修改真实字段后可用 `RefreshChangedProperties()` 重新同步脏状态。
 
 ### 4.3 状态机
 
@@ -515,7 +516,7 @@ Osba 在增强时遵循以下约束：
 ### 11.1 测试
 
 ```text
-Euonia.Osba.Tests             300 passed
+Euonia.Osba.Tests             301 passed
 Euonia.Osba.Standalone.Tests    7 passed
 ```
 
