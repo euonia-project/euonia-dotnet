@@ -11,6 +11,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions: 
+      id-token: write
+
     steps:
     - uses: actions/checkout@v2
     - name: Setup .NET
@@ -23,5 +26,10 @@ jobs:
       run: dotnet build Euonia.Build.slnx --no-restore --configuration Release
     - name: Pack
       run: dotnet pack Euonia.Build.slnx -c Release -o artifacts/ 
+    - name: NuGet login (OIDC → temp API key)
+      uses: NuGet/login@v1
+      id: login
+      with:
+        user: zhaorong
     - name: Publish NuGet
       run: dotnet nuget push artifacts/*.nupkg --api-key ${{secrets.NUGET_API}} --source https://api.nuget.org/v3/index.json --skip-duplicate
