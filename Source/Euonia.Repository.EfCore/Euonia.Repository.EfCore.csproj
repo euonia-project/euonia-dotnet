@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia Repository 的 Entity Framework Core 实现：自动应用配置与墓碑查询过滤的 DbContext 基类、仓储实现、ID 值生成器与值转换器。 / Entity Framework Core implementation for Euonia Repository: DbContext base with auto-applied configurations and tombstone query filters, repository implementations, ID value generators and value converters.</Description>
+        <PackageTags>euonia, repository, efcore, entity-framework, orm, data-access</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.EntityFrameworkCore" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Tools">

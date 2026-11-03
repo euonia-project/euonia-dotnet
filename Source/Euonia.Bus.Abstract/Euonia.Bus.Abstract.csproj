@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 消息总线抽象：消息信封与上下文、约定、传输策略、注解、可靠性契约（Outbox、Inbox 与死信）及事件体系，是所有 Euonia 总线传输的扩展基础。 / Messaging abstractions for Euonia: message envelopes and contexts, conventions, transport strategies, annotations, reliability contracts (outbox, inbox and dead letter) and the event system. Extension base for all Euonia bus transports.</Description>
+        <PackageTags>euonia, messaging, message-bus, abstractions, outbox, inbox, dead-letter, transport</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <RootNamespace>Nerosoft.Euonia.Bus</RootNamespace>
         <!-- 与 Euonia.Bus 共用根命名空间，此处单独隔离资源类以避免 CS0436 同名冲突。 -->
         <ResourcesNamespace>Nerosoft.Euonia.Bus.Abstract.Properties</ResourcesNamespace>

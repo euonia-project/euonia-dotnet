@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>受 ASP.NET Core 启发的 Euonia 中间件管道：可组合的 IPipeline&lt;TRequest,TResponse&gt; 行为，支持依赖注入与表达式编译委托。 / ASP.NET Core-inspired middleware pipeline for Euonia: composable IPipeline&lt;TRequest,TResponse&gt; behaviors with dependency injection and expression-compiled delegates.</Description>
+        <PackageTags>euonia, pipeline, middleware, behavior, dependency-injection</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

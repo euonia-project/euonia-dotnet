@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 缓存的 Redis 提供程序：通过通用缓存抽象注册的 StackExchange.Redis 分布式缓存句柄。 / Redis provider for Euonia Caching: a StackExchange.Redis-backed distributed cache handle registered through the common caching abstractions.</Description>
+        <PackageTags>euonia, caching, redis, distributed-cache, stackexchange</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

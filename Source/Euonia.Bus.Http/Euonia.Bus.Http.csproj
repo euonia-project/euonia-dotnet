@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 总线 HTTP 远程传输：客户端通过 HTTP POST 执行 CallAsync，服务端端点执行处理器并返回结果，与 gRPC 传输共用 RemoteReply 线路协议。 / HTTP remote transport for Euonia Bus: client-side CallAsync over HTTP POST plus a server endpoint that executes handlers and returns results, sharing the RemoteReply wire protocol with the gRPC transport.</Description>
+        <PackageTags>euonia, message-bus, http, remote, transport, rpc</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>

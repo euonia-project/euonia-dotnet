@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia LINQ 工具：规约模式、谓词与表达式构建器，以及过滤、分页和排序等查询扩展。 / LINQ utilities for Euonia: the specification pattern, predicate and expression builders, and queryable extensions for filtering, pagination and ordering.</Description>
+        <PackageTags>euonia, linq, specification, expression, predicate, queryable</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

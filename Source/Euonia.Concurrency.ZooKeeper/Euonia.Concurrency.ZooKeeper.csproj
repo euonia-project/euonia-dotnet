@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>基于 ZooKeeperNetEx 的 Euonia 分布式锁与信号量实现。 / Apache ZooKeeper implementation of Euonia distributed locks and semaphores, built on ZooKeeperNetEx.</Description>
+        <PackageTags>euonia, concurrency, distributed-lock, zookeeper, semaphore</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="ZooKeeperNetEx" />
     </ItemGroup>

@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 的 ASP.NET Core 托管基础设施：主机启动引导、异常与请求追踪中间件、JWT/内省认证、授权策略与用户主体访问器。 / ASP.NET Core hosting infrastructure for Euonia: host bootstrap, exception and request-trace middleware, JWT/introspection authentication, authorization policies and user principal accessors.</Description>
+        <PackageTags>euonia, aspnetcore, hosting, middleware, authentication, authorization, jwt, oidc</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>

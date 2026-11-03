@@ -2,6 +2,11 @@
 
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
+
+    <PropertyGroup>
+        <Description>Euonia 消息总线引擎：处理器发现与注册、约定与传输策略分发、Publish/Send/Call API、中间件管道、序列化、Outbox/Inbox 可靠性及 OpenTelemetry 遥测。 / Message bus engine for Euonia: handler discovery and registration, convention and transport-strategy dispatch, publish/send/call APIs, middleware pipelines, serialization, outbox/inbox reliability and OpenTelemetry instrumentation.</Description>
+        <PackageTags>euonia, message-bus, event-bus, cqrs, outbox, inbox, dead-letter, opentelemetry</PackageTags>
+    </PropertyGroup>
     
     <PropertyGroup>
         <PackageReadmeFile>README.md</PackageReadmeFile>

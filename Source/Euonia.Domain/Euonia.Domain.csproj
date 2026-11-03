@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 领域驱动设计构建块：实体、聚合根、值对象、领域事件、命令与审计契约。 / Domain-Driven Design building blocks for Euonia: entities, aggregate roots, value objects, domain events, commands and auditing contracts.</Description>
+        <PackageTags>euonia, ddd, domain-driven-design, domain, entity, aggregate, value-object, domain-events, cqrs</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />

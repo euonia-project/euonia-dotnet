@@ -4,7 +4,8 @@
     <Import Project="..\resource.props" />
 
 	<PropertyGroup>
-		<Description>Authorization primitives: operation permission requirements and data-scope (row-level) policy engine for Euonia. Independent of any object model, user model and application framework; host applications declare the operation rules (callback, configuration or a custom source) and supply the user accessor and grant resolver.</Description>
+		<Description>Euonia 授权原语：操作权限要求与数据范围（行级）策略引擎，不依赖具体对象模型、用户模型或应用框架。 / Authorization primitives for Euonia: operation permission requirements and a data-scope (row-level) policy engine, independent of any object model, user model or application framework.</Description>
+		<PackageTags>euonia, security, authorization, permission, row-level, data-scope, policy</PackageTags>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">

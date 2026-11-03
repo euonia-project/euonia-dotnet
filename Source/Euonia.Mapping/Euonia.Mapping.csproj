@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 对象映射抽象：ITypeAdapter 与 ITypeAdapterFactory 契约，以及支持可插拔后端的静态 TypeAdapter 门面。 / Object-mapping abstraction for Euonia: ITypeAdapter and ITypeAdapterFactory contracts plus a static TypeAdapter facade with pluggable backends.</Description>
+        <PackageTags>euonia, mapping, object-mapping, mapper, abstraction</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 多级缓存框架：分层缓存句柄、缓存管理器编排、Backplane 同步与流式配置。 / Multi-level caching framework for Euonia: layered cache handles, cache-manager orchestration, backplane synchronization and fluent configuration.</Description>
+        <PackageTags>euonia, caching, cache, multi-level, backplane</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

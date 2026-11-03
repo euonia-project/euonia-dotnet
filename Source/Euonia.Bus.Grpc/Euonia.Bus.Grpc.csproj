@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 总线 gRPC 远程传输与集成：无需生成桩的泛化客户端调用、服务端 RemoteMessageService、拦截器、健康检查、自动发现与 protobuf 契约。 / gRPC remote transport and integration for Euonia Bus: generic client invocation without generated stubs, server-side RemoteMessageService, interceptors, health checks, auto-discovery and protobuf contracts.</Description>
+        <PackageTags>euonia, message-bus, grpc, protobuf, transport, rpc, interceptors</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
     </ItemGroup>

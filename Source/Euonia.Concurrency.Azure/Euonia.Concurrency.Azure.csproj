@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>基于 Azure Blob Storage 的 Euonia 分布式锁与信号量实现。 / Azure Blob Storage implementation of Euonia distributed locks and semaphores, built on Azure.Storage.Blobs.</Description>
+        <PackageTags>euonia, concurrency, distributed-lock, azure, blob-storage, semaphore</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Azure.Storage.Blobs" />
     </ItemGroup>

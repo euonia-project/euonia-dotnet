@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 基于文件系统的分布式锁与信号量实现，适用于单机或共享卷场景。 / File-system based implementation of Euonia distributed locks and semaphores for single-host or shared-volume scenarios.</Description>
+        <PackageTags>euonia, concurrency, distributed-lock, filesystem, semaphore</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
         <ProjectReference Include="..\Euonia.Concurrency\Euonia.Concurrency.csproj" />

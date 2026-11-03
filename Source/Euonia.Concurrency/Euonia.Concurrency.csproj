@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 分布式同步抽象：带超时、取消与句柄丢失监控的命名锁和信号量。 / Distributed synchronization abstractions for Euonia: named locks and semaphores with timeouts, cancellation and handle-lost monitoring.</Description>
+        <PackageTags>euonia, concurrency, distributed-lock, lock, semaphore, synchronization</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Core\Euonia.Core.csproj" />
     </ItemGroup>

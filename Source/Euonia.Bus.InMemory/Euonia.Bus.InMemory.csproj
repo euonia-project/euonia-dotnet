@@ -2,6 +2,11 @@
     
     <Import Project="..\common.props"/>
     <Import Project="..\resource.props" />
+
+    <PropertyGroup>
+        <Description>Euonia 总线进程内内存传输：完整的 ITransporter 实现，无需外部基础设施，适用于开发、测试与单进程消息场景。 / In-process memory transport for Euonia Bus: a complete ITransporter implementation for development, testing and single-process messaging without external infrastructure.</Description>
+        <PackageTags>euonia, message-bus, inmemory, transport, testing</PackageTags>
+    </PropertyGroup>
     
     <PropertyGroup>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
