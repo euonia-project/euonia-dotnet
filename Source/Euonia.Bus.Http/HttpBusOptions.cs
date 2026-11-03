@@ -48,4 +48,19 @@ public class HttpBusOptions
 	/// 主要用于测试场景（例如使用 <see cref="HttpClientHandler"/> 的替代实现）。
 	/// </summary>
 	public Func<HttpMessageHandler> MessageHandlerFactory { get; set; }
+
+	/// <summary>
+	/// 获取按通道指向的端点映射表（通道名 → 服务端 BaseAddress）。
+	/// </summary>
+	/// <remarks>
+	/// 微服务体系里不同服务有不同的地址：<see cref="Endpoint"/> 是**默认端点**，
+	/// 发往 <see cref="Endpoints"/> 中已映射通道的消息以其为 BaseAddress 与 <see cref="Route"/> 拼接，
+	/// 未映射的通道走默认端点。通道即逻辑目的地，端点是其物理承载——
+	/// 调用方按通道发消息即可，无需感知服务地址。
+	/// <para>
+	/// 所有映射端点共用同一 <see cref="Route"/>（目标服务都部署了同一套总线协议）；
+	/// 「BaseAddress + Route」的解析结果按端点缓存复用。
+	/// </para>
+	/// </remarks>
+	public IDictionary<string, string> Endpoints { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 }

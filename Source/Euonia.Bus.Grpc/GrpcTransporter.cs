@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,14 +13,18 @@ namespace Nerosoft.Euonia.Bus.Grpc;
 /// 一元服务，服务名/方法名由 <see cref="GrpcBusOptions"/> 指定，默认 <c>nerorsoft.bus.ReplierService/Call</c>，
 /// 并以 <see cref="RemoteReply{TResult}"/> 协议交换结果。
 /// </summary>
+/// <remarks>
+/// 微服务体系里不同服务有不同的端点：<see cref="GrpcBusOptions.Endpoint"/> 是默认端点，
+/// <see cref="GrpcBusOptions.Endpoints"/> 按通道把消息投递到各服务的端点——通道即逻辑目的地，
+/// 端点是其物理承载。连接（通道 + 泛化方法描述符 + 调用器）按端点缓存复用。
+/// </remarks>
 internal class GrpcTransporter : ITransporter, IDisposable
 {
 	private readonly GrpcBusOptions _options;
 	private readonly IMessageSerializer _serializer;
 	private readonly ILogger<GrpcTransporter> _logger;
-	private readonly GrpcChannel _channel;
-	private readonly CallInvoker _callInvoker;
-	private readonly Method<Google.Protobuf.GrpcRequest, Google.Protobuf.GrpcResponse> _method;
+	private readonly ConcurrentDictionary<string, GrpcConnection> _connections = new();
+	private bool _disposed;
 
 	/// <summary>
 	/// 当消息成功投递到远端时触发。
@@ -47,14 +52,13 @@ internal class GrpcTransporter : ITransporter, IDisposable
 			throw new InvalidOperationException(Resources.IDS_ENDPOINT_NOT_CONFIGURED);
 		}
 
-		_channel = GrpcChannel.ForAddress(_options.Endpoint);
-		// 泛化调用：运行时构造方法描述符（服务名/方法名可动态指定），不依赖生成的服务桩代码。
-		_method = GrpcMethodFactory.CreateUnary(_options.ServiceName, _options.MethodName);
-		_callInvoker = _channel.CreateCallInvoker();
+		// 预热默认端点：选项配置在构造时校验并缓存，最常见的单端点场景与此前行为一致。
+		_ = _connections.GetOrAdd(_options.Endpoint, static (endpoint, self) => GrpcConnection.Create(endpoint, self), this);
 	}
 
 	/// <summary>
 	/// 通过 gRPC 泛化一元调用（服务名与方法名由选项指定）执行远端并返回强类型响应。
+	/// 通道映射了端点时投递到该端点，否则使用默认端点。
 	/// </summary>
 	/// <typeparam name="TRequest">消息负载的类型。</typeparam>
 	/// <typeparam name="TResponse">期望的响应类型。</typeparam>
@@ -70,11 +74,12 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		};
 		SetProperties(request, message);
 
-		_logger.LogDebug("Calling remote gRPC method '{Method}' for channel '{Channel}' with correlation ID '{CorrelationId}'", _method.FullName, message.Channel, message.CorrelationId);
+		var connection = ResolveConnection(message.Channel);
+		_logger.LogDebug("Calling remote gRPC method '{Method}' at endpoint '{Endpoint}' for channel '{Channel}' with correlation ID '{CorrelationId}'", connection.Method.FullName, connection.Endpoint, message.Channel, message.CorrelationId);
 
 		// AsyncUnaryCall 实现 IDisposable 并持有底层 HTTP 响应流；
 		// 错误路径（下方各 throw）若不释放会在高负载下持续保留流。
-		using var call = _callInvoker.AsyncUnaryCall(_method, null, new global::Grpc.Core.CallOptions().WithCancellationToken(cancellationToken), request);
+		using var call = connection.CallInvoker.AsyncUnaryCall(connection.Method, null, new global::Grpc.Core.CallOptions().WithCancellationToken(cancellationToken), request);
 		var response = await call.ResponseAsync.ConfigureAwait(false);
 
 		var content = response.Data;
@@ -124,11 +129,37 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	}
 
 	/// <summary>
-	/// 释放 <see cref="GrpcChannel"/> 占用的资源。
+	/// 释放默认端点与各通道端点缓存的全部 <see cref="GrpcChannel"/>。
 	/// </summary>
 	public void Dispose()
 	{
-		_channel.Dispose();
+		if (_disposed)
+		{
+			return;
+		}
+
+		_disposed = true;
+		foreach (var connection in _connections.Values)
+		{
+			connection.Channel.Dispose();
+		}
+
+		_connections.Clear();
+	}
+
+	/// <summary>
+	/// 解析通道对应的连接：通道映射了端点则按其缓存复用，否则使用默认端点连接。
+	/// </summary>
+	/// <param name="channel">消息通道名称。</param>
+	/// <returns>目标端点连接。</returns>
+	private GrpcConnection ResolveConnection(string channel)
+	{
+		if (!string.IsNullOrWhiteSpace(channel) && _options.Endpoints.TryGetValue(channel, out var endpoint))
+		{
+			return _connections.GetOrAdd(endpoint, static (address, self) => GrpcConnection.Create(address, self), this);
+		}
+
+		return _connections[_options.Endpoint];
 	}
 
 	/// <summary>
@@ -150,6 +181,38 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		if (!string.IsNullOrWhiteSpace(value))
 		{
 			request.Property[key] = value;
+		}
+	}
+
+	/// <summary>
+	/// 一个目标端点的连接：通道、调用器与方法描述符。
+	/// 服务名/方法名来自传输器选项——端点只决定“打到哪台服务”，协议契约保持一致；
+	/// 服务端共享同一实现（<see cref="RemoteMessageService"/>），跨服务端点无需逐个配置方法名。
+	/// </summary>
+	private sealed class GrpcConnection
+	{
+		public string Endpoint { get; }
+
+		public GrpcChannel Channel { get; }
+
+		public CallInvoker CallInvoker { get; }
+
+		public Method<Google.Protobuf.GrpcRequest, Google.Protobuf.GrpcResponse> Method { get; }
+
+		private GrpcConnection(string endpoint, GrpcChannel channel, CallInvoker callInvoker, Method<Google.Protobuf.GrpcRequest, Google.Protobuf.GrpcResponse> method)
+		{
+			Endpoint = endpoint;
+			Channel = channel;
+			CallInvoker = callInvoker;
+			Method = method;
+		}
+
+		public static GrpcConnection Create(string endpoint, GrpcTransporter owner)
+		{
+			var channel = GrpcChannel.ForAddress(endpoint);
+			// 泛化调用：运行时构造方法描述符（服务名/方法名可动态指定），不依赖生成的服务桩代码。
+			var method = GrpcMethodFactory.CreateUnary(owner._options.ServiceName, owner._options.MethodName);
+			return new GrpcConnection(endpoint, channel, channel.CreateCallInvoker(), method);
 		}
 	}
 }

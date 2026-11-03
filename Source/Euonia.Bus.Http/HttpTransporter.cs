@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net.Http;
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,12 +11,17 @@ namespace Nerosoft.Euonia.Bus.Http;
 /// 基于 HTTP 的 <see cref="ITransporter"/> 实现。
 /// 通过 HTTP POST 方式调用远端端点，并以 <see cref="RemoteReply{TResult}"/> 协议交换结果。
 /// </summary>
+/// <remarks>
+/// 微服务体系里不同服务有不同的端点：<see cref="HttpBusOptions.Endpoint"/> 是默认端点，
+/// <see cref="HttpBusOptions.Endpoints"/> 按通道把消息投递到各服务的端点——通道即逻辑目的地，
+/// 端点是其物理承载。「BaseAddress + Route」的解析结果按端点缓存复用。
+/// </remarks>
 internal class HttpTransporter : ITransporter, IDisposable
 {
 	private readonly HttpBusOptions _options;
 	private readonly IMessageSerializer _serializer;
 	private readonly HttpClient _httpClient;
-	private readonly string _requestUri;
+	private readonly ConcurrentDictionary<string, string> _requestUris = new();
 	private readonly ILogger<HttpTransporter> _logger;
 
 	/// <summary>
@@ -46,11 +52,13 @@ internal class HttpTransporter : ITransporter, IDisposable
 			_httpClient.Timeout = _options.RequestTimeout.Value;
 		}
 
-		_requestUri = BuildRequestUri(_options);
+		// 预热默认端点的请求地址：单端点场景与此前行为一致。
+		_ = _requestUris.GetOrAdd(string.Empty, _ => BuildRequestUri(_options, null));
 	}
 
 	/// <summary>
 	/// 以 HTTP POST 方式调用远端并返回强类型响应。
+	/// 通道映射了端点时投递到该端点，否则使用默认端点。
 	/// </summary>
 	/// <typeparam name="TRequest">消息负载的类型。</typeparam>
 	/// <typeparam name="TResponse">期望的响应类型。</typeparam>
@@ -60,14 +68,15 @@ internal class HttpTransporter : ITransporter, IDisposable
 	public async Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 	{
 		var json = _serializer.Serialize(message);
-		using var request = new HttpRequestMessage(HttpMethod.Post, _requestUri)
+		var requestUri = ResolveRequestUri(message);
+		using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
 		{
 			Content = new StringContent(json, Encoding.UTF8, "application/json"),
 		};
 
 		SetRequestHeaders(request, message);
 
-		_logger.LogDebug("Calling remote endpoint '{Uri}' for channel '{Channel}' with correlation ID '{CorrelationId}'", _requestUri, message.Channel, message.CorrelationId);
+		_logger.LogDebug("Calling remote endpoint '{Uri}' for channel '{Channel}' with correlation ID '{CorrelationId}'", requestUri, message.Channel, message.CorrelationId);
 
 		using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
 		var content = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -126,9 +135,26 @@ internal class HttpTransporter : ITransporter, IDisposable
 	}
 
 	/// <summary>
+	/// 解析消息的完整请求地址：通道映射了端点则以其为 BaseAddress 并缓存结果，否则使用默认地址。
+	/// </summary>
+	/// <param name="message">消息信封。</param>
+	/// <returns>完整请求地址。</returns>
+	private string ResolveRequestUri(IMessageEnvelope message)
+	{
+		if (!string.IsNullOrWhiteSpace(message.Channel) && _options.Endpoints.TryGetValue(message.Channel, out var endpoint))
+		{
+			return _requestUris.GetOrAdd(endpoint, address => BuildRequestUri(_options, address));
+		}
+
+		return _requestUris[string.Empty];
+	}
+
+	/// <summary>
 	/// 构建完整请求地址。
 	/// </summary>
-	private static string BuildRequestUri(HttpBusOptions options)
+	/// <param name="options">HTTP 总线选项。</param>
+	/// <param name="baseAddressOverride">目标端点覆盖值；为 <c>null</c> 时使用选项的 <see cref="HttpBusOptions.Endpoint"/>。</param>
+	private static string BuildRequestUri(HttpBusOptions options, string baseAddressOverride)
 	{
 		var route = options.Route ?? string.Empty;
 		if (route.Length == 0)
@@ -136,13 +162,17 @@ internal class HttpTransporter : ITransporter, IDisposable
 			route = "/";
 		}
 
-		if (string.IsNullOrWhiteSpace(options.Endpoint))
+		if (string.IsNullOrWhiteSpace(baseAddressOverride))
 		{
-			return route;
+			if (string.IsNullOrWhiteSpace(options.Endpoint))
+			{
+				return route;
+			}
+
+			return $"{options.Endpoint.TrimEnd('/')}{route}";
 		}
 
-		var baseAddress = options.Endpoint.TrimEnd('/');
-		return $"{baseAddress}{route}";
+		return $"{baseAddressOverride.TrimEnd('/')}{route}";
 	}
 
 	/// <summary>

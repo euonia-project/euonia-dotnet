@@ -192,7 +192,8 @@ configurator.SetConvention(convention => convention.Add<DefaultMessageConvention
 |---|---|---|
 | `Enabled` | `true` | 功能开关 |
 | `Name` | `"grpc"` | 传输器名（键控 `ITransporter` 的键） |
-| `Endpoint` | 空 | 服务端地址；明文 h2c 用 `http://`，TLS 用 `https://` |
+| `Endpoint` | 空 | **默认**服务端地址；明文 h2c 用 `http://`，TLS 用 `https://`。未映射通道的消息走这里 |
+| `Endpoints` | 空 | 通道 → 端点映射表（§4.1）：已映射通道的消息投递到映射端点 |
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名 |
 | `ServiceName` | `"nerorsoft.bus.ReplierService"` | 泛化调用服务全名（§4） |
 | `MethodName` | `"Call"` | 泛化调用一元方法名（§4） |
@@ -226,13 +227,45 @@ services.AddGrpcBus("grpc", options =>
 });
 ```
 
+### 4.1 多端点路由（微服务多服务地址）
+
+微服务体系里每个服务有自己的 gRPC 地址：`GrpcBusOptions.Endpoint` 只是**默认端点**，
+`Endpoints` 按通道把消息投递到各服务的端点——通道即逻辑目的地，端点是其物理承载：
+
+```csharp
+services.AddGrpcBus("grpc", options =>
+{
+    options.Endpoint = "http://orders:5081";           // 默认端点（未映射通道走这里）
+    options.Endpoints["billing"]  = "http://billing:5081";   // 通道 billing → billing 服务
+    options.Endpoints["inventory"] = "http://inventory:5081"; // 通道 inventory → inventory 服务
+});
+
+// 调用方只关心通道，不感知服务地址
+var order = await bus.CallAsync<GetOrder, Order>(new GetOrder { Id = 1 },
+    new CallOptions { Channel = "orders" }, ct);          // → orders 服务
+var bill = await bus.CallAsync<CreateInvoice, Invoice>(new CreateInvoice { OrderId = 1 },
+    new CallOptions { Channel = "billing" }, ct);          // → billing 服务
+```
+
+- 服务名/方法名仍来自 `ServiceName`/`MethodName`——所有微服务共享同一套总线协议
+  （都部署了 `MapGrpcBusService`），换端点只换“打到哪台服务”，不需要逐服务配置方法名；
+- 连接按端点缓存复用（通道 + 泛化方法描述符 + `CallInvoker`），首次调用某端点时惰性建立；
+- 未映射的通道走默认端点，单服务场景零配置；
+- 映射的端点不可达/不存在时抛 `RpcException`（Unimplemented 或连接错误），**不会静默回落默认端点**；
+- 每条调用链路要发的通道在服务端注册处理器时已经确定，端点映射是**部署期配置**
+  （appsettings 或启动代码），不随单条消息变化——需要按消息动态选目标时，
+  应注册多个 keyed 传输器并用传输策略路由。
+
 方法名不存在时返回 `RpcException(StatusCode.Unimplemented)`（`CallAsync_UnknownMethod_ReturnsUnimplemented`
 用例已覆盖），可用它做服务能力探测。
 
 **相关测试**（`Euonia.Bus.Grpc.Tests`）：
 - `CallAsync_UsesConfiguredMethodDescriptor`：显式指定 `ServiceName`/`MethodName` 往返成功（41→42），
   证明描述符由选项驱动；
-- `CallAsync_UnknownMethod_ReturnsUnimplemented`：`MethodName="Nope"` → `Unimplemented`。
+- `CallAsync_UnknownMethod_ReturnsUnimplemented`：`MethodName="Nope"` → `Unimplemented`；
+- `CallAsync_WithChannelEndpointMapping_RoutesEachChannelToMappedServer` /
+  `..._ReusesConnectionPerEndpoint` / `..._WithMappedUnreachableEndpoint_FailsInsteadOfFallback`：
+  多端点路由、连接缓存复用与不静默回落。
 
 ---
 
@@ -322,6 +355,9 @@ await app.StopAsync();
    由宿主自行调用，`MapGrpcBusService` 不帮你开 gRPC。
 10. `SerializerProvider` 必须是已注册键控序列化器（内置 `SystemTestJson` / `NewtonsoftJson`），
     配错抛 `InvalidOperationException`。
+11. 多端点路由只改“打到哪台服务”（§4.1）：目标服务必须部署了同一套总线契约
+    （`MapGrpcBusService`），通道映射不会改变服务名/方法名；
+    映射端点写错得到的是连接错误或 `Unimplemented`，不会回落默认端点。
 
 ## 下一步
 

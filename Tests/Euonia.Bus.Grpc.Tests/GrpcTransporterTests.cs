@@ -161,6 +161,99 @@ public class GrpcTransporterTests
 		Assert.Equal(StatusCode.Unimplemented, exception.StatusCode);
 	}
 
+	/// <summary>
+	/// 微服务多端点：按通道映射端点——一个传输器把不同通道的消息投递到不同服务的端点。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithChannelEndpointMapping_RoutesEachChannelToMappedServer()
+	{
+		await using var serverA = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		await using var serverB = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("billing", (request, _) => Task.FromResult(request.Start * 2));
+		});
+
+		// 默认端点指向 A；通道 billing 映射到 B。
+		var transport = GrpcServerHarness.BuildTransporter(serverA.Endpoint, options =>
+		{
+			options.Endpoints["billing"] = serverB.Endpoint;
+		});
+
+		var resultA = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "count"),
+			TestContext.Current.CancellationToken);
+		var resultB = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "billing"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(41, resultA);
+		Assert.Equal(80, resultB);
+	}
+
+	/// <summary>
+	/// 通道未映射端点时走默认端点；同一通道重复调用复用缓存的连接。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithChannelEndpointMapping_ReusesConnectionPerEndpoint()
+	{
+		var calls = 0;
+		await using var serverA = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		await using var serverB = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("billing", (request, _) =>
+			{
+				Interlocked.Increment(ref calls);
+				return Task.FromResult(request.Start * 2);
+			});
+		});
+
+		var transport = GrpcServerHarness.BuildTransporter(serverA.Endpoint, options =>
+		{
+			options.Endpoints["billing"] = serverB.Endpoint;
+		});
+
+		var first = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 3 }, "billing"),
+			TestContext.Current.CancellationToken);
+		var second = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 4 }, "billing"),
+			TestContext.Current.CancellationToken);
+		var defaultCall = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 1 }, "count"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(6, first);
+		Assert.Equal(8, second);
+		Assert.Equal(2, defaultCall);
+		Assert.Equal(2, calls);
+	}
+
+	/// <summary>
+	/// 映射端点不可达/未部署总线契约时直接失败，不静默回落默认端点（避免消息发错服务）。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithMappedUnreachableEndpoint_FailsInsteadOfFallback()
+	{
+		await using var server = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		var transport = GrpcServerHarness.BuildTransporter(server.Endpoint, options =>
+		{
+			options.Endpoints["billing"] = "http://127.0.0.1:1";
+		});
+
+		await Assert.ThrowsAnyAsync<RpcException>(() => transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 1 }, "billing"),
+			TestContext.Current.CancellationToken));
+	}
+
 	[Fact]
 	public async Task Server_RejectsEmptyPayload()
 	{

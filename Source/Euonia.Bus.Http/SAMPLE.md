@@ -163,7 +163,8 @@ builder.Services.AddHttpBus("http");
 |---|---|---|
 | `Enabled` | `true` | 功能开关 |
 | `Name` | `"http"` | 传输器名（键控 `ITransporter` 的键） |
-| `Endpoint` | 空 | 服务端 BaseAddress；与 `Route` 拼接为完整地址 |
+| `Endpoint` | 空 | **默认**服务端 BaseAddress；与 `Route` 拼接为完整地址。未映射通道的消息走这里 |
+| `Endpoints` | 空 | 通道 → 端点映射表（§3.3）：已映射通道的消息以映射端点为 BaseAddress |
 | `Route` | `"/bus/call"` | 远程调用路由 |
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名（内置 `SystemTestJson` / `NewtonsoftJson`） |
 | `RequestTimeout` | `null` | 请求超时（`HttpClient.Timeout`），`null` 不限制 |
@@ -230,6 +231,37 @@ catch (InvalidOperationException ex)
 
 - `HttpBusOptions.RequestTimeout` 超时抛 `TimeoutException`（来自 `HttpClient`）；
 - 端点返回非 2xx（路由不对、500 等）→ `MessageDeliverException`。
+
+### 3.3 多端点路由（微服务多服务地址）
+
+微服务体系里每个服务有自己的地址：`HttpBusOptions.Endpoint` 只是**默认端点**，
+`Endpoints` 按通道把消息投递到各服务的端点（BaseAddress），路由（`Route`）保持一致：
+
+```csharp
+services.AddHttpBus("http", options =>
+{
+    options.Endpoint = "http://orders:8080";            // 默认端点（未映射通道走这里）
+    options.Endpoints["billing"]   = "http://billing:8080";   // 通道 billing → billing 服务
+    options.Endpoints["inventory"] = "http://inventory:8080"; // 通道 inventory → inventory 服务
+});
+
+// 调用方只关心通道，不感知服务地址
+var bill = await bus.CallAsync<CreateInvoice, Invoice>(new CreateInvoice { OrderId = 1 },
+    new CallOptions { Channel = "billing" }, ct);       // → POST http://billing:8080/bus/call
+```
+
+- 目标服务必须同样部署了 `MapBusEndpoint`（同一套总线协议）；换端点只换“打到哪台服务”；
+- 「BaseAddress + Route」的解析结果按端点缓存，同一端点多次调用不重复拼接；
+- 未映射的通道走默认端点，单服务场景零配置；
+- 映射的端点不可达 → `HttpRequestException` / 非 2xx → `MessageDeliverException`，
+  **不会静默回落默认端点**（避免消息发错服务）；
+- 端点映射是**部署期配置**（appsettings 或启动代码），不随单条消息变化——
+  需要按消息动态选目标时，应注册多个 keyed 传输器并用传输策略路由。
+
+**相关测试**（`Euonia.Bus.Http.Tests`）：
+- `CallAsync_WithChannelEndpointMapping_PostsToMappedBaseAddress`；
+- `CallAsync_WithUnmappedChannel_UsesDefaultEndpoint`；
+- `CallAsync_AlternatingChannels_ProduceDistinctUris`。
 
 ---
 
@@ -306,6 +338,9 @@ await app.StopAsync();
    配错会在构造 `HttpTransporter` 时抛 `InvalidOperationException`。
 7. `Endpoint` 为空时请求地址退化为 `Route`（相对路径），用于已注入 `BaseAddress` 的场景。
 8. 空串请求头（如无上下文的 `CorrelationId`）会被跳过写头，不会抛错。
+9. 多端点路由（§3.3）只改 BaseAddress，不改 `Route`：所有目标服务必须用同一 `Route`
+   部署 `MapBusEndpoint`；未映射的通道回落默认端点，
+   映射端点不可达则直接失败，不会回落。
 
 ## 下一步
 

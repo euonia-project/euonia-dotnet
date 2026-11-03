@@ -37,6 +37,20 @@ public class GrpcBusOptions
 	public string MethodName { get; set; } = "Call";
 
 	/// <summary>
+	/// 获取按通道指向的端点映射表（通道名 → 服务端地址）。
+	/// </summary>
+	/// <remarks>
+	/// 微服务体系里不同服务有不同的 gRPC 地址：<see cref="Endpoint"/> 是**默认端点**，
+	/// 发往 <see cref="Endpoints"/> 中已映射通道的消息投递到映射的端点，未映射的通道走默认端点。
+	/// 通道即逻辑目的地，端点是其物理承载——调用方按通道发消息即可，无需感知服务地址。
+	/// <para>
+	/// 端点格式与 <see cref="Endpoint"/> 一致（明文 h2c 用 <c>http://</c>，TLS 用 <c>https://</c>）。
+	/// 连接（通道 + 泛化方法描述符 + 调用器）按端点缓存复用。
+	/// </para>
+	/// </remarks>
+	public IDictionary<string, string> Endpoints { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>
 	/// 获取或设置一个值，指示 gRPC 远程调用端点是否要求授权。
 	/// 默认 <c>true</c>：端点映射后默认应用授权策略，避免消息总线端点被匿名调用。
 	/// 测试或受控内网环境可显式设为 <c>false</c>。
