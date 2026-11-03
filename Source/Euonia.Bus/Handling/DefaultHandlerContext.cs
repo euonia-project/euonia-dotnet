@@ -379,6 +379,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		}
 
 		_disposed = true;
+
+		// 构造时订阅了配置器的通道注册事件；不退订的话，容器重建（测试/宿主重启）
+		// 后配置器仍会向已释放的上下文投递注册，处理器被登记到无效的容器里。
+		if (_configurator != null)
+		{
+			_configurator.ChannelRegistered -= OnChannelRegistered;
+		}
+
 		_inboxDispatcher?.Dispose();
 		GC.SuppressFinalize(this);
 	}

@@ -120,6 +120,13 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// 将对象状态重置为 <see cref="ObjectEditState.None"/> 并清除删除时的对象规则检查标记，
 	/// 令 <see cref="IsChanged"/> 返回 <see langword="false"/>。
 	/// </remarks>
+	/// <remarks>
+	/// 状态复位<b>刻意不走</b> <see cref="TransitionTo"/>/<see cref="CanTransitionTo"/>：
+	/// 提交/回滚是框架内部的权威复位点（保存成功、删除幂等、装载完成都会调用），
+	/// 派生类状态机若禁止回到 <see cref="ObjectEditState.None"/> 会阻断这些流程。
+	/// <see cref="CanTransitionTo"/> 只约束用户可见的 <see cref="MarkAsNew"/> /
+	/// <see cref="MarkAsChanged"/> / <see cref="MarkAsDeleted"/> 入口。
+	/// </remarks>
 	public override void AcceptChanges()
 	{
 		var previous = State;

@@ -149,10 +149,20 @@ public class FieldDataManager
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	/// <param name="property">属性信息。</param>
 	/// <returns>原始值。</returns>
+	/// <remarks>
+	/// 自定义 <see cref="IFieldData"/> 实现（未实现 <see cref="IFieldData{TValue}"/>）回退到
+	/// 非泛型 <see cref="IFieldData.OriginalValue"/>（默认接口实现返回 <see cref="IFieldData.Value"/>），
+	/// 避免把「有字段但读不到原始值」误判成「没有原始值」。
+	/// </remarks>
 	public TValue GetOriginalValue<TValue>(PropertyInfo<TValue> property)
 	{
 		var field = GetFieldData(property);
-		return field is IFieldData<TValue> typed ? typed.OriginalValue : property.DefaultValue;
+		if (field is IFieldData<TValue> typed)
+		{
+			return typed.OriginalValue;
+		}
+
+		return field != null ? (TValue)field.OriginalValue : property.DefaultValue;
 	}
 
 	/// <summary>

@@ -238,6 +238,15 @@ public class StrictnessRegressionTests
 	}
 
 	[Fact]
+	public void StartupValidator_Should_Report_Awaited_AsyncEnumerable_Factory()
+	{
+		var diagnostics = OsbaStartupValidator.Validate([typeof(WrappedAsyncEnumerableObject).Assembly]);
+
+		Assert.Contains(diagnostics, diagnostic =>
+			diagnostic.Code == "OSBA-F002" && diagnostic.Type == typeof(WrappedAsyncEnumerableObject));
+	}
+
+	[Fact]
 	public void FieldData_ObservableValue_Should_Publish_Current_And_Subsequent_Values()
 	{
 		var field = new FieldData<int>("Number") { Value = 1 };
@@ -449,6 +458,19 @@ public class BadInjectObject : BusinessObject<BadInjectObject>
 {
 	[Inject]
 	public int Number { get; set; }
+}
+
+/// <summary>工厂方法返回 Task&lt;IAsyncEnumerable&lt;T&gt;&gt; 的对象，校验器应报 OSBA-F002。</summary>
+public class WrappedAsyncEnumerableObject : BusinessObject<WrappedAsyncEnumerableObject>
+{
+	[FactoryFetch]
+	public Task<System.Collections.Generic.IAsyncEnumerable<WrappedAsyncEnumerableObject>> FetchAsync(string id) =>
+		Task.FromResult(FetchCore());
+
+	private static System.Collections.Generic.IAsyncEnumerable<WrappedAsyncEnumerableObject> FetchCore()
+	{
+		return System.Linq.AsyncEnumerable.Empty<WrappedAsyncEnumerableObject>();
+	}
 }
 
 /// <summary>记录收到值的观察者。</summary>

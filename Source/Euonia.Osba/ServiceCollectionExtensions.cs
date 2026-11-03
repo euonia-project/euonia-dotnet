@@ -67,6 +67,16 @@ public static class ServiceCollectionExtensions
 		if (options.ValidateOnStartup)
 		{
 			var diagnostics = OsbaStartupValidator.Validate(assemblies);
+
+			// 警告不阻止启动，但必须可见：否则「缺持久化方法」这类隐患要等到第一次保存才暴露。
+			foreach (var warning in diagnostics.Where(d => d.Severity == OsbaDiagnosticSeverity.Warning))
+			{
+				OsbaDiagnostics.Log(
+					null,
+					OsbaDiagnosticLevel.Warning,
+					$"{warning.Code}: {warning.Message}{(warning.Type == null ? string.Empty : $" ({warning.Type.FullName})")}");
+			}
+
 			OsbaStartupValidator.ThrowIfErrors(diagnostics);
 		}
 

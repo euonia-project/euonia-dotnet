@@ -133,6 +133,15 @@ public static class OsbaStartupValidator
 				diagnostics.Add(Error("OSBA-F002", $"Factory method '{method.Name}' returns IAsyncEnumerable, which is not supported.", type));
 			}
 
+			// Task<T> / ValueTask<T> 包裹的 IAsyncEnumerable 同样无法被工厂边界消费。
+			var unwrapped = UnwrapAwaitable(method.ReturnType);
+			if (unwrapped != null &&
+			    unwrapped.IsGenericType &&
+			    unwrapped.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+			{
+				diagnostics.Add(Error("OSBA-F002", $"Factory method '{method.Name}' returns IAsyncEnumerable, which is not supported.", type));
+			}
+
 			foreach (var parameter in method.GetParameters())
 			{
 				if (parameter.ParameterType.IsByRef)
@@ -225,6 +234,20 @@ public static class OsbaStartupValidator
 
 		var definition = declaringType.GetGenericTypeDefinition();
 		return definition == typeof(EditableObject<>) || definition == typeof(ServiceObject<>);
+	}
+
+	/// <summary>
+	/// 解开 <see cref="Task{TResult}"/> / <see cref="ValueTask{TResult}"/> 的结果类型；非可等待泛型返回 <see langword="null"/>。
+	/// </summary>
+	private static Type UnwrapAwaitable(Type returnType)
+	{
+		if (!returnType.IsGenericType)
+		{
+			return null;
+		}
+
+		var definition = returnType.GetGenericTypeDefinition();
+		return definition == typeof(Task<>) || definition == typeof(ValueTask<>) ? returnType.GetGenericArguments()[0] : null;
 	}
 
 	private static OsbaDiagnostic Error(string code, string message, Type type)

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Osba;
@@ -201,14 +202,49 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	}
 
 	/// <summary>
-	/// 提交当前更改：清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
+	/// 提交当前更改：级联到就地持有的子对象，清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
 	/// 将字段当前值作为新的基线。
 	/// </summary>
 	/// <remarks>
 	/// 通常在对象被成功保存或加载后调用，使对象恢复“干净”状态。
+	/// 级联让整棵子图的字段基线对齐到本次提交的值：父对象先 AcceptChanges 而子对象不跟随的话，
+	/// 随后的父对象 <see cref="RejectChanges"/> 会把子对象回滚到过期的基线。
 	/// </remarks>
 	public override void AcceptChanges()
 	{
+		// 环形引用防护：已在提交链上的对象直接跳过。
+		var accepting = AcceptingGraphs ??= [];
+		if (accepting.Add(this))
+		{
+			try
+			{
+				// 就地持有的子对象（字段里存的引用就是当前子对象）跟随提交；
+				// 字段尚未创建时没有可级联的内容。
+				foreach (var property in FieldManager.GetRegisteredProperties())
+				{
+					if (!typeof(IOsbaObject).IsAssignableFrom(property.Type))
+					{
+						continue;
+					}
+
+					if (FieldManager.GetFieldData(property)?.Value is not IOsbaObject child)
+					{
+						continue;
+					}
+
+					GetGraphMethod(child.GetType(), nameof(AcceptChanges))?.Invoke(child, null);
+				}
+			}
+			finally
+			{
+				accepting.Remove(this);
+				if (accepting.Count == 0)
+				{
+					AcceptingGraphs = null;
+				}
+			}
+		}
+
 		lock (_changedPropertiesLock)
 		{
 			_changedProperties.Clear();
@@ -281,19 +317,113 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// </summary>
 	/// <remarks>
 	/// 与 <see cref="AcceptChanges"/> 相反：前者把当前值当作新基线，后者回到旧基线。
-	/// 派生类可重写以处理子对象、集合或额外的领域状态。
+	/// 引用未被替换的子对象（<see cref="IOsbaObject"/>）会递归执行其自身的 <see cref="RejectChanges"/>，
+	/// 使整棵子图回到装载时的基线；引用被整体替换的子对象不做级联（其旧引用由字段恢复，新子图不受影响）。
+	/// 每个被恢复的标量属性都会补发 <see cref="ObjectBase.OnPropertyChanged(string)"/>，
+	/// 保证绑定与父链通知感知到回滚后的值。
 	/// </remarks>
 	public virtual void RejectChanges()
 	{
-		foreach (var property in ChangedProperties)
+		// 防止环形对象图（父↔子互持）导致递归死循环：同一次回滚中每个对象只处理一次。
+		var rejecting = RejectingGraphs ??= [];
+		if (!rejecting.Add(this))
 		{
-			var current = ReadProperty(property);
-			var original = FieldManager.GetOriginalValue(property);
-			AttachChild(property, current, original);
-			FieldManager.LoadFieldData(property, original);
+			return;
 		}
 
-		AcceptChanges();
+		try
+		{
+			// 先取快照再回滚：回滚过程中字段被装载（LoadFieldData），
+			// ChangedProperties 若在迭代中被修改会破坏遍历。
+			var changed = ChangedProperties;
+
+			foreach (var property in changed)
+			{
+				var current = ReadProperty(property);
+				var original = FieldManager.GetOriginalValue(property);
+				AttachChild(property, current, original);
+
+				// 就地编辑的子对象：引用相同、内容被改过，递归回滚子图自身。
+				// RejectChanges / AcceptChanges 声明在 BusinessObject<T> 上且没有非泛型契约，只能反射调用；
+				// MethodInfo 按子对象的具体类型缓存，热路径不重复查找。
+				if (ReferenceEquals(current, original) && current is IOsbaObject editableChild)
+				{
+					var reject = GetGraphMethod(editableChild.GetType(), nameof(RejectChanges));
+					if (reject != null)
+					{
+						reject.Invoke(editableChild, null);
+					}
+					else
+					{
+						FieldManager.LoadFieldData(property, original);
+					}
+
+					OnPropertyChanged(property);
+					continue;
+				}
+
+				// 其余属性：整体装载原始值（含子对象引用被替换、集合被重建的情形）。
+				FieldManager.LoadFieldData(property, original);
+
+				if (!ValuesDiffer(property, current, original))
+				{
+					continue;
+				}
+
+				// 值确实变了才补发通知；装载不经过属性 setter，不会自动触发。
+				OnPropertyChanged(property);
+			}
+
+			AcceptChanges();
+		}
+		finally
+		{
+			rejecting.Remove(this);
+			if (rejecting.Count == 0)
+			{
+				RejectingGraphs = null;
+			}
+		}
+	}
+
+	/// <summary>当前正在回滚的对象集合；阻断环形对象图的递归。</summary>
+	[ThreadStatic]
+	private static HashSet<object> RejectingGraphs;
+
+	/// <summary>当前正在提交的对象集合；阻断环形对象图的递归。</summary>
+	[ThreadStatic]
+	private static HashSet<object> AcceptingGraphs;
+
+	/// <summary>
+	/// 图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）的反射查找缓存；按（子对象类型, 方法名）取一次。
+	/// </summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Method), MethodInfo> GraphMethodCache = new();
+
+	/// <summary>
+	/// 取子对象上可用的无参图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）；不是可编辑对象时返回 <see langword="null"/>。
+	/// </summary>
+	/// <param name="childType">子对象的具体类型。</param>
+	/// <param name="methodName">方法名。</param>
+	/// <returns>无参实例方法。</returns>
+	/// <remarks>
+	/// 两个方法都声明在 <see cref="BusinessObject{T}"/> 上，没有非泛型契约可查，只能反射调用；
+	/// 结果按子对象的具体类型缓存，每个类型只查找一次。
+	/// </remarks>
+	private static MethodInfo GetGraphMethod(Type childType, string methodName)
+	{
+		return GraphMethodCache.GetOrAdd((childType, methodName), static key =>
+		{
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
+			for (var current = key.Type; current != null && current != typeof(object); current = current.BaseType)
+			{
+				if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(BusinessObject<>))
+				{
+					return current.GetMethod(key.Method, flags, Type.EmptyTypes);
+				}
+			}
+
+			return null;
+		});
 	}
 
 	/// <summary>

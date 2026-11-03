@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -288,7 +289,9 @@ public abstract class ActuatorBase<TTarget>
 		{
 			// 没有 Handle / Behavior / IActuatorBehavior 时，空管道只会多分配一次组件快照与组合委托。
 			// 这里直接执行「后续处理 → 终结」，语义与管道完全一致。
-			if (Builder.CanBypassPipeline)
+			// 例外：目标类型声明了 [PipelineBehavior]，RunAsync 会在执行时按请求类型解析行为，
+			// 快路径绕过管道会静默丢掉这些行为，此时仍走完整管道。
+			if (Builder.CanBypassPipeline && !HasDeclaredPipelineBehavior<TTarget>())
 			{
 				await ContinueHandleAsync(target, cancellationToken).ConfigureAwait(false);
 				return await FinalizeAsync(target, cancellationToken).ConfigureAwait(false);
@@ -312,5 +315,24 @@ public abstract class ActuatorBase<TTarget>
 				target.RuleSet.DetachOperationRules(_ruleScope);
 			}
 		}
+	}
+
+	/// <summary>
+	/// <see cref="PipelineBehaviorAttribute"/> 声明检查的缓存；按目标类型取一次。
+	/// </summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> DeclaredPipelineBehaviorCache = new();
+
+	/// <summary>
+	/// 判断目标类型是否声明了 <see cref="PipelineBehaviorAttribute"/>。
+	/// </summary>
+	/// <typeparam name="TTarget">目标业务对象类型。</typeparam>
+	/// <returns>声明了至少一个管道行为特性则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// <see cref="PipelineBase{TRequest,TResponse}.RunCoreAsync"/> 在每次执行时按请求类型的特性解析行为；
+	/// 空管道快路径绕过管道会静默丢掉这些行为。特性在类型装载后不变，反射只发生一次。
+	/// </remarks>
+	private static bool HasDeclaredPipelineBehavior<TTarget>()
+	{
+		return DeclaredPipelineBehaviorCache.GetOrAdd(typeof(TTarget), static type => type.GetCustomAttributes(typeof(PipelineBehaviorAttribute), true).Length > 0);
 	}
 }

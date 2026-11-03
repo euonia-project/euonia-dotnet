@@ -231,6 +231,66 @@ public class DomainControlTests
 				(ObjectEditState.Deleted, ObjectEditState.None)
 			}, transitions);
 	}
+
+	[Fact]
+	public void RejectChanges_ShouldCascadeToEditedChildObject()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var parent = RuleTestHarness.Create<ParentEditable>(provider);
+		var child = RuleTestHarness.Create<ChildEditable>(provider);
+
+		parent.Child = child;
+		child.Title = "original";
+		parent.AcceptChanges();
+
+		// 就地编辑子对象：父对象通过子图传播变为脏。
+		child.Title = "edited";
+		Assert.True(parent.HasChangedProperties);
+
+		parent.RejectChanges();
+
+		Assert.Equal("original", child.Title);
+		Assert.Equal("original", parent.Child.Title);
+		Assert.False(parent.HasChangedProperties);
+		Assert.False(child.HasChangedProperties);
+	}
+
+	[Fact]
+	public void RejectChanges_ShouldRaisePropertyChangedForRestoredValues()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		var notifications = new List<string>();
+		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+
+		target.Name = "edited";
+		notifications.Clear();
+
+		target.RejectChanges();
+
+		// 回滚装载不经过 setter，必须补发通知，否则绑定停留在编辑后的值。
+		Assert.Contains(nameof(DomainControlEditable.Name), notifications);
+		Assert.Equal(string.Empty, target.Name);
+	}
+
+	[Fact]
+	public void RejectChanges_ShouldNotNotifyUnchangedScalar()
+	{
+		using var scope = RuleTestHarness.CreateScope(out var provider);
+		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
+
+		target.Name = "kept";
+		target.AcceptChanges();
+
+		var notifications = new List<string>();
+		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+
+		// 子对象内容变化会把父对象标脏（子对象属性在 ChangedProperties 里），
+		// 但标量属性本身没有变化：回滚时不应为它补发通知。
+		Assert.False(target.HasChangedProperties);
+		Assert.Empty(notifications);
+	}
 }
 
 /// <summary>
@@ -269,5 +329,33 @@ public sealed class DomainControlEditable : EditableObject<DomainControlEditable
 			ObjectEditState.Deleted => false,
 			_ => true
 		};
+	}
+}
+
+/// <summary>
+/// 持有可编辑子对象的父对象，用于验证回滚级联。
+/// </summary>
+public sealed class ParentEditable : EditableObject<ParentEditable>
+{
+	public static readonly PropertyInfo<ChildEditable> ChildProperty = RegisterProperty(p => p.Child);
+
+	public ChildEditable Child
+	{
+		get => GetProperty(ChildProperty);
+		set => SetProperty(ChildProperty, value);
+	}
+}
+
+/// <summary>
+/// 被父对象持有的可编辑子对象。
+/// </summary>
+public sealed class ChildEditable : EditableObject<ChildEditable>
+{
+	public static readonly PropertyInfo<string> TitleProperty = RegisterProperty(p => p.Title);
+
+	public string Title
+	{
+		get => GetProperty(TitleProperty);
+		set => SetProperty(TitleProperty, value);
 	}
 }
