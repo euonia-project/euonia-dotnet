@@ -154,22 +154,22 @@ public class BypassRuleChecksFlowScopeTests
 			using (target.BypassRuleChecks)
 			{
 				barrier.SetResult();
-				await observedDuringBypass.Task;
+				await observedDuringBypass.Task.WaitAsync(TestContext.Current.CancellationToken);
 			}
-		});
+		}, TestContext.Current.CancellationToken);
 
-		await barrier.Task;
+		await barrier.Task.WaitAsync(TestContext.Current.CancellationToken);
 
 		// 流 B：与流 A 并发，同实例、同一时刻。对象级 bool 时代这里会被外溢的标志跳过变更追踪。
 		var flowB = Task.Run(async () =>
 		{
 			target.Name = "concurrent";
 			observedDuringBypass.SetResult(target.ChangedProperties.Count > 0);
-		});
+		}, TestContext.Current.CancellationToken);
 
-		await Task.WhenAll(flowA, flowB);
+		await Task.WhenAll(flowA, flowB).WaitAsync(TestContext.Current.CancellationToken);
 
-		Assert.True(observedDuringBypass.Task.Result, "并发流的属性变更被流 A 的绕过标志外溢跳过（AsyncLocal 语义被破坏）。");
+		Assert.True(await observedDuringBypass.Task.WaitAsync(TestContext.Current.CancellationToken), "并发流的属性变更被流 A 的绕过标志外溢跳过（AsyncLocal 语义被破坏）。");
 		Assert.Contains(target.ChangedProperties, p => p.Name == "Name");
 	}
 
@@ -193,7 +193,7 @@ public class BypassRuleChecksFlowScopeTests
 	}
 
 	[Fact]
-	public void Bypass_Should_Not_Cross_Await_Boundary_Into_Sibling_Flow()
+	public async Task Bypass_Should_Not_Cross_Await_Boundary_Into_Sibling_Flow()
 	{
 		// AsyncLocal 值只流向派生流：进入绕过后启动的新 Task 继承它（保持原语义），
 		// 但与本流平行的、绕过之前已启动的流不受影响。
@@ -202,11 +202,11 @@ public class BypassRuleChecksFlowScopeTests
 
 		using (target.BypassRuleChecks)
 		{
-			var derived = Task.Run(() => inherited.SetResult(target.IsBypassingForProbe));
-			derived.Wait();
+			var derived = Task.Run(() => inherited.SetResult(target.IsBypassingForProbe), TestContext.Current.CancellationToken);
+			await derived.WaitAsync(TestContext.Current.CancellationToken);
 		}
 
-		Assert.True(inherited.Task.Result, "派生流应继承绕过状态（与原对象级语义兼容）。");
+		Assert.True(await inherited.Task.WaitAsync(TestContext.Current.CancellationToken), "派生流应继承绕过状态（与原对象级语义兼容）。");
 		Assert.False(target.IsBypassingForProbe, "using 退出后本流必须还原。");
 	}
 

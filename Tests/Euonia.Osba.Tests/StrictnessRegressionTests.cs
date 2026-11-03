@@ -62,7 +62,7 @@ public class StrictnessRegressionTests
 		var factory = provider.GetRequiredService<IObjectFactory>();
 
 		await Assert.ThrowsAsync<NotSupportedException>(
-			() => factory.ExecuteAsync(new NoExecuteCommand()));
+			() => factory.ExecuteAsync(new NoExecuteCommand(), TestContext.Current.CancellationToken));
 	}
 
 	[Fact]

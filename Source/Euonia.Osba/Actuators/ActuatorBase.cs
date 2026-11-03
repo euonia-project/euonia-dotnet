@@ -291,7 +291,7 @@ public abstract class ActuatorBase<TTarget>
 			// 这里直接执行「后续处理 → 终结」，语义与管道完全一致。
 			// 例外：目标类型声明了 [PipelineBehavior]，RunAsync 会在执行时按请求类型解析行为，
 			// 快路径绕过管道会静默丢掉这些行为，此时仍走完整管道。
-			if (Builder.CanBypassPipeline && !HasDeclaredPipelineBehavior<TTarget>())
+			if (Builder.CanBypassPipeline && !HasDeclaredPipelineBehavior(typeof(TTarget)))
 			{
 				await ContinueHandleAsync(target, cancellationToken).ConfigureAwait(false);
 				return await FinalizeAsync(target, cancellationToken).ConfigureAwait(false);
@@ -325,14 +325,14 @@ public abstract class ActuatorBase<TTarget>
 	/// <summary>
 	/// 判断目标类型是否声明了 <see cref="PipelineBehaviorAttribute"/>。
 	/// </summary>
-	/// <typeparam name="TTarget">目标业务对象类型。</typeparam>
+	/// <param name="targetType">目标业务对象的类型。</param>
 	/// <returns>声明了至少一个管道行为特性则返回 <see langword="true"/>。</returns>
 	/// <remarks>
-	/// <see cref="PipelineBase{TRequest,TResponse}.RunCoreAsync"/> 在每次执行时按请求类型的特性解析行为；
+	/// 管道在每次执行时按请求类型的特性解析行为（见 <see cref="PipelineBase{TRequest, TResponse}.RunAsync(TRequest)"/>）；
 	/// 空管道快路径绕过管道会静默丢掉这些行为。特性在类型装载后不变，反射只发生一次。
 	/// </remarks>
-	private static bool HasDeclaredPipelineBehavior<TTarget>()
+	private static bool HasDeclaredPipelineBehavior(Type targetType)
 	{
-		return DeclaredPipelineBehaviorCache.GetOrAdd(typeof(TTarget), static type => type.GetCustomAttributes(typeof(PipelineBehaviorAttribute), true).Length > 0);
+		return DeclaredPipelineBehaviorCache.GetOrAdd(targetType, static type => type.GetCustomAttributes(typeof(PipelineBehaviorAttribute), true).Length > 0);
 	}
 }
