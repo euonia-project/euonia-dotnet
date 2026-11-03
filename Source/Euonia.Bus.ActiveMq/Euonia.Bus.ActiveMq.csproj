@@ -2,6 +2,11 @@
     
     <Import Project="..\common.props"/>
     <Import Project="..\resource.props" />
+
+    <PropertyGroup>
+        <Description>Euonia 总线 Apache ActiveMQ 传输：基于 NMS 的 Topic 与 Queue 消息，通过临时回复队列和关联 ID 完成请求-响应，支持持久连接与 Polly 重试。 / Apache ActiveMQ transport for Euonia Bus: topic and queue messaging over NMS, request-response via temporary reply queues and correlation ids, persistent connections and Polly-based retries.</Description>
+        <PackageTags>euonia, message-bus, activemq, nms, transport, jms, pubsub, rpc</PackageTags>
+    </PropertyGroup>
     
     <PropertyGroup>
         <IsPackable>true</IsPackable>

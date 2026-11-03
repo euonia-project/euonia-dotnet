@@ -4,7 +4,8 @@
     <Import Project="..\resource.props" />
 
 	<PropertyGroup>
-		<Description>Object oriented &amp; scalable business architecture library.</Description>
+		<Description>Euonia 面向对象可扩展业务架构（OSBA）：富业务对象、规则校验、属性变更跟踪、编辑状态管理、权限契约与反射驱动对象工厂。 / Object-Oriented Scalable Business Architecture (OSBA) for Euonia: rich business objects, rule-based validation, property change tracking, edit-state management, permission contracts and reflection-driven object factories.</Description>
+		<PackageTags>euonia, osba, business-object, business-architecture, validation, rules, permission</PackageTags>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
@@ -12,7 +13,6 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- FieldData 已改为内置的按需可观察对象；Osba 不再需要 Rx / Interactive。 -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
 	</ItemGroup>

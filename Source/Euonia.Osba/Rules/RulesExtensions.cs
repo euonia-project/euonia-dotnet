@@ -26,7 +26,7 @@ public static class RulesExtensions
 				using (target.BypassRuleChecks)
 				{
 					// 在 handler 完成前保持绕过规则检查，防止异步规则提前恢复检查
-					return await handler(target);
+					return await handler(target).ConfigureAwait(false);
 				}
 			}, message);
 			//var methodName = handler.Method.ToString();
@@ -51,7 +51,7 @@ public static class RulesExtensions
 				using (target.BypassRuleChecks)
 				{
 					// 在 handler 完成前保持绕过规则检查，防止异步规则提前恢复检查
-					return await handler(target);
+					return await handler(target).ConfigureAwait(false);
 				}
 			}, message);
 			//var methodName = handler.Method.ToString();

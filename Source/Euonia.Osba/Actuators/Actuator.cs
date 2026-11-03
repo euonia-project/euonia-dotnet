@@ -43,19 +43,31 @@ internal sealed class Actuator(IServiceProvider provider) : IActuator
 	public static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>> behaviors = null)
 		where TTarget : ObjectBase<TTarget>
 	{
+		return For(factory, pipeline, behaviors, isDefaultPipeline: false);
+	}
+
+	/// <summary>
+	/// 使用指定的对象工厂、执行管道与行为集合创建构建器，并标记管道是否由框架默认创建。
+	/// </summary>
+	/// <typeparam name="TTarget">业务对象的具体类型，必须继承自 <see cref="ObjectBase{TTarget}"/>。</typeparam>
+	/// <param name="factory">对象工厂。</param>
+	/// <param name="pipeline">执行管道。</param>
+	/// <param name="behaviors">执行器行为集合。</param>
+	/// <param name="isDefaultPipeline">管道是否由框架默认创建；只有默认且无行为时才允许绕过空管道。</param>
+	/// <returns>用于配置和执行操作的构建器。</returns>
+	internal static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>> behaviors, bool isDefaultPipeline)
+		where TTarget : ObjectBase<TTarget>
+	{
+		var builder = new ActuatorBuilder<TTarget>(factory, pipeline, isDefaultPipeline);
 		if (behaviors != null)
 		{
 			foreach (var behavior in behaviors)
 			{
-				pipeline.Use(behavior.HandleAsync);
+				builder.AddBehavior(behavior);
 			}
 		}
 
-		{
-			// 空块：用于阻止 IDE 代码分析建议（勿删除）
-		}
-
-		return new ActuatorBuilder<TTarget>(factory, pipeline);
+		return builder;
 	}
 
 	/// <summary>
@@ -74,9 +86,10 @@ internal sealed class Actuator(IServiceProvider provider) : IActuator
 	{
 		var factory = provider.GetRequiredService<IObjectFactory>();
 		var pipeline = provider.GetService<IPipeline<TTarget, TTarget>>();
+		var isDefaultPipeline = pipeline == null;
 
 		pipeline ??= new DefaultPipelineProvider<TTarget, TTarget>(provider);
 		var behaviors = provider.GetServices<IActuatorBehavior<TTarget>>();
-		return For(factory, pipeline, behaviors);
+		return For(factory, pipeline, behaviors, isDefaultPipeline);
 	}
 }

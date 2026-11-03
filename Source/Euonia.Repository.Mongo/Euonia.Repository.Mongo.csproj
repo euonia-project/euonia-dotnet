@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia Repository 的 MongoDB 实现：客户端会话管理、类型化集合访问、仓储与流式类映射配置。 / MongoDB implementation for Euonia Repository: context with client session management, typed collection access, repositories and fluent class-map configuration.</Description>
+        <PackageTags>euonia, repository, mongodb, mongo, data-access, nosql</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="MongoDB.Driver" />

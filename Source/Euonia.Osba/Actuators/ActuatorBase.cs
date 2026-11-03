@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Osba;
 
@@ -87,10 +88,10 @@ public abstract class ActuatorBase<TTarget>
 	/// </remarks>
 	public ActuatorBase<TTarget> Handle(Func<TTarget, Task> action)
 	{
-		Builder.Pipeline.Use(async (target, next) =>
+		Builder.AddHandler(async (target, next) =>
 		{
-			await action(target);
-			return await next(target);
+			await action(target).ConfigureAwait(false);
+			return await next(target).ConfigureAwait(false);
 		});
 		return this;
 	}
@@ -105,10 +106,10 @@ public abstract class ActuatorBase<TTarget>
 	/// </remarks>
 	public ActuatorBase<TTarget> Handle(Action<TTarget> action)
 	{
-		Builder.Pipeline.Use(async (target, next) =>
+		Builder.AddHandler(async (target, next) =>
 		{
 			action(target);
-			return await next(target);
+			return await next(target).ConfigureAwait(false);
 		});
 		return this;
 	}
@@ -275,7 +276,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <returns>处理完成并终结后的目标对象。</returns>
 	public async Task<TTarget> ExecuteAsync(CancellationToken cancellationToken = default)
 	{
-		var target = await Factory();
+		var target = await Factory().ConfigureAwait(false);
 
 		if (_ruleScope != null)
 		{
@@ -286,16 +287,26 @@ public abstract class ActuatorBase<TTarget>
 
 		try
 		{
+			// 没有 Handle / Behavior / IActuatorBehavior 时，空管道只会多分配一次组件快照与组合委托。
+			// 这里直接执行「后续处理 → 终结」，语义与管道完全一致。
+			// 例外：目标类型声明了 [PipelineBehavior]，RunAsync 会在执行时按请求类型解析行为，
+			// 快路径绕过管道会静默丢掉这些行为，此时仍走完整管道。
+			if (Builder.CanBypassPipeline && !HasDeclaredPipelineBehavior(typeof(TTarget)))
+			{
+				await ContinueHandleAsync(target, cancellationToken).ConfigureAwait(false);
+				return await FinalizeAsync(target, cancellationToken).ConfigureAwait(false);
+			}
+
 			return await Builder.Pipeline.RunAsync(target, async result =>
 			{
-				await ContinueHandleAsync(result, cancellationToken);
+				await ContinueHandleAsync(result, cancellationToken).ConfigureAwait(false);
 
 				// 规则写在终结步骤（保存 / 操作执行）之前，是因为那一步才是规则的权威裁决点：
 				// 可编辑对象由 SaveAsync 裁决，服务对象由工厂边界裁决。此处只负责「挂规则」，
 				// 让规则进入那一次检查，而不是另跑一遍再把结果并进去——
 				// 后者会被 ClearRules 清掉，也会让规则执行两次。
-				return await FinalizeAsync(result, cancellationToken);
-			});
+				return await FinalizeAsync(result, cancellationToken).ConfigureAwait(false);
+			}).ConfigureAwait(false);
 		}
 		finally
 		{
@@ -304,5 +315,24 @@ public abstract class ActuatorBase<TTarget>
 				target.RuleSet.DetachOperationRules(_ruleScope);
 			}
 		}
+	}
+
+	/// <summary>
+	/// <see cref="PipelineBehaviorAttribute"/> 声明检查的缓存；按目标类型取一次。
+	/// </summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> DeclaredPipelineBehaviorCache = new();
+
+	/// <summary>
+	/// 判断目标类型是否声明了 <see cref="PipelineBehaviorAttribute"/>。
+	/// </summary>
+	/// <param name="targetType">目标业务对象的类型。</param>
+	/// <returns>声明了至少一个管道行为特性则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 管道在每次执行时按请求类型的特性解析行为（见 <see cref="PipelineBase{TRequest, TResponse}.RunAsync(TRequest)"/>）；
+	/// 空管道快路径绕过管道会静默丢掉这些行为。特性在类型装载后不变，反射只发生一次。
+	/// </remarks>
+	private static bool HasDeclaredPipelineBehavior(Type targetType)
+	{
+		return DeclaredPipelineBehaviorCache.GetOrAdd(targetType, static type => type.GetCustomAttributes(typeof(PipelineBehaviorAttribute), true).Length > 0);
 	}
 }

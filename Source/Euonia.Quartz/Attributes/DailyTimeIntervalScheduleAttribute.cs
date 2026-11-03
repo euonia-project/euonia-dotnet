@@ -47,17 +47,9 @@ public class DailyTimeIntervalScheduleAttribute : BackgroundJobScheduleAttribute
 			builder.WithRepeatCount(RepeatCount.Value);
 		}
 
-		switch (MisfirePolicy)
+		if (MisfirePolicy.HasValue)
 		{
-			case MisfireInstruction.IgnoreMisfirePolicy:
-				builder.WithMisfireHandlingInstructionIgnoreMisfires();
-				break;
-			case MisfireInstruction.DailyTimeIntervalTrigger.DoNothing:
-				builder.WithMisfireHandlingInstructionDoNothing();
-				break;
-			case MisfireInstruction.DailyTimeIntervalTrigger.FireOnceNow:
-				builder.WithMisfireHandlingInstructionFireAndProceed();
-				break;
+			builder.WithMisfireInstruction((DailyTimeIntervalTriggerMisfireInstruction)MisfirePolicy.Value);
 		}
 
 		return builder;

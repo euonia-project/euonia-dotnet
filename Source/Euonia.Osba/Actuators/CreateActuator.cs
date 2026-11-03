@@ -64,7 +64,7 @@ public class CreateActuator<TTarget> : ActuatorBase<TTarget>
 	{
 		if (target is ISavable savable && target is ITrackableObject trackable)
 		{
-			return (TTarget)await savable.SaveAsync(trackable.IsChanged, cancellationToken);
+			return (TTarget)await savable.SaveAsync(trackable.IsChanged, cancellationToken).ConfigureAwait(false);
 		}
 
 		return target;

@@ -66,9 +66,9 @@ internal static class ObjectAuthorization
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	/// <remarks>
-	/// 供 <c>BusinessObjectFactory</c> 的 <c>*Async</c> 入口使用。判定本身仍是同步契约，
-	/// 这里只把 <see cref="AuthorizationWarmup"/> 挪到判定之前——授权数据命中暖路径后不再走
-	/// <c>AsyncContext.Run</c>，因此整条异步链路不再退化成 sync-over-async。
+	/// 供 <c>BusinessObjectFactory</c> 的 <c>*Async</c> 入口使用。判定本身仍是同步契约；
+	/// 这里在判定前先 await <see cref="AuthorizationWarmup"/>，授权数据命中暖路径后
+	/// 判定直接走同步快路径，整条异步链路不会退化成 sync-over-async。
 	/// </remarks>
 	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, Type requirementType = null)
 	{

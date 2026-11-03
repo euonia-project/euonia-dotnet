@@ -152,7 +152,7 @@ internal static class ScopeAuthorization
 	/// <param name="target">目标对象。</param>
 	/// <param name="operation">操作。</param>
 	/// <remarks>
-	/// 这不是强制点（行为保持向后兼容），而是把隐性风险变为可观测的告警。
+	/// 这不是强制点，而是把隐性风险变为可观测的告警。
 	/// 需要“写入前拒绝”的宿主应改用 <c>Fetch → 判定 → Save</c>，或在工厂方法内先判定。
 	/// </remarks>
 	internal static void WarnIfWriteBeforeCheck(object target, string operation)

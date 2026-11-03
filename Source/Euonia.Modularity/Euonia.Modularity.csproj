@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 模块化应用框架：可插拔模块、依赖图解析、约定式服务注册与应用生命周期管理。 / Modular application framework for Euonia: pluggable modules, dependency-graph resolution, convention-based service registration and application lifecycle management.</Description>
+        <PackageTags>euonia, modularity, modules, dependency-injection, lifecycle, plugin</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

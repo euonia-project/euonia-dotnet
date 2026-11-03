@@ -17,7 +17,7 @@ public static class QuartzExtensions
 	/// <param name="options"></param>
 	/// <typeparam name="TJob"></typeparam>
 	/// <returns></returns>
-	public static IServiceCollectionQuartzConfigurator AddJob<TJob>(this IServiceCollectionQuartzConfigurator configurator, BackgroundJobOptions options = null)
+	public static IQuartzBuilder AddJob<TJob>(this IQuartzBuilder configurator, BackgroundJobOptions options = null)
 		where TJob : IJob
 	{
 		return configurator.AddJob(typeof(TJob), options);
@@ -32,11 +32,11 @@ public static class QuartzExtensions
 	/// <returns></returns>
 	/// <exception cref="ArgumentNullException"></exception>
 	/// <exception cref="ArgumentException"></exception>
-	public static IServiceCollectionQuartzConfigurator AddJob(this IServiceCollectionQuartzConfigurator configurator, Type jobType, BackgroundJobOptions options = null)
+	public static IQuartzBuilder AddJob(this IQuartzBuilder configurator, Type jobType, BackgroundJobOptions options = null)
 	{
 		ArgumentNullException.ThrowIfNull(jobType);
 		ArgumentNullException.ThrowIfNull(configurator);
-		
+
 		if (!typeof(IJob).IsAssignableFrom(jobType))
 		{
 			throw new ArgumentException(string.Format(Resources.IDS_TYPE_MUST_BE_JOB_TYPE, jobType.FullName));
@@ -78,7 +78,11 @@ public static class QuartzExtensions
 		};
 
 		var jobKey = new JobKey($"{options.Name}.job", options.Group);
-		configurator.AddJob(jobType, jobKey, job => options.JobConfigure(job));
+		configurator.AddJob(jobType, job =>
+		{
+			job.WithIdentity(jobKey);
+			options.JobConfigure(job);
+		});
 
 		foreach (var trigger in triggers)
 		{
@@ -104,7 +108,7 @@ public static class QuartzExtensions
 	/// <param name="configurator"></param>
 	/// <param name="assembly"></param>
 	/// <returns></returns>
-	public static IServiceCollectionQuartzConfigurator AddJobs(this IServiceCollectionQuartzConfigurator configurator, Assembly assembly)
+	public static IQuartzBuilder AddJobs(this IQuartzBuilder configurator, Assembly assembly)
 	{
 		ArgumentNullException.ThrowIfNull(assembly);
 
@@ -125,7 +129,7 @@ public static class QuartzExtensions
 	/// <param name="attribute"></param>
 	/// <param name="jobKey"></param>
 	/// <returns></returns>
-	public static ITriggerConfigurator Configure(this ITriggerConfigurator config, BackgroundJobScheduleAttribute attribute, JobKey jobKey)
+	public static ITriggerConfigurator<IJob> Configure(this ITriggerConfigurator<IJob> config, BackgroundJobScheduleAttribute attribute, JobKey jobKey)
 	{
 		config.WithIdentity($"{attribute.Identity}.trigger")
 			  .ForJob(jobKey)
@@ -134,7 +138,7 @@ public static class QuartzExtensions
 			  .WithDescription(attribute.Description);
 		if (attribute.Delay > 0)
 		{
-			config.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(attribute.Delay)));
+			config.StartAt(EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(attribute.Delay)));
 		}
 		else
 		{
@@ -152,7 +156,7 @@ public static class QuartzExtensions
 	/// <param name="jobKey"></param>
 	/// <typeparam name="TSchedule"></typeparam>
 	/// <returns></returns>
-	public static ITriggerConfigurator Configure<TSchedule>(this ITriggerConfigurator config, TSchedule attribute, JobKey jobKey)
+	public static ITriggerConfigurator<IJob> Configure<TSchedule>(this ITriggerConfigurator<IJob> config, TSchedule attribute, JobKey jobKey)
 		where TSchedule : BackgroundJobScheduleAttribute
 	{
 		config.WithIdentity($"{attribute.Identity}.trigger")
@@ -162,7 +166,7 @@ public static class QuartzExtensions
 			  .WithDescription(attribute.Description);
 		if (attribute.Delay > 0)
 		{
-			config.StartAt(DateBuilder.EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(attribute.Delay)));
+			config.StartAt(EvenSecondDate(DateTimeOffset.UtcNow.AddSeconds(attribute.Delay)));
 		}
 		else
 		{
@@ -170,5 +174,17 @@ public static class QuartzExtensions
 		}
 
 		return config;
+	}
+
+	/// <summary>
+	/// Rounds the specified time up to the next even second.
+	/// </summary>
+	private static DateTimeOffset EvenSecondDate(DateTimeOffset value)
+	{
+		var seconds = value.Ticks - value.Ticks % TimeSpan.TicksPerSecond;
+		var truncated = new DateTimeOffset(seconds, value.Offset);
+		return truncated.Second % 2 == 0
+			? truncated
+			: truncated.AddSeconds(1);
 	}
 }

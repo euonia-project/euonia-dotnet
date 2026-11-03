@@ -3,6 +3,11 @@
     <Import Project="..\common.props"/>
     <Import Project="..\resource.props"/>
     
+    <PropertyGroup>
+        <Description>Euonia Mapping 的 AutoMapper 后端：基于 AutoMapper 的 ITypeAdapter 实现与模块注册。 / AutoMapper backend for Euonia Mapping: an AutoMapper-based ITypeAdapter implementation with module registration.</Description>
+        <PackageTags>euonia, mapping, automapper, object-mapping, mapper</PackageTags>
+    </PropertyGroup>
+    
     <ItemGroup>
         <PackageReference Include="AutoMapper"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions"/>

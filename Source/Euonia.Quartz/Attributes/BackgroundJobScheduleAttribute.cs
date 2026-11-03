@@ -39,20 +39,19 @@ public abstract class BackgroundJobScheduleAttribute : Attribute
 	public string Description { get; set; }
 
 	/// <summary>
-	/// Instructs the <see cref="IScheduler" /> that the <see cref="ITrigger"/> will never be evaluated for a misfire situation.
-	/// and that the scheduler will simply try to fire it as soon as it can,and then update the Trigger as if it had fired at the proper time.
+	/// Gets or sets the numeric misfire instruction applied to the trigger.
 	/// <br/>
-	/// <para><see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.IgnoreMisfirePolicy"/> is valid for all schedule type.</para>
-	/// <para>Constants in <see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.CalendarIntervalTrigger"/> area valid for <see cref="CalendarIntervalScheduleAttribute"/></para>
-	/// <para>Constants in <see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.CronTrigger"/> area valid for <see cref="CronExpressionScheduleAttribute"/></para>
-	/// <para>Constants in <see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.DailyTimeIntervalTrigger"/> area valid for <see cref="DailyTimeIntervalScheduleAttribute"/></para>
-	/// <para>Constants in <see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.SimpleTrigger"/> area valid for <see cref="SimpleScheduleAttribute"/></para>
+	/// <para>The value is interpreted as <see cref="CronTriggerMisfireInstruction"/> for <see cref="CronExpressionScheduleAttribute"/>,
+	/// <see cref="SimpleTriggerMisfireInstruction"/> for <see cref="SimpleScheduleAttribute"/>,
+	/// <see cref="CalendarIntervalTriggerMisfireInstruction"/> for <see cref="CalendarIntervalScheduleAttribute"/> and
+	/// <see cref="DailyTimeIntervalTriggerMisfireInstruction"/> for <see cref="DailyTimeIntervalScheduleAttribute"/>.</para>
+	/// <para><c>-1</c> (<c>IgnoreMisfires</c>) is valid for every schedule type.</para>
 	/// </summary>
 	/// <remarks>
-	///	Default value: <see cref="MisfireInstruction"/>.<see cref="MisfireInstruction.SmartPolicy"/>.
+	/// Default value: <see langword="null"/>, which leaves the schedule's smart policy in place.
 	/// </remarks>
 	public virtual int? MisfirePolicy { get; set; }
-	
+
 	/// <summary>
 	/// Configures the trigger builder.
 	/// </summary>

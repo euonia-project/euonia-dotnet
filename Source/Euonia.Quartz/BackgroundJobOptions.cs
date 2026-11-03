@@ -20,10 +20,10 @@ public class BackgroundJobOptions
     /// <summary>
     /// Gets or sets job configuration.
     /// </summary>
-    public Action<IJobConfigurator> JobConfigure { get; set; }
+    public Action<IJobConfigurator<IJob>> JobConfigure { get; set; }
 
     /// <summary>
     /// Gets or sets trigger configuration.
     /// </summary>
-    public List<Action<ITriggerConfigurator>> TriggerConfigure { get; } = new();
+    public List<Action<ITriggerConfigurator<IJob>>> TriggerConfigure { get; } = new();
 }

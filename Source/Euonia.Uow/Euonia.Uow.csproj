@@ -2,6 +2,11 @@
 
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
+
+    <PropertyGroup>
+        <Description>Euonia 工作单元抽象：事务边界、提交/回滚生命周期、环境上下文与 Castle 动态代理拦截器。 / Unit of Work abstraction for Euonia: transaction boundaries, commit/rollback lifecycle, ambient context and a Castle DynamicProxy interceptor.</Description>
+        <PackageTags>euonia, unit-of-work, uow, transaction, repository, castle, interceptor</PackageTags>
+    </PropertyGroup>
     
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />

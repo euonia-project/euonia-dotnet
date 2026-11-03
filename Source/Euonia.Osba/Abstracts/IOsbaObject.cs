@@ -10,11 +10,11 @@ namespace Nerosoft.Euonia.Osba;
 public interface IOsbaObject : IUseBusinessContext
 {
 	/// <summary>
-	/// 获取负责字段数据操作的管理器实例。
+	/// 获取字段元数据与只读查询的管理器实例。
 	/// </summary>
 	/// <remarks>
-	/// 使用此属性访问字段数据以进行检索和存储操作。返回的管理器
-	/// 提供了与字段相关数据交互的方法，对于需要操作或查询字段的场景至关重要。
+	/// 管理器只暴露属性元数据、字段是否存在与原始值查询；字段值的写入必须通过
+	/// <c>SetProperty</c>，装载必须通过 <c>LoadProperty</c>。
 	/// </remarks>
 	FieldDataManager FieldManager { get; }
 

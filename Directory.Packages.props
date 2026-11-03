@@ -3,8 +3,8 @@
         <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
         <EnablePackageVersionOverride>true</EnablePackageVersionOverride>
         <ExtensionsPackageVersion>10.0.14</ExtensionsPackageVersion>
-        <GrpcAspNetCoreVersion>2.84.0</GrpcAspNetCoreVersion>
-        <QuartzVersion>3.19.1</QuartzVersion>
+        <GrpcAspNetCoreVersion>2.85.0</GrpcAspNetCoreVersion>
+        <QuartzVersion>4.6.2</QuartzVersion>
         <RefitVersion>16.4.0</RefitVersion>
     </PropertyGroup>
     <PropertyGroup>
@@ -35,11 +35,9 @@
         <PackageVersion Include="MediatR.Contracts" Version="2.0.1" />
         <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageVersion Include="Polly" Version="8.8.1" />
+        <PackageVersion Include="Polly" Version="8.9.0" />
         <PackageVersion Include="protobuf-net" Version="3.4.40" />
         <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
-        <PackageVersion Include="Quartz.Extensions.DependencyInjection" Version="$(QuartzVersion)" />
-        <PackageVersion Include="Quartz.Extensions.Hosting" Version="$(QuartzVersion)" />
         <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
         <PackageVersion Include="Refit" Version="$(RefitVersion)" />
         <PackageVersion Include="Refit.HttpClientFactory" Version="$(RefitVersion)" />
@@ -48,7 +46,7 @@
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageVersion Include="StackExchange.Redis" Version="3.4.20" />
+        <PackageVersion Include="StackExchange.Redis" Version="3.4.29" />
         <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
         <PackageVersion Include="System.Collections.Immutable" Version="10.0.14" />
         <PackageVersion Include="System.Configuration.ConfigurationManager" Version="10.0.14" />

@@ -192,7 +192,8 @@ configurator.SetConvention(convention => convention.Add<DefaultMessageConvention
 |---|---|---|
 | `Enabled` | `true` | 功能开关 |
 | `Name` | `"grpc"` | 传输器名（键控 `ITransporter` 的键） |
-| `Endpoint` | 空 | 服务端地址；明文 h2c 用 `http://`，TLS 用 `https://` |
+| `Endpoint` | 空 | **默认**服务端地址；明文 h2c 用 `http://`，TLS 用 `https://`。未命中映射与规则的消息走这里 |
+| `Endpoints` | 空 | 通道 → 端点路由表（§4.1）：键为精确通道名或通配符模式（含 `*`/`?` 自动按模式匹配），值可含模板占位符 |
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名 |
 | `ServiceName` | `"nerorsoft.bus.ReplierService"` | 泛化调用服务全名（§4） |
 | `MethodName` | `"Call"` | 泛化调用一元方法名（§4） |
@@ -226,13 +227,69 @@ services.AddGrpcBus("grpc", options =>
 });
 ```
 
+### 4.1 多端点路由（微服务多服务地址）
+
+微服务体系里每个服务有自己的 gRPC 地址：`GrpcBusOptions.Endpoint` 只是**默认端点**。
+路由目标统一在 `Endpoints` 里配置——键为精确通道名或通配符模式（含 `*`/`?` 即自动按模式匹配），
+通道即逻辑目的地，端点是它的物理承载：
+
+```csharp
+services.AddGrpcBus("grpc", options =>
+{
+    options.Endpoint = "http://orders:5081";           // 默认端点（Endpoints 未命中走这里）
+
+    options.Endpoints["billing.CreateInvoice"] = "http://billing:5081";  // 精确通道名
+    options.Endpoints["billing.*"]  = "http://billing:5081";             // 通配符：* 不跨段
+    options.Endpoints["order.**"]   = "http://orders:5081";              // 通配符：** 跨段
+    options.Endpoints["*.ship"]     = "http://{1}:5081";                 // {1} = 第 1 个通配符段
+});
+
+// 调用方只关心通道，不感知服务地址
+var bill = await bus.CallAsync<CreateInvoice, Invoice>(new CreateInvoice { OrderId = 1 },
+    new CallOptions { Channel = "billing.CreateInvoice" }, ct);   // → billing 服务
+```
+
+**解析顺序**（`TryResolveEndpoint`）：
+
+| 优先级 | 来源 | 说明 |
+|---|---|---|
+| 1 | `Endpoints` 精确键 | 精确通道名（忽略大小写），适合个别通道的特殊指向 |
+| 2 | `Endpoints` 通配符键 | 键含 `*`/`?` 自动按模式匹配；按声明顺序求值，首个匹配生效 |
+| 3 | `Endpoint` 默认端点 | 未命中任何键时兜底 |
+
+**通配符语法**（键含 `*`/`?` 即触发，Glob 风格，通道全名锚定匹配、忽略大小写）：
+
+| 通配符 | 语义 | 示例 |
+|---|---|---|
+| `*` | 匹配任意字符序列，**不跨段**（不含 `.`） | `billing.*` 命中 `billing.CreateInvoice`，不命中 `billing.a.b` |
+| `?` | 匹配单个字符，不跨段 | `coun?` 命中 `count`，不命中 `cou.t` |
+| `**` | 匹配任意字符序列，**可跨段**（含 `.`） | `order.**` 命中 `order.payment.capture` |
+
+**端点值模板占位符**：
+
+- `{channel}`——整个通道名；
+- `{1}`…`{9}`——第 N 个通配符段（按 `*`/`**`/`?` 出现顺序）的匹配值；
+- 占位符值均经 `Uri.EscapeDataString` 转义后写入。
+
+- 服务名/方法名仍来自 `ServiceName`/`MethodName`——所有微服务共享同一套总线协议
+  （都部署了 `MapGrpcBusService`），换端点只换“打到哪台服务”，不需要逐服务配置方法名；
+- 连接按端点缓存复用（通道 + 泛化方法描述符 + `CallInvoker`），首次调用某端点时惰性建立；
+- 命中的端点不可达/不存在时抛 `RpcException`（Unimplemented 或连接错误），**不会静默回落默认端点**；
+- 路由表是**部署期配置**（启动代码或 appsettings 绑定 `Endpoints`），不随单条消息变化——
+  需要按消息动态选目标时，应注册多个 keyed 传输器并用传输策略路由。
+
 方法名不存在时返回 `RpcException(StatusCode.Unimplemented)`（`CallAsync_UnknownMethod_ReturnsUnimplemented`
 用例已覆盖），可用它做服务能力探测。
 
 **相关测试**（`Euonia.Bus.Grpc.Tests`）：
-- `CallAsync_UsesConfiguredMethodDescriptor`：显式指定 `ServiceName`/`MethodName` 往返成功（41→42），
-  证明描述符由选项驱动；
-- `CallAsync_UnknownMethod_ReturnsUnimplemented`：`MethodName="Nope"` → `Unimplemented`。
+- `CallAsync_WithChannelEndpointMapping_RoutesEachChannelToMappedServer`：精确键路由；
+- `CallAsync_WithWildcardEndpointKey_RoutesMatchingChannels` / `CallAsync_WithDoubleStarEndpointKey_MatchesDeepChannels`：
+  通配符键 `*` 单段与 `**` 跨段路由；
+- `CallAsync_ExactKeyOverridesWildcard_UnmatchedFallsBackToDefault`：精确键 > 通配符键 > 默认的优先级；
+- `EndpointPattern_TryResolve_RendersTemplatePlaceholders` / `EndpointPattern_IsAnchoredAndSingleSegment`：
+  模板渲染与全名锚定；
+- `CallAsync_WithChannelEndpointMapping_ReusesConnectionPerEndpoint` / `..._WithWildcardUnreachableEndpoint_FailsInsteadOfFallback`：
+  连接缓存复用与不静默回落。
 
 ---
 
@@ -322,6 +379,9 @@ await app.StopAsync();
    由宿主自行调用，`MapGrpcBusService` 不帮你开 gRPC。
 10. `SerializerProvider` 必须是已注册键控序列化器（内置 `SystemTestJson` / `NewtonsoftJson`），
     配错抛 `InvalidOperationException`。
+11. 多端点路由只改“打到哪台服务”（§4.1）：目标服务必须部署了同一套总线契约
+    （`MapGrpcBusService`），`Endpoints` 键（精确或通配符）不会改变服务名/方法名；
+    命中的端点写错得到的是连接错误或 `Unimplemented`，不会回落默认端点。
 
 ## 下一步
 

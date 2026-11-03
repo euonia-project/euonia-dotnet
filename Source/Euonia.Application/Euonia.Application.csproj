@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>Euonia 应用层：用例、应用服务基类、Castle 拦截器，以及用于日志、校验、授权、追踪和工作单元的管道行为。 / Application layer for Euonia: use cases, application service base classes, Castle-based interceptors and message pipeline behaviors for logging, validation, authorization, tracing and unit of work.</Description>
+        <PackageTags>euonia, application, usecase, cqrs, interceptor, pipeline, validation, authorization</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.AspNetCore.Authorization" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />

@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Osba;
+namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
 /// 字段数据的接口。
@@ -16,6 +16,15 @@ public interface IFieldData : ITrackableObject
 	/// <value>字段的值。</value>
 	/// <returns>字段的值。</returns>
 	object Value { get; set; }
+
+	/// <summary>
+	/// 获取字段自上次 <see cref="MarkAsUnchanged"/> 以来的原始值。
+	/// </summary>
+	/// <remarks>
+	/// 未发生变更时与 <see cref="Value"/> 相同；发生多次修改时始终保留第一次修改前的值。
+	/// 默认实现返回 <see cref="Value"/>，自定义实现可按需覆盖。
+	/// </remarks>
+	object OriginalValue => Value;
 
 	/// <summary>
 	/// 将字段标记为未更改。
@@ -40,4 +49,9 @@ public interface IFieldData<T> : IFieldData
 	/// <value>字段的值。</value>
 	/// <returns>字段的值。</returns>
 	new T Value { get; set; }
+
+	/// <summary>
+	/// 获取字段自上次 <see cref="IFieldData.MarkAsUnchanged"/> 以来的原始值。
+	/// </summary>
+	new T OriginalValue => Value;
 }

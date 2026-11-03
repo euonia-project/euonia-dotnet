@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 总线 RabbitMQ 传输：分布式发布/订阅与请求-响应消息，支持持久连接、fanout 交换机、优先级队列、死信与 Polly 重试。 / RabbitMQ transport for Euonia Bus: distributed publish/subscribe and request-response messaging with persistent connections, fanout exchanges, priority queues, dead lettering and Polly-based retries.</Description>
+        <PackageTags>euonia, message-bus, rabbitmq, amqp, transport, pubsub, rpc</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <PackageReadmeFile>README.md</PackageReadmeFile>
     </PropertyGroup>
     

@@ -4,11 +4,10 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
-        <Description>Provides a simple and easy to use .NET library for scheduling jobs using Quartz.</Description>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-        <LangVersion>latest</LangVersion>
+        <Description>Euonia 的 Quartz.NET 作业调度集成：基于特性的后台作业与触发器（Simple、Cron、CalendarInterval、DailyTimeInterval）及流式配置。 / Quartz.NET job scheduling integration for Euonia: attribute-based background jobs and triggers (simple, cron, calendar interval and daily time interval) with fluent configuration.</Description>
+        <PackageTags>euonia, quartz, scheduling, jobs, background-jobs, cron</PackageTags>
+        <!-- Quartz.NET 4.x only ships net10.0 assets. -->
+        <TargetFrameworks>net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,8 +15,6 @@
         <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Options" />
         <PackageReference Include="Quartz" />
-        <PackageReference Include="Quartz.Extensions.DependencyInjection" />
-        <PackageReference Include="Quartz.Extensions.Hosting" />
     </ItemGroup>
 
     <ItemGroup>

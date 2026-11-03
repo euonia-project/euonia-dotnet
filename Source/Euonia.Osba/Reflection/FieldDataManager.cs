@@ -14,8 +14,8 @@ namespace Nerosoft.Euonia.Osba;
 /// </para>
 /// <para>
 /// 字段值按属性在元数据中的稳定索引存放在 <see cref="IFieldData"/> 数组里，
-/// 不再为每个对象分配一个 <see cref="ConcurrentDictionary{TKey,TValue}"/>。
-/// 未在元数据中注册的自定义 <see cref="IPropertyInfo"/> 仍走按名称的兜底字典，保持兼容。
+/// 每个对象只分配这一个数组。
+/// 未在元数据中注册的自定义 <see cref="IPropertyInfo"/> 走按名称的兜底字典。
 /// </para>
 /// </remarks>
 public class FieldDataManager
@@ -99,11 +99,11 @@ public class FieldDataManager
 	#region Get/Set/Find fields
 
 	/// <summary>
-	/// 获取属性的字段数据。
+	/// 获取属性的真实字段数据；仅供 Osba 内部使用。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
-	/// <returns>字段数据。</returns>
-	public IFieldData GetFieldData(IPropertyInfo property)
+	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
+	internal IFieldData GetFieldData(IPropertyInfo property)
 	{
 		var index = GetIndex(property);
 		if (index >= 0)
@@ -116,11 +116,11 @@ public class FieldDataManager
 	}
 
 	/// <summary>
-	/// 获取具有指定名称的属性的字段数据。
+	/// 获取具有指定名称的真实字段数据；仅供 Osba 内部使用。
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
-	/// <returns>字段数据。</returns>
-	public IFieldData GetFieldData(string propertyName)
+	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
+	internal IFieldData GetFieldData(string propertyName)
 	{
 		var index = _metadata.IndexOf(propertyName);
 		if (index >= 0)
@@ -130,6 +130,39 @@ public class FieldDataManager
 		}
 
 		return GetUnindexed(propertyName);
+	}
+
+	/// <summary>
+	/// 获取属性的原始值；字段尚未创建时返回注册的默认值。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public object GetOriginalValue(IPropertyInfo property)
+	{
+		var field = GetFieldData(property);
+		return field?.OriginalValue ?? property.DefaultValue;
+	}
+
+	/// <summary>
+	/// 获取属性的原始值（泛型版本）；字段尚未创建时返回注册的默认值。
+	/// </summary>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	/// <remarks>
+	/// 自定义 <see cref="IFieldData"/> 实现（未实现 <see cref="IFieldData{TValue}"/>）回退到
+	/// 非泛型 <see cref="IFieldData.OriginalValue"/>（默认接口实现返回 <see cref="IFieldData.Value"/>），
+	/// 避免把「有字段但读不到原始值」误判成「没有原始值」。
+	/// </remarks>
+	public TValue GetOriginalValue<TValue>(PropertyInfo<TValue> property)
+	{
+		var field = GetFieldData(property);
+		if (field is IFieldData<TValue> typed)
+		{
+			return typed.OriginalValue;
+		}
+
+		return field != null ? (TValue)field.OriginalValue : property.DefaultValue;
 	}
 
 	/// <summary>
@@ -327,7 +360,7 @@ public class FieldDataManager
 	/// 而加锁会造出一条可证明的 ABBA 锁序反转：本方法被 <c>PropertyInfoManager.CreateAndPublish</c>
 	/// 在持有 <c>_publishLock</c> 时调用（A→B），而本方法一旦触发类型的静态初始化器，
 	/// 初始化器又会重入 <c>GetPropertyListCache</c> 去要 <c>_publishLock</c>（B→A）。
-	/// 早期版本在 B 段额外拿 <c>lock(type)</c> 时，两个入口并发即可能互等。
+	/// 若在 B 段额外拿 <c>lock(type)</c>，两个入口并发即可能互等。
 	/// </para>
 	/// </remarks>
 	public static void ForceStaticFieldInit(Type type)
@@ -383,7 +416,10 @@ public class FieldDataManager
 	/// <summary>
 	/// 将所有字段数据标记为未更改，清除每个字段的修改历史。
 	/// </summary>
-	public void MarkAllAsUnchanged()
+	/// <remarks>
+	/// 仅供对象级生命周期使用；外部应通过 <c>AcceptChanges</c> / <c>RejectChanges</c> 控制状态。
+	/// </remarks>
+	internal void MarkAllAsUnchanged()
 	{
 		if (_fields != null)
 		{

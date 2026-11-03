@@ -4,6 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
+        <Description>Euonia 缓存的 Microsoft.Extensions.Caching.Memory 提供程序：通过通用缓存抽象注册的进程内缓存句柄。 / Microsoft.Extensions.Caching.Memory provider for Euonia Caching: an in-process cache handle registered through the common caching abstractions.</Description>
+        <PackageTags>euonia, caching, memorycache, in-memory, cache</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
         <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
     </PropertyGroup>
 

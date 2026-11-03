@@ -3,6 +3,11 @@
     <Import Project="..\common.props" />
     <Import Project="..\resource.props" />
 
+    <PropertyGroup>
+        <Description>基于 StackExchange.Redis 的 Euonia 分布式锁与信号量实现。 / Redis implementation of Euonia distributed locks and semaphores, built on StackExchange.Redis.</Description>
+        <PackageTags>euonia, concurrency, distributed-lock, redis, semaphore</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="StackExchange.Redis" />
     </ItemGroup>

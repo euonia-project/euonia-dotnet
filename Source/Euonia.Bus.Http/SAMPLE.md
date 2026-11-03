@@ -163,7 +163,8 @@ builder.Services.AddHttpBus("http");
 |---|---|---|
 | `Enabled` | `true` | 功能开关 |
 | `Name` | `"http"` | 传输器名（键控 `ITransporter` 的键） |
-| `Endpoint` | 空 | 服务端 BaseAddress；与 `Route` 拼接为完整地址 |
+| `Endpoint` | 空 | **默认**服务端 BaseAddress；与 `Route` 拼接为完整地址。未命中映射与规则的消息走这里 |
+| `Endpoints` | 空 | 通道 → 端点路由表（§3.3）：键为精确通道名或通配符模式（含 `*`/`?` 自动按模式匹配），值可含模板占位符 |
 | `Route` | `"/bus/call"` | 远程调用路由 |
 | `SerializerProvider` | `"SystemTestJson"` | 键控 `IMessageSerializer` 名（内置 `SystemTestJson` / `NewtonsoftJson`） |
 | `RequestTimeout` | `null` | 请求超时（`HttpClient.Timeout`），`null` 不限制 |
@@ -230,6 +231,58 @@ catch (InvalidOperationException ex)
 
 - `HttpBusOptions.RequestTimeout` 超时抛 `TimeoutException`（来自 `HttpClient`）；
 - 端点返回非 2xx（路由不对、500 等）→ `MessageDeliverException`。
+
+### 3.3 多端点路由（微服务多服务地址）
+
+微服务体系里每个服务有自己的地址：`HttpBusOptions.Endpoint` 只是**默认端点**。
+路由目标统一在 `Endpoints` 里配置——键为精确通道名或通配符模式（含 `*`/`?` 即自动按模式匹配），
+值为 BaseAddress，路由（`Route`）保持一致：
+
+```csharp
+services.AddHttpBus("http", options =>
+{
+    options.Endpoint = "http://orders:8080";            // 默认端点（Endpoints 未命中走这里）
+
+    options.Endpoints["billing.CreateInvoice"] = "http://billing:8080";  // 精确通道名
+    options.Endpoints["billing.*"]  = "http://billing:8080";             // 通配符：* 不跨段
+    options.Endpoints["order.**"]   = "http://orders:8080";              // 通配符：** 跨段
+    options.Endpoints["*.ship"]     = "http://{1}:8080";                 // {1} = 第 1 个通配符段
+});
+
+// 调用方只关心通道，不感知服务地址
+var bill = await bus.CallAsync<CreateInvoice, Invoice>(new CreateInvoice { OrderId = 1 },
+    new CallOptions { Channel = "billing.CreateInvoice" }, ct);   // → POST http://billing:8080/bus/call
+```
+
+**解析顺序**（`TryResolveEndpoint`）：`Endpoints` 精确键（忽略大小写）→ 通配符键（按声明顺序首个匹配）→ `Endpoint` 默认端点。
+
+**通配符语法**（键含 `*`/`?` 即触发，Glob 风格，通道全名锚定匹配、忽略大小写）：
+
+| 通配符 | 语义 | 示例 |
+|---|---|---|
+| `*` | 匹配任意字符序列，**不跨段**（不含 `.`） | `billing.*` 命中 `billing.CreateInvoice`，不命中 `billing.a.b` |
+| `?` | 匹配单个字符，不跨段 | `coun?` 命中 `count`，不命中 `cou.t` |
+| `**` | 匹配任意字符序列，**可跨段**（含 `.`） | `order.**` 命中 `order.payment.capture` |
+
+**端点值模板占位符**：`{channel}` 整个通道名；`{1}`…`{9}` 第 N 个通配符段（按 `*`/`**`/`?` 出现顺序）的匹配值；均经 `Uri.EscapeDataString` 转义。
+
+- 目标服务必须同样部署了 `MapBusEndpoint`（同一套总线协议）；换端点只换“打到哪台服务”；
+- 「BaseAddress + Route」的解析结果按端点缓存，同一端点多次调用不重复拼接；
+- 未命中任何键的通道走默认端点，单服务场景零配置；
+- 命中的端点不可达 → `HttpRequestException` / 非 2xx → `MessageDeliverException`，
+  **不会静默回落默认端点**（避免消息发错服务）；
+- 路由表是**部署期配置**（启动代码或 appsettings 绑定 `Endpoints`），不随单条消息变化——
+  需要按消息动态选目标时，应注册多个 keyed 传输器并用传输策略路由。
+
+**相关测试**（`Euonia.Bus.Http.Tests`）：
+- `CallAsync_WithChannelEndpointMapping_PostsToMappedBaseAddress`：精确键路由；
+- `CallAsync_WithWildcardEndpointKey_PostsToPatternDerivedBaseAddress` / `CallAsync_WithSegmentTemplate_RendersBaseAddressFromChannel`：
+  通配符键与段模板路由；
+- `CallAsync_ExactKeyOverridesWildcard_UnmatchedFallsBackToDefault`：精确键 > 通配符键 > 默认的优先级；
+- `EndpointPattern_TryResolve_RendersTemplatePlaceholders` / `EndpointPattern_IsAnchoredAndSingleSegment`：
+  模板渲染与全名锚定；
+- `CallAsync_WithUnmappedChannel_UsesDefaultEndpoint` / `CallAsync_AlternatingChannels_ProduceDistinctUris`：
+  默认端点回落与地址缓存。
 
 ---
 
@@ -306,6 +359,9 @@ await app.StopAsync();
    配错会在构造 `HttpTransporter` 时抛 `InvalidOperationException`。
 7. `Endpoint` 为空时请求地址退化为 `Route`（相对路径），用于已注入 `BaseAddress` 的场景。
 8. 空串请求头（如无上下文的 `CorrelationId`）会被跳过写头，不会抛错。
+9. 多端点路由（§3.3）只改 BaseAddress，不改 `Route`：所有目标服务必须用同一 `Route`
+   部署 `MapBusEndpoint`；未命中 `Endpoints` 任何键的通道回落默认端点，
+   命中的端点不可达则直接失败，不会回落。
 
 ## 下一步
 

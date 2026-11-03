@@ -4,7 +4,8 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
-        <Description>Provides customizable validation capabilities for various data inputs.</Description>
+        <Description>Euonia 校验框架：集成 FluentValidation，提供泛型、范围和正则校验器、带可观察错误的自校验对象，以及携带校验结果的异常。 / Validation framework for Euonia: FluentValidation integration, generic, range and regular-expression validators, a self-validating object with observable errors and a validation exception carrying results.</Description>
+        <PackageTags>euonia, validation, fluentvalidation, validator, rules</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

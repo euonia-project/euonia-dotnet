@@ -6,6 +6,10 @@
         <RootNamespace>Nerosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
         <Description>Euonia development framework and toolkit library for .NET application/service. Powered by Nerosoft.</Description>
         <PackageProjectUrl>https://github.com/euonia-project/euonia-dotnet/</PackageProjectUrl>
+        <!-- NuGet 包图标：嵌入 Source/icon.png（来源 https://avatars.githubusercontent.com/u/293804248） -->
+        <PackageIcon>icon.png</PackageIcon>
+        <!-- 旧客户端回退使用；nuget.org 以嵌入的 PackageIcon 为准 -->
+        <PackageIconUrl>https://avatars.githubusercontent.com/u/293804248</PackageIconUrl>
         <PackageTags>.net, asp.net, core, framework, ddd, distributed, architecture, EventBus, ServiceBug, EF, EFCore, Caching, Redis, Mapping, Mapper, ObjectMap, DistributedLock, OOP, RPC, Grpc, proto, Validate, Validation, FluentValidation</PackageTags>
         <Configurations>Debug;Release</Configurations>
         <DeployDependsOn> $(DeployDependsOn); PrepareForBuild; Build </DeployDependsOn>
@@ -33,6 +37,11 @@
         <Using Include="System.Text"/>
         <Using Include="System.Threading"/>
         <Using Include="System.Threading.Tasks"/>
+    </ItemGroup>
+
+    <!-- 所有 Source 项目共用同一张包图标 -->
+    <ItemGroup>
+        <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
     </ItemGroup>
     
 </Project>

@@ -1,3 +1,4 @@
+using System.Reflection;
 using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Osba;
@@ -40,14 +41,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="property">要标记的属性信息。</param>
 	protected override void PropertyHasChanged(IPropertyInfo property)
 	{
-		lock (_changedPropertiesLock)
-		{
-			if (!_changedProperties.Contains(property))
-			{
-				_changedProperties.Add(property);
-				_changedPropertiesSnapshot = null;
-			}
-		}
+		AddChangedProperty(property);
 
 		// 该属性没有规则时退化为普通变更通知——绑定依赖这条通知，
 		// 不能因为「进了规则分支但无规则可跑」而丢掉它。
@@ -60,6 +54,104 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		{
 			SetValidationState(ValidationState.NotValidated);
 			OnPropertyChanged(property);
+		}
+	}
+
+	/// <summary>
+	/// 属性直接赋值后的变更处理：先走常规的脏标记/规则/通知，再在字段回到基线时撤销脏标记。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	/// <remarks>
+	/// 子对象属性变化与集合内容变化不走本方法，因此它们仍会保持父对象为脏状态。
+	/// </remarks>
+	protected override void OnPropertyValueChanged(IPropertyInfo property)
+	{
+		// 先走常规的脏标记/规则/通知；字段存在且已回到基线时再撤销脏标记。
+		// 正常变更路径不额外走 TrackPropertyValueChanged，避免每次写入多一次查重。
+		PropertyHasChanged(property);
+
+		var field = FieldManager.GetFieldData(property);
+		if (field != null && !field.IsChanged)
+		{
+			RemoveChangedProperty(property);
+		}
+	}
+
+	/// <summary>
+	/// 按字段的实际变更状态同步 <see cref="ChangedProperties"/>。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void TrackPropertyValueChanged(IPropertyInfo property)
+	{
+		var field = FieldManager.GetFieldData(property);
+
+		// 没有字段数据时无法判断，保守地保留为已更改。
+		if (field == null || field.IsChanged)
+		{
+			AddChangedProperty(property);
+			return;
+		}
+
+		RemoveChangedProperty(property);
+	}
+
+	/// <summary>
+	/// 将属性加入已更改集合，并去重。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void AddChangedProperty(IPropertyInfo property)
+	{
+		lock (_changedPropertiesLock)
+		{
+			if (!_changedProperties.Contains(property))
+			{
+				_changedProperties.Add(property);
+				_changedPropertiesSnapshot = null;
+			}
+		}
+	}
+
+	/// <summary>
+	/// 从已更改属性列表中移除指定属性，并使快照失效。
+	/// </summary>
+	/// <param name="property">属性。</param>
+	private void RemoveChangedProperty(IPropertyInfo property)
+	{
+		lock (_changedPropertiesLock)
+		{
+			if (_changedProperties.Remove(property))
+			{
+				_changedPropertiesSnapshot = null;
+			}
+		}
+	}
+
+	/// <summary>
+	/// 按字段当前状态重新同步 <see cref="ChangedProperties"/>。
+	/// </summary>
+	/// <remarks>
+	/// 直接操作 <see cref="IFieldData"/>（例如 <see cref="IFieldData.Undo"/>）不会经过对象级属性通知；
+	/// 调用本方法可把这类低层修改重新纳入脏状态。子对象/集合属性保持原样，因为它们是否脏取决于子图。
+	/// </remarks>
+	public virtual void RefreshChangedProperties()
+	{
+		// 扫描全部已注册属性，而不是只扫描当前脏集合：低层 Undo/赋值既可能把属性改脏，
+		// 也可能把它改回基线。没有字段数据的属性不在这里凭空创建字段。
+		foreach (var property in FieldManager.GetRegisteredProperties())
+		{
+			if (typeof(IOsbaObject).IsAssignableFrom(property.Type) ||
+			    typeof(IChildGraphNode).IsAssignableFrom(property.Type))
+			{
+				continue;
+			}
+
+			if (FieldManager.GetFieldData(property) == null)
+			{
+				RemoveChangedProperty(property);
+				continue;
+			}
+
+			TrackPropertyValueChanged(property);
 		}
 	}
 
@@ -110,14 +202,49 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	}
 
 	/// <summary>
-	/// 提交当前更改：清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
+	/// 提交当前更改：级联到就地持有的子对象，清除所有已更改属性的跟踪记录，并使字段的修改历史失效，
 	/// 将字段当前值作为新的基线。
 	/// </summary>
 	/// <remarks>
 	/// 通常在对象被成功保存或加载后调用，使对象恢复“干净”状态。
+	/// 级联让整棵子图的字段基线对齐到本次提交的值：父对象先 AcceptChanges 而子对象不跟随的话，
+	/// 随后的父对象 <see cref="RejectChanges"/> 会把子对象回滚到过期的基线。
 	/// </remarks>
 	public override void AcceptChanges()
 	{
+		// 环形引用防护：已在提交链上的对象直接跳过。
+		var accepting = AcceptingGraphs ??= [];
+		if (accepting.Add(this))
+		{
+			try
+			{
+				// 就地持有的子对象（字段里存的引用就是当前子对象）跟随提交；
+				// 字段尚未创建时没有可级联的内容。
+				foreach (var property in FieldManager.GetRegisteredProperties())
+				{
+					if (!typeof(IOsbaObject).IsAssignableFrom(property.Type))
+					{
+						continue;
+					}
+
+					if (FieldManager.GetFieldData(property)?.Value is not IOsbaObject child)
+					{
+						continue;
+					}
+
+					GetGraphMethod(child.GetType(), nameof(AcceptChanges))?.Invoke(child, null);
+				}
+			}
+			finally
+			{
+				accepting.Remove(this);
+				if (accepting.Count == 0)
+				{
+					AcceptingGraphs = null;
+				}
+			}
+		}
+
 		lock (_changedPropertiesLock)
 		{
 			_changedProperties.Clear();
@@ -125,6 +252,178 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		}
 
 		base.AcceptChanges();
+	}
+
+	/// <summary>
+	/// 获取一个值，指示对象是否存在未提交的修改。
+	/// </summary>
+	public virtual bool IsDirty => HasChangedProperties;
+
+	/// <summary>
+	/// 获取属性的原始值（自上次 <see cref="AcceptChanges"/> 以来的基线）。
+	/// </summary>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public virtual object GetOriginalValue(IPropertyInfo property)
+	{
+		return FieldManager.GetOriginalValue(property);
+	}
+
+	/// <summary>
+	/// 获取属性的原始值（自上次 <see cref="AcceptChanges"/> 以来的基线）。
+	/// </summary>
+	/// <typeparam name="TValue">属性值的类型。</typeparam>
+	/// <param name="property">属性信息。</param>
+	/// <returns>原始值。</returns>
+	public virtual TValue GetOriginalValue<TValue>(PropertyInfo<TValue> property)
+	{
+		return FieldManager.GetOriginalValue(property);
+	}
+
+	/// <summary>
+	/// 获取所有已更改属性的当前值。
+	/// </summary>
+	/// <returns>属性与当前值的只读字典。</returns>
+	public virtual IReadOnlyDictionary<IPropertyInfo, object> GetChangedValues()
+	{
+		var changed = ChangedProperties;
+		var values = new Dictionary<IPropertyInfo, object>(changed.Count);
+		foreach (var property in changed)
+		{
+			values[property] = ReadProperty(property);
+		}
+
+		return values;
+	}
+
+	/// <summary>
+	/// 获取所有已更改属性的原始值。
+	/// </summary>
+	/// <returns>属性与原始值的只读字典。</returns>
+	public virtual IReadOnlyDictionary<IPropertyInfo, object> GetOriginalValues()
+	{
+		var changed = ChangedProperties;
+		var values = new Dictionary<IPropertyInfo, object>(changed.Count);
+		foreach (var property in changed)
+		{
+			values[property] = GetOriginalValue(property);
+		}
+
+		return values;
+	}
+
+	/// <summary>
+	/// 放弃当前修改：把所有已更改属性恢复到原始值，并清除变更记录。
+	/// </summary>
+	/// <remarks>
+	/// 与 <see cref="AcceptChanges"/> 相反：前者把当前值当作新基线，后者回到旧基线。
+	/// 引用未被替换的子对象（<see cref="IOsbaObject"/>）会递归执行其自身的 <see cref="RejectChanges"/>，
+	/// 使整棵子图回到装载时的基线；引用被整体替换的子对象不做级联（其旧引用由字段恢复，新子图不受影响）。
+	/// 每个被恢复的标量属性都会补发 <see cref="ObjectBase.OnPropertyChanged(string)"/>，
+	/// 保证绑定与父链通知感知到回滚后的值。
+	/// </remarks>
+	public virtual void RejectChanges()
+	{
+		// 防止环形对象图（父↔子互持）导致递归死循环：同一次回滚中每个对象只处理一次。
+		var rejecting = RejectingGraphs ??= [];
+		if (!rejecting.Add(this))
+		{
+			return;
+		}
+
+		try
+		{
+			// 先取快照再回滚：回滚过程中字段被装载（LoadFieldData），
+			// ChangedProperties 若在迭代中被修改会破坏遍历。
+			var changed = ChangedProperties;
+
+			foreach (var property in changed)
+			{
+				var current = ReadProperty(property);
+				var original = FieldManager.GetOriginalValue(property);
+				AttachChild(property, current, original);
+
+				// 就地编辑的子对象：引用相同、内容被改过，递归回滚子图自身。
+				// RejectChanges / AcceptChanges 声明在 BusinessObject<T> 上且没有非泛型契约，只能反射调用；
+				// MethodInfo 按子对象的具体类型缓存，热路径不重复查找。
+				if (ReferenceEquals(current, original) && current is IOsbaObject editableChild)
+				{
+					var reject = GetGraphMethod(editableChild.GetType(), nameof(RejectChanges));
+					if (reject != null)
+					{
+						reject.Invoke(editableChild, null);
+					}
+					else
+					{
+						FieldManager.LoadFieldData(property, original);
+					}
+
+					OnPropertyChanged(property);
+					continue;
+				}
+
+				// 其余属性：整体装载原始值（含子对象引用被替换、集合被重建的情形）。
+				FieldManager.LoadFieldData(property, original);
+
+				if (!ValuesDiffer(property, current, original))
+				{
+					continue;
+				}
+
+				// 值确实变了才补发通知；装载不经过属性 setter，不会自动触发。
+				OnPropertyChanged(property);
+			}
+
+			AcceptChanges();
+		}
+		finally
+		{
+			rejecting.Remove(this);
+			if (rejecting.Count == 0)
+			{
+				RejectingGraphs = null;
+			}
+		}
+	}
+
+	/// <summary>当前正在回滚的对象集合；阻断环形对象图的递归。</summary>
+	[ThreadStatic]
+	private static HashSet<object> RejectingGraphs;
+
+	/// <summary>当前正在提交的对象集合；阻断环形对象图的递归。</summary>
+	[ThreadStatic]
+	private static HashSet<object> AcceptingGraphs;
+
+	/// <summary>
+	/// 图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）的反射查找缓存；按（子对象类型, 方法名）取一次。
+	/// </summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Method), MethodInfo> GraphMethodCache = new();
+
+	/// <summary>
+	/// 取子对象上可用的无参图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）；不是可编辑对象时返回 <see langword="null"/>。
+	/// </summary>
+	/// <param name="childType">子对象的具体类型。</param>
+	/// <param name="methodName">方法名。</param>
+	/// <returns>无参实例方法。</returns>
+	/// <remarks>
+	/// 两个方法都声明在 <see cref="BusinessObject{T}"/> 上，没有非泛型契约可查，只能反射调用；
+	/// 结果按子对象的具体类型缓存，每个类型只查找一次。
+	/// </remarks>
+	private static MethodInfo GetGraphMethod(Type childType, string methodName)
+	{
+		return GraphMethodCache.GetOrAdd((childType, methodName), static key =>
+		{
+			const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
+			for (var current = key.Type; current != null && current != typeof(object); current = current.BaseType)
+			{
+				if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(BusinessObject<>))
+				{
+					return current.GetMethod(key.Method, flags, Type.EmptyTypes);
+				}
+			}
+
+			return null;
+		});
 	}
 
 	/// <summary>
@@ -218,7 +517,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// </summary>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <returns>属性值。</returns>
-	public object GetProperty(IPropertyInfo propertyInfo)
+	public virtual object GetProperty(IPropertyInfo propertyInfo)
 	{
 		object result;
 		if (IsBypassingRuleChecks || CanReadProperty(propertyInfo, false))
@@ -284,12 +583,16 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		field = newValue;
 
 		// 字段模式与字典模式共用同一份“可被规则读取”的值：
-		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步一份，避免它们读到默认值。
+		// 规则/DataAnnotations 走 ReadProperty（字典），这里同步写入字典。
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -328,9 +631,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		field = converted;
 		FieldManager.SetFieldData(propertyInfo, converted);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -385,9 +692,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		AttachChild(propertyInfo, field, newValue);
 		field = newValue;
 		FieldManager.SetFieldData(propertyInfo, newValue);
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyName);
+			TrackPropertyValueChanged(propertyInfo);
+		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
 		}
 	}
 
@@ -442,9 +753,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			AttachChild(propertyInfo, field, converted);
 			field = converted;
 			FieldManager.SetFieldData(propertyInfo, field);
-			if (!IsBypassingRuleChecks)
+			if (IsBypassingRuleChecks)
 			{
-				PropertyHasChanged(propertyName);
+				TrackPropertyValueChanged(propertyInfo);
+			}
+			else
+			{
+				OnPropertyValueChanged(propertyInfo);
 			}
 		}
 	}
@@ -471,7 +786,14 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, TypeHelper.CoerceValue<TField>(typeof(TValue), newValue), !IsBypassingRuleChecks, onChanged);
+		var converted = TypeHelper.CoerceValue<TField>(typeof(TValue), newValue);
+		if (IsBypassingRuleChecks)
+		{
+			SetPropertyValueBypassingRules(propertyInfo, oldValue, converted);
+			return;
+		}
+
+		LoadPropertyValue(propertyInfo, oldValue, converted, true, onChanged);
 	}
 
 	/// <summary>
@@ -499,7 +821,13 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 			newValue = TypeHelper.CoerceValue<TValue>(typeof(string), string.Empty);
 		}
 
-		LoadPropertyValue(propertyInfo, oldValue, newValue, !IsBypassingRuleChecks, onChanged);
+		if (IsBypassingRuleChecks)
+		{
+			SetPropertyValueBypassingRules(propertyInfo, oldValue, newValue);
+			return;
+		}
+
+		LoadPropertyValue(propertyInfo, oldValue, newValue, true, onChanged);
 	}
 
 	/// <summary>
@@ -511,7 +839,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// </remarks>
 	/// <param name="propertyInfo">属性信息。</param>
 	/// <param name="newValue">新值。</param>
-	public void SetProperty(IPropertyInfo propertyInfo, object newValue)
+	public virtual void SetProperty(IPropertyInfo propertyInfo, object newValue)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -538,10 +866,32 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		AttachChild(propertyInfo, currentValue, newValue);
 		FieldManager.SetFieldData(propertyInfo, newValue);
 
-		if (!IsBypassingRuleChecks)
+		if (IsBypassingRuleChecks)
 		{
-			PropertyHasChanged(propertyInfo);
+			TrackPropertyValueChanged(propertyInfo);
 		}
+		else
+		{
+			OnPropertyValueChanged(propertyInfo);
+		}
+	}
+
+	/// <summary>
+	/// 在绕过规则检查时写入属性：保留变更追踪，但不触发通知与规则。
+	/// </summary>
+	/// <param name="propertyInfo">属性。</param>
+	/// <param name="oldValue">旧值。</param>
+	/// <param name="newValue">新值。</param>
+	private void SetPropertyValueBypassingRules(IPropertyInfo propertyInfo, object oldValue, object newValue)
+	{
+		if (!ValuesDiffer(propertyInfo, newValue, oldValue))
+		{
+			return;
+		}
+
+		AttachChild(propertyInfo, oldValue, newValue);
+		FieldManager.SetFieldData(propertyInfo, newValue);
+		TrackPropertyValueChanged(propertyInfo);
 	}
 
 	/// <summary>
