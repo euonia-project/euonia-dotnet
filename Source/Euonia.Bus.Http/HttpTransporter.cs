@@ -22,6 +22,7 @@ internal class HttpTransporter : ITransporter, IDisposable
 	private readonly IMessageSerializer _serializer;
 	private readonly HttpClient _httpClient;
 	private readonly ConcurrentDictionary<string, string> _requestUris = new();
+	private readonly ConcurrentDictionary<string, HttpEndpointPattern> _patterns = new();
 	private readonly ILogger<HttpTransporter> _logger;
 
 	/// <summary>
@@ -135,18 +136,52 @@ internal class HttpTransporter : ITransporter, IDisposable
 	}
 
 	/// <summary>
-	/// 解析消息的完整请求地址：通道映射了端点则以其为 BaseAddress 并缓存结果，否则使用默认地址。
+	/// 解析消息的完整请求地址：精确键 → 通配符键（按声明顺序首个匹配）→ 默认端点，结果按端点缓存复用。
 	/// </summary>
 	/// <param name="message">消息信封。</param>
 	/// <returns>完整请求地址。</returns>
 	private string ResolveRequestUri(IMessageEnvelope message)
 	{
-		if (!string.IsNullOrWhiteSpace(message.Channel) && _options.Endpoints.TryGetValue(message.Channel, out var endpoint))
+		if (!string.IsNullOrWhiteSpace(message.Channel) && TryResolveEndpoint(message.Channel, out var endpoint))
 		{
 			return _requestUris.GetOrAdd(endpoint, address => BuildRequestUri(_options, address));
 		}
 
 		return _requestUris[string.Empty];
+	}
+
+	/// <summary>
+	/// 按解析顺序求值通道的端点：精确键 → 通配符键（按声明顺序首个匹配）。
+	/// </summary>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="endpoint">解析出的端点地址。</param>
+	/// <returns>命中则为 <c>true</c>；否则为 <c>false</c>（走默认端点）。</returns>
+	private bool TryResolveEndpoint(string channel, out string endpoint)
+	{
+		// ① 精确通道名（字典忽略大小写）。
+		if (_options.Endpoints.TryGetValue(channel, out endpoint!))
+		{
+			return true;
+		}
+
+		// ② 通配符模式：按声明顺序求值，首个匹配生效。
+		foreach (var (key, template) in _options.Endpoints)
+		{
+			if (!HttpEndpointPattern.IsWildcard(key))
+			{
+				continue;
+			}
+
+			// 模式编译按键缓存；值随配置固定，闭包捕获当前键值对即可。
+			var matcher = _patterns.GetOrAdd(key, static (pattern, state) => HttpEndpointPattern.Create(pattern, state.template), (key, template));
+			if (matcher.TryResolve(channel, out var resolved))
+			{
+				endpoint = resolved;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/// <summary>

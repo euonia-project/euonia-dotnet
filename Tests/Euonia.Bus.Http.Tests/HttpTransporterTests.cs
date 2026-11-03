@@ -111,6 +111,114 @@ public class HttpTransporterTests
 	}
 
 	/// <summary>
+	/// 前缀型通配符模式：通道名匹配 <c>billing.*</c> 即以模板推导的 BaseAddress 发送，无需逐通道登记。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithWildcardEndpointKey_PostsToPatternDerivedBaseAddress()
+	{
+		var handler = new FakeBusServerHandler(HttpTestFactory.CreateSerializer(), new StubHandlerContext());
+		var transport = HttpTestFactory.BuildTransporter(handler, options =>
+		{
+			options.Endpoints["billing.*"] = "http://billing:8080";
+		});
+
+		var result = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 41 }, "billing.CreateInvoice"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(42, result);
+		Assert.Equal(new Uri("http://billing:8080/bus/call"), handler.LastRequestUri);
+	}
+
+	/// <summary>
+	/// 通配符模板：段引用 <c>{1}</c> 渲染进 BaseAddress。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithSegmentTemplate_RendersBaseAddressFromChannel()
+	{
+		var handler = new FakeBusServerHandler(HttpTestFactory.CreateSerializer(), new StubHandlerContext());
+		var transport = HttpTestFactory.BuildTransporter(handler, options =>
+		{
+			options.Endpoints["*.ship"] = "http://{1}:8080";
+		});
+
+		var result = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 41 }, "billing.ship"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(42, result);
+		Assert.Equal(new Uri("http://billing:8080/bus/call"), handler.LastRequestUri);
+	}
+
+	/// <summary>
+	/// 解析优先级：精确键 > 通配符键 > 默认端点。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_ExactKeyOverridesWildcard_UnmatchedFallsBackToDefault()
+	{
+		var handler = new FakeBusServerHandler(HttpTestFactory.CreateSerializer(), new StubHandlerContext());
+		var transport = HttpTestFactory.BuildTransporter(handler, options =>
+		{
+			options.Endpoints["billing.*"] = "http://billing:8080";
+			options.Endpoints["billing.refund"] = "http://refund:8080";
+		});
+
+		// 精确键优先于通配符键。
+		await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 1 }, "billing.refund"),
+			TestContext.Current.CancellationToken);
+		Assert.Equal(new Uri("http://refund:8080/bus/call"), handler.LastRequestUri);
+
+		// 通配符键命中。
+		await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 41 }, "billing.create"),
+			TestContext.Current.CancellationToken);
+		Assert.Equal(new Uri("http://billing:8080/bus/call"), handler.LastRequestUri);
+
+		// 未配置 → 默认端点。
+		var result = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 41 }, "count"),
+			TestContext.Current.CancellationToken);
+		Assert.Equal(42, result);
+		Assert.Equal(new Uri("http://localhost/bus/call"), handler.LastRequestUri);
+	}
+
+	/// <summary>
+	/// 通配符键占位符渲染的单元级行为：<c>{channel}</c> 与 <c>{N}</c> 段引用均正确替换并转义。
+	/// </summary>
+	[Fact]
+	public void EndpointPattern_TryResolve_RendersTemplatePlaceholders()
+	{
+		Assert.True(HttpEndpointPattern.Create("billing.*", "http://{channel}:8080").TryResolve("billing.CreateInvoice", out var wholeChannel));
+		Assert.Equal("http://billing.CreateInvoice:8080", wholeChannel);
+
+		Assert.True(HttpEndpointPattern.Create("*.ship", "http://{1}:8080").TryResolve("billing.ship", out var segment));
+		Assert.Equal("http://billing:8080", segment);
+
+		Assert.True(HttpEndpointPattern.Create("*.**", "http://{2}:8080").TryResolve("billing.a.b", out var doubleStar));
+		Assert.Equal("http://a.b:8080", doubleStar);
+
+		// 未命中返回 false，且 endpoint 为 null。
+		Assert.False(HttpEndpointPattern.Create("order.*", "http://orders:8080").TryResolve("billing.CreateInvoice", out var unmatched));
+		Assert.Null(unmatched);
+	}
+
+	/// <summary>
+	/// 通配符键以通道全名锚定匹配：<c>*</c> 不跨段、<c>?</c> 匹配单字符、子串不误命中。
+	/// </summary>
+	[Fact]
+	public void EndpointPattern_IsAnchoredAndSingleSegment()
+	{
+		Assert.True(HttpEndpointPattern.Create("billing.*", "http://billing:8080").TryResolve("billing.x", out _));
+		Assert.False(HttpEndpointPattern.Create("billing.*", "http://billing:8080").TryResolve("xbilling.x", out _));
+		Assert.False(HttpEndpointPattern.Create("billing.*", "http://billing:8080").TryResolve("billing", out _));
+		Assert.False(HttpEndpointPattern.Create("billing.*", "http://billing:8080").TryResolve("billing.a.b", out _));
+
+		Assert.True(HttpEndpointPattern.Create("coun?", "http://count:8080").TryResolve("count", out _));
+		Assert.False(HttpEndpointPattern.Create("coun?", "http://count:8080").TryResolve("cou.t", out _));
+	}
+
+	/// <summary>
 	/// 未映射通道的消息继续走选项配置的默认端点。
 	/// </summary>
 	[Fact]

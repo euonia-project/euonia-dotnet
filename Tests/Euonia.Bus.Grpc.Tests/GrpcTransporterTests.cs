@@ -235,10 +235,156 @@ public class GrpcTransporterTests
 	}
 
 	/// <summary>
-	/// 映射端点不可达/未部署总线契约时直接失败，不静默回落默认端点（避免消息发错服务）。
+	/// 通配符键自动推断：键含 <c>*</c> 即按模式匹配——<c>billing.*</c> 命中 <c>billing.CreateInvoice</c>，不命中 <c>count</c>。
 	/// </summary>
 	[Fact]
-	public async Task CallAsync_WithMappedUnreachableEndpoint_FailsInsteadOfFallback()
+	public async Task CallAsync_WithWildcardEndpointKey_RoutesMatchingChannels()
+	{
+		await using var serverA = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		await using var serverB = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("billing.CreateInvoice", (request, _) => Task.FromResult(request.Start * 2));
+		});
+
+		var transport = GrpcServerHarness.BuildTransporter(serverA.Endpoint, options =>
+		{
+			options.Endpoints["billing.*"] = serverB.Endpoint;
+		});
+
+		// 模式命中 → B；未命中 → 默认端点 A。
+		var billing = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "billing.CreateInvoice"),
+			TestContext.Current.CancellationToken);
+		var count = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "count"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(80, billing);
+		Assert.Equal(41, count);
+	}
+
+	/// <summary>
+	/// 通配符键 <c>**</c> 跨段：<c>order.**</c> 命中任意深度的 order 通道。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithDoubleStarEndpointKey_MatchesDeepChannels()
+	{
+		await using var serverA = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		await using var serverB = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("order.payment.capture", (request, _) => Task.FromResult(request.Start * 2));
+		});
+
+		var transport = GrpcServerHarness.BuildTransporter(serverA.Endpoint, options =>
+		{
+			options.Endpoints["order.**"] = serverB.Endpoint;
+		});
+
+		var deep = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "order.payment.capture"),
+			TestContext.Current.CancellationToken);
+		var count = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "count"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(80, deep);
+		Assert.Equal(41, count);
+	}
+
+	/// <summary>
+	/// 端点值模板占位符渲染的单元级行为：<c>{channel}</c> 与 <c>{N}</c> 段引用均正确替换并转义。
+	/// </summary>
+	[Fact]
+	public void EndpointPattern_TryResolve_RendersTemplatePlaceholders()
+	{
+		// {1} = 第一个 * 的匹配段。
+		Assert.True(GrpcEndpointPattern.Create("billing.*", "http://{1}:5081").TryResolve("billing.CreateInvoice", out var firstSegment));
+		Assert.Equal("http://CreateInvoice:5081", firstSegment);
+
+		// {channel} = 整个通道名。
+		Assert.True(GrpcEndpointPattern.Create("order.**", "http://orders:5081/{channel}").TryResolve("order.payment.capture", out var wholeChannel));
+		Assert.Equal("http://orders:5081/order.payment.capture", wholeChannel);
+
+		// ** 的 {2} 引用第二个通配符段（跨段全量匹配）。
+		Assert.True(GrpcEndpointPattern.Create("*.**", "http://{2}:5081").TryResolve("billing.a.b", out var doubleStar));
+		Assert.Equal("http://a.b:5081", doubleStar);
+
+		// 未命中返回 false，且 endpoint 为 null。
+		Assert.False(GrpcEndpointPattern.Create("order.*", "http://orders:5081").TryResolve("billing.CreateInvoice", out var unmatched));
+		Assert.Null(unmatched);
+	}
+
+	/// <summary>
+	/// 通配符键以通道全名锚定匹配：<c>billing.*</c> 不命中 <c>xbilling</c>，<c>*</c> 不跨段，<c>?</c> 匹配单字符。
+	/// </summary>
+	[Fact]
+	public void EndpointPattern_IsAnchoredAndSingleSegment()
+	{
+		Assert.True(GrpcEndpointPattern.Create("billing.*", "http://billing:5081").TryResolve("billing.x", out _));
+		Assert.False(GrpcEndpointPattern.Create("billing.*", "http://billing:5081").TryResolve("xbilling.x", out _));
+		Assert.False(GrpcEndpointPattern.Create("billing.*", "http://billing:5081").TryResolve("billing", out _));
+
+		// * 不跨段：billing.a.b 不命中 billing.*。
+		Assert.False(GrpcEndpointPattern.Create("billing.*", "http://billing:5081").TryResolve("billing.a.b", out _));
+
+		// ? 匹配单个字符且不跨段。
+		Assert.True(GrpcEndpointPattern.Create("coun?", "http://count:5081").TryResolve("count", out _));
+		Assert.False(GrpcEndpointPattern.Create("coun?", "http://count:5081").TryResolve("coun", out _));
+		Assert.False(GrpcEndpointPattern.Create("coun?", "http://count:5081").TryResolve("cou.t", out _));
+	}
+
+	/// <summary>
+	/// 解析优先级：精确键 > 通配符键（按声明顺序） > 默认端点。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_ExactKeyOverridesWildcard_UnmatchedFallsBackToDefault()
+	{
+		await using var serverA = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("count", (request, _) => Task.FromResult(request.Start + 1));
+			configurator.RegisterChannel<CountRequest, int>("inventory.ship", (request, _) => Task.FromResult(request.Start + 1));
+		});
+		await using var serverB = await GrpcServerHarness.StartAsync(configurator =>
+		{
+			configurator.RegisterChannel<CountRequest, int>("billing.CreateInvoice", (request, _) => Task.FromResult(request.Start * 2));
+		});
+
+		var transport = GrpcServerHarness.BuildTransporter(serverA.Endpoint, options =>
+		{
+			options.Endpoints["billing.*"] = serverB.Endpoint;
+			options.Endpoints["inventory.*"] = serverB.Endpoint;
+			options.Endpoints["inventory.ship"] = serverA.Endpoint;
+		});
+
+		// 通配符键命中 → B。
+		var billing = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "billing.CreateInvoice"),
+			TestContext.Current.CancellationToken);
+		// 精确键优先于通配符键 → A。
+		var inventory = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "inventory.ship"),
+			TestContext.Current.CancellationToken);
+		// 未配置 → 默认端点 A。
+		var count = await transport.CallAsync<CountRequest, int>(
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 40 }, "count"),
+			TestContext.Current.CancellationToken);
+
+		Assert.Equal(80, billing);
+		Assert.Equal(41, inventory);
+		Assert.Equal(41, count);
+	}
+
+	/// <summary>
+	/// 通配符键命中的端点不可达/未部署总线契约时直接失败，不静默回落默认端点（避免消息发错服务）。
+	/// </summary>
+	[Fact]
+	public async Task CallAsync_WithWildcardUnreachableEndpoint_FailsInsteadOfFallback()
 	{
 		await using var server = await GrpcServerHarness.StartAsync(configurator =>
 		{
@@ -246,11 +392,11 @@ public class GrpcTransporterTests
 		});
 		var transport = GrpcServerHarness.BuildTransporter(server.Endpoint, options =>
 		{
-			options.Endpoints["billing"] = "http://127.0.0.1:1";
+			options.Endpoints["billing.*"] = "http://127.0.0.1:1";
 		});
 
 		await Assert.ThrowsAnyAsync<RpcException>(() => transport.CallAsync<CountRequest, int>(
-			new RoutedMessage<CountRequest>(new CountRequest { Start = 1 }, "billing"),
+			new RoutedMessage<CountRequest>(new CountRequest { Start = 1 }, "billing.x"),
 			TestContext.Current.CancellationToken));
 	}
 

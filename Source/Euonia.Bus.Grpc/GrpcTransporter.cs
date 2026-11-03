@@ -24,6 +24,7 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	private readonly IMessageSerializer _serializer;
 	private readonly ILogger<GrpcTransporter> _logger;
 	private readonly ConcurrentDictionary<string, GrpcConnection> _connections = new();
+	private readonly ConcurrentDictionary<string, GrpcEndpointPattern> _patterns = new();
 	private bool _disposed;
 
 	/// <summary>
@@ -148,18 +149,52 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	}
 
 	/// <summary>
-	/// 解析通道对应的连接：通道映射了端点则按其缓存复用，否则使用默认端点连接。
+	/// 解析通道对应的连接：精确键 → 通配符键（按声明顺序首个匹配）→ 默认端点，结果按端点缓存复用。
 	/// </summary>
 	/// <param name="channel">消息通道名称。</param>
 	/// <returns>目标端点连接。</returns>
 	private GrpcConnection ResolveConnection(string channel)
 	{
-		if (!string.IsNullOrWhiteSpace(channel) && _options.Endpoints.TryGetValue(channel, out var endpoint))
+		if (!string.IsNullOrWhiteSpace(channel) && TryResolveEndpoint(channel, out var endpoint))
 		{
 			return _connections.GetOrAdd(endpoint, static (address, self) => GrpcConnection.Create(address, self), this);
 		}
 
 		return _connections[_options.Endpoint];
+	}
+
+	/// <summary>
+	/// 按解析顺序求值通道的端点：精确键 → 通配符键（按声明顺序首个匹配）。
+	/// </summary>
+	/// <param name="channel">通道名称。</param>
+	/// <param name="endpoint">解析出的端点地址。</param>
+	/// <returns>命中则为 <c>true</c>；否则为 <c>false</c>（走默认端点）。</returns>
+	private bool TryResolveEndpoint(string channel, out string endpoint)
+	{
+		// ① 精确通道名（字典忽略大小写）。
+		if (_options.Endpoints.TryGetValue(channel, out endpoint!))
+		{
+			return true;
+		}
+
+		// ② 通配符模式：按声明顺序求值，首个匹配生效。
+		foreach (var (key, template) in _options.Endpoints)
+		{
+			if (!GrpcEndpointPattern.IsWildcard(key))
+			{
+				continue;
+			}
+
+			// 模式编译按键缓存；值随配置固定，闭包捕获当前键值对即可。
+			var matcher = _patterns.GetOrAdd(key, static (pattern, state) => GrpcEndpointPattern.Create(pattern, state.template), (key, template));
+			if (matcher.TryResolve(channel, out var resolved))
+			{
+				endpoint = resolved;
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/// <summary>
