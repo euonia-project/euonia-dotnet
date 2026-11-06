@@ -34,13 +34,13 @@ public partial class CommonRule
 		{
 			if (context.Target is IOsbaObject target)
 			{
-				var value = target.ReadProperty(Property!);
+				var value = target.ReadProperty(Property);
 
 				var result = await Handler(value, context).ConfigureAwait(false);
 
 				if (!result)
 				{
-					context.AddErrorResult(string.Format(MessageFactory(), Property!.FriendlyName));
+					context.AddErrorResult(string.Format(MessageFactory(), Property.FriendlyName));
 				}
 			}
 		}
@@ -76,13 +76,13 @@ public partial class CommonRule
 		{
 			if (context.Target is IOsbaObject target)
 			{
-				var value = (T)target.ReadProperty(Property!);
+				var value = (T)target.ReadProperty(Property);
 
 				var result = Handler(value, context);
 
 				if (!result)
 				{
-					context.AddErrorResult(string.Format(MessageFactory(), Property!.FriendlyName));
+					context.AddErrorResult(string.Format(MessageFactory(), Property.FriendlyName));
 				}
 			}
 

@@ -241,7 +241,7 @@ protected override void AddRules()
 
 | Type | Description |
 |------|-------------|
-| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), `Priority`, and `RelatedProperties` |
+| `ObjectRuleBase` / `PropertyRuleBase` | Object-level / property-level rule bases with URI-style name (`rule://type/...`), `Priority`, and `RelatedProperties` |
 | `CommonRule.Required` | Non-null property validation |
 | `CommonRule.Regular` | Regex-based string validation |
 | `CommonRule.Lambda<T>` | Lambda-based property rule |

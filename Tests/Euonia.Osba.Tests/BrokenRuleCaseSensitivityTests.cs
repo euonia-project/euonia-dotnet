@@ -35,7 +35,7 @@ public class BrokenRuleCaseSensitivityTests
 	}
 
 	private sealed class AlwaysFailPropertyRule(IPropertyInfo property)
-		: RuleBase(property)
+		: PropertyRuleBase(property)
 	{
 		public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 		{

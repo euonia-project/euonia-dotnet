@@ -31,10 +31,10 @@ public partial class CommonRule
         {
             if (context.Target is IOsbaObject target)
             {
-                var value = target.ReadProperty(Property!);
+                var value = target.ReadProperty(Property);
                 if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
                 {
-                    var message = string.Format(MessageFactory(), Property!.FriendlyName);
+                    var message = string.Format(MessageFactory(), Property.FriendlyName);
                     context.AddErrorResult(message);
                 }
             }

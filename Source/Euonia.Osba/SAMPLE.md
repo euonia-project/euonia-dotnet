@@ -424,7 +424,7 @@ protected override void AddRules()
 自定义属性级规则：
 
 ```csharp
-public sealed class RepoNameCheckRule(IPropertyInfo property) : RuleBase(property)
+public sealed class RepoNameCheckRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
     public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
@@ -501,7 +501,7 @@ protected override bool CheckRuleOnPropertyChanged => false;   // 变更时挂�
 
 ```csharp
 [ExecuteOnState(ObjectEditState.New)]           // 标在规则类上，只对 IEditableObject 目标生效
-public sealed class RepoCreateOnlyRule : RuleBase { /* ... */ }
+public sealed class RepoCreateOnlyRule : ObjectRuleBase { /* ... */ }
 ```
 
 > **只有 `Error` 会让对象无效**（`IsValid => BrokenRules.ErrorCount == 0`）；Warning / Information 不阻断保存。

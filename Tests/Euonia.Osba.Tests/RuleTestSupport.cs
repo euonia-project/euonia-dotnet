@@ -346,7 +346,7 @@ public sealed class RuleTestDependency
 /// <summary>
 /// 需要从容器解析依赖的失败规则。
 /// </summary>
-public sealed class DependentFailRule : RuleBase
+public sealed class DependentFailRule : ObjectRuleBase
 {
 	private readonly RuleTestDependency _dependency;
 
@@ -370,7 +370,7 @@ public sealed class DependentFailRule : RuleBase
 /// <summary>
 /// 恒失败的对象级规则。
 /// </summary>
-public sealed class AlwaysFailObjectRule : RuleBase
+public sealed class AlwaysFailObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -383,7 +383,7 @@ public sealed class AlwaysFailObjectRule : RuleBase
 /// <summary>
 /// 恒通过的对象级规则。
 /// </summary>
-public sealed class AlwaysPassObjectRule : RuleBase
+public sealed class AlwaysPassObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -399,7 +399,7 @@ public sealed class AlwaysPassObjectRule : RuleBase
 /// <remarks>
 /// 复用 <see cref="OsbaFeatureTests"/> 中已有的同名规则（规则本身无状态，可安全共享）。
 /// </remarks>
-public sealed class WarnOnlyObjectRule : RuleBase
+public sealed class WarnOnlyObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -412,7 +412,7 @@ public sealed class WarnOnlyObjectRule : RuleBase
 /// <summary>
 /// 记录被检查时目标对象当前 <c>Name</c> 值的失败规则，用于验证规则看到的是 Handle 之后的状态。
 /// </summary>
-public sealed class NameSnapshotFailRule : RuleBase
+public sealed class NameSnapshotFailRule : ObjectRuleBase
 {
 	/// <summary>
 	/// 最近一次执行时观察到的名称。
@@ -435,7 +435,7 @@ public sealed class NameSnapshotFailRule : RuleBase
 /// <summary>
 /// 绑定到属性的恒失败规则（属性级）。
 /// </summary>
-public sealed class PropertyBoundFailRule : RuleBase
+public sealed class PropertyBoundFailRule : PropertyRuleBase
 {
 	/// <summary>
 	/// 初始化 <see cref="PropertyBoundFailRule"/>。
@@ -457,7 +457,7 @@ public sealed class PropertyBoundFailRule : RuleBase
 /// <summary>
 /// 用 <c>null</c> 描述报告错误的规则。
 /// </summary>
-public sealed class NullMessageRule : RuleBase
+public sealed class NullMessageRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -470,7 +470,7 @@ public sealed class NullMessageRule : RuleBase
 /// <summary>
 /// 用空白描述报告错误的规则。
 /// </summary>
-public sealed class WhitespaceMessageRule : RuleBase
+public sealed class WhitespaceMessageRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)

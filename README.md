@@ -261,7 +261,7 @@ protected override void AddRules()
 
 | 类型 | 说明 |
 |------|-------------|
-| `RuleBase` | 抽象规则基类，含 URI 风格名称（`rule://type/...`）、`Priority` 与 `RelatedProperties` |
+| `ObjectRuleBase` / `PropertyRuleBase` | 对象级 / 属性级规则基类，含 URI 风格名称（`rule://type/...`）、`Priority` 与 `RelatedProperties` |
 | `CommonRule.Required` | 非空属性校验 |
 | `CommonRule.Regular` | 基于正则的字符串校验 |
 | `CommonRule.Lambda<T>` | 基于 Lambda 的属性规则 |

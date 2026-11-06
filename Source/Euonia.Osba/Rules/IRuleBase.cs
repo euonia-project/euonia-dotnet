@@ -3,17 +3,16 @@
 /// <summary>
 /// 业务或验证规则的基础接口。
 /// </summary>
+/// <remarks>
+/// 本接口只描述所有规则共有的成员，不包含 <c>Property</c>：
+/// 对象级规则见 <see cref="IObjectRule"/>，属性级规则见 <see cref="IPropertyRule"/>。
+/// </remarks>
 public interface IRuleBase
 {
     /// <summary>
     /// 获取特定实例的唯一名称。
     /// </summary>
     string Name { get; }
-
-    /// <summary>
-    /// 获取受此规则影响的属性。
-    /// </summary>
-    IPropertyInfo? Property { get; }
 
     /// <summary>
     /// 获取相关属性。

@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Sample.Business.Rules;
 /// <summary>
 /// Represents a rule to check the availability of an email address during user updates.
 /// </summary>
-internal sealed class EmailAddressCheckRule : RuleBase
+internal sealed class EmailAddressCheckRule : PropertyRuleBase
 {
 	private readonly string? _ignoreId;
 
@@ -30,7 +30,7 @@ internal sealed class EmailAddressCheckRule : RuleBase
 			return;
 		}
 
-		var property = Property!;
+		var property = Property;
 		var value = target.ReadProperty(property)?.ToString();
 
 		// Skip the rule if the email address is null or whitespace.

@@ -32,7 +32,7 @@ public class RuleRegistrationTests
 /// <summary>
 /// 总是报告错误的测试规则。
 /// </summary>
-public sealed class ExternalAlwaysFailRule : RuleBase
+public sealed class ExternalAlwaysFailRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

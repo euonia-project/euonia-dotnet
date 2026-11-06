@@ -75,7 +75,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 - **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段；属性直接改回基线后自动移出 `ChangedProperties`。
 - **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态迁移（`CanTransitionTo` / `StateChanged`）。
 - **状态机**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted`，保存时由 `ScopeOperationMap` 唯一映射到业务操作。
-- **规则系统**：`RuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
+- **规则系统**：`ObjectRuleBase`、`PropertyRuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；对象级规则通过 `IObjectRule` 约束、不暴露属性，属性级规则通过 `IPropertyRule` 保证 `Property` 非空；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
 - **工厂**：约定名 + 特性双通道查找，支持可选参数、`params`、`Task` / `ValueTask`，并缓存反射结果。
 - **执行器**：`IActuator.For<T>().Fetch/Create/Update/Delete/Execute(...)` 把「取对象 → Handle → 终结」串成管道，可挂 `IActuatorBehavior<T>`。
 - **生命周期回调**：`IObjectLifecycle` 在保存与执行边界提供 `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` 扩展点。
@@ -1293,7 +1293,7 @@ protected override void AddRules()
 自定义规则：
 
 ```csharp
-public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
+public sealed class RepoUniqueRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
     public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
@@ -1315,7 +1315,7 @@ public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
 }
 ```
 
-- 规则名称形如 `rule://命名空间.类型名/属性名`，由 `RuleBase` 生成。
+- 规则名称形如 `rule://命名空间.类型名/属性名`，由 `PropertyRuleBase`（属性级）或 `RuleBase`（对象级）生成。
 - `Priority` 越小越先执行。
 - `ExecuteOnStateAttribute` 标在规则类上，只对 `IEditableObject` 目标生效；不填状态视为不限制。
 - `AddErrorResult(null)` / 空白描述会用占位消息补上，不会被静默当成通过。
@@ -1761,8 +1761,9 @@ flowchart TB
 flowchart TB
     R["Rules/"]
 
-    R --> R1["IRuleBase.cs<br/>规则契约：Name、Property、RelatedProperties、Priority、ExecuteAsync"]
-    R --> R2["RuleBase.cs<br/>规则基类：URI 风格名称、优先级、相关属性"]
+    R --> R1["IRuleBase.cs<br/>通用规则契约：Name、RelatedProperties、Priority、ExecuteAsync"]
+    R --> R2["ObjectRuleBase.cs / PropertyRuleBase.cs<br/>对象级 / 属性级规则基类：URI 风格名称、优先级、相关属性"]
+    R --> R2A["IObjectRule.cs / IPropertyRule.cs<br/>对象级（无 Property）/ 属性级（Property 非空）契约"]
     R --> R3["IRuleContext.cs<br/>规则上下文契约：Target、Results、AddError / Warning / Information / Success、Complete"]
     R --> R4["RuleContext.cs<br/>规则上下文默认实现：结果收集、去重完成、空白消息兜底"]
     R --> R5["RuleResult.cs<br/>单条规则结果：Success、Description、Severity、RuleName、Properties"]

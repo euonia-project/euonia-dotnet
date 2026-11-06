@@ -35,7 +35,7 @@ public sealed class RuleProbeService
 /// <summary>
 /// 通过 <see cref="IRuleContext.GetService{T}"/> 解析服务的规则。
 /// </summary>
-public sealed class ServiceResolvingRule : RuleBase
+public sealed class ServiceResolvingRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

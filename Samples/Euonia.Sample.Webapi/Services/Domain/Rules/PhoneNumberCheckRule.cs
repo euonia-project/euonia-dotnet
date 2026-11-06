@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Sample.Business.Rules;
 /// <summary>
 /// Represents a rule to check the availability of a phone number during user updates.
 /// </summary>
-internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : RuleBase(property)
+internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <summary>
 	/// Executes the rule to verify if the phone number is available.
@@ -22,7 +22,7 @@ internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : RuleBase(pr
 			return;
 		}
 
-		var property = Property!;
+		var property = Property;
 		var value = target.ReadProperty(property)?.ToString();
 
 		// Skip the rule if the phone number is null or whitespace.

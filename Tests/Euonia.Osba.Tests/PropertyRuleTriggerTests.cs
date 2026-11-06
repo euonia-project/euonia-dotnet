@@ -655,7 +655,7 @@ public class EmptyStateObject : EditableObject<EmptyStateObject>
 /// 未填状态的规则：应视为不限制状态。
 /// </summary>
 [ExecuteOnState]
-public sealed class EmptyStateRule : RuleBase
+public sealed class EmptyStateRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

@@ -84,7 +84,7 @@ public class RuleExecutionRegressionTests
 /// <summary>
 /// 抛出 <see cref="InvalidOperationException"/> 的属性级规则。
 /// </summary>
-internal sealed class ThrowingPropertyRule(IPropertyInfo property) : RuleBase(property)
+internal sealed class ThrowingPropertyRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -96,7 +96,7 @@ internal sealed class ThrowingPropertyRule(IPropertyInfo property) : RuleBase(pr
 /// <summary>
 /// 以 <see cref="OperationCanceledException"/> 结束的属性级规则。
 /// </summary>
-internal sealed class CancelledPropertyRule(IPropertyInfo property) : RuleBase(property)
+internal sealed class CancelledPropertyRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)

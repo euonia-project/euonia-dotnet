@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Sample.Business.Rules;
 /// <summary>
 /// Represents a rule to validate the strength of a user's password during creation or update.
 /// </summary>
-internal sealed class PasswordStrengthRule(IPropertyInfo property) : RuleBase(property)
+internal sealed class PasswordStrengthRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <summary>
 	/// The regular expression pattern used to validate password strength.
@@ -32,7 +32,7 @@ internal sealed class PasswordStrengthRule(IPropertyInfo property) : RuleBase(pr
 			return;
 		}
 
-		var property = Property!;
+		var property = Property;
 		var value = target.ReadProperty(property)?.ToString();
 
 		// Validate the password during user creation.

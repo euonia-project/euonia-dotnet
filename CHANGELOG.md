@@ -39,6 +39,9 @@
 
 ### Euonia.Osba
 
+- **规则基类拆分**：新增 `ObjectRuleBase` / `PropertyRuleBase` 与 `IObjectRule` / `IPropertyRule` 契约。
+  `IRuleBase` 不再暴露 `Property`；对象级规则继承 `ObjectRuleBase`（无 `Property`），属性级规则继承
+  `PropertyRuleBase`（`Property` 保证非空）。`RuleManager` 按 `IPropertyRule` 分类属性规则，其余规则归为对象级。
 - **易用性：属性注册推断类型**：新增 `RegisterProperty(Expression<Func<T, TValue>>, ...)` 重载，
   可直接写 `RegisterProperty(p => p.Name)`，无需显式泛型参数，值类型也不再装箱。
 - **易用性：读取执行器**：新增 `FetchActuator<T>` 与 `IActuator.For<T>().Fetch(...)`；

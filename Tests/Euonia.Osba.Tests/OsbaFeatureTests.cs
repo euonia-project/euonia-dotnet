@@ -446,7 +446,7 @@ public class RuleObject : ObservableObject<RuleObject>
 /// <summary>
 /// 仅产生警告的对象级规则（Property 为 null），不会让对象无效。
 /// </summary>
-public class AlwaysWarnObjectRule : RuleBase
+public class AlwaysWarnObjectRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

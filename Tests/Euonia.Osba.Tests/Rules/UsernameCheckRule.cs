@@ -4,7 +4,7 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Osba.Tests.Rules;
 
 [ExecuteOnState(ObjectEditState.New)]
-public class UsernameCheckRule : RuleBase
+public class UsernameCheckRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

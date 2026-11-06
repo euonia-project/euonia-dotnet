@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <summary>
 /// 表示基于 <see cref="ValidationAttribute"/> 的规则。
 /// </summary>
-public class DataAnnotationRule : RuleBase
+public class DataAnnotationRule : PropertyRuleBase
 {
     /// <summary>
     /// 获取验证特性。
@@ -40,13 +40,13 @@ public class DataAnnotationRule : RuleBase
         ValidationResult? result;
         if (context.Target is IOsbaObject target)
         {
-            var value = target.ReadProperty(Property!);
+            var value = target.ReadProperty(Property);
             var serviceProvider = target.BusinessContext?.CurrentServiceProvider;
             result = Attribute.GetValidationResult(value, CreateContext(context.Target, serviceProvider));
         }
         else
         {
-            result = Attribute.GetValidationResult(Property!.DefaultValue, CreateContext(context.Target, null));
+            result = Attribute.GetValidationResult(Property.DefaultValue, CreateContext(context.Target, null));
         }
 
         if (result != null)
@@ -71,7 +71,7 @@ public class DataAnnotationRule : RuleBase
     /// </remarks>
     private ValidationContext CreateContext(object instance, IServiceProvider? serviceProvider)
     {
-        var property = Property!;
+        var property = Property;
         return new ValidationContext(instance, serviceProvider, null)
         {
             DisplayName = property.FriendlyName ?? property.Name,

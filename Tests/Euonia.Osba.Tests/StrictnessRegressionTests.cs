@@ -413,7 +413,7 @@ public class ScopeProbeObject : EditableObject<ScopeProbeObject>
 }
 
 /// <summary>总是失败的对象级规则。</summary>
-public sealed class AlwaysFailRule : RuleBase
+public sealed class AlwaysFailRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
@@ -423,7 +423,7 @@ public sealed class AlwaysFailRule : RuleBase
 }
 
 /// <summary>总是通过的对象级规则。</summary>
-public sealed class AlwaysPassRule : RuleBase
+public sealed class AlwaysPassRule : ObjectRuleBase
 {
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{

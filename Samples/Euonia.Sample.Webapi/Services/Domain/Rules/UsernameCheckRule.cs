@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Sample.Business.Rules;
 /// <summary>
 /// Represents a rule to check the availability of a username during user creation.
 /// </summary>
-internal sealed class UsernameCheckRule(IPropertyInfo property) : RuleBase(property)
+internal sealed class UsernameCheckRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <summary>
 	/// Executes the rule to verify if the username is available.
@@ -28,7 +28,7 @@ internal sealed class UsernameCheckRule(IPropertyInfo property) : RuleBase(prope
 			return;
 		}
 
-		var property = Property!;
+		var property = Property;
 		var value = target.ReadProperty(property)?.ToString();
 
 		if (string.IsNullOrWhiteSpace(value))

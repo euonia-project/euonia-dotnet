@@ -305,14 +305,14 @@ public class Rules : IRules
 
 		lock (_lockObject)
 		{
-			if (_instanceRules.Any(rule => ReferenceEquals(rule.Property, property)))
+			if (_instanceRules.OfType<IPropertyRule>().Any(rule => ReferenceEquals(rule.Property, property)))
 			{
 				return true;
 			}
 
 			foreach (var scope in _operationScopes)
 			{
-				if (scope.Rules.Any(rule => ReferenceEquals(rule.Property, property)))
+				if (scope.Rules.OfType<IPropertyRule>().Any(rule => ReferenceEquals(rule.Property, property)))
 				{
 					return true;
 				}
@@ -337,7 +337,7 @@ public class Rules : IRules
 	/// <c>ObjectBase.EnsureRulesAsync</c> 在调用本方法<b>之前</b>单独处理（只跑变更过的属性）。
 	/// </para>
 	/// <para>
-	/// <b>实例级与操作级规则不按 <see cref="IRuleBase.Property"/> 过滤，全部纳入对象级检查</b>：
+	/// <b>实例级与操作级规则不按 <see cref="IPropertyRule.Property"/> 过滤，全部纳入对象级检查</b>：
 	/// 它们是调用方为「本次操作」显式附加的（执行器 <c>WithRule</c>），语义就是「这次必须满足」，
 	/// 按属性过滤会让 <c>WithRule(new XxxRule(SomeProperty))</c> 静默不执行。
 	/// 属性只用于结果归因（<see cref="BrokenRule.Property"/>）与变更通知。
@@ -383,7 +383,8 @@ public class Rules : IRules
 			return typed.Count == 0 ? Array.Empty<IRuleBase>() : typed;
 		}
 
-		var matched = supplemental.Where(rule => ReferenceEquals(rule.Property, property));
+		var matched = supplemental.OfType<IPropertyRule>()
+		                          .Where(rule => ReferenceEquals(rule.Property, property));
 
 		return FilterByScope(typed.Concat(matched), scopes)
 		       .OrderBy(rule => rule.Priority)
@@ -620,8 +621,8 @@ public class Rules : IRules
 
 		// 比较口径必须与 BrokenRuleCollection.ClearRules(string) 的序数相等保持一致，
 		// 否则仅大小写不同的两个属性只会清理其中一个，陈旧条目跨轮累积导致 IsValid 失真。
-		foreach (var property in rules.Select(rule => rule.Property)
-		                              .OfType<IPropertyInfo>()
+		foreach (var property in rules.OfType<IPropertyRule>()
+		                              .Select(rule => rule.Property)
 		                              .DistinctBy(property => property.Name))
 		{
 			BrokenRules.ClearRules(property);
@@ -814,7 +815,7 @@ public class Rules : IRules
 			{
 				Target = Target,
 				Rule = rule,
-				PropertyName = rule.Property?.Name
+				PropertyName = rule is IPropertyRule propertyRule ? propertyRule.Property.Name : null
 			};
 
 			if (cascade && rule.RelatedProperties.Count > 0)
@@ -940,14 +941,15 @@ public class Rules : IRules
 		lock (_lockObject)
 		{
 			var results = ruleContext.Results;
+			var ruleProperty = (ruleContext.Rule as IPropertyRule)?.Property;
 			if (results.Count > 0)
 			{
-				BrokenRules.Add(results, ruleContext.Rule.Property?.Name);
+				BrokenRules.Add(results, ruleProperty?.Name);
 			}
 
 			RunningRules.Remove(ruleContext.Rule);
 
-			var property = ruleContext.Rule.Property;
+			var property = ruleProperty;
 			if (property != null && IsNotRunning(property))
 			{
 				(notify ??= []).Add(property);
@@ -986,7 +988,7 @@ public class Rules : IRules
 	{
 		foreach (var running in RunningRules)
 		{
-			if (ReferenceEquals(running.Property, property))
+			if (running is IPropertyRule propertyRule && ReferenceEquals(propertyRule.Property, property))
 			{
 				return false;
 			}
