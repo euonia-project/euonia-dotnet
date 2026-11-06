@@ -305,6 +305,10 @@ public class LockInterceptor : IInterceptor
 /// </remarks>
 internal static class SemaphoreLockStore
 {
+	/// <summary>
+	/// 单个锁键对应的条目：持有信号量，并统计当前持有或等待该锁的使用者数量，
+	/// 以便计数归零时把条目从存储中移除。
+	/// </summary>
 	private sealed class LockEntry
 	{
 		public LockEntry(int maximumCount)

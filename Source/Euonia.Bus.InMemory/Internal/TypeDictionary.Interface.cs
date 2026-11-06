@@ -1,51 +1,50 @@
 ﻿namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A base interface masking <see cref="ITypeDictionary{TKey,TValue}"/> instances and exposing non-generic functionalities.
+/// 一个基接口，用于屏蔽 <see cref="ITypeDictionary{TKey,TValue}"/> 实例并公开非泛型功能。
 /// </summary>
 internal interface ITypeDictionary
 {
 	/// <summary>
-	/// Gets the count of entries in the dictionary.
+	/// 获取字典中的条目数。
 	/// </summary>
 	int Count { get; }
 
 	/// <summary>
-	/// Clears the current dictionary.
+	/// 清空当前字典。
 	/// </summary>
 	void Clear();
 }
 
 /// <summary>
-/// An interface providing key type contravariant access to a <see cref="ITypeDictionary{TKey,TValue}"/> instance.
+/// 一个接口，提供对 <see cref="ITypeDictionary{TKey,TValue}"/> 实例的键类型逆变访问。
 /// </summary>
-/// <typeparam name="TKey">The contravariant type of keys in the dictionary.</typeparam>
+/// <typeparam name="TKey">字典中键的逆变类型。</typeparam>
 internal interface ITypeDictionary<in TKey> : ITypeDictionary
 	where TKey : IEquatable<TKey>
 {
 	/// <summary>
-	/// Tries to remove a value with a specified key, if present.
+	/// 尝试移除具有指定键的值（如果存在）。
 	/// </summary>
-	/// <param name="key">The key of the value to remove.</param>
-	/// <returns>Whether or not the key was present.</returns>
+	/// <param name="key">要移除的值的键。</param>
+	/// <returns>该键是否存在。</returns>
 	bool TryRemove(TKey key);
 }
 
 /// <summary>
-/// An interface providing key type contravariant and value type covariant access
-/// to a <see cref="ITypeDictionary{TKey,TValue}"/> instance.
+/// 一个接口，提供对 <see cref="ITypeDictionary{TKey,TValue}"/> 实例的键类型逆变和值类型协变访问。
 /// </summary>
-/// <typeparam name="TKey">The contravariant type of keys in the dictionary.</typeparam>
-/// <typeparam name="TValue">The covariant type of values in the dictionary.</typeparam>
+/// <typeparam name="TKey">字典中键的逆变类型。</typeparam>
+/// <typeparam name="TValue">字典中值的协变类型。</typeparam>
 internal interface ITypeDictionary<in TKey, out TValue> : ITypeDictionary<TKey>
 	where TKey : IEquatable<TKey>
 	where TValue : class
 {
 	/// <summary>
-	/// Gets the value with the specified key.
+	/// 获取具有指定键的值。
 	/// </summary>
-	/// <param name="key">The key to look for.</param>
-	/// <returns>The returned value.</returns>
-	/// <exception cref="ArgumentException">Thrown if the key wasn't present.</exception>
+	/// <param name="key">要查找的键。</param>
+	/// <returns>返回的值。</returns>
+	/// <exception cref="ArgumentException">当键不存在时引发。</exception>
 	TValue this[TKey key] { get; }
 }

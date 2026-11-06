@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The module lifecycle base class.
+/// 模块生命周期基类。
 /// </summary>
 public abstract class ModuleLifecycleBase : IModuleLifecycle
 {

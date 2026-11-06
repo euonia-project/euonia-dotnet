@@ -1,16 +1,17 @@
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// The validator.
+/// 验证器。
 /// </summary>
 public class Validator
 {
     /// <summary>
-    /// Validate the specified object.
+    /// 验证指定的对象。
     /// </summary>
-    /// <param name="item"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="T">要验证的对象的类型。</typeparam>
+    /// <param name="item">要验证的实例，不能为 <see langword="null"/>。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="item"/> 为 <see langword="null"/>。</exception>
+    /// <exception cref="ValidationException"><paramref name="item"/> 实现 <see cref="IValidatableObject"/> 且验证失败时抛出，包含其错误集合。</exception>
     public static void Validate<T>(T item)
         where T : class
     {
@@ -33,12 +34,13 @@ public class Validator
     }
 
 	/// <summary>
-	/// Validate the specified object asynchronously.
+	/// 异步验证指定的对象。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="item"></param>
-	/// <returns></returns>
-	/// <exception cref="ValidationException"></exception>
+	/// <typeparam name="T">要验证的对象的类型。</typeparam>
+	/// <param name="item">要验证的实例，不能为 <see langword="null"/>。</param>
+	/// <returns>表示异步验证过程的任务。</returns>
+	/// <exception cref="ArgumentNullException"><paramref name="item"/> 为 <see langword="null"/>。</exception>
+	/// <exception cref="ValidationException"><paramref name="item"/> 实现 <see cref="IValidatableObject"/> 且验证失败时抛出，包含其错误集合。</exception>
 	public static async Task ValidateAsync<T>(T item)
 		where T : class
 	{

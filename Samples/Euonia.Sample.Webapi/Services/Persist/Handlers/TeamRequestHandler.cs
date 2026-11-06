@@ -20,6 +20,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 internal class TeamRequestHandler(ITeamStore store, IScopeGuard guard)
 	: IHandler<TeamListQueryRequest, PagedResult<TeamDto>>
 {
+	/// <inheritdoc/>
 	public async Task<PagedResult<TeamDto>> HandleAsync(TeamListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var page = message.Page < 1 ? 1 : message.Page;

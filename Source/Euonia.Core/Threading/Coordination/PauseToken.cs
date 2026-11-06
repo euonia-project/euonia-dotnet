@@ -45,6 +45,10 @@ public struct PauseToken
     /// </summary>
     private readonly AsyncManualResetEvent _mre;
 
+    /// <summary>
+    /// 使用管理暂停状态的手动重置事件初始化暂停令牌。
+    /// </summary>
+    /// <param name="mre">手动重置事件；传入 <c>null</c> 表示该令牌永远不可被暂停。</param>
     internal PauseToken(AsyncManualResetEvent mre)
     {
         _mre = mre;

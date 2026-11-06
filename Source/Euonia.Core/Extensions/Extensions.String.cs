@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 
 // ReSharper disable MemberCanBePrivate.Global
 
+/// <summary>
+/// 提供字符串校验、命名转换、截断与 HTML 清理的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>

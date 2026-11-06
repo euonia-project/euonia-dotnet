@@ -12,24 +12,21 @@ using Nerosoft.Euonia.Uow;
 namespace Nerosoft.Euonia.Sample.Persist;
 
 /// <summary>
-/// Provides persistent-level registrations and behavior for the bounded context.
+/// 为限界上下文提供持久化层的注册与行为。
 /// </summary>
 /// <remarks>
 /// <para>
-/// This module is responsible for registering persistent implementations, persistence contexts,
-/// mappings and any persistent-related services required by the features within the
-/// application's modular dependency injection system.
+/// 此模块负责注册持久化实现、持久化上下文、映射以及应用模块化依赖注入系统中
+/// 各功能所需的持久化相关服务。
 /// </para>
 /// <para>
-/// The module derives from <see cref="ModuleContextBase"/> and is intended to be discovered
-/// and initialized by the application's modularity/bootstrapper during startup. Concrete
-/// persistent types (for example, implementations of persistent interfaces or DbContext types)
-/// should be registered here so they become available to other modules and application services.
+/// 此模块派生自 <see cref="ModuleContextBase"/>，旨在启动时由应用的模块化/引导器
+/// 发现并初始化。具体的持久化类型（例如持久化接口的实现或 DbContext 类型）
+/// 应在此注册，以便其他模块和应用服务可以使用它们。
 /// </para>
 /// </remarks>
 /// <example>
-/// To ensure persistent services are available at runtime, include this module in the application's
-/// module registration sequence or bootstrapper. For example:
+/// 为确保运行时可以使用持久化服务，请将此模块加入应用的模块注册序列或引导器。例如：
 /// <code>
 /// // Pseudo-code illustrating module registration
 /// var bootstrapper = new ApplicationBootstrapper();
@@ -41,6 +38,10 @@ namespace Nerosoft.Euonia.Sample.Persist;
 [DependsOn(typeof(RepositoryModule))]
 public class PersistServiceModule : ModuleContextBase
 {
+	/// <summary>
+	/// 在常规服务注册之前调整工作单元选项，关闭默认事务。
+	/// </summary>
+	/// <param name="context">服务配置上下文，提供选项配置入口。</param>
 	public override void AheadConfigureServices(ServiceConfigurationContext context)
 	{
 		Configure<UnitOfWorkOptions>(options =>
@@ -50,9 +51,9 @@ public class PersistServiceModule : ModuleContextBase
 	}
 
 	/// <summary>
-	/// Configures persistent services for the bounded context.
+	/// 为限界上下文配置持久化服务。
 	/// </summary>
-	/// <param name="context"></param>
+	/// <param name="context">服务配置上下文，提供用于注册服务的 <see cref="IServiceCollection"/>。</param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
 		context.Services.AddKeyedSingleton<ConnectionConfigurator>("inmemory", (builder, connectionString) => builder.UseInMemoryDatabase(connectionString));
@@ -64,6 +65,10 @@ public class PersistServiceModule : ModuleContextBase
 		context.Services.AddScoped<IApplicationDataContext>(provider => provider.GetRequiredService<IDbContextFactory<SampleDataContext>>().CreateDbContext());
 	}
 
+	/// <summary>
+	/// 应用初始化时确保数据库结构存在，并在库为空时写入内置管理员等初始数据。
+	/// </summary>
+	/// <param name="context">应用初始化上下文，提供创建服务作用域所需的服务提供程序。</param>
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
 	{
 		using var scope = context.ServiceProvider.CreateScope();

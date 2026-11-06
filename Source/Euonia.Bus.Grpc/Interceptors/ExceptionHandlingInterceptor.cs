@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Nerosoft.Euonia.Grpc;
 
 /// <summary>
-/// Interceptor to handle exception.
+/// 用于处理异常的拦截器。
 /// </summary>
 internal class ExceptionHandlingInterceptor : Interceptor
 {
@@ -22,19 +22,19 @@ internal class ExceptionHandlingInterceptor : Interceptor
     private readonly IExceptionHandler? _handler;
 
     /// <summary>
-    /// Initialize new instance of <see cref="ExceptionHandlingInterceptor"/>.
+    /// 初始化 <see cref="ExceptionHandlingInterceptor"/> 的新实例。
     /// </summary>
-    /// <param name="logger"></param>
+    /// <param name="logger">用于创建拦截器日志记录器的日志工厂。</param>
     public ExceptionHandlingInterceptor(ILoggerFactory logger)
     {
         _logger = logger.CreateLogger<ExceptionHandlingInterceptor>();
     }
 
     /// <summary>
-    /// Initialize new instance of <see cref="ExceptionHandlingInterceptor"/>.
+    /// 初始化 <see cref="ExceptionHandlingInterceptor"/> 的新实例。
     /// </summary>
-    /// <param name="logger"></param>
-    /// <param name="handler"></param>
+    /// <param name="logger">用于创建拦截器日志记录器的日志工厂。</param>
+    /// <param name="handler">自定义异常处理器；用于将异常转换为 <see cref="RpcException"/>。</param>
     public ExceptionHandlingInterceptor(ILoggerFactory logger, IExceptionHandler handler)
         : this(logger)
     {

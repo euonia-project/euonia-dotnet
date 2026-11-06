@@ -48,6 +48,14 @@ public static class CacheItemUpdateResult
 /// <typeparam name="TValue">缓存值的类型。</typeparam>
 public class CacheItemUpdateResult<TValue>
 {
+	/// <summary>
+	/// 初始化 <see cref="CacheItemUpdateResult{TValue}"/> 的新实例。
+	/// </summary>
+	/// <param name="value">更新成功后的缓存项；失败时为 <see langword="null"/>。</param>
+	/// <param name="state">更新结果状态。</param>
+	/// <param name="conflictOccurred">更新期间是否发生版本冲突。</param>
+	/// <param name="triesNeeded">完成更新所需的尝试次数，必须大于零。</param>
+	/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="triesNeeded"/> 为零时抛出。</exception>
 	internal CacheItemUpdateResult(CacheItem<TValue>? value, CacheItemUpdateResultState state, bool conflictOccurred, int triesNeeded)
 	{
 		if (triesNeeded == 0)

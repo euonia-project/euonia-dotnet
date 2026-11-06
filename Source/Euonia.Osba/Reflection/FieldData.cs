@@ -536,6 +536,9 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 			}
 		}
 
+		/// <summary>
+		/// 表示观察者对字段可观察对象的一次订阅；首次释放时从所有者移除观察者，重复释放无副作用。
+		/// </summary>
 		private sealed class Subscription(FieldObservable owner, IObserver<T> observer) : IDisposable
 		{
 			private int _disposed;

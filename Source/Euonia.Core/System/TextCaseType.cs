@@ -11,12 +11,12 @@ public enum TextCaseType
 	None,
 
 	/// <summary>
-	/// 大写。
+	/// 转换为大写。
 	/// </summary>
 	Upper,
 
 	/// <summary>
-	/// 小写。
+	/// 转换为小写。
 	/// </summary>
 	Lower,
 

@@ -28,6 +28,12 @@ public sealed record SecurityProfile(string Name, IReadOnlyCollection<string> Co
 /// </summary>
 public sealed class AuthorizationStore(IApplicationDataContext context)
 {
+	/// <summary>
+	/// 读取指定账号的授权数据；账号没有任何授权行时返回 <see langword="null"/>。
+	/// </summary>
+	/// <param name="userId">账号标识。</param>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>该账号的授权数据；无授权行时为 <see langword="null"/>。</returns>
 	public async Task<SecurityProfile?> GetAsync(string userId, CancellationToken cancellationToken = default)
 	{
 		return await LoadAsync(userId, cancellationToken);

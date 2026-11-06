@@ -24,6 +24,14 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	private readonly IServiceScope? _ownedScope;
 	private bool _disposed;
 
+	/// <summary>
+	/// 初始化消息执行作用域：解析或创建服务提供程序，并按描述符安装请求上下文。
+	/// </summary>
+	/// <param name="container">调用方的服务容器，用于判定借用作用域是否可用。</param>
+	/// <param name="scopeFactory">借用作用域不可用时，用于创建本次执行专用作用域的工厂。</param>
+	/// <param name="descriptor">消息执行描述符，指定提供程序租约与请求上下文来源。</param>
+	/// <param name="message">当前处理的消息上下文，用于从信封恢复请求上下文。</param>
+	/// <param name="logger">可选的日志记录器，用于记录借用作用域失效等降级情况。</param>
 	internal MessageExecutionScope(
 		IServiceProvider container,
 		IServiceScopeFactory scopeFactory,

@@ -2,6 +2,9 @@
 
 namespace Nerosoft.Euonia.Caching;
 
+/// <summary>
+/// 定义 <see cref="BaseCacheManager{TValue}"/> 的添加或更新、尝试更新与更新成员。
+/// </summary>
 public partial class BaseCacheManager<TValue>
 {
     /// <inheritdoc />

@@ -4,12 +4,15 @@ using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Concurrency.FileSystem;
 
+/// <summary>
+/// 文件系统同步模块，作为 <see cref="FileSystemLockModule"/> 的依赖标记，本身不注册任何服务。
+/// </summary>
 internal class FileSystemSynchronizationModule : ModuleContextBase
 {
 }
 
 /// <summary>
-/// The FileSystemLockModule class contains methods used to configure the file system lock.
+/// FileSystemLockModule 类包含用于配置文件系统锁的方法。
 /// </summary>
 [DependsOn(typeof(FileSystemSynchronizationModule))]
 public class FileSystemLockModule : ModuleContextBase

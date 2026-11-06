@@ -4,19 +4,19 @@ using Microsoft.Extensions.Configuration;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// 
+/// 模块上下文基类，为模块提供配置服务注册、应用程序配置访问以及应用生命周期回调的默认实现。
 /// </summary>
 public abstract class ModuleContextBase : IModuleContext
 {
     /// <summary>
-    /// Gets a value to indicate whether the service should registry automatically or not.
+    /// 获取一个值，指示服务是否应自动注册。
     /// </summary>
     protected internal virtual bool AutomaticRegisterService => true;
 
     /// <summary>
-    /// Gets or sets the service configuration context.
+    /// 获取或设置服务配置上下文。
     /// </summary>
-    /// <exception cref="Exception"></exception>
+    /// <exception cref="Exception">当配置上下文尚未初始化（即模块尚未执行服务配置）时引发。</exception>
     protected internal ServiceConfigurationContext ConfigurationContext
     {
         get
@@ -34,7 +34,7 @@ public abstract class ModuleContextBase : IModuleContext
     private ServiceConfigurationContext? _configurationContext;
 
     /// <summary>
-    /// Gets or sets the application configuration service.
+    /// 获取或设置应用程序配置服务。
     /// </summary>
     protected internal IConfiguration Configuration { get; internal set; } = null!;
 
@@ -64,10 +64,11 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <summary>
-    /// 
+    /// 注册用于配置 <typeparamref name="TOptions"/> 选项实例的委托。
     /// </summary>
-    /// <param name="configureOptions"></param>
-    /// <typeparam name="TOptions"></typeparam>
+    /// <typeparam name="TOptions">要配置的选项类型，必须为引用类型。</typeparam>
+    /// <param name="configureOptions">接收选项实例并对其进行配置的委托。</param>
+    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(Action<TOptions> configureOptions)
         where TOptions : class
     {
@@ -75,11 +76,12 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <summary>
-    /// 
+    /// 注册用于配置具名选项实例 <paramref name="name"/> 的委托。
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="configureOptions"></param>
-    /// <typeparam name="TOptions"></typeparam>
+    /// <typeparam name="TOptions">要配置的选项类型，必须为引用类型。</typeparam>
+    /// <param name="name">选项实例的名称，用于区分同一选项类型的多组配置。</param>
+    /// <param name="configureOptions">接收选项实例并对其进行配置的委托。</param>
+    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(string name, Action<TOptions> configureOptions)
         where TOptions : class
     {
@@ -87,10 +89,11 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <summary>
-    /// 
+    /// 将 <typeparamref name="TOptions"/> 绑定到指定的配置节。
     /// </summary>
-    /// <param name="configuration"></param>
-    /// <typeparam name="TOptions"></typeparam>
+    /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
+    /// <param name="configuration">提供选项值的配置节。</param>
+    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(IConfiguration configuration)
         where TOptions : class
     {
@@ -98,11 +101,12 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <summary>
-    /// 
+    /// 将 <typeparamref name="TOptions"/> 绑定到指定的配置节，并自定义绑定行为。
     /// </summary>
-    /// <param name="configuration"></param>
-    /// <param name="configureBinder"></param>
-    /// <typeparam name="TOptions"></typeparam>
+    /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
+    /// <param name="configuration">提供选项值的配置节。</param>
+    /// <param name="configureBinder">用于调整绑定行为的委托，例如绑定错误与未知键的处理方式。</param>
+    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(IConfiguration configuration, Action<BinderOptions> configureBinder)
         where TOptions : class
     {
@@ -110,11 +114,12 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <summary>
-    /// 
+    /// 将具名选项实例 <paramref name="name"/> 绑定到指定的配置节。
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="configuration"></param>
-    /// <typeparam name="TOptions"></typeparam>
+    /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
+    /// <param name="name">选项实例的名称，用于区分同一选项类型的多组配置。</param>
+    /// <param name="configuration">提供选项值的配置节。</param>
+    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(string name, IConfiguration configuration)
         where TOptions : class
     {

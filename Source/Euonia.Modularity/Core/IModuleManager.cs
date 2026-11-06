@@ -1,19 +1,19 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// Defines the interface of a module manager.
+/// 定义模块管理器的接口。
 /// </summary>
 public interface IModuleManager
 {
     /// <summary>
-    /// Initializes the modules.
+    /// 初始化模块。
     /// </summary>
-    /// <param name="context"></param>
+    /// <param name="context">应用程序初始化上下文，提供模块初始化所需的服务提供程序。</param>
     void InitializeModules(ApplicationInitializationContext context);
 
     /// <summary>
-    /// Unload the modules.
+    /// 卸载模块。
     /// </summary>
-    /// <param name="context"></param>
+    /// <param name="context">应用程序关闭上下文，提供模块卸载所需的服务提供程序。</param>
     void UnloadModules(ApplicationShutdownContext context);
 }

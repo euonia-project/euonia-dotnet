@@ -243,6 +243,13 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 			: $"'{Key}', exp:{ExpirationMode} {ExpirationTimeout}, lastAccess:{LastAccessedUtc}";
 	}
 
+	/// <summary>
+	/// 创建带指定过期模式与超时的当前缓存项副本，供缓存句柄在写入前应用过期设置。
+	/// </summary>
+	/// <param name="mode">过期模式。</param>
+	/// <param name="timeout">过期时间。</param>
+	/// <param name="usesHandleDefault">是否表示该过期设置来自缓存句柄的默认值。</param>
+	/// <returns>缓存项的新实例；绝对过期模式会同时把创建时间重置为当前 UTC 时间。</returns>
 	internal CacheItem<T> WithExpiration(CacheExpirationMode mode, TimeSpan timeout, bool usesHandleDefault = true) =>
 		new(Key, Region, Value, mode, timeout, mode == CacheExpirationMode.Absolute ? DateTime.UtcNow : CreatedUtc, LastAccessedUtc, usesHandleDefault);
 

@@ -8,7 +8,7 @@ using Nerosoft.Euonia.Sample.Facade;
 namespace Nerosoft.Euonia.Sample;
 
 /// <summary>
-/// Module context to configure the current application.
+/// 用于配置当前应用的模块上下文。
 /// </summary>
 [DependsOn(typeof(FacadeServiceModule))]
 [DependsOn(typeof(HostingModule))]

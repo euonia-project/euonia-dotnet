@@ -5,19 +5,29 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Concurrency.Redis.Internal;
 
 /// <summary>
-/// Implements the release operation in the RedLock algorithm. See https://redis.io/topics/distlock
+/// 实现 RedLock 算法中的释放操作。参见 https://redis.io/topics/distlock
 /// </summary>
 internal readonly struct RedisLockRelease
 {
     private readonly IRedisLockReleasableSynchronizationPrimitive _primitive;
     private readonly IReadOnlyDictionary<IDatabase, Task<bool>> _tryAcquireOrRenewTasks;
 
+    /// <summary>
+    /// 初始化 RedLock 释放操作。
+    /// </summary>
+    /// <param name="primitive">在各数据库上执行释放的同步原语。</param>
+    /// <param name="tryAcquireOrRenewTasks">获取或最近一次续期产生的任务字典，用于判断各数据库是否确实持有锁。</param>
     public RedisLockRelease(IRedisLockReleasableSynchronizationPrimitive primitive, IReadOnlyDictionary<IDatabase, Task<bool>> tryAcquireOrRenewTasks)
     {
         _primitive = primitive;
         _tryAcquireOrRenewTasks = tryAcquireOrRenewTasks;
     }
 
+    /// <summary>
+    /// 在所有已获取的数据库上释放锁，并在多数派已释放或已无法继续时提前结束；剩余数据库改为后台释放。
+    /// </summary>
+    /// <returns>表示异步释放操作的值任务。</returns>
+    /// <exception cref="AggregateException">释放过程中出错的数据库过多，已无法完成多数派释放。</exception>
     public async ValueTask ReleaseAsync()
     {
         var isSynchronous = TaskHelper.IsSynchronous;
@@ -33,9 +43,9 @@ internal readonly struct RedisLockRelease
             while (true)
             {
                 var databases = unreleasedTryAcquireOrRenewTasks.Where(kvp => kvp.Value.IsCompleted)
-                                                                // work through non-faulted tasks first
+                                                                // 先处理未出错的任务
                                                                 .OrderByDescending(kvp => kvp.Value.Status == TaskStatus.RanToCompletion)
-                                                                // then start with failed since no action is required to release those
+                                                                // 然后从失败的任务开始，因为无需对它们执行释放操作
                                                                 .ThenBy(kvp => kvp.Value.Status == TaskStatus.RanToCompletion && kvp.Value.Result)
                                                                 .Select(kvp => kvp.Key)
                                                                 .ToArray();
@@ -46,7 +56,7 @@ internal readonly struct RedisLockRelease
 
                     if (RedisLockHelper.ReturnedFalse(tryAcquireOrRenewTask))
                     {
-                        // if we failed to acquire, we don't need to release
+                        // 如果获取失败，则无需释放
                         ++successCount;
                     }
                     else
@@ -81,7 +91,7 @@ internal readonly struct RedisLockRelease
                     }
                 }
 
-                // if we haven't released enough yet to be done or certain of success or failure, wait for another to finish
+                // 如果尚未释放足够多的锁以完成操作或确定成功或失败，则等待另一个完成
                 if (isSynchronous)
                 {
                     // ReSharper disable once CoVariantArrayConversion
@@ -93,7 +103,7 @@ internal readonly struct RedisLockRelease
                 }
             }
         }
-        finally // fire and forget the rest
+        finally // 其余的发后即忘
         {
             foreach (var kvp in unreleasedTryAcquireOrRenewTasks)
             {

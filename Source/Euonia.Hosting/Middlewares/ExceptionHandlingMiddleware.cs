@@ -6,16 +6,16 @@ using Microsoft.Extensions.Logging;
 namespace Nerosoft.Euonia.Hosting;
 
 /// <summary>
-/// A middleware for handle exception.
+/// 用于处理异常的中间件。
 /// </summary>
 internal class ExceptionHandlingMiddleware : IMiddleware
 {
 	private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="ExceptionHandlingMiddleware"/>.
+	/// 初始化 <see cref="ExceptionHandlingMiddleware"/> 类的新实例。
 	/// </summary>
-	/// <param name="logger"></param>
+	/// <param name="logger">日志工厂，用于创建该中间件类型的日志记录器。</param>
 	public ExceptionHandlingMiddleware(ILoggerFactory logger)
 	{
 		_logger = logger.CreateLogger<ExceptionHandlingMiddleware>();

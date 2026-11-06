@@ -6,9 +6,14 @@ using Nerosoft.Euonia.Sample.Domain.Repositories;
 
 namespace Nerosoft.Euonia.Sample.Persist.Repositories;
 
+/// <summary>
+/// 用户仓储实现：基于示例数据上下文查询用户，并维护用户角色关系子表。
+/// </summary>
 internal class UserRepository(IContextProvider provider)
 	: BaseRepository<SampleDataContext, UserEntity, string>(provider), IUserRepository
 {
+	/// <inheritdoc/>
+	/// <remarks>按创建时间倒序返回，并在分页前应用谓词与导航属性加载。</remarks>
 	public Task<List<UserEntity>> FindAsync(Expression<Func<UserEntity, bool>> predicate, string[] properties, int skip, int take, CancellationToken cancellationToken = default)
 	{
 		// 用 (predicate, handle, offset, count) 重载：基类先 BuildQuery（Where(predicate) + handle），
@@ -27,6 +32,7 @@ internal class UserRepository(IContextProvider provider)
 		}
 	}
 
+	/// <inheritdoc/>
 	public async Task<List<string>> GetRolesAsync(string userId, CancellationToken cancellationToken = default)
 	{
 		return await Context.Set<UserRoleEntity>()
@@ -36,6 +42,8 @@ internal class UserRepository(IContextProvider provider)
 		                    .ToListAsync(cancellationToken);
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>角色名会先去除首尾空白并转为小写去重，已存在的角色不会重复写入。</remarks>
 	public async Task AddRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default)
 	{
 		var names = roles.Select(role => role.Trim().ToLowerInvariant())
@@ -65,6 +73,8 @@ internal class UserRepository(IContextProvider provider)
 		await Context.SaveChangesAsync(cancellationToken);
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>角色名会先去除首尾空白并转为小写去重，仅删除确实存在的角色关系。</remarks>
 	public async Task RemoveRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default)
 	{
 		var names = roles.Select(role => role.Trim().ToLowerInvariant())

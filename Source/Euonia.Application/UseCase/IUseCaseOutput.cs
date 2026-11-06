@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Defines the structure of use case execute result.
+/// 定义用例执行结果的结构。
 /// </summary>
 public interface IUseCaseOutput
 {

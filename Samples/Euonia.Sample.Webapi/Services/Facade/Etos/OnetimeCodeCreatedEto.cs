@@ -1,5 +1,8 @@
 namespace Nerosoft.Euonia.Sample.Domain.Etos;
 
+/// <summary>
+/// 验证码创建后发布的领域事件，供消息订阅方执行验证码发送逻辑。
+/// </summary>
 public class OnetimeCodeCreatedEto
 {
 	/// <summary>

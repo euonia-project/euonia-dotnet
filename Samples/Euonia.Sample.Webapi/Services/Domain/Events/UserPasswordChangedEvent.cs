@@ -3,10 +3,16 @@
 namespace Nerosoft.Euonia.Sample.Domain.Events;
 
 /// <summary>
-/// A domain event that is raised when a user's password is changed.
+/// 用户密码被修改时引发的领域事件。
 /// </summary>
 public class UserPasswordChangedEvent : DomainEvent
 {
+	/// <summary>
+	/// 初始化 <see cref="UserPasswordChangedEvent"/> 的新实例。
+	/// </summary>
+	/// <param name="userId">密码被修改的用户标识。</param>
+	/// <param name="type">操作类型，如 <c>change</c> 或 <c>reset</c>。</param>
+	/// <param name="time">密码被修改的时间。</param>
 	public UserPasswordChangedEvent(string userId, string type, DateTime time)
 	{
 		UserId = userId;
@@ -15,7 +21,7 @@ public class UserPasswordChangedEvent : DomainEvent
 	}
 
 	/// <summary>
-	/// Gets or sets the action type.
+	/// 获取或设置操作类型。
 	/// </summary>
 	/// <value>
 	/// <para>- change</para>
@@ -24,12 +30,12 @@ public class UserPasswordChangedEvent : DomainEvent
 	public string Type { get; set; }
 
 	/// <summary>
-	/// Gets or sets the identifier of the user whose password was changed.
+	/// 获取或设置密码被修改的用户标识。
 	/// </summary>
 	public string UserId { get; }
 
 	/// <summary>
-	/// Gets or sets the time when the password was changed.
+	/// 获取或设置密码被修改的时间。
 	/// </summary>
 	public DateTime ChangedAt { get; }
 }

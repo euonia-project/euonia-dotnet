@@ -564,47 +564,48 @@ public static class Reflect
 	/// <returns>方法参数类型是否完全匹配。</returns>
 	private static bool MethodParameterSelector(MethodBase methodToEvaluate, params Type[] methodParameterTypes)
 	{
-		//we are going to match the GetParameters and the MethodParameterTypes. It needs to match index for index and type for type. So GetParameters[0].Type must match MethodParameterTypes[0].Type...[1].Type must match [1].Type
+		// 将 GetParameters 与 MethodParameterTypes 逐索引、逐类型进行匹配。
+		// 也就是说 GetParameters[0].Type 必须匹配 MethodParameterTypes[0].Type，[1].Type 必须匹配 [1].Type
 
-		//holds the index with the method parameter types we are up too
+		// 记录当前处理方法参数类型所使用的索引
 		int i = 0;
 
-		//let's loop through the parameters
+		// 遍历参数
 		foreach (ParameterInfo thisParameter in methodToEvaluate.GetParameters())
 		{
-			//it's a generic parameter...ie...TSource then we are going to ignore it because whatever we pass in would be TSource
+			// 这是泛型参数（例如 TSource），直接忽略，因为无论传入什么都会被当作 TSource
 			if (!thisParameter.ParameterType.IsGenericParameter)
 			{
-				//is this a generic type? we need to compare this differently
+				// 这是泛型类型吗？需要采用不同的比较方式
 				if (thisParameter.ParameterType.IsGenericType)
 				{
-					//is the method parameter a generic type?
+					// 方法参数是泛型类型吗？
 					if (!methodParameterTypes[i].IsGenericType)
 					{
-						//it isn't so return false..cause they aren't the same
+						// 不是，因此返回 false，因为二者并不相同
 						return false;
 					}
 
-					//if the generic type's don't match then return false...This might be problematic...it works for the scenario which I'm using it for so we will leave this and modify afterwards
+					// 泛型类型不匹配则返回 false……这可能存在问题，但在当前使用场景下可行，因此先保留，之后再修改
 					if (thisParameter.ParameterType.GetGenericTypeDefinition() != methodParameterTypes[i].GetGenericTypeDefinition())
 					{
-						//doesn't match return false
+						// 不匹配，返回 false
 						return false;
 					}
 				}
 				else if (thisParameter.ParameterType != methodParameterTypes[i].UnderlyingSystemType)
 				{
-					//this is a regular parameter so we can compare it normally
-					//we don't have a match...so return false
+					// 这是普通参数，可以按常规方式比较
+					// 不匹配，因此返回 false
 					return false;
 				}
 			}
 
-			//increment the index
+			// 递增索引
 			i++;
 		}
 
-		//if we get here then everything matches so return true
+		// 走到这里说明全部匹配，返回 true
 		return true;
 	}
 

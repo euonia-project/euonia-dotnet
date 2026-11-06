@@ -1,5 +1,8 @@
 namespace Nerosoft.Euonia.Osba;
 
+/// <summary>
+/// 通用业务规则集合；此分部类提供属性必填验证规则。
+/// </summary>
 public partial class CommonRule
 {
     /// <summary>

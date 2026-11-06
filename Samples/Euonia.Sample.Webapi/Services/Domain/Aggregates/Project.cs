@@ -20,17 +20,23 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class Project : EditableObjectBase<Project, string>
 {
+	/// <summary>注册的项目名称属性元数据，供属性读写、规则与数据范围映射使用。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+	/// <summary>注册的项目描述属性元数据。</summary>
 	public static readonly PropertyInfo<string> DescriptionProperty = RegisterProperty<string>(p => p.Description);
+	/// <summary>注册的项目负责人属性元数据，同时是行级数据范围的负责人维度。</summary>
 	public static readonly PropertyInfo<string> OwnerIdProperty = RegisterProperty<string>(p => p.OwnerId);
+	/// <summary>注册的归档标记属性元数据，同时是行级数据范围的归档维度。</summary>
 	public static readonly PropertyInfo<bool> IsArchivedProperty = RegisterProperty<bool>(p => p.IsArchived);
 
+	/// <summary>项目名称，必填。</summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>项目描述。</summary>
 	public string Description
 	{
 		get => GetProperty(DescriptionProperty);
@@ -53,7 +59,7 @@ public sealed class Project : EditableObjectBase<Project, string>
 
 	/// <summary>
 	/// 归档项目：置归档标记并发布 <see cref="ProjectArchivedEvent"/>。
-	/// 事件随本次保存经总线自动分发（<see cref="ProjectStore"/> 保存后触发）。
+	/// 事件随本次保存经总线自动分发（<see cref="IProjectStore"/> 保存后触发）。
 	/// </summary>
 	public void Archive()
 	{
@@ -90,6 +96,11 @@ public sealed class Project : EditableObjectBase<Project, string>
 		LoadProperty(IsArchivedProperty, project.IsArchived);
 	}
 
+	/// <summary>
+	/// 工厂插入钩子：将当前项目写入项目存储。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步插入操作的任务。</returns>
 	[Permission(ProjectPermissions.Create, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryInsert]
 	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -97,6 +108,11 @@ public sealed class Project : EditableObjectBase<Project, string>
 		await BusinessContext.GetRequiredService<IProjectStore>().AddAsync(this, cancellationToken);
 	}
 
+	/// <summary>
+	/// 工厂更新钩子：将当前项目的最新状态写回项目存储。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步更新操作的任务。</returns>
 	[Permission(ProjectPermissions.Edit, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
@@ -131,6 +147,9 @@ public sealed class Project : EditableObjectBase<Project, string>
 		await BusinessContext.GetRequiredService<IProjectStore>().DeleteAsync(id, cancellationToken);
 	}
 
+	/// <summary>
+	/// 注册项目名必填规则，名称为空时校验失败。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(NameProperty, "项目名不能为空。"));

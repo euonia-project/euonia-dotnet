@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Threading;
 public sealed class AsyncMonitor
 {
     /// <summary>
-    /// 锁。
+    /// 保护监视器状态变更的异步锁。
     /// </summary>
     private readonly AsyncLock _asyncLock;
 

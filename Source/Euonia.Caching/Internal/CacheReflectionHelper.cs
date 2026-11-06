@@ -3,6 +3,9 @@ using System.Reflection;
 
 namespace Nerosoft.Euonia.Caching.Internal;
 
+/// <summary>
+/// 缓存配置的反射辅助类：按配置创建背板与缓存句柄实例，并匹配构造函数参数。
+/// </summary>
 internal static class CacheReflectionHelper
 {
 	/// <summary>

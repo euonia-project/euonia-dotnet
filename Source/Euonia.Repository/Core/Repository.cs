@@ -3,11 +3,11 @@
 namespace Nerosoft.Euonia.Repository;
 
 /// <summary>
-/// The abstract implement of <see cref="IRepository{TEntity, TKey}"/>.
+/// <see cref="IRepository{TEntity, TKey}"/> 的抽象实现。
 /// </summary>
-/// <typeparam name="TEntity">The type of the entity.</typeparam>
-/// <typeparam name="TKey">The type of the entity key.</typeparam>
-/// <typeparam name="TContext"></typeparam>
+/// <typeparam name="TEntity">实体的类型。</typeparam>
+/// <typeparam name="TKey">实体键的类型。</typeparam>
+/// <typeparam name="TContext">数据持久化上下文的类型。</typeparam>
 public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IRepository<TContext, TEntity, TKey>
 	where TKey : IEquatable<TKey>
 	where TEntity : class, IEntity<TKey>
@@ -16,16 +16,16 @@ public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IR
 	private readonly IContextProvider _provider;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="Repository{TContext, TEntity, TKey}"/> with context.
+	/// 使用上下文初始化 <see cref="Repository{TContext, TEntity, TKey}"/> 的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
+	/// <param name="provider">用于获取数据持久化上下文的上下文提供程序。</param>
 	protected Repository(IContextProvider provider)
 	{
 		_provider = provider;
 	}
 
 	/// <summary>
-	/// Gets the data persistent context.
+	/// 获取数据持久化上下文。
 	/// </summary>
 	public TContext Context => _provider.GetContext<TContext>();
 
@@ -33,24 +33,24 @@ public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IR
 	public List<Func<IQueryable<TEntity>, IQueryable<TEntity>>> Actions { get; } = new();
 
 	/// <summary>
-	/// Gets all entities.
+	/// 获取所有实体。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>可查询所有实体的 <see cref="IQueryable{T}"/>。</returns>
 	public abstract IQueryable<TEntity> Queryable();
 
 	/// <inheritdoc />
 	public abstract IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task<TEntity?> GetAsync(TKey key, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
@@ -65,29 +65,29 @@ public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IR
 	/// <inheritdoc/>
 	public abstract Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task<TEntity> InsertAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task InsertAsync(IEnumerable<TEntity> entities, bool autoSave = true, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task UpdateAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task UpdateAsync(IEnumerable<TEntity> entities, bool autoSave = true, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task DeleteAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default);
 
-	/// <inherited/>
+	/// <inheritdoc/>
 	public abstract Task DeleteAsync(IEnumerable<TEntity> entities, bool autoSave = true, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Commit changes asynchronously.
+	/// 异步提交更改。
 	/// </summary>
-	/// <param name="cancellationToken">The cancellation token.</param>
-	/// <returns></returns>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>已提交的更改数量。</returns>
 	public virtual async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
 		return await Context.SaveChangesAsync(cancellationToken);

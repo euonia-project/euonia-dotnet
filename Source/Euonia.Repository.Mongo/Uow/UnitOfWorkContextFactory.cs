@@ -7,7 +7,7 @@ using Nerosoft.Euonia.Uow;
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The <see cref="IContextFactory"/> implementation used to create a <see cref="IRepositoryContext"/> instance.
+/// 用于创建 <see cref="IRepositoryContext"/> 实例的 <see cref="IContextFactory"/> 实现。
 /// </summary>
 internal class UnitOfWorkContextFactory : IContextFactory
 {
@@ -15,10 +15,10 @@ internal class UnitOfWorkContextFactory : IContextFactory
 	private readonly IConfiguration _configuration;
 
 	/// <summary>
-	/// 
+	/// 初始化 <see cref="UnitOfWorkContextFactory"/> 的新实例。
 	/// </summary>
-	/// <param name="manager"></param>
-	/// <param name="configuration"></param>
+	/// <param name="manager">工作单元管理器，用于获取当前工作单元及其服务提供程序。</param>
+	/// <param name="configuration">配置源，用于按约定读取数据库连接字符串。</param>
 	public UnitOfWorkContextFactory(IUnitOfWorkManager manager, IConfiguration configuration)
 	{
 		_manager = manager;

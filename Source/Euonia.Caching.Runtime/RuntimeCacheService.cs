@@ -3,16 +3,16 @@
 namespace Nerosoft.Euonia.Caching.Runtime;
 
 /// <summary>
-/// The implement of <see cref="ICacheService"/> with <see cref="System.Runtime.Caching"/>.
+/// 基于 <see cref="System.Runtime.Caching"/> 的 <see cref="ICacheService"/> 实现。
 /// </summary>
 public class RuntimeCacheService : BaseCacheService, ICacheService
 {
 	private readonly RuntimeCacheManager _manager;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RuntimeCacheService"/> class.
+	/// 初始化 <see cref="RuntimeCacheService"/> 类的新实例。
 	/// </summary>
-	/// <param name="options"></param>
+	/// <param name="options">包含缓存选项（如键前缀）的选项包装器。</param>
 	public RuntimeCacheService(IOptions<RuntimeCacheOptions> options)
 	{
 		_manager = new RuntimeCacheManager(options.Value);

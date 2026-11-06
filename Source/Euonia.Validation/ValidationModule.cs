@@ -6,7 +6,7 @@ using Nerosoft.Euonia.Modularity;
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Set depends on <see cref="ValidationModule"/> to import object validation services.
+/// 设置依赖 <see cref="ValidationModule"/> 以导入对象验证服务。
 /// </summary>
 public class ValidationModule : ModuleContextBase
 {

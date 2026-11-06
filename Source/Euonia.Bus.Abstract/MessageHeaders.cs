@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Defines the message header keys.
+/// 定义消息标头键。
 /// </summary>
 public static class MessageHeaders
 {

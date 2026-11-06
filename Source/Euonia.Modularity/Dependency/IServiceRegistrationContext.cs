@@ -3,17 +3,17 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The service registration context interface.
+/// 服务注册上下文接口。
 /// </summary>
 public interface IServiceRegistrationContext
 {
     /// <summary>
-    /// Gets the method interceptor types.
+    /// 获取方法拦截器类型。
     /// </summary>
     ITypeList<IMethodInterceptor> Interceptors { get; }
 
     /// <summary>
-    /// Gets the implementation type.
+    /// 获取实现类型。
     /// </summary>
     Type ImplementationType { get; }
 }

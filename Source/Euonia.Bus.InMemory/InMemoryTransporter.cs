@@ -146,7 +146,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			Aborted = cancellationToken
 		};
 
-		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
+		// 参见 https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
 		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)
@@ -211,7 +211,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			Aborted = cancellationToken
 		};
 
-		// See https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
+		// 参见 https://stackoverflow.com/questions/18760252/timeout-an-async-method-implemented-with-taskcompletionsource
 		var taskCompletion = new TaskCompletionSource<TResponse>(TaskCreationOptions.RunContinuationsAsynchronously);
 		CancellationTokenRegistration cancellationRegistration = default;
 		if (cancellationToken != CancellationToken.None)

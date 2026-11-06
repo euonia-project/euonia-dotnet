@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Collections;
 /// 可分页集合类。
 /// 实现了 <see cref="List{T}" />
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">分页集合中元素的类型。</typeparam>
 /// <seealso cref="List{T}" />
 public class PageableCollection<T> : List<T>
 {

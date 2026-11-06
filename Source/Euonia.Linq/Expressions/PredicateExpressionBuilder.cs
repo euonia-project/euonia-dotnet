@@ -17,7 +17,7 @@ public class PredicateExpressionBuilder<TEntity>
     }
 
     /// <summary>
-    /// 参数。
+    /// 构建谓词表达式时使用的参数表达式（通常代表源对象）。
     /// </summary>
     private readonly ParameterExpression _parameter;
     /// <summary>

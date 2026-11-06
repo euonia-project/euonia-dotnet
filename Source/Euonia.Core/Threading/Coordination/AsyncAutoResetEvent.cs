@@ -135,6 +135,9 @@ public sealed class AsyncAutoResetEvent
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露自动重置事件的标识、设置状态与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

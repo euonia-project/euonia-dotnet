@@ -144,13 +144,13 @@ public static class UserClaimTypes
 	/// <summary>身份提供者。</summary>
 	public const string IdentityProvider = "idp";
 
-	/// <summary>角色。</summary>
+	/// <summary>角色声明的类型标识。</summary>
 	public const string Role = "role";
 
 	/// <summary>引用令牌标识符。</summary>
 	public const string ReferenceTokenId = "reference_token_id";
 
-	/// <summary>确认。</summary>
+	/// <summary>账户确认状态的声明类型标识。</summary>
 	public const string Confirmation = "cnf";
 
 	/// <summary>用户唯一编码。</summary>
@@ -159,6 +159,6 @@ public static class UserClaimTypes
 	/// <summary>用户租户 ID。</summary>
 	public const string Tenant = "tenant";
 
-	/// <summary>方案。</summary>
+	/// <summary>认证方案声明的类型标识。</summary>
 	public const string Scheme = "scheme";
 }

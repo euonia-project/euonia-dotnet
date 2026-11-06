@@ -152,6 +152,9 @@ public sealed class AsyncCountdownEvent
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露倒计时事件的标识、当前计数与内部手动重置事件。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

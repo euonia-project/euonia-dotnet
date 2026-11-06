@@ -3,31 +3,31 @@
 namespace Nerosoft.Euonia.Bus.RabbitMq;
 
 /// <summary>
-/// Defines the interface of a RabbitMQ persistent connection.
+/// 定义 RabbitMQ 持久连接的接口。
 /// </summary>
 public interface IPersistentConnection : IDisposable
 {
 	/// <summary>
-	/// Gets a value indicating whether the connection is connected.
+	/// 获取一个值，指示连接是否已建立。
 	/// </summary>
 	bool IsConnected { get; }
 
 	/// <summary>
-	/// Tries to connect to RabbitMQ.
+	/// 尝试连接到 RabbitMQ。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>表示异步连接过程的任务。</returns>
 	Task TryConnectAsync();
 
 	/// <summary>
-	/// Creates a channel.
+	/// 创建通道。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>表示异步操作的任务，包含创建的通道。</returns>
 	Task<IChannel> CreateChannelAsync();
 
 	/// <summary>
-	/// Creates a channel with explicit options (for example publisher confirmations).
+	/// 使用显式选项创建通道（例如发布者确认）。
 	/// </summary>
-	/// <param name="options">Channel creation options.</param>
+	/// <param name="options">通道创建选项。</param>
 	/// <returns>表示异步操作的任务，包含创建的通道。</returns>
 	/// <remarks>默认实现忽略选项并调用无参重载，便于既有自定义实现保持兼容。</remarks>
 	Task<IChannel> CreateChannelAsync(CreateChannelOptions? options)

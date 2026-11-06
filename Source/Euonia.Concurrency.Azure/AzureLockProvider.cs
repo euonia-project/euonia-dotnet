@@ -195,6 +195,9 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
     }
 }
 
+/// <summary>
+/// 提供 <see cref="AzureLockProvider"/> 的锁获取方法的分部实现。
+/// </summary>
 public sealed partial class AzureLockProvider
 {
 	/// <inheritdoc />
@@ -235,6 +238,9 @@ public sealed partial class AzureLockProvider
     }
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ILockProvider"/> 接口成员。
+/// </summary>
 public sealed partial class AzureLockProvider
 {
     /// <inheritdoc />

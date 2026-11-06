@@ -25,7 +25,7 @@ public class UnitOfWorkAccessor : IUnitOfWorkAccessor, ISingletonDependency
     {
         var uow = UnitOfWork;
 
-        //Skip reserved unit of work
+        //跳过已保留的工作单元
         while (uow != null && (uow.IsReserved || uow.IsDisposed || uow.IsCompleted))
         {
             uow = uow.Outer;

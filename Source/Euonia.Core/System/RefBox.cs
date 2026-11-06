@@ -11,6 +11,10 @@ public sealed class RefBox<T> where T : struct
 {
     private readonly T _value;
 
+    /// <summary>
+    /// 使用指定的值初始化引用盒；实例创建后值不可更改。
+    /// </summary>
+    /// <param name="value">要包装的值。</param>
     internal RefBox(T value)
     {
         _value = value;

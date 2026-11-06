@@ -7,11 +7,15 @@ using Nerosoft.Euonia.Sample.Domain.Repositories;
 
 namespace Nerosoft.Euonia.Sample.Business.Handlers;
 
+/// <summary>
+/// 用户的命令侧处理：创建走用户工厂并写入资料与初始口令，更新则直接修改持久化实体。
+/// </summary>
 internal sealed class UserCommandHandler(IObjectFactory factory, IActuator actuator, IUserRepository users)
 	: CommandHandlerBase(factory, actuator),
 	  IHandler<UserCreateCommand, string>,
 	  IHandler<UserUpdateCommand>
 {
+	/// <inheritdoc/>
 	public Task<string> HandleAsync(UserCreateCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		return Actuator.For<User>()

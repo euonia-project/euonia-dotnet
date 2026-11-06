@@ -3,13 +3,13 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// Finds the assemblies used by the application.
+/// 查找应用程序使用的程序集。
 /// </summary>
 public interface IAssemblyFinder
 {
     /// <summary>
-    /// Gets the assemblies.
+    /// 获取程序集。
     /// </summary>
-    /// <returns>An immutable list containing the assemblies used by the application.</returns>
+    /// <returns>包含应用程序所使用程序集的不可变列表。</returns>
     IReadOnlyList<Assembly> Assemblies { get; }
 }

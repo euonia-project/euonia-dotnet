@@ -5,24 +5,24 @@ using Nerosoft.Euonia.Modularity;
 namespace System;
 
 /// <summary>
-/// Implementation of <see cref="ILazyServiceProvider"/>.
+/// <see cref="ILazyServiceProvider"/> 的实现。
 /// </summary>
 public partial class LazyServiceProvider : ILazyServiceProvider
 {
 	/// <summary>
-	/// Gets the cached services.
+	/// 获取已缓存的服务。
 	/// </summary>
 	private ConcurrentDictionary<ServiceIdentifier, Lazy<object>> CachedServices { get; } = new();
 
 	/// <summary>
-	/// Gets the service provider instance.
+	/// 获取服务提供程序实例。
 	/// </summary>
 	private IServiceProvider ServiceProvider { get; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="LazyServiceProvider"/> class.
+	/// 初始化 <see cref="LazyServiceProvider"/> 类的新实例。
 	/// </summary>
-	/// <param name="serviceProvider"></param>
+	/// <param name="serviceProvider">用于解析服务的根服务提供程序。</param>
 	public LazyServiceProvider(IServiceProvider serviceProvider)
 	{
 		ServiceProvider = serviceProvider;

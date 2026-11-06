@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The service exposing context implementation.
+/// 服务公开上下文的实现。
 /// </summary>
 public class ServiceExposingContext : IServiceExposingContext
 {
@@ -12,10 +12,11 @@ public class ServiceExposingContext : IServiceExposingContext
 	public List<Type> ExposedTypes { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ServiceExposingContext"/> class.
+    /// 初始化 <see cref="ServiceExposingContext"/> 类的新实例。
     /// </summary>
-    /// <param name="implementationType"></param>
-    /// <param name="exposedTypes"></param>
+    /// <param name="implementationType">服务的实现类型，不能为 <see langword="null"/>。</param>
+    /// <param name="exposedTypes">该实现要公开的服务类型列表，不能为 <see langword="null"/>。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="implementationType"/> 或 <paramref name="exposedTypes"/> 为 <see langword="null"/> 时抛出。</exception>
     public ServiceExposingContext(Type implementationType, List<Type> exposedTypes)
     {
         ImplementationType = Check.EnsureNotNull(implementationType, nameof(implementationType));

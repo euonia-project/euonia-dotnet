@@ -9,31 +9,31 @@ using Nerosoft.Euonia.Repository.EfCore;
 namespace Nerosoft.Euonia.Sample.Persist;
 
 /// <summary>
-/// Provides a base repository implementation for Entity Framework Core that extends
-/// <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> and exposes common helper methods.
+/// 为 Entity Framework Core 提供基础仓储实现，继承
+/// <see cref="EfCoreRepository{TContext, TEntity, TKey}"/> 并公开常用辅助方法。
 /// </summary>
-/// <typeparam name="TContext">The DbContext type deriving from <see cref="DataContextBase{TContext}"/>.</typeparam>
-/// <typeparam name="TEntity">The entity type managed by the repository. Must implement <see cref="Euonia.Domain.IEntity{TKey}"/>.</typeparam>
-/// <typeparam name="TKey">The type of the entity primary key. Must implement <see cref="IEquatable{TKey}"/>.</typeparam>
+/// <typeparam name="TContext">派生自 <see cref="DataContextBase{TContext}"/> 的 DbContext 类型。</typeparam>
+/// <typeparam name="TEntity">仓储所管理的实体类型，必须实现 <see cref="Euonia.Domain.IEntity{TKey}"/>。</typeparam>
+/// <typeparam name="TKey">实体主键的类型，必须实现 <see cref="IEquatable{TKey}"/>。</typeparam>
 internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreRepository<TContext, TEntity, TKey>, IScopedDependency
 	where TContext : DataContextBase<TContext>
 	where TEntity : class, Repository.IEntity<TKey>
 	where TKey : IEquatable<TKey>
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="BaseRepository{TContext, TEntity, TKey}"/> class.
+	/// 初始化 <see cref="BaseRepository{TContext, TEntity, TKey}"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider">The context provider used to obtain the EF Core <see cref="DbContext"/> instance.</param>
+	/// <param name="provider">用于获取 EF Core <see cref="DbContext"/> 实例的上下文提供程序。</param>
 	protected BaseRepository(IContextProvider provider)
 		: base(provider)
 	{
 	}
 
 	/// <summary>
-	/// Gets a queryable set for the specified entity type <typeparamref name="T"/>.
+	/// 获取指定实体类型 <typeparamref name="T"/> 的可查询集合。
 	/// </summary>
-	/// <typeparam name="T">The entity CLR type to query. Must be a class.</typeparam>
-	/// <returns>An <see cref="IQueryable{T}"/> for the requested entity type that can be composed and executed against the current <see cref="DbContext"/>.</returns>
+	/// <typeparam name="T">要查询的实体 CLR 类型，必须为类。</typeparam>
+	/// <returns>针对所请求实体类型的 <see cref="IQueryable{T}"/>，可基于当前 <see cref="DbContext"/> 进行组合与执行。</returns>
 	public IQueryable<T> SetOf<T>()
 		where T : class
 	{
@@ -41,13 +41,13 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Gets the first entity that has the specified primary key.
+	/// 获取具有指定主键的第一个实体。
 	/// </summary>
-	/// <param name="id">The primary key value to search for.</param>
-	/// <param name="tracking">If <c>true</c>, the returned entity is tracked by the context; otherwise tracking is disabled.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="id">要查找的主键值。</param>
+	/// <param name="tracking">若为 <c>true</c>，返回的实体将由上下文跟踪；否则禁用跟踪。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
+	/// 表示异步操作的任务。若找到实体，任务结果包含该实体实例；否则为 <c>null</c>。
 	/// </returns>
 	public virtual Task<TEntity?> GetAsync(TKey id, bool tracking, CancellationToken cancellationToken = default)
 	{
@@ -56,14 +56,14 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Gets the first entity that has the specified primary key and optionally includes navigation properties.
+	/// 获取具有指定主键的第一个实体，并可选择包含导航属性。
 	/// </summary>
-	/// <param name="id">The primary key value to search for.</param>
-	/// <param name="tracking">If <c>true</c>, the returned entity is tracked by the context; otherwise tracking is disabled.</param>
-	/// <param name="properties">An array of navigation property names to include in the query. Can be empty.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="id">要查找的主键值。</param>
+	/// <param name="tracking">若为 <c>true</c>，返回的实体将由上下文跟踪；否则禁用跟踪。</param>
+	/// <param name="properties">要包含在查询中的导航属性名称数组，可为空。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
+	/// 表示异步操作的任务。若找到实体，任务结果包含该实体实例；否则为 <c>null</c>。
 	/// </returns>
 	public virtual Task<TEntity?> GetAsync(TKey id, bool tracking, string[] properties, CancellationToken cancellationToken = default)
 	{
@@ -74,13 +74,13 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Gets the first entity that matches the specified predicate.
+	/// 获取与指定谓词匹配的第一个实体。
 	/// </summary>
-	/// <param name="predicate">The predicate expression used to filter entities.</param>
-	/// <param name="tracking">If <c>true</c>, the returned entity is tracked by the context; otherwise tracking is disabled.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="predicate">用于筛选实体的谓词表达式。</param>
+	/// <param name="tracking">若为 <c>true</c>，返回的实体将由上下文跟踪；否则禁用跟踪。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
+	/// 表示异步操作的任务。若找到实体，任务结果包含该实体实例；否则为 <c>null</c>。
 	/// </returns>
 	public virtual Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, CancellationToken cancellationToken = default)
 	{
@@ -88,33 +88,39 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Gets the first entity that matches the specified predicate and optionally includes navigation properties.
+	/// 获取与指定谓词匹配的第一个实体，并可选择包含导航属性。
 	/// </summary>
-	/// <param name="predicate">The predicate expression used to filter entities.</param>
-	/// <param name="tracking">If <c>true</c>, the returned entity is tracked by the context; otherwise tracking is disabled.</param>
-	/// <param name="properties">An array of navigation property names to include in the query. Can be empty.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="predicate">用于筛选实体的谓词表达式。</param>
+	/// <param name="tracking">若为 <c>true</c>，返回的实体将由上下文跟踪；否则禁用跟踪。</param>
+	/// <param name="properties">要包含在查询中的导航属性名称数组，可为空。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
+	/// 表示异步操作的任务。若找到实体，任务结果包含该实体实例；否则为 <c>null</c>。
 	/// </returns>
 	public virtual Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, string[] properties, CancellationToken cancellationToken = default)
 	{
 		return base.GetAsync(predicate, query => BuildQuery(query, tracking, properties), cancellationToken);
 	}
 
+	/// <summary>
+	/// 判断是否存在与指定条件匹配的实体。
+	/// </summary>
+	/// <param name="expression">用于筛选实体的条件表达式。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步操作的任务。若存在匹配的实体，任务结果为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public virtual Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
 	{
 		return Context.Set<TEntity>().AnyAsync(expression, cancellationToken);
 	}
 
 	/// <summary>
-	/// Finds entities whose primary keys are contained in the provided collection.
+	/// 查找主键包含在指定集合中的实体。
 	/// </summary>
-	/// <param name="ids">A collection of primary key values to search for.</param>
-	/// <param name="properties">An array of navigation property names to include in the query. Can be empty.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="ids">要查找的主键值集合。</param>
+	/// <param name="properties">要包含在查询中的导航属性名称数组，可为空。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains a list of matching entities (may be empty).
+	/// 表示异步操作的任务。任务结果包含匹配的实体列表（可能为空）。
 	/// </returns>
 	public virtual Task<List<TEntity>> FindAsync(IEnumerable<TKey> ids, string[] properties, CancellationToken cancellationToken = default)
 	{
@@ -123,13 +129,13 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Finds entities that match the specified predicate and optionally includes navigation properties.
+	/// 查找与指定谓词匹配的实体，并可选择包含导航属性。
 	/// </summary>
-	/// <param name="predicate">The predicate expression used to filter entities.</param>
-	/// <param name="properties">An array of navigation property names to include in the query. Can be empty.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="predicate">用于筛选实体的谓词表达式。</param>
+	/// <param name="properties">要包含在查询中的导航属性名称数组，可为空。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous operation. The task result contains a list of matching entities (may be empty).
+	/// 表示异步操作的任务。任务结果包含匹配的实体列表（可能为空）。
 	/// </returns>
 	public virtual Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, string[] properties, CancellationToken cancellationToken = default)
 	{
@@ -137,11 +143,14 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Finds entities based on the given handle.
+	/// 使用指定的查询委托查找实体。
 	/// </summary>
-	/// <param name="handle"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
+	/// <param name="handle">应用于无跟踪查询的委托，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步操作的任务。任务结果包含查询得到的实体列表（可能为空）。</returns>
+	/// <remarks>
+	/// <paramref name="handle"/> 的返回值不会被使用，因此通过该委托追加的筛选不会影响最终结果；需要筛选时请改用接受谓词的重载。
+	/// </remarks>
 	public virtual Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
 		var query = Context.Set<TEntity>().AsNoTracking();
@@ -154,11 +163,14 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Counts entities based on the given handle.
+	/// 使用指定的查询委托统计实体数量。
 	/// </summary>
-	/// <param name="handle"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
+	/// <param name="handle">应用于无跟踪查询的委托，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步操作的任务。任务结果包含满足查询条件的实体数量。</returns>
+	/// <remarks>
+	/// <paramref name="handle"/> 的返回值不会被使用，因此通过该委托追加的筛选不会影响最终结果；需要筛选时请改用接受谓词的重载。
+	/// </remarks>
 	public virtual Task<int> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
 		var query = Context.Set<TEntity>().AsNoTracking();
@@ -171,11 +183,14 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Gets a single entity based on the given handle.
+	/// 使用指定的查询委托获取单个实体。
 	/// </summary>
-	/// <param name="handle"></param>
-	/// <param name="cancellationToken"></param>
-	/// <returns></returns>
+	/// <param name="handle">应用于无跟踪查询的委托，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步操作的任务。任务结果包含查询到的第一个实体；若无匹配结果则为 <c>null</c>。</returns>
+	/// <remarks>
+	/// <paramref name="handle"/> 的返回值不会被使用，因此通过该委托追加的筛选不会影响最终结果；需要筛选时请改用接受谓词的重载。
+	/// </remarks>
 	public virtual Task<TEntity?> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
 		var query = Context.Set<TEntity>().AsNoTracking();
@@ -188,12 +203,13 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Looks up entities by their IDs and selects a key-value pair using the provided selector.
+	/// 按 ID 查找实体，并使用提供的选择器选取键值对。
 	/// </summary>
-	/// <param name="ids">The values of the primary key for the entity to be found.</param>
-	/// <param name="selector"></param>
-	/// <param name="cancellationToken">A <see cref="CancellationToken"/> to observe while waiting for the task to complete.</param>
-	/// <returns></returns>
+	/// <param name="ids">要查找实体的主键值集合。</param>
+	/// <param name="selector">将实体投影为键值对的选择器，键为返回字典的键，值为返回字典的值。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的 <see cref="CancellationToken"/>。</param>
+	/// <returns>表示异步操作的任务。任务结果是以选择器返回的键为键、对应值为值的字典；无匹配实体时为空字典。</returns>
+	/// <exception cref="ArgumentException">当 <paramref name="selector"/> 为多个实体返回相同的键时引发。</exception>
 	public virtual async Task<Dictionary<TKey, string>> LookupAsync(IEnumerable<TKey> ids, Expression<Func<TEntity, KeyValuePair<TKey, string>>> selector, CancellationToken cancellationToken = default)
 	{
 		var predicate = PredicateBuilder.PropertyInRange<TEntity, TKey>(nameof(Euonia.Domain.IEntity<TKey>.Id), ids.ToArray());
@@ -209,13 +225,13 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Deletes the entity with the specified primary key.
+	/// 删除具有指定主键的实体。
 	/// </summary>
-	/// <param name="id">The primary key of the entity to delete.</param>
-	/// <param name="autoSave">If <c>true</c>, calls <see cref="SaveChangesAsync(CancellationToken)"/> after removal.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
-	/// <returns>A task that represents the asynchronous delete operation.</returns>
-	/// <exception cref="NotFoundException">Thrown when an entity with the specified id cannot be found.</exception>
+	/// <param name="id">要删除实体的主键。</param>
+	/// <param name="autoSave">若为 <c>true</c>，则在移除后调用 <see cref="SaveChangesAsync(CancellationToken)"/>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
+	/// <exception cref="NotFoundException">当找不到具有指定 id 的实体时引发。</exception>
 	public virtual async Task DeleteAsync(TKey id, bool autoSave = true, CancellationToken cancellationToken = default)
 	{
 		var set = Context.Set<TEntity>();
@@ -234,15 +250,15 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Deletes the entity with the specified primary key and raises a domain event produced by <paramref name="eventFactory"/>.
+	/// 删除具有指定主键的实体，并引发由 <paramref name="eventFactory"/> 生成的领域事件。
 	/// </summary>
-	/// <typeparam name="TEvent">The domain event type to raise.</typeparam>
-	/// <param name="id">The primary key of the entity to delete.</param>
-	/// <param name="eventFactory">A factory that creates a domain event from the entity before deletion.</param>
-	/// <param name="autoSave">If <c>true</c>, calls <see cref="SaveChangesAsync(CancellationToken)"/> after removal.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
-	/// <returns>A task that represents the asynchronous delete operation.</returns>
-	/// <exception cref="NotFoundException">Thrown when an entity with the specified id cannot be found.</exception>
+	/// <typeparam name="TEvent">要引发的领域事件类型。</typeparam>
+	/// <param name="id">要删除实体的主键。</param>
+	/// <param name="eventFactory">在删除前根据实体创建领域事件的工厂。</param>
+	/// <param name="autoSave">若为 <c>true</c>，则在移除后调用 <see cref="SaveChangesAsync(CancellationToken)"/>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
+	/// <exception cref="NotFoundException">当找不到具有指定 id 的实体时引发。</exception>
 	public virtual async Task DeleteAsync<TEvent>(TKey id, Func<TEvent> eventFactory, bool autoSave = true, CancellationToken cancellationToken = default)
 		where TEvent : DomainEvent
 	{
@@ -270,14 +286,14 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 
 
 	/// <summary>
-	/// Deletes the specified entity and optionally raises a domain event produced by <paramref name="eventFactory"/>.
+	/// 删除指定的实体，并可选择引发由 <paramref name="eventFactory"/> 生成的领域事件。
 	/// </summary>
-	/// <typeparam name="TEvent">The domain event type to raise.</typeparam>
-	/// <param name="entity">The entity instance to delete.</param>
-	/// <param name="eventFactory">A factory that creates the domain event; invoked only when the entity implements <see cref="IHasDomainEvents"/>.</param>
-	/// <param name="autoSave">If <c>true</c>, calls <see cref="SaveChangesAsync(CancellationToken)"/> after removal.</param>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
-	/// <returns>A task that represents the asynchronous delete operation.</returns>
+	/// <typeparam name="TEvent">要引发的领域事件类型。</typeparam>
+	/// <param name="entity">要删除的实体实例。</param>
+	/// <param name="eventFactory">创建领域事件的工厂；仅当实体实现 <see cref="IHasDomainEvents"/> 时才会调用。</param>
+	/// <param name="autoSave">若为 <c>true</c>，则在移除后调用 <see cref="SaveChangesAsync(CancellationToken)"/>。</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
 	public virtual Task DeleteAsync<TEvent>(TEntity entity, Func<TEvent> eventFactory, bool autoSave = true, CancellationToken cancellationToken = default)
 		where TEvent : DomainEvent
 	{
@@ -294,12 +310,12 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Persists changes in the current <see cref="DbContext"/> to the underlying database.
-	/// This method overrides the base implementation and forwards the call to <see cref="DbContext.SaveChangesAsync(CancellationToken)"/>.
+	/// 将当前 <see cref="DbContext"/> 中的更改持久化到基础数据库。
+	/// 此方法重写基类实现，并将调用转发至 <see cref="DbContext.SaveChangesAsync(CancellationToken)"/>。
 	/// </summary>
-	/// <param name="cancellationToken">A cancellation token to cancel the asynchronous operation.</param>
+	/// <param name="cancellationToken">用于取消异步操作的取消标记。</param>
 	/// <returns>
-	/// A task that represents the asynchronous save operation. The task result contains the number of state entries written to the database.
+	/// 表示异步保存操作的任务。任务结果包含写入数据库的状态条目数。
 	/// </returns>
 	public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
 	{
@@ -307,12 +323,12 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	}
 
 	/// <summary>
-	/// Builds a base query for the repository by applying tracking behavior and include paths.
+	/// 通过应用跟踪行为和包含路径，为仓储构建基础查询。
 	/// </summary>
-	/// <param name="query">The base queryable to modify.</param>
-	/// <param name="tracking">If <c>true</c>, the returned query will use change tracking via <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsTracking{TEntity}(IQueryable{TEntity})"/>; otherwise <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking{TEntity}(IQueryable{TEntity})"/> is applied.</param>
-	/// <param name="properties">Array of navigation property names to include. Each entry is passed to <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.Include{TEntity, TProperty}(IQueryable{TEntity}, string)"/>.</param>
-	/// <returns>The composed <see cref="IQueryable{TEntity}"/> with tracking and includes applied.</returns>
+	/// <param name="query">要修改的基础可查询对象。</param>
+	/// <param name="tracking">若为 <c>true</c>，返回的查询将通过 <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsTracking{TEntity}(IQueryable{TEntity})"/> 启用变更跟踪；否则应用 <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AsNoTracking{TEntity}(IQueryable{TEntity})"/>。</param>
+	/// <param name="properties">要包含的导航属性名称数组。每个元素都会传递给 <see cref="Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.Include{TEntity}(IQueryable{TEntity}, string)"/>。</param>
+	/// <returns>已应用跟踪与包含设置的组合后的 <see cref="IQueryable{TEntity}"/>。</returns>
 	protected virtual IQueryable<TEntity> BuildQuery(IQueryable<TEntity> query, bool tracking, string[] properties)
 	{
 		query = tracking ? query.AsTracking() : query.AsNoTracking();

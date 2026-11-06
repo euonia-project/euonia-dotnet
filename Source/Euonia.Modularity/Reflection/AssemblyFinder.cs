@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// Finds all assemblies for the specified module container.
+/// 查找指定模块容器的所有程序集。
 /// </summary>
 public class AssemblyFinder : IAssemblyFinder
 {
@@ -13,9 +13,9 @@ public class AssemblyFinder : IAssemblyFinder
     private readonly Lazy<IReadOnlyList<Assembly>> _assemblies;
 
     /// <summary>
-    /// Initialize a new instance of <see cref="AssemblyFinder"/>.
+    /// 初始化 <see cref="AssemblyFinder"/> 的新实例。
     /// </summary>
-    /// <param name="moduleContainer"></param>
+    /// <param name="moduleContainer">模块容器，用于枚举所有已注册模块。</param>
     public AssemblyFinder(IModuleContainer moduleContainer)
     {
         _moduleContainer = moduleContainer;
@@ -27,9 +27,9 @@ public class AssemblyFinder : IAssemblyFinder
     public IReadOnlyList<Assembly> Assemblies => _assemblies.Value;
 
     /// <summary>
-    /// Finds all assemblies for the specified module container.
+    /// 查找指定模块容器的所有程序集。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>模块容器中所有模块所在程序集的去重只读列表。</returns>
     public IReadOnlyList<Assembly> FindAll()
     {
         var assemblies = new List<Assembly>();

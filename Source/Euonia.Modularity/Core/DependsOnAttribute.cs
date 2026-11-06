@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// Represents that the class which this attribute is applied depends on the specified modules.
+/// 表示应用此特性的类依赖于指定的模块。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class DependsOnAttribute : Attribute
 {
     /// <summary>
-    /// Initialize a new instance which inherited <see cref="DependsOnAttribute"/>
+    /// 初始化继承自 <see cref="DependsOnAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="types"></param>
+    /// <param name="types">所依赖的模块类型；为 <see langword="null"/> 时视为空数组。</param>
     public DependsOnAttribute(params Type[] types)
     {
         ModuleTypes = types ?? Array.Empty<Type>();
     }
 
     /// <summary>
-    /// Gets the depended modules.
+    /// 获取所依赖的模块。
     /// </summary>
     public Type[] ModuleTypes { get; }
 }

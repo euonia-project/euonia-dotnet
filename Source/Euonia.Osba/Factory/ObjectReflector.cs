@@ -40,6 +40,11 @@ public class ObjectReflector
 	/// </remarks>
 	private static readonly ConcurrentDictionary<(Type Target, Type Attribute, Type Argument, bool IsNull), MethodInfo> _singleArgFactoryMethods = new();
 
+	/// <summary>
+	/// 获取指定类型上标记了 <see cref="InjectAttribute"/> 的属性及其解析出的服务类型。
+	/// </summary>
+	/// <param name="objectType">要扫描的对象类型。</param>
+	/// <returns>每项依次包含属性信息、服务类型、是否多实例注入与服务键；结果按类型缓存。</returns>
 	internal static List<Tuple<PropertyInfo, Type, bool, object?>> GetAutoInjectProperties(Type objectType)
 	{
 		return _propertyCache.GetOrAdd(objectType, type =>
@@ -65,12 +70,26 @@ public class ObjectReflector
 		});
 	}
 
+	/// <summary>
+	/// 查找目标类型上匹配指定条件与工厂方法特性的工厂方法。
+	/// </summary>
+	/// <typeparam name="TTarget">要查找工厂方法的目标类型。</typeparam>
+	/// <typeparam name="TAttribute">用于筛选方法的工厂方法特性类型。</typeparam>
+	/// <param name="criteria">匹配方法参数的条件值。</param>
+	/// <returns>匹配的工厂方法；未找到时抛出 <see cref="MissingMethodException"/>。</returns>
 	internal static MethodInfo FindFactoryMethod<TTarget, TAttribute>(object[] criteria)
 		where TAttribute : FactoryMethodAttribute
 	{
 		return FindFactoryMethod<TTarget>(typeof(TAttribute), criteria);
 	}
 
+	/// <summary>
+	/// 查找目标类型上匹配指定条件与工厂方法特性的工厂方法，并按条件数量选择对应缓存。
+	/// </summary>
+	/// <typeparam name="TTarget">要查找工厂方法的目标类型。</typeparam>
+	/// <param name="attributeType">用于筛选方法的工厂方法特性类型。</param>
+	/// <param name="criteria">匹配方法参数的条件值。</param>
+	/// <returns>匹配的工厂方法；未找到时抛出 <see cref="MissingMethodException"/>。</returns>
 	internal static MethodInfo FindFactoryMethod<TTarget>(Type attributeType, object[] criteria)
 	{
 		var targetType = typeof(TTarget);

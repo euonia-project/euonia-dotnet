@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// <summary>
 /// 按当前用户（claim 中的 subject）查找授权数据并解析为权限主体。
 /// 角色由令牌中的声明提供；行级授予（<see cref="AuthorizationKinds.Grant"/>，编码 <c>"{op}|{id}"</c>）
-/// 按操作码分组，再经 <see cref="ScopeSubjectSetBuilder.AddGrant"/> 下推到对应资源的行级维度：
+/// 按操作码分组，再经 <see cref="ScopeSubjectSetBuilder.AddGrant(string, string, string)"/> 下推到对应资源的行级维度：
 /// <c>repository:*</c> → <see cref="RepositoryScopeModel.RepositoryDimension"/>、
 /// <c>project:*</c> → <see cref="ProjectScopeModel.ProjectDimension"/>；其余前缀一律忽略。
 /// <para>
@@ -23,12 +23,23 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 	private readonly AuthorizationStore _store;
 	private readonly ITeamStore _teams;
 
+	/// <summary>
+	/// 初始化解析器，注入授权数据存储与团队存储。
+	/// </summary>
+	/// <param name="store">授权数据的读取入口。</param>
+	/// <param name="teams">团队存储，用于反向展开当前用户所属的团队。</param>
 	public ScopeSubjectResolver(AuthorizationStore store, ITeamStore teams)
 	{
 		_store = store;
 		_teams = teams;
 	}
 
+	/// <summary>
+	/// 根据当前用户的声明解析权限主体；缺少用户标识或无授权数据时返回空主体。
+	/// </summary>
+	/// <param name="user">当前请求的用户声明主体，可能为 <see langword="null"/>。</param>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>包含权限码、行级授予与团队维度的权限主体集合。</returns>
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ResolveCoreAsync(user, cancellationToken);

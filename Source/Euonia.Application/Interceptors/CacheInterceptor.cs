@@ -32,6 +32,9 @@ public class CacheInterceptor : IInterceptor
 
 	private readonly IServiceProvider _serviceProvider;
 
+	/// <summary>
+	/// 根据 <see cref="CacheAttribute"/> 预先算出的过期参数：相对超时或绝对到期时间，以及时间值是否按 UTC 解释。
+	/// </summary>
 	private readonly struct CacheExpirations
 	{
 		public TimeSpan? Timeout { get; init; }

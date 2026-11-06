@@ -1,5 +1,8 @@
 namespace System;
 
+/// <summary>
+/// 基于时间戳、数据中心 ID、机器 ID 与序列号生成有序的 64 位雪花 ID。
+/// </summary>
 internal class SnowflakeId
 {
     private long _machineId; //机器ID

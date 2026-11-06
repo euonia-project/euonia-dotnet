@@ -1,5 +1,8 @@
 using System.Runtime.ExceptionServices;
 
+/// <summary>
+/// 提供异常消息提取与重新抛出操作的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
     /// <summary>

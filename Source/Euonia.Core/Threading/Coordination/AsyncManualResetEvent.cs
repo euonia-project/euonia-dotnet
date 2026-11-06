@@ -146,6 +146,9 @@ public sealed class AsyncManualResetEvent
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露手动重置事件的标识、设置状态与当前任务。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

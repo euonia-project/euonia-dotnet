@@ -10,20 +10,26 @@ using Nerosoft.Euonia.Sample.Persist.Requests;
 
 namespace Nerosoft.Euonia.Sample.Facade.Implements;
 
+/// <summary>
+/// 用户应用服务实现：详情与列表走查询请求，创建经命令总线，改密经对象工厂执行命令对象。
+/// </summary>
 internal class UserApplicationService : BaseApplicationService, IUserApplicationService
 {
+	/// <inheritdoc/>
 	public async Task<UserDetailDto> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var request = new UserDetailQueryRequest(id);
 		return await Bus.CallAsync(request, new CallOptions(), cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task<List<UserListDto>> FindAsync(string keyword, int skip, int take, CancellationToken cancellationToken = default)
 	{
 		var request = new UserListQueryRequest(keyword) { Skip = skip, Take = take };
 		return Bus.CallAsync(request, new CallOptions(), cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<string> CreateAsync(UserCreateDto data, CancellationToken cancellationToken = default)
 	{
 		var command = TypeAdapter.ProjectedAs<UserCreateCommand>(data);

@@ -3,27 +3,27 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The module descriptor.
+/// 模块描述符。
 /// </summary>
 public interface IModuleDescriptor
 {
     /// <summary>
-    /// Gets the module type.
+    /// 获取模块类型。
     /// </summary>
     Type Type { get; }
 
     /// <summary>
-    /// Gets the module assembly.
+    /// 获取模块程序集。
     /// </summary>
     Assembly Assembly { get; }
 
     /// <summary>
-    /// Gets the module context instance.
+    /// 获取模块上下文实例。
     /// </summary>
     IModuleContext Instance { get; }
 
     /// <summary>
-    /// Gets the dependencies of current module.
+    /// 获取当前模块的依赖项。
     /// </summary>
     IReadOnlyList<IModuleDescriptor> Dependencies { get;}
 }

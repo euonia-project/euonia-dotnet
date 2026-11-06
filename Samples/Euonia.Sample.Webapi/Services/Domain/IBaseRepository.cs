@@ -4,181 +4,181 @@ using Nerosoft.Euonia.Domain;
 namespace Nerosoft.Euonia.Sample.Domain;
 
 /// <summary>
-/// Defines common asynchronous repository operations for entities.
+/// 定义实体的通用异步仓储操作。
 /// </summary>
-/// <typeparam name="TEntity">The entity type handled by the repository.</typeparam>
-/// <typeparam name="TKey">The entity primary key type.</typeparam>
+/// <typeparam name="TEntity">仓储所处理的实体类型。</typeparam>
+/// <typeparam name="TKey">实体主键类型。</typeparam>
 public interface IBaseRepository<TEntity, in TKey>
 	where TEntity : class, IEntity<TKey>
 	where TKey : IEquatable<TKey>
 {
 	/// <summary>
-	/// Inserts a new entity into the underlying data store.
+	/// 向底层数据存储插入一个新实体。
 	/// </summary>
-	/// <param name="entity">The entity instance to insert. Must not be <see langword="null"/>.</param>
+	/// <param name="entity">要插入的实体实例。不能为 <see langword="null"/>。</param>
 	/// <param name="autoSave">
-	/// If <see langword="true"/>, the repository will persist changes to the data store
-	/// (for example by calling <c>SaveChangesAsync</c>) after the insert operation.
-	/// If <see langword="false"/>, the caller is responsible for saving changes.
+	/// 如果为 <see langword="true"/>，仓储会在插入操作之后把更改持久化到数据存储
+	/// （例如调用 <c>SaveChangesAsync</c>）。
+	/// 如果为 <see langword="false"/>，则由调用方负责保存更改。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The inserted entity instance including any changes applied by the store (e.g. generated keys).</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>插入的实体实例，包含存储所应用的任何更改（例如生成的键）。</returns>
 	Task<TEntity> InsertAsync(TEntity entity, bool autoSave, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Updates an existing entity in the underlying data store.
+	/// 更新底层数据存储中的现有实体。
 	/// </summary>
-	/// <param name="entity">The entity instance containing updated values. Must not be <see langword="null"/>.</param>
+	/// <param name="entity">包含更新值的实体实例。不能为 <see langword="null"/>。</param>
 	/// <param name="autoSave">
-	/// If <see langword="true"/>, the repository will persist changes to the data store
-	/// after the update operation. If <see langword="false"/>, the caller is responsible for saving changes.
+	/// 如果为 <see langword="true"/>，仓储会在更新操作之后把更改持久化到数据存储。
+	/// 如果为 <see langword="false"/>，则由调用方负责保存更改。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
 	Task UpdateAsync(TEntity entity, bool autoSave, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Retrieves an entity by its primary key.
+	/// 按主键检索实体。
 	/// </summary>
-	/// <param name="id">The primary key value of the entity to retrieve.</param>
+	/// <param name="id">要检索的实体的主键值。</param>
 	/// <param name="tracking">
-	/// When <see langword="true"/>, the returned entity will be tracked by the underlying context (useful for subsequent updates).
-	/// When <see langword="false"/>, the entity will be returned in a no-tracking state for read-only scenarios.
+	/// 为 <see langword="true"/> 时，返回的实体将由底层上下文跟踪（便于后续更新）。
+	/// 为 <see langword="false"/> 时，实体以不跟踪状态返回，适用于只读场景。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The entity instance if found; otherwise implementation-specific (commonly <see langword="null"/> or an exception).</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>找到时返回实体实例；否则取决于实现（通常是 <see langword="null"/> 或抛出异常）。</returns>
 	Task<TEntity> GetAsync(TKey id, bool tracking, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Retrieves an entity by its primary key and includes related navigation properties.
+	/// 按主键检索实体，并包含相关的导航属性。
 	/// </summary>
-	/// <param name="id">The primary key value of the entity to retrieve.</param>
+	/// <param name="id">要检索的实体的主键值。</param>
 	/// <param name="tracking">
-	/// When <see langword="true"/>, the returned entity will be tracked by the underlying context.
-	/// When <see langword="false"/>, the entity will be returned in a no-tracking state for read-only scenarios.
+	/// 为 <see langword="true"/> 时，返回的实体将由底层上下文跟踪。
+	/// 为 <see langword="false"/> 时，实体以不跟踪状态返回，适用于只读场景。
 	/// </param>
 	/// <param name="properties">
-	/// An array of related property names to include (e.g. navigation properties). Implementations should ignore unknown names.
-	/// Use this to eagerly load related data.
+	/// 要包含的相关属性名数组（例如导航属性）。实现应忽略未知的名称。
+	/// 可用于立即加载相关数据。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The entity instance with requested related data included if found; otherwise implementation-specific.</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>找到时返回包含所请求相关数据的实体实例；否则取决于实现。</returns>
 	Task<TEntity> GetAsync(TKey id, bool tracking, string[] properties, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Determines whether any entity exists that satisfies the specified predicate.
+	/// 判断是否存在满足指定谓词的实体。
 	/// </summary>
-	/// <param name="expression">A predicate to test entities against.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns><see langword="true"/> if at least one matching entity exists; otherwise <see langword="false"/>.</returns>
+	/// <param name="expression">用于测试实体的谓词。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>如果至少存在一个匹配的实体，则为 <see langword="true"/>；否则为 <see langword="false"/>。</returns>
 	Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Counts entities that match the provided predicate and optional query modifications.
+	/// 统计匹配所提供谓词并应用可选查询修改的实体数量。
 	/// </summary>
-	/// <param name="expression">A predicate to filter entities. If <see langword="null"/>, counts all entities.</param>
+	/// <param name="expression">用于筛选实体的谓词。如果为 <see langword="null"/>，则统计全部实体。</param>
 	/// <param name="handle">
-	/// A delegate that receives an <see cref="IQueryable{TEntity}"/> and returns an <see cref="IQueryable{TEntity}"/>
-	/// allowing callers to apply additional query operators (filters, includes, projections).
+	/// 一个委托，接收 <see cref="IQueryable{TEntity}"/> 并返回 <see cref="IQueryable{TEntity}"/>，
+	/// 允许调用方附加额外的查询运算符（筛选、包含、投影）。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The number of entities that match the query.</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>匹配查询的实体数量。</returns>
 	Task<int> CountAsync(Expression<Func<TEntity, bool>> expression, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Finds entities that satisfy the specified predicate with additional query customization.
+	/// 查找满足指定谓词的实体，并可对查询作额外定制。
 	/// </summary>
-	/// <param name="predicate">A predicate used to filter the entities.</param>
+	/// <param name="predicate">用于筛选实体的谓词。</param>
 	/// <param name="handle">
-	/// A delegate to customize the query (for example to add includes, ordering, or additional filters).
-	/// The delegate receives the base <see cref="IQueryable{TEntity}"/> and returns the modified query.
+	/// 用于定制查询的委托（例如添加包含、排序或额外筛选）。
+	/// 该委托接收基础 <see cref="IQueryable{TEntity}"/> 并返回修改后的查询。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>A list of entities matching the query. Returns an empty list if no entities match.</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>匹配查询的实体列表。没有匹配项时返回空列表。</returns>
 	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Finds entities that satisfy the specified predicate with pagination and additional query customization.
+	/// 查找满足指定谓词的实体，并支持分页与额外的查询定制。
 	/// </summary>
-	/// <param name="predicate">A predicate used to filter the entities.</param>
+	/// <param name="predicate">用于筛选实体的谓词。</param>
 	/// <param name="handle">
-	/// A delegate to customize the query (for example to add includes, ordering, or additional filters).
+	/// 用于定制查询的委托（例如添加包含、排序或额外筛选）。
 	/// </param>
-	/// <param name="offset">Zero-based offset of the first item to return.</param>
-	/// <param name="count">Maximum number of items to return.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>A list of entities representing the requested page. Returns an empty list if no entities match.</returns>
+	/// <param name="offset">要返回的第一项从零开始的偏移量。</param>
+	/// <param name="count">要返回的最大项数。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>表示所请求页面的实体列表。没有匹配项时返回空列表。</returns>
 	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, int offset, int count, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Deletes the entity identified by the given primary key.
+	/// 删除由给定主键标识的实体。
 	/// </summary>
-	/// <param name="id">The primary key value of the entity to delete.</param>
+	/// <param name="id">要删除的实体的主键值。</param>
 	/// <param name="autoSave">
-	/// If <see langword="true"/>, the repository will persist changes after deletion.
-	/// If <see langword="false"/>, the caller must save changes manually.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <exception cref="NotFoundException">Thrown when no entity with the specified key exists (implementation-specific).</exception>
+	/// 如果为 <see langword="true"/>，仓储会在删除后持久化更改。
+	/// 如果为 <see langword="false"/>，调用方必须手动保存更改。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <exception cref="NotFoundException">当不存在指定键的实体时抛出（取决于实现）。</exception>
 	Task DeleteAsync(TKey id, bool autoSave = true, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Deletes the provided entity instance.
+	/// 删除所提供的实体实例。
 	/// </summary>
-	/// <param name="entity">The entity instance to delete.</param>
-	/// <param name="autoSave">If <see langword="true"/>, persist changes after deletion; otherwise the caller must save changes.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns></returns>
+	/// <param name="entity">要删除的实体实例。</param>
+	/// <param name="autoSave">如果为 <see langword="true"/>，则在删除后持久化更改；否则调用方必须保存更改。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
 	Task DeleteAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Deletes the provided entity instance and raises a domain event produced by <paramref name="eventFactory"/>.
+	/// 删除所提供的实体实例，并引发由 <paramref name="eventFactory"/> 生成的领域事件。
 	/// </summary>
-	/// <typeparam name="TEvent">The domain event type to be generated and published after deletion.</typeparam>
-	/// <param name="entity">The entity instance to delete.</param>
-	/// <param name="eventFactory">A factory delegate producing a domain event to be raised for this deletion.</param>
-	/// <param name="autoSave">If <see langword="true"/>, persist changes after deletion; otherwise the caller must save changes.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
+	/// <typeparam name="TEvent">删除后要生成并发布的领域事件类型。</typeparam>
+	/// <param name="entity">要删除的实体实例。</param>
+	/// <param name="eventFactory">一个工厂委托，用于生成要为此删除操作引发的领域事件。</param>
+	/// <param name="autoSave">如果为 <see langword="true"/>，则在删除后持久化更改；否则调用方必须保存更改。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
 	Task DeleteAsync<TEvent>(TEntity entity, Func<TEvent> eventFactory, bool autoSave = true, CancellationToken cancellationToken = default)
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// Deletes the entity identified by the given key and raises a domain event produced by <paramref name="eventFactory"/>.
+	/// 删除由给定键标识的实体，并引发由 <paramref name="eventFactory"/> 生成的领域事件。
 	/// </summary>
-	/// <typeparam name="TEvent">The domain event type to be generated and published after deletion.</typeparam>
-	/// <param name="id">The primary key value of the entity to delete.</param>
-	/// <param name="eventFactory">A factory delegate producing a domain event to be raised for this deletion.</param>
-	/// <param name="autoSave">If <see langword="true"/>, persist changes after deletion; otherwise the caller must save changes.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>A task representing the asynchronous delete operation.</returns>
+	/// <typeparam name="TEvent">删除后要生成并发布的领域事件类型。</typeparam>
+	/// <param name="id">要删除的实体的主键值。</param>
+	/// <param name="eventFactory">一个工厂委托，用于生成要为此删除操作引发的领域事件。</param>
+	/// <param name="autoSave">如果为 <see langword="true"/>，则在删除后持久化更改；否则调用方必须保存更改。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>表示异步删除操作的任务。</returns>
 	Task DeleteAsync<TEvent>(TKey id, Func<TEvent> eventFactory, bool autoSave = true, CancellationToken cancellationToken = default)
 		where TEvent : DomainEvent;
 
 	/// <summary>
-	/// Finds entities using a query customization delegate.
+	/// 使用查询定制委托查找实体。
 	/// </summary>
 	/// <param name="handle">
-	/// A delegate that receives an <see cref="IQueryable{TEntity}"/> and returns an <see cref="IQueryable{TEntity}"/>
-	/// with the desired modifications (includes, ordering, filtering, projection to entity).
+	/// 一个委托，接收 <see cref="IQueryable{TEntity}"/> 并返回 <see cref="IQueryable{TEntity}"/>，
+	/// 其中包含所需的修改（包含、排序、筛选、投影为实体）。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>A list of entities returned by the customized query. Returns an empty list if none found.</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>定制查询返回的实体列表。未找到任何实体时返回空列表。</returns>
 	Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Counts entities based on a customizable query delegate.
+	/// 基于可定制的查询委托统计实体数量。
 	/// </summary>
-	/// <param name="handle">A delegate that configures the query used to count entities.</param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The number of entities produced by the configured query.</returns>
+	/// <param name="handle">用于配置统计实体所用查询的委托。</param>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>配置的查询所产生的实体数量。</returns>
 	Task<int> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
-	/// Executes a customized query expected to return a single entity.
+	/// 执行预期返回单个实体的定制查询。
 	/// </summary>
 	/// <param name="handle">
-	/// A delegate that configures the query (for example to add filters and includes) and should result in a single entity.
-	/// Implementations should document whether they return the first matching entity or throw when multiple/none are found.
+	/// 一个委托，用于配置查询（例如添加筛选和包含），并且应返回单个实体。
+	/// 实现应说明是返回第一个匹配的实体，还是在存在多个/没有结果时抛出异常。
 	/// </param>
-	/// <param name="cancellationToken">Token to observe while waiting for the task to complete.</param>
-	/// <returns>The single entity returned by the configured query; behavior on zero or multiple results is implementation-specific.</returns>
+	/// <param name="cancellationToken">在等待任务完成期间观察的令牌。</param>
+	/// <returns>配置的查询返回的单个实体；零个或多个结果时的行为取决于实现。</returns>
 	Task<TEntity> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
 }

@@ -2,6 +2,9 @@ using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using Nerosoft.Euonia.Collections;
 
+/// <summary>
+/// 提供 <see cref="ObservableGroupedCollection{TKey, TValue}"/> 分组查询与修改的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>

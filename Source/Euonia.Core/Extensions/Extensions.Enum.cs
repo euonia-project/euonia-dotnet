@@ -5,6 +5,9 @@ using System.Reflection;
 using System.Resources;
 using Nerosoft.Euonia.Reflection;
 
+/// <summary>
+/// 提供枚举特性、描述文本与标志位操作的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>
@@ -70,10 +73,10 @@ public static partial class Extensions
 	/// <summary>
 	/// 获取指定枚举值的本地化描述。
 	/// </summary>
-	/// <param name="enum"></param>
-	/// <param name="resourceType"></param>
-	/// <returns></returns>
-	/// <exception cref="NullReferenceException"></exception>
+	/// <param name="enum">要获取本地化描述的枚举值。</param>
+	/// <param name="resourceType">提供本地化字符串的资源类型，其公共静态属性名与描述键对应。</param>
+	/// <returns>本地化描述；对应属性的值为 <see langword="null"/> 时返回 <see langword="null"/>。</returns>
+	/// <exception cref="NullReferenceException">枚举字段未定义，或 <paramref name="resourceType"/> 上找不到对应名称的公共静态属性时抛出。</exception>
 	public static string? GetDescription(this Enum @enum, Type resourceType)
 	{
 		var field = @enum.GetType().GetField(@enum.ToString());

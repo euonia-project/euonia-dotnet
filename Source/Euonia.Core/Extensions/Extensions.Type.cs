@@ -2,6 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
+/// <summary>
+/// 提供类型反射、继承关系与可赋值性判断的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>

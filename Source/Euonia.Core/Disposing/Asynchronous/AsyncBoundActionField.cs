@@ -60,6 +60,9 @@ public sealed class AsyncBoundActionField<T>
         ValueTask InvokeAsync();
     }
 
+    /// <summary>
+    /// 不可变的绑定操作实现，持有委托与其上下文；上下文更新时创建新实例以支持无锁替换。
+    /// </summary>
     private sealed class BoundAction : IBoundAction
     {
         private readonly Func<T, ValueTask> _action;

@@ -3,30 +3,30 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// Exposes all public services of the class.
+/// 公开类的所有公共服务。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class ExposeServicesAttribute : Attribute, IExposedServiceTypesProvider
 {
     /// <summary>
-    /// The list of exposed service types.
+    /// 公开的服务类型列表。
     /// </summary>
     public Type[] ServiceTypes { get; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether include defaults.
+    /// 获取或设置一个值，指示是否包含默认服务。
     /// </summary>
     public bool IncludeDefaults { get; set; }
 
     /// <summary>
-    /// Gets or sets a value indicating whether include self.
+    /// 获取或设置一个值，指示是否包含自身。
     /// </summary>
     public bool IncludeSelf { get; set; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ExposeServicesAttribute"/> class.
+    /// 初始化 <see cref="ExposeServicesAttribute"/> 类的新实例。
     /// </summary>
-    /// <param name="serviceTypes"></param>
+    /// <param name="serviceTypes">要公开的服务类型；为 <see langword="null"/> 时使用空数组。</param>
     public ExposeServicesAttribute(params Type[] serviceTypes)
     {
         ServiceTypes = serviceTypes ?? Array.Empty<Type>();

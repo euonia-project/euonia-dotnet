@@ -12,6 +12,12 @@ public sealed record RepositoryUpdateInput(string Name, string Level = null!, bo
 /// <summary>分页响应体。</summary>
 public sealed record PagedResult<T>(int Total, int Page, int PageSize, IReadOnlyCollection<T> Items)
 {
+	/// <summary>
+	/// 创建一个总数为零、携带分页参数的空分页结果。
+	/// </summary>
+	/// <param name="page">页码。</param>
+	/// <param name="pageSize">每页记录数。</param>
+	/// <returns>空的分页结果。</returns>
 	public static PagedResult<T> Empty(int page, int pageSize)
 	{
 		return new PagedResult<T>(0, page, pageSize, []);

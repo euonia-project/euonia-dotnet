@@ -4,15 +4,15 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// 
+/// 提供模块类型识别与模块依赖查找的辅助方法。
 /// </summary>
 public static class ModuleHelper
 {
 	/// <summary>
-	/// 
+	/// 判断指定类型是否为可加载的模块类型。
 	/// </summary>
-	/// <param name="type"></param>
-	/// <returns></returns>
+	/// <param name="type">要判断的类型。</param>
+	/// <returns>该类型为非抽象、非泛型类且实现 <see cref="IModuleContext"/> 时为 <see langword="true"/>；否则为 <see langword="false"/>。</returns>
 	public static bool IsModule(Type type)
 	{
 		var typeInfo = type.GetTypeInfo();
@@ -24,6 +24,11 @@ public static class ModuleHelper
 			typeof(IModuleContext).GetTypeInfo().IsAssignableFrom(type);
 	}
 
+	/// <summary>
+	/// 校验指定类型是有效的模块类型，否则抛出异常。
+	/// </summary>
+	/// <param name="moduleType">要校验的模块类型。</param>
+	/// <exception cref="ArgumentException"><paramref name="moduleType"/> 不是有效的模块类型。</exception>
 	internal static void CheckModuleType(Type moduleType)
 	{
 		if (!IsModule(moduleType))
@@ -33,10 +38,10 @@ public static class ModuleHelper
 	}
 
 	/// <summary>
-	/// 
+	/// 递归查找启动模块及其所有依赖模块的类型。
 	/// </summary>
-	/// <param name="startupModuleType"></param>
-	/// <returns></returns>
+	/// <param name="startupModuleType">启动模块的类型。</param>
+	/// <returns>包含启动模块及其全部依赖模块的类型列表（按深度优先顺序）。</returns>
 	internal static List<Type> FindAllModuleTypes(Type startupModuleType)
 	{
 		var moduleTypes = new List<Type>();
@@ -45,10 +50,11 @@ public static class ModuleHelper
 	}
 
 	/// <summary>
-	/// 
+	/// 获取指定模块通过 <see cref="DependsOnAttribute"/> 声明的直接依赖模块类型。
 	/// </summary>
-	/// <param name="moduleType"></param>
-	/// <returns></returns>
+	/// <param name="moduleType">要查找依赖的模块类型。</param>
+	/// <returns>去重后的直接依赖模块类型列表。</returns>
+	/// <exception cref="ArgumentException"><paramref name="moduleType"/> 不是有效的模块类型。</exception>
 	internal static List<Type> FindDependedModuleTypes(Type moduleType)
 	{
 		CheckModuleType(moduleType);

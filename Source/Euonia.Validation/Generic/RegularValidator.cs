@@ -3,17 +3,17 @@
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Class RegularValidator.
-/// Implements the <see cref="AbstractValidator{String}" />
+/// RegularValidator 类。
+/// 实现 <see cref="AbstractValidator{String}" />
 /// </summary>
 /// <seealso cref="AbstractValidator{String}" />
 public class RegularValidator : AbstractValidator<string>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="RegularValidator"/> class.
+    /// 初始化 <see cref="RegularValidator"/> 类的新实例。
     /// </summary>
-    /// <param name="pattern">The pattern.</param>
-    /// <param name="message">The error message.</param>
+    /// <param name="pattern">模式。</param>
+    /// <param name="message">错误消息。</param>
     public RegularValidator(string pattern, string message)
         : base(message)
     {
@@ -21,16 +21,16 @@ public class RegularValidator : AbstractValidator<string>
     }
 
     /// <summary>
-    /// Gets the pattern.
+    /// 获取模式。
     /// </summary>
-    /// <value>The pattern.</value>
+    /// <value>模式。</value>
     public string Pattern { get; }
 
     /// <summary>
-    /// Validates the specified value.
+    /// 验证指定的值。
     /// </summary>
-    /// <param name="value">The value.</param>
-    /// <returns><c>true</c> if the value is valid, <c>false</c> otherwise.</returns>
+    /// <param name="value">要验证的值。</param>
+    /// <returns>如果值有效则为 <c>true</c>，否则为 <c>false</c>。</returns>
     public override bool Validate(string value)
     {
         return Regex.IsMatch(value, Pattern);

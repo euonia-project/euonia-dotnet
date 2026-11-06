@@ -11,7 +11,7 @@ using Nerosoft.Euonia.Repository.EfCore;
 namespace Nerosoft.Euonia.Sample.Persist;
 
 /// <summary>
-/// Base data context with bus and request context support.
+/// 支持消息总线与请求上下文的基础数据上下文。
 /// </summary>
 internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	where TContext : DbContext, IRepositoryContext
@@ -21,11 +21,11 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	private readonly IRequestContextAccessor _request;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="DataContextWithBus{TContext}"/> class.
+	/// 初始化 <see cref="DataContextWithBus{TContext}"/> 类的新实例。
 	/// </summary>
-	/// <param name="options">The options for this context.</param>
-	/// <param name="bus">The <see cref="IBus"/> to publish domain events.</param>
-	/// <param name="request">The accessor to get current request information.</param>
+	/// <param name="options">此上下文的选项。</param>
+	/// <param name="bus">用于发布领域事件的 <see cref="IBus"/>。</param>
+	/// <param name="request">用于获取当前请求信息的访问器。</param>
 	protected DataContextWithBus(DbContextOptions<TContext> options, IBus bus, IRequestContextAccessor request)
 		: base(options)
 	{
@@ -39,7 +39,7 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 
 
 	/// <summary>
-	/// Gets the DateTimeKind used for date and time values.
+	/// 获取用于日期和时间值的 DateTimeKind。
 	/// </summary>
 	protected override DateTimeKind DateTimeKind => DateTimeKind.Utc;
 
@@ -72,6 +72,12 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 		return result;
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>
+	/// 为 <see cref="IAuditable"/> 实体写入创建/更新审计字段；对实现 <see cref="ITombstone"/> 的删除请求
+	/// 改为写入删除标记与删除审计字段，并将状态转为 <see cref="EntityState.Modified"/> 以保留数据行。
+	/// 本次未检测到实际变更的实体不参与赋值，避免产生无意义的更新。
+	/// </remarks>
 	protected override void SetEntryValues(IEnumerable<EntityEntry> entries)
 	{
 		if (!AutoSetEntryValues)
@@ -131,9 +137,9 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	}
 
 	/// <summary>
-	/// Gets the current user from the request context.
+	/// 从请求上下文中获取当前用户。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>当前用户的名称标识；无法获取时为 <see langword="null"/>。</returns>
 	private string? GetCurrentUser()
 	{
 		var principal = _request?.Context?.User;
@@ -146,6 +152,8 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 		return principal.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? principal.Identity?.Name ?? null;
 	}
 
+	/// <inheritdoc/>
+	/// <remarks>为 <see cref="DateTime"/> 与 <see cref="Nullable{DateTime}"/> 属性统一注册 UTC 时间转换器。</remarks>
 	protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
 	{
 		base.ConfigureConventions(configurationBuilder);
@@ -173,18 +181,26 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 		return events;
 	}
 
+	/// <inheritdoc/>
 	public override void Dispose()
 	{
 		ChangeTracker.DetectedEntityChanges -= OnDetectedEntityChanges;
 		base.Dispose();
 	}
 
+	/// <inheritdoc/>
 	public override ValueTask DisposeAsync()
 	{
 		ChangeTracker.DetectedEntityChanges -= OnDetectedEntityChanges;
 		return base.DisposeAsync();
 	}
 
+	/// <summary>
+	/// 处理 EF Core 的实体变更检测事件：记录“状态为已修改但未检测到实际变更”的实体标识。
+	/// </summary>
+	/// <param name="sender">事件源，即当前 <see cref="ChangeTracker"/>。</param>
+	/// <param name="args">包含实体条目与变更检测结果的参数。</param>
+	/// <remarks>记录的标识用于在 <see cref="SetEntryValues"/> 中跳过这些实体，避免写入审计字段后产生空更新。</remarks>
 	protected virtual void OnDetectedEntityChanges(object? sender, DetectedEntityChangesEventArgs args)
 	{
 		Debug.WriteLine(args.Entry.DebugView.LongView);

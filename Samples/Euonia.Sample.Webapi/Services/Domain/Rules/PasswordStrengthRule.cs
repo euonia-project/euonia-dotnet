@@ -4,29 +4,29 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Sample.Business.Rules;
 
 /// <summary>
-/// Represents a rule to validate the strength of a user's password during creation or update.
+/// 表示在创建或更新用户时校验密码强度的规则。
 /// </summary>
 internal sealed class PasswordStrengthRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <summary>
-	/// The regular expression pattern used to validate password strength.
-	/// The password must:
-	/// - Contain at least one lowercase letter.
-	/// - Contain at least one uppercase letter.
-	/// - Contain at least one digit.
-	/// - Be between 8 and 32 characters long.
+	/// 用于校验密码强度的正则表达式模式。
+	/// 密码必须：
+	/// - 至少包含一个小写字母。
+	/// - 至少包含一个大写字母。
+	/// - 至少包含一个数字。
+	/// - 长度介于 8 到 32 个字符之间。
 	/// </summary>
 	private const string REGEX_PATTERN = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[\x00-\xff]{8,32}$";
 
 	/// <summary>
-	/// Executes the rule to validate the password strength.
+	/// 执行规则以校验密码强度。
 	/// </summary>
-	/// <param name="context">The rule context containing the target object.</param>
-	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <param name="context">包含目标对象的规则上下文。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步操作的任务。</returns>
 	public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
-		// Ensure the target object is of type IEditableObject.
+		// 确保目标对象为 IEditableObject 类型。
 		if (context.Target is not IEditableObject target)
 		{
 			return;
@@ -35,30 +35,30 @@ internal sealed class PasswordStrengthRule(IPropertyInfo property) : PropertyRul
 		var property = Property;
 		var value = target.ReadProperty(property)?.ToString();
 
-		// Validate the password during user creation.
+		// 在创建用户时校验密码。
 		if (target.IsNew)
 		{
-			// Check if the password is null or whitespace.
+			// 检查密码是否为空或空白。
 			if (string.IsNullOrWhiteSpace(value))
 			{
-				// Add an error result if the password is required but missing.
+				// 如果密码为必填但缺失，则添加错误结果。
 				context.AddErrorResult("Password is required.");
 			}
-			// Check if the password matches the strength requirements.
+			// 检查密码是否满足强度要求。
 			else if (!Regex.IsMatch(value, REGEX_PATTERN))
 			{
-				// Add an error result if the password does not meet the strength requirements.
+				// 如果密码不满足强度要求，则添加错误结果。
 				context.AddErrorResult("Password does not meet strength requirements.");
 			}
 		}
-		// Validate the password during user updates.
+		// 在更新用户时校验密码。
 		else if (target.IsChanged && !string.IsNullOrEmpty(value) && !Regex.IsMatch(value, REGEX_PATTERN))
 		{
-			// Add an error result if the updated password does not meet the strength requirements.
+			// 如果更新后的密码不满足强度要求，则添加错误结果。
 			context.AddErrorResult("Password does not meet strength requirements.");
 		}
 
-		// Complete the task.
+		// 完成任务。
 		await Task.CompletedTask;
 	}
 }

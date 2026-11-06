@@ -3,18 +3,21 @@
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The model builder.
+/// 模型构建器。
 /// </summary>
 public class ModelBuilder
 {
+    /// <summary>
+    /// 获取或设置模型配置完成时的回调，用于将类型与配置登记到模型配置容器。
+    /// </summary>
     internal Action<Type, ModelProfile> OnConfigure { get; set; } = null!;
 
     /// <summary>
-    /// Sets the configure action for specified model type.
+    /// 为指定模型类型设置配置操作。
     /// </summary>
-    /// <param name="buildAction"></param>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <param name="buildAction">用于配置指定模型类型的委托。</param>
+    /// <typeparam name="T">要配置的模型类型。</typeparam>
+    /// <returns>当前构建器实例，以支持链式调用。</returns>
     public ModelBuilder For<T>(Action<ModelProfile<T>> buildAction)
         where T : class
     {

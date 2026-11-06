@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Represents the method/parameter/class should be validated.
+/// 表示方法/参数/类应被验证。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Parameter | AttributeTargets.Method)]
 public class ValidationAttribute : Attribute
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ValidationAttribute"/> class.
+    /// 初始化 <see cref="ValidationAttribute"/> 类的新实例。
     /// </summary>
     public ValidationAttribute()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ValidationAttribute"/> class.
+    /// 初始化 <see cref="ValidationAttribute"/> 类的新实例。
     /// </summary>
-    /// <param name="validatorType">Type of the validator.</param>
+    /// <param name="validatorType">验证器的类型。</param>
     public ValidationAttribute(Type validatorType)
         : this()
     {
@@ -24,8 +24,8 @@ public class ValidationAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets the type of the validator.
+    /// 获取验证器的类型。
     /// </summary>
-    /// <value>The type of the validator.</value>
+    /// <value>验证器的类型。</value>
     public Type? ValidatorType { get; }
 }

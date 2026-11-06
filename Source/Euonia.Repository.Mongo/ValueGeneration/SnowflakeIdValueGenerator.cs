@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The class used to generate a snowflake id.
+/// 用于生成雪花 Id 的类。
 /// </summary>
 public class SnowflakeIdValueGenerator : IIdGenerator, IValueGenerator<long>
 {

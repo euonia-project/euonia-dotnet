@@ -289,16 +289,26 @@ public sealed class AsyncCollection<T>
 	/// </summary>
 	public T Take() => Take(CancellationToken.None);
 
+	/// <summary>
+	/// 供调试器显示的只读视图，以数组形式暴露集合当前内容的快照。
+	/// </summary>
 	[DebuggerNonUserCode]
 	internal sealed class DebugView
 	{
 		private readonly AsyncCollection<T> _collection;
 
+		/// <summary>
+		/// 初始化调试视图。
+		/// </summary>
+		/// <param name="collection">要检查的异步集合。</param>
 		public DebugView(AsyncCollection<T> collection)
 		{
 			_collection = collection;
 		}
 
+		/// <summary>
+		/// 获取集合当前内容的快照。
+		/// </summary>
 		[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
 		public T[] Items => _collection._collection.ToArray();
 	}

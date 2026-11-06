@@ -54,7 +54,7 @@ public static class DataContextExtensions
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
-            //other automated configurations left out
+            // 其他自动化配置已省略
             if (typeof(ITombstone).IsAssignableFrom(entityType.ClrType))
             {
                 entityType.SetTombstoneQueryFilter();

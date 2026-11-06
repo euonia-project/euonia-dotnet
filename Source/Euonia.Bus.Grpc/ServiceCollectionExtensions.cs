@@ -61,16 +61,16 @@ public static class ServiceCollectionExtensions
 }
 
 /// <summary>
-/// The gRPC service collection extensions.
+/// gRPC 服务集合扩展。
 /// </summary>
 public static class GrpcServiceCollectionExtensions
 {
 	/// <summary>
-	/// Add gRPC service to specified <see cref="IServiceCollection"/>.
+	/// 将 gRPC 服务添加到指定的 <see cref="IServiceCollection"/>。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="configureOptions"></param>
-	/// <returns></returns>
+	/// <param name="services">要添加 gRPC 服务的服务集合。</param>
+	/// <param name="configureOptions">用于进一步配置 <see cref="GrpcServiceOptions"/> 的可选委托；为 <see langword="null"/> 时使用默认设置。</param>
+	/// <returns>原始服务集合，以支持链式调用。</returns>
 	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions>? configureOptions = null)
 	{
 		services.AddGrpc(options =>

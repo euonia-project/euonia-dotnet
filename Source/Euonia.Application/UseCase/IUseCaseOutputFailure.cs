@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Represents the structure of use case output when it is failure.
+/// 表示用例输出为失败时的结构。
 /// </summary>
 public interface IUseCaseOutputFailure
 {
 	/// <summary>
-	/// 
+	/// 报告用例执行失败。
 	/// </summary>
-	/// <param name="exception"></param>
+	/// <param name="exception">导致用例失败的异常。</param>
 	void Error(Exception exception);
 }

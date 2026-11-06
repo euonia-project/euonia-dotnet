@@ -6,6 +6,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Specifications;
 /// <summary>团队查询规范。</summary>
 internal static class TeamSpecification
 {
+	/// <summary>匹配所有团队的规范，以主键非空作为条件。</summary>
 	public static readonly Specification<Team> All = new DirectSpecification<Team>(t => t.Id != null);
 
 	/// <summary>Id 等于 <paramref name="id"/>。</summary>

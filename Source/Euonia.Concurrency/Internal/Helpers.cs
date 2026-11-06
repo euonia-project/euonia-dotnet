@@ -109,16 +109,33 @@ internal static class Helpers
         private readonly TTask _task;
         private readonly ConfiguredTaskAwaitable.ConfiguredTaskAwaiter _taskAwaiter;
 
+        /// <summary>
+        /// 使用要包装的任务初始化等待对象。
+        /// </summary>
+        /// <param name="task">被包装的任务，其完成状态用于驱动等待。</param>
         public NonThrowingAwaitable(TTask task)
         {
             _task = task;
             _taskAwaiter = task.ConfigureAwait(false).GetAwaiter();
         }
 
+        /// <summary>
+        /// 获取等待对象自身，以便 <c>await</c> 表达式可以启动等待流程。
+        /// </summary>
+        /// <returns>当前等待对象。</returns>
         public NonThrowingAwaitable<TTask> GetAwaiter() => this;
 
+        /// <summary>
+        /// 获取被包装的任务是否已完成。
+        /// </summary>
         public bool IsCompleted => _taskAwaiter.IsCompleted;
 
+        /// <summary>
+        /// 获取被包装的任务而不重新抛出其异常。
+        /// </summary>
+        /// <returns>已完成的被包装任务。</returns>
+        /// <exception cref="InvalidOperationException">当任务尚未完成时抛出。</exception>
+        /// <remarks>完成性检查仅在 DEBUG 构建中生效，发布构建下依赖等待协议保证任务已完成。</remarks>
         public TTask GetResult()
         {
             // 不调用 _taskAwaiter.GetResult()，因为它可能抛出异常！
@@ -127,7 +144,16 @@ internal static class Helpers
             return _task;
         }
 
+        /// <summary>
+        /// 注册任务完成时要执行的回调。
+        /// </summary>
+        /// <param name="continuation">任务完成后的延续委托。</param>
         public void OnCompleted(Action continuation) => _taskAwaiter.OnCompleted(continuation);
+
+        /// <summary>
+        /// 以不捕获执行上下文的方式注册任务完成时要执行的回调。
+        /// </summary>
+        /// <param name="continuation">任务完成后的延续委托。</param>
         public void UnsafeOnCompleted(Action continuation) => _taskAwaiter.UnsafeOnCompleted(continuation);
     }
 

@@ -5,21 +5,21 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Concurrency.Redis;
 
 /// <summary>
-/// Implements a <see cref="ISemaphoreProvider"/> using Redis.
+/// 使用 Redis 实现 <see cref="ISemaphoreProvider"/>。
 /// </summary>
 public sealed partial class RedisSemaphoreProvider : ISemaphoreProvider<RedisSynchronizationHandle>
 {
     /// <summary>
-    /// Note: while we store this as a list to simplify the interactions with the RedLock components, in fact the semaphore
-    /// algorithm only works with a single database. With multiple databases, we risk violating our <see cref="MaxCount"/>.
-    /// For example, with 3 dbs and 2 tickets, we can have 3 users acquiring AB, BC, and AC. Each database sees 2 tickets taken!
+    /// 注意：虽然我们将其存储为列表以简化与 RedLock 组件的交互，但实际上信号量
+    /// 算法只适用于单个数据库。使用多个数据库时，我们可能会违反 <see cref="MaxCount"/>。
+    /// 例如，有 3 个数据库和 2 张票时，可以有 3 个用户分别获取 AB、BC 和 AC。每个数据库都看到 2 张票被占用！
     /// </summary>
     private readonly IReadOnlyList<IDatabase> _databases;
 
     private readonly RedisSynchronizationOptions _options;
 
     /// <summary>
-    /// Constructs a semaphore named <paramref name="key"/> using the provided <paramref name="maxCount"/>, <paramref name="database"/>, and <paramref name="options"/>.
+    /// 使用提供的 <paramref name="maxCount"/>、<paramref name="database"/> 和 <paramref name="options"/> 构造名为 <paramref name="key"/> 的信号量。
     /// </summary>
     public RedisSemaphoreProvider(RedisKey key, int maxCount, IDatabase database, Action<RedisSynchronizationOptionsBuilder>? options = null)
     {
@@ -42,17 +42,16 @@ public sealed partial class RedisSemaphoreProvider : ISemaphoreProvider<RedisSyn
 
     private RedisKey Key { get; }
 
-    /// <summary>
-    /// Implements <see cref="ISemaphoreProvider.Name"/>
-    /// </summary>
+    /// <inheritdoc />
     public string Name => Key.ToString();
 
-    /// <summary>
-    /// Implements <see cref="ISemaphoreProvider.MaxCount"/>
-    /// </summary>
+    /// <inheritdoc />
     public int MaxCount { get; }
 }
 
+/// <summary>
+/// 提供 <see cref="RedisSemaphoreProvider"/> 的信号量获取方法的分部实现。
+/// </summary>
 public sealed partial class RedisSemaphoreProvider
 {
     /// <inheritdoc />
@@ -102,6 +101,9 @@ public sealed partial class RedisSemaphoreProvider
     }
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ISemaphoreProvider"/> 接口成员。
+/// </summary>
 public sealed partial class RedisSemaphoreProvider
 {
     ISynchronizationHandle ISemaphoreProvider.Acquire(TimeSpan? timeout, CancellationToken cancellationToken)

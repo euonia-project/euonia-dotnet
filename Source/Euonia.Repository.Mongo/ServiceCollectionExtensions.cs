@@ -6,23 +6,24 @@ using Nerosoft.Euonia.Repository.Mongo;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// The extension methods for <see cref="IServiceCollection"/>.
+/// 用于 <see cref="IServiceCollection"/> 的扩展方法。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	/// The extension methods for <see cref="IServiceCollection"/>.
+	/// 用于 <see cref="IServiceCollection"/> 的扩展方法。
 	/// </summary>
-	/// <param name="services">The service collection instance.</param>
+	/// <param name="services">服务集合实例。</param>
 	extension(IServiceCollection services)
 	{
 		/// <summary>
-		/// Adds the mongo repository.
+		/// 添加 Mongo 上下文与仓储。
 		/// </summary>
-		/// <param name="configure">The mongo database options configure action.</param>
-		/// <param name="contextLifeTime"></param>
-		/// <typeparam name="TContext"></typeparam>
-		/// <returns></returns>
+		/// <typeparam name="TContext">Mongo 数据库上下文类型，须同时实现 <see cref="IRepositoryContext"/>。</typeparam>
+		/// <param name="configure">Mongo 数据库选项配置操作。</param>
+		/// <param name="contextLifeTime">上下文与仓储注册使用的服务生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。</param>
+		/// <returns>同一 <paramref name="services"/> 实例，以便链式调用。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="contextLifeTime"/> 不是 <see cref="ServiceLifetime"/> 的有效取值时抛出。</exception>
 		public IServiceCollection AddMongoRepository<TContext>(Action<MongoDbOptions> configure, ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 			where TContext : MongoDbContext, IRepositoryContext
 		{
@@ -33,13 +34,14 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
-		/// Adds the mongo repository.
+		/// 添加 Mongo 上下文与仓储。
 		/// </summary>
-		/// <param name="configure">The mongo database options configure action.</param>
-		/// <param name="contextLifeTime"></param>
-		/// <typeparam name="TContextService"></typeparam>
-		/// <typeparam name="TContextImplementation"></typeparam>
-		/// <returns></returns>
+		/// <typeparam name="TContextService">作为服务契约注册的 Mongo 上下文类型。</typeparam>
+		/// <typeparam name="TContextImplementation">实际实例化的上下文类型，须可赋值给 <typeparamref name="TContextService"/>。</typeparam>
+		/// <param name="configure">Mongo 数据库选项配置操作。</param>
+		/// <param name="contextLifeTime">上下文与仓储注册使用的服务生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。</param>
+		/// <returns>同一 <paramref name="services"/> 实例，以便链式调用。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="contextLifeTime"/> 不是 <see cref="ServiceLifetime"/> 的有效取值时抛出。</exception>
 		public IServiceCollection AddMongoRepository<TContextService, TContextImplementation>(Action<MongoDbOptions> configure, ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 			where TContextService : MongoDbContext, IRepositoryContext
 			where TContextImplementation : TContextService
@@ -51,11 +53,15 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
-		/// Adds the mongo repository.
+		/// 添加 Mongo 仓储。
 		/// </summary>
-		/// <param name="contextLifeTime"></param>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <param name="contextLifeTime">仓储注册使用的服务生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。</param>
+		/// <returns>同一 <paramref name="services"/> 实例，以便链式调用。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="contextLifeTime"/> 不是 <see cref="ServiceLifetime"/> 的有效取值时抛出。</exception>
+		/// <remarks>
+		/// 将开放泛型 <see cref="IRepository{TContext, TEntity, TKey}"/> 注册为 <see cref="MongoRepository{TContext, TEntity, TKey}"/>，
+		/// 使任意实体类型都可解析到 Mongo 仓储实现。
+		/// </remarks>
 		public IServiceCollection AddMongoRepository(ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 		{
 			switch (contextLifeTime)
@@ -77,14 +83,18 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
-		/// Adds the mongo database context.
+		/// 添加 Mongo 数据库上下文。
 		/// </summary>
-		/// <param name="configure">The mongo database options configure action.</param>
-		/// <param name="contextLifeTime"></param>
-		/// <typeparam name="TContextService"></typeparam>
-		/// <typeparam name="TContextImplementation"></typeparam>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <typeparam name="TContextService">作为服务契约注册的 Mongo 上下文类型。</typeparam>
+		/// <typeparam name="TContextImplementation">实际实例化的上下文类型，须可赋值给 <typeparamref name="TContextService"/>。</typeparam>
+		/// <param name="configure">Mongo 数据库选项配置操作。</param>
+		/// <param name="contextLifeTime">上下文注册使用的服务生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。</param>
+		/// <returns>同一 <paramref name="services"/> 实例，以便链式调用。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="contextLifeTime"/> 不是 <see cref="ServiceLifetime"/> 的有效取值时抛出。</exception>
+		/// <remarks>
+		/// 同时以单例方式注册由 <see cref="MongoDbOptions.ConnectionString"/> 与 <see cref="MongoDbOptions.Database"/>
+		/// 构建的 <see cref="IMongoDatabase"/>，供上下文复用。
+		/// </remarks>
 		public IServiceCollection AddMongoDbContext<TContextService, TContextImplementation>(Action<MongoDbOptions> configure, ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 			where TContextService : MongoDbContext, IRepositoryContext
 			where TContextImplementation : TContextService
@@ -116,13 +126,17 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
-		/// Adds the mongo database context.
+		/// 添加 Mongo 数据库上下文。
 		/// </summary>
-		/// <param name="configure">The mongo database options configure action.</param>
-		/// <param name="contextLifeTime"></param>
-		/// <typeparam name="TContext"></typeparam>
-		/// <returns></returns>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <typeparam name="TContext">Mongo 数据库上下文类型，须同时实现 <see cref="IRepositoryContext"/>。</typeparam>
+		/// <param name="configure">Mongo 数据库选项配置操作。</param>
+		/// <param name="contextLifeTime">上下文注册使用的服务生命周期，默认为 <see cref="ServiceLifetime.Scoped"/>。</param>
+		/// <returns>同一 <paramref name="services"/> 实例，以便链式调用。</returns>
+		/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="contextLifeTime"/> 不是 <see cref="ServiceLifetime"/> 的有效取值时抛出。</exception>
+		/// <remarks>
+		/// 同时以单例方式注册由 <see cref="MongoDbOptions.ConnectionString"/> 与 <see cref="MongoDbOptions.Database"/>
+		/// 构建的 <see cref="IMongoDatabase"/>，供上下文复用。
+		/// </remarks>
 		public IServiceCollection AddMongoDbContext<TContext>(Action<MongoDbOptions> configure, ServiceLifetime contextLifeTime = ServiceLifetime.Scoped)
 			where TContext : MongoDbContext, IRepositoryContext
 		{

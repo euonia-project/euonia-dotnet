@@ -4,16 +4,16 @@ using Nerosoft.Euonia.Caching.Redis;
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// The implement of <see cref="ICacheService"/> with Redis.
+/// 使用 Redis 的 <see cref="ICacheService"/> 实现。
 /// </summary>
 public class RedisCacheService : BaseCacheService, ICacheService
 {
 	private readonly RedisCacheManager _manager;
 
 	/// <summary>
-	/// 
+	/// 初始化 <see cref="RedisCacheService"/> 类的新实例。
 	/// </summary>
-	/// <param name="options"></param>
+	/// <param name="options">包含 Redis 缓存选项（如键前缀）的选项包装器。</param>
 	public RedisCacheService(IOptions<RedisCacheOptions> options)
 	{
 		_manager = new RedisCacheManager(options.Value);

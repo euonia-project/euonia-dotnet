@@ -49,6 +49,11 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 		return NoContent();
 	}
 
+	/// <summary>
+	/// 按标识查看指定账号的资料，账号不存在时返回 404。
+	/// </summary>
+	/// <param name="id">账号标识。</param>
+	/// <returns>包含账号资料的动作结果。</returns>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpGet("{id}")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
@@ -59,6 +64,13 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 		return Ok(result);
 	}
 
+	/// <summary>
+	/// 按关键字分页搜索账号，返回包含分页结果的响应。
+	/// </summary>
+	/// <param name="keyword">搜索关键字。</param>
+	/// <param name="skip">跳过的记录数。</param>
+	/// <param name="take">返回的最大记录数。</param>
+	/// <returns>包含分页结果的动作结果。</returns>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpGet("search")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
@@ -68,6 +80,11 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 		return Ok(result);
 	}
 
+	/// <summary>
+	/// 创建新账号，成功时返回 201 及新账号标识的访问地址。
+	/// </summary>
+	/// <param name="data">创建账号所需的入参。</param>
+	/// <returns>包含新账号标识的动作结果。</returns>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPost]
 	[ProducesResponseType(StatusCodes.Status201Created)]

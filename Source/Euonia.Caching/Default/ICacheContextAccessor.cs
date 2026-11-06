@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Interface ICacheContextAccessor
+/// 提供当前缓存获取上下文 <see cref="IAcquireContext"/> 的访问入口。
 /// </summary>
 public interface ICacheContextAccessor
 {
     /// <summary>
-    /// Gets or sets the current <see cref="IAcquireContext"/>.
+    /// 获取或设置当前的 <see cref="IAcquireContext"/>。
     /// </summary>
-    /// <value>The <see cref="IAcquireContext"/> instance.</value>
+    /// <value><see cref="IAcquireContext"/> 实例。</value>
     IAcquireContext? Current { get; set; }
 }

@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Sample.Business.Handlers;
 
 /// <summary>
 /// 代码仓库的命令侧处理：经 <see cref="Actuator"/> 把命令映射为工厂边界操作，
-/// 操作权限（<see cref="Permissions.RepositoryPermissions"/>）、角色与行级数据权限在工厂边界强制执行。
+/// 操作权限（<see cref="Nerosoft.Euonia.Sample.Domain.Permissions.RepositoryPermissions"/>）、角色与行级数据权限在工厂边界强制执行。
 /// </summary>
 internal sealed class RepositoryCommandHandler(IObjectFactory factory, IActuator actuator)
 	: CommandHandlerBase(factory, actuator),
@@ -16,6 +16,7 @@ internal sealed class RepositoryCommandHandler(IObjectFactory factory, IActuator
 	  IHandler<UpdateRepositoryCommand>,
 	  IHandler<DeleteRepositoryCommand>
 {
+	/// <inheritdoc/>
 	public Task<string> HandleAsync(CreateRepositoryCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		return Actuator.For<CodeRepository>()
@@ -36,6 +37,7 @@ internal sealed class RepositoryCommandHandler(IObjectFactory factory, IActuator
 		               .ReturnAsync(target => target.Id);
 	}
 
+	/// <inheritdoc/>
 	public Task HandleAsync(UpdateRepositoryCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		return Actuator.For<CodeRepository>()
@@ -56,6 +58,7 @@ internal sealed class RepositoryCommandHandler(IObjectFactory factory, IActuator
 		               .ExecuteAsync(cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task HandleAsync(DeleteRepositoryCommand message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		// 删除走工厂直接删除：工厂的保存路径（EditableObject.SaveAsync 的 Delete 操作）解析的是

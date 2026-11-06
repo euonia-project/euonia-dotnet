@@ -5,9 +5,16 @@ using Nerosoft.Euonia.Sample.Domain.Aggregates;
 
 namespace Nerosoft.Euonia.Sample.Persist.Configurations;
 
+/// <summary>
+/// <see cref="Team"/> 的 EF Core 实体映射配置。
+/// </summary>
 [DbContext(typeof(SampleDataContext))]
 public class TeamEntityConfiguration : IEntityTypeConfiguration<Team>
 {
+	/// <summary>
+	/// 配置团队表名、主键与列映射，忽略业务对象基类属性以及由 <c>team_member</c> 表承载的成员集合。
+	/// </summary>
+	/// <param name="builder">用于构建实体映射的构建器。</param>
 	public void Configure(EntityTypeBuilder<Team> builder)
 	{
 		builder.ToTable("team");

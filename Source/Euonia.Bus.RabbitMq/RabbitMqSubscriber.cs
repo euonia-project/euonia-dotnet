@@ -65,7 +65,7 @@ internal class RabbitMqSubscriber : RabbitMqRecipient, ISubscriber
 		await Channel.QueueBindAsync(queue.QueueName, exchangeName, Options.RoutingKey ?? "*", cancellationToken: cancellationToken);
 		await Channel.BasicQosAsync((uint)Math.Max(0, Options.PrefetchSize), (ushort)Math.Clamp(Options.PrefetchCount, 0, ushort.MaxValue), false, cancellationToken: cancellationToken);
 
-		// Consume from the declared queue (use the generated queueName) instead of an empty name.
+		// 从已声明的队列消费（使用生成的 queueName），而不是使用空名称。
 		await Channel.BasicConsumeAsync(queue.QueueName, Options.AutoAck, Consumer, cancellationToken: cancellationToken);
 	}
 }

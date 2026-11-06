@@ -3,17 +3,17 @@
 namespace System;
 
 /// <summary>
-/// The extension methods for <see cref="IServiceProvider"/> interface.
+/// <see cref="IServiceProvider"/> 接口的扩展方法。
 /// </summary>
 public static class ServiceProviderExtensions
 {
     /// <summary>
-    /// Gets the service object with specified name.
+    /// 获取指定名称的服务对象。
     /// </summary>
-    /// <param name="provider">The service provider instance.</param>
-    /// <param name="name">The registered service name.</param>
-    /// <typeparam name="TService">The service type.</typeparam>
-    /// <returns></returns>
+    /// <param name="provider">服务提供程序实例。</param>
+    /// <param name="name">已注册的服务名称。</param>
+    /// <typeparam name="TService">服务类型。</typeparam>
+    /// <returns>名称对应的服务实例；未注册或其名称为 <see langword="null"/> 的注册项时为 <see langword="null"/>。</returns>
     public static TService? GetNamedService<TService>(this IServiceProvider provider, string name)
         where TService : class
     {
@@ -22,13 +22,13 @@ public static class ServiceProviderExtensions
     }
 
     /// <summary>
-    /// Gets the service object with specified name.
+    /// 获取指定名称的服务对象。
     /// </summary>
-    /// <param name="provider">The service provider instance.</param>
-    /// <param name="name">The registered service name.</param>
-    /// <typeparam name="TService">The service type.</typeparam>
-    /// <returns></returns>
-    /// <exception cref="InvalidOperationException">Throws if service with specified name was not resolved.</exception>
+    /// <param name="provider">服务提供程序实例。</param>
+    /// <param name="name">已注册的服务名称。</param>
+    /// <typeparam name="TService">服务类型。</typeparam>
+    /// <returns>名称对应的服务实例。</returns>
+    /// <exception cref="InvalidOperationException">如果具有指定名称的服务未能解析，则抛出异常。</exception>
     public static TService GetNamedRequiredService<TService>(this IServiceProvider provider, string name)
         where TService : class
     {
@@ -37,13 +37,13 @@ public static class ServiceProviderExtensions
     }
 
 	/// <summary>
-	/// Gets the service object of the specified type.
+	/// 获取指定类型的服务对象。
 	/// </summary>
-	/// <param name="provider"></param>
-	/// <param name="serviceType">An object that specifies the type of service object to get.</param>
-	/// <param name="serviceKey">An object that specifies the key of service object to get.</param>
-	/// <returns></returns>
-	/// <exception cref="InvalidOperationException"></exception>
+	/// <param name="provider">服务提供程序实例。</param>
+	/// <param name="serviceType">一个对象，指定要获取的服务对象的类型。</param>
+	/// <param name="serviceKey">一个对象，指定要获取的服务对象的键。</param>
+	/// <returns>键对应的服务实例；未找到时为 <see langword="null"/>。</returns>
+	/// <exception cref="InvalidOperationException">服务提供程序不支持键控服务时抛出。</exception>
 	public static object? GetKeyedService(this IServiceProvider provider, Type serviceType, object serviceKey)
 	{
 		if (provider is IKeyedServiceProvider keyedServiceProvider)

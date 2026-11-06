@@ -1,9 +1,9 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// The default implementation of <see cref="IUseCasePresenter{TOutput}"/>.
+/// <see cref="IUseCasePresenter{TOutput}"/> 的默认实现。
 /// </summary>
-/// <typeparam name="TOutput"></typeparam>
+/// <typeparam name="TOutput">用例执行结果（输出）的类型。</typeparam>
 public class DefaultUseCasePresenter<TOutput> : DisposableObject,
 												IUseCasePresenter<TOutput>
 {
@@ -37,7 +37,7 @@ public class DefaultUseCasePresenter<TOutput> : DisposableObject,
 	}
 
 	/// <summary>
-	/// Gets the output of the use case.
+	/// 获取用例的输出。
 	/// </summary>
 	public TOutput Output { get; private set; } = default!;
 

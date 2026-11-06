@@ -6,17 +6,17 @@
 public enum MessageProcessType
 {
     /// <summary>
-    /// 发送。
+    /// 发送消息。
     /// </summary>
     Send,
 
     /// <summary>
-    /// 投递。
+    /// 投递（分发）消息。
     /// </summary>
     Dispatch,
 
     /// <summary>
-    /// 接收。
+    /// 接收消息。
     /// </summary>
     Receive
 }

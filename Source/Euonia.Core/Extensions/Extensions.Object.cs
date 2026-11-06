@@ -3,6 +3,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 
+/// <summary>
+/// 提供对象转换、条件执行与特性反射的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>

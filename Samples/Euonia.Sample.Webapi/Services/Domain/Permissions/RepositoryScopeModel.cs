@@ -20,6 +20,10 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 	/// <summary>行级授予维度：值为仓库标识。解析器经 <c>AddGrant(码, 本维度, 仓库id集合)</c> 展开。</summary>
 	public const string RepositoryDimension = "repository";
 
+	/// <summary>
+	/// 定义仓库的数据权限维度：所有者、团队、资源标识，并把密级声明为 <c>level</c> 分类属性。
+	/// </summary>
+	/// <param name="builder">数据权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<CodeRepository> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, r => r.OwnerId)
@@ -28,12 +32,19 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 		       .Classify("level", r => r.Level);
 	}
 
+	/// <summary>
+	/// 获取默认策略：公开行对匿名访问放行，本人或本团队的行对已登录用户可见。
+	/// </summary>
 	public override ScopePolicy<CodeRepository> Policy
 		=> ScopePolicy<CodeRepository>.Any(
 			ScopePolicy<CodeRepository>.Where(r => r.IsPublic),
 			ScopePolicy<CodeRepository>.Self(),
 			ScopePolicy<CodeRepository>.Grant(ScopeDimensions.Team));
 
+	/// <summary>
+	/// 按操作声明策略：读允许本人、本团队或单行授予；推送与删除仅按单行授予，机密行一律否决。
+	/// </summary>
+	/// <param name="policies">按资源类型收集操作策略的策略集合。</param>
 	public override void Declare(ScopePolicySet<CodeRepository> policies)
 	{
 		// 读侧显式按码：已登录用户必须持有 repository:view（类型级闸门由工厂/控制器检查），

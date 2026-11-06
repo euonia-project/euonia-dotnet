@@ -2,6 +2,9 @@ using System.Security.Cryptography;
 
 namespace System;
 
+/// <summary>
+/// 基于加密随机数与时间戳生成不同类型的 GUID。
+/// </summary>
 internal class GuidGenerator
 {
     private static readonly RandomNumberGenerator _generator = RandomNumberGenerator.Create();

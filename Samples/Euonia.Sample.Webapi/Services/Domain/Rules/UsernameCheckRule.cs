@@ -4,25 +4,25 @@ using Nerosoft.Euonia.Sample.Domain.Repositories;
 namespace Nerosoft.Euonia.Sample.Business.Rules;
 
 /// <summary>
-/// Represents a rule to check the availability of a username during user creation.
+/// 表示一条在创建用户期间检查用户名可用性的规则。
 /// </summary>
 internal sealed class UsernameCheckRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
 	/// <summary>
-	/// Executes the rule to verify if the username is available.
+	/// 执行规则，以验证用户名是否可用。
 	/// </summary>
-	/// <param name="context">The rule context containing the target object.</param>
-	/// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-	/// <returns>A task that represents the asynchronous operation.</returns>
+	/// <param name="context">包含目标对象的规则上下文。</param>
+	/// <param name="cancellationToken">用于取消操作的取消令牌。</param>
+	/// <returns>表示异步操作的任务。</returns>
 	public override async Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
-		// Ensure the target object is of type UserGeneralBusiness.
+		// 确保目标对象的类型为 UserGeneralBusiness。
 		if (context.Target is not IEditableObject target)
 		{
 			return;
 		}
 
-		// Skip the rule if the operation is not an insert.
+		// 如果操作不是插入，则跳过该规则。
 		if (!target.IsNew)
 		{
 			return;
@@ -39,24 +39,24 @@ internal sealed class UsernameCheckRule(IPropertyInfo property) : PropertyRuleBa
 		{
 			var configuration = target.BusinessContext.GetRequiredService<IConfiguration>();
 
-			// Retrieve the list of reserved usernames from the configuration.
+			// 从配置中获取保留用户名的列表。
 			var reserved = configuration.GetValue<List<string>>("ReservedUsernames");
 
-			// Check if the username is in the reserved list.
+			// 检查用户名是否位于保留列表中。
 			if (reserved?.Contains(value, StringComparer.InvariantCultureIgnoreCase) == true)
 			{
-				// Add an error result if the username is reserved.
+				// 如果用户名已被保留，则添加错误结果。
 				context.AddErrorResult($"Username '{value}' is unavailable.");
 				return;
 			}
 
 			var repository = target.BusinessContext.GetRequiredService<IUserRepository>();
 
-			// Check if the username already exists in the repository.
+			// 检查仓储中是否已存在该用户名。
 			var exists = await repository.AnyAsync(t => t.Username == value, cancellationToken);
 			if (exists)
 			{
-				// Add an error result if the username already exists.
+				// 如果用户名已存在，则添加错误结果。
 				context.AddErrorResult($"Username '{value}' is unavailable.");
 			}
 		}

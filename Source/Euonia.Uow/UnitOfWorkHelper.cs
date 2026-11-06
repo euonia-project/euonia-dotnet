@@ -17,13 +17,13 @@ internal static class UnitOfWorkHelper
 	/// </returns>
 	public static bool IsUnitOfWorkType(Type implementationType)
 	{
-		//Explicitly defined UnitOfWorkAttribute
+		//显式定义 UnitOfWorkAttribute
 		if (HasUnitOfWorkAttribute(implementationType) || AnyMethodHasUnitOfWorkAttribute(implementationType))
 		{
 			return true;
 		}
 
-		//Conventional classes
+		//约定类
 		if (typeof(IUnitOfWorkEnabled).GetTypeInfo().IsAssignableFrom(implementationType))
 		{
 			return true;
@@ -50,7 +50,7 @@ internal static class UnitOfWorkHelper
 	{
 		ArgumentNullException.ThrowIfNull(methodInfo);
 
-		//Method declaration
+		//方法声明
 		var attrs = methodInfo.GetCustomAttributes(true).OfType<UnitOfWorkAttribute>().ToArray();
 		if (attrs.Any())
 		{
@@ -60,7 +60,7 @@ internal static class UnitOfWorkHelper
 
 		if (methodInfo.DeclaringType != null)
 		{
-			//Class declaration
+			//类声明
 			attrs = methodInfo.DeclaringType.GetTypeInfo().GetCustomAttributes(true).OfType<UnitOfWorkAttribute>().ToArray();
 			if (attrs.Any())
 			{
@@ -68,7 +68,7 @@ internal static class UnitOfWorkHelper
 				return !unitOfWorkAttribute.IsDisabled;
 			}
 
-			//Conventional classes
+			//约定类
 			if (typeof(IUnitOfWorkEnabled).GetTypeInfo().IsAssignableFrom(methodInfo.DeclaringType))
 			{
 				unitOfWorkAttribute = null;

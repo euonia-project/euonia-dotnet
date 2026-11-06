@@ -4,6 +4,9 @@ using StackExchange.Redis;
 
 namespace Nerosoft.Euonia.Concurrency.Redis.Internal;
 
+/// <summary>
+/// 持有 Redis 锁的内部句柄：由后台监视器按节奏续期，并在释放时向所有已获取的数据库发送释放命令。
+/// </summary>
 internal sealed class RedisLockHandle : ISynchronizationHandle, LeaseMonitor.ILeaseHandle
 {
     private readonly IRedisLockExtensibleSynchronizationPrimitive _primitive;
@@ -11,6 +14,13 @@ internal sealed class RedisLockHandle : ISynchronizationHandle, LeaseMonitor.ILe
     private readonly TimeoutValue _extensionCadence, _expiry;
     private readonly LeaseMonitor _monitor;
 
+    /// <summary>
+    /// 使用获取结果与续期参数初始化 <see cref="RedisLockHandle"/>，并立即启动租约监视器。
+    /// </summary>
+    /// <param name="primitive">用于续期与释放锁的同步原语。</param>
+    /// <param name="tryAcquireTasks">获取锁时各数据库对应的成功任务。</param>
+    /// <param name="extensionCadence">后台续期的间隔。</param>
+    /// <param name="expiry">锁的过期时间。</param>
     public RedisLockHandle(
         IRedisLockExtensibleSynchronizationPrimitive primitive,
         Dictionary<IDatabase, Task<bool>> tryAcquireTasks,
@@ -21,22 +31,20 @@ internal sealed class RedisLockHandle : ISynchronizationHandle, LeaseMonitor.ILe
         _tryAcquireTasks = tryAcquireTasks;
         _extensionCadence = extensionCadence;
         _expiry = expiry;
-        // important to set this last, since the monitor constructor will read other fields of this
+        // 必须最后设置，因为监视器构造函数会读取此对象的其他字段
         _monitor = new LeaseMonitor(this);
     }
 
-    /// <summary>
-    /// Implements <see cref="ISynchronizationHandle.HandleCancellationToken"/>
-    /// </summary>
+    /// <inheritdoc />
     public CancellationToken HandleCancellationToken => _monitor.HandleLostToken;
 
     /// <summary>
-    /// Releases the lock
+    /// 释放锁并释放底层资源。
     /// </summary>
     public void Dispose() => this.DisposeSyncViaAsync();
 
     /// <summary>
-    /// Releases the lock asynchronously
+    /// 异步释放锁
     /// </summary>
     public async ValueTask DisposeAsync()
     {

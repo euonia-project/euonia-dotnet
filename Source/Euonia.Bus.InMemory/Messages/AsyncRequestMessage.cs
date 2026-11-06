@@ -5,17 +5,17 @@ using System.Runtime.CompilerServices;
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A <see langword="class"/> for async request messages, which can either be used directly or through derived classes.
+/// 用于异步请求消息的 <see langword="class"/>，既可直接使用，也可通过派生类使用。
 /// </summary>
-/// <typeparam name="T">The type of request to make.</typeparam>
+/// <typeparam name="T">要发起的请求类型。</typeparam>
 public class AsyncRequestMessage<T>
 {
 	private Task<T>? _response;
 
 	/// <summary>
-	/// Gets the message response.
+	/// 获取消息响应。
 	/// </summary>
-	/// <exception cref="InvalidOperationException">Thrown when <see cref="HasReceivedResponse"/> is <see langword="false"/>.</exception>
+	/// <exception cref="InvalidOperationException">当 <see cref="HasReceivedResponse"/> 为 <see langword="false"/> 时引发。</exception>
 	public Task<T> Response
 	{
 		get
@@ -30,26 +30,26 @@ public class AsyncRequestMessage<T>
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether a response has already been assigned to this instance.
+	/// 获取一个值，指示是否已为当前实例分配了响应。
 	/// </summary>
 	public bool HasReceivedResponse { get; private set; }
 
 	/// <summary>
-	/// Replies to the current request message.
+	/// 回复当前请求消息。
 	/// </summary>
-	/// <param name="response">The response to use to reply to the request message.</param>
-	/// <exception cref="InvalidOperationException">Thrown if <see cref="Response"/> has already been set.</exception>
+	/// <param name="response">用于回复请求消息的响应。</param>
+	/// <exception cref="InvalidOperationException">当 <see cref="Response"/> 已被设置时引发。</exception>
 	public void Reply(T response)
 	{
 		Reply(Task.FromResult(response));
 	}
 
 	/// <summary>
-	/// Replies to the current request message.
+	/// 回复当前请求消息。
 	/// </summary>
-	/// <param name="response">The response to use to reply to the request message.</param>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="response"/> is <see langword="null"/>.</exception>
-	/// <exception cref="InvalidOperationException">Thrown if <see cref="Response"/> has already been set.</exception>
+	/// <param name="response">用于回复请求消息的响应。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="response"/> 为 <see langword="null"/> 时引发。</exception>
+	/// <exception cref="InvalidOperationException">当 <see cref="Response"/> 已被设置时引发。</exception>
 	public void Reply(Task<T> response)
 	{
 		ArgumentAssert.ThrowIfNull(response);
@@ -73,7 +73,7 @@ public class AsyncRequestMessage<T>
 	}
 
 	/// <summary>
-	/// Throws an <see cref="InvalidOperationException"/> when a response is not available.
+	/// 当响应不可用时引发 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForNoResponseReceived()
@@ -82,7 +82,7 @@ public class AsyncRequestMessage<T>
 	}
 
 	/// <summary>
-	/// Throws an <see cref="InvalidOperationException"/> when <see cref="Reply(T)"/> or <see cref="Reply(Task{T})"/> are called twice.
+	/// 当 <see cref="Reply(T)"/> 或 <see cref="Reply(Task{T})"/> 被调用两次时引发 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForDuplicateReply()

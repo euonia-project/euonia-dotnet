@@ -57,10 +57,10 @@ public enum OsbaDiagnosticLevel
 	/// <summary>一般信息。</summary>
 	Information,
 
-	/// <summary>警告。</summary>
+	/// <summary>警告级别。</summary>
 	Warning,
 
-	/// <summary>错误。</summary>
+	/// <summary>错误级别。</summary>
 	Error,
 
 	/// <summary>关闭诊断日志。</summary>

@@ -373,6 +373,9 @@ public sealed class WeakEventManager
 
     #endregion
 
+    /// <summary>
+    /// 表示一次事件订阅，记录以弱引用持有的订阅者及其处理方法，用于精确比较与移除。
+    /// </summary>
     private readonly struct Subscription : IEquatable<Subscription>
     {
         public Subscription(WeakReference? subscriber, MethodInfo handler)

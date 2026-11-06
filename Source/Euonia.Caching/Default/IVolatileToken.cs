@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Interface IVolatileToken
+/// 表示可失效的缓存令牌；仅当令牌有效时缓存项才可命中。
 /// </summary>
 public interface IVolatileToken
 {
     /// <summary>
-    /// Gets a value indicating whether this instance is current.
+    /// 获取一个值，指示此实例是否为当前状态。
     /// </summary>
-    /// <value><c>true</c> if this instance is current; otherwise, <c>false</c>.</value>
+    /// <value>若此实例为当前状态，则为 <c>true</c>；否则为 <c>false</c>。</value>
     bool IsCurrent { get; }
 }

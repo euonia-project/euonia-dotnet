@@ -14,15 +14,19 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class Team : EditableObjectBase<Team, string>
 {
+	/// <summary>注册的团队名称属性元数据，供属性读写与数据范围映射使用。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+	/// <summary>注册的团队负责人属性元数据，同时是行级数据范围的负责人维度。</summary>
 	public static readonly PropertyInfo<string> LeaderIdProperty = RegisterProperty<string>(p => p.LeaderId);
 
+	/// <summary>团队名称。</summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>团队负责人（使用者标识），建团队时取当前用户。</summary>
 	public string LeaderId
 	{
 		get => GetProperty(LeaderIdProperty);
@@ -68,6 +72,11 @@ public sealed class Team : EditableObjectBase<Team, string>
 		Members = team.Members;
 	}
 
+	/// <summary>
+	/// 工厂插入钩子：将当前团队写入团队存储。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步插入操作的任务。</returns>
 	[Permission(TeamPermissions.Create, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryInsert]
 	protected override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -75,6 +84,11 @@ public sealed class Team : EditableObjectBase<Team, string>
 		await BusinessContext.GetRequiredService<ITeamStore>().AddAsync(this, cancellationToken);
 	}
 
+	/// <summary>
+	/// 工厂更新钩子：将当前团队的最新状态写回团队存储。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步更新操作的任务。</returns>
 	[Permission(TeamPermissions.Edit, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)

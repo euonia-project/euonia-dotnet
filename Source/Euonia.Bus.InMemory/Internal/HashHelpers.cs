@@ -3,22 +3,22 @@
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// 
+/// 提供哈希表容量计算的辅助方法，例如根据期望容量选取不小于它的质数。
 /// </summary>
 internal static class HashHelpers
 {
 	/// <summary>
-	/// Maximum prime smaller than the maximum array length.
+	/// 小于最大数组长度的最大质数。
 	/// </summary>
 	private const int MAX_PRIME_ARRAY_LENGTH = 0x7FFFFFC3;
 
 	/// <summary>
-	/// An arbitrary prime factor used in <see cref="GetPrime(int)"/>.
+	/// 用于 <see cref="GetPrime(int)"/> 的任意质因子。
 	/// </summary>
 	private const int HASH_PRIME = 101;
 
 	/// <summary>
-	/// Table of prime numbers to use as hash table sizes.
+	/// 用作哈希表大小的质数表。
 	/// </summary>
 	private static readonly int[] _primes =
 	{
@@ -30,10 +30,10 @@ internal static class HashHelpers
 	};
 
 	/// <summary>
-	/// Checks whether a value is a prime.
+	/// 检查某个值是否为质数。
 	/// </summary>
-	/// <param name="candidate">The value to check.</param>
-	/// <returns>Whether or not <paramref name="candidate"/> is a prime.</returns>
+	/// <param name="candidate">要检查的值。</param>
+	/// <returns><paramref name="candidate"/> 是否为质数。</returns>
 	private static bool IsPrime(int candidate)
 	{
 		if ((candidate & 1) != 0)
@@ -55,10 +55,10 @@ internal static class HashHelpers
 	}
 
 	/// <summary>
-	/// Gets the smallest prime bigger than a specified value.
+	/// 获取大于指定值的最小质数。
 	/// </summary>
-	/// <param name="min">The target minimum value.</param>
-	/// <returns>The new prime that was found.</returns>
+	/// <param name="min">目标最小值。</param>
+	/// <returns>找到的新质数。</returns>
 	public static int GetPrime(int min)
 	{
 		foreach (var prime in _primes)
@@ -81,10 +81,10 @@ internal static class HashHelpers
 	}
 
 	/// <summary>
-	/// Returns size of hashtable to grow to.
+	/// 返回哈希表要扩展到的容量。
 	/// </summary>
-	/// <param name="oldSize">The previous table size.</param>
-	/// <returns>The expanded table size.</returns>
+	/// <param name="oldSize">先前的表大小。</param>
+	/// <returns>扩展后的表大小。</returns>
 	public static int ExpandPrime(int oldSize)
 	{
 		int newSize = 2 * oldSize;
@@ -98,18 +98,18 @@ internal static class HashHelpers
 	}
 
 	/// <summary>
-	/// Returns approximate reciprocal of the divisor: ceil(2**64 / divisor).
+	/// 返回除数的近似倒数：ceil(2**64 / divisor)。
 	/// </summary>
-	/// <remarks>This should only be used on 64-bit.</remarks>
+	/// <remarks>仅应在 64 位平台上使用。</remarks>
 	public static ulong GetFastModMultiplier(uint divisor)
 	{
 		return ulong.MaxValue / divisor + 1;
 	}
 
 	/// <summary>
-	/// Performs a mod operation using the multiplier pre-computed with <see cref="GetFastModMultiplier"/>.
+	/// 使用由 <see cref="GetFastModMultiplier"/> 预先计算的乘数执行取模运算。
 	/// </summary>
-	/// <remarks>This should only be used on 64-bit.</remarks>
+	/// <remarks>仅应在 64 位平台上使用。</remarks>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static uint FastMod(uint value, uint divisor, ulong multiplier)
 	{

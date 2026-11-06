@@ -1,10 +1,10 @@
 ﻿namespace Nerosoft.Euonia.Caching.Redis;
 
 /// <summary>
-/// Manages redis client configurations for the cache handle.
+/// 管理缓存句柄使用的 redis 客户端配置。
 /// <para>
-/// Configurations will be added by the cache configuration builder/factory or the configuration
-/// loader. The cache handle will pick up the configuration matching the handle's name.
+/// 配置由缓存配置构建器/工厂或配置加载器添加。
+/// 缓存句柄将选取与句柄名称匹配的配置。
 /// </para>
 /// </summary>
 public static class RedisConfigurations
@@ -29,10 +29,10 @@ public static class RedisConfigurations
     }
 
     /// <summary>
-    /// Adds the configuration.
+    /// 添加配置。
     /// </summary>
-    /// <param name="configuration">The configuration.</param>
-    /// <exception cref="ArgumentNullException">If configuration is null.</exception>
+    /// <param name="configuration">配置。</param>
+    /// <exception cref="ArgumentNullException">当 configuration 为 null 时抛出。</exception>
     public static void AddConfiguration(RedisConfiguration configuration)
     {
         lock (_configLock)
@@ -45,14 +45,14 @@ public static class RedisConfigurations
     }
 
     /// <summary>
-    /// Gets the configuration.
+    /// 获取配置。
     /// </summary>
-    /// <param name="configurationName">The identifier.</param>
-    /// <param name="connectionString"></param>
-    /// <returns>The <c>RedisConfiguration</c>.</returns>
-    /// <exception cref="ArgumentNullException">If id is null.</exception>
+    /// <param name="configurationName">标识符。</param>
+    /// <param name="connectionString">当指定名称尚无已注册配置时，用于创建该配置的 Redis 连接字符串。</param>
+    /// <returns><c>RedisConfiguration</c>。</returns>
+    /// <exception cref="ArgumentNullException">当 id 为 null 时抛出。</exception>
     /// <exception cref="InvalidOperationException">
-    /// If no configuration was added for the id.
+    /// 当该 id 未添加任何配置时抛出。
     /// </exception>
     public static RedisConfiguration GetConfiguration(string configurationName, string connectionString)
     {
@@ -62,7 +62,7 @@ public static class RedisConfigurations
         {
             Check.EnsureNotNullOrWhiteSpace(connectionString, nameof(connectionString));
 
-            // defaulting to database 0, no way to set it via connection strings atm.
+            // 默认使用数据库 0，目前无法通过连接字符串设置。
             var configuration = new RedisConfiguration(configurationName, connectionString);
             AddConfiguration(configuration);
         }

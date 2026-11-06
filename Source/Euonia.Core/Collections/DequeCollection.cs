@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Collections;
 /// 双端队列集合类。此类不能被继承。
 /// 实现了 <see cref="IList{T}" />、<see cref="IReadOnlyList{T}" />、<see cref="IList" />
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">双端队列中元素的类型。</typeparam>
 /// <seealso cref="IList{T}" />
 /// <seealso cref="IReadOnlyList{T}" />
 /// <seealso cref="IList" />

@@ -3,27 +3,27 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// To be added.
+/// 表示一个模块化应用程序，提供对模块容器、服务集合与服务提供程序的访问，并支持关闭。
 /// </summary>
 public interface IModularityApplication : IModuleContainer, IDisposable
 {
     /// <summary>
-    /// Gets the startup module type.
+    /// 获取启动模块类型。
     /// </summary>
     Type StartupModuleType { get; }
 
     /// <summary>
-    /// Gets the <see cref="IServiceCollection"/> instance of current application.
+    /// 获取当前应用程序的 <see cref="IServiceCollection"/> 实例。
     /// </summary>
     IServiceCollection Services { get; }
 
     /// <summary>
-    /// Gets the <see cref="IServiceProvider"/> instance of current application.
+    /// 获取当前应用程序的 <see cref="IServiceProvider"/> 实例。
     /// </summary>
     IServiceProvider ServiceProvider { get; }
 
     /// <summary>
-    /// Shutdown the application.
+    /// 关闭应用程序。
     /// </summary>
     void Shutdown();
 }

@@ -20,11 +20,13 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard guard, IObjectFactory factory)
 	: BaseApplicationService, IRepositoryApplicationService
 {
+	/// <inheritdoc/>
 	public Task<PagedResult<RepositoryDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new RepositoryListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<RepositoryDto> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		if (guard.User?.Identity?.IsAuthenticated != true)
@@ -48,6 +50,7 @@ internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard 
 		return ToDto(repository);
 	}
 
+	/// <inheritdoc/>
 	public async Task<string> CreateAsync(RepositoryCreateInput input, CancellationToken cancellationToken = default)
 	{
 		var command = new CreateRepositoryCommand
@@ -72,6 +75,7 @@ internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard 
 		return await tcs.Task;
 	}
 
+	/// <inheritdoc/>
 	public Task UpdateAsync(string id, RepositoryUpdateInput input, CancellationToken cancellationToken = default)
 	{
 		var command = new UpdateRepositoryCommand
@@ -84,17 +88,20 @@ internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard 
 		return Bus.SendAsync(command, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new DeleteRepositoryCommand { Id = id }, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task PushAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var command = await factory.CreateAsync<PushRepositoryCommand>(id, cancellationToken);
 		await factory.ExecuteAsync(command, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<object> ExplainAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var repository = await factory.FetchAsync<CodeRepository>(id, cancellationToken);

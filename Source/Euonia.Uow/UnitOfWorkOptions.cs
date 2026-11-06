@@ -26,7 +26,7 @@ public class UnitOfWorkOptions : IUnitOfWorkOptions
 	public TimeSpan? Timeout { get; set; }
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UnitOfWorkOptions"/> class.
+	/// 初始化 <see cref="UnitOfWorkOptions"/> 类的新实例。
 	/// </summary>
 	public UnitOfWorkOptions()
 	{

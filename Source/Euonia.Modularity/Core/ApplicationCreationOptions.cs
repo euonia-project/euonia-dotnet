@@ -3,14 +3,14 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The application creation options.
+/// 应用程序创建选项。
 /// </summary>
 public class ApplicationCreationOptions
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ApplicationCreationOptions"/> class.
+    /// 初始化 <see cref="ApplicationCreationOptions"/> 类的新实例。
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">应用程序使用的服务集合。</param>
     public ApplicationCreationOptions(IServiceCollection services)
     {
         Services = services;
@@ -18,12 +18,12 @@ public class ApplicationCreationOptions
     }
 
     /// <summary>
-    /// Gets the services.
+    /// 获取服务集合。
     /// </summary>
     public IServiceCollection Services { get; }
 
     /// <summary>
-    /// Gets the configuration.
+    /// 获取配置。
     /// </summary>
     public ConfigurationBuilderOptions Configuration { get; }
 }

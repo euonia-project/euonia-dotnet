@@ -181,6 +181,9 @@ public sealed class AsyncLock
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露锁的标识、占用状态与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

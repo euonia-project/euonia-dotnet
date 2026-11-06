@@ -6,17 +6,17 @@ using Quartz;
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// Extension methods for setting up Quartz services.
+/// 用于设置 Quartz 服务的扩展方法。
 /// </summary>
 public static class QuartzExtensions
 {
 	/// <summary>
-	/// 
+	/// 注册指定类型的作业。
 	/// </summary>
-	/// <param name="configurator"></param>
-	/// <param name="options"></param>
-	/// <typeparam name="TJob"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TJob">作业类型，必须实现 <see cref="IJob"/>。</typeparam>
+	/// <param name="configurator">Quartz 构建器。</param>
+	/// <param name="options">作业选项；为 <see langword="null"/> 时使用默认选项。</param>
+	/// <returns>同一个 <paramref name="configurator"/> 实例，以便链式调用。</returns>
 	public static IQuartzBuilder AddJob<TJob>(this IQuartzBuilder configurator, BackgroundJobOptions? options = null)
 		where TJob : IJob
 	{
@@ -24,14 +24,19 @@ public static class QuartzExtensions
 	}
 
 	/// <summary>
-	/// 
+	/// 按类型注册作业及其触发器。
 	/// </summary>
-	/// <param name="configurator"></param>
-	/// <param name="jobType"></param>
-	/// <param name="options"></param>
-	/// <returns></returns>
-	/// <exception cref="ArgumentNullException"></exception>
-	/// <exception cref="ArgumentException"></exception>
+	/// <param name="configurator">Quartz 构建器。</param>
+	/// <param name="jobType">作业类型，必须实现 <see cref="IJob"/>。</param>
+	/// <param name="options">作业选项；为 <see langword="null"/> 时创建默认选项。</param>
+	/// <returns>同一个 <paramref name="configurator"/> 实例，以便链式调用。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="jobType"/> 或 <paramref name="configurator"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="ArgumentException">当 <paramref name="jobType"/> 未实现 <see cref="IJob"/> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当类型上的调度特性与选项均未提供任何触发器配置时抛出。</exception>
+	/// <remarks>
+	/// <para>未指定名称或组时，依次使用 <see cref="BackgroundJobAttribute"/> 的值、类型名称和 <c>default</c> 组。</para>
+	/// <para>作业键为 <c>{Name}.job</c>，触发器标识由 <see cref="BackgroundJobScheduleAttribute.Identity"/> 附加 <c>.trigger</c> 后缀构成。</para>
+	/// </remarks>
 	public static IQuartzBuilder AddJob(this IQuartzBuilder configurator, Type jobType, BackgroundJobOptions? options = null)
 	{
 		ArgumentNullException.ThrowIfNull(jobType);
@@ -103,11 +108,13 @@ public static class QuartzExtensions
 	}
 
 	/// <summary>
-	/// Add jobs from the specified assembly.
+	/// 注册指定程序集中所有实现 <see cref="IJob"/> 的导出类型。
 	/// </summary>
-	/// <param name="configurator"></param>
-	/// <param name="assembly"></param>
-	/// <returns></returns>
+	/// <param name="configurator">Quartz 构建器。</param>
+	/// <param name="assembly">要扫描的程序集。</param>
+	/// <returns>同一个 <paramref name="configurator"/> 实例，以便链式调用。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="assembly"/> 为 <see langword="null"/> 时抛出。</exception>
+	/// <exception cref="InvalidOperationException">当程序集中的某个作业类型没有可用的触发器配置时抛出。</exception>
 	public static IQuartzBuilder AddJobs(this IQuartzBuilder configurator, Assembly assembly)
 	{
 		ArgumentNullException.ThrowIfNull(assembly);
@@ -123,12 +130,13 @@ public static class QuartzExtensions
 	}
 
 	/// <summary>
-	/// Configure the job trigger.
+	/// 使用指定的调度特性配置触发器。
 	/// </summary>
-	/// <param name="config"></param>
-	/// <param name="attribute"></param>
-	/// <param name="jobKey"></param>
-	/// <returns></returns>
+	/// <param name="config">触发器配置器。</param>
+	/// <param name="attribute">提供触发器标识、调度、优先级和延迟的调度特性。</param>
+	/// <param name="jobKey">触发器关联的作业键。</param>
+	/// <returns>同一个 <paramref name="config"/> 实例，以便链式调用。</returns>
+	/// <remarks>当 <see cref="BackgroundJobScheduleAttribute.Delay"/> 大于 0 时，在延迟结束后的最近偶数秒启动；否则立即启动。</remarks>
 	public static ITriggerConfigurator<IJob> Configure(this ITriggerConfigurator<IJob> config, BackgroundJobScheduleAttribute attribute, JobKey jobKey)
 	{
 		config.WithIdentity($"{attribute.Identity}.trigger")
@@ -149,13 +157,14 @@ public static class QuartzExtensions
 	}
 
 	/// <summary>
-	/// Configure the job trigger.
+	/// 使用指定具体类型的调度特性配置触发器。
 	/// </summary>
-	/// <param name="config"></param>
-	/// <param name="attribute"></param>
-	/// <param name="jobKey"></param>
-	/// <typeparam name="TSchedule"></typeparam>
-	/// <returns></returns>
+	/// <typeparam name="TSchedule">调度特性的具体类型，必须继承 <see cref="BackgroundJobScheduleAttribute"/>。</typeparam>
+	/// <param name="config">触发器配置器。</param>
+	/// <param name="attribute">提供触发器标识、调度、优先级和延迟的调度特性。</param>
+	/// <param name="jobKey">触发器关联的作业键。</param>
+	/// <returns>同一个 <paramref name="config"/> 实例，以便链式调用。</returns>
+	/// <remarks>当 <see cref="BackgroundJobScheduleAttribute.Delay"/> 大于 0 时，在延迟结束后的最近偶数秒启动；否则立即启动。</remarks>
 	public static ITriggerConfigurator<IJob> Configure<TSchedule>(this ITriggerConfigurator<IJob> config, TSchedule attribute, JobKey jobKey)
 		where TSchedule : BackgroundJobScheduleAttribute
 	{
@@ -177,7 +186,7 @@ public static class QuartzExtensions
 	}
 
 	/// <summary>
-	/// Rounds the specified time up to the next even second.
+	/// 将指定时间向上舍入到下一个偶数秒。
 	/// </summary>
 	private static DateTimeOffset EvenSecondDate(DateTimeOffset value)
 	{

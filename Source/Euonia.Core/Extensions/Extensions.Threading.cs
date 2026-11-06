@@ -2,6 +2,9 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using Nerosoft.Euonia.Threading;
 
+/// <summary>
+/// 提供任务等待、同步上下文调度与任务工厂执行的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
     /// <summary>

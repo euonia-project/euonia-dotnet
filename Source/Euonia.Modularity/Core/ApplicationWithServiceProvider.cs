@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// A base class for applications that provides access to the <see cref="IServiceProvider"/>.
+/// 为应用程序提供 <see cref="IServiceProvider"/> 访问的基类。
 /// </summary>
 public class ApplicationWithServiceProvider : ModularityApplicationBase, IApplicationWithServiceProvider
 {

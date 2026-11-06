@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The module manager.
+/// 模块管理器。
 /// </summary>
 public class ModuleManager : IModuleManager, ISingletonDependency
 {
@@ -12,11 +12,11 @@ public class ModuleManager : IModuleManager, ISingletonDependency
     private readonly IEnumerable<IModuleLifecycle> _lifecycleContributors;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ModuleManager"/> class.
+    /// 初始化 <see cref="ModuleManager"/> 类的新实例。
     /// </summary>
-    /// <param name="moduleContainer"></param>
-    /// <param name="options"></param>
-    /// <param name="serviceProvider"></param>
+    /// <param name="moduleContainer">模块容器，提供当前已加载的模块。</param>
+    /// <param name="options">模块生命周期选项，指定参与生命周期的模块生命周期实现。</param>
+    /// <param name="serviceProvider">用于解析生命周期参与者的服务提供程序。</param>
     public ModuleManager(IModuleContainer moduleContainer, IOptions<ModuleLifecycleOptions> options, IServiceProvider serviceProvider)
     {
         _moduleContainer = moduleContainer;
@@ -29,10 +29,10 @@ public class ModuleManager : IModuleManager, ISingletonDependency
     }
 
     /// <summary>
-    /// Initializes the modules.
+    /// 初始化模块。
     /// </summary>
-    /// <param name="context"></param>
-    /// <exception cref="Exception"></exception>
+    /// <param name="context">应用程序初始化上下文。</param>
+    /// <exception cref="Exception">某个生命周期参与者初始化模块失败时抛出，内部异常为原始失败原因。</exception>
     public void InitializeModules(ApplicationInitializationContext context)
     {
         foreach (var contributor in _lifecycleContributors)
@@ -52,10 +52,10 @@ public class ModuleManager : IModuleManager, ISingletonDependency
     }
 
     /// <summary>
-    /// Shutdowns the modules.
+    /// 关闭模块。
     /// </summary>
-    /// <param name="context"></param>
-    /// <exception cref="Exception"></exception>
+    /// <param name="context">应用程序关闭上下文。</param>
+    /// <exception cref="Exception">某个生命周期参与者终止模块失败时抛出，内部异常为原始失败原因。</exception>
     public void UnloadModules(ApplicationShutdownContext context)
     {
         var modules = _moduleContainer.Modules.Reverse().ToList();

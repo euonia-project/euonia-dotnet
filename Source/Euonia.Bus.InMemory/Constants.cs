@@ -1,17 +1,17 @@
 ﻿namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// Contains constant values used in the In-Memory Bus module.
+/// 包含内存总线模块中使用的常量值。
 /// </summary>
 internal static class Constants
 {
 	/// <summary>
-	/// The default name for the In-Memory transport.
+	/// 内存传输的默认名称。
 	/// </summary>
 	public const string DefaultTransportName = "InMemory";
 
 	/// <summary>
-	/// The configuration section name for In-Memory Bus settings.
+	/// 内存总线设置的配置节名称。
 	/// </summary>
 	public const string ConfigurationSection = "Euonia:Bus:InMemory";
 }

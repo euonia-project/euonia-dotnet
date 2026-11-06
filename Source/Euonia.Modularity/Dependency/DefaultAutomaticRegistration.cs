@@ -4,15 +4,15 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The default automatic registration.
+/// 默认自动注册。
 /// </summary>
 public class DefaultAutomaticRegistration : AutomaticRegistrationBase
 {
     /// <summary>
-    /// Detect whether the specified type should register service automatically or not.
+    /// 判断是否禁用指定类型的自动注册。
     /// </summary>
-    /// <param name="type"></param>
-    /// <returns></returns>
+    /// <param name="type">要检查的类型。</param>
+    /// <returns>如果该类型应跳过自动注册则返回 <see langword="true"/>，否则返回 <see langword="false"/>；默认实现始终返回 <see langword="false"/>。</returns>
     protected virtual bool IsAutomaticRegistrationDisabled(Type type) => false;
 
     /// <inheritdoc />

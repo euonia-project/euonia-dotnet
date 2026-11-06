@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The contract interface of the module container.
+/// 模块容器的契约接口。
 /// </summary>
 public interface IModuleContainer
 {
 	/// <summary>
-	/// Gets the registered modules.
+	/// 获取已注册的模块。
 	/// </summary>
     IReadOnlyList<IModuleDescriptor> Modules { get; }
 }

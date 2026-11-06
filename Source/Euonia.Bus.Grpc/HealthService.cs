@@ -4,14 +4,14 @@ using Grpc.HealthCheck;
 namespace Nerosoft.Euonia.Grpc;
 
 /// <summary>
-/// Grpc health check service.
+/// gRPC 健康检查服务。
 /// </summary>
 public class HealthService : HealthServiceImpl
 {
     private const string SERVICE_NAME = "HealthCheck";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="HealthService"/> class.
+    /// 初始化 <see cref="HealthService"/> 类的新实例。
     /// </summary>
     public HealthService()
     {

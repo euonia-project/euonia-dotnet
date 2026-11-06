@@ -3,6 +3,9 @@ using Nerosoft.Euonia.Modularity;
 
 namespace System;
 
+/// <summary>
+/// 延迟解析的服务提供程序；此分部类提供按服务键解析服务的成员。
+/// </summary>
 public partial class LazyServiceProvider
 {
 	/// <inheritdoc />

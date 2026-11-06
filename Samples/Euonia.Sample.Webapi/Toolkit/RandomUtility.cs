@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Sample.Toolkit;
 
 /// <summary>
-/// A utility class for generating random numbers or strings.
+/// 用于生成随机数或随机字符串的实用工具类。
 /// </summary>
 public class RandomUtility : Random
 {
@@ -11,10 +11,10 @@ public class RandomUtility : Random
 	private readonly byte[] _uint32Buffer = new byte[4];
 
 	/// <summary>
-	/// Generate a random string with a given size.
+	/// 生成指定长度的随机字符串。
 	/// </summary>
-	/// <param name="length"></param>
-	/// <returns></returns>
+	/// <param name="length">要生成的字符串长度，默认 32；为奇数时实际长度向下取偶。</param>
+	/// <returns>由小写十六进制字符组成的随机字符串。</returns>
 	public static string GenerateRandomString(int length = 32)
 	{
 		var bytes = new byte[Convert.ToInt32(length / 2)];
@@ -29,10 +29,10 @@ public class RandomUtility : Random
 	}
 
 	/// <summary>
-	/// Returns a nonnegative random number.
+	/// 返回一个非负随机数。
 	/// </summary>
 	/// <returns>
-	/// A 32-bit signed integer greater than or equal to zero and less than <see cref="F:System.Int32.MaxValue"/>.
+	/// 一个大于等于零且小于 <see cref="F:System.Int32.MaxValue"/> 的 32 位有符号整数。
 	/// </returns>
 	public override int Next()
 	{
@@ -41,14 +41,14 @@ public class RandomUtility : Random
 	}
 
 	/// <summary>
-	/// Returns a nonnegative random number less than the specified maximum.
+	/// 返回一个小于指定最大值的非负随机数。
 	/// </summary>
-	/// <param name="maxValue">The exclusive upper bound of the random number to be generated. <paramref name="maxValue"/> must be greater than or equal to zero.</param>
+	/// <param name="maxValue">要生成的随机数的排他上限。<paramref name="maxValue"/> 必须大于或等于零。</param>
 	/// <returns>
-	/// A 32-bit signed integer greater than or equal to zero, and less than <paramref name="maxValue"/>; that is, the range of return values ordinarily includes zero but not <paramref name="maxValue"/>. However, if <paramref name="maxValue"/> equals zero, <paramref name="maxValue"/> is returned.
+	/// 一个大于等于零且小于 <paramref name="maxValue"/> 的 32 位有符号整数；也就是说，返回值范围通常包含零但不包含 <paramref name="maxValue"/>。但是，如果 <paramref name="maxValue"/> 等于零，则返回 <paramref name="maxValue"/>。
 	/// </returns>
 	/// <exception cref="T:System.ArgumentOutOfRangeException">
-	/// 	<paramref name="maxValue"/> is less than zero.
+	/// 	<paramref name="maxValue"/> 小于零。
 	/// </exception>
 	public override int Next(int maxValue)
 	{
@@ -58,15 +58,15 @@ public class RandomUtility : Random
 	}
 
 	/// <summary>
-	/// Returns a random number within a specified range.
+	/// 返回指定范围内的随机数。
 	/// </summary>
-	/// <param name="minValue">The inclusive lower bound of the random number returned.</param>
-	/// <param name="maxValue">The exclusive upper bound of the random number returned. <paramref name="maxValue"/> must be greater than or equal to <paramref name="minValue"/>.</param>
+	/// <param name="minValue">所返回随机数的包含下限。</param>
+	/// <param name="maxValue">所返回随机数的排他上限。<paramref name="maxValue"/> 必须大于或等于 <paramref name="minValue"/>。</param>
 	/// <returns>
-	/// A 32-bit signed integer greater than or equal to <paramref name="minValue"/> and less than <paramref name="maxValue"/>; that is, the range of return values includes <paramref name="minValue"/> but not <paramref name="maxValue"/>. If <paramref name="minValue"/> equals <paramref name="maxValue"/>, <paramref name="minValue"/> is returned.
+	/// 一个大于等于 <paramref name="minValue"/> 且小于 <paramref name="maxValue"/> 的 32 位有符号整数；也就是说，返回值范围包含 <paramref name="minValue"/> 但不包含 <paramref name="maxValue"/>。如果 <paramref name="minValue"/> 等于 <paramref name="maxValue"/>，则返回 <paramref name="minValue"/>。
 	/// </returns>
 	/// <exception cref="T:System.ArgumentOutOfRangeException">
-	/// 	<paramref name="minValue"/> is greater than <paramref name="maxValue"/>.
+	/// 	<paramref name="minValue"/> 大于 <paramref name="maxValue"/>。
 	/// </exception>
 	public override int Next(int minValue, int maxValue)
 	{
@@ -91,10 +91,10 @@ public class RandomUtility : Random
 	}
 
 	/// <summary>
-	/// Returns a random number between 0.0 and 1.0.
+	/// 返回一个介于 0.0 和 1.0 之间的随机数。
 	/// </summary>
 	/// <returns>
-	/// A double-precision floating point number greater than or equal to 0.0, and less than 1.0.
+	/// 一个大于或等于 0.0 且小于 1.0 的双精度浮点数。
 	/// </returns>
 	public override double NextDouble()
 	{
@@ -104,11 +104,11 @@ public class RandomUtility : Random
 	}
 
 	/// <summary>
-	/// Fills the elements of a specified array of bytes with random numbers.
+	/// 用随机数填充指定字节数组的元素。
 	/// </summary>
-	/// <param name="buffer">An array of bytes to contain random numbers.</param>
+	/// <param name="buffer">用于存放随机数的字节数组。</param>
 	/// <exception cref="T:System.ArgumentNullException">
-	/// 	<paramref name="buffer"/> is null.
+	/// 	<paramref name="buffer"/> 为 null。
 	/// </exception>
 	public override void NextBytes(byte[] buffer)
 	{

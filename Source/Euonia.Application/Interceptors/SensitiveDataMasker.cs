@@ -153,6 +153,9 @@ public static class SensitiveDataMasker
 		return descriptors.ToArray();
 	}
 
+	/// <summary>
+	/// 单个可读成员的反射描述：名称、取值委托与敏感标记，用于缓存反射结果、避免每次脱敏重复读取特性。
+	/// </summary>
 	private sealed class MemberDescriptor
 	{
 		public MemberDescriptor(string name, Func<object?, object?> getter, SensitiveDataAttribute? attribute)

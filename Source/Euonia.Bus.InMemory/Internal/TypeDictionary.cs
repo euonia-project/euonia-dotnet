@@ -7,52 +7,52 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 #pragma warning disable CS8500 // This takes the address of, gets the size of, or declares a pointer to a managed type
 
 /// <summary>
-/// A specialized <see cref="Dictionary{TKey, TValue}"/> implementation to be used with messenger types.
+/// 一种专用的 <see cref="Dictionary{TKey, TValue}"/> 实现，供消息信使类型使用。
 /// </summary>
-/// <typeparam name="TKey">The type of keys in the dictionary.</typeparam>
-/// <typeparam name="TValue">The type of values in the dictionary.</typeparam>
+/// <typeparam name="TKey">字典中键的类型。</typeparam>
+/// <typeparam name="TValue">字典中值的类型。</typeparam>
 [DebuggerDisplay("Count = {Count}")]
 internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	where TKey : IEquatable<TKey>
 	where TValue : class
 {
 	/// <summary>
-	/// The index indicating the start of a free linked list.
+	/// 指示空闲链表起始位置的索引。
 	/// </summary>
 	private const int START_OF_FREE_LIST = -3;
 
 	/// <summary>
-	/// The array of 1-based indices for the <see cref="Entry"/> items stored in <see cref="_entries"/>.
+	/// 存储在 <see cref="_entries"/> 中的 <see cref="Entry"/> 项基于 1 的索引数组。
 	/// </summary>
 	private int[] _buckets;
 
 	/// <summary>
-	/// The array of currently stored key-value pairs (ie. the lists for each hash group).
+	/// 当前存储的键值对数组（即每个哈希分组对应的列表）。
 	/// </summary>
 	private Entry[] _entries;
 
 	/// <summary>
-	/// A coefficient used to speed up retrieving the target bucket when doing lookups.
+	/// 用于在进行查找时加速定位目标桶的系数。
 	/// </summary>
 	private ulong _fastModMultiplier;
 
 	/// <summary>
-	/// The current number of items stored in the map.
+	/// 映射中当前存储的项数。
 	/// </summary>
 	private int _count;
 
 	/// <summary>
-	/// The 1-based index for the start of the free list within <see cref="_entries"/>.
+	/// <see cref="_entries"/> 中空闲链表起始位置基于 1 的索引。
 	/// </summary>
 	private int _freeList;
 
 	/// <summary>
-	/// The total number of empty items.
+	/// 空项的总数。
 	/// </summary>
 	private int _freeCount;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ITypeDictionary{TKey,TValue}"/> class.
+	/// 初始化 <see cref="ITypeDictionary{TKey,TValue}"/> 类的新实例。
 	/// </summary>
 	public TypeDictionary()
 	{
@@ -106,21 +106,21 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Checks whether or not the dictionary contains a pair with a specified key.
+	/// 检查字典中是否包含具有指定键的键值对。
 	/// </summary>
-	/// <param name="key">The key to look for.</param>
-	/// <returns>Whether or not the key was present in the dictionary.</returns>
+	/// <param name="key">要查找的键。</param>
+	/// <returns>该键是否存在于字典中。</returns>
 	public bool ContainsKey(TKey key)
 	{
 		return !Unsafe.IsNullRef(ref FindValue(key));
 	}
 
 	/// <summary>
-	/// Gets the value if present for the specified key.
+	/// 获取指定键的值（如果存在）。
 	/// </summary>
-	/// <param name="key">The key to look for.</param>
-	/// <param name="value">The value found, otherwise <see langword="default"/>.</param>
-	/// <returns>Whether or not the key was present.</returns>
+	/// <param name="key">要查找的键。</param>
+	/// <param name="value">找到的值，否则为 <see langword="default"/>。</param>
+	/// <returns>该键是否存在。</returns>
 	public bool TryGetValue(TKey key, [MaybeNullWhen(false)] out TValue value)
 	{
 		ref var valRef = ref FindValue(key);
@@ -186,12 +186,11 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Gets the value for the specified key, or, if the key is not present,
-	/// adds an entry and returns the value by ref. This makes it possible to
-	/// add or update a value in a single look up operation.
+	/// 获取指定键的值；如果键不存在，则添加一个条目并返回该值的引用。这使得
+	/// 可以在单次查找操作中添加或更新值。
 	/// </summary>
-	/// <param name="key">Key to look for.</param>
-	/// <returns>Reference to the new or existing value.</returns>
+	/// <param name="key">要查找的键。</param>
+	/// <returns>对新的或现有值的引用。</returns>
 	public ref TValue GetOrAddValueRef(TKey key)
 	{
 		var entries = _entries;
@@ -256,29 +255,29 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	public Enumerator GetEnumerator() => new(this);
 
 	/// <summary>
-	/// Enumerator for <see cref="ITypeDictionary{TKey,TValue}"/>.
+	/// <see cref="ITypeDictionary{TKey,TValue}"/> 的枚举器。
 	/// </summary>
 	public ref struct Enumerator
 	{
 		/// <summary>
-		/// The entries being enumerated.
+		/// 正在枚举的条目。
 		/// </summary>
 		private readonly Entry[] _entries;
 
 		/// <summary>
-		/// The current enumeration index.
+		/// 当前枚举索引。
 		/// </summary>
 		private int _index;
 
 		/// <summary>
-		/// The current dictionary count.
+		/// 当前字典计数。
 		/// </summary>
 		private readonly int _count;
 
 		/// <summary>
-		/// Creates a new <see cref="Enumerator"/> instance.
+		/// 创建新的 <see cref="Enumerator"/> 实例。
 		/// </summary>
-		/// <param name="dictionary">The input dictionary to enumerate.</param>
+		/// <param name="dictionary">要枚举的输入字典。</param>
 		internal Enumerator(TypeDictionary<TKey, TValue> dictionary)
 		{
 			_entries = dictionary._entries;
@@ -291,14 +290,12 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 		{
 			while ((uint)_index < (uint)_count)
 			{
-				// We need to preemptively increment the current index so that we still correctly keep track
-				// of the current position in the dictionary even if the users doesn't access any of the
-				// available properties in the enumerator. As this is a possibility, we can't rely on one of
-				// them to increment the index before MoveNext is invoked again. We ditch the standard enumerator
-				// API surface here to expose the Key/Value properties directly and minimize the memory copies.
-				// For the same reason, we also removed the KeyValuePair<TKey, TValue> field here, and instead
-				// rely on the properties lazily accessing the target instances directly from the current entry
-				// pointed at by the index property (adjusted backwards to account for the increment here).
+				// 我们需要预先递增当前索引，以便即使用户不访问枚举器中的任何可用属性，
+				// 也能正确跟踪字典中的当前位置。由于存在这种可能性，我们不能依赖这些属性
+				// 在再次调用 MoveNext 之前递增索引。我们在此舍弃标准枚举器 API 接口，
+				// 改为直接公开 Key/Value 属性并尽量减少内存复制。出于同样的原因，我们也
+				// 移除了此处的 KeyValuePair<TKey, TValue> 字段，而是依赖这些属性从索引属性
+				// 所指向的当前条目中按需直接访问目标实例（为抵消此处的递增而向后调整）。
 				if (_entries![_index++].Next >= -1)
 				{
 					return true;
@@ -311,7 +308,7 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the current key.
+		/// 获取当前键。
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public TKey GetKey()
@@ -320,7 +317,7 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the current value.
+		/// 获取当前值。
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public TValue GetValue()
@@ -330,10 +327,10 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Gets the value for the specified key, or.
+	/// 获取指定键的值，或。
 	/// </summary>
-	/// <param name="key">Key to look for.</param>
-	/// <returns>Reference to the existing value.</returns>
+	/// <param name="key">要查找的键。</param>
+	/// <returns>对现有值的引用。</returns>
 	private unsafe ref TValue FindValue(TKey key)
 	{
 		ref var entry = ref *(Entry*)null;
@@ -369,10 +366,9 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Initializes the current instance.
+	/// 初始化当前实例。
 	/// </summary>
-	/// <param name="capacity">The target capacity.</param>
-	/// <returns></returns>
+	/// <param name="capacity">目标容量。</param>
 	[MemberNotNull(nameof(_buckets), nameof(_entries))]
 	private void Initialize(int capacity)
 	{
@@ -387,7 +383,7 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Resizes the current dictionary to reduce the number of collisions
+	/// 调整当前字典的大小以减少冲突数量
 	/// </summary>
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void Resize()
@@ -416,10 +412,10 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Gets a reference to a target bucket from an input hashcode.
+	/// 根据输入哈希码获取目标桶的引用。
 	/// </summary>
-	/// <param name="hashCode">The input hashcode.</param>
-	/// <returns>A reference to the target bucket.</returns>
+	/// <param name="hashCode">输入哈希码。</param>
+	/// <returns>对目标桶的引用。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private ref int GetBucket(uint hashCode)
 	{
@@ -429,35 +425,35 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 	}
 
 	/// <summary>
-	/// A type representing a map entry, ie. a node in a given list.
+	/// 表示映射条目的类型，即给定列表中的节点。
 	/// </summary>
 	private struct Entry
 	{
 		/// <summary>
-		/// The cached hashcode for <see cref="Key"/>;
+		/// <see cref="Key"/> 的缓存哈希码；
 		/// </summary>
 		public uint HashCode;
 
 		/// <summary>
-		/// 0-based index of next entry in chain: -1 means end of chain
-		/// also encodes whether this entry this.itself_ is part of the free list by changing sign and subtracting 3,
-		/// so -2 means end of free list, -3 means index 0 but on free list, -4 means index 1 but on free list, etc.
+		/// 链中下一个条目基于 0 的索引：-1 表示链结束，
+		/// 同时通过改变符号并减去 3 来编码此条目本身是否属于空闲链表，
+		/// 因此 -2 表示空闲链表结束，-3 表示索引 0 但在空闲链表上，-4 表示索引 1 但在空闲链表上，依此类推。
 		/// </summary>
 		public int Next;
 
 		/// <summary>
-		/// The key for the value in the current node.
+		/// 当前节点中值的键。
 		/// </summary>
 		public TKey Key;
 
 		/// <summary>
-		/// The value in the current node, if present.
+		/// 当前节点中的值（如果存在）。
 		/// </summary>
 		public TValue Value;
 	}
 
 	/// <summary>
-	/// Throws an <see cref="ArgumentException"/> when trying to load an element with a missing key.
+	/// 当尝试加载缺少键的元素时引发 <see cref="ArgumentException"/>。
 	/// </summary>
 	private static void ThrowArgumentExceptionForKeyNotFound(TKey key)
 	{

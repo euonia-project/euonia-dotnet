@@ -68,7 +68,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <summary>
 	/// 释放由 <see cref="DefaultPersistentConnection"/> 占用的资源。
 	/// </summary>
-	/// <param name="disposing"></param>
+	/// <param name="disposing">指示是否为显式释放；当前实现中两种取值执行相同的清理逻辑。</param>
 	protected override void Dispose(bool disposing)
 	{
 		if (IsDisposed)

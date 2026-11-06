@@ -3,29 +3,29 @@ using Nerosoft.Euonia.Repository;
 namespace Nerosoft.Euonia.Sample.Persist.Entities;
 
 /// <summary>
-/// Represents a user aggregate in the domain.
+/// 表示领域中的用户聚合根。
 /// </summary>
 public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime, ITombstone
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UserEntity"/> class.
+	/// 初始化 <see cref="UserEntity"/> 类的新实例。
 	/// </summary>
 	/// <remarks>
-	/// The constructor is required by Entity Framework, and should not be used directly.
+	/// 此构造函数为 Entity Framework 所必需，不应直接使用。
 	/// </remarks>
 	private UserEntity()
 	{
 	}
 
 	/// <summary>
-	/// Creates a user account with the given credentials. The caller is responsible for persisting it.
+	/// 使用给定的凭据创建用户账户。调用方负责将其持久化。
 	/// </summary>
-	/// <param name="userId">The user identifier.</param>
-	/// <param name="username">The login username.</param>
-	/// <param name="nickname">The display name.</param>
-	/// <param name="passwordHash">The hash of the salted password (见 <c>Cryptography.SHA.Encrypt(salt + password)</c>).</param>
-	/// <param name="passwordSalt">The salt used when hashing the password.</param>
-	/// <returns>A new user account instance.</returns>
+	/// <param name="userId">用户标识。</param>
+	/// <param name="username">登录用户名。</param>
+	/// <param name="nickname">显示名。</param>
+	/// <param name="passwordHash">加盐密码的哈希值（见 <c>Cryptography.SHA.Encrypt(salt + password)</c>）。</param>
+	/// <param name="passwordSalt">对密码进行哈希时使用的盐。</param>
+	/// <returns>新的用户账户实例。</returns>
 	internal static UserEntity Create(string userId, string username, string nickname, string passwordHash, string passwordSalt)
 	{
 		return new UserEntity
@@ -41,104 +41,104 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	}
 
 	/// <summary>
-	/// Gets or sets the username.
+	/// 获取或设置用户名。
 	/// </summary>
 	public string Username { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the encrypted password.
+	/// 获取或设置加密后的密码。
 	/// </summary>
 	public string PasswordHash { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the salt used to encrypt the password.
+	/// 获取或设置用于加密密码的盐。
 	/// </summary>
 	public string PasswordSalt { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the nickname.
+	/// 获取或设置昵称。
 	/// </summary>
 	public string Nickname { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the email address.
+	/// 获取或设置电子邮件地址。
 	/// </summary>
 	public string Email { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the phone number.
+	/// 获取或设置电话号码。
 	/// </summary>
 	public string Phone { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the count of failed access attempts.
+	/// 获取或设置访问失败次数。
 	/// </summary>
 	public int AccessFailedCount { get; set; }
 
 	/// <summary>
-	/// Gets or sets the lockout end time.
+	/// 获取或设置锁定结束时间。
 	/// </summary>
 	public DateTime? LockoutEnd { get; set; }
 
 	/// <summary>
-	/// Gets or sets the creation time.
+	/// 获取或设置创建时间。
 	/// </summary>
 	public DateTime CreatedAt { get; set; }
 
 	/// <summary>
-	/// Gets or sets the update time.
+	/// 获取或设置更新时间。
 	/// </summary>
 	public DateTime UpdatedAt { get; set; }
 
 	/// <summary>
-	/// Gets or sets a value indicating whether this instance is deleted.
+	/// 获取或设置一个值，指示此实例是否已删除。
 	/// </summary>
 	public bool IsDeleted { get; set; }
 
 	/// <summary>
-	/// Gets or sets the delete time.
+	/// 获取或设置删除时间。
 	/// </summary>
 	public DateTime? DeletedAt { get; set; }
 
 	/// <summary>
-	/// Gets or sets the time when the password was last changed.
+	/// 获取或设置密码最后更改的时间。
 	/// </summary>
 	public DateTime? PasswordChangedTime { get; set; }
 
 	/// <summary>
-	/// Gets or sets the roles associated with the user.
+	/// 获取或设置与用户关联的角色。
 	/// </summary>
 	public HashSet<UserRoleEntity> Roles { get; set; } = null!;
 
 	/// <summary>
-	/// Sets the email address for the user.
+	/// 设置用户的电子邮件地址。
 	/// </summary>
-	/// <param name="email">The email address to set.</param>
+	/// <param name="email">要设置的电子邮件地址。</param>
 	internal void SetEmail(string email)
 	{
 		Email = email.Normalize(TextCaseType.Lower);
 	}
 
 	/// <summary>
-	/// Sets the phone number for the user.
+	/// 设置用户的电话号码。
 	/// </summary>
-	/// <param name="phone">The phone number to set.</param>
+	/// <param name="phone">要设置的电话号码。</param>
 	internal void SetPhone(string phone)
 	{
 		Phone = phone;
 	}
 
 	/// <summary>
-	/// Sets the nickname for the user.
+	/// 设置用户的昵称。
 	/// </summary>
-	/// <param name="nickname">The nickname to set.</param>
+	/// <param name="nickname">要设置的昵称。</param>
 	internal void SetNickname(string nickname)
 	{
 		Nickname = nickname;
 	}
 
 	/// <summary>
-	/// Increases the count of failed access attempts.
+	/// 增加访问失败次数。
 	/// </summary>
 	internal void IncreaseAccessFailedCount()
 	{
@@ -150,7 +150,7 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	}
 
 	/// <summary>
-	/// Resets the count of failed access attempts.
+	/// 重置访问失败次数。
 	/// </summary>
 	internal void ResetAccessFailedCount()
 	{
@@ -161,9 +161,9 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	
 
 	/// <summary>
-	/// Sets the lockout end time for the user.
+	/// 设置用户的锁定结束时间。
 	/// </summary>
-	/// <param name="until">The lockout end time.</param>
+	/// <param name="until">锁定结束时间。</param>
 	internal void SetLockoutEnd(DateTime? until)
 	{
 		LockoutEnd = until;

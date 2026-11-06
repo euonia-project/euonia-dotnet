@@ -17,6 +17,10 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// </summary>
 public sealed class TeamScopeModel : ScopeModel<Team>
 {
+	/// <summary>
+	/// 定义团队的数据权限维度：负责人为行内列，成员为来自 <c>team_member</c> 子表的集合维度。
+	/// </summary>
+	/// <param name="builder">数据权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<Team> builder)
 	{
 		// 行内的列：负责人
@@ -31,6 +35,10 @@ public sealed class TeamScopeModel : ScopeModel<Team>
 	/// <summary>默认策略（按码策略之外的兜底）：仅按行内列判定，不要求加载子表。</summary>
 	public override ScopePolicy<Team> Policy => ScopePolicy<Team>.Grant(ScopeDimensions.Owner);
 
+	/// <summary>
+	/// 按操作声明策略：读允许团队成员或负责人；编辑与删除仅允许负责人（只用行内列判定）。
+	/// </summary>
+	/// <param name="policies">按资源类型收集操作策略的策略集合。</param>
 	public override void Declare(ScopePolicySet<Team> policies)
 	{
 		// 读侧：本团队成员或负责人可见。成员维度来自子表 ⇒ 下推为 EXISTS，实时生效。

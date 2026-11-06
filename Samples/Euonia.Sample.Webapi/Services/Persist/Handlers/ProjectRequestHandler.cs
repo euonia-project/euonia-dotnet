@@ -19,6 +19,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 internal class ProjectRequestHandler(IProjectStore store, IScopeGuard guard)
 	: IHandler<ProjectListQueryRequest, PagedResult<ProjectDto>>
 {
+	/// <inheritdoc/>
 	public async Task<PagedResult<ProjectDto>> HandleAsync(ProjectListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var page = message.Page < 1 ? 1 : message.Page;

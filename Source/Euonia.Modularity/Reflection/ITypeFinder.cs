@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// This interface defines a contract for a type finder that retrieves an read-only list of types.
+/// 此接口定义类型查找器的契约，用于检索类型的只读列表。
 /// </summary>
 public interface ITypeFinder
 {
     /// <summary>
-    /// Gets the list of types.
+    /// 获取类型列表。
     /// </summary>
     IReadOnlyList<Type> Types { get; }
 }

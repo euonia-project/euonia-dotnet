@@ -5,8 +5,8 @@ using org.apache.zookeeper;
 namespace Nerosoft.Euonia.Concurrency.ZooKeeper;
 
 /// <summary>
-/// <see cref="ISynchronizationHandle"/> implementation where holding the primitive
-/// is based on the existence of an ephemeral zookeeper node
+/// <see cref="ISynchronizationHandle"/> 的实现，其中持有原语
+/// 基于 ZooKeeper 临时节点的存在。
 /// </summary>
 internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
 {
@@ -17,6 +17,12 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
 
     private volatile bool _disposed;
 
+    /// <summary>
+    /// 使用已获取的临时节点初始化句柄，并延迟启动节点丢失监视。
+    /// </summary>
+    /// <param name="connection">持有临时节点的 ZooKeeper 连接。</param>
+    /// <param name="nodePath">临时节点的完整路径。</param>
+    /// <param name="shouldDeleteParent">释放句柄时是否尝试删除父目录。</param>
     public ZooKeeperNodeHandle(ZooKeeperConnection connection, string nodePath, bool shouldDeleteParent)
     {
         _connection = connection;
@@ -26,7 +32,7 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         _handleLostState = new Lazy<HandleLostState>(() =>
         {
             var handleLostSource = CancellationTokenSource.CreateLinkedTokenSource(_connection.ConnectionLostToken);
-            var handleLostToken = handleLostSource.Token; // grab this now before the source is disposed
+            var handleLostToken = handleLostSource.Token; // 在源被释放之前先取出该令牌
             var disposalSource = new CancellationTokenSource();
             var monitoringTask = Task.Run(async () =>
             {
@@ -41,9 +47,9 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
                         ).ConfigureAwait(false);
                         switch (result)
                         {
-                            case false: // disposalSource triggered
+                            case false: // disposalSource 已触发
                                 return;
-                            case true: // node no longer exists
+                            case true: // 节点已不存在
                                 handleLostSource.Cancel();
                                 return;
                         }
@@ -58,12 +64,15 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         });
     }
 
+    /// <inheritdoc />
     public CancellationToken HandleCancellationToken => _disposed ? throw this.ObjectDisposed() : _handleLostState.Value.Token;
 
+    /// <inheritdoc />
     public void Dispose() => this.DisposeSyncViaAsync();
 
+    /// <inheritdoc />
     public ValueTask DisposeAsync() =>
-        // we're forced to use sync-over-async here because ZooKeeperNetEx doesn't have synchronous APIs
+        // 此处被迫使用同步方式等待异步调用，因为 ZooKeeperNetEx 没有同步 API
         InternalDisposeAsync().AwaitSyncOverAsync();
 
     private async Task InternalDisposeAsync()
@@ -73,7 +82,7 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
 
         try
         {
-            // clean up monitoring
+            // 清理监视
             if (_handleLostState.IsValueCreated)
             {
                 _handleLostState.Value.DisposalSource.Cancel();
@@ -85,14 +94,14 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         {
             try
             {
-                // clean up the node
+                // 清理节点
                 await _connection.ZooKeeper.deleteAsync(_nodePath.ToString()).ConfigureAwait(false);
 
                 if (_shouldDeleteParent)
                 {
                     try { await _connection.ZooKeeper.deleteAsync(_nodePath.GetDirectory()!.Value.ToString()).ConfigureAwait(false); }
-                    catch (KeeperException.NotEmptyException) { } // can't delete nodes which have other children
-                    catch (KeeperException.NoNodeException) { } // can't delete nodes which don't exist (race condition)
+                    catch (KeeperException.NotEmptyException) { } // 无法删除仍有其他子节点的节点
+                    catch (KeeperException.NoNodeException) { } // 无法删除不存在的节点（竞态条件）
                 }
             }
             finally
@@ -103,9 +112,9 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
     }
 
     /// <summary>
-    /// Returns true when <paramref name="path"/> does not exist. 
-    /// Returns null when we receive a watch event indicating that <paramref name="path"/> has changed. 
-    /// Returns false if the <paramref name="timeoutToken"/> fires.
+    /// 当 <paramref name="path"/> 不存在时返回 true。
+    /// 收到指示 <paramref name="path"/> 已更改的监视事件时返回 null。
+    /// 如果 <paramref name="timeoutToken"/> 触发，则返回 false。
     /// </summary>
     public static async Task<bool?> WaitForNotExistsOrChangedAsync(
         ZooKeeperConnection connection,
@@ -116,7 +125,7 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         using var timeoutRegistration = timeoutToken.Register(
             () => watcher.TaskCompletionSource.TrySetResult(false)
         );
-        // this is needed because if the connection goes down and never recovers, we'll never get the session expired notification
+        // 这是必要的，因为如果连接断开且始终未恢复，我们将永远收不到会话过期通知
         using var connectionLostRegistration = connection.ConnectionLostToken.Register(
             () => watcher.TaskCompletionSource.TrySetException(new InvalidOperationException("Lost connection to ZooKeeper"))
         );
@@ -125,6 +134,10 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         return exists == null ? true : await watcher.TaskCompletionSource.Task.ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// 在收到已连接状态事件时调用回调完成任务的通用监视器，释放后不再触发回调。
+    /// </summary>
+    /// <typeparam name="TResult">等待任务完成后返回的结果类型。</typeparam>
     private sealed class TaskWatcher<TResult> : Watcher, IDisposable
     {
         private volatile Action<WatchedEvent, TaskCompletionSource<TResult>>? _watchedEventHandler;
@@ -140,7 +153,7 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
 
         public override Task process(WatchedEvent @event)
         {
-            // only care about connected state events; the ConnectionLostToken takes care of the other states for us
+            // 只关心已连接状态的事件；其他状态由 ConnectionLostToken 负责处理
             if (@event.getState() == Event.KeeperState.SyncConnected)
             {
                 _watchedEventHandler?.Invoke(@event, TaskCompletionSource);
@@ -150,5 +163,11 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
         }
     }
 
+    /// <summary>
+    /// 记录句柄丢失监视所需的取消令牌、释放信号源与后台监视任务。
+    /// </summary>
+    /// <param name="Token">节点丢失或连接断开时触发的令牌。</param>
+    /// <param name="DisposalSource">用于通知监视任务停止的信号源。</param>
+    /// <param name="MonitoringTask">后台监视节点是否消失的任务。</param>
     private record HandleLostState(CancellationToken Token, CancellationTokenSource DisposalSource, Task MonitoringTask);
 }

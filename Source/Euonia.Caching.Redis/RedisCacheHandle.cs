@@ -4,9 +4,9 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Caching.Redis;
 
 /// <summary>
-/// Cache handle implementation for Redis.
+/// Redis 的缓存句柄实现。
 /// </summary>
-/// <typeparam name="TValue">The type of the cache value.</typeparam>
+/// <typeparam name="TValue">缓存值的类型。</typeparam>
 public class RedisCacheHandle<TValue> : BaseCacheHandle<TValue>
 {
 	// ReSharper disable once StaticMemberInGenericType
@@ -43,7 +43,7 @@ else
 end
 return result";
 
-	// script should also update expire now. If sliding, update the sliding window
+	// 脚本此时也应更新过期时间。如果是滑动过期，则更新滑动窗口
 	private const string SCRIPT_UPDATE = $@"
 if redis.call('HGET', KEYS[1], '{HASH_FIELD_VERSION}') == ARGV[2] then
     local result=redis.call('HSET', KEYS[1], '{HASH_FIELD_VALUE}', ARGV[1])
@@ -74,17 +74,17 @@ return result";
 	private bool _canPreloadScripts;
 	private readonly RedisConfiguration _redisConfiguration;
 
-	// flag if scripts are initially loaded to the server
+	// 标记脚本是否已初始加载到服务器
 	private bool _scriptsLoaded;
 
 	private readonly object _lockObject = new();
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RedisCacheHandle{TCacheValue}"/> class.
+	/// 初始化 <see cref="RedisCacheHandle{TCacheValue}"/> 类的新实例。
 	/// </summary>
-	/// <param name="managerConfiguration">The manager configuration.</param>
-	/// <param name="configuration">The cache handle configuration.</param>
-	/// <param name="connectionString"></param>
+	/// <param name="managerConfiguration">管理器配置。</param>
+	/// <param name="configuration">缓存句柄配置。</param>
+	/// <param name="connectionString">Redis 连接字符串，不能为 <see langword="null"/> 或空白。</param>
 	public RedisCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, string connectionString)
 		: base(managerConfiguration, configuration)
 	{
@@ -98,14 +98,14 @@ return result";
 		_connection = new RedisConnectionManager(_redisConfiguration);
 		_isLuaAllowed = _connection.Features.Scripting;
 
-		// disable preloading right away if twemproxy mode, as this is not supported.
+		// 如果处于 twemproxy 模式，立即禁用预加载，因为该模式不支持预加载。
 		_canPreloadScripts = !_redisConfiguration.TwemproxyEnabled;
 
 		if (_redisConfiguration.KeyspaceNotificationsEnabled)
 		{
-			// notify-keyspace-events needs to be set to "Exe" at least! Otherwise we will not receive any events.
-			// this must be configured per server and should probably not be done automagically as this needs admin rights!
-			// Let's try to check at least if those settings are configured (the check also works only if useAdmin is set to true though).
+			// notify-keyspace-events 至少需要设置为 "Exe"！否则我们将接收不到任何事件。
+			// 该配置必须按服务器分别设置，而且不应自动完成，因为这需要管理员权限！
+			// 至少尝试检查这些设置是否已配置（不过该检查仅在 useAdmin 设为 true 时才有效）。
 			//try
 			//{
 			//    var configurations = _connection.GetConfiguration("notify-keyspace-events");
@@ -136,10 +136,10 @@ return result";
 	public override bool IsDistributedCache => true;
 
 	/// <summary>
-	/// Gets the number of items the cache handle currently maintains.
+	/// 获取该缓存句柄当前维护的项数。
 	/// </summary>
-	/// <value>The count.</value>
-	/// <exception cref="InvalidOperationException">No active master found.</exception>
+	/// <value>项数。</value>
+	/// <exception cref="InvalidOperationException">未找到活动的主节点。</exception>
 	public override int Count
 	{
 		get
@@ -155,32 +155,32 @@ return result";
 				count += (int)server.DatabaseSize(_redisConfiguration.Database);
 			}
 
-			// approx size, only size on the master..
+			// 近似大小，仅统计主节点上的数量..
 			return count;
 		}
 	}
 
 	/// <summary>
-	/// Gets the servers.
+	/// 获取服务器。
 	/// </summary>
-	/// <value>The list of servers.</value>
+	/// <value>服务器列表。</value>
 	public IEnumerable<IServer> Servers => _connection.Servers;
 
 	/// <summary>
-	/// Gets the features the redis server supports.
+	/// 获取 Redis 服务器支持的功能。
 	/// </summary>
-	/// <value>The server features.</value>
+	/// <value>服务器功能。</value>
 	public RedisFeatures Features => _connection.Features;
 
 	/// <summary>
-	/// Gets a value indicating whether we can use the lua implementation instead of manual.
-	/// This flag will be set automatically via feature detection based on the Redis server version
-	/// or via <see cref="RedisConfiguration.StrictCompatibilityModeVersion"/> if set to a version which does not support lua scripting.
+	/// 获取一个值，指示是否可以使用 Lua 实现来代替手动实现。
+	/// 该标志会根据 Redis 服务器版本通过功能检测自动设置，
+	/// 或者通过 <see cref="RedisConfiguration.StrictCompatibilityModeVersion"/> 设置为不支持 Lua 脚本的版本时设置。
 	/// </summary>
 	public bool IsLuaAllowed => _isLuaAllowed;
 
 	/// <summary>
-	/// Clears this cache, removing all items in the base cache and all regions.
+	/// 清空此缓存，移除基础缓存和所有区域中的所有项。
 	/// </summary>
 	/// <remarks>
 	/// <b>注意爆炸半径</b>：实现为对当前逻辑库执行 <c>FLUSHDB</c>，清空的是**整个数据库**，
@@ -223,27 +223,27 @@ return result";
 	}
 
 	/// <summary>
-	/// Clears the cache region, removing all items from the specified <paramref name="region"/> only.
+	/// 清空缓存区域，仅移除指定 <paramref name="region"/> 中的所有项。
 	/// </summary>
-	/// <param name="region">The cache region.</param>
+	/// <param name="region">缓存区域。</param>
 	public override void ClearRegion(string region)
 	{
 		Retry(() =>
 		{
-			// we are storing all keys stored in the region in the hash for key=region
+			// 我们将区域中存储的所有键都存放在 key=region 的哈希中
 			var hashKeys = _connection.Database.HashKeys(region);
 
 			if (hashKeys.Length > 0)
 			{
-				// lets remove all keys which where in the region
-				// 01/32/16 changed to remove one by one because on clusters the keys could belong to multiple slots
+				// 现在移除该区域中的所有键
+				// 01/32/16 改为逐个移除，因为在集群上这些键可能属于多个槽
 				foreach (var key in hashKeys.Where(p => p.HasValue))
 				{
 					_connection.Database.KeyDelete(key.ToString(), CommandFlags.FireAndForget);
 				}
 			}
 
-			// now delete the region
+			// 现在删除该区域
 			_connection.Database.KeyDelete(region);
 		});
 	}
@@ -294,16 +294,16 @@ return result";
 
 				ValidateExpirationTimeout(item);
 
-				// run update
+				// 执行更新
 				var newValue = updateValue(item.Value);
 
-				// added null check, throw explicit to me more consistent. Otherwise it would throw within the script exec
+				// 增加 null 检查，显式抛出以便更一致。否则会在脚本执行内部抛出
 				if (newValue == null)
 				{
 					return CacheItemUpdateResult.ForFactoryReturnedNull<TValue>();
 				}
 
-				// resetting TTL on update, too
+				// 更新时也重置 TTL
 				var result = Eval(ScriptType.Update, fullKey, new[]
 				{
 					ToRedisValue(newValue),
@@ -314,7 +314,7 @@ return result";
 
 				if (result is { IsNull: false })
 				{
-					// optimizing not retrieving the item again after update (could have changed already, too)
+					// 优化：更新后不再重新获取该项（它也可能已经再次发生变化）
 					var newItem = item.WithValue(newValue);
 					newItem.LastAccessedUtc = DateTime.UtcNow;
 
@@ -353,10 +353,10 @@ return result";
 				var tran = _connection.Database.CreateTransaction();
 				tran.AddCondition(Condition.HashEqual(fullKey, HASH_FIELD_VALUE, oldValue));
 
-				// run update
+				// 执行更新
 				var newValue = updateValue(item.Value);
 
-				// added null check, throw explicit to me more consistent. Otherwise it would throw later
+				// 增加 null 检查，显式抛出以便更一致。否则会在稍后抛出
 				if (newValue == null)
 				{
 					return CacheItemUpdateResult.ForFactoryReturnedNull<TValue>();
@@ -386,25 +386,23 @@ return result";
 	}
 
 	/// <summary>
-	/// Adds a value to the cache.
+	/// 向缓存添加一个值。
 	/// <para>
-	/// Add call is synced, so might be slower than put which is fire and forget but we want to
-	/// return true|false if the operation was successfully or not. And always returning true
-	/// could be misleading if the item already exists
+	/// Add 调用是同步的，因此可能比即发即忘的 Put 慢，但我们希望在操作成功与否时
+	/// 返回 true|false。如果项已存在，始终返回 true 会产生误导
 	/// </para>
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果键尚未添加到缓存则返回 <c>true</c>，否则返回 <c>false</c>。
 	/// </returns>
 	protected override bool AddInternalPrepared(CacheItem<TValue> item) =>
 		Retry(() => Set(item, When.NotExists, true));
 
 	/// <summary>
-	/// Performs application-defined tasks associated with freeing, releasing, or resetting
-	/// unmanaged resources.
+	/// 执行与释放、归还或重置非托管资源相关的应用程序定义任务。
 	/// </summary>
-	/// <param name="disposeManaged">Indicator if managed resources should be released.</param>
+	/// <param name="disposeManaged">指示是否应释放托管资源。</param>
 	protected override void Dispose(bool disposeManaged)
 	{
 		base.Dispose(disposeManaged);
@@ -415,19 +413,19 @@ return result";
 	}
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <returns>该 <c>CacheItem</c>。</returns>
 	protected override CacheItem<TValue>? GetCacheItemInternal(string key)
 		=> GetCacheItemInternal(key, null);
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <returns>该 <c>CacheItem</c>。</returns>
 	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		return GetCacheItemAndVersion(key, region, out _);
@@ -446,13 +444,13 @@ return result";
 		var result = Retry(() => Eval(ScriptType.Get, fullKey));
 		if (result == null || result.IsNull)
 		{
-			// something went wrong. HMGET should return at least a null result for each requested field
+			// 出了问题。HMGET 至少应为每个请求的字段返回 null 结果
 			throw new InvalidOperationException(string.Format(Resources.IDS_ERROR_RETRIEVING, fullKey));
 		}
 
 		var values = ((RedisValue[]?)result)!;
 
-		// the first item stores the value
+		// 第一项存储值
 		var item = values![0];
 		var expirationModeItem = values[1];
 		var timeoutItem = values[2];
@@ -460,11 +458,11 @@ return result";
 		var valueTypeItem = values[4];
 		version = (int)values[5];
 		var usesDefaultExpiration = values[6].HasValue
-			? (bool)values[6] // if flag is set, all good...
-			: !expirationModeItem.HasValue || !timeoutItem.HasValue; // otherwise fall back to use default expiration from config
+			? (bool)values[6] // 如果设置了标志，则一切正常...
+			: !expirationModeItem.HasValue || !timeoutItem.HasValue; // 否则回退为使用配置中的默认过期时间
 
 		// 注意不能把空字符串/空字节数组当作“不存在”，否则 Put(key, "") 后 Get 会返回 null。
-		if (!item.HasValue || !valueTypeItem.HasValue /* partially removed? */ || item.IsNull)
+		if (!item.HasValue || !valueTypeItem.HasValue /* 被部分移除？ */ || item.IsNull)
 		{
 			return null;
 		}
@@ -472,7 +470,7 @@ return result";
 		var expirationMode = CacheExpirationMode.None;
 		var expirationTimeout = default(TimeSpan);
 
-		// checking if the expiration mode is set on the hash
+		// 检查是否在哈希上设置了过期模式
 		if (expirationModeItem.HasValue && timeoutItem.HasValue)
 		{
 			if (!timeoutItem.IsNullOrEmpty && !expirationModeItem.IsNullOrEmpty)
@@ -508,19 +506,19 @@ return result";
 	}
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key without using lua script.
+	/// 获取指定键的 <c>CacheItem</c>，不使用 Lua 脚本。
 	/// </summary>
-	/// <param name="key"></param>
-	/// <param name="region"></param>
-	/// <returns></returns>
+	/// <param name="key">缓存项的键。</param>
+	/// <param name="region">缓存区域名称；为 <see langword="null"/> 时不使用区域。</param>
+	/// <returns>找到的缓存项；未找到或已过期时为 <see langword="null"/>。</returns>
 	protected virtual CacheItem<TValue>? GetCacheItemInternalNoScript(string key, string? region)
 	{
 		return Retry(() =>
 		{
 			var fullKey = GetKey(key, region);
 
-			// getting both, the value and, if exists, the expiration mode. if that one is set
-			// and it is sliding, we also retrieve the timeout later
+			// 同时获取值和过期模式（如果存在）。如果已设置过期模式
+			// 且为滑动过期，我们稍后还会获取超时时间
 			var values = _connection.Database.HashGet(
 				fullKey,
 				new RedisValue[]
@@ -533,17 +531,17 @@ return result";
 					HASH_FIELD_USES_DEFAULT_EXP
 				});
 
-			// the first item stores the value
+			// 第一项存储值
 			var item = values[0];
 			var expirationModeItem = values[1];
 			var timeoutItem = values[2];
 			var createdItem = values[3];
 			var valueTypeItem = values[4];
 			var usesDefaultExpiration = values[5].HasValue
-				? (bool)values[5] // if flag is set, all good...
-				: !expirationModeItem.HasValue || !timeoutItem.HasValue; // otherwise fall back to use default expiration from config
+				? (bool)values[5] // 如果设置了标志，则一切正常...
+				: !expirationModeItem.HasValue || !timeoutItem.HasValue; // 否则回退为使用配置中的默认过期时间
 
-			if (!item.HasValue || !valueTypeItem.HasValue /* partially removed? */
+			if (!item.HasValue || !valueTypeItem.HasValue /* 被部分移除？ */
 			                   || item.IsNull)
 			{
 				return null;
@@ -552,10 +550,10 @@ return result";
 			var expirationMode = CacheExpirationMode.None;
 			var expirationTimeout = default(TimeSpan);
 
-			// checking if the expiration mode is set on the hash
+			// 检查是否在哈希上设置了过期模式
 			if (expirationModeItem.HasValue && timeoutItem.HasValue)
 			{
-				// adding sanity check for empty string results. Could happen in rare cases like #74
+				// 增加对空字符串结果的合理性检查。可能出现在像 #74 这样的罕见情况中
 				if (!timeoutItem.IsNullOrEmpty && !expirationModeItem.IsNullOrEmpty)
 				{
 					expirationMode = (CacheExpirationMode)(int)expirationModeItem;
@@ -585,7 +583,7 @@ return result";
 				return null;
 			}
 
-			// update sliding
+			// 更新滑动过期
 			if (expirationMode == CacheExpirationMode.Sliding && expirationTimeout != default)
 			{
 				_connection.Database.KeyExpire(fullKey, cacheItem.ExpirationTimeout, CommandFlags.FireAndForget);
@@ -596,29 +594,29 @@ return result";
 	}
 
 	/// <summary>
-	/// Puts the <paramref name="item"/> into the cache. If the item exists it will get updated
-	/// with the new value. If the item doesn't exist, the item will be added to the cache.
+	/// 将 <paramref name="item"/> 放入缓存。如果该项已存在，将用新值更新它。
+	/// 如果该项不存在，则会将其添加到缓存。
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
 	protected override void PutInternalPrepared(CacheItem<TValue> item) =>
 		Retry(() => Set(item, When.Always));
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果键被找到并从缓存中移除则返回 <c>true</c>，否则返回 <c>false</c>。
 	/// </returns>
 	protected override bool RemoveInternal(string key) => RemoveInternal(key, null);
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果键被找到并从缓存中移除则返回 <c>true</c>，否则返回 <c>false</c>。
 	/// </returns>
 	protected override bool RemoveInternal(string key, string? region)
 	{
@@ -626,13 +624,13 @@ return result";
 		{
 			var fullKey = GetKey(key, region);
 
-			// clean up region
+			// 清理区域
 			if (!string.IsNullOrWhiteSpace(region))
 			{
 				_connection.Database.HashDelete(region, fullKey, CommandFlags.FireAndForget);
 			}
 
-			// remove key
+			// 移除键
 			var result = _connection.Database.KeyDelete(fullKey);
 
 			return result;
@@ -646,7 +644,7 @@ return result";
 			(_, key) =>
 			{
 				var tuple = ParseKey(key);
-				// we cannot return the original value here because we don't have it
+				// 我们无法在此返回原始值，因为拿不到它
 				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.Expired, null);
 			});
 
@@ -656,7 +654,7 @@ return result";
 			{
 				var tuple = ParseKey(key);
 
-				// we cannot return the original value here because we don't have it
+				// 我们无法在此返回原始值，因为拿不到它
 				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.Evicted, null);
 			});
 
@@ -666,7 +664,7 @@ return result";
 			{
 				var tuple = ParseKey(key);
 
-				// we cannot return the original value here because we don't have it
+				// 我们无法在此返回原始值，因为拿不到它
 				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.ExternalDelete, null);
 			});
 	}
@@ -719,10 +717,10 @@ return result";
 			throw new ArgumentNullException(nameof(key));
 		}
 
-		// for notifications, we have to get key and region back from the key stored in redis.
-		// in case the key and or region itself contains the separator, there would be no way to do so...
-		// So, only if that feature is enabled, we'll encode the key and/or region in that case
-		// and the ParseKey method will respect that, too, and decodes the key and/or region.
+		// 对于通知，我们必须从存储在 Redis 中的键还原出键和区域。
+		// 如果键和/或区域本身包含分隔符，就无法做到这一点...
+		// 因此，仅在启用该功能时才编码键和/或区域，
+		// ParseKey 方法也会遵循该约定并解码键和/或区域。
 		if (_redisConfiguration.KeyspaceNotificationsEnabled && key.Contains(":"))
 		{
 			key = BASE64_PREFIX + Convert.ToBase64String(Encoding.UTF8.GetBytes(key));
@@ -793,7 +791,7 @@ return result";
 
 		ValidateExpirationTimeout(item);
 
-		// ARGV [1]: value, [2]: type, [3]: expirationMode, [4]: expirationTimeout(millis), [5]: created(ticks)
+		// ARGV [1]: 值，[2]: 类型，[3]: 过期模式，[4]: 过期超时（毫秒），[5]: 创建时间（计时周期）
 		var parameters = new RedisValue[]
 		{
 			value,
@@ -821,11 +819,11 @@ return result";
 			{
 				if (!string.IsNullOrWhiteSpace(item.Region))
 				{
-					// setting region lookup key if region is being used
+					// 如果使用了区域，则设置区域查找键
 					_connection.Database.HashSet(item.Region, fullKey, "regionKey", When.Always, CommandFlags.FireAndForget);
 				}
 
-				// put runs via fire and forget, so we don't get a result back
+				// put 通过即发即忘方式运行，因此不会得到结果返回
 				return true;
 			}
 
@@ -834,7 +832,7 @@ return result";
 				return false;
 			}
 
-			// should never happen, something went wrong with the script
+			// 绝不应发生，脚本出了问题
 			throw new InvalidOperationException(Resources.IDS_ADD_ITEM_RESULT_MUST_NOT_BE_NULL);
 		}
 		else
@@ -843,11 +841,11 @@ return result";
 
 			if (resultValue.HasValue && resultValue.ToString().Equals("OK", StringComparison.OrdinalIgnoreCase))
 			{
-				// Added successfully:
+				// 添加成功：
 				if (!string.IsNullOrWhiteSpace(item.Region))
 				{
-					// setting region lookup key if region is being used
-					// we cannot do that within the lua because the region could be on another cluster node!
+					// 如果使用了区域，则设置区域查找键
+					// 我们无法在 Lua 中完成该操作，因为区域可能位于另一个集群节点上！
 					_connection.Database.HashSet(item.Region, fullKey, "regionKey", When.Always, CommandFlags.FireAndForget);
 				}
 
@@ -880,7 +878,7 @@ return result";
 
 			var setResult = _connection.Database.HashSet(fullKey, HASH_FIELD_VALUE, value, when, flags);
 
-			// setResult from fire and forget is alwys false, so we have to assume it works...
+			// 即发即忘的 setResult 始终为 false，因此只能假定它成功...
 			setResult = flags == CommandFlags.FireAndForget || setResult;
 
 			if (!setResult)
@@ -890,13 +888,13 @@ return result";
 
 			if (!string.IsNullOrWhiteSpace(item.Region))
 			{
-				// setting region lookup key if region is being used
+				// 如果使用了区域，则设置区域查找键
 				_connection.Database.HashSet(item.Region, fullKey, "regionKey", When.Always, CommandFlags.FireAndForget);
 			}
 
-			// set the additional fields in case sliding expiration should be used in this
-			// case we have to store the expiration mode and timeout on the hash, too so
-			// that we can extend the expiration period every time we do a get
+			// 设置额外字段，以备需要使用滑动过期。在这种情况下，
+			// 我们还必须将过期模式和超时时间存储在哈希上，
+			// 以便每次执行 get 时都能延长过期时间
 			_connection.Database.HashSet(fullKey, metaValues, flags);
 
 			if (item.ExpirationMode != CacheExpirationMode.None && item.ExpirationMode != CacheExpirationMode.Default)
@@ -905,7 +903,7 @@ return result";
 			}
 			else
 			{
-				// bugfix #9
+				// 修复 #9
 				_connection.Database.KeyPersist(fullKey, CommandFlags.FireAndForget);
 			}
 
@@ -950,7 +948,7 @@ return result";
 		{
 			LoadScripts();
 
-			// retry
+			// 重试
 			throw;
 		}
 	}
@@ -969,7 +967,7 @@ return result";
 			_luaScripts.Add(ScriptType.Update, updateLua);
 			_luaScripts.Add(ScriptType.Get, getLua);
 
-			// servers feature might be disabled
+			// 服务器功能可能已被禁用
 			if (_canPreloadScripts)
 			{
 				try

@@ -1,24 +1,27 @@
 ﻿namespace Nerosoft.Euonia.Sample.Constants;
 
+/// <summary>
+/// 示例应用使用的角色名称常量。
+/// </summary>
 public static class RoleName
 {
 	/// <summary>
-	/// Super user role constant.
+	/// 超级用户角色常量。
 	/// </summary>
 	public const string SuperUser = "SU";
 
 	/// <summary>
-	/// System administrator role constant.
+	/// 系统管理员角色常量。
 	/// </summary>
 	public const string SystemAdmin = "AD";
 
 	/// <summary>
-	/// Helpdesk role constant.
+	/// 服务台角色常量。
 	/// </summary>
 	public const string Helpdesk = "HD";
 
 	/// <summary>
-	/// Normal user role constant.
+	/// 普通用户角色常量。
 	/// </summary>
 	public const string NormalUser = "US";
 
@@ -38,17 +41,17 @@ public static class RoleName
 	public const string ProjectManager = "project-manager";
 
 	/// <summary>
-	/// Combined roles for system support.
+	/// 系统支持使用的组合角色。
 	/// </summary>
 	public const string Support = "SU,AD,HD";
 
 	/// <summary>
-	/// Combined roles for administrators.
+	/// 管理员使用的组合角色。
 	/// </summary>
 	public const string Admin = "SU,AD";
 
 	/// <summary>
-	/// Gets all defined role names.
+	/// 获取所有已定义的角色名称。
 	/// </summary>
 	public static IEnumerable<string> All => [SuperUser, SystemAdmin, Helpdesk, NormalUser, Developer, Tester, ProjectManager];
 }

@@ -3,16 +3,16 @@
 namespace Nerosoft.Euonia.Caching.Memory;
 
 /// <summary>
-/// The implement of <see cref="ICacheService"/> with <see cref="Microsoft.Extensions.Caching.Memory"/>.
+/// 使用 <see cref="Microsoft.Extensions.Caching.Memory"/> 实现的 <see cref="ICacheService"/>。
 /// </summary>
 public class MemoryCacheService : BaseCacheService, ICacheService
 {
 	private readonly MemoryCacheManager _manager;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MemoryCacheService"/> class.
+	/// 初始化 <see cref="MemoryCacheService"/> 类的新实例。
 	/// </summary>
-	/// <param name="options"></param>
+	/// <param name="options">包含缓存选项（如键前缀）的选项包装器。</param>
 	public MemoryCacheService(IOptions<MemoryCacheOptions> options)
 	{
 		_manager = new MemoryCacheManager(options.Value);

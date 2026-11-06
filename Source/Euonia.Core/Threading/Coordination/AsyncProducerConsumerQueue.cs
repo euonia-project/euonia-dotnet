@@ -341,16 +341,26 @@ public sealed class AsyncProducerConsumerQueue<T>
 		return Dequeue(CancellationToken.None);
 	}
 
+	/// <summary>
+	/// 供调试器显示的只读视图，以数组形式暴露队列当前内容的快照。
+	/// </summary>
 	[DebuggerNonUserCode]
 	internal sealed class DebugView
 	{
 		private readonly AsyncProducerConsumerQueue<T> _queue;
 
+		/// <summary>
+		/// 初始化调试视图。
+		/// </summary>
+		/// <param name="queue">要检查的生产者/消费者队列。</param>
 		public DebugView(AsyncProducerConsumerQueue<T> queue)
 		{
 			_queue = queue;
 		}
 
+		/// <summary>
+		/// 获取队列当前内容的快照。
+		/// </summary>
 		[DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
 		public T[] Items => _queue._queue.ToArray();
 	}

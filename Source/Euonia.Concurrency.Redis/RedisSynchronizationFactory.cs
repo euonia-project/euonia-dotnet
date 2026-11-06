@@ -3,8 +3,8 @@
 namespace Nerosoft.Euonia.Concurrency.Redis;
 
 /// <summary>
-/// Implements <see cref="ILockFactory"/> for <see cref="RedisLockProvider"/>,
-/// and <see cref="ISemaphoreFactory"/> for <see cref="RedisSemaphoreProvider"/>.
+/// 为 <see cref="RedisLockProvider"/> 实现 <see cref="ILockFactory"/>，
+/// 并为 <see cref="RedisSemaphoreProvider"/> 实现 <see cref="ISemaphoreFactory"/>。
 /// </summary>
 public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactory
 {
@@ -12,8 +12,8 @@ public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactor
     private readonly Action<RedisSynchronizationOptionsBuilder>? _options;
 
     /// <summary>
-    /// Constructs a <see cref="RedisSynchronizationFactory"/> that connects to the provided <paramref name="database"/>
-    /// and uses the provided <paramref name="options"/>.
+    /// 构造一个连接到所提供的 <paramref name="database"/> 并使用所提供的
+    /// <paramref name="options"/> 的 <see cref="RedisSynchronizationFactory"/>。
     /// </summary>
     public RedisSynchronizationFactory(IDatabase database, Action<RedisSynchronizationOptionsBuilder>? options = null)
         : this(new[] { database ?? throw new ArgumentNullException(nameof(database)) }, options)
@@ -21,11 +21,11 @@ public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactor
     }
 
     /// <summary>
-    /// Constructs a <see cref="RedisSynchronizationFactory"/> that connects to the provided <paramref name="databases"/>
-    /// and uses the provided <paramref name="options"/>.
+    /// 构造一个连接到所提供的 <paramref name="databases"/> 并使用所提供的
+    /// <paramref name="options"/> 的 <see cref="RedisSynchronizationFactory"/>。
     /// 
-    /// Note that if multiple <see cref="IDatabase"/>s are provided, <see cref="Create(StackExchange.Redis.RedisKey,int)"/> will use only the first
-    /// <see cref="IDatabase"/>.
+    /// 注意，如果提供了多个 <see cref="IDatabase"/>，则 <see cref="Create(StackExchange.Redis.RedisKey,int)"/> 将只使用第一个
+    /// <see cref="IDatabase"/>。
     /// </summary>
     public RedisSynchronizationFactory(IEnumerable<IDatabase> databases, Action<RedisSynchronizationOptionsBuilder>? options = null)
     {
@@ -34,14 +34,14 @@ public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactor
     }
 
     /// <summary>
-    /// Creates a <see cref="RedisLockProvider"/> using the given <paramref name="key"/>.
+    /// 使用给定的 <paramref name="key"/> 创建 <see cref="RedisLockProvider"/>。
     /// </summary>
     public RedisLockProvider Create(RedisKey key) => new(key, _databases, _options);
 
     ILockProvider ILockFactory.Create(string name) => Create(name);
 
     /// <summary>
-    /// Creates a <see cref="RedisSemaphoreProvider"/> using the provided <paramref name="key"/> and <paramref name="maxCount"/>.
+    /// 使用所提供的 <paramref name="key"/> 和 <paramref name="maxCount"/> 创建 <see cref="RedisSemaphoreProvider"/>。
     /// </summary>
     public RedisSemaphoreProvider Create(RedisKey key, int maxCount) => new(key, maxCount, _databases[0], _options);
 

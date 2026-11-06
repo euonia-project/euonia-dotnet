@@ -2,12 +2,19 @@
 
 namespace Nerosoft.Euonia.Caching.Runtime;
 
+/// <summary>
+/// 按 <see cref="RuntimeCacheOptions"/> 构建基于 <c>MemoryCache.Default</c> 的缓存配置，并按缓存值类型复用缓存管理器实例。
+/// </summary>
 internal class RuntimeCacheManager
 {
     private readonly ConcurrentDictionary<Type, object> _instances = new();
 
     private readonly CacheManagerConfiguration _configuration;
 
+    /// <summary>
+    /// 初始化 <see cref="RuntimeCacheManager"/> 的新实例，并按选项构建运行时缓存配置。
+    /// </summary>
+    /// <param name="options">运行时缓存选项，含实例名、更新与重试策略以及可选的绝对过期时间。</param>
     public RuntimeCacheManager(RuntimeCacheOptions options)
     {
         var configuration = ConfigurationBuilder.BuildConfiguration(settings =>
@@ -33,10 +40,10 @@ internal class RuntimeCacheManager
     }
 
     /// <summary>
-    /// 
+    /// 获取指定类型的缓存管理器，同一类型共享同一实例。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="T">缓存项的类型。</typeparam>
+    /// <returns>与 <typeparamref name="T"/> 对应的缓存管理器实例。</returns>
     public ICacheManager<T> Instance<T>()
     {
         return (ICacheManager<T>)_instances.GetOrAdd(typeof(T), _ => CacheFactory.FromConfiguration<T>(_configuration));

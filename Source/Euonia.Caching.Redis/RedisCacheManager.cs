@@ -2,6 +2,9 @@
 
 namespace Nerosoft.Euonia.Caching.Redis;
 
+/// <summary>
+/// 按 <see cref="RedisCacheOptions"/> 构建 Redis 缓存配置（缓存句柄与背板），并按缓存值类型复用缓存管理器实例。
+/// </summary>
 internal class RedisCacheManager
 {
     private readonly ConcurrentDictionary<Type, Lazy<object>> _instances = new();
@@ -9,9 +12,9 @@ internal class RedisCacheManager
     private readonly CacheManagerConfiguration _configuration;
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="RedisCacheManager"/> 的新实例，并按指定选项构建 Redis 缓存配置。
     /// </summary>
-    /// <param name="options"></param>
+    /// <param name="options">包含连接字符串、更新模式、重试与过期设置的 Redis 缓存选项。</param>
     public RedisCacheManager(RedisCacheOptions options)
     {
         var configuration = ConfigurationBuilder.BuildConfiguration(settings =>
@@ -37,10 +40,10 @@ internal class RedisCacheManager
     }
 
     /// <summary>
-    /// 
+    /// 获取指定类型的缓存管理器，同一类型在整个应用内共享同一实例。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="T">缓存项的类型。</typeparam>
+    /// <returns>与 <typeparamref name="T"/> 对应的缓存管理器实例。</returns>
     public ICacheManager<T> Instance<T>()
     {
         // Lazy + ExecutionAndPublication 保证每个类型只会创建并共享一个缓存管理器实例

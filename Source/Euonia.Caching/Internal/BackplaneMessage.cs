@@ -348,6 +348,9 @@ public sealed class BackplaneMessage
         }
     }
 
+    /// <summary>
+    /// 将背板消息写入带 v2 魔数头的字节缓冲区，供跨进程传输。
+    /// </summary>
     private class MessageWriter
     {
         private static readonly Encoding _encoding = Encoding.UTF8;
@@ -415,6 +418,9 @@ public sealed class BackplaneMessage
         }
     }
 
+    /// <summary>
+    /// 从带 v2 魔数头的字节缓冲区读取背板消息，头部不匹配或数据越界时抛出异常。
+    /// </summary>
     private class MessageReader
     {
         private static readonly Encoding _encoding = Encoding.UTF8;

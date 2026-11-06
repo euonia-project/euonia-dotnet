@@ -3,8 +3,8 @@
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Represents the exception that is thrown when given data is not valid.
-/// Implements the <see cref="Exception" />
+/// 表示给定的数据无效时引发的异常。
+/// 实现 <see cref="Exception" />
 /// </summary>
 /// <seealso cref="Exception"/>
 [Serializable]
@@ -13,10 +13,10 @@ public class ValidationException : Exception
 	private readonly IEnumerable<ValidationResult> _errors;
 
 	/// <summary>
-	/// Create a new <see cref="ValidationException"/>.
+	/// 创建新的 <see cref="ValidationException"/>。
 	/// </summary>
-	/// <param name="message"></param>
-	/// <param name="results"></param>
+	/// <param name="message">描述验证失败的错误消息。</param>
+	/// <param name="results">验证失败的结果集合。</param>
 	public ValidationException(string message, params ValidationResult[] results)
 		: base(message)
 	{
@@ -24,10 +24,10 @@ public class ValidationException : Exception
 	}
 
 	/// <summary>
-	/// Creates a new <see cref="ValidationException"/>
+	/// 创建新的 <see cref="ValidationException"/>
 	/// </summary>
-	/// <param name="message"></param>
-	/// <param name="errors"></param>
+	/// <param name="message">描述验证失败的错误消息。</param>
+	/// <param name="errors">验证失败的结果集合。</param>
 	public ValidationException(string message, IEnumerable<ValidationResult> errors)
 		: base(message)
 	{
@@ -35,7 +35,7 @@ public class ValidationException : Exception
 	}
 
 	/// <summary>
-	/// 
+	/// 获取验证失败的结果集合。
 	/// </summary>
 	public virtual IEnumerable<ValidationResult> Errors => _errors;
 

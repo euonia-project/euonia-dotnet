@@ -3,22 +3,22 @@
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Class Signals.
-/// Implements the <see cref="ICacheSignal" />
+/// <see cref="DefaultCacheSignal"/> 类。
+/// 实现 <see cref="ICacheSignal" />。
 /// </summary>
 /// <seealso cref="ICacheSignal" />
 public class DefaultCacheSignal : ICacheSignal
 {
     /// <summary>
-    /// The tokens
+    /// 令牌集合。
     /// </summary>
     private readonly Dictionary<object, VolatileToken> _tokens = new();
 
     /// <summary>
-    /// Triggers the specified signal.
+    /// 触发指定的信号。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="signal">The signal.</param>
+    /// <typeparam name="T">信号类型。</typeparam>
+    /// <param name="signal">信号。</param>
     public void Trigger<T>(T signal)
     {
         lock (_tokens)
@@ -34,11 +34,11 @@ public class DefaultCacheSignal : ICacheSignal
     }
 
     /// <summary>
-    /// Whens the specified signal.
+    /// 为指定的信号创建令牌。
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="signal">The signal.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <typeparam name="T">信号类型。</typeparam>
+    /// <param name="signal">信号。</param>
+    /// <returns>IVolatileToken。</returns>
     public IVolatileToken When<T>(T signal)
     {
         lock (_tokens)
@@ -55,10 +55,13 @@ public class DefaultCacheSignal : ICacheSignal
         }
     }
 
+    /// <summary>
+    /// 由 <see cref="DefaultCacheSignal"/> 按信号登记、触发后失效的易变令牌。
+    /// </summary>
     private class VolatileToken : IVolatileToken
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="VolatileToken"/> class.
+        /// 初始化 <see cref="VolatileToken"/> 类的新实例。
         /// </summary>
         public VolatileToken()
         {
@@ -66,13 +69,13 @@ public class DefaultCacheSignal : ICacheSignal
         }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is current.
+        /// 获取一个值，指示此实例是否为当前状态。
         /// </summary>
-        /// <value><c>true</c> if this instance is current; otherwise, <c>false</c>.</value>
+        /// <value>若此实例为当前状态，则为 <c>true</c>；否则为 <c>false</c>。</value>
         public bool IsCurrent { get; private set; }
 
         /// <summary>
-        /// Triggers this instance.
+        /// 触发此实例。
         /// </summary>
         public void Trigger()
         {

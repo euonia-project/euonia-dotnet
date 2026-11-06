@@ -3,29 +3,28 @@
 namespace Nerosoft.Euonia.Concurrency.FileSystem;
 
 /// <summary>
-/// A distributed lock based on holding an exclusive handle to a lock file. The file will be deleted when the lock is released.
+/// 基于持有锁文件独占句柄的分布式锁。释放锁时该文件将被删除。
 /// </summary>
 public sealed partial class FileLockProvider : ILockProvider<FileSynchronizationHandle>
 {
     /// <summary>
-    /// Since <see cref="UnauthorizedAccessException"/> can be thrown EITHER transiently or for permissions issues, we retry up to this many times
-    /// before we assume that the issue is non-transient. Empirically I've found this value to be reliable both locally and on AppVeyor (if there 
-    /// IS a problem there's little risk to trying more times because we'll eventually be failing hard).
+    /// 由于 <see cref="UnauthorizedAccessException"/> 既可能是瞬时抛出，也可能是权限问题导致，因此在认定问题为非瞬时之前，我们最多重试此次数。
+    /// 根据经验，无论是在本地还是在 AppVeyor 上，该值都是可靠的（如果确实存在问题，多试几次风险也很小，因为最终会明确失败）。
     /// </summary>
     private const int MAX_UNAUTHORIZED_ACCESS_EXCEPTION_RETRIES = 400;
 
-    // These are not configurable currently because in the future we may want to change the implementation of FileLockProvider
-    // to leverage native methods which may allow for actual blocking. The values here reflect the idea that we expect file locks
-    // to be used in cases where contention is rare
+    // 这些值目前不可配置，因为将来我们可能想改变 FileLockProvider 的实现，
+    // 利用原生方法来实现真正的阻塞。这里的取值反映了我们的预期：文件锁
+    // 会被用在竞争很少的场景中。
     private static readonly TimeoutValue _minBusyWaitSleepTime = TimeSpan.FromMilliseconds(50), _maxBusyWaitSleepTime = TimeSpan.FromSeconds(1);
 
     private string? _cachedDirectory;
 
     /// <summary>
-    /// Constructs a lock which uses the provided <paramref name="lockFile"/> as the exact file name.
+    /// 构造一个锁，使用提供的 <paramref name="lockFile"/> 作为确切的文件名。
     /// 
-    /// Upon acquiring the lock, the file's directory will be created automatically if it does not already exist. The file 
-    /// will similarly be created if it does not already exist, and will be deleted when the lock is released.
+    /// 获取锁时，如果文件所在目录尚不存在，将自动创建。文件同样会在不存在时
+    /// 被创建，并在释放锁时被删除。
     /// </summary>
     public FileLockProvider(FileInfo lockFile)
     {
@@ -37,20 +36,18 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
     }
 
     /// <summary>
-    /// Constructs a lock which will place a lock file in <paramref name="lockFileDirectory"/>. The file's name
-    /// will be based on <paramref name="name"/>, but with proper escaping/hashing to ensure that a valid file name is produced.
+    /// 构造一个锁，将锁文件放置在 <paramref name="lockFileDirectory"/> 中。文件名
+    /// 将基于 <paramref name="name"/> 生成，但会进行适当的转义/哈希，以确保产生有效的文件名。
     /// 
-    /// Upon acquiring the lock, the file's directory will be created automatically if it does not already exist. The file 
-    /// will similarly be created if it does not already exist, and will be deleted when the lock is released.
+    /// 获取锁时，如果文件所在目录尚不存在，将自动创建。文件同样会在不存在时
+    /// 被创建，并在释放锁时被删除。
     /// </summary>
     public FileLockProvider(DirectoryInfo lockFileDirectory, string name)
     {
         Name = FileNameValidationHelper.GetLockFileName(lockFileDirectory, name);
     }
 
-    /// <summary>
-    /// Implements <see cref="ILockProvider.Name"/>
-    /// </summary>
+    /// <inheritdoc />
     public string Name { get; }
 
     private string Directory => _cachedDirectory ??= Path.GetDirectoryName(Name)!;
@@ -68,28 +65,28 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
             FileStream lockFileStream;
             try
             {
-                // key arguments: 
-                // OpenOrCreate to be robust to the file existing or not
-                // None to take an exclusive lock
-                // DeleteOnClose to clean up after ourselves
+                // 关键参数：
+                // OpenOrCreate 以便文件存在与否都能正常工作
+                // None 以获取独占锁
+                // DeleteOnClose 以便自行清理
                 lockFileStream = new FileStream(Name, FileMode.OpenOrCreate, FileAccess.Read, FileShare.None, bufferSize: 1, FileOptions.DeleteOnClose);
             }
             catch (DirectoryNotFoundException)
             {
-                // this should almost never happen because we just created the directory but in a race condition it could. Just retry
+                // 这几乎不可能发生，因为我们刚刚创建了目录，但在竞态条件下仍有可能。重试即可
                 continue;
             }
             catch (UnauthorizedAccessException)
             {
-                // This can happen in few cases:
+                // 这在少数几种情况下可能发生：
 
-                // The path is already directory, so we'll never be able to open a handle of it as a file
+                // 该路径已经是目录，因此我们永远无法以文件方式打开它的句柄
                 if (System.IO.Directory.Exists(Name))
                 {
                     throw new InvalidOperationException(string.Format(Resources.IDS_LOCK_FILE_IS_DIRECTORY, Name));
                 }
 
-                // The file exists and is read-only
+                // 文件存在且为只读
                 FileAttributes attributes;
                 try
                 {
@@ -98,34 +95,34 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
                 catch
                 {
                     attributes = FileAttributes.Normal;
-                } // e. g. could fail with FileNotFoundException
+                } // 例如：可能因 FileNotFoundException 而失败
 
                 if (attributes.HasFlag(FileAttributes.ReadOnly))
                 {
-                    // We could support this by eschewing DeleteOnClose once we detect that a file is read-only,
-                    // but absent interest or a use-case we'll just throw for now
+                    // 我们本可以在检测到文件只读时放弃 DeleteOnClose 来支持这种情况，
+                    // 但由于没有需求或使用场景，目前就直接抛出异常
                     throw new NotSupportedException(string.Format(Resources.IDS_LOCK_FILE_READ_ONLY, Name));
                 }
 
-                // Frustratingly, this error can be thrown transiently due to concurrent creation/deletion. Initially assume
-                // that it is transient and just retry
+                // 令人沮丧的是，由于并发的创建/删除操作，该错误可能是瞬时抛出的。先假定
+                // 它是瞬时的，直接重试
                 if (++retryCount <= MAX_UNAUTHORIZED_ACCESS_EXCEPTION_RETRIES)
                 {
                     continue;
                 }
 
-                // If we get here, we've exhausted our retries: assume that it is a legitimate permissions issue
+                // 如果执行到这里，说明重试已耗尽：假定这是确实存在的权限问题
                 throw;
             }
-            // this should never happen because we validate. However if it does (e. g. due to some system configuration change?), throw so that
-            // this doesn't end up in the IOException block (PathTooLongException is IOException)
+            // 这不应发生，因为我们会进行校验。但如果真的发生了（例如由于某种系统配置变更？），就抛出异常，
+            // 以免落入 IOException 分支（PathTooLongException 属于 IOException）
             catch (PathTooLongException)
             {
                 throw;
             }
             catch (IOException)
             {
-                // the hope is that if we get here the only failure reason would be that the file is locked
+                // 希望走到这里时，唯一的失败原因就是文件已被锁定
                 return null;
             }
 
@@ -144,8 +141,8 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
                 System.IO.Directory.CreateDirectory(Directory);
                 return;
             }
-            // This can indicate either a transient failure during concurrent creation/deletion or a permissions issue.
-            // If we encounter it, assume it is transient unless it persists.
+            // 这可能表示并发创建/删除期间的瞬时失败，也可能是权限问题。
+            // 如果遇到，先假定为瞬时问题，除非它持续存在。
             catch (Exception ex) when ((ex is UnauthorizedAccessException || ex is IOException) && ++retryCount <= MAX_UNAUTHORIZED_ACCESS_EXCEPTION_RETRIES)
             {
                 // 并发创建/删除目录时可能瞬时抛出 IOException（上游同样按瞬态错误重试）。
@@ -158,6 +155,9 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
     }
 }
 
+/// <summary>
+/// 提供 <see cref="FileLockProvider"/> 的锁获取方法的分部实现。
+/// </summary>
 public sealed partial class FileLockProvider
 {
     /// <inheritdoc />
@@ -198,6 +198,9 @@ public sealed partial class FileLockProvider
     }
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ILockProvider"/> 接口成员。
+/// </summary>
 public sealed partial class FileLockProvider
 {
     ISynchronizationHandle? ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)

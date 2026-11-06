@@ -5,15 +5,15 @@
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for setting up object validation services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> instance.
+/// 用于在 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> 实例中设置对象验证服务的扩展方法。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	/// Adds object validator to the specified <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+	/// 将对象验证器添加到指定的 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="types"></param>
+	/// <param name="services">要添加验证器服务的服务集合。</param>
+	/// <param name="types">要注册的验证器类型集合；为 <see langword="null"/> 或为空时不注册任何验证器。</param>
 	public static void AddValidator(this IServiceCollection services, IEnumerable<Type> types)
 	{
 		try
@@ -58,10 +58,10 @@ public static class ServiceCollectionExtensions
 	}
 
 	/// <summary>
-	/// Adds object validator to the specified <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+	/// 将对象验证器添加到指定的 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="factory"></param>
+	/// <param name="services">要添加验证器服务的服务集合。</param>
+	/// <param name="factory">延迟提供验证器类型集合的工厂委托；返回 <see langword="null"/> 或空集合时不注册任何验证器。</param>
 	public static void AddValidator(this IServiceCollection services, Func<IEnumerable<Type>> factory)
 	{
 		var types = factory?.Invoke();

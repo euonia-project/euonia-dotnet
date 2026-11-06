@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The class used to generate a sequential guid.
+/// 用于生成顺序 GUID 的类。
 /// </summary>
 public class SequentialGuidValueGenerator : IIdGenerator, IValueGenerator<Guid>
 {

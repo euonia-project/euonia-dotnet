@@ -1,25 +1,24 @@
 ﻿namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
-/// The <c>BaseCacheHandle</c> implements all the logic which might be common for all the cache
-/// handles. It abstracts the <see cref="ICache{T}"/> interface and defines new properties and
-/// methods the implementer must use.
-/// <para>Actually it is not advisable to not use <see cref="BaseCacheHandle{T}"/>.</para>
+/// <c>BaseCacheHandle</c> 实现了所有缓存句柄可能共用的逻辑。它抽象了 <see cref="ICache{T}"/> 接口，
+/// 并定义了实现方必须使用的属性和方法。
+/// <para>实际上，不建议绕过 <see cref="BaseCacheHandle{T}"/> 直接实现。</para>
 /// </summary>
-/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
+/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
 public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
 {
     private readonly object _updateLock = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="BaseCacheHandle{TCacheValue}"/> class.
+    /// 初始化 <see cref="BaseCacheHandle{TCacheValue}"/> 类的新实例。
     /// </summary>
-    /// <param name="managerConfiguration">The manager's configuration.</param>
-    /// <param name="configuration">The configuration.</param>
+    /// <param name="managerConfiguration">管理器的配置。</param>
+    /// <param name="configuration">配置。</param>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="managerConfiguration"/> or <paramref name="configuration"/> are null.
+    /// 如果 <paramref name="managerConfiguration"/> 或 <paramref name="configuration"/> 为 null。
     /// </exception>
-    /// <exception cref="ArgumentException">If <paramref name="configuration"/> name is empty.</exception>
+    /// <exception cref="ArgumentException">如果 <paramref name="configuration"/> 的名称为空。</exception>
     protected BaseCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration)
     {
         Check.EnsureNotNull(configuration, nameof(configuration));
@@ -32,62 +31,62 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Indicates if this cache handle is a distributed cache.
+    /// 指示此缓存句柄是否为分布式缓存。
     /// </summary>
     /// <remarks>
-    /// The value will be evaluated by the backplane logic to figure out what to do if remote events are received.
+    /// 该值将由背板逻辑评估，以确定在收到远程事件时应执行的操作。
     /// <para>
-    /// If the cache handle is distributed, a remote remove event for example does not cause another <c>Remove</c> call. 
-    /// For in-memory cache handles which are backplane source though, it would trigger a <c>Remove</c>.
+    /// 如果缓存句柄是分布式的，例如远程移除事件不会引发另一次 <c>Remove</c> 调用。
+    /// 但对于作为背板源的内存缓存句柄，它会触发一次 <c>Remove</c>。
     /// </para>
     /// </remarks>
     public virtual bool IsDistributedCache { get { return false; } }
 
+    /// <summary>
+    /// 当底层缓存因容量或过期而逐出某个项时触发，供管理器同步统计与背板状态。
+    /// </summary>
     internal event EventHandler<CacheItemRemovedEventArgs>? OnCacheSpecificRemove;
 
     /// <summary>
-    /// Gets the cache handle configuration.
+    /// 获取缓存句柄配置。
     /// </summary>
-    /// <value>The configuration.</value>
+    /// <value>配置。</value>
     public CacheHandleConfiguration Configuration { get; }
 
     /// <summary>
-    /// Gets the number of items the cache handle currently maintains.
+    /// 获取缓存句柄当前维护的项数。
     /// </summary>
-    /// <value>The count.</value>
+    /// <value>计数。</value>
     public abstract int Count { get; }
 
     /// <summary>
-    /// Gets the cache stats object.
+    /// 获取缓存统计对象。
     /// </summary>
-    /// <value>The stats.</value>
+    /// <value>统计数据。</value>
     public virtual CacheStats<TCacheValue> Stats { get; }
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中已存在的键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终基于最新的版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，且在更新过程中其他客户端更改了
+    /// 该键的值，缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <param name="maxRetries">The number of tries.</param>
-    /// <returns>The update result which is interpreted by the cache manager.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="updateValue">用于执行更新的函数。</param>
+    /// <param name="maxRetries">重试次数。</param>
+    /// <returns>由缓存管理器解释的更新结果。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，则 Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     public virtual CacheItemUpdateResult<TCacheValue> Update(string key, Func<TCacheValue, TCacheValue> updateValue, int maxRetries)
     {
@@ -117,31 +116,28 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中已存在的键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终基于最新的版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，且在更新过程中其他客户端更改了
+    /// 该键的值，缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <param name="maxRetries">The number of tries.</param>
-    /// <returns>The update result which is interpreted by the cache manager.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="updateValue">用于执行更新的函数。</param>
+    /// <param name="maxRetries">重试次数。</param>
+    /// <returns>由缓存管理器解释的更新结果。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/>, <paramref name="region"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，则 Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     public virtual CacheItemUpdateResult<TCacheValue> Update(string key, string region, Func<TCacheValue, TCacheValue> updateValue, int maxRetries)
     {
@@ -171,11 +167,11 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Adds a value to the cache.
+    /// 向缓存中添加值。
     /// </summary>
-    /// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+    /// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
     /// <returns>
-    /// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+    /// 如果该键尚未添加到缓存则为 <c>true</c>，否则为 <c>false</c>。
     /// </returns>
     protected override bool AddInternal(CacheItem<TCacheValue> item)
     {
@@ -185,10 +181,10 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Puts the <paramref name="item"/> into the cache. If the item exists it will get updated
-    /// with the new value. If the item doesn't exist, the item will be added to the cache.
+    /// 将 <paramref name="item"/> 放入缓存。如果项已存在，将使用新值更新；如果项不存在，
+    /// 则将其添加到缓存。
     /// </summary>
-    /// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+    /// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
     protected override void PutInternal(CacheItem<TCacheValue> item)
     {
         CheckDisposed();
@@ -197,36 +193,35 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Can be used to signal a remove event to the <see cref="ICacheManager{TCacheValue}"/> in case the underlying cache supports this and the implementation
-    /// can react on evictions and expiration of cache items.
+    /// 当底层缓存支持且实现能够响应缓存项的逐出和过期时，可用于向
+    /// <see cref="ICacheManager{TCacheValue}"/> 发出移除事件信号。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region. Can be null.</param>
-    /// <param name="reason">The reason.</param>
-    /// <param name="value">The original cache value. The value might be null if the underlying cache system doesn't support returning the value on eviction.</param>
-    /// <exception cref="ArgumentNullException">If <paramref name="key"/> is null.</exception>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。可以为 null。</param>
+    /// <param name="reason">原因。</param>
+    /// <param name="value">原始缓存值。如果底层缓存系统不支持在逐出时返回值，则该值可能为 null。</param>
+    /// <exception cref="ArgumentNullException">如果 <paramref name="key"/> 为 null。</exception>
     protected void TriggerCacheSpecificRemove(string key, string? region, CacheItemRemovedReason reason, object? value)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
-        // internal remove event, we don't know the level at this point => emit 0
+        // 内部移除事件，此时尚不知道层级 => 发出 0
         OnCacheSpecificRemove?.Invoke(this, new CacheItemRemovedEventArgs(key, region, reason, value));
     }
 
     /// <summary>
-    /// Adds a value to the cache.
+    /// 向缓存中添加值。
     /// </summary>
-    /// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+    /// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
     /// <returns>
-    /// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+    /// 如果该键尚未添加到缓存则为 <c>true</c>，否则为 <c>false</c>。
     /// </returns>
     protected abstract bool AddInternalPrepared(CacheItem<TCacheValue> item);
 
     /// <summary>
-    /// Performs application-defined tasks associated with freeing, releasing, or resetting
-    /// unmanaged resources.
+    /// 执行与释放或重置非托管资源关联的应用程序定义任务。
     /// </summary>
-    /// <param name="disposeManaged">Indicator if managed resources should be released.</param>
+    /// <param name="disposeManaged">指示是否应释放托管资源。</param>
     protected override void Dispose(bool disposeManaged)
     {
         if (disposeManaged)
@@ -238,21 +233,20 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Gets the item expiration.
+    /// 获取项的过期设置。
     /// </summary>
-    /// <param name="item">The item.</param>
-    /// <returns>Returns the updated cache item.</returns>
-    /// <exception cref="ArgumentNullException">If item is null.</exception>
+    /// <param name="item">项。</param>
+    /// <returns>返回更新后的缓存项。</returns>
+    /// <exception cref="ArgumentNullException">如果 item 为 null。</exception>
     /// <exception cref="InvalidOperationException">
-    /// If expiration mode is defined without timeout.
+    /// 如果在未定义超时的情况下定义了过期模式。
     /// </exception>
     protected virtual CacheItem<TCacheValue> GetItemExpiration(CacheItem<TCacheValue> item)
     {
         Check.EnsureNotNull(item, nameof(item));
 
-        // logic should be that the item setting overrules the handle setting if the item
-        // doesn't define a mode (value is Default) it should use the handle's setting. if the
-        // handle also doesn't define a mode (value is None|Default), we use None.
+        // 逻辑应当是：项设置优先于句柄设置。如果项未定义模式（值为 Default），
+        // 则应使用句柄的设置；如果句柄也未定义模式（值为 None|Default），则使用 None。
         var expirationMode = CacheExpirationMode.Default;
         var expirationTimeout = TimeSpan.Zero;
         var useItemExpiration = item.ExpirationMode != CacheExpirationMode.Default && !item.UsesExpirationDefaults;
@@ -282,9 +276,9 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     }
 
     /// <summary>
-    /// Puts the <paramref name="item"/> into the cache. If the item exists it will get updated
-    /// with the new value. If the item doesn't exist, the item will be added to the cache.
+    /// 将 <paramref name="item"/> 放入缓存。如果项已存在，将使用新值更新；如果项不存在，
+    /// 则将其添加到缓存。
     /// </summary>
-    /// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+    /// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
     protected abstract void PutInternalPrepared(CacheItem<TCacheValue> item);
 }

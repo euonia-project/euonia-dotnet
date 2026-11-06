@@ -5,10 +5,10 @@ using Microsoft.Extensions.Logging;
 namespace Nerosoft.Euonia.Grpc;
 
 /// <summary>
-/// Provides request tracing functionality to gRPC services.
+/// 为 gRPC 服务提供请求跟踪功能。
 /// </summary>
 /// <remarks>
-/// Intercepts gRPC requests and sets a unique `x-request-trace-id` header for every call.
+/// 拦截 gRPC 请求，并为每次调用设置唯一的 `x-request-trace-id` 标头。
 /// </remarks>
 public class RequestTraceInterceptor : Interceptor
 {
@@ -17,9 +17,9 @@ public class RequestTraceInterceptor : Interceptor
     private readonly ILogger<RequestTraceInterceptor> _logger;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="RequestTraceInterceptor"/> class.
+    /// 初始化 <see cref="RequestTraceInterceptor"/> 类的新实例。
     /// </summary>
-    /// <param name="logger"></param>
+    /// <param name="logger">日志工厂，用于创建该拦截器类型的日志记录器。</param>
     public RequestTraceInterceptor(ILoggerFactory logger)
     {
         _logger = logger.CreateLogger<RequestTraceInterceptor>();

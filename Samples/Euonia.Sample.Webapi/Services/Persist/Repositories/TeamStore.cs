@@ -11,6 +11,10 @@ namespace Nerosoft.Euonia.Sample.Persist.Repositories;
 /// </summary>
 public sealed class TeamStore(IApplicationDataContext context) : ITeamStore
 {
+	/// <summary>
+	/// 返回团队的查询源，供读侧在数据库端组合权限过滤条件。
+	/// </summary>
+	/// <returns>当前数据上下文中可供进一步筛选的团队查询。</returns>
 	public IQueryable<Team> Query()
 	{
 		return context.Teams;

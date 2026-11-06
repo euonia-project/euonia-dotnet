@@ -1,29 +1,29 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// The cache context.
+/// 缓存上下文。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">任务执行结果的类型。</typeparam>
 public class CacheContextTask<T> : IDisposable
 {
     /// <summary>
-    /// The cache context accessor
+    /// 缓存上下文访问器。
     /// </summary>
     private readonly ICacheContextAccessor _cacheContextAccessor;
     /// <summary>
-    /// The function
+    /// 要执行的函数。
     /// </summary>
     private readonly Func<T> _function;
     /// <summary>
-    /// The tokens
+    /// 令牌集合。
     /// </summary>
     private List<IVolatileToken>? _tokens;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheContextTask{T}"/> class.
+    /// 初始化 <see cref="CacheContextTask{T}"/> 类的新实例。
     /// </summary>
-    /// <param name="cacheContextAccessor">The cache context accessor.</param>
-    /// <param name="function">The function.</param>
+    /// <param name="cacheContextAccessor">缓存上下文访问器。</param>
+    /// <param name="function">要执行的函数。</param>
     public CacheContextTask(ICacheContextAccessor cacheContextAccessor, Func<T> function)
     {
         _cacheContextAccessor = cacheContextAccessor;
@@ -31,26 +31,26 @@ public class CacheContextTask<T> : IDisposable
     }
 
     /// <summary>
-    /// Execute task and collect eventual volatile tokens
+    /// 执行任务并收集期间产生的易失令牌。
     /// </summary>
-    /// <returns>T.</returns>
+    /// <returns>T。</returns>
     public T Execute()
     {
         var parentContext = _cacheContextAccessor.Current;
         try
         {
-            // Push context
+            // 压入上下文
             if (parentContext == null)
             {
                 _cacheContextAccessor.Current = new SimpleAcquireContext(AddToken);
             }
 
-            // Execute lambda
+            // 执行 lambda
             return _function();
         }
         finally
         {
-            // Pop context
+            // 弹出上下文
             if (parentContext == null)
             {
                 _cacheContextAccessor.Current = parentContext;
@@ -59,13 +59,13 @@ public class CacheContextTask<T> : IDisposable
     }
 
     /// <summary>
-    /// Return tokens collected during task execution
+    /// 返回任务执行期间收集的令牌。
     /// </summary>
-    /// <value>The tokens.</value>
+    /// <value>令牌集合。</value>
     public IEnumerable<IVolatileToken> Tokens => _tokens ?? Enumerable.Empty<IVolatileToken>();
 
     /// <summary>
-    /// Disposes this instance.
+    /// 释放此实例。
     /// </summary>
     public void Dispose()
     {
@@ -73,7 +73,7 @@ public class CacheContextTask<T> : IDisposable
     }
 
     /// <summary>
-    /// Forward collected tokens to current cache context
+    /// 将收集到的令牌转发到当前缓存上下文。
     /// </summary>
     public void Finish()
     {
@@ -91,9 +91,9 @@ public class CacheContextTask<T> : IDisposable
     }
 
     /// <summary>
-    /// Adds the token.
+    /// 添加令牌。
     /// </summary>
-    /// <param name="token">The token.</param>
+    /// <param name="token">令牌。</param>
     private void AddToken(IVolatileToken token)
     {
         _tokens ??= new List<IVolatileToken>();

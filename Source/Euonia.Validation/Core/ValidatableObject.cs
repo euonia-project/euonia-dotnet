@@ -5,31 +5,30 @@ using System.Runtime.CompilerServices;
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Represents the object can be validated.
+/// 表示可被验证的对象。
 /// </summary>
-/// <typeparam name="TValue">The type of the t value.</typeparam>
+/// <typeparam name="TValue">值类型。</typeparam>
 public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChanged
 {
 	/// <summary>
-	/// Occurs when a property value changes.
+	/// 当属性值发生更改时触发。
 	/// </summary>
-	/// <returns></returns>
 	public event PropertyChangedEventHandler? PropertyChanged;
 
 	#region Variables
 
 	/// <summary>
-	/// The value
+	/// 被验证对象的值。
 	/// </summary>
 	private TValue _value = default!;
 
 	/// <summary>
-	/// The is valid
+	/// 是否有效
 	/// </summary>
 	private bool _isValid = true;
 
 	/// <summary>
-	/// The rules
+	/// 规则集合
 	/// </summary>
 	private readonly List<IObjectValidator<TValue>> _rules = new();
 
@@ -38,9 +37,9 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	#region Properties
 
 	/// <summary>
-	/// Gets or sets the value.
+	/// 获取或设置值。
 	/// </summary>
-	/// <value>The value.</value>
+	/// <value>值。</value>
 	public TValue Value
 	{
 		get => _value;
@@ -64,9 +63,9 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	}
 
 	/// <summary>
-	/// Returns true if ... is valid.
+	/// 如果对象有效则返回 true。
 	/// </summary>
-	/// <value><c>true</c> if this instance is valid; otherwise, <c>false</c>.</value>
+	/// <value>如果此实例有效则为 <c>true</c>；否则为 <c>false</c>。</value>
 	public bool IsValid
 	{
 		get => _isValid;
@@ -74,24 +73,24 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	}
 
 	/// <summary>
-	/// Gets or sets a value indicating whether the <see cref="Validate"/> method will be call while value changed or not.
+	/// 获取或设置一个值，指示值更改时是否调用 <see cref="Validate"/> 方法。
 	/// </summary>
 	public bool ValidateOnChanged { get; set; } = false;
 
 	/// <summary>
-	/// Gets the errors.
+	/// 获取错误集合。
 	/// </summary>
-	/// <value>The errors.</value>
+	/// <value>错误集合。</value>
 	public ObservableCollection<string> Errors { get; } = new();
 
 	/// <summary>
-	/// Gets the rules.
+	/// 获取规则集合。
 	/// </summary>
-	/// <value>The rules.</value>
+	/// <value>规则集合。</value>
 	public IReadOnlyList<IObjectValidator<TValue>> Rules => _rules;
 
 	/// <summary>
-	/// Gets or sets the value changed callback.
+	/// 获取或设置值更改回调。
 	/// </summary>
 	public Action<TValue>? ValueChangedCallback { get; set; }
 
@@ -100,7 +99,7 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	#region Methods
 
 	/// <summary>
-	/// Validates this instance.
+	/// 验证此实例。
 	/// </summary>
 	public void Validate()
 	{
@@ -127,11 +126,11 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	}
 
 	/// <summary>
-	/// Withes the validator.
+	/// 使用指定的验证器。
 	/// </summary>
-	/// <param name="rule">The rule.</param>
-	/// <returns>ValidatableObject&lt;TValue&gt;.</returns>
-	/// <exception cref="ArgumentNullException">rule</exception>
+	/// <param name="rule">规则。</param>
+	/// <returns>ValidatableObject&lt;TValue&gt;。</returns>
+	/// <exception cref="ArgumentNullException">当 <paramref name="rule"/> 为 <see langword="null"/> 时抛出。</exception>
 	public ValidatableObject<TValue> UseValidator(IObjectValidator<TValue> rule)
 	{
 		if (rule == null)
@@ -144,21 +143,21 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	}
 
 	/// <summary>
-	/// Raises up the property changed event.
+	/// 触发属性更改事件。
 	/// </summary>
-	/// <param name="propertyName">The property name.</param>
+	/// <param name="propertyName">属性名称。</param>
 	protected virtual void RaisePropertyChanged(string? propertyName)
 	{
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 
 	/// <summary>
-	/// Set property value.
+	/// 设置属性值。
 	/// </summary>
-	/// <typeparam name="T">Value type.</typeparam>
-	/// <param name="field">The property field.</param>
-	/// <param name="value">The new property value.</param>
-	/// <param name="propertyName">The property name.</param>
+	/// <typeparam name="T">值类型。</typeparam>
+	/// <param name="field">属性字段。</param>
+	/// <param name="value">新的属性值。</param>
+	/// <param name="propertyName">属性名称。</param>
 	protected virtual void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
 	{
 		if (EqualityComparer<T>.Default.Equals(field, value))

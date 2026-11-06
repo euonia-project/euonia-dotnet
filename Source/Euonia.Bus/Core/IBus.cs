@@ -286,7 +286,7 @@ public interface IBus
 	/// <typeparam name="TService">请求处理程序所依赖的服务类型。</typeparam>
 	/// <typeparam name="TResult">期望从请求处理程序返回的结果类型。</typeparam>
 	/// <returns>表示异步调用操作的任务，包含返回的结果。</returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="handler"/> 为 <see langword="null"/> 时抛出。</exception>
 	Task<TResult> CallAsync<TService, TResult>(Func<TService, Task<TResult>> handler, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(handler);

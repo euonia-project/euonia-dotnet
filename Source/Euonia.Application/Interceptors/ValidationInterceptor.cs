@@ -110,5 +110,8 @@ public class ValidationInterceptor : IInterceptor
 		}
 	}
 
+	/// <summary>
+	/// 单个方法参数的验证元数据缓存项：参数名、参数类型以及可选的 <see cref="NotNullAttribute"/> 与 <see cref="ValidationAttribute"/>。
+	/// </summary>
 	private sealed record ParameterValidationInfo(string? Name, Type ParameterType, NotNullAttribute? NotNullAttribute, ValidationAttribute? ValidationAttribute);
 }

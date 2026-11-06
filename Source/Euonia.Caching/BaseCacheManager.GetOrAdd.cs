@@ -2,6 +2,9 @@
 
 namespace Nerosoft.Euonia.Caching;
 
+/// <summary>
+/// 定义 <see cref="BaseCacheManager{TValue}"/> 的“获取或添加”成员：未命中时通过值工厂创建并写入缓存。
+/// </summary>
 public partial class BaseCacheManager<TValue>
 {
     /// <inheritdoc />

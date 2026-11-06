@@ -3,6 +3,9 @@ using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Bus.ActiveMq;
 
+/// <summary>
+/// ActiveMQ 的接收器注册器：按消息约定为每个通道创建消费者、订阅者或执行器，并在停机时释放它们持有的会话与消费者。
+/// </summary>
 internal class ActiveMqRecipientRegistrar : IRecipientRegistrar
 {
 	/// <summary>

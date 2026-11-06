@@ -131,16 +131,26 @@ internal sealed class DefaultAsyncWaitQueue<T> : IAsyncWaitQueue<T>
         _queue.Clear();
     }
 
+    /// <summary>
+    /// 供调试器显示的只读视图，以数组形式暴露等待队列中的任务。
+    /// </summary>
     [DebuggerNonUserCode]
     internal sealed class DebugView
     {
         private readonly DefaultAsyncWaitQueue<T> _queue;
 
+        /// <summary>
+        /// 初始化调试视图。
+        /// </summary>
+        /// <param name="queue">要检查的等待队列。</param>
         public DebugView(DefaultAsyncWaitQueue<T> queue)
         {
             _queue = queue;
         }
 
+        /// <summary>
+        /// 获取等待队列中当前所有任务的快照。
+        /// </summary>
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public Task<T>[] Tasks
         {

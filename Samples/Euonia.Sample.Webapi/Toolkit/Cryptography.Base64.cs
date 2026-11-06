@@ -1,27 +1,30 @@
 ﻿namespace Nerosoft.Euonia.Sample.Toolkit;
 
+/// <summary>
+/// 提供 Base64 编解码能力的 <see cref="Cryptography"/> 分部声明，实际实现位于嵌套类型 <c>Cryptography.Base64</c>。
+/// </summary>
 public partial class Cryptography
 {
 	/// <summary>
-	/// Provides Base64 encode and decode helpers for UTF8 strings.
+	/// 为 UTF8 字符串提供 Base64 编码与解码的辅助类。
 	/// </summary>
 	public class Base64
 	{
 		/// <summary>
-		/// Encodes the specified string to Base64 using UTF8 encoding.
+		/// 使用 UTF8 编码把指定字符串编码为 Base64。
 		/// </summary>
-		/// <param name="source">String to encode.</param>
-		/// <returns>Base64-encoded representation.</returns>
+		/// <param name="source">要编码的字符串。</param>
+		/// <returns>Base64 编码后的表示。</returns>
 		public static string Encode(string source)
 		{
 			return Convert.ToBase64String(Encoding.UTF8.GetBytes(source));
 		}
 
 		/// <summary>
-		/// Decodes the specified Base64-encoded string using UTF8 encoding.
+		/// 使用 UTF8 编码解码指定的 Base64 编码字符串。
 		/// </summary>
-		/// <param name="source">Base64-encoded string.</param>
-		/// <returns>Decoded UTF8 string.</returns>
+		/// <param name="source">Base64 编码的字符串。</param>
+		/// <returns>解码后的 UTF8 字符串。</returns>
 		public static string Decode(string source)
 		{
 			return Encoding.UTF8.GetString(Convert.FromBase64String(source));

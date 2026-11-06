@@ -3,12 +3,12 @@
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The options for module lifecycle.
+/// 模块生命周期的选项。
 /// </summary>
 public class ModuleLifecycleOptions
 {
 	/// <summary>
-	/// Gets the lifecycle.
+	/// 获取生命周期。
 	/// </summary>
 	public ITypeList<IModuleLifecycle> Lifecycle { get; } = new TypeList<IModuleLifecycle>();
 }

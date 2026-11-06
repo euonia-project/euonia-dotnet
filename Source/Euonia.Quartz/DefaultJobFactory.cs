@@ -5,16 +5,16 @@ using Quartz.Extensibility;
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// 
+/// 基于依赖注入的 Quartz 作业工厂。
 /// </summary>
 public class DefaultJobFactory : IJobFactory
 {
     private readonly IServiceProvider _provider;
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="DefaultJobFactory"/> 的新实例。
     /// </summary>
-    /// <param name="provider"></param>
+    /// <param name="provider">用于创建或解析作业实例的服务提供程序。</param>
     public DefaultJobFactory(IServiceProvider provider)
     {
         _provider = provider;

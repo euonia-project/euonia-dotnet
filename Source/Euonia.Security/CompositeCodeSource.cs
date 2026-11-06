@@ -8,6 +8,11 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 	private readonly IPermissionCodeSource[] _sources;
 	private readonly IReadOnlyList<string> _operations;
 
+	/// <summary>
+	/// 初始化组合来源，并在构造时把各来源的操作全集合并为只读快照。
+	/// </summary>
+	/// <param name="sources">被组合的权限码来源，按声明顺序参与合并。</param>
+	/// <remarks>操作名按 <see cref="StringComparer.OrdinalIgnoreCase"/> 去重，并过滤 <see langword="null"/> 项。</remarks>
 	public CompositeCodeSource(IPermissionCodeSource[] sources)
 	{
 		_sources = sources;

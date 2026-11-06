@@ -3,17 +3,17 @@
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// 
+/// 配置基于 <see cref="DailyTimeIntervalScheduleBuilder"/> 的每日时间区间调度，使触发器按固定间隔重复执行。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class DailyTimeIntervalScheduleAttribute : BackgroundJobScheduleAttribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="DailyTimeIntervalScheduleAttribute"/> class.
+	/// 初始化 <see cref="DailyTimeIntervalScheduleAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity"></param>
-	/// <param name="interval"></param>
-	/// <param name="unit"></param>
+	/// <param name="identity">触发器的标识，配置触发器时会附加 <c>.trigger</c> 后缀作为触发器名称。</param>
+	/// <param name="interval">触发器重复的间隔数值，与 <paramref name="unit"/> 共同决定实际时间间隔。</param>
+	/// <param name="unit">间隔的时间单位（如秒、分钟、小时、天、周、月、年）。</param>
 	public DailyTimeIntervalScheduleAttribute(string identity, int interval, IntervalUnit unit)
 		: base(identity)
 	{
@@ -22,18 +22,21 @@ public class DailyTimeIntervalScheduleAttribute : BackgroundJobScheduleAttribute
 	}
 
 	/// <summary>
-	/// Gets the interval at which the trigger should repeat.
+	/// 获取触发器重复的间隔。
 	/// </summary>
 	public int Interval { get; }
 
 	/// <summary>
-	/// Gets the time unit of the interval.
+	/// 获取间隔的时间单位。
 	/// </summary>
 	public IntervalUnit Unit { get; }
 
 	/// <summary>
-	/// Gets or set number of times for interval to repeat.
+	/// 获取或设置间隔重复的次数。
 	/// </summary>
+	/// <remarks>
+	/// 仅当值大于 0 时才会应用到调度构建器；为 <see langword="null"/> 或非正数时保持 Quartz 的默认行为。
+	/// </remarks>
 	public int? RepeatCount { get; set; }
 
 	/// <inheritdoc />

@@ -6,20 +6,20 @@ using MongoDB.Driver.Linq;
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The class used to implement the repository pattern for MongoDB.
+/// 用于为 MongoDB 实现仓储模式的类。
 /// </summary>
-/// <typeparam name="TContext"></typeparam>
-/// <typeparam name="TEntity"></typeparam>
-/// <typeparam name="TKey"></typeparam>
+/// <typeparam name="TContext">MongoDB 数据上下文的类型。</typeparam>
+/// <typeparam name="TEntity">实体的类型。</typeparam>
+/// <typeparam name="TKey">实体键的类型。</typeparam>
 public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEntity, TKey>
 	where TKey : IEquatable<TKey>
 	where TEntity : class, IEntity<TKey>
 	where TContext : MongoDbContext, IRepositoryContext
 {
 	/// <summary>
-	/// Initialize a new instance of <see cref="MongoRepository{TContext, TEntity, TKey}"/> with context.
+	/// 使用上下文初始化 <see cref="MongoRepository{TContext, TEntity, TKey}"/> 的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
+	/// <param name="provider">用于获取 MongoDB 数据上下文的上下文提供程序。</param>
 	public MongoRepository(IContextProvider provider)
 		: base(provider)
 	{
@@ -28,7 +28,7 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	/// <inheritdoc />
 	protected override void Dispose(bool disposing)
 	{
-		// ignore.
+		// 忽略。
 	}
 
 	/// <inheritdoc />

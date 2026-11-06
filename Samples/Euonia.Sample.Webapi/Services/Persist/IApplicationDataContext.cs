@@ -17,13 +17,13 @@ public interface IApplicationDataContext
 	/// <summary>代码仓库。</summary>
 	DbSet<CodeRepository> CodeRepositories { get; }
 
-	/// <summary>团队。</summary>
+	/// <summary>获取团队实体集合。</summary>
 	DbSet<Team> Teams { get; }
 
 	/// <summary>团队成员关系（子表：谁属于哪个团队）。</summary>
 	DbSet<TeamMember> TeamMembers { get; }
 
-	/// <summary>项目。</summary>
+	/// <summary>获取项目实体集合。</summary>
 	DbSet<Project> Projects { get; }
 
 	/// <summary>授权数据（角色 / 权限码 / 团队范围 / 显示名）。</summary>

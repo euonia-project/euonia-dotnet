@@ -140,6 +140,9 @@ public sealed class AsyncConditionVariable
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露条件变量的标识、关联锁与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

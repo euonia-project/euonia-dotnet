@@ -1,8 +1,8 @@
 ﻿namespace System;
 
 /// <summary>
-/// The delegate to inject or resolve service with specified name.
+/// 用于按指定名称注入或解析服务的委托。
 /// </summary>
-/// <param name="name">The service name.</param>
-/// <typeparam name="TService">The service type.</typeparam>
+/// <param name="name">服务名称。</param>
+/// <typeparam name="TService">服务类型。</typeparam>
 public delegate TService NamedService<out TService>(string name);

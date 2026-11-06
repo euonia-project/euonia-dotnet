@@ -1,21 +1,21 @@
 ﻿namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Interface IValidator
+/// 验证器接口。
 /// </summary>
-/// <typeparam name="TValue">The type of the t value.</typeparam>
+/// <typeparam name="TValue">值类型。</typeparam>
 public interface IObjectValidator<in TValue>
 {
     /// <summary>
-    /// Gets or sets the error message.
+    /// 获取或设置错误消息。
     /// </summary>
-    /// <value>The error message.</value>
+    /// <value>错误消息。</value>
     string Message { get; set; }
 
     /// <summary>
-    /// Validates the specified value.
+    /// 验证指定的值。
     /// </summary>
-    /// <param name="value">The value.</param>
-    /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
+    /// <param name="value">要验证的值。</param>
+    /// <returns>如果有效则为 <c>true</c>，否则为 <c>false</c>。</returns>
     bool Validate(TValue value);
 }

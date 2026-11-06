@@ -10,8 +10,8 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// </summary>
 internal abstract class RabbitMqRecipient : DisposableObject
 {
-	// Backing field for the consumer instance. Use a dedicated lock to ensure
-	// the consumer is created and event handlers are attached only once.
+	// 消费者实例的后备字段。使用专用锁确保消费者仅被创建一次，
+	// 且事件处理程序仅被附加一次。
 	private readonly Lock _consumerLock = new();
 	private volatile AsyncEventingBasicConsumer? _consumer;
 
@@ -34,7 +34,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// 初始化 <see cref="RabbitMqRecipient"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析服务（如消息序列化器）的服务提供程序。</param>
-	/// <param name="factory">用于建立和管����� RabbitMQ 连接的持久连接工厂。</param>
+	/// <param name="factory">用于建立和管理 RabbitMQ 连接的持久连接工厂。</param>
 	/// <param name="handler">用于处理消息的处理器上下文。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 <see cref="RabbitMqBusOptions"/> 配置。</param>
 	protected RabbitMqRecipient(IServiceProvider provider, IPersistentConnection factory, IHandlerContext handler, IOptions<RabbitMqBusOptions> options)
@@ -118,7 +118,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 				if (consumer == null)
 				{
 					consumer = new AsyncEventingBasicConsumer(Channel);
-					// Attach the handler only once when the consumer is created.
+					// 仅在创建消费者时附加一次处理程序。
 					consumer.ReceivedAsync += HandleMessageReceivedAsync;
 					_consumer = consumer;
 				}
@@ -266,8 +266,8 @@ internal abstract class RabbitMqRecipient : DisposableObject
 				await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);
 			}
 
-			// When auto-ack is enabled the broker has already acknowledged the message,
-			// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
+			// 启用自动确认时，代理已确认该消息，
+			// 因此再次调用 BasicAckAsync 会因 PRECONDITION_FAILED 而失败。
 			if (!AutoAck)
 			{
 				// 纯订阅者（无回复通道）的处理失败不能 ACK，否则消息会被静默丢弃；
@@ -305,8 +305,8 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		finally
 		{
 			cancellationRegistration.Dispose();
-			// Unsubscribe to avoid potential memory leaks or repeated calls in long-running
-			// scenarios. The context is per-message, but being defensive is useful.
+			// 取消订阅以避免长时间运行场景中的潜在内存泄漏或重复调用。
+			// 上下文是按消息独立的，但保持防御性仍然有益。
 			context.Responded -= onResponded;
 			context.Failed -= onFailed;
 			context.Completed -= onCompleted;
@@ -447,21 +447,21 @@ internal abstract class RabbitMqRecipient : DisposableObject
 			return;
 		}
 
-		// Do not access the Consumer property here (it may throw if Channel is null).
+		// 不要在此处访问 Consumer 属性（当 Channel 为 null 时它可能抛出异常）。
 		if (_consumer != null)
 		{
 			_consumer.ReceivedAsync -= HandleMessageReceivedAsync;
 			_consumer = null;
 		}
 
-		// Dispose the channel if it exists.
+		// 释放通道（如果存在）。
 		try
 		{
 			Channel?.Dispose();
 		}
 		catch
 		{
-			// Swallow exceptions during dispose to avoid throwing in finalizers.
+			// 释放期间吞掉异常，以避免在终结器中抛出。
 		}
 	}
 }

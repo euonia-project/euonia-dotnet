@@ -8,10 +8,14 @@ using Nerosoft.Euonia.Sample.Persist.Specifications;
 
 namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 
+/// <summary>
+/// 用户读侧处理：详情按标识加载并显式包含角色导航属性，列表按关键字组合条件后分页查询。
+/// </summary>
 internal class UserRequestHandler(IUserRepository repository)
 	: IHandler<UserDetailQueryRequest, UserDetailDto>,
 	  IHandler<UserListQueryRequest>
 {
+	/// <inheritdoc/>
 	public async Task<UserDetailDto> HandleAsync(UserDetailQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		// Roles 是集合导航属性，必须显式 Include，否则 AsNoTracking 查询拿不到角色。
@@ -35,6 +39,7 @@ internal class UserRequestHandler(IUserRepository repository)
 		};
 	}
 
+	/// <inheritdoc/>
 	public Task HandleAsync(UserListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var specification = UserSpecification.All;

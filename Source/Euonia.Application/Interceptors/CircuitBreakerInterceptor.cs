@@ -199,8 +199,16 @@ internal static class CircuitStateStore
 	/// </summary>
 	public static Func<DateTime> UtcNowProvider { get; set; } = () => DateTime.UtcNow;
 
+	/// <summary>
+	/// 返回当前 UTC 时间；实际取值来自 <see cref="UtcNowProvider"/>，便于测试替换受控时钟。
+	/// </summary>
 	public static DateTime GetUtcNow() => UtcNowProvider();
 
+	/// <summary>
+	/// 获取指定方法键对应的熔断状态；键不存在时创建并登记一个 Closed 状态。
+	/// </summary>
+	/// <param name="key">由服务类型与方法名组成的状态键。</param>
+	/// <returns>该键对应的熔断状态，同一键始终返回同一实例。</returns>
 	public static CircuitState Get(string key)
 	{
 		return _states.GetOrAdd(key, _ => new CircuitState());
@@ -350,9 +358,15 @@ internal sealed class CircuitState
 	}
 }
 
+/// <summary>
+/// 熔断器的状态类型。
+/// </summary>
 internal enum CircuitStateKind
 {
+	/// <summary>关闭状态：正常放行调用并累计连续失败次数。</summary>
 	Closed,
+	/// <summary>打开状态：直接快速失败，直到重置超时结束。</summary>
 	Open,
+	/// <summary>半开状态：放行单个探测请求，以确认依赖是否已恢复。</summary>
 	HalfOpen
 }

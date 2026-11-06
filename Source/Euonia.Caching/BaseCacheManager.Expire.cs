@@ -1,5 +1,8 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
+/// <summary>
+/// 定义 <see cref="BaseCacheManager{TValue}"/> 的过期时间管理成员：设置绝对/滑动过期以及移除过期。
+/// </summary>
 public partial class BaseCacheManager<TValue>
 {
 	/// <inheritdoc />

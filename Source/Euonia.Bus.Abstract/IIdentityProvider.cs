@@ -3,13 +3,13 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// Defines the identity provider.
+/// 定义身份提供程序。
 /// </summary>
 public interface IIdentityProvider
 {
 	/// <summary>
-	/// Get the identity from authorization header.
+	/// 从授权标头获取标识。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>从授权标头解析出的标识。</returns>
 	IPrincipal GetIdentity();
 }

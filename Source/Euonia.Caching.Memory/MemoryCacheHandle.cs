@@ -5,19 +5,19 @@ using Nerosoft.Euonia.Caching.Internal;
 namespace Nerosoft.Euonia.Caching.Memory;
 
 /// <summary>
-/// Implementation of a cache handle using <see cref="Microsoft.Extensions.Caching.Memory"/>.
+/// 使用 <see cref="Microsoft.Extensions.Caching.Memory"/> 的缓存句柄实现。
 /// </summary>
-/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
+/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
 public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 {
 	private volatile MemoryCache _cache;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MemoryCacheHandle{TCacheValue}"/> class.
+	/// 初始化 <see cref="MemoryCacheHandle{TCacheValue}"/> 类的新实例。
 	/// </summary>
-	/// <param name="managerConfiguration">The manager configuration.</param>
-	/// <param name="configuration">The cache handle configuration.</param>
-	/// <param name="options">The vendor specific options.</param>
+	/// <param name="managerConfiguration">管理器配置。</param>
+	/// <param name="configuration">缓存句柄配置。</param>
+	/// <param name="options">供应商特定的选项。</param>
 	///
 	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions? options = null)
 		: base(managerConfiguration, configuration)
@@ -31,6 +31,9 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	/// <inheritdoc/>
 	public override int Count => _cache.Count;
 
+	/// <summary>
+	/// 获取创建该句柄时使用的内存缓存选项，同时用作共享底层存储的标识。
+	/// </summary>
 	internal MemoryCacheOptions Options { get; }
 
 	/// <inheritdoc/>
@@ -220,7 +223,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 			return;
 		}
 
-		// don't trigger stuff on manual remove
+		// 手动移除时不触发相关事件
 		if (reason == EvictionReason.Removed)
 		{
 			return;

@@ -44,6 +44,11 @@ internal class ActiveMqTransporter : ITransporter
 		Name = _options.Name ?? Constants.DefaultTransportName;
 	}
 
+	/// <inheritdoc />
+	/// <remarks>
+	/// 以持久投递方式把消息发送到对应主题，并对投递过程中的异常按配置次数重试；
+	/// 每次成功投递后触发 <see cref="Delivered"/>。临时会话与生产者在使用后立即释放。
+	/// </remarks>
 	public async Task PublishAsync<TMessage>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 	{
 		using var session = await _connection.CreateSessionAsync();

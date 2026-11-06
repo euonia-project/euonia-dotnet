@@ -110,7 +110,6 @@ public class IdentityServerAuthenticationOptions : AuthenticationSchemeOptions
 	/// </summary>
 	public TimeSpan BackChannelTimeouts { get; set; } = TimeSpan.FromSeconds(60);
 
-	// todo
 	/// <summary>
 	/// JWT 中间件的事件。
 	/// </summary>

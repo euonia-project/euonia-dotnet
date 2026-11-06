@@ -3,6 +3,9 @@ using System.Collections.ObjectModel;
 using System.Diagnostics.CodeAnalysis;
 using Nerosoft.Euonia.Collections;
 
+/// <summary>
+/// 提供集合、分页集合与字典操作的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	[ThreadStatic] private static Random? _random;
@@ -562,7 +565,7 @@ public static partial class Extensions
 	public static List<T> SortByDependencies<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> getDependencies, IEqualityComparer<T>? comparer = null)
 		where T : notnull
 	{
-		/* See: http://www.codeproject.com/Articles/869059/Topological-sorting-in-Csharp
+		/* 参见：http://www.codeproject.com/Articles/869059/Topological-sorting-in-Csharp
 		 *      http://en.wikipedia.org/wiki/Topological_sorting
 		 */
 		var sorted = new List<T>();

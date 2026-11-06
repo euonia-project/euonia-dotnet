@@ -4,41 +4,41 @@ using System.Runtime.CompilerServices;
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A simple buffer writer implementation using pooled arrays.
+/// 使用池化数组的简单缓冲区写入器实现。
 /// </summary>
-/// <typeparam name="T">The type of items to store in the list.</typeparam>
+/// <typeparam name="T">要存储在列表中的项类型。</typeparam>
 /// <remarks>
-/// This type is a <see langword="ref"/> <see langword="struct"/> to avoid the object allocation and to
-/// enable the pattern-based <see cref="IDisposable"/> support. We aren't worried with consumers not
-/// using this type correctly since it's private and only accessible within the parent type.
+/// 此类型是 <see langword="ref"/> <see langword="struct"/>，以避免对象分配，并支持基于模式的
+/// <see cref="IDisposable"/>。由于此类型是私有的且只能在父类型内部访问，因此我们无需担心
+/// 使用者未正确使用它。
 /// </remarks>
 internal ref struct ArrayPoolBufferWriter<T>
 {
 	/// <summary>
-	/// The default buffer size to use to expand empty arrays.
+	/// 用于扩展空数组的默认缓冲区大小。
 	/// </summary>
 	private const int DEFAULT_INITIAL_BUFFER_SIZE = 128;
 
 	/// <summary>
-	/// The underlying <typeparamref name="T"/> array.
+	/// 底层的 <typeparamref name="T"/> 数组。
 	/// </summary>
 	private T[] _array;
 
 	/// <summary>
-	/// The span mapping to <see cref="_array"/>.
+	/// 映射到 <see cref="_array"/> 的跨度。
 	/// </summary>
-	/// <remarks>All writes are done through this to avoid covariance checks.</remarks>
+	/// <remarks>所有写入都通过它完成，以避免协变检查。</remarks>
 	private Span<T> _span;
 
 	/// <summary>
-	/// The starting offset within <see cref="_array"/>.
+	/// 在 <see cref="_array"/> 中的起始偏移量。
 	/// </summary>
 	private int _index;
 
 	/// <summary>
-	/// Creates a new instance of the <see cref="ArrayPoolBufferWriter{T}"/> struct.
+	/// 创建 <see cref="ArrayPoolBufferWriter{T}"/> 结构的新实例。
 	/// </summary>
-	/// <returns>A new <see cref="ArrayPoolBufferWriter{T}"/> instance.</returns>
+	/// <returns>新的 <see cref="ArrayPoolBufferWriter{T}"/> 实例。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public static ArrayPoolBufferWriter<T> Create()
 	{
@@ -51,7 +51,7 @@ internal ref struct ArrayPoolBufferWriter<T>
 	}
 
 	/// <summary>
-	/// Gets a <see cref="ReadOnlySpan{T}"/> with the current items.
+	/// 获取包含当前项的 <see cref="ReadOnlySpan{T}"/>。
 	/// </summary>
 	public ReadOnlySpan<T> Span
 	{
@@ -60,9 +60,9 @@ internal ref struct ArrayPoolBufferWriter<T>
 	}
 
 	/// <summary>
-	/// Adds a new item to the current collection.
+	/// 向当前集合添加新项。
 	/// </summary>
-	/// <param name="item">The item to add.</param>
+	/// <param name="item">要添加的项。</param>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	public void Add(T item)
 	{
@@ -82,7 +82,7 @@ internal ref struct ArrayPoolBufferWriter<T>
 	}
 
 	/// <summary>
-	/// Resets the underlying array and the stored items.
+	/// 重置底层数组及已存储的项。
 	/// </summary>
 	public void Reset()
 	{
@@ -92,9 +92,9 @@ internal ref struct ArrayPoolBufferWriter<T>
 	}
 
 	/// <summary>
-	/// Resizes <see cref="_array"/> when there is no space left for new items, then adds one
+	/// 当没有剩余空间容纳新项时调整 <see cref="_array"/> 的大小，然后添加一项
 	/// </summary>
-	/// <param name="item">The item to add.</param>
+	/// <param name="item">要添加的项。</param>
 	[MethodImpl(MethodImplOptions.NoInlining)]
 	private void ResizeBufferAndAdd(T item)
 	{

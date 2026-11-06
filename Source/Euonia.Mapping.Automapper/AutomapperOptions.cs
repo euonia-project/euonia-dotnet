@@ -146,7 +146,7 @@ public class AutomapperOptions
 		}
 
 		{
-			// prevent code check
+			// 防止代码检查
 		}
 	}
 

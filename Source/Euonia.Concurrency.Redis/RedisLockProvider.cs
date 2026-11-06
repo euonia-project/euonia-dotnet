@@ -78,6 +78,9 @@ public sealed partial class RedisLockProvider : ILockProvider<RedisSynchronizati
 	public string Name => Key.ToString();
 }
 
+/// <summary>
+/// 提供 <see cref="RedisLockProvider"/> 的锁获取方法的分部实现。
+/// </summary>
 public sealed partial class RedisLockProvider
 {
 	/// <inheritdoc />
@@ -133,6 +136,9 @@ public sealed partial class RedisLockProvider
 	}
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ILockProvider"/> 接口成员。
+/// </summary>
 public sealed partial class RedisLockProvider
 {
 	/// <inheritdoc />

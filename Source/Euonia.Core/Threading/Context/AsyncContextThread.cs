@@ -94,18 +94,31 @@ public sealed class AsyncContextThread : SingleDisposable<AsyncContext>
     /// </summary>
     public TaskFactory Factory => Context.Factory;
 
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露上下文线程的内部状态。
+    /// </summary>
     [DebuggerNonUserCode]
     internal sealed class DebugView
     {
         private readonly AsyncContextThread _thread;
 
+        /// <summary>
+        /// 初始化调试视图。
+        /// </summary>
+        /// <param name="thread">要检查的上下文线程。</param>
         public DebugView(AsyncContextThread thread)
         {
             _thread = thread;
         }
 
+        /// <summary>
+        /// 获取此线程使用的 <see cref="AsyncContext"/>。
+        /// </summary>
         public AsyncContext Context => _thread.Context;
 
+        /// <summary>
+        /// 获取底层线程对象。
+        /// </summary>
         public object Thread => _thread._thread;
     }
 }

@@ -6,25 +6,26 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// 
+/// 将实现类按其服务类型导出到依赖注入容器的特性。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ExportServiceAttribute : Attribute
 {
     /// <summary>
-    /// Initialize a new instance of <see cref="ExportServiceAttribute"/>.
+    /// 初始化 <see cref="ExportServiceAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="lifetime"></param>
+    /// <param name="lifetime">服务的生命周期。</param>
     public ExportServiceAttribute(ServiceLifetime lifetime)
     {
         Lifetime = lifetime;
     }
 
     /// <summary>
-    /// Initialize a new instance of <see cref="ExportServiceAttribute"/>.
+    /// 初始化 <see cref="ExportServiceAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="lifetime"></param>
-    /// <param name="serviceTypes"></param>
+    /// <param name="lifetime">服务的生命周期。</param>
+    /// <param name="serviceTypes">要导出的服务类型；为空时不指定具体服务类型。</param>
+    /// <exception cref="InvalidOperationException"><paramref name="serviceTypes"/> 中包含既非类也非接口的类型。</exception>
     public ExportServiceAttribute(ServiceLifetime lifetime, params Type[] serviceTypes)
         : this(lifetime)
     {
@@ -52,34 +53,34 @@ public class ExportServiceAttribute : Attribute
     }
 
     /// <summary>
-    /// Gets the service lifetime.
+    /// 获取服务生命周期。
     /// </summary>
     public ServiceLifetime Lifetime { get; }
 
     /// <summary>
-    /// Gets the implemented service types.
+    /// 获取已实现的服务类型。
     /// </summary>
     public List<Type>? ServiceTypes { get; }
 
     /// <summary>
-    /// 
+    /// 获取或设置一个值，指示是否仅在服务尚未注册时注册。
     /// </summary>
     public virtual bool TryRegister { get; set; }
 
     /// <summary>
-    /// 
+    /// 获取或设置一个值，指示是否替换已存在的服务注册。
     /// </summary>
     public virtual bool ReplaceServices { get; set; }
 }
 
 /// <summary>
-/// 
+/// 将服务以瞬态生命周期导出的特性。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ExportServiceAsTransientAttribute : ExportServiceAttribute
 {
     /// <summary>
-    /// Initialize a new instance of <see cref="ExportServiceAsTransientAttribute"/>.
+    /// 初始化 <see cref="ExportServiceAsTransientAttribute"/> 的新实例。
     /// </summary>
     public ExportServiceAsTransientAttribute()
         : base(ServiceLifetime.Transient)
@@ -87,9 +88,9 @@ public class ExportServiceAsTransientAttribute : ExportServiceAttribute
     }
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="ExportServiceAsTransientAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="serviceType"></param>
+    /// <param name="serviceType">要导出的服务类型。</param>
     public ExportServiceAsTransientAttribute(Type serviceType)
         : base(ServiceLifetime.Transient, serviceType)
     {
@@ -97,13 +98,13 @@ public class ExportServiceAsTransientAttribute : ExportServiceAttribute
 }
 
 /// <summary>
-/// 
+/// 将服务以单例生命周期导出的特性。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ExportServiceAsSingletonAttribute : ExportServiceAttribute
 {
     /// <summary>
-    /// 
+    /// 初始化 <see cref="ExportServiceAsSingletonAttribute"/> 的新实例。
     /// </summary>
     public ExportServiceAsSingletonAttribute()
         : base(ServiceLifetime.Singleton)
@@ -111,9 +112,9 @@ public class ExportServiceAsSingletonAttribute : ExportServiceAttribute
     }
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="ExportServiceAsSingletonAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="serviceType"></param>
+    /// <param name="serviceType">要导出的服务类型。</param>
     public ExportServiceAsSingletonAttribute(Type serviceType)
         : base(ServiceLifetime.Singleton, serviceType)
     {
@@ -121,13 +122,13 @@ public class ExportServiceAsSingletonAttribute : ExportServiceAttribute
 }
 
 /// <summary>
-/// 
+/// 将服务以作用域生命周期导出的特性。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class ExportServiceAsScopedAttribute : ExportServiceAttribute
 {
     /// <summary>
-    /// 
+    /// 初始化 <see cref="ExportServiceAsScopedAttribute"/> 的新实例。
     /// </summary>
     public ExportServiceAsScopedAttribute()
         : base(ServiceLifetime.Scoped)
@@ -135,9 +136,9 @@ public class ExportServiceAsScopedAttribute : ExportServiceAttribute
     }
 
     /// <summary>
-    /// 
+    /// 初始化 <see cref="ExportServiceAsScopedAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="serviceType"></param>
+    /// <param name="serviceType">要导出的服务类型。</param>
     public ExportServiceAsScopedAttribute(Type serviceType)
         : base(ServiceLifetime.Scoped, serviceType)
     {

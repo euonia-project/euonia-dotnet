@@ -25,6 +25,10 @@ public class Rules : IRules
 	/// </summary>
 	private static readonly ConcurrentDictionary<Type, ObjectEditState[]> _ruleStates = new();
 
+	/// <summary>
+	/// 为指定的业务对象创建规则集合实例。
+	/// </summary>
+	/// <param name="object">参与规则检查的业务对象。</param>
 	internal Rules(IHasRuleCheck @object)
 	{
 		_target = @object;
@@ -214,6 +218,10 @@ public class Rules : IRules
 		}
 	}
 
+	/// <summary>
+	/// 替换后续规则检查所针对的业务对象。
+	/// </summary>
+	/// <param name="target">新的业务对象。</param>
 	internal void SetTarget(IHasRuleCheck target)
 	{
 		_target = target;

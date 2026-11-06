@@ -48,11 +48,21 @@ internal class ModelProfileContainer
         _mappings[type] = profile;
     }
 
+    /// <summary>
+    /// 获取指定泛型实体类型的模型配置。
+    /// </summary>
+    /// <typeparam name="T">要查询配置的实体类型。</typeparam>
+    /// <returns>已注册的模型配置；未注册时返回新的默认配置实例。</returns>
     internal ModelProfile GetProfile<T>()
     {
         return GetProfile(typeof(T));
     }
 
+    /// <summary>
+    /// 获取指定实体类型的模型配置。
+    /// </summary>
+    /// <param name="type">要查询配置的实体类型。</param>
+    /// <returns>已注册的模型配置；未注册时返回新的默认配置实例。</returns>
     internal ModelProfile GetProfile(Type type)
     {
         return _mappings.TryGetValue(type, out var profile) ? profile : new ModelProfile();

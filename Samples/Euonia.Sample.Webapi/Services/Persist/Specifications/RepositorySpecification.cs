@@ -6,6 +6,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Specifications;
 /// <summary>仓库查询规范。</summary>
 internal static class RepositorySpecification
 {
+	/// <summary>匹配所有代码仓库的规范，以主键非空作为条件。</summary>
 	public static readonly Specification<CodeRepository> All = new DirectSpecification<CodeRepository>(t => t.Id != null);
 
 	/// <summary>Id 等于 <paramref name="id"/>。</summary>

@@ -27,6 +27,13 @@ public sealed class RemoveTeamMemberCommand : ServiceObjectBase<RemoveTeamMember
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 执行移出团队成员：先取目标团队并做行级判定，通过后把成员关系置为失效。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="NotFoundException">目标团队不存在时抛出。</exception>
+	/// <exception cref="SecurityException">当前用户不是该团队负责人、行级判定未通过时抛出。</exception>
 	[Permission(TeamPermissions.Edit, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)

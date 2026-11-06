@@ -5,17 +5,16 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Caching.Redis;
 
 /// <summary>
-/// Implementation of the cache backplane using a Redis Pub/Sub channel.
+/// 基于 Redis 发布/订阅通道的缓存背板实现。
 /// <para>
-/// Redis Pub/Sub is used to send messages to the redis server on any key change, cache clear, region
-/// clear or key remove operation.
-/// Every cache manager with the same configuration subscribes to the
-/// same channel and can react on those messages to keep other cache handles in sync with the 'master'.
+/// 当发生键变更、缓存清空、区域清空或键移除操作时，使用 Redis 发布/订阅向 redis 服务器发送消息。
+/// 所有使用相同配置的缓存管理器都会订阅同一通道，并可以响应这些消息，
+/// 以保持其他缓存句柄与“主”缓存同步。
 /// </para>
 /// </summary>
 /// <remarks>
-/// The cache manager must have at least one cache handle configured with <see cref="CacheHandleConfiguration.IsBackplaneSource"/> set to <c>true</c>.
-/// Usually this is the redis cache handle, if configured. It should be the distributed and bottom most cache handle.
+/// 缓存管理器必须至少配置一个缓存句柄，并将 <see cref="CacheHandleConfiguration.IsBackplaneSource"/> 设置为 <c>true</c>。
+/// 通常这是 redis 缓存句柄（如果已配置）。它应当是分布式且最底层的缓存句柄。
 /// </remarks>
 public sealed class RedisCacheBackplane : CacheBackplane
 {
@@ -32,10 +31,10 @@ public sealed class RedisCacheBackplane : CacheBackplane
     private bool _loggedLimitWarningOnce;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RedisCacheBackplane"/> class.
+    /// 初始化 <see cref="RedisCacheBackplane"/> 类的新实例。
     /// </summary>
-    /// <param name="configuration">The cache manager configuration.</param>
-    /// <param name="connectionString"></param>
+    /// <param name="configuration">缓存管理器配置。</param>
+    /// <param name="connectionString">用于建立 Redis 连接的连接字符串；当该配置键尚无已注册配置时使用。</param>
     public RedisCacheBackplane(CacheManagerConfiguration configuration, string connectionString)
         : base(configuration)
     {
@@ -48,34 +47,34 @@ public sealed class RedisCacheBackplane : CacheBackplane
 
         RetryHelper.Retry(Subscribe, configuration.RetryTimeout, configuration.MaxRetries);
 
-        // adding additional timer based send message invoke (shouldn't do anything if there are no messages,
-        // but in really rare race conditions, it might happen messages do not get send if SendMEssages only get invoked through "NotifyXyz"
+        // 额外添加基于计时器的消息发送调用（若没有消息，则不应有任何操作，
+        // 但在极其罕见的竞态条件下，如果 SendMessages 仅通过 "NotifyXyz" 触发，消息可能未被发送
         _timer = new Timer(SendMessages, true, 1000, 1000);
     }
 
     /// <summary>
-    /// Notifies other cache clients about a changed cache key.
+    /// 通知其他缓存客户端某个缓存键已变更。
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="action">The cache action.</param>
+    /// <param name="key">键。</param>
+    /// <param name="action">缓存操作。</param>
     public override void NotifyChange(string key, CacheItemChangedEventAction action)
     {
         PublishMessage(BackplaneMessage.ForChanged(_identifier, key, action));
     }
 
     /// <summary>
-    /// Notifies other cache clients about a changed cache key.
+    /// 通知其他缓存客户端某个缓存键已变更。
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="region">The region.</param>
-    /// <param name="action">The cache action.</param>
+    /// <param name="key">键。</param>
+    /// <param name="region">区域。</param>
+    /// <param name="action">缓存操作。</param>
     public override void NotifyChange(string key, string region, CacheItemChangedEventAction action)
     {
         PublishMessage(BackplaneMessage.ForChanged(_identifier, key, region, action));
     }
 
     /// <summary>
-    /// Notifies other cache clients about a cache clear.
+    /// 通知其他缓存客户端缓存已清空。
     /// </summary>
     public override void NotifyClear()
     {
@@ -83,39 +82,38 @@ public sealed class RedisCacheBackplane : CacheBackplane
     }
 
     /// <summary>
-    /// Notifies other cache clients about a cache clear region call.
+    /// 通知其他缓存客户端某个缓存区域已清空。
     /// </summary>
-    /// <param name="region">The region.</param>
+    /// <param name="region">区域。</param>
     public override void NotifyClearRegion(string region)
     {
         PublishMessage(BackplaneMessage.ForClearRegion(_identifier, region));
     }
 
     /// <summary>
-    /// Notifies other cache clients about a removed cache key.
+    /// 通知其他缓存客户端某个缓存键已被移除。
     /// </summary>
-    /// <param name="key">The key.</param>
+    /// <param name="key">键。</param>
     public override void NotifyRemove(string key)
     {
         PublishMessage(BackplaneMessage.ForRemoved(_identifier, key));
     }
 
     /// <summary>
-    /// Notifies other cache clients about a removed cache key.
+    /// 通知其他缓存客户端某个缓存键已被移除。
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="region">The region.</param>
+    /// <param name="key">键。</param>
+    /// <param name="region">区域。</param>
     public override void NotifyRemove(string key, string region)
     {
         PublishMessage(BackplaneMessage.ForRemoved(_identifier, key, region));
     }
 
     /// <summary>
-    /// Releases unmanaged and - optionally - managed resources.
+    /// 释放非托管资源，并可选地释放托管资源。
     /// </summary>
     /// <param name="managed">
-    /// <c>true</c> to release both managed and unmanaged resources; <c>false</c> to release
-    /// only unmanaged resources.
+    /// 若要同时释放托管和非托管资源，则为 <c>true</c>；若仅释放非托管资源，则为 <c>false</c>。
     /// </param>
     protected override void Dispose(bool managed)
     {
@@ -129,7 +127,7 @@ public sealed class RedisCacheBackplane : CacheBackplane
             }
             catch
             {
-                // ignore.
+                // 忽略。
             }
         }
 
@@ -200,10 +198,10 @@ public sealed class RedisCacheBackplane : CacheBackplane
                                 Interlocked.Add(ref MessagesSent, _messages.Count);
                                 _skippedMessages = 0;
 
-                                // clearing up only after successfully sending. Basically retrying...
+                                // 仅在成功发送后才清空。本质上就是重试……
                                 _messages.Clear();
 
-                                // reset log limmiter because we just send stuff
+                                // 重置日志限制器，因为刚刚发送了内容
                                 _loggedLimitWarningOnce = false;
                             }
                         }
@@ -236,11 +234,11 @@ public sealed class RedisCacheBackplane : CacheBackplane
 
                     if (!messages.Any())
                     {
-                        // no messages for this instance
+                        // 没有发往此实例的消息
                         return;
                     }
 
-                    // now deserialize all of them (lazy enumerable)
+                    // 现在反序列化全部消息（惰性可枚举）
                     var fullMessages = messages.ToArray();
                     Interlocked.Add(ref MessagesReceived, fullMessages.Length);
 

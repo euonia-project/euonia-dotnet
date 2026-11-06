@@ -2,14 +2,17 @@
 
 namespace Nerosoft.Euonia.Concurrency.ZooKeeper.Internal;
 
+/// <summary>
+/// 顺序节点辅助方法：按前缀筛选子节点并按从旧到新排序，以及查询节点的创建时间。
+/// </summary>
 internal static class ZooKeeperSequentialPathHelper
 {
     /// <summary>
-    /// Given a set of child node names (<paramref name="childrenNames"/>), filters them to include only sequential nodes
-    /// with the prefix <paramref name="prefix"/> or <paramref name="alternatePrefix"/>.
+    /// 在给定一组子节点名称（<paramref name="childrenNames"/>）的情况下，筛选出仅带有前缀 <paramref name="prefix"/>
+    /// 或 <paramref name="alternatePrefix"/> 的顺序节点。
     /// 
-    /// Then, sorts the nodes from oldest to newest. In most, cases, this sort can be done purely using the sequence number. However, because sequence
-    /// numbers roll over at <see cref="int.MaxValue"/>, more complex logic is needed to get a correct sort in certain scenarios.
+    /// 然后，按从最旧到最新的顺序对节点排序。大多数情况下，仅使用序列号即可完成排序。但由于序列号会在
+    /// <see cref="int.MaxValue"/> 处回绕，某些场景下需要更复杂的逻辑才能得到正确的排序结果。
     /// </summary>
     public static async ValueTask<(string Path, int SequenceNumber, string Prefix)[]> FilterAndSortAsync(
         string parentNode,
@@ -25,13 +28,13 @@ internal static class ZooKeeperSequentialPathHelper
             return Array.Empty<(string, int, string)>();
         }
 
-        // first, sort by the unsigned value
+        // 首先，按无符号值排序
         ephemeralChildrenWithPrefix.Sort((a, b) => a.UnsignedSequenceNumber.CompareTo(b.UnsignedSequenceNumber));
 
-        // next, measure the gaps between each pair of sequential values to see if the break point is obvious
+        // 接下来，测量每对相邻序列值之间的间隔，以判断断点是否明显
 
-        // This is > 90% of the uint space; there can only be one gap of this size and if there is such a gap
-        // then we can safely assume that the gap identifies the end of the sequence 
+        // 该值大于 uint 空间的 90%；这样的间隔只可能出现一个，如果存在这样的间隔，
+        // 就可以安全地认为该间隔标识了序列的结束
         const uint largeGapSize = 4_000_000_000u;
 
         var maxGap = 0u;
@@ -52,11 +55,11 @@ internal static class ZooKeeperSequentialPathHelper
             return ReorderByLowestIndex(maxGapEndIndex);
         }
 
-        // finally, fall back to determining the start point via creation time
+        // 最后，退回到通过创建时间来确定起始点
         var creationTimeTasksByChildPath = ephemeralChildrenWithPrefix.ToDictionary(t => t.Path, t => getNodeCreationTimeAsync(t.Path));
         await Task.WhenAll(creationTimeTasksByChildPath.Values).ConfigureAwait(false);
 
-        ephemeralChildrenWithPrefix.RemoveAll(t => creationTimeTasksByChildPath[t.Path].Result == null); // remove all nodes with no creation time (they no longer exist)
+        ephemeralChildrenWithPrefix.RemoveAll(t => creationTimeTasksByChildPath[t.Path].Result == null); // 移除所有没有创建时间的节点（它们已不存在）
         if (ephemeralChildrenWithPrefix.Count == 0)
         {
             return Array.Empty<(string, int, string)>();
@@ -115,34 +118,39 @@ internal static class ZooKeeperSequentialPathHelper
     }
 
     /// <summary>
-    /// If <paramref name="pathOrName"/> is of the form [.../]prefix{sequence number}, returns the sequence
-    /// number. Otherwise, returns null.
+    /// 如果 <paramref name="pathOrName"/> 的形式为 [.../]prefix{序列号}，则返回序列号。否则返回 null。
     /// </summary>
     internal static int? GetSequenceNumberOrDefault(string pathOrName, string prefix)
     {
         Invariant.Require(prefix.Length > 0);
 
-        // when processing child path names, this should be -1; that means we'll expect the prefix at the start
+        // 处理子路径名称时，此处应为 -1；这意味着我们期望前缀位于开头
         var prefixStartIndex = pathOrName.LastIndexOf(ZooKeeperPath.Separator) + 1;
         if (pathOrName.IndexOf(prefix, prefixStartIndex, StringComparison.OrdinalIgnoreCase) != prefixStartIndex)
         {
             return null;
         }
 
-        // FROM https://zookeeper.apache.org/doc/r3.5.4-beta/zookeeperProgrammers.html#Sequence+Nodes+--+Unique+Naming
-        // "The counter has a format of %010d -- that is 10 digits with 0 (zero) padding (the counter is formatted in this way to simplify sorting), 
-        // i.e. "<path>0000000001". See Queue Recipe for an example use of this feature. Note: the counter used to store the next sequence number 
-        // is a signed int (4bytes) maintained by the parent node, the counter will overflow when incremented beyond 2147483647 (resulting in a name "<path>-2147483648")."
+        // 摘自 https://zookeeper.apache.org/doc/r3.5.4-beta/zookeeperProgrammers.html#Sequence+Nodes+--+Unique+Naming
+        // “计数器格式为 %010d，即 10 位数字并以 0（零）填充（计数采用这种格式是为了便于排序），
+        // 例如 "<path>0000000001"。有关此功能的用法示例，请参见 Queue Recipe。注意：用于存储下一个序列号的计数器
+        // 是由父节点维护的有符号 int（4 字节），当递增超过 2147483647 时计数器将溢出（从而产生名称 "<path>-2147483648"）。”
         var counterSuffix = pathOrName[(prefixStartIndex + prefix.Length)..];
         return (
-                   (counterSuffix.Length == 10 && counterSuffix[0] != '+') // 10-char number; don't allow leading +
-                   || (counterSuffix.Length == 11 && counterSuffix[0] == '-') // 11-char number MUST be - and then 10 digits
+                   (counterSuffix.Length == 10 && counterSuffix[0] != '+') // 10 位数字；不允许前导 +
+                   || (counterSuffix.Length == 11 && counterSuffix[0] == '-') // 11 位数字必须以 - 开头，后跟 10 位数字
                )
                && int.TryParse(counterSuffix, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var sequenceNumber)
             ? sequenceNumber
             : default(int?);
     }
 
+    /// <summary>
+    /// 获取指定节点的创建时间。
+    /// </summary>
+    /// <param name="connection">用于查询的 ZooKeeper 连接。</param>
+    /// <param name="path">要查询的节点路径。</param>
+    /// <returns>节点创建时间的毫秒时间戳；节点不存在时为 <see langword="null"/>。</returns>
     public static async Task<long?> GetNodeCreationTimeAsync(this ZooKeeperConnection connection, string path) =>
         (await connection.ZooKeeper.existsAsync(path).ConfigureAwait(false))?.getCtime();
 }

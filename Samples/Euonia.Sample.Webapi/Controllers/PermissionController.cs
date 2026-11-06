@@ -12,7 +12,7 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 /// 角色由账号角色表（user_role）承载，随令牌传递，改角色后重新登录生效；
 /// 权限码由 <see cref="ScopeSubjectResolver"/> 在下一次解析时生效，
 /// 故撤销即时生效、无需重新签发令牌。
-/// <b>团队归属不在这里</b>：它是业务关系（<see cref="TeamMember"/> / <c>team_member</c>），
+/// <b>团队归属不在这里</b>：它是业务关系（<see cref="Nerosoft.Euonia.Sample.Domain.Aggregates.TeamMember"/> / <c>team_member</c>），
 /// 由团队端点（<c>POST /api/team/{id}/members</c>）在 <c>team:edit</c> 的行级闸门下维护，
 /// 本控制器只负责<b>查看</b>。
 /// 变更类操作仅限项目管理角色（视作许可管理员）。

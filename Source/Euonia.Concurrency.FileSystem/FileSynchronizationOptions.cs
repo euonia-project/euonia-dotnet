@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Concurrency.FileSystem;
 
 /// <summary>
-/// Options for the file system synchronization provider
+/// 文件系统同步提供程序的选项
 /// </summary>
 public class FileSynchronizationOptions
 {
     /// <summary>
-    /// Gets or sets the directory to use for synchronization
+    /// 获取或设置用于同步的目录
     /// </summary>
     public string Directory { get; set; } = null!;
 }

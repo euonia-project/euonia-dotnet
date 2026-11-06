@@ -33,6 +33,12 @@ internal sealed class OperationCodeSource : IPermissionCodeSource
 
 	private readonly ConcurrentDictionary<(Type Type, string Operation), IReadOnlyList<PermissionAttribute>> _cache = new();
 
+	/// <summary>
+	/// 用已声明的操作全集与入口判定规则初始化权限码来源。
+	/// </summary>
+	/// <param name="operations">本来源负责的操作全集，构造时复制为只读快照。</param>
+	/// <param name="rules">操作名到入口判定规则列表的映射，由构造器保证已按忽略大小写归一。</param>
+	/// <remarks>规则字典按引用持有，调用方在构造后不应再改动它。</remarks>
 	internal OperationCodeSource(
 		IReadOnlyList<string> operations,
 		IReadOnlyDictionary<string, IReadOnlyList<Func<MethodInfo, bool>>> rules)

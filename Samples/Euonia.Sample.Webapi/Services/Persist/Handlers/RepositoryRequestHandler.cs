@@ -18,6 +18,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 internal class RepositoryRequestHandler(IRepositoryStore store, IScopeGuard guard)
 	: IHandler<RepositoryListQueryRequest, PagedResult<RepositoryDto>>
 {
+	/// <inheritdoc/>
 	public async Task<PagedResult<RepositoryDto>> HandleAsync(RepositoryListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var page = message.Page < 1 ? 1 : message.Page;

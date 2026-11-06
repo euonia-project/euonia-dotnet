@@ -184,6 +184,9 @@ public sealed class AsyncSemaphore
     public IDisposable Lock() => Lock(CancellationToken.None);
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露信号量的标识、当前计数与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

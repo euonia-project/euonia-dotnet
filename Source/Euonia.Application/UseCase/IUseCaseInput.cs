@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Defines the input data structure of a use case.
+/// 定义用例的输入数据结构。
 /// </summary>
 public interface IUseCaseInput
 {

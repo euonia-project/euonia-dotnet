@@ -40,6 +40,13 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 	/// <summary>新密码。</summary>
 	public string NewPassword { get; private set; } = null!;
 
+	/// <summary>
+	/// 执行改密：校验新密码长度与旧密码，通过后重新生成盐与哈希并保存，同时发布密码变更事件。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="BusinessException">无法识别当前用户、新密码过短或旧密码不正确时抛出。</exception>
+	/// <exception cref="NotFoundException">当前用户不存在时抛出。</exception>
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{

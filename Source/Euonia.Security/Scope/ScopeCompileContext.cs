@@ -28,6 +28,12 @@ internal sealed class ScopeCompileContext<T>
 	/// <summary>本次编译中真正被策略引用的集合维度：加载探测只针对它们。</summary>
 	private readonly HashSet<string> _referencedCollectionDimensions = new(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// 初始化编译上下文，并创建所有叶子条件共用的规范参数。
+	/// </summary>
+	/// <param name="descriptor">资源模型描述。</param>
+	/// <param name="subjects">用户主体集合，提供各维度被授予的值。</param>
+	/// <param name="scopeKey">策略键；为 <see langword="null"/>、空或仅空白时回落到 <see cref="ScopeKeys.Default"/>。</param>
 	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string? scopeKey)
 	{
 		_descriptor = descriptor;
