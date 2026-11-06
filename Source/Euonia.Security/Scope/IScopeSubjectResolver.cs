@@ -19,5 +19,5 @@ public interface IScopeSubjectResolver
 	/// <param name="user">当前用户，可能为 <see langword="null"/>（未接入用户上下文）。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>用户被授予的主体集合；无任何授予时返回空集合。</returns>
-	ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default);
+	ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default);
 }

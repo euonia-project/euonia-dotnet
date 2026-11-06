@@ -12,7 +12,7 @@ public class QueryHandler<TEntity>
 
     private readonly IQueryable<TEntity> _query;
 
-    private Func<IQueryable<TEntity>, IQueryable<TEntity>> _ordering;
+    private Func<IQueryable<TEntity>, IQueryable<TEntity>>? _ordering;
 
     private int _page = 1;
     private int _size = int.MaxValue;

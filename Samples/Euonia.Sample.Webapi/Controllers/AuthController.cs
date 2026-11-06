@@ -76,7 +76,7 @@ public class AuthController(IConfiguration configuration, IUserRepository users)
 	private string IssueToken(UserEntity user)
 	{
 		var section = configuration.GetSection("JwtAuthenticationOptions");
-		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(section["SigningKey"]));
+		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(section["SigningKey"]!));
 		var issuer = section.GetSection("Issuer").Get<string[]>()?.FirstOrDefault() ?? "euonia.com";
 
 		var claims = new List<Claim>

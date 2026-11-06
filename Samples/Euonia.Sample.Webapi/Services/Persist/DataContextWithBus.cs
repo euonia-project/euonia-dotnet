@@ -16,7 +16,7 @@ namespace Nerosoft.Euonia.Sample.Persist;
 internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	where TContext : DbContext, IRepositoryContext
 {
-	private readonly List<object> _unchangedEntities = [];
+	private readonly List<object?> _unchangedEntities = [];
 	private readonly IBus _bus;
 	private readonly IRequestContextAccessor _request;
 
@@ -134,7 +134,7 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 	/// Gets the current user from the request context.
 	/// </summary>
 	/// <returns></returns>
-	private string GetCurrentUser()
+	private string? GetCurrentUser()
 	{
 		var principal = _request?.Context?.User;
 
@@ -185,7 +185,7 @@ internal abstract class DataContextWithBus<TContext> : DataContextBase<TContext>
 		return base.DisposeAsync();
 	}
 
-	protected virtual void OnDetectedEntityChanges(object sender, DetectedEntityChangesEventArgs args)
+	protected virtual void OnDetectedEntityChanges(object? sender, DetectedEntityChangesEventArgs args)
 	{
 		Debug.WriteLine(args.Entry.DebugView.LongView);
 

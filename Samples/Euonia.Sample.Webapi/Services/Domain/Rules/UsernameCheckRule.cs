@@ -28,7 +28,8 @@ internal sealed class UsernameCheckRule(IPropertyInfo property) : RuleBase(prope
 			return;
 		}
 
-		var value = target.ReadProperty(Property)?.ToString();
+		var property = Property!;
+		var value = target.ReadProperty(property)?.ToString();
 
 		if (string.IsNullOrWhiteSpace(value))
 		{

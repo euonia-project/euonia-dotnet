@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace Nerosoft.Euonia.Security;
@@ -18,7 +19,7 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 internal sealed record ScopeDimensionMapping
 {
-	private ScopeDimensionMapping(string dimension, LambdaExpression value, LambdaExpression collection, IReadOnlyList<LambdaExpression> filters, string path, Type elementType)
+	private ScopeDimensionMapping(string dimension, LambdaExpression? value, LambdaExpression? collection, IReadOnlyList<LambdaExpression> filters, string path, Type elementType)
 	{
 		Dimension = dimension;
 		Value = value;
@@ -35,10 +36,10 @@ internal sealed record ScopeDimensionMapping
 	/// 取值选择器：单值维度是资源上的一个值（<c>x =&gt; x.DeptId</c>）；
 	/// 集合维度是<b>子项</b>上的一个值（<c>v =&gt; v.UserId</c>），子项本身是字符串时为恒等映射。
 	/// </summary>
-	internal LambdaExpression Value { get; }
+	internal LambdaExpression? Value { get; }
 
 	/// <summary>集合导航（<c>x =&gt; x.Members</c>）；单值维度为 <see langword="null"/>。</summary>
-	internal LambdaExpression Collection { get; }
+	internal LambdaExpression? Collection { get; }
 
 	/// <summary>集合导航上的过滤条件（<c>m =&gt; m.Status == "active"</c>），按书写顺序；单值维度为空。</summary>
 	internal IReadOnlyList<LambdaExpression> Filters { get; }
@@ -50,6 +51,7 @@ internal sealed record ScopeDimensionMapping
 	internal Type ElementType { get; }
 
 	/// <summary>是否为集合维度（取值来自子表）。</summary>
+	[MemberNotNullWhen(true, nameof(Collection))]
 	internal bool IsCollection => Collection != null;
 
 	/// <summary>
@@ -68,7 +70,7 @@ internal sealed record ScopeDimensionMapping
 		}
 
 		var body = Strip(selector.Body);
-		LambdaExpression value = null;
+		LambdaExpression? value = null;
 		var filters = new List<LambdaExpression>();
 
 		// 由外向内剥离 Select / Where，剩下的必须是以资源参数为根的成员访问链（导航集合）
@@ -113,7 +115,7 @@ internal sealed record ScopeDimensionMapping
 			Expression.Lambda(body, selector.Parameters[0]),
 			filters,
 			body.ToString(),
-			elementType);
+			elementType!);
 	}
 
 	/// <summary>
@@ -123,7 +125,7 @@ internal sealed record ScopeDimensionMapping
 	/// <remarks>
 	/// 探测只用于单行判定，绝不参与下推：查询路径由数据库求值，与内存对象图无关。
 	/// </remarks>
-	internal LambdaExpression CreateLoadProbe()
+	internal LambdaExpression? CreateLoadProbe()
 	{
 		if (!IsCollection || Collection.Body.Type.IsValueType)
 		{
@@ -146,10 +148,15 @@ internal sealed record ScopeDimensionMapping
 	}
 
 	/// <summary>判断表达式是否为「以资源参数为根的成员访问链」。</summary>
-	private static bool IsResourceMemberChain(Expression expression, ParameterExpression resource)
+	private static bool IsResourceMemberChain(Expression? expression, ParameterExpression resource)
 	{
 		while (true)
 		{
+			if (expression == null)
+			{
+				return false;
+			}
+
 			switch (Strip(expression))
 			{
 				case MemberExpression member:
@@ -164,7 +171,7 @@ internal sealed record ScopeDimensionMapping
 	}
 
 	/// <summary>取集合的元素类型；不是集合时返回 <see langword="null"/>。</summary>
-	private static Type ResolveElementType(Type type)
+	private static Type? ResolveElementType(Type type)
 	{
 		return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)
 			? type.GetGenericArguments()[0]

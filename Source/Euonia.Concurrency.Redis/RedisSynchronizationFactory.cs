@@ -9,13 +9,13 @@ namespace Nerosoft.Euonia.Concurrency.Redis;
 public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactory
 {
     private readonly IReadOnlyList<IDatabase> _databases;
-    private readonly Action<RedisSynchronizationOptionsBuilder> _options;
+    private readonly Action<RedisSynchronizationOptionsBuilder>? _options;
 
     /// <summary>
     /// Constructs a <see cref="RedisSynchronizationFactory"/> that connects to the provided <paramref name="database"/>
     /// and uses the provided <paramref name="options"/>.
     /// </summary>
-    public RedisSynchronizationFactory(IDatabase database, Action<RedisSynchronizationOptionsBuilder> options = null)
+    public RedisSynchronizationFactory(IDatabase database, Action<RedisSynchronizationOptionsBuilder>? options = null)
         : this(new[] { database ?? throw new ArgumentNullException(nameof(database)) }, options)
     {
     }
@@ -27,7 +27,7 @@ public sealed class RedisSynchronizationFactory : ILockFactory, ISemaphoreFactor
     /// Note that if multiple <see cref="IDatabase"/>s are provided, <see cref="Create(StackExchange.Redis.RedisKey,int)"/> will use only the first
     /// <see cref="IDatabase"/>.
     /// </summary>
-    public RedisSynchronizationFactory(IEnumerable<IDatabase> databases, Action<RedisSynchronizationOptionsBuilder> options = null)
+    public RedisSynchronizationFactory(IEnumerable<IDatabase> databases, Action<RedisSynchronizationOptionsBuilder>? options = null)
     {
         _databases = RedisLockProvider.ValidateDatabases(databases);
         _options = options;

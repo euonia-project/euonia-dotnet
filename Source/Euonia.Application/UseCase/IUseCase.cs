@@ -11,7 +11,7 @@ public interface IUseCase
 	/// <param name="input"></param>
 	/// <param name="cancellationToken"></param>
 	/// <returns></returns>
-	Task<object> ExecuteAsync(object input, CancellationToken cancellationToken = default);
+	Task<object?> ExecuteAsync(object input, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -30,7 +30,7 @@ public interface IUseCase<in TInput, TOutput> : IUseCase
 	Task<TOutput> ExecuteAsync(TInput input, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
-	async Task<object> IUseCase.ExecuteAsync(object input, CancellationToken cancellationToken)
+	async Task<object?> IUseCase.ExecuteAsync(object input, CancellationToken cancellationToken)
 		=> await ExecuteAsync((TInput)input, cancellationToken);
 }
 

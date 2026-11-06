@@ -206,7 +206,7 @@ public sealed partial class AsyncContext : IDisposable
     /// <summary>
     /// 获取当前线程的 <see cref="AsyncContext"/>，如果此线程当前未在 <see cref="AsyncContext"/> 中运行，则返回 <c>null</c>。
     /// </summary>
-    public static AsyncContext Current
+    public static AsyncContext? Current
     {
         get
         {

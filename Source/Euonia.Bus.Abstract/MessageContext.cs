@@ -65,40 +65,40 @@ public sealed class MessageContext : IMessageContext
 	/// <inheritdoc />
 	public string MessageId
 	{
-		get => _headers.GetValueOrDefault(MessageHeaders.MessageId);
+		get => _headers.GetValueOrDefault(MessageHeaders.MessageId)!;
 		set => _headers[MessageHeaders.MessageId] = value;
 	}
 
 	/// <inheritdoc />
 	public string CorrelationId
 	{
-		get => _headers.GetValueOrDefault(MessageHeaders.CorrelationId);
+		get => _headers.GetValueOrDefault(MessageHeaders.CorrelationId)!;
 		set => _headers[MessageHeaders.CorrelationId] = value;
 	}
 
 	/// <inheritdoc />
 	public string ConversationId
 	{
-		get => _headers.GetValueOrDefault(MessageHeaders.ConversationId);
+		get => _headers.GetValueOrDefault(MessageHeaders.ConversationId)!;
 		set => _headers[MessageHeaders.ConversationId] = value;
 	}
 
 	/// <inheritdoc />
-	public string RequestTraceId
+	public string? RequestTraceId
 	{
 		get => _headers.GetValueOrDefault(MessageHeaders.RequestTraceId);
-		set => _headers[MessageHeaders.RequestTraceId] = value;
+		set => _headers[MessageHeaders.RequestTraceId] = value!;
 	}
 
 	/// <inheritdoc />
-	public string Authorization
+	public string? Authorization
 	{
 		get => _headers.GetValueOrDefault(MessageHeaders.Authorization);
-		set => _headers[MessageHeaders.Authorization] = value;
+		set => _headers[MessageHeaders.Authorization] = value!;
 	}
 
 	/// <inheritdoc/>
-	public IPrincipal User { get; }
+	public IPrincipal? User { get; }
 
 	/// <inheritdoc />
 	public IReadOnlyDictionary<string, string> Headers => _headers;
@@ -106,7 +106,7 @@ public sealed class MessageContext : IMessageContext
 	/// <summary>
 	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
-	public MessageMetadata Metadata { get; set; }
+	public MessageMetadata Metadata { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置本次消息处理的执行环境描述符，决定服务作用域与请求上下文的来源。
@@ -121,7 +121,7 @@ public sealed class MessageContext : IMessageContext
 	/// 向消息分发器回复消息处理结果。
 	/// </summary>
 	/// <param name="message">要回复的消息。</param>
-	public void Response(object message)
+	public void Response(object? message)
 	{
 		_events.HandleEvent(this, new MessageRepliedEventArgs(message), nameof(Responded));
 	}
@@ -133,7 +133,7 @@ public sealed class MessageContext : IMessageContext
 	/// <param name="message">要回复的消息。</param>
 	public void Response<TMessage>(TMessage message)
 	{
-		Response((object)message);
+		Response((object?)message);
 	}
 
 	/// <summary>
@@ -148,8 +148,8 @@ public sealed class MessageContext : IMessageContext
 	/// <summary>
 	/// 在消息处理完成后调用。此操作将触发 <see cref="Completed"/> 事件。
 	/// </summary>
-	/// <param name="messageId">已完成处理的消息标识符。</param>
-	public void Complete(string messageId)
+	/// <param name="messageId">已完成处理的消息标识符；只有完成通知、没有消息标识时可为 <c>null</c>。</param>
+	public void Complete(string? messageId)
 	{
 		_events.HandleEvent(this, new MessageHandledEventArgs(messageId), nameof(Completed));
 	}
@@ -157,9 +157,9 @@ public sealed class MessageContext : IMessageContext
 	/// <summary>
 	/// 在消息处理完成后调用。此操作将触发 <see cref="Completed"/> 事件。
 	/// </summary>
-	/// <param name="messageId">已完成处理的消息标识符。</param>
+	/// <param name="messageId">已完成处理的消息标识符；只有完成通知、没有消息标识时可为 <c>null</c>。</param>
 	/// <param name="handlerType">处理该消息的处理程序类型。</param>
-	public void Complete(string messageId, Type handlerType)
+	public void Complete(string? messageId, Type handlerType)
 	{
 		_events.HandleEvent(this, new MessageHandledEventArgs(messageId) { HandlerType = handlerType }, nameof(Completed));
 	}

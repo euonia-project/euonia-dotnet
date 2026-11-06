@@ -39,7 +39,7 @@ public interface ICacheItemProperties
     /// 获取缓存区域。
     /// </summary>
     /// <value>缓存区域。</value>
-    string Region { get; }
+    string? Region { get; }
 
     /// <summary>
     /// 获取一个值，指示缓存项是否使用缓存句柄配置的过期时间。

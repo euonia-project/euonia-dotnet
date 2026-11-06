@@ -124,7 +124,7 @@ public class CreateProbeCommand : ServiceObject<CreateProbeCommand>
 	/// <summary>
 	/// 创建工厂方法接收到的参数。
 	/// </summary>
-	public string Criteria { get; private set; }
+	public string Criteria { get; private set; } = null!;
 
 	[FactoryCreate]
 	private Task FactoryCreateAsync(string criteria, CancellationToken cancellationToken = default)
@@ -160,7 +160,7 @@ public class CreateProbeBusiness : BusinessObject<CreateProbeBusiness>
 	/// <summary>
 	/// 创建工厂方法接收到的参数。
 	/// </summary>
-	public string Criteria { get; private set; }
+	public string Criteria { get; private set; } = null!;
 
 	[FactoryCreate]
 	private Task FactoryCreateAsync(string criteria, CancellationToken cancellationToken = default)

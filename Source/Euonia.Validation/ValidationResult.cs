@@ -27,10 +27,10 @@ public class ValidationResult
     /// <summary>
     /// 
     /// </summary>
-    public string PropertyName { get; set; }
+    public string PropertyName { get; set; } = string.Empty;
 
     /// <summary>
     /// 
     /// </summary>
-    public string ErrorMessage { get; set; }
+    public string ErrorMessage { get; set; } = string.Empty;
 }

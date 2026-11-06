@@ -43,7 +43,7 @@ public readonly struct Unit : IEquatable<Unit>, IComparable<Unit>, IComparable
 	///  - 零：此实例在排序顺序中与 <paramref name="obj" /> 处于相同位置。
 	///  - 大于零：此实例在排序顺序中位于 <paramref name="obj" /> 之后。
 	/// </returns>
-	int IComparable.CompareTo(object obj) => 0;
+	int IComparable.CompareTo(object? obj) => 0;
 
 	/// <summary>
 	/// 返回此实例的哈希码。
@@ -70,7 +70,7 @@ public readonly struct Unit : IEquatable<Unit>, IComparable<Unit>, IComparable
 	/// <returns>
 	/// 如果指定的 <see cref="System.Object" /> 等于此实例，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
-	public override bool Equals(object obj) => obj is Unit;
+	public override bool Equals(object? obj) => obj is Unit;
 
 	/// <summary>
 	/// 确定 <paramref name="first"/> 对象是否等于 <paramref name="second"/> 对象。

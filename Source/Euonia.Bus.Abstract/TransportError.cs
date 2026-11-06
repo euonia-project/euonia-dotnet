@@ -13,19 +13,19 @@ public sealed class TransportError
 	/// <summary>
 	/// 获取或设置原始异常类型的完整名称。
 	/// </summary>
-	public string Type { get; set; }
+	public string? Type { get; set; }
 
 	/// <summary>
 	/// 获取或设置异常消息。
 	/// </summary>
-	public string Message { get; set; }
+	public string? Message { get; set; }
 
 	/// <summary>
 	/// 从异常创建传输错误信息。
 	/// </summary>
 	/// <param name="exception">要转换的异常。</param>
 	/// <returns>传输错误信息；<paramref name="exception"/> 为 <c>null</c> 时返回 <c>null</c>。</returns>
-	public static TransportError From(Exception exception)
+	public static TransportError? From(Exception? exception)
 	{
 		return exception == null
 			       ? null

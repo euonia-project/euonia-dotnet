@@ -17,7 +17,7 @@ public static class ApplicationBuilderExtensions
     /// <param name="builder"></param>
     /// <param name="configure"></param>
     /// <returns></returns>
-    public static IApplicationBuilder UseGrpcEndpoints(this IApplicationBuilder builder, Action<IEndpointRouteBuilder> configure = null)
+    public static IApplicationBuilder UseGrpcEndpoints(this IApplicationBuilder builder, Action<IEndpointRouteBuilder>? configure = null)
     {
         builder.UseEndpoints(endpoints =>
         {
@@ -59,7 +59,7 @@ public static class ApplicationBuilderExtensions
         var types = definedTypes.Where(t => t.IsClass)
                                 .Where(t => t.IsAbstract == false)
                                 .Where(t => t.BaseType != null && t.BaseType.IsAbstract)
-                                .Where(t => t.BaseType.GetCustomAttributes<BindServiceMethodAttribute>().Any());
+                                .Where(t => t.BaseType!.GetCustomAttributes<BindServiceMethodAttribute>().Any());
 
         foreach (var type in types)
         {

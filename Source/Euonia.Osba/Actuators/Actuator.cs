@@ -40,7 +40,7 @@ internal sealed class Actuator(IServiceProvider provider) : IActuator
 	/// <remarks>
 	/// 该重载绕过依赖注入容器，直接使用给定的工厂与管道构建执行器，适用于手动组合依赖的场景。
 	/// </remarks>
-	public static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>> behaviors = null)
+	public static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>>? behaviors = null)
 		where TTarget : ObjectBase<TTarget>
 	{
 		return For(factory, pipeline, behaviors, isDefaultPipeline: false);
@@ -55,7 +55,7 @@ internal sealed class Actuator(IServiceProvider provider) : IActuator
 	/// <param name="behaviors">执行器行为集合。</param>
 	/// <param name="isDefaultPipeline">管道是否由框架默认创建；只有默认且无行为时才允许绕过空管道。</param>
 	/// <returns>用于配置和执行操作的构建器。</returns>
-	internal static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>> behaviors, bool isDefaultPipeline)
+	internal static ActuatorBuilder<TTarget> For<TTarget>([NotNull] IObjectFactory factory, IPipeline<TTarget, TTarget> pipeline, IEnumerable<IActuatorBehavior<TTarget>>? behaviors, bool isDefaultPipeline)
 		where TTarget : ObjectBase<TTarget>
 	{
 		var builder = new ActuatorBuilder<TTarget>(factory, pipeline, isDefaultPipeline);

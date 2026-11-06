@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Nerosoft.Euonia.Security;
@@ -68,7 +69,7 @@ public sealed class ScopeModelRegistry
 	/// <param name="resourceType">资源类型。</param>
 	/// <param name="registration">注册项。</param>
 	/// <returns>存在则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	public bool TryGet(Type resourceType, out ScopeModelRegistration registration)
+	public bool TryGet(Type? resourceType, [MaybeNullWhen(false)] out ScopeModelRegistration registration)
 	{
 		if (resourceType == null)
 		{
@@ -88,7 +89,7 @@ public sealed class ScopeModelRegistry
 	/// 沿基类链查找：实体框架的代理类型是派生类，直接按 <c>GetType()</c> 查找会漏。
 	/// 实现即 <see cref="TryGetInherited"/>——两者是同一段遍历，分开写只会让「要不要越过 object」的口径分叉。
 	/// </remarks>
-	public bool IsDeclared(Type resourceType)
+	public bool IsDeclared(Type? resourceType)
 	{
 		return TryGetInherited(resourceType, out _);
 	}
@@ -99,7 +100,7 @@ public sealed class ScopeModelRegistry
 	/// <param name="resourceType">资源类型。</param>
 	/// <param name="registration">注册项。</param>
 	/// <returns>找到则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
-	public bool TryGetInherited(Type resourceType, out ScopeModelRegistration registration)
+	public bool TryGetInherited(Type? resourceType, [MaybeNullWhen(false)] out ScopeModelRegistration registration)
 	{
 		for (var type = resourceType; type != null && type != typeof(object); type = type.BaseType)
 		{

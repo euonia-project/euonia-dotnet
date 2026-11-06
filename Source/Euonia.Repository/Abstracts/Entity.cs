@@ -11,7 +11,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
 	/// 获取或设置实体的标识（主键）。
 	/// </summary>
 	/// <value>实体的标识值。</value>
-	public virtual TKey Id { get; set; }
+	public virtual TKey Id { get; set; } = default!;
 
 	/// <inheritdoc/>
 	public override object[] GetKeys()

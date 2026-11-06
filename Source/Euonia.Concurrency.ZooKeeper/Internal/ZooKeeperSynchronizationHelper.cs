@@ -23,7 +23,7 @@ internal class ZooKeeperSynchronizationHelper
         ZooKeeperPath path,
         bool assumePathExists,
         string connectionString,
-        Action<ZooKeeperSynchronizationOptionsBuilder> optionsBuilder,
+        Action<ZooKeeperSynchronizationOptionsBuilder>? optionsBuilder,
         bool setAcquiredMarker = false)
     {
         Path = path;
@@ -41,18 +41,18 @@ internal class ZooKeeperSynchronizationHelper
 
     public ZooKeeperPath Path { get; }
 
-    public async Task<ZooKeeperNodeHandle> TryAcquireAsync(
+    public async Task<ZooKeeperNodeHandle?> TryAcquireAsync(
         Func<State, bool> hasAcquired,
         Func<org.apache.zookeeper.ZooKeeper, State, Watcher, Task<bool>> waitAsync,
         TimeoutValue timeout,
         CancellationToken cancellationToken,
         string nodePrefix,
-        string alternateNodePrefix = null)
+        string? alternateNodePrefix = null)
     {
         var acquired = false;
         var ephemeralNodeLost = false;
-        ZooKeeperConnection connection = null;
-        string ephemeralNodePath = null;
+        ZooKeeperConnection? connection = null;
+        string? ephemeralNodePath = null;
         var timeoutSource = new CancellationTokenSource(timeout.TimeSpan);
 
         try
@@ -97,12 +97,11 @@ internal class ZooKeeperSynchronizationHelper
 
                 // wait for something to change
                 var waitCompletionSource = new TaskCompletionSource<bool>();
-                using var timeoutRegistration = timeoutSource.Token.Register(obj => ((TaskCompletionSource<bool>)obj).TrySetResult(false), waitCompletionSource);
-                using var cancellationRegistration = cancellationToken.Register(obj => ((TaskCompletionSource<bool>)obj).TrySetCanceled(), waitCompletionSource);
+                using var timeoutRegistration = timeoutSource.Token.Register(() => waitCompletionSource.TrySetResult(false));
+                using var cancellationRegistration = cancellationToken.Register(() => waitCompletionSource.TrySetCanceled());
                 // this is needed because if the connection goes down and never recovers, we'll never get the session expired notification
                 using var connectionLostRegistration = connection.ConnectionLostToken.Register(
-                    obj => ((TaskCompletionSource<bool>)obj).TrySetException(new InvalidOperationException("Lost connection to ZooKeeper")),
-                    state: waitCompletionSource
+                    () => waitCompletionSource.TrySetException(new InvalidOperationException("Lost connection to ZooKeeper"))
                 );
                 if (!waitCompletionSource.Task.IsCompleted
                     && await waitAsync(connection.ZooKeeper, state, new WaitCompletionSourceWatcher(waitCompletionSource)).ConfigureAwait(false))
@@ -128,7 +127,7 @@ internal class ZooKeeperSynchronizationHelper
         }
     }
 
-    private async Task CleanUpOnFailureAsync(ZooKeeperConnection connection, string ephemeralNodePath, bool ephemeralNodeLost)
+    private async Task CleanUpOnFailureAsync(ZooKeeperConnection? connection, string? ephemeralNodePath, bool ephemeralNodeLost)
     {
         if (connection == null)
         {

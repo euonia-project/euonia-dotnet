@@ -159,7 +159,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// <param name="token">A token used to determine the receiving channel to use.</param>
 	/// <param name="dispatcher">The input <see cref="MessageHandlerDispatcher"/> instance to register, or null.</param>
 	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher dispatcher)
+	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher? dispatcher)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
@@ -272,7 +272,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 		}
 
 		var lockTaken = false;
-		object[] maps = null;
+		object[]? maps = null;
 		var i = 0;
 
 		// We use an explicit try/finally block here instead of the lock syntax so that we can use a single
@@ -757,7 +757,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// <param name="mapping">The resulting <see cref="Mapping"/> instance, if found.</param>
 	/// <returns>Whether or not the required <see cref="Mapping"/> instance was found.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool TryGetMapping<TMessage>([NotNullWhen(true)] out Mapping mapping)
+	private bool TryGetMapping<TMessage>([NotNullWhen(true)] out Mapping? mapping)
 		where TMessage : class
 	{
 		EquatableType key = new(typeof(TMessage), typeof(Unit));
@@ -786,7 +786,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// <param name="mapping">The resulting <see cref="Mapping{TToken}"/> instance, if found.</param>
 	/// <returns>Whether or not the required <see cref="Mapping{TToken}"/> instance was found.</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool TryGetMapping<TMessage, TToken>([NotNullWhen(true)] out Mapping<TToken> mapping)
+	private bool TryGetMapping<TMessage, TToken>([NotNullWhen(true)] out Mapping<TToken>? mapping)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
@@ -959,7 +959,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 		}
 
 		/// <inheritdoc/>
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is Recipient other && Equals(other);
 		}

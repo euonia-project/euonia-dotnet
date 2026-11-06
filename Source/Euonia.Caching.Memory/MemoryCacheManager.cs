@@ -20,7 +20,7 @@ internal class MemoryCacheManager
             // Default 模式会被 GetItemExpiration 当作“无过期”，必须用 Absolute 才会真正应用 Expires。
             if (options.Expires.HasValue)
             {
-                handle.WithExpiration(CacheExpirationMode.Absolute, options.Expires.Value);
+                handle?.WithExpiration(CacheExpirationMode.Absolute, options.Expires.Value);
             }
         });
 

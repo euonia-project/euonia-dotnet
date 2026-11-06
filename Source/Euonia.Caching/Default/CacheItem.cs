@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nerosoft.Euonia.Caching;
 
@@ -7,7 +8,7 @@ namespace Nerosoft.Euonia.Caching;
 /// </summary>
 /// <typeparam name="TKey"></typeparam>
 /// <typeparam name="TResult"></typeparam>
-internal class CacheItem<TKey, TResult>
+internal class CacheItem<TKey, TResult> where TKey : notnull
 {
     /// <summary>
     /// The cache context accessor
@@ -112,7 +113,7 @@ internal class CacheItem<TKey, TResult>
     /// <param name="key"></param>
     /// <param name="value"></param>
     /// <returns></returns>
-    public bool TryGet(TKey key, out TResult value)
+    public bool TryGet(TKey key, [MaybeNullWhen(false)] out TResult value)
     {
         if (_entries.TryGetValue(key, out var entry))
         {
@@ -166,7 +167,7 @@ internal class CacheItem<TKey, TResult>
         var entry = new CacheEntry();
         var context = new AcquireContext<TKey>(key, entry.AddToken);
 
-        IAcquireContext parentContext = null;
+        IAcquireContext? parentContext = null;
         try
         {
             // Push context
@@ -185,7 +186,7 @@ internal class CacheItem<TKey, TResult>
         return entry;
     }
 
-    private async Task<CacheEntry> UpdateEntryAsync(CacheEntry currentEntry, TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
+    private async Task<CacheEntry> UpdateEntryAsync(CacheEntry? currentEntry, TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
         // currentEntry 可能为 null（例如来自 AddOrUpdateAsync），此时必须新建条目
         var entry = currentEntry == null || currentEntry.Tokens.Any(t => t is { IsCurrent: false }) ? await CreateEntryAsync(key, acquire) : currentEntry;
@@ -198,7 +199,7 @@ internal class CacheItem<TKey, TResult>
         var entry = new CacheEntry();
         var context = new AcquireContext<TKey>(key, entry.AddToken);
 
-        IAcquireContext parentContext = null;
+        IAcquireContext? parentContext = null;
         try
         {
             // Push context
@@ -255,13 +256,13 @@ internal class CacheItem<TKey, TResult>
         /// <summary>
         /// The tokens
         /// </summary>
-        private IList<IVolatileToken> _tokens;
+        private IList<IVolatileToken>? _tokens;
 
         /// <summary>
         /// Gets or sets the result.
         /// </summary>
         /// <value>The result.</value>
-        public TResult Result { get; set; }
+        public TResult Result { get; set; } = default!;
 
         /// <summary>
         /// Gets the tokens.

@@ -54,7 +54,7 @@ public abstract class AutomaticRegistrationBase : IAutomaticRegistration
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    protected virtual ExportServiceAttribute GetDependencyAttribute(Type type)
+    protected virtual ExportServiceAttribute? GetDependencyAttribute(Type type)
     {
         return type.GetCustomAttribute<ExportServiceAttribute>(true);
     }
@@ -65,7 +65,7 @@ public abstract class AutomaticRegistrationBase : IAutomaticRegistration
     /// <param name="type"></param>
     /// <param name="attribute"></param>
     /// <returns></returns>
-    protected virtual ServiceLifetime? GetLifeTime(Type type, ExportServiceAttribute attribute)
+    protected virtual ServiceLifetime? GetLifeTime(Type type, ExportServiceAttribute? attribute)
     {
         if (attribute != null)
         {
@@ -136,7 +136,7 @@ public abstract class AutomaticRegistrationBase : IAutomaticRegistration
 
             if (redirectedType != null)
             {
-                return ServiceDescriptor.Describe(serviceType, provider => provider.GetService(redirectedType), lifeTime);
+                return ServiceDescriptor.Describe(serviceType, provider => provider.GetService(redirectedType)!, lifeTime);
             }
         }
 
@@ -154,7 +154,7 @@ public abstract class AutomaticRegistrationBase : IAutomaticRegistration
     /// <param name="implementationType"></param>
     /// <param name="exposingServiceTypes"></param>
     /// <returns></returns>
-    protected virtual Type GetRedirectedTypeOrNull(Type serviceType, Type implementationType, List<Type> exposingServiceTypes)
+    protected virtual Type? GetRedirectedTypeOrNull(Type serviceType, Type implementationType, List<Type> exposingServiceTypes)
     {
         if (exposingServiceTypes.Count < 2)
         {

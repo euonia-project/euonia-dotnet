@@ -15,7 +15,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// <summary>
 	/// 当消息处理程序被订阅时触发。
 	/// </summary>
-	public event EventHandler<MessageSubscribedEventArgs> MessageSubscribed;
+	public event EventHandler<MessageSubscribedEventArgs>? MessageSubscribed;
 
 	private readonly ConcurrentDictionary<string, List<HandlerRegistration>> _handlerContainer = new();
 
@@ -54,7 +54,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 
 	#region Handling register
 
-	private void OnChannelRegistered(object sender, ChannelRegisteredEventArgs args)
+	private void OnChannelRegistered(object? sender, ChannelRegisteredEventArgs args)
 	{
 		if (args.Handler.HandlerType.IsInterface && args.Handler.HandlerType.IsGenericType && args.Handler.HandlerType.GetGenericTypeDefinition() == typeof(IHandler<,>))
 		{
@@ -86,14 +86,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		{
 			// 容器里可能未注册具体实现类型（仅通过 configurator 扫描时），回退到运行时创建。
 			var handler = ActivatorUtilities.GetServiceOrCreateInstance<THandler>(provider);
-			return async (message, context, token) => await handler.HandleAsync((TMessage)message, context, token);
+			return async (message, context, token) => (await handler.HandleAsync((TMessage)message, context, token))!;
 		}
 
-		AddRegistration(channel, typeof(THandler).FullName, Handling);
+		AddRegistration(channel, typeof(THandler).FullName!, Handling);
 		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, typeof(TMessage), typeof(THandler)));
 	}
 
-	private void Register(string channel, Type type, object instance, MethodInfo method)
+	private void Register(string channel, Type type, object? instance, MethodInfo method)
 	{
 		var invoker = BuildHandlerInvoker(method);
 		if (invoker == null)
@@ -109,8 +109,9 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			return (message, context, token) => invoker(handler, message, context, token);
 		}
 
-		AddRegistration(channel, type.FullName, Handling);
-		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, type));
+		AddRegistration(channel, type.FullName!, Handling);
+		// messageType 为 null 表示“按接口/特性注册，具体消息类型由处理器自行确定”。
+		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null!, type));
 	}
 
 	/// <summary>
@@ -167,8 +168,8 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			};
 		}
 
-		AddRegistration(channel, (channelHandler.ImplementationType ?? channelHandler.HandlerType).FullName, handling);
-		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null, channelHandler.HandlerType));
+		AddRegistration(channel, (channelHandler.ImplementationType ?? channelHandler.HandlerType).FullName!, handling);
+		MessageSubscribed?.Invoke(this, new MessageSubscribedEventArgs(channel, null!, channelHandler.HandlerType));
 	}
 
 	/// <summary>
@@ -210,7 +211,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		ArgumentNullException.ThrowIfNull(message);
 		ArgumentException.ThrowIfNullOrWhiteSpace(handler);
 
-		HandlerRegistration registration;
+		HandlerRegistration? registration;
 		lock (_registrationLock)
 		{
 			if (!_handlerContainer.TryGetValue(channel, out var registrations) || registrations == null)
@@ -235,6 +236,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 				var invoker = registration.Factory(provider);
 				var result = await invoker(message, context, cancellationToken).ConfigureAwait(false);
 				context.Response(result);
+				// 重放场景没有新的消息标识，沿用既有语义以 null 完成。
 				context.Complete(null);
 				provider.GetService<IInboxStore>()?.MarkAsSuccess(context.MessageId, registration.Name);
 			}).ConfigureAwait(false);
@@ -288,9 +290,8 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 		_logger.LogDebug("Message {Id} is being handled", context.MessageId);
 
 		// 收件箱全局开关启用时要求已注册收件箱存储；否则视为配置缺失，快速失败以避免静默退化。
-		var useInbox = _inboxOptions.Enabled;
-		var inboxStore = useInbox ? provider.GetService<IInboxStore>() : null;
-		if (useInbox && inboxStore == null)
+		var inboxStore = _inboxOptions.Enabled ? provider.GetService<IInboxStore>() : null;
+		if (_inboxOptions.Enabled && inboxStore == null)
 		{
 			throw new MessagePersistentException(Resources.IDS_INBOX_STORE_NOT_REGISTERED);
 		}
@@ -310,7 +311,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 
 			// 单播：执行第一个处理程序；启用收件箱时标记执行结果（不做去重跳过 —— 与 Java 版本保持一致）。
 			var (name, handler) = handlers[0];
-			if (useInbox)
+			if (inboxStore != null)
 			{
 				try
 				{
@@ -334,7 +335,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 			// 否则并行执行所有处理程序，并逐处理程序标记执行结果。
 			var names = handlers.Select(handler => handler.Name).ToArray();
 
-			if (useInbox && !inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
+			if (inboxStore != null && !inboxStore.Insert(channel, new InboundEnvelope(context, channel, message), names))
 			{
 				_logger.LogInformation("Message {Id} was already handled and will be skipped", context.MessageId);
 				result = Unit.Value;
@@ -346,14 +347,14 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 					try
 					{
 						await handler.Handler(message, context, token);
-						if (useInbox)
+						if (inboxStore != null)
 						{
 							inboxStore.MarkAsSuccess(context.MessageId, handler.Name);
 						}
 					}
 					catch (Exception exception)
 					{
-						if (useInbox)
+						if (inboxStore != null)
 						{
 							inboxStore.MarkAsFailed(context.MessageId, handler.Name, exception.Message);
 						}
@@ -403,7 +404,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// 返回可复用的 <c>Func&lt;object, object, IMessageContext, CancellationToken, Task&lt;object&gt;&gt;</c> 委托；
 	/// 当方法参数超过三个（不支持）时返回 <c>null</c>。
 	/// </returns>
-	private static Func<object, object, IMessageContext, CancellationToken, Task<object>> BuildHandlerInvoker(MethodInfo method)
+	private static Func<object, object, IMessageContext, CancellationToken, Task<object>>? BuildHandlerInvoker(MethodInfo method)
 	{
 		var instanceParam = Expression.Parameter(typeof(object), "instance");
 		var messageParam = Expression.Parameter(typeof(object), "message");
@@ -435,7 +436,7 @@ internal sealed class DefaultHandlerContext : IHandlerContext, IDisposable
 	/// <returns>
 	/// 与方法参数对应的 <see cref="Expression"/> 数组；当方法参数超过三个（不支持）时返回 <c>null</c>。
 	/// </returns>
-	private static Expression[] GetArguments(MethodInfo method, Expression message, Expression context, Expression token)
+	private static Expression[]? GetArguments(MethodInfo method, Expression message, Expression context, Expression token)
 	{
 		var parameterInfos = method.GetParameters();
 		if (parameterInfos.Length > 3)

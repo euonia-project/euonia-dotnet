@@ -15,12 +15,12 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// <summary>
 	/// 当消息被接收时触发。
 	/// </summary>
-	public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+	public event EventHandler<MessageReceivedEventArgs> MessageReceived = null!;
 
 	/// <summary>
 	/// 当消息被确认后触发。
 	/// </summary>
-	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged;
+	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged = null!;
 
 	/// <summary>
 	/// 消息序列化器，用于消息信封的序列化与反序列化。
@@ -30,7 +30,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// <summary>
 	/// 当前接收器的日志记录器。
 	/// </summary>
-	private readonly ILogger _logger;
+	private readonly ILogger? _logger;
 
 	/// <summary>
 	/// 初始化 <see cref="ActiveMqRecipient"/> 类的新实例。
@@ -80,12 +80,12 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置当前接收器使用的消息会话。
 	/// </summary>
-	protected virtual ISession Session { get; set; }
+	protected virtual ISession? Session { get; set; }
 
 	/// <summary>
 	/// 获取或设置当前接收器关联的消息消费者。
 	/// </summary>
-	protected IMessageConsumer Consumer { get; set; }
+	protected IMessageConsumer? Consumer { get; set; }
 
 	/// <summary>
 	/// 处理接收到的消息。
@@ -165,8 +165,9 @@ internal abstract class ActiveMqRecipient : DisposableObject
 			{
 				var response = _serializer.Serialize(reply);
 
-				using var responder = await Session.CreateProducerAsync(message.NMSReplyTo);
-				var responseMessage = await Session.CreateTextMessageAsync(response);
+				var session = Session!;
+				using var responder = await session.CreateProducerAsync(message.NMSReplyTo);
+				var responseMessage = await session.CreateTextMessageAsync(response);
 
 				// 建立关联 ID，使请求方能够将回复与原始请求消息进行对应。
 				responseMessage.NMSCorrelationID = message.NMSCorrelationID;
@@ -193,24 +194,24 @@ internal abstract class ActiveMqRecipient : DisposableObject
 			throw;
 		}
 
-		void OnResponded(object s, MessageRepliedEventArgs e)
+		void OnResponded(object? s, MessageRepliedEventArgs e)
 		{
 			if (message.NMSReplyTo == null || string.IsNullOrWhiteSpace(message.NMSCorrelationID))
 			{
 				return;
 			}
 
-			taskCompletion.TrySetResult(e.Result);
+			taskCompletion.TrySetResult(e.Result!);
 		}
 
-		void OnFailed(object s, Exception exception)
+		void OnFailed(object? s, Exception exception)
 		{
 			taskCompletion.TrySetException(exception);
 		}
 
-		void OnCompleted(object s, MessageHandledEventArgs e)
+		void OnCompleted(object? s, MessageHandledEventArgs e)
 		{
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
+			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)!));
 		}
 	}
 
@@ -252,7 +253,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// <summary>
 	/// 连接重建后重新创建会话与消费者。
 	/// </summary>
-	private void OnReconnected(object sender, EventArgs e)
+	private void OnReconnected(object? sender, EventArgs e)
 	{
 		_ = RestartAsync();
 	}
@@ -285,7 +286,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 	/// 优先使用配置中的订阅标识；若未配置，则回退到入口程序集名称；
 	/// 若仍不可用，则使用默认值 <c>DefaultSubscription</c>。
 	/// </summary>
-	protected virtual string SubscriptionId => string.Collapse(Options?.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, "DefaultSubscription");
+	protected virtual string SubscriptionId => string.Collapse(Options.SubscriptionId ?? string.Empty, Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty, "DefaultSubscription");
 
 	/// <summary>
 	/// 启动消息接收器并开始监听消息。

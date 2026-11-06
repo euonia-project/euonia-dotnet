@@ -14,7 +14,7 @@ namespace Nerosoft.Euonia.Uow;
 public class UnitOfWorkInterceptor : IInterceptor
 {
 	// 缓存 WrapAsync 的闭包泛型 MethodInfo（按结果类型），避免每次调用 MakeGenericMethod。
-	private static readonly MethodInfo _wrapAsyncMethod = typeof(UnitOfWorkInterceptor).GetMethod(nameof(WrapAsync), BindingFlags.Instance | BindingFlags.NonPublic);
+	private static readonly MethodInfo _wrapAsyncMethod = typeof(UnitOfWorkInterceptor).GetMethod(nameof(WrapAsync), BindingFlags.Instance | BindingFlags.NonPublic)!;
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapAsyncMethods = new();
 
 	private readonly IServiceScopeFactory _factory;
@@ -67,7 +67,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 			else
 			{
 				var task = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
-				                            .Invoke(this, new object[] { invocation, proceedInfo, attribute });
+				                            .Invoke(this, new object?[] { invocation, proceedInfo, attribute });
 
 				invocation.ReturnValue = isGenericValueTask
 					                         ? Activator.CreateInstance(returnType, task)
@@ -83,7 +83,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <summary>
 	/// 同步方法路径：创建作用域与工作单元，调用目标方法后完成工作单元。
 	/// </summary>
-	private void InterceptSync(IInvocation invocation, UnitOfWorkAttribute attribute)
+	private void InterceptSync(IInvocation invocation, UnitOfWorkAttribute? attribute)
 	{
 		using var scope = _factory.CreateScope();
 		var provider = scope.ServiceProvider;
@@ -103,7 +103,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// 异步方法路径：创建作用域与工作单元，在目标方法返回的 <see cref="Task"/> 完成后再完成工作单元，
 	/// 使工作单元覆盖目标方法的整个异步执行体。
 	/// </summary>
-	private async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, UnitOfWorkAttribute attribute)
+	private async Task InterceptAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, UnitOfWorkAttribute? attribute)
 	{
 		using var scope = _factory.CreateScope();
 		var provider = scope.ServiceProvider;
@@ -124,7 +124,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <summary>
 	/// 异步方法路径（<see cref="Task{TResult}"/>）：同上，并返回目标方法的执行结果。
 	/// </summary>
-	private async Task<T> WrapAsync<T>(IInvocation invocation, IInvocationProceedInfo proceedInfo, UnitOfWorkAttribute attribute)
+	private async Task<T> WrapAsync<T>(IInvocation invocation, IInvocationProceedInfo proceedInfo, UnitOfWorkAttribute? attribute)
 	{
 		using var scope = _factory.CreateScope();
 		var provider = scope.ServiceProvider;
@@ -148,7 +148,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <param name="attribute">方法或类型上的工作单元特性，可为 <c>null</c>。</param>
 	/// <param name="provider">用于解析 <see cref="UnitOfWorkOptions"/> 的服务提供程序。</param>
 	/// <returns>解析结果；均未配置时返回 <c>false</c>。</returns>
-	private static bool ResolveIsTransactional(UnitOfWorkAttribute attribute, IServiceProvider provider)
+	private static bool ResolveIsTransactional(UnitOfWorkAttribute? attribute, IServiceProvider provider)
 	{
 		return PriorityValueFinder.Find<bool?>(queue =>
 		{
@@ -163,7 +163,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <param name="attribute">方法或类型上的工作单元特性，可为 <c>null</c>。</param>
 	/// <param name="provider">用于解析 <see cref="UnitOfWorkOptions"/> 的服务提供程序。</param>
 	/// <returns>解析出的超时时长；均未配置时返回 <c>null</c>。</returns>
-	private static TimeSpan? ResolveTimeout(UnitOfWorkAttribute attribute, IServiceProvider provider)
+	private static TimeSpan? ResolveTimeout(UnitOfWorkAttribute? attribute, IServiceProvider provider)
 	{
 		return PriorityValueFinder.Find<TimeSpan?>(queue =>
 		{
@@ -175,7 +175,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <summary>
 	/// 等待目标方法返回的 <see cref="Task"/> 或 <see cref="ValueTask"/>。
 	/// </summary>
-	private static async Task AwaitReturnValueAsync(object returnValue)
+	private static async Task AwaitReturnValueAsync(object? returnValue)
 	{
 		switch (returnValue)
 		{
@@ -193,7 +193,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <summary>
 	/// 等待目标方法返回的 <see cref="Task{TResult}"/> 或 <see cref="ValueTask{TResult}"/>。
 	/// </summary>
-	private static async Task<T> AwaitReturnValueAsync<T>(object returnValue)
+	private static async Task<T> AwaitReturnValueAsync<T>(object? returnValue)
 	{
 		return returnValue switch
 		{
@@ -209,7 +209,7 @@ public class UnitOfWorkInterceptor : IInterceptor
 	/// <param name="method">要判断的方法。</param>
 	/// <param name="resultType">输出参数：泛型任务的结果类型；非泛型任务或非任务方法时为 <c>null</c>。</param>
 	/// <returns>若为任务返回类型则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
-	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
+	private static bool IsTaskMethod(MethodInfo method, out Type? resultType)
 	{
 		if (method.ReturnType == typeof(Task) || method.ReturnType == typeof(ValueTask))
 		{

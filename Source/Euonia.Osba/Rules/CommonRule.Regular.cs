@@ -71,13 +71,13 @@ public partial class CommonRule
 		{
 			if (context.Target is IOsbaObject target)
 			{
-				var value = target.ReadProperty(Property);
+				var value = target.ReadProperty(Property!);
 
 				var message = value switch
 				{
-					string @string => _regex.IsMatch(@string) ? string.Empty : string.Format(MessageFactory(), Property.FriendlyName),
-					null => IgnoreNullValue ? string.Empty : string.Format(MessageFactory(), Property.FriendlyName),
-					_ => throw new NotSupportedException(string.Format(Resources.IDS_REGULAR_NOT_ON_STRING_PROPERTY, Property.FriendlyName))
+					string @string => _regex.IsMatch(@string) ? string.Empty : string.Format(MessageFactory(), Property!.FriendlyName),
+					null => IgnoreNullValue ? string.Empty : string.Format(MessageFactory(), Property!.FriendlyName),
+					_ => throw new NotSupportedException(string.Format(Resources.IDS_REGULAR_NOT_ON_STRING_PROPERTY, Property!.FriendlyName))
 				};
 				if (!string.IsNullOrWhiteSpace(message))
 				{

@@ -19,7 +19,7 @@ public static class ServiceCollectionModularityExtensions
     /// <param name="optionsAction"></param>
     /// <typeparam name="TStartupModel"></typeparam>
     /// <returns></returns>
-    public static IApplicationWithServiceProvider AddModularityApplication<TStartupModel>(this IServiceCollection services, IConfiguration configuration = null, Action<ApplicationCreationOptions> optionsAction = null)
+    public static IApplicationWithServiceProvider AddModularityApplication<TStartupModel>(this IServiceCollection services, IConfiguration? configuration = null, Action<ApplicationCreationOptions>? optionsAction = null)
         where TStartupModel : class, IModuleContext
     {
         return ApplicationFactory.Create<TStartupModel>(services, configuration, optionsAction);
@@ -78,7 +78,7 @@ public static class ServiceCollectionModularityExtensions
     /// </summary>
     /// <param name="services"></param>
     /// <returns></returns>
-    public static IConfiguration GetConfiguration(this IServiceCollection services)
+    public static IConfiguration? GetConfiguration(this IServiceCollection services)
     {
         var hostBuilderContext = services.GetSingletonInstanceOrNull<HostBuilderContext>();
         if (hostBuilderContext?.Configuration != null)

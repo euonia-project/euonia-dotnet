@@ -11,15 +11,15 @@ public partial class Cryptography
 	/// </summary>
 	public class RSA
 	{
-		private readonly System.Security.Cryptography.RSA _privateKeyRsaProvider;
-		private readonly System.Security.Cryptography.RSA _publicKeyRsaProvider;
+		private readonly System.Security.Cryptography.RSA? _privateKeyRsaProvider;
+		private readonly System.Security.Cryptography.RSA? _publicKeyRsaProvider;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="RSA"/> class.
 		/// </summary>
 		/// <param name="privateKey">Base64-encoded private key in PKCS#1 or similar DER format. If null or empty, private key functionality is not available.</param>
 		/// <param name="publicKey">Base64-encoded public key (X.509 SubjectPublicKeyInfo). If null or empty, public key functionality is not available.</param>
-		public RSA(string privateKey, string publicKey = null)
+		public RSA(string privateKey, string? publicKey = null)
 		{
 			if (!string.IsNullOrEmpty(privateKey))
 			{
@@ -122,7 +122,7 @@ public partial class Cryptography
 		/// </summary>
 		/// <param name="key">Base64-encoded public key bytes (X.509 SubjectPublicKeyInfo).</param>
 		/// <returns>Initialized <see cref="System.Security.Cryptography.RSA"/> instance, or null if parsing fails.</returns>
-		private static System.Security.Cryptography.RSA CreateRsaProviderFromPublicKey(string key)
+		private static System.Security.Cryptography.RSA? CreateRsaProviderFromPublicKey(string key)
 		{
 			byte[] seqOid = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
 

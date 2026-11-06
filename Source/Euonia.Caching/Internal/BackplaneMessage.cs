@@ -53,7 +53,7 @@ public sealed class BackplaneMessage
     /// 获取或设置键。
     /// </summary>
     /// <value>键。</value>
-    public string Key { get; }
+    public string? Key { get; }
 
     /// <summary>
     /// 获取或设置所有者标识。
@@ -65,7 +65,7 @@ public sealed class BackplaneMessage
     /// 获取或设置区域。
     /// </summary>
     /// <value>区域。</value>
-    public string Region { get; private set; }
+    public string? Region { get; private set; }
 
     /// <summary>
     /// 获取或设置缓存操作。
@@ -96,7 +96,7 @@ public sealed class BackplaneMessage
 	}
 
 	/// <inheritdoc />
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
     {
         if (obj == null)
         {
@@ -247,7 +247,7 @@ public sealed class BackplaneMessage
                 {
                     writer.WriteByte(1);
                 }
-                writer.WriteString(message.Key);
+                writer.WriteString(message.Key!);
 
                 break;
 
@@ -261,12 +261,12 @@ public sealed class BackplaneMessage
                 {
                     writer.WriteByte(1);
                 }
-                writer.WriteString(message.Key);
+                writer.WriteString(message.Key!);
 
                 break;
 
             case ClearRegion:
-                writer.WriteString(message.Region);
+                writer.WriteString(message.Region!);
                 break;
 
             case Clear:
@@ -284,7 +284,7 @@ public sealed class BackplaneMessage
     /// </returns>
     /// <exception cref="ArgumentException">当 <paramref name="message"/> 为 <c>null</c> 时抛出。</exception>
     /// <exception cref="ArgumentException">当消息无效时抛出。</exception>
-    public static IEnumerable<BackplaneMessage> Deserialize(byte[] message, byte[] skipOwner = null)
+    public static IEnumerable<BackplaneMessage> Deserialize(byte[] message, byte[]? skipOwner = null)
     {
         Check.EnsureNotNull(message, nameof(message));
         if (message.Length < 5)
@@ -311,7 +311,7 @@ public sealed class BackplaneMessage
         }
     }
 
-    private static BackplaneMessage DeserializeMessage(MessageReader reader, byte[] existingOwner)
+    private static BackplaneMessage DeserializeMessage(MessageReader reader, byte[]? existingOwner)
     {
         var owner = existingOwner ?? reader.ReadBytes(reader.ReadInt());
         var action = (BackplaneAction)reader.ReadByte();

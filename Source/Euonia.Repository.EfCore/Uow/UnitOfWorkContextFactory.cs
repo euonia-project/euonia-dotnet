@@ -31,7 +31,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 	}
 
 	/// <inheritdoc />
-	public TContext GetContext<TContext>()
+	public TContext? GetContext<TContext>()
 		where TContext : class, IRepositoryContext
 	{
 		var unitOfWork = _manager.Current;
@@ -47,7 +47,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 
 		var contextType = typeof(TContext);
 
-		string connectionString;
+		string? connectionString;
 
 		var attribute = contextType.GetCustomAttribute<ConnectionStringAttribute>();
 
@@ -76,7 +76,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 			return (TContext)uowContext.Context;
 		}
 
-		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>();
+		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>()!;
 
 		// 事务性工作单元必须在上下文首次使用时开启事务，否则 SaveChanges 会逐次自动提交，
 		// IsTransactional 形同虚设，RollbackAsync 也无法撤销已写入的数据。

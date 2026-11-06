@@ -1,4 +1,5 @@
-﻿using Nerosoft.Euonia.Caching.Internal;
+﻿using System.Diagnostics.CodeAnalysis;
+using Nerosoft.Euonia.Caching.Internal;
 
 namespace Nerosoft.Euonia.Caching;
 
@@ -370,7 +371,7 @@ public interface ICacheManager<TValue> : ICache<TValue>
     /// <exception cref="ArgumentException">
     /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
     /// </exception>
-    bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, out TValue value);
+    bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value);
 
     /// <summary>
     /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
@@ -384,7 +385,7 @@ public interface ICacheManager<TValue> : ICache<TValue>
     /// <exception cref="ArgumentException">
     /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
     /// </exception>
-    bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, out TValue value);
+    bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value);
 
     /// <summary>
     /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
@@ -396,7 +397,7 @@ public interface ICacheManager<TValue> : ICache<TValue>
     /// <exception cref="ArgumentException">
     /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
     /// </exception>
-    bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item);
+    bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item);
 
     /// <summary>
     /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
@@ -409,7 +410,7 @@ public interface ICacheManager<TValue> : ICache<TValue>
     /// <exception cref="ArgumentException">
     /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
     /// </exception>
-    bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item);
+    bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item);
 
     /// <summary>
     /// Updates an existing key in the cache.

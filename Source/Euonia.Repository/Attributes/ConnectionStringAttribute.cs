@@ -18,11 +18,11 @@ public class ConnectionStringAttribute : Attribute
 	/// 该名称用于在配置文件中定位对应的连接字符串；
 	/// 当 <see cref="Value"/> 为空时，将使用此名称调用 <c>IConfiguration.GetConnectionString(string)</c>。
 	/// </remarks>
-	public string Name { get; set; }
+	public string? Name { get; set; }
 
 	/// <summary>
 	/// 获取或设置连接字符串的具体值。
 	/// </summary>
 	/// <value>连接字符串内容；为空或空白时回退到按 <see cref="Name"/> 从配置中查找。</value>
-	public string Value { get; set; }
+	public string? Value { get; set; }
 }

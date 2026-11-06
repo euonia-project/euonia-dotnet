@@ -40,7 +40,7 @@ public abstract class RuleBase : IRuleBase
 	public string Name { get; }
 
 	/// <inheritdoc />
-	public IPropertyInfo Property { get; }
+	public IPropertyInfo? Property { get; }
 
 	/// <inheritdoc />
 	public virtual List<IPropertyInfo> RelatedProperties { get; } = new();

@@ -37,16 +37,16 @@ public class DataAnnotationRule : RuleBase
     /// <returns>表示异步规则执行操作的任务。</returns>
     public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
-        ValidationResult result;
+        ValidationResult? result;
         if (context.Target is IOsbaObject target)
         {
-            var value = target.ReadProperty(Property);
+            var value = target.ReadProperty(Property!);
             var serviceProvider = target.BusinessContext?.CurrentServiceProvider;
             result = Attribute.GetValidationResult(value, CreateContext(context.Target, serviceProvider));
         }
         else
         {
-            result = Attribute.GetValidationResult(Property.DefaultValue, CreateContext(context.Target, null));
+            result = Attribute.GetValidationResult(Property!.DefaultValue, CreateContext(context.Target, null));
         }
 
         if (result != null)
@@ -69,12 +69,13 @@ public class DataAnnotationRule : RuleBase
     /// 于是 <c>[Required(ErrorMessage = "{0} 不能为空。")]</c> 这类消息会把占位符填成业务对象的名字
     /// （「Repo 不能为空」）而不是字段名——校验结果本身就是给表单用的，字段名错了就失去了意义。
     /// </remarks>
-    private ValidationContext CreateContext(object instance, IServiceProvider serviceProvider)
+    private ValidationContext CreateContext(object instance, IServiceProvider? serviceProvider)
     {
+        var property = Property!;
         return new ValidationContext(instance, serviceProvider, null)
         {
-            DisplayName = Property.FriendlyName ?? Property.Name,
-            MemberName = Property.Name
+            DisplayName = property.FriendlyName ?? property.Name,
+            MemberName = property.Name
         };
     }
 }

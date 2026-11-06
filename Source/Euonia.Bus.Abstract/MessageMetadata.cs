@@ -1,4 +1,6 @@
-﻿namespace Nerosoft.Euonia.Bus;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
 /// The message meta data.
@@ -14,16 +16,21 @@ public class MessageMetadata : IDictionary<string, object>
     /// <param name="key"></param>
     /// <param name="value"></param>
     /// <returns></returns>
-    public bool TryGetValue(string key, out object value) => _dictionary.TryGetValue(key, out value);
+    public bool TryGetValue(string key, [MaybeNullWhen(false)] out object value) => _dictionary.TryGetValue(key, out value);
 
     /// <summary>
-    /// 
+    /// 获取或设置指定键的元数据。
     /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">元数据键。</param>
+    /// <remarks>
+    /// 为兼容既有调用方，读取不存在的键时返回 <c>null</c> 而不是抛出
+    /// <see cref="KeyNotFoundException"/>；需要区分“不存在”与“值为 null”时请使用
+    /// <see cref="TryGetValue"/>。
+    /// </remarks>
     public object this[string key]
     {
-        get => _dictionary.TryGetValue(key, out var value) ? value : null;
+        [return: MaybeNull]
+        get => _dictionary.TryGetValue(key, out var value) ? value : null!;
         set => _dictionary[key] = value;
     }
 

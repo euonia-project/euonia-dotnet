@@ -53,13 +53,13 @@ public sealed class CacheManagerConfiguration
     /// 获取或设置背板可能使用的配置键。
     /// </summary>
     /// <value>背板配置的键。</value>
-    public string BackplaneConfigurationKey { get; set; }
+    public string? BackplaneConfigurationKey { get; set; }
 
     /// <summary>
     /// 获取或设置背板通道名称。
     /// </summary>
     /// <value>通道名称。</value>
-    public string BackplaneChannelName { get; set; }
+    public string? BackplaneChannelName { get; set; }
 
     /// <summary>
     /// 获取一个值，指示此实例是否定义了背板。
@@ -73,13 +73,13 @@ public sealed class CacheManagerConfiguration
     /// 获取或设置缓存背板的工厂方法。
     /// </summary>
     /// <value>背板激活器。</value>
-    public Type BackplaneType { get; set; }
+    public Type? BackplaneType { get; set; }
 
     /// <summary>
     /// 获取或设置实例化背板时应使用的附加参数。
     /// </summary>
     /// <value>参数列表。</value>
-    public object[] BackplaneTypeArguments { get; set; }
+    public object[]? BackplaneTypeArguments { get; set; }
 
     /// <summary>
     /// 获取缓存句柄配置的列表。

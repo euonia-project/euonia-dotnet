@@ -90,7 +90,7 @@ public class OsbaRegressionTests
 	[Fact]
 	public void FriendlyName_ShouldReturnExplicitValue_WhenProvided()
 	{
-		var property = new PropertyInfo<string>("Name", "Full Name", default(string));
+		var property = new PropertyInfo<string>("Name", "Full Name", default(string)!);
 
 		Assert.Equal("Full Name", property.FriendlyName);
 	}
@@ -99,7 +99,7 @@ public class OsbaRegressionTests
 	public void FieldData_BusyChangedEvent_ShouldNotThrow()
 	{
 		var field = new FieldData<string>("Name");
-		BusyChangedEventArgs raised = null;
+		BusyChangedEventArgs? raised = null;
 
 		((INotifyBusy)field).BusyChanged += (_, args) => raised = args;
 

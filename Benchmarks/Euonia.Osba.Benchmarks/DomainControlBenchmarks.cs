@@ -9,7 +9,7 @@ namespace Euonia.Osba.Benchmarks;
 [MemoryDiagnoser]
 public class DomainControlBenchmarks
 {
-	private DomainBenchObject _target;
+	private DomainBenchObject _target = null!;
 	private bool _toggle;
 
 	[GlobalSetup]

@@ -11,7 +11,7 @@ internal class PropertyComparer : Comparer<IPropertyInfo>
     /// <param name="x">要比较的第一个属性。</param>
     /// <param name="y">要比较的第二个属性。</param>
     /// <returns>指示两个属性的相对顺序的值。</returns>
-    public override int Compare(IPropertyInfo x, IPropertyInfo y)
+    public override int Compare(IPropertyInfo? x, IPropertyInfo? y)
     {
         return StringComparer.InvariantCulture.Compare(x?.Name, y?.Name);
     }

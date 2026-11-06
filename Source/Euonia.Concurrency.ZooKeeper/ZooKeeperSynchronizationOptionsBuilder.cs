@@ -94,7 +94,7 @@ public sealed class ZooKeeperSynchronizationOptionsBuilder
         return this;
     }
 
-    internal static (TimeoutValue SessionTimeout, TimeoutValue ConnectTimeout, EquatableReadOnlyList<ZooKeeperAuthInfo> AuthInfo, IReadOnlyList<ACL> Acl) GetOptions(Action<ZooKeeperSynchronizationOptionsBuilder> options)
+    internal static (TimeoutValue SessionTimeout, TimeoutValue ConnectTimeout, EquatableReadOnlyList<ZooKeeperAuthInfo> AuthInfo, IReadOnlyList<ACL> Acl) GetOptions(Action<ZooKeeperSynchronizationOptionsBuilder>? options)
     {
         var builder = new ZooKeeperSynchronizationOptionsBuilder();
         options?.Invoke(builder);

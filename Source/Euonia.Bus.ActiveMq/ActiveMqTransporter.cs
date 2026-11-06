@@ -15,7 +15,7 @@ internal class ActiveMqTransporter : ITransporter
 	/// <summary>
 	/// 当消息成功投递到 ActiveMQ 时触发。
 	/// </summary>
-	public event EventHandler<MessageDeliveredEventArgs> Delivered;
+	public event EventHandler<MessageDeliveredEventArgs> Delivered = null!;
 
 	private readonly ActiveMqBusOptions _options;
 	private readonly IPersistentConnection _connection;
@@ -61,7 +61,7 @@ internal class ActiveMqTransporter : ITransporter
 		            {
 			            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 		            });
 	}
 
@@ -111,7 +111,7 @@ internal class ActiveMqTransporter : ITransporter
 			            {
 				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
-				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 			            });
 
 			return await task.Task;
@@ -152,7 +152,7 @@ internal class ActiveMqTransporter : ITransporter
 				var response = _serializer.Deserialize<ActiveMqReply<object>>(reply.Text);
 				if (response.IsSuccess)
 				{
-					task.TrySetResult(default);
+					task.TrySetResult(default(TResponse)!);
 				}
 				else
 				{
@@ -220,7 +220,7 @@ internal class ActiveMqTransporter : ITransporter
 			            {
 				            await producer.SendAsync(request, MsgDeliveryMode.Persistent, ActiveMqDelivery.ResolvePriority(message.GetPriority()), TimeSpan.MaxValue);
 
-				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+				            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 			            });
 
 			return await task.Task;
@@ -268,7 +268,7 @@ internal class ActiveMqTransporter : ITransporter
 		}
 	}
 
-	private async Task<ITextMessage> BuildRequestAsync<TMessage>(ISession session, IMessageEnvelope<TMessage> message, IDestination replyTo = null)
+	private async Task<ITextMessage> BuildRequestAsync<TMessage>(ISession session, IMessageEnvelope<TMessage> message, IDestination? replyTo = null)
 	{
 		var messageBody = _serializer.Serialize(message);
 		var request = await session.CreateTextMessageAsync(messageBody);

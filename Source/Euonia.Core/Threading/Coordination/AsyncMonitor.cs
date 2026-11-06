@@ -23,7 +23,7 @@ public sealed class AsyncMonitor
     /// </summary>
     /// <param name="lockQueue">用于管理锁等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
     /// <param name="conditionVariableQueue">用于管理信号等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
-    internal AsyncMonitor(IAsyncWaitQueue<IDisposable> lockQueue, IAsyncWaitQueue<object> conditionVariableQueue)
+    internal AsyncMonitor(IAsyncWaitQueue<IDisposable>? lockQueue, IAsyncWaitQueue<object>? conditionVariableQueue)
     {
         _asyncLock = new AsyncLock(lockQueue);
         _conditionVariable = new AsyncConditionVariable(_asyncLock, conditionVariableQueue);

@@ -85,7 +85,7 @@ public class ModuleLoader : IModuleLoader
 	/// <returns></returns>
 	protected virtual IModuleContext CreateAndRegisterModule(IServiceCollection services, Type moduleType)
 	{
-		var module = (IModuleContext)Activator.CreateInstance(moduleType);
+		var module = (IModuleContext?)Activator.CreateInstance(moduleType);
 		if (module == null)
 		{
 			throw new Exception(string.Format(Resources.IDS_MODULE_CREATE_FAILED, moduleType.AssemblyQualifiedName));

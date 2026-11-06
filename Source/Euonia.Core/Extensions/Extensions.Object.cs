@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 
@@ -38,7 +39,7 @@ public static partial class Extensions
 		if (typeof(T) == typeof(Guid))
 		{
 			// ReSharper disable once PossibleNullReferenceException
-			return (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(obj.ToString());
+			return (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(obj.ToString()!)!;
 		}
 
 		return (T)System.Convert.ChangeType(obj, typeof(T), CultureInfo.InvariantCulture);
@@ -147,7 +148,7 @@ public static partial class Extensions
 	/// <param name="attribute">输出的特性</param>
 	/// <param name="inherit">是否搜索继承链以查找特性</param>
 	/// <returns>如果对象类型定义了指定特性，则返回 true；否则返回 false。</returns>
-	public static bool HasAttribute<TAttribute>(this object source, out TAttribute attribute, bool inherit = true)
+	public static bool HasAttribute<TAttribute>(this object source, [MaybeNullWhen(false)] out TAttribute attribute, bool inherit = true)
 		where TAttribute : Attribute
 	{
 		var type = source.GetType();

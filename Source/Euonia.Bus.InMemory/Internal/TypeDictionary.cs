@@ -362,16 +362,10 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 		while (true);
 
 		ReturnFound:
-		ref var value = ref entry.Value!;
-
-		Return:
-		return ref value;
+		return ref entry.Value!;
 
 		ReturnNotFound:
-
-		value = ref *(TValue*)null;
-
-		goto Return;
+		return ref *(TValue*)(void*)0;
 	}
 
 	/// <summary>

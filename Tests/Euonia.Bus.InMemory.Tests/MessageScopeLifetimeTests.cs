@@ -141,7 +141,7 @@ public class MessageScopeLifetimeTests
 		/// <summary>
 		/// 处理器构造时由处理作用域创建的作用域服务。
 		/// </summary>
-		public ScopedProbe Probe { get; set; }
+		public ScopedProbe Probe { get; set; } = null!;
 	}
 
 	/// <summary>
@@ -177,7 +177,7 @@ public class MessageScopeLifetimeTests
 					throw new ObjectDisposedException(nameof(ScopedProbe), "处理嵌套命令期间作用域服务被提前释放");
 				}
 
-				state.Observed.TrySetResult(null);
+				state.Observed.TrySetResult(null!);
 			}
 			catch (Exception exception)
 			{

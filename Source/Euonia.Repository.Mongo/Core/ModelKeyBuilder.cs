@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Repository.Mongo;
 /// </summary>
 public class ModelKeyBuilder
 {
-    internal ModelKeyBuilder(string key, Type type)
+    internal ModelKeyBuilder(string key, Type? type)
     {
         Key = key;
         Type = type;
@@ -15,9 +15,9 @@ public class ModelKeyBuilder
 
     internal string Key { get; }
 
-    internal Type Type { get; }
+    internal Type? Type { get; }
 
-    internal IIdGenerator IdGenerator { get; private set; }
+    internal IIdGenerator? IdGenerator { get; private set; }
 
     internal bool AutoGenerateId { get; private set; } = true;
 

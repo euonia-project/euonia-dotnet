@@ -9,12 +9,12 @@ namespace Nerosoft.Euonia.Repository.Mongo;
 /// </summary>
 public class ModelProfile
 {
-    private ModelKeyBuilder _keyBuilder;
-    internal string KeyName => _keyBuilder?.Key;
+    private ModelKeyBuilder? _keyBuilder;
+    internal string? KeyName => _keyBuilder?.Key;
 
-    internal Type KeyType => _keyBuilder?.Type;
+    internal Type? KeyType => _keyBuilder?.Type;
 
-    internal string CollectionName { get; private set; }
+    internal string? CollectionName { get; private set; }
 
     internal bool AutoMapProperty { get; private set; } = true;
 
@@ -23,7 +23,7 @@ public class ModelProfile
     /// </summary>
     internal bool AutoGenerateId => _keyBuilder?.AutoGenerateId ?? true;
 
-    internal IIdGenerator IdGenerator => _keyBuilder?.IdGenerator;
+    internal IIdGenerator? IdGenerator => _keyBuilder?.IdGenerator;
 
     internal bool? BypassDocumentValidation { get; set; }
 
@@ -33,7 +33,7 @@ public class ModelProfile
     /// <param name="key"></param>
     /// <param name="type"></param>
     /// <returns></returns>
-    public ModelKeyBuilder HasKey(string key, Type type = null)
+    public ModelKeyBuilder HasKey(string key, Type? type = null)
     {
         _keyBuilder = new ModelKeyBuilder(key, type);
         return _keyBuilder;
@@ -80,7 +80,7 @@ public class ModelProfile<TModel> : ModelProfile
 
     internal IReadOnlyDictionary<string, ModelPropertyBuilder> Properties => _properties;
 
-    internal Action<BsonClassMap<TModel>> MapAction { get; private set; }
+    internal Action<BsonClassMap<TModel>>? MapAction { get; private set; }
 
     /// <summary>
     /// Sets the model key selector.

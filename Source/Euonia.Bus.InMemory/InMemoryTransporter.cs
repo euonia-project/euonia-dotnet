@@ -18,7 +18,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <summary>
 	/// 当消息被分发时触发。
 	/// </summary>
-	public event EventHandler<MessageDeliveredEventArgs> Delivered;
+	public event EventHandler<MessageDeliveredEventArgs> Delivered = null!;
 
 	private readonly ILogger<InMemoryTransporter> _logger;
 	private readonly WeakReferenceMessenger _weakMessenger;
@@ -27,12 +27,12 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	/// <summary>
 	/// 当前调用方作用域的服务访问器；手动构造时未提供。
 	/// </summary>
-	private readonly IServiceAccessor _accessor;
+	private readonly IServiceAccessor? _accessor;
 
 	/// <summary>
 	/// 当前调用方作用域的请求上下文访问器；手动构造时未提供。
 	/// </summary>
-	private readonly IRequestContextAccessor _requestContextAccessor;
+	private readonly IRequestContextAccessor? _requestContextAccessor;
 
 	/// <summary>
 	/// 初始化 <see cref="InMemoryTransporter"/> 类的新实例。
@@ -45,9 +45,9 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 	public InMemoryTransporter(
 		IOptions<InMemoryBusOptions> options,
 		ILoggerFactory logger,
-		InMemoryMessengerProvider messengers = null,
-		IServiceAccessor accessor = null,
-		IRequestContextAccessor requestContextAccessor = null)
+		InMemoryMessengerProvider? messengers = null,
+		IServiceAccessor? accessor = null,
+		IRequestContextAccessor? requestContextAccessor = null)
 	{
 		var opts = options.Value;
 		Name = opts.Name ?? Constants.DefaultTransportName;
@@ -75,7 +75,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			Aborted = cancellationToken
 		};
 		_weakMessenger.Send(pack, message.Channel);
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, context));
 		await Task.CompletedTask;
 	}
 
@@ -118,7 +118,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		{
 			_strongMessenger.UnsafeSend(pack, message.Channel);
 
-			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, context));
 
 			await taskCompletion.Task;
 		}
@@ -161,7 +161,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			context.Completed += OnCompleted;
 
 			_strongMessenger.UnsafeSend(pack, message.Channel);
-			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, context));
 
 			var result = await taskCompletion.Task;
 			return result;
@@ -174,22 +174,22 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			context.Completed -= OnCompleted;
 		}
 
-		void OnResponded(object sender, MessageRepliedEventArgs args)
+		void OnResponded(object? sender, MessageRepliedEventArgs args)
 		{
 			_logger.LogDebug("Message '{MessageId}' responded with result: {Result}", message.MessageId, args.Result);
-			taskCompletion.TrySetResult((TResponse)args.Result);
+			taskCompletion.TrySetResult((TResponse)args.Result!);
 		}
 
-		void OnFailed(object sender, Exception exception)
+		void OnFailed(object? sender, Exception exception)
 		{
 			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 
-		void OnCompleted(object sender, MessageHandledEventArgs args)
+		void OnCompleted(object? sender, MessageHandledEventArgs args)
 		{
 			_logger.LogDebug("Message '{MessageId}' completed", message.MessageId);
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)));
+			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)!));
 		}
 	}
 
@@ -226,7 +226,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		try
 		{
 			_strongMessenger.UnsafeSend(pack, message.Channel);
-			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, context));
+			Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, context));
 
 			return await taskCompletion.Task;
 		}
@@ -238,22 +238,22 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 			context.Completed -= OnCompleted;
 		}
 
-		void OnResponded(object sender, MessageRepliedEventArgs args)
+		void OnResponded(object? sender, MessageRepliedEventArgs args)
 		{
 			_logger.LogDebug("Message '{MessageId}' responded with result: {Result}", message.MessageId, args.Result);
-			taskCompletion.TrySetResult((TResponse)args.Result);
+			taskCompletion.TrySetResult((TResponse)args.Result!);
 		}
 
-		void OnFailed(object sender, Exception exception)
+		void OnFailed(object? sender, Exception exception)
 		{
 			_logger.LogError(exception, "Message '{MessageId}' ({MessageType}) on channel '{Channel}' failed with exception", message.MessageId, message.TypeName, message.Channel);
 			taskCompletion.TrySetException(exception);
 		}
 
-		void OnCompleted(object sender, MessageHandledEventArgs args)
+		void OnCompleted(object? sender, MessageHandledEventArgs args)
 		{
 			_logger.LogDebug("Message '{MessageId}' completed", message.MessageId);
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)));
+			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(TResponse)!));
 		}
 	}
 

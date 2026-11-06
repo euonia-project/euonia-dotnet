@@ -24,14 +24,14 @@ public interface IDeadLetterService
 	/// </summary>
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>对应的死信记录；未找到时返回 <c>null</c>。</returns>
-	DeadLetterEntry Get(string messageId);
+	DeadLetterEntry? Get(string messageId);
 
 	/// <summary>
 	/// 根据死信记录唯一标识获取记录；未找到时返回 <c>null</c>。
 	/// </summary>
 	/// <param name="id">死信记录唯一标识（<see cref="DeadLetterEntry.Id"/>）。</param>
 	/// <returns>对应的死信记录；未找到时返回 <c>null</c>。</returns>
-	DeadLetterEntry GetById(string id)
+	DeadLetterEntry? GetById(string id)
 	{
 		return GetAll().FirstOrDefault(entry => string.Equals(entry.Id, id, StringComparison.Ordinal));
 	}

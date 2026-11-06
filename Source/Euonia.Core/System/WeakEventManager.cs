@@ -22,7 +22,7 @@ public sealed class WeakEventManager
     /// <param name="eventName">事件名称。</param>
     /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
     /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
-    public void AddEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string eventName = null)
+    public void AddEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string? eventName = null)
         where TEventArgs : EventArgs
     {
         if (string.IsNullOrEmpty(eventName))
@@ -82,7 +82,7 @@ public sealed class WeakEventManager
     /// <param name="eventName">事件名称。</param>
     /// <typeparam name="TEventArgs">事件参数的类型。</typeparam>
     /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
-    public void RemoveEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string eventName = null)
+    public void RemoveEventHandler<TEventArgs>(EventHandler<TEventArgs> handler, [CallerMemberName] string? eventName = null)
         where TEventArgs : EventArgs
     {
         if (string.IsNullOrEmpty(eventName))
@@ -119,7 +119,7 @@ public sealed class WeakEventManager
         RemoveEventHandler(eventName, handler.Target, handler.GetMethodInfo());
     }
 
-    private void AddEventHandler(string eventName, object handlerTarget, MethodInfo methodInfo)
+    private void AddEventHandler(string eventName, object? handlerTarget, MethodInfo methodInfo)
     {
         lock (_lock)
         {
@@ -140,7 +140,7 @@ public sealed class WeakEventManager
         }
     }
 
-    private void RemoveEventHandler(string eventName, object handlerTarget, MemberInfo methodInfo)
+    private void RemoveEventHandler(string eventName, object? handlerTarget, MemberInfo methodInfo)
     {
         lock (_lock)
         {
@@ -170,7 +170,7 @@ public sealed class WeakEventManager
         }
     }
 
-    private static bool SubscriberEquals(WeakReference subscriber, object handlerTarget)
+    private static bool SubscriberEquals(WeakReference? subscriber, object? handlerTarget)
     {
         if (subscriber == null)
         {
@@ -186,7 +186,7 @@ public sealed class WeakEventManager
     /// <param name="handler">事件处理器。</param>
     /// <param name="eventName">事件名称。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
-    public void AddEventHandler(EventHandler handler, [CallerMemberName] string eventName = null)
+    public void AddEventHandler(EventHandler handler, [CallerMemberName] string? eventName = null)
     {
         if (string.IsNullOrEmpty(eventName))
         {
@@ -208,9 +208,9 @@ public sealed class WeakEventManager
     /// </summary>
     /// <param name="eventName">事件名称。</param>
     /// <returns>订阅者和处理器的列表。</returns>
-    private List<(object subscriber, MethodInfo handler)> GetEventHandler(string eventName)
+    private List<(object? subscriber, MethodInfo handler)> GetEventHandler(string eventName)
     {
-        var toRaise = new List<(object subscriber, MethodInfo handler)>();
+        var toRaise = new List<(object? subscriber, MethodInfo handler)>();
         var toRemove = new List<Subscription>();
 
         lock (_lock)
@@ -221,8 +221,7 @@ public sealed class WeakEventManager
                 for (var i = 0; i < target.Count; i++)
                 {
                     var subscription = target[i];
-                    var isStatic = subscription.Subscriber == null;
-                    if (isStatic)
+                    if (subscription.Subscriber == null)
                     {
                         // 对于静态方法，我们只传递 null 作为 MethodInfo.Invoke 的第一个参数
                         toRaise.Add((null, subscription.Handler));
@@ -328,7 +327,7 @@ public sealed class WeakEventManager
     /// <param name="handler">事件处理器。</param>
     /// <param name="eventName">事件名称。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="eventName"/> 或 <paramref name="handler"/> 为 null 时抛出。</exception>
-    public void RemoveEventHandler(EventHandler handler, [CallerMemberName] string eventName = null)
+    public void RemoveEventHandler(EventHandler handler, [CallerMemberName] string? eventName = null)
     {
         if (string.IsNullOrEmpty(eventName))
         {
@@ -376,18 +375,18 @@ public sealed class WeakEventManager
 
     private readonly struct Subscription : IEquatable<Subscription>
     {
-        public Subscription(WeakReference subscriber, MethodInfo handler)
+        public Subscription(WeakReference? subscriber, MethodInfo handler)
         {
             Subscriber = subscriber;
             Handler = handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
-        public readonly WeakReference Subscriber;
+        public readonly WeakReference? Subscriber;
         public readonly MethodInfo Handler;
 
         public bool Equals(Subscription other) => Subscriber == other.Subscriber && Handler == other.Handler;
 
-        public override bool Equals(object obj) => obj is Subscription other && Equals(other);
+        public override bool Equals(object? obj) => obj is Subscription other && Equals(other);
 
         public override int GetHashCode() => (Subscriber?.GetHashCode() ?? 0) ^ Handler.GetHashCode();
     }

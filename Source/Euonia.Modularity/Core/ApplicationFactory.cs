@@ -16,7 +16,7 @@ public static class ApplicationFactory
     /// <param name="optionsAction"></param>
     /// <typeparam name="TStartupModule"></typeparam>
     /// <returns></returns>
-    public static IApplicationWithServiceProvider Create<TStartupModule>(IServiceCollection services, IConfiguration configuration, Action<ApplicationCreationOptions> optionsAction = null)
+    public static IApplicationWithServiceProvider Create<TStartupModule>(IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction = null)
         where TStartupModule : IModuleContext
     {
         return Create(typeof(TStartupModule), services, configuration, optionsAction);
@@ -30,7 +30,7 @@ public static class ApplicationFactory
     /// <param name="configuration"></param>
     /// <param name="optionsAction"></param>
     /// <returns></returns>
-    public static IApplicationWithServiceProvider Create(Type startupModuleType, IServiceCollection services, IConfiguration configuration, Action<ApplicationCreationOptions> optionsAction = null)
+    public static IApplicationWithServiceProvider Create(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction = null)
     {
         return new ApplicationWithServiceProvider(startupModuleType, services, configuration, optionsAction);
     }

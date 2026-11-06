@@ -72,13 +72,13 @@ public class AddPermissionTests
 	{
 		var services = new ServiceCollection();
 
-		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => p.Source(null)));
+		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => p.Source(null!)));
 	}
 
 	[Fact]
 	public void AddPermission_Should_Throw_On_Null_Service_Collection()
 	{
-		IServiceCollection services = null;
+		IServiceCollection services = null!;
 
 		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 	}
@@ -94,7 +94,7 @@ public class AddPermissionTests
 		var provider = Build(s => s.AddPermission(p =>
 		{
 			p.Scan(TestAssembly);
-			p.OnAttributeOrName(BusinessOperation.Read, null, typeof(AssetApproveAttribute));
+			p.OnAttributeOrName(BusinessOperation.Read, null!, typeof(AssetApproveAttribute));
 		}));
 
 		var requirements = provider.GetRequiredService<IPermissionCodeSource>()
@@ -335,7 +335,7 @@ public class AddPermissionTests
 
 	private static string[] ReferencedBy(Assembly assembly)
 	{
-		return assembly.GetReferencedAssemblies().Select(x => x.Name).ToArray();
+		return assembly.GetReferencedAssemblies().Select(x => x.Name!).ToArray();
 	}
 
 	private static string ResolveExecuteKey(IServiceProvider provider, Type resourceType)

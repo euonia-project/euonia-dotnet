@@ -30,7 +30,7 @@ public class UnitOfWorkFailedEventArgs : UnitOfWorkEventArgs
     /// 获取导致工作单元失败的异常。
     /// </summary>
     /// <value>捕获到的异常；若因未完成而失败则可能为 <c>null</c>。</value>
-    public Exception Exception { get; }
+    public Exception? Exception { get; }
     
     /// <summary>
     /// 获取一个值，指示失败时工作单元是否已回滚。
@@ -44,7 +44,7 @@ public class UnitOfWorkFailedEventArgs : UnitOfWorkEventArgs
     /// <param name="unitOfWork">事件关联的工作单元实例。</param>
     /// <param name="exception">导致失败的异常。</param>
     /// <param name="isRollback">指示失败时是否已回滚。</param>
-    public UnitOfWorkFailedEventArgs(IUnitOfWork unitOfWork, Exception exception, bool isRollback)
+    public UnitOfWorkFailedEventArgs(IUnitOfWork unitOfWork, Exception? exception, bool isRollback)
         : base(unitOfWork)
     {
         Exception = exception;

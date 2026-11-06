@@ -17,7 +17,7 @@ public class ServiceBusTests
 	public ServiceBusTests(IServiceProvider provider, IConfiguration configuration)
 	{
 		_provider = provider;
-		_bus = provider.GetService<IBus>();
+		_bus = provider.GetService<IBus>()!;
 		_preventRunTests = configuration.GetValue<bool>("PreventRunTests");
 	}
 
@@ -51,7 +51,7 @@ public class ServiceBusTests
 		else
 		{
 			// 无响应场景：SendAsync 能正常返回即表示单播链路完整（不应抛异常）。
-			await _provider.GetService<IBus>().SendAsync(new UserUpdateCommand(), TestContext.Current.CancellationToken);
+			await _provider.GetService<IBus>()!.SendAsync(new UserUpdateCommand(), TestContext.Current.CancellationToken);
 		}
 	}
 
@@ -85,7 +85,7 @@ public class ServiceBusTests
 		else
 		{
 			await Task.Delay(1000, TestContext.Current.CancellationToken);
-			var result = await _bus.CallAsync(new UserCountRequest(), null, cancellationToken: TestContext.Current.CancellationToken);
+			var result = await _bus.CallAsync(new UserCountRequest(), null!, cancellationToken: TestContext.Current.CancellationToken);
 			Assert.Equal(1, result);
 		}
 	}
@@ -165,7 +165,7 @@ public class ServiceBusTests
 			// Handler 抛出异常时，调用端应该收到原始异常及错误信息。
 			var exception = await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
 			{
-				await _bus.CallAsync(new UserExceptionRequest(), null, cancellationToken: TestContext.Current.CancellationToken);
+				await _bus.CallAsync(new UserExceptionRequest(), null!, cancellationToken: TestContext.Current.CancellationToken);
 			});
 
 			Assert.Equal("User not found", exception.Message);
@@ -188,7 +188,7 @@ public class ServiceBusTests
 			// 会静默吞掉处理程序异常，导致调用方无法捕获。
 			var exception = await Assert.ThrowsAnyAsync<NotFoundException>(async () =>
 			{
-				await _bus.SendAsync(new UserExceptionCommand(), null, cancellationToken: TestContext.Current.CancellationToken);
+				await _bus.SendAsync(new UserExceptionCommand(), null!, cancellationToken: TestContext.Current.CancellationToken);
 			});
 
 			Assert.Equal("User not found", exception.Message);

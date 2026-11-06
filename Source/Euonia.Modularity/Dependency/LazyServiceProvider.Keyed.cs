@@ -14,7 +14,7 @@ public partial class LazyServiceProvider
 	/// <inheritdoc />
 	public virtual object GetKeyedService(Type serviceType, object serviceKey)
 	{
-		return CachedServices.GetOrAdd(new ServiceIdentifier(serviceKey, serviceType), _ => new Lazy<object>(() => ServiceProvider.GetKeyedService(serviceType, serviceKey))).Value;
+		return CachedServices.GetOrAdd(new ServiceIdentifier(serviceKey, serviceType), _ => new Lazy<object>(() => ServiceProvider.GetKeyedService(serviceType, serviceKey)!)).Value;
 	}
 
 	/// <inheritdoc />
@@ -32,13 +32,13 @@ public partial class LazyServiceProvider
 	/// <inheritdoc />
 	public virtual T GetKeyedService<T>(object serviceKey, T defaultValue)
 	{
-		return (T)GetKeyedService(typeof(T), serviceKey, defaultValue);
+		return (T)GetKeyedService(typeof(T), serviceKey, defaultValue!);
 	}
 
 	/// <inheritdoc />
 	public virtual T GetKeyedService<T>(object serviceKey, Func<IServiceProvider, T> factory)
 	{
-		return (T)GetKeyedService(typeof(T), serviceKey, provider => factory(provider));
+		return (T)GetKeyedService(typeof(T), serviceKey, provider => factory(provider)!);
 	}
 
 	/// <inheritdoc />

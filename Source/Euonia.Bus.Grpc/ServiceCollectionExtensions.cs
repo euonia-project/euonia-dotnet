@@ -24,7 +24,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="name">传输器的名称，用作键控服务注册的键。</param>
 		/// <param name="configureOptions">用于配置 <see cref="GrpcBusOptions"/> 的可选委托。</param>
 		/// <returns>原始服务集合，以支持链式调用。</returns>
-		public IServiceCollection AddGrpcBus(string name = "grpc", Action<GrpcBusOptions> configureOptions = null)
+		public IServiceCollection AddGrpcBus(string name = "grpc", Action<GrpcBusOptions>? configureOptions = null)
 		{
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
@@ -38,7 +38,7 @@ public static class ServiceCollectionExtensions
 
 			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetService<GrpcTransporter>());
+				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<GrpcTransporter>());
 			}
 
 			return services;
@@ -71,7 +71,7 @@ public static class GrpcServiceCollectionExtensions
 	/// <param name="services"></param>
 	/// <param name="configureOptions"></param>
 	/// <returns></returns>
-	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions> configureOptions = null)
+	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions>? configureOptions = null)
 	{
 		services.AddGrpc(options =>
 		{

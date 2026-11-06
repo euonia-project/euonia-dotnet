@@ -91,7 +91,7 @@ public class ConventionTests
 	{
 		var convention = new DefaultMessageConvention();
 
-		Assert.Throws<ArgumentNullException>(() => convention.IsUnicast("default", null));
+		Assert.Throws<ArgumentNullException>(() => convention.IsUnicast("default", null!));
 	}
 
 	[Fact]
@@ -139,7 +139,7 @@ public class ConventionTests
 	{
 		var convention = new AnnotationMessageConvention();
 
-		Assert.Throws<ArgumentNullException>(() => convention.IsUnicast(null, typeof(PlainMessage)));
+		Assert.Throws<ArgumentNullException>(() => convention.IsUnicast(null!, typeof(PlainMessage)));
 		Assert.Throws<ArgumentException>(() => convention.IsUnicast(" ", typeof(PlainMessage)));
 	}
 }

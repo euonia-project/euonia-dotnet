@@ -48,7 +48,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	/// </summary>
 	/// <param name="key">The key to add.</param>
 	/// <param name="value">The value to associate with key.</param>
-	public bool TryAdd(TKey key, TValue value)
+	public bool TryAdd(TKey key, TValue? value)
 	{
 		lock (_lockObject)
 		{
@@ -185,8 +185,8 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 			}
 
 			_currentIndex = -1;
-			_key = null;
-			_value = null;
+			_key = null!;
+			_value = null!;
 		}
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
@@ -198,8 +198,8 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 			_table = null!;
 
 			// Ensure we don't keep the last current alive unnecessarily
-			_key = null;
-			_value = null;
+			_key = null!;
+			_value = null!;
 		}
 
 		/// <inheritdoc cref="IEnumerator.MoveNext"/>
@@ -220,8 +220,10 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 			{
 				currentIndex++;
 
-				if (c.TryGetEntry(currentIndex, out _key, out _value))
+				if (c.TryGetEntry(currentIndex, out var key, out var value))
 				{
+					_key = key;
+					_value = value;
 					_currentIndex = currentIndex;
 
 					return true;
@@ -257,7 +259,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	/// </summary>
 	/// <param name="key">The key for the new entry.</param>
 	/// <param name="value">The value for the new entry.</param>
-	private void CreateEntry(TKey key, TValue value)
+	private void CreateEntry(TKey key, TValue? value)
 	{
 		var container = _container;
 
@@ -331,7 +333,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		/// <summary>
 		/// Used to ensure the next allocated container isn't finalized until this one is GC'd.
 		/// </summary>
-		private volatile object _oldKeepAlive;
+		private volatile object? _oldKeepAlive;
 
 		/// <summary>
 		/// Initializes a new instance of the <see cref="Container"/> class.
@@ -383,7 +385,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		/// <summary>
 		/// Worker for adding a new key/value pair. Container must NOT be full.
 		/// </summary>
-		internal void CreateEntryNoResize(TKey key, TValue value)
+		internal void CreateEntryNoResize(TKey key, TValue? value)
 		{
 			VerifyIntegrity();
 
@@ -423,7 +425,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		/// Must hold lock, or be prepared to retry the search while holding lock.
 		/// </summary>
 		/// <remarks>This method requires <paramref name="value"/> to be on the stack to be properly tracked.</remarks>
-		internal int FindEntry(TKey key, out object value)
+		internal int FindEntry(TKey key, out object? value)
 		{
 			var hashCode = RuntimeHelpers.GetHashCode(key) & int.MaxValue;
 			var bucket = hashCode & (_buckets.Length - 1);
@@ -475,7 +477,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 				}
 			}
 
-			key = default;
+			key = default!;
 			value = default;
 
 			return false;

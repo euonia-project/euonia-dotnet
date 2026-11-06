@@ -179,14 +179,14 @@ public class UnitOfWorkInterceptorTests
 	}
 
 	[Fact]
-	public void DisabledUow_ShouldNotBegin()
+	public async Task DisabledUow_ShouldNotBegin()
 	{
 		var harness = new Harness();
 
 		using var scope = harness.Provider.CreateScope();
 		var svc = scope.ServiceProvider.GetRequiredService<IUowTestService>();
 
-		_ = svc.NoUowAsync().GetAwaiter().GetResult();
+		await svc.NoUowAsync();
 
 		harness.Manager.Verify(m => m.Begin(It.IsAny<bool>(), It.IsAny<bool>()), Times.Never);
 	}

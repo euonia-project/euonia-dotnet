@@ -10,7 +10,7 @@ public class ValidatorFactory
 {
     #region Members
 
-    private static IValidatorFactory _factory;
+    private static IValidatorFactory? _factory;
 
     #endregion
 
@@ -29,7 +29,7 @@ public class ValidatorFactory
     /// Create a new <see cref="IValidator"/> instance.
     /// </summary>
     /// <returns>Created ILog</returns>
-    public static IValidator Create()
+    public static IValidator? Create()
     {
         return _factory?.Create();
     }

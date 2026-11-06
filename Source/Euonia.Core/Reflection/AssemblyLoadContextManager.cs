@@ -19,7 +19,7 @@ public static class AssemblyLoadContextManager
     /// <param name="excludeNonCollectible">是否排除引用主应用程序（AssemblyLoadContext.Default）的缓存项。</param>
     /// <returns>包含"Item1"为活动"AssemblyLoadContext"名称和"Item2"为缓存项的元组结构。</returns>
     /// <exception cref="ArgumentNullException">当 objectType、cachingItem 或 unloadAction 为 null 时抛出。</exception>
-    public static Tuple<string, TValue> CreateCacheInstance<TValue>(Type objectType, TValue cachingItem, Action<AssemblyLoadContext> unloadAction, bool excludeNonCollectible = false)
+    public static Tuple<string?, TValue> CreateCacheInstance<TValue>(Type objectType, TValue cachingItem, Action<AssemblyLoadContext> unloadAction, bool excludeNonCollectible = false)
     {
         if (objectType == null)
         {
@@ -36,7 +36,7 @@ public static class AssemblyLoadContextManager
             throw new ArgumentNullException(nameof(unloadAction));
         }
 
-        string assemblyLoadContextName = null;
+        string? assemblyLoadContextName = null;
 
         if ((!excludeNonCollectible || objectType.Assembly.IsCollectible)
             && AssemblyLoadContext.CurrentContextualReflectionContext != null
@@ -47,7 +47,7 @@ public static class AssemblyLoadContextManager
             AssemblyLoadContext.CurrentContextualReflectionContext.Unloading += unloadAction;
         }
 
-        return new Tuple<string, TValue>(assemblyLoadContextName, cachingItem);
+        return new Tuple<string?, TValue>(assemblyLoadContextName, cachingItem);
     }
 
     /// <summary>
@@ -59,7 +59,8 @@ public static class AssemblyLoadContextManager
     /// <param name="context">正在卸载的"AssemblyLoadContext"。</param>
     /// <param name="usingConcurrentDictionary">指导如何从字典中移除缓存项的方法标志。</param>
     /// <exception cref="ArgumentNullException">当缓存项字典为 null 时抛出。</exception>
-    public static void RemoveFromCache<TKey, TValue>(IDictionary<TKey, Tuple<string, TValue>> dictionary, AssemblyLoadContext context, bool usingConcurrentDictionary = false)
+    public static void RemoveFromCache<TKey, TValue>(IDictionary<TKey, Tuple<string?, TValue>> dictionary, AssemblyLoadContext context, bool usingConcurrentDictionary = false)
+        where TKey : notnull
     {
         if (dictionary == null)
         {
@@ -84,7 +85,7 @@ public static class AssemblyLoadContextManager
         foreach (var cacheKey in obsoleteCacheKeys)
         {
             _ = usingConcurrentDictionary
-                ? ((ConcurrentDictionary<TKey, Tuple<string, TValue>>)dictionary).TryRemove(cacheKey, out _)
+                ? ((ConcurrentDictionary<TKey, Tuple<string?, TValue>>)dictionary).TryRemove(cacheKey, out _)
                 : dictionary.Remove(cacheKey);
         }
     }

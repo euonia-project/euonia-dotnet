@@ -11,15 +11,15 @@ public interface IUseCasePresenter<TOutput> : IUseCaseOutputFailure,
 	/// <summary>
 	/// Occurs when the use case is successfully executed.
 	/// </summary>
-	event EventHandler<TOutput> OnSucceed;
+	event EventHandler<TOutput>? OnSucceed;
 
 	/// <summary>
 	/// Occurs when the use case is failed to execute.
 	/// </summary>
-	event EventHandler<Exception> OnFailed;
+	event EventHandler<Exception>? OnFailed;
 
 	/// <summary>
 	/// Occurs when the use case is canceled.
 	/// </summary>
-	event EventHandler OnCanceled;
+	event EventHandler? OnCanceled;
 }

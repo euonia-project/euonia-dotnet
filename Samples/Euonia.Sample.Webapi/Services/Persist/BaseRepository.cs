@@ -49,7 +49,7 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	/// <returns>
 	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
 	/// </returns>
-	public virtual Task<TEntity> GetAsync(TKey id, bool tracking, CancellationToken cancellationToken = default)
+	public virtual Task<TEntity?> GetAsync(TKey id, bool tracking, CancellationToken cancellationToken = default)
 	{
 		//var lambda = predicate.Compile();
 		return GetAsync(id, tracking, [], cancellationToken);
@@ -65,7 +65,7 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	/// <returns>
 	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
 	/// </returns>
-	public virtual Task<TEntity> GetAsync(TKey id, bool tracking, string[] properties, CancellationToken cancellationToken = default)
+	public virtual Task<TEntity?> GetAsync(TKey id, bool tracking, string[] properties, CancellationToken cancellationToken = default)
 	{
 		var predicate = PredicateBuilder.PropertyEqual<TEntity, TKey>(nameof(Euonia.Domain.IEntity<TKey>.Id), id);
 
@@ -82,7 +82,7 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	/// <returns>
 	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
 	/// </returns>
-	public virtual Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, CancellationToken cancellationToken = default)
+	public virtual Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, CancellationToken cancellationToken = default)
 	{
 		return GetAsync(predicate, tracking, [], cancellationToken);
 	}
@@ -97,7 +97,7 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	/// <returns>
 	/// A task that represents the asynchronous operation. The task result contains the entity instance if found; otherwise <c>null</c>.
 	/// </returns>
-	public virtual Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, string[] properties, CancellationToken cancellationToken = default)
+	public virtual Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, bool tracking, string[] properties, CancellationToken cancellationToken = default)
 	{
 		return base.GetAsync(predicate, query => BuildQuery(query, tracking, properties), cancellationToken);
 	}
@@ -176,7 +176,7 @@ internal abstract class BaseRepository<TContext, TEntity, TKey> : EfCoreReposito
 	/// <param name="handle"></param>
 	/// <param name="cancellationToken"></param>
 	/// <returns></returns>
-	public virtual Task<TEntity> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public virtual Task<TEntity?> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
 	{
 		var query = Context.Set<TEntity>().AsNoTracking();
 		if (handle != null)

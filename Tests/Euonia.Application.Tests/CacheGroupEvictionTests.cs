@@ -67,6 +67,6 @@ public class CacheGroupEvictionTests
 
 	private sealed class SampleDto
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 	}
 }

@@ -1,4 +1,6 @@
-﻿namespace Nerosoft.Euonia.Caching;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
 /// Interface ICacheManager
@@ -11,8 +13,8 @@ public interface ICacheManager
     /// <param name="key"></param>
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TResult"></typeparam>
-    /// <returns></returns>
-    TResult Get<TKey, TResult>(TKey key);
+    /// <returns>缓存的项；未命中时返回 <typeparamref name="TResult"/> 的默认值（引用类型为 <c>null</c>）。</returns>
+    TResult Get<TKey, TResult>(TKey key) where TKey : notnull;
 
     /// <summary>
     /// Gets the specified key.
@@ -22,7 +24,7 @@ public interface ICacheManager
     /// <param name="key">The key.</param>
     /// <param name="acquire">The acquire.</param>
     /// <returns>TResult.</returns>
-    TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire);
+    TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull;
 
     /// <summary>
     /// Adds or updates cached value with the specified key.
@@ -32,7 +34,7 @@ public interface ICacheManager
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TResult"></typeparam>
     /// <returns></returns>
-    TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire);
+    TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull;
 
     /// <summary>
     /// Try gets the specified key.
@@ -42,5 +44,5 @@ public interface ICacheManager
     /// <param name="key">The key.</param>
     /// <param name="result">The cached value of key.</param>
     /// <returns></returns>
-    bool TryGet<TKey, TResult>(TKey key, out TResult result);
+    bool TryGet<TKey, TResult>(TKey key, [MaybeNullWhen(false)] out TResult result) where TKey : notnull;
 }

@@ -35,17 +35,17 @@ public sealed class Team : EditableObjectBase<Team, string>
 	/// 读取时由仓储填充。
 	/// </summary>
 	/// <remarks>
-	/// <b>刻意不给初始化器</b>：未加载时保持空引用，单行判定（详情 / 工厂边界）会以明确异常失败，
-	/// 而不是把「没加载」伪装成「没有成员」而静默拒绝。
+	/// <b>刻意不给默认值</b>（<c>null!</c> 只用于标注不变量）：未加载时保持空引用，单行判定（详情 / 工厂边界）
+	/// 会以明确异常失败，而不是把「没加载」伪装成「没有成员」而静默拒绝。
 	/// </remarks>
-	public IReadOnlyCollection<TeamMember> Members { get; set; }
+	public IReadOnlyCollection<TeamMember> Members { get; set; } = null!;
 
 	[Permission(TeamPermissions.Create, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryCreate]
 	private async Task CreateAsync(string name, CancellationToken cancellationToken = default)
 	{
 		Name = name;
-		LeaderId = BusinessContext.User?.UserId;
+		LeaderId = BusinessContext.User?.UserId ?? string.Empty;
 		Id = Guid.NewGuid().ToString("N");
 		await Task.CompletedTask;
 	}

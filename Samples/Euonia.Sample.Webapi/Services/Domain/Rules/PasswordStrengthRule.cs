@@ -32,7 +32,8 @@ internal sealed class PasswordStrengthRule(IPropertyInfo property) : RuleBase(pr
 			return;
 		}
 
-		var value = target.ReadProperty(Property)?.ToString();
+		var property = Property!;
+		var value = target.ReadProperty(property)?.ToString();
 
 		// Validate the password during user creation.
 		if (target.IsNew)

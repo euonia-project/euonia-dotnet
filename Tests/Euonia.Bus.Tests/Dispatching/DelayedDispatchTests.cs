@@ -113,7 +113,7 @@ public class DelayedDispatchTests
 			TestContext.Current.CancellationToken));
 	}
 
-	private static ServiceProvider BuildProvider(List<string> delivered, ITransporter transporter = null)
+	private static ServiceProvider BuildProvider(List<string> delivered, ITransporter? transporter = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

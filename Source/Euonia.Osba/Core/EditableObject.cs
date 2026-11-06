@@ -42,7 +42,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// <param name="newObject">新保存的对象实例；如果保存失败则为 <see langword="null"/>。</param>
 	/// <param name="error">保存操作期间发生的异常；如果成功则为 <see langword="null"/>。</param>
 	/// <param name="userState">与保存操作关联的可选用户定义状态信息。</param>
-	protected virtual void OnSaved(T newObject, Exception error, object userState)
+	protected virtual void OnSaved(T newObject, Exception? error, object? userState)
 	{
 		var args = new SavedEventArgs(newObject, error, userState);
 		Events.HandleEvent(this, args, nameof(Saved));
@@ -109,7 +109,7 @@ public abstract class EditableObject<T> : ObservableObject<T>, ISavable, ISavabl
 	/// <param name="cancellationToken">用于监视取消请求的令牌。</param>
 	/// <returns>表示异步保存操作的任务，包含保存后的对象实例。</returns>
 	/// <exception cref="ValidationException">当对象无效且无法保存时抛出。</exception>
-	protected virtual async Task<T> SaveAsync(bool forceUpdate, object userState, CancellationToken cancellationToken = default)
+	protected virtual async Task<T> SaveAsync(bool forceUpdate, object? userState, CancellationToken cancellationToken = default)
 	{
 		if (State == ObjectEditState.None)
 		{

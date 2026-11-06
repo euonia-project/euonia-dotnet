@@ -131,7 +131,7 @@ internal class RedisConnectionManager
 
     public IConnectionMultiplexer Connect()
     {
-        IConnectionMultiplexer connection;
+        IConnectionMultiplexer? connection;
         lock (_connectLock)
         {
             if (!_connections.TryGetValue(_connectionString, out connection))
@@ -198,7 +198,7 @@ internal class RedisConnectionManager
         {
         }
 
-        public override void Write(string value)
+        public override void Write(string? value)
         {
         }
 

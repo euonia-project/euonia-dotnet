@@ -4,9 +4,9 @@ namespace Nerosoft.Euonia.Domain.Tests;
 
 public class TaggedDescriptor : ValueObject<TaggedDescriptor>
 {
-	public string Name { get; set; }
+	public string Name { get; set; } = string.Empty;
 
-	public IReadOnlyList<int> Numbers { get; set; }
+	public IReadOnlyList<int> Numbers { get; set; } = Array.Empty<int>();
 }
 
 public class ValueObjectFeatureTest

@@ -17,12 +17,12 @@ public class StoreCleanupTests
 
 	private static void Age(IOutboxStore store, string messageId, TimeSpan age)
 	{
-		store.Get(messageId).CreatedAt = DateTime.Now - age;
+		store.Get(messageId)!.CreatedAt = DateTime.Now - age;
 	}
 
 	private static void Age(IInboxStore store, string messageId, TimeSpan age)
 	{
-		store.Get(messageId).CreatedAt = DateTime.Now - age;
+		store.Get(messageId)!.CreatedAt = DateTime.Now - age;
 	}
 
 	[Fact]
@@ -72,7 +72,7 @@ public class StoreCleanupTests
 	{
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(CreateEnvelope("cleanup-outbox-dead"), ["transport-a"]);
-		store.Get("cleanup-outbox-dead").GetTransport("transport-a").MarkAsDeadLettered("exhausted");
+		store.Get("cleanup-outbox-dead")!.GetTransport("transport-a")!.MarkAsDeadLettered("exhausted");
 		Age(store, "cleanup-outbox-dead", TimeSpan.FromHours(2));
 
 		store.Cleanup(DateTime.Now - TimeSpan.FromHours(1));
@@ -125,7 +125,7 @@ public class StoreCleanupTests
 
 		public OutboxEntry Get(string messageId)
 		{
-			return _inner.Get(messageId);
+			return _inner.Get(messageId)!;
 		}
 
 		public void MarkAsSuccess(string messageId, string transport)

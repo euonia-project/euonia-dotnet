@@ -18,7 +18,7 @@ public static class Extensions
 		/// <returns>可用于释放锁的句柄，失败时返回 null。</returns>
 		/// <exception cref="ArgumentNullException">当 <paramref name="provider"/> 为 <c>null</c> 时抛出。</exception>
 		/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <c>null</c> 或空白时抛出。</exception>
-		public ISynchronizationHandle TryAcquire(string name, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ISynchronizationHandle? TryAcquire(string name, TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			ArgumentNullException.ThrowIfNull(provider);
 			ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -52,7 +52,7 @@ public static class Extensions
 		/// <returns>表示异步操作的任务，包含可用于释放锁的句柄，失败时返回 null。</returns>
 		/// <exception cref="ArgumentNullException">当 <paramref name="provider"/> 为 <c>null</c> 时抛出。</exception>
 		/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <c>null</c> 或空白时抛出。</exception>
-		public ValueTask<ISynchronizationHandle> TryAcquireAsync(string name, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ValueTask<ISynchronizationHandle?> TryAcquireAsync(string name, TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			ArgumentNullException.ThrowIfNull(provider);
 			ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -91,7 +91,7 @@ public static class Extensions
 		/// <returns>可用于释放票据的句柄，失败时返回 null。</returns>
 		/// <exception cref="ArgumentNullException">当 <paramref name="provider"/> 为 <c>null</c> 时抛出。</exception>
 		/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <c>null</c> 或空白时抛出。</exception>
-		public ISynchronizationHandle TryAcquire(string name, int maxCount, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ISynchronizationHandle? TryAcquire(string name, int maxCount, TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			ArgumentNullException.ThrowIfNull(provider);
 			ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -127,7 +127,7 @@ public static class Extensions
 		/// <returns>表示异步操作的任务，包含可用于释放票据的句柄，失败时返回 null。</returns>
 		/// <exception cref="ArgumentNullException">当 <paramref name="provider"/> 为 <c>null</c> 时抛出。</exception>
 		/// <exception cref="ArgumentException">当 <paramref name="name"/> 为 <c>null</c> 或空白时抛出。</exception>
-		public ValueTask<ISynchronizationHandle> TryAcquireAsync(string name, int maxCount, TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ValueTask<ISynchronizationHandle?> TryAcquireAsync(string name, int maxCount, TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			ArgumentNullException.ThrowIfNull(provider);
 			ArgumentException.ThrowIfNullOrWhiteSpace(name);

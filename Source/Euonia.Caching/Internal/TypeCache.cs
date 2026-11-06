@@ -21,7 +21,7 @@ public static class TypeCache
 	/// <summary>
 	/// 自定义类型解析器列表。
 	/// </summary>
-	private static readonly List<Func<string, Type>> _resolvers = new();
+	private static readonly List<Func<string, Type?>> _resolvers = new();
 
 	/// <summary>
 	/// 获取 <c>typeof(object)</c>。
@@ -34,7 +34,7 @@ public static class TypeCache
 	/// <paramref name="resolve"/> 函数可能抛出的任何异常都不会向上传播。
 	/// </summary>
 	/// <param name="resolve">解析器函数。</param>
-	public static void RegisterResolveType(Func<string, Type> resolve)
+	public static void RegisterResolveType(Func<string, Type?> resolve)
 	{
 		lock (_typesLock)
 		{
@@ -52,11 +52,11 @@ public static class TypeCache
 	{
 		return _types.GetOrAdd(type, t =>
 		{
-			Type typeResult = null;
+			Type? typeResult = null;
 
 			// 快照解析器列表：RegisterResolveType 可能在解析过程中修改 List，
 			// 直接枚举会抛“集合已修改”。
-			Func<string, Type>[] resolvers;
+			Func<string, Type?>[] resolvers;
 			lock (_typesLock)
 			{
 				resolvers = _resolvers.ToArray();

@@ -64,7 +64,7 @@ public sealed class CodeRepository : EditableObjectBase<CodeRepository, string>
 	{
 		Name = name;
 		TeamId = teamId;
-		OwnerId = BusinessContext.User?.UserId;
+		OwnerId = BusinessContext.User?.UserId ?? string.Empty;
 		Level = RepositoryLevel.Normal;
 		IsPublic = false;
 		Id = Guid.NewGuid().ToString("N");

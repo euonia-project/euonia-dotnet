@@ -45,7 +45,7 @@ public sealed class AsyncProducerConsumerQueue<T>
 	/// </summary>
 	/// <param name="collection">要放入队列的初始元素。可以为 <c>null</c> 以从空集合开始。</param>
 	/// <param name="maxCount">最大元素数量。必须大于零，且大于或等于 <paramref name="collection"/> 中的元素数量。</param>
-	public AsyncProducerConsumerQueue(IEnumerable<T> collection, int maxCount)
+	public AsyncProducerConsumerQueue(IEnumerable<T>? collection, int maxCount)
 	{
 		if (maxCount <= 0)
 			throw new ArgumentOutOfRangeException(nameof(maxCount), Resources.IDS_MAXIMUM_COUNT_MUST_BE_GREATER_THAN_ZERO);
@@ -277,7 +277,7 @@ public sealed class AsyncProducerConsumerQueue<T>
 			}
 
 			if (_completed && Empty)
-				return Tuple.Create(false, default(T));
+				return Tuple.Create(false, default(T)!);
 
 			var item = _queue.Dequeue();
 			_completedOrNotFull.Notify();

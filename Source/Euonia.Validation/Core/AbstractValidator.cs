@@ -11,7 +11,7 @@ public abstract class AbstractValidator<TValue> : IObjectValidator<TValue>
     /// Gets or sets the error message.
     /// </summary>
     /// <value>The error message.</value>
-    public string Message { get; set; }
+    public string Message { get; set; } = string.Empty;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AbstractValidator{TValue}"/> class.

@@ -19,7 +19,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
     // to be used in cases where contention is rare
     private static readonly TimeoutValue _minBusyWaitSleepTime = TimeSpan.FromMilliseconds(50), _maxBusyWaitSleepTime = TimeSpan.FromSeconds(1);
 
-    private string _cachedDirectory;
+    private string? _cachedDirectory;
 
     /// <summary>
     /// Constructs a lock which uses the provided <paramref name="lockFile"/> as the exact file name.
@@ -53,9 +53,9 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
     /// </summary>
     public string Name { get; }
 
-    private string Directory => _cachedDirectory ??= Path.GetDirectoryName(Name);
+    private string Directory => _cachedDirectory ??= Path.GetDirectoryName(Name)!;
 
-    private FileSynchronizationHandle TryAcquire(CancellationToken cancellationToken)
+    private FileSynchronizationHandle? TryAcquire(CancellationToken cancellationToken)
     {
         var retryCount = 0;
 
@@ -161,7 +161,7 @@ public sealed partial class FileLockProvider : ILockProvider<FileSynchronization
 public sealed partial class FileLockProvider
 {
     /// <inheritdoc />
-    public FileSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public FileSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
@@ -173,7 +173,7 @@ public sealed partial class FileLockProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<FileSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ValueTask<FileSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
@@ -185,7 +185,7 @@ public sealed partial class FileLockProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<FileSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default)
+    public ValueTask<FileSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default)
     {
         return BusyWaitHelper.WaitAsync(
             state: this,
@@ -200,7 +200,7 @@ public sealed partial class FileLockProvider
 
 public sealed partial class FileLockProvider
 {
-    ISynchronizationHandle ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
@@ -210,9 +210,9 @@ public sealed partial class FileLockProvider
         return Acquire(timeout, cancellationToken);
     }
 
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     ValueTask<ISynchronizationHandle> ILockProvider.AcquireAsync(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -220,8 +220,8 @@ public sealed partial class FileLockProvider
         return AcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

@@ -20,7 +20,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard, IObjectFactory factory)
 	: BaseApplicationService, IProjectApplicationService
 {
-	public Task<PagedResult<ProjectDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
+	public Task<PagedResult<ProjectDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new ProjectListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
@@ -64,7 +64,7 @@ internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard,
 	{
 		var tcs = new TaskCompletionSource<string>();
 		var subject = new Subject<string>();
-		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null!));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;

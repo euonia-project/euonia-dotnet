@@ -19,10 +19,10 @@ public class SerializationBenchmarks
 		Items = ["a", "b", "c"],
 	};
 
-	private SystemTextJsonSerializer _systemTextJson;
-	private NewtonsoftJsonSerializer _newtonsoftJson;
-	private string _systemTextJsonPayload;
-	private string _newtonsoftJsonPayload;
+	private SystemTextJsonSerializer _systemTextJson = null!;
+	private NewtonsoftJsonSerializer _newtonsoftJson = null!;
+	private string _systemTextJsonPayload = null!;
+	private string _newtonsoftJsonPayload = null!;
 
 	[GlobalSetup]
 	public void Setup()
@@ -60,12 +60,12 @@ public class SerializationBenchmarks
 
 	public sealed class BenchMessage
 	{
-		public string Id { get; set; }
+		public string Id { get; set; } = string.Empty;
 
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 
 		public decimal Amount { get; set; }
 
-		public string[] Items { get; set; }
+		public string[] Items { get; set; } = [];
 	}
 }

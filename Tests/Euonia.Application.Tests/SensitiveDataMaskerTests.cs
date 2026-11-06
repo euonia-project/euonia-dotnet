@@ -116,11 +116,11 @@ public class SensitiveDataMaskerTests
 
 	private sealed class OuterCommand
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 
-		public InnerCommand Inner { get; set; }
+		public InnerCommand Inner { get; set; } = null!;
 
-		public object InnerRef { get; set; }
+		public object InnerRef { get; set; } = null!;
 	}
 
 	private sealed class InnerCommand
@@ -128,19 +128,19 @@ public class SensitiveDataMaskerTests
 		public int Id { get; set; }
 
 		[SensitiveData(Mask = "###")]
-		public string Secret { get; set; }
+		public string Secret { get; set; } = null!;
 	}
 
 	[SensitiveData]
 	private sealed class WholeSensitiveCommand
 	{
-		public string PublicName { get; set; }
+		public string PublicName { get; set; } = null!;
 	}
 
 	private sealed class CyclicNode
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 
-		public CyclicNode Child { get; set; }
+		public CyclicNode Child { get; set; } = null!;
 	}
 }

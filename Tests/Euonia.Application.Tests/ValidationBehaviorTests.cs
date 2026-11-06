@@ -11,7 +11,7 @@ public class ValidationBehaviorTests
 {
 	private sealed class Payload
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 	}
 
 	/// <summary>
@@ -41,7 +41,7 @@ public class ValidationBehaviorTests
 		}
 	}
 
-	private static ValidationBehavior<IMessageEnvelope, object> CreateBehavior(IValidatorFactory factory)
+	private static ValidationBehavior<IMessageEnvelope, object> CreateBehavior(IValidatorFactory? factory)
 	{
 		var services = new ServiceCollection();
 		if (factory != null)
@@ -72,7 +72,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await behavior.HandleAsync(CreateEnvelope(new Payload()).Object, next);
@@ -89,7 +89,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await behavior.HandleAsync(CreateEnvelope(new Payload()).Object, next);
@@ -109,7 +109,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await Assert.ThrowsAsync<ValidationException>(

@@ -19,7 +19,7 @@ internal class ExceptionHandlingInterceptor : Interceptor
     private const int MaxInnerExceptionDepth = 16;
 
     private readonly ILogger<ExceptionHandlingInterceptor> _logger;
-    private readonly IExceptionHandler _handler;
+    private readonly IExceptionHandler? _handler;
 
     /// <summary>
     /// Initialize new instance of <see cref="ExceptionHandlingInterceptor"/>.

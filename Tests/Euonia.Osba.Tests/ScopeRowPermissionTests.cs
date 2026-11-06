@@ -83,7 +83,7 @@ public class ScopeRowPermissionTests
 		using var scope = CreateScope(new AclResolver(), out var provider);
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
-		var compiled = guard.GetPolicy<GrantRepo>(BusinessOperation.Delete);
+		var compiled = guard.GetPolicy<GrantRepo>(BusinessOperation.Delete)!;
 
 		var call = Assert.IsAssignableFrom<MethodCallExpression>(compiled.Allow.Body);
 		Assert.Equal(nameof(Enumerable.Contains), call.Method.Name);
@@ -433,7 +433,7 @@ public class AclResolver : IScopeSubjectResolver
 		}
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		var builder = ScopeSubjectSet.CreateBuilder().AddCodes(_codes);
 
@@ -454,7 +454,7 @@ public class AclResolver : IScopeSubjectResolver
 
 public class GrantRepo : EditableObject<GrantRepo>
 {
-	public string RepoId { get; set; }
+	public string RepoId { get; set; } = string.Empty;
 
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -512,11 +512,11 @@ public class MultiModulePermissionTests
 {
 	public sealed class ReportRow
 	{
-		public string Id { get; set; }
+		public string Id { get; set; } = string.Empty;
 
-		public string OwnerId { get; set; }
+		public string OwnerId { get; set; } = string.Empty;
 
-		public string DeptId { get; set; }
+		public string DeptId { get; set; } = string.Empty;
 	}
 
 	public sealed class ReportRowModel : ScopeModel<ReportRow>
@@ -588,7 +588,7 @@ public class MultiModulePermissionTests
 
 	private sealed class ReportAclResolver : IScopeSubjectResolver
 	{
-		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		{
 			var builder = ScopeSubjectSet.CreateBuilder();
 			builder.Add(ScopeDimensions.Dept, "team-a");

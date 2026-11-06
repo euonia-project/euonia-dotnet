@@ -144,7 +144,7 @@ public class BusStressTests
 		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 		{
 			Interlocked.Increment(ref _sent);
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 
 		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)

@@ -135,7 +135,7 @@ public class CollectionDimensionTests
 		// 未授予任何值：恒假常量——不生成空 IN ()，也不生成空 EXISTS
 		var body = Assert.IsAssignableFrom<ConstantExpression>(compiled.Allow.Body);
 
-		Assert.False((bool)body.Value);
+		Assert.False((bool)body.Value!);
 	}
 
 	[Fact]
@@ -210,8 +210,8 @@ public class CollectionDimensionTests
 			ScopePolicy<Workspace>.Grant(ScopeDimensions.Owner),
 			(ScopeDimensions.Owner, "dev"));
 
-		Assert.True(ScopeFilter.Allows(new Workspace { OwnerId = "dev", Members = null }, compiled));
-		Assert.False(ScopeFilter.Allows(new Workspace { OwnerId = "other", Members = null }, compiled));
+		Assert.True(ScopeFilter.Allows(new Workspace { OwnerId = "dev", Members = null! }, compiled));
+		Assert.False(ScopeFilter.Allows(new Workspace { OwnerId = "other", Members = null! }, compiled));
 	}
 
 	[Fact]

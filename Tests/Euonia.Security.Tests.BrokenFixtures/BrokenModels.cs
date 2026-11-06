@@ -5,9 +5,9 @@ namespace Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 /// </summary>
 public sealed class UnmappedDimensionAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 }
 
 /// <summary>
@@ -31,9 +31,9 @@ public sealed class UnmappedDimensionModel : ScopeModel<UnmappedDimensionAsset>
 /// </summary>
 public sealed class AlwaysDenyAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 }
 
 /// <summary>
@@ -58,11 +58,11 @@ public sealed class AlwaysDenyModel : ScopeModel<AlwaysDenyAsset>
 /// </summary>
 public sealed class UnsupportedCollectionAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string[] Tags { get; set; }
+	public string[] Tags { get; set; } = null!;
 
-	public string[] OtherTags { get; set; }
+	public string[] OtherTags { get; set; } = null!;
 }
 
 /// <summary>
@@ -87,11 +87,11 @@ public sealed class UnsupportedCollectionModel : ScopeModel<UnsupportedCollectio
 /// </summary>
 public sealed class ReportAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 }
 
 /// <summary>

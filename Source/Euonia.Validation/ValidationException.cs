@@ -44,7 +44,7 @@ public class ValidationException : Exception
 	public ValidationException(SerializationInfo info, StreamingContext context)
 		: base(info, context)
 	{
-		_errors = info.GetValue(nameof(Errors), typeof(IEnumerable<ValidationResult>)) as IEnumerable<ValidationResult>;
+		_errors = info.GetValue(nameof(Errors), typeof(IEnumerable<ValidationResult>)) as IEnumerable<ValidationResult> ?? Enumerable.Empty<ValidationResult>();
 	}
 
 #pragma warning disable CS0672

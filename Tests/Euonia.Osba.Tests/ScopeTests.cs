@@ -74,7 +74,7 @@ public class ScopeTests
 
 		// 未授予任何值：直接恒假，不生成空 IN ()
 		Assert.IsAssignableFrom<ConstantExpression>(compiled.Allow.Body);
-		Assert.False((bool)((ConstantExpression)compiled.Allow.Body).Value);
+		Assert.False((bool)((ConstantExpression)compiled.Allow.Body).Value!);
 	}
 
 	#endregion
@@ -576,7 +576,7 @@ public class ScopeTests
 		where T : class
 	{
 		var model = (IScopeModel<T>)Activator.CreateInstance(
-			typeof(T).Assembly.GetTypes().First(type => type.IsClass && !type.IsAbstract && typeof(IScopeModel<T>).IsAssignableFrom(type)));
+			typeof(T).Assembly.GetTypes().First(type => type.IsClass && !type.IsAbstract && typeof(IScopeModel<T>).IsAssignableFrom(type)))!;
 
 		return ScopeModelDescriptor.Create(model);
 	}
@@ -592,9 +592,9 @@ public class ScopeTests
 		return builder.Build();
 	}
 
-	private static ScopedRepo Repo(string teamId, string region = null, string owner = null, string level = "normal", string project = null)
+	private static ScopedRepo Repo(string teamId, string? region = null, string? owner = null, string level = "normal", string? project = null)
 	{
-		return new ScopedRepo { TeamId = teamId, Region = region, OwnerId = owner, Level = level, ProjectId = project };
+		return new ScopedRepo { TeamId = teamId, Region = region!, OwnerId = owner!, Level = level, ProjectId = project! };
 	}
 
 	private static IServiceScope CreateScope(UserPrincipal user, IScopeSubjectResolver resolver, out IServiceProvider provider)
@@ -678,7 +678,7 @@ public class CountingScopeResolver : IScopeSubjectResolver
 		_subjects.Add((dimension, value));
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		CallCount++;
 
@@ -700,15 +700,15 @@ public class CountingScopeResolver : IScopeSubjectResolver
 /// </summary>
 public class ScopedRepo : EditableObject<ScopedRepo>
 {
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string TeamId { get; set; }
+	public string TeamId { get; set; } = null!;
 
-	public string Region { get; set; }
+	public string Region { get; set; } = null!;
 
-	public string ProjectId { get; set; }
+	public string ProjectId { get; set; } = null!;
 
-	public string Level { get; set; }
+	public string Level { get; set; } = null!;
 
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -734,7 +734,7 @@ public class ScopedRepo : EditableObject<ScopedRepo>
 /// </summary>
 public class ScopedRepoOther : EditableObject<ScopedRepoOther>
 {
-	public string TeamId { get; set; }
+	public string TeamId { get; set; } = null!;
 
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
@@ -770,7 +770,7 @@ public sealed class ScopedRepoModel : ScopeModel<ScopedRepo>
 /// </summary>
 public class ScopedTask : EditableObject<ScopedTask>
 {
-	public string TeamId { get; set; }
+	public string TeamId { get; set; } = null!;
 
 	/// <summary>
 	/// 按条件更新：范围列由本方法内部填充。
@@ -816,7 +816,7 @@ public sealed class GatedScopeResolver : IScopeSubjectResolver
 	public void Release() => _release.TrySetResult();
 
 	/// <inheritdoc />
-	public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		// 在阻塞之前取值：模拟「读到的仍是撤销前的数据」
 		var revoked = Revoked;

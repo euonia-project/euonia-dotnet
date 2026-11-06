@@ -17,7 +17,7 @@ public class CacheContextTask<T> : IDisposable
     /// <summary>
     /// The tokens
     /// </summary>
-    private List<IVolatileToken> _tokens;
+    private List<IVolatileToken>? _tokens;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CacheContextTask{T}"/> class.

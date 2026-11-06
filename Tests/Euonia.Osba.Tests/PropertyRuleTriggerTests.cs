@@ -171,7 +171,7 @@ public class PropertyRuleTriggerTests
 		var editable = RuleTestHarness.Create<NotificationObject>(provider);
 
 		var names = new List<string>();
-		editable.PropertyChanged += (_, args) => names.Add(args.PropertyName);
+		editable.PropertyChanged += (_, args) => names.Add(args.PropertyName!);
 
 		editable.Plain = "value";
 
@@ -188,7 +188,7 @@ public class PropertyRuleTriggerTests
 		var editable = RuleTestHarness.Create<NotificationObject>(provider);
 
 		var names = new List<string>();
-		editable.PropertyChanged += (_, args) => names.Add(args.PropertyName);
+		editable.PropertyChanged += (_, args) => names.Add(args.PropertyName!);
 
 		editable.Checked = "   ";
 
@@ -360,7 +360,7 @@ public class PropertyRuleTriggerTests
 		var editable = RuleTestHarness.Create<AsyncRuleObject>(provider);
 
 		var completed = new ManualResetEventSlim(false);
-		Exception failure = null;
+		Exception? failure = null;
 
 		var thread = new Thread(() =>
 		{
@@ -398,7 +398,7 @@ public class PropertyRuleTriggerTests
 	/// </summary>
 	private sealed class NonPumpingContext : SynchronizationContext
 	{
-		public override void Post(SendOrPostCallback d, object state)
+		public override void Post(SendOrPostCallback d, object? state)
 		{
 			// 排入队列但永不执行：等待方将永远等不到续体
 		}

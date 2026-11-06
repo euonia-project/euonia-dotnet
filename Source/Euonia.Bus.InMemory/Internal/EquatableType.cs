@@ -51,7 +51,7 @@ internal readonly struct EquatableType : IEquatable<EquatableType>
 	}
 
 	/// <inheritdoc/>
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		return obj is EquatableType other && Equals(other);
 	}

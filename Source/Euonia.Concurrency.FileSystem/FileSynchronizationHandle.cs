@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class FileSynchronizationHandle : ISynchronizationHandle
 {
-    private FileStream _fileStream;
+    private FileStream? _fileStream;
 
     internal FileSynchronizationHandle(FileStream fileStream)
     {

@@ -129,13 +129,13 @@ public class SubTableDimensionTests
 		return new UserPrincipal(new ClaimsPrincipal(identity));
 	}
 
-	private static MemberTeam Team(string id, (string UserId, string Status)[] members = null, string leader = "other")
+	private static MemberTeam Team(string id, (string UserId, string Status)[]? members = null, string leader = "other")
 	{
 		return new MemberTeam
 		{
 			Id = id,
 			LeaderId = leader,
-			Members = members?.Select(member => new TeamMemberRow { TeamId = id, UserId = member.UserId, Status = member.Status }).ToList()
+			Members = members?.Select(member => new TeamMemberRow { TeamId = id, UserId = member.UserId, Status = member.Status }).ToList()!
 		};
 	}
 
@@ -147,11 +147,11 @@ public class SubTableDimensionTests
 /// <summary>子表行：团队成员（真实系统里就是 <c>team_member</c> 表的一行）。</summary>
 public sealed class TeamMemberRow
 {
-	public string TeamId { get; set; }
+	public string TeamId { get; set; } = null!;
 
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
-	public string Status { get; set; }
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>
@@ -159,12 +159,12 @@ public sealed class TeamMemberRow
 /// </summary>
 public class MemberTeam : EditableObject<MemberTeam>
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string LeaderId { get; set; }
+	public string LeaderId { get; set; } = null!;
 
 	/// <summary>子表行。刻意不初始化：未加载时为空引用，单行判定会明确报错而不是静默拒绝。</summary>
-	public List<TeamMemberRow> Members { get; set; }
+	public List<TeamMemberRow> Members { get; set; } = null!;
 
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -205,7 +205,7 @@ public sealed class MemberTeamScopeModel : ScopeModel<MemberTeam>
 /// </summary>
 internal sealed class SelfMemberResolver : IScopeSubjectResolver
 {
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
 

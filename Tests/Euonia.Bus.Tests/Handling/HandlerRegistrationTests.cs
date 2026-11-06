@@ -27,7 +27,7 @@ public class HandlerRegistrationTests
 
 		configurator.RegisterChannel(typeof(CountingHandler));
 
-		await context.HandleAsync(typeof(TestMessages.OrderPlacedEvent).FullName,
+		await context.HandleAsync(typeof(TestMessages.OrderPlacedEvent).FullName!,
 		                          new TestMessages.OrderPlacedEvent { OrderId = "single" },
 		                          new MessageContext(),
 		                          TestContext.Current.CancellationToken);
@@ -50,7 +50,7 @@ public class HandlerRegistrationTests
 		configurator.RegisterChannel(typeof(CountingHandler));
 		configurator.RegisterChannel(typeof(CountingHandler));
 
-		await context.HandleAsync(typeof(TestMessages.OrderPlacedEvent).FullName,
+		await context.HandleAsync(typeof(TestMessages.OrderPlacedEvent).FullName!,
 		                          new TestMessages.OrderPlacedEvent { OrderId = "dup" },
 		                          new MessageContext(),
 		                          TestContext.Current.CancellationToken);
@@ -70,7 +70,7 @@ public class HandlerRegistrationTests
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 
 		var context = provider.GetRequiredService<IHandlerContext>();
-		var channel = typeof(TestMessages.OrderPlacedEvent).FullName;
+		var channel = typeof(TestMessages.OrderPlacedEvent).FullName!;
 		var invocations = 0;
 
 		configurator.RegisterChannel<TestMessages.OrderPlacedEvent>(channel, (_, _) => { invocations++; return Task.CompletedTask; });

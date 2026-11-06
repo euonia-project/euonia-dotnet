@@ -14,7 +14,7 @@ public class BackgroundBuildOptions
 	/// <summary>
 	/// Gets the jobs.
 	/// </summary>
-	internal Dictionary<Type, BackgroundJobOptions> Jobs { get; } = new();
+	internal Dictionary<Type, BackgroundJobOptions?> Jobs { get; } = new();
 
 	/// <summary>
 	/// The actions to configure the <see cref="IQuartzBuilder"/>.
@@ -24,17 +24,17 @@ public class BackgroundBuildOptions
 	/// <summary>
 	/// The flat <c>quartz.*</c> properties applied before the scheduler is registered.
 	/// </summary>
-	internal Dictionary<string, string> Properties { get; } = new(StringComparer.OrdinalIgnoreCase);
+	internal Dictionary<string, string?> Properties { get; } = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// Gets or sets the scheduler identifier.
 	/// </summary>
-	public string SchedulerId { get; set; }
+	public string? SchedulerId { get; set; }
 
 	/// <summary>
 	/// Gets or sets the scheduler name.
 	/// </summary>
-	public string SchedulerName { get; set; }
+	public string? SchedulerName { get; set; }
 
 	/// <summary>
 	/// Gets or sets the misfire threshold time.
@@ -69,7 +69,7 @@ public class BackgroundBuildOptions
 	/// <summary>
 	/// Gets or sets the type loader.
 	/// </summary>
-	public Type TypeLoader { get; set; }
+	public Type? TypeLoader { get; set; }
 
 	/// <summary>
 	/// If <see langword="true" /> the scheduler will not allow shutdown process
@@ -108,7 +108,7 @@ public class BackgroundBuildOptions
 	/// </summary>
 	/// <param name="options"></param>
 	/// <typeparam name="TJob"></typeparam>
-	public void AddJob<TJob>(BackgroundJobOptions options)
+	public void AddJob<TJob>(BackgroundJobOptions? options)
 		where TJob : IJob
 	{
 		Jobs[typeof(TJob)] = options;
@@ -141,7 +141,7 @@ public class BackgroundBuildOptions
 	/// </summary>
 	/// <param name="jobType"></param>
 	/// <param name="options"></param>
-	public void AddJob(Type jobType, BackgroundJobOptions options)
+	public void AddJob(Type jobType, BackgroundJobOptions? options)
 	{
 		Jobs[jobType] = options;
 	}
@@ -194,7 +194,7 @@ public class BackgroundBuildOptions
 	/// </summary>
 	/// <param name="configure"></param>
 	/// <returns></returns>
-	public BackgroundBuildOptions UseInMemoryStore(Action<InMemoryJobStoreOptions> configure = null)
+	public BackgroundBuildOptions UseInMemoryStore(Action<InMemoryJobStoreOptions>? configure = null)
 	{
 		Configurations.Add(cfg => cfg.UseInMemoryStore(configure));
 		return this;
@@ -230,7 +230,7 @@ public class BackgroundBuildOptions
 	/// <typeparam name="T"></typeparam>
 	/// <param name="configure"></param>
 	/// <returns></returns>
-	public BackgroundBuildOptions UseThreadPool<T>(Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseThreadPool<T>(Action<ThreadPoolOptions>? configure = null)
 		where T : class, IThreadPool
 	{
 		Configurations.Add(cfg =>
@@ -251,7 +251,7 @@ public class BackgroundBuildOptions
 	/// <param name="maxConcurrency"></param>
 	/// <param name="configure"></param>
 	/// <returns></returns>
-	public BackgroundBuildOptions UseDefaultThreadPool(int maxConcurrency, Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseDefaultThreadPool(int maxConcurrency, Action<ThreadPoolOptions>? configure = null)
 	{
 		Configurations.Add(cfg => cfg.UseDefaultThreadPool(options =>
 		{
@@ -266,7 +266,7 @@ public class BackgroundBuildOptions
 	/// </summary>
 	/// <param name="configure"></param>
 	/// <returns></returns>
-	public BackgroundBuildOptions UseDefaultThreadPool(Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseDefaultThreadPool(Action<ThreadPoolOptions>? configure = null)
 	{
 		Configurations.Add(cfg => cfg.UseDefaultThreadPool(configure));
 		return this;
@@ -280,7 +280,7 @@ public class BackgroundBuildOptions
 	/// <exception cref="NotSupportedException">
 	/// Quartz.NET 4.x requires a thread pool with at least one thread; there is no zero-size pool.
 	/// </exception>
-	public BackgroundBuildOptions UseZeroSizeThreadPool(Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseZeroSizeThreadPool(Action<ThreadPoolOptions>? configure = null)
 	{
 		throw new NotSupportedException("Quartz.NET 4.x no longer supports the zero size thread pool.");
 	}
@@ -295,7 +295,7 @@ public class BackgroundBuildOptions
 	/// Quartz.NET 4.x no longer ships a dedicated thread pool; use <see cref="UseDefaultThreadPool(int, Action{ThreadPoolOptions})"/>
 	/// or <see cref="UseThreadPool{T}(Action{ThreadPoolOptions})"/> instead.
 	/// </exception>
-	public BackgroundBuildOptions UseDedicatedThreadPool(int maxConcurrency, Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseDedicatedThreadPool(int maxConcurrency, Action<ThreadPoolOptions>? configure = null)
 	{
 		throw new NotSupportedException("Quartz.NET 4.x no longer supports the dedicated thread pool.");
 	}
@@ -309,7 +309,7 @@ public class BackgroundBuildOptions
 	/// Quartz.NET 4.x no longer ships a dedicated thread pool; use <see cref="UseDefaultThreadPool(Action{ThreadPoolOptions})"/>
 	/// or <see cref="UseThreadPool{T}(Action{ThreadPoolOptions})"/> instead.
 	/// </exception>
-	public BackgroundBuildOptions UseDedicatedThreadPool(Action<ThreadPoolOptions> configure = null)
+	public BackgroundBuildOptions UseDedicatedThreadPool(Action<ThreadPoolOptions>? configure = null)
 	{
 		throw new NotSupportedException("Quartz.NET 4.x no longer supports the dedicated thread pool.");
 	}

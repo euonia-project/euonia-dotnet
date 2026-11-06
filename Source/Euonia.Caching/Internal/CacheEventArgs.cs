@@ -56,7 +56,7 @@ public sealed class CacheItemRemovedEventArgs : EventArgs
     /// <param name="value">被移除的原始缓存值。根据缓存子系统的不同，可能为 <c>null</c>。</param>
     /// <param name="level">触发事件的缓存层级。</param>
     /// <exception cref="ArgumentNullException">当 <c>key</c> 为 <c>null</c> 时抛出。</exception>
-    public CacheItemRemovedEventArgs(string key, string region, CacheItemRemovedReason reason, object value, int level = 0)
+    public CacheItemRemovedEventArgs(string key, string? region, CacheItemRemovedReason reason, object? value, int level = 0)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -77,7 +77,7 @@ public sealed class CacheItemRemovedEventArgs : EventArgs
     /// 获取区域。
     /// </summary>
     /// <value>区域。</value>
-    public string Region { get; }
+    public string? Region { get; }
 
     /// <summary>
     /// 获取指示 <see cref="CacheItem{T}"/> 被移除原因详情的标志。
@@ -96,7 +96,7 @@ public sealed class CacheItemRemovedEventArgs : EventArgs
     /// 此属性可能返回 <c>Null</c>。
     /// </para>
     /// </summary>
-    public object Value { get; }
+    public object? Value { get; }
 
     /// <inheritdoc />
     public override string ToString()
@@ -116,7 +116,7 @@ public sealed class CacheActionEventArgs : EventArgs
     /// <param name="key">键。</param>
     /// <param name="region">区域。</param>
     /// <exception cref="ArgumentNullException">当 <c>key</c> 为 <c>null</c> 时抛出。</exception>
-    public CacheActionEventArgs(string key, string region)
+    public CacheActionEventArgs(string key, string? region)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -131,7 +131,7 @@ public sealed class CacheActionEventArgs : EventArgs
     /// <param name="region">区域。</param>
     /// <param name="origin">事件发生的来源。如果为远程，则事件由背板触发，并非实际在本地执行。</param>
     /// <exception cref="ArgumentNullException">当 <c>key</c> 为 <c>null</c> 时抛出。</exception>
-    public CacheActionEventArgs(string key, string region, CacheActionEventArgOrigin origin)
+    public CacheActionEventArgs(string key, string? region, CacheActionEventArgOrigin origin)
         : this(key, region)
     {
         Origin = origin;
@@ -147,7 +147,7 @@ public sealed class CacheActionEventArgs : EventArgs
     /// 获取区域。
     /// </summary>
     /// <value>区域。</value>
-    public string Region { get; }
+    public string? Region { get; }
 
     /// <summary>
     /// 获取指示事件是由本地操作触发还是通过背板远程触发的事件来源。

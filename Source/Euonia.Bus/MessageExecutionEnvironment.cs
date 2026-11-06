@@ -14,14 +14,14 @@ internal sealed class MessageExecutionEnvironment
 {
 	private readonly IServiceProvider _container;
 	private readonly IServiceScopeFactory _scopeFactory;
-	private readonly ILogger _logger;
+	private readonly ILogger? _logger;
 
 	/// <summary>
 	/// 使用宿主容器创建执行环境。
 	/// </summary>
 	/// <param name="container">宿主容器，用于创建作用域并识别“复用了根容器”。</param>
 	/// <param name="logger">可选日志记录器。</param>
-	internal MessageExecutionEnvironment(IServiceProvider container, ILogger logger)
+	internal MessageExecutionEnvironment(IServiceProvider container, ILogger? logger)
 	{
 		ArgumentNullException.ThrowIfNull(container);
 
@@ -40,7 +40,7 @@ internal sealed class MessageExecutionEnvironment
 	/// <returns>处理结果。</returns>
 	internal async Task<TResult> RunAsync<TResult>(
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
+		MessageContext? message,
 		Func<IServiceProvider, Task<TResult>> execute)
 	{
 		ArgumentNullException.ThrowIfNull(execute);
@@ -58,7 +58,7 @@ internal sealed class MessageExecutionEnvironment
 	/// <returns>表示处理操作的任务。</returns>
 	internal async Task RunAsync(
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
+		MessageContext? message,
 		Func<IServiceProvider, Task> execute)
 	{
 		ArgumentNullException.ThrowIfNull(execute);

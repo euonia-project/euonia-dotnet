@@ -52,7 +52,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// 惰性创建：既有调用方不关心规则时零开销、也不改变任何行为。
 	/// </remarks>
-	private RuleScope _ruleScope;
+	private RuleScope? _ruleScope;
 
 	/// <summary>
 	/// 获取本次操作的规则范围，按需创建。

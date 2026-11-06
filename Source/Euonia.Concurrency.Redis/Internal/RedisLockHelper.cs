@@ -50,9 +50,9 @@ internal static class RedisLockHelper
         acquireOrRenewTask.ContinueWith(async (t, state) =>
             {
                 // don't clean up if we know we failed
-                if (!ReturnedFalse(t))
+                if (!ReturnedFalse(t) && state is IDatabase database)
                 {
-                    await primitive.ReleaseAsync((IDatabase)state, fireAndForget: true).ConfigureAwait(false);
+                    await primitive.ReleaseAsync(database, fireAndForget: true).ConfigureAwait(false);
                 }
             },
             state: database

@@ -71,7 +71,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="value"/> 为 <see langword="null"/> 时抛出。</exception>
     public static Optional<T> Of(T value)
     {
-        ArgumentAssert.ThrowIfNull(value);
+        ArgumentAssert.ThrowIfNull(value!);
         return new Optional<T>(value);
     }
 
@@ -251,7 +251,7 @@ public sealed class Optional<T>
     }
 
     /// <inheritdoc />
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj is not Optional<T> other)
         {

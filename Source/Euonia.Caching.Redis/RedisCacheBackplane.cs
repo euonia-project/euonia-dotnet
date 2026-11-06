@@ -43,7 +43,7 @@ public sealed class RedisCacheBackplane : CacheBackplane
         _channelName = new RedisChannel(configuration.BackplaneChannelName ?? "CacheManagerBackplane", RedisChannel.PatternMode.Auto);
         _identifier = Encoding.UTF8.GetBytes(Guid.NewGuid().ToString());
 
-        var cfg = RedisConfigurations.GetConfiguration(ConfigurationKey, connectionString);
+        var cfg = RedisConfigurations.GetConfiguration(ConfigurationKey!, connectionString);
         _connection = new RedisConnectionManager(cfg);
 
         RetryHelper.Retry(Subscribe, configuration.RetryTimeout, configuration.MaxRetries);
@@ -167,7 +167,7 @@ public sealed class RedisCacheBackplane : CacheBackplane
         }
     }
 
-    private void SendMessages(object state)
+    private void SendMessages(object? state)
     {
         if (_sending || _messages == null || _messages.Count == 0)
         {
@@ -231,7 +231,8 @@ public sealed class RedisCacheBackplane : CacheBackplane
             {
                 try
                 {
-                    var messages = BackplaneMessage.Deserialize(msg, _identifier);
+                    var messageBytes = (byte[]?)msg;
+                    var messages = BackplaneMessage.Deserialize(messageBytes!, _identifier);
 
                     if (!messages.Any())
                     {
@@ -252,28 +253,28 @@ public sealed class RedisCacheBackplane : CacheBackplane
                                 break;
 
                             case BackplaneAction.ClearRegion:
-                                TriggerClearedRegion(message.Region);
+                                TriggerClearedRegion(message.Region!);
                                 break;
 
                             case BackplaneAction.Changed:
                                 if (string.IsNullOrWhiteSpace(message.Region))
                                 {
-                                    TriggerChanged(message.Key, message.ChangeAction);
+                                    TriggerChanged(message.Key!, message.ChangeAction);
                                 }
                                 else
                                 {
-                                    TriggerChanged(message.Key, message.Region, message.ChangeAction);
+                                    TriggerChanged(message.Key!, message.Region, message.ChangeAction);
                                 }
                                 break;
 
                             case BackplaneAction.Removed:
                                 if (string.IsNullOrWhiteSpace(message.Region))
                                 {
-                                    TriggerRemoved(message.Key);
+                                    TriggerRemoved(message.Key!);
                                 }
                                 else
                                 {
-                                    TriggerRemoved(message.Key, message.Region);
+                                    TriggerRemoved(message.Key!, message.Region);
                                 }
                                 break;
                         }

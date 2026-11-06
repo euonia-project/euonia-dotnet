@@ -7,8 +7,8 @@ namespace Nerosoft.Euonia.Concurrency.ZooKeeper;
 /// </summary>
 public sealed class ZooKeeperSynchronizationHandle : ISynchronizationHandle
 {
-    private ZooKeeperNodeHandle _innerHandle;
-    private IDisposable _finalizerRegistration;
+    private ZooKeeperNodeHandle? _innerHandle;
+    private IDisposable? _finalizerRegistration;
 
     internal ZooKeeperSynchronizationHandle(ZooKeeperNodeHandle innerHandle)
     {

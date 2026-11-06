@@ -8,5 +8,5 @@ public class FileSynchronizationOptions
     /// <summary>
     /// Gets or sets the directory to use for synchronization
     /// </summary>
-    public string Directory { get; set; }
+    public string Directory { get; set; } = null!;
 }

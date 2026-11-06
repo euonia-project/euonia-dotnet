@@ -88,7 +88,7 @@ public sealed class CacheHandleConfiguration
     /// 获取或设置句柄的类型。
     /// </summary>
     /// <value>句柄的类型。</value>
-    public Type HandleType { get; set; }
+    public Type HandleType { get; set; } = null!;
 
     internal object[] ConfigurationTypes { get; set; } = [];
 

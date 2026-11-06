@@ -24,14 +24,14 @@ public class MessageExecutionScopeTests
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/ambient" }, "test.events", "ambient-outbox-1");
 		store.Insert(envelope, ["test"]);
-		store.Get("ambient-outbox-1").GetTransport("test").MarkAsFailed("first attempt failed");
+		store.Get("ambient-outbox-1")!.GetTransport("test")!.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions());
 
 		await dispatcher.RetryAllAsync();
 
 		Assert.Contains("ambient-outbox-1", delivered);
-		Assert.Equal(OutboxTransportStatus.Success, store.Get("ambient-outbox-1").GetTransport("test").Status);
+		Assert.Equal(OutboxTransportStatus.Success, store.Get("ambient-outbox-1")!.GetTransport("test")!.Status);
 	}
 
 	[Fact]
@@ -51,7 +51,7 @@ public class MessageExecutionScopeTests
 				{
 					_ = factory.GetRequiredService<ScopedProbe>();
 					handled++;
-					return Task.FromResult<object>(null);
+					return Task.FromResult<object>(null!);
 				})
 			]
 		};
@@ -59,14 +59,14 @@ public class MessageExecutionScopeTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/ambient" }, "test.events", "ambient-inbox-1");
 		IInboxStore store = new InMemoryInboxStore();
 		store.Insert("test.events", envelope, ["MyHandler"]);
-		store.Get("ambient-inbox-1").GetHandler("MyHandler").MarkAsFailed("first attempt failed");
+		store.Get("ambient-inbox-1")!.GetHandler("MyHandler")!.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true }, container);
 
 		await dispatcher.RetryAllAsync();
 
 		Assert.Equal(1, handled);
-		Assert.Equal(InboxHandlerStatus.Success, store.Get("ambient-inbox-1").GetHandler("MyHandler").Status);
+		Assert.Equal(InboxHandlerStatus.Success, store.Get("ambient-inbox-1")!.GetHandler("MyHandler")!.Status);
 	}
 
 	[Fact]
@@ -98,17 +98,17 @@ public class MessageExecutionScopeTests
 		adminScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>().Context = new RequestContext { TraceIdentifier = "trace-admin" };
 
 		var payload = new ReplayProbeEvent();
-		var envelope = new RoutedMessage<ReplayProbeEvent>(payload, typeof(ReplayProbeEvent).FullName)
+		var envelope = new RoutedMessage<ReplayProbeEvent>(payload, typeof(ReplayProbeEvent).FullName!)
 		{
 			MessageId = "replay-ambient-1",
 			RequestTraceId = "trace-original",
 		};
 
 		await handlerContext.ReplayDeadLetterAsync(
-			typeof(ReplayProbeEvent).FullName,
+			typeof(ReplayProbeEvent).FullName!,
 			payload,
 			new MessageContext(envelope),
-			typeof(ReplayProbeHandler).FullName,
+			typeof(ReplayProbeHandler).FullName!,
 			TestContext.Current.CancellationToken);
 
 		var state = provider.GetRequiredService<ProbeState>();
@@ -131,7 +131,7 @@ public class MessageExecutionScopeTests
 		var environment = new MessageExecutionEnvironment(provider, null);
 		var message = new MessageContext();
 
-		RequestContext observed = null;
+		RequestContext? observed = null;
 		await environment.RunAsync(MessageExecutionDescriptor.Replay, message, _ =>
 		{
 			observed = contextAccessor.Context;
@@ -160,7 +160,7 @@ public class MessageExecutionScopeTests
 			ExecutionDescriptor = MessageExecutionDescriptor.InProcessCall(borrowed, null),
 		};
 
-		IServiceProvider observed = null;
+		IServiceProvider? observed = null;
 		await environment.RunAsync(message.ExecutionDescriptor, message, scopedProvider =>
 		{
 			observed = scopedProvider;
@@ -184,7 +184,7 @@ public class MessageExecutionScopeTests
 			ExecutionDescriptor = MessageExecutionDescriptor.InProcessCall(provider, null),
 		};
 
-		IServiceProvider observed = null;
+		IServiceProvider? observed = null;
 		await environment.RunAsync(message.ExecutionDescriptor, message, scopedProvider =>
 		{
 			observed = scopedProvider;
@@ -217,9 +217,9 @@ public class MessageExecutionScopeTests
 		var contextAccessor = observerScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>();
 		var environment = new MessageExecutionEnvironment(provider, null);
 
-		RequestContext first = null;
-		RequestContext second = null;
-		IServiceProvider firstProvider = null;
+		RequestContext? first = null;
+		RequestContext? second = null;
+		IServiceProvider? firstProvider = null;
 
 		await environment.RunAsync(descriptor, message, scopedProvider =>
 		{
@@ -271,7 +271,7 @@ public class MessageExecutionScopeTests
 	{
 		public bool Handled { get; set; }
 
-		public string TraceIdentifier { get; set; }
+		public string? TraceIdentifier { get; set; }
 	}
 
 	private sealed class ReplayProbeEvent : IMulticast

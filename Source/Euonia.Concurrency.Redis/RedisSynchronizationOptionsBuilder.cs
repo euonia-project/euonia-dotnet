@@ -112,9 +112,9 @@ public sealed class RedisSynchronizationOptionsBuilder
 		return this;
 	}
 
-	internal static RedisSynchronizationOptions GetOptions(Action<RedisSynchronizationOptionsBuilder> optionsBuilder)
+	internal static RedisSynchronizationOptions GetOptions(Action<RedisSynchronizationOptionsBuilder>? optionsBuilder)
 	{
-		RedisSynchronizationOptionsBuilder options;
+		RedisSynchronizationOptionsBuilder? options;
 		if (optionsBuilder != null)
 		{
 			options = new RedisSynchronizationOptionsBuilder();

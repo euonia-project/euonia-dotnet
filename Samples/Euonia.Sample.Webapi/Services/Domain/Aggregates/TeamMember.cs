@@ -11,16 +11,16 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 public sealed class TeamMember
 {
 	/// <summary>关系标识。</summary>
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
 	/// <summary>所属团队（<c>team.id</c>）。</summary>
-	public string TeamId { get; set; }
+	public string TeamId { get; set; } = null!;
 
 	/// <summary>成员（账号标识，<c>user.id</c>）。</summary>
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
 	/// <summary>关系状态，见 <see cref="TeamMemberStatus"/>。</summary>
-	public string Status { get; set; }
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>成员关系状态。失效的关系保留在表里（审计），但不参与判定。</summary>

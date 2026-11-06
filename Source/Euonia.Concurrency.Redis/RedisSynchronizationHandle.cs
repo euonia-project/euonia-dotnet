@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Concurrency.Redis;
 /// </summary>
 public class RedisSynchronizationHandle : ISynchronizationHandle
 {
-    private RedisLockHandle _innerHandle;
+    private RedisLockHandle? _innerHandle;
 
     internal RedisSynchronizationHandle(RedisLockHandle innerHandle)
     {

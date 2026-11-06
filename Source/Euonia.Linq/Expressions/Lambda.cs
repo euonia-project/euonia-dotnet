@@ -12,7 +12,7 @@ public static class Lambda
     /// 获取表达式的成员信息。
     /// </summary>
     /// <param name="expression">Lambda 表达式。</param>
-    public static MemberInfo GetMember(Expression expression)
+    public static MemberInfo? GetMember(Expression expression)
     {
         var memberExpression = GetMemberExpression(expression);
         return memberExpression?.Member;
@@ -22,7 +22,7 @@ public static class Lambda
     /// 获取成员访问表达式。
     /// </summary>
     /// <param name="expression">Lambda 表达式。</param>
-    public static MemberExpression GetMemberExpression(Expression expression)
+    public static MemberExpression? GetMemberExpression(Expression expression)
     {
         if (expression == null)
         {
@@ -52,7 +52,7 @@ public static class Lambda
     /// 获取 <paramref name="memberExpression"/> 的成员名称。
     /// </summary>
     /// <param name="memberExpression">成员访问表达式。</param>
-    public static string GetMemberName(MemberExpression memberExpression)
+    public static string GetMemberName(MemberExpression? memberExpression)
     {
         if (memberExpression == null)
         {
@@ -104,7 +104,7 @@ public static class Lambda
     /// </summary>
     /// <param name="expression">Lambda 表达式。</param>
     /// <example>表达式：t =&gt; t.Name == "A"，返回："A"</example>
-    public static object GetValue(Expression expression)
+    public static object? GetValue(Expression? expression)
     {
         if (expression == null)
         {
@@ -139,7 +139,7 @@ public static class Lambda
     /// <summary>
     /// 获取方法调用表达式的值。
     /// </summary>
-    private static object GetMethodCallExpressionValue(Expression expression)
+    private static object? GetMethodCallExpressionValue(Expression expression)
     {
         var methodCallExpression = (MethodCallExpression)expression;
         var value = GetValue(methodCallExpression.Arguments.FirstOrDefault());
@@ -153,7 +153,7 @@ public static class Lambda
     /// <summary>
     /// 获取属性表达式的值。
     /// </summary>
-    private static object GetMemberValue(MemberExpression expression)
+    private static object? GetMemberValue(MemberExpression? expression)
     {
         if (expression == null)
         {
@@ -191,7 +191,7 @@ public static class Lambda
     /// <summary>
     /// 获取常量表达式的值。
     /// </summary>
-    private static object GetConstantExpressionValue(Expression expression)
+    private static object? GetConstantExpressionValue(Expression expression)
     {
         var constantExpression = (ConstantExpression)expression;
         return constantExpression.Value;
@@ -201,7 +201,7 @@ public static class Lambda
     /// 获取参数，范例：t.Name，返回 t。
     /// </summary>
     /// <param name="expression">表达式，范例：t.Name。</param>
-    public static ParameterExpression GetParameter(Expression expression)
+    public static ParameterExpression? GetParameter(Expression? expression)
     {
         if (expression == null)
         {
@@ -281,9 +281,15 @@ public static class Lambda
     /// </summary>
     /// <typeparam name="TAttribute">特性类型。</typeparam>
     /// <param name="expression">属性表达式。</param>
-    public static TAttribute GetAttribute<TAttribute>(Expression expression) where TAttribute : Attribute
+    /// <returns>找到的特性；未找到时返回 <see langword="null"/>。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="expression"/> 未返回任何成员。</exception>
+    public static TAttribute? GetAttribute<TAttribute>(Expression expression) where TAttribute : Attribute
     {
         var memberInfo = GetMember(expression);
+        if (memberInfo == null)
+        {
+            throw new ArgumentNullException(nameof(expression));
+        }
         return memberInfo.GetCustomAttribute<TAttribute>();
     }
 
@@ -294,7 +300,7 @@ public static class Lambda
     /// <typeparam name="TProperty">属性类型。</typeparam>
     /// <typeparam name="TAttribute">特性类型。</typeparam>
     /// <param name="propertyExpression">属性表达式。</param>
-    public static TAttribute GetAttribute<TEntity, TProperty, TAttribute>(Expression<Func<TEntity, TProperty>> propertyExpression) where TAttribute : Attribute
+    public static TAttribute? GetAttribute<TEntity, TProperty, TAttribute>(Expression<Func<TEntity, TProperty>> propertyExpression) where TAttribute : Attribute
     {
         return GetAttribute<TAttribute>(propertyExpression);
     }
@@ -305,7 +311,7 @@ public static class Lambda
     /// <typeparam name="TProperty">属性类型。</typeparam>
     /// <typeparam name="TAttribute">特性类型。</typeparam>
     /// <param name="propertyExpression">属性表达式。</param>
-    public static TAttribute GetAttribute<TProperty, TAttribute>(Expression<Func<TProperty>> propertyExpression) where TAttribute : Attribute
+    public static TAttribute? GetAttribute<TProperty, TAttribute>(Expression<Func<TProperty>> propertyExpression) where TAttribute : Attribute
     {
         return GetAttribute<TAttribute>(propertyExpression);
     }
@@ -317,9 +323,14 @@ public static class Lambda
     /// <typeparam name="TProperty">属性类型。</typeparam>
     /// <typeparam name="TAttribute">特性类型。</typeparam>
     /// <param name="propertyExpression">属性表达式。</param>
+    /// <exception cref="ArgumentNullException"><paramref name="propertyExpression"/> 未返回任何成员。</exception>
     public static IEnumerable<TAttribute> GetAttributes<TEntity, TProperty, TAttribute>(Expression<Func<TEntity, TProperty>> propertyExpression) where TAttribute : Attribute
     {
         var memberInfo = GetMember(propertyExpression);
+        if (memberInfo == null)
+        {
+            throw new ArgumentNullException(nameof(propertyExpression));
+        }
         return memberInfo.GetCustomAttributes<TAttribute>();
     }
 
@@ -332,7 +343,7 @@ public static class Lambda
     /// 当 <paramref name="expression"/> 为成员访问表达式时，常量会使用成员类型进行类型化，
     /// 以支持可空值类型（如 <see langword="int?"/>）的比较。
     /// </remarks>
-    public static ConstantExpression Constant(Expression expression, object value)
+    public static ConstantExpression Constant(Expression expression, object? value)
     {
         if (expression is not MemberExpression memberExpression)
         {
@@ -347,7 +358,7 @@ public static class Lambda
     /// <param name="value">值。</param>
     /// <param name="type">目标类型。</param>
     /// <returns>类型化常量表达式。</returns>
-    internal static ConstantExpression ToConstant(object value, Type type)
+    internal static ConstantExpression ToConstant(object? value, Type type)
     {
         if (value == null)
         {

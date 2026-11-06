@@ -247,17 +247,17 @@ public class CacheEvictionInterceptorTests
 
 	private sealed class StubProvider : IServiceProvider
 	{
-		private readonly ICacheService _cache;
+		private readonly ICacheService? _cache;
 
-		private readonly ICacheGroupManager _manager;
+		private readonly ICacheGroupManager? _manager;
 
-		public StubProvider(ICacheService cache, ICacheGroupManager manager = null)
+		public StubProvider(ICacheService? cache, ICacheGroupManager? manager = null)
 		{
 			_cache = cache;
 			_manager = manager;
 		}
 
-		public object GetService(Type serviceType)
+		public object? GetService(Type serviceType)
 		{
 			if (serviceType == typeof(ICacheService))
 			{

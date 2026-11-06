@@ -21,7 +21,7 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 	[AllowAnonymous]
 	[HttpGet]
 	[ProducesResponseType(StatusCodes.Status200OK)]
-	public Task<IActionResult> List([FromQuery] string keyword = null, [FromQuery] string sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+	public Task<IActionResult> List([FromQuery] string? keyword = null, [FromQuery] string? sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
 	{
 		return InvokeAsync(() => service.FindAsync(keyword, sortBy, page, pageSize, cancellationToken));
 	}

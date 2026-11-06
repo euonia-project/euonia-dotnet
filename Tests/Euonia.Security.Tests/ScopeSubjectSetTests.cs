@@ -61,10 +61,10 @@ public class ScopeSubjectSetTests
 		var subjects = ScopeSubjectSet.CreateBuilder().Add("dept", "team-a").Build();
 
 		Assert.Empty(subjects.ValuesOf(ScopeKeys.Default, "region"));
-		Assert.False(subjects.Contains(ScopeKeys.Default, "dept", null));
+		Assert.False(subjects.Contains(ScopeKeys.Default, "dept", null!));
 
 		// 权限码为 null 视作默认键（不是「无授予」）
-		Assert.Equal(["team-a"], subjects.ValuesOf(null, "dept"));
+		Assert.Equal(["team-a"], subjects.ValuesOf(null!, "dept"));
 	}
 
 	[Fact]

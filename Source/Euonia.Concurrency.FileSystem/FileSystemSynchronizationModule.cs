@@ -19,7 +19,7 @@ public class FileSystemLockModule : ModuleContextBase
     {
         context.Services.AddSingleton<ILockFactory>(provider =>
         {
-            var options = provider.GetService<IOptions<FileSynchronizationOptions>>().Value;
+            var options = provider.GetService<IOptions<FileSynchronizationOptions>>()!.Value;
             return new FileSynchronizationFactory(new DirectoryInfo(options.Directory));
         });
     }

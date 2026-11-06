@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Contracts;
 public interface ITeamApplicationService : IApplicationService
 {
 	/// <summary>分页查询团队（必须先持有 <c>team:view</c> 码，否则返回空页）。</summary>
-	Task<PagedResult<TeamDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
+	Task<PagedResult<TeamDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
 
 	/// <summary>查看团队详情（行级视图判定）。</summary>
 	Task<TeamDto> GetAsync(string id, CancellationToken cancellationToken = default);

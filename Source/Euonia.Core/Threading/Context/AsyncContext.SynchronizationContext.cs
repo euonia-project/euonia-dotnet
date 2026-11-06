@@ -26,7 +26,7 @@ public sealed partial class AsyncContext
 		/// </summary>
 		/// <param name="d">要调用的 <see cref="T:System.Threading.SendOrPostCallback"/> 委托。不能为 <c>null</c>。</param>
 		/// <param name="state">传递给委托的对象。</param>
-		public override void Post(SendOrPostCallback d, object state)
+		public override void Post(SendOrPostCallback d, object? state)
 		{
 			Context.Enqueue(Context._taskFactory.Run(() => d(state)), true);
 		}
@@ -36,7 +36,7 @@ public sealed partial class AsyncContext
 		/// </summary>
 		/// <param name="d">要调用的 <see cref="T:System.Threading.SendOrPostCallback"/> 委托。不能为 <c>null</c>。</param>
 		/// <param name="state">传递给委托的对象。</param>
-		public override void Send(SendOrPostCallback d, object state)
+		public override void Send(SendOrPostCallback d, object? state)
 		{
 			if (AsyncContext.Current == Context)
 			{
@@ -88,7 +88,7 @@ public sealed partial class AsyncContext
 		/// </summary>
 		/// <param name="obj">要与此实例比较的 <see cref="object"/>。</param>
 		/// <returns>如果指定的 <see cref="object"/> 等于此实例，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			if (obj is not AsyncContextSynchronizationContext other)
 			{

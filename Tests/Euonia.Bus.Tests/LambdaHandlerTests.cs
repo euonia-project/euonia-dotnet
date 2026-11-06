@@ -10,7 +10,7 @@ public class LambdaHandlerTests
 	{
 		var handler = new LambdaHandler<string, int>((message, _) => Task.FromResult(message.Length));
 
-		var result = await handler.HandleAsync("hello", null);
+		var result = await handler.HandleAsync("hello", null!);
 
 		Assert.Equal(5, result);
 	}
@@ -18,8 +18,8 @@ public class LambdaHandlerTests
 	[Fact]
 	public async Task TestHandlerWithResult_ShouldPassMessageAndContext()
 	{
-		string receivedMessage = null;
-		IMessageContext receivedContext = null;
+		string? receivedMessage = null;
+		IMessageContext? receivedContext = null;
 
 		var handler = new LambdaHandler<string, string>((message, context) =>
 		{
@@ -38,7 +38,7 @@ public class LambdaHandlerTests
 	[Fact]
 	public async Task TestHandlerWithoutResult_ShouldInvokeDelegate()
 	{
-		string receivedMessage = null;
+		string? receivedMessage = null;
 
 		var handler = new LambdaHandler<string>((message, _) =>
 		{
@@ -46,7 +46,7 @@ public class LambdaHandlerTests
 			return Task.CompletedTask;
 		});
 
-		await handler.HandleAsync("world", null);
+		await handler.HandleAsync("world", null!);
 
 		Assert.Equal("world", receivedMessage);
 	}
@@ -57,8 +57,8 @@ public class LambdaHandlerTests
 		public string CorrelationId => "correlation-id";
 		public string ConversationId => "conversation-id";
 		public string RequestTraceId => "trace-id";
-		public string Authorization => null;
-		public System.Security.Principal.IPrincipal User => null;
+		public string Authorization => null!;
+		public System.Security.Principal.IPrincipal User => null!;
 		public IReadOnlyDictionary<string, string> Headers => new Dictionary<string, string>();
 		public MessageMetadata Metadata => new();
 		public void Response<TMessage>(TMessage message)

@@ -34,7 +34,7 @@ internal sealed class FakeCacheService : ICacheService
 			}
 		}
 
-		value = default;
+		value = default!;
 		return false;
 	}
 

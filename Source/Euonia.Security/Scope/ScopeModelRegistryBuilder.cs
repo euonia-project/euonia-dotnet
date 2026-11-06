@@ -156,7 +156,7 @@ internal sealed class ScopeModelRegistryBuilder
 
 		return problems;
 
-		static void Collect(List<ScopeModelDiagnostic> target, string name, string problem)
+		static void Collect(List<ScopeModelDiagnostic> target, string name, string? problem)
 		{
 			if (problem != null)
 			{
@@ -165,7 +165,7 @@ internal sealed class ScopeModelRegistryBuilder
 		}
 	}
 
-	private static string TryValidatePolicy(string name, ScopeModelDescriptor descriptor, object policy, string scopeKey)
+	private static string? TryValidatePolicy(string name, ScopeModelDescriptor descriptor, object policy, string scopeKey)
 	{
 		var probe = ScopeSubjectSet.CreateBuilder();
 		foreach (var dimension in descriptor.Dimensions)
@@ -204,7 +204,7 @@ internal sealed class ScopeModelRegistryBuilder
 
 	private static IEnumerable<Type> GetModelTypes(IEnumerable<Assembly> assemblies)
 	{
-		return AssemblyHelper.LoadTypes(assemblies)
+		return AssemblyHelper.LoadTypes(assemblies)!
 						   .Where(type => type.IsClass && !type.IsAbstract && type.IsAssignableTo(typeof(IScopeModel)));
 	}
 }

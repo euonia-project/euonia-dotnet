@@ -4,7 +4,7 @@ namespace Nerosoft.Euonia.Domain.Tests;
 
 public class PersonDescriptor : ValueObject<PersonDescriptor>
 {
-	public string Name { get; set; }
+	public string? Name { get; set; }
 
 	public int Age { get; set; }
 }

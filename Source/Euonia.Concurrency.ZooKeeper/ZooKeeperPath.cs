@@ -17,7 +17,7 @@ public readonly struct ZooKeeperPath : IEquatable<ZooKeeperPath>
 	/// </summary>
 	public ZooKeeperPath(string path) : this(path, checkPath: true) { }
 
-	private ZooKeeperPath(string path, bool checkPath, string paramName = null)
+	private ZooKeeperPath(string path, bool checkPath, string? paramName = null)
 	{
 		if (path == null) { throw new ArgumentNullException(paramName ?? nameof(path)); }
 		if (checkPath && ValidatePath(path) is { } error)
@@ -42,7 +42,7 @@ public readonly struct ZooKeeperPath : IEquatable<ZooKeeperPath>
 	/// <summary>
 	/// Implements equality based on the path string 
 	/// </summary>
-	public override bool Equals(object obj) => obj is ZooKeeperPath that && Equals(that);
+	public override bool Equals(object? obj) => obj is ZooKeeperPath that && Equals(that);
 
 	/// <summary>
 	/// Implements equality based on the path string 

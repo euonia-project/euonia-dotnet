@@ -9,13 +9,13 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public sealed class Asset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 
-	public string Level { get; set; }
+	public string Level { get; set; } = null!;
 }
 
 /// <summary>
@@ -43,11 +43,11 @@ public sealed class AssetModel : ScopeModel<Asset>
 /// </summary>
 public sealed class KeyedAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 }
 
 /// <summary>
@@ -79,9 +79,9 @@ public sealed class KeyedAssetModel : ScopeModel<KeyedAsset>
 /// </summary>
 public sealed class WorkspaceMember
 {
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
-	public string Status { get; set; }
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>
@@ -92,11 +92,11 @@ public sealed class WorkspaceMember
 /// </remarks>
 public sealed class Workspace
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public List<WorkspaceMember> Members { get; set; }
+	public List<WorkspaceMember> Members { get; set; } = null!;
 }
 
 /// <summary>
@@ -121,9 +121,9 @@ public sealed class WorkspaceModel : ScopeModel<Workspace>
 /// </summary>
 public sealed class ChannelMember
 {
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
-	public string Status { get; set; }
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>
@@ -131,9 +131,9 @@ public sealed class ChannelMember
 /// </summary>
 public sealed class Channel
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public List<ChannelMember> Members { get; set; }
+	public List<ChannelMember> Members { get; set; } = null!;
 }
 
 /// <summary>
@@ -154,9 +154,9 @@ public sealed class ChannelModel : ScopeModel<Channel>
 /// </summary>
 public sealed class SharedDocument
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public List<string> ReaderIds { get; set; }
+	public List<string> ReaderIds { get; set; } = null!;
 }
 
 /// <summary>
@@ -216,9 +216,9 @@ public sealed class UnionProbeAsset
 /// </summary>
 public class ProxyableAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 }
 
 /// <summary>
@@ -242,7 +242,7 @@ public sealed class ProxyableAssetModel : ScopeModel<ProxyableAsset>
 [Permission("asset:read")]
 public sealed class ClassLevelAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 }
 
 /// <summary>
@@ -279,7 +279,7 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 {
 	private readonly ScopeSubjectSet _subjects;
 
-	public FixedSubjectResolver(string[] codes = null, (string Dimension, string Value)[] grants = null)
+	public FixedSubjectResolver(string[]? codes = null, (string Dimension, string Value)[]? grants = null)
 	{
 		var builder = ScopeSubjectSet.CreateBuilder();
 
@@ -296,7 +296,7 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 		_subjects = builder.Build();
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		=> new(_subjects);
 }
 
@@ -314,11 +314,11 @@ public sealed class AssetSecondApproveAttribute : Attribute;
 [Permission("asset:read")]
 public sealed class ApprovableAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 
 	[Permission("asset:approve", "auditor", "manager")]
 	[AssetApprove]
@@ -337,9 +337,9 @@ public sealed class ApprovableAsset
 /// </summary>
 public sealed class ApproveOnlyAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
 	[Permission("asset:approve")]
 	[AssetApprove]

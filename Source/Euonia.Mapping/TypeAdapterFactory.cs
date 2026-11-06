@@ -10,7 +10,7 @@ public static class TypeAdapterFactory
 {
 	#region Members
 
-	private static ITypeAdapterFactory _factory;
+	private static ITypeAdapterFactory? _factory;
 
 	#endregion
 
@@ -29,7 +29,7 @@ public static class TypeAdapterFactory
 	/// 从当前工厂创建一个新的类型适配器。
 	/// </summary>
 	/// <returns>所创建的类型适配器；若尚未通过 <see cref="SetCurrent"/> 配置工厂，则返回 <see langword="null"/>。</returns>
-	public static ITypeAdapter CreateAdapter()
+	public static ITypeAdapter? CreateAdapter()
 	{
 		return _factory?.Create();
 	}

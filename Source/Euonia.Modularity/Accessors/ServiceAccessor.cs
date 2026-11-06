@@ -16,7 +16,7 @@ public class ServiceAccessor(IServiceProvider provider) : IServiceAccessor
 	public IServiceProvider ServiceProvider { get; } = provider;
 
 	/// <inheritdoc/>
-	public T GetService<T>()
+	public T? GetService<T>()
 	{
 		return ServiceProvider.GetService<T>();
 	}
@@ -24,11 +24,11 @@ public class ServiceAccessor(IServiceProvider provider) : IServiceAccessor
 	/// <inheritdoc />
 	public T GetRequiredService<T>()
 	{
-		return ServiceProvider.GetRequiredService<T>();
+		return (T)ServiceProvider.GetRequiredService(typeof(T));
 	}
 
 	/// <inheritdoc />
-	public T GetKeyedService<T>(object key)
+	public T? GetKeyedService<T>(object key)
 	{
 		return ServiceProvider.GetKeyedService<T>(key);
 	}
@@ -36,11 +36,11 @@ public class ServiceAccessor(IServiceProvider provider) : IServiceAccessor
 	/// <inheritdoc />
 	public T GetRequiredKeyedService<T>(object name)
 	{
-		return ServiceProvider.GetRequiredKeyedService<T>(name);
+		return (T)ServiceProvider.GetRequiredKeyedService(typeof(T), name);
 	}
 
 	/// <inheritdoc/>
-	public object GetService(Type type)
+	public object? GetService(Type type)
 	{
 		return ServiceProvider.GetService(type);
 	}

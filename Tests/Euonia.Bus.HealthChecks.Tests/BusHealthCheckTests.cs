@@ -99,7 +99,7 @@ public class BusHealthCheckTests
 	/// <summary>
 	/// 构造一个注册了总线核心服务的最小容器；传输器数量为 0，因为没有配置任何传输策略。
 	/// </summary>
-	private static ServiceProvider BuildProvider(Action<BusHealthCheckOptions> configure, IDeadLetterStore deadLetterStore = null)
+	private static ServiceProvider BuildProvider(Action<BusHealthCheckOptions>? configure, IDeadLetterStore? deadLetterStore = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

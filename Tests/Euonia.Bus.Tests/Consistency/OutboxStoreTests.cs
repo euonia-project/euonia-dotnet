@@ -56,8 +56,8 @@ public class OutboxStoreTests
 		store.Insert(message, ["transport-a", "transport-b"]);
 		store.MarkAsSuccess(message.MessageId, "transport-a");
 
-		var transportA = store.Get(message.MessageId).GetTransport("transport-a");
-		var transportB = store.Get(message.MessageId).GetTransport("transport-b");
+		var transportA = store.Get(message.MessageId)!.GetTransport("transport-a")!;
+		var transportB = store.Get(message.MessageId)!.GetTransport("transport-b")!;
 
 		Assert.Equal(OutboxTransportStatus.Success, transportA.Status);
 		Assert.Equal(OutboxTransportStatus.Pending, transportB.Status);
@@ -86,7 +86,7 @@ public class OutboxStoreTests
 		store.Insert(message, ["transport-a"]);
 		store.MarkAsFailed(message.MessageId, "transport-a", "connection lost");
 
-		var transport = store.Get(message.MessageId).GetTransport("transport-a");
+		var transport = store.Get(message.MessageId)!.GetTransport("transport-a")!;
 		Assert.Equal(OutboxTransportStatus.Failed, transport.Status);
 		Assert.Equal(1, transport.RetryAttempts);
 		Assert.Equal("connection lost", transport.Error);
@@ -150,7 +150,7 @@ public class OutboxStoreTests
 		store.Insert(message, ["transport-a"]);
 		var entry = store.Get(message.MessageId);
 
-		Assert.NotNull(entry.GetTransport("transport-a"));
+		Assert.NotNull(entry!.GetTransport("transport-a"));
 		Assert.Null(entry.GetTransport("transport-z"));
 	}
 
@@ -184,7 +184,7 @@ public class OutboxStoreTests
 		public OutboxEntry Get(string messageId)
 		{
 			GetCallCount++;
-			return _entries.GetValueOrDefault(messageId);
+			return _entries.GetValueOrDefault(messageId)!;
 		}
 
 		public void MarkAsSuccess(string messageId, string transport)

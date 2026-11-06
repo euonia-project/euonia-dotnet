@@ -31,7 +31,7 @@ public class DefaultRequestContextAccessor
 	/// <see cref="AsyncLocal{T}"/> 保证值沿 <c>async/await</c> 调用链向下流动，
 	/// 并在不同异步执行流之间相互隔离。
 	/// </remarks>
-	private static readonly AsyncLocal<RequestContext> _context = new();
+	private static readonly AsyncLocal<RequestContext?> _context = new();
 
 	/// <summary>
 	/// 获取或设置当前异步执行流中的 <see cref="RequestContext"/> 实例。
@@ -48,7 +48,7 @@ public class DefaultRequestContextAccessor
 	/// 设置为 <c>null</c> 可显式清除当前执行流中的请求上下文。
 	/// </para>
 	/// </remarks>
-	public RequestContext Context
+	public RequestContext? Context
 	{
 		get => _context.Value;
 		set => _context.Value = value;

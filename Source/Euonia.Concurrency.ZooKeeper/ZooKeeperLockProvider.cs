@@ -21,7 +21,7 @@ public sealed partial class ZooKeeperLockProvider : ILockProvider<ZooKeeperSynch
         ZooKeeperPath path,
         string connectionString,
         bool assumePathExists = false,
-        Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+        Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(path, assumePathExists: assumePathExists, connectionString, options)
     {
         if (path == default)
@@ -40,7 +40,7 @@ public sealed partial class ZooKeeperLockProvider : ILockProvider<ZooKeeperSynch
     /// The lock's path will be a parent node of the root directory '/'. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
     /// validity.
     /// </summary>
-    public ZooKeeperLockProvider(string name, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperLockProvider(string name, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(ZooKeeperPath.Root, name, connectionString, options)
     {
     }
@@ -51,7 +51,7 @@ public sealed partial class ZooKeeperLockProvider : ILockProvider<ZooKeeperSynch
     /// The lock's path will be a parent node of <paramref name="directoryPath"/>. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
     /// validity.
     /// </summary>
-    public ZooKeeperLockProvider(ZooKeeperPath directoryPath, string name, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperLockProvider(ZooKeeperPath directoryPath, string name, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(
             (directoryPath == default ? throw new ArgumentNullException(nameof(directoryPath)) : directoryPath).GetChildNodePathWithSafeName(name),
             assumePathExists: false,
@@ -60,7 +60,7 @@ public sealed partial class ZooKeeperLockProvider : ILockProvider<ZooKeeperSynch
     {
     }
 
-    private ZooKeeperLockProvider(ZooKeeperPath path, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> optionsBuilder) =>
+    private ZooKeeperLockProvider(ZooKeeperPath path, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? optionsBuilder) =>
         _synchronizationHelper = new ZooKeeperSynchronizationHelper(path, assumePathExists, connectionString, optionsBuilder);
 
     /// <summary>
@@ -78,7 +78,7 @@ public sealed partial class ZooKeeperLockProvider : ILockProvider<ZooKeeperSynch
 public sealed partial class ZooKeeperLockProvider
 {
     /// <inheritdoc />
-    public ZooKeeperSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ZooKeeperSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
@@ -90,7 +90,7 @@ public sealed partial class ZooKeeperLockProvider
     }
 
     /// <inheritdoc />
-    public async ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    public async ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         var nodeHandle = await _synchronizationHelper.TryAcquireAsync(
                                                          hasAcquired: state => state.SortedChildren[0].Path == state.EphemeralNodePath,
@@ -114,7 +114,7 @@ public sealed partial class ZooKeeperLockProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
@@ -128,7 +128,7 @@ public sealed partial class ZooKeeperLockProvider
 
 public sealed partial class ZooKeeperLockProvider
 {
-    ISynchronizationHandle ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
@@ -138,9 +138,9 @@ public sealed partial class ZooKeeperLockProvider
         return Acquire(timeout, cancellationToken);
     }
 
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     ValueTask<ISynchronizationHandle> ILockProvider.AcquireAsync(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -148,8 +148,8 @@ public sealed partial class ZooKeeperLockProvider
         return AcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

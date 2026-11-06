@@ -43,32 +43,32 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	/// <summary>
 	/// Gets or sets the username.
 	/// </summary>
-	public string Username { get; set; }
+	public string Username { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the encrypted password.
 	/// </summary>
-	public string PasswordHash { get; set; }
+	public string PasswordHash { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the salt used to encrypt the password.
 	/// </summary>
-	public string PasswordSalt { get; set; }
+	public string PasswordSalt { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the nickname.
 	/// </summary>
-	public string Nickname { get; set; }
+	public string Nickname { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the email address.
 	/// </summary>
-	public string Email { get; set; }
+	public string Email { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the phone number.
 	/// </summary>
-	public string Phone { get; set; }
+	public string Phone { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the count of failed access attempts.
@@ -108,7 +108,7 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	/// <summary>
 	/// Gets or sets the roles associated with the user.
 	/// </summary>
-	public HashSet<UserRoleEntity> Roles { get; set; }
+	public HashSet<UserRoleEntity> Roles { get; set; } = null!;
 
 	/// <summary>
 	/// Sets the email address for the user.

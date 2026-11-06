@@ -39,11 +39,11 @@ internal static class RabbitMqClientExtensions
 			}
 		}
 
-		public Task<QueueDeclareOk> DeclareQueuePassivelyAsync(string queueName)
+		public async Task<QueueDeclareOk?> DeclareQueuePassivelyAsync(string queueName)
 		{
 			try
 			{
-				return channel.QueueDeclarePassiveAsync(queueName);
+				return await channel.QueueDeclarePassiveAsync(queueName);
 			}
 			catch (OperationInterruptedException exception)
 			{

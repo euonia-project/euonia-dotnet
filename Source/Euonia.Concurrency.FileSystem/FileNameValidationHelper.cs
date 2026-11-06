@@ -94,7 +94,7 @@ internal static class FileNameValidationHelper
     {
         const char replacementChar = '_';
 
-        StringBuilder builder = null;
+        StringBuilder? builder = null;
         for (var i = 0; i < name.Length; ++i)
         {
             var @char = name[i];

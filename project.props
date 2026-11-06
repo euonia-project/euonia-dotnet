@@ -6,7 +6,7 @@
         <Product>Euonia</Product>
         <Copyright>© 2018-$([System.DateTime]::Now.Year) Nerosoft. All Rights Reserved.</Copyright>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
+        <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
         <NoWarn>CS2002;IDE0290;IDE0300;IDE0301;IDE0305;IDE0028</NoWarn>
     </PropertyGroup>

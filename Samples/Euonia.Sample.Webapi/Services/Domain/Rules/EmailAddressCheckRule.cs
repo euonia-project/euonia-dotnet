@@ -8,9 +8,9 @@ namespace Nerosoft.Euonia.Sample.Business.Rules;
 /// </summary>
 internal sealed class EmailAddressCheckRule : RuleBase
 {
-	private readonly string _ignoreId;
+	private readonly string? _ignoreId;
 
-	public EmailAddressCheckRule(IPropertyInfo property, string ignoreId = null)
+	public EmailAddressCheckRule(IPropertyInfo property, string? ignoreId = null)
 		: base(property)
 	{
 		_ignoreId = ignoreId;
@@ -30,7 +30,8 @@ internal sealed class EmailAddressCheckRule : RuleBase
 			return;
 		}
 
-		var value = target.ReadProperty(Property)?.ToString();
+		var property = Property!;
+		var value = target.ReadProperty(property)?.ToString();
 
 		// Skip the rule if the email address is null or whitespace.
 		if (string.IsNullOrWhiteSpace(value))
@@ -39,7 +40,7 @@ internal sealed class EmailAddressCheckRule : RuleBase
 		}
 
 		// Check if the email property has been changed.
-		if (Equals(target.FieldManager.GetOriginalValue(Property), target.ReadProperty(Property)))
+		if (Equals(target.FieldManager.GetOriginalValue(property), target.ReadProperty(property)))
 		{
 			return;
 		}

@@ -55,13 +55,13 @@ public partial class LazyServiceProvider : ILazyServiceProvider
 	/// <inheritdoc />
 	public virtual object GetService(Type serviceType)
 	{
-		return CachedServices.GetOrAdd(new ServiceIdentifier(serviceType), _ => new Lazy<object>(() => ServiceProvider.GetService(serviceType))).Value;
+		return CachedServices.GetOrAdd(new ServiceIdentifier(serviceType), _ => new Lazy<object>(() => ServiceProvider.GetService(serviceType)!)).Value;
 	}
 
 	/// <inheritdoc />
 	public virtual T GetService<T>(T defaultValue)
 	{
-		return (T)GetService(typeof(T), defaultValue);
+		return (T)GetService(typeof(T), defaultValue!);
 	}
 
 	/// <inheritdoc />

@@ -73,7 +73,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 			var isValueTask = returnType.GetGenericTypeDefinition() == typeof(ValueTask<>);
 			invocation.Proceed();
 			_handleTypedMethods.GetOrAdd(resultType, type => _handleTypedMethod.MakeGenericMethod(type))
-				.Invoke(null, new object[] { entry, attribute, invocation.ReturnValue, isValueTask });
+				.Invoke(null, new object?[] { entry, attribute, invocation.ReturnValue, isValueTask });
 			return;
 		}
 
@@ -90,15 +90,17 @@ public class CircuitBreakerInterceptor : IInterceptor
 		}
 	}
 
-	private static void HandleUntypedTask(CircuitState entry, CircuitBreakerAttribute attribute, object rawReturnValue, bool isValueTask)
+	private static void HandleUntypedTask(CircuitState entry, CircuitBreakerAttribute attribute, object? rawReturnValue, bool isValueTask)
 	{
-		var task = isValueTask ? ((ValueTask)rawReturnValue).AsTask() : (Task)rawReturnValue;
+		// 反射传入的是被拦截方法返回的非空 Task/ValueTask 装箱值。
+		var task = isValueTask ? ((ValueTask)rawReturnValue!).AsTask() : (Task)rawReturnValue!;
 		task.ContinueWith(completed => Record(entry, attribute, completed.IsCompletedSuccessfully), TaskScheduler.Default);
 	}
 
-	private static void HandleTypedAsync<T>(CircuitState entry, CircuitBreakerAttribute attribute, object rawReturnValue, bool isValueTask)
+	private static void HandleTypedAsync<T>(CircuitState entry, CircuitBreakerAttribute attribute, object? rawReturnValue, bool isValueTask)
 	{
-		var task = isValueTask ? ((ValueTask<T>)rawReturnValue).AsTask() : (Task<T>)rawReturnValue;
+		// 反射传入的是被拦截方法返回的非空 Task<T>/ValueTask<T> 装箱值。
+		var task = isValueTask ? ((ValueTask<T>)rawReturnValue!).AsTask() : (Task<T>)rawReturnValue!;
 		task.ContinueWith(completed => Record(entry, attribute, completed.IsCompletedSuccessfully), TaskScheduler.Default);
 	}
 
@@ -148,7 +150,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 			if (definition == typeof(ValueTask<>))
 			{
 				invocation.ReturnValue = _wrapValueTaskMethods.GetOrAdd(resultType, type => _wrapValueTaskMethod.MakeGenericMethod(type))
-					.Invoke(null, new object[] { task });
+					.Invoke(null, new object?[] { task });
 				return;
 			}
 
@@ -164,9 +166,9 @@ public class CircuitBreakerInterceptor : IInterceptor
 		return Task.FromException<T>(new CircuitBreakerOpenException(message));
 	}
 
-	private static ValueTask<T> WrapValueTask<T>(object rawTask)
+	private static ValueTask<T> WrapValueTask<T>(object? rawTask)
 	{
-		return new ValueTask<T>((Task<T>)rawTask);
+		return new ValueTask<T>((Task<T>)rawTask!);
 	}
 
 	private static string BuildKey(IInvocation invocation)
@@ -176,7 +178,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 		return $"{serviceType?.FullName}.{method.Name}";
 	}
 
-	private static CircuitBreakerAttribute ResolveAttribute(IInvocation invocation)
+	private static CircuitBreakerAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<CircuitBreakerAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<CircuitBreakerAttribute>()

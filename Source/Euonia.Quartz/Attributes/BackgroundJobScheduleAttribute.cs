@@ -36,7 +36,7 @@ public abstract class BackgroundJobScheduleAttribute : Attribute
 	/// <summary>
 	/// Gets or sets the trigger description.
 	/// </summary>
-	public string Description { get; set; }
+	public string? Description { get; set; }
 
 	/// <summary>
 	/// Gets or sets the numeric misfire instruction applied to the trigger.

@@ -18,7 +18,7 @@ public class GrpcBusOptions
 	/// <summary>
 	/// 获取或设置客户端连接的服务端地址，例如 <c>https://localhost:5001</c>。
 	/// </summary>
-	public string Endpoint { get; set; }
+	public string Endpoint { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 获取或设置序列化器提供程序名称。

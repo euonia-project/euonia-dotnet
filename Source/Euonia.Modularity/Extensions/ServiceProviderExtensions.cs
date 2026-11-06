@@ -14,10 +14,10 @@ public static class ServiceProviderExtensions
     /// <param name="name">The registered service name.</param>
     /// <typeparam name="TService">The service type.</typeparam>
     /// <returns></returns>
-    public static TService GetNamedService<TService>(this IServiceProvider provider, string name)
+    public static TService? GetNamedService<TService>(this IServiceProvider provider, string name)
         where TService : class
     {
-        var @delegate = (NamedService<TService>)provider.GetService(typeof(NamedService<TService>));
+        var @delegate = provider.GetService(typeof(NamedService<TService>)) as NamedService<TService>;
         return @delegate?.Invoke(name);
     }
 
@@ -32,7 +32,7 @@ public static class ServiceProviderExtensions
     public static TService GetNamedRequiredService<TService>(this IServiceProvider provider, string name)
         where TService : class
     {
-        var @delegate = (NamedService<TService>)provider.GetService(typeof(NamedService<TService>));
+        var @delegate = provider.GetService(typeof(NamedService<TService>)) as NamedService<TService>;
         return @delegate?.Invoke(name) ?? throw new InvalidOperationException(string.Format(Nerosoft.Euonia.Modularity.Properties.Resources.IDS_NAMED_SERVICE_NOT_FOUND, typeof(TService).FullName, name));
     }
 
@@ -44,7 +44,7 @@ public static class ServiceProviderExtensions
 	/// <param name="serviceKey">An object that specifies the key of service object to get.</param>
 	/// <returns></returns>
 	/// <exception cref="InvalidOperationException"></exception>
-	public static object GetKeyedService(this IServiceProvider provider, Type serviceType, object serviceKey)
+	public static object? GetKeyedService(this IServiceProvider provider, Type serviceType, object serviceKey)
 	{
 		if (provider is IKeyedServiceProvider keyedServiceProvider)
 		{

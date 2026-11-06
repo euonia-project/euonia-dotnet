@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Concurrency.Redis.Internal;
 internal sealed class RedisLockHandle : ISynchronizationHandle, LeaseMonitor.ILeaseHandle
 {
     private readonly IRedisLockExtensibleSynchronizationPrimitive _primitive;
-    private Dictionary<IDatabase, Task<bool>> _tryAcquireTasks;
+    private Dictionary<IDatabase, Task<bool>>? _tryAcquireTasks;
     private readonly TimeoutValue _extensionCadence, _expiry;
     private readonly LeaseMonitor _monitor;
 

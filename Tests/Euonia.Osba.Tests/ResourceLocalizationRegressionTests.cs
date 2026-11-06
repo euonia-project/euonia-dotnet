@@ -47,7 +47,7 @@ public class ResourceLocalizationRegressionTests
 			{
 				var en = Properties.Resources.ResourceManager.GetString(key, CultureInfo.GetCultureInfo("en-US"));
 				var zh = Properties.Resources.ResourceManager.GetString(key, CultureInfo.GetCultureInfo("zh-CN"));
-				Assert.Equal(CountPlaceholders(zh), CountPlaceholders(en));
+				Assert.Equal(CountPlaceholders(zh!), CountPlaceholders(en!));
 				Assert.Contains("{0}", en);
 				Assert.Contains("{1}", en);
 			}

@@ -157,12 +157,13 @@ public class IdempotentInterceptorTests
 		Assert.Equal(1, probe.AsyncCalls);
 	}
 
-	private static IIdempotentProbe CreateProxy(IdempotentProbe probe, out FakeCacheService cache, IRequestContextAccessor accessor = null, InMemoryLockFactory lockFactory = null)
+	private static IIdempotentProbe CreateProxy(IdempotentProbe probe, out FakeCacheService cache, IRequestContextAccessor? accessor = null, InMemoryLockFactory? lockFactory = null)
 	{
 		cache = new FakeCacheService();
 		var interceptor = new IdempotentInterceptor(new ServiceProviderStub(cache, lockFactory), accessor);
 		var generator = new ProxyGenerator();
-		return generator.CreateInterfaceProxyWithTarget(typeof(IIdempotentProbe), probe, interceptor) as IIdempotentProbe;
+		return generator.CreateInterfaceProxyWithTarget(typeof(IIdempotentProbe), probe, interceptor) as IIdempotentProbe
+		       ?? throw new InvalidOperationException("Failed to create the idempotent proxy.");
 	}
 
 	public interface IIdempotentProbe
@@ -260,7 +261,7 @@ public class IdempotentInterceptorTests
 			return new Handle(_semaphore);
 		}
 
-		public ISynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ISynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			return _semaphore.Wait(timeout, cancellationToken) ? new Handle(_semaphore) : null;
 		}
@@ -280,17 +281,17 @@ public class IdempotentInterceptorTests
 			return new Handle(_semaphore);
 		}
 
-		public ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+		public ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
 		{
 			return TryAcquireAsyncCore(timeout, cancellationToken);
 		}
 
-		private async ValueTask<ISynchronizationHandle> TryAcquireAsyncCore(TimeSpan timeout, CancellationToken cancellationToken)
+		private async ValueTask<ISynchronizationHandle?> TryAcquireAsyncCore(TimeSpan timeout, CancellationToken cancellationToken)
 		{
 			return await _semaphore.WaitAsync(timeout, cancellationToken).ConfigureAwait(false) ? new Handle(_semaphore) : null;
 		}
 
-		public ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default)
+		public ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default)
 		{
 			return TryAcquireAsync(timeout.IsInfinite ? Timeout.InfiniteTimeSpan : timeout.TimeSpan, cancellationToken);
 		}
@@ -320,15 +321,15 @@ public class IdempotentInterceptorTests
 	{
 		private readonly ICacheService _cache;
 
-		private readonly ILockFactory _lockFactory;
+		private readonly ILockFactory? _lockFactory;
 
-		public ServiceProviderStub(ICacheService cache, InMemoryLockFactory lockFactory = null)
+		public ServiceProviderStub(ICacheService cache, InMemoryLockFactory? lockFactory = null)
 		{
 			_cache = cache;
 			_lockFactory = lockFactory;
 		}
 
-		public object GetService(Type serviceType)
+		public object? GetService(Type serviceType)
 		{
 			if (serviceType == typeof(ICacheService))
 			{
@@ -341,6 +342,6 @@ public class IdempotentInterceptorTests
 
 	private sealed class EmptyServiceProvider : IServiceProvider
 	{
-		public object GetService(Type serviceType) => null;
+		public object? GetService(Type serviceType) => null;
 	}
 }

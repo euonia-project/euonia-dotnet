@@ -97,7 +97,7 @@ public static class ScopeFilter
 	/// <remarks>
 	/// 供审计与排障使用：逐叶子求值，列出成立的条件，并在结果中带上策略键。这是诊断路径，不用于热路径判定。
 	/// </remarks>
-	public static ScopeDecision Explain<T>(T resource, ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey = null)
+	public static ScopeDecision Explain<T>(T resource, ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string? scopeKey = null)
 		where T : class
 	{
 		Check.EnsureNotNull(policy, nameof(policy));

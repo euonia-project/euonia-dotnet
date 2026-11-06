@@ -7,6 +7,21 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### 全库
+
+- **可空引用类型**：所有项目（含测试与示例）启用 `<Nullable>enable</Nullable>`，公开 API 补充可空性标注。
+- **消息信封契约**：`IMessageEnvelope` / `IMessageContext` 的 `RequestTraceId`、`Authorization` 改为 `string?`，
+  `User` 改为可空；请求作用域外或外部消息未携带时确实为 `null`，不再用 `null!` 掩盖。
+- **消息完成/回复事件**：`MessageRepliedEventArgs.Result` 改为 `object?`；`MessageHandledEventArgs.MessageId` 与
+  `MessageContext.Complete(string?)` 允许 `null`，用于“仅完成通知、无响应结果”的语义。
+- **行为变化**：`RoutedMessage.GetTypeName()` 在元数据缺失时返回 `string.Empty`（原为 `null`）；
+  `MessageBusOptions.DefaultTransporter` 默认值改为 `string.Empty`（原为 `null`）；`BusinessException.Code`、
+  若干校验消息默认值由 `null` 改为 `string.Empty`。
+- **Source-level 兼容性**：`ICacheManager` 的泛型方法新增 `where TKey : notnull` 约束（二进制兼容，
+  未约束泛型调用方可能产生 CS8714 警告）。
+- **异常类型**：`Lambda.GetAttribute` / `GetAttributes` 在表达式无法解析出成员时抛出 `ArgumentNullException`
+  （原为 `NullReferenceException`）。
+
 ### Euonia.Quartz
 
 - **Quartz.NET 4.6.2**：迁移到 Quartz 4 API。配置入口由 `IServiceCollectionQuartzConfigurator` 改为 `IQuartzBuilder`；

@@ -74,7 +74,7 @@ internal class User : EditableObjectBase<User, string>
 	/// </summary>
 	/// <param name="password">The new password.</param>
 	/// <param name="actionType">The type of action triggering the password change.</param>
-	public void SetPassword(string password, string actionType = null)
+	public void SetPassword(string password, string? actionType = null)
 	{
 		// var salt = RandomUtility.GenerateRandomString();
 		// var hash = Cryptography.DES.Encrypt(password, Encoding.UTF8.GetBytes(salt));

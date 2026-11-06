@@ -67,7 +67,7 @@ public sealed class Project : EditableObjectBase<Project, string>
 	{
 		Name = name;
 		Description = description;
-		OwnerId = BusinessContext.User?.UserId;
+		OwnerId = BusinessContext.User?.UserId ?? string.Empty;
 		IsArchived = false;
 		Id = Guid.NewGuid().ToString("N");
 		await Task.CompletedTask;

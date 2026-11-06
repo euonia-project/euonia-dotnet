@@ -56,7 +56,7 @@ public static class AssemblyHelper
 	/// </summary>
 	/// <param name="assemblies">要加载类型的程序集集合。</param>
 	/// <returns>所有程序集中找到的类型列表；如果 <paramref name="assemblies"/> 为 <c>null</c>，则返回 <c>null</c>。</returns>
-	public static IReadOnlyList<Type> LoadTypes(IEnumerable<Assembly> assemblies)
+	public static IReadOnlyList<Type>? LoadTypes(IEnumerable<Assembly>? assemblies)
 	{
 		return assemblies?.SelectMany(LoadTypes)?.ToList();
 	}
@@ -69,7 +69,7 @@ public static class AssemblyHelper
 		}
 		catch (ReflectionTypeLoadException ex)
 		{
-			return ex.Types.Where(t => t != null).ToArray();
+			return ex.Types.OfType<Type>().ToArray();
 		}
 	}
 

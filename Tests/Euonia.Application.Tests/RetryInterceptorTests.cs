@@ -210,7 +210,8 @@ public class RetryInterceptorTests
 	{
 		var interceptor = new RetryInterceptor();
 		var generator = new ProxyGenerator();
-		return generator.CreateInterfaceProxyWithTarget(typeof(IRetryProbe), probe, interceptor) as IRetryProbe;
+		return generator.CreateInterfaceProxyWithTarget(typeof(IRetryProbe), probe, interceptor) as IRetryProbe
+		       ?? throw new InvalidOperationException("Failed to create the retry proxy.");
 	}
 
 	public interface IRetryProbe
@@ -434,11 +435,11 @@ public class RetryInterceptorTests
 			_cache = cache;
 		}
 
-		public object GetService(Type serviceType) => serviceType == typeof(Nerosoft.Euonia.Caching.ICacheService) ? _cache : null;
+		public object? GetService(Type serviceType) => serviceType == typeof(Nerosoft.Euonia.Caching.ICacheService) ? _cache : null;
 	}
 
 	private sealed class EmptyServiceProvider : IServiceProvider
 	{
-		public object GetService(Type serviceType) => null;
+		public object? GetService(Type serviceType) => null;
 	}
 }

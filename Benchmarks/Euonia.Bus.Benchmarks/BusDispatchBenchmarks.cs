@@ -14,10 +14,10 @@ namespace Euonia.Bus.Benchmarks;
 [ShortRunJob]
 public class BusDispatchBenchmarks
 {
-	private ServiceProvider _provider;
-	private IBus _bus;
-	private NoopTransporter _transporter;
-	private IMessageEnvelope<BenchEvent> _envelope;
+	private ServiceProvider _provider = null!;
+	private IBus _bus = null!;
+	private NoopTransporter _transporter = null!;
+	private IMessageEnvelope<BenchEvent> _envelope = null!;
 
 	[GlobalSetup]
 	public void Setup()
@@ -124,12 +124,12 @@ public class BusDispatchBenchmarks
 
 		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 
 		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 	}
 }

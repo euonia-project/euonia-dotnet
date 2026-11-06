@@ -63,25 +63,25 @@ public class InjectCollectionResolutionTests
 	private sealed class CollectionInjectSubject
 	{
 		[Inject]
-		public SampleService Single { get; set; }
+		public SampleService Single { get; set; } = null!;
 
 		[Inject]
-		public SampleService[] Array { get; set; }
+		public SampleService[] Array { get; set; } = null!;
 
 		[Inject]
-		public IEnumerable<SampleService> Enumerable { get; set; }
+		public IEnumerable<SampleService> Enumerable { get; set; } = null!;
 
 		[Inject]
-		public ICollection<SampleService> Collection { get; set; }
+		public ICollection<SampleService> Collection { get; set; } = null!;
 
 		[Inject]
-		public IList<SampleService> List { get; set; }
+		public IList<SampleService> List { get; set; } = null!;
 	}
 
 	private sealed class NestedCollectionInjectSubject
 	{
 		[Inject]
-		public IList<IList<SampleService>> Nested { get; set; }
+		public IList<IList<SampleService>> Nested { get; set; } = null!;
 	}
 
 	private sealed class PrimitiveInjectSubject

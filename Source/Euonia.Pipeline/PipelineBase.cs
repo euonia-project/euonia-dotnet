@@ -238,13 +238,13 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// 优先级最高（最后执行）的组件最先被包装，成为最内层；优先级最低（最先执行）的最后包装，成为最外层。
 	/// 必须在锁外调用：<c>Component</c> 的执行会触发反射与表达式编译，不适合持锁。
 	/// </remarks>
-	private static PipelineDelegate<TRequest, TResponse> Compose(IReadOnlyList<ComponentEntry> entries, Func<TRequest, Task<TResponse>> terminal = null)
+	private static PipelineDelegate<TRequest, TResponse> Compose(IReadOnlyList<ComponentEntry> entries, Func<TRequest, Task<TResponse>>? terminal = null)
 	{
 		// 累积委托必须作为最内层终结点，而不是按优先级混入组件表：
 		// 否则任何优先级大于 0 的组件都会被它包住且永远不会执行。
 		PipelineDelegate<TRequest, TResponse> app = terminal != null
 			                                            ? request => terminal(request)
-			                                            : _ => Task.FromResult(default(TResponse));
+			                                            : _ => Task.FromResult(default(TResponse)!);
 
 		return entries
 			.OrderByDescending(c => c.Priority)
@@ -285,9 +285,9 @@ public abstract class PipelineBase<TRequest, TResponse> : IPipeline<TRequest, TR
 	/// <para>顺序与旧实现一致：请求类型行为优先级为 <see cref="int.MinValue"/>，故排在最外层（最先执行）；
 	/// 累积委托优先级 0、序号最大，故排在优先级 0 组件的最内层。</para>
 	/// </remarks>
-	private async Task<TResponse> RunCoreAsync(TRequest context, Func<TRequest, Task<TResponse>> accumulate)
+	private async Task<TResponse> RunCoreAsync(TRequest context, Func<TRequest, Task<TResponse>>? accumulate)
 	{
-		var behaviors = ResolveBehaviors(context.GetType(), useAheadOfOthers: true);
+		var behaviors = ResolveBehaviors(context!.GetType(), useAheadOfOthers: true);
 
 		List<ComponentEntry> entries;
 		lock (_sync)

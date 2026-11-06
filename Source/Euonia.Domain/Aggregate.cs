@@ -20,7 +20,7 @@ public abstract class Aggregate<TKey> : Entity<TKey>, IAggregateRoot<TKey>, IHas
 	/// <summary>
 	/// 获取事件集合。
 	/// </summary>
-	public virtual IReadOnlyList<DomainEvent> GetEvents() => _events?.AsReadOnly();
+	public virtual IReadOnlyList<DomainEvent> GetEvents() => _events.AsReadOnly();
 
 	/// <summary>
 	/// 获取指定类型的待处理事件集合。

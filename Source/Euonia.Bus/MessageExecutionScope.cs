@@ -18,18 +18,18 @@ namespace Nerosoft.Euonia.Bus;
 /// </remarks>
 internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 {
-	private readonly DefaultRequestContextAccessor _requestContextAccessor;
-	private readonly RequestContext _inheritedRequestContext;
+	private readonly DefaultRequestContextAccessor? _requestContextAccessor;
+	private readonly RequestContext? _inheritedRequestContext;
 	private readonly bool _requestContextInstalled;
-	private readonly IServiceScope _ownedScope;
+	private readonly IServiceScope? _ownedScope;
 	private bool _disposed;
 
 	internal MessageExecutionScope(
 		IServiceProvider container,
 		IServiceScopeFactory scopeFactory,
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
-		ILogger logger)
+		MessageContext? message,
+		ILogger? logger)
 	{
 		ServiceProvider = AcquireProvider(container, scopeFactory, descriptor, message, logger, out var ownedScope);
 		_ownedScope = ownedScope;
@@ -126,7 +126,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	/// </summary>
 	private void RestoreRequestContext()
 	{
-		if (_requestContextInstalled)
+		if (_requestContextInstalled && _requestContextAccessor != null)
 		{
 			_requestContextAccessor.Context = _inheritedRequestContext;
 		}
@@ -139,9 +139,9 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		IServiceProvider container,
 		IServiceScopeFactory scopeFactory,
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
-		ILogger logger,
-		out IServiceScope ownedScope)
+		MessageContext? message,
+		ILogger? logger,
+		out IServiceScope? ownedScope)
 	{
 		ownedScope = null;
 
@@ -173,7 +173,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	/// <summary>
 	/// 从消息信封恢复请求上下文；信封未携带可用信息时返回 <c>null</c>。
 	/// </summary>
-	private static RequestContext CreateFromEnvelope(IMessageContext message, IServiceProvider requestServices)
+	private static RequestContext? CreateFromEnvelope(IMessageContext? message, IServiceProvider requestServices)
 	{
 		if (message == null)
 		{

@@ -19,7 +19,7 @@ public class InMemoryOutboxStore : IOutboxStore
 	}
 
 	/// <inheritdoc/>
-	public OutboxEntry Get(string messageId)
+	public OutboxEntry? Get(string messageId)
 	{
 		return _entries.GetValueOrDefault(messageId);
 	}

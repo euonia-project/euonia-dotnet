@@ -56,7 +56,7 @@ public class CorrelationIdBehaviorTests
 	public async Task HandleAsync_WithoutAnyCorrelation_ShouldGenerateNewOne()
 	{
 		var behavior = CreateBehavior(null, null);
-		var context = new RoutedMessage<string>("payload", "channel") { CorrelationId = null };
+		var context = new RoutedMessage<string>("payload", "channel") { CorrelationId = null! };
 
 		await behavior.HandleAsync(context, _ => Task.FromResult(true));
 
@@ -119,13 +119,13 @@ public class CorrelationIdBehaviorTests
 		Assert.True(invoked);
 	}
 
-	private static CorrelationIdBehavior<RoutedMessage<string>, bool> CreateBehavior(string traceIdentifier, string requestId)
+	private static CorrelationIdBehavior<RoutedMessage<string>, bool> CreateBehavior(string? traceIdentifier, string? requestId)
 	{
 		var accessor = new StubRequestContextAccessor
 		{
 			Context = new RequestContext
 			{
-				TraceIdentifier = traceIdentifier,
+				TraceIdentifier = traceIdentifier!,
 				Headers = requestId == null
 					? new Dictionary<string, string>()
 					: new Dictionary<string, string> { ["Request-Id"] = requestId }

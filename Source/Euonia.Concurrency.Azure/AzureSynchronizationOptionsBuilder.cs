@@ -112,9 +112,9 @@ public sealed class AzureSynchronizationOptionsBuilder
 	/// <param name="optionsBuilder">用于配置选项的可选委托。</param>
 	/// <returns>构建完成的 <see cref="AzureSynchronizationOptions"/> 实例。</returns>
 	/// <exception cref="ArgumentOutOfRangeException">当续约节奏大于或等于租约时长时抛出。</exception>
-	internal static AzureSynchronizationOptions GetOptions(Action<AzureSynchronizationOptionsBuilder> optionsBuilder)
+	internal static AzureSynchronizationOptions GetOptions(Action<AzureSynchronizationOptionsBuilder>? optionsBuilder)
 	{
-		AzureSynchronizationOptionsBuilder options;
+		AzureSynchronizationOptionsBuilder? options;
 		if (optionsBuilder != null)
 		{
 			options = new AzureSynchronizationOptionsBuilder();

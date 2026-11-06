@@ -33,7 +33,7 @@ public class RequestContextAccessor : IRequestContextAccessor
 	/// 委托访问器在请求流之外（如消息消费者进程）可能返回 <c>null</c>；
 	/// 此时回退到默认访问器中由消息信封恢复的上下文。
 	/// </remarks>
-	public RequestContext Context
+	public RequestContext? Context
 	{
 		get
 		{

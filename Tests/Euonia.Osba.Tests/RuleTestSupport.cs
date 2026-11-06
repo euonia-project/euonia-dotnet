@@ -22,7 +22,7 @@ internal static class RuleTestHarness
 	/// <param name="provider">解析出的服务提供程序。</param>
 	/// <param name="configure">可选的额外服务注册。</param>
 	/// <returns>服务作用域；调用方负责释放。</returns>
-	internal static IServiceScope CreateScope(out IServiceProvider provider, Action<IServiceCollection> configure = null)
+	internal static IServiceScope CreateScope(out IServiceProvider provider, Action<IServiceCollection>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject();
@@ -137,7 +137,7 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 	/// <summary>
 	/// 对象的标识。
 	/// </summary>
-	public string Id { get; private set; }
+	public string Id { get; private set; } = null!;
 
 	/// <summary>
 	/// 供测试观察的字段值。
@@ -417,7 +417,7 @@ public sealed class NameSnapshotFailRule : RuleBase
 	/// <summary>
 	/// 最近一次执行时观察到的名称。
 	/// </summary>
-	public string Observed { get; private set; }
+	public string Observed { get; private set; } = null!;
 
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)

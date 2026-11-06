@@ -16,8 +16,8 @@ public abstract class DomainEvent : Event, IDomainEvent
 	public void Attach<TKey>(IAggregateRoot<TKey> aggregate)
 		where TKey : IEquatable<TKey>
 	{
-		OriginatorId = aggregate.Id?.ToString();
-		OriginatorType = aggregate.GetType().AssemblyQualifiedName;
+		OriginatorId = aggregate.Id?.ToString()!;
+		OriginatorType = aggregate.GetType().AssemblyQualifiedName!;
 		AggregatePayload = aggregate;
 	}
 
@@ -45,14 +45,14 @@ public abstract class DomainEvent : Event, IDomainEvent
 	/// 获取或设置聚合负载。
 	/// </summary>
 	/// <value>聚合负载。</value>
-	public virtual object AggregatePayload { get; set; }
+	public virtual object? AggregatePayload { get; set; }
 
 	/// <summary>
 	/// 获取已附加的聚合根对象。
 	/// </summary>
 	/// <typeparam name="TAggregate">聚合根的类型。</typeparam>
 	/// <returns>附加的聚合根实例；若不存在或类型不匹配则返回默认值。</returns>
-	public virtual TAggregate GetAggregate<TAggregate>()
+	public virtual TAggregate? GetAggregate<TAggregate>()
 		where TAggregate : IAggregateRoot
 	{
 		return AggregatePayload switch

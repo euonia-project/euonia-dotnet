@@ -18,7 +18,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class TeamApplicationService(IObjectFactory factory)
 	: BaseApplicationService, ITeamApplicationService
 {
-	public Task<PagedResult<TeamDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
+	public Task<PagedResult<TeamDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new TeamListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
@@ -41,7 +41,7 @@ internal class TeamApplicationService(IObjectFactory factory)
 	{
 		var tcs = new TaskCompletionSource<string>();
 		var subject = new Subject<string>();
-		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null!));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;

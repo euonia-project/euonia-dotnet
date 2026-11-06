@@ -56,7 +56,7 @@ public sealed class RuleContextProbe : EditableObject<RuleContextProbe>
 {
 	public bool Resolved { get; set; }
 
-	public RuleProbeService ResolvedService { get; set; }
+	public RuleProbeService? ResolvedService { get; set; }
 
 	protected override void AddRules()
 	{

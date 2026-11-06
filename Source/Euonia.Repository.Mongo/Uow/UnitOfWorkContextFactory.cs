@@ -26,7 +26,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 	}
 
 	/// <inheritdoc />
-	public TContext GetContext<TContext>()
+	public TContext? GetContext<TContext>()
 		where TContext : class, IRepositoryContext
 	{
 		var unitOfWork = _manager.Current;
@@ -42,7 +42,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 
 		var contextType = typeof(TContext);
 
-		string connectionString;
+		string? connectionString;
 
 		var attribute = contextType.GetCustomAttribute<ConnectionStringAttribute>();
 
@@ -71,7 +71,7 @@ internal class UnitOfWorkContextFactory : IContextFactory
 			return (TContext)uowContext.Context;
 		}
 
-		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>();
+		var dbContext = unitOfWork.ServiceProvider.GetService<TContext>()!;
 
 		// 事务性工作单元必须显式开启 Mongo 会话事务。
 		AsyncContext.Run(() => dbContext.BeginTransactionAsync());

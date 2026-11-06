@@ -29,10 +29,10 @@ public sealed class SubscribeAttribute : Attribute
 	/// <summary>
 	/// 获取消息名称。
 	/// </summary>
-	public string Name { get; }
+	public string? Name { get; }
 
 	/// <summary>
 	/// 获取或设置消息分组名称。
 	/// </summary>
-	public string Group { get; set; }
+	public string? Group { get; set; }
 }

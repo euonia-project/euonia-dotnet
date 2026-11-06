@@ -25,7 +25,7 @@ public abstract class DispatchBuilder<TBuilder, TOptions, TMessage, TResult>
 	/// <summary>
 	/// 获取或设置消息处理的管道构建委托。
 	/// </summary>
-	protected Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> Pipeline { get; set; }
+	protected Action<IPipeline<IMessageEnvelope<TMessage>, TResult>>? Pipeline { get; set; }
 
 	/// <summary>
 	/// 获取消息发送选项。

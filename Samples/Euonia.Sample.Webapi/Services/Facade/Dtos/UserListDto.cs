@@ -5,25 +5,25 @@ public class UserListDto
 	/// <summary>
 	/// Unique identifier of the user.
 	/// </summary>
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
 	/// <summary>
 	/// Unique identifier of the user.
 	/// </summary>
-	public string Username { get; set; }
+	public string Username { get; set; } = null!;
 
 	/// <summary>
 	/// Nickname of the user.
 	/// </summary>
-	public string Nickname { get; set; }
+	public string Nickname { get; set; } = null!;
 
 	/// <summary>
 	/// Email address of the user.
 	/// </summary>
-	public string Email { get; set; }
+	public string Email { get; set; } = null!;
 
 	/// <summary>
 	/// Phone number of the user.
 	/// </summary>
-	public string Phone { get; set; }
+	public string Phone { get; set; } = null!;
 }

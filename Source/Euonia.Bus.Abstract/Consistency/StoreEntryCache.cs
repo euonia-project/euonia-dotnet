@@ -26,7 +26,7 @@ internal static class StoreEntryCache<TStore, TEntry>
 	/// <param name="key">消息标识符。</param>
 	/// <param name="factory">缓存未命中时用于加载条目的委托。</param>
 	/// <returns>缓存或新加载的条目；未找到时返回 <c>default</c>（不写入缓存）。</returns>
-	public static TEntry GetOrAdd(TStore store, string key, Func<string, TEntry> factory)
+	public static TEntry? GetOrAdd(TStore store, string key, Func<string, TEntry?> factory)
 	{
 		var cache = _caches.GetOrCreateValue(store);
 		if (cache.TryGetValue(key, out var cached))

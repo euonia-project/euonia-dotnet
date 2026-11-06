@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="services"></param>
 	/// <param name="optionsAction"></param>
 	/// <returns></returns>
-	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<BackgroundBuildOptions> optionsAction = null)
+	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<BackgroundBuildOptions>? optionsAction = null)
 	{
 		var buildOptions = Singleton<BackgroundBuildOptions>.Get(() => new BackgroundBuildOptions());
 		optionsAction?.Invoke(buildOptions);
@@ -43,7 +43,7 @@ public static class ServiceCollectionExtensions
 		// Quartz 4 folds the misfire threshold into the job store options, and the flat property is
 		// bridged before the builder callback runs; feeding it as a property keeps it applying to
 		// whichever store (in-memory or persistent) the user configures later.
-		var properties = new Dictionary<string, string>(buildOptions.Properties, StringComparer.OrdinalIgnoreCase);
+		var properties = new Dictionary<string, string?>(buildOptions.Properties, StringComparer.OrdinalIgnoreCase);
 		if (buildOptions.MisfireThreshold.HasValue && !properties.ContainsKey("quartz.jobStore.misfireThreshold"))
 		{
 			properties["quartz.jobStore.misfireThreshold"] = ((long)buildOptions.MisfireThreshold.Value.TotalMilliseconds)

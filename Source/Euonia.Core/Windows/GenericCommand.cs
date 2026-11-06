@@ -15,13 +15,13 @@ public sealed class GenericCommand : ICommand
     /// 获取或设置用于判断命令是否可以执行的回调函数。
     /// </summary>
     /// <value>用于判断命令是否可以执行的回调函数。</value>
-    public Func<object, bool> CanExecuteCallback { get; set; }
+    public Func<object?, bool>? CanExecuteCallback { get; set; }
 
     /// <summary>
     /// 获取或设置命令执行时要调用的回调函数。
     /// </summary>
     /// <value>命令执行时要调用的回调函数。</value>
-    public Action<object> ExecuteCallback { get; set; }
+    public Action<object?>? ExecuteCallback { get; set; }
 
     #region ICommand Members
 
@@ -30,7 +30,7 @@ public sealed class GenericCommand : ICommand
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
         if (CanExecuteCallback != null)
         {
@@ -44,7 +44,7 @@ public sealed class GenericCommand : ICommand
     /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
     /// <returns>事件参数，包含与事件相关的数据。</returns>
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler? CanExecuteChanged;
 
     /// <summary>
     /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
@@ -59,7 +59,7 @@ public sealed class GenericCommand : ICommand
     /// 定义在调用命令时要调用的方法。
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
-    public void Execute(object parameter)
+    public void Execute(object? parameter)
     {
         ExecuteCallback?.Invoke(parameter);
     }
@@ -77,13 +77,13 @@ public sealed class GenericCommand<T> : ICommand
     /// 获取或设置用于判断命令是否可以执行的回调函数。
     /// </summary>
     /// <value>用于判断命令是否可以执行的回调函数。</value>
-    public Func<T, bool> CanExecuteCallback { get; set; }
+    public Func<T, bool>? CanExecuteCallback { get; set; }
 
     /// <summary>
     /// 获取或设置命令执行时要调用的回调函数。
     /// </summary>
     /// <value>命令执行时要调用的回调函数。</value>
-    public Action<T> ExecuteCallback { get; set; }
+    public Action<T>? ExecuteCallback { get; set; }
 
     #region ICommand Members
 
@@ -92,16 +92,16 @@ public sealed class GenericCommand<T> : ICommand
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
-        return CanExecuteCallback?.Invoke((T)parameter) ?? true;
+        return CanExecuteCallback?.Invoke((T)parameter!) ?? true;
     }
 
     /// <summary>
     /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
     /// <returns>事件参数，包含与事件相关的数据。</returns>
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler? CanExecuteChanged;
 
     /// <summary>
     /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
@@ -116,9 +116,9 @@ public sealed class GenericCommand<T> : ICommand
     /// 定义在调用命令时要调用的方法。
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
-    public void Execute(object parameter)
+    public void Execute(object? parameter)
     {
-        ExecuteCallback?.Invoke((T)parameter);
+        ExecuteCallback?.Invoke((T)parameter!);
     }
 
     #endregion

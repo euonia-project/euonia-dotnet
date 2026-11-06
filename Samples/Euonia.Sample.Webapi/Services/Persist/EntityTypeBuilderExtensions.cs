@@ -135,7 +135,7 @@ internal static class EntityTypeBuilderExtensions
 	/// <typeparam name="TEntity"></typeparam>
 	/// <param name="builder"></param>
 	/// <param name="tableName"></param>
-	public static void HasTombstoneIndex<TEntity>(this EntityTypeBuilder<TEntity> builder, string tableName = null)
+	public static void HasTombstoneIndex<TEntity>(this EntityTypeBuilder<TEntity> builder, string? tableName = null)
 		where TEntity : class, ITombstone
 	{
 		builder.HasIndex(t => t.IsDeleted)

@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 /// <typeparam name="T">The type of request to make.</typeparam>
 public class AsyncRequestMessage<T>
 {
-	private Task<T> _response;
+	private Task<T>? _response;
 
 	/// <summary>
 	/// Gets the message response.

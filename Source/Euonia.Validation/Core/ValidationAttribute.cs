@@ -27,5 +27,5 @@ public class ValidationAttribute : Attribute
     /// Gets the type of the validator.
     /// </summary>
     /// <value>The type of the validator.</value>
-    public Type ValidatorType { get; }
+    public Type? ValidatorType { get; }
 }

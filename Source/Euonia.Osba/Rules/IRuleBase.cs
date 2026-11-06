@@ -13,7 +13,7 @@ public interface IRuleBase
     /// <summary>
     /// 获取受此规则影响的属性。
     /// </summary>
-    IPropertyInfo Property { get; }
+    IPropertyInfo? Property { get; }
 
     /// <summary>
     /// 获取相关属性。

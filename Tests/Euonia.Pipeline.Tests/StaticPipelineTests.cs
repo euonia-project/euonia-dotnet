@@ -16,7 +16,7 @@ public class StaticPipelineTests
 		{
 			log.Add("Handler");
 			return Task.FromResult("ok");
-		}, behaviors);
+		}, behaviors, TestContext.Current.CancellationToken);
 
 		Assert.Equal(["A", "B", "Handler"], log);
 	}

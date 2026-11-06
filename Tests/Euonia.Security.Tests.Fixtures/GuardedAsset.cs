@@ -12,11 +12,11 @@ namespace Nerosoft.Euonia.Security.Tests.Fixtures;
 /// </remarks>
 public sealed class GuardedAsset
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 
 	[Permission("guarded:run")]
 	public void Run() { }

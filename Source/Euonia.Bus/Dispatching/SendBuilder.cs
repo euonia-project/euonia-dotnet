@@ -11,7 +11,7 @@ public class SendBuilder<TMessage, TResult> : DispatchBuilder<SendBuilder<TMessa
 {
 	private readonly IBus _bus;
 	private readonly TMessage _message;
-	private Subject<TResult> _subject;
+	private Subject<TResult>? _subject;
 
 	/// <summary>
 	/// 初始化 <see cref="SendBuilder{TMessage, TResult}"/> 类的新实例。

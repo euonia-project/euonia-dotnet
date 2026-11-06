@@ -48,5 +48,5 @@ public sealed class ObservableGroup<TKey, TValue> : ObservableCollection<TValue>
     public TKey Key { get; }
 
     /// <inheritdoc/>
-    object IReadOnlyObservableGroup.Key => Key;
+    object IReadOnlyObservableGroup.Key => Key!;
 }

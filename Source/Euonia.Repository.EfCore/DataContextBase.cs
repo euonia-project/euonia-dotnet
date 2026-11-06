@@ -61,7 +61,7 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	/// 获取当前上下文所使用的数据库提供程序名称。
 	/// </summary>
 	/// <value>EF Core 数据提供程序的名称。</value>
-	public virtual string Provider => Database.ProviderName;
+	public virtual string Provider => Database.ProviderName!;
 
 	/// <inheritdoc />
 	public IQueryable<TEntity> SetOf<TEntity>()
@@ -77,7 +77,7 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	}
 
 	/// <inheritdoc />
-	public IDbTransaction GetTransaction()
+	public IDbTransaction? GetTransaction()
 	{
 		return Database.CurrentTransaction?.GetDbTransaction();
 	}

@@ -44,11 +44,11 @@ internal class RedisValueConverter : IRedisValueConverter,
 
 	RedisValue IRedisValueConverter<byte[]>.ToRedisValue(byte[] value) => value;
 
-	byte[] IRedisValueConverter<byte[]>.FromRedisValue(RedisValue value, string valueType) => value;
+	byte[] IRedisValueConverter<byte[]>.FromRedisValue(RedisValue value, string valueType) => ((byte[]?)value)!;
 
 	RedisValue IRedisValueConverter<string>.ToRedisValue(string value) => value;
 
-	string IRedisValueConverter<string>.FromRedisValue(RedisValue value, string valueType) => value;
+	string IRedisValueConverter<string>.FromRedisValue(RedisValue value, string valueType) => ((string?)value)!;
 
 	RedisValue IRedisValueConverter<int>.ToRedisValue(int value) => value;
 
@@ -82,7 +82,7 @@ internal class RedisValueConverter : IRedisValueConverter,
 	// also, even if we do not exceed long.MaxValue, the SA client stores it as double for no parent reason => cast to long fixes it.
 	RedisValue IRedisValueConverter<ulong>.ToRedisValue(ulong value) => value > long.MaxValue ? (RedisValue)value.ToString() : checked((long)value);
 
-	ulong IRedisValueConverter<ulong>.FromRedisValue(RedisValue value, string valueType) => ulong.Parse(value);
+	ulong IRedisValueConverter<ulong>.FromRedisValue(RedisValue value, string valueType) => ulong.Parse(value.ToString());
 
 	RedisValue IRedisValueConverter<object>.ToRedisValue(object value)
 	{
@@ -218,12 +218,12 @@ internal class RedisValueConverter : IRedisValueConverter,
 
 		{
 		}
-		return Deserialize(value, type);
+		return Deserialize(value.ToString(), type);
 	}
 
 	public RedisValue ToRedisValue<T>(T value) => JsonSerializer.Serialize(value);
 
-	public T FromRedisValue<T>(RedisValue value, string valueType) => (T)Deserialize(value, valueType);
+	public T FromRedisValue<T>(RedisValue value, string valueType) => (T)Deserialize(value.ToString(), valueType);
 
 	private static object Deserialize(string value, string valueType)
 	{
@@ -233,6 +233,6 @@ internal class RedisValueConverter : IRedisValueConverter,
 			throw new NullReferenceException(string.Format(Resources.IDS_TYPE_COULD_NOT_BE_LOADED, valueType));
 		}
 
-		return JsonSerializer.Deserialize(value, type);
+		return JsonSerializer.Deserialize(value, type)!;
 	}
 }

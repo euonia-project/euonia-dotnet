@@ -111,7 +111,7 @@ public static partial class Extensions
     /// <param name="successCallback">成功时的回调。</param>
     /// <param name="failureCallback">失败时的回调。</param>
     /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
-    public static void EnsureInRoles(this UserPrincipal user, IEnumerable<string> roles, Action successCallback = null, Action failureCallback = null)
+    public static void EnsureInRoles(this UserPrincipal user, IEnumerable<string> roles, Action? successCallback = null, Action? failureCallback = null)
     {
         user.EnsureAuthenticated();
 
@@ -134,7 +134,7 @@ public static partial class Extensions
     /// <param name="failureCallback">失败时的异步回调。</param>
     /// <returns>表示异步操作的任务。</returns>
     /// <exception cref="AuthenticationException">当用户未通过身份验证时抛出。</exception>
-    public static Task EnsureInRolesAsync(this UserPrincipal user, IEnumerable<string> roles, Func<Task> successCallback = null, Func<Task> failureCallback = null)
+    public static Task? EnsureInRolesAsync(this UserPrincipal user, IEnumerable<string> roles, Func<Task>? successCallback = null, Func<Task>? failureCallback = null)
     {
         user.EnsureAuthenticated();
 

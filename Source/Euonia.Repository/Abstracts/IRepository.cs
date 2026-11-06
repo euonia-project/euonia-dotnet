@@ -29,7 +29,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <returns>经过 <paramref name="handle"/> 处理并附加了 <paramref name="predicate"/> 条件的查询对象。</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="predicate"/> 为 <c>null</c> 时抛出。</exception>
-	IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle);
+	IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle);
 
 	/// <summary>
 	/// 异步获取满足指定条件的单个实体。
@@ -37,7 +37,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="predicate">用于筛选实体的条件表达式。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>第一个满足条件的实体；若不存在则为 <c>null</c>。</returns>
-	Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+	Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
 	{
 		return GetAsync(predicate, null, cancellationToken);
 	}
@@ -49,7 +49,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>第一个满足条件的实体；若不存在则为 <c>null</c>。</returns>
-	Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步查找序列中所有满足指定条件的实体。
@@ -69,7 +69,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>满足条件的实体列表；无匹配项时为空列表。</returns>
-	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步分页查找序列中满足指定条件的实体。
@@ -93,7 +93,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="count">最多返回的实体数量。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>当前分页内满足条件的实体列表；无匹配项时为空列表。</returns>
-	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, int offset, int count, CancellationToken cancellationToken = default);
+	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步获取序列中满足指定条件的实体数量。
@@ -113,7 +113,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>满足条件的实体数量。</returns>
-	Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步获取序列中满足指定条件的实体数量，并以 <see cref="long"/> 返回。
@@ -133,7 +133,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>满足条件的实体数量。</returns>
-	Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步判断序列中是否存在满足指定条件的实体。
@@ -153,7 +153,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>若存在满足条件的实体则为 <c>true</c>，否则为 <c>false</c>。</returns>
-	Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步判断序列中的所有实体是否都满足指定条件。
@@ -173,7 +173,7 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="handle">在附加条件之前对查询进行的附加处理，可为 <c>null</c>。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>若所有实体都满足条件则为 <c>true</c>，否则为 <c>false</c>。</returns>
-	Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default);
+	Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// 异步新增单个实体。
@@ -258,7 +258,7 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 	/// <param name="key">实体的主键值。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>具有指定主键的实体；若不存在则为 <c>null</c>。</returns>
-	Task<TEntity> GetAsync(TKey key, CancellationToken cancellationToken = default)
+	Task<TEntity?> GetAsync(TKey key, CancellationToken cancellationToken = default)
 	{
 		return GetAsync(key, null, cancellationToken);
 	}
@@ -271,7 +271,7 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>具有指定主键的实体；若不存在则为 <c>null</c>。</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
-	Task<TEntity> GetAsync(TKey key, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	Task<TEntity?> GetAsync(TKey key, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(key);
 		return GetAsync(PredicateBuilder.PropertyEqual<TEntity, TKey>(nameof(IEntity<TKey>.Id), key), handle, cancellationToken);
@@ -296,7 +296,7 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>主键匹配的实体列表；<paramref name="keys"/> 为空时返回空列表。</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="keys"/> 为 <c>null</c> 时抛出。</exception>
-	Task<List<TEntity>> FindAsync(IEnumerable<TKey> keys, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	Task<List<TEntity>> FindAsync(IEnumerable<TKey> keys, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(keys);
 		var array = keys as TKey[] ?? [.. keys];

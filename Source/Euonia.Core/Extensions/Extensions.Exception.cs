@@ -8,7 +8,7 @@ public static partial class Extensions
     /// <param name="exception">异常。</param>
     /// <param name="maxDepths">最大遍历深度。</param>
     /// <returns>完整的异常消息字符串。</returns>
-    public static string GetFullMessage(this Exception exception, int maxDepths = 3)
+    public static string? GetFullMessage(this Exception? exception, int maxDepths = 3)
     {
         if (exception == null)
         {
@@ -32,7 +32,7 @@ public static partial class Extensions
     /// </summary>
     /// <param name="exception">捕获的异常。</param>
     /// <returns>根异常的消息。</returns>
-    public static string GetRootMessage(this Exception exception)
+    public static string GetRootMessage(this Exception? exception)
     {
         while (true)
         {

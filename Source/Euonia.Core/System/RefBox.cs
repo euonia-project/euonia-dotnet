@@ -46,7 +46,7 @@ public sealed class RefBox
     /// <param name="boxRef">要消费的引用盒引用。</param>
     /// <param name="value">输出的值。</param>
     /// <returns>如果成功消费则为 true；否则为 false。</returns>
-    public static bool TryConsume<T>(ref RefBox<T> boxRef, out T value)
+    public static bool TryConsume<T>(ref RefBox<T>? boxRef, out T value)
         where T : struct
     {
         var box = Interlocked.Exchange(ref boxRef, null);

@@ -27,11 +27,11 @@ public class ValidationRegistrar : DefaultAutomaticRegistration
     {
         return new List<Type>
         {
-            typeof(IValidator<>).MakeGenericType(GetFirstGenericArgument(type, 1))
+            typeof(IValidator<>).MakeGenericType(GetFirstGenericArgument(type, 1)!)
         };
     }
 
-    private static Type GetFirstGenericArgument(Type type, int depth)
+    private static Type? GetFirstGenericArgument(Type? type, int depth)
     {
         const int maxFindDepth = 8;
 

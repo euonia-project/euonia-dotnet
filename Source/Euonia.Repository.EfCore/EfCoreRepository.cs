@@ -37,7 +37,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	}
 
 	/// <inheritdoc />
-	public override IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle)
+	public override IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle)
 	{
 		ArgumentNullException.ThrowIfNull(predicate);
 		var query = Context.Set<TEntity>().AsQueryable();
@@ -50,44 +50,44 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	}
 
 	/// <inheritdoc />
-	public override async Task<TEntity> GetAsync(TKey key, CancellationToken cancellationToken = default)
+	public override async Task<TEntity?> GetAsync(TKey key, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(key);
 		return await Context.FindAsync<TEntity>([key], cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).FirstOrDefaultAsync(predicate, cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).ToListAsync(cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, int offset, int count, CancellationToken cancellationToken = default)
+	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).Skip(offset).Take(count).ToListAsync(cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).CountAsync(predicate, cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).LongCountAsync(predicate, cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		// BuildQuery 已经应用了 Where(predicate)，此处不能再叠加一次：
 		// Where(p).Any(p) 虽然等价，但会产生冗余的 SQL 条件。
@@ -95,7 +95,7 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	}
 
 	/// <inheritdoc />
-	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		// 此前写作 BuildQuery(predicate, handle).AllAsync(predicate)，即 Where(p).All(p)，
 		// 翻译为 SQL 是 NOT EXISTS(... WHERE p AND NOT p)，**恒为 true**，断言完全失效。

@@ -23,19 +23,19 @@ public interface IMessageContext : IDisposable
 	string ConversationId { get; }
 
 	/// <summary>
-	/// 获取或设置请求追踪标识符。
+	/// 获取或设置请求追踪标识符；消息未携带时为 <c>null</c>。
 	/// </summary>
-	string RequestTraceId { get; }
+	string? RequestTraceId { get; }
 
 	/// <summary>
-	/// 获取或设置授权信息。
+	/// 获取或设置授权信息；请求作用域外为 <c>null</c>。
 	/// </summary>
-	string Authorization { get; }
+	string? Authorization { get; }
 
 	/// <summary>
-	/// 获取当前用户。
+	/// 获取当前用户；没有用户主体时为 <c>null</c>。
 	/// </summary>
-	IPrincipal User { get; }
+	IPrincipal? User { get; }
 
 	/// <summary>
 	/// 获取消息请求头。

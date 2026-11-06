@@ -20,7 +20,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard guard, IObjectFactory factory)
 	: BaseApplicationService, IRepositoryApplicationService
 {
-	public Task<PagedResult<RepositoryDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
+	public Task<PagedResult<RepositoryDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new RepositoryListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
@@ -66,7 +66,7 @@ internal class RepositoryApplicationService(IRepositoryStore store, IScopeGuard 
 	{
 		var tcs = new TaskCompletionSource<string>();
 		var subject = new Subject<string>();
-		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null!));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;

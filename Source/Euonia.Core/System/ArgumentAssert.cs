@@ -15,9 +15,9 @@ public sealed class ArgumentAssert
 	/// <param name="paramName"><paramref name="argument"/> 对应的参数名称。</param>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET5_0_OR_GREATER
-	public static void ThrowIfNull([NotNull] object argument, [CallerArgumentExpression(nameof(argument))] string paramName = null)
+	public static void ThrowIfNull([NotNull] object argument, [CallerArgumentExpression(nameof(argument))] string? paramName = null)
 #else
-	public static void ThrowIfNull([NotNull] object argument, string paramName = null)
+	public static void ThrowIfNull([NotNull] object argument, string? paramName = null)
 #endif
 	{
 		if (argument is null)
@@ -42,9 +42,9 @@ public sealed class ArgumentAssert
 		/// <param name="paramName"><paramref name="argument"/> 对应的参数名称。</param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if NET5_0_OR_GREATER
-		public static void ThrowIfNull([NotNull] T argument, [CallerArgumentExpression(nameof(argument))] string paramName = null)
+		public static void ThrowIfNull([NotNull] T argument, [CallerArgumentExpression(nameof(argument))] string? paramName = null)
 #else
-		public static void ThrowIfNull([NotNull] T argument, string paramName = null)
+		public static void ThrowIfNull([NotNull] T argument, string? paramName = null)
 #endif
 		{
 			if (argument is null)
@@ -59,7 +59,7 @@ public sealed class ArgumentAssert
 	/// </summary>
 	/// <param name="paramName">验证失败的参数名称。</param>
 	[DoesNotReturn]
-	private static void Throw(string paramName)
+	private static void Throw(string? paramName)
 	{
 		throw new ArgumentNullException(paramName);
 	}

@@ -14,14 +14,14 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	/// Occurs when a property value changes.
 	/// </summary>
 	/// <returns></returns>
-	public event PropertyChangedEventHandler PropertyChanged;
+	public event PropertyChangedEventHandler? PropertyChanged;
 
 	#region Variables
 
 	/// <summary>
 	/// The value
 	/// </summary>
-	private TValue _value;
+	private TValue _value = default!;
 
 	/// <summary>
 	/// The is valid
@@ -93,7 +93,7 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	/// <summary>
 	/// Gets or sets the value changed callback.
 	/// </summary>
-	public Action<TValue> ValueChangedCallback { get; set; }
+	public Action<TValue>? ValueChangedCallback { get; set; }
 
 	#endregion
 
@@ -147,7 +147,7 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	/// Raises up the property changed event.
 	/// </summary>
 	/// <param name="propertyName">The property name.</param>
-	protected virtual void RaisePropertyChanged(string propertyName)
+	protected virtual void RaisePropertyChanged(string? propertyName)
 	{
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
@@ -159,7 +159,7 @@ public class ValidatableObject<TValue> : IValidatableObject, INotifyPropertyChan
 	/// <param name="field">The property field.</param>
 	/// <param name="value">The new property value.</param>
 	/// <param name="propertyName">The property name.</param>
-	protected virtual void SetProperty<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+	protected virtual void SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
 	{
 		if (EqualityComparer<T>.Default.Equals(field, value))
 		{

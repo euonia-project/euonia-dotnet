@@ -8,7 +8,7 @@ public class RedisCacheOptions
     /// <summary>
     /// Gets or sets the redis connection string.
     /// </summary>
-    public string ConnectionString { get; set; }
+    public string ConnectionString { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the maximum redis access retry times.
@@ -38,7 +38,7 @@ public class RedisCacheOptions
     /// <summary>
     /// Gets or sets the cache key prefix.
     /// </summary>
-    public string KeyPrefix { get; set; }
+    public string? KeyPrefix { get; set; }
 
     /// <summary>
     /// Gets or sets the cache expire time.

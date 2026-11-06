@@ -96,7 +96,7 @@ public sealed class ManagedFinalizerQueue
             // （并且可能在一段时间内都不会退出）。因此，我们将一个任务作为延续排队，
             // 以便一次只有一个终结器循环在运行。
             _finalizerTask = _finalizerTask.ContinueWith(
-                                          (_, @this) => ((ManagedFinalizerQueue)@this).FinalizerLoop(),
+                                          (_, @this) => ((ManagedFinalizerQueue)@this!).FinalizerLoop(),
                                           state: this,
                                           CancellationToken.None
                                       )
@@ -125,7 +125,7 @@ public sealed class ManagedFinalizerQueue
 
     private Task FinalizeAsync(bool waitForItemFinalization)
     {
-        List<Task> itemFinalizerTasks = null;
+        List<Task>? itemFinalizerTasks = null;
 
         // ConcurrentDictionary 的枚举器可以安全地与写入操作并发使用，并且非常廉价
         // （无锁且不会生成快照副本）
@@ -168,7 +168,7 @@ public sealed class ManagedFinalizerQueue
     private sealed class Registration : IDisposable
     {
         private readonly ManagedFinalizerQueue _queue;
-        private IAsyncDisposable _key;
+        private IAsyncDisposable? _key;
 
         public Registration(ManagedFinalizerQueue queue, IAsyncDisposable key)
         {

@@ -10,22 +10,22 @@ public class JwtAuthenticationOptions
 	/// <summary>
 	/// 获取或设置认证方案名称。
 	/// </summary>
-	public string Scheme { get; set; }
+	public string Scheme { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置令牌颁发者。
 	/// </summary>
-	public IEnumerable<string> Issuer { get; set; }
+	public IEnumerable<string>? Issuer { get; set; }
 
 	/// <summary>
 	/// 获取或设置签名密钥。
 	/// </summary>
-	public string SigningKey { get; set; }
+	public string SigningKey { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置颁发机构（authority）的 URL。
 	/// </summary>
-	public string Authority { get; set; }
+	public string? Authority { get; set; }
 
 	/// <summary>
 	/// 获取或设置一个值，指示是否要求 HTTPS 元数据。
@@ -35,7 +35,7 @@ public class JwtAuthenticationOptions
 	/// <summary>
 	/// 获取或设置受众（audience）。
 	/// </summary>
-	public string Audience { get; set; }
+	public string? Audience { get; set; }
 
 	/// <summary>
 	/// 获取或设置一个值，指示是否使用策略。

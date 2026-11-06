@@ -9,7 +9,7 @@ public interface IUnitOfWorkManager
     /// 获取当前可用的工作单元实例。
     /// </summary>
     /// <value>当前工作单元；若不存在可用实例则为 <c>null</c>。</value>
-    IUnitOfWork Current { get; }
+    IUnitOfWork? Current { get; }
 
     /// <summary>
     /// 使用指定选项开启一个工作单元。

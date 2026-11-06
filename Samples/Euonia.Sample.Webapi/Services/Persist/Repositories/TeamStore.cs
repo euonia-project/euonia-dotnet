@@ -17,7 +17,7 @@ public sealed class TeamStore(IApplicationDataContext context) : ITeamStore
 	}
 
 	/// <inheritdoc />
-	public async Task<Team> GetAsync(string id, CancellationToken cancellationToken = default)
+	public async Task<Team?> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		// 只读实体用于填充工厂新建的聚合实例（LoadProperty），不参与 SaveChanges，
 		// 必须 AsNoTracking：否则随后的 UpdateAsync(context.Update(...)) 会因同一主键被跟踪两次
@@ -26,7 +26,7 @@ public sealed class TeamStore(IApplicationDataContext context) : ITeamStore
 	}
 
 	/// <inheritdoc />
-	public async Task<Team> GetWithMembersAsync(string id, CancellationToken cancellationToken = default)
+	public async Task<Team?> GetWithMembersAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var team = await GetAsync(id, cancellationToken);
 

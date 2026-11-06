@@ -13,7 +13,7 @@ public class Product : Entity<Guid>
 		Id = id;
 	}
 
-	public string Name { get; set; }
+	public string Name { get; set; } = string.Empty;
 }
 
 public class Category : Entity<Guid>

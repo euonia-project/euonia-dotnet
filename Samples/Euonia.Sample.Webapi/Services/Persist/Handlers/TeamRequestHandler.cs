@@ -52,7 +52,7 @@ internal class TeamRequestHandler(ITeamStore store, IScopeGuard guard)
 		return new PagedResult<TeamDto>(total, page, pageSize, items);
 	}
 
-	private static IQueryable<Team> ApplySort(IQueryable<Team> query, string sortBy)
+	private static IQueryable<Team> ApplySort(IQueryable<Team> query, string? sortBy)
 	{
 		// 排序白名单：只允许按实体列排序，非法值回落默认（Id）。
 		return sortBy?.ToLowerInvariant() switch

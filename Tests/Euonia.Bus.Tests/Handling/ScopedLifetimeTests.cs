@@ -113,7 +113,7 @@ public class ScopedLifetimeTests
 		var expectedProbe = requestScope.ServiceProvider.GetRequiredService<ScopedProbe>();
 
 		var payload = new BorrowProbeEvent();
-		var envelope = new RoutedMessage<BorrowProbeEvent>(payload, typeof(BorrowProbeEvent).FullName)
+		var envelope = new RoutedMessage<BorrowProbeEvent>(payload, typeof(BorrowProbeEvent).FullName!)
 		{
 			MessageId = "borrow-1",
 		};
@@ -124,7 +124,7 @@ public class ScopedLifetimeTests
 		};
 
 		await handlerContext.HandleAsync(
-			typeof(BorrowProbeEvent).FullName,
+			typeof(BorrowProbeEvent).FullName!,
 			payload,
 			context,
 			TestContext.Current.CancellationToken);
@@ -139,7 +139,7 @@ public class ScopedLifetimeTests
 
 	private sealed class ProbeState
 	{
-		public ScopedProbe Probe { get; set; }
+		public ScopedProbe Probe { get; set; } = null!;
 	}
 
 	private sealed class BorrowProbeEvent : IMulticast

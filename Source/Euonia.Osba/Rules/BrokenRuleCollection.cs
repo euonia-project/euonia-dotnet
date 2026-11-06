@@ -43,7 +43,7 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 	/// 移除给定属性的先前结果。
 	/// </summary>
 	/// <param name="property">属性信息。</param>
-    internal void ClearRules(IPropertyInfo property)
+    internal void ClearRules(IPropertyInfo? property)
     {
         ClearRules(property?.Name);
     }
@@ -52,7 +52,7 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 	/// 移除给定属性名称的先前结果。
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
-    private void ClearRules(string propertyName)
+    private void ClearRules(string? propertyName)
     {
         lock (_lockObject)
         {
@@ -78,7 +78,7 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 	/// </summary>
 	/// <param name="results">规则结果集合。</param>
 	/// <param name="propertyName">属性名称。</param>
-    internal void Add(IEnumerable<RuleResult> results, string propertyName)
+    internal void Add(IEnumerable<RuleResult> results, string? propertyName)
     {
         lock (_lockObject)
         {
@@ -91,7 +91,7 @@ public class BrokenRuleCollection : ObservableCollection<BrokenRule>
 
                 var rule = new BrokenRule
                 {
-                    Description = result.Description,
+                    Description = result.Description!,
                     Severity = result.Severity,
                     Property = propertyName
                 };

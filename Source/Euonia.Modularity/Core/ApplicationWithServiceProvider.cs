@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Modularity;
 public class ApplicationWithServiceProvider : ModularityApplicationBase, IApplicationWithServiceProvider
 {
     /// <inheritdoc />
-    public ApplicationWithServiceProvider(Type startupModuleType, IServiceCollection services, IConfiguration configuration, Action<ApplicationCreationOptions> optionsAction)
+    public ApplicationWithServiceProvider(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction)
         : base(startupModuleType, services, configuration, optionsAction)
     {
         services.AddSingleton<IApplicationWithServiceProvider>(this);

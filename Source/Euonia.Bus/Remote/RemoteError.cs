@@ -9,12 +9,12 @@ public class RemoteError
 	/// <summary>
 	/// 获取或设置异常类型的完整名称。
 	/// </summary>
-	public string Type { get; set; }
+	public string? Type { get; set; }
 
 	/// <summary>
 	/// 获取或设置异常消息。
 	/// </summary>
-	public string Message { get; set; }
+	public string? Message { get; set; }
 
 	/// <summary>
 	/// 获取或设置异常堆栈跟踪。
@@ -22,7 +22,7 @@ public class RemoteError
 	/// <remarks>
 	/// 出于安全考虑，<see cref="Create"/> 不再填充该字段；保留属性仅为兼容既有序列化契约。
 	/// </remarks>
-	public string StackTrace { get; set; }
+	public string? StackTrace { get; set; }
 
 	/// <summary>
 	/// 从指定异常创建 <see cref="RemoteError"/> 实例。
@@ -56,7 +56,7 @@ public class RemoteError
 
 		try
 		{
-			var exception = (Exception)Activator.CreateInstance(type, Message);
+			var exception = Activator.CreateInstance(type, Message) as Exception;
 			if (exception != null)
 			{
 				exception.GetType().GetProperty("Source")?.SetValue(exception, null);
@@ -77,7 +77,7 @@ public class RemoteError
 		       && (type.Assembly == typeof(Exception).Assembly || typeof(MessageBusException).IsAssignableFrom(type));
 	}
 
-	private static Type TryResolveType(string typeName)
+	private static Type? TryResolveType(string? typeName)
 	{
 		if (string.IsNullOrWhiteSpace(typeName))
 		{

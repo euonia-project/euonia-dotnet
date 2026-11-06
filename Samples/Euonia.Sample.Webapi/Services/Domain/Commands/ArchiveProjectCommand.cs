@@ -18,13 +18,13 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectCommand>
 {
 	/// <summary>目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
-	public string ProjectId { get; set; }
+	public string ProjectId { get; set; } = null!;
 
 	/// <summary>
 	/// 已取到并待归档的项目实体：行级判定以命令自身为资源、以该实体为判定依据
 	/// （见 <see cref="Permissions.ArchiveProjectScopeModel"/>），故必须在判定前装载。
 	/// </summary>
-	public Project Project { get; private set; }
+	public Project Project { get; private set; } = null!;
 
 	/// <summary>命令是否已成功执行。</summary>
 	public bool Archived { get; private set; }
@@ -36,11 +36,13 @@ public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectComm
 	private async Task CreateAsync(string projectId, CancellationToken cancellationToken = default)
 	{
 		ProjectId = projectId;
-		Project = await BusinessContext.GetRequiredService<IProjectStore>().GetAsync(projectId, cancellationToken);
-		if (Project == null)
+		var project = await BusinessContext.GetRequiredService<IProjectStore>().GetAsync(projectId, cancellationToken);
+		if (project == null)
 		{
 			throw new NotFoundException($"Project with ID '{projectId}' not found.");
 		}
+
+		Project = project;
 	}
 
 	[Permission(ProjectPermissions.Archive, RoleName.Developer, RoleName.ProjectManager)]

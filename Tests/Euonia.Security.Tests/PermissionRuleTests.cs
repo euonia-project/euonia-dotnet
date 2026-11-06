@@ -44,8 +44,8 @@ public class PermissionRuleTests
 	{
 		var services = new ServiceCollection();
 
-		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Execute, null, typeof(AssetApproveAttribute)); });
-		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Execute, null, typeof(AssetSecondApproveAttribute)); });
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Execute, null!, typeof(AssetApproveAttribute)); });
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Execute, null!, typeof(AssetSecondApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -60,7 +60,7 @@ public class PermissionRuleTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); });
-		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Read, null, typeof(AssetApproveAttribute)); });
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Read, null!, typeof(AssetApproveAttribute)); });
 
 		var source = services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>();
 
@@ -92,7 +92,7 @@ public class PermissionRuleTests
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => { p.Scan(FixturesAssembly); p.Source(new ConventionCodeSource()); });                                            // 只给码
-		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Read, null, typeof(AssetApproveAttribute)); });    // 能回答要求
+		services.AddPermission(p => { p.Scan(TestAssembly); p.OnAttributeOrName(BusinessOperation.Read, null!, typeof(AssetApproveAttribute)); });    // 能回答要求
 
 		var source = Assert.IsAssignableFrom<IPermissionCodeSource>(
 			services.BuildServiceProvider().GetRequiredService<IPermissionCodeSource>());

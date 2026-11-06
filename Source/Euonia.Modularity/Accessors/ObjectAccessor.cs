@@ -4,7 +4,7 @@
 public class ObjectAccessor<TValue> : IObjectAccessor<TValue>
 {
     /// <inheritdoc />
-    public TValue Value { get; set; }
+    public TValue Value { get; set; } = default!;
 
     /// <summary>
     /// Initialize a new instance of <see cref="ObjectAccessor{TValue}"/>.

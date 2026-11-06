@@ -15,7 +15,7 @@ public abstract class BaseCacheService
 	/// <value>
 	/// 表示键前缀的字符串。如果为 <see langword="null"/> 或空，则不向前缀添加任何内容。
 	/// </value>
-	public virtual string KeyPrefix { get; protected set; }
+	public virtual string? KeyPrefix { get; protected set; }
 
 	/// <summary>
 	/// 获取指定类型的缓存管理器实例。

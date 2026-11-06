@@ -67,20 +67,29 @@ public abstract class RoutedMessage
 	/// <summary>
 	/// 获取或设置请求追踪标识符。
 	/// </summary>
+	/// <remarks>
+	/// 反序列化时由信封数据填充；外部消息未携带时保持 <c>null</c>。
+	/// </remarks>
 	[DataMember]
-	public virtual string RequestTraceId { get; set; }
+	public virtual string? RequestTraceId { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息发送的目标通道。
 	/// </summary>
+	/// <remarks>
+	/// 反序列化时由信封数据填充；接口契约声明为非空，未携带时保持 <c>null</c>。
+	/// </remarks>
 	[DataMember]
-	public virtual string Channel { get; set; }
+	public virtual string Channel { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置消息的授权信息。
 	/// </summary>
+	/// <remarks>
+	/// 请求作用域外（例如后台任务）没有授权信息，此时保持 <c>null</c>。
+	/// </remarks>
 	[DataMember]
-	public virtual string Authorization { get; set; }
+	public virtual string? Authorization { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息发生的时间戳（Unix 毫秒）。
@@ -97,14 +106,17 @@ public abstract class RoutedMessage
 	/// <summary>
 	/// 获取或设置当前请求的用户主体。
 	/// </summary>
+	/// <remarks>
+	/// 请求作用域外没有用户信息，此时保持 <c>null</c>。
+	/// </remarks>
 	[DataMember]
-	public ClaimsPrincipal User { get; set; }
+	public ClaimsPrincipal? User { get; set; }
 
 	/// <summary>
 	/// 获取消息的 .NET CLR 程序集限定名。
 	/// </summary>
-	/// <returns>消息的程序集限定名。</returns>
-	public virtual string GetTypeName() => Metadata[MessageTypeKey] as string;
+	/// <returns>消息的程序集限定名；元数据中未携带时返回空字符串。</returns>
+	public virtual string GetTypeName() => Metadata[MessageTypeKey] as string ?? string.Empty;
 
 	/// <summary>
 	/// 返回当前实例的字符串表示形式。
@@ -139,7 +151,7 @@ public class RoutedMessage<T> : RoutedMessage, IMessageEnvelope<T>
 	/// <param name="messageId">消息标识符；为 <c>null</c> 时自动生成。</param>
 	/// <param name="correlationId">关联标识符；为 <c>null</c> 时自动生成。</param>
 	/// <param name="conversationId">会话标识符；为 <c>null</c> 时自动生成。</param>
-	public RoutedMessage(T payload, string channel, string messageId, string correlationId, string conversationId)
+	public RoutedMessage(T payload, string channel, string? messageId, string? correlationId, string? conversationId)
 		: base(messageId ?? NewId(), correlationId ?? NewId(), conversationId ?? NewId())
 	{
 		Payload = payload;
@@ -151,10 +163,10 @@ public class RoutedMessage<T> : RoutedMessage, IMessageEnvelope<T>
 	/// </summary>
 	public string TypeName => GetTypeName();
 
-	object IMessageEnvelope.Payload => Payload;
+	object IMessageEnvelope.Payload => Payload!;
 
 	/// <inheritdoc cref="Payload"/>
-	private T _payload;
+	private T _payload = default!;
 
 	/// <summary>
 	/// 获取或设置消息的负载内容。
@@ -202,7 +214,7 @@ public class RoutedMessage<TData, TResponse> : RoutedMessage<TData>
 	/// <param name="messageId">消息标识符；为 <c>null</c> 时自动生成。</param>
 	/// <param name="correlationId">关联标识符；为 <c>null</c> 时自动生成。</param>
 	/// <param name="conversationId">会话标识符；为 <c>null</c> 时自动生成。</param>
-	public RoutedMessage(TData payload, string channel, string messageId, string correlationId, string conversationId)
+	public RoutedMessage(TData payload, string channel, string? messageId, string? correlationId, string? conversationId)
 		: base(payload, channel, messageId, correlationId, conversationId)
 	{
 	}

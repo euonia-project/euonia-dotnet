@@ -93,12 +93,13 @@ public static partial class Extensions
 			return true;
 		}
 
-		while (type != null && type != typeof(object))
+		var currentType = type;
+		while (currentType != null && currentType != typeof(object))
 		{
-			isTheRawGenericType = IsTheRawGenericType(type);
+			isTheRawGenericType = IsTheRawGenericType(currentType);
 			if (isTheRawGenericType)
 				return true;
-			type = type.BaseType;
+			currentType = currentType.BaseType;
 		}
 
 		return false;
@@ -144,7 +145,7 @@ public static partial class Extensions
 	/// <param name="type">当前类型。</param>
 	/// <param name="includeObject">是否在集合中包含 <see cref="object"/> 类型。</param>
 	/// <param name="stoppingType">达到此类型时停止递归。</param>
-	private static void AddTypeAndBaseTypesRecursively([NotNull] ICollection<Type> types, Type type, bool includeObject, Type stoppingType = null)
+	private static void AddTypeAndBaseTypesRecursively([NotNull] ICollection<Type> types, Type? type, bool includeObject, Type? stoppingType = null)
 	{
 		if (type == null || type == stoppingType)
 		{
@@ -185,7 +186,7 @@ public static partial class Extensions
 	{
 		if (propertyType.IsGenericType && (propertyType.GetGenericTypeDefinition() == typeof(Nullable<>)))
 		{
-			return Nullable.GetUnderlyingType(propertyType);
+			return Nullable.GetUnderlyingType(propertyType)!;
 		}
 
 		return propertyType;

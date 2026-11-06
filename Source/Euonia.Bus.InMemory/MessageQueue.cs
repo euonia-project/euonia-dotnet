@@ -13,7 +13,7 @@ internal sealed class MessageQueue
 
     private readonly ConcurrentQueue<object> _queue = new();
 
-    public event EventHandler<MessageProcessedEventArgs> MessagePushed;
+    public event EventHandler<MessageProcessedEventArgs>? MessagePushed;
 
     internal void Enqueue(object message, IMessageContext messageContext, MessageProcessType processType)
     {
@@ -22,7 +22,7 @@ internal sealed class MessageQueue
         MessagePushed?.Invoke(this, new MessageProcessedEventArgs(message, messageContext, processType));
     }
 
-    internal object Dequeue()
+    internal object? Dequeue()
     {
         var succeed = _queue.TryDequeue(out var message);
         return succeed ? message : null;
@@ -47,7 +47,7 @@ internal sealed class MessageQueue
     /// </summary>
     /// <param name="type"></param>
     /// <returns></returns>
-    internal static MessageQueue GetQueue(Type type) => GetQueue(type.FullName);
+    internal static MessageQueue GetQueue(Type type) => GetQueue(type.FullName!);
 
     /// <summary>
     /// Register new message queue for specified name.
@@ -68,5 +68,5 @@ internal sealed class MessageQueue
     /// </summary>
     /// <param name="type"></param>
     /// <param name="queue"></param>
-    internal static void AddQueue(Type type, MessageQueue queue) => AddQueue(type.FullName, queue);
+    internal static void AddQueue(Type type, MessageQueue queue) => AddQueue(type.FullName!, queue);
 }

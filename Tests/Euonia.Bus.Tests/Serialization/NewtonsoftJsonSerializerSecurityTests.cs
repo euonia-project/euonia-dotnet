@@ -34,6 +34,6 @@ public class NewtonsoftJsonSerializerSecurityTests
 			Interlocked.Increment(ref Activations);
 		}
 
-		public string Value { get; set; }
+		public string Value { get; set; } = null!;
 	}
 }

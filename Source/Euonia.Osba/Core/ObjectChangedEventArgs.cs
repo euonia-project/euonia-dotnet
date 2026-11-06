@@ -29,7 +29,7 @@ public class ObjectChangedEventArgs : EventArgs
 	/// <param name="changedObject">发生更改的对象。</param>
 	/// <param name="propertyChangedArgs">包含属性更改详细信息的 <see cref="PropertyChangedEventArgs"/>。</param>
 	/// <param name="collectionChangedArgs">包含集合更改详细信息的 <see cref="NotifyCollectionChangedEventArgs"/>。</param>
-	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs collectionChangedArgs)
+	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs? collectionChangedArgs)
 		: this(changedObject, propertyChangedArgs)
 	{
 		CollectionChangedArgs = collectionChangedArgs;
@@ -41,7 +41,7 @@ public class ObjectChangedEventArgs : EventArgs
 	/// <param name="changedObject">发生更改的对象。</param>
 	/// <param name="propertyChangedArgs">包含属性更改详细信息的 <see cref="PropertyChangedEventArgs"/>。</param>
 	/// <param name="listChangedArgs">包含列表更改详细信息的 <see cref="ListChangedEventArgs"/>。</param>
-	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, ListChangedEventArgs listChangedArgs)
+	public ObjectChangedEventArgs(object changedObject, PropertyChangedEventArgs propertyChangedArgs, ListChangedEventArgs? listChangedArgs)
 		: this(changedObject, propertyChangedArgs)
 	{
 		ListChangedArgs = listChangedArgs;
@@ -71,7 +71,7 @@ public class ObjectChangedEventArgs : EventArgs
 	/// 包含集合更改信息的 <see cref="NotifyCollectionChangedEventArgs"/> 实例；
 	/// 如果更改与集合无关，则为 <see langword="null"/>。
 	/// </value>
-	public NotifyCollectionChangedEventArgs CollectionChangedArgs { get; }
+	public NotifyCollectionChangedEventArgs? CollectionChangedArgs { get; }
 
 	/// <summary>
 	/// 获取列表更改事件参数。
@@ -80,5 +80,5 @@ public class ObjectChangedEventArgs : EventArgs
 	/// 包含列表更改信息的 <see cref="ListChangedEventArgs"/> 实例；
 	/// 如果更改与列表无关，则为 <see langword="null"/>。
 	/// </value>
-	public ListChangedEventArgs ListChangedArgs { get; }
+	public ListChangedEventArgs? ListChangedArgs { get; }
 }

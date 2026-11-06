@@ -78,7 +78,7 @@ internal class BlobClientWrapper
         }
     }
 
-    public ValueTask DeleteIfExistsAsync(string leaseId = null)
+    public ValueTask DeleteIfExistsAsync(string? leaseId = null)
     {
         var conditions = leaseId != null ? new BlobRequestConditions { LeaseId = leaseId } : null;
         if (TaskHelper.IsSynchronous)

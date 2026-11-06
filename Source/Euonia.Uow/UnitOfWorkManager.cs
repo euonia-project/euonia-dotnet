@@ -37,7 +37,7 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <summary>
     /// Gets the current unit of work instance.
     /// </summary>
-    public IUnitOfWork Current => _accessor.GetCurrentUnitOfWork();
+    public IUnitOfWork? Current => _accessor.GetCurrentUnitOfWork();
 
     /// <summary>
     /// Create a new unit of work.
@@ -101,7 +101,7 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <param name="scope">该工作单元对应的依赖注入作用域，释放工作单元时一并释放。</param>
     /// <param name="outerUow">外层工作单元；释放后需恢复为当前工作单元。</param>
     /// <returns>用于订阅 <see cref="DisposableObject.Disposed"/> 的委托。</returns>
-    private EventHandler<DisposedEventArgs> CreateDisposalHandler(IUnitOfWork unitOfWork, IServiceScope scope, IUnitOfWork outerUow)
+    private EventHandler<DisposedEventArgs> CreateDisposalHandler(IUnitOfWork unitOfWork, IServiceScope scope, IUnitOfWork? outerUow)
     {
         EventHandler<DisposedEventArgs> handler = (_, _) =>
         {

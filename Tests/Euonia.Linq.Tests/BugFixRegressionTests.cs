@@ -12,7 +12,7 @@ public class BugFixRegressionTests
 	{
 		public int Id { get; set; }
 
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 
 		public int? Score { get; set; }
 	}
@@ -24,14 +24,14 @@ public class BugFixRegressionTests
 
 	private class Owner
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 	}
 
 	private class OwnedItem
 	{
 		public int Id { get; set; }
 
-		public Owner Owner { get; set; }
+		public Owner Owner { get; set; } = null!;
 	}
 
 	[Fact]
@@ -40,7 +40,7 @@ public class BugFixRegressionTests
 		// 回归测试：null 谓词在组合时被当作恒真条件忽略，会让查询静默失去过滤条件。
 		var handler = new QueryHandler<Item>(CreateItems().AsQueryable());
 
-		Assert.Throws<ArgumentNullException>(() => handler.AddCriteria(null));
+		Assert.Throws<ArgumentNullException>(() => handler.AddCriteria(null!));
 	}
 
 	[Fact]
@@ -50,7 +50,7 @@ public class BugFixRegressionTests
 		// 当排序键路径包含 null 时会在排序阶段抛 NullReferenceException。
 		var items = new List<OwnedItem>
 		{
-			new() { Id = 1, Owner = null },
+			new() { Id = 1, Owner = null! },
 			new() { Id = 2, Owner = new Owner { Name = "b" } },
 			new() { Id = 3, Owner = new Owner { Name = "a" } }
 		};
@@ -79,7 +79,7 @@ public class BugFixRegressionTests
 	[Fact]
 	public void QueryHandler_NullQuery_ShouldThrow()
 	{
-		Assert.Throws<ArgumentNullException>(() => new QueryHandler<Item>(null));
+		Assert.Throws<ArgumentNullException>(() => new QueryHandler<Item>(null!));
 	}
 
 	[Fact]
@@ -87,8 +87,8 @@ public class BugFixRegressionTests
 	{
 		var handler = new QueryHandler<Item>(CreateItems().AsQueryable());
 
-		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Action<Orderable<Item>>)null));
-		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Func<IQueryable<Item>, IOrderedQueryable<Item>>)null));
+		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Action<Orderable<Item>>)null!));
+		Assert.Throws<ArgumentNullException>(() => handler.SetCollator((Func<IQueryable<Item>, IOrderedQueryable<Item>>)null!));
 	}
 
 	[Fact]
@@ -162,7 +162,7 @@ public class BugFixRegressionTests
 	[Fact]
 	public void PredicateBuilder_GetCompareCondition_NullableShouldMatch()
 	{
-		var predicate = PredicateBuilder.GetCompareCondition<Item, int>(null, nameof(Item.Score), 5, QueryOperator.GreaterThan).Compile();
+		var predicate = PredicateBuilder.GetCompareCondition<Item, int>(null!, nameof(Item.Score), 5, QueryOperator.GreaterThan).Compile();
 
 		Assert.True(predicate(new Item { Id = 1, Score = 6 }));
 		Assert.False(predicate(new Item { Id = 2, Score = 4 }));
@@ -196,11 +196,11 @@ public class BugFixRegressionTests
 	{
 		var parameter = Expression.Parameter(typeof(Item), "t");
 		var expression = parameter.Property(nameof(Item.Name))
-		                          .Operation(QueryOperator.Is, null)
+		                          .Operation(QueryOperator.Is, null!)
 		                          .ToLambda<Func<Item, bool>>(parameter)
 		                          .Compile();
 
-		Assert.True(expression(new Item { Id = 1, Name = null }));
+		Assert.True(expression(new Item { Id = 1, Name = null! }));
 		Assert.False(expression(new Item { Id = 2, Name = "n2" }));
 	}
 

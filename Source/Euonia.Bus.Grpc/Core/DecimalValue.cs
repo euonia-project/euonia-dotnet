@@ -54,7 +54,7 @@ public sealed partial class DecimalValue
     /// </summary>
     /// <param name="value"></param>
     /// <returns></returns>
-    public static implicit operator DecimalValue(decimal? value)
+    public static implicit operator DecimalValue?(decimal? value)
     {
         if (value == null)
         {

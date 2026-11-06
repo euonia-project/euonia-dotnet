@@ -26,7 +26,7 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	public async Task<IActionResult> GetSelfAsync()
 	{
-		var result = await service.GetAsync(identity.UserId, HttpContext.RequestAborted);
+		var result = await service.GetAsync(identity.UserId!, HttpContext.RequestAborted);
 		return Ok(result);
 	}
 
@@ -35,7 +35,7 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	public async Task<IActionResult> UpdateSelfAsync([FromBody] UserUpdateDto data)
 	{
-		await service.UpdateAsync(identity.UserId, data, HttpContext.RequestAborted);
+		await service.UpdateAsync(identity.UserId!, data, HttpContext.RequestAborted);
 		return NoContent();
 	}
 

@@ -39,7 +39,7 @@ public static class OperationConventions
 	/// 不剥离会得到 <c>FactoryFactoryUpdate</c> 这类永不匹配的名称，
 	/// 使「短名」那一半约定形同虚设。
 	/// </remarks>
-	public static string[] Names(Type attributeType, string prefix = null)
+	public static string[] Names(Type attributeType, string? prefix = null)
 	{
 		// netstandard2.1 没有 ArgumentNullException.ThrowIfNull
 		ArgumentAssert.ThrowIfNull(attributeType, nameof(attributeType));

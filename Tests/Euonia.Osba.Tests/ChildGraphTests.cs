@@ -15,7 +15,7 @@ public class ChildGraphTests
 		parent.Child = child;
 		parent.AcceptChanges();
 
-		string observed = null;
+		string? observed = null;
 		parent.PropertyChanged += (_, args) => observed = args.PropertyName;
 
 		child.Name = "changed";

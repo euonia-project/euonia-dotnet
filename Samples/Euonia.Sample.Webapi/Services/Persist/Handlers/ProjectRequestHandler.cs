@@ -60,7 +60,7 @@ internal class ProjectRequestHandler(IProjectStore store, IScopeGuard guard)
 		return new PagedResult<ProjectDto>(total, page, pageSize, items);
 	}
 
-	private static IQueryable<Project> ApplySort(IQueryable<Project> query, string sortBy)
+	private static IQueryable<Project> ApplySort(IQueryable<Project> query, string? sortBy)
 	{
 		// 排序白名单：只允许按实体列排序，非法值回落默认（Id）。
 		return sortBy?.ToLowerInvariant() switch

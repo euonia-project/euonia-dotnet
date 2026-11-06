@@ -39,7 +39,7 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
         /// <summary>
         /// The task exception
         /// </summary>
-        private volatile Exception _taskException;
+        private volatile Exception? _taskException;
         /// <summary>
         /// The is task finished
         /// </summary>

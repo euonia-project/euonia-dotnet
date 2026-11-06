@@ -87,7 +87,7 @@ public class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMi
 		return message;
 	}
 
-	private object ResolveDetails(Exception exception)
+	private object? ResolveDetails(Exception exception)
 	{
 		if (Unwrap(exception) is not ValidationException ex)
 		{
@@ -104,12 +104,18 @@ public class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMi
 		var current = exception;
 		while (current is AggregateException or TargetInvocationException)
 		{
-			current = current switch
+			if (current is AggregateException { InnerExceptions.Count: > 0 } aggregate)
 			{
-				AggregateException { InnerExceptions.Count: > 0 } agg => agg.InnerExceptions[0],
-				TargetInvocationException { InnerException: not null } target => target.InnerException,
-				_ => current
-			};
+				current = aggregate.InnerExceptions[0];
+			}
+			else if (current is TargetInvocationException { InnerException: not null } target)
+			{
+				current = target.InnerException!;
+			}
+			else
+			{
+				break;
+			}
 		}
 
 		return current;

@@ -182,7 +182,7 @@ public class AuthorizationWarmupTests
 	{
 		public int WarmupCount { get; private set; }
 
-		public IServiceProvider LastWarmupScope { get; private set; }
+		public IServiceProvider LastWarmupScope { get; private set; } = null!;
 
 		public bool IsConstrained(Type resourceType) => true;
 

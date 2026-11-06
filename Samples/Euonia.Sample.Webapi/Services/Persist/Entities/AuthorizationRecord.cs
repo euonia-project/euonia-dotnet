@@ -22,11 +22,11 @@ public static class AuthorizationKinds
 public sealed class AuthorizationRecord
 {
 	/// <summary>账号标识（对应 <c>user.id</c>）。</summary>
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
 	/// <summary>维度名，见 <see cref="AuthorizationKinds"/>。</summary>
-	public string Kind { get; set; }
+	public string Kind { get; set; } = null!;
 
 	/// <summary>维度取值（如权限码、行级授予编码或显示名）。</summary>
-	public string Value { get; set; }
+	public string Value { get; set; } = null!;
 }

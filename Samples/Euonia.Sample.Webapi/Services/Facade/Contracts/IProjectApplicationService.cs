@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Contracts;
 public interface IProjectApplicationService : IApplicationService
 {
 	/// <summary>分页查询项目（已登录按 <c>project:view</c> 码与行范围下推；项目不对外公开）。</summary>
-	Task<PagedResult<ProjectDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
+	Task<PagedResult<ProjectDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
 
 	/// <summary>查看项目详情（行级视图判定；项目不对外公开，匿名 403）。</summary>
 	Task<ProjectDto> GetAsync(string id, CancellationToken cancellationToken = default);

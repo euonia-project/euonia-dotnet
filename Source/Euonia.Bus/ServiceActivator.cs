@@ -15,12 +15,12 @@ public class ServiceActivator : BackgroundService
 	private readonly IServiceProvider _provider;
 	private readonly MessageBusOptions _options;
 	private readonly IConfigurator _configurator;
-	private readonly ILogger<ServiceActivator> _logger;
+	private readonly ILogger<ServiceActivator>? _logger;
 
 	/// <summary>
 	/// 已解析并启动的接收者注册器，停机时需要释放。
 	/// </summary>
-	private IReadOnlyList<IRecipientRegistrar> _registrars;
+	private IReadOnlyList<IRecipientRegistrar>? _registrars;
 
 	/// <summary>
 	/// 初始化 <see cref="ServiceActivator"/> 类的新实例。

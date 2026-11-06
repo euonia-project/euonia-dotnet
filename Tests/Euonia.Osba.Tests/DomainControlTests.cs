@@ -53,7 +53,7 @@ public class DomainControlTests
 		Assert.False(target.HasChangedProperties);
 		Assert.Empty(target.ChangedProperties);
 		Assert.False(target.IsDirty);
-		Assert.False(target.FieldManager.GetFieldData(DomainControlEditable.NameProperty).IsChanged);
+		Assert.False(target.FieldManager.GetFieldData(DomainControlEditable.NameProperty)!.IsChanged);
 	}
 
 	[Fact]
@@ -135,7 +135,7 @@ public class DomainControlTests
 		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
 
 		target.Name = "changed";
-		var field = target.FieldManager.GetFieldData(DomainControlEditable.NameProperty);
+		var field = target.FieldManager.GetFieldData(DomainControlEditable.NameProperty)!;
 		field.Undo();
 
 		Assert.True(target.HasChangedProperties);
@@ -262,7 +262,7 @@ public class DomainControlTests
 		var target = RuleTestHarness.Create<DomainControlEditable>(provider);
 
 		var notifications = new List<string>();
-		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName!);
 
 		target.Name = "edited";
 		notifications.Clear();
@@ -284,7 +284,7 @@ public class DomainControlTests
 		target.AcceptChanges();
 
 		var notifications = new List<string>();
-		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName);
+		target.PropertyChanged += (_, args) => notifications.Add(args.PropertyName!);
 
 		// 子对象内容变化会把父对象标脏（子对象属性在 ChangedProperties 里），
 		// 但标量属性本身没有变化：回滚时不应为它补发通知。

@@ -37,7 +37,7 @@ public static class HealthChecksBuilderExtensions
 		/// });
 		/// </code>
 		/// </example>
-		public IHealthChecksBuilder AddEuoniaBusHealthChecks(Action<BusHealthCheckOptions> configure = null, HealthStatus? failureStatus = null, IEnumerable<string> tags = null, TimeSpan? timeout = null)
+		public IHealthChecksBuilder AddEuoniaBusHealthChecks(Action<BusHealthCheckOptions>? configure = null, HealthStatus? failureStatus = null, IEnumerable<string>? tags = null, TimeSpan? timeout = null)
 		{
 			if (configure != null)
 			{

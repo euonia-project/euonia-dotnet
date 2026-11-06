@@ -10,7 +10,8 @@ public class CircuitBreakerInterceptorTests
 	{
 		var interceptor = new CircuitBreakerInterceptor();
 		var generator = new ProxyGenerator();
-		return generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, interceptor) as ICircuitProbe;
+		return generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, interceptor) as ICircuitProbe
+		       ?? throw new InvalidOperationException("Failed to create the circuit breaker proxy.");
 	}
 
 	[Fact]
@@ -253,7 +254,8 @@ public class CircuitBreakerInterceptorTests
 		CircuitStateStore.Clear();
 		var probe = new CircuitProbe();
 		var generator = new ProxyGenerator();
-		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, new CircuitBreakerInterceptor(), new RetryInterceptor()) as ICircuitProbe;
+		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, new CircuitBreakerInterceptor(), new RetryInterceptor()) as ICircuitProbe
+		            ?? throw new InvalidOperationException("Failed to create the circuit breaker proxy.");
 
 		// 每个调用：重试内部消耗 2 次执行后耗尽并冒泡原始异常，熔断对「冒泡」计 1 次失败。
 		Assert.Throws<InvalidOperationException>(() => proxy.BreakerOutRetryIn());
@@ -270,7 +272,8 @@ public class CircuitBreakerInterceptorTests
 		CircuitStateStore.Clear();
 		var probe = new CircuitProbe();
 		var generator = new ProxyGenerator();
-		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, new RetryInterceptor(), new CircuitBreakerInterceptor()) as ICircuitProbe;
+		var proxy = generator.CreateInterfaceProxyWithTarget(typeof(ICircuitProbe), probe, new RetryInterceptor(), new CircuitBreakerInterceptor()) as ICircuitProbe
+		            ?? throw new InvalidOperationException("Failed to create the circuit breaker proxy.");
 
 		// 第 1 次尝试失败即打开；后续每次重试都被熔断快速失败拦截（不再执行），耗尽重试后抛出 CircuitBreakerOpenException。
 		Assert.Throws<CircuitBreakerOpenException>(() => proxy.RetryOutBreakerIn());

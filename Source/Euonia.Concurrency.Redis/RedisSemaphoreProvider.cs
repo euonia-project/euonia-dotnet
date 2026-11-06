@@ -21,7 +21,7 @@ public sealed partial class RedisSemaphoreProvider : ISemaphoreProvider<RedisSyn
     /// <summary>
     /// Constructs a semaphore named <paramref name="key"/> using the provided <paramref name="maxCount"/>, <paramref name="database"/>, and <paramref name="options"/>.
     /// </summary>
-    public RedisSemaphoreProvider(RedisKey key, int maxCount, IDatabase database, Action<RedisSynchronizationOptionsBuilder> options = null)
+    public RedisSemaphoreProvider(RedisKey key, int maxCount, IDatabase database, Action<RedisSynchronizationOptionsBuilder>? options = null)
     {
         if (key == default(RedisKey))
         {
@@ -56,7 +56,7 @@ public sealed partial class RedisSemaphoreProvider : ISemaphoreProvider<RedisSyn
 public sealed partial class RedisSemaphoreProvider
 {
     /// <inheritdoc />
-    public RedisSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public RedisSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
@@ -68,7 +68,7 @@ public sealed partial class RedisSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<RedisSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ValueTask<RedisSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
@@ -80,7 +80,7 @@ public sealed partial class RedisSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<RedisSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    public ValueTask<RedisSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         return BusyWaitHelper.WaitAsync(
             state: this,
@@ -92,7 +92,7 @@ public sealed partial class RedisSemaphoreProvider
         );
     }
 
-    private async ValueTask<RedisSynchronizationHandle> TryAcquireAsync(CancellationToken cancellationToken)
+    private async ValueTask<RedisSynchronizationHandle?> TryAcquireAsync(CancellationToken cancellationToken)
     {
         var primitive = new RedisSemaphorePrimitive(Key, MaxCount, _options.RedisLockTimeouts);
         var tryAcquireTasks = await new RedisLockAcquire(primitive, _databases, cancellationToken).TryAcquireAsync().ConfigureAwait(false);
@@ -109,14 +109,14 @@ public sealed partial class RedisSemaphoreProvider
         return Acquire(timeout, cancellationToken);
     }
 
-    ISynchronizationHandle ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     ValueTask<ISynchronizationHandle> ISemaphoreProvider.AcquireAsync(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -124,8 +124,8 @@ public sealed partial class RedisSemaphoreProvider
         return AcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 namespace Nerosoft.Euonia.Security;
@@ -83,10 +84,10 @@ internal sealed class PermissionRegistration
 	/// <summary>
 	/// 获取最近一次成功构建的注册表；尚未构建时为 <see langword="null"/>。
 	/// </summary>
-	public ScopeModelRegistry LastRegistry { get; private set; }
+	public ScopeModelRegistry? LastRegistry { get; private set; }
 
 	/// <summary>最近一次成功构建时的程序集集合；用于判断下一次注册是否真的改变了输入。</summary>
-	private Assembly[] _lastBuiltAssemblies;
+	private Assembly[]? _lastBuiltAssemblies;
 
 	/// <summary>
 	/// 尝试复用上一次成功构建的注册表。
@@ -100,13 +101,14 @@ internal sealed class PermissionRegistration
 	/// 同一组程序集反复 <c>AddPermission</c>（多个模块各注册一次）应当是空操作。
 	/// 构建抛出时不会记录，失败的调用下次照常重建。
 	/// </remarks>
-	public bool TryReuse(Assembly[] assemblies, out ScopeModelRegistry registry)
+	public bool TryReuse(Assembly[] assemblies, [MaybeNullWhen(false)] out ScopeModelRegistry registry)
 	{
 		registry = LastRegistry;
 
-		return LastRegistry != null
-		       && _lastBuiltAssemblies.Length == assemblies.Length
-		       && _lastBuiltAssemblies.All(assemblies.Contains);
+		return registry != null
+		       && _lastBuiltAssemblies is { } lastBuilt
+		       && lastBuilt.Length == assemblies.Length
+		       && lastBuilt.All(assemblies.Contains);
 	}
 
 	/// <summary>

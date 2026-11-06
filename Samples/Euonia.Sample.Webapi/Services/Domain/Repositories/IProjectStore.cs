@@ -11,7 +11,7 @@ public interface IProjectStore
 	IQueryable<Project> Query();
 
 	/// <summary>按标识获取项目；不存在时返回 <see langword="null"/>。</summary>
-	Task<Project> GetAsync(string id, CancellationToken cancellationToken = default);
+	Task<Project?> GetAsync(string id, CancellationToken cancellationToken = default);
 
 	/// <summary>追加一个新项目。</summary>
 	Task AddAsync(Project project, CancellationToken cancellationToken = default);

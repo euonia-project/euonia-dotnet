@@ -2,8 +2,8 @@
 {
 	public class SourceObject3
 	{
-		public string FirstName { get; set; }
+		public string FirstName { get; set; } = null!;
 
-		public string LastName { get; set; }
+		public string LastName { get; set; } = null!;
 	}
 }

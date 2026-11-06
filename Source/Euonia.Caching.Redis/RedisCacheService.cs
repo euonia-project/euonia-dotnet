@@ -38,7 +38,7 @@ public class RedisCacheService : BaseCacheService, ICacheService
 			return true;
 		}
 
-		value = default;
+		value = default!;
 		return false;
 	}
 
@@ -114,7 +114,7 @@ public class RedisCacheService : BaseCacheService, ICacheService
 
 		key = RewriteKey(key);
 		var item = GetCacheManager<TValue>().GetCacheItem(key);
-		var value = item != null ? item.Value : default;
+		var value = item != null ? item.Value : default!;
 
 		return Task.FromResult(Tuple.Create(item != null, value));
 	}

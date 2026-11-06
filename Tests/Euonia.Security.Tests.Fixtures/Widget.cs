@@ -2,11 +2,11 @@ namespace Nerosoft.Euonia.Security.Tests.Fixtures;
 
 public sealed class Widget
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	public string DeptId { get; set; } = null!;
 }
 
 public sealed class WidgetModel : ScopeModel<Widget>

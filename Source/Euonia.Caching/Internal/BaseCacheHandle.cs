@@ -43,7 +43,7 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     /// </remarks>
     public virtual bool IsDistributedCache { get { return false; } }
 
-    internal event EventHandler<CacheItemRemovedEventArgs> OnCacheSpecificRemove;
+    internal event EventHandler<CacheItemRemovedEventArgs>? OnCacheSpecificRemove;
 
     /// <summary>
     /// Gets the cache handle configuration.
@@ -205,7 +205,7 @@ public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
     /// <param name="reason">The reason.</param>
     /// <param name="value">The original cache value. The value might be null if the underlying cache system doesn't support returning the value on eviction.</param>
     /// <exception cref="ArgumentNullException">If <paramref name="key"/> is null.</exception>
-    protected void TriggerCacheSpecificRemove(string key, string region, CacheItemRemovedReason reason, object value)
+    protected void TriggerCacheSpecificRemove(string key, string? region, CacheItemRemovedReason reason, object? value)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 

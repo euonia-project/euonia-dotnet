@@ -19,7 +19,7 @@ public partial class Cryptography
 		/// </summary>
 		/// <param name="source">Plain text to encrypt.</param>
 		/// <returns>Base64-encoded cipher text, or null if source is null or empty.</returns>
-		public static string Encrypt(string source)
+		public static string? Encrypt(string source)
 		{
 			return Encrypt(source, _defaultSalt);
 		}
@@ -30,7 +30,7 @@ public partial class Cryptography
 		/// <param name="source">Plain text to encrypt.</param>
 		/// <param name="key">Key string; its UTF8 bytes are used as AES key.</param>
 		/// <returns>Base64-encoded cipher text, or null if source is null or empty.</returns>
-		public static string Encrypt(string source, string key)
+		public static string? Encrypt(string source, string key)
 		{
 			return Encrypt(source, Encoding.UTF8.GetBytes(key));
 		}
@@ -41,7 +41,7 @@ public partial class Cryptography
 		/// <param name="source">Plain text to encrypt.</param>
 		/// <param name="key">Key bytes to use with AES (length must be appropriate for AES algorithm).</param>
 		/// <returns>Base64-encoded cipher text, or null if source is null or empty.</returns>
-		public static string Encrypt(string source, byte[] key)
+		public static string? Encrypt(string source, byte[] key)
 		{
 			if (string.IsNullOrEmpty(source))
 			{
@@ -64,7 +64,7 @@ public partial class Cryptography
 		/// </summary>
 		/// <param name="source">Base64-encoded cipher text.</param>
 		/// <returns>Decrypted plain text, or null if source is null or empty.</returns>
-		public static string Decrypt(string source)
+		public static string? Decrypt(string source)
 		{
 			return Decrypt(source, _defaultSalt);
 		}
@@ -75,7 +75,7 @@ public partial class Cryptography
 		/// <param name="source">Base64-encoded cipher text.</param>
 		/// <param name="key">Key string; its UTF8 bytes are used as AES key.</param>
 		/// <returns>Decrypted plain text, or null if source is null or empty.</returns>
-		public static string Decrypt(string source, string key)
+		public static string? Decrypt(string source, string key)
 		{
 			return Decrypt(source, Encoding.UTF8.GetBytes(key));
 		}
@@ -86,7 +86,7 @@ public partial class Cryptography
 		/// <param name="source">Base64-encoded cipher text.</param>
 		/// <param name="key">Key bytes to use with AES (length must be appropriate for AES algorithm).</param>
 		/// <returns>Decrypted plain text, or null if source is null or empty.</returns>
-		public static string Decrypt(string source, byte[] key)
+		public static string? Decrypt(string source, byte[] key)
 		{
 			if (string.IsNullOrEmpty(source))
 			{

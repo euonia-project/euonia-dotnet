@@ -60,7 +60,7 @@ public static class CacheManagerExtensions
     /// <param name="preventConcurrentCalls">if set to <c>true</c> [prevent concurrent calls].</param>
     /// <param name="acquire">The acquire.</param>
     /// <returns>TResult.</returns>
-    public static TResult GetOrAdd<TKey, TResult>(this ICacheManager manager, TKey key, Func<AcquireContext<TKey>, TResult> acquire, bool preventConcurrentCalls)
+    public static TResult GetOrAdd<TKey, TResult>(this ICacheManager manager, TKey key, Func<AcquireContext<TKey>, TResult> acquire, bool preventConcurrentCalls) where TKey : notnull
     {
         if (!preventConcurrentCalls)
         {
@@ -84,7 +84,7 @@ public static class CacheManagerExtensions
     /// <typeparam name="TKey"></typeparam>
     /// <typeparam name="TResult"></typeparam>
     /// <returns></returns>
-    public static TResult AddOrUpdate<TKey, TResult>(this ICacheManager manager, TKey key, Func<AcquireContext<TKey>, TResult> acquire, bool preventConcurrentCalls)
+    public static TResult AddOrUpdate<TKey, TResult>(this ICacheManager manager, TKey key, Func<AcquireContext<TKey>, TResult> acquire, bool preventConcurrentCalls) where TKey : notnull
     {
         if (!preventConcurrentCalls)
         {

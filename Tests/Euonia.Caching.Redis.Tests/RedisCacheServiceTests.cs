@@ -125,7 +125,7 @@ public class RedisCacheServiceTests
 		return (services.BuildServiceProvider(), connection);
 	}
 
-	private static async Task<IConnectionMultiplexer> TryConnectAsync()
+	private static async Task<IConnectionMultiplexer?> TryConnectAsync()
 	{
 		try
 		{
@@ -157,6 +157,6 @@ public class RedisCacheServiceTests
 
 	public sealed class SampleValue
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 	}
 }

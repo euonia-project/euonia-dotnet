@@ -135,7 +135,8 @@ internal sealed class OperationCodeSourceBuilder
 				attributeType != null && typeof(Attribute).IsAssignableFrom(attributeType),
 				Resources.IDS_OPERATION_ATTRIBUTE_TYPE_INVALID);
 
-			OnMethod(operation, method => method.IsDefined(attributeType, true));
+			// 上面的 Check.Ensure 已拒绝 null，闭包捕获的因此是确定非空的类型。
+			OnMethod(operation, method => method.IsDefined(attributeType!, true));
 		}
 
 		return this;

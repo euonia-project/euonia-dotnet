@@ -22,7 +22,7 @@ public static class RuntimeCacheBuilderExtensions
     /// The builder part.
     /// </returns>
     /// <returns>The builder part.</returns>
-    public static ConfigurationBuilderCacheHandlePart WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, bool isBackplaneSource = false)
+    public static ConfigurationBuilderCacheHandlePart? WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, bool isBackplaneSource = false)
         => part?.WithHandle(typeof(RuntimeCacheHandle<>), DEFAULT_NAME, isBackplaneSource);
 
     /// <summary>
@@ -38,7 +38,7 @@ public static class RuntimeCacheBuilderExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If part is null.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource = false)
+    public static ConfigurationBuilderCacheHandlePart? WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource = false)
         => part?.WithHandle(typeof(RuntimeCacheHandle<>), instanceName, isBackplaneSource);
 
     /// <summary>
@@ -56,7 +56,7 @@ public static class RuntimeCacheBuilderExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If part is null.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, RuntimeCacheOptions options)
+    public static ConfigurationBuilderCacheHandlePart? WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, RuntimeCacheOptions options)
         => WithRuntimeCacheHandle(part, instanceName, false, options);
 
     /// <summary>
@@ -76,6 +76,6 @@ public static class RuntimeCacheBuilderExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If part is null.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource, RuntimeCacheOptions options)
+    public static ConfigurationBuilderCacheHandlePart? WithRuntimeCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource, RuntimeCacheOptions options)
         => part?.WithHandle(typeof(RuntimeCacheHandle<>), instanceName, isBackplaneSource, options);
 }

@@ -11,7 +11,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// <summary>
     /// 获取或设置实体标识符。
     /// </summary>
-    public virtual TKey Id { get; set; }
+    public virtual TKey Id { get; set; } = default!;
 
     /// <inheritdoc/>
     public override object[] GetKeys()
@@ -39,7 +39,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// </summary>
     /// <param name="obj">要比较的对象。</param>
     /// <returns>如果身份相等则为 <c>true</c>；否则为 <c>false</c>。</returns>
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (ReferenceEquals(this, obj))
         {
@@ -71,7 +71,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// <param name="left">左侧操作数。</param>
     /// <param name="right">右侧操作数。</param>
     /// <returns>运算符的结果。</returns>
-    public static bool operator ==(Entity<TKey> left, Entity<TKey> right)
+    public static bool operator ==(Entity<TKey>? left, Entity<TKey>? right)
     {
         if (left is null)
         {
@@ -87,7 +87,7 @@ public abstract class Entity<TKey> : Entity, IEntity<TKey>
     /// <param name="left">左侧操作数。</param>
     /// <param name="right">右侧操作数。</param>
     /// <returns>运算符的结果。</returns>
-    public static bool operator !=(Entity<TKey> left, Entity<TKey> right)
+    public static bool operator !=(Entity<TKey>? left, Entity<TKey>? right)
     {
         return !(left == right);
     }

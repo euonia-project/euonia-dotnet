@@ -85,7 +85,7 @@ internal static class OsbaDiagnostics
 	/// <param name="objectType">对象类型名。</param>
 	/// <param name="operation">业务操作。</param>
 	/// <returns>活动；无监听者时为 <see langword="null"/>。</returns>
-	public static Activity StartSave(string objectType, string operation)
+	public static Activity? StartSave(string objectType, string operation)
 	{
 		if (!Enabled)
 		{
@@ -119,16 +119,16 @@ internal static class OsbaDiagnostics
 		if (SaveDuration.Enabled)
 		{
 			SaveDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-				new KeyValuePair<string, object>("osba.object.type", objectType),
-				new KeyValuePair<string, object>("osba.operation", operation),
-				new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+				new KeyValuePair<string, object?>("osba.object.type", objectType),
+				new KeyValuePair<string, object?>("osba.operation", operation),
+				new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 		}
 
 		if (!succeeded && SaveFailures.Enabled)
 		{
 			SaveFailures.Add(1,
-				new KeyValuePair<string, object>("osba.object.type", objectType),
-				new KeyValuePair<string, object>("osba.operation", operation));
+				new KeyValuePair<string, object?>("osba.object.type", objectType),
+				new KeyValuePair<string, object?>("osba.operation", operation));
 		}
 	}
 
@@ -147,9 +147,9 @@ internal static class OsbaDiagnostics
 		}
 
 		AuthorizationDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-			new KeyValuePair<string, object>("osba.auth.kind", kind),
-			new KeyValuePair<string, object>("osba.operation", operation),
-			new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+			new KeyValuePair<string, object?>("osba.auth.kind", kind),
+			new KeyValuePair<string, object?>("osba.operation", operation),
+			new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 	}
 
 	/// <summary>
@@ -168,13 +168,13 @@ internal static class OsbaDiagnostics
 		if (RuleDuration.Enabled)
 		{
 			RuleDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-				new KeyValuePair<string, object>("osba.rule.name", ruleName),
-				new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+				new KeyValuePair<string, object?>("osba.rule.name", ruleName),
+				new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 		}
 
 		if (!succeeded && RuleFailures.Enabled)
 		{
-			RuleFailures.Add(1, new KeyValuePair<string, object>("osba.rule.name", ruleName));
+			RuleFailures.Add(1, new KeyValuePair<string, object?>("osba.rule.name", ruleName));
 		}
 	}
 
@@ -185,7 +185,7 @@ internal static class OsbaDiagnostics
 	/// <param name="level">级别。</param>
 	/// <param name="message">消息。</param>
 	/// <param name="exception">异常；可为 <see langword="null"/>。</param>
-	public static void Log(IServiceProvider provider, OsbaDiagnosticLevel level, string message, Exception exception = null)
+	public static void Log(IServiceProvider? provider, OsbaDiagnosticLevel level, string message, Exception? exception = null)
 	{
 		if (level == OsbaDiagnosticLevel.None)
 		{

@@ -98,7 +98,7 @@ public sealed class LegacyFieldData : IFieldData
 {
 	public string Name => "legacy";
 
-	public object Value { get; set; }
+	public object Value { get; set; } = null!;
 
 	public bool IsValid => true;
 
@@ -134,21 +134,21 @@ public sealed class LegacyFieldData : IFieldData
 /// </summary>
 public sealed class LegacyRuleContext : IRuleContext
 {
-	public IRuleBase Rule => null;
+	public IRuleBase Rule => null!;
 
-	public object Target => null;
+	public object Target => null!;
 
 	public IReadOnlyList<RuleResult> Results => Array.Empty<RuleResult>();
 
-	public void AddErrorResult(string description)
+	public void AddErrorResult(string? description)
 	{
 	}
 
-	public void AddWarningResult(string description)
+	public void AddWarningResult(string? description)
 	{
 	}
 
-	public void AddInformationResult(string description)
+	public void AddInformationResult(string? description)
 	{
 	}
 

@@ -28,7 +28,7 @@ public abstract class Command : ICommand
 	/// <param name="name">属性名称。</param>
 	public virtual string this[string name]
 	{
-		get => Properties.TryGetValue(name, out var value) ? value : default;
+		get => Properties.TryGetValue(name, out var value) ? value : default!;
 		set => Properties[name] = value;
 	}
 
@@ -63,5 +63,5 @@ public abstract class Command<TData> : Command
 	/// <summary>
 	/// 获取或设置命令数据。
 	/// </summary>
-	public virtual TData Data { get; set; }
+	public virtual TData Data { get; set; } = default!;
 }

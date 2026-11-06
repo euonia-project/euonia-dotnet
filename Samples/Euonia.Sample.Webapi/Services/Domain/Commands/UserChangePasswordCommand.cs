@@ -21,7 +21,7 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 	public const int MinPasswordLength = 8;
 
 	/// <summary>被改密的账号标识（由工厂执行时解析当前用户填入）。</summary>
-	public string UserId { get; private set; }
+	public string UserId { get; private set; } = null!;
 
 	/// <summary>命令是否已成功执行。</summary>
 	public bool Changed { get; private set; }
@@ -35,10 +35,10 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 	}
 
 	/// <summary>当前密码。</summary>
-	public string OldPassword { get; private set; }
+	public string OldPassword { get; private set; } = null!;
 
 	/// <summary>新密码。</summary>
-	public string NewPassword { get; private set; }
+	public string NewPassword { get; private set; } = null!;
 
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)

@@ -21,7 +21,7 @@ internal class ZooKeeperConnection : IDisposable
     public static readonly Pool DefaultPool = new(maxAge: TimeSpan.FromMinutes(10));
 
     private readonly InternalConnection _internalConnection;
-    private Action _releaseToPool;
+    private Action? _releaseToPool;
 
     private ZooKeeperConnection(InternalConnection internalConnection, Action releaseToPool)
     {

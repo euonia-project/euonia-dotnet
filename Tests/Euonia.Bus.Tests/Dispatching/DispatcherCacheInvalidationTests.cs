@@ -23,7 +23,7 @@ public class DispatcherCacheInvalidationTests
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 		var dispatcher = provider.GetRequiredService<IDispatcher>();
 
-		var channel = typeof(TestMessages.OrderPlacedEvent).FullName;
+		var channel = typeof(TestMessages.OrderPlacedEvent).FullName!;
 
 		// 尚无任何策略：退回默认传输器，该结果会进入缓存。
 		Assert.Equal(["test"], dispatcher.Determine(channel, typeof(TestMessages.OrderPlacedEvent)));

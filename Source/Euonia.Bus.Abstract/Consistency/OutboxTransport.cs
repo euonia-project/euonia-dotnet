@@ -12,12 +12,12 @@ public class OutboxTransport
 	/// <summary>
 	/// 获取或设置关联消息的标识符。
 	/// </summary>
-	public string MessageId { get; set; }
+	public string MessageId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置传输器的名称。
 	/// </summary>
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置当前传输状态。
@@ -32,7 +32,7 @@ public class OutboxTransport
 	/// <summary>
 	/// 获取或设置最后一次发送失败时的错误信息。
 	/// </summary>
-	public string Error { get; set; }
+	public string? Error { get; set; }
 
 	/// <summary>
 	/// 将当前状态标记为发送成功，并清除失败信息。

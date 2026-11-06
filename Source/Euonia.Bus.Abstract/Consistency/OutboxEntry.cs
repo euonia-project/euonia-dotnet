@@ -14,22 +14,22 @@ public class OutboxEntry
 	/// <summary>
 	/// 获取或设置消息的标识符。
 	/// </summary>
-	public string MessageId { get; set; }
+	public string MessageId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置消息的通道名称。
 	/// </summary>
-	public string Channel { get; set; }
+	public string Channel { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置消息负载的完整类型名称。
 	/// </summary>
-	public string MessageType { get; set; }
+	public string? MessageType { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息内容（信封）。
 	/// </summary>
-	public IMessageEnvelope Content { get; set; }
+	public IMessageEnvelope Content { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置条目的创建时间。
@@ -74,7 +74,7 @@ public class OutboxEntry
 	/// </summary>
 	/// <param name="name">传输器名称。</param>
 	/// <returns>对应的传输记录；未找到时返回 <c>null</c>。</returns>
-	public OutboxTransport GetTransport(string name)
+	public OutboxTransport? GetTransport(string name)
 	{
 		return _transports.FirstOrDefault(t => t.Name == name);
 	}

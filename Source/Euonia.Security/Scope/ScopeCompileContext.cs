@@ -28,7 +28,7 @@ internal sealed class ScopeCompileContext<T>
 	/// <summary>本次编译中真正被策略引用的集合维度：加载探测只针对它们。</summary>
 	private readonly HashSet<string> _referencedCollectionDimensions = new(StringComparer.OrdinalIgnoreCase);
 
-	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string scopeKey)
+	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string? scopeKey)
 	{
 		_descriptor = descriptor;
 		_subjects = subjects;
@@ -86,7 +86,8 @@ internal sealed class ScopeCompileContext<T>
 
 		if (!mapping.IsCollection)
 		{
-			return Contains(granted, Rebind(mapping.Value));
+			// 单值维度的映射必然带取值选择器（见 ScopeDimensionMapping.Create）。
+			return Contains(granted, Rebind(mapping.Value!));
 		}
 
 		// 记下「本策略确实用到了这个子表维度」：加载探测只对用到的维度生效，
@@ -107,7 +108,9 @@ internal sealed class ScopeCompileContext<T>
 	private Expression CollectionCondition(ScopeDimensionMapping mapping, Expression granted)
 	{
 		var element = Expression.Parameter(mapping.ElementType, "v");
-		var source = Rebind(mapping.Collection);
+
+		// CollectionCondition 只由 IsCollection 为真的映射进入（见 GrantCondition）。
+		var source = Rebind(mapping.Collection!);
 
 		foreach (var filter in mapping.Filters)
 		{

@@ -11,8 +11,8 @@ namespace Nerosoft.Euonia.Caching.Redis;
 /// </summary>
 public class RedisConfiguration
 {
-    private string _connectionString;
-    private ConfigurationOptions _configurationOptions;
+    private string _connectionString = null!;
+    private ConfigurationOptions _configurationOptions = null!;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="RedisConfiguration"/> class.
@@ -48,14 +48,14 @@ public class RedisConfiguration
     public RedisConfiguration(string key,
                               IList<ServerEndPoint> endpoints,
                               int database = 0,
-                              string password = null,
+                              string? password = null,
                               bool isSsl = false,
-                              string sslHost = null,
+                              string? sslHost = null,
                               int connectionTimeout = 5000,
                               bool allowAdmin = false,
                               bool keyspaceNotificationsEnabled = false,
                               bool twemproxyEnabled = false,
-                              string strictCompatibilityModeVersion = null)
+                              string? strictCompatibilityModeVersion = null)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
         Check.EnsureNotNull(endpoints, nameof(endpoints));
@@ -102,7 +102,7 @@ public class RedisConfiguration
                               string connectionString,
                               int database = 0,
                               bool keyspaceNotificationsEnabled = false,
-                              string strictCompatibilityModeVersion = null)
+                              string? strictCompatibilityModeVersion = null)
     {
         Key = key;
         Database = database;
@@ -148,7 +148,7 @@ public class RedisConfiguration
     /// CacheManager per default falls back to a version which supports LUA. If you are using a Redis server behind TwemPoxy which
     /// does not allow LUA, use this property!
     /// </remarks>
-    public string StrictCompatibilityModeVersion { get; set; }
+    public string? StrictCompatibilityModeVersion { get; set; }
 
     /// <summary>
     /// Gets or sets the identifier for the redis configuration.
@@ -159,7 +159,7 @@ public class RedisConfiguration
     /// <value>
     /// The key.
     /// </value>
-    public string Key { get; set; }
+    public string Key { get; set; } = null!;
 
     /// <summary>
     /// Gets or sets the connection string.
@@ -199,7 +199,7 @@ public class RedisConfiguration
     /// <value>
     /// The password.
     /// </value>
-    public string Password { get; set; }
+    public string? Password { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether to use SSL encryption.
@@ -216,7 +216,7 @@ public class RedisConfiguration
     /// <value>
     /// The SSL host.
     /// </value>
-    public string SslHost { get; set; }
+    public string? SslHost { get; set; }
 
     /// <summary>
     /// Gets or sets the timeout for any connect operations.
@@ -304,5 +304,5 @@ public sealed class ServerEndPoint
     /// Gets or sets the host.
     /// </summary>
     /// <value>The host.</value>
-    public string Host { get; set; }
+    public string Host { get; set; } = null!;
 }

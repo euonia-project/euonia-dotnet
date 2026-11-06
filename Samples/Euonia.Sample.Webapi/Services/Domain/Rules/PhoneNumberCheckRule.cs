@@ -22,7 +22,8 @@ internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : RuleBase(pr
 			return;
 		}
 
-		var value = target.ReadProperty(Property)?.ToString();
+		var property = Property!;
+		var value = target.ReadProperty(property)?.ToString();
 
 		// Skip the rule if the phone number is null or whitespace.
 		if (string.IsNullOrWhiteSpace(value))
@@ -31,7 +32,7 @@ internal sealed class PhoneNumberCheckRule(IPropertyInfo property) : RuleBase(pr
 		}
 
 		// Check if the phone property has been changed.
-		if (Equals(target.FieldManager.GetOriginalValue(Property), target.ReadProperty(Property)))
+		if (Equals(target.FieldManager.GetOriginalValue(property), target.ReadProperty(property)))
 		{
 			return;
 		}

@@ -46,7 +46,7 @@ public class RuleExecutionRegressionTests
 
 		var rulesLock = typeof(Nerosoft.Euonia.Osba.Rules)
 			.GetField("_lockObject", BindingFlags.Instance | BindingFlags.NonPublic)
-			!.GetValue(target.PublicRules);
+			!.GetValue(target.PublicRules)!;
 
 		bool? heldDuringNotification = null;
 		target.PropertyChanged += (_, args) =>
@@ -111,7 +111,7 @@ internal sealed class CancelledPropertyRule(IPropertyInfo property) : RuleBase(p
 internal sealed class ExplodingValidationAttribute : ValidationAttribute
 {
 	/// <inheritdoc />
-	public override bool IsValid(object value)
+	public override bool IsValid(object? value)
 	{
 		throw new InvalidOperationException("attribute boom");
 	}

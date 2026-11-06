@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
@@ -82,7 +84,7 @@ public sealed class ScopeModelRegistration
 	/// 没写则与从前一样回落到 <see cref="ScopeKeys.Default"/>。</description></item>
 	/// </list>
 	/// </remarks>
-	internal bool TryResolve(string identifier, out object policy, out string key)
+	internal bool TryResolve(string? identifier, [MaybeNullWhen(false)] out object policy, out string key)
 	{
 		var name = Normalize(identifier);
 
@@ -118,7 +120,7 @@ public sealed class ScopeModelRegistration
 	/// 不规范化的话，<c>"delete"</c> 与 <c>"delete "</c> 会是两条不同的判定路径，
 	/// 而后者会连授予键都取错。
 	/// </remarks>
-	private static string Normalize(string identifier)
+	private static string? Normalize(string? identifier)
 	{
 		return string.IsNullOrWhiteSpace(identifier) ? null : identifier.Trim();
 	}

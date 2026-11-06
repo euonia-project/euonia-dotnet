@@ -13,7 +13,7 @@ public static class Invariant
     /// <param name="condition">要检查的条件。</param>
     /// <param name="message">如果条件为 false，则包含在 <see cref="InvalidOperationException"/> 中的消息。如果为 null，则使用默认消息。</param>
     [Conditional("DEBUG")]
-    public static void Require(bool condition, string message = null)
+    public static void Require(bool condition, string? message = null)
     {
         if (!condition)
         {

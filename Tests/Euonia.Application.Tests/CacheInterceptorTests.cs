@@ -174,12 +174,12 @@ public class CacheInterceptorTests
 		Assert.Empty(manager.GetKeys("cart"));
 	}
 
-	private static ICachedProbe CreateProxy(CachedProbe probe, out FakeCacheService cache, ICacheGroupManager manager = null)
+	private static ICachedProbe CreateProxy(CachedProbe probe, out FakeCacheService cache, ICacheGroupManager? manager = null)
 	{
 		cache = new FakeCacheService();
 		var interceptor = new CacheInterceptor(new ServiceProviderStub(cache, manager));
 		var generator = new ProxyGenerator();
-		return generator.CreateInterfaceProxyWithTarget(typeof(ICachedProbe), probe, interceptor) as ICachedProbe;
+		return (generator.CreateInterfaceProxyWithTarget(typeof(ICachedProbe), probe, interceptor) as ICachedProbe)!;
 	}
 
 	public interface ICachedProbe
@@ -200,7 +200,7 @@ public class CacheInterceptorTests
 
 		string GetGrouped(int id);
 
-		string GetGroupedNullable(int id);
+		string? GetGroupedNullable(int id);
 	}
 
 	public class CachedProbe : ICachedProbe
@@ -261,7 +261,7 @@ public class CacheInterceptorTests
 		}
 
 		[Cache(Groups = ["cart"], AbsoluteExpirationSeconds = 3600)]
-		public virtual string GetGroupedNullable(int id)
+		public virtual string? GetGroupedNullable(int id)
 		{
 			SyncCalls++;
 			return ReturnNull ? null : "v-" + id;
@@ -272,15 +272,15 @@ public class CacheInterceptorTests
 	{
 		private readonly ICacheService _cache;
 
-		private readonly ICacheGroupManager _manager;
+		private readonly ICacheGroupManager? _manager;
 
-		public ServiceProviderStub(ICacheService cache, ICacheGroupManager manager = null)
+		public ServiceProviderStub(ICacheService cache, ICacheGroupManager? manager = null)
 		{
 			_cache = cache;
 			_manager = manager;
 		}
 
-		public object GetService(Type serviceType)
+		public object? GetService(Type serviceType)
 		{
 			if (serviceType == typeof(ICacheService))
 			{
@@ -293,6 +293,6 @@ public class CacheInterceptorTests
 
 	private sealed class EmptyServiceProvider : IServiceProvider
 	{
-		public object GetService(Type serviceType) => null;
+		public object? GetService(Type serviceType) => null;
 	}
 }

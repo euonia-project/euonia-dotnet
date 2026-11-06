@@ -23,7 +23,7 @@ internal readonly struct RedisLockRelease
         var isSynchronous = TaskHelper.IsSynchronous;
         var unreleasedTryAcquireOrRenewTasks = _tryAcquireOrRenewTasks.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
-        List<Exception> releaseExceptions = null;
+        List<Exception>? releaseExceptions = null;
         var successCount = 0;
         var faultCount = 0;
         var databaseCount = unreleasedTryAcquireOrRenewTasks.Count;
@@ -70,7 +70,7 @@ internal readonly struct RedisLockRelease
                             ++faultCount;
                             if (RedisLockHelper.HasTooManyFailuresOrFaults(faultCount, databaseCount))
                             {
-                                throw new AggregateException(releaseExceptions!).Flatten();
+                                throw new AggregateException(releaseExceptions).Flatten();
                             }
                         }
                     }

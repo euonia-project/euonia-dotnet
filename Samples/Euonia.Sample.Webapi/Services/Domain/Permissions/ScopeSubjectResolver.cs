@@ -29,12 +29,12 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		_teams = teams;
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ResolveCoreAsync(user, cancellationToken);
 	}
 
-	private async ValueTask<ScopeSubjectSet> ResolveCoreAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
+	private async ValueTask<ScopeSubjectSet> ResolveCoreAsync(ClaimsPrincipal? user, CancellationToken cancellationToken)
 	{
 		// sub 在部分 JwtBearer 版本中被映射成 ClaimTypes.NameIdentifier，两个都认
 		var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value
@@ -66,7 +66,8 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		foreach (var group in authorization.Grants
 		                                 .Select(ParseGrant)
 		                                 .Where(grant => grant.HasValue)
-		                                 .GroupBy(grant => grant!.Value.Operation))
+		                                 .Select(grant => grant.GetValueOrDefault())
+		                                 .GroupBy(grant => grant.Operation))
 		{
 			var dimension = ResolveDimension(group.Key);
 			if (dimension == null)
@@ -80,7 +81,7 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 			// 故读码额外并列挂一份；写码之间仍彼此独立（edit 不蕴含 archive）。
 			foreach (var code in ScopeCodesFor(group.Key, dimension))
 			{
-				builder.AddGrant(code, dimension, group.Select(grant => grant.Value.Id));
+				builder.AddGrant(code, dimension, group.Select(grant => grant.Id));
 			}
 		}
 
@@ -123,7 +124,7 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 	}
 
 	/// <summary>按操作码前缀把行级授予路由到相应资源的行级维度；未知前缀忽略。</summary>
-	private static string ResolveDimension(string operation)
+	private static string? ResolveDimension(string operation)
 	{
 		if (operation.StartsWith("repository:", StringComparison.Ordinal))
 		{

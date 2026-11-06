@@ -29,7 +29,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <param name="configuration">The cache handle configuration.</param>
 	/// <param name="options">The vendor specific options.</param>
 	/// 
-	public RuntimeCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, RuntimeCacheOptions options = null)
+	public RuntimeCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, RuntimeCacheOptions? options = null)
 		: base(managerConfiguration, configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
@@ -136,7 +136,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// </summary>
 	/// <param name="key">The key being used to identify the item within the cache.</param>
 	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key) => GetCacheItemInternal(key, null);
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key) => GetCacheItemInternal(key, null);
 
 	/// <summary>
 	/// Gets a <c>CacheItem</c> for the specified key.
@@ -144,7 +144,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <param name="key">The key being used to identify the item within the cache.</param>
 	/// <param name="region">The cache region.</param>
 	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 
@@ -204,7 +204,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <returns>
 	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
 	/// </returns>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 		if (!_cache.Contains(fullKey))
@@ -310,9 +310,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 		return policy;
 	}
 
-	private string GetItemKey(CacheItem<TValue> item) => GetItemKey(item?.Key, item?.Region);
+	private string GetItemKey(CacheItem<TValue> item) => GetItemKey(item.Key, item.Region);
 
-	private string GetItemKey(string key, string region = null)
+	private string GetItemKey(string key, string? region = null)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -355,7 +355,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 			return;
 		}
 
-		ParseKeyParts(_instanceKeyLength, fullKey, out bool isToken, out bool hasRegion, out string region, out string key);
+		ParseKeyParts(_instanceKeyLength, fullKey, out bool isToken, out bool hasRegion, out string? region, out string key);
 
 		if (!isToken)
 		{
@@ -368,7 +368,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 				Stats.OnRemove();
 			}
 
-			object originalValue = null;
+			object? originalValue = null;
 			if (arguments.CacheItem.Value is CacheItem<TValue> item)
 			{
 				originalValue = item.Value;
@@ -386,13 +386,14 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 		}
 	}
 
-	private static void ParseKeyParts(int instanceKeyLength, string fullKey, out bool isToken, out bool hasRegion, out string region, out string key)
+	private static void ParseKeyParts(int instanceKeyLength, string fullKey, out bool isToken, out bool hasRegion, out string? region, out string key)
 	{
 		var relevantKey = fullKey[instanceKeyLength..];
 		isToken = relevantKey[0] == '_';
 		hasRegion = false;
 		region = null;
-		key = null;
+		// key 仅在非 token 的分支中被使用，且该分支一定会为其赋值。
+		key = null!;
 
 		if (!isToken)
 		{

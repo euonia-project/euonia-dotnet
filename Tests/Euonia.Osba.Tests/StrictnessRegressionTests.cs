@@ -434,7 +434,7 @@ public sealed class AlwaysPassRule : RuleBase
 /// <summary>命令对象不跟踪属性变化。</summary>
 public sealed class TrackingCommand : ServiceObject<TrackingCommand>
 {
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 }
 
 /// <summary>构造注入依赖。</summary>

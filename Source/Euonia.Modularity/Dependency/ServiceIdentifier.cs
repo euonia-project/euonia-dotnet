@@ -8,7 +8,7 @@ internal readonly struct ServiceIdentifier : IEquatable<ServiceIdentifier>
 	/// <summary>
 	/// Gets the service key.
 	/// </summary>
-	public object ServiceKey { get; }
+	public object? ServiceKey { get; }
 
 	/// <summary>
 	/// Gets the service type.
@@ -49,9 +49,9 @@ internal readonly struct ServiceIdentifier : IEquatable<ServiceIdentifier>
 		return false;
 	}
 
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
-		return obj is ServiceIdentifier && Equals((ServiceIdentifier)obj);
+		return obj is ServiceIdentifier identifier && Equals(identifier);
 	}
 
 	public override int GetHashCode()

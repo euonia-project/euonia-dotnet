@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Repository.Mongo;
 /// </summary>
 public class ModelBuilder
 {
-    internal Action<Type, ModelProfile> OnConfigure { get; set; }
+    internal Action<Type, ModelProfile> OnConfigure { get; set; } = null!;
 
     /// <summary>
     /// Sets the configure action for specified model type.
@@ -37,7 +37,7 @@ public class ModelBuilder
             if (!string.IsNullOrEmpty(profile.KeyName))
             {
                 var type = profile.KeyType ?? typeof(T).GetProperty(profile.KeyName)?.PropertyType;
-                var memberMap = map.MapIdProperty(profile.KeyName).SetSerializer(new ObjectIdSerializer(type));
+                var memberMap = map.MapIdProperty(profile.KeyName).SetSerializer(new ObjectIdSerializer(type!));
                 if (profile.IdGenerator != null)
                 {
                     memberMap.SetIdGenerator(profile.IdGenerator);

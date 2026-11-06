@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Application.Tests;
 /// </summary>
 internal sealed class StubRequestContextAccessor : IRequestContextAccessor
 {
-	public RequestContext Context { get; set; }
+	public RequestContext? Context { get; set; }
 }
 
 /// <summary>
@@ -40,12 +40,12 @@ internal sealed class InMemoryLoggerProvider : ILoggerProvider
 		public IDisposable BeginScope<TState>(TState state)
 			where TState : notnull
 		{
-			return null;
+			return null!;
 		}
 
 		public bool IsEnabled(LogLevel logLevel) => logLevel is LogLevel.Debug or LogLevel.Error or LogLevel.Information or LogLevel.Trace or LogLevel.Warning or LogLevel.Critical;
 
-		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+		public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
 		{
 			lock (_provider._entries)
 			{
@@ -403,8 +403,8 @@ public class InterceptorTests
 /// </summary>
 public class LoginCommand
 {
-	public string Username { get; set; }
+	public string Username { get; set; } = string.Empty;
 
 	[SensitiveData(Mask = "###")]
-	public string Password { get; set; }
+	public string Password { get; set; } = string.Empty;
 }

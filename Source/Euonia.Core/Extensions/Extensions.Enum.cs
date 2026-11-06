@@ -25,7 +25,7 @@ public static partial class Extensions
 	/// <typeparam name="T">特性类型。</typeparam>
 	/// <param name="enum">要获取特性的枚举值。</param>
 	/// <returns>返回枚举字段上的指定特性，如果不存在则返回 <c>null</c>。</returns>
-	public static T GetAttribute<T>(this Enum @enum) where T : Attribute
+	public static T? GetAttribute<T>(this Enum @enum) where T : Attribute
 	{
 		return EnumHelper.GetCustomerAttribute<T>(@enum);
 	}
@@ -51,7 +51,7 @@ public static partial class Extensions
 	/// <returns>本地化描述字符串。</returns>
 	/// <remarks>字段应添加 <see cref="DescriptionAttribute"/>，其 Description 属性应为资源键。</remarks>
 	/// <exception cref="NullReferenceException">如果枚举字段未定义，则抛出异常。</exception>
-	public static string GetDescription(this Enum @enum, ResourceManager resourceManager, CultureInfo resourceCulture = null)
+	public static string? GetDescription(this Enum @enum, ResourceManager resourceManager, CultureInfo? resourceCulture = null)
 	{
 		resourceCulture ??= CultureInfo.CurrentCulture;
 
@@ -74,7 +74,7 @@ public static partial class Extensions
 	/// <param name="resourceType"></param>
 	/// <returns></returns>
 	/// <exception cref="NullReferenceException"></exception>
-	public static string GetDescription(this Enum @enum, Type resourceType)
+	public static string? GetDescription(this Enum @enum, Type resourceType)
 	{
 		var field = @enum.GetType().GetField(@enum.ToString());
 		if (field == null)

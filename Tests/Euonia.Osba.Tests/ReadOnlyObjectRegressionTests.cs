@@ -69,7 +69,7 @@ public class ReadOnlyObjectRegressionTests
 
 		var bypassProperty = typeof(ObjectBase)
 			.GetProperty("IsBypassingRuleChecks", BindingFlags.Instance | BindingFlags.NonPublic);
-		Assert.False((bool)bypassProperty!.GetValue(target));
+		Assert.False((bool)bypassProperty!.GetValue(target)!);
 	}
 
 	[Fact]
@@ -110,7 +110,7 @@ public class ReadOnlyProbe : ReadOnlyObject<ReadOnlyProbe>
 {
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
-	private string _name;
+	private string _name = null!;
 
 	/// <summary>
 	/// 控制 <see cref="CanReadProperty(IPropertyInfo)"/> 的返回值。
@@ -220,7 +220,7 @@ public class BypassRuleChecksFlowScopeTests
 	{
 		public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
-		private string _name;
+		private string _name = null!;
 
 		public bool IsBypassingForProbe => GetType()
 			.GetProperty("IsBypassingRuleChecks", BindingFlags.Instance | BindingFlags.NonPublic)!

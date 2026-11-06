@@ -8,10 +8,10 @@ public class UserChangePasswordDto
 	/// <summary>
 	/// Gets or sets the current password, used to prove ownership of the account.
 	/// </summary>
-	public string OldPassword { get; set; }
+	public string OldPassword { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the new password.
 	/// </summary>
-	public string NewPassword { get; set; }
+	public string NewPassword { get; set; } = null!;
 }

@@ -79,7 +79,7 @@ internal static class RetryHelper
         }
         while (tries < retries);
 
-        return default;
+        return default!;
     }
 
     public static void Retry(Action action, int timeOut, int retries)

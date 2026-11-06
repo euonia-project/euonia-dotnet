@@ -18,7 +18,7 @@ public abstract class BaseApplicationService : IApplicationService
 	/// <summary>
 	/// 获取或设置懒加载服务提供程序。
 	/// </summary>
-	public virtual ILazyServiceProvider LazyServiceProvider { get; set; }
+	public virtual ILazyServiceProvider LazyServiceProvider { get; set; } = null!;
 
 	/// <summary>
 	/// 获取 <see cref="IBus"/> 实例。
@@ -38,7 +38,7 @@ public abstract class BaseApplicationService : IApplicationService
 	/// <summary>
 	/// 获取当前请求上下文；请求上下文访问器缺失或当前不在请求流内时返回 <see langword="null"/>。
 	/// </summary>
-	protected virtual RequestContext RequestContext => HttpRequestAccessor?.Context;
+	protected virtual RequestContext? RequestContext => HttpRequestAccessor?.Context;
 
 	/// <summary>
 	/// 获取当前请求的取消令牌；不在请求流内时返回 <see cref="CancellationToken.None"/>。

@@ -17,7 +17,7 @@ public interface IValidationTestService
 
 public class ValidatablePayload : IValidatableObject
 {
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	public ObservableCollection<string> Errors { get; } = [];
 
@@ -67,7 +67,7 @@ public class ValidationInterceptorTests
 		using var scope = provider.CreateScope();
 		var svc = scope.ServiceProvider.GetRequiredService<IValidationTestService>();
 
-		await Assert.ThrowsAsync<ValidationException>(() => svc.ProcessAsync(null));
+		await Assert.ThrowsAsync<ValidationException>(() => svc.ProcessAsync(null!));
 	}
 
 	[Fact]
@@ -90,7 +90,7 @@ public class ValidationInterceptorTests
 		var svc = scope.ServiceProvider.GetRequiredService<IValidationTestService>();
 
 		await Assert.ThrowsAsync<ValidationException>(
-			() => svc.ProcessValidatable(new ValidatablePayload { Name = null }));
+			() => svc.ProcessValidatable(new ValidatablePayload { Name = null! }));
 	}
 
 	[Fact]

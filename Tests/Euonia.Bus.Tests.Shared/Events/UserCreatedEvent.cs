@@ -2,5 +2,5 @@ namespace Nerosoft.Euonia.Bus.Tests.Events;
 
 public class UserCreatedEvent
 {
-	public string UserId { get; set; }
+	public string UserId { get; set; } = string.Empty;
 }

@@ -46,7 +46,7 @@ public class RemoteReceiverTests
 		var parsed = JsonSerializer.Deserialize<RemoteReply<object>>(reply, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 		Assert.NotNull(parsed);
 		Assert.False(parsed.IsSuccess);
-		Assert.Equal("handler exploded", parsed.Error.Message);
+		Assert.Equal("handler exploded", parsed.Error!.Message);
 	}
 
 	[Fact]

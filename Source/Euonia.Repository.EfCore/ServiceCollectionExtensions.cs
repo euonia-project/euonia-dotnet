@@ -127,7 +127,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="lifetime">数据上下文工厂的生命周期；注入 scoped 服务时应使用 <see cref="ServiceLifetime.Scoped"/>。</param>
 		/// <returns>注册完成后的 <paramref name="services"/>，以便链式调用。</returns>
 		/// <exception cref="InvalidOperationException">无法解析到任何有效连接字符串时抛出。</exception>
-		public IServiceCollection AddDataContextFactory<TContext>(string connectionString = null, Func<DbContext, bool, CancellationToken, Task> seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+		public IServiceCollection AddDataContextFactory<TContext>(string? connectionString = null, Func<DbContext, bool, CancellationToken, Task>? seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
 			where TContext : DataContextBase<TContext>
 		{
 			return services.AddDataContextFactory<TContext>(_ => connectionString, seeding, lifetime);
@@ -153,14 +153,14 @@ public static class ServiceCollectionExtensions
 		/// </list>
 		/// 连接字符串需包含 <c>{provider}://{connection}</c> 格式的提供程序前缀，用于选择已注册的 <see cref="ConnectionConfigurator"/>。
 		/// </remarks>
-		public IServiceCollection AddDataContextFactory<TContext>(Func<IServiceProvider, string> connectionStringFactory, Func<DbContext, bool, CancellationToken, Task> seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
+		public IServiceCollection AddDataContextFactory<TContext>(Func<IServiceProvider, string?>? connectionStringFactory, Func<DbContext, bool, CancellationToken, Task>? seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
 			where TContext : DataContextBase<TContext>
 		{
 			services.AddDbContextFactory<TContext>((provider, options) =>
 			{
 				var connectionString = connectionStringFactory?.Invoke(provider);
 
-				var connection = PriorityValueFinder.Find<string>(queue =>
+				var connection = PriorityValueFinder.Find<string?>(queue =>
 				{
 					queue.Enqueue(() => connectionString, 1);
 					queue.Enqueue(() =>
@@ -217,7 +217,7 @@ public static class ServiceCollectionExtensions
 	/// <param name="seeding">可选的数据初始化委托。</param>
 	/// <exception cref="ArgumentException"><paramref name="connectionString"/> 为 <c>null</c>、空白或格式不合法时抛出。</exception>
 	/// <exception cref="NotSupportedException">连接字符串中指定的数据库提供程序未注册对应的 <see cref="ConnectionConfigurator"/> 时抛出。</exception>
-	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task> seeding = null)
+	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task>? seeding = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 

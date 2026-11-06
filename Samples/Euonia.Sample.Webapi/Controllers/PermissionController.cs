@@ -96,7 +96,7 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(items);
 	}
 
-	private async Task<IActionResult> Mutate(string userId, PermissionChangeInput input, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile>> grant, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile>> revoke, CancellationToken cancellationToken)
+	private async Task<IActionResult> Mutate(string userId, PermissionChangeInput input, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile?>> grant, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile?>> revoke, CancellationToken cancellationToken)
 	{
 		var authorization = await grant(userId, input?.Add ?? [], cancellationToken);
 		if (authorization == null)
@@ -108,7 +108,7 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(await ToViewAsync(userId, cancellationToken));
 	}
 
-	private async Task<AuthorizationView> ToViewAsync(string userId, CancellationToken cancellationToken)
+	private async Task<AuthorizationView?> ToViewAsync(string userId, CancellationToken cancellationToken)
 	{
 		// “未知账号”以账号表为准：账号存在但从未被授权时返回空视图，
 		// 而不是把「没有授权行」误判成「账号不存在」。

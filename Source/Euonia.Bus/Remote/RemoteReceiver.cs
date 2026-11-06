@@ -42,7 +42,7 @@ public static class RemoteReceiver
 	/// <param name="requestServices">入站请求作用域的服务提供程序；为 <c>null</c> 时创建新作用域。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>序列化后的 <see cref="RemoteReply{TResult}"/> JSON 字符串。</returns>
-	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, IServiceProvider requestServices, CancellationToken cancellationToken = default)
+	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, IServiceProvider? requestServices, CancellationToken cancellationToken = default)
 	{
 		IMessageEnvelope message;
 		MessageContext context;
@@ -105,19 +105,20 @@ public static class RemoteReceiver
 			cancellationRegistration.Dispose();
 		}
 
-		void OnResponded(object sender, MessageRepliedEventArgs e)
+		void OnResponded(object? sender, MessageRepliedEventArgs e)
 		{
-			taskCompletion.TrySetResult(e.Result);
+			taskCompletion.TrySetResult(e.Result!);
 		}
 
-		void OnFailed(object sender, Exception exception)
+		void OnFailed(object? sender, Exception exception)
 		{
 			taskCompletion.TrySetException(exception);
 		}
 
-		void OnCompleted(object sender, MessageHandledEventArgs e)
+		void OnCompleted(object? sender, MessageHandledEventArgs e)
 		{
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
+			// 仅完成通知而没有响应结果：以 null 结束，保持原有语义。
+			taskCompletion.TrySetResult(null!);
 		}
 	}
 
@@ -153,7 +154,7 @@ public static class RemoteReceiver
 	/// <param name="payload">包含消息信封 JSON 数据的字符串。</param>
 	/// <param name="allowedTypes">允许反序列化的消息类型集合；为 <c>null</c> 时不启用白名单。</param>
 	/// <returns>反序列化后的 <see cref="IMessageEnvelope"/> 实例。</returns>
-	private static IMessageEnvelope DeserializeMessage(IMessageSerializer serializer, string payload, ISet<Type> allowedTypes)
+	private static IMessageEnvelope DeserializeMessage(IMessageSerializer serializer, string payload, ISet<Type>? allowedTypes)
 	{
 		var typeName = ReadTypeName(payload);
 		if (string.IsNullOrWhiteSpace(typeName))
@@ -182,7 +183,7 @@ public static class RemoteReceiver
 	/// </summary>
 	/// <param name="requestServices">入站请求作用域；为 <c>null</c> 时不启用白名单。</param>
 	/// <returns>已注册处理器的消息类型集合；无法取得配置器时返回空集合（失败关闭）。</returns>
-	private static ISet<Type> ResolveAllowedMessageTypes(IServiceProvider requestServices)
+	private static ISet<Type>? ResolveAllowedMessageTypes(IServiceProvider? requestServices)
 	{
 		if (requestServices == null)
 		{
@@ -205,7 +206,7 @@ public static class RemoteReceiver
 	/// </summary>
 	/// <param name="payload">包含消息信封 JSON 数据的字符串。</param>
 	/// <returns>消息类型名称；未找到时返回 <c>null</c>。</returns>
-	private static string ReadTypeName(string payload)
+	private static string? ReadTypeName(string payload)
 	{
 		using var document = JsonDocument.Parse(payload);
 		foreach (var key in TypeNameKeys)

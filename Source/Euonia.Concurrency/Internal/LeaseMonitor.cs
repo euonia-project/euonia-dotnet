@@ -26,7 +26,7 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
     /// <summary>
     /// 当租约丢失时用于触发取消的后台任务。
     /// </summary>
-    private Task _cancellationTask;
+    private Task? _cancellationTask;
 
     /// <summary>
     /// 初始化 <see cref="LeaseMonitor"/> 类的新实例并启动监控循环。
@@ -70,7 +70,7 @@ internal sealed class LeaseMonitor : IDisposable, IAsyncDisposable
             if (_cancellationTask != null)
             {
                 // 不能传 HandleLostToken：该令牌正是前序任务取消时触发的，续延会被跳过而导致 CTS 泄漏。
-                _ = _cancellationTask.ContinueWith((_, state) => ((CancellationTokenSource)state).Dispose(), state: _handleLostSource);
+                _ = _cancellationTask.ContinueWith((_, state) => (state as CancellationTokenSource)?.Dispose(), state: _handleLostSource);
             }
             else
             {

@@ -35,7 +35,7 @@ public sealed class AsyncAutoResetEvent
     /// </summary>
     /// <param name="set">自动重置事件初始是否处于设置状态。</param>
     /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
-    internal AsyncAutoResetEvent(bool set, IAsyncWaitQueue<object> queue)
+    internal AsyncAutoResetEvent(bool set, IAsyncWaitQueue<object>? queue)
     {
         _queue = queue ?? new DefaultAsyncWaitQueue<object>();
         _set = set;

@@ -27,15 +27,15 @@ public class HostBuilderOptions
 	/// <summary>
 	/// 获取或设置应用程序名称。
 	/// </summary>
-	public object ApplicationName { get; set; } = Assembly.GetEntryAssembly()?.GetName();
+	public object? ApplicationName { get; set; } = Assembly.GetEntryAssembly()?.GetName();
 
 	/// <summary>
 	/// 获取或设置用于处理 <see cref="IWebHostBuilder"/> 的操作。
 	/// </summary>
-	public Action<IWebHostBuilder> ConfigureWebHostBuilder { get; set; }
+	public Action<IWebHostBuilder>? ConfigureWebHostBuilder { get; set; }
 
 	/// <summary>
 	/// 获取或设置用于处理 <see cref="IHostBuilder"/> 的操作。
 	/// </summary>
-	public Action<IHostBuilder> ConfigureHostBuilder { get; set; }
+	public Action<IHostBuilder>? ConfigureHostBuilder { get; set; }
 }

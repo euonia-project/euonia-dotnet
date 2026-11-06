@@ -14,7 +14,7 @@ public interface IContextFactory : ITransientDependency
     /// </summary>
     /// <typeparam name="TContext">要获取的仓储上下文类型。</typeparam>
     /// <returns>指定类型的仓储上下文实例；若该工厂无法创建则返回 <c>null</c>。</returns>
-    TContext GetContext<TContext>()
+    TContext? GetContext<TContext>()
         where TContext : class, IRepositoryContext;
 
     /// <summary>

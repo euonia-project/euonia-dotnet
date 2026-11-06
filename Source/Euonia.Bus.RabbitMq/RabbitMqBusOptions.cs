@@ -19,7 +19,7 @@ public class RabbitMqBusOptions
 	/// 获取或设置 RabbitMQ 连接字符串。
 	/// <example>amqp://user:password@host:port</example>
 	/// </summary>
-	public string Connection { get; set; }
+	public string? Connection { get; set; }
 
 	/// <summary>
 	/// 获取或设置交换机名称前缀；为空时不添加前缀。
@@ -62,7 +62,7 @@ public class RabbitMqBusOptions
 	/// <summary>
 	/// 获取或设置订阅标识符。
 	/// </summary>
-	public string SubscriptionId { get; set; }
+	public string? SubscriptionId { get; set; }
 
 	/// <summary>
 	/// 获取或设置预取大小（单条消息的最大字节数，0 表示不限制）。

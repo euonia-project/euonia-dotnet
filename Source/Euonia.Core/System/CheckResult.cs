@@ -72,7 +72,7 @@ public sealed class CheckResult<TValue>
     }
 
     /// <inheritdoc />
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         return obj switch
         {

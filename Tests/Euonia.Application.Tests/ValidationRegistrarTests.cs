@@ -18,7 +18,7 @@ public class ValidationRegistrarTests
 		var registrar = new ValidationRegistrar();
 		var method = typeof(ValidationRegistrar).GetMethod("GetExposedServiceTypes", BindingFlags.Instance | BindingFlags.NonPublic);
 
-		var services = (List<Type>)method!.Invoke(registrar, [typeof(DirectValidator)]);
+		var services = (List<Type>)method!.Invoke(registrar, [typeof(DirectValidator)])!;
 
 		Assert.Contains(typeof(IValidator<DirectItem>), services);
 	}
@@ -39,6 +39,6 @@ public class ValidationRegistrarTests
 
 		public Task<FluentValidationResult> ValidateAsync(IValidationContext context, CancellationToken cancellation = default) => Task.FromResult(new FluentValidationResult());
 
-		public IValidatorDescriptor CreateDescriptor() => null;
+		public IValidatorDescriptor CreateDescriptor() => null!;
 	}
 }

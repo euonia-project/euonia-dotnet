@@ -116,7 +116,7 @@ public class MessageRequestContextTests
 		consumerScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>().Context = null;
 
 		var payload = new EnvelopeOnlyEvent();
-		var envelope = new RoutedMessage<EnvelopeOnlyEvent>(payload, typeof(EnvelopeOnlyEvent).FullName)
+		var envelope = new RoutedMessage<EnvelopeOnlyEvent>(payload, typeof(EnvelopeOnlyEvent).FullName!)
 		{
 			MessageId = "envelope-1",
 			RequestTraceId = "trace-envelope",
@@ -125,7 +125,7 @@ public class MessageRequestContextTests
 		};
 
 		await handlerContext.HandleAsync(
-			typeof(EnvelopeOnlyEvent).FullName,
+			typeof(EnvelopeOnlyEvent).FullName!,
 			payload,
 			new MessageContext(envelope),
 			TestContext.Current.CancellationToken);
@@ -188,7 +188,7 @@ public class MessageRequestContextTests
 		services.AddOptions();
 		services.AddScoped<DefaultRequestContextAccessor>();
 		services.Configure<RequestContextAccessorOptions>(options => options.UseDefaultAccessor = !useDelegate);
-		services.AddScoped<DelegateRequestContextAccessor>(_ => () => useDelegate ? null : new RequestContext());
+		services.AddScoped<DelegateRequestContextAccessor>(_ => () => useDelegate ? null! : new RequestContext());
 		services.AddScoped<IServiceAccessor, ServiceAccessor>();
 		services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
 		return services;
@@ -198,17 +198,17 @@ public class MessageRequestContextTests
 	{
 		public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-		public ConcurrentDictionary<string, string> Traces { get; } = new();
+		public ConcurrentDictionary<string, string?> Traces { get; } = new();
 
-		public ConcurrentDictionary<string, string> Methods { get; } = new();
+		public ConcurrentDictionary<string, string?> Methods { get; } = new();
 
-		public ConcurrentDictionary<string, string> Paths { get; } = new();
+		public ConcurrentDictionary<string, string?> Paths { get; } = new();
 
-		public ConcurrentDictionary<string, string> CorrelationIds { get; } = new();
+		public ConcurrentDictionary<string, string?> CorrelationIds { get; } = new();
 
 		public ConcurrentDictionary<string, bool> RequestServicesBound { get; } = new();
 
-		public ConcurrentDictionary<string, IServiceProvider> RequestServices { get; } = new();
+		public ConcurrentDictionary<string, IServiceProvider?> RequestServices { get; } = new();
 
 		public TaskCompletionSource FirstHandled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -217,9 +217,9 @@ public class MessageRequestContextTests
 
 	private sealed class ReuseState
 	{
-		public ScopedProbe PublisherProbe { get; set; }
+		public ScopedProbe PublisherProbe { get; set; } = null!;
 
-		public IServiceProvider PublisherProvider { get; set; }
+		public IServiceProvider PublisherProvider { get; set; } = null!;
 
 		public bool SameProbe { get; set; }
 
@@ -245,18 +245,18 @@ public class MessageRequestContextTests
 	{
 		public bool Handled { get; set; }
 
-		public Exception Error { get; set; }
+		public Exception? Error { get; set; }
 
-		public string TraceIdentifier { get; set; }
+		public string? TraceIdentifier { get; set; }
 
-		public string Authorization { get; set; }
+		public string? Authorization { get; set; }
 
-		public string UserName { get; set; }
+		public string? UserName { get; set; }
 	}
 
 	private sealed class ContextEvent : IMulticast
 	{
-		public string Id { get; set; }
+		public string Id { get; set; } = string.Empty;
 	}
 
 	private sealed class EnvelopeOnlyEvent : IMulticast

@@ -23,7 +23,7 @@ internal sealed class RabbitMqRecipientRegistrar : IRecipientRegistrar
 	/// <summary>
 	/// 可以对特定消息类型启用/禁用入站处理的传输策略。
 	/// </summary>
-	private readonly ITransportStrategy _strategy;
+	private readonly ITransportStrategy? _strategy;
 
 	/// <summary>
 	/// 当前注册器实例的 RabbitMQ 总线选项（含传输器名称）。

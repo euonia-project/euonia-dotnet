@@ -82,7 +82,8 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 
 		var value = JsonSerializer.Create(_settings).Deserialize<T>(jsonReader);
 
-		return Task.FromResult(value);
+		// IMessageSerializer 的契约声明反序列化结果非空。
+		return Task.FromResult(value!);
 	}
 
 	/// <summary>
@@ -106,7 +107,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(byte[] source)
 	{
-		return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(source), _settings);
+		return JsonConvert.DeserializeObject<T>(Encoding.UTF8.GetString(source), _settings)!;
 	}
 
 	/// <summary>
@@ -117,7 +118,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(string source)
 	{
-		return JsonConvert.DeserializeObject<T>(source, _settings);
+		return JsonConvert.DeserializeObject<T>(source, _settings)!;
 	}
 
 	/// <summary>
@@ -133,7 +134,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 
 		var value = JsonSerializer.Create(_settings).Deserialize<T>(jsonReader);
 
-		return value;
+		return value!;
 	}
 
 	/// <summary>
@@ -155,7 +156,7 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public object Deserialize(string source, Type type)
 	{
-		return JsonConvert.DeserializeObject(source, type, _settings);
+		return JsonConvert.DeserializeObject(source, type, _settings)!;
 	}
 
 	/// <summary>
@@ -167,6 +168,6 @@ public class NewtonsoftJsonSerializer : IMessageSerializer
 	public IMessageEnvelope DeserializeEnvelope(string source, Type payloadType)
 	{
 		var type = typeof(RoutedMessage<>).MakeGenericType(payloadType);
-		return (IMessageEnvelope)JsonConvert.DeserializeObject(source, type, _settings);
+		return (IMessageEnvelope)JsonConvert.DeserializeObject(source, type, _settings)!;
 	}
 }

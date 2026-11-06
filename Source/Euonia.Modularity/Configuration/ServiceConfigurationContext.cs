@@ -26,10 +26,10 @@ public class ServiceConfigurationContext
     /// </summary>
     /// <param name="key"></param>
     /// <returns></returns>
-    public object this[string key]
+    public object? this[string key]
     {
         get => Items.GetOrDefault(key);
-        set => Items[key] = value;
+        set => Items[key] = value!;
     }
 
     /// <summary>

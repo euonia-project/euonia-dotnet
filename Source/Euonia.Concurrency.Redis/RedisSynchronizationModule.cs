@@ -13,7 +13,7 @@ internal class RedisSynchronizationModule : ModuleContextBase
         context.Services.TryAddSingleton(provider =>
         {
             var configuration = provider.GetRequiredService<IConfiguration>();
-            var connection = ConnectionMultiplexer.Connect(configuration.GetValue<string>("RedisSynchronization:ConnectionString"));
+            var connection = ConnectionMultiplexer.Connect(configuration.GetValue<string>("RedisSynchronization:ConnectionString")!);
             var database = configuration.GetValue("RedisSynchronization:Database", -1);
             var expiry = configuration.GetValue<TimeSpan?>("RedisSynchronization:Expiry");
             var cadence = configuration.GetValue<TimeSpan?>("RedisSynchronization:ExtensionCadence");

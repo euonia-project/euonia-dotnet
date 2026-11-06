@@ -154,7 +154,7 @@ internal sealed class HostUpdateRequirementSource : IPermissionCodeSource
 /// <summary>授予指定权限码与部门范围的解析器（数据范围满足 <see cref="ScopedTaskModel"/> 的部门策略）。</summary>
 internal sealed class HostRuleResolver(string[] codes) : IScopeSubjectResolver
 {
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder()
 		                                            .AddCodes(codes)

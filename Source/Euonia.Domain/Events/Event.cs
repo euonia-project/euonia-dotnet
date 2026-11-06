@@ -33,7 +33,7 @@ public abstract class Event : IEvent
 	/// <param name="name">属性名称。</param>
 	public string this[string name]
 	{
-		get => Properties.TryGetValue(name, out var value) ? value : default;
+		get => Properties.TryGetValue(name, out var value) ? value : default!;
 		set => Properties[name] = value;
 	}
 
@@ -81,11 +81,11 @@ public abstract class Event : IEvent
 	/// 获取事件发起方的 .NET CLR 类型。
 	/// </summary>
 	/// <returns>事件发起方的 .NET CLR 类型。</returns>
-	public virtual string OriginatorType { get; set; }
+	public virtual string OriginatorType { get; set; } = null!;
 
 	/// <summary>
 	/// 获取发起方标识符。
 	/// </summary>
 	/// <returns>发起方标识符。</returns>
-	public virtual string OriginatorId { get; set; }
+	public virtual string OriginatorId { get; set; } = null!;
 }

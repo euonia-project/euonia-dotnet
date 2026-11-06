@@ -57,7 +57,7 @@ internal static class ZooKeeperNodeCreator
 
             var toCreate = new Stack<ZooKeeperPath>();
             toCreate.Push(directory);
-            List<ZooKeeperPath> created = null;
+            List<ZooKeeperPath>? created = null;
             do
             {
                 var directoryToCreate = toCreate.Peek();

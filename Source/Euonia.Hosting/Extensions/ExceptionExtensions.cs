@@ -26,7 +26,7 @@ internal static class ExceptionExtensions
 			};
 		}
 
-		public IReadOnlyDictionary<string, string[]> GetErrorDetails()
+		public IReadOnlyDictionary<string, string?[]>? GetErrorDetails()
 		{
 			var ex = exception;
 			while (true)
@@ -42,7 +42,7 @@ internal static class ExceptionExtensions
 					return euoniaValidationException.Errors
 					                                 .Where(result => !string.IsNullOrWhiteSpace(result.PropertyName))
 					                                 .GroupBy(result => result.PropertyName)
-					                                 .ToDictionary(group => group.Key, group => group.Select(result => result.ErrorMessage).ToArray());
+					                                 .ToDictionary(group => group.Key, group => group.Select(result => (string?)result.ErrorMessage).ToArray());
 				}
 
 				if (ex is not ValidationException validationException)

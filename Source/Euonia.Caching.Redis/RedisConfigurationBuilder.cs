@@ -12,10 +12,10 @@ public class RedisConfigurationBuilder
     private readonly List<ServerEndPoint> _endpoints = new();
     private bool _isSsl;
     private readonly string _key;
-    private string _password;
-    private string _sslHost;
+    private string? _password;
+    private string? _sslHost;
     private bool _enabledKeyspaceNotifications;
-    private string _useVersion;
+    private string? _useVersion;
     private bool _useTwemproxy;
 
     /// <summary>
@@ -152,7 +152,7 @@ public class RedisConfigurationBuilder
     /// </summary>
     /// <param name="host">The SSL host.</param>
     /// <returns>The builder.</returns>
-    public RedisConfigurationBuilder WithSsl(string host = null)
+    public RedisConfigurationBuilder WithSsl(string? host = null)
     {
         _isSsl = true;
         _sslHost = host;

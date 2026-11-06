@@ -135,7 +135,7 @@ public static class ServiceCollectionExtensions
 		/// <remarks>
 		/// 仅注册继承自 <see cref="IApplicationService"/> 的非抽象类。
 		/// </remarks>
-		public void AddApplicationService(Assembly assembly, ServiceLifetime lifetime, Func<Type, bool> filter)
+		public void AddApplicationService(Assembly assembly, ServiceLifetime lifetime, Func<Type, bool>? filter)
 		{
 			if (assembly == null)
 			{
@@ -177,7 +177,7 @@ public static class ServiceCollectionExtensions
 		/// 业务接口为排除 <see cref="_frameworkInterfaces"/> 之后由实现类公开的接口；
 		/// 接口代理与类代理在同一个作用域内共享同一个目标实例。
 		/// </remarks>
-		private void AddApplicationService(TypeInfo[] definedTypes, ServiceLifetime lifetime, Func<Type, bool> filter)
+		private void AddApplicationService(TypeInfo[] definedTypes, ServiceLifetime lifetime, Func<Type, bool>? filter)
 		{
 			if (!definedTypes.Any())
 			{
@@ -202,7 +202,8 @@ public static class ServiceCollectionExtensions
 				services.AddScoped(holderType, provider =>
 				{
 					var instance = ActivatorUtilities.CreateInstance(provider, implementationType);
-					return Activator.CreateInstance(holderType, instance);
+					// ApplicationServiceTarget<T> 存在接受单个实例的构造函数，反射创建不会返回 null。
+					return Activator.CreateInstance(holderType, instance)!;
 				});
 
 				// 实现类直接解析也走代理（类代理），避免绕过拦截器；

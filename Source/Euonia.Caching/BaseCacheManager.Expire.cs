@@ -17,7 +17,7 @@ public partial class BaseCacheManager<TValue>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="mode">过期模式。</param>
 	/// <param name="timeout">过期时间值。</param>
-	private void ExpireInternal(string key, string region, CacheExpirationMode mode, TimeSpan timeout)
+	private void ExpireInternal(string key, string? region, CacheExpirationMode mode, TimeSpan timeout)
 	{
 		CheckDisposed();
 

@@ -25,7 +25,7 @@ public sealed class CountRequest : IRequest<int>
 /// </summary>
 public sealed class FailingRequest : IRequest<object>
 {
-	public string Text { get; set; }
+	public string Text { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -89,7 +89,7 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		return BuildClientProvider(endpoint, null);
 	}
 
-	internal static ServiceProvider BuildClientProvider(string endpoint, Action<GrpcBusOptions> configure)
+	internal static ServiceProvider BuildClientProvider(string endpoint, Action<GrpcBusOptions>? configure)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -116,7 +116,7 @@ internal sealed class GrpcServerHarness : IAsyncDisposable
 		return BuildTransporter(endpoint, null);
 	}
 
-	internal static GrpcTransporter BuildTransporter(string endpoint, Action<GrpcBusOptions> configure)
+	internal static GrpcTransporter BuildTransporter(string endpoint, Action<GrpcBusOptions>? configure)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

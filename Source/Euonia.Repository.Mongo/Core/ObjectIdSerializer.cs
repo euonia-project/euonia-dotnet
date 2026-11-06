@@ -21,7 +21,7 @@ public class ObjectIdSerializer : IBsonSerializer
     public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var id = context.Reader.ReadObjectId().ToString();
-        return TypeDescriptor.GetConverter(ValueType).ConvertFrom(id);
+        return TypeDescriptor.GetConverter(ValueType).ConvertFrom(id)!;
     }
 
     /// <inheritdoc />
@@ -46,7 +46,7 @@ public class ObjectIdSerializer : IBsonSerializer
     /// 对无法表示的键类型现在会显式失败，而不是静默写入错误的标识符。
     /// </para>
     /// </remarks>
-    private static MongoDB.Bson.ObjectId ToObjectId(object value)
+    private static MongoDB.Bson.ObjectId ToObjectId(object? value)
     {
         switch (value)
         {
@@ -88,6 +88,6 @@ public class ObjectIdSerializer<T> : ObjectIdSerializer, IBsonSerializer<T>
 	/// <inheritdoc />
 	public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
     {
-        base.Serialize(context, args, value);
+        base.Serialize(context, args, value!);
     }
 }

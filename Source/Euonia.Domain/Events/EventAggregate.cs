@@ -14,17 +14,17 @@ public class EventAggregate : IAggregateRoot<string>
     /// <summary>
     /// 获取或设置当前实例的标识符。
     /// </summary>
-    public string Id { get; set; }
+    public string Id { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置事件标识符。
 	/// </summary>
-	public string EventId { get; set; }
+	public string EventId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置关联标识符，用于跨实例/跨过程的因果追踪。
 	/// </summary>
-	public string CorrelationId { get; set; }
+	public string CorrelationId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置时间戳。
@@ -34,27 +34,27 @@ public class EventAggregate : IAggregateRoot<string>
 	/// <summary>
 	/// 获取或设置类型名称。
 	/// </summary>
-	public string TypeName { get; set; }
+	public string? TypeName { get; set; }
 
 	/// <summary>
 	/// 获取或设置事件意图。
 	/// </summary>
-	public string EventIntent { get; set; }
+	public string EventIntent { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置发起方类型。
 	/// </summary>
-	public string OriginatorType { get; set; }
+	public string OriginatorType { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置发起方标识符。
 	/// </summary>
-	public string OriginatorId { get; set; }
+	public string OriginatorId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置事件负载。
 	/// </summary>
-	public object EventPayload { get; set; }
+	public object EventPayload { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置事件序号。

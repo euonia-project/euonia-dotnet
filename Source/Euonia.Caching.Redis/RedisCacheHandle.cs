@@ -266,7 +266,7 @@ return result";
 
 	/// <inheritdoc />
 	public override CacheItemUpdateResult<TValue> Update(string key, Func<TValue, TValue> updateValue, int maxRetries)
-		=> Update(key, null, updateValue, maxRetries);
+		=> Update(key, null!, updateValue, maxRetries);
 
 	/// <inheritdoc />
 	public override CacheItemUpdateResult<TValue> Update(string key, string region, Func<TValue, TValue> updateValue, int maxRetries)
@@ -419,7 +419,7 @@ return result";
 	/// </summary>
 	/// <param name="key">The key being used to identify the item within the cache.</param>
 	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key)
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key)
 		=> GetCacheItemInternal(key, null);
 
 	/// <summary>
@@ -428,12 +428,12 @@ return result";
 	/// <param name="key">The key being used to identify the item within the cache.</param>
 	/// <param name="region">The cache region.</param>
 	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		return GetCacheItemAndVersion(key, region, out _);
 	}
 
-	private CacheItem<TValue> GetCacheItemAndVersion(string key, string region, out int version)
+	private CacheItem<TValue>? GetCacheItemAndVersion(string key, string? region, out int version)
 	{
 		version = -1;
 		if (!_isLuaAllowed)
@@ -450,7 +450,7 @@ return result";
 			throw new InvalidOperationException(string.Format(Resources.IDS_ERROR_RETRIEVING, fullKey));
 		}
 
-		var values = (RedisValue[])result;
+		var values = ((RedisValue[]?)result)!;
 
 		// the first item stores the value
 		var item = values![0];
@@ -485,7 +485,7 @@ return result";
 			}
 		}
 
-		var value = FromRedisValue(item, valueTypeItem);
+		var value = FromRedisValue(item, valueTypeItem.ToString());
 
 		var cacheItem =
 			usesDefaultExpiration ? string.IsNullOrWhiteSpace(region) ? new CacheItem<TValue>(key, value) : new CacheItem<TValue>(key, region, value) :
@@ -513,7 +513,7 @@ return result";
 	/// <param name="key"></param>
 	/// <param name="region"></param>
 	/// <returns></returns>
-	protected virtual CacheItem<TValue> GetCacheItemInternalNoScript(string key, string region)
+	protected virtual CacheItem<TValue>? GetCacheItemInternalNoScript(string key, string? region)
 	{
 		return Retry(() =>
 		{
@@ -566,7 +566,7 @@ return result";
 				}
 			}
 
-			var value = FromRedisValue(item, valueTypeItem);
+			var value = FromRedisValue(item, valueTypeItem.ToString());
 
 			var cacheItem =
 				usesDefaultExpiration ? string.IsNullOrWhiteSpace(region) ? new CacheItem<TValue>(key, value) : new CacheItem<TValue>(key, region, value) :
@@ -620,7 +620,7 @@ return result";
 	/// <returns>
 	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
 	/// </returns>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		return Retry(() =>
 		{
@@ -647,7 +647,7 @@ return result";
 			{
 				var tuple = ParseKey(key);
 				// we cannot return the original value here because we don't have it
-				TriggerCacheSpecificRemove(tuple.Item1, tuple.Item2, CacheItemRemovedReason.Expired, null);
+				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.Expired, null);
 			});
 
 		_connection.Subscriber.Subscribe(
@@ -657,7 +657,7 @@ return result";
 				var tuple = ParseKey(key);
 
 				// we cannot return the original value here because we don't have it
-				TriggerCacheSpecificRemove(tuple.Item1, tuple.Item2, CacheItemRemovedReason.Evicted, null);
+				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.Evicted, null);
 			});
 
 		_connection.Subscriber.Subscribe(
@@ -667,21 +667,21 @@ return result";
 				var tuple = ParseKey(key);
 
 				// we cannot return the original value here because we don't have it
-				TriggerCacheSpecificRemove(tuple.Item1, tuple.Item2, CacheItemRemovedReason.ExternalDelete, null);
+				TriggerCacheSpecificRemove(tuple.Item1!, tuple.Item2, CacheItemRemovedReason.ExternalDelete, null);
 			});
 	}
 
-	private static Tuple<string, string> ParseKey(string value)
+	private static Tuple<string?, string?> ParseKey(string? value)
 	{
 		if (value == null)
 		{
-			return Tuple.Create<string, string>(null, null);
+			return Tuple.Create<string?, string?>(null, null);
 		}
 
 		var sepIndex = value.IndexOf(':');
 		var hasRegion = sepIndex > 0;
 		var key = value;
-		string region = null;
+		string? region = null;
 
 		if (hasRegion)
 		{
@@ -701,7 +701,7 @@ return result";
 			key = Encoding.UTF8.GetString(Convert.FromBase64String(key));
 		}
 
-		return Tuple.Create(key, region);
+		return Tuple.Create<string?, string?>(key, region);
 	}
 
 	private static void ValidateExpirationTimeout(CacheItem<TValue> item)
@@ -712,7 +712,7 @@ return result";
 		}
 	}
 
-	private string GetKey(string key, string region = null)
+	private string GetKey(string key, string? region = null)
 	{
 		if (string.IsNullOrWhiteSpace(key))
 		{
@@ -747,7 +747,7 @@ return result";
 	{
 		if (value.IsNull || !value.HasValue)
 		{
-			return default;
+			return default!;
 		}
 
 		if (_valueConverter is IRedisValueConverter<TValue> typedConverter)
@@ -913,7 +913,7 @@ return result";
 		});
 	}
 
-	private RedisResult Eval(ScriptType scriptType, RedisKey redisKey, RedisValue[] values = null, CommandFlags flags = CommandFlags.None)
+	private RedisResult Eval(ScriptType scriptType, RedisKey redisKey, RedisValue[]? values = null, CommandFlags flags = CommandFlags.None)
 	{
 		if (!_scriptsLoaded)
 		{
@@ -927,8 +927,8 @@ return result";
 			}
 		}
 
-		LoadedLuaScript script = null;
-		if (!_luaScripts.TryGetValue(scriptType, out LuaScript luaScript)
+		LoadedLuaScript? script = null;
+		if (!_luaScripts.TryGetValue(scriptType, out LuaScript? luaScript)
 		    || (_canPreloadScripts && !_shaScripts.TryGetValue(scriptType, out script)))
 		{
 			_scriptsLoaded = false;

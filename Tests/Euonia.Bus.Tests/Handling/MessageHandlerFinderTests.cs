@@ -51,7 +51,7 @@ public class MessageHandlerFinderTests
 	[Fact]
 	public void Find_SubscribeAttributeWithoutName_MessageContainsHandlerAndMethod()
 	{
-		var handlerType = DefineHandler("MissingChannelNameHandler", [typeof(string)], channelName: null);
+		var handlerType = DefineHandler("MissingChannelNameHandler", [typeof(string)], channelName: null!);
 
 		var exception = Assert.Throws<InvalidOperationException>(() => Find(handlerType));
 
@@ -62,7 +62,7 @@ public class MessageHandlerFinderTests
 	[Fact]
 	public void Find_SingleSubscribeAttributeWithoutName_InfersChannelFromMessageType()
 	{
-		var handlerType = DefineHandler("InferredChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var handlerType = DefineHandler("InferredChannelHandler", [typeof(InferredChannelMessage)], channelName: null!);
 		var registrations = new List<(string Channel, Type MessageType)>();
 
 		MessageHandlerFinder.Find((channel, messageType, _) => registrations.Add((channel, messageType)), type => type.FullName!, handlerType);
@@ -75,7 +75,7 @@ public class MessageHandlerFinderTests
 	[Fact]
 	public void Find_SingleSubscribeAttributeWithoutName_UsesChannelResolver()
 	{
-		var handlerType = DefineHandler("InferredCustomChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var handlerType = DefineHandler("InferredCustomChannelHandler", [typeof(InferredChannelMessage)], channelName: null!);
 		var channels = new List<string>();
 
 		MessageHandlerFinder.Find((channel, _, _) => channels.Add(channel), _ => "custom-channel", handlerType);

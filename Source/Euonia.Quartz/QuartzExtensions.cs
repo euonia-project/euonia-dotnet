@@ -17,7 +17,7 @@ public static class QuartzExtensions
 	/// <param name="options"></param>
 	/// <typeparam name="TJob"></typeparam>
 	/// <returns></returns>
-	public static IQuartzBuilder AddJob<TJob>(this IQuartzBuilder configurator, BackgroundJobOptions options = null)
+	public static IQuartzBuilder AddJob<TJob>(this IQuartzBuilder configurator, BackgroundJobOptions? options = null)
 		where TJob : IJob
 	{
 		return configurator.AddJob(typeof(TJob), options);
@@ -32,7 +32,7 @@ public static class QuartzExtensions
 	/// <returns></returns>
 	/// <exception cref="ArgumentNullException"></exception>
 	/// <exception cref="ArgumentException"></exception>
-	public static IQuartzBuilder AddJob(this IQuartzBuilder configurator, Type jobType, BackgroundJobOptions options = null)
+	public static IQuartzBuilder AddJob(this IQuartzBuilder configurator, Type jobType, BackgroundJobOptions? options = null)
 	{
 		ArgumentNullException.ThrowIfNull(jobType);
 		ArgumentNullException.ThrowIfNull(configurator);

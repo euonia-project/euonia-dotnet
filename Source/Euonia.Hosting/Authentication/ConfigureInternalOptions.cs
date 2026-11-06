@@ -37,7 +37,7 @@ internal class ConfigureInternalOptions :
     /// </summary>
     /// <param name="name">认证方案名称。</param>
     /// <param name="options">JWT Bearer 选项。</param>
-    public void Configure(string name, JwtBearerOptions options)
+    public void Configure(string? name, JwtBearerOptions options)
     {
         if (name == _scheme + IdentityServerAuthenticationDefaults.JwtAuthenticationScheme &&
             _identityServerOptions.SupportsJwt)
@@ -51,7 +51,7 @@ internal class ConfigureInternalOptions :
     /// </summary>
     /// <param name="name">认证方案名称。</param>
     /// <param name="options">OAuth2 内省选项。</param>
-    public void Configure(string name, OAuth2IntrospectionOptions options)
+    public void Configure(string? name, OAuth2IntrospectionOptions options)
     {
         if (name == _scheme + IdentityServerAuthenticationDefaults.IntrospectionAuthenticationScheme &&
             _identityServerOptions.SupportsIntrospection)

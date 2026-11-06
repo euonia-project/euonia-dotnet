@@ -50,7 +50,7 @@ public class BuilderTests
 
 		Assert.Throws<ArgumentNullException>(() =>
 		{
-			bus.Send<string, string>("ping").WithCorrelationId(null);
+			bus.Send<string, string>("ping").WithCorrelationId(null!);
 		});
 		Assert.Throws<ArgumentException>(() =>
 		{
@@ -99,24 +99,24 @@ public class BuilderTests
 
 	private sealed class FakeBus : IBus
 	{
-		public object LastSendMessage { get; private set; }
-		public SendOptions LastSendOptions { get; private set; }
-		public object LastPublishMessage { get; private set; }
-		public PublishOptions LastPublishOptions { get; private set; }
-		public object LastCallMessage { get; private set; }
-		public CallOptions LastCallOptions { get; private set; }
+		public object LastSendMessage { get; private set; } = null!;
+		public SendOptions LastSendOptions { get; private set; } = null!;
+		public object LastPublishMessage { get; private set; } = null!;
+		public PublishOptions LastPublishOptions { get; private set; } = null!;
+		public object LastCallMessage { get; private set; } = null!;
+		public CallOptions LastCallOptions { get; private set; } = null!;
 
-		public Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
+		public Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>>? behavior, CancellationToken cancellationToken = default)
 		{
-			LastPublishMessage = message;
+			LastPublishMessage = message!;
 			LastPublishOptions = options;
 			return Task.CompletedTask;
 		}
 
-		public Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+		public Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult>? callback, SendOptions? options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>>? behavior, CancellationToken cancellationToken = default)
 		{
-			LastSendMessage = message;
-			LastSendOptions = options;
+			LastSendMessage = message!;
+			LastSendOptions = options!;
 			// 注意：不要在此处调用 callback.OnCompleted()，
 			// ExecuteWithResultAsync 的订阅者在 onNext 中会自行调用 OnCompleted，
 			// 重复完成 Subject 会抛出异常。
@@ -124,14 +124,14 @@ public class BuilderTests
 			return Task.CompletedTask;
 		}
 
-		public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+		public Task<TResult> CallAsync<TMessage, TResult>(TMessage message, CallOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>>? behavior, CancellationToken cancellationToken = default)
 		{
-			LastCallMessage = message;
+			LastCallMessage = message!;
 			LastCallOptions = options;
 			return Task.FromResult((TResult)(object)42);
 		}
 
-		public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default)
+		public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>>? behavior, CancellationToken cancellationToken = default)
 		{
 			LastCallMessage = request;
 			LastCallOptions = options;
@@ -140,7 +140,7 @@ public class BuilderTests
 
 		public Task<TResult> CallAsync<TResult>(Func<IServiceProvider, Task<TResult>> handler, CancellationToken cancellationToken = default)
 		{
-			return handler(null);
+			return handler(null!);
 		}
 	}
 }

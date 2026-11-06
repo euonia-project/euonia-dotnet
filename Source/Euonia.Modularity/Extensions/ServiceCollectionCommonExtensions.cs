@@ -82,9 +82,9 @@ public static class ServiceCollectionCommonExtensions
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
-		public T GetSingletonInstanceOrNull<T>()
+		public T? GetSingletonInstanceOrNull<T>()
 		{
-			return (T)services
+			return (T?)services
 			          .FirstOrDefault(d => d.ServiceType == typeof(T))
 			          ?.ImplementationInstance;
 		}
@@ -110,7 +110,7 @@ public static class ServiceCollectionCommonExtensions
 		/// Resolves a dependency using given <see cref="IServiceCollection"/>.
 		/// This method should be used only after dependency injection registration phase completed.
 		/// </summary>
-		internal T GetService<T>()
+		internal T? GetService<T>()
 		{
 			return services
 			       .GetSingletonInstance<IModularityApplication>()
@@ -122,7 +122,7 @@ public static class ServiceCollectionCommonExtensions
 		/// Resolves a dependency using given <see cref="IServiceCollection"/>.
 		/// This method should be used only after dependency injection registration phase completed.
 		/// </summary>
-		internal object GetService(Type type)
+		internal object? GetService(Type type)
 		{
 			return services
 			       .GetSingletonInstance<IModularityApplication>()
@@ -137,10 +137,10 @@ public static class ServiceCollectionCommonExtensions
 		/// </summary>
 		public T GetRequiredService<T>()
 		{
-			return services
-			       .GetSingletonInstance<IModularityApplication>()
-			       .ServiceProvider
-			       .GetRequiredService<T>();
+			return (T)services
+			          .GetSingletonInstance<IModularityApplication>()
+			          .ServiceProvider
+			          .GetRequiredService(typeof(T));
 		}
 
 		/// <summary>
@@ -160,18 +160,18 @@ public static class ServiceCollectionCommonExtensions
 		/// Returns a <see cref="Lazy{T}"/> to resolve a service from given <see cref="IServiceCollection"/>
 		/// once dependency injection registration phase completed.
 		/// </summary>
-		public Lazy<T> GetServiceLazy<T>()
+		public Lazy<T?> GetServiceLazy<T>()
 		{
-			return new Lazy<T>(services.GetService<T>, true);
+			return new Lazy<T?>(services.GetService<T>, true);
 		}
 
 		/// <summary>
 		/// Returns a <see cref="Lazy{T}"/> to resolve a service from given <see cref="IServiceCollection"/>
 		/// once dependency injection registration phase completed.
 		/// </summary>
-		public Lazy<object> GetServiceLazy(Type type)
+		public Lazy<object?> GetServiceLazy(Type type)
 		{
-			return new Lazy<object>(() => services.GetService(type), true);
+			return new Lazy<object?>(() => services.GetService(type), true);
 		}
 
 		/// <summary>
@@ -196,7 +196,7 @@ public static class ServiceCollectionCommonExtensions
 		/// Gets the <see cref="IServiceProvider"/> from the <see cref="IServiceCollection"/>, or null if not registered.
 		/// </summary>
 		/// <returns></returns>
-		public IServiceProvider GetServiceProviderOrNull()
+		public IServiceProvider? GetServiceProviderOrNull()
 		{
 			return services.GetObjectOrNull<IServiceProvider>();
 		}
@@ -263,7 +263,7 @@ public static class ServiceCollectionCommonExtensions
 		/// </summary>
 		/// <typeparam name="T"></typeparam>
 		/// <returns></returns>
-		public T GetObjectOrNull<T>()
+		public T? GetObjectOrNull<T>()
 			where T : class
 		{
 			return services.GetSingletonInstanceOrNull<IObjectAccessor<T>>()?.Value;
@@ -477,7 +477,7 @@ public static class ServiceCollectionCommonExtensions
 			{
 				var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
 				var interceptors = provider.GetServices<IInterceptor>().ToArray();
-				return proxyGenerator.CreateInterfaceProxyWithTarget(typeof(TService), implementation, interceptors);
+				return proxyGenerator.CreateInterfaceProxyWithTarget(typeof(TService), implementation!, interceptors);
 			});
 			return services;
 		}
@@ -576,7 +576,7 @@ public static class ServiceCollectionCommonExtensions
 			{
 				var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
 				var interceptors = provider.GetServices<IInterceptor>().ToArray();
-				return proxyGenerator.CreateInterfaceProxyWithTarget(typeof(TService), implementation, interceptors);
+				return proxyGenerator.CreateInterfaceProxyWithTarget(typeof(TService), implementation!, interceptors);
 			});
 			return services;
 		}

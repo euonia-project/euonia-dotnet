@@ -72,7 +72,7 @@ public class EfCoreCollectionDimensionTests
 		                    .AsNoTracking()
 		                    .ToList();
 
-		var compiled = fixture.Guard.GetPolicy<EfWorkspace>();
+		var compiled = fixture.Guard.GetPolicy<EfWorkspace>()!;
 
 		var inMemory = loaded.Where(workspace => ScopeFilter.Allows(workspace, compiled))
 		                     .Select(workspace => workspace.Id)
@@ -155,7 +155,7 @@ public class EfCoreCollectionDimensionTests
 
 	private sealed class MemberResolver : IScopeSubjectResolver
 	{
-		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		{
 			// 子表维度授予的是「子表里应当出现的值」——也就是当前用户自己的标识
 			return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder()
@@ -179,24 +179,24 @@ public class EfCoreCollectionDimensionTests
 /// <summary>EF 实体：工作区（父行）。</summary>
 public sealed class EfWorkspace
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	/// <summary>子表行。刻意不初始化：EF 未加载时保持 <see langword="null"/>。</summary>
-	public List<EfWorkspaceMember> Members { get; set; }
+	public List<EfWorkspaceMember> Members { get; set; } = null!;
 }
 
 /// <summary>EF 实体：工作区成员（子表行，带状态属性）。</summary>
 public sealed class EfWorkspaceMember
 {
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
-	public string WorkspaceId { get; set; }
+	public string WorkspaceId { get; set; } = null!;
 
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
-	public string Status { get; set; }
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>

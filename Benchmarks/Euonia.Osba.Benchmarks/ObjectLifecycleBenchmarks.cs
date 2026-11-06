@@ -9,7 +9,7 @@ namespace Euonia.Osba.Benchmarks;
 [MemoryDiagnoser]
 public class ObjectLifecycleBenchmarks
 {
-	private SmallObject _existing;
+	private SmallObject _existing = null!;
 	private bool _toggle;
 
 	[GlobalSetup]

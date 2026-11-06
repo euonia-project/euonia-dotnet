@@ -56,8 +56,8 @@ public class InboxStoreTests
 		store.Insert("test.events", message, ["handler-a", "handler-b"]);
 		store.MarkAsSuccess(message.MessageId, "handler-a");
 
-		var handlerA = store.Get(message.MessageId).GetHandler("handler-a");
-		var handlerB = store.Get(message.MessageId).GetHandler("handler-b");
+		var handlerA = store.Get(message.MessageId)!.GetHandler("handler-a")!;
+		var handlerB = store.Get(message.MessageId)!.GetHandler("handler-b")!;
 
 		Assert.Equal(InboxHandlerStatus.Success, handlerA.Status);
 		Assert.Equal(InboxHandlerStatus.Pending, handlerB.Status);
@@ -86,7 +86,7 @@ public class InboxStoreTests
 		store.Insert("test.events", message, ["handler-a"]);
 		store.MarkAsFailed(message.MessageId, "handler-a", "handler threw");
 
-		var handler = store.Get(message.MessageId).GetHandler("handler-a");
+		var handler = store.Get(message.MessageId)!.GetHandler("handler-a")!;
 		Assert.Equal(InboxHandlerStatus.Failed, handler.Status);
 		Assert.Equal(1, handler.RetryAttempts);
 		Assert.Equal("handler threw", handler.Error);
@@ -171,7 +171,7 @@ public class InboxStoreTests
 		public InboxEntry Get(string messageId)
 		{
 			GetCallCount++;
-			return _entries.GetValueOrDefault(messageId);
+			return _entries.GetValueOrDefault(messageId)!;
 		}
 
 		public void MarkAsSuccess(string messageId, string handler)

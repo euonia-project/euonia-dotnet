@@ -33,7 +33,7 @@ public interface ISemaphoreProvider
     ///     // dispose releases the ticket if we took it
     /// </code>
     /// </example>
-    ISynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    ISynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 同步获取一个信号量票据，如果尝试超时则抛出 <see cref="TimeoutException"/>。
@@ -67,7 +67,7 @@ public interface ISemaphoreProvider
     ///     // dispose releases the ticket if we took it
     /// </code>
     /// </example>
-    ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 异步获取一个信号量票据，如果尝试超时则抛出 <see cref="TimeoutException"/>。
@@ -101,7 +101,7 @@ public interface ISemaphoreProvider
     ///     // dispose releases the ticket if we took it
     /// </code>
     /// </example>
-    ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
+    ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -117,7 +117,7 @@ public interface ISemaphoreProvider<THandle> : ISemaphoreProvider
     /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
     /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
     /// <returns>可用于释放票据的类型化 <typeparamref name="THandle"/>，失败时返回 null。</returns>
-    new THandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    new THandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 同步获取一个信号量票据，如果尝试超时则抛出 <see cref="TimeoutException"/>。
@@ -133,7 +133,7 @@ public interface ISemaphoreProvider<THandle> : ISemaphoreProvider
     /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
     /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
     /// <returns>可用于释放票据的类型化 <typeparamref name="THandle"/>，失败时返回 null。</returns>
-    new ValueTask<THandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    new ValueTask<THandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 异步获取一个信号量票据，如果尝试超时则抛出 <see cref="TimeoutException"/>。
@@ -149,5 +149,5 @@ public interface ISemaphoreProvider<THandle> : ISemaphoreProvider
     /// <param name="timeout">放弃获取尝试之前等待的时间。默认值为 0</param>
     /// <param name="cancellationToken">指定可用于取消等待的令牌。</param>
     /// <returns>可用于释放票据的类型化 <typeparamref name="THandle"/>，失败时返回 null。</returns>
-    new ValueTask<THandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
+    new ValueTask<THandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
 }

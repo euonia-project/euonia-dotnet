@@ -38,7 +38,7 @@ public class MemoryCacheOptions : Microsoft.Extensions.Caching.Memory.MemoryCach
     /// <summary>
     /// Gets or sets the cache key prefix.
     /// </summary>
-    public string KeyPrefix { get; set; }
+    public string? KeyPrefix { get; set; }
 
     /// <summary>
     /// Gets or sets the cache expire time.

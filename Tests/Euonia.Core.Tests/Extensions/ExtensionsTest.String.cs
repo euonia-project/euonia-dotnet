@@ -22,7 +22,7 @@ public class ExtensionsTest
     [Fact]
     public void TestStringTruncateWithoutEllipsis_NullSource()
     {
-        string source = null;
+        string source = null!;
         var result = source.Truncate(15, false);
         Assert.Equal(string.Empty, result);
     }
@@ -30,7 +30,7 @@ public class ExtensionsTest
     [Fact]
     public void TestStringTruncateWithinEllipsis_NullSource()
     {
-        string source = null;
+        string source = null!;
         var result = source.Truncate(15, true);
         Assert.Equal(string.Empty, result);
     }

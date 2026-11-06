@@ -31,12 +31,12 @@ public abstract class ModuleContextBase : IModuleContext
         internal set => _configurationContext = value;
     }
 
-    private ServiceConfigurationContext _configurationContext;
+    private ServiceConfigurationContext? _configurationContext;
 
     /// <summary>
     /// Gets or sets the application configuration service.
     /// </summary>
-    protected internal IConfiguration Configuration { get; internal set; }
+    protected internal IConfiguration Configuration { get; internal set; } = null!;
 
     /// <inheritdoc />
     public virtual void AheadConfigureServices(ServiceConfigurationContext context)

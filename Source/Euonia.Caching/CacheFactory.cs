@@ -202,7 +202,7 @@ public static class CacheFactory
         var factoryType = typeof(CacheFactory).GetTypeInfo();
         var buildMethod = factoryType.GetDeclaredMethods("Build").First(p => p.IsGenericMethod);
         var genericMethod = buildMethod.MakeGenericMethod(cacheValueType);
-        return genericMethod.Invoke(null, [cacheName, settings]);
+        return genericMethod.Invoke(null, [cacheName, settings])!;
     }
 
     /// <summary>
@@ -327,7 +327,7 @@ public static class CacheFactory
         cfg.Name = cacheName;
 
         var type = typeof(BaseCacheManager<>).MakeGenericType(cacheValueType);
-        return Activator.CreateInstance(type, cfg);
+        return Activator.CreateInstance(type, cfg)!;
     }
 
     /// <summary>

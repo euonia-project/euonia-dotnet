@@ -11,7 +11,7 @@ public class PredicateBuilderTests
 	{
 		public int Id { get; set; }
 
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 	}
 
 	[Fact]
@@ -92,7 +92,7 @@ public class PredicateBuilderTests
 	[Fact]
 	public void GetCompareCondition_Equal_ShouldMatch()
 	{
-		var predicate = PredicateBuilder.GetCompareCondition<Item, int>(null, nameof(Item.Id), 7, QueryOperator.Equal).Compile();
+		var predicate = PredicateBuilder.GetCompareCondition<Item, int>(null!, nameof(Item.Id), 7, QueryOperator.Equal).Compile();
 
 		Assert.True(predicate(new Item { Id = 7 }));
 		Assert.False(predicate(new Item { Id = 8 }));
@@ -101,7 +101,7 @@ public class PredicateBuilderTests
 	[Fact]
 	public void GetContainsCondition_ShouldMatch()
 	{
-		var predicate = PredicateBuilder.GetContainsCondition<Item, int>(null, nameof(Item.Id), new List<int> { 1, 3, 5 }).Compile();
+		var predicate = PredicateBuilder.GetContainsCondition<Item, int>(null!, nameof(Item.Id), new List<int> { 1, 3, 5 }).Compile();
 
 		Assert.True(predicate(new Item { Id = 3 }));
 		Assert.False(predicate(new Item { Id = 2 }));

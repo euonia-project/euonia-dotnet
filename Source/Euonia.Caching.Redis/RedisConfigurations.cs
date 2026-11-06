@@ -9,7 +9,7 @@
 /// </summary>
 public static class RedisConfigurations
 {
-    private static Dictionary<string, RedisConfiguration> _config;
+    private static Dictionary<string, RedisConfiguration> _config = null!;
     private static readonly object _configLock = new();
 
     private static Dictionary<string, RedisConfiguration> Configurations
@@ -80,7 +80,7 @@ public static class RedisConfigurations
     /// <c>RedisCacheHandle</c> 的构造函数需要连接字符串，而它只能经由句柄配置的
     /// <c>ConfigurationTypes</c> 传入（见 <c>CacheReflectionHelper.MatchArguments</c>）。
     /// </remarks>
-    public static RedisConfiguration GetConfiguration(string configurationName)
+    public static RedisConfiguration? GetConfiguration(string configurationName)
     {
         Check.EnsureNotNullOrWhiteSpace(configurationName, nameof(configurationName));
 

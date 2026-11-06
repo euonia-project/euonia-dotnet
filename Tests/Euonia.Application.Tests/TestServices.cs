@@ -76,7 +76,7 @@ public class OrderAuditService : BaseApplicationService, IOrderService, IAuditSe
 	}
 
 	// virtual 属性：类代理可拦截并转发到共享的目标实例（字段不会被转发）。
-	public virtual string Flag { get; set; }
+	public virtual string Flag { get; set; } = string.Empty;
 
 	public virtual void SetFlag(string value) => Flag = value;
 

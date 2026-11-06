@@ -33,7 +33,7 @@ public class GenericValidator<TValue> : AbstractValidator<TValue>
 	/// <inheritdoc/>
 	public override bool Validate(TValue value)
 	{
-		Message = _function?.Invoke(value);
+		Message = _function.Invoke(value) ?? string.Empty;
 		return string.IsNullOrEmpty(Message);
 	}
 }

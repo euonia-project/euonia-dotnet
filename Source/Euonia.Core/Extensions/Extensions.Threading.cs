@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Nerosoft.Euonia.Threading;
 
 public static partial class Extensions
@@ -399,7 +400,7 @@ public static partial class Extensions
 
         // 分配 TCS 数组和结果任务数组。
         var numTasks = taskArray.Length;
-        var tcs = new TaskCompletionSource<object>[numTasks];
+        var tcs = new TaskCompletionSource<object?>[numTasks];
         var ret = new List<Task>(numTasks);
 
         // 每个任务完成时，完成下一个 tcs。
@@ -414,7 +415,7 @@ public static partial class Extensions
 		// 填充数组并附加延续任务。
 		for (var i = 0; i != numTasks; ++i)
         {
-            tcs[i] = new TaskCompletionSource<object>();
+            tcs[i] = new TaskCompletionSource<object?>();
             ret.Add(tcs[i].Task);
             taskArray[i].ContinueWith(Continuation, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
         }
@@ -463,7 +464,7 @@ public static partial class Extensions
         }
         catch (AggregateException ex)
         {
-            throw ex.InnerException.PrepareForRethrow();
+            throw ex.InnerException!.PrepareForRethrow();
         }
     }
 
@@ -513,7 +514,7 @@ public static partial class Extensions
         }
         catch (AggregateException ex)
         {
-            throw ex.InnerException.PrepareForRethrow();
+            throw ex.InnerException!.PrepareForRethrow();
         }
     }
 
@@ -568,7 +569,7 @@ public static partial class Extensions
         }
     }
 
-    private static Func<object> NullResultFunc { get; } = () => null;
+    private static Func<object?> NullResultFunc { get; } = () => null;
 
     #region SynchronizationContext
 
@@ -588,6 +589,7 @@ public static partial class Extensions
     /// <typeparam name="T">结果的类型。</typeparam>
     /// <param name="context">同步上下文。</param>
     /// <param name="action">要执行的委托。</param>
+    [return: MaybeNull]
     public static T Send<T>(this SynchronizationContext context, Func<T> action)
     {
         var result = default(T);
@@ -611,7 +613,7 @@ public static partial class Extensions
             try
             {
                 ((Action)state!)();
-                taskCompletionSource.TrySetResult(null);
+                taskCompletionSource.TrySetResult(null!);
             }
             catch (OperationCanceledException ex)
             {
@@ -661,12 +663,12 @@ public static partial class Extensions
     {
         var taskCompletionSource = CreateAsyncTaskSource<object>();
 
-        async void PostCallback(object state)
+        async void PostCallback(object? state)
         {
             try
             {
                 await ((Func<Task>)state!)().ConfigureAwait(false);
-                taskCompletionSource.TrySetResult(null);
+                taskCompletionSource.TrySetResult(null!);
             }
             catch (OperationCanceledException ex)
             {
@@ -692,7 +694,7 @@ public static partial class Extensions
     {
         var taskCompletionSource = CreateAsyncTaskSource<T>();
 
-        async void PostCallback(object state)
+        async void PostCallback(object? state)
         {
             try
             {

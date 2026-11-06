@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Threading.Redis;
 public readonly struct TimeoutTask : IDisposable
 {
     private readonly CancellationTokenSource _cleanupTokenSource;
-    private readonly CancellationTokenSource _linkedTokenSource;
+    private readonly CancellationTokenSource? _linkedTokenSource;
 
     /// <summary>
     /// 使用指定的超时值初始化 <see cref="TimeoutTask"/> 的新实例。

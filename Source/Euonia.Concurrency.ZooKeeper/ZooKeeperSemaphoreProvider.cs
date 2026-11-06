@@ -16,7 +16,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     /// If <paramref name="assumePathExists"/> is specified, then the node will not be created as part of acquiring nor will it be 
     /// deleted after releasing (defaults to false).
     /// </summary>
-    public ZooKeeperSemaphoreProvider(ZooKeeperPath path, int maxCount, string connectionString, bool assumePathExists = false, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(ZooKeeperPath path, int maxCount, string connectionString, bool assumePathExists = false, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(path, maxCount, assumePathExists: assumePathExists, connectionString, options)
     {
         if (path == default)
@@ -35,7 +35,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     /// The semaphore's path will be a parent node of the root directory '/'. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
     /// validity.
     /// </summary>
-    public ZooKeeperSemaphoreProvider(string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(ZooKeeperPath.Root, name, maxCount, connectionString, options)
     {
     }
@@ -46,7 +46,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     /// The semaphore's path will be a parent node of <paramref name="directoryPath"/>. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
     /// validity.
     /// </summary>
-    public ZooKeeperSemaphoreProvider(ZooKeeperPath directoryPath, string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(ZooKeeperPath directoryPath, string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(
             (directoryPath == default ? throw new ArgumentNullException(nameof(directoryPath)) : directoryPath).GetChildNodePathWithSafeName(name),
             maxCount,
@@ -56,7 +56,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     {
     }
 
-    private ZooKeeperSemaphoreProvider(ZooKeeperPath nodePath, int maxCount, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> optionsBuilder)
+    private ZooKeeperSemaphoreProvider(ZooKeeperPath nodePath, int maxCount, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? optionsBuilder)
     {
         if (maxCount < 1)
         {
@@ -88,7 +88,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
 public sealed partial class ZooKeeperSemaphoreProvider
 {
     /// <inheritdoc />
-    public ZooKeeperSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ZooKeeperSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
@@ -100,7 +100,7 @@ public sealed partial class ZooKeeperSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
@@ -112,7 +112,7 @@ public sealed partial class ZooKeeperSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public async ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    public async ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         var nodeHandle = await _synchronizationHelper.TryAcquireAsync(
                                                          hasAcquired: state => Array.FindIndex(state.SortedChildren, t => t.Path == state.EphemeralNodePath) < MaxCount,
@@ -157,14 +157,14 @@ public sealed partial class ZooKeeperSemaphoreProvider
         return Acquire(timeout, cancellationToken);
     }
 
-    ISynchronizationHandle ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     ValueTask<ISynchronizationHandle> ISemaphoreProvider.AcquireAsync(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -172,8 +172,8 @@ public sealed partial class ZooKeeperSemaphoreProvider
         return AcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

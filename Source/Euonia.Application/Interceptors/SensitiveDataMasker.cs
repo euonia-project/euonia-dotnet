@@ -31,12 +31,12 @@ public static class SensitiveDataMasker
 	/// <param name="instance">要脱敏的对象。</param>
 	/// <param name="mask">敏感值替换用的掩码文本。</param>
 	/// <returns>脱敏后的对象（字符串/标量/<c>null</c> 原样返回；对象转为字典；序列转为列表）。</returns>
-	public static object Mask(object instance, string mask = "***")
+	public static object? Mask(object? instance, string mask = "***")
 	{
 		return MaskCore(instance, mask, new HashSet<object>(ReferenceEqualityComparer.Instance), 0);
 	}
 
-	private static object MaskCore(object instance, string mask, HashSet<object> visited, int depth)
+	private static object? MaskCore(object? instance, string mask, HashSet<object> visited, int depth)
 	{
 		if (instance == null)
 		{
@@ -57,10 +57,11 @@ public static class SensitiveDataMasker
 
 		if (instance is IDictionary dictionaryType)
 		{
-			var dictionary = new Dictionary<object, object>();
+			var dictionary = new Dictionary<object, object?>();
 			foreach (DictionaryEntry entry in dictionaryType)
 			{
-				dictionary[entry.Key] = MaskCore(entry.Value, mask, visited, depth + 1);
+				// 字典条目的键契约上非空（Hashtable/Dictionary 均拒绝 null 键）。
+				dictionary[entry.Key!] = MaskCore(entry.Value, mask, visited, depth + 1);
 			}
 
 			return dictionary;
@@ -106,9 +107,9 @@ public static class SensitiveDataMasker
 		return false;
 	}
 
-	private static Dictionary<string, object> MaskObject(object instance, string mask, HashSet<object> visited, int depth)
+	private static Dictionary<string, object?> MaskObject(object instance, string mask, HashSet<object> visited, int depth)
 	{
-		var result = new Dictionary<string, object>(StringComparer.Ordinal);
+		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
 		var members = _memberCache.GetOrAdd(instance.GetType(), ResolveMembers);
 
 		foreach (var member in members)
@@ -154,7 +155,7 @@ public static class SensitiveDataMasker
 
 	private sealed class MemberDescriptor
 	{
-		public MemberDescriptor(string name, Func<object, object> getter, SensitiveDataAttribute attribute)
+		public MemberDescriptor(string name, Func<object?, object?> getter, SensitiveDataAttribute? attribute)
 		{
 			Name = name;
 			Getter = getter;
@@ -166,13 +167,13 @@ public static class SensitiveDataMasker
 
 		public bool IsSensitive { get; }
 
-		public string Mask { get; }
+		public string? Mask { get; }
 
-		public object GetValue(object instance)
+		public object? GetValue(object instance)
 		{
 			return Getter(instance);
 		}
 
-		private readonly Func<object, object> Getter;
+		private readonly Func<object?, object?> Getter;
 	}
 }

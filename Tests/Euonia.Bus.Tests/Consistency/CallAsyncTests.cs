@@ -253,7 +253,7 @@ public class CallAsyncTests
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
 	}
 
-	private static ServiceProvider CreateProvider(ITransporter transporter, Action<IServiceCollection> configure = null)
+	private static ServiceProvider CreateProvider(ITransporter transporter, Action<IServiceCollection>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -311,7 +311,7 @@ public class CallAsyncTests
 
 		public string Name => "test";
 
-		public IMessageEnvelope LastCallEnvelope { get; private set; }
+		public IMessageEnvelope LastCallEnvelope { get; private set; } = null!;
 
 		public CancellationToken LastCallToken { get; private set; }
 

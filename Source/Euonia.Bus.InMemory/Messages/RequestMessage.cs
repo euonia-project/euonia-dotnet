@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 /// <typeparam name="T">The type of request to make.</typeparam>
 public class RequestMessage<T>
 {
-	private T _response;
+	private T _response = default!;
 
 	/// <summary>
 	/// Gets the message response.

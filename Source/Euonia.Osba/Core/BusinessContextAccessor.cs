@@ -18,7 +18,7 @@ public class BusinessContextAccessor
 	/// <summary>
 	/// 存储当前异步流作用域的服务提供程序。
 	/// </summary>
-	private static readonly AsyncLocal<IServiceProvider> _currentServiceProvider = new();
+	private static readonly AsyncLocal<IServiceProvider?> _currentServiceProvider = new();
 
 	/// <summary>
 	/// 本作用域解析时捕获的服务提供程序，作为异步流未建立时的兜底。
@@ -44,7 +44,7 @@ public class BusinessContextAccessor
 	/// <summary>
 	/// 获取当前异步流中的服务提供程序；未建立上下文时为 <c>null</c>。
 	/// </summary>
-	public static IServiceProvider Current => _currentServiceProvider.Value;
+	public static IServiceProvider? Current => _currentServiceProvider.Value;
 
 	/// <summary>
 	/// 获取当前异步流中的服务提供程序；异步流未建立时回退到本作用域的实例 provider。

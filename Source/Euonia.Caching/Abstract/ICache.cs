@@ -190,7 +190,7 @@ public interface ICache<TValue> : IDisposable
     /// <param name="key">The key being used to identify the item within the cache.</param>
     /// <returns>The <c>CacheItem</c>.</returns>
     /// <exception cref="ArgumentNullException">If the <paramref name="key"/> is null.</exception>
-    CacheItem<TValue> GetCacheItem(string key);
+    CacheItem<TValue>? GetCacheItem(string key);
 
     /// <summary>
     /// Gets the <c>CacheItem</c> for the specified key and region.
@@ -201,7 +201,7 @@ public interface ICache<TValue> : IDisposable
     /// <exception cref="ArgumentNullException">
     /// If the <paramref name="key"/> or <paramref name="region"/> is null.
     /// </exception>
-    CacheItem<TValue> GetCacheItem(string key, string region);
+    CacheItem<TValue>? GetCacheItem(string key, string region);
 
     /// <summary>
     /// Puts a value for the specified key into the cache.

@@ -17,13 +17,13 @@ namespace Nerosoft.Euonia.Bus;
 internal sealed class InboxDispatcher : IDisposable
 {
 	private readonly IServiceProvider _provider;
-	private readonly IInboxStore _storeOverride;
+	private readonly IInboxStore? _storeOverride;
 	private readonly InboxOptions _options;
 	private readonly ConcurrentDictionary<string, List<HandlerRegistration>> _container;
-	private readonly ILogger _logger;
+	private readonly ILogger? _logger;
 	private readonly MessageExecutionEnvironment _execution;
-	private readonly IServiceProviderIsService _serviceProbe;
-	private Timer _timer;
+	private readonly IServiceProviderIsService? _serviceProbe;
+	private Timer? _timer;
 	private int _running;
 
 	/// <summary>
@@ -33,7 +33,7 @@ internal sealed class InboxDispatcher : IDisposable
 	/// <param name="store">收件箱存储覆盖；传 <c>null</c> 时按作用域解析。</param>
 	/// <param name="options">收件箱配置选项。</param>
 	/// <param name="container">已注册处理程序的容器（与 <see cref="DefaultHandlerContext"/> 共享）。</param>
-	public InboxDispatcher(IServiceProvider provider, IInboxStore store, InboxOptions options, ConcurrentDictionary<string, List<HandlerRegistration>> container)
+	public InboxDispatcher(IServiceProvider provider, IInboxStore? store, InboxOptions options, ConcurrentDictionary<string, List<HandlerRegistration>> container)
 	{
 		_provider = provider;
 		_storeOverride = store;
@@ -63,7 +63,7 @@ internal sealed class InboxDispatcher : IDisposable
 		_timer = new Timer(OnTimerTick, null, interval, interval);
 	}
 
-	private void OnTimerTick(object state)
+	private void OnTimerTick(object? state)
 	{
 		if (Interlocked.Exchange(ref _running, 1) == 1)
 		{
@@ -78,19 +78,24 @@ internal sealed class InboxDispatcher : IDisposable
 	/// </summary>
 	public async Task RetryAllAsync()
 	{
-		IServiceScope scope = null;
-		IInboxStore store = null;
+		IServiceScope? scope = null;
+		IInboxStore? store = null;
 
 		try
 		{
 			scope = _provider.CreateScope();
 			store = _storeOverride ?? scope.ServiceProvider.GetService<IInboxStore>();
+			if (store == null)
+			{
+				return;
+			}
+
 			var deadLetterStore = scope.ServiceProvider.GetService<IDeadLetterStore>();
 
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
 			CleanupExpired(store);
 
-			var items = store?.GetFailedMessages();
+			var items = store.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
 				return;
@@ -206,11 +211,11 @@ internal sealed class InboxDispatcher : IDisposable
 	/// <param name="entry">消息条目。</param>
 	/// <param name="item">处理记录快照。</param>
 	/// <param name="error">转入死信的原因；重试耗尽时使用最后一次错误。</param>
-	private void DeadLetter(IInboxStore store, IDeadLetterStore deadLetterStore, InboxEntry entry, InboxHandler item, string error)
+	private void DeadLetter(IInboxStore store, IDeadLetterStore? deadLetterStore, InboxEntry entry, InboxHandler item, string? error)
 	{
 		// 必须经存储接口持久化终态：item 只是 GetFailedMessages 返回的快照，
 		// 直接调用 item.MarkAsDeadLettered 在持久化实现中不会落库，记录会每轮被重复扫描。
-		store.MarkAsDeadLettered(entry.MessageId, item.Name, error);
+		store.MarkAsDeadLettered(entry.MessageId, item.Name, error ?? string.Empty);
 		BusTelemetry.InboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel } });
 
 		if (deadLetterStore == null)

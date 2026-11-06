@@ -29,12 +29,12 @@ public class UserRoleEntity : Entity<string>, IHasCreateTime
 	/// <summary>
 	/// Gets or sets the name of the role.
 	/// </summary>
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the ID of the user associated with this role.
 	/// </summary>
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the creation time of the role.
@@ -44,7 +44,7 @@ public class UserRoleEntity : Entity<string>, IHasCreateTime
 	/// <summary>
 	/// Gets or sets the user associated with this role.
 	/// </summary>
-	public UserEntity UserEntity { get; set; }
+	public UserEntity UserEntity { get; set; } = null!;
 
 	/// <summary>
 	/// Creates a new instance of the <see cref="UserRoleEntity"/> class with the specified name.

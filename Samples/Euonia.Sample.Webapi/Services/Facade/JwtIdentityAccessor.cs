@@ -50,7 +50,7 @@ internal class JwtIdentityAccessor
 			const string prefix = "JwtAuthenticationOptions";
 
 			var signingKey = configuration.GetValue<string>($"{prefix}:SigningKey");
-			var key = Encoding.UTF8.GetBytes(signingKey);
+			var key = Encoding.UTF8.GetBytes(signingKey!);
 
 			var validation = new TokenValidationParameters
 			{

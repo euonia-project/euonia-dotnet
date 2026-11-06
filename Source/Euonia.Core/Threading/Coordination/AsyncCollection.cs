@@ -46,7 +46,7 @@ public sealed class AsyncCollection<T>
 	/// </summary>
 	/// <param name="collection">要包装的集合。</param>
 	/// <param name="maxCount">最大元素数量。必须大于零。</param>
-	public AsyncCollection(IProducerConsumerCollection<T> collection, int maxCount)
+	public AsyncCollection(IProducerConsumerCollection<T>? collection, int maxCount)
 	{
 		collection ??= new ConcurrentQueue<T>();
 		if (maxCount <= 0)
@@ -259,11 +259,11 @@ public sealed class AsyncCollection<T>
 			if (_completed && Empty)
 				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_TAKE_COMPLETED_AND_EMPTY);
 
-			if (!_collection.TryTake(out T item))
+			if (!_collection.TryTake(out var item))
 				throw new InvalidOperationException(Resources.IDS_ASYNC_COLLECTION_TAKE_FAILED);
 
 			_completedOrNotFull.Notify();
-			return item;
+			return item!;
 		}
 	}
 

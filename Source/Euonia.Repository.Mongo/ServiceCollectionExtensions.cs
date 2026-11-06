@@ -92,7 +92,7 @@ public static class ServiceCollectionExtensions
 			services.Configure(configure);
 			services.AddSingleton(provider =>
 			{
-				var options = provider.GetService<IOptions<MongoDbOptions>>().Value;
+				var options = provider.GetService<IOptions<MongoDbOptions>>()!.Value;
 				var client = new MongoClient(options.ConnectionString);
 				return client.GetDatabase(options.Database);
 			});
@@ -129,7 +129,7 @@ public static class ServiceCollectionExtensions
 			services.Configure(configure);
 			services.AddSingleton(provider =>
 			{
-				var options = provider.GetService<IOptions<MongoDbOptions>>().Value;
+				var options = provider.GetService<IOptions<MongoDbOptions>>()!.Value;
 				var client = new MongoClient(options.ConnectionString);
 				return client.GetDatabase(options.Database);
 			});

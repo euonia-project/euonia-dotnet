@@ -9,11 +9,11 @@ namespace Nerosoft.Euonia.Modularity;
 /// </summary>
 public abstract class ModularityApplicationBase : IModularityApplication
 {
-    internal ModularityApplicationBase(Type startupModuleType, IServiceCollection services, IConfiguration configuration, Action<ApplicationCreationOptions> optionsAction)
+    internal ModularityApplicationBase(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction)
     {
         StartupModuleType = startupModuleType;
         Services = services;
-        Configuration = configuration;
+        Configuration = configuration!;
 
         services.TryAddObjectAccessor<IServiceProvider>();
 
@@ -47,7 +47,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
     /// <summary>
     /// Gets the service provider of current application.
     /// </summary>
-    public IServiceProvider ServiceProvider { get; private set; }
+    public IServiceProvider ServiceProvider { get; private set; } = null!;
 
     /// <summary>
     /// Gets the configuration context instance of current application.
@@ -86,7 +86,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
     {
         ServiceProvider = serviceProvider;
         ServiceProvider.GetRequiredService<ObjectAccessor<IServiceProvider>>().Value = ServiceProvider;
-        Configuration ??= serviceProvider.GetService<IConfiguration>();
+        Configuration ??= serviceProvider.GetService<IConfiguration>()!;
     }
 
     /// <summary>
@@ -175,7 +175,7 @@ public abstract class ModularityApplicationBase : IModularityApplication
         {
             if (module.Instance is ModuleContextBase moduleContext)
             {
-                moduleContext.ConfigurationContext = null;
+                moduleContext.ConfigurationContext = null!;
             }
         }
     }

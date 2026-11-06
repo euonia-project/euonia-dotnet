@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Bus.Telemetry;
@@ -23,14 +24,14 @@ internal sealed class OutboxDispatcher : IDisposable
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _redeliverMethods = new();
 
 	private readonly IServiceProvider _provider;
-	private readonly IOutboxStore _storeOverride;
-	private readonly IDeadLetterStore _deadLetterStoreOverride;
+	private readonly IOutboxStore? _storeOverride;
+	private readonly IDeadLetterStore? _deadLetterStoreOverride;
 	private readonly OutboxOptions _options;
 	private readonly ILogger _logger;
 	private readonly MessageExecutionEnvironment _execution;
-	private readonly IServiceProviderIsService _serviceProbe;
+	private readonly IServiceProviderIsService? _serviceProbe;
 
-	private Timer _timer;
+	private Timer? _timer;
 	private int _running;
 
 	/// <summary>
@@ -47,16 +48,16 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// <summary>
 	/// 使用显式存储创建调度器的测试/直接构造入口。
 	/// </summary>
-	internal OutboxDispatcher(IServiceProvider provider, IOutboxStore store, OutboxOptions options, IDeadLetterStore deadLetterStore = null, ILogger logger = null)
+	internal OutboxDispatcher(IServiceProvider provider, IOutboxStore store, OutboxOptions options, IDeadLetterStore? deadLetterStore = null, ILogger? logger = null)
 		: this(provider, options ?? new OutboxOptions(), logger ?? provider.GetService<ILoggerFactory>()?.CreateLogger<OutboxDispatcher>(), store, deadLetterStore)
 	{
 	}
 
-	private OutboxDispatcher(IServiceProvider provider, OutboxOptions options, ILogger logger, IOutboxStore storeOverride, IDeadLetterStore deadLetterStoreOverride)
+	private OutboxDispatcher(IServiceProvider provider, OutboxOptions options, ILogger? logger, IOutboxStore? storeOverride, IDeadLetterStore? deadLetterStoreOverride)
 	{
 		_provider = provider;
 		_options = options;
-		_logger = logger;
+		_logger = logger ?? NullLogger.Instance;
 		_storeOverride = storeOverride;
 		_deadLetterStoreOverride = deadLetterStoreOverride;
 		_execution = new MessageExecutionEnvironment(provider, logger);
@@ -77,7 +78,7 @@ internal sealed class OutboxDispatcher : IDisposable
 		_timer = new Timer(OnTimerTick, null, interval, interval);
 	}
 
-	private void OnTimerTick(object state)
+	private void OnTimerTick(object? state)
 	{
 		if (Interlocked.Exchange(ref _running, 1) == 1)
 		{
@@ -92,13 +93,18 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// </summary>
 	public async Task RetryAllAsync()
 	{
-		IServiceScope scope = null;
-		IOutboxStore store = null;
+		IServiceScope? scope = null;
+		IOutboxStore? store = null;
 
 		try
 		{
 			scope = _provider.CreateScope();
 			store = _storeOverride ?? scope.ServiceProvider.GetService<IOutboxStore>();
+			if (store == null)
+			{
+				return;
+			}
+
 			var deadLetterStore = _deadLetterStoreOverride ?? scope.ServiceProvider.GetService<IDeadLetterStore>();
 
 			// 每轮顺带按保留策略清理已终结的旧条目，避免内存实现无界增长。
@@ -108,7 +114,7 @@ internal sealed class OutboxDispatcher : IDisposable
 			// 不回收就会永远停留在 Pending（既不重试也不清理）。
 			ReclaimAbandonedPending(store);
 
-			var items = store?.GetFailedMessages();
+			var items = store.GetFailedMessages();
 			if (items == null || items.Count == 0)
 			{
 				return;
@@ -184,7 +190,7 @@ internal sealed class OutboxDispatcher : IDisposable
 		var cutoff = _options.PendingReclaimGracePeriod > TimeSpan.Zero
 			             ? DateTime.Now - _options.PendingReclaimGracePeriod
 			             : DateTime.Now;
-		var pending = store?.GetPendingMessages(cutoff);
+		var pending = store.GetPendingMessages(cutoff);
 		if (pending == null || pending.Count == 0)
 		{
 			return;
@@ -230,11 +236,11 @@ internal sealed class OutboxDispatcher : IDisposable
 	/// （从而被 <see cref="IOutboxStore.GetFailedMessages"/> 排除，不再被每轮轮询重复扫描），
 	/// 并在已注册死信存储时写入一条死信记录。
 	/// </summary>
-	private void DeadLetter(IOutboxStore store, IDeadLetterStore deadLetterStore, OutboxEntry entry, OutboxTransport item)
+	private void DeadLetter(IOutboxStore store, IDeadLetterStore? deadLetterStore, OutboxEntry entry, OutboxTransport item)
 	{
 		// 必须经存储接口持久化终态：item 只是 GetFailedMessages 返回的快照，
 		// 直接调用 item.MarkAsDeadLettered 在持久化实现中不会落库，记录会每轮被重复扫描。
-		store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error);
+		store.MarkAsDeadLettered(entry.MessageId, item.Name, item.Error ?? string.Empty);
 		BusTelemetry.OutboxDeadLettered.Add(1, new TagList { { "messaging.channel", entry.Channel }, { "messaging.destination.name", item.Name } });
 
 		if (deadLetterStore == null)

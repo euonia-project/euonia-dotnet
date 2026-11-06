@@ -15,10 +15,10 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeGuard : IScopeGuard, IDisposable
 {
-	private readonly UserPrincipal _user;
+	private readonly UserPrincipal? _user;
 	private readonly ScopeModelRegistry _registry;
-	private readonly IScopeSubjectResolver _resolver;
-	private readonly IObjectOperationResolver _operationResolver;
+	private readonly IScopeSubjectResolver? _resolver;
+	private readonly IObjectOperationResolver? _operationResolver;
 	private readonly Dictionary<(Type Type, string ScopeKey), object> _compiledPolicies = [];
 	private readonly Dictionary<(Type Type, string ScopeKey), Func<object, bool>> _evaluators = [];
 	private readonly Lock _sync = new();
@@ -40,7 +40,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// </remarks>
 	private const int MaxCacheEntries = 512;
 
-	private ScopeSubjectSet _subjects;
+	private ScopeSubjectSet? _subjects;
 	private bool _resolved;
 
 	/// <summary>
@@ -51,19 +51,18 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// <param name="resolver">授权数据解析器；可缺席，但一旦需要解析授权数据（判定的类型已注册模型）就会抛
 	/// <see cref="InvalidOperationException"/>，不会静默放行。</param>
 	/// <param name="operationResolver">对象状态 → 操作的映射器（宿主框架提供）；可缺席，此时未显式给出操作的判定按「无待执行操作」处理。</param>
-	public ScopeGuard(UserPrincipal user, ScopeModelRegistry registry, IScopeSubjectResolver resolver, IObjectOperationResolver operationResolver)
+	public ScopeGuard(UserPrincipal? user, ScopeModelRegistry registry, IScopeSubjectResolver? resolver, IObjectOperationResolver? operationResolver)
 	{
 		// user/resolver/operationResolver 允许为空是设计（见各自的 <param> 文档）；registry 不允许。
-		Check.EnsureNotNull(registry, nameof(registry));
+		_registry = Check.EnsureNotNull(registry, nameof(registry));
 
 		_user = user;
-		_registry = registry;
 		_resolver = resolver;
 		_operationResolver = operationResolver;
 	}
 
 	/// <inheritdoc />
-	public ClaimsPrincipal User => _user?.Claims;
+	public ClaimsPrincipal? User => _user?.Claims;
 
 	/// <inheritdoc />
 	public IReadOnlyCollection<string> Permissions => GetSubjects().Codes;
@@ -98,7 +97,8 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		{
 			if (_resolved)
 			{
-				return _subjects;
+				// _resolved 与 _subjects 总在同一把锁内成对更新：为 true 时快照必已发布。
+				return _subjects!;
 			}
 		}
 
@@ -109,7 +109,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	}
 
 	/// <inheritdoc />
-	public CompiledScopePolicy<T> GetPolicy<T>(string identifier = null)
+	public CompiledScopePolicy<T>? GetPolicy<T>(string? identifier = null)
 		where T : class
 	{
 		if (!_registry.TryGet(typeof(T), out var registration))
@@ -124,7 +124,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		// 键随解析一起返回（而不是由标识派生）：为 read 声明策略、授予键写 repository:view 时，
 		// 用哪个名字寻址都必须落到同一个键上，否则授予会取错地方。
 		registration.TryResolve(identifier, out var declared, out var key);
-		var policy = (ScopePolicy<T>)declared ?? (ScopePolicy<T>)registration.DefaultPolicy;
+		var policy = (ScopePolicy<T>?)declared ?? (ScopePolicy<T>)registration.DefaultPolicy;
 
 		// 缓存键是解析后的键而不是标识：键在一条模型里唯一（声明期已校验），
 		// 因此「read」与「repository:view」这两个同义的名字会命中同一条编译结果，不会各编译一份。
@@ -141,7 +141,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		// 此后每次都命中它、撤销在本作用域内被静默回滚。这正是 DESIGN §1.8 定义为
 		// 「真实的安全缺口」的那类缺陷。代数在每次发布时自增，写回前比对一次即可封住。
 		int version;
-		ScopeSubjectSet subjects;
+		ScopeSubjectSet? subjects;
 
 		GetSubjects();
 
@@ -168,7 +168,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	}
 
 	/// <inheritdoc />
-	public IQueryable<T> Apply<T>(IQueryable<T> source, string identifier = null)
+	public IQueryable<T> Apply<T>(IQueryable<T> source, string? identifier = null)
 		where T : class
 	{
 		Check.EnsureNotNull(source, nameof(source));
@@ -185,7 +185,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// 与 <see cref="AllowsObject"/> 同口径——<see cref="IScopeGuard"/> 承诺
 	/// 「同一实例经两个入口必然得到同一结论」。
 	/// </remarks>
-	public bool Allows<T>(T resource, string identifier = null)
+	public bool Allows<T>(T? resource, string? identifier = null)
 		where T : class
 	{
 		if (resource == null)
@@ -209,14 +209,14 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	}
 
 	/// <inheritdoc />
-	public ScopeDecision Explain<T>(T resource, string identifier = null)
+	public ScopeDecision Explain<T>(T? resource, string? identifier = null)
 		where T : class
 	{
 		return ExplainCore(resource, ResolveIdentifier(resource, identifier));
 	}
 
 	/// <inheritdoc />
-	public bool AllowsObject(object resource, string identifier = null)
+	public bool AllowsObject(object? resource, string? identifier = null)
 	{
 		if (resource == null)
 		{
@@ -227,7 +227,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	}
 
 	/// <inheritdoc />
-	public string ExplainObject(object resource, string identifier = null)
+	public string ExplainObject(object? resource, string? identifier = null)
 	{
 		var resolved = ResolveIdentifier(resource, identifier);
 		var decision = ExplainCore(resource, resolved);
@@ -260,8 +260,10 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// </remarks>
 	private async ValueTask<ScopeSubjectSet> ResolveAsync(bool force, CancellationToken cancellationToken)
 	{
+		var resolver = _resolver;
+
 		Check.Ensure(
-			_resolver != null,
+			resolver != null,
 			Resources.IDS_SCOPE_SUBJECT_RESOLVER_MISSING,
 			nameof(IScopeSubjectResolver));
 
@@ -291,7 +293,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 			// 未认证 ⇒ 授权数据一律视为空。fail-closed：解析器一旦返回了授予集合，
 			// 而调用方其实并无身份，就会退化成「匿名即放行」。
 			var subjects = User?.Identity?.IsAuthenticated == true
-				? await _resolver.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty
+				? await resolver!.ResolveAsync(User, cancellationToken).ConfigureAwait(false) ?? ScopeSubjectSet.Empty
 				: ScopeSubjectSet.Empty;
 
 			lock (_sync)
@@ -328,7 +330,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// 规范化授权标识：空白一律视为「未指定」，其余去掉首尾空白。
 	/// </summary>
 	/// <remarks>不 trim 的话，<c>"repo:push"</c> 与 <c>"repo:push "</c> 会走两条不同查找路径，后半还会取错授予键。</remarks>
-	private static string Normalize(string identifier)
+	private static string? Normalize(string? identifier)
 	{
 		return string.IsNullOrWhiteSpace(identifier) ? null : identifier.Trim();
 	}
@@ -344,7 +346,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// 引擎不认识任何对象模型，因此这一步由宿主实现（<see cref="IObjectOperationResolver"/>），
 	/// 引擎只消费结果——与「类型 → 维度取值」交给模型是同一个道理。
 	/// </remarks>
-	private string ResolveIdentifier(object resource, string identifier)
+	private string? ResolveIdentifier(object? resource, string? identifier)
 	{
 		var explicitIdentifier = Normalize(identifier);
 
@@ -361,7 +363,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// <summary>
 	/// 沿基类链找出资源实例对应的已声明类型（实体框架的代理类型是派生类）。
 	/// </summary>
-	private Type ResolveDeclaredType(object resource)
+	private Type? ResolveDeclaredType(object? resource)
 	{
 		if (resource == null)
 		{
@@ -371,7 +373,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		return _registry.TryGetInherited(resource.GetType(), out var registration) ? registration.Descriptor.ResourceType : null;
 	}
 
-	private bool AllowsCore(object resource, string identifier)
+	private bool AllowsCore(object resource, string? identifier)
 	{
 		var declaredType = ResolveDeclaredType(resource);
 
@@ -379,15 +381,15 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 		return declaredType == null || GetEvaluator(declaredType, identifier)(resource);
 	}
 
-	private ScopeDecision ExplainCore(object resource, string identifier)
+	private ScopeDecision ExplainCore(object? resource, string? identifier)
 	{
 		var declaredType = ResolveDeclaredType(resource);
 		var registration = declaredType != null && _registry.TryGetInherited(declaredType, out var found) ? found : null;
 
 		// 与判定同源：解释里的策略与键必须就是判定时用的那一对，否则排障时会照着一条错的行范围去查。
 		// 从同一个 TryResolve 取，而不是自己再算一遍——两处各算一遍正是漂移的起点。
-		object declared = null;
-		string resolvedKey = null;
+		object? declared = null;
+		string? resolvedKey = null;
 
 		if (registration != null)
 		{
@@ -437,7 +439,7 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	/// 用表达式构建一次、编译一次，之后复用；避免在写路径上反复反射调用。
 	/// 传入的实例可能是声明类型的派生类型（代理），因此这里做的是引用转换。
 	/// </remarks>
-	private Func<object, bool> GetEvaluator(Type declaredType, string identifier)
+	private Func<object, bool> GetEvaluator(Type declaredType, string? identifier)
 	{
 		var cacheKey = (declaredType, identifier ?? string.Empty);
 

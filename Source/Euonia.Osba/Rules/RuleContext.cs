@@ -11,7 +11,7 @@ public class RuleContext : IRuleContext
 	/// <summary>
 	/// 存储规则结果的列表；规则通过（无结果）时不创建。
 	/// </summary>
-	private List<RuleResult> _results;
+	private List<RuleResult>? _results;
 
 	/// <summary>
 	/// 指示上下文是否已完成，防止重复完成导致规则结果被重复处理。
@@ -28,33 +28,33 @@ public class RuleContext : IRuleContext
 	}
 
 	/// <inheritdoc />
-	public IRuleBase Rule { get; internal set; }
+	public IRuleBase Rule { get; internal set; } = null!;
 
 	/// <inheritdoc />
-	public object Target { get; internal set; }
+	public object Target { get; internal set; } = null!;
 
 	/// <summary>
 	/// 获取或设置属性的名称。
 	/// </summary>
-	public string PropertyName { get; internal set; }
+	public string? PropertyName { get; internal set; }
 
 	/// <inheritdoc />
 	public IReadOnlyList<RuleResult> Results => _results == null ? Array.Empty<RuleResult>() : _results;
 
 	/// <inheritdoc />
-	public void AddErrorResult(string description)
+	public void AddErrorResult(string? description)
 	{
 		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Error));
 	}
 
 	/// <inheritdoc />
-	public void AddWarningResult(string description)
+	public void AddWarningResult(string? description)
 	{
 		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Warning));
 	}
 
 	/// <inheritdoc />
-	public void AddInformationResult(string description)
+	public void AddInformationResult(string? description)
 	{
 		(_results ??= []).Add(new RuleResult(Rule.Name, Normalize(description), RuleSeverity.Information));
 	}
@@ -77,7 +77,7 @@ public class RuleContext : IRuleContext
 	/// 被 <see cref="BrokenRuleCollection"/> 跳过——规则明明报了错，对象却被判为有效。
 	/// 这是比抛异常更危险的静默失效。
 	/// </remarks>
-	private string Normalize(string description)
+	private string Normalize(string? description)
 	{
 		return string.IsNullOrWhiteSpace(description)
 			       ? $"{Resources.IDS_RULE_MESSAGE_REQUIRED} ({Rule.Name})"

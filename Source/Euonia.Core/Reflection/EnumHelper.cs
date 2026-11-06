@@ -25,7 +25,7 @@ public static class EnumHelper
         return (
             from field in type.GetRuntimeFields()
             where field.IsLiteral
-            select (TEnum)field.GetValue(type)).ToArray();
+            select (TEnum)field.GetValue(type)!).ToArray();
     }
 
     /// <summary>
@@ -53,7 +53,7 @@ public static class EnumHelper
     /// <typeparam name="T">特性类型。</typeparam>
     /// <param name="e">枚举值。</param>
     /// <returns>找到的特性实例，如果未找到则返回默认值。</returns>
-    public static T GetAttribute<T>(Enum e)
+    public static T? GetAttribute<T>(Enum e)
         where T : Attribute
     {
         if (e == null)
@@ -78,7 +78,7 @@ public static class EnumHelper
     /// <typeparam name="T">特性类型。</typeparam>
     /// <param name="value">枚举值。</param>
     /// <returns>找到的特性实例，如果未找到则返回默认值。</returns>
-    public static T GetCustomerAttribute<T>(Enum value)
+    public static T? GetCustomerAttribute<T>(Enum value)
         where T : Attribute
     {
         var enumType = value.GetType();

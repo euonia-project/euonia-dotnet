@@ -19,7 +19,7 @@ public static class UserContextExtensions
 	/// </summary>
 	/// <param name="metadata">携带用户上下文键的消息元数据。</param>
 	/// <returns>认证令牌；元数据中不存在时返回 <c>null</c>。</returns>
-	public static string GetAuthorizationToken(this MessageMetadata metadata)
+	public static string? GetAuthorizationToken(this MessageMetadata metadata)
 	{
 		return metadata.GetOrDefault(UserContextMetadataKeys.Authorization);
 	}
@@ -36,7 +36,7 @@ public static class UserContextExtensions
 	/// 重建的前提是元数据中存在至少一个用户身份键。恢复时以 <c>Bearer</c> 作为身份验证类型，
 	/// 并依据 <see cref="UserPrincipal"/> 的读取规则填入对应声明（Subject/NameIdentifier、Name、Code、Tenant）。
 	/// </remarks>
-	public static UserPrincipal GetUserPrincipal(this MessageMetadata metadata)
+	public static UserPrincipal? GetUserPrincipal(this MessageMetadata metadata)
 	{
 		var userName = metadata.GetOrDefault(UserContextMetadataKeys.UserName);
 		var userId = metadata.GetOrDefault(UserContextMetadataKeys.UserId);
@@ -72,7 +72,7 @@ public static class UserContextExtensions
 		return new UserPrincipal(new ClaimsPrincipal(identity));
 	}
 
-	private static string GetOrDefault(this MessageMetadata metadata, string key)
+	private static string? GetOrDefault(this MessageMetadata metadata, string key)
 	{
 		return metadata.TryGetValue(key, out var value) && value is string text ? text : null;
 	}

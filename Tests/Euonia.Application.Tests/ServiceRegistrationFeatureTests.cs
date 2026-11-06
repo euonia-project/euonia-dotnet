@@ -27,7 +27,7 @@ public sealed class BetaService : BaseApplicationService, IBetaService
 public interface ILoggerProbeService : IApplicationService
 	{
 		ILogger Logger { get; }
-		RequestContext RequestContext { get; }
+		RequestContext? RequestContext { get; }
 		CancellationToken RequestAborted { get; }
 	}
 
@@ -40,7 +40,7 @@ public interface ILoggerProbeService : IApplicationService
 	{
 		ILogger ILoggerProbeService.Logger => Logger;
 
-		RequestContext ILoggerProbeService.RequestContext => RequestContext;
+		RequestContext? ILoggerProbeService.RequestContext => RequestContext;
 
 		CancellationToken ILoggerProbeService.RequestAborted => RequestAborted;
 	}

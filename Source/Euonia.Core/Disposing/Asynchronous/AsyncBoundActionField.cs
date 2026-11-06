@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Disposing;
 /// <typeparam name="T">操作的上下文类型。</typeparam>
 public sealed class AsyncBoundActionField<T>
 {
-    private BoundAction _field;
+    private BoundAction? _field;
 
     /// <summary>
     /// 使用指定的操作和上下文初始化字段。
@@ -26,7 +26,7 @@ public sealed class AsyncBoundActionField<T>
     /// <summary>
     /// 原子地从字段中获取绑定的操作并将字段设置为 <c>null</c>。可能返回 <c>null</c>。
     /// </summary>
-    public IBoundAction TryGetAndUnset()
+    public IBoundAction? TryGetAndUnset()
     {
         return Interlocked.Exchange(ref _field, null);
     }

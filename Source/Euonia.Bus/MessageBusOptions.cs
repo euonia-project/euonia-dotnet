@@ -13,7 +13,7 @@ public class MessageBusOptions
 	/// <para>此选项通过<c>Euonia:Bus:DefaultTransporter</c>节点进行配置。</para>
 	/// </remarks>
 	/// <value>默认传输器的名称。</value>
-	public string DefaultTransporter { get; set; }
+	public string DefaultTransporter { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 获取或设置需要自动扫描并注册消息处理器的程序集名称列表。
@@ -25,7 +25,7 @@ public class MessageBusOptions
 	/// <para>程序集按**简单名称**加载（例如 <c>MyApp.Handlers</c>）；无法加载时启动即失败并指出具体名称。</para>
 	/// <para>通过 <c>Euonia:Bus:AutoLoadAssemblies</c> 节点配置。</para>
 	/// </remarks>
-	public string[] AutoLoadAssemblies { get; set; }
+	public string[]? AutoLoadAssemblies { get; set; }
 
 	/// <summary>
 	/// 获取或设置发件箱（Outbox）模式的配置选项。

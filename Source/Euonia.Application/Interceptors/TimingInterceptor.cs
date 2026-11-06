@@ -49,14 +49,15 @@ public class TimingInterceptor : IInterceptor
 		if (returnType == typeof(Task) || (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>)))
 		{
 			invocation.Proceed();
-			((Task)invocation.ReturnValue).ContinueWith(_ => LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
+			// Proceed 之后返回 Task/Task<T> 的方法其 ReturnValue 必为任务实例。
+			((Task)invocation.ReturnValue!).ContinueWith(_ => LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
 			return;
 		}
 
 		if (returnType == typeof(ValueTask))
 		{
 			invocation.Proceed();
-			((ValueTask)invocation.ReturnValue).AsTask().ContinueWith(_ => LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
+			((ValueTask)invocation.ReturnValue!).AsTask().ContinueWith(_ => LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
 			return;
 		}
 
@@ -64,7 +65,7 @@ public class TimingInterceptor : IInterceptor
 		{
 			invocation.Proceed();
 			_attachValueTaskMethod.MakeGenericMethod(returnType.GetGenericArguments()[0])
-			                      .Invoke(null, new object[] { invocation.ReturnValue, this, stopwatch, invocation, attribute });
+			                      .Invoke(null, new object?[] { invocation.ReturnValue, this, stopwatch, invocation, attribute });
 			return;
 		}
 
@@ -72,9 +73,10 @@ public class TimingInterceptor : IInterceptor
 		LogIfSlow(invocation, stopwatch, attribute);
 	}
 
-	private static void AttachValueTask<T>(object rawReturnValue, TimingInterceptor owner, Stopwatch stopwatch, IInvocation invocation, TimingAttribute attribute)
+	private static void AttachValueTask<T>(object? rawReturnValue, TimingInterceptor owner, Stopwatch stopwatch, IInvocation invocation, TimingAttribute attribute)
 	{
-		((ValueTask<T>)rawReturnValue).AsTask().ContinueWith(_ => owner.LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
+		// 反射传入的是被拦截方法返回的非空 ValueTask<T> 装箱值。
+		((ValueTask<T>)rawReturnValue!).AsTask().ContinueWith(_ => owner.LogIfSlow(invocation, stopwatch, attribute), TaskScheduler.Default);
 	}
 
 	private void LogIfSlow(IInvocation invocation, Stopwatch stopwatch, TimingAttribute attribute)
@@ -107,7 +109,7 @@ public class TimingInterceptor : IInterceptor
 		}
 	}
 
-	private static TimingAttribute ResolveAttribute(IInvocation invocation)
+	private static TimingAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<TimingAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<TimingAttribute>()

@@ -12,5 +12,5 @@ public interface ICacheHolder
     /// <typeparam name="TResult">The type of the result.</typeparam>
     /// <param name="component">The component context.</param>
     /// <returns>An entry from the cache, or a new, empty one, if none is found.</returns>
-    internal CacheItem<TKey, TResult> GetCache<TKey, TResult>(Type component);
+    internal CacheItem<TKey, TResult> GetCache<TKey, TResult>(Type component) where TKey : notnull;
 }

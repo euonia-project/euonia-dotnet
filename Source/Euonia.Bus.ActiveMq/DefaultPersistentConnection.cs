@@ -35,7 +35,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <summary>
 	/// 当前的 ActiveMQ 连接实例。
 	/// </summary>
-	private IConnection _connection;
+	private IConnection? _connection;
 
 	/// <summary>
 	/// 是否已经成功建立过连接；用于区分首次连接与重连。
@@ -45,7 +45,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <summary>
 	/// 底层连接重新建立后触发，接收者据此重建会话与消费者。
 	/// </summary>
-	public event EventHandler Reconnected;
+	public event EventHandler Reconnected = null!;
 
 	/// <summary>
 	/// 初始化 <see cref="DefaultPersistentConnection"/> 类的新实例。
@@ -153,12 +153,12 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 				return connection;
 			});
 
-			if (IsConnected)
+			if (IsConnected && _connection is { } connection)
 			{
-				_connection.ConnectionInterruptedListener += OnConnectionInterruptedAsync;
-				_connection.ExceptionListener += OnConnectionExceptionAsync;
+				connection.ConnectionInterruptedListener += OnConnectionInterruptedAsync;
+				connection.ExceptionListener += OnConnectionExceptionAsync;
 
-				_logger.LogInformation("ActiveMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.ClientId);
+				_logger.LogInformation("ActiveMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", connection.ClientId);
 
 				if (_hasConnected)
 				{
@@ -230,6 +230,6 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			await TryConnectAsync();
 		}
 
-		return await _connection.CreateSessionAsync(AcknowledgementMode.ClientAcknowledge);
+		return await _connection!.CreateSessionAsync(AcknowledgementMode.ClientAcknowledge);
 	}
 }

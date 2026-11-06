@@ -19,7 +19,7 @@ public static class MemoryCacheBuilderExtensions
     /// The builder part.
     /// </returns>
     /// <returns>The builder part.</returns>
-    public static ConfigurationBuilderCacheHandlePart WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, bool isBackplaneSource = false)
+    public static ConfigurationBuilderCacheHandlePart? WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, bool isBackplaneSource = false)
         => WithMemoryCacheHandle(part, Guid.NewGuid().ToString(), isBackplaneSource, new MemoryCacheOptions());
 
     /// <summary>
@@ -34,7 +34,7 @@ public static class MemoryCacheBuilderExtensions
     /// </returns>
     /// <exception cref="ArgumentNullException">If part is null.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource = false)
+    public static ConfigurationBuilderCacheHandlePart? WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource = false)
         => WithMemoryCacheHandle(part, instanceName, isBackplaneSource, new MemoryCacheOptions());
 
     /// <summary>
@@ -45,7 +45,7 @@ public static class MemoryCacheBuilderExtensions
     /// <param name="options">The <see cref="MemoryCacheOptions"/> which should be used to initiate or reset this cache.</param>
     /// <returns>The builder part.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, MemoryCacheOptions options)
+    public static ConfigurationBuilderCacheHandlePart? WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, MemoryCacheOptions options)
         => WithMemoryCacheHandle(part, instanceName, false, options);
 
     /// <summary>
@@ -55,7 +55,7 @@ public static class MemoryCacheBuilderExtensions
     /// <param name="part">The builder part.</param>
     /// <param name="options">The <see cref="MemoryCacheOptions"/> which should be used to initiate or reset this cache.</param>
     /// <returns>The builder part.</returns>
-    public static ConfigurationBuilderCacheHandlePart WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, MemoryCacheOptions options)
+    public static ConfigurationBuilderCacheHandlePart? WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, MemoryCacheOptions options)
         => WithMemoryCacheHandle(part, Guid.NewGuid().ToString(), false, options);
 
     /// <summary>
@@ -72,6 +72,6 @@ public static class MemoryCacheBuilderExtensions
     /// <returns>The builder part.</returns>
     /// <exception cref="ArgumentNullException">If part is null.</exception>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="instanceName"/> is null.</exception>
-    public static ConfigurationBuilderCacheHandlePart WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource, MemoryCacheOptions options)
+    public static ConfigurationBuilderCacheHandlePart? WithMemoryCacheHandle(this ConfigurationBuilderCachePart part, string instanceName, bool isBackplaneSource, MemoryCacheOptions options)
         => part?.WithHandle(typeof(MemoryCacheHandle<>), instanceName, isBackplaneSource, options);
 }

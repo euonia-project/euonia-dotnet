@@ -48,7 +48,7 @@ public static class CacheItemUpdateResult
 /// <typeparam name="TValue">缓存值的类型。</typeparam>
 public class CacheItemUpdateResult<TValue>
 {
-	internal CacheItemUpdateResult(CacheItem<TValue> value, CacheItemUpdateResultState state, bool conflictOccurred, int triesNeeded)
+	internal CacheItemUpdateResult(CacheItem<TValue>? value, CacheItemUpdateResultState state, bool conflictOccurred, int triesNeeded)
 	{
 		if (triesNeeded == 0)
 		{
@@ -76,8 +76,8 @@ public class CacheItemUpdateResult<TValue>
 	/// <summary>
 	/// 获取更新后的值。
 	/// </summary>
-	/// <value>更新后的值。</value>
-	public CacheItem<TValue> Value { get; }
+	/// <value>更新后的值；更新失败时为 <c>null</c>。</value>
+	public CacheItem<TValue>? Value { get; }
 
 	/// <summary>
 	/// 获取一个值，指示更新操作期间是否发生了版本冲突。

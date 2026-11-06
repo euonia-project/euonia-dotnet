@@ -109,7 +109,7 @@ public class GeneralityTests
 
 		Assert.NotNull(byOperation);
 		Assert.Same(byOperation, byCode);
-		Assert.Equal("guarded:run", byCode.ScopeKey);
+		Assert.Equal("guarded:run", byCode!.ScopeKey);
 
 		var asset = new GuardedAsset { OwnerId = "dev", DeptId = "team-a" };
 

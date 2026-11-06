@@ -87,7 +87,7 @@ public class BusTelemetryTests
 		/// </summary>
 		public ICollection<string> TagValues => _tagValues.Keys;
 
-		private void OnMeasurement(Instrument instrument, long measurement, ReadOnlySpan<KeyValuePair<string, object>> tags, object state)
+		private void OnMeasurement(Instrument instrument, long measurement, ReadOnlySpan<KeyValuePair<string, object?>> tags, object? state)
 		{
 			foreach (var tag in tags)
 			{
@@ -147,12 +147,12 @@ public class BusTelemetryTests
 
 		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 
 		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 	}
 }

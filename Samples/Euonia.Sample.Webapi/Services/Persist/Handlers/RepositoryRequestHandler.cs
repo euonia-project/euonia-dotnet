@@ -59,7 +59,7 @@ internal class RepositoryRequestHandler(IRepositoryStore store, IScopeGuard guar
 		return new PagedResult<RepositoryDto>(total, page, pageSize, items);
 	}
 
-	private static IQueryable<CodeRepository> ApplySort(IQueryable<CodeRepository> query, string sortBy)
+	private static IQueryable<CodeRepository> ApplySort(IQueryable<CodeRepository> query, string? sortBy)
 	{
 		// 排序白名单：只允许按实体列排序，非法值回落默认（Id）。
 		return sortBy?.ToLowerInvariant() switch

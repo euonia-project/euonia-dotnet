@@ -65,7 +65,7 @@ public static class GrpcExtensions
             throw new NullReferenceException();
         }
 
-        return request.Property.TryGetValue(key, out var value) ? Convert<TValue>(value) : default;
+        return request.Property.TryGetValue(key, out var value) ? Convert<TValue>(value) : default!;
     }
 
     /// <summary>
@@ -119,14 +119,14 @@ public static class GrpcExtensions
             return string.Empty;
         }
 
-        return typeof(TValue).IsClass ? JsonSerializer.Serialize(content) : content.ToString();
+        return typeof(TValue).IsClass ? JsonSerializer.Serialize(content) : content.ToString()!;
     }
 
     private static TValue Convert<TValue>(string content)
     {
         if (string.IsNullOrEmpty(content))
         {
-            return default;
+            return default!;
         }
 
         if (typeof(TValue).IsEnum)
@@ -137,9 +137,9 @@ public static class GrpcExtensions
         if (!typeof(TValue).IsClass)
         {
             return (TValue)TypeDescriptor.GetConverter(typeof(TValue))
-                                         .ConvertFrom(content);
+                                         .ConvertFrom(content)!;
         }
 
-        return JsonSerializer.Deserialize<TValue>(content);
+        return JsonSerializer.Deserialize<TValue>(content)!;
     }
 }

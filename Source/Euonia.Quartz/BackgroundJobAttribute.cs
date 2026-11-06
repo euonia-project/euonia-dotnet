@@ -26,12 +26,12 @@ public class BackgroundJobAttribute : Attribute
     /// <summary>
     /// Gets or sets the quartz job group name.
     /// </summary>
-    public string Group { get; set; }
+    public string? Group { get; set; }
 
     /// <summary>
     /// Gets or sets a description for the job.
     /// </summary>
-    public string Description { get; set; }
+    public string? Description { get; set; }
     
     /// <summary>
     /// Instructs the <see cref="IScheduler" /> whether or not the job should be re-executed if a 'recovery' or 'fail-over' situation is encountered.

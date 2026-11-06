@@ -10,7 +10,7 @@ namespace Nerosoft.Euonia.Sample.Facade.Contracts;
 public interface IRepositoryApplicationService : IApplicationService
 {
 	/// <summary>分页查询仓库（已登录按 <c>repository:view</c> 码与行范围下推；匿名只返回公开行）。</summary>
-	Task<PagedResult<RepositoryDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
+	Task<PagedResult<RepositoryDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default);
 
 	/// <summary>查看仓库详情（行级视图判定；匿名仅公开行）。</summary>
 	Task<RepositoryDto> GetAsync(string id, CancellationToken cancellationToken = default);

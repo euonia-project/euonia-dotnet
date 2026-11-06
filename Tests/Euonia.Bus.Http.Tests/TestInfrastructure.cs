@@ -17,7 +17,7 @@ public sealed class CountRequest : IRequest<int>
 /// </summary>
 public sealed class FailingRequest : IRequest<object>
 {
-	public string Text { get; set; }
+	public string Text { get; set; } = string.Empty;
 }
 
 /// <summary>
@@ -52,15 +52,15 @@ public class FakeBusServerHandler : HttpMessageHandler
 		_handler = handler;
 	}
 
-	public string LastRequestBody { get; private set; }
+	public string LastRequestBody { get; private set; } = null!;
 
-	public Uri LastRequestUri { get; private set; }
+	public Uri LastRequestUri { get; private set; } = null!;
 
 	public IDictionary<string, string> LastRequestHeaders { get; } = new Dictionary<string, string>();
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
-		LastRequestUri = request.RequestUri;
+		LastRequestUri = request.RequestUri!;
 		LastRequestHeaders.Clear();
 		foreach (var header in request.Headers)
 		{
@@ -123,7 +123,7 @@ public class StubHandlerContext : IHandlerContext
 				throw new InvalidOperationException(failing.Text);
 			case SlowRequest:
 				await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
-				return null;
+				return null!;
 			default:
 				throw new MessageDeliverException($"No handler for type {message.GetType().FullName}.");
 		}
@@ -135,7 +135,7 @@ public class StubHandlerContext : IHandlerContext
 /// </summary>
 internal static class HttpTestFactory
 {
-	internal static HttpTransporter BuildTransporter(HttpMessageHandler handler, Action<HttpBusOptions> configure = null)
+	internal static HttpTransporter BuildTransporter(HttpMessageHandler handler, Action<HttpBusOptions>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

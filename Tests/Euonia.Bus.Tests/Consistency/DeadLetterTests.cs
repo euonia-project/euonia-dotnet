@@ -21,7 +21,7 @@ public class DeadLetterTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/dead" }, "test.events", "dead-outbox-1");
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(envelope, ["test"]);
-		var failed = store.Get("dead-outbox-1").GetTransport("test");
+		var failed = store.Get("dead-outbox-1")!.GetTransport("test")!;
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
@@ -30,7 +30,7 @@ public class DeadLetterTests
 
 		// 不再重投递，且已从失败集合中移除（否则每轮轮询都会重复扫描）。
 		Assert.DoesNotContain("dead-outbox-1", delivered);
-		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("dead-outbox-1").GetTransport("test").Status);
+		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("dead-outbox-1")!.GetTransport("test")!.Status);
 		Assert.Empty(store.GetFailedMessages());
 
 		var entry = deadLetters.Get("dead-outbox-1");
@@ -70,7 +70,7 @@ public class DeadLetterTests
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(envelope, ["test"]);
 		// MaxRetryAttempts = 1 表示允许 1 次重投递，因此需要累计 2 次失败才算耗尽。
-		var failed = store.Get("dead-outbox-2").GetTransport("test");
+		var failed = store.Get("dead-outbox-2")!.GetTransport("test")!;
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
@@ -78,7 +78,7 @@ public class DeadLetterTests
 		await dispatcher.RetryAllAsync();
 
 		// 未注册死信存储时保持原有的"跳过"语义，但状态仍转为终态，避免被反复扫描。
-		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("dead-outbox-2").GetTransport("test").Status);
+		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("dead-outbox-2")!.GetTransport("test")!.Status);
 		Assert.Empty(store.GetFailedMessages());
 	}
 
@@ -99,7 +99,7 @@ public class DeadLetterTests
 				new HandlerRegistration("MyHandler", _ => (message, context, token) =>
 				{
 					handled++;
-					return Task.FromResult<object>(null);
+					return Task.FromResult<object>(null!);
 				})
 			]
 		};
@@ -108,7 +108,7 @@ public class DeadLetterTests
 		IInboxStore store = new InMemoryInboxStore();
 		store.Insert("test.events", envelope, ["MyHandler"]);
 		// MaxRetryAttempts = 1 表示允许 1 次重执行，因此需要累计 2 次失败才算耗尽。
-		var failed = store.Get("dead-inbox-1").GetHandler("MyHandler");
+		var failed = store.Get("dead-inbox-1")!.GetHandler("MyHandler")!;
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
@@ -116,7 +116,7 @@ public class DeadLetterTests
 		await dispatcher.RetryAllAsync();
 
 		Assert.Equal(0, handled);
-		Assert.Equal(InboxHandlerStatus.DeadLettered, store.Get("dead-inbox-1").GetHandler("MyHandler").Status);
+		Assert.Equal(InboxHandlerStatus.DeadLettered, store.Get("dead-inbox-1")!.GetHandler("MyHandler")!.Status);
 		Assert.Empty(store.GetFailedMessages());
 
 		var entry = deadLetters.Get("dead-inbox-1");
@@ -137,12 +137,12 @@ public class DeadLetterTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/missing" }, "test.events", "missing-handler-1");
 		IInboxStore store = new InMemoryInboxStore();
 		store.Insert("test.events", envelope, ["MissingHandler"]);
-		store.Get("missing-handler-1").GetHandler("MissingHandler")!.MarkAsFailed("boom");
+		store.Get("missing-handler-1")!.GetHandler("MissingHandler")!.MarkAsFailed("boom");
 
 		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true, MaxRetryAttempts = 1 }, new ConcurrentDictionary<string, List<HandlerRegistration>>());
 		await dispatcher.RetryAllAsync();
 
-		Assert.Equal(InboxHandlerStatus.DeadLettered, store.Get("missing-handler-1").GetHandler("MissingHandler")!.Status);
+		Assert.Equal(InboxHandlerStatus.DeadLettered, store.Get("missing-handler-1")!.GetHandler("MissingHandler")!.Status);
 		Assert.Empty(store.GetFailedMessages());
 		Assert.NotNull(deadLetters.Get("missing-handler-1"));
 	}
@@ -239,7 +239,7 @@ public class DeadLetterTests
 
 		Assert.Equal(1, ReplayHandler.Calls);
 		Assert.Null(deadLetters.Get("replay-inbox-2"));
-		Assert.Equal(InboxHandlerStatus.Success, inbox.Get("replay-inbox-2").GetHandler(handlerName).Status);
+		Assert.Equal(InboxHandlerStatus.Success, inbox.Get("replay-inbox-2")!.GetHandler(handlerName)!.Status);
 	}
 
 	[Fact]
@@ -296,7 +296,7 @@ public class DeadLetterTests
 		// 用接口类型调用：Insert(信封, 传输器名) 是默认接口方法，只能经接口访问。
 		IOutboxStore store = new DetachedOutboxStore();
 		store.Insert(TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/dead" }, "test.events", "detached-1"), ["test"]);
-		var failed = store.Get("detached-1").GetTransport("test");
+		var failed = store.Get("detached-1")!.GetTransport("test")!;
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
@@ -305,7 +305,7 @@ public class DeadLetterTests
 
 		// 若实现改为直接修改 GetFailedMessages 返回的对象，此处仍会返回该记录（状态未落库）。
 		Assert.Empty(store.GetFailedMessages());
-		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("detached-1").GetTransport("test").Status);
+		Assert.Equal(OutboxTransportStatus.DeadLettered, store.Get("detached-1")!.GetTransport("test")!.Status);
 	}
 
 	/// <summary>
@@ -416,7 +416,7 @@ public class DeadLetterTests
 
 		public OutboxEntry Get(string messageId)
 		{
-			return _inner.Get(messageId);
+			return _inner.Get(messageId)!;
 		}
 
 		public void MarkAsSuccess(string messageId, string transport)

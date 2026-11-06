@@ -33,13 +33,13 @@ internal sealed class DeadLetterService : IDeadLetterService
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry Get(string messageId)
+	public DeadLetterEntry? Get(string messageId)
 	{
 		return string.IsNullOrWhiteSpace(messageId) ? null : _store.Get(messageId);
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry GetById(string id)
+	public DeadLetterEntry? GetById(string id)
 	{
 		return string.IsNullOrWhiteSpace(id) ? null : _store.GetById(id);
 	}

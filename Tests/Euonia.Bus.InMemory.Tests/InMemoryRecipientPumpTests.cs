@@ -21,7 +21,7 @@ public class InMemoryRecipientPumpTests
 		var pack = CreatePack("pump-1");
 
 		var acknowledged = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-		recipient.MessageAcknowledged += (_, _) => acknowledged.TrySetResult(null);
+		recipient.MessageAcknowledged += (_, _) => acknowledged.TrySetResult(null!);
 
 		// 处理程序被 gate 挡住。若 Receive 仍同步等待处理完成，下面的等待会超时，
 		// 从而把"再次引入阻塞"表现为一次明确的失败，而不是让整个测试宿主挂起。
@@ -31,7 +31,7 @@ public class InMemoryRecipientPumpTests
 		Assert.False(acknowledged.Task.IsCompleted, "Receive must not wait for the handler to complete");
 
 		// 放行处理程序后，确认事件应在泵内被触发。
-		gate.SetResult(null);
+		gate.SetResult(null!);
 		await acknowledged.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 	}
 

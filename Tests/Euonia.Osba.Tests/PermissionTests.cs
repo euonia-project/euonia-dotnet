@@ -498,7 +498,7 @@ public class TestSubjectResolver : IScopeSubjectResolver
 	}
 
 	/// <inheritdoc />
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder().AddCodes(_permissions).Build());
 	}

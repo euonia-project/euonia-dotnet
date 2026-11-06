@@ -121,7 +121,7 @@ public class ObjectPermissionOptInTests
 
 	private sealed class FixedSubjectResolver : IScopeSubjectResolver
 	{
-		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 			=> ValueTask.FromResult(ScopeSubjectSet.Empty);
 	}
 }

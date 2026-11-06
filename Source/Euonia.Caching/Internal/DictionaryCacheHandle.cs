@@ -116,7 +116,7 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// </summary>
 	/// <param name="key">用于在缓存中识别项的键。</param>
 	/// <returns><c>CacheItem</c>。</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key) =>
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key) =>
 		GetCacheItemInternal(key, null);
 
 	/// <summary>
@@ -125,11 +125,11 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <param name="key">用于在缓存中识别项的键。</param>
 	/// <param name="region">缓存区域。</param>
 	/// <returns><c>CacheItem</c>。</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		var fullKey = GetKey(key, region);
 
-		if (_cache.TryGetValue(fullKey, out CacheItem<TValue> result))
+		if (_cache.TryGetValue(fullKey, out CacheItem<TValue>? result))
 		{
 			if (result.ExpirationMode != CacheExpirationMode.None && IsExpired(result, DateTime.UtcNow))
 			{
@@ -171,7 +171,7 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <returns>
 	/// <c>true</c> 如果键被找到并从缓存中移除，<c>false</c> 否则。
 	/// </returns>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		var fullKey = GetKey(key, region);
 		return _cache.TryRemove(fullKey, out _);
@@ -184,7 +184,7 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// <param name="region">区域。</param>
 	/// <returns>完整键。若区域为空，则返回键本身；否则返回拼接了区域前缀的完整键。</returns>
 	/// <exception cref="ArgumentException">如果 <c>key</c> 是空的。</exception>
-	private static string GetKey(string key, string region)
+	private static string GetKey(string key, string? region)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -217,7 +217,7 @@ public class DictionaryCacheHandle<TValue> : BaseCacheHandle<TValue>
 	/// 定时器回调，用于周期扫描并移除过期项。通过 <see cref="Interlocked"/> 防止并发扫描。
 	/// </summary>
 	/// <param name="state">定时器状态对象（未使用）。</param>
-	private void TimerLoop(object state)
+	private void TimerLoop(object? state)
 	{
 		if (_scanRunning > 0)
 		{

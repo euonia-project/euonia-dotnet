@@ -20,7 +20,7 @@ public abstract class ServiceObjectBase<T> : ServiceObject<T>, IHasLazyServicePr
 	/// during construction.
 	/// </remarks>
 	[Inject]
-	public virtual ILazyServiceProvider LazyServiceProvider { get; set; }
+	public virtual ILazyServiceProvider LazyServiceProvider { get; set; } = null!;
 
 	/// <summary>
 	/// Gets the current authorized user's principal.

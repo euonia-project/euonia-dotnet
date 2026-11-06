@@ -5,7 +5,7 @@ using Nerosoft.Euonia.Collections;
 
 public static partial class Extensions
 {
-	[ThreadStatic] private static Random _random;
+	[ThreadStatic] private static Random? _random;
 
 	private static Random RandomInstance => _random ??= new Random();
 
@@ -559,7 +559,8 @@ public static partial class Extensions
 	/// <param name="getDependencies">解析依赖关系的函数。</param>
 	/// <param name="comparer">依赖关系的相等比较器。</param>
 	/// <returns>按依赖关系排序的新列表。如果 A 依赖于 B，则 B 在结果列表中排在 A 之前。</returns>
-	public static List<T> SortByDependencies<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> getDependencies, IEqualityComparer<T> comparer = null)
+	public static List<T> SortByDependencies<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> getDependencies, IEqualityComparer<T>? comparer = null)
+		where T : notnull
 	{
 		/* See: http://www.codeproject.com/Articles/869059/Topological-sorting-in-Csharp
 		 *      http://en.wikipedia.org/wiki/Topological_sorting
@@ -584,6 +585,7 @@ public static partial class Extensions
 	/// <param name="sorted">已排序的元素列表。</param>
 	/// <param name="visited">访问状态字典。</param>
 	private static void SortByDependenciesVisit<T>(T item, Func<T, IEnumerable<T>> getDependencies, IList<T> sorted, Dictionary<T, bool> visited)
+		where T : notnull
 	{
 		var alreadyVisited = visited.TryGetValue(item, out var inProcess);
 
@@ -673,7 +675,7 @@ public static partial class Extensions
 	/// <param name="key">键。</param>
 	/// <param name="value">输出参数，用于存储获取到的值。</param>
 	/// <returns>如果成功获取到值，则返回 <c>true</c>；否则返回 <c>false</c>。</returns>
-	internal static bool TryGetValue<T>(this IDictionary<string, object> dictionary, string key, out T value)
+	internal static bool TryGetValue<T>(this IDictionary<string, object> dictionary, string key, [MaybeNullWhen(false)] out T value)
 	{
 		if (dictionary.TryGetValue(key, out var valueObj) && valueObj is T result)
 		{
@@ -693,7 +695,9 @@ public static partial class Extensions
 	/// <param name="dictionary">字典。</param>
 	/// <param name="key">键。</param>
 	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+	[return: MaybeNull]
 	public static TValue GetOrDefault<TKey, TValue>(this Dictionary<TKey, TValue> dictionary, TKey key)
+		where TKey : notnull
 	{
 		return dictionary.GetValueOrDefault(key);
 	}
@@ -706,6 +710,7 @@ public static partial class Extensions
 	/// <param name="dictionary">字典。</param>
 	/// <param name="key">键。</param>
 	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+	[return: MaybeNull]
 	public static TValue GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dictionary, TKey key)
 	{
 		return dictionary.TryGetValue(key, out var obj) ? obj : default;
@@ -719,6 +724,7 @@ public static partial class Extensions
 	/// <param name="dictionary">字典。</param>
 	/// <param name="key">键。</param>
 	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+	[return: MaybeNull]
 	public static TValue GetOrDefault<TKey, TValue>(this IReadOnlyDictionary<TKey, TValue> dictionary, TKey key)
 	{
 		return dictionary.GetValueOrDefault(key);
@@ -732,7 +738,9 @@ public static partial class Extensions
 	/// <param name="dictionary">字典。</param>
 	/// <param name="key">键。</param>
 	/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+	[return: MaybeNull]
 	public static TValue GetOrDefault<TKey, TValue>(this ConcurrentDictionary<TKey, TValue> dictionary, TKey key)
+		where TKey : notnull
 	{
 		return dictionary.GetValueOrDefault(key);
 	}
@@ -970,7 +978,7 @@ public static partial class Extensions
 				return;
 			}
 
-			var refValue = (TRef)System.Convert.ChangeType(value, typeof(TRef));
+			var refValue = (TRef)System.Convert.ChangeType(value, typeof(TRef))!;
 			func(refValue);
 		}
 
@@ -979,6 +987,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="key">要获取的键。</param>
 		/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+		[return: MaybeNull]
 		public TValue TryGetValue(TKey key)
 		{
 			if (source == null)
@@ -1022,7 +1031,7 @@ public static partial class Extensions
 				return value;
 			}
 
-			value = default;
+			value = default!;
 			source.Add(key, value);
 			return source[key];
 		}
@@ -1032,6 +1041,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="key">要获取的键。</param>
 		/// <returns>如果找到键，则返回对应的值；否则返回默认值。</returns>
+		[return: MaybeNull]
 		public TValue GetValueOrDefault(TKey key)
 		{
 			return source.TryGetValue(key, out var value) ? value : default;

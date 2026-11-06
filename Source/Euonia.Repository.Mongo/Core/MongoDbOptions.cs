@@ -8,12 +8,12 @@ public class MongoDbOptions
     /// <summary>
     /// Gets the connection string.
     /// </summary>
-    public string ConnectionString { get; private set; }
+    public string ConnectionString { get; private set; } = null!;
 
     /// <summary>
     /// Gets the database name.
     /// </summary>
-    public string Database { get; private set; }
+    public string Database { get; private set; } = null!;
 
     /// <summary>
     /// Gets the specified connection.

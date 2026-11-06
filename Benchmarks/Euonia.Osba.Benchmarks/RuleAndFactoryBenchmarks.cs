@@ -10,13 +10,13 @@ namespace Euonia.Osba.Benchmarks;
 [MemoryDiagnoser]
 public class RuleAndFactoryBenchmarks
 {
-	private ServiceProvider _provider;
-	private IServiceScope _scope;
-	private BusinessContext _context;
-	private RuledObject _ruled;
-	private PlainObject _plain;
-	private IActuator _actuator;
-	private IObjectFactory _factory;
+	private ServiceProvider _provider = null!;
+	private IServiceScope _scope = null!;
+	private BusinessContext _context = null!;
+	private RuledObject _ruled = null!;
+	private PlainObject _plain = null!;
+	private IActuator _actuator = null!;
+	private IObjectFactory _factory = null!;
 	private bool _toggle;
 
 	[GlobalSetup]

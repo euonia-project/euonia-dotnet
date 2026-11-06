@@ -39,25 +39,25 @@ internal sealed class InboundEnvelope : IMessageEnvelope
 	public string ConversationId => _context.ConversationId;
 
 	/// <inheritdoc/>
-	public string RequestTraceId => _context.RequestTraceId;
+	public string? RequestTraceId => _context.RequestTraceId;
 
 	/// <inheritdoc/>
 	public string Channel { get; }
 
 	/// <inheritdoc/>
-	public string Authorization => _context.Authorization;
+	public string? Authorization => _context.Authorization;
 
 	/// <inheritdoc/>
 	public long Timestamp => 0;
 
 	/// <inheritdoc/>
-	public string TypeName => _payload.GetType().FullName;
+	public string TypeName => _payload.GetType().FullName!;
 
 	/// <inheritdoc/>
 	public MessageMetadata Metadata => _context.Metadata;
 
 	/// <inheritdoc/>
-	public ClaimsPrincipal User => _context.User as ClaimsPrincipal;
+	public ClaimsPrincipal? User => _context.User as ClaimsPrincipal;
 
 	/// <inheritdoc/>
 	public object Payload => _payload;

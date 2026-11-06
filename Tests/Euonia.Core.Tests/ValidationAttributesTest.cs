@@ -48,7 +48,7 @@ public class CollectionCountAttributeTest
     {
         var attribute = new CollectionCountAttribute(1);
 
-        Assert.True(IsValid(attribute, null));
+        Assert.True(IsValid(attribute, null!));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class CollectionCountAttributeTest
             AllowNull = false
         };
 
-        Assert.False(IsValid(attribute, null));
+        Assert.False(IsValid(attribute, null!));
     }
 
     [Fact]
@@ -153,6 +153,6 @@ public class GuidAttributeTest
     {
         var attribute = new GuidAttribute();
 
-        Assert.True(IsValid(attribute, null));
+        Assert.True(IsValid(attribute, null!));
     }
 }

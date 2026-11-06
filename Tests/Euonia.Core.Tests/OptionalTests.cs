@@ -23,7 +23,7 @@ namespace Euonia.Core.Tests
         [Fact]
         public void OfNullableReturnsEmptyForNullAndValueForNonNull()
         {
-            var empty = Optional<string>.OfNullable(null);
+            var empty = Optional<string>.OfNullable(null!);
             Assert.False(empty.HasValue);
 
             var val = Optional<string>.OfNullable("x");

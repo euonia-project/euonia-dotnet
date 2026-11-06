@@ -16,7 +16,7 @@ internal static class ZooKeeperSequentialPathHelper
         IEnumerable<string> childrenNames,
         Func<string, Task<long?>> getNodeCreationTimeAsync,
         string prefix,
-        string alternatePrefix = null)
+        string? alternatePrefix = null)
     {
         var ephemeralChildrenWithPrefix = GetEphemeralChildrenWithPrefix();
 
@@ -74,7 +74,7 @@ internal static class ZooKeeperSequentialPathHelper
             foreach (var childName in childrenNames)
             {
                 int? childSequenceNumber;
-                string childPrefix;
+                string? childPrefix;
                 if (GetSequenceNumberOrDefault(childName, prefix) is { } prefixSequenceNumber)
                 {
                     childSequenceNumber = prefixSequenceNumber;

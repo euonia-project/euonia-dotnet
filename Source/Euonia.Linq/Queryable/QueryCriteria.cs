@@ -41,7 +41,7 @@ public sealed class QueryCriteria<TEntity>
     /// <summary>
     /// 获取或设置在返回结果之前对元素进行排序的操作。
     /// </summary>
-    public Action<Orderable<TEntity>> Collation { get; set; }
+    public Action<Orderable<TEntity>>? Collation { get; set; }
 
     /// <summary>
     /// 获取表示查询偏移量的 <see cref="Offset"/> 属性。

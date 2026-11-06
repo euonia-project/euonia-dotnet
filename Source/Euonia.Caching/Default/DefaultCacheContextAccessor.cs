@@ -14,20 +14,20 @@ public class DefaultCacheContextAccessor : ICacheContextAccessor
     /// 使用 <see cref="AsyncLocal{T}"/> 而非 <c>[ThreadStatic]</c>，
     /// 使缓存上下文能够在 <c>async/await</c> 边界间正确流转。
     /// </remarks>
-    private static readonly AsyncLocal<IAcquireContext> _threadInstance = new();
+    private static readonly AsyncLocal<IAcquireContext?> _threadInstance = new();
 
     /// <summary>
     /// Gets or sets the thread instance.
     /// </summary>
     /// <value>The thread instance.</value>
-    public static IAcquireContext ThreadInstance
+    public static IAcquireContext? ThreadInstance
     {
         get => _threadInstance.Value;
         set => _threadInstance.Value = value;
     }
 
     /// <inheritdoc />
-    public IAcquireContext Current
+    public IAcquireContext? Current
     {
         get => ThreadInstance;
         set => ThreadInstance = value;

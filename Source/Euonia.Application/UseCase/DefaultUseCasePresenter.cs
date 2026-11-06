@@ -8,13 +8,13 @@ public class DefaultUseCasePresenter<TOutput> : DisposableObject,
 												IUseCasePresenter<TOutput>
 {
 	/// <inheritdoc/>
-	public event EventHandler<TOutput> OnSucceed;
+	public event EventHandler<TOutput>? OnSucceed;
 
 	/// <inheritdoc/>
-	public event EventHandler<Exception> OnFailed;
+	public event EventHandler<Exception>? OnFailed;
 
 	/// <inheritdoc/>
-	public event EventHandler OnCanceled;
+	public event EventHandler? OnCanceled;
 
 	/// <inheritdoc/>
 	public void Error(Exception exception)
@@ -39,7 +39,7 @@ public class DefaultUseCasePresenter<TOutput> : DisposableObject,
 	/// <summary>
 	/// Gets the output of the use case.
 	/// </summary>
-	public TOutput Output { get; private set; }
+	public TOutput Output { get; private set; } = default!;
 
 	/// <inheritdoc/>
 	protected override void Dispose(bool disposing)

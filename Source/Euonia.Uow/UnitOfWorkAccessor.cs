@@ -12,16 +12,16 @@ public class UnitOfWorkAccessor : IUnitOfWorkAccessor, ISingletonDependency
     private readonly AsyncLocal<IUnitOfWork> _currentUnitOfWork = new();
 
     /// <inheritdoc />
-    public IUnitOfWork UnitOfWork => _currentUnitOfWork.Value;
+    public IUnitOfWork? UnitOfWork => _currentUnitOfWork.Value;
 
     /// <inheritdoc />
-    public void SetUnitOfWork(IUnitOfWork unitOfWork)
+    public void SetUnitOfWork(IUnitOfWork? unitOfWork)
     {
-        _currentUnitOfWork.Value = unitOfWork;
+        _currentUnitOfWork.Value = unitOfWork!;
     }
 
     /// <inheritdoc />
-    public IUnitOfWork GetCurrentUnitOfWork()
+    public IUnitOfWork? GetCurrentUnitOfWork()
     {
         var uow = UnitOfWork;
 

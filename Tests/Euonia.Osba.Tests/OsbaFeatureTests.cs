@@ -94,7 +94,7 @@ public class OsbaFeatureTests
 		obj.MarkAsNew();
 		obj.Name = "new";
 
-		object saved = null;
+		object? saved = null;
 		obj.Saved += (_, e) => saved = e.NewObject;
 
 		var result = await obj.SaveAsync(cancellationToken: TestContext.Current.CancellationToken);
@@ -189,9 +189,9 @@ public class OsbaFeatureTests
 
 	private class TestItem : INotifyPropertyChanged
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
 
-		private string _name;
+		private string _name = null!;
 
 		public string Name
 		{
@@ -527,7 +527,7 @@ public class SaveEditableObject : EditableObject<SaveEditableObject>
 /// </summary>
 public class OptionalCriteriaObject : BusinessObject<OptionalCriteriaObject>
 {
-	public string Code { get; private set; }
+	public string Code { get; private set; } = null!;
 
 	[FactoryCreate]
 	public async Task CreateAsync(string code, CancellationToken cancellationToken = default)
@@ -542,7 +542,7 @@ public class OptionalCriteriaObject : BusinessObject<OptionalCriteriaObject>
 /// </summary>
 public class AttributeNamedObject : BusinessObject<AttributeNamedObject>
 {
-	public string Code { get; private set; }
+	public string Code { get; private set; } = null!;
 
 	/// <summary>
 	/// 名称与约定无关，仅靠特性被识别为创建工厂方法。
@@ -561,7 +561,7 @@ public class AttributeNamedObject : BusinessObject<AttributeNamedObject>
 /// </summary>
 public class ConventionallyNamedObject : BusinessObject<ConventionallyNamedObject>
 {
-	public string Code { get; private set; }
+	public string Code { get; private set; } = null!;
 
 	/// <summary>
 	/// 无特性，按约定名称被识别为创建工厂方法。
@@ -579,7 +579,7 @@ public class ConventionallyNamedObject : BusinessObject<ConventionallyNamedObjec
 /// </summary>
 public class MisspelledMethodObject : BusinessObject<MisspelledMethodObject>
 {
-	public string Code { get; private set; }
+	public string Code { get; private set; } = null!;
 
 	/// <summary>
 	/// 名称拼错（<c>CreateAsnyc</c>）且无特性，不应被识别为创建工厂方法。
@@ -597,7 +597,7 @@ public class MisspelledMethodObject : BusinessObject<MisspelledMethodObject>
 /// </summary>
 public class OverloadedCriteriaObject : BusinessObject<OverloadedCriteriaObject>
 {
-	public string Which { get; private set; }
+	public string Which { get; private set; } = null!;
 
 	[FactoryCreate]
 	public Task CreateAsync(string code)

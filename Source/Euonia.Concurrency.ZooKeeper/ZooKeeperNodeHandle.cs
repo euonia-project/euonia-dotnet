@@ -114,13 +114,11 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
     {
         using var watcher = new TaskWatcher<bool?>((_, s) => s.TrySetResult(null));
         using var timeoutRegistration = timeoutToken.Register(
-            state => ((TaskWatcher<bool?>)state).TaskCompletionSource.TrySetResult(false),
-            state: watcher
+            () => watcher.TaskCompletionSource.TrySetResult(false)
         );
         // this is needed because if the connection goes down and never recovers, we'll never get the session expired notification
         using var connectionLostRegistration = connection.ConnectionLostToken.Register(
-            state => ((TaskWatcher<bool?>)state).TaskCompletionSource.TrySetException(new InvalidOperationException("Lost connection to ZooKeeper")),
-            state: watcher
+            () => watcher.TaskCompletionSource.TrySetException(new InvalidOperationException("Lost connection to ZooKeeper"))
         );
 
         var exists = await connection.ZooKeeper.existsAsync(path, watcher).ConfigureAwait(false);
@@ -129,7 +127,7 @@ internal sealed class ZooKeeperNodeHandle : ISynchronizationHandle
 
     private sealed class TaskWatcher<TResult> : Watcher, IDisposable
     {
-        private volatile Action<WatchedEvent, TaskCompletionSource<TResult>> _watchedEventHandler;
+        private volatile Action<WatchedEvent, TaskCompletionSource<TResult>>? _watchedEventHandler;
 
         public TaskWatcher(Action<WatchedEvent, TaskCompletionSource<TResult>> watchedEventHandler)
         {

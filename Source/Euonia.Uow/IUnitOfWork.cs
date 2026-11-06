@@ -14,12 +14,12 @@ public interface IUnitOfWork : IDisposable
 	/// <summary>
 	/// Occurs when the unit of work has been completed successfully.
 	/// </summary>
-	event EventHandler<UnitOfWorkEventArgs> Completed;
+	event EventHandler<UnitOfWorkEventArgs>? Completed;
 
 	/// <summary>
 	/// Occurs when the unit of work has failed.
 	/// </summary>
-	event EventHandler<UnitOfWorkFailedEventArgs> Failed;
+	event EventHandler<UnitOfWorkFailedEventArgs>? Failed;
 
 	/// <summary>
 	/// Gets the unique identifier of this unit of work instance.
@@ -51,7 +51,7 @@ public interface IUnitOfWork : IDisposable
 	/// <summary>
 	/// Gets the outer (parent) unit of work when this unit of work is nested; otherwise null.
 	/// </summary>
-	IUnitOfWork Outer { get; }
+	IUnitOfWork? Outer { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether this unit of work has been reserved.
@@ -61,7 +61,7 @@ public interface IUnitOfWork : IDisposable
 	/// <summary>
 	/// Gets the reservation name if this unit of work is reserved; otherwise null.
 	/// </summary>
-	string ReservationName { get; }
+	string? ReservationName { get; }
 
 	/// <summary>
 	/// Gets a value indicating whether this unit of work has been disposed.
@@ -105,7 +105,7 @@ public interface IUnitOfWork : IDisposable
 	/// Sets the outer (parent) unit of work for this instance. Used for nested unit of work scenarios.
 	/// </summary>
 	/// <param name="outer">The parent <see cref="IUnitOfWork"/>.</param>
-	void SetOuter(IUnitOfWork outer);
+	void SetOuter(IUnitOfWork? outer);
 
 	/// <summary>
 	/// Initializes this unit of work with the provided options.
@@ -124,7 +124,7 @@ public interface IUnitOfWork : IDisposable
 	/// </summary>
 	/// <typeparam name="TService">The service type to resolve.</typeparam>
 	/// <returns>An instance of <typeparamref name="TService"/> or null if not registered.</returns>
-	TService GetService<TService>() where TService : class;
+	TService? GetService<TService>() where TService : class;
 
 	/// <summary>
 	/// Resolves all services of type <typeparamref name="TService"/> from the unit of work's scope.
@@ -138,21 +138,21 @@ public interface IUnitOfWork : IDisposable
 	/// </summary>
 	/// <param name="serviceType">The service type to resolve.</param>
 	/// <returns>An instance of the service or null if not registered.</returns>
-	object GetService(Type serviceType);
+	object? GetService(Type serviceType);
 
 	/// <summary>
 	/// Resolves all services of the specified <paramref name="serviceType"/> from the unit of work's scope.
 	/// </summary>
 	/// <param name="serviceType">The service type to resolve.</param>
 	/// <returns>A sequence of resolved services; empty if none registered.</returns>
-	IEnumerable<object> GetServices(Type serviceType);
+	IEnumerable<object?> GetServices(Type serviceType);
 
 	/// <summary>
 	/// Finds a registered <see cref="IUnitOfWorkContext"/> by its key.
 	/// </summary>
 	/// <param name="key">The context key to find.</param>
 	/// <returns>The <see cref="IUnitOfWorkContext"/> if found; otherwise null.</returns>
-	IUnitOfWorkContext FindContext(string key);
+	IUnitOfWorkContext? FindContext(string key);
 
 	/// <summary>
 	/// Adds the specified <see cref="IUnitOfWorkContext"/> to this unit of work using the provided key.

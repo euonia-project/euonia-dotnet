@@ -156,7 +156,7 @@ public sealed class WeakReferenceMessenger : IMessenger
 	/// <param name="token">A token used to determine the receiving channel to use.</param>
 	/// <param name="dispatcher">The input <see cref="MessageHandlerDispatcher"/> instance to register, or null.</param>
 	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher dispatcher)
+	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher? dispatcher)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
@@ -369,8 +369,8 @@ public sealed class WeakReferenceMessenger : IMessenger
 		// the end of each iteration. The target being a span, obviously means the length is constant.
 		var slice = pairs[..(2 * i)];
 
-		ref var sliceStart = ref MemoryMarshal.GetReference(slice);
-		ref var sliceEnd = ref Unsafe.Add(ref sliceStart, slice.Length);
+		ref object sliceStart = ref MemoryMarshal.GetReference(slice);
+		ref object sliceEnd = ref Unsafe.Add(ref sliceStart, slice.Length);
 
 		while (Unsafe.IsAddressLessThan(ref sliceStart, ref sliceEnd))
 		{

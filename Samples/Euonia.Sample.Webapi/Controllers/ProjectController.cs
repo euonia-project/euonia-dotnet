@@ -21,7 +21,7 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 	/// <summary>分页查询项目（已登录须持有 project:view 码并按行范围过滤；项目不公开）。</summary>
 	[HttpGet]
 	[ProducesResponseType(StatusCodes.Status200OK)]
-	public Task<IActionResult> List([FromQuery] string keyword = null, [FromQuery] string sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+	public Task<IActionResult> List([FromQuery] string? keyword = null, [FromQuery] string? sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
 	{
 		return InvokeAsync(() => service.FindAsync(keyword, sortBy, page, pageSize, cancellationToken));
 	}

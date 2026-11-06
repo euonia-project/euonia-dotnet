@@ -20,9 +20,9 @@ internal sealed class ChannelRegistrar
 	/// </summary>
 	private readonly object _registrationSync = new();
 
-	private readonly Action<string, Type, ChannelHandler> _registerAction;
+	private readonly Action<string, Type, ChannelHandler> _registerAction = null!;
 
-	private readonly ILogger<ChannelRegistrar> _logger;
+	private readonly ILogger<ChannelRegistrar> _logger = null!;
 
 	/// <summary>
 	/// 用于把消息类型解析为通道名称的委托。
@@ -31,7 +31,7 @@ internal sealed class ChannelRegistrar
 	/// 由配置器提供，并且必须与分发时使用**同一个**解析器，否则注册与分发会落在不同通道上。
 	/// 以委托形式持有（而非解析结果），是为了让运行期的 <c>SetChannelResolver</c> 同样生效。
 	/// </remarks>
-	private readonly Func<Type, string> _channelResolver;
+	private readonly Func<Type, string> _channelResolver = null!;
 
 	private ChannelRegistrar()
 	{
@@ -52,10 +52,11 @@ internal sealed class ChannelRegistrar
 	}
 
 	/// <summary>
-	/// 
+	/// 获取指定通道的注册信息。
 	/// </summary>
-	/// <param name="channel"></param>
-	public ChannelRegistration this[string channel] => _registrations.GetValueOrDefault(channel);
+	/// <param name="channel">通道名称。</param>
+	/// <returns>通道注册信息；通道未注册时为 <c>null</c>。</returns>
+	public ChannelRegistration? this[string channel] => _registrations.GetValueOrDefault(channel);
 
 	/// <summary>
 	/// 获取已注册的通道处理器列表。
@@ -70,8 +71,9 @@ internal sealed class ChannelRegistrar
 	/// <returns>返回指定通道的注册信息，如果通道未注册则返回空的 <see cref="Optional{T}"/></returns>
 	public Optional<ChannelRegistration> Get(string channel)
 	{
-		var value = Registrations.TryGetValue(channel, out var registration) ? registration : null;
-		return Optional<ChannelRegistration>.OfNullable(value);
+		return Registrations.TryGetValue(channel, out var registration)
+			       ? Optional<ChannelRegistration>.Of(registration)
+			       : Optional<ChannelRegistration>.Empty;
 	}
 
 	/// <summary>
@@ -128,7 +130,7 @@ internal sealed class ChannelRegistrar
 	public void Register(string channel, Type messageType, Type handlerType, string methodName)
 	{
 		ArgumentNullException.ThrowIfNull(handlerType);
-		var method = PriorityValueFinder.Find<MethodInfo>(queue =>
+		var method = PriorityValueFinder.Find<MethodInfo?>(queue =>
 		{
 			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType, typeof(IMessageContent), typeof(CancellationToken)]), 1);
 			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType, typeof(IMessageContent)]), 2);
@@ -136,7 +138,8 @@ internal sealed class ChannelRegistrar
 			queue.Enqueue(() => handlerType.GetMethod(methodName, [messageType]), 4);
 		}, value => value != null);
 
-		Register(channel, messageType, handlerType, method);
+		// 未找到匹配方法时 method 为 null，由下层 Register 的 ThrowIfNull 抛出与之前一致的异常。
+		Register(channel, messageType, handlerType, method!);
 	}
 
 	/// <summary>
@@ -208,7 +211,7 @@ internal sealed class ChannelRegistrar
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	public void Register<TMessage, TResult>(string channel, Func<TMessage, IMessageContext, Task<TResult>> handler)
 	{
-		var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<,>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+		var method = typeof(LambdaHandler<TMessage, TResult>).GetMethod(nameof(LambdaHandler<,>.HandleAsync), BindingFlags.Public | BindingFlags.Instance)!;
 		Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage, TResult>), method, new LambdaHandler<TMessage, TResult>(handler)));
 	}
 
@@ -222,7 +225,7 @@ internal sealed class ChannelRegistrar
 	/// <returns>返回当前的 <see cref="ChannelRegistrar"/> 实例，以便进行链式调用。</returns>
 	public void Register<TMessage>(string channel, Func<TMessage, IMessageContext, Task> handler)
 	{
-		var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<>.HandleAsync), BindingFlags.Public | BindingFlags.Instance);
+		var method = typeof(LambdaHandler<TMessage>).GetMethod(nameof(LambdaHandler<>.HandleAsync), BindingFlags.Public | BindingFlags.Instance)!;
 		Register(channel, typeof(TMessage), new ChannelHandler(typeof(LambdaHandler<TMessage>), method, new LambdaHandler<TMessage>(handler)));
 	}
 }

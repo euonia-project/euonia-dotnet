@@ -8,27 +8,27 @@ public class UserDetailDto
 	/// <summary>
 	/// Gets or sets the unique identifier of the user.
 	/// </summary>
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the login username.
 	/// </summary>
-	public string Username { get; set; }
+	public string Username { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the nickname of the user.
 	/// </summary>
-	public string Nickname { get; set; }
+	public string Nickname { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the email address of the user.
 	/// </summary>
-	public string Email { get; set; }
+	public string Email { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the phone number of the user.
 	/// </summary>
-	public string Phone { get; set; }
+	public string Phone { get; set; } = null!;
 
 	/// <summary>
 	/// Gets or sets the time when the password was last changed.
@@ -48,5 +48,5 @@ public class UserDetailDto
 	/// <summary>
 	/// Gets or sets the role names granted to the user.
 	/// </summary>
-	public string[] Roles { get; set; }
+	public string[] Roles { get; set; } = null!;
 }

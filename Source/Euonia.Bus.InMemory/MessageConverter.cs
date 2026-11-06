@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 
 internal class MessageConverter
 {
-    public static object Convert(object source, Type targetType)
+    public static object? Convert(object source, Type targetType)
     {
         if (source == null)
         {

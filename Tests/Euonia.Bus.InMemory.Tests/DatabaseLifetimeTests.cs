@@ -152,12 +152,12 @@ public class DatabaseLifetimeTests
 	{
 		public int Id { get; set; }
 
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
 	private sealed class RoundState
 	{
-		public TestDbContext CallerContext { get; set; }
+		public TestDbContext CallerContext { get; set; } = null!;
 
 		public bool CommandUsedCallerContext { get; set; } = true;
 
@@ -165,26 +165,26 @@ public class DatabaseLifetimeTests
 
 		public bool EventUsedNewContext { get; set; }
 
-		public Exception Error { get; set; }
+		public Exception? Error { get; set; }
 
 		public int PublishRemaining;
 
-		public TaskCompletionSource PublishAllCompleted { get; set; }
+		public TaskCompletionSource PublishAllCompleted { get; set; } = null!;
 	}
 
 	private sealed class InsertCommand : IUnicast
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
 	private sealed class InsertRequest : IRequest<int>
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
 	private sealed class InsertEvent : IMulticast
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
 	private sealed class InsertCommandHandler(TestDbContext database, RoundState state) : IHandler<InsertCommand>

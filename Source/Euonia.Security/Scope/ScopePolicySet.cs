@@ -58,7 +58,7 @@ public sealed class ScopePolicySet<T>
 	/// 派生只会让这条策略的授予永远取不到。以自身为键则没有这个缺口。
 	/// </para>
 	/// </remarks>
-	public ScopePolicySet<T> ForOperation(string operation, ScopePolicy<T> policy, string scopeKey = null)
+	public ScopePolicySet<T> ForOperation(string operation, ScopePolicy<T> policy, string? scopeKey = null)
 	{
 		ScopeKeys.ValidateOperation(operation);
 

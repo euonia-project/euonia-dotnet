@@ -18,12 +18,12 @@ public class IdentityServerAuthenticationOptions : AuthenticationSchemeOptions
 	/// <summary>
 	/// 从当前请求上下文中提取内部令牌的委托。
 	/// </summary>
-	private static readonly Func<HttpRequest, string> _internalTokenRetriever = request => request.HttpContext.Items[IdentityServerAuthenticationDefaults.TokenItemsKey] as string;
+	private static readonly Func<HttpRequest, string?> _internalTokenRetriever = request => request.HttpContext.Items[IdentityServerAuthenticationDefaults.TokenItemsKey] as string;
 
 	/// <summary>
 	/// 令牌颁发者的基地址。
 	/// </summary>
-	public string Authority { get; set; }
+	public string Authority { get; set; } = null!;
 
 	/// <summary>
 	/// 指定发现端点是否要求 HTTPS。
@@ -38,17 +38,17 @@ public class IdentityServerAuthenticationOptions : AuthenticationSchemeOptions
 	/// <summary>
 	/// 用于从传入请求中检索令牌的回调。
 	/// </summary>
-	public Func<HttpRequest, string> TokenRetriever { get; set; } = TokenRetrieval.FromAuthorizationHeader();
+	public Func<HttpRequest, string?> TokenRetriever { get; set; } = TokenRetrieval.FromAuthorizationHeader();
 
 	/// <summary>
 	/// 用于向内省端点进行身份验证的 API 资源名称。
 	/// </summary>
-	public string ApiName { get; set; }
+	public string? ApiName { get; set; }
 
 	/// <summary>
 	/// 用于向内省端点进行身份验证的密钥。
 	/// </summary>
-	public string ApiSecret { get; set; }
+	public string? ApiSecret { get; set; }
 
 	/// <summary>
 	/// 当此 API 由 IdentityServer3 保护且需要同时支持 JWT 和引用令牌时启用。
@@ -103,7 +103,7 @@ public class IdentityServerAuthenticationOptions : AuthenticationSchemeOptions
 	/// <summary>
 	/// JWT 中间件的后通道处理器。
 	/// </summary>
-	public HttpMessageHandler JwtBackChannelHandler { get; set; }
+	public HttpMessageHandler? JwtBackChannelHandler { get; set; }
 
 	/// <summary>
 	/// 后通道操作的超时时间。

@@ -10,12 +10,12 @@ public class OnetimeCodeCreatedEto
 	/// <summary>
 	/// 获取或设置验证码内容。
 	/// </summary>
-	public string Code { get; set; }
+	public string Code { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置验证码接收方（手机号码或邮箱地址）。
 	/// </summary>
-	public string Recipient { get; set; }
+	public string Recipient { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置验证码的用途场景。

@@ -16,7 +16,7 @@ namespace Nerosoft.Euonia.Application;
 public class TracingInterceptor : IInterceptor
 {
 	private readonly ILogger<TracingInterceptor> _logger;
-	private readonly IRequestContextAccessor _contextAccessor;
+	private readonly IRequestContextAccessor? _contextAccessor;
 
 	/// <summary>
 	/// 初始化 <see cref="TracingInterceptor"/> 类的新实例。

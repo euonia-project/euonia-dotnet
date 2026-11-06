@@ -52,7 +52,7 @@ public class InterfaceHandlerFanOutTests
 		configurator.RegisterChannel(typeof(FirstHandler), typeof(SecondHandler));
 
 		await context.HandleAsync(
-			typeof(FanOutEvent).FullName,
+			typeof(FanOutEvent).FullName!,
 			new FanOutEvent(),
 			new MessageContext(),
 			TestContext.Current.CancellationToken);

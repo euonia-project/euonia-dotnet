@@ -8,13 +8,13 @@ public sealed class ZooKeeperSynchronizationFactory : ILockFactory, ISemaphoreFa
 {
     private readonly ZooKeeperPath _directoryPath;
     private readonly string _connectionString;
-    private readonly Action<ZooKeeperSynchronizationOptionsBuilder> _options;
+    private readonly Action<ZooKeeperSynchronizationOptionsBuilder>? _options;
 
     /// <summary>
     /// Constructs a provider which uses <paramref name="connectionString"/> and <paramref name="options"/>. Lock and semaphore nodes will be created
     /// in the root directory '/'.
     /// </summary>
-    public ZooKeeperSynchronizationFactory(string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSynchronizationFactory(string? connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(ZooKeeperPath.Root, connectionString, options)
     {
     }
@@ -23,7 +23,7 @@ public sealed class ZooKeeperSynchronizationFactory : ILockFactory, ISemaphoreFa
     /// Constructs a provider which uses <paramref name="connectionString"/> and <paramref name="options"/>. Lock and semaphore nodes will be created
     /// in <paramref name="directoryPath"/>.
     /// </summary>
-    public ZooKeeperSynchronizationFactory(ZooKeeperPath directoryPath, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSynchronizationFactory(ZooKeeperPath directoryPath, string? connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
     {
         _directoryPath = directoryPath != default ? directoryPath : throw new ArgumentNullException(nameof(directoryPath));
         _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));

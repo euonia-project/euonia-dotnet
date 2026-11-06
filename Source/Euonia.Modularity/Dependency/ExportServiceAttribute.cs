@@ -59,7 +59,7 @@ public class ExportServiceAttribute : Attribute
     /// <summary>
     /// Gets the implemented service types.
     /// </summary>
-    public List<Type> ServiceTypes { get; }
+    public List<Type>? ServiceTypes { get; }
 
     /// <summary>
     /// 

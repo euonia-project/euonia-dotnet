@@ -19,7 +19,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	/// <param name="configuration">The cache handle configuration.</param>
 	/// <param name="options">The vendor specific options.</param>
 	///
-	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions options = null)
+	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions? options = null)
 		: base(managerConfiguration, configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
@@ -71,13 +71,13 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	}
 
 	/// <inheritdoc/>
-	protected override CacheItem<TCacheValue> GetCacheItemInternal(string key)
+	protected override CacheItem<TCacheValue>? GetCacheItemInternal(string key)
 	{
 		return GetCacheItemInternal(key, null);
 	}
 
 	/// <inheritdoc/>
-	protected override CacheItem<TCacheValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TCacheValue>? GetCacheItemInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 
@@ -109,7 +109,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	}
 
 	/// <inheritdoc/>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 		var result = _cache.Contains(fullKey);
@@ -156,9 +156,9 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 		}
 	}
 
-	private string GetItemKey(CacheItem<TCacheValue> item) => GetItemKey(item?.Key, item?.Region);
+	private string GetItemKey(CacheItem<TCacheValue> item) => GetItemKey(item.Key, item.Region);
 
-	private string GetItemKey(string key, string region = null)
+	private string GetItemKey(string key, string? region = null)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -212,7 +212,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 		_cache.Set(region, new ConcurrentDictionary<object, bool>(), options);
 	}
 
-	private void ItemRemoved(object key, object value, EvictionReason reason, object state)
+	private void ItemRemoved(object key, object? value, EvictionReason reason, object? state)
 	{
 		var strKey = key as string;
 		if (string.IsNullOrWhiteSpace(strKey))
@@ -237,7 +237,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 				Stats.OnRemove();
 			}
 
-			object originalValue = null;
+			object? originalValue = null;
 			if (value is CacheItem<TCacheValue> item)
 			{
 				originalValue = item.Value;

@@ -15,11 +15,11 @@ public class ModelPropertyBuilder
 
     internal Type PropertyType { get; }
 
-    internal string ElementName { get; private set; }
+    internal string? ElementName { get; private set; }
 
     internal bool? IsRequired { get; private set; }
 
-    internal IValueGenerator ValueGenerator { get; private set; }
+    internal IValueGenerator? ValueGenerator { get; private set; }
 
     /// <summary>
     /// Sets the element name for current property.

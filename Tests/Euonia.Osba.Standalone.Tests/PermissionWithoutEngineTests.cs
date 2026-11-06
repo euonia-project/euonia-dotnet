@@ -140,7 +140,7 @@ public class PermissionWithoutEngineTests
 
 	#region 装配
 
-	private static IServiceScope CreateScope(string[] codes, out IServiceProvider provider)
+	private static IServiceScope CreateScope(string[]? codes, out IServiceProvider provider)
 	{
 		var services = new ServiceCollection();
 
@@ -188,7 +188,7 @@ public class PermissionWithoutEngineTests
 		return new UserPrincipal(new ClaimsPrincipal(identity));
 	}
 
-	private static string[] TransitiveReferences(Assembly assembly, HashSet<string> visited = null)
+	private static string[] TransitiveReferences(Assembly assembly, HashSet<string>? visited = null)
 	{
 		visited ??= [];
 
@@ -196,12 +196,12 @@ public class PermissionWithoutEngineTests
 
 		foreach (var reference in assembly.GetReferencedAssemblies())
 		{
-			if (!visited.Add(reference.Name))
+			if (!visited.Add(reference.Name!))
 			{
 				continue;
 			}
 
-			result.Add(reference.Name);
+			result.Add(reference.Name!);
 
 			if (Assembly.Load(reference) is { } loaded)
 			{
@@ -220,10 +220,10 @@ public class PermissionWithoutEngineTests
 /// <summary>要求由实体自己声明（<c>[Permission]</c>），判定由宿主实现。</summary>
 public class GroundedEntity : EditableObject<GroundedEntity>
 {
-	public string Name { get; set; }
+	public string Name { get; set; } = string.Empty;
 
 	/// <summary>本实体在更新操作上要求的权限码，由宿主的要求来源读取。</summary>
-	public string RequiredCode { get; set; }
+	public string RequiredCode { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 业务方法内的行级分支：直接问宿主自己的行级授权器（无引擎场景，没有 <c>IScopeGuard</c>）。
@@ -235,7 +235,7 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 		var context = BusinessContext;
 		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null || authorizer.Allows(this, operation, context.CurrentServiceProvider);
+		return authorizer == null || authorizer.Allows(this, operation, context!.CurrentServiceProvider);
 	}
 
 	/// <summary>业务方法内的行级判定说明。</summary>
@@ -246,7 +246,7 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 		var context = BusinessContext;
 		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null ? "Data scope is not enabled." : authorizer.Explain(this, operation, context.CurrentServiceProvider);
+		return authorizer == null ? "Data scope is not enabled." : authorizer.Explain(this, operation, context!.CurrentServiceProvider);
 	}
 
 	[FactoryUpdate]
@@ -259,7 +259,7 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 /// <summary>没有任何权限要求的实体：不需要任何权限装配。</summary>
 public class PlainEntity : EditableObject<PlainEntity>
 {
-	public string Name { get; set; }
+	public string Name { get; set; } = string.Empty;
 
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)

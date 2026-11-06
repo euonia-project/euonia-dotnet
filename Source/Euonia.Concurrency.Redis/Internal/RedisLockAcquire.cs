@@ -25,7 +25,7 @@ internal readonly struct RedisLockAcquire
         _cancellationToken = cancellationToken;
     }
 
-    public async ValueTask<Dictionary<IDatabase, Task<bool>>> TryAcquireAsync()
+    public async ValueTask<Dictionary<IDatabase, Task<bool>>?> TryAcquireAsync()
     {
         _cancellationToken.ThrowIfCancellationRequested();
 
@@ -53,7 +53,7 @@ internal readonly struct RedisLockAcquire
             // clean up
             if (!succeeded)
             {
-                List<Task> releaseTasks = null;
+                List<Task>? releaseTasks = null;
                 foreach (var kvp in tryAcquireTasks)
                 {
                     // if the task hasn't finished yet, we don't want to do any releasing now; just
@@ -166,7 +166,7 @@ internal readonly struct RedisLockAcquire
     /// single-operation timeouts/cancellations. Therefore, one slow response would jeopardize our ability to claim the
     /// lock in time. With a single db, the one operation is all that matters so it is fine if we need to wait for it.
     /// </summary>
-    private Dictionary<IDatabase, Task<bool>> TrySingleFullySynchronousAcquire()
+    private Dictionary<IDatabase, Task<bool>>? TrySingleFullySynchronousAcquire()
     {
         var database = _databases.Single();
 

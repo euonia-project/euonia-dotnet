@@ -66,7 +66,7 @@ public class Rules : IRules
 	/// <summary>
 	/// 惰性创建的违规集合。
 	/// </summary>
-	private BrokenRuleCollection _brokenRules;
+	private BrokenRuleCollection _brokenRules = null!;
 
 	/// <summary>
 	/// 获取违规集合；首次访问时创建。
@@ -583,7 +583,7 @@ public class Rules : IRules
 				return;
 			}
 
-			var existing = BrokenRules.Select(t => new ValidationResult(t.Property, t.Description));
+			var existing = BrokenRules.Select(t => new ValidationResult(t.Property!, t.Description!));
 			throw new ValidationException(message, existing);
 		}
 
@@ -594,7 +594,7 @@ public class Rules : IRules
 			return;
 		}
 
-		var errors = BrokenRules.Select(t => new ValidationResult(t.Property, t.Description));
+		var errors = BrokenRules.Select(t => new ValidationResult(t.Property!, t.Description!));
 		throw new ValidationException(message, errors);
 	}
 
@@ -621,7 +621,7 @@ public class Rules : IRules
 		// 比较口径必须与 BrokenRuleCollection.ClearRules(string) 的序数相等保持一致，
 		// 否则仅大小写不同的两个属性只会清理其中一个，陈旧条目跨轮累积导致 IsValid 失真。
 		foreach (var property in rules.Select(rule => rule.Property)
-		                              .Where(property => property != null)
+		                              .OfType<IPropertyInfo>()
 		                              .DistinctBy(property => property.Name))
 		{
 			BrokenRules.ClearRules(property);
@@ -789,8 +789,8 @@ public class Rules : IRules
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
 	private (List<string> Properties, List<Task> Tasks) RunRules(IEnumerable<IRuleBase> rules, bool cascade, out int executedCount, CancellationToken cancellationToken = default)
 	{
-		List<string> affectProperties = null;
-		List<Task> tasks = null;
+		List<string>? affectProperties = null;
+		List<Task>? tasks = null;
 		var editableObject = Target as IEditableObject;
 		executedCount = 0;
 
@@ -935,7 +935,7 @@ public class Rules : IRules
 	/// <param name="ruleContext">规则上下文。</param>
 	private void OnRuleCompleted(IRuleContext ruleContext)
 	{
-		List<IPropertyInfo> notify = null;
+		List<IPropertyInfo>? notify = null;
 
 		lock (_lockObject)
 		{

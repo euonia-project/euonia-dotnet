@@ -10,7 +10,7 @@ internal static class TestMessages
 	/// </summary>
 	public sealed class OrderPlacedEvent : IMulticast
 	{
-		public string OrderId { get; set; }
+		public string OrderId { get; set; } = string.Empty;
 	}
 
 	/// <summary>

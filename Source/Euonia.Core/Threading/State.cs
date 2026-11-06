@@ -35,7 +35,7 @@ public class State
     /// </summary>
     /// <param name="obj">要比较的对象。</param>
     /// <returns>如果它们具有相同的状态编号则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         var otherState = obj as State;
         return otherState?._stateNum == _stateNum;

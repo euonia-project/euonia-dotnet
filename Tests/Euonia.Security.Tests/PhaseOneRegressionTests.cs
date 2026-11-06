@@ -234,7 +234,7 @@ public class PhaseOneRegressionTests
 
 	#region Helpers
 
-	private static ServiceProvider BuildGuard(IScopeSubjectResolver resolver = null)
+	private static ServiceProvider BuildGuard(IScopeSubjectResolver? resolver = null)
 	{
 		var services = new ServiceCollection();
 
@@ -276,7 +276,7 @@ internal sealed class SwappableSubjectResolver : IScopeSubjectResolver
 		_subjects = Build(dept);
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		=> new(_subjects);
 
 	private static ScopeSubjectSet Build(string dept)

@@ -24,5 +24,5 @@ public abstract class EditableObjectBase<TTarget> : EditableObject<TTarget>, IHa
 	/// </para>
 	/// </remarks>
 	//[Inject]
-	public ILazyServiceProvider LazyServiceProvider { get; set; }
+	public ILazyServiceProvider LazyServiceProvider { get; set; } = null!;
 }

@@ -21,7 +21,7 @@ public class AutoLoadAssembliesTests
 	[Fact]
 	public async Task ExecuteAsync_WithConfiguredAssembly_RegistersHandlersFromIt()
 	{
-		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name]);
+		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name!]);
 		var configurator = provider.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 
@@ -35,7 +35,7 @@ public class AutoLoadAssembliesTests
 	[Fact]
 	public async Task ExecuteAsync_WithoutConfiguration_RegistersNothing()
 	{
-		await using var provider = BuildProvider(null);
+		await using var provider = BuildProvider(null!);
 		var configurator = provider.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 
@@ -63,7 +63,7 @@ public class AutoLoadAssembliesTests
 	[Fact]
 	public async Task ExecuteAsync_WithCustomChannelResolver_RegistersAutoLoadedHandlerOnResolvedChannel()
 	{
-		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name], services =>
+		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name!], services =>
 		{
 			services.AddConfiguratorBuilder(configurator => configurator.SetChannelResolver(type => $"custom.{type.Name}", replaceDefault: true));
 		});
@@ -80,7 +80,7 @@ public class AutoLoadAssembliesTests
 	[Fact]
 	public async Task ExecuteAsync_WhenHandlerAlsoRegisteredExplicitly_DoesNotDuplicate()
 	{
-		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name]);
+		await using var provider = BuildProvider([Assembly.GetExecutingAssembly().GetName().Name!]);
 		var configurator = provider.GetRequiredService<IConfigurator>();
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 
@@ -90,7 +90,7 @@ public class AutoLoadAssembliesTests
 		// 用户随后再次显式注册同一处理器：不应产生第二份注册。
 		configurator.RegisterChannel(typeof(AutoLoadProbeHandler));
 
-		var registration = configurator.Registrations[typeof(TestMessages.OrderPlacedEvent).FullName];
+		var registration = configurator.Registrations[typeof(TestMessages.OrderPlacedEvent).FullName!];
 
 		// 测试程序集中有多个 IHandler<OrderPlacedEvent> 实现（接口处理器现在支持多播扇出），
 		// 只断言自动装配与显式注册的目标处理程序没有产生第二份注册。
@@ -104,10 +104,10 @@ public class AutoLoadAssembliesTests
 
 		// BackgroundService.StartAsync 只负责启动，ExecuteAsync 在线程池上运行；
 		// 必须等待 ExecuteTask 才能观察到它的副作用（以及它的异常）。
-		await activator.ExecuteTask;
+		await activator.ExecuteTask!;
 	}
 
-	private static ServiceProvider BuildProvider(string[] autoLoadAssemblies, Action<IServiceCollection> configure = null)
+	private static ServiceProvider BuildProvider(string[] autoLoadAssemblies, Action<IServiceCollection>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

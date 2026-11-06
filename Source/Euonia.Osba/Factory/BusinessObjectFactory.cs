@@ -14,7 +14,7 @@ namespace Nerosoft.Euonia.Osba;
 public class BusinessObjectFactory : IObjectFactory
 {
 	private readonly IServiceProvider _provider;
-	private readonly IObjectActivator _activator;
+	private readonly IObjectActivator? _activator;
 	private readonly OsbaOptions _options;
 
 	/// <summary>
@@ -42,7 +42,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public virtual TTarget Create<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryCreateAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 		if (target is IEditableObject editable)
@@ -52,7 +52,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return WithActivator(target, initialize =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Create);
+			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Create);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
@@ -66,25 +66,25 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public virtual TTarget Fetch<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 		return WithActivator(target, initialize =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target, BusinessOperation.Read);
+			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Read);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
-			ScopeAuthorization.EnsureAuthorizedAfter(target, BusinessOperation.Read);
+			ScopeAuthorization.EnsureAuthorizedAfter(target!, BusinessOperation.Read);
 		});
 	}
 
 	/// <inheritdoc/>
 	public virtual async Task<TTarget> CreateAsync<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryCreateAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 		if (target is IEditableObject editable)
@@ -94,7 +94,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
@@ -106,18 +106,18 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public virtual async Task<TTarget> FetchAsync<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryFetchAttribute>(criteria);
 		var target = GetObjectInstance<TTarget>();
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Read, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Read, default).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
 
 			// 目标由工厂方法填充：加载完成后才谈得上数据范围
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Read, default).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, BusinessOperation.Read, default).ConfigureAwait(false);
 		}).ConfigureAwait(false);
 	}
 
@@ -125,40 +125,40 @@ public class BusinessObjectFactory : IObjectFactory
 	[Obsolete("Use CreateAsync + SaveAsync. Criteria-based insert cannot enforce pre-write data scope checks.")]
 	public virtual async Task<TTarget> InsertAsync<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryInsertAttribute>(criteria);
 		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
-		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Create);
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Create);
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Create, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
 
 			// Insert 会落库：工厂方法填充完成后判定，越权的行不返回给调用方
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Create, default).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, BusinessOperation.Create, default).ConfigureAwait(false);
 		}).ConfigureAwait(false);
 	}
 
 	/// <inheritdoc/>
 	public virtual async Task<TTarget> UpdateAsync<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryUpdateAttribute>(criteria);
 		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
-		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Update);
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Update);
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Update, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Update, default).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Update, default).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, BusinessOperation.Update, default).ConfigureAwait(false);
 		}).ConfigureAwait(false);
 	}
 
@@ -166,7 +166,7 @@ public class BusinessObjectFactory : IObjectFactory
 	public virtual async Task<TTarget> SaveAsync<TTarget>(TTarget target, CancellationToken cancellationToken = default)
 	{
 		// 操作只由 ScopeOperationMap 这一条映射决定（见该类型的备注：三处各写一遍必然漂移）
-		var operation = ScopeOperationMap.Resolve(target);
+		var operation = ScopeOperationMap.Resolve(target!);
 
 		var method = operation switch
 		{
@@ -185,10 +185,10 @@ public class BusinessObjectFactory : IObjectFactory
 		try
 		{
 			// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, operation, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, operation, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
 
 			// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
-			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, operation, cancellationToken).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, operation, cancellationToken).ConfigureAwait(false);
 
 			var lifecycle = operation == BusinessOperation.Execute ? target as IObjectLifecycle : null;
 
@@ -209,7 +209,7 @@ public class BusinessObjectFactory : IObjectFactory
 				// 对它们再做一次完整授权链只会增加延迟，不会增加安全性。
 				if (operation is BusinessOperation.Create or BusinessOperation.Update)
 				{
-					await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, operation, cancellationToken).ConfigureAwait(false);
+					await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, operation, cancellationToken).ConfigureAwait(false);
 				}
 
 				if (lifecycle != null)
@@ -236,10 +236,10 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
 
 			// 目标由调用方提供：可以前置判定
-			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target, BusinessOperation.Execute, cancellationToken).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, BusinessOperation.Execute, cancellationToken).ConfigureAwait(false);
 
 			initialize();
 
@@ -268,15 +268,15 @@ public class BusinessObjectFactory : IObjectFactory
 	public virtual async Task<TTarget> ExecuteAsync<TTarget>(params object[] criteria)
 		where TTarget : IServiceObject
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryExecuteAttribute>(criteria);
 		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
-		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Execute);
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Execute);
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Execute, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, default).ConfigureAwait(false);
 			initialize();
 
 			var lifecycle = target as IObjectLifecycle;
@@ -289,7 +289,7 @@ public class BusinessObjectFactory : IObjectFactory
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Execute, default).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, BusinessOperation.Execute, default).ConfigureAwait(false);
 
 			if (lifecycle != null)
 			{
@@ -307,21 +307,21 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <inheritdoc/>
 	public virtual async Task DeleteAsync<TTarget>(params object[] criteria)
 	{
-		criteria ??= [null];
+		criteria ??= [null!];
 		var method = ObjectReflector.FindFactoryMethod<TTarget, FactoryDeleteAttribute>(criteria);
 		EnsurePersistenceMethod<TTarget>(method);
 		var target = GetObjectInstance<TTarget>();
-		ScopeAuthorization.WarnIfWriteBeforeCheck(target, BusinessOperation.Delete);
+		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Delete);
 
 		await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target, BusinessOperation.Delete, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Delete, default).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
 
 			// 目标由工厂方法填充：范围列在此之前无效，故在返回后判定
-			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target, BusinessOperation.Delete, default).ConfigureAwait(false);
+			await ScopeAuthorization.EnsureAuthorizedAfterAsync(target!, BusinessOperation.Delete, default).ConfigureAwait(false);
 		}).ConfigureAwait(false);
 	}
 
@@ -343,7 +343,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		void Initialize()
 		{
-			_activator?.InitializeInstance(target);
+			_activator?.InitializeInstance(target!);
 			initialized = true;
 		}
 
@@ -357,7 +357,7 @@ public class BusinessObjectFactory : IObjectFactory
 			// 授权失败发生在初始化之前，此时不能调用 Finalize（否则会终结一个从未初始化的对象）。
 			if (initialized)
 			{
-				_activator?.FinalizeInstance(target);
+				_activator?.FinalizeInstance(target!);
 			}
 		}
 	}
@@ -369,7 +369,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		void Initialize()
 		{
-			_activator?.InitializeInstance(target);
+			_activator?.InitializeInstance(target!);
 			initialized = true;
 		}
 
@@ -382,7 +382,7 @@ public class BusinessObjectFactory : IObjectFactory
 		{
 			if (initialized)
 			{
-				_activator?.FinalizeInstance(target);
+				_activator?.FinalizeInstance(target!);
 			}
 		}
 	}
@@ -399,7 +399,7 @@ public class BusinessObjectFactory : IObjectFactory
 	private static async Task InvokeAsync<TTarget>(MethodInfo method, TTarget target, object[] parameters)
 	{
 		var normalized = NormalizeParameters(method, parameters);
-		object result;
+		object? result;
 		try
 		{
 			result = method.Invoke(target, normalized);
@@ -444,7 +444,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <returns>调用完成的任务。</returns>
 	private static async Task InvokeAndAwaitAsync<TTarget>(MethodInfo method, TTarget target, object[] normalized)
 	{
-		object result;
+		object? result;
 		try
 		{
 			result = method.Invoke(target, normalized);
@@ -463,7 +463,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// </summary>
 	/// <param name="result">反射调用返回值。</param>
 	/// <returns>任务。</returns>
-	private static Task AwaitResultAsync(object result)
+	private static Task AwaitResultAsync(object? result)
 	{
 		switch (result)
 		{
@@ -669,7 +669,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <summary>
 	/// 解析键控的单个服务；容器不支持键控服务时给出明确错误而不是强转异常。
 	/// </summary>
-	private object ResolveKeyedService(Type type, object serviceKey)
+	private object? ResolveKeyedService(Type type, object serviceKey)
 	{
 		return _provider is IKeyedServiceProvider keyedServiceProvider
 			   ? keyedServiceProvider.GetKeyedService(type, serviceKey)
@@ -679,7 +679,7 @@ public class BusinessObjectFactory : IObjectFactory
 	/// <summary>
 	/// 解析键控的全部服务；容器不支持键控服务时给出明确错误而不是强转异常。
 	/// </summary>
-	private IEnumerable<object> ResolveKeyedServices(Type type, object serviceKey)
+	private IEnumerable<object?> ResolveKeyedServices(Type type, object serviceKey)
 	{
 		return _provider is IKeyedServiceProvider keyedServiceProvider
 			   ? keyedServiceProvider.GetKeyedServices(type, serviceKey)

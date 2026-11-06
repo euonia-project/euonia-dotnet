@@ -13,7 +13,7 @@ public class AsyncCollectionRequestMessage<T> : IAsyncEnumerable<T>
 	/// operations that can be executed in parallel, or <see cref="Func{T,TResult}"/> instances, which can be used so that multiple
 	/// asynchronous operations are only started sequentially from <see cref="GetAsyncEnumerator"/> and do not overlap in time.
 	/// </summary>
-	private readonly List<(Task<T>, Func<CancellationToken, Task<T>>)> _responses = new();
+	private readonly List<(Task<T>?, Func<CancellationToken, Task<T>>?)> _responses = new();
 
 	/// <summary>
 	/// The <see cref="CancellationTokenSource"/> instance used to link the token passed to

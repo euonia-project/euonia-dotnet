@@ -39,7 +39,7 @@ internal static class ServiceCollectionExtensions
 	/// <param name="seeding"></param>
 	/// <exception cref="ArgumentException"></exception>
 	/// <exception cref="NotSupportedException"></exception>
-	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task> seeding = null)
+	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task>? seeding = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 

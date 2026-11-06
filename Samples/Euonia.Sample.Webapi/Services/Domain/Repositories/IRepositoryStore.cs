@@ -11,7 +11,7 @@ public interface IRepositoryStore
 	IQueryable<CodeRepository> Query();
 
 	/// <summary>按标识获取仓库；不存在时返回 <see langword="null"/>。</summary>
-	Task<CodeRepository> GetAsync(string id, CancellationToken cancellationToken = default);
+	Task<CodeRepository?> GetAsync(string id, CancellationToken cancellationToken = default);
 
 	/// <summary>追加一个新仓库。</summary>
 	Task AddAsync(CodeRepository repository, CancellationToken cancellationToken = default);

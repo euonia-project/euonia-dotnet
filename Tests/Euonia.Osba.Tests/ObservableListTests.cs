@@ -14,10 +14,10 @@ public class ObservableListTests
 	/// </summary>
 	private class TestItem : INotifyBusy, INotifyPropertyChanged
 	{
-		public event PropertyChangedEventHandler PropertyChanged;
-		public event BusyChangedEventHandler BusyChanged;
+		public event PropertyChangedEventHandler? PropertyChanged;
+		public event BusyChangedEventHandler? BusyChanged;
 
-		private string _name;
+		private string _name = null!;
 
 		public string Name
 		{

@@ -23,12 +23,12 @@ public class DefaultCacheSignal : ICacheSignal
     {
         lock (_tokens)
         {
-            if (!_tokens.TryGetValue(signal, out var token))
+            if (!_tokens.TryGetValue(signal!, out var token))
             {
                 return;
             }
 
-            _tokens.Remove(signal);
+            _tokens.Remove(signal!);
             token.Trigger();
         }
     }
@@ -43,13 +43,13 @@ public class DefaultCacheSignal : ICacheSignal
     {
         lock (_tokens)
         {
-            if (_tokens.TryGetValue(signal, out var token))
+            if (_tokens.TryGetValue(signal!, out var token))
             {
                 return token;
             }
 
             token = new VolatileToken();
-            _tokens[signal] = token;
+            _tokens[signal!] = token;
 
             return token;
         }

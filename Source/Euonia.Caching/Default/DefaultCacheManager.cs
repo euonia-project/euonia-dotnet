@@ -1,4 +1,6 @@
-﻿namespace Nerosoft.Euonia.Caching;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
 /// Provides the default implementation for a cache manager.
@@ -35,15 +37,15 @@ public class DefaultCacheManager : ICacheManager
     /// <typeparam name="TKey">The type of the key to be used to fetch the cache entry.</typeparam>
     /// <typeparam name="TResult">The type of the entry to be obtained from the cache.</typeparam>
     /// <returns>The entry from the cache.</returns>
-    private CacheItem<TKey, TResult> GetCache<TKey, TResult>()
+    private CacheItem<TKey, TResult> GetCache<TKey, TResult>() where TKey : notnull
     {
         return _holder.GetCache<TKey, TResult>(_component);
     }
 
     /// <inheritdoc />
-    public TResult Get<TKey, TResult>(TKey key)
+    public TResult Get<TKey, TResult>(TKey key) where TKey : notnull
     {
-        return TryGet<TKey, TResult>(key, out var result) ? result : default;
+        return TryGet<TKey, TResult>(key, out var result) ? result : default!;
     }
 
     /// <summary>
@@ -54,13 +56,13 @@ public class DefaultCacheManager : ICacheManager
     /// <param name="key">The key.</param>
     /// <param name="acquire">The acquire.</param>
     /// <returns>TResult.</returns>
-    public TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
+    public TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull
     {
         return GetCache<TKey, TResult>().GetOrAdd(key, acquire);
     }
 
     /// <inheritdoc />
-    public TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
+    public TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull
     {
         return GetCache<TKey, TResult>().AddOrUpdate(key, acquire);
     }
@@ -73,7 +75,7 @@ public class DefaultCacheManager : ICacheManager
     /// <param name="key">The key.</param>
     /// <param name="result">The cached value of key.</param>
     /// <returns></returns>
-    public bool TryGet<TKey, TResult>(TKey key, out TResult result)
+    public bool TryGet<TKey, TResult>(TKey key, [MaybeNullWhen(false)] out TResult result) where TKey : notnull
     {
         return GetCache<TKey, TResult>().TryGet(key, out result);
     }

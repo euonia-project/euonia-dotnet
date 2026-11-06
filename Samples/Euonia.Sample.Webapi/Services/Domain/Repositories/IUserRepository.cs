@@ -9,9 +9,9 @@ public interface IUserRepository
 
 	Task UpdateAsync(UserEntity entity, bool autoSave, CancellationToken cancellationToken = default);
 
-	Task<UserEntity> GetAsync(string id, bool tracking, CancellationToken cancellationToken = default);
+	Task<UserEntity?> GetAsync(string id, bool tracking, CancellationToken cancellationToken = default);
 
-	Task<UserEntity> GetAsync(string id, bool tracking, string[] properties, CancellationToken cancellationToken = default);
+	Task<UserEntity?> GetAsync(string id, bool tracking, string[] properties, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Check if any user exists with the given expression.

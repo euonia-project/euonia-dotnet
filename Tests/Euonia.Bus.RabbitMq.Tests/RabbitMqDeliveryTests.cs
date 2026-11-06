@@ -146,7 +146,7 @@ public class RabbitMqDeliveryTests
 	[Fact]
 	public void BuildQueueArguments_MergesAdditionalArguments()
 	{
-		var additional = new Dictionary<string, object> { ["x-dead-letter-exchange"] = "orders.dlx" };
+		var additional = new Dictionary<string, object?> { ["x-dead-letter-exchange"] = "orders.dlx" };
 
 		var arguments = RabbitMqDelivery.BuildQueueArguments(5, additional);
 
@@ -161,7 +161,7 @@ public class RabbitMqDeliveryTests
 	[Fact]
 	public void BuildQueueArguments_WithoutPriorityButWithAdditional_ReturnsAdditional()
 	{
-		var additional = new Dictionary<string, object> { ["x-dead-letter-exchange"] = "orders.dlx" };
+		var additional = new Dictionary<string, object?> { ["x-dead-letter-exchange"] = "orders.dlx" };
 
 		var arguments = RabbitMqDelivery.BuildQueueArguments(0, additional);
 

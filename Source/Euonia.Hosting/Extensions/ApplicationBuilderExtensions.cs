@@ -43,7 +43,7 @@ public static class ApplicationBuilderExtensions
 					{
 						try
 						{
-							var culture = CultureInfo.GetCultureInfo(language.Value.Value);
+							var culture = CultureInfo.GetCultureInfo(language.Value.Value!);
 							CultureInfo.CurrentCulture = culture;
 							CultureInfo.CurrentUICulture = culture;
 						}

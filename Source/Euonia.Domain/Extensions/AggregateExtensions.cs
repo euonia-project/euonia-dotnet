@@ -28,7 +28,7 @@ public static class AggregateExtensions
     /// <typeparam name="TEntity">实体的类型。</typeparam>
     /// <typeparam name="TKey">键类型。</typeparam>
     /// <returns>找到的实体；若未找到则返回 <c>null</c>。</returns>
-    public static TEntity Find<TEntity, TKey>(this HashSet<TEntity> source, TKey id)
+    public static TEntity? Find<TEntity, TKey>(this HashSet<TEntity> source, TKey id)
         where TEntity : IEntity<TKey>
         where TKey : IEquatable<TKey>
     {

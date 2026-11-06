@@ -19,14 +19,14 @@ public static class BusyWaitHelper
     /// <param name="maxSleepTime">两次尝试之间的最大休眠时间。</param>
     /// <param name="cancellationToken">用于取消等待操作的令牌。</param>
     /// <returns>获取到的结果；如果超时且最终尝试仍未成功，则返回 null。</returns>
-    public static async ValueTask<TResult> WaitAsync<TState, TResult>(
+    public static async ValueTask<TResult?> WaitAsync<TState, TResult>(
         TState state,
         Func<TState, CancellationToken, ValueTask<TResult>> tryGetValue, 
         TimeoutValue timeout,
         TimeoutValue minSleepTime,
         TimeoutValue maxSleepTime,
         CancellationToken cancellationToken)
-        where TResult : class
+        where TResult : class?
     {
         Invariant.Require(minSleepTime.CompareTo(maxSleepTime) <= 0);
         Invariant.Require(!maxSleepTime.IsInfinite);
@@ -77,7 +77,7 @@ public static class BusyWaitHelper
     /// <param name="cancellationToken">调用方提供的取消令牌。</param>
     /// <param name="mergedCancellationToken">合并后的取消令牌。</param>
     /// <returns>用于释放合并令牌源的 <see cref="IDisposable"/>；当超时为无限时返回 null。</returns>
-    private static IDisposable CreateMergedCancellationTokenSource(TimeoutValue timeout, CancellationToken cancellationToken, out CancellationToken mergedCancellationToken)
+    private static IDisposable? CreateMergedCancellationTokenSource(TimeoutValue timeout, CancellationToken cancellationToken, out CancellationToken mergedCancellationToken)
     {
         if (timeout.IsInfinite)
         {

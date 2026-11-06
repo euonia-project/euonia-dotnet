@@ -305,7 +305,7 @@ public static class Check
 	/// <param name="minLength">输入字符串的最小长度，默认为 0。</param>
 	/// <returns>输入字符串。</returns>
 	/// <exception cref="ArgumentException">当长度不符合要求时抛出。</exception>
-	public static string EnsureLengthInRange(string value, [NotNull] string parameter, int maxLength, int minLength = 0)
+	public static string? EnsureLengthInRange(string? value, [NotNull] string parameter, int maxLength, int minLength = 0)
 	{
 		if (minLength > 0)
 		{

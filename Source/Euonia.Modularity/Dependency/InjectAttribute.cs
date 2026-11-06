@@ -13,7 +13,7 @@ public class InjectAttribute : Attribute
     /// Initialize a new instance of <see cref="InjectAttribute"/>.
     /// </summary>
     /// <param name="serviceKey">An object that specifies the key of service object to get.</param>
-    public InjectAttribute(object serviceKey = null)
+    public InjectAttribute(object? serviceKey = null)
     {
         ServiceKey = serviceKey;
     }
@@ -21,5 +21,5 @@ public class InjectAttribute : Attribute
     /// <summary>
     /// An object that specifies the key of service object to get.
     /// </summary>
-    public object ServiceKey { get; }
+    public object? ServiceKey { get; }
 }

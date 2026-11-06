@@ -26,7 +26,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <summary>
 	/// 配置的缓存背板，用于跨进程同步缓存操作；未配置时为 <c>null</c>。
 	/// </summary>
-	private readonly CacheBackplane _cacheBackplane;
+	private readonly CacheBackplane? _cacheBackplane;
 
 	/// <summary>
 	/// 使用指定的 <paramref name="configuration"/> 初始化 <see cref="BaseCacheManager{TCacheValue}"/> 类的新实例。
@@ -42,7 +42,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <see cref="ConfigurationBuilder"/>
 	/// <see cref="BaseCacheHandle{TCacheValue}"/>
 	public BaseCacheManager(CacheManagerConfiguration configuration)
-		: this(configuration?.Name ?? Guid.NewGuid().ToString(), configuration)
+		: this(configuration?.Name ?? Guid.NewGuid().ToString(), configuration!)
 	{
 	}
 
@@ -106,28 +106,28 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	}
 
 	/// <inheritdoc />
-	public event EventHandler<CacheActionEventArgs> OnAdd;
+	public event EventHandler<CacheActionEventArgs>? OnAdd;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheClearEventArgs> OnClear;
+	public event EventHandler<CacheClearEventArgs>? OnClear;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheClearRegionEventArgs> OnClearRegion;
+	public event EventHandler<CacheClearRegionEventArgs>? OnClearRegion;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheActionEventArgs> OnGet;
+	public event EventHandler<CacheActionEventArgs>? OnGet;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheActionEventArgs> OnPut;
+	public event EventHandler<CacheActionEventArgs>? OnPut;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheActionEventArgs> OnRemove;
+	public event EventHandler<CacheActionEventArgs>? OnRemove;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheItemRemovedEventArgs> OnRemoveByHandle;
+	public event EventHandler<CacheItemRemovedEventArgs>? OnRemoveByHandle;
 
 	/// <inheritdoc />
-	public event EventHandler<CacheActionEventArgs> OnUpdate;
+	public event EventHandler<CacheActionEventArgs>? OnUpdate;
 
 	/// <inheritdoc />
 	public CacheManagerConfiguration Configuration { get; }
@@ -140,7 +140,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// 获取配置的缓存背板。
 	/// </summary>
 	/// <value>背板实例。</value>
-	public CacheBackplane Backplane => _cacheBackplane;
+	public CacheBackplane? Backplane => _cacheBackplane;
 
 	/// <summary>
 	/// 获取缓存名称。
@@ -294,15 +294,15 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	}
 
 	/// <inheritdoc />
-	protected override CacheItem<TValue> GetCacheItemInternal(string key) =>
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key) =>
 		GetCacheItemInternal(key, null);
 
 	/// <inheritdoc />
-	protected override CacheItem<TValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		CheckDisposed();
 
-		CacheItem<TValue> cacheItem = null;
+		CacheItem<TValue>? cacheItem = null;
 
 		for (var handleIndex = 0; handleIndex < _cacheHandles.Length; handleIndex++)
 		{
@@ -335,7 +335,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 		RemoveInternal(key, null);
 
 	/// <inheritdoc />
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		CheckDisposed();
 
@@ -430,7 +430,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">要逐出的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="handles">要逐出的缓存句柄集合。</param>
-	private static void EvictFromHandles(string key, string region, IEnumerable<BaseCacheHandle<TValue>> handles)
+	private static void EvictFromHandles(string key, string? region, IEnumerable<BaseCacheHandle<TValue>> handles)
 	{
 		foreach (var handle in handles)
 		{
@@ -444,7 +444,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">要逐出的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="handle">要逐出的缓存句柄。</param>
-	private static void EvictFromHandle(string key, string region, BaseCacheHandle<TValue> handle)
+	private static void EvictFromHandle(string key, string? region, BaseCacheHandle<TValue> handle)
 	{
 		var result = string.IsNullOrWhiteSpace(region) ? handle.Remove(key) : handle.Remove(key, region);
 
@@ -478,7 +478,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// </summary>
 	/// <param name="item">要添加的缓存项。</param>
 	/// <param name="foundIndex">找到该项的句柄索引。</param>
-	private void AddToHandlesBelow(CacheItem<TValue> item, int foundIndex)
+	private void AddToHandlesBelow(CacheItem<TValue>? item, int foundIndex)
 	{
 		if (item == null)
 		{
@@ -506,7 +506,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="excludeIndex">要排除的句柄索引。</param>
 	/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="excludeIndex"/> 超出句柄数组范围时抛出。</exception>
-	private void EvictFromOtherHandles(string key, string region, int excludeIndex)
+	private void EvictFromOtherHandles(string key, string? region, int excludeIndex)
 	{
 		if (excludeIndex < 0 || excludeIndex >= _cacheHandles.Length)
 		{
@@ -529,7 +529,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="excludeIndex">作为边界的句柄索引，仅逐出其之前的句柄。</param>
 	/// <exception cref="ArgumentOutOfRangeException">当 <paramref name="excludeIndex"/> 超出句柄数组范围时抛出。</exception>
-	private void EvictFromHandlesAbove(string key, string region, int excludeIndex)
+	private void EvictFromHandlesAbove(string key, string? region, int excludeIndex)
 	{
 		if (excludeIndex < 0 || excludeIndex >= _cacheHandles.Length)
 		{
@@ -621,7 +621,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">被添加的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="origin">事件来源（本地或远程）。</param>
-	private void TriggerOnAdd(string key, string region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
+	private void TriggerOnAdd(string key, string? region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
 	{
 		OnAdd?.Invoke(this, new CacheActionEventArgs(key, region, origin));
 	}
@@ -651,7 +651,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">被获取的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="origin">事件来源（本地或远程）。</param>
-	private void TriggerOnGet(string key, string region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
+	private void TriggerOnGet(string key, string? region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
 	{
 		OnGet?.Invoke(this, new CacheActionEventArgs(key, region, origin));
 	}
@@ -662,7 +662,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">被更新的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="origin">事件来源（本地或远程）。</param>
-	private void TriggerOnPut(string key, string region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
+	private void TriggerOnPut(string key, string? region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
 	{
 		OnPut?.Invoke(this, new CacheActionEventArgs(key, region, origin));
 	}
@@ -673,7 +673,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">被移除的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="origin">事件来源（本地或远程）。</param>
-	private void TriggerOnRemove(string key, string region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
+	private void TriggerOnRemove(string key, string? region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 		OnRemove?.Invoke(this, new CacheActionEventArgs(key, region, origin));
@@ -687,7 +687,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="reason">缓存项被移除的原因。</param>
 	/// <param name="level">移除发生时所在的句柄层级。</param>
 	/// <param name="value">被移除的缓存项值。</param>
-	private void TriggerOnRemoveByHandle(string key, string region, CacheItemRemovedReason reason, int level, object value)
+	private void TriggerOnRemoveByHandle(string key, string? region, CacheItemRemovedReason reason, int level, object? value)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 		OnRemoveByHandle?.Invoke(this, new CacheItemRemovedEventArgs(key, region, reason, value, level));
@@ -699,7 +699,7 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <param name="key">被更新的缓存键。</param>
 	/// <param name="region">缓存键所在的区域；可为 <c>null</c>。</param>
 	/// <param name="origin">事件来源（本地或远程）。</param>
-	private void TriggerOnUpdate(string key, string region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
+	private void TriggerOnUpdate(string key, string? region, CacheActionEventArgOrigin origin = CacheActionEventArgOrigin.Local)
 	{
 		OnUpdate?.Invoke(this, new CacheActionEventArgs(key, region, origin));
 	}
