@@ -6,8 +6,14 @@ using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+/// <summary>
+/// 针对 <see cref="UserContextBehavior{TMessage, TResponse}"/> 元数据写入与用户上下文扩展方法读取行为的测试。
+/// </summary>
 public class UserContextBehaviorTests
 {
+	/// <summary>
+	/// 请求头包含 Bearer 令牌时应把授权信息写入消息元数据。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_WithBearerToken_ShouldWriteAuthorizationMetadata()
 	{
@@ -19,6 +25,9 @@ public class UserContextBehaviorTests
 		Assert.Equal("Bearer abc", context.Metadata[UserContextMetadataKeys.Authorization]);
 	}
 
+	/// <summary>
+	/// 请求头不含授权信息时不应写入授权元数据。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_WithoutToken_ShouldNotWriteAuthorizationMetadata()
 	{
@@ -30,6 +39,9 @@ public class UserContextBehaviorTests
 		Assert.False(context.Metadata.ContainsKey(UserContextMetadataKeys.Authorization));
 	}
 
+	/// <summary>
+	/// 令牌为字面量 <c>null</c> 时视为未提供授权，不应写入授权元数据。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_BearerNull_ShouldNotWriteAuthorizationMetadata()
 	{
@@ -41,6 +53,9 @@ public class UserContextBehaviorTests
 		Assert.False(context.Metadata.ContainsKey(UserContextMetadataKeys.Authorization));
 	}
 
+	/// <summary>
+	/// 已认证用户应把用户名、用户 ID、编码与租户写入元数据。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_WithAuthenticatedUser_ShouldWriteUserMetadata()
 	{
@@ -55,6 +70,9 @@ public class UserContextBehaviorTests
 		Assert.Equal("TENANT1", context.Metadata[UserContextMetadataKeys.UserTenant]);
 	}
 
+	/// <summary>
+	/// 匿名用户不应写入任何用户元数据。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_AnonymousUser_ShouldNotWriteUserMetadata()
 	{
@@ -69,6 +87,9 @@ public class UserContextBehaviorTests
 		Assert.False(context.Metadata.ContainsKey(UserContextMetadataKeys.UserTenant));
 	}
 
+	/// <summary>
+	/// 行为应继续调用管道中的下一个处理器。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_ShouldInvokeNext()
 	{
@@ -85,6 +106,9 @@ public class UserContextBehaviorTests
 		Assert.True(invoked);
 	}
 
+	/// <summary>
+	/// 写入元数据后读取应还原出完整的已认证用户主体。
+	/// </summary>
 	[Fact]
 	public async Task UserContextExtensions_WriteThenRead_ShouldRoundTripUserPrincipal()
 	{
@@ -102,6 +126,9 @@ public class UserContextBehaviorTests
 		Assert.Equal("TENANT1", user.Tenant);
 	}
 
+	/// <summary>
+	/// 元数据不含用户相关键时 <c>GetUserPrincipal</c> 应返回 <see langword="null"/>。
+	/// </summary>
 	[Fact]
 	public void UserContextExtensions_NoUserKeys_ShouldReturnNull()
 	{
@@ -110,6 +137,9 @@ public class UserContextBehaviorTests
 		Assert.Null(metadata.GetUserPrincipal());
 	}
 
+	/// <summary>
+	/// 仅包含部分用户键时应按可用声明重建用户主体，缺失字段为 <see langword="null"/>。
+	/// </summary>
 	[Fact]
 	public void UserContextExtensions_PartialUserKeys_ShouldRebuildAvailableClaims()
 	{
@@ -125,6 +155,9 @@ public class UserContextBehaviorTests
 		Assert.Null(user.Tenant);
 	}
 
+	/// <summary>
+	/// 应能读取元数据中保存的授权令牌。
+	/// </summary>
 	[Fact]
 	public void UserContextExtensions_AuthorizationToken_ShouldReadToken()
 	{
@@ -134,6 +167,9 @@ public class UserContextBehaviorTests
 		Assert.Equal("Bearer token-1", metadata.GetAuthorizationToken());
 	}
 
+	/// <summary>
+	/// 元数据不含授权键时读取令牌应返回 <see langword="null"/>。
+	/// </summary>
 	[Fact]
 	public void UserContextExtensions_NoAuthorizationKey_ShouldReturnNull()
 	{
@@ -174,6 +210,9 @@ public class UserContextBehaviorTests
 		return new UserPrincipal(new ClaimsPrincipal(new ClaimsIdentity()));
 	}
 
+	/// <summary>
+	/// 携带固定负载与通道路由信息的测试消息，用于驱动用户上下文行为读取消息头并构建用户主体。
+	/// </summary>
 	private sealed class TestMessage : RoutedMessage<string>
 	{
 		public TestMessage()

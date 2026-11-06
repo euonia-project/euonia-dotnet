@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class ReadOnlyObjectRegressionTests
 {
+	/// <summary>
+	/// 只读对象的属性赋值会抛出 <see cref="SecurityException"/>，且原值保持不变。
+	/// </summary>
 	[Fact]
 	public void ReadOnly_Object_Should_Refuse_Writes()
 	{
@@ -27,6 +30,9 @@ public class ReadOnlyObjectRegressionTests
 		Assert.NotEqual("changed", target.Name);
 	}
 
+	/// <summary>
+	/// 读取权限被拒绝时，读取只读对象属性仍会抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public void ReadOnly_Object_Should_Still_Honor_Read_Permissions()
 	{
@@ -38,6 +44,9 @@ public class ReadOnlyObjectRegressionTests
 		});
 	}
 
+	/// <summary>
+	/// 多线程并发进出绕过块均不抛异常，且结束后绕过标志完全还原为 <c>false</c>。
+	/// </summary>
 	[Fact]
 	public async Task Concurrent_Bypass_Blocks_Should_Restore_The_Target_Completely()
 	{
@@ -72,6 +81,9 @@ public class ReadOnlyObjectRegressionTests
 		Assert.False((bool)bypassProperty!.GetValue(target)!);
 	}
 
+	/// <summary>
+	/// 两条并发流可各自独立进入绕过区间并写入同一实例。
+	/// </summary>
 	[Fact]
 	public async Task Concurrent_Flows_Should_Each_Bypass_Independently()
 	{
@@ -108,6 +120,9 @@ public class ReadOnlyObjectRegressionTests
 /// </summary>
 public class ReadOnlyProbe : ReadOnlyObject<ReadOnlyProbe>
 {
+	/// <summary>
+	/// Name 属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	private string _name = null!;
@@ -117,6 +132,9 @@ public class ReadOnlyProbe : ReadOnlyObject<ReadOnlyProbe>
 	/// </summary>
 	public bool AllowRead { get; set; } = true;
 
+	/// <summary>
+	/// 受读取权限控制的名称属性，写入会被只读语义拒绝。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
@@ -141,6 +159,9 @@ public class ReadOnlyProbe : ReadOnlyObject<ReadOnlyProbe>
 /// </summary>
 public class BypassRuleChecksFlowScopeTests
 {
+	/// <summary>
+	/// 一条流进入绕过区间不会影响并发流对同一实例的变更追踪。
+	/// </summary>
 	[Fact]
 	public async Task Bypass_Should_Not_Leak_To_Concurrent_Flow()
 	{
@@ -173,6 +194,9 @@ public class BypassRuleChecksFlowScopeTests
 		Assert.Contains(target.ChangedProperties, p => p.Name == "Name");
 	}
 
+	/// <summary>
+	/// 嵌套绕过退出时还原进入时捕获的值，而不是强制置为 <c>false</c>。
+	/// </summary>
 	[Fact]
 	public void Nested_Bypass_Should_Restore_Captured_Value_Not_False()
 	{
@@ -192,6 +216,9 @@ public class BypassRuleChecksFlowScopeTests
 		Assert.False(target.IsBypassingForProbe);
 	}
 
+	/// <summary>
+	/// 绕过状态只向派生流继承，不跨越 <c>await</c> 影响平行流，退出后本流还原。
+	/// </summary>
 	[Fact]
 	public async Task Bypass_Should_Not_Cross_Await_Boundary_Into_Sibling_Flow()
 	{
@@ -213,7 +240,7 @@ public class BypassRuleChecksFlowScopeTests
 	/// <summary>
 	/// 绕过语义探针：暴露当前流的绕过状态与变更追踪。
 	/// 继承 <see cref="ObservableObject{T}"/>（可写）——并发写用例需要能真实落进
-	/// <see cref="ObjectBase.ChangedProperties"/>；只读探针（<see cref="ReadOnlyProbe"/>）
+	/// <c>ChangedProperties</c>；只读探针（<see cref="ReadOnlyProbe"/>）
 	/// 的写入会被 <c>CanWriteProperty</c> 拒绝，握手完成源永不置位会让用例挂起。
 	/// </summary>
 	private sealed class BypassProbe : ObservableObject<BypassProbe>

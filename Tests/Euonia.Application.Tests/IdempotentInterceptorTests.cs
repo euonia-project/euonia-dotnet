@@ -7,8 +7,15 @@ using Nerosoft.Euonia.Threading;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+/// <summary>
+/// <see cref="IdempotentInterceptor"/> 的测试，覆盖同步与异步方法的幂等窗口、缓存过期后的重新执行、
+/// 请求幂等键、自定义键模板、缺少缓存服务以及经由锁工厂去重的场景。
+/// </summary>
 public class IdempotentInterceptorTests
 {
+	/// <summary>
+	/// 同一实参在幂等窗口内重复调用同步命令时，方法体只执行一次。
+	/// </summary>
 	[Fact]
 	public void SyncCommand_SecondCallWithinWindow_ShouldExecuteOnce()
 	{
@@ -21,6 +28,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(1, probe.SyncCalls);
 	}
 
+	/// <summary>
+	/// 幂等窗口过期后，相同实参的调用应再次执行方法体。
+	/// </summary>
 	[Fact]
 	public void SyncCommand_AfterWindowExpiry_ShouldExecuteAgain()
 	{
@@ -36,6 +46,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(2, probe.SyncCalls);
 	}
 
+	/// <summary>
+	/// 重复调用有返回值的异步方法时返回首次执行结果，且方法体只执行一次。
+	/// </summary>
 	[Fact]
 	public async Task ValueMethod_Duplicate_ShouldReturnFirstResult()
 	{
@@ -50,6 +63,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(1, probe.AsyncCalls);
 	}
 
+	/// <summary>
+	/// 实参不同会生成不同指纹，因此两次调用各自执行一次。
+	/// </summary>
 	[Fact]
 	public async Task ValueMethod_DifferentArguments_ShouldExecuteTwice()
 	{
@@ -62,6 +78,10 @@ public class IdempotentInterceptorTests
 		Assert.Equal(2, probe.AsyncCalls);
 	}
 
+	/// <summary>
+	/// 存在 <c>Idempotency-Key</c> 请求头时以该键界定去重范围，即使实参不同也只执行一次；
+	/// 键变化后新的调用会重新执行。
+	/// </summary>
 	[Fact]
 	public async Task RequestIdempotencyKey_ShouldScopeFingerprintRegardlessOfArguments()
 	{
@@ -84,6 +104,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(2, probe.AsyncCalls);
 	}
 
+	/// <summary>
+	/// 配置了自定义键模板时按模板格式化实参生成缓存键，并据此完成去重。
+	/// </summary>
 	[Fact]
 	public void SyncCommand_WithCustomKeyTemplate_ShouldDedup()
 	{
@@ -96,6 +119,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(1, probe.SyncCalls);
 	}
 
+	/// <summary>
+	/// 无返回值的 <see cref="Task"/> 方法在同一实参下重复调用时，第二次应被跳过。
+	/// </summary>
 	[Fact]
 	public async Task TaskMethod_SecondCall_ShouldSkip()
 	{
@@ -108,6 +134,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(1, probe.AsyncCalls);
 	}
 
+	/// <summary>
+	/// 未注册 <see cref="ICacheService"/> 时拦截器退化为直接放行，重复调用每次都执行。
+	/// </summary>
 	[Fact]
 	public async Task WithoutCacheServiceRegistered_ShouldExecuteAlways()
 	{
@@ -122,6 +151,9 @@ public class IdempotentInterceptorTests
 		Assert.Equal(2, probe.AsyncCalls);
 	}
 
+	/// <summary>
+	/// 注册锁工厂后异步与同步调用都经由工厂创建锁，并保证重复调用只执行一次。
+	/// </summary>
 	[Fact]
 	public async Task WithLockFactoryRegistered_ShouldRouteThroughFactoryAndDedup()
 	{
@@ -144,6 +176,9 @@ public class IdempotentInterceptorTests
 		Assert.True(factory.AnyProvider(key => key.Contains(".SubmitOrder", StringComparison.Ordinal)));
 	}
 
+	/// <summary>
+	/// 并发重复调用经锁工厂合并为一次执行，两个调用者都得到相同结果。
+	/// </summary>
 	[Fact]
 	public async Task WithLockFactory_ConcurrentDuplicate_ShouldCoalesceToSingleExecution()
 	{
@@ -166,31 +201,64 @@ public class IdempotentInterceptorTests
 		       ?? throw new InvalidOperationException("Failed to create the idempotent proxy.");
 	}
 
+	/// <summary>
+	/// 幂等拦截器测试使用的探测接口，声明同步、异步、带返回值以及带自定义键模板的被拦截方法。
+	/// </summary>
 	public interface IIdempotentProbe
 	{
+		/// <summary>
+		/// 同步提交订单，用于验证窗口内以相同标识重复提交只执行一次。
+		/// </summary>
 		void SubmitOrder(string id);
 
+		/// <summary>
+		/// 异步扣款并返回金额，用于验证重复调用返回首次结果。
+		/// </summary>
 		Task<decimal> Charge(string id);
 
+		/// <summary>
+		/// 可延迟完成的异步扣款，用于验证并发重复调用被合并为一次执行。
+		/// </summary>
 		Task<decimal> Charge(bool delay);
 
+		/// <summary>
+		/// 无返回值的异步通知，用于验证 <see cref="Task"/> 方法的去重。
+		/// </summary>
 		Task Notify(string id);
 
+		/// <summary>
+		/// 使用自定义键模板的同步发券方法，用于验证模板生成的缓存键可被去重命中。
+		/// </summary>
 		void SendCoupon(string userId, string offer);
 	}
 
+	/// <summary>
+	/// <see cref="IIdempotentProbe"/> 的测试实现，统计同步与异步方法体的真实执行次数。
+	/// </summary>
 	public class IdempotentProbe : IIdempotentProbe
 	{
+		/// <summary>
+		/// 同步方法体被执行的总次数，用于断言去重是否生效。
+		/// </summary>
 		public int SyncCalls;
 
+		/// <summary>
+		/// 异步方法体被执行的总次数，用于断言去重是否生效。
+		/// </summary>
 		public int AsyncCalls;
 
+		/// <summary>
+		/// 记录一次同步调用，模拟提交订单。
+		/// </summary>
 		[Idempotent(TimeoutSeconds = 60)]
 		public virtual void SubmitOrder(string id)
 		{
 			SyncCalls++;
 		}
 
+		/// <summary>
+		/// 记录一次异步调用并返回固定金额 <c>10</c>。
+		/// </summary>
 		[Idempotent(TimeoutSeconds = 60)]
 		public virtual async Task<decimal> Charge(string id)
 		{
@@ -199,6 +267,10 @@ public class IdempotentInterceptorTests
 			return 10m;
 		}
 
+		/// <summary>
+		/// 记录一次异步调用，按 <paramref name="delay"/> 决定是否延迟完成后返回固定金额 <c>10</c>。
+		/// </summary>
+		/// <param name="delay">是否延迟 200 毫秒以模拟耗时操作。</param>
 		[Idempotent(TimeoutSeconds = 60)]
 		public virtual async Task<decimal> Charge(bool delay)
 		{
@@ -211,6 +283,9 @@ public class IdempotentInterceptorTests
 			return 10m;
 		}
 
+		/// <summary>
+		/// 记录一次异步调用，模拟发送通知。
+		/// </summary>
 		[Idempotent(TimeoutSeconds = 60)]
 		public virtual async Task Notify(string id)
 		{
@@ -218,6 +293,9 @@ public class IdempotentInterceptorTests
 			await Task.Yield();
 		}
 
+		/// <summary>
+		/// 记录一次同步调用，缓存键由 <c>coupon-{userId}-{offer}</c> 模板生成。
+		/// </summary>
 		[Idempotent(Key = "coupon-{0}-{1}")]
 		public virtual void SendCoupon(string userId, string offer)
 		{
@@ -240,6 +318,9 @@ public class IdempotentInterceptorTests
 		}
 	}
 
+	/// <summary>
+	/// 进程内锁提供程序：以 <see cref="SemaphoreSlim"/> 模拟分布式锁，供幂等拦截器在并发测试中使用。
+	/// </summary>
 	private sealed class InMemoryLockProvider : ILockProvider
 	{
 		private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -296,6 +377,9 @@ public class IdempotentInterceptorTests
 			return TryAcquireAsync(timeout.IsInfinite ? Timeout.InfiniteTimeSpan : timeout.TimeSpan, cancellationToken);
 		}
 
+		/// <summary>
+		/// 锁句柄：释放时归还信号量，使其他等待者可以继续获取同一把锁。
+		/// </summary>
 		private sealed class Handle : ISynchronizationHandle
 		{
 			private readonly SemaphoreSlim _semaphore;
@@ -317,6 +401,9 @@ public class IdempotentInterceptorTests
 		}
 	}
 
+	/// <summary>
+	/// 测试用服务提供程序：按请求类型返回预置的缓存服务与锁工厂，其余类型返回 <see langword="null"/>。
+	/// </summary>
 	private sealed class ServiceProviderStub : IServiceProvider
 	{
 		private readonly ICacheService _cache;
@@ -340,6 +427,9 @@ public class IdempotentInterceptorTests
 		}
 	}
 
+	/// <summary>
+	/// 不包含任何服务的提供程序，用于验证拦截器在缺少锁工厂时的回退行为。
+	/// </summary>
 	private sealed class EmptyServiceProvider : IServiceProvider
 	{
 		public object? GetService(Type serviceType) => null;

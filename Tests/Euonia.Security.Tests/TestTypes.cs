@@ -9,12 +9,24 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public sealed class Asset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 负责人标识，用于「本人可见」判定。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 所属部门标识，用于「本部门可见」判定。
+	/// </summary>
 	public string DeptId { get; set; } = null!;
 
+	/// <summary>
+	/// 密级，取值为 <c>secret</c> 时被默认策略拒绝。
+	/// </summary>
 	public string Level { get; set; } = null!;
 }
 
@@ -23,6 +35,10 @@ public sealed class Asset
 /// </summary>
 public sealed class AssetModel : ScopeModel<Asset>
 {
+	/// <summary>
+	/// 登记负责人、部门两个维度映射，并把 <c>level</c> 分类为可供策略读取的属性。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<Asset> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
@@ -30,6 +46,9 @@ public sealed class AssetModel : ScopeModel<Asset>
 		       .Classify("level", x => x.Level);
 	}
 
+	/// <summary>
+	/// 默认策略：本人或本部门授予可见，密级为 <c>secret</c> 的资源一律拒绝。
+	/// </summary>
 	public override ScopePolicy<Asset> Policy =>
 		ScopePolicy<Asset>.All(
 			ScopePolicy<Asset>.Any(
@@ -43,10 +62,19 @@ public sealed class AssetModel : ScopeModel<Asset>
 /// </summary>
 public sealed class KeyedAsset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 负责人标识，用于「本人可见」判定。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 所属部门标识，用于「本部门可见」判定。
+	/// </summary>
 	public string DeptId { get; set; } = null!;
 }
 
@@ -55,18 +83,35 @@ public sealed class KeyedAsset
 /// </summary>
 public sealed class KeyedAssetModel : ScopeModel<KeyedAsset>
 {
+	/// <summary>
+	/// 查看操作的权限码。
+	/// </summary>
 	public const string View = "keyed:view";
 
+	/// <summary>
+	/// 删除操作的权限码。
+	/// </summary>
 	public const string Delete = "keyed:delete";
 
+	/// <summary>
+	/// 登记负责人、部门两个维度映射。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<KeyedAsset> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
 		       .Map(ScopeDimensions.Dept, x => x.DeptId);
 	}
 
+	/// <summary>
+	/// 默认策略：仅本人可见；按权限码声明的策略由 <see cref="Declare"/> 覆盖。
+	/// </summary>
 	public override ScopePolicy<KeyedAsset> Policy => ScopePolicy<KeyedAsset>.Self();
 
+	/// <summary>
+	/// 按权限码分别声明查看（本人或本部门）与删除（仅负责人）策略。
+	/// </summary>
+	/// <param name="policies">用于按权限码登记策略的集合。</param>
 	public override void Declare(ScopePolicySet<KeyedAsset> policies)
 	{
 		policies.For(View, ScopePolicy<KeyedAsset>.Any(ScopePolicy<KeyedAsset>.Self(), ScopePolicy<KeyedAsset>.Grant(ScopeDimensions.Dept)));
@@ -79,8 +124,14 @@ public sealed class KeyedAssetModel : ScopeModel<KeyedAsset>
 /// </summary>
 public sealed class WorkspaceMember
 {
+	/// <summary>
+	/// 成员的用户标识，对应 <see cref="ScopeDimensions.Member"/> 维度值。
+	/// </summary>
 	public string UserId { get; set; } = null!;
 
+	/// <summary>
+	/// 成员状态，用于构造不同状态的子表行。
+	/// </summary>
 	public string Status { get; set; } = null!;
 }
 
@@ -92,10 +143,19 @@ public sealed class WorkspaceMember
 /// </remarks>
 public sealed class Workspace
 {
+	/// <summary>
+	/// 工作区标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 负责人标识，用于「本人可见」判定。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 成员子表行集合；未加载时为空引用，单行判定会明确报错。
+	/// </summary>
 	public List<WorkspaceMember> Members { get; set; } = null!;
 }
 
@@ -104,12 +164,19 @@ public sealed class Workspace
 /// </summary>
 public sealed class WorkspaceModel : ScopeModel<Workspace>
 {
+	/// <summary>
+	/// 映射负责人维度，并把成员子表行的用户标识映射为成员维度。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<Workspace> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
 		       .MapMany(ScopeDimensions.Member, x => x.Members.Select(m => m.UserId));
 	}
 
+	/// <summary>
+	/// 默认策略：成员或负责人可见。
+	/// </summary>
 	public override ScopePolicy<Workspace> Policy =>
 		ScopePolicy<Workspace>.Any(
 			ScopePolicy<Workspace>.Grant(ScopeDimensions.Member),
@@ -121,8 +188,14 @@ public sealed class WorkspaceModel : ScopeModel<Workspace>
 /// </summary>
 public sealed class ChannelMember
 {
+	/// <summary>
+	/// 成员的用户标识，对应 <see cref="ScopeDimensions.Member"/> 维度值。
+	/// </summary>
 	public string UserId { get; set; } = null!;
 
+	/// <summary>
+	/// 成员状态，只有 <c>active</c> 的成员计入维度。
+	/// </summary>
 	public string Status { get; set; } = null!;
 }
 
@@ -131,8 +204,14 @@ public sealed class ChannelMember
 /// </summary>
 public sealed class Channel
 {
+	/// <summary>
+	/// 频道标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 频道成员子表行集合，其状态在选择器中参与过滤。
+	/// </summary>
 	public List<ChannelMember> Members { get; set; } = null!;
 }
 
@@ -141,11 +220,18 @@ public sealed class Channel
 /// </summary>
 public sealed class ChannelModel : ScopeModel<Channel>
 {
+	/// <summary>
+	/// 仅把状态为 <c>active</c> 的成员映射为成员维度，过滤条件写在选择器里由数据库实时求值。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<Channel> builder)
 	{
 		builder.MapMany(ScopeDimensions.Member, x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId));
 	}
 
+	/// <summary>
+	/// 默认策略：仅「有效成员」可见。
+	/// </summary>
 	public override ScopePolicy<Channel> Policy => ScopePolicy<Channel>.Grant(ScopeDimensions.Member);
 }
 
@@ -154,8 +240,14 @@ public sealed class ChannelModel : ScopeModel<Channel>
 /// </summary>
 public sealed class SharedDocument
 {
+	/// <summary>
+	/// 文档标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 读者用户标识集合，集合元素本身即维度值。
+	/// </summary>
 	public List<string> ReaderIds { get; set; } = null!;
 }
 
@@ -164,13 +256,23 @@ public sealed class SharedDocument
 /// </summary>
 public sealed class SharedDocumentModel : ScopeModel<SharedDocument>
 {
+	/// <summary>
+	/// 读者维度的名称。
+	/// </summary>
 	public const string Reader = "reader";
 
+	/// <summary>
+	/// 把读者标识集合直接映射为读者维度值。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<SharedDocument> builder)
 	{
 		builder.MapMany(Reader, x => x.ReaderIds);
 	}
 
+	/// <summary>
+	/// 默认策略：被列为读者的用户可见。
+	/// </summary>
 	public override ScopePolicy<SharedDocument> Policy => ScopePolicy<SharedDocument>.Grant(Reader);
 }
 
@@ -216,8 +318,14 @@ public sealed class UnionProbeAsset
 /// </summary>
 public class ProxyableAsset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 所属部门标识，用于「本部门可见」判定。
+	/// </summary>
 	public string DeptId { get; set; } = null!;
 }
 
@@ -227,11 +335,18 @@ public class ProxyableAsset
 /// </summary>
 public sealed class ProxyableAssetModel : ScopeModel<ProxyableAsset>
 {
+	/// <summary>
+	/// 把所属部门映射为部门维度。
+	/// </summary>
+	/// <param name="builder">用于登记维度映射的模型构建器。</param>
 	public override void Define(ScopeModelBuilder<ProxyableAsset> builder)
 	{
 		builder.Map(ScopeDimensions.Dept, x => x.DeptId);
 	}
 
+	/// <summary>
+	/// 默认策略：本部门可见。
+	/// </summary>
 	public override ScopePolicy<ProxyableAsset> Policy =>
 		ScopePolicy<ProxyableAsset>.Grant(ScopeDimensions.Dept);
 }
@@ -242,6 +357,9 @@ public sealed class ProxyableAssetModel : ScopeModel<ProxyableAsset>
 [Permission("asset:read")]
 public sealed class ClassLevelAsset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 }
 
@@ -253,8 +371,17 @@ public sealed class ConventionCodeSource : IPermissionCodeSource
 {
 	private static readonly string[] Operations = [.. BusinessOperation.All];
 
+	/// <summary>
+	/// 该来源支持的全部操作词汇表，沿用 <see cref="BusinessOperation.All"/>。
+	/// </summary>
 	public IReadOnlyList<string> AllOperations => Operations;
 
+	/// <summary>
+	/// 按「名为 <c>Run</c> 的方法即执行入口」的约定，返回该方法上声明的权限码。
+	/// </summary>
+	/// <param name="type">要检查的资源类型。</param>
+	/// <param name="operation">要查询的操作；只有执行操作才有码。</param>
+	/// <returns>该类型在指定操作上的权限码集合；无匹配时为空集合。</returns>
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{
 		if (operation != BusinessOperation.Execute)
@@ -279,6 +406,11 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 {
 	private readonly ScopeSubjectSet _subjects;
 
+	/// <summary>
+	/// 以给定的权限码与维度授予构造固定的授权数据。
+	/// </summary>
+	/// <param name="codes">主体持有的权限码；为 <c>null</c> 时不添加。</param>
+	/// <param name="grants">主体持有的维度值（维度名, 值）列表；为 <c>null</c> 时不添加。</param>
 	public FixedSubjectResolver(string[]? codes = null, (string Dimension, string Value)[]? grants = null)
 	{
 		var builder = ScopeSubjectSet.CreateBuilder();
@@ -296,6 +428,12 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 		_subjects = builder.Build();
 	}
 
+	/// <summary>
+	/// 返回构造时固定的授权数据，忽略当前用户与取消信号。
+	/// </summary>
+	/// <param name="user">当前用户主体，本实现不使用。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>构造时生成的固定授权数据集合。</returns>
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		=> new(_subjects);
 }
@@ -306,6 +444,9 @@ public sealed class FixedSubjectResolver : IScopeSubjectResolver
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class AssetApproveAttribute : Attribute;
 
+/// <summary>
+/// 第二个审批入口标记特性，用于验证多个特性来源的权限码可合并。
+/// </summary>
 public sealed class AssetSecondApproveAttribute : Attribute;
 
 /// <summary>
@@ -314,19 +455,37 @@ public sealed class AssetSecondApproveAttribute : Attribute;
 [Permission("asset:read")]
 public sealed class ApprovableAsset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 负责人标识。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 所属部门标识。
+	/// </summary>
 	public string DeptId { get; set; } = null!;
 
+	/// <summary>
+	/// 声明 <c>asset:approve</c> 及 <c>auditor</c>、<c>manager</c> 角色，并由特性标记的审批入口。
+	/// </summary>
 	[Permission("asset:approve", "auditor", "manager")]
 	[AssetApprove]
 	public void Approve() { }
 
+	/// <summary>
+	/// 仅按命名约定声明 <c>asset:approve</c> 的审批入口。
+	/// </summary>
 	[Permission("asset:approve")]
 	public void ApproveAsync() { }
 
+	/// <summary>
+	/// 仅由两个审批特性标记、不携带权限码声明的入口。
+	/// </summary>
 	[AssetApprove]
 	[AssetSecondApprove]
 	public void ApproveViaAttribute() { }
@@ -337,17 +496,32 @@ public sealed class ApprovableAsset
 /// </summary>
 public sealed class ApproveOnlyAsset
 {
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>
+	/// 负责人标识。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 声明 <c>asset:approve</c> 并由特性标记的审批入口。
+	/// </summary>
 	[Permission("asset:approve")]
 	[AssetApprove]
 	public void Approve() { }
 
+	/// <summary>
+	/// 仅按命名约定声明 <c>asset:approve</c> 的审批入口。
+	/// </summary>
 	[Permission("asset:approve")]
 	public void ApproveAsync() { }
 
+	/// <summary>
+	/// 仅由两个审批特性标记、不携带权限码声明的入口。
+	/// </summary>
 	[AssetApprove]
 	[AssetSecondApprove]
 	public void ApproveViaAttribute() { }

@@ -5,6 +5,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class LambdaHandlerTests
 {
+	/// <summary>
+	/// 验证带结果的 lambda 处理器会执行委托并返回其计算结果。
+	/// </summary>
 	[Fact]
 	public async Task TestHandlerWithResult_ShouldInvokeDelegateAndReturnResult()
 	{
@@ -15,6 +18,9 @@ public class LambdaHandlerTests
 		Assert.Equal(5, result);
 	}
 
+	/// <summary>
+	/// 验证 lambda 处理器把原始消息与上下文原样传给委托。
+	/// </summary>
 	[Fact]
 	public async Task TestHandlerWithResult_ShouldPassMessageAndContext()
 	{
@@ -35,6 +41,9 @@ public class LambdaHandlerTests
 		Assert.Same(context, receivedContext);
 	}
 
+	/// <summary>
+	/// 验证无结果的 lambda 处理器会执行委托并收到待处理消息。
+	/// </summary>
 	[Fact]
 	public async Task TestHandlerWithoutResult_ShouldInvokeDelegate()
 	{
@@ -51,6 +60,9 @@ public class LambdaHandlerTests
 		Assert.Equal("world", receivedMessage);
 	}
 
+	/// <summary>
+	/// 返回固定元数据的消息上下文替身，为 lambda 处理器提供非空上下文。
+	/// </summary>
 	private sealed class FakeMessageContext : IMessageContext
 	{
 		public string MessageId => "message-id";

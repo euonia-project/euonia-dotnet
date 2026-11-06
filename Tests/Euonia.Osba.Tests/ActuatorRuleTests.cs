@@ -18,6 +18,9 @@ public class ActuatorRuleTests
 {
 	#region 追加规则
 
+	/// <summary>
+	/// 以实例形式附加失败的规则时，更新保存应抛出 <see cref="ValidationException"/> 并包含规则错误信息。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRuleInstance_ShouldFailSave()
 	{
@@ -36,6 +39,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 以泛型形式附加失败的规则时，更新保存应抛出 <see cref="ValidationException"/>。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRuleGeneric_ShouldFailSave()
 	{
@@ -52,6 +58,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 从服务提供程序解析规则时，应注入其依赖并返回依赖相关的失败信息。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRuleFromProvider_ShouldResolveDependency()
 	{
@@ -72,6 +81,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 同时附加多个规则时，所有规则都应被执行并汇总各自的错误。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRules_ShouldApplyAll()
 	{
@@ -92,6 +104,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 规则应在 Handle 之后执行，并能看到 Handle 填充后的属性值。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRule_ShouldRunAfterHandle_AndSeePopulatedValues()
 	{
@@ -111,6 +126,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 实例级规则不应泄漏到同类型的后续操作，后续操作应正常保存。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithRule_ShouldNotLeakToOtherInstancesOfSameType()
 	{
@@ -135,6 +153,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 命令附加失败规则时，命令主体应被阻止执行并抛出 <see cref="ValidationException"/>。
+	/// </summary>
 	[Fact]
 	public async Task Execute_WithRule_ShouldBlockCommandBody()
 	{
@@ -156,6 +177,9 @@ public class ActuatorRuleTests
 
 	#region 排除规则
 
+	/// <summary>
+	/// 按类型排除规则后，原本被类型级规则拦截的保存应放行。
+	/// </summary>
 	[Fact]
 	public async Task Update_BypassRuleByType_ShouldExcludeTypeLevelRule()
 	{
@@ -181,6 +205,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 按名称排除规则后，原本被类型级规则拦截的保存应放行。
+	/// </summary>
 	[Fact]
 	public async Task Update_BypassRuleByName_ShouldExcludeTypeLevelRule()
 	{
@@ -199,6 +226,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 按类型排除规则时仅匹配精确类型，不应连带排除派生规则。
+	/// </summary>
 	[Fact]
 	public async Task Update_BypassRule_ExactTypeMatch_ShouldNotExcludeDerivedRules()
 	{
@@ -220,6 +250,9 @@ public class ActuatorRuleTests
 
 	#region 跳过检查
 
+	/// <summary>
+	/// 跳过规则检查后，即使存在会失败的规则保存也应成功完成。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithoutRuleChecks_ShouldSaveSuccessfully_EvenWithFailingRule()
 	{
@@ -238,6 +271,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 跳过规则检查仅对当前操作生效，后续操作仍应执行规则检查并失败。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithoutRuleChecks_ShouldNotAffectNextOperation()
 	{
@@ -259,6 +295,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 跳过规则检查不应覆盖调用方自行挂起的检查状态。
+	/// </summary>
 	[Fact]
 	public async Task Update_WithoutRuleChecks_ShouldNotClobberCallerOwnSuspension()
 	{
@@ -285,6 +324,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 跳过规则检查后，命令主体应照常执行。
+	/// </summary>
 	[Fact]
 	public async Task Execute_WithoutRuleChecks_ShouldRunCommandBody()
 	{
@@ -305,6 +347,9 @@ public class ActuatorRuleTests
 
 	#region 删除时的规则开关
 
+	/// <summary>
+	/// 删除操作默认不执行对象级规则，应直接完成删除。
+	/// </summary>
 	[Fact]
 	public async Task Delete_WithRule_ShouldNotRunRulesByDefault()
 	{
@@ -321,6 +366,9 @@ public class ActuatorRuleTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 启用删除时的规则检查后，失败的规则应阻止删除操作。
+	/// </summary>
 	[Fact]
 	public async Task Delete_WithRuleChecksOnDelete_ShouldRunRules()
 	{
@@ -340,6 +388,9 @@ public class ActuatorRuleTests
 
 	#region 并发隔离
 
+	/// <summary>
+	/// 并发操作附加的规则彼此隔离，不应污染按类型共享的规则管理器。
+	/// </summary>
 	[Fact]
 	public async Task Update_ConcurrentOperations_ShouldNotPolluteSharedRules()
 	{

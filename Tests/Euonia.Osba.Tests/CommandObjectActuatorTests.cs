@@ -10,11 +10,18 @@ public class ServiceObjectActuatorTests
 {
 	private readonly IActuator _actuator;
 
+	/// <summary>
+	/// 初始化测试类并保存待验证的执行器。
+	/// </summary>
+	/// <param name="actuator">由测试宿主注入的执行器实例。</param>
 	public ServiceObjectActuatorTests(IActuator actuator)
 	{
 		_actuator = actuator;
 	}
 
+	/// <summary>
+	/// 验证执行器按「创建 → Handle → 命令体」的顺序执行，且命令体在 Handle 之后才被置为已执行。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteShouldCreateHandleThenRunCommandBody()
 	{
@@ -49,6 +56,11 @@ public class ActuatorTestCommand : ServiceObject<ActuatorTestCommand>
 	/// </summary>
 	public bool Executed { get; private set; }
 
+	/// <summary>
+	/// 创建阶段将 <see cref="Created"/> 置位、把 <see cref="Step"/> 置为 1，再调用基类创建逻辑。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示创建过程的任务。</returns>
 	[FactoryCreate]
 	protected internal override Task CreateAsync(CancellationToken cancellationToken = default)
 	{
@@ -57,6 +69,11 @@ public class ActuatorTestCommand : ServiceObject<ActuatorTestCommand>
 		return base.CreateAsync(cancellationToken);
 	}
 
+	/// <summary>
+	/// 命令体仅在 <see cref="Step"/> 已被 Handle 置为 2 时将 <see cref="Executed"/> 置位，用于验证执行顺序。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示执行过程的任务。</returns>
 	[FactoryExecute]
 	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{

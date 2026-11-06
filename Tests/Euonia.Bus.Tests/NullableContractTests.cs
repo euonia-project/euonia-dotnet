@@ -11,6 +11,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class NullableContractTests
 {
+	/// <summary>
+	/// 验证未绑定请求上下文的路由消息，其追踪标识、授权信息与用户主体均为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void RoutedMessage_WithoutRequestContext_ExposesNulls()
 	{
@@ -21,6 +24,9 @@ public class NullableContractTests
 		Assert.Null(envelope.User);
 	}
 
+	/// <summary>
+	/// 验证由未携带相关值的信封构造的消息上下文，相应属性均返回 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void MessageContext_FromEnvelopeWithoutValues_ExposesNulls()
 	{
@@ -32,6 +38,9 @@ public class NullableContractTests
 		Assert.Null(context.User);
 	}
 
+	/// <summary>
+	/// 验证入站信封在来源未提供用户信息时，追踪标识、授权信息与用户主体均为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void InboundEnvelope_WithoutUser_ExposesNull()
 	{
@@ -44,6 +53,9 @@ public class NullableContractTests
 		Assert.Null(envelope.User);
 	}
 
+	/// <summary>
+	/// 验证元数据索引器在键不存在时返回 <c>null</c> 而不是抛出异常。
+	/// </summary>
 	[Fact]
 	public void MessageMetadata_MissingKey_ReturnsNull()
 	{
@@ -52,6 +64,9 @@ public class NullableContractTests
 		Assert.Null(metadata["missing"]);
 	}
 
+	/// <summary>
+	/// 验证回复事件参数允许结果为空，并如实暴露 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void MessageRepliedEventArgs_AllowsNullResult()
 	{
@@ -60,6 +75,9 @@ public class NullableContractTests
 		Assert.Null(args.Result);
 	}
 
+	/// <summary>
+	/// 验证以空消息标识完成上下文时，完成事件报告的标识为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void MessageContext_CompleteWithoutMessageId_ReportsNull()
 	{

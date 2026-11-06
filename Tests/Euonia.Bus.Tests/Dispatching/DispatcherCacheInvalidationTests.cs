@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class DispatcherCacheInvalidationTests
 {
+	/// <summary>
+	/// 验证首次 <see cref="IDispatcher.Determine"/> 结果被缓存后，运行期新增的传输策略立即出现在判定结果中。
+	/// </summary>
 	[Fact]
 	public async Task Determine_AfterStrategyAdded_IncludesNewTransport()
 	{

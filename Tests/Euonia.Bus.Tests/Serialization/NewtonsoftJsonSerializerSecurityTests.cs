@@ -11,6 +11,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class NewtonsoftJsonSerializerSecurityTests
 {
+	/// <summary>
+	/// 验证反序列化忽略 JSON 中的 <c>$type</c> 字段，不会实例化被指定的类型。
+	/// </summary>
 	[Fact]
 	public void Deserialize_DoesNotHonorTypeNameHandling()
 	{
@@ -25,6 +28,9 @@ public class NewtonsoftJsonSerializerSecurityTests
 		Assert.IsNotType<DangerousProbe>(result);
 	}
 
+	/// <summary>
+	/// 带构造计数的攻击载荷类型，用于验证反序列化不会依据 <c>$type</c> 实例化任意类型。
+	/// </summary>
 	private sealed class DangerousProbe
 	{
 		public static int Activations;

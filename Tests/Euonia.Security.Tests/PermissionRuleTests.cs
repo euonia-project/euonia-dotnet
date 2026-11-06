@@ -21,6 +21,9 @@ public class PermissionRuleTests
 
 	#region 回调载体
 
+	/// <summary>
+	/// 注册回调内联声明 <c>execute</c> 操作规则后，<see cref="GuardedAsset"/> 的 execute 策略键应为 <c>guarded:run</c>。
+	/// </summary>
 	[Fact]
 	public void Callback_Should_Declare_Rules_Inline()
 	{
@@ -29,6 +32,9 @@ public class PermissionRuleTests
 		Assert.Equal("guarded:run", ResolveExecuteKey(provider, typeof(GuardedAsset)));
 	}
 
+	/// <summary>
+	/// 未声明任何规则的空回调应在注册期抛出 <see cref="InvalidOperationException"/>，并在消息中指出 <c>NoModels</c> 与 <c>NoOperationCodes</c>。
+	/// </summary>
 	[Fact]
 	public void Callback_Without_Rules_Should_Fail_At_Registration()
 	{
@@ -39,6 +45,9 @@ public class PermissionRuleTests
 		Assert.Contains("NoOperationCodes", exception.Message);
 	}
 
+	/// <summary>
+	/// 来自两个模块的回调应合并：操作词汇表只保留一条 <c>execute</c>，且 <see cref="ApproveOnlyAsset"/> 仍只暴露 <c>asset:approve</c>。
+	/// </summary>
 	[Fact]
 	public void Callbacks_From_Different_Modules_Should_Merge()
 	{
@@ -53,6 +62,9 @@ public class PermissionRuleTests
 		Assert.Equal(["asset:approve"], source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Execute));
 	}
 
+	/// <summary>
+	/// 注册回调与自定义 <see cref="IPermissionCodeSource"/> 并存时，两者的权限码应同时可查。
+	/// </summary>
 	[Fact]
 	public void Callback_And_Custom_Source_Should_Merge()
 	{
@@ -68,6 +80,9 @@ public class PermissionRuleTests
 		Assert.Contains("asset:read", source.CodesFor(typeof(ApprovableAsset), BusinessOperation.Read));
 	}
 
+	/// <summary>
+	/// 重复注册相同回调时，容器中 <see cref="ScopeModelRegistry"/> 与 <see cref="IPermissionCodeSource"/> 应各只有一个注册。
+	/// </summary>
 	[Fact]
 	public void Callback_Should_Not_Duplicate_Registrations()
 	{
@@ -84,6 +99,9 @@ public class PermissionRuleTests
 
 	#region 合并后的「要求」面
 
+	/// <summary>
+	/// 合并后的来源应回答每个来源的要求：只给码的来源折算为「有码、无角色」，能回答要求的来源保留原角色。
+	/// </summary>
 	[Fact]
 	public void Merged_Sources_Should_Expose_Requirements_From_Every_Source()
 	{
@@ -109,6 +127,9 @@ public class PermissionRuleTests
 			requirement => requirement.Permission == "asset:approve" && requirement.Roles.SequenceEqual(["auditor", "manager"]));
 	}
 
+	/// <summary>
+	/// 只注册一个来源时，解析出的 <see cref="IPermissionCodeSource"/> 同样应能回答要求（无须经过合并）。
+	/// </summary>
 	[Fact]
 	public void Single_Source_Should_Also_Answer_Requirements()
 	{

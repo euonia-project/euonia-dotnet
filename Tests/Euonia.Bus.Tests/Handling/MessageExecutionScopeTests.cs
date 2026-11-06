@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class MessageExecutionScopeTests
 {
+	/// <summary>
+	/// 验证发件箱重试使用独立的执行作用域重新投递，并把传输状态置为成功。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RedeliversWithOwnScope()
 	{
@@ -34,6 +37,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal(OutboxTransportStatus.Success, store.Get("ambient-outbox-1")!.GetTransport("test")!.Status);
 	}
 
+	/// <summary>
+	/// 验证收件箱重试在独立执行作用域中运行处理器，处理器可解析作用域服务且状态置为成功。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_ExecutesHandlerWithOwnScope()
 	{
@@ -69,6 +75,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal(InboxHandlerStatus.Success, store.Get("ambient-inbox-1")!.GetHandler("MyHandler")!.Status);
 	}
 
+	/// <summary>
+	/// 验证死信重放使用原消息的追踪标识执行处理器，而不是沿用触发方的请求上下文。
+	/// </summary>
 	[Fact]
 	public async Task ReplayDeadLetterAsync_ExecutesHandlerWithOwnScope()
 	{
@@ -116,6 +125,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal("trace-original", state.TraceIdentifier);
 	}
 
+	/// <summary>
+	/// 验证重放时清空继承的请求上下文，执行结束后恢复触发方自身的上下文。
+	/// </summary>
 	[Fact]
 	public async Task EnvelopeOverride_WithEmptyEnvelope_ClearsInheritedContext()
 	{
@@ -143,6 +155,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal("trace-admin", contextAccessor.Context?.TraceIdentifier);
 	}
 
+	/// <summary>
+	/// 验证借用的服务提供程序已被释放时，执行环境改用新建的执行作用域。
+	/// </summary>
 	[Fact]
 	public async Task BorrowedProvider_WhenDisposed_IsReplacedByOwnScope()
 	{
@@ -171,6 +186,9 @@ public class MessageExecutionScopeTests
 		Assert.NotSame(borrowed, observed);
 	}
 
+	/// <summary>
+	/// 验证借用根容器时执行环境改用新建的执行作用域，不会把作用域服务解析到根容器上。
+	/// </summary>
 	[Fact]
 	public async Task BorrowedProvider_WhenRootContainer_IsReplacedByOwnScope()
 	{
@@ -195,6 +213,9 @@ public class MessageExecutionScopeTests
 		Assert.NotSame(provider, observed);
 	}
 
+	/// <summary>
+	/// 验证每次执行都基于发布方快照创建独立的请求上下文，且请求服务指向本次执行作用域。
+	/// </summary>
 	[Fact]
 	public async Task PublisherSnapshot_CreatesIndependentContextPerExecution()
 	{
@@ -267,6 +288,9 @@ public class MessageExecutionScopeTests
 	{
 	}
 
+	/// <summary>
+	/// 记录处理器是否执行以及请求跟踪标识的共享状态，用于跨作用域断言执行结果。
+	/// </summary>
 	private sealed class ProbeState
 	{
 		public bool Handled { get; set; }
@@ -274,10 +298,17 @@ public class MessageExecutionScopeTests
 		public string? TraceIdentifier { get; set; }
 	}
 
+	/// <summary>
+	/// 用于验证重放执行作用域的探测事件。
+	/// </summary>
 	private sealed class ReplayProbeEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 探测处理器：从执行作用域解析 <see cref="ScopedProbe"/> 并记录请求跟踪标识，
+	/// 用于验证重放时仍使用独立执行作用域与正确的请求上下文。
+	/// </summary>
 	private sealed class ReplayProbeHandler(IServiceAccessor accessor, IRequestContextAccessor requestContext, ProbeState state) : IHandler<ReplayProbeEvent>
 	{
 		public Task HandleAsync(ReplayProbeEvent message, IMessageContext context, CancellationToken cancellationToken = default)
@@ -289,6 +320,9 @@ public class MessageExecutionScopeTests
 		}
 	}
 
+	/// <summary>
+	/// 记录被投递消息标识的传输器替身，供执行作用域测试断言消息是否已由总线送出。
+	/// </summary>
 	private sealed class RecordingTransporter(ICollection<string> delivered) : ITransporter
 	{
 		public string Name => "test";

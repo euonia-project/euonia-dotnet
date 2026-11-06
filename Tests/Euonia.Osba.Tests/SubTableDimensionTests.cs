@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class SubTableDimensionTests
 {
+	/// <summary>
+	/// 成员关系已加载时保存成功：写侧边界在内存中判定成员维度并放行，结果状态回到 <see cref="ObjectEditState.None"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WithLoadedMembership_ShouldSucceed()
 	{
@@ -30,6 +33,10 @@ public class SubTableDimensionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 成员集合未加载时保存失败：抛出 <see cref="InvalidOperationException"/>，消息中指出维度名与修复指引（<c>Apply</c>），
+	/// 而不是伪装成越权的 <see cref="System.Security.SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WithoutLoadedMembers_ShouldFailLoudly_NotDeny()
 	{
@@ -50,6 +57,9 @@ public class SubTableDimensionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 子表维度按当前对象图实时求值：移除成员行后下一次判定立即变为拒绝，无需等待授权数据刷新。
+	/// </summary>
 	[Fact]
 	public void MembershipChange_ShouldTakeEffect_WithoutRefresh()
 	{
@@ -70,6 +80,9 @@ public class SubTableDimensionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 子表属性参与判定：状态为 <c>expired</c> 的成员行不算成员，只有 <c>active</c> 的行授予访问。
+	/// </summary>
 	[Fact]
 	public void MembershipRow_Expired_ShouldNotGrantAccess()
 	{
@@ -84,6 +97,9 @@ public class SubTableDimensionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 负责人维度与成员维度并存：负责人由行内列判定，即使当前用户不在成员表中也能看到该团队。
+	/// </summary>
 	[Fact]
 	public void Leader_ShouldSeeTeam_WithoutMembership()
 	{
@@ -147,10 +163,13 @@ public class SubTableDimensionTests
 /// <summary>子表行：团队成员（真实系统里就是 <c>team_member</c> 表的一行）。</summary>
 public sealed class TeamMemberRow
 {
+	/// <summary>所属团队的标识，与 <see cref="MemberTeam.Id"/> 对应。</summary>
 	public string TeamId { get; set; } = null!;
 
+	/// <summary>成员的用户标识，判定时与授予值比较。</summary>
 	public string UserId { get; set; } = null!;
 
+	/// <summary>成员关系状态；仅 <c>active</c> 视为有效成员。</summary>
 	public string Status { get; set; } = null!;
 }
 
@@ -159,19 +178,31 @@ public sealed class TeamMemberRow
 /// </summary>
 public class MemberTeam : EditableObject<MemberTeam>
 {
+	/// <summary>团队标识。</summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>负责人（<c>owner</c> 维度）的用户标识。</summary>
 	public string LeaderId { get; set; } = null!;
 
 	/// <summary>子表行。刻意不初始化：未加载时为空引用，单行判定会明确报错而不是静默拒绝。</summary>
 	public List<TeamMemberRow> Members { get; set; } = null!;
 
+	/// <summary>
+	/// 工厂插入钩子：本测试替身不做持久化，直接完成。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示异步操作的任务。</returns>
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 工厂更新钩子：本测试替身不做持久化，直接完成。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示异步操作的任务。</returns>
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -184,12 +215,19 @@ public class MemberTeam : EditableObject<MemberTeam>
 /// </summary>
 public sealed class MemberTeamScopeModel : ScopeModel<MemberTeam>
 {
+	/// <summary>
+	/// 声明维度映射：负责人取自 <see cref="MemberTeam.LeaderId"/>，成员维度取自状态为 <c>active</c> 的成员行用户标识。
+	/// </summary>
+	/// <param name="builder">权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<MemberTeam> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.LeaderId)
 		       .MapMany(ScopeDimensions.Member, x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId));
 	}
 
+	/// <summary>
+	/// 默认策略：有效成员或负责人任一命中即放行。
+	/// </summary>
 	public override ScopePolicy<MemberTeam> Policy =>
 		ScopePolicy<MemberTeam>.Any(
 			ScopePolicy<MemberTeam>.Grant(ScopeDimensions.Member),
@@ -205,6 +243,7 @@ public sealed class MemberTeamScopeModel : ScopeModel<MemberTeam>
 /// </summary>
 internal sealed class SelfMemberResolver : IScopeSubjectResolver
 {
+	/// <inheritdoc />
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;

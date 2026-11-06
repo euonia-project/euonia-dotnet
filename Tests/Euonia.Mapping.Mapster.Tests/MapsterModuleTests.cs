@@ -9,6 +9,9 @@ namespace Nerosoft.Euonia.Mapping.Tests;
 /// </summary>
 public class MapsterModuleTests
 {
+	/// <summary>
+	/// 键控类型适配器工厂在启用作用域验证的服务容器中应能被正常解析。
+	/// </summary>
 	[Fact]
 	public void ConfigureServices_KeyedFactory_ShouldResolveWithScopeValidation()
 	{

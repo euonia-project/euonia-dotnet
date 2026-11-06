@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class RabbitMqDeliveryTests
 {
+	/// <summary>
+	/// 验证显式传入的队列名覆盖配置与通道推导结果。
+	/// </summary>
 	[Fact]
 	public void ResolveQueueName_WithOverride_UsesOverride()
 	{
@@ -21,6 +24,9 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("explicit.queue", RabbitMqDelivery.ResolveQueueName(options, "orders.created", "explicit.queue"));
 	}
 
+	/// <summary>
+	/// 验证未指定队列名覆盖时，队列名由通道名与订阅标识拼接而成。
+	/// </summary>
 	[Fact]
 	public void ResolveQueueName_WithoutOverride_CombinesChannelAndSubscriptionId()
 	{
@@ -40,6 +46,9 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("orders.created@sub", RabbitMqDelivery.ResolveQueueName(options, "orders.created", "   "));
 	}
 
+	/// <summary>
+	/// 验证配置队列名前缀后，推导出的队列名带有该前缀。
+	/// </summary>
 	[Fact]
 	public void ResolveQueueName_WithPrefix_AppliesPrefix()
 	{
@@ -48,6 +57,9 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("tenant-a:orders.created@sub", RabbitMqDelivery.ResolveQueueName(options, "orders.created"));
 	}
 
+	/// <summary>
+	/// 验证配置交换机名前缀后，推导出的交换机名带有该前缀。
+	/// </summary>
 	[Fact]
 	public void ResolveExchangeName_WithPrefix_AppliesPrefix()
 	{
@@ -56,6 +68,9 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("tenant-a:orders.created", RabbitMqDelivery.ResolveExchangeName(options, "orders.created"));
 	}
 
+	/// <summary>
+	/// 验证未配置前缀时交换机名直接使用通道名。
+	/// </summary>
 	[Fact]
 	public void ResolveExchangeName_WithoutPrefix_UsesChannel()
 	{
@@ -80,6 +95,9 @@ public class RabbitMqDeliveryTests
 		Assert.DoesNotContain(",", subscriptionId);
 	}
 
+	/// <summary>
+	/// 验证显式配置订阅标识时优先使用配置值，而不是回退到程序集名称。
+	/// </summary>
 	[Fact]
 	public void ResolveSubscriptionId_WithConfiguredValue_UsesIt()
 	{
@@ -88,6 +106,12 @@ public class RabbitMqDeliveryTests
 		Assert.Equal("configured", RabbitMqDelivery.ResolveSubscriptionId(options, "orders.created"));
 	}
 
+	/// <summary>
+	/// 验证声明的优先级被收敛到受支持范围，任一侧无效时返回 <c>null</c>。
+	/// </summary>
+	/// <param name="priority">声明的消息优先级。</param>
+	/// <param name="maxPriority">队列声明的最大优先级。</param>
+	/// <param name="expected">期望的解析结果，<c>null</c> 表示不启用优先级。</param>
 	[Theory]
 	[InlineData(5, 9, 5)]
 	[InlineData(20, 9, 9)]
@@ -104,6 +128,9 @@ public class RabbitMqDeliveryTests
 		Assert.Equal(expected is null ? null : (byte)expected.Value, resolved);
 	}
 
+	/// <summary>
+	/// 验证未声明优先级时返回 <c>null</c>，不向 broker 声明优先级参数。
+	/// </summary>
 	[Fact]
 	public void ResolvePriority_WithoutDeclaredPriority_ReturnsNull()
 	{
@@ -119,6 +146,9 @@ public class RabbitMqDeliveryTests
 		Assert.Null(RabbitMqDelivery.BuildQueueArguments(0));
 	}
 
+	/// <summary>
+	/// 验证声明了最大优先级时，队列参数包含 <c>x-max-priority</c> 且取值与声明一致。
+	/// </summary>
 	[Fact]
 	public void BuildQueueArguments_WithPriority_AddsMaxPriority()
 	{
@@ -158,6 +188,9 @@ public class RabbitMqDeliveryTests
 		Assert.False(additional.ContainsKey("x-max-priority"));
 	}
 
+	/// <summary>
+	/// 验证未启用优先级但传入其他参数时，仅返回调用方提供的参数集合。
+	/// </summary>
 	[Fact]
 	public void BuildQueueArguments_WithoutPriorityButWithAdditional_ReturnsAdditional()
 	{

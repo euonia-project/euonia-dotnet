@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class RuleExecutionRegressionTests
 {
+	/// <summary>
+	/// 抛出异常的规则会在违规描述中保留异常类型与消息。
+	/// </summary>
 	[Fact]
 	public async Task Rule_That_Throws_Should_Keep_The_Exception_Type_In_The_Result()
 	{
@@ -27,6 +30,9 @@ public class RuleExecutionRegressionTests
 			&& broken.Description.Contains("boom", StringComparison.Ordinal));
 	}
 
+	/// <summary>
+	/// 规则被取消时异常向上传播，而不是被转换成校验错误。
+	/// </summary>
 	[Fact]
 	public async Task Cancelling_A_Rule_Should_Propagate_Instead_Of_Becoming_A_Validation_Error()
 	{
@@ -39,6 +45,9 @@ public class RuleExecutionRegressionTests
 		Assert.Empty(target.GetBrokenRules());
 	}
 
+	/// <summary>
+	/// 规则完成后的属性变更通知在规则管理器的锁外发出。
+	/// </summary>
 	[Fact]
 	public async Task Rule_Completion_Should_Notify_Outside_The_Rules_Lock()
 	{
@@ -64,6 +73,9 @@ public class RuleExecutionRegressionTests
 		Assert.False(heldDuringNotification.Value, "规则完成回调不得在 Rules 的锁内执行——那是把用户代码带进了临界区。");
 	}
 
+	/// <summary>
+	/// 数据注解规则抛出的异常同样在违规描述中保留异常类型与消息。
+	/// </summary>
 	[Fact]
 	public async Task DataAnnotationRule_That_Throws_Should_Keep_The_Exception_Type_In_The_Result()
 	{

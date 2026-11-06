@@ -7,12 +7,15 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 /// <remarks>
 /// <see cref="MessageContext"/> 的事件由 <c>WeakEventManager</c> 支持，仅弱引用处理器目标。
-/// <see cref="RemoteReceiver.ReceiveAsync"/> 曾用局部函数订阅回复事件且未持有强引用，
+/// <see cref="RemoteReceiver.ReceiveAsync(IMessageSerializer, IHandlerContext, string, System.Threading.CancellationToken)"/> 曾用局部函数订阅回复事件且未持有强引用，
 /// 一旦处理器执行期间发生 GC，闭包可能被回收，三个回调全部失效，
 /// 导致 <c>await taskCompletion.Task</c> 永久挂起（HTTP / gRPC 调用永不返回）。
 /// </remarks>
 public class RemoteReceiverTests
 {
+	/// <summary>
+	/// 验证处理器执行期间发生完整垃圾回收时，弱事件订阅仍然有效，调用能在超时前返回成功回复。
+	/// </summary>
 	[Fact]
 	public async Task ReceiveAsync_WhenHandlerTriggersGc_StillCompletesWithReply()
 	{
@@ -33,6 +36,9 @@ public class RemoteReceiverTests
 		Assert.Equal("handled", parsed.Result?.ToString());
 	}
 
+	/// <summary>
+	/// 验证处理器抛出异常时返回失败回复，并保留原始异常消息。
+	/// </summary>
 	[Fact]
 	public async Task ReceiveAsync_WhenHandlerThrows_ReturnsFailureReply()
 	{
@@ -49,6 +55,9 @@ public class RemoteReceiverTests
 		Assert.Equal("handler exploded", parsed.Error!.Message);
 	}
 
+	/// <summary>
+	/// 验证远程错误对象只保留异常消息，不会把堆栈信息暴露给调用方。
+	/// </summary>
 	[Fact]
 	public void RemoteError_DoesNotExposeStackTrace()
 	{

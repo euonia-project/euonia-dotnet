@@ -8,6 +8,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class RuleContextServiceTests
 {
+	/// <summary>
+	/// 规则可通过上下文解析到与目标对象相同作用域的 Scoped 服务。
+	/// </summary>
 	[Fact]
 	public async Task Rule_ShouldResolveScopedServiceFromContext()
 	{
@@ -29,6 +32,9 @@ public class RuleContextServiceTests
 /// </summary>
 public sealed class RuleProbeService
 {
+	/// <summary>
+	/// 服务实例的唯一标识，用于区分不同的解析结果。
+	/// </summary>
 	public Guid Id { get; } = Guid.NewGuid();
 }
 
@@ -37,6 +43,12 @@ public sealed class RuleProbeService
 /// </summary>
 public sealed class ServiceResolvingRule : ObjectRuleBase
 {
+	/// <summary>
+	/// 从规则上下文解析 <see cref="RuleProbeService"/> 并写回目标对象的探针规则。
+	/// </summary>
+	/// <param name="context">当前规则上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		if (context.Target is RuleContextProbe target)
@@ -54,10 +66,19 @@ public sealed class ServiceResolvingRule : ObjectRuleBase
 /// </summary>
 public sealed class RuleContextProbe : EditableObject<RuleContextProbe>
 {
+	/// <summary>
+	/// 是否成功从上下文解析到服务。
+	/// </summary>
 	public bool Resolved { get; set; }
 
+	/// <summary>
+	/// 从上下文解析到的服务实例。
+	/// </summary>
 	public RuleProbeService? ResolvedService { get; set; }
 
+	/// <summary>
+	/// 注册用于解析服务的对象级规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<ServiceResolvingRule>();

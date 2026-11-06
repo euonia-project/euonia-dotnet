@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class FieldDataLockOrderingTests
 {
+	/// <summary>
+	/// 验证 <see cref="FieldDataManager.ForceStaticFieldInit(Type)"/> 不会在目标类型的监视器上阻塞：其他线程持有该类型锁时仍能及时完成。
+	/// </summary>
 	[Fact]
 	public void ForceStaticFieldInit_Should_Not_Block_On_The_Type_Monitor()
 	{

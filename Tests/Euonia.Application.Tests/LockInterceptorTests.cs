@@ -4,9 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+/// <summary>
+/// 锁拦截器的集成测试，验证实现方法上的锁特性解析、并发调用串行化、异步续延不重复进入拦截器链，
+/// 以及信号量锁表的回收与互斥体保持。
+/// </summary>
 [Collection("AppTests")]
 public class LockInterceptorTests
 {
+	/// <summary>
+	/// 多个并发调用命中同一把实现方法锁时应被串行化，最大并发保持为 1 且结束后无残留并发。
+	/// </summary>
 	[Fact]
 	public async Task ImplementationMethodLock_ShouldSerializeConcurrentCalls()
 	{
@@ -22,6 +29,9 @@ public class LockInterceptorTests
 		Assert.Equal(0, CounterService.Concurrent);
 	}
 
+	/// <summary>
+	/// 异步续延中继续执行不应重新进入拦截器链：10 个并发同锁调用应全部成功返回且不出现自锁超时。
+	/// </summary>
 	[Fact]
 	public async Task AsyncProceed_ShouldNotReenterInterceptorChain()
 	{
@@ -39,6 +49,9 @@ public class LockInterceptorTests
 		Assert.Equal(Enumerable.Range(1, 10), results.OrderBy(x => x));
 	}
 
+	/// <summary>
+	/// 锁释放后，信号量锁表应回收不再使用的条目，避免内存持续增长。
+	/// </summary>
 	[Fact]
 	public async Task SemaphoreLockStore_ShouldEvictUnusedEntries()
 	{
@@ -52,6 +65,9 @@ public class LockInterceptorTests
 		Assert.Equal(0, CountStoreEntries());
 	}
 
+	/// <summary>
+	/// 锁表条目被回收后再次创建仍应复用同一互斥体，后续并发调用依旧保持串行。
+	/// </summary>
 	[Fact]
 	public async Task SemaphoreLockStore_ShouldKeepMutexAfterEviction()
 	{
@@ -68,6 +84,9 @@ public class LockInterceptorTests
 		Assert.Equal(1, CounterService.MaxConcurrent);
 	}
 
+	/// <summary>
+	/// 实现方法上应能通过反射解析到 <see cref="LockAttribute"/>，确保拦截器可据此加锁。
+	/// </summary>
 	[Fact]
 	public void ImplementationMethod_ShouldResolveLockAttribute()
 	{
@@ -77,6 +96,9 @@ public class LockInterceptorTests
 		Assert.NotNull(attribute);
 	}
 
+	/// <summary>
+	/// 同步调用路径应正常通过锁拦截器执行，并返回首次计数结果 <c>1</c>。
+	/// </summary>
 	[Fact]
 	public void SyncPath_ShouldWork()
 	{

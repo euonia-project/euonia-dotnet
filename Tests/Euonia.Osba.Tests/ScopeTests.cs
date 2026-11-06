@@ -16,6 +16,9 @@ public class ScopeTests
 {
 	#region 表达式下推
 
+	/// <summary>
+	/// 授予策略应编译为可翻译的 <c>Contains</c> 表达式，而不是委托。
+	/// </summary>
 	[Fact]
 	public void Grant_ShouldCompileToContainsExpression_NotDelegate()
 	{
@@ -31,6 +34,10 @@ public class ScopeTests
 		Assert.Contains("x.TeamId", compiled.Allow.ToString());
 	}
 
+	/// <summary>
+	/// 过滤应生成基于表达式的 <see cref="Queryable"/><c>.Where</c>，而不是
+	/// <see cref="Enumerable"/><c>.Where</c> 委托调用。
+	/// </summary>
 	[Fact]
 	public void Apply_ShouldProduceExpressionBasedWhere_NotEnumerableWhere()
 	{
@@ -52,6 +59,9 @@ public class ScopeTests
 		Assert.IsAssignableFrom<LambdaExpression>(quoted.Operand);
 	}
 
+	/// <summary>
+	/// 过滤表达式不应引入 <c>Invoke</c>、<c>AsEnumerable</c>、<c>Compile</c> 等客户端求值痕迹。
+	/// </summary>
 	[Fact]
 	public void Apply_ShouldNotIntroduceInvokeOrClientEvaluation()
 	{
@@ -66,6 +76,9 @@ public class ScopeTests
 		Assert.Empty(visitor.Forbidden);
 	}
 
+	/// <summary>
+	/// 未授予任何范围值时，允许条件应直接为恒假常量，而不是生成空的 <c>IN</c> 判断。
+	/// </summary>
 	[Fact]
 	public void EmptySubjects_ShouldProduceConstantFalse_NotEmptyIn()
 	{
@@ -81,6 +94,9 @@ public class ScopeTests
 
 	#region 单一真值来源：下推与内存求值必须一致
 
+	/// <summary>
+	/// 对多种策略组合，下推查询的结果必须与逐行内存判定完全一致。
+	/// </summary>
 	[Fact]
 	public void Pushdown_And_InMemoryEvaluation_ShouldAgree()
 	{
@@ -116,6 +132,10 @@ public class ScopeTests
 
 	#region 允许 / 拒绝代数
 
+	/// <summary>
+	/// 含纯拒绝分支的 <c>Any</c> 不得退化为放行全部：本部门普通行放行、机密行拒绝，
+	/// 非本部门且非机密的行同样拒绝。
+	/// </summary>
 	[Fact]
 	public void Any_WithDenyOnlyBranch_ShouldNotDegradeToAllowAll()
 	{
@@ -139,6 +159,9 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("team-z", level: "normal"), compiled));
 	}
 
+	/// <summary>
+	/// 仅由拒绝分支组成的 <c>Any</c> 不含允许条件，应拒绝所有行。
+	/// </summary>
 	[Fact]
 	public void Any_OfOnlyDenyBranches_ShouldDenyEverything()
 	{
@@ -154,6 +177,9 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("team-a"), compiled));
 	}
 
+	/// <summary>
+	/// 拒绝条件应压过授予，即使授予位于嵌套的 <c>Any</c> 中；范围外的行仍然拒绝。
+	/// </summary>
 	[Fact]
 	public void Deny_ShouldOverrideGrant_EvenInNestedAny()
 	{
@@ -176,6 +202,9 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("team-z", level: "normal"), compiled));
 	}
 
+	/// <summary>
+	/// 仅含拒绝分支的 <c>All</c> 充当拒绝清单：除命中项外全部放行。
+	/// </summary>
 	[Fact]
 	public void All_OfOnlyDenyBranches_ShouldActAsDenyList()
 	{
@@ -191,6 +220,9 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("any-team", level: "secret"), compiled));
 	}
 
+	/// <summary>
+	/// 跨维度的 <c>Any</c> 按逻辑或组合：命中任一维度即可放行，无需同时命中所有维度。
+	/// </summary>
 	[Fact]
 	public void Any_CrossDimension_ShouldUseOr()
 	{
@@ -213,6 +245,9 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("team-z", region: null, project: "p1"), compiled));
 	}
 
+	/// <summary>
+	/// 本人访问策略必须依赖所有者维度的授予；撤销授予后本人也不再可访问。
+	/// </summary>
 	[Fact]
 	public void Self_ShouldRequireOwnerGrant_AndBeRevocable()
 	{
@@ -226,6 +261,10 @@ public class ScopeTests
 		Assert.False(ScopeFilter.Allows(Repo("team-z", owner: "dev"), ScopePolicyCompiler.Compile(policy, model, Subjects(("dept", "team-a")))));
 	}
 
+	/// <summary>
+	/// 分类属性不参与授权：以其名称作为维度授予会因维度未映射而抛出
+	/// <see cref="InvalidOperationException"/>。
+	/// </summary>
 	[Fact]
 	public void Classification_ShouldNotGrantAccess()
 	{
@@ -236,6 +275,9 @@ public class ScopeTests
 			ScopePolicyCompiler.Compile(ScopePolicy<ScopedRepo>.Grant("level"), model, Subjects(("level", "public"))));
 	}
 
+	/// <summary>
+	/// 编译未映射的维度应抛出 <see cref="InvalidOperationException"/>，并在消息中包含维度名。
+	/// </summary>
 	[Fact]
 	public void Compile_UnmappedDimension_ShouldThrow()
 	{
@@ -249,6 +291,9 @@ public class ScopeTests
 
 	#region 构造期校验
 
+	/// <summary>
+	/// 构造不含子策略的 <c>All</c> 或 <c>Any</c> 应抛出 <see cref="InvalidOperationException"/>。
+	/// </summary>
 	[Fact]
 	public void All_Or_Any_WithoutChild_ShouldThrow()
 	{
@@ -256,6 +301,9 @@ public class ScopeTests
 		Assert.Throws<InvalidOperationException>(() => ScopePolicy<ScopedRepo>.Any());
 	}
 
+	/// <summary>
+	/// 嵌套的拒绝策略应被拒绝，并抛出 <see cref="InvalidOperationException"/>。
+	/// </summary>
 	[Fact]
 	public void Deny_Nested_ShouldThrow()
 	{
@@ -268,6 +316,9 @@ public class ScopeTests
 
 	#region 审计
 
+	/// <summary>
+	/// 审计结果应列出实际命中的授予路径与拒绝路径。
+	/// </summary>
 	[Fact]
 	public void Explain_ShouldReportMatchingPaths()
 	{
@@ -285,6 +336,9 @@ public class ScopeTests
 
 	#region 缓存契约
 
+	/// <summary>
+	/// 同一作用域内多次使用守卫（下推与逐行判定）只应解析一次主体。
+	/// </summary>
 	[Fact]
 	public void Guard_ShouldResolveSubjectsOncePerScope()
 	{
@@ -304,6 +358,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 刷新守卫后应读取最新授权数据，使新增的授予立即生效。
+	/// </summary>
 	[Fact]
 	public async Task Guard_Refresh_ShouldPickUpAuthorizationChanges()
 	{
@@ -324,6 +381,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 未声明范围模型的类型不受约束，也不应触发主体解析。
+	/// </summary>
 	[Fact]
 	public void Guard_UnmodeledType_ShouldBeUnconstrained()
 	{
@@ -342,6 +402,9 @@ public class ScopeTests
 
 	#region 写侧强制
 
+	/// <summary>
+	/// 创建阶段不做范围判定；调用方填充字段后保存时才判定，范围内的数据应能成功保存。
+	/// </summary>
 	[Fact]
 	public async Task CreateAsync_ShouldNotBeScopeChecked_BeforeCallerPopulates()
 	{
@@ -363,6 +426,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 创建阶段虽不判定，但保存越界数据仍应在落库前抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task CreateAsync_ThenSaveOutOfScope_ShouldStillBeDenied()
 	{
@@ -383,6 +449,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 越权更新应由工厂边界抛出 <see cref="SecurityException"/>，消息包含 <c>Data scope denied</c>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OutOfScope_OnUpdate_ShouldFailWithSecurityException()
 	{
@@ -400,6 +469,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 越权删除应由工厂边界抛出 <see cref="SecurityException"/>，消息标注删除范围。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OutOfScope_OnDelete_ShouldFailWithSecurityException()
 	{
@@ -419,6 +491,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 范围内的行保存后应回到 <see cref="ObjectEditState.None"/> 状态。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_InScope_ShouldSucceed()
 	{
@@ -435,6 +510,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 未声明范围模型的类型保存时不受数据权限约束。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_UnmodeledType_ShouldNotBeAffected()
 	{
@@ -451,6 +529,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 以 criteria 入口更新时，范围列在调用前尚未填充；后置判定不应误杀范围内的行。
+	/// </summary>
 	[Fact]
 	public async Task UpdateAsync_Criteria_ShouldNotMisfire_WhenRowIsInScope()
 	{
@@ -467,6 +548,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// criteria 入口更新到范围外的行时，应在工厂方法执行后抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task UpdateAsync_Criteria_OutOfScope_ShouldThrowAfterwards()
 	{
@@ -483,6 +567,10 @@ public class ScopeTests
 
 	#region 无法判定时必须失败，不能静默放行
 
+	/// <summary>
+	/// 已声明范围模型但目标缺少 <c>BusinessContext</c> 时无法判定，应抛出
+	/// <see cref="InvalidOperationException"/>，而不是静默放行。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing()
 	{
@@ -502,6 +590,9 @@ public class ScopeTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 未声明范围模型的类型即使缺少 <c>BusinessContext</c> 也不应被阻止保存。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_UnmodeledTypeWithoutBusinessContext_ShouldNotBeBlocked()
 	{
@@ -521,6 +612,9 @@ public class ScopeTests
 	}
 
 
+	/// <summary>
+	/// 解析在途时发生撤销并请求刷新，刷新应排在在途解析之后，并发布撤销后的结果。
+	/// </summary>
 	[Fact]
 	public async Task Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes()
 	{
@@ -645,8 +739,17 @@ public class ScopeTests
 /// </summary>
 internal sealed class ForbiddenNodeVisitor : ExpressionVisitor
 {
+	/// <summary>
+	/// 获取遍历过程中命中的客户端求值方法名列表，用于断言表达式不含客户端求值痕迹。
+	/// </summary>
 	public List<string> Forbidden { get; } = [];
 
+	/// <summary>
+	/// 记录 <c>AsEnumerable</c>、<c>ToList</c>、<c>ToArray</c>、<c>Compile</c>、<c>Invoke</c>
+	/// 等方法调用后继续遍历子节点。
+	/// </summary>
+	/// <param name="node">当前访问的方法调用表达式。</param>
+	/// <returns>遍历后的表达式节点。</returns>
 	protected override Expression VisitMethodCall(MethodCallExpression node)
 	{
 		if (node.Method.Name is nameof(Enumerable.AsEnumerable) or "ToList" or "ToArray" or "Compile" or "Invoke")
@@ -657,6 +760,11 @@ internal sealed class ForbiddenNodeVisitor : ExpressionVisitor
 		return base.VisitMethodCall(node);
 	}
 
+	/// <summary>
+	/// 记录委托调用表达式后继续遍历子节点。
+	/// </summary>
+	/// <param name="node">当前访问的委托调用表达式。</param>
+	/// <returns>遍历后的表达式节点。</returns>
 	protected override Expression VisitInvocation(InvocationExpression node)
 	{
 		Forbidden.Add("Invoke");
@@ -671,13 +779,27 @@ public class CountingScopeResolver : IScopeSubjectResolver
 {
 	private readonly List<(string Dimension, string Value)> _subjects = [];
 
+	/// <summary>
+	/// 解析方法的累计调用次数，用于验证缓存与刷新行为。
+	/// </summary>
 	public int CallCount { get; private set; }
 
+	/// <summary>
+	/// 追加一条维度授予，模拟运行期的授权数据变化。
+	/// </summary>
+	/// <param name="dimension">范围维度名称。</param>
+	/// <param name="value">该维度下授予的值。</param>
 	public void Grant(string dimension, string value)
 	{
 		_subjects.Add((dimension, value));
 	}
 
+	/// <summary>
+	/// 返回固定的主体集合（本人 <c>dev</c> 与 <c>team-a</c> 部门及追加的授予），并累加调用次数。
+	/// </summary>
+	/// <param name="user">当前用户主体，可为 <see langword="null"/>。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>测试用主体集合。</returns>
 	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		CallCount++;
@@ -700,28 +822,52 @@ public class CountingScopeResolver : IScopeSubjectResolver
 /// </summary>
 public class ScopedRepo : EditableObject<ScopedRepo>
 {
+	/// <summary>
+	/// 所有者标识，映射到 <see cref="ScopeDimensions.Owner"/> 维度。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>
+	/// 团队标识，映射到 <see cref="ScopeDimensions.Dept"/> 维度。
+	/// </summary>
 	public string TeamId { get; set; } = null!;
 
+	/// <summary>
+	/// 区域标识，映射到 <see cref="ScopeDimensions.Region"/> 维度。
+	/// </summary>
 	public string Region { get; set; } = null!;
 
+	/// <summary>
+	/// 项目标识，映射到 <see cref="ScopeDimensions.Project"/> 维度。
+	/// </summary>
 	public string ProjectId { get; set; } = null!;
 
+	/// <summary>
+	/// 数据密级，作为分类属性 <c>level</c> 使用，不参与授权。
+	/// </summary>
 	public string Level { get; set; } = null!;
 
+	/// <summary>
+	/// 插入工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 更新工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 删除工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryDelete]
 	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
@@ -734,8 +880,14 @@ public class ScopedRepo : EditableObject<ScopedRepo>
 /// </summary>
 public class ScopedRepoOther : EditableObject<ScopedRepoOther>
 {
+	/// <summary>
+	/// 团队标识；该类型未声明范围模型，不受数据权限约束。
+	/// </summary>
 	public string TeamId { get; set; } = null!;
 
+	/// <summary>
+	/// 更新工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -748,6 +900,10 @@ public class ScopedRepoOther : EditableObject<ScopedRepoOther>
 /// </summary>
 public sealed class ScopedRepoModel : ScopeModel<ScopedRepo>
 {
+	/// <summary>
+	/// 映射所有者、团队、区域、项目维度，并将 <c>level</c> 声明为分类属性。
+	/// </summary>
+	/// <param name="builder">范围模型构建器。</param>
 	public override void Define(ScopeModelBuilder<ScopedRepo> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
@@ -757,6 +913,9 @@ public sealed class ScopedRepoModel : ScopeModel<ScopedRepo>
 		       .Classify("level", x => x.Level);
 	}
 
+	/// <summary>
+	/// 策略：本人或本部门可访问，密级为 <c>secret</c> 的行一律拒绝。
+	/// </summary>
 	public override ScopePolicy<ScopedRepo> Policy =>
 		ScopePolicy<ScopedRepo>.All(
 			ScopePolicy<ScopedRepo>.Any(
@@ -770,6 +929,9 @@ public sealed class ScopedRepoModel : ScopeModel<ScopedRepo>
 /// </summary>
 public class ScopedTask : EditableObject<ScopedTask>
 {
+	/// <summary>
+	/// 团队标识，映射到 <see cref="ScopeDimensions.Dept"/> 维度。
+	/// </summary>
 	public string TeamId { get; set; } = null!;
 
 	/// <summary>
@@ -790,11 +952,18 @@ public class ScopedTask : EditableObject<ScopedTask>
 /// </summary>
 public sealed class ScopedTaskModel : ScopeModel<ScopedTask>
 {
+	/// <summary>
+	/// 将团队维度映射到 <see cref="ScopedTask.TeamId"/>。
+	/// </summary>
+	/// <param name="builder">范围模型构建器。</param>
 	public override void Define(ScopeModelBuilder<ScopedTask> builder)
 	{
 		builder.Map(ScopeDimensions.Dept, x => x.TeamId);
 	}
 
+	/// <summary>
+	/// 策略：要求 <see cref="ScopeDimensions.Dept"/> 维度的授予。
+	/// </summary>
 	public override ScopePolicy<ScopedTask> Policy => ScopePolicy<ScopedTask>.Grant(ScopeDimensions.Dept);
 }
 

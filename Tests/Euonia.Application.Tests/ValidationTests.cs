@@ -12,6 +12,9 @@ namespace Nerosoft.Euonia.Application.Tests;
 /// </remarks>
 public class ValidationTests
 {
+	/// <summary>
+	/// 值满足规则时校验应通过、错误集合为空且 <c>Validator.Validate</c> 不抛出异常。
+	/// </summary>
 	[Fact]
 	public void Validate_WithNoRuleViolation_IsValidAndDoesNotThrow()
 	{
@@ -24,6 +27,9 @@ public class ValidationTests
 		Validator.Validate(target);
 	}
 
+	/// <summary>
+	/// 值违反规则时对象应判定为无效，且 <c>Validator.Validate</c> 抛出 <see cref="ValidationException"/>。
+	/// </summary>
 	[Fact]
 	public void Validate_WithRuleViolation_IsInvalidAndThrows()
 	{

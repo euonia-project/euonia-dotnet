@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class CreateActuatorTests
 {
+	/// <summary>
+	/// 验证创建命令对象时只执行创建工厂方法与 Handle，不会运行命令体。
+	/// </summary>
 	[Fact]
 	public async Task Create_ShouldConstructCommandWithoutRunningCommandBody()
 	{
@@ -27,6 +30,9 @@ public class CreateActuatorTests
 		Assert.False(result.Executed);
 	}
 
+	/// <summary>
+	/// 验证普通业务对象可被创建执行器构造，并向 Handle 暴露构造结果。
+	/// </summary>
 	[Fact]
 	public async Task Create_ShouldConstructPlainBusinessObject()
 	{
@@ -43,6 +49,9 @@ public class CreateActuatorTests
 		Assert.Equal("seed", result.Criteria);
 	}
 
+	/// <summary>
+	/// 验证可编辑对象创建后被标记为新增并执行插入，且保留 Handle 中修改的属性值。
+	/// </summary>
 	[Fact]
 	public async Task Create_ShouldMarkNewAndInsertForEditableObject()
 	{
@@ -65,6 +74,7 @@ public class CreateActuatorTests
 /// </summary>
 public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 {
+	/// <summary>可编辑探针名称的属性元数据。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>
@@ -93,6 +103,11 @@ public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 插入阶段将 <see cref="Inserted"/> 置位并直接完成，不执行真实持久化。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示插入过程的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -134,6 +149,11 @@ public class CreateProbeCommand : ServiceObject<CreateProbeCommand>
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 命令体将 <see cref="Executed"/> 置位，用于验证创建路径不会触发执行。
+	/// </summary>
+	/// <param name="cancellationToken">取消标记。</param>
+	/// <returns>表示执行过程的任务。</returns>
 	[FactoryExecute]
 	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{

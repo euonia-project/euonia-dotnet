@@ -18,6 +18,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class AutoLoadAssembliesTests
 {
+	/// <summary>
+	/// 验证配置了 <see cref="MessageBusOptions.AutoLoadAssemblies"/> 后，启动时会把该程序集中的处理器注册到对应消息通道。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteAsync_WithConfiguredAssembly_RegistersHandlersFromIt()
 	{
@@ -32,6 +35,9 @@ public class AutoLoadAssembliesTests
 		Assert.Contains(typeof(TestMessages.OrderPlacedEvent).FullName, configurator.Registrations.Keys);
 	}
 
+	/// <summary>
+	/// 验证未配置自动装配程序集时启动流程不会注册任何处理器。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteAsync_WithoutConfiguration_RegistersNothing()
 	{

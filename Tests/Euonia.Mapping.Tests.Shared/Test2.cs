@@ -2,8 +2,14 @@
 
 namespace Nerosoft.Euonia.Mapping.Tests;
 
+/// <summary>
+/// 验证全名拼接映射行为的测试。
+/// </summary>
 public class Test2
 {
+    /// <summary>
+    /// 源对象的名与姓应以空格拼接后映射到目标对象的完整姓名属性。
+    /// </summary>
     [Fact]
     public void Test()
     {

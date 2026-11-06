@@ -18,6 +18,13 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class MessageScopeLifetimeTests
 {
+	/// <summary>
+	/// 验证发布方作用域释放后，后台泵中的处理器仍解析到有效的处理作用域，并可继续发送嵌套命令。
+	/// </summary>
+	/// <remarks>
+	/// 环境服务提供程序必须指向处理作用域而非已释放的发布方作用域；作用域服务应在处理期间存活，
+	/// 并在处理完成后释放。
+	/// </remarks>
 	[Fact]
 	public async Task Publish_AfterPublisherScopeDisposed_HandlerResolvesLiveProviderAndSendsCommand()
 	{
@@ -110,10 +117,16 @@ public class MessageScopeLifetimeTests
 		}
 	}
 
+	/// <summary>
+	/// 空多播事件，用于在发布方作用域释放后触发后台处理，并探测处理作用域是否仍然有效。
+	/// </summary>
 	private sealed class ScopeProbeEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 空单播命令，由事件订阅者在处理期间发送，用于验证嵌套命令不会因发布方作用域失效而被丢弃。
+	/// </summary>
 	private sealed class NestedCommand : IUnicast
 	{
 	}

@@ -66,6 +66,10 @@ public class ObservableListTests
 		return (list, childEvents, collectionEvents, propertyEvents, busyEvents);
 	}
 
+	/// <summary>
+	/// 验证向列表插入实现 <see cref="INotifyPropertyChanged"/> 的项后，子项属性变更会以一次
+	/// <see cref="ObservableList{TItem}.ChildChanged"/> 事件上报，且事件携带该子项与属性名。
+	/// </summary>
 	[Fact]
 	public void InsertItem_ShouldHookChildPropertyChanges()
 	{
@@ -80,6 +84,10 @@ public class ObservableListTests
 		Assert.Equal(nameof(TestItem.Name), e.PropertyChangedArgs.PropertyName);
 	}
 
+	/// <summary>
+	/// 验证插入实现 <see cref="INotifyBusy"/> 的项后，子项忙碌状态变化会透传为列表的一次
+	/// <see cref="ObservableList{TItem}.BusyChanged"/> 事件，且事件中忙碌标志为 <see langword="true"/>。
+	/// </summary>
 	[Fact]
 	public void InsertItem_ShouldHookChildBusyChanges()
 	{
@@ -93,6 +101,10 @@ public class ObservableListTests
 		Assert.True(e.IsBusy);
 	}
 
+	/// <summary>
+	/// 验证以索引赋值替换元素时事件钩子随之迁移：旧项不再触发 <see cref="ObservableList{TItem}.ChildChanged"/>，
+	/// 新项的属性变更能够被正常上报。
+	/// </summary>
 	[Fact]
 	public void SetItem_ShouldTransferHooksFromOldToNewItem()
 	{
@@ -114,6 +126,10 @@ public class ObservableListTests
 		Assert.Same(newItem, e.ChangedObject);
 	}
 
+	/// <summary>
+	/// 验证移除元素时会解除其事件钩子：被移除项此后的属性变更不再引发
+	/// <see cref="ObservableList{TItem}.ChildChanged"/> 事件。
+	/// </summary>
 	[Fact]
 	public void RemoveItem_ShouldRemoveHooks()
 	{
@@ -129,6 +145,10 @@ public class ObservableListTests
 		Assert.Empty(childEvents);
 	}
 
+	/// <summary>
+	/// 验证清空列表会解除所有元素的钩子：原各项此后的属性变更均不再引发
+	/// <see cref="ObservableList{TItem}.ChildChanged"/> 事件。
+	/// </summary>
 	[Fact]
 	public void Clear_ShouldRemoveHooksOfAllItems()
 	{
@@ -148,6 +168,9 @@ public class ObservableListTests
 		Assert.Empty(childEvents);
 	}
 
+	/// <summary>
+	/// 验证添加元素会引发一次集合变更通知，并同时发出 <c>Count</c> 与 <c>Item[]</c> 的属性变更通知。
+	/// </summary>
 	[Fact]
 	public void Add_ShouldRaiseCollectionAndPropertyChanged()
 	{
@@ -160,6 +183,10 @@ public class ObservableListTests
 		Assert.Contains(propertyEvents, e => e.PropertyName == "Item[]");
 	}
 
+	/// <summary>
+	/// 验证将 <see cref="ObservableList{TItem}.RaiseListChangedEvents"/> 设为 <see langword="false"/> 后，
+	/// 添加元素不再引发集合变更与属性变更通知。
+	/// </summary>
 	[Fact]
 	public void RaiseListChangedEvents_False_ShouldSuppressAllNotifications()
 	{
@@ -173,6 +200,10 @@ public class ObservableListTests
 		Assert.Empty(propertyEvents);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="ObservableList{TItem}.SuppressListChangedEvents"/> 作用域内抑制通知，
+	/// 释放后恢复通知能力并继续发出集合与属性变更事件。
+	/// </summary>
 	[Fact]
 	public void SuppressListChangedEvents_ShouldSuppressAndRestore()
 	{
@@ -191,6 +222,9 @@ public class ObservableListTests
 		Assert.Contains(propertyEvents, e => e.PropertyName == "Count");
 	}
 
+	/// <summary>
+	/// 验证嵌套抑制作用域逐层恢复：内层释放后仍保持外层抑制，全部释放后回到进入前的初始状态。
+	/// </summary>
 	[Fact]
 	public void SuppressListChangedEvents_Nested_ShouldRestoreInitialState()
 	{

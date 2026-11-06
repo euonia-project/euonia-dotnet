@@ -9,6 +9,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class BuilderTests
 {
+	/// <summary>
+	/// 验证 <see cref="SendBuilder{TMessage, TResult}"/> 将通道、消息标识、优先级、超时、延迟与关联标识透传到发送选项。
+	/// </summary>
 	[Fact]
 	public async Task TestSendBuilder_ShouldPropagateOptions()
 	{
@@ -33,6 +36,9 @@ public class BuilderTests
 		Assert.Equal("corr-1", fake.LastSendOptions.CorrelationId);
 	}
 
+	/// <summary>
+	/// 验证发送构建器以结果为返回值的执行方式会返回处理程序给出的结果。
+	/// </summary>
 	[Fact]
 	public async Task TestSendBuilder_ExecuteWithResult_ShouldReturnHandlerResult()
 	{
@@ -43,6 +49,9 @@ public class BuilderTests
 		Assert.Equal("handler-result", result);
 	}
 
+	/// <summary>
+	/// 验证关联标识为 <c>null</c> 或空白时，设置关联标识分别抛出 <see cref="ArgumentNullException"/> 与 <see cref="ArgumentException"/>。
+	/// </summary>
 	[Fact]
 	public void TestSendBuilder_WithCorrelationId_ShouldThrow_WhenNullOrWhiteSpace()
 	{
@@ -58,6 +67,9 @@ public class BuilderTests
 		});
 	}
 
+	/// <summary>
+	/// 验证 <see cref="PublishBuilder{TMessage}"/> 将通道、消息标识、优先级与超时透传到发布选项。
+	/// </summary>
 	[Fact]
 	public async Task TestPublishBuilder_ShouldPropagateOptions()
 	{
@@ -78,6 +90,9 @@ public class BuilderTests
 		Assert.Equal(1500, fake.LastPublishOptions.Timeout);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="CallBuilder{TMessage, TResult}"/> 透传通道、消息标识与关联标识，并返回调用结果 <c>42</c>。
+	/// </summary>
 	[Fact]
 	public async Task TestCallBuilder_ShouldPropagateOptionsAndReturnResult()
 	{
@@ -97,6 +112,9 @@ public class BuilderTests
 		Assert.Equal("corr-3", fake.LastCallOptions.CorrelationId);
 	}
 
+	/// <summary>
+	/// 测试用总线实现：记录最近一次 Send、Call、Publish 的消息与选项，并以固定结果完成异步调用。
+	/// </summary>
 	private sealed class FakeBus : IBus
 	{
 		public object LastSendMessage { get; private set; } = null!;

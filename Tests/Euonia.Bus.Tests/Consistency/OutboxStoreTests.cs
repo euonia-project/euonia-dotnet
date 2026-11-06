@@ -12,6 +12,9 @@ public class OutboxStoreTests
 		return TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/1" }, "test.events", messageId);
 	}
 
+	/// <summary>
+	/// 验证插入消息时为每个传输器名称创建一个处于 <see cref="OutboxTransportStatus.Pending"/> 状态的投递记录。
+	/// </summary>
 	[Fact]
 	public void Insert_WithTransports_AddsPendingTransportForEachName()
 	{
@@ -37,6 +40,9 @@ public class OutboxStoreTests
 		Assert.Equal(["transport-a", "transport-b"], entry.Transports.Select(transport => transport.Name));
 	}
 
+	/// <summary>
+	/// 验证重复插入相同消息标识时返回 <c>false</c>，保持首次写入的条目。
+	/// </summary>
 	[Fact]
 	public void Insert_DuplicateMessageId_ReturnsFalse()
 	{
@@ -47,6 +53,9 @@ public class OutboxStoreTests
 		Assert.False(store.Insert(message, ["transport-a"]));
 	}
 
+	/// <summary>
+	/// 验证标记成功后仅目标传输器变为 <see cref="OutboxTransportStatus.Success"/>，其他传输器仍保持待处理。
+	/// </summary>
 	[Fact]
 	public void MarkAsSuccess_UpdatesTransportStatus()
 	{
@@ -65,6 +74,9 @@ public class OutboxStoreTests
 		Assert.DoesNotContain(transportB, store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证尚未标记失败的待投递传输器不会出现在失败消息集合中，避免被重复投递。
+	/// </summary>
 	[Fact]
 	public void GetFailedMessages_ExcludesPendingInFlightTransports()
 	{
@@ -77,6 +89,9 @@ public class OutboxStoreTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证标记失败后传输器转为 <see cref="OutboxTransportStatus.Failed"/>、累加重试次数并记入失败消息集合。
+	/// </summary>
 	[Fact]
 	public void MarkAsFailed_UpdatesStatusAndIsIncludedInFailedMessages()
 	{
@@ -95,6 +110,9 @@ public class OutboxStoreTests
 		Assert.Same(transport, failed);
 	}
 
+	/// <summary>
+	/// 验证第二次读取命中缓存不再回查底层存储，清空缓存后重新回查。
+	/// </summary>
 	[Fact]
 	public void GetAndCache_ReturnsCachedEntryOnSecondCall()
 	{
@@ -134,6 +152,9 @@ public class OutboxStoreTests
 		Assert.Null(empty.GetAndCache("shared-id"));
 	}
 
+	/// <summary>
+	/// 验证消息标识不存在时返回 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void GetAndCache_WithMissingMessageId_ReturnsNull()
 	{
@@ -141,6 +162,9 @@ public class OutboxStoreTests
 		Assert.Null(store.GetAndCache("missing"));
 	}
 
+	/// <summary>
+	/// 验证按传输器名称返回对应记录，名称不存在时返回 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void OutboxEntry_GetTransport_ReturnsMatchingTransport()
 	{
@@ -154,6 +178,9 @@ public class OutboxStoreTests
 		Assert.Null(entry.GetTransport("transport-z"));
 	}
 
+	/// <summary>
+	/// 验证对不存在的条目标记成功或失败均为空操作，不产生失败记录。
+	/// </summary>
 	[Fact]
 	public void InMemoryOutboxStore_MarkWithoutEntry_IsNoOp()
 	{

@@ -16,6 +16,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class HttpEndToEndTests
 {
+	/// <summary>
+	/// 通过真实 HTTP 服务端与完整总线调用栈发起请求应返回处理器计算结果（41 加 1 等于 42）。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_OverHttpEndpoint_ReturnsResult()
 	{
@@ -57,6 +60,9 @@ public class HttpEndToEndTests
 		}
 	}
 
+	/// <summary>
+	/// 服务端处理器抛出的异常应以原始类型与消息经 HTTP 边界传回客户端。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_OverHttpEndpoint_PropagatesHandlerError()
 	{

@@ -3,24 +3,23 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
-/// Base class for editable business objects that supports lazy service resolution.
+/// 支持延迟服务解析的可编辑业务对象基类。
 /// </summary>
-/// <typeparam name="TTarget">The concrete editable object type that derives from this base class.</typeparam>
+/// <typeparam name="TTarget">派生自该基类的具体可编辑对象类型。</typeparam>
 public abstract class EditableObjectBase<TTarget> : EditableObject<TTarget>, IHasLazyServiceProvider
 	where TTarget : EditableObjectBase<TTarget>
 {
 	/// <summary>
-	/// Gets or sets the lazy service provider.
+	/// 获取或设置延迟服务提供程序。
 	/// </summary>
 	/// <remarks>
 	/// <para>
-	/// The <see cref="ILazyServiceProvider"/> allows the object to resolve framework or application
-	/// services on demand instead of requiring constructor injection. This property is expected to be
-	/// provided by the host or dependency injection infrastructure.
+	/// <see cref="ILazyServiceProvider"/> 允许对象按需解析框架或应用程序服务，
+	/// 而无需构造函数注入。该属性应由宿主或依赖注入基础设施提供。
 	/// </para>
 	/// <para>
-	/// This property allows for lazy loading of services, enabling dependency injection and service resolution at runtime.
-	/// Please note that this property should be set by the framework or infrastructure code that manages the lifecycle of business objects.
+	/// 该属性支持服务的延迟加载，从而在运行时实现依赖注入与服务解析。
+	/// 请注意，该属性应由管理业务对象生命周期的框架或基础设施代码设置。
 	/// </para>
 	/// </remarks>
 	//[Inject]

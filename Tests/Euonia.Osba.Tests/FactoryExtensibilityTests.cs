@@ -8,6 +8,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class FactoryExtensibilityTests
 {
+	/// <summary>
+	/// 验证自定义工厂覆盖实例创建点后，由该工厂实际创建实例并记录创建次数。
+	/// </summary>
 	[Fact]
 	public async Task CustomFactory_ShouldOverrideInstanceCreation()
 	{
@@ -40,8 +43,14 @@ public class FactoryExtensibilityTests
 /// </summary>
 public sealed class CountingFactory(IServiceProvider provider) : BusinessObjectFactory(provider)
 {
+	/// <summary>该工厂累计创建的实例数量。</summary>
 	public int Instances { get; private set; }
 
+	/// <summary>
+	/// 覆盖实例创建点：先累加创建计数，再委托基类创建实例。
+	/// </summary>
+	/// <typeparam name="TTarget">待创建的业务对象类型。</typeparam>
+	/// <returns>创建出的目标类型实例。</returns>
 	protected override TTarget GetObjectInstance<TTarget>()
 	{
 		Instances++;
@@ -54,6 +63,7 @@ public sealed class CountingFactory(IServiceProvider provider) : BusinessObjectF
 /// </summary>
 public sealed class FactoryProbe : BusinessObject<FactoryProbe>
 {
+	/// <summary>指示创建工厂方法是否已执行。</summary>
 	public bool Created { get; private set; }
 
 	[FactoryCreate]

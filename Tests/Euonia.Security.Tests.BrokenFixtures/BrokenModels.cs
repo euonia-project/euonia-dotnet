@@ -5,8 +5,10 @@ namespace Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 /// </summary>
 public sealed class UnmappedDimensionAsset
 {
+	/// <summary>资源标识。</summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>负责人用户标识，也是该资源唯一被映射的维度。</summary>
 	public string OwnerId { get; set; } = null!;
 }
 
@@ -31,8 +33,10 @@ public sealed class UnmappedDimensionModel : ScopeModel<UnmappedDimensionAsset>
 /// </summary>
 public sealed class AlwaysDenyAsset
 {
+	/// <summary>资源标识。</summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>负责人用户标识，模型映射的就是这一列。</summary>
 	public string OwnerId { get; set; } = null!;
 }
 
@@ -58,10 +62,13 @@ public sealed class AlwaysDenyModel : ScopeModel<AlwaysDenyAsset>
 /// </summary>
 public sealed class UnsupportedCollectionAsset
 {
+	/// <summary>资源标识。</summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>标签数组，其「数组拼接」的取值形状不受集合维度支持。</summary>
 	public string[] Tags { get; set; } = null!;
 
+	/// <summary>另一组标签，与 <see cref="Tags"/> 拼接后构成不受支持的形状。</summary>
 	public string[] OtherTags { get; set; } = null!;
 }
 
@@ -87,10 +94,13 @@ public sealed class UnsupportedCollectionModel : ScopeModel<UnsupportedCollectio
 /// </summary>
 public sealed class ReportAsset
 {
+	/// <summary>资源标识。</summary>
 	public string Id { get; set; } = null!;
 
+	/// <summary>负责人用户标识，对应 <c>owner</c> 维度。</summary>
 	public string OwnerId { get; set; } = null!;
 
+	/// <summary>所属部门标识，对应 <c>dept</c> 维度。</summary>
 	public string DeptId { get; set; } = null!;
 }
 

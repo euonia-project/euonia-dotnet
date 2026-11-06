@@ -27,6 +27,9 @@ public class InboxOutboxRetryTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 验证发件箱重试会重新投递失败消息，累加重试次数并转为 <see cref="OutboxTransportStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_RedeliversFailedMessageAndMarksSuccess()
 	{
@@ -49,6 +52,9 @@ public class InboxOutboxRetryTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证收件箱重试会重新执行失败的处理器，累加重试次数并转为 <see cref="InboxHandlerStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_ReexecutesFailedHandlerAndMarksSuccess()
 	{
@@ -85,6 +91,9 @@ public class InboxOutboxRetryTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证重试次数耗尽后不再投递，记录转为 <see cref="OutboxTransportStatus.DeadLettered"/> 并移出失败集合。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_RespectsMaxRetryAttempts()
 	{
@@ -110,6 +119,9 @@ public class InboxOutboxRetryTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证仍处于 <see cref="OutboxTransportStatus.Pending"/> 的在途记录不会被重试投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_DoesNotRedeliverPendingInFlightMessages()
 	{
@@ -129,6 +141,9 @@ public class InboxOutboxRetryTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证创建时间早于宽限期的 <see cref="OutboxTransportStatus.Pending"/> 记录会被回收并重新投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsAbandonedPendingMessages()
 	{
@@ -153,6 +168,9 @@ public class InboxOutboxRetryTests
 		Assert.NotEqual(OutboxTransportStatus.Pending, transport.Status);
 	}
 
+	/// <summary>
+	/// 验证将宽限期配置为 <see cref="TimeSpan.Zero"/> 后，创建不久的待处理记录也会被立即回收并投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsPendingAfterConfiguredGracePeriod()
 	{
@@ -173,6 +191,9 @@ public class InboxOutboxRetryTests
 		Assert.Contains("outbox-abandoned-2", delivered);
 	}
 
+	/// <summary>
+	/// 验证仍在执行中的收件箱处理器不会被重试路径重复执行。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers()
 	{

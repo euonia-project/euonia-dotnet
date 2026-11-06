@@ -59,6 +59,12 @@ public class UnitOfWorkManagerTests
 		Assert.Equal(1, ProbeDisposable.DisposedCount);
 	}
 
+	/// <summary>
+	/// 单次释放工作单元应只触发一次 <see cref="DisposableObject.Disposed"/> 事件。
+	/// </summary>
+	/// <remarks>
+	/// 回归测试：<c>UnitOfWork.Dispose(bool)</c> 与基类各触发一次 <c>Disposed</c>，单次释放会通知两遍。
+	/// </remarks>
 	[Fact]
 	public void Dispose_RaisesDisposedEventOnce()
 	{

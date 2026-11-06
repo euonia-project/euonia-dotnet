@@ -14,11 +14,17 @@ public class CacheTypeAgnosticTests
 {
 	private readonly ICacheService _service;
 
+	/// <summary>
+	/// 注入待测缓存服务。
+	/// </summary>
 	public CacheTypeAgnosticTests(ICacheService service)
 	{
 		_service = service;
 	}
 
+	/// <summary>
+	/// 验证以不同的泛型值类型调用 <c>Remove</c> 仍会删除同一键上的条目。
+	/// </summary>
 	[Fact]
 	public void Remove_WithDifferentValueType_ShouldStillRemoveEntry()
 	{
@@ -71,6 +77,9 @@ public class CacheTypeAgnosticTests
 		Assert.Equal("value", value.Name);
 	}
 
+	/// <summary>
+	/// 带 <see cref="Name"/> 的引用类型值，用于验证同一类型缓存的写入与读取仍然正常。
+	/// </summary>
 	private sealed class SampleValue
 	{
 		public string Name { get; set; } = string.Empty;

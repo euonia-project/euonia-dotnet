@@ -7,11 +7,17 @@ public class RuntimeCacheServiceTest
 {
 	private readonly ICacheService _service;
 
+	/// <summary>
+	/// 注入待测缓存服务。
+	/// </summary>
 	public RuntimeCacheServiceTest(ICacheService service)
 	{
 		_service = service;
 	}
 
+	/// <summary>
+	/// 验证 <c>GetOrAdd</c> 仅首次执行工厂并缓存结果，后续调用直接返回缓存值。
+	/// </summary>
 	[Fact]
 	public void TestGetOrAdd_ShouldReturnValueAndCacheIt()
 	{
@@ -35,6 +41,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal(1, factoryCalls);
 	}
 
+	/// <summary>
+	/// 验证 <c>AddOrUpdate</c> 会覆盖已有值并返回更新后的值。
+	/// </summary>
 	[Fact]
 	public void TestAddOrUpdate_ShouldUpdateExistingValue()
 	{
@@ -47,6 +56,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal("new-value", _service.Get<string>(key));
 	}
 
+	/// <summary>
+	/// 验证 <c>TryGet</c> 对已存在的键返回 <c>true</c> 与缓存值。
+	/// </summary>
 	[Fact]
 	public void TestTryGet_ShouldReturnCachedValue()
 	{
@@ -60,6 +72,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal("cached-value", value);
 	}
 
+	/// <summary>
+	/// 验证键不存在时 <c>TryGet</c> 返回 <c>false</c>，输出值为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void TestTryGet_ShouldReturnFalse_WhenKeyDoesNotExist()
 	{
@@ -69,6 +84,9 @@ public class RuntimeCacheServiceTest
 		Assert.Null(value);
 	}
 
+	/// <summary>
+	/// 验证 <c>Remove</c> 删除条目并返回 <c>true</c>，之后无法再读取该条目。
+	/// </summary>
 	[Fact]
 	public void TestRemove_ShouldRemoveValue()
 	{
@@ -82,6 +100,9 @@ public class RuntimeCacheServiceTest
 		Assert.False(_service.TryGet<string>(key, out _));
 	}
 
+	/// <summary>
+	/// 验证异步 <c>TryGetAsync</c> 返回存在标志与缓存值。
+	/// </summary>
 	[Fact]
 	public async Task TestTryGetAsync_ShouldReturnValueAndFlag()
 	{
@@ -95,6 +116,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal("async-value", value);
 	}
 
+	/// <summary>
+	/// 验证异步 <c>GetOrAddAsync</c> 仅执行一次工厂并缓存结果。
+	/// </summary>
 	[Fact]
 	public async Task TestGetOrAddAsync_ShouldCacheValue()
 	{
@@ -120,6 +144,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal(1, factoryCalls);
 	}
 
+	/// <summary>
+	/// 验证异步 <c>AddOrUpdateAsync</c> 写入并返回新值，且可同步读回。
+	/// </summary>
 	[Fact]
 	public async Task TestAddOrUpdateAsync_ShouldUpdateValue()
 	{
@@ -135,6 +162,9 @@ public class RuntimeCacheServiceTest
 		Assert.Equal("updated-value", _service.Get<string>(key));
 	}
 
+	/// <summary>
+	/// 验证带超时的 <c>GetOrAdd</c> 条目在超时后被移除。
+	/// </summary>
 	[Fact]
 	public async Task TestGetOrAdd_ShouldExpireAfterTimeout()
 	{

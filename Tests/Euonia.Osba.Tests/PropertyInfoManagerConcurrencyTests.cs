@@ -34,10 +34,20 @@ public class PropertyInfoManagerConcurrencyTests
 		typeof(byte), typeof(short), typeof(double), typeof(decimal)
 	];
 
+	/// <summary>
+	/// 用于批量生成唯一泛型类型的标记类型，作为属性缓存键以压测并发读写。
+	/// </summary>
+	/// <typeparam name="T1">第一个泛型参数，仅用于构造不同的闭合类型。</typeparam>
+	/// <typeparam name="T2">第二个泛型参数，仅用于构造不同的闭合类型。</typeparam>
+	/// <typeparam name="T3">第三个泛型参数，仅用于构造不同的闭合类型。</typeparam>
 	private sealed class Marker<T1, T2, T3>
 	{
 	}
 
+	/// <summary>
+	/// 验证在其它线程持续发布新类型时并发读取属性列表缓存不会抛出异常，
+	/// 且同一类型始终返回同一条列表实例。
+	/// </summary>
 	[Fact]
 	public async Task Reading_The_Cache_While_Other_Threads_Publish_New_Types_Should_Not_Fault()
 	{

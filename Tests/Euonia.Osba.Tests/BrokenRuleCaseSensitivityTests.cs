@@ -3,7 +3,7 @@ using Nerosoft.Euonia.Osba;
 namespace Nerosoft.Euonia.Osba.Tests;
 
 /// <summary>
-/// 对象级规则轮次的清理口径：<b>必须与 <c>BrokenRuleCollection.ClearRules(string)</b> 的序数相等保持一致</b>。
+/// 对象级规则轮次的清理口径：<b>必须与 <c>BrokenRuleCollection.ClearRules(string)</c> 的序数相等保持一致</b>。
 /// </summary>
 /// <remarks>
 /// <c>Rules.PrepareObjectRules</c> 先按 <c>DistinctBy(rule.Property.Name)</c> 挑出本轮涉及的属性，
@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class BrokenRuleCaseSensitivityTests
 {
+	/// <summary>
+	/// 验证仅大小写不同的两个属性在连续三轮对象级规则检查后仍各保留一条错误，不会跨轮累积。
+	/// </summary>
 	[Fact]
 	public void Repeated_Object_Check_Rounds_Should_Not_Accumulate_Entries_For_Case_Only_Different_Properties()
 	{
@@ -34,6 +37,9 @@ public class BrokenRuleCaseSensitivityTests
 		Assert.False(subject.PublicRules.IsValid);
 	}
 
+	/// <summary>
+	/// 每次都添加错误结果的属性级规则，用于验证重复检查不会累加错误数。
+	/// </summary>
 	private sealed class AlwaysFailPropertyRule(IPropertyInfo property)
 		: PropertyRuleBase(property)
 	{
@@ -44,6 +50,9 @@ public class BrokenRuleCaseSensitivityTests
 		}
 	}
 
+	/// <summary>
+	/// 注册仅大小写不同的两个属性名的业务对象，用于验证规则管理区分大小写。
+	/// </summary>
 	private sealed class CaseOnlyDuplicateSubject : BusinessObject<CaseOnlyDuplicateSubject>
 	{
 		internal static readonly PropertyInfo<string> UpperProperty = RegisterProperty<string>("Name");

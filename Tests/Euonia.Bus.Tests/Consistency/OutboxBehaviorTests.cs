@@ -9,6 +9,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class OutboxBehaviorTests
 {
+	/// <summary>
+	/// 验证发件箱行为在后续管道成功后把传输状态标记为 <see cref="OutboxTransportStatus.Success"/>，并保留管道返回值。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_OnSuccess_MarksTransportAsSuccess()
 	{
@@ -27,6 +30,9 @@ public class OutboxBehaviorTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证后续管道抛出异常时，发件箱行为将传输标记为失败、记录错误并原样抛出该异常。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_OnFailure_MarksTransportAsFailedAndRethrows()
 	{

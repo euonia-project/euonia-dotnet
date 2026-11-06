@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class ConventionCacheInvalidationTests
 {
+	/// <summary>
+	/// 验证首次判定结果被缓存后，新增多播约定会立即使缓存失效，同一类型再次判定返回 <c>true</c>。
+	/// </summary>
 	[Fact]
 	public void IsMulticast_AfterAddingConvention_ReflectsNewConvention()
 	{
@@ -25,6 +28,9 @@ public class ConventionCacheInvalidationTests
 		Assert.True(convention.IsMulticast("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 验证新增单播约定后判定缓存失效，此前被判为非单播的普通类立即变为单播。
+	/// </summary>
 	[Fact]
 	public void IsUnicast_AfterAddingConvention_ReflectsNewConvention()
 	{
@@ -38,6 +44,9 @@ public class ConventionCacheInvalidationTests
 		Assert.True(convention.IsUnicast("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 验证新增请求约定后判定缓存失效，此前被判为非请求的普通类立即变为请求。
+	/// </summary>
 	[Fact]
 	public void IsRequest_AfterAddingConvention_ReflectsNewConvention()
 	{
@@ -51,6 +60,9 @@ public class ConventionCacheInvalidationTests
 		Assert.True(convention.IsRequest("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 验证 <c>DefineMulticastTypeConvention</c> 重定义判定函数后缓存失效，新的多播判定立即生效。
+	/// </summary>
 	[Fact]
 	public void IsMulticast_AfterRedefiningConvention_ReflectsNewConvention()
 	{

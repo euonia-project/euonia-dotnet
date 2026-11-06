@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class TransportStrategyCacheInvalidationTests
 {
+	/// <summary>
+	/// 验证重定义传出判定函数后传输策略缓存失效，新的判定结果立即生效。
+	/// </summary>
 	[Fact]
 	public void Outgoing_AfterDefiningStrategy_ReflectsNewStrategy()
 	{
@@ -24,6 +27,9 @@ public class TransportStrategyCacheInvalidationTests
 		Assert.True(strategy.Outgoing("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 验证重定义传入判定函数后传输策略缓存失效，新的判定结果立即生效。
+	/// </summary>
 	[Fact]
 	public void Incoming_AfterDefiningStrategy_ReflectsNewStrategy()
 	{
@@ -37,6 +43,9 @@ public class TransportStrategyCacheInvalidationTests
 		Assert.True(strategy.Incoming("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 验证新增传输策略后判定缓存失效，此前被判为不允许传出的消息立即允许传出。
+	/// </summary>
 	[Fact]
 	public void Outgoing_AfterAddingStrategy_ReflectsNewStrategy()
 	{
@@ -50,6 +59,9 @@ public class TransportStrategyCacheInvalidationTests
 		Assert.True(strategy.Outgoing("plain.channel", messageType));
 	}
 
+	/// <summary>
+	/// 不被任何传出策略接受的普通消息，用于验证新增策略后判定缓存失效。
+	/// </summary>
 	private sealed class PlainMessage
 	{
 	}

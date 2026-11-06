@@ -7,6 +7,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class ChildGraphTests
 {
+	/// <summary>
+	/// 验证子对象属性变更会把父对象标记为已更改，并发出父对象对应属性的变更通知。
+	/// </summary>
 	[Fact]
 	public void Child_Change_Should_Mark_Parent_Changed_And_Notify_Parent_Property()
 	{
@@ -25,6 +28,9 @@ public class ChildGraphTests
 		Assert.True(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证子对象的变更会经由父对象逐级传播到祖父对象。
+	/// </summary>
 	[Fact]
 	public void Child_Change_Should_Propagate_To_GrandParent()
 	{
@@ -44,6 +50,9 @@ public class ChildGraphTests
 		Assert.Contains(grand.ChangedProperties, property => ReferenceEquals(property, GrandParentProbe.ChildProperty));
 	}
 
+	/// <summary>
+	/// 验证子对象被替换后，旧子对象不再通知父对象，而新子对象仍会通知。
+	/// </summary>
 	[Fact]
 	public void Replaced_Child_Should_Stop_Notifying_Parent()
 	{
@@ -62,6 +71,9 @@ public class ChildGraphTests
 		Assert.True(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证同一子对象被多个父对象持有时，变更会通知到每一个父对象。
+	/// </summary>
 	[Fact]
 	public void Child_Change_Should_Notify_All_Parents()
 	{
@@ -80,6 +92,9 @@ public class ChildGraphTests
 		Assert.True(second.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证父对象的规则绕过会传导到子对象，绕过期间的子对象写入不进入变更追踪。
+	/// </summary>
 	[Fact]
 	public void Parent_Bypass_Should_Reach_Child()
 	{
@@ -101,6 +116,9 @@ public class ChildGraphTests
 		Assert.Equal("bypassed", child.Name);
 	}
 
+	/// <summary>
+	/// 验证绕过状态可跨多代传播，内层作用域退出后仍保持外层绕过，全部退出后恢复。
+	/// </summary>
 	[Fact]
 	public void Bypass_Should_Propagate_Across_Generations_And_Restore()
 	{
@@ -127,6 +145,9 @@ public class ChildGraphTests
 		Assert.False(child.IsBypassing);
 	}
 
+	/// <summary>
+	/// 验证子对象开启的绕过不会反向传导到父对象。
+	/// </summary>
 	[Fact]
 	public void Child_Bypass_Should_Not_Leak_To_Parent()
 	{
@@ -141,6 +162,9 @@ public class ChildGraphTests
 		}
 	}
 
+	/// <summary>
+	/// 验证列表内元素的属性变更会通知持有该列表的父对象，并标记其集合属性。
+	/// </summary>
 	[Fact]
 	public void List_Item_Change_Should_Notify_Parent()
 	{
@@ -158,6 +182,9 @@ public class ChildGraphTests
 		Assert.Contains(parent.ChangedProperties, property => ReferenceEquals(property, ParentListProbe.ChildrenProperty));
 	}
 
+	/// <summary>
+	/// 验证父对象开启绕过时，赋值给父对象之前已存在于列表中的元素同样进入绕过状态。
+	/// </summary>
 	[Fact]
 	public void Parent_Bypass_Should_Reach_Items_Already_In_List()
 	{
@@ -179,6 +206,9 @@ public class ChildGraphTests
 		Assert.False(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证列表的集合结构变更（新增元素）会标记父对象为已更改。
+	/// </summary>
 	[Fact]
 	public void List_Collection_Change_Should_Notify_Parent()
 	{
@@ -190,6 +220,9 @@ public class ChildGraphTests
 		Assert.True(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证字典值的属性变更会通知持有该字典的父对象，并标记其集合属性。
+	/// </summary>
 	[Fact]
 	public void Dictionary_Value_Change_Should_Notify_Parent()
 	{
@@ -207,6 +240,9 @@ public class ChildGraphTests
 		Assert.Contains(parent.ChangedProperties, property => ReferenceEquals(property, ParentDictionaryProbe.ChildrenProperty));
 	}
 
+	/// <summary>
+	/// 验证在赋给父对象之前已加入字典的值也会被挂接，因而能受父对象绕过影响。
+	/// </summary>
 	[Fact]
 	public void Dictionary_Value_Added_Before_Parent_Should_Be_Attached()
 	{
@@ -223,6 +259,9 @@ public class ChildGraphTests
 		}
 	}
 
+	/// <summary>
+	/// 验证从字典移除键后，对应值不再向父对象传播变更。
+	/// </summary>
 	[Fact]
 	public void Dictionary_Remove_Should_Detach_Value()
 	{
@@ -241,6 +280,9 @@ public class ChildGraphTests
 		Assert.False(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证同一值被多个键引用时，只有最后一个键被移除才会解除与父对象的挂接。
+	/// </summary>
 	[Fact]
 	public void Dictionary_Duplicate_Value_Should_Detach_Only_When_Last_Key_Removed()
 	{
@@ -266,6 +308,9 @@ public class ChildGraphTests
 		Assert.False(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证字典的集合结构变更（新增键值）会标记父对象为已更改。
+	/// </summary>
 	[Fact]
 	public void Dictionary_Collection_Change_Should_Notify_Parent()
 	{
@@ -277,6 +322,9 @@ public class ChildGraphTests
 		Assert.True(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证父子互相引用时变更通知不会无限递归，父对象仍被正确标记为已更改。
+	/// </summary>
 	[Fact]
 	public void Bidirectional_References_Should_Not_Recurse_Notifications()
 	{
@@ -292,6 +340,9 @@ public class ChildGraphTests
 		Assert.True(parent.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证父对象释放后不再接收子对象的变更通知。
+	/// </summary>
 	[Fact]
 	public void Parent_Dispose_Should_Detach_Child_Notifications()
 	{
@@ -310,8 +361,10 @@ public class ChildGraphTests
 /// <summary>子对象探针。</summary>
 public sealed class ChildProbe : ObservableObject<ChildProbe>
 {
+	/// <summary>子对象名称的属性元数据。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
+	/// <summary>子对象的名称，写入时触发变更追踪与父对象通知。</summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
@@ -328,8 +381,10 @@ public sealed class ChildProbe : ObservableObject<ChildProbe>
 /// <summary>父对象探针。</summary>
 public sealed class ParentProbe : ObservableObject<ParentProbe>
 {
+	/// <summary>父对象所持有的子对象属性元数据。</summary>
 	public static readonly PropertyInfo<ChildProbe> ChildProperty = RegisterProperty<ChildProbe>(p => p.Child);
 
+	/// <summary>父对象持有的子对象，赋值时建立子图变更通知关系。</summary>
 	public ChildProbe Child
 	{
 		get => GetProperty(ChildProperty);
@@ -346,8 +401,10 @@ public sealed class ParentProbe : ObservableObject<ParentProbe>
 /// <summary>双向引用父对象探针。</summary>
 public sealed class CyclicParentProbe : ObservableObject<CyclicParentProbe>
 {
+	/// <summary>双向引用场景中父对象持有的子对象属性元数据。</summary>
 	public static readonly PropertyInfo<CyclicChildProbe> ChildProperty = RegisterProperty<CyclicChildProbe>(p => p.Child);
 
+	/// <summary>双向引用场景中父对象持有的子对象。</summary>
 	public CyclicChildProbe Child
 	{
 		get => GetProperty(ChildProperty);
@@ -358,15 +415,19 @@ public sealed class CyclicParentProbe : ObservableObject<CyclicParentProbe>
 /// <summary>双向引用子对象探针。</summary>
 public sealed class CyclicChildProbe : ObservableObject<CyclicChildProbe>
 {
+	/// <summary>双向引用场景中子对象名称的属性元数据。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
+	/// <summary>双向引用场景中子对象指回父对象的属性元数据。</summary>
 	public static readonly PropertyInfo<CyclicParentProbe> ParentProperty = RegisterProperty<CyclicParentProbe>(p => p.Parent);
 
+	/// <summary>双向引用场景中子对象的名称，写入时用于验证通知不会递归。</summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>双向引用场景中子对象指回的父对象。</summary>
 	public CyclicParentProbe Parent
 	{
 		get => GetProperty(ParentProperty);
@@ -377,9 +438,11 @@ public sealed class CyclicChildProbe : ObservableObject<CyclicChildProbe>
 /// <summary>持有子集合的父对象探针。</summary>
 public sealed class ParentListProbe : ObservableObject<ParentListProbe>
 {
+	/// <summary>父对象所持有的子对象列表属性元数据。</summary>
 	public static readonly PropertyInfo<ObservableList<ChildProbe>> ChildrenProperty =
 		RegisterProperty<ObservableList<ChildProbe>>(p => p.Children);
 
+	/// <summary>父对象持有的可观察子对象列表，元素与集合变更均会传播。</summary>
 	public ObservableList<ChildProbe> Children
 	{
 		get => GetProperty(ChildrenProperty);
@@ -393,9 +456,11 @@ public sealed class ParentListProbe : ObservableObject<ParentListProbe>
 /// <summary>持有子字典的父对象探针。</summary>
 public sealed class ParentDictionaryProbe : ObservableObject<ParentDictionaryProbe>
 {
+	/// <summary>父对象所持有的子对象字典属性元数据。</summary>
 	public static readonly PropertyInfo<ObservableDictionary<string, ChildProbe>> ChildrenProperty =
 		RegisterProperty<ObservableDictionary<string, ChildProbe>>(p => p.Children);
 
+	/// <summary>父对象持有的可观察子对象字典，值变更与集合变更均会传播。</summary>
 	public ObservableDictionary<string, ChildProbe> Children
 	{
 		get => GetProperty(ChildrenProperty);
@@ -409,8 +474,10 @@ public sealed class ParentDictionaryProbe : ObservableObject<ParentDictionaryPro
 /// <summary>祖父对象探针。</summary>
 public sealed class GrandParentProbe : ObservableObject<GrandParentProbe>
 {
+	/// <summary>祖父对象所持有的父对象属性元数据。</summary>
 	public static readonly PropertyInfo<ParentProbe> ChildProperty = RegisterProperty<ParentProbe>(p => p.Child);
 
+	/// <summary>祖父对象持有的父对象，用于验证跨代变更传播。</summary>
 	public ParentProbe Child
 	{
 		get => GetProperty(ChildProperty);

@@ -23,6 +23,9 @@ public class BusTelemetryTests
 	private const string PublishChannel = "telemetry.publish";
 	private const string CallChannel = "telemetry.call";
 
+	/// <summary>
+	/// 验证发布路径会向 <c>bus.messages.published</c> 计数器上报测量，且标签包含本次使用的通道。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_IncrementsPublishedCounter()
 	{
@@ -38,6 +41,9 @@ public class BusTelemetryTests
 		Assert.Contains(PublishChannel, recorder.TagValues);
 	}
 
+	/// <summary>
+	/// 验证调用路径会向 <c>bus.messages.called</c> 计数器上报测量，且标签包含本次使用的通道。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_IncrementsCalledCounter()
 	{

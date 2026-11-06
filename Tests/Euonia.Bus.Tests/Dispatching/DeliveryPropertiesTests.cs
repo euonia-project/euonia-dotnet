@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class DeliveryPropertiesTests
 {
+	/// <summary>
+	/// 验证发送选项中的目标队列与优先级会被写入信封元数据，并能通过 <c>GetQueue</c>、<c>GetPriority</c> 读回。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithQueueAndPriority_WritesThemIntoMetadata()
 	{
@@ -33,6 +36,9 @@ public class DeliveryPropertiesTests
 		Assert.Equal(7, envelope.GetPriority());
 	}
 
+	/// <summary>
+	/// 验证未设置队列与优先级时不会写入对应元数据键，读取结果为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithoutTheseOptions_LeavesMetadataUnset()
 	{

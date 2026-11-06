@@ -7,6 +7,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class DomainControlTests
 {
+	/// <summary>
+	/// 验证字段存储管理器不把取字段数据与批量清除变更标记的方法暴露为公开实例方法。
+	/// </summary>
 	[Fact]
 	public void FieldStorage_ShouldNotBePubliclyAccessible()
 	{
@@ -17,6 +20,9 @@ public class DomainControlTests
 		Assert.DoesNotContain(typeof(FieldDataManager).GetMethods(publicInstance), method => method.Name == "MarkAllAsUnchanged");
 	}
 
+	/// <summary>
+	/// 验证原始值保留首次装载的基线，拒绝变更后属性恢复该基线并清除脏状态。
+	/// </summary>
 	[Fact]
 	public void OriginalValues_ShouldKeepFirstValueAndRejectChanges()
 	{
@@ -39,6 +45,9 @@ public class DomainControlTests
 		Assert.False(target.IsDirty);
 	}
 
+	/// <summary>
+	/// 验证属性改回原始值后，该属性的变更标记与对象的脏状态都会被清除。
+	/// </summary>
 	[Fact]
 	public void RevertingProperty_ShouldClearDirtyState()
 	{
@@ -56,6 +65,9 @@ public class DomainControlTests
 		Assert.False(target.FieldManager.GetFieldData(DomainControlEditable.NameProperty)!.IsChanged);
 	}
 
+	/// <summary>
+	/// 验证只回退其中一个属性时，其他已修改属性仍保持脏状态。
+	/// </summary>
 	[Fact]
 	public void RevertingOneProperty_ShouldKeepOtherPropertiesDirty()
 	{
@@ -76,6 +88,9 @@ public class DomainControlTests
 		Assert.Empty(target.ChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证绕过规则检查的写入仍会追踪脏状态，包括非泛型 <c>SetProperty</c> 写入路径。
+	/// </summary>
 	[Fact]
 	public void BypassWrite_ShouldStillTrackDirtyState()
 	{
@@ -113,6 +128,9 @@ public class DomainControlTests
 		Assert.False(target.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证经类型转换写入后再改回原值，脏状态会被正确清除。
+	/// </summary>
 	[Fact]
 	public void SetPropertyConvert_Reverting_ShouldClearDirtyState()
 	{
@@ -128,6 +146,9 @@ public class DomainControlTests
 		Assert.Empty(target.ChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证刷新变更属性可把低层字段的撤销与直接写入重新同步到对象的脏状态。
+	/// </summary>
 	[Fact]
 	public void RefreshChangedProperties_ShouldReconcileLowLevelUndo()
 	{
@@ -157,6 +178,9 @@ public class DomainControlTests
 		Assert.False(target.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证拒绝变更后恢复到已装载的基线值，而不是构造时的默认值。
+	/// </summary>
 	[Fact]
 	public void RejectChanges_ShouldRestoreLoadedBaseline()
 	{
@@ -177,6 +201,9 @@ public class DomainControlTests
 		Assert.Equal("loaded", target.GetOriginalValue(DomainControlEditable.NameProperty));
 	}
 
+	/// <summary>
+	/// 验证历史深度为 0 时字段数据仍通过与原始值比较来追踪变更。
+	/// </summary>
 	[Fact]
 	public void FieldData_ShouldTrackChangeWhenHistoryDepthIsZero()
 	{
@@ -201,6 +228,9 @@ public class DomainControlTests
 		Assert.Equal(2, field.OriginalValue);
 	}
 
+	/// <summary>
+	/// 验证对象状态按既定规则迁移：非法迁移抛出 <see cref="InvalidOperationException"/>，迁移事件完整记录。
+	/// </summary>
 	[Fact]
 	public void StateTransitions_ShouldBeControllable()
 	{
@@ -232,6 +262,9 @@ public class DomainControlTests
 			}, transitions);
 	}
 
+	/// <summary>
+	/// 验证父对象拒绝变更时会级联回滚被就地编辑的子对象，并清除双方的脏状态。
+	/// </summary>
 	[Fact]
 	public void RejectChanges_ShouldCascadeToEditedChildObject()
 	{
@@ -255,6 +288,9 @@ public class DomainControlTests
 		Assert.False(child.HasChangedProperties);
 	}
 
+	/// <summary>
+	/// 验证回滚恢复标量属性值时补发属性变更通知，使绑定层同步到恢复后的值。
+	/// </summary>
 	[Fact]
 	public void RejectChanges_ShouldRaisePropertyChangedForRestoredValues()
 	{
@@ -274,6 +310,9 @@ public class DomainControlTests
 		Assert.Equal(string.Empty, target.Name);
 	}
 
+	/// <summary>
+	/// 验证回滚时不会为值未发生变化的标量属性补发属性变更通知。
+	/// </summary>
 	[Fact]
 	public void RejectChanges_ShouldNotNotifyUnchangedScalar()
 	{
@@ -298,27 +337,40 @@ public class DomainControlTests
 /// </summary>
 public sealed class DomainControlEditable : EditableObject<DomainControlEditable>
 {
+	/// <summary>名称属性的元数据。</summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty(p => p.Name);
 
+	/// <summary>代码属性的元数据。</summary>
 	public static readonly PropertyInfo<string> CodeProperty = RegisterProperty(p => p.Code);
 
+	/// <summary>可编辑对象的名称。</summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>可编辑对象的代码，支持经类型转换写入。</summary>
 	public string Code
 	{
 		get => GetProperty(CodeProperty);
 		set => SetProperty(CodeProperty, value);
 	}
 
+	/// <summary>
+	/// 通过类型转换路径写入代码属性，用于验证该路径的变更追踪与回退行为。
+	/// </summary>
+	/// <param name="code">待转换并写入的代码文本。</param>
 	public void SetCodeConverted(string code)
 	{
 		SetPropertyConvert(CodeProperty, code);
 	}
 
+	/// <summary>
+	/// 定义严格的状态迁移规则：允许从无状态开始推进，删除后不可再迁移。
+	/// </summary>
+	/// <param name="target">目标编辑状态。</param>
+	/// <returns>允许迁移返回 <see langword="true"/>，否则返回 <see langword="false"/>。</returns>
 	protected override bool CanTransitionTo(ObjectEditState target)
 	{
 		return State switch
@@ -337,8 +389,10 @@ public sealed class DomainControlEditable : EditableObject<DomainControlEditable
 /// </summary>
 public sealed class ParentEditable : EditableObject<ParentEditable>
 {
+	/// <summary>父对象所持有的子对象属性元数据。</summary>
 	public static readonly PropertyInfo<ChildEditable> ChildProperty = RegisterProperty(p => p.Child);
 
+	/// <summary>父对象持有的可编辑子对象。</summary>
 	public ChildEditable Child
 	{
 		get => GetProperty(ChildProperty);
@@ -351,8 +405,10 @@ public sealed class ParentEditable : EditableObject<ParentEditable>
 /// </summary>
 public sealed class ChildEditable : EditableObject<ChildEditable>
 {
+	/// <summary>子对象标题属性的元数据。</summary>
 	public static readonly PropertyInfo<string> TitleProperty = RegisterProperty(p => p.Title);
 
+	/// <summary>子对象的标题，用于验证父对象回滚的级联效果。</summary>
 	public string Title
 	{
 		get => GetProperty(TitleProperty);

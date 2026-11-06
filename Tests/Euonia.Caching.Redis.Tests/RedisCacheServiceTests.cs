@@ -155,8 +155,14 @@ public class RedisCacheServiceTests
 		}
 	}
 
+	/// <summary>
+	/// 用于验证 Redis 缓存往返读写的示例值类型。
+	/// </summary>
 	public sealed class SampleValue
 	{
+		/// <summary>
+		/// 获取或设置示例值的名称。
+		/// </summary>
 		public string Name { get; set; } = null!;
 	}
 }

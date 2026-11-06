@@ -2,8 +2,14 @@
 
 namespace Nerosoft.Euonia.Mapping.Tests;
 
+/// <summary>
+/// 验证基础属性同名映射行为的测试。
+/// </summary>
 public class Test1
 {
+    /// <summary>
+    /// 同名的标识、名称、地址与年龄属性应被完整映射到目标对象。
+    /// </summary>
     [Fact]
     public void SimpleTest()
     {

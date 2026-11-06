@@ -15,11 +15,21 @@ public class NoRecipientErrorTests
 {
 	private readonly IBus _bus;
 
+	/// <summary>
+	/// 使用测试宿主提供的服务提供程序解析消息总线。
+	/// </summary>
+	/// <param name="provider">由测试框架注入的服务提供程序。</param>
 	public NoRecipientErrorTests(IServiceProvider provider)
 	{
 		_bus = provider.GetRequiredService<IBus>();
 	}
 
+	/// <summary>
+	/// 验证调用无订阅者的通道时抛出 <see cref="MessageDeliverException"/>，且异常信息包含业务消息类型与通道名。
+	/// </summary>
+	/// <remarks>
+	/// 错误信息不得只暴露内存传输使用的 <see cref="MessagePack"/> 包装类型，否则无法定位缺失订阅的消息。
+	/// </remarks>
 	[Fact]
 	public async Task CallAsync_NoRecipient_ErrorIdentifiesMessageAndChannel()
 	{

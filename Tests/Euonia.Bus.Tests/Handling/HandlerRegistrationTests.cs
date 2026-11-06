@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class HandlerRegistrationTests
 {
+	/// <summary>
+	/// 验证单次注册的处理器在消息分发时恰好被调用一次。
+	/// </summary>
 	[Fact]
 	public async Task RegisterChannel_SingleRegistration_InvokesItOnce()
 	{
@@ -35,6 +38,9 @@ public class HandlerRegistrationTests
 		Assert.Equal(1, CountingHandler.Invocations);
 	}
 
+	/// <summary>
+	/// 验证同一处理器重复注册会被幂等去重，消息只被处理一次。
+	/// </summary>
 	[Fact]
 	public async Task RegisterChannel_SameHandlerTwice_InvokesItOnce()
 	{
@@ -97,6 +103,9 @@ public class HandlerRegistrationTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 统计被调用次数的订单事件处理器，用于验证处理器注册幂等、消息分发时恰好执行一次。
+	/// </summary>
 	private sealed class CountingHandler : IHandler<TestMessages.OrderPlacedEvent>
 	{
 		public static int Invocations;

@@ -11,6 +11,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class DeadLetterTests
 {
+	/// <summary>
+	/// 验证发件箱重试次数耗尽后记录被归档为死信，状态转为 <see cref="OutboxTransportStatus.DeadLettered"/> 并移出失败集合。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_WhenRetriesExhausted_MovesRecordToDeadLetters()
 	{
@@ -42,6 +45,9 @@ public class DeadLetterTests
 		Assert.Equal("second attempt failed", entry.Error);
 	}
 
+	/// <summary>
+	/// 验证同一消息在不同目标下作为独立死信保存，并可按标识单独移除。
+	/// </summary>
 	[Fact]
 	public void InMemoryDeadLetterStore_KeepsSameMessageWithDifferentTargets()
 	{
@@ -60,6 +66,9 @@ public class DeadLetterTests
 		Assert.Single(store.GetAll());
 	}
 
+	/// <summary>
+	/// 验证未注册死信存储时，重试耗尽仍将记录标记为 <see cref="OutboxTransportStatus.DeadLettered"/> 并移出失败集合。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_WhenRetriesExhaustedWithoutDeadLetterStore_StillMarksDeadLettered()
 	{
@@ -82,6 +91,9 @@ public class DeadLetterTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证收件箱重试次数耗尽后不再执行处理器，记录归档为死信并转为终态。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_WhenRetriesExhausted_MovesRecordToDeadLetters()
 	{
@@ -125,6 +137,9 @@ public class DeadLetterTests
 		Assert.Equal("MyHandler", entry.Target);
 	}
 
+	/// <summary>
+	/// 验证重试时找不到对应处理器，记录被归档为死信而不是继续重试。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_WhenHandlerMissing_MovesRecordToDeadLetters()
 	{
@@ -147,6 +162,9 @@ public class DeadLetterTests
 		Assert.NotNull(deadLetters.Get("missing-handler-1"));
 	}
 
+	/// <summary>
+	/// 验证重放发件箱死信会重新投递消息，并在成功后删除死信条目。
+	/// </summary>
 	[Fact]
 	public async Task ReplayAsync_ForOutboxSource_RedeliversAndRemovesEntry()
 	{
@@ -163,6 +181,9 @@ public class DeadLetterTests
 		Assert.Empty(service.GetAll());
 	}
 
+	/// <summary>
+	/// 验证重放收件箱死信会重新执行处理器，并在成功后删除死信条目。
+	/// </summary>
 	[Fact]
 	public async Task ReplayAsync_ForInboxSource_ReexecutesHandlerAndRemovesEntry()
 	{
@@ -242,6 +263,9 @@ public class DeadLetterTests
 		Assert.Equal(InboxHandlerStatus.Success, inbox.Get("replay-inbox-2")!.GetHandler(handlerName)!.Status);
 	}
 
+	/// <summary>
+	/// 验证重放时目标传输器未注册会返回 <c>false</c>，保留死信条目并记录错误。
+	/// </summary>
 	[Fact]
 	public async Task ReplayAsync_WhenTransportMissing_KeepsEntryAndRecordsError()
 	{
@@ -258,6 +282,9 @@ public class DeadLetterTests
 		Assert.Contains("not-registered", entry.Error);
 	}
 
+	/// <summary>
+	/// 验证重放不存在的消息标识时返回 <c>false</c>。
+	/// </summary>
 	[Fact]
 	public async Task ReplayAsync_WithUnknownMessageId_ReturnsFalse()
 	{
@@ -268,6 +295,9 @@ public class DeadLetterTests
 		Assert.False(await service.ReplayAsync("does-not-exist", TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// 验证丢弃死信仅删除条目而不重新投递，重复丢弃返回 <c>false</c>。
+	/// </summary>
 	[Fact]
 	public async Task Discard_RemovesEntryWithoutReplaying()
 	{
@@ -368,10 +398,16 @@ public class DeadLetterTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 用于验证收件箱死信重放的多播事件。
+	/// </summary>
 	private sealed class ReplayEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 重放测试用处理器：统计被调用次数，用于确认绕过去重后确实重新执行。
+	/// </summary>
 	private sealed class ReplayHandler : IHandler<ReplayEvent>
 	{
 		public static int Calls;
@@ -451,6 +487,9 @@ public class DeadLetterTests
 		}
 	}
 
+	/// <summary>
+	/// 记录被投递消息标识的传输器替身，不真正向外部代理发送。
+	/// </summary>
 	private sealed class RecordingTransporter : ITransporter
 	{
 		private readonly List<string> _delivered;

@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class PermissionOperationCaseTests
 {
+	/// <summary>
+	/// 验证权限要求查询忽略操作名大小写：任意大小写形式返回与规范操作名一致的要求集合。
+	/// </summary>
 	[Fact]
 	public void Requirements_Lookup_Should_Ignore_Operation_Casing()
 	{
@@ -25,6 +28,9 @@ public class PermissionOperationCaseTests
 		Assert.Equal(expected, actual);
 	}
 
+	/// <summary>
+	/// 验证权限码查询忽略操作名大小写：混合大小写形式返回与规范操作名一致的权限码集合。
+	/// </summary>
 	[Fact]
 	public void Codes_Lookup_Should_Ignore_Operation_Casing()
 	{
@@ -37,6 +43,10 @@ public class PermissionOperationCaseTests
 		Assert.Equal(expected, actual);
 	}
 
+	/// <summary>
+	/// 带 <see cref="PermissionAttribute"/> 与 <see cref="FactoryUpdateAttribute"/> 的测试对象，
+	/// 用于验证操作名比较忽略大小写。
+	/// </summary>
 	private sealed class MixedCaseOperationSubject
 	{
 		[Permission("mixed:update")]

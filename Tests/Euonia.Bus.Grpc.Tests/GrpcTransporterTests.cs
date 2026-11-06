@@ -11,12 +11,18 @@ namespace Nerosoft.Euonia.Bus.Grpc.Tests;
 /// </summary>
 public class GrpcTransporterTests
 {
+	/// <summary>
+	/// <see cref="GrpcBusOptions.RequireAuthorization"/> 默认应为 <see langword="true"/>。
+	/// </summary>
 	[Fact]
 	public void GrpcBusOptions_RequireAuthorization_DefaultsToTrue()
 	{
 		Assert.True(new GrpcBusOptions().RequireAuthorization);
 	}
 
+	/// <summary>
+	/// <c>AddGrpcBus</c> 应自行注册序列化器、配置器、处理器上下文与 gRPC 传输器。
+	/// </summary>
 	[Fact]
 	public void AddGrpcBus_SelfRegistersCoreServices()
 	{
@@ -34,6 +40,9 @@ public class GrpcTransporterTests
 		Assert.NotNull(provider.GetRequiredKeyedService<ITransporter>("grpc"));
 	}
 
+	/// <summary>
+	/// <c>AddGrpcBusServer</c> 应自行注册远程消息服务与处理器上下文。
+	/// </summary>
 	[Fact]
 	public void AddGrpcBusServer_SelfRegistersCoreServices()
 	{
@@ -48,6 +57,9 @@ public class GrpcTransporterTests
 		Assert.NotNull(provider.GetService<IHandlerContext>());
 	}
 
+	/// <summary>
+	/// 通过 gRPC 端点发起请求应返回处理器计算结果（41 加 1 等于 42）。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_ReturnsResult()
 	{
@@ -64,6 +76,9 @@ public class GrpcTransporterTests
 		Assert.Equal(42, result);
 	}
 
+	/// <summary>
+	/// 服务端处理器抛出的异常应以原始类型与消息传回客户端。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_PropagatesRemoteErrorAsOriginalType()
 	{
@@ -80,6 +95,9 @@ public class GrpcTransporterTests
 		Assert.Equal("boom", exception.Message);
 	}
 
+	/// <summary>
+	/// 经完整 <see cref="IBus"/> 调用栈的 gRPC 请求应返回处理器计算结果。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_OverGrpcEndpoint_ReturnsResult_ThroughBus()
 	{
@@ -100,6 +118,9 @@ public class GrpcTransporterTests
 		Assert.Equal(42, result);
 	}
 
+	/// <summary>
+	/// 经完整总线的 gRPC 请求应把处理器异常以原始类型与消息传回客户端。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_OverGrpcEndpoint_PropagatesHandlerError()
 	{
@@ -120,6 +141,9 @@ public class GrpcTransporterTests
 		Assert.Equal("boom", exception.Message);
 	}
 
+	/// <summary>
+	/// 请求应使用选项在运行时配置的服务名与方法名生成的描述符。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_UsesConfiguredMethodDescriptor()
 	{
@@ -141,6 +165,9 @@ public class GrpcTransporterTests
 		Assert.Equal(42, result);
 	}
 
+	/// <summary>
+	/// 调用不存在的 gRPC 方法应返回 <see cref="StatusCode.Unimplemented"/>。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_UnknownMethod_ReturnsUnimplemented()
 	{
@@ -400,6 +427,9 @@ public class GrpcTransporterTests
 			TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// 服务端收到空载荷时应以 <see cref="StatusCode.InvalidArgument"/> 拒绝请求。
+	/// </summary>
 	[Fact]
 	public async Task Server_RejectsEmptyPayload()
 	{
@@ -422,6 +452,9 @@ public class GrpcTransporterTests
 		Assert.Equal(StatusCode.InvalidArgument, exception.StatusCode);
 	}
 
+	/// <summary>
+	/// gRPC 传输器不支持 <c>SendAsync</c>，调用应抛出 <see cref="NotSupportedException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SendAsync_ThrowsNotSupported()
 	{
@@ -430,6 +463,9 @@ public class GrpcTransporterTests
 		await Assert.ThrowsAsync<NotSupportedException>(async () => await transport.SendAsync<CountRequest, int>(new RoutedMessage<CountRequest>(new CountRequest(), "count"), TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// gRPC 传输器不支持 <c>PublishAsync</c>，调用应抛出 <see cref="NotSupportedException"/>。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_ThrowsNotSupported()
 	{

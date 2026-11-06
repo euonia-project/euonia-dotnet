@@ -23,6 +23,9 @@ public class PropertyRuleTriggerTests
 {
 	#region 变更即检查
 
+	/// <summary>
+	/// 属性值违反规则时，setter 立即把对象标记为无效，并把违规归因到该属性。
+	/// </summary>
 	[Fact]
 	public void SetProperty_WithFailingRule_ShouldMarkInvalidImmediately()
 	{
@@ -40,6 +43,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 修正属性值后，先前的违规被清除，对象重新变为有效。
+	/// </summary>
 	[Fact]
 	public void SetProperty_FixingTheValue_ShouldClearTheError()
 	{
@@ -57,6 +63,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 将属性赋为当前值时视为没有变更，既不标脏也不触发规则检查。
+	/// </summary>
 	[Fact]
 	public void SetProperty_ToCurrentValue_ShouldBeANoOp()
 	{
@@ -72,6 +81,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 同一属性上的特性规则与 <c>AddRules</c> 注册的规则会全部执行并各报一条错误。
+	/// </summary>
 	[Fact]
 	public void SetProperty_WithMultipleRules_ShouldRunAll()
 	{
@@ -86,6 +98,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 绑定到属性的实例级规则同样在属性变更时触发，并将对象标记为无效。
+	/// </summary>
 	[Fact]
 	public void SetProperty_WithInstanceRuleBoundToProperty_ShouldAlsoTrigger()
 	{
@@ -101,6 +116,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 通过 <c>LoadProperty</c> 装载值只更新字段，不触发规则检查也不标脏。
+	/// </summary>
 	[Fact]
 	public void LoadProperty_ShouldNotTriggerRuleCheck()
 	{
@@ -121,6 +139,9 @@ public class PropertyRuleTriggerTests
 
 	#region 保存语义
 
+	/// <summary>
+	/// 属性级违规会阻止保存，<see cref="ValidationException"/> 的错误列表包含该属性名。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ShouldBeBlockedByPropertyRuleError()
 	{
@@ -141,6 +162,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 保存时只校验已变更的属性，未修改的属性不会因默认值触发校验异常。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ShouldNotValidatePropertiesThatWereNeverModified()
 	{
@@ -164,6 +188,9 @@ public class PropertyRuleTriggerTests
 
 	#region 变更通知不受影响
 
+	/// <summary>
+	/// 没有规则约束的属性在赋值后仍会发出 <c>PropertyChanged</c> 通知。
+	/// </summary>
 	[Fact]
 	public void PropertyChanged_ShouldFire_ForPropertyWithoutRules()
 	{
@@ -180,6 +207,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 存在规则约束的属性在完成规则检查后仍会发出 <c>PropertyChanged</c> 通知。
+	/// </summary>
 	[Fact]
 	public void PropertyChanged_ShouldFire_WhenRulesExist()
 	{
@@ -201,6 +231,9 @@ public class PropertyRuleTriggerTests
 
 	#region 可退出
 
+	/// <summary>
+	/// 覆写 <c>CheckRuleOnPropertyChanged</c> 为 <c>false</c> 后 setter 不再检查规则，显式检查时才报错。
+	/// </summary>
 	[Fact]
 	public void CheckRuleOnPropertyChanged_OptOut_ShouldSkipRuleCheckOnSet()
 	{
@@ -225,6 +258,9 @@ public class PropertyRuleTriggerTests
 
 	#region DataAnnotations 桥接
 
+	/// <summary>
+	/// 数据注解规则产生的错误消息使用属性的友好名填充占位符。
+	/// </summary>
 	[Fact]
 	public async Task DataAnnotationRule_Message_ShouldUseFriendlyName()
 	{
@@ -245,6 +281,9 @@ public class PropertyRuleTriggerTests
 
 	#region 推迟到保存时检查
 
+	/// <summary>
+	/// 推迟检查的类型在保存时补查已变更属性的规则，并抛出验证异常。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OnOptOutType_ShouldCheckChangedPropertyRules()
 	{
@@ -268,6 +307,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 推迟检查的类型在保存时仍只校验已变更属性，未修改属性不会产生异常。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OnOptOutType_ShouldNotCheckUnchangedProperties()
 	{
@@ -285,6 +327,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 推迟检查的类型在变更值合法时保存通过，且对象保持有效。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OnOptOutType_ShouldPass_WhenTheChangedValueIsValid()
 	{
@@ -303,6 +348,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 保存时的错误按先属性级、后对象级的顺序记录。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ShouldReportPropertyErrors_BeforeObjectErrors()
 	{
@@ -325,6 +373,9 @@ public class PropertyRuleTriggerTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 推迟检查的类型在保存阶段可以等待异步属性规则并回报违规。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OnOptOutType_ShouldSupportAsyncPropertyRules()
 	{
@@ -350,6 +401,9 @@ public class PropertyRuleTriggerTests
 
 	#region 同步上下文下的死锁防护
 
+	/// <summary>
+	/// 存在不泵送续体的同步上下文时，异步规则的 setter 仍能完成且不会死锁。
+	/// </summary>
 	[Fact]
 	public void SetProperty_WithAsyncRule_ShouldNotDeadlock_WhenSynchronizationContextIsPresent()
 	{
@@ -408,6 +462,9 @@ public class PropertyRuleTriggerTests
 
 	#region ExecuteOnState 空声明
 
+	/// <summary>
+	/// 空的 <c>[ExecuteOnState]</c> 声明视为不限制状态，规则仍会执行并报错。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteOnState_WithNoStates_ShouldNotDisableTheRule()
 	{
@@ -431,8 +488,14 @@ public class PropertyRuleTriggerTests
 /// </summary>
 public class RequiredNameObject : EditableObject<RequiredNameObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 受 <see cref="RequiredAttribute"/> 约束的名称属性。
+	/// </summary>
 	[Required(ErrorMessage = "{0} 不能为空。")]
 	public string Name
 	{
@@ -440,6 +503,11 @@ public class RequiredNameObject : EditableObject<RequiredNameObject>
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 测试用的插入实现，不做任何持久化操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -452,8 +520,14 @@ public class RequiredNameObject : EditableObject<RequiredNameObject>
 /// </summary>
 public class MultiRuleNameObject : EditableObject<MultiRuleNameObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 同时受特性规则与内置必填规则约束的名称属性。
+	/// </summary>
 	[Required(ErrorMessage = "{0} 不能为空。")]
 	public string Name
 	{
@@ -461,6 +535,9 @@ public class MultiRuleNameObject : EditableObject<MultiRuleNameObject>
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 额外注册一条内置必填规则，使其与特性规则同时作用于 <c>Name</c>。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(NameProperty, "{0} 是必填的。"));
@@ -472,21 +549,36 @@ public class MultiRuleNameObject : EditableObject<MultiRuleNameObject>
 /// </summary>
 public class NotificationObject : EditableObject<NotificationObject>
 {
+	/// <summary>
+	/// 无规则约束的 <c>Plain</c> 属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> PlainProperty = RegisterProperty<string>(p => p.Plain);
+	/// <summary>
+	/// 带必填规则的 <c>Checked</c> 属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> CheckedProperty = RegisterProperty<string>(p => p.Checked);
 
+	/// <summary>
+	/// 没有任何规则约束的属性。
+	/// </summary>
 	public string Plain
 	{
 		get => GetProperty(PlainProperty);
 		set => SetProperty(PlainProperty, value);
 	}
 
+	/// <summary>
+	/// 注册了必填规则的属性。
+	/// </summary>
 	public string Checked
 	{
 		get => GetProperty(CheckedProperty);
 		set => SetProperty(CheckedProperty, value);
 	}
 
+	/// <summary>
+	/// 仅为 <c>Checked</c> 注册必填规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(CheckedProperty, "{0} 是必填的。"));
@@ -498,14 +590,23 @@ public class NotificationObject : EditableObject<NotificationObject>
 /// </summary>
 public class OptOutObject : EditableObject<OptOutObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 受必填规则约束、但规则检查被推迟的名称属性。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 返回 <c>false</c>，把属性级检查推迟到显式调用或保存时。
+	/// </summary>
 	protected internal override bool CheckRuleOnPropertyChanged => false;
 
 	/// <summary>
@@ -516,6 +617,9 @@ public class OptOutObject : EditableObject<OptOutObject>
 		CheckPropertyRules(NameProperty);
 	}
 
+	/// <summary>
+	/// 为 <c>Name</c> 注册必填规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(NameProperty, "{0} 是必填的。"));
@@ -527,14 +631,23 @@ public class OptOutObject : EditableObject<OptOutObject>
 /// </summary>
 public class AsyncRuleObject : EditableObject<AsyncRuleObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 由内部真正 <c>await</c> 的异步规则校验的名称属性。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 注册一条内部真正 <c>await</c> 的异步属性规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AsyncRuleObject>(
@@ -554,21 +667,38 @@ public class AsyncRuleObject : EditableObject<AsyncRuleObject>
 /// </summary>
 public class DeferredRuleObject : EditableObject<DeferredRuleObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 受必填规则约束、检查推迟到保存时的名称属性。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 返回 <c>false</c>，推迟属性级规则检查。
+	/// </summary>
 	protected internal override bool CheckRuleOnPropertyChanged => false;
 
+	/// <summary>
+	/// 为 <c>Name</c> 注册必填规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(NameProperty, "{0} 是必填的。"));
 	}
 
+	/// <summary>
+	/// 测试用的插入实现，不做任何持久化操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -581,22 +711,39 @@ public class DeferredRuleObject : EditableObject<DeferredRuleObject>
 /// </summary>
 public class DeferredOrderObject : EditableObject<DeferredOrderObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 同时受属性级与对象级规则约束、检查推迟到保存时的名称属性。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 返回 <c>false</c>，推迟属性级规则检查。
+	/// </summary>
 	protected internal override bool CheckRuleOnPropertyChanged => false;
 
+	/// <summary>
+	/// 注册必填属性规则与总是失败的对象级规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule(new CommonRule.Required(NameProperty, "{0} 是必填的。"));
 		Rules.AddRule<AlwaysFailObjectRule>();
 	}
 
+	/// <summary>
+	/// 测试用的插入实现，不做任何持久化操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -609,16 +756,28 @@ public class DeferredOrderObject : EditableObject<DeferredOrderObject>
 /// </summary>
 public class DeferredAsyncRuleObject : EditableObject<DeferredAsyncRuleObject>
 {
+	/// <summary>
+	/// Name 属性的元数据，友好名为「仓库名」。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>("Name", "仓库名");
 
+	/// <summary>
+	/// 由异步属性规则校验、检查推迟到保存时的名称属性。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 返回 <c>false</c>，推迟属性级规则检查。
+	/// </summary>
 	protected internal override bool CheckRuleOnPropertyChanged => false;
 
+	/// <summary>
+	/// 注册一条内部真正 <c>await</c> 的异步属性规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<DeferredAsyncRuleObject>(
@@ -631,6 +790,11 @@ public class DeferredAsyncRuleObject : EditableObject<DeferredAsyncRuleObject>
 			"{0} 是必填的。");
 	}
 
+	/// <summary>
+	/// 测试用的插入实现，不做任何持久化操作。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -643,8 +807,14 @@ public class DeferredAsyncRuleObject : EditableObject<DeferredAsyncRuleObject>
 /// </summary>
 public class EmptyStateObject : EditableObject<EmptyStateObject>
 {
+	/// <summary>
+	/// 暴露规则管理器，便于测试直接添加实例规则。
+	/// </summary>
 	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
 
+	/// <summary>
+	/// 注册携带空 <c>[ExecuteOnState]</c> 声明的对象级规则。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<EmptyStateRule>();
@@ -657,6 +827,12 @@ public class EmptyStateObject : EditableObject<EmptyStateObject>
 [ExecuteOnState]
 public sealed class EmptyStateRule : ObjectRuleBase
 {
+	/// <summary>
+	/// 记录一条错误结果，以证明空状态声明的规则确实被执行。
+	/// </summary>
+	/// <param name="context">当前规则上下文。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>表示操作完成的任务。</returns>
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
 	{
 		context.AddErrorResult("空状态声明的规则已执行");

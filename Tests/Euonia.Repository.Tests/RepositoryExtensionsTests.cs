@@ -5,6 +5,9 @@ namespace Nerosoft.Euonia.Repository.Tests;
 /// </summary>
 public class RepositoryExtensionsTests
 {
+	/// <summary>
+	/// 页偏移量超出 <c>int</c> 范围时返回空页，而不是因负偏移抛出 <see cref="ArgumentOutOfRangeException"/>。
+	/// </summary>
 	[Fact]
 	public void Paginate_OffsetOverflowsInt32_ShouldReturnEmptyInsteadOfThrowing()
 	{
@@ -17,6 +20,7 @@ public class RepositoryExtensionsTests
 		Assert.Empty(page);
 	}
 
+	/// <summary>页大小为负数时返回空页，而不是抛出异常。</summary>
 	[Fact]
 	public void Paginate_NegativeSize_ShouldReturnEmpty()
 	{

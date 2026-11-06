@@ -18,6 +18,13 @@ public class MessageRequestContextTests
 	private const string UserName = "alice";
 	private const string Authorization = "Bearer publisher-token";
 
+	/// <summary>
+	/// 验证进程内多播发布按消息保留发布方上下文：先后入队的消息各自使用自己的跟踪标识与请求信息。
+	/// </summary>
+	/// <remarks>
+	/// 消息 A 会阻塞后台泵，消息 B 在其运行期间入队；若上下文被泵启动时的执行流继承，
+	/// B 就会错误地读到 A 的跟踪标识。同时多播处理不得复用发布方的请求作用域。
+	/// </remarks>
 	[Fact]
 	public async Task InMemoryPublish_PreservesPublisherContextPerMessage()
 	{
@@ -66,6 +73,12 @@ public class MessageRequestContextTests
 		Assert.NotSame(scope.ServiceProvider, state.RequestServices["B"]);
 	}
 
+	/// <summary>
+	/// 验证进程内单播发送复用发布方作用域：处理器构造注入的 scoped 服务与环境访问器解析结果均与调用方一致。
+	/// </summary>
+	/// <remarks>
+	/// 单播由调用方等待处理完成，因此处理器应在发布方作用域仍然存活期间执行，作用域不得提前释放。
+	/// </remarks>
 	[Fact]
 	public async Task InMemorySend_ReusesPublisherScope()
 	{
@@ -97,6 +110,10 @@ public class MessageRequestContextTests
 		Assert.False(state.PublisherProbe.Disposed, "处理器完成前发布方作用域不应被释放");
 	}
 
+	/// <summary>
+	/// 验证消费侧没有发布方上下文时，处理器能从消息信封恢复跟踪标识、授权信息与用户身份。
+	/// </summary>
+	/// <param name="useDelegate">是否使用委托式请求上下文访问器，用于覆盖两种访问器实现。</param>
 	[Theory]
 	[InlineData(false)]
 	[InlineData(true)]
@@ -194,6 +211,9 @@ public class MessageRequestContextTests
 		return services;
 	}
 
+	/// <summary>
+	/// 多播按消息保留发布方上下文测试的共享状态：阻塞闸门、按消息标识收集的上下文观察结果，以及两条消息的完成信号。
+	/// </summary>
 	private sealed class PreserveState
 	{
 		public TaskCompletionSource Gate { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -215,6 +235,9 @@ public class MessageRequestContextTests
 		public TaskCompletionSource SecondHandled { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 	}
 
+	/// <summary>
+	/// 单播复用发布方作用域测试的共享状态：发布方的 scoped 探测实例与服务提供程序、复用判定结果及处理完成信号。
+	/// </summary>
 	private sealed class ReuseState
 	{
 		public ScopedProbe PublisherProbe { get; set; } = null!;
@@ -241,6 +264,9 @@ public class MessageRequestContextTests
 		}
 	}
 
+	/// <summary>
+	/// 从信封恢复上下文测试的共享状态：是否已处理、捕获的异常，以及恢复出的跟踪标识、授权信息与用户名。
+	/// </summary>
 	private sealed class EnvelopeState
 	{
 		public bool Handled { get; set; }
@@ -254,15 +280,24 @@ public class MessageRequestContextTests
 		public string? UserName { get; set; }
 	}
 
+	/// <summary>
+	/// 带标识的多播事件，用于区分并发入队的两条消息及其各自的发布方上下文。
+	/// </summary>
 	private sealed class ContextEvent : IMulticast
 	{
 		public string Id { get; set; } = string.Empty;
 	}
 
+	/// <summary>
+	/// 不含负载字段的多播事件，仅用于验证处理器能从消息信封恢复请求上下文。
+	/// </summary>
 	private sealed class EnvelopeOnlyEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 空单播命令，用于验证单播处理复用发布方作用域。
+	/// </summary>
 	private sealed class ReuseCommand : IUnicast
 	{
 	}

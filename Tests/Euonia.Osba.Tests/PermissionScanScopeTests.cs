@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class PermissionScanScopeTests
 {
+	/// <summary>
+	/// 验证权限要求与对象工厂查找工厂方法的口径同源：要求恰好来自工厂实际调用的那个更新方法。
+	/// </summary>
 	[Fact]
 	public void Requirement_Should_Come_From_The_Method_The_Factory_Invokes()
 	{
@@ -30,6 +33,9 @@ public class PermissionScanScopeTests
 		Assert.Empty(fromDerived);
 	}
 
+	/// <summary>
+	/// 验证派生类型没有候选方法时工厂会沿继承链上溯，基类方法上的权限声明照旧生效。
+	/// </summary>
 	[Fact]
 	public void Derived_Type_Should_Still_Inherit_Requirements_When_It_Declares_No_Candidate()
 	{
@@ -41,6 +47,9 @@ public class PermissionScanScopeTests
 		Assert.Equal(["base:update"], requirements.Select(requirement => requirement.Permission));
 	}
 
+	/// <summary>
+	/// 验证只按命名约定声明的方法无需任何特性也会被视为入口，其权限要求能够被收集。
+	/// </summary>
 	[Fact]
 	public void Convention_Named_Method_Should_Be_An_Entry_Without_Any_Attribute()
 	{
@@ -52,6 +61,9 @@ public class PermissionScanScopeTests
 		Assert.Equal(["convention:update"], requirements.Select(requirement => requirement.Permission));
 	}
 
+	/// <summary>
+	/// 验证自定义操作名不由本来源负责：规则表之外的操作不声明任何权限要求。
+	/// </summary>
 	[Fact]
 	public void Unknown_Operation_Should_Declare_Nothing()
 	{
@@ -65,6 +77,10 @@ public class PermissionScanScopeTests
 /// <summary>基类：更新方法上声明了权限要求。</summary>
 public class BaseScopedEntity : EditableObject<BaseScopedEntity>
 {
+	/// <summary>
+	/// 更新操作的工厂实现，测试中不执行实际操作。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[Permission("base:update")]
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
@@ -76,6 +92,10 @@ public class BaseScopedEntity : EditableObject<BaseScopedEntity>
 /// <summary>遮蔽了基类的更新方法：工厂会调用本类型这一层的方法。</summary>
 public class DerivedScopedEntity : BaseScopedEntity
 {
+	/// <summary>
+	/// 遮蔽基类的更新方法，工厂会调用此方法且不带权限要求。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryUpdate]
 	protected new async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -91,6 +111,10 @@ public class PlainDerivedScopedEntity : BaseScopedEntity
 /// <summary>不打特性、只按约定名成为入口的资源。</summary>
 public class ConventionNamedEntity : EditableObject<ConventionNamedEntity>
 {
+	/// <summary>
+	/// 按命名约定成为更新入口，其上的权限要求应被收集。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[Permission("convention:update")]
 	protected new async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{

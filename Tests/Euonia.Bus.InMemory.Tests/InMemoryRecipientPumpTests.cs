@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class InMemoryRecipientPumpTests
 {
+	/// <summary>
+	/// <c>Receive</c> 应立即返回而不等待处理程序完成，放行处理程序后确认事件最终触发。
+	/// </summary>
 	[Fact]
 	public async Task Receive_DoesNotBlockUntilHandlerCompletes()
 	{
@@ -35,6 +38,9 @@ public class InMemoryRecipientPumpTests
 		await acknowledged.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 	}
 
+	/// <summary>
+	/// 连续投递的消息应按接收顺序串行处理。
+	/// </summary>
 	[Fact]
 	public async Task Receive_ProcessesMessagesInOrder()
 	{

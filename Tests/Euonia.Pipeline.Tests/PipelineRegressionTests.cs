@@ -8,10 +8,16 @@ namespace Nerosoft.Euonia.Pipeline.Tests;
 /// </summary>
 public class PipelineRegressionTests
 {
+	/// <summary>
+	/// 管道回归测试用空请求。
+	/// </summary>
 	private sealed class Request
 	{
 	}
 
+	/// <summary>
+	/// 记录处理器是否被调用并携带返回值的注入对象。
+	/// </summary>
 	private sealed class Marker
 	{
 		public bool Called { get; set; }
@@ -19,6 +25,9 @@ public class PipelineRegressionTests
 		public int Value { get; init; }
 	}
 
+	/// <summary>
+	/// 方法级多参数处理器，用于验证构造参数与方法参数均可注入。
+	/// </summary>
 	private sealed class MultiParamHandler
 	{
 #pragma warning disable IDE0052
@@ -39,6 +48,9 @@ public class PipelineRegressionTests
 		}
 	}
 
+	/// <summary>
+	/// 把自身执行写入日志的委托行为，用于验证与累积委托的执行顺序。
+	/// </summary>
 	private sealed class RecordingDelegateBehavior : IDelegateBehavior<Request>
 	{
 		private readonly List<string> _log;
@@ -55,6 +67,9 @@ public class PipelineRegressionTests
 		}
 	}
 
+	/// <summary>
+	/// 以方法级多参数处理器注册的行为可以构建并运行：返回注入对象中的值，且该对象被标记为已调用。
+	/// </summary>
 	[Fact]
 	public async Task TypedPipeline_Use_MethodBasedMultiParamHandler_BuildsAndRuns()
 	{
@@ -71,6 +86,7 @@ public class PipelineRegressionTests
 		Assert.True(provider.GetRequiredService<Marker>().Called);
 	}
 
+	/// <summary>静态 <c>Pipeline.Run</c> 先按顺序执行行为、再执行累积委托，并返回累积委托的结果。</summary>
 	[Fact]
 	public void StaticRun_returns_accumulate_result_and_runs_behaviors_in_order()
 	{
@@ -87,6 +103,7 @@ public class PipelineRegressionTests
 		Assert.Equal(new[] { "Behavior", "Accumulate" }, log);
 	}
 
+	/// <summary>没有行为时，静态 <c>Pipeline.Run</c> 直接执行累积委托并返回其结果。</summary>
 	[Fact]
 	public void StaticRun_without_behaviors_returns_accumulate_result()
 	{
@@ -103,6 +120,7 @@ public class PipelineRegressionTests
 		Assert.Equal(new[] { "Accumulate" }, log);
 	}
 
+	/// <summary>无返回值的静态 <c>Pipeline.Run</c> 同样先执行行为、再执行累积委托。</summary>
 	[Fact]
 	public void StaticRun_void_runs_behaviors_then_accumulate()
 	{
