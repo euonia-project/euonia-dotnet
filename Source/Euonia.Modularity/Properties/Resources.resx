@@ -143,4 +143,31 @@
   <data name="IDS_KEYED_SERVICE_NOT_SUPPORTED" xml:space="preserve">
     <value>This service provider doesn't support keyed services.</value>
   </data>
+  <data name="IDS_SERVICE_PROVIDER_UNAVAILABLE" xml:space="preserve">
+    <value>The application service provider is not available. Initialize the application with a service provider first.</value>
+  </data>
+  <data name="IDS_SERVICE_PROVIDER_ALREADY_SET" xml:space="preserve">
+    <value>The application has already been initialized with another service provider.</value>
+  </data>
+  <data name="IDS_APPLICATION_ALREADY_DISPOSED" xml:space="preserve">
+    <value>The application has already been disposed.</value>
+  </data>
+  <data name="IDS_APPLICATION_ALREADY_SHUTDOWN" xml:space="preserve">
+    <value>The application has already been shut down and cannot be initialized again.</value>
+  </data>
+  <data name="IDS_MODULE_NOT_FOUND" xml:space="preserve">
+    <value>Could not find the module {0}.</value>
+  </data>
+  <data name="IDS_MODULE_CIRCULAR_DEPENDENCY" xml:space="preserve">
+    <value>A circular dependency was detected while resolving module {0}.</value>
+  </data>
+  <data name="IDS_MODULE_SELF_DEPENDENCY" xml:space="preserve">
+    <value>The module {0} cannot depend on itself.</value>
+  </data>
+  <data name="IDS_CONFIGURATION_NOT_AVAILABLE" xml:space="preserve">
+    <value>No application configuration is available. Provide an IConfiguration instance or configure the application creation options.</value>
+  </data>
+  <data name="IDS_PROXY_SERVICE_TYPE_MUST_BE_INTERFACE" xml:space="preserve">
+    <value>The proxied service type '{0}' must be an interface.</value>
+  </data>
 </root>

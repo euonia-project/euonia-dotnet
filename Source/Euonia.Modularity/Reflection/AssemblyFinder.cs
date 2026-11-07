@@ -16,9 +16,10 @@ public class AssemblyFinder : IAssemblyFinder
     /// 初始化 <see cref="AssemblyFinder"/> 的新实例。
     /// </summary>
     /// <param name="moduleContainer">模块容器，用于枚举所有已注册模块。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="moduleContainer"/> 为 <see langword="null"/> 时抛出。</exception>
     public AssemblyFinder(IModuleContainer moduleContainer)
     {
-        _moduleContainer = moduleContainer;
+        _moduleContainer = Check.EnsureNotNull(moduleContainer, nameof(moduleContainer));
 
         _assemblies = new Lazy<IReadOnlyList<Assembly>>(FindAll, LazyThreadSafetyMode.ExecutionAndPublication);
     }
@@ -32,13 +33,9 @@ public class AssemblyFinder : IAssemblyFinder
     /// <returns>模块容器中所有模块所在程序集的去重只读列表。</returns>
     public IReadOnlyList<Assembly> FindAll()
     {
-        var assemblies = new List<Assembly>();
-
-        foreach (var module in _moduleContainer.Modules)
-        {
-            assemblies.Add(module.Type.Assembly);
-        }
-
-        return assemblies.Distinct().ToImmutableList();
+        return _moduleContainer.Modules
+                               .Select(module => module.Assembly)
+                               .Distinct()
+                               .ToImmutableList();
     }
 }

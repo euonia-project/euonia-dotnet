@@ -22,6 +22,20 @@
 - **异常类型**：`Lambda.GetAttribute` / `GetAttributes` 在表达式无法解析出成员时抛出 `ArgumentNullException`
   （原为 `NullReferenceException`）。
 
+### Euonia.Modularity
+
+- **模块依赖图**：加载阶段新增循环依赖、模块依赖自身与非法模块类型校验，错误信息包含具体模块；模块描述符的依赖快照改为不可变列表，并按类型字典查找依赖（O(1)）。
+- **应用程序生命周期**：`Initialize` / `Shutdown` / `Dispose` 幂等且线程安全；新增 `IsInitialized` / `IsShutdown`；初始化后拒绝更换服务提供程序，关闭后拒绝再次初始化。
+- **模块生命周期**：生命周期参与者改为在当前初始化/关闭作用域中解析，支持作用域依赖；重复初始化与卸载自动忽略；`ModuleManager` 暴露 `IsInitialized`。
+- **自动注册**：同一程序集只扫描一次，避免多模块同程序集导致服务重复注册；支持一个类型声明多个 `ExportService` 特性（修复原先的 `AmbiguousMatchException`）；新增 `[DisableAutomaticRegistration]`、`IncludeSelf`、`AddAssemblyOf(Type)` / `AddTypes(...)`；`OnExposing` 与 `Registry` 回调现在真正参与注册流程。
+- **命名服务**：命名注册表由全局静态字典改为每个 `IServiceCollection` 独立存储，修复多容器之间名称冲突与泄漏；新增按名称取默认值重载。
+- **延迟服务提供程序**：修复键控默认值重载完全忽略已注册服务的问题；默认值结果同样按标识缓存；补充参数校验与线程安全说明。
+- **配置**：显式传入的 `IConfiguration` 不再被忽略；环境名未指定时回退读取 `DOTNET_ENVIRONMENT` / `ASPNETCORE_ENVIRONMENT`；新增 `ReloadOnChange`，构建过程不再修改传入选项；`GetConfiguration` 不再因配置不是根配置而返回 `null`。
+- **模块查找**：新增 `FindModule` / `GetModule` / `TryGetModule` / `IsModuleLoaded` 扩展方法。
+- **代理注册**：合并重复的 `AddProxied*` 实现，新增按 `ServiceLifetime` 注册的 `AddProxied(...)`；注册时校验服务类型必须为接口且实现类型可赋值。
+- **测试**：新增 `Euonia.Modularity.Tests`，覆盖模块排序/循环依赖、自动注册、多个导出特性、命名服务隔离、延迟解析、配置构建与应用生命周期幂等性。
+- **API 变更**：`ExportServiceAttribute.ServiceTypes` 改为只读列表；`IServiceRegistrationContext` 增加 `Services` / `Lifetime` / `ExposedTypes`；`IModularityApplication` 与 `IModuleManager` 增加状态属性；移除始终被注释的 `DependencyAttribute.cs` 与未使用的 `ServiceRegistrationAction.IsClassInterceptorsDisabled`。
+
 ### Euonia.Quartz
 
 - **Quartz.NET 4.6.2**：迁移到 Quartz 4 API。配置入口由 `IServiceCollectionQuartzConfigurator` 改为 `IQuartzBuilder`；

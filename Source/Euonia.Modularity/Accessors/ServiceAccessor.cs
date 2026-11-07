@@ -12,36 +12,38 @@ namespace System;
 /// <seealso cref="IServiceAccessor"/>
 public class ServiceAccessor(IServiceProvider provider) : IServiceAccessor
 {
-	/// <inheritdoc/>
-	public IServiceProvider ServiceProvider { get; } = provider;
+    /// <inheritdoc/>
+    public IServiceProvider ServiceProvider { get; } = Check.EnsureNotNull(provider, nameof(provider));
 
-	/// <inheritdoc/>
-	public T? GetService<T>()
-	{
-		return ServiceProvider.GetService<T>();
-	}
+    /// <inheritdoc/>
+    public T? GetService<T>()
+    {
+        return ServiceProvider.GetService<T>();
+    }
 
-	/// <inheritdoc />
-	public T GetRequiredService<T>()
-	{
-		return (T)ServiceProvider.GetRequiredService(typeof(T));
-	}
+    /// <inheritdoc />
+    public T GetRequiredService<T>()
+    {
+        return (T)ServiceProvider.GetRequiredService(typeof(T));
+    }
 
-	/// <inheritdoc />
-	public T? GetKeyedService<T>(object key)
-	{
-		return ServiceProvider.GetKeyedService<T>(key);
-	}
+    /// <inheritdoc />
+    public T? GetKeyedService<T>(object key)
+    {
+        return ServiceProvider.GetKeyedService<T>(key);
+    }
 
-	/// <inheritdoc />
-	public T GetRequiredKeyedService<T>(object name)
-	{
-		return (T)ServiceProvider.GetRequiredKeyedService(typeof(T), name);
-	}
+    /// <inheritdoc />
+    public T GetRequiredKeyedService<T>(object name)
+    {
+        return (T)ServiceProvider.GetRequiredKeyedService(typeof(T), name);
+    }
 
-	/// <inheritdoc/>
-	public object? GetService(Type type)
-	{
-		return ServiceProvider.GetService(type);
-	}
+    /// <inheritdoc/>
+    public object? GetService(Type type)
+    {
+        Check.EnsureNotNull(type, nameof(type));
+
+        return ServiceProvider.GetService(type);
+    }
 }

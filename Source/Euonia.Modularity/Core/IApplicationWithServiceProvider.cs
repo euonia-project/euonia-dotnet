@@ -14,7 +14,10 @@ public interface IApplicationWithServiceProvider: IModularityApplication
     /// <summary>
     /// 使用指定的服务提供程序初始化应用程序。
     /// </summary>
-    /// <remarks>实现通常会设置服务提供程序并执行各模块的初始化逻辑。</remarks>
+    /// <remarks>
+    /// 实现通常会设置服务提供程序并执行各模块的初始化逻辑。
+    /// 该方法可安全地使用同一个服务提供程序重复调用，后续调用将被忽略。
+    /// </remarks>
     /// <param name="serviceProvider">应用程序的服务提供程序。</param>
     void Initialize(IServiceProvider serviceProvider);
 }

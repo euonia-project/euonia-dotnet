@@ -119,7 +119,7 @@ public interface ILazyServiceProvider
 	/// <param name="defaultValue">服务不存在时返回的默认值。</param>
 	/// <returns>与 <paramref name="serviceKey"/> 关联的服务实例，或 <paramref name="defaultValue"/>。</returns>
 	/// <remarks>
-	/// <see cref="LazyServiceProvider"/> 的实现按服务键与类型缓存 <paramref name="defaultValue"/>，不查询服务容器。
+	/// 该重载先查询服务容器；服务不存在时返回并缓存 <paramref name="defaultValue"/>。
 	/// </remarks>
 	T GetKeyedService<T>(object serviceKey, T defaultValue);
 
@@ -155,7 +155,7 @@ public interface ILazyServiceProvider
 	/// <param name="defaultValue">服务不存在时返回的默认值。</param>
 	/// <returns>与 <paramref name="serviceKey"/> 关联的服务实例，或 <paramref name="defaultValue"/>。</returns>
 	/// <remarks>
-	/// <see cref="LazyServiceProvider"/> 的实现按服务键与类型缓存 <paramref name="defaultValue"/>，不查询服务容器。
+	/// 该重载先查询服务容器；服务不存在时返回并缓存 <paramref name="defaultValue"/>。
 	/// </remarks>
 	object GetKeyedService(Type serviceType, object serviceKey, object defaultValue);
 }

@@ -27,11 +27,13 @@ public class ConfigurationBuilderOptions
 
     /// <summary>
     /// 环境名称。通常使用 "Development"、"Staging" 或 "Production"。
+    /// 未设置时依次读取环境变量 <c>DOTNET_ENVIRONMENT</c> 与 <c>ASPNETCORE_ENVIRONMENT</c>。
     /// </summary>
     public string? EnvironmentName { get; set; }
 
     /// <summary>
     /// 读取由 <see cref="FileName"/> 指定的配置文件的基础路径。
+    /// 未设置时使用当前工作目录。
     /// </summary>
     public string? BasePath { get; set; }
 
@@ -44,4 +46,9 @@ public class ConfigurationBuilderOptions
     /// 命令行参数。
     /// </summary>
     public string[]? CommandLineArgs { get; set; }
+
+    /// <summary>
+    /// 获取或设置一个值，指示配置文件更改时是否重新加载。默认值为 <see langword="true"/>。
+    /// </summary>
+    public bool ReloadOnChange { get; set; } = true;
 }

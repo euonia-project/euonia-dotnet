@@ -35,47 +35,58 @@ public class ExposeServicesAttribute : Attribute, IExposedServiceTypesProvider
     /// <inheritdoc />
     public IEnumerable<Type> GetExposedServiceTypes(Type targetType)
     {
-        var serviceList = ServiceTypes.ToList();
+        var serviceList = new List<Type>(ServiceTypes.Length + 1);
+
+        foreach (var serviceType in ServiceTypes)
+        {
+            if (serviceType != null)
+            {
+                serviceList.AddIfNotContains(serviceType);
+            }
+        }
 
         if (IncludeDefaults)
         {
-            foreach (var type in GetDefaultServices(targetType))
+            foreach (var serviceType in GetDefaultServices(targetType))
             {
-                serviceList.AddIfNotContains(type);
-            }
-
-            if (IncludeSelf)
-            {
-                serviceList.AddIfNotContains(targetType);
+                serviceList.AddIfNotContains(serviceType);
             }
         }
-        else if (IncludeSelf)
+
+        if (IncludeSelf)
         {
             serviceList.AddIfNotContains(targetType);
         }
 
-        return serviceList.ToArray();
+        return serviceList;
     }
 
     private static List<Type> GetDefaultServices(Type type)
     {
         var serviceTypes = new List<Type>();
+        var targetName = TrimGenericArity(type.Name);
 
         foreach (var interfaceType in type.GetTypeInfo().GetInterfaces())
         {
-            var interfaceName = interfaceType.Name;
+            var interfaceName = TrimGenericArity(interfaceType.Name);
 
-            if (interfaceName.StartsWith("I"))
+            if (interfaceName.StartsWith("I", StringComparison.Ordinal))
             {
                 interfaceName = interfaceName.Right(interfaceName.Length - 1);
             }
 
-            if (type.Name.EndsWith(interfaceName))
+            if (targetName.EndsWith(interfaceName, StringComparison.Ordinal))
             {
                 serviceTypes.Add(interfaceType);
             }
         }
 
         return serviceTypes;
+    }
+
+    private static string TrimGenericArity(string name)
+    {
+        var arityIndex = name.IndexOf('`');
+        return arityIndex >= 0 ? name.Left(arityIndex) : name;
     }
 }

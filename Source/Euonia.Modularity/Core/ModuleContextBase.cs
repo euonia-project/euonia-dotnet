@@ -16,14 +16,14 @@ public abstract class ModuleContextBase : IModuleContext
     /// <summary>
     /// 获取或设置服务配置上下文。
     /// </summary>
-    /// <exception cref="Exception">当配置上下文尚未初始化（即模块尚未执行服务配置）时引发。</exception>
+    /// <exception cref="InvalidOperationException">当配置上下文尚未初始化（即模块尚未执行服务配置）时引发。</exception>
     protected internal ServiceConfigurationContext ConfigurationContext
     {
         get
         {
             if (_configurationContext == null)
             {
-                throw new Exception(string.Format(Resources.IDS_CONFIGURATION_CONTEXT_UNAVAILABLE, nameof(ConfigurationContext), nameof(ConfigureServices)));
+                throw new InvalidOperationException(string.Format(Resources.IDS_CONFIGURATION_CONTEXT_UNAVAILABLE, nameof(ConfigurationContext), nameof(ConfigureServices)));
             }
 
             return _configurationContext;
@@ -32,6 +32,12 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     private ServiceConfigurationContext? _configurationContext;
+
+    /// <summary>
+    /// 获取当前模块注册服务所用的服务集合。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">当配置上下文尚未初始化时引发。</exception>
+    protected IServiceCollection Services => ConfigurationContext.Services;
 
     /// <summary>
     /// 获取或设置应用程序配置服务。
@@ -68,7 +74,7 @@ public abstract class ModuleContextBase : IModuleContext
     /// </summary>
     /// <typeparam name="TOptions">要配置的选项类型，必须为引用类型。</typeparam>
     /// <param name="configureOptions">接收选项实例并对其进行配置的委托。</param>
-    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
+    /// <exception cref="InvalidOperationException">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(Action<TOptions> configureOptions)
         where TOptions : class
     {
@@ -81,7 +87,7 @@ public abstract class ModuleContextBase : IModuleContext
     /// <typeparam name="TOptions">要配置的选项类型，必须为引用类型。</typeparam>
     /// <param name="name">选项实例的名称，用于区分同一选项类型的多组配置。</param>
     /// <param name="configureOptions">接收选项实例并对其进行配置的委托。</param>
-    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
+    /// <exception cref="InvalidOperationException">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(string name, Action<TOptions> configureOptions)
         where TOptions : class
     {
@@ -93,7 +99,7 @@ public abstract class ModuleContextBase : IModuleContext
     /// </summary>
     /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
     /// <param name="configuration">提供选项值的配置节。</param>
-    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
+    /// <exception cref="InvalidOperationException">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(IConfiguration configuration)
         where TOptions : class
     {
@@ -106,7 +112,7 @@ public abstract class ModuleContextBase : IModuleContext
     /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
     /// <param name="configuration">提供选项值的配置节。</param>
     /// <param name="configureBinder">用于调整绑定行为的委托，例如绑定错误与未知键的处理方式。</param>
-    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
+    /// <exception cref="InvalidOperationException">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(IConfiguration configuration, Action<BinderOptions> configureBinder)
         where TOptions : class
     {
@@ -119,7 +125,7 @@ public abstract class ModuleContextBase : IModuleContext
     /// <typeparam name="TOptions">要绑定的选项类型，必须为引用类型。</typeparam>
     /// <param name="name">选项实例的名称，用于区分同一选项类型的多组配置。</param>
     /// <param name="configuration">提供选项值的配置节。</param>
-    /// <exception cref="Exception">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
+    /// <exception cref="InvalidOperationException">当 <see cref="ConfigurationContext"/> 尚未初始化时引发。</exception>
     protected void Configure<TOptions>(string name, IConfiguration configuration)
         where TOptions : class
     {

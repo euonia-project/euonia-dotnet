@@ -12,50 +12,86 @@ public class DefaultAutomaticRegistration : AutomaticRegistrationBase
     /// 判断是否禁用指定类型的自动注册。
     /// </summary>
     /// <param name="type">要检查的类型。</param>
-    /// <returns>如果该类型应跳过自动注册则返回 <see langword="true"/>，否则返回 <see langword="false"/>；默认实现始终返回 <see langword="false"/>。</returns>
-    protected virtual bool IsAutomaticRegistrationDisabled(Type type) => false;
+    /// <returns>如果该类型应跳过自动注册则返回 <see langword="true"/>，否则返回 <see langword="false"/>。</returns>
+    /// <remarks>默认实现会检查类型上是否标记了 <see cref="DisableAutomaticRegistrationAttribute"/>。</remarks>
+    protected virtual bool IsAutomaticRegistrationDisabled(Type type)
+    {
+        return type.IsDefined(typeof(DisableAutomaticRegistrationAttribute), true);
+    }
 
     /// <inheritdoc />
     public override void AddType(IServiceCollection services, Type type)
     {
-        if (IsAutomaticRegistrationDisabled(type))
+        Check.EnsureNotNull(services, nameof(services));
+
+        if (type == null || !IsRegistrableType(type) || IsAutomaticRegistrationDisabled(type))
         {
             return;
         }
 
-        var attribute = GetDependencyAttribute(type);
-        var lifeTime = GetLifeTime(type, attribute);
+        var attributes = GetDependencyAttributes(type);
+        var registeredServiceTypes = new HashSet<Type>();
 
+        if (attributes.Count == 0)
+        {
+            RegisterServices(services, type, null, registeredServiceTypes);
+            return;
+        }
+
+        foreach (var attribute in attributes)
+        {
+            RegisterServices(services, type, attribute, registeredServiceTypes);
+        }
+    }
+
+    private void RegisterServices(IServiceCollection services, Type implementationType, ExportServiceAttribute? attribute, ISet<Type> registeredServiceTypes)
+    {
+        var lifeTime = GetLifeTime(implementationType, attribute);
         if (lifeTime == null)
         {
             return;
         }
 
-        var exposedServiceTypes = attribute?.ServiceTypes;
+        var exposedServiceTypes = attribute?.ServiceTypes is { Count: > 0 }
+            ? new List<Type>(attribute.ServiceTypes)
+            : GetExposedServiceTypes(implementationType);
 
-        if (exposedServiceTypes == null || exposedServiceTypes.Count < 1)
+        if (attribute?.IncludeSelf == true)
         {
-            exposedServiceTypes = GetExposedServiceTypes(type);
+            exposedServiceTypes.AddIfNotContains(implementationType);
         }
-        else
+
+        exposedServiceTypes = exposedServiceTypes
+                              .Where(serviceType => serviceType != null)
+                              .Distinct()
+                              .ToList();
+
+        if (exposedServiceTypes.Count == 0)
         {
-            foreach (var serviceType in exposedServiceTypes)
+            return;
+        }
+
+        TriggerServiceExposing(services, implementationType, exposedServiceTypes);
+        TriggerServiceRegistration(services, implementationType, lifeTime.Value, exposedServiceTypes);
+
+        exposedServiceTypes = exposedServiceTypes
+                              .Where(serviceType => serviceType != null)
+                              .Distinct()
+                              .ToList();
+
+        foreach (var serviceType in exposedServiceTypes)
+        {
+            ValidateServiceType(implementationType, serviceType);
+        }
+
+        foreach (var serviceType in exposedServiceTypes)
+        {
+            if (!registeredServiceTypes.Add(serviceType))
             {
-                if (serviceType == null)
-                {
-                    continue;
-                }
-
-                if (!serviceType.IsAssignableFrom(type))
-                {
-                    throw new InvalidOperationException(string.Format(Resources.IDS_IMPLEMENTATION_NOT_INHERIT_SERVICE, type.FullName, serviceType.FullName));
-                }
+                continue;
             }
-        }
 
-        foreach (var exposedServiceType in exposedServiceTypes)
-        {
-            var descriptor = CreateServiceDescriptor(exposedServiceType, type, exposedServiceTypes, lifeTime.Value);
+            var descriptor = CreateServiceDescriptor(serviceType, implementationType, exposedServiceTypes, lifeTime.Value);
 
             if (attribute?.ReplaceServices == true)
             {
@@ -69,6 +105,14 @@ public class DefaultAutomaticRegistration : AutomaticRegistrationBase
             {
                 services.Add(descriptor);
             }
+        }
+    }
+
+    private static void ValidateServiceType(Type implementationType, Type serviceType)
+    {
+        if (!serviceType.IsAssignableFrom(implementationType))
+        {
+            throw new InvalidOperationException(string.Format(Resources.IDS_IMPLEMENTATION_NOT_INHERIT_SERVICE, implementationType.FullName, serviceType.FullName));
         }
     }
 }

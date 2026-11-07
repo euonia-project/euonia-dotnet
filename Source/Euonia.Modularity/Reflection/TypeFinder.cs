@@ -1,4 +1,5 @@
-﻿using Nerosoft.Euonia.Reflection;
+﻿using System.Diagnostics;
+using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Modularity;
 
@@ -15,9 +16,10 @@ public class TypeFinder : ITypeFinder
     /// 初始化 <see cref="TypeFinder"/> 的新实例。
     /// </summary>
     /// <param name="assemblyFinder">程序集查找器，用于获取待扫描的程序集。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="assemblyFinder"/> 为 <see langword="null"/> 时抛出。</exception>
     public TypeFinder(IAssemblyFinder assemblyFinder)
     {
-        _assemblyFinder = assemblyFinder;
+        _assemblyFinder = Check.EnsureNotNull(assemblyFinder, nameof(assemblyFinder));
 
         _types = new Lazy<IReadOnlyList<Type>>(FindAll, LazyThreadSafetyMode.ExecutionAndPublication);
     }
@@ -39,18 +41,18 @@ public class TypeFinder : ITypeFinder
         {
             try
             {
-                var typesInThisAssembly = AssemblyHelper.LoadTypes(assembly);
+                var typesInAssembly = AssemblyHelper.LoadTypes(assembly);
 
-                if (!typesInThisAssembly.Any())
+                if (typesInAssembly.Count == 0)
                 {
                     continue;
                 }
 
-                allTypes.AddRange(typesInThisAssembly.Where(type => type != null));
+                allTypes.AddRange(typesInAssembly.Where(type => type != null));
             }
-            catch
+            catch (Exception exception)
             {
-                //TODO: 触发全局事件？
+                Debug.WriteLine($"Could not load types from assembly '{assembly.FullName}': {exception.Message}");
             }
         }
 
