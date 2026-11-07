@@ -43,4 +43,16 @@ public interface IModularityApplication : IModuleContainer, IDisposable
     /// </summary>
     /// <remarks>该方法可安全地重复调用，后续调用将被忽略。</remarks>
     void Shutdown();
+
+    /// <summary>
+    /// 异步关闭应用程序。
+    /// </summary>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>表示异步操作的任务。</returns>
+    /// <remarks>未重写时回退到同步的 <see cref="Shutdown"/>。</remarks>
+    Task ShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        Shutdown();
+        return Task.CompletedTask;
+    }
 }

@@ -87,6 +87,15 @@ public class SecondStartupModule : ModuleContextBase
 {
 }
 
+public class PluginModule : ModuleContextBase
+{
+}
+
+[DependsOn(typeof(StartupModule))]
+public class PluginWithStartupDependencyModule : ModuleContextBase
+{
+}
+
 public class LifecycleModule : ModuleContextBase
 {
     public int InitializationCount { get; private set; }
@@ -101,6 +110,66 @@ public class LifecycleModule : ModuleContextBase
     public override void OnApplicationShutdown(ApplicationShutdownContext context)
     {
         ShutdownCount++;
+    }
+}
+
+public class LifecycleEventModule : ModuleContextBase
+{
+    public List<string> Events { get; } = new();
+
+    public override void AheadConfigureServices(ServiceConfigurationContext context)
+    {
+        Events.Add("ahead-configure");
+    }
+
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        Events.Add("configure");
+    }
+
+    public override void AfterConfigureServices(ServiceConfigurationContext context)
+    {
+        Events.Add("after-configure");
+    }
+
+    public override void OnApplicationInitialization(ApplicationInitializationContext context)
+    {
+        Events.Add("initialize");
+    }
+
+    public override void OnApplicationShutdown(ApplicationShutdownContext context)
+    {
+        Events.Add("shutdown");
+    }
+
+    public override async Task AheadConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        await Task.Yield();
+        Events.Add("ahead-configure-async");
+    }
+
+    public override async Task ConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        await Task.Yield();
+        Events.Add("configure-async");
+    }
+
+    public override async Task AfterConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        await Task.Yield();
+        Events.Add("after-configure-async");
+    }
+
+    public override async Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
+    {
+        await Task.Yield();
+        Events.Add("initialize-async");
+    }
+
+    public override async Task OnApplicationShutdownAsync(ApplicationShutdownContext context)
+    {
+        await Task.Yield();
+        Events.Add("shutdown-async");
     }
 }
 

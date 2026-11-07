@@ -48,4 +48,70 @@ public class ApplicationLifecycleTests
 
         Assert.Throws<InvalidOperationException>(() => _ = application.ServiceProvider);
     }
+
+    [Fact]
+    public void SyncLifecycle_ShouldExecuteAheadConfigureAndMainPhasesInOrder()
+    {
+        var services = new ServiceCollection();
+        var application = ApplicationFactory.Create<LifecycleEventModule>(services, null);
+        using var provider = services.BuildServiceProvider();
+
+        application.Initialize(provider);
+        application.Shutdown();
+
+        var module = provider.GetRequiredService<LifecycleEventModule>();
+
+        Assert.Equal(
+            new[]
+            {
+                "ahead-configure",
+                "configure",
+                "after-configure",
+                "initialize",
+                "shutdown"
+            },
+            module.Events);
+    }
+
+    [Fact]
+    public async Task AsyncLifecycle_ShouldExecuteAsyncPhasesOnly()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var services = new ServiceCollection();
+        var application = await ApplicationFactory.CreateAsync<LifecycleEventModule>(services, null, cancellationToken: cancellationToken);
+        using var provider = services.BuildServiceProvider();
+
+        await application.InitializeAsync(provider, cancellationToken);
+        await application.ShutdownAsync(cancellationToken);
+
+        var module = provider.GetRequiredService<LifecycleEventModule>();
+
+        Assert.Equal(
+            new[]
+            {
+                "ahead-configure-async",
+                "configure-async",
+                "after-configure-async",
+                "initialize-async",
+                "shutdown-async"
+            },
+            module.Events);
+    }
+
+    [Fact]
+    public async Task DisposeAsync_ShouldShutdownAndDisposeApplication()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var services = new ServiceCollection();
+        var application = await ApplicationFactory.CreateAsync<LifecycleModule>(services, null, cancellationToken: cancellationToken);
+        var provider = services.BuildServiceProvider();
+
+        await application.InitializeAsync(provider, cancellationToken);
+        var module = provider.GetRequiredService<LifecycleModule>();
+
+        await application.DisposeAsync();
+
+        Assert.True(application.IsShutdown);
+        Assert.Equal(1, module.ShutdownCount);
+    }
 }

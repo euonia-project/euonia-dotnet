@@ -60,6 +60,27 @@ public abstract class ModuleContextBase : IModuleContext
     }
 
     /// <inheritdoc />
+    public virtual Task AheadConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        AheadConfigureServices(context);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task ConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        ConfigureServices(context);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task AfterConfigureServicesAsync(ServiceConfigurationContext context)
+    {
+        AfterConfigureServices(context);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
     public virtual void OnApplicationInitialization(ApplicationInitializationContext context)
     {
     }
@@ -67,6 +88,20 @@ public abstract class ModuleContextBase : IModuleContext
     /// <inheritdoc />
     public virtual void OnApplicationShutdown(ApplicationShutdownContext context)
     {
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnApplicationInitializationAsync(ApplicationInitializationContext context)
+    {
+        OnApplicationInitialization(context);
+        return Task.CompletedTask;
+    }
+
+    /// <inheritdoc />
+    public virtual Task OnApplicationShutdownAsync(ApplicationShutdownContext context)
+    {
+        OnApplicationShutdown(context);
+        return Task.CompletedTask;
     }
 
     /// <summary>

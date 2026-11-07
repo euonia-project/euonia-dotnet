@@ -64,9 +64,46 @@ public class ModuleManager : IModuleManager, ISingletonDependency
                 }
                 catch (Exception exception)
                 {
-                    throw new InvalidOperationException(
-                        string.Format(Resources.IDS_MODULE_INITIALIZE_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, exception.Message),
-                        exception);
+                    throw CreateInitializeException(contributor, module, exception);
+                }
+            }
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task InitializeModulesAsync(ApplicationInitializationContext context, CancellationToken cancellationToken = default)
+    {
+        Check.EnsureNotNull(context, nameof(context));
+
+        if (IsInitialized)
+        {
+            return;
+        }
+
+        var lifecycleContributors = ResolveLifecycleContributors(context.ServiceProvider);
+
+        if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
+        {
+            return;
+        }
+
+        foreach (var contributor in lifecycleContributors)
+        {
+            foreach (var module in _moduleContainer.Modules)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    await contributor.InitializeAsync(context, module.Instance).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    throw CreateInitializeException(contributor, module, exception);
                 }
             }
         }
@@ -108,12 +145,65 @@ public class ModuleManager : IModuleManager, ISingletonDependency
                 }
                 catch (Exception exception)
                 {
-                    throw new InvalidOperationException(
-                        string.Format(Resources.IDS_MODULE_SHUTDOWN_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, exception.Message),
-                        exception);
+                    throw CreateShutdownException(contributor, module, exception);
                 }
             }
         }
+    }
+
+    /// <inheritdoc />
+    public async Task UnloadModulesAsync(ApplicationShutdownContext context, CancellationToken cancellationToken = default)
+    {
+        Check.EnsureNotNull(context, nameof(context));
+
+        if (!IsInitialized)
+        {
+            return;
+        }
+
+        var lifecycleContributors = ResolveLifecycleContributors(context.ServiceProvider);
+
+        if (Interlocked.Exchange(ref _initialized, 0) == 0)
+        {
+            return;
+        }
+
+        var modules = _moduleContainer.Modules.Reverse().ToArray();
+
+        foreach (var contributor in lifecycleContributors)
+        {
+            foreach (var module in modules)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    await contributor.FinalizeAsync(context, module.Instance).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
+                catch (Exception exception)
+                {
+                    throw CreateShutdownException(contributor, module, exception);
+                }
+            }
+        }
+    }
+
+    private static InvalidOperationException CreateInitializeException(IModuleLifecycle contributor, IModuleDescriptor module, Exception exception)
+    {
+        return new InvalidOperationException(
+            string.Format(Resources.IDS_MODULE_INITIALIZE_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, exception.Message),
+            exception);
+    }
+
+    private static InvalidOperationException CreateShutdownException(IModuleLifecycle contributor, IModuleDescriptor module, Exception exception)
+    {
+        return new InvalidOperationException(
+            string.Format(Resources.IDS_MODULE_SHUTDOWN_PHASE_FAILED, contributor.GetType().FullName, module.Type.AssemblyQualifiedName, exception.Message),
+            exception);
     }
 
     private IModuleLifecycle[] ResolveLifecycleContributors(IServiceProvider serviceProvider)

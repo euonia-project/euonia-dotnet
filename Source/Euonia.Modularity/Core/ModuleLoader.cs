@@ -12,20 +12,39 @@ public class ModuleLoader : IModuleLoader
     /// <exception cref="ArgumentException">当 <paramref name="startupModuleType"/> 不是有效的模块类型，或模块依赖关系无效时抛出。</exception>
     public IModuleDescriptor[] LoadModules(IServiceCollection services, Type startupModuleType)
     {
+        return LoadModules(services, startupModuleType, null);
+    }
+
+    /// <inheritdoc />
+    public IModuleDescriptor[] LoadModules(IServiceCollection services, Type startupModuleType, IEnumerable<Type>? additionalModuleTypes)
+    {
         Check.EnsureNotNull(services, nameof(services));
         ModuleHelper.CheckModuleType(startupModuleType);
 
-        var modules = GetDescriptors(services, startupModuleType);
+        var additionalTypes = additionalModuleTypes?
+                              .Where(type => type != null)
+                              .Distinct()
+                              .ToArray();
+
+        var modules = GetDescriptors(services, startupModuleType, additionalTypes);
         var sortedModules = SortByDependency(modules, startupModuleType);
 
         return sortedModules.ToArray();
     }
 
-    private List<ModuleDescriptor> GetDescriptors(IServiceCollection services, Type startupModuleType)
+    private List<ModuleDescriptor> GetDescriptors(IServiceCollection services, Type startupModuleType, Type[]? additionalModuleTypes)
     {
         var modules = new List<ModuleDescriptor>();
 
-        FillModules(modules, services, startupModuleType);
+        if (additionalModuleTypes is { Length: > 0 })
+        {
+            FillModules(modules, services, startupModuleType, additionalModuleTypes);
+        }
+        else
+        {
+            FillModules(modules, services, startupModuleType);
+        }
+
         SetDependencies(modules);
 
         return modules;
@@ -39,7 +58,46 @@ public class ModuleLoader : IModuleLoader
     /// <param name="startupModuleType">启动模块类型，其自身及递归发现的所有依赖模块都会被加入集合。</param>
     protected virtual void FillModules(List<ModuleDescriptor> modules, IServiceCollection services, Type startupModuleType)
     {
+        FillModules(modules, services, startupModuleType, Array.Empty<Type>());
+    }
+
+    /// <summary>
+    /// 填充启动模块依赖图以及额外来源提供的模块。
+    /// </summary>
+    /// <param name="modules">用于接收模块描述符的集合。</param>
+    /// <param name="services">用于注册模块实例的服务集合。</param>
+    /// <param name="startupModuleType">启动模块类型。</param>
+    /// <param name="additionalModuleTypes">额外模块类型。</param>
+    protected virtual void FillModules(List<ModuleDescriptor> modules, IServiceCollection services, Type startupModuleType, IEnumerable<Type> additionalModuleTypes)
+    {
+        var moduleTypes = new List<Type>();
+        var addedTypes = new HashSet<Type>();
+
         foreach (var moduleType in ModuleHelper.FindAllModuleTypes(startupModuleType))
+        {
+            if (addedTypes.Add(moduleType))
+            {
+                moduleTypes.Add(moduleType);
+            }
+        }
+
+        foreach (var moduleType in additionalModuleTypes)
+        {
+            if (moduleType == null)
+            {
+                continue;
+            }
+
+            foreach (var dependencyType in ModuleHelper.FindAllModuleTypes(moduleType))
+            {
+                if (addedTypes.Add(dependencyType))
+                {
+                    moduleTypes.Add(dependencyType);
+                }
+            }
+        }
+
+        foreach (var moduleType in moduleTypes)
         {
             modules.Add(CreateModuleDescriptor(services, moduleType));
         }
@@ -63,13 +121,19 @@ public class ModuleLoader : IModuleLoader
     /// 按依赖关系对模块排序。
     /// </summary>
     /// <param name="modules">待排序的模块描述符集合。</param>
-    /// <param name="startupModuleType">启动模块类型，排序后会被移动到结果末尾。</param>
-    /// <returns>按依赖顺序排列的模块描述符列表，被依赖的模块排在依赖它的模块之前，启动模块位于最后。</returns>
+    /// <param name="startupModuleType">启动模块类型，通常在排序后位于结果末尾；若其他模块依赖启动模块，则按实际依赖顺序排列。</param>
+    /// <returns>按依赖顺序排列的模块描述符列表，被依赖的模块排在依赖它的模块之前。</returns>
     /// <exception cref="ArgumentException">模块之间存在循环依赖时抛出。</exception>
     protected virtual List<IModuleDescriptor> SortByDependency(IReadOnlyList<IModuleDescriptor> modules, Type startupModuleType)
     {
         var sortedModules = modules.SortByDependencies(module => module.Dependencies);
-        sortedModules.MoveItem(module => module.Type == startupModuleType, sortedModules.Count - 1);
+        var startupModule = sortedModules.FirstOrDefault(module => module.Type == startupModuleType);
+
+        if (startupModule != null && !sortedModules.Any(module => module != startupModule && module.Dependencies.Contains(startupModule)))
+        {
+            sortedModules.MoveItem(module => module.Type == startupModuleType, sortedModules.Count - 1);
+        }
+
         return sortedModules;
     }
 

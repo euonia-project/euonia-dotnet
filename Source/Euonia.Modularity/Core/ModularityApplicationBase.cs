@@ -9,6 +9,7 @@ namespace Nerosoft.Euonia.Modularity;
 /// </summary>
 public abstract class ModularityApplicationBase : IModularityApplication
 {
+    private int _servicesConfigured;
     private int _initialized;
     private int _shutdown;
     private IServiceProvider? _serviceProvider;
@@ -23,6 +24,19 @@ public abstract class ModularityApplicationBase : IModularityApplication
     /// <exception cref="ArgumentNullException">当 <paramref name="startupModuleType"/> 或 <paramref name="services"/> 为 <see langword="null"/> 时抛出。</exception>
     /// <exception cref="ArgumentException">当 <paramref name="startupModuleType"/> 不是有效的模块类型时抛出。</exception>
     internal ModularityApplicationBase(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction)
+        : this(startupModuleType, services, configuration, optionsAction, true)
+    {
+    }
+
+    /// <summary>
+    /// 初始化模块化应用程序。
+    /// </summary>
+    /// <param name="startupModuleType">启动模块类型，作为模块依赖图的根节点。</param>
+    /// <param name="services">应用程序的服务集合。</param>
+    /// <param name="configuration">应用程序配置；为 <c>null</c> 时按创建选项构建配置。</param>
+    /// <param name="optionsAction">用于自定义应用程序创建选项的委托，可为 <c>null</c>。</param>
+    /// <param name="configureServices">是否立即执行同步服务配置；为 <see langword="false"/> 时由调用方执行异步服务配置。</param>
+    internal ModularityApplicationBase(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction, bool configureServices)
     {
         Check.EnsureNotNull(services, nameof(services));
         ModuleHelper.CheckModuleType(startupModuleType);
@@ -49,8 +63,12 @@ public abstract class ModularityApplicationBase : IModularityApplication
 
         // ReSharper disable once VirtualMemberCallInConstructor
         Modules = LoadModules(services, options);
-        // ReSharper disable once VirtualMemberCallInConstructor
-        ConfigureServices();
+
+        if (configureServices)
+        {
+            // ReSharper disable once VirtualMemberCallInConstructor
+            ConfigureServices();
+        }
     }
 
     /// <summary>
@@ -102,6 +120,16 @@ public abstract class ModularityApplicationBase : IModularityApplication
     }
 
     /// <summary>
+    /// 异步关闭应用程序。
+    /// </summary>
+    /// <returns>表示异步释放操作的值任务。</returns>
+    public virtual async ValueTask DisposeAsync()
+    {
+        await ShutdownAsync().ConfigureAwait(false);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
     /// 关闭应用程序并卸载所有模块。
     /// </summary>
     /// <remarks>该方法可安全地重复调用，后续调用将被忽略。</remarks>
@@ -126,6 +154,30 @@ public abstract class ModularityApplicationBase : IModularityApplication
         }
 
         moduleManager.UnloadModules(new ApplicationShutdownContext(scope.ServiceProvider));
+    }
+
+    /// <inheritdoc />
+    public async Task ShutdownAsync(CancellationToken cancellationToken = default)
+    {
+        if (Volatile.Read(ref _serviceProvider) == null)
+        {
+            return;
+        }
+
+        if (IsShutdown)
+        {
+            return;
+        }
+
+        using var scope = EnsureServiceProvider().CreateScope();
+        var moduleManager = scope.ServiceProvider.GetRequiredService<IModuleManager>();
+
+        if (Interlocked.Exchange(ref _shutdown, 1) != 0)
+        {
+            return;
+        }
+
+        await moduleManager.UnloadModulesAsync(new ApplicationShutdownContext(scope.ServiceProvider), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -175,6 +227,30 @@ public abstract class ModularityApplicationBase : IModularityApplication
     }
 
     /// <summary>
+    /// 异步初始化依赖模块。
+    /// </summary>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>表示异步操作的任务。</returns>
+    /// <remarks>该方法可安全地重复调用，后续调用将被忽略。</remarks>
+    protected virtual async Task InitializeModulesAsync(CancellationToken cancellationToken = default)
+    {
+        if (IsInitialized)
+        {
+            return;
+        }
+
+        using var scope = EnsureServiceProvider().CreateScope();
+        var moduleManager = scope.ServiceProvider.GetRequiredService<IModuleManager>();
+
+        if (Interlocked.CompareExchange(ref _initialized, 1, 0) != 0)
+        {
+            return;
+        }
+
+        await moduleManager.InitializeModulesAsync(new ApplicationInitializationContext(scope.ServiceProvider), cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// 加载依赖模块。
     /// </summary>
     /// <param name="services">用于加载模块的服务集合。</param>
@@ -182,15 +258,99 @@ public abstract class ModularityApplicationBase : IModularityApplication
     /// <returns>已加载的模块描述符列表。</returns>
     protected virtual IReadOnlyList<IModuleDescriptor> LoadModules(IServiceCollection services, ApplicationCreationOptions options)
     {
+        var additionalModuleTypes = options.ModuleSources
+                                           .SelectMany(source => source.GetModules())
+                                           .Where(type => type != null)
+                                           .Distinct()
+                                           .ToArray();
+
         return services.GetSingletonInstance<IModuleLoader>()
-                       .LoadModules(services, StartupModuleType);
+                       .LoadModules(services, StartupModuleType, additionalModuleTypes);
     }
 
     /// <summary>
     /// 配置应用程序的服务。
     /// </summary>
-    /// <exception cref="Exception">任一模块在服务配置生命周期阶段抛出异常时，包装并附带阶段与模块信息后抛出。</exception>
+    /// <exception cref="InvalidOperationException">任一模块在服务配置生命周期阶段抛出异常时，包装并附带阶段与模块信息后抛出。</exception>
     protected virtual void ConfigureServices()
+    {
+        if (Interlocked.Exchange(ref _servicesConfigured, 1) != 0)
+        {
+            return;
+        }
+
+        var context = CreateServiceConfigurationContext();
+
+        try
+        {
+            InvokeModulePhase(Modules, nameof(IModuleContext.AheadConfigureServices), module => module.Instance.AheadConfigureServices(context));
+
+            InvokeModulePhase(
+                Modules,
+                nameof(IModuleContext.ConfigureServices),
+                module =>
+                {
+                    RegisterAssemblies(module);
+                    module.Instance.ConfigureServices(context);
+                });
+
+            InvokeModulePhase(Modules, nameof(IModuleContext.AfterConfigureServices), module => module.Instance.AfterConfigureServices(context));
+        }
+        finally
+        {
+            ClearServiceConfigurationContext();
+        }
+    }
+
+    /// <summary>
+    /// 异步配置应用程序的服务。
+    /// </summary>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>表示异步操作的任务。</returns>
+    /// <exception cref="InvalidOperationException">任一模块在服务配置生命周期阶段抛出异常时，包装并附带阶段与模块信息后抛出。</exception>
+    protected internal virtual async Task ConfigureServicesAsync(CancellationToken cancellationToken = default)
+    {
+        if (Interlocked.Exchange(ref _servicesConfigured, 1) != 0)
+        {
+            return;
+        }
+
+        var context = CreateServiceConfigurationContext();
+
+        try
+        {
+            await InvokeModulePhaseAsync(
+                    Modules,
+                    nameof(IModuleContext.AheadConfigureServicesAsync),
+                    module => module.Instance.AheadConfigureServicesAsync(context),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            await InvokeModulePhaseAsync(
+                    Modules,
+                    nameof(IModuleContext.ConfigureServicesAsync),
+                    module =>
+                    {
+                        RegisterAssemblies(module);
+                        return module.Instance.ConfigureServicesAsync(context);
+                    },
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            await InvokeModulePhaseAsync(
+                    Modules,
+                    nameof(IModuleContext.AfterConfigureServicesAsync),
+                    module => module.Instance.AfterConfigureServicesAsync(context),
+                    cancellationToken)
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            ClearServiceConfigurationContext();
+        }
+    }
+
+    private ServiceConfigurationContext CreateServiceConfigurationContext()
     {
         var context = new ServiceConfigurationContext(Services);
         Services.AddSingleton(context);
@@ -204,34 +364,25 @@ public abstract class ModularityApplicationBase : IModularityApplication
             }
         }
 
-        try
+        return context;
+    }
+
+    private void ClearServiceConfigurationContext()
+    {
+        foreach (var module in Modules)
         {
-            InvokeModulePhase(Modules, nameof(ModuleContextBase.AheadConfigureServices), module => module.Instance.AheadConfigureServices(context));
-
-            InvokeModulePhase(
-                Modules,
-                nameof(ModuleContextBase.ConfigureServices),
-                module =>
-                {
-                    if (module.Instance is ModuleContextBase { AutomaticRegisterService: true })
-                    {
-                        Services.AddAssembly(module.Type.Assembly);
-                    }
-
-                    module.Instance.ConfigureServices(context);
-                });
-
-            InvokeModulePhase(Modules, nameof(ModuleContextBase.AfterConfigureServices), module => module.Instance.AfterConfigureServices(context));
-        }
-        finally
-        {
-            foreach (var module in Modules)
+            if (module.Instance is ModuleContextBase moduleContext)
             {
-                if (module.Instance is ModuleContextBase moduleContext)
-                {
-                    moduleContext.ConfigurationContext = null!;
-                }
+                moduleContext.ConfigurationContext = null!;
             }
+        }
+    }
+
+    private void RegisterAssemblies(IModuleDescriptor module)
+    {
+        if (module.Instance is ModuleContextBase { AutomaticRegisterService: true })
+        {
+            Services.AddAssembly(module.Type.Assembly);
         }
     }
 
@@ -242,6 +393,29 @@ public abstract class ModularityApplicationBase : IModularityApplication
             try
             {
                 action(module);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    string.Format(Resources.IDS_MODULE_LIFECYCLE_PHASE_FAILED, phase, module.Type.AssemblyQualifiedName),
+                    exception);
+            }
+        }
+    }
+
+    private static async Task InvokeModulePhaseAsync(IEnumerable<IModuleDescriptor> modules, string phase, Func<IModuleDescriptor, Task> action, CancellationToken cancellationToken)
+    {
+        foreach (var module in modules)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            try
+            {
+                await action(module).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception exception)
             {

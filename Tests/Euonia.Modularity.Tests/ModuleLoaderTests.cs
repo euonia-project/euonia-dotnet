@@ -66,4 +66,22 @@ public class ModuleLoaderTests
 
         Assert.Equal(1, services.Count(descriptor => descriptor.ServiceType == typeof(IExportedScopedService)));
     }
+
+    [Fact]
+    public void ModuleSources_ShouldLoadAdditionalModules()
+    {
+        var services = new ServiceCollection();
+
+        var application = ApplicationFactory.Create<StartupModule>(
+            services,
+            null,
+            options => options.AddModuleSource(typeof(PluginModule), typeof(PluginWithStartupDependencyModule)));
+
+        Assert.True(application.IsModuleLoaded<PluginModule>());
+        Assert.True(application.IsModuleLoaded<PluginWithStartupDependencyModule>());
+
+        var startupIndex = application.Modules.ToList().FindIndex(module => module.Type == typeof(StartupModule));
+        var pluginIndex = application.Modules.ToList().FindIndex(module => module.Type == typeof(PluginWithStartupDependencyModule));
+        Assert.True(pluginIndex > startupIndex);
+    }
 }

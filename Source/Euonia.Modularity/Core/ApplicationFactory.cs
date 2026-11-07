@@ -55,4 +55,56 @@ public static class ApplicationFactory
 
         return new ApplicationWithServiceProvider(startupModuleType, services, configuration, optionsAction);
     }
+
+    /// <summary>
+    /// 异步创建 <see cref="IApplicationWithServiceProvider"/> 的新实例。
+    /// </summary>
+    /// <typeparam name="TStartupModule">启动模块类型，应用程序从该类型开始解析模块依赖关系。</typeparam>
+    /// <param name="services">服务集合，应用程序及其各模块的服务将注册到该集合中。</param>
+    /// <param name="configuration">应用程序配置；可为 <see langword="null"/>，此时将按创建选项构建配置。</param>
+    /// <param name="optionsAction">用于自定义 <see cref="ApplicationCreationOptions"/> 的委托；为 <see langword="null"/> 时使用默认选项。</param>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>已完成异步服务配置的应用程序实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="services"/> 为 <see langword="null"/> 时抛出。</exception>
+    /// <exception cref="ArgumentException">当 <typeparamref name="TStartupModule"/> 不是有效的模块类型时抛出。</exception>
+    public static Task<IApplicationWithServiceProvider> CreateAsync<TStartupModule>(IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction = null, CancellationToken cancellationToken = default)
+        where TStartupModule : IModuleContext
+    {
+        return CreateAsync(typeof(TStartupModule), services, configuration, optionsAction, cancellationToken);
+    }
+
+    /// <summary>
+    /// 使用默认配置异步创建 <see cref="IApplicationWithServiceProvider"/> 的新实例。
+    /// </summary>
+    /// <typeparam name="TStartupModule">启动模块类型，应用程序从该类型开始解析模块依赖关系。</typeparam>
+    /// <param name="services">服务集合，应用程序及其各模块的服务将注册到该集合中。</param>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>已完成异步服务配置的应用程序实例。</returns>
+    public static Task<IApplicationWithServiceProvider> CreateAsync<TStartupModule>(IServiceCollection services, CancellationToken cancellationToken = default)
+        where TStartupModule : IModuleContext
+    {
+        return CreateAsync(typeof(TStartupModule), services, null, null, cancellationToken);
+    }
+
+    /// <summary>
+    /// 异步创建 <see cref="IApplicationWithServiceProvider"/> 的新实例。
+    /// </summary>
+    /// <param name="startupModuleType">启动模块类型，应用程序从该类型开始解析模块依赖关系。</param>
+    /// <param name="services">服务集合，应用程序及其各模块的服务将注册到该集合中。</param>
+    /// <param name="configuration">应用程序配置；可为 <see langword="null"/>，此时将按创建选项构建配置。</param>
+    /// <param name="optionsAction">用于自定义 <see cref="ApplicationCreationOptions"/> 的委托；为 <see langword="null"/> 时使用默认选项。</param>
+    /// <param name="cancellationToken">用于取消操作的令牌。</param>
+    /// <returns>已完成异步服务配置的应用程序实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="startupModuleType"/> 或 <paramref name="services"/> 为 <see langword="null"/> 时抛出。</exception>
+    /// <exception cref="ArgumentException">当 <paramref name="startupModuleType"/> 不是有效的模块类型时抛出。</exception>
+    public static async Task<IApplicationWithServiceProvider> CreateAsync(Type startupModuleType, IServiceCollection services, IConfiguration? configuration, Action<ApplicationCreationOptions>? optionsAction = null, CancellationToken cancellationToken = default)
+    {
+        Check.EnsureNotNull(startupModuleType, nameof(startupModuleType));
+        Check.EnsureNotNull(services, nameof(services));
+
+        var application = new ApplicationWithServiceProvider(startupModuleType, services, configuration, optionsAction, false);
+        await application.ConfigureServicesAsync(cancellationToken).ConfigureAwait(false);
+
+        return application;
+    }
 }
