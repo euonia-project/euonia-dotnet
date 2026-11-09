@@ -77,7 +77,7 @@ public sealed class AsyncLazy<T>
     /// <param name="flags">影响异步延迟语义的标志。</param>
     public AsyncLazy(Func<Task<T>> factory, AsyncLazyFlags flags = AsyncLazyFlags.None)
     {
-		ArgumentAssert.ThrowIfNull(factory);
+		ArgumentNullException.ThrowIfNull(factory);
 
         _factory = factory;
         if ((flags & AsyncLazyFlags.RetryOnFailure) == AsyncLazyFlags.RetryOnFailure)

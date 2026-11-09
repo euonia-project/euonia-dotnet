@@ -8,10 +8,6 @@
 		<PackageTags>euonia, security, authorization, permission, row-level, data-scope, policy</PackageTags>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-		<LangVersion>latest</LangVersion>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<!-- DI.Abstractions：AddPermission 这一注册入口所需。 -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />

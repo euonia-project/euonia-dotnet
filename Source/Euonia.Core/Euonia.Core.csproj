@@ -4,22 +4,11 @@
     <Import Project="..\resource.props" />
 
     <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
         <RootNamespace>Nerosoft.Euonia.Core</RootNamespace>
         <Description>Euonia 核心基础库：提供基类、对象标识（Snowflake、ULID、ObjectId、ShortUniqueId）、集合、反射工具、异步协调原语、可释放模式、安全原语与常用扩展。 / Core foundation for Euonia: base classes, object identifiers (Snowflake, ULID, ObjectId, ShortUniqueId), collections, reflection helpers, async coordination primitives, disposable patterns, security primitives and common extensions.</Description>
         <PackageTags>euonia, core, foundation, objectid, snowflake, ulid, collections, reflection, async, threading, extensions</PackageTags>
     </PropertyGroup>
 
-    <PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-        <LangVersion>latest</LangVersion>
-    </PropertyGroup>
-
-    <ItemGroup Condition="$(TargetFramework.Contains('netstandard'))">
-        <PackageReference Include="System.Collections.Immutable" />
-        <PackageReference Include="System.Runtime.Loader" />
-        <PackageReference Include="System.ComponentModel.Annotations" />
-    </ItemGroup>
-    
     <ItemGroup>
         <Compile Update="Properties\Resources.Designer.cs">
             <DesignTime>True</DesignTime>

@@ -4,7 +4,7 @@ Euonia 缓存的 `System.Runtime.Caching` 提供程序：把 `MemoryCache` 封�
 
 System.Runtime.Caching provider for Euonia Caching: wraps `MemoryCache` as a cache handle for scenarios that rely on the `System.Runtime.Caching` configuration model (memory limits, polling interval).
 
-- **目标框架**：`netstandard2.1`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.Caching.Runtime`
 - **NuGet 包**：`Euonia.Caching.Runtime`
 

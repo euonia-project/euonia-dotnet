@@ -2,7 +2,7 @@
 
 Euonia.Core 是 Euonia 框架的基础库，提供一组必备的、与具体框架解耦的通用构建模块——集合、反射辅助、扩展方法、异步线程原语、释放工具、异常类型与常用工具类——这些模块被 Euonia 下其他所有包复用。
 
-- **目标框架**：`netstandard2.1`、`net7.0`、`net8.0`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.*`（部分工具按惯例直接放入 `System` / 全局命名空间）
 - **开源**：依据仓库内 `LICENSE` 许可发布
 
@@ -70,15 +70,6 @@ if (result.IsValid)
 }
 ```
 
-### `ArgumentAssert`
-
-参数空引用断言：
-
-```csharp
-ArgumentAssert.ThrowIfNull(configuration, nameof(configuration));
-ArgumentAssert.For<string>.ThrowIfNull(name);   // 泛型特化版本
-```
-
 ### `ExceptionAssert`
 
 按条件抛出指定类型异常：
@@ -116,7 +107,7 @@ string value = maybe.GetOrThrow<InvalidOperationException>(
 
 见上文 `Check` 一节。另外还有：
 
-### `CheckResult<TValue>`、`ArgumentAssert`、`ExceptionAssert`、`Invariant`
+### `CheckResult<TValue>`、`ExceptionAssert`、`Invariant`
 
 均已包含在使用示例中，此处从略。
 

@@ -19,7 +19,7 @@ public static class Reflect
 	/// <exception cref="ArgumentException">当表达式不是 <see cref="MemberExpression"/>、或不表示属性、或属性为静态时抛出。</exception>
 	public static PropertyInfo GetProperty<T>(Expression<Func<T>> expression)
 	{
-		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
+		ArgumentNullException.ThrowIfNull(expression, nameof(expression));
 
 		if (expression.Body is not MemberExpression memberExpression)
 		{
@@ -57,7 +57,7 @@ public static class Reflect
 	/// <exception cref="ArgumentException">当表达式不引用属性时抛出。</exception>
 	public static PropertyInfo GetProperty<T, TResult>(Expression<Func<T, TResult>> expression)
 	{
-		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
+		ArgumentNullException.ThrowIfNull(expression, nameof(expression));
 
 		var result = expression.Body switch
 		{
@@ -735,7 +735,7 @@ public static class Reflect<TTarget>
 	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 null。</exception>
 	public static void SetValue<TValue>(TTarget item, TValue value, Expression<Func<TTarget, TValue>> property)
 	{
-		ArgumentAssert.ThrowIfNull(property, nameof(property));
+		ArgumentNullException.ThrowIfNull(property, nameof(property));
 
 		var propertyInfo = GetProperty(property);
 

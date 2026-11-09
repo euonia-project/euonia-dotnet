@@ -2,7 +2,7 @@
 
 Euonia.Core is the foundation library of the Euonia framework. It provides a set of essential, framework-agnostic building blocks—collections, reflection helpers, extension methods, threading abstractions, disposal primitives, exception types, and common utilities—that are reused across all other Euonia packages.
 
-- **Target frameworks**: `netstandard2.1`, `net7.0`, `net8.0`, `net9.0`, `net10.0`
+- **Target frameworks**: `net9.0`, `net10.0`
 - **Root namespaces**: `Nerosoft.Euonia.*` (some utilities intentionally live in the global `System` namespace)
 - **Open source**: licensed under the `LICENSE` in this repository
 
@@ -72,15 +72,6 @@ if (result.IsValid)
 {
     int value = result;                             // implicit conversion to TValue
 }
-```
-
-### `ArgumentAssert`
-
-Null-argument assertions that throw `ArgumentNullException`:
-
-```csharp
-ArgumentAssert.ThrowIfNull(configuration, nameof(configuration));
-ArgumentAssert.For<string>.ThrowIfNull(name);       // generic specialization
 ```
 
 ### `ExceptionAssert`

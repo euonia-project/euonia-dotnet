@@ -52,7 +52,7 @@ public class AsyncRequestMessage<T>
 	/// <exception cref="InvalidOperationException">当 <see cref="Response"/> 已被设置时引发。</exception>
 	public void Reply(Task<T> response)
 	{
-		ArgumentAssert.ThrowIfNull(response);
+		ArgumentNullException.ThrowIfNull(response);
 
 		if (HasReceivedResponse)
 		{

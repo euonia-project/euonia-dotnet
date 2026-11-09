@@ -20,12 +20,7 @@ public partial class Cryptography
 		/// <returns>小写十六进制的 MD5 摘要。</returns>
 		public static string Encrypt(string value)
 		{
-#if NETSTANDARD2_1
-			using var md5 = System.Security.Cryptography.MD5.Create();
-			var bytes = md5.ComputeHash(Encoding.Default.GetBytes(value));
-#elif NET6_0_OR_GREATER
 			var bytes = System.Security.Cryptography.MD5.HashData(Encoding.Default.GetBytes(value));
-#endif
 			var builder = new StringBuilder();
 			foreach (var @byte in bytes)
 			{

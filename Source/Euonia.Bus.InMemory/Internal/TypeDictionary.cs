@@ -91,11 +91,7 @@ internal class TypeDictionary<TKey, TValue> : ITypeDictionary<TKey, TValue>
 
 		if (count > 0)
 		{
-#if NETSTANDARD2_0_OR_GREATER
-            Array.Clear(_buckets!, 0, _buckets!.Length);
-#else
 			Array.Clear(_buckets!);
-#endif
 
 			_count = 0;
 			_freeList = -1;

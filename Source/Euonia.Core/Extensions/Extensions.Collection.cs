@@ -26,7 +26,7 @@ public static partial class Extensions
 			throw new ArgumentNullException(nameof(source));
 		}
 
-		ArgumentAssert.ThrowIfNull(action, nameof(action));
+		ArgumentNullException.ThrowIfNull(action, nameof(action));
 
 		foreach (var value in source)
 		{
@@ -93,7 +93,7 @@ public static partial class Extensions
 			throw new ArgumentNullException(nameof(source));
 		}
 
-		ArgumentAssert.ThrowIfNull(dest, nameof(dest));
+		ArgumentNullException.ThrowIfNull(dest, nameof(dest));
 
 		var sourceList = source.ToList();
 		var destList = dest.ToList();

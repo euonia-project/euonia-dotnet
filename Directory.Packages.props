@@ -104,8 +104,6 @@
         <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="[$(EntityFrameworkCoreVersionCurrent),$(EntityFrameworkCoreVersionNext))" />
     </ItemGroup>
     <!-- Microsoft.AspNetCore -->
-    <ItemGroup Condition="$(TargetFramework.Contains('netstandard'))">
-    </ItemGroup>
     <ItemGroup Condition="'$(TargetFramework)'=='net9.0'">
         <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="[$(AspNetCoreVersionPrevious),$(AspNetCoreVersionCurrent))" />
         <PackageVersion Include="Microsoft.AspNetCore.Connections.Abstractions" Version="[$(AspNetCoreVersionPrevious),$(AspNetCoreVersionCurrent))" />

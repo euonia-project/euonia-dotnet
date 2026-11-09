@@ -48,8 +48,7 @@ internal class CacheItem<TKey, TResult> where TKey : notnull
         // 与 TryGet 保持一致：token 失效的条目视为不存在，必须重新获取。
         if (_entries.TryGetValue(key, out var stale) && !stale.Tokens.All(t => t.IsCurrent))
         {
-            // netstandard2.1 没有 TryRemove(KeyValuePair)；ICollection.Remove 提供原子的“值相同才删除”。
-            ((ICollection<KeyValuePair<TKey, CacheEntry>>)_entries).Remove(new KeyValuePair<TKey, CacheEntry>(key, stale));
+            _entries.TryRemove(new KeyValuePair<TKey, CacheEntry>(key, stale));
         }
 
         var entry = _entries.GetOrAdd(key, _ =>

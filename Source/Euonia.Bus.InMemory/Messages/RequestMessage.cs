@@ -57,7 +57,7 @@ public class RequestMessage<T>
 	/// <exception cref="InvalidOperationException">当 <see cref="HasReceivedResponse"/> 为 <see langword="false"/> 时引发。</exception>
 	public static implicit operator T(RequestMessage<T> message)
 	{
-		ArgumentAssert.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(message);
 
 		return message.Response;
 	}

@@ -4,7 +4,7 @@ Euonia 的多级缓存框架：以缓存句柄（cache handle）分层组织内�
 
 Multi-level caching framework for Euonia: layered cache handles for in-process and distributed caches, orchestrated by `ICacheManager<T>`, with backplane synchronization, expiration policies and fluent configuration.
 
-- **目标框架**：`netstandard2.1`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.Caching`
 - **NuGet 包**：`Euonia.Caching`
 

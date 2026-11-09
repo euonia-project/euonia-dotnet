@@ -23,15 +23,7 @@ public partial class Cryptography
 		{
 			var bytes = Encoding.UTF8.GetBytes(source);
 
-#if NETSTANDARD2_1
-			byte[] output;
-			using (var sha = SHA256.Create())
-			{
-				output = sha.ComputeHash(bytes);
-			}
-#else
 			var output = SHA256.HashData(bytes);
-#endif
 			return Convert.ToBase64String(output);
 		}
 	}

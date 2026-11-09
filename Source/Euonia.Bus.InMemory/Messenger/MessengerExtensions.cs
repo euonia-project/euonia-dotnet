@@ -65,8 +65,8 @@ public static partial class MessengerExtensions
 	public static bool IsRegistered<TMessage>(this IMessenger messenger, object recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		return messenger.IsRegistered<TMessage, Unit>(recipient, default);
 	}
@@ -83,8 +83,8 @@ public static partial class MessengerExtensions
 	public static void Register<TMessage>(this IMessenger messenger, IRecipient<TMessage> recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		if (messenger is WeakReferenceMessenger weakReferenceMessenger)
 		{
@@ -115,9 +115,9 @@ public static partial class MessengerExtensions
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		if (messenger is WeakReferenceMessenger weakReferenceMessenger)
 		{
@@ -146,9 +146,9 @@ public static partial class MessengerExtensions
 	public static void Register<TMessage>(this IMessenger messenger, object recipient, MessageHandler<object, TMessage> handler)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, default(Unit), handler);
 	}
@@ -168,9 +168,9 @@ public static partial class MessengerExtensions
 		where TRecipient : class
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, default(Unit), handler);
 	}
@@ -190,10 +190,10 @@ public static partial class MessengerExtensions
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, token, handler);
 	}
@@ -212,8 +212,8 @@ public static partial class MessengerExtensions
 	public static void Unregister<TMessage>(this IMessenger messenger, object recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		messenger.Unregister<TMessage, Unit>(recipient, default);
 	}
@@ -232,7 +232,7 @@ public static partial class MessengerExtensions
 	public static TMessage Send<TMessage>(this IMessenger messenger)
 		where TMessage : class, new()
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(messenger);
 
 		return messenger.Send(new TMessage(), default(Unit));
 	}
@@ -248,8 +248,8 @@ public static partial class MessengerExtensions
 	public static TMessage Send<TMessage>(this IMessenger messenger, TMessage message)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(message);
 
 		return messenger.Send(message, default(Unit));
 	}
@@ -271,8 +271,8 @@ public static partial class MessengerExtensions
 		where TMessage : class, new()
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(token);
 
 		return messenger.Send(new TMessage(), token);
 	}

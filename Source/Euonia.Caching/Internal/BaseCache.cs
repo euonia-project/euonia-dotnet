@@ -445,14 +445,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <exception cref="ObjectDisposedException">如果实例已释放。</exception>
 	protected void CheckDisposed()
 	{
-		#if NET8_0_OR_GREATER
 		ObjectDisposedException.ThrowIf(Disposed, this);
-		#else
-		if(Disposed)
-		{
-			throw new ObjectDisposedException(GetType().FullName);
-		}
-		#endif
 	}
 
 	/// <summary>

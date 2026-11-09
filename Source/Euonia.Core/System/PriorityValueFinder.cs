@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 namespace System;
 
 /// <summary>
@@ -103,4 +102,3 @@ public static class PriorityValueFinder
         return value;
     }
 }
-#endif

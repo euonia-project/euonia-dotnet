@@ -84,8 +84,8 @@ public sealed class WeakReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		lock (_recipientsMap)
 		{
@@ -117,9 +117,9 @@ public sealed class WeakReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		Register<TMessage, TToken>(recipient, token, new MessageHandlerDispatcher.For<TRecipient, TMessage>(handler));
 	}
@@ -196,7 +196,7 @@ public sealed class WeakReferenceMessenger : IMessenger
 	/// <inheritdoc/>
 	public void UnregisterAll(object recipient)
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		lock (_recipientsMap)
 		{
@@ -215,8 +215,8 @@ public sealed class WeakReferenceMessenger : IMessenger
 	public void UnregisterAll<TToken>(object recipient, TToken token)
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		// 此方法从不会在 unit 类型下被调用。更多细节请参见
 		// StrongReferenceMessenger 中对应方法内的注释。
@@ -249,8 +249,8 @@ public sealed class WeakReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		lock (_recipientsMap)
 		{
@@ -277,8 +277,8 @@ public sealed class WeakReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(message);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(token);
 
 		ArrayPoolBufferWriter<object> bufferWriter;
 		var i = 0;

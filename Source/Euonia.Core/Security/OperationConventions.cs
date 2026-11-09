@@ -41,8 +41,7 @@ public static class OperationConventions
 	/// </remarks>
 	public static string[] Names(Type attributeType, string? prefix = null)
 	{
-		// netstandard2.1 没有 ArgumentNullException.ThrowIfNull
-		ArgumentAssert.ThrowIfNull(attributeType, nameof(attributeType));
+		ArgumentNullException.ThrowIfNull(attributeType, nameof(attributeType));
 
 		return _cache.GetOrAdd((attributeType, prefix ?? string.Empty), static key =>
 		{

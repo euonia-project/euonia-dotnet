@@ -71,7 +71,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="value"/> 为 <see langword="null"/> 时抛出。</exception>
     public static Optional<T> Of(T value)
     {
-        ArgumentAssert.ThrowIfNull(value!);
+        ArgumentNullException.ThrowIfNull(value!);
         return new Optional<T>(value);
     }
 
@@ -93,7 +93,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="predicate"/> 为 <see langword="null"/> 时抛出。</exception>
     public Optional<T> Where(Func<T, bool> predicate)
     {
-        ArgumentAssert.ThrowIfNull(predicate);
+        ArgumentNullException.ThrowIfNull(predicate);
         if (!_hasValue)
         {
             return this;
@@ -112,7 +112,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="selector"/> 为 <see langword="null"/> 时抛出。</exception>
     public Optional<TResult> Select<TResult>(Func<T, TResult> selector)
     {
-        ArgumentAssert.ThrowIfNull(selector);
+        ArgumentNullException.ThrowIfNull(selector);
         if (!_hasValue)
         {
             return Optional<TResult>.Empty;
@@ -131,7 +131,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="selector"/> 为 <see langword="null"/> 时抛出。</exception>
     public Optional<TResult> SelectMany<TResult>(Func<T, Optional<TResult>> selector)
     {
-        ArgumentAssert.ThrowIfNull(selector);
+        ArgumentNullException.ThrowIfNull(selector);
         if (!_hasValue)
         {
             return Optional<TResult>.Empty;
@@ -158,7 +158,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="supplier"/> 为 <see langword="null"/> 时抛出。</exception>
     public T Or(Func<T> supplier)
     {
-        ArgumentAssert.ThrowIfNull(supplier);
+        ArgumentNullException.ThrowIfNull(supplier);
         return _hasValue ? _value : supplier();
     }
 
@@ -186,7 +186,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="exceptionSupplier"/> 为 <see langword="null"/> 时抛出。</exception>
     public T GetOrThrow<TException>(Func<TException> exceptionSupplier) where TException : Exception
     {
-        ArgumentAssert.ThrowIfNull(exceptionSupplier);
+        ArgumentNullException.ThrowIfNull(exceptionSupplier);
         if (!_hasValue)
         {
             throw exceptionSupplier();
@@ -202,7 +202,7 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="action"/> 为 <see langword="null"/> 时抛出。</exception>
     public void IfPresent(Action<T> action)
     {
-        ArgumentAssert.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(action);
         if (_hasValue)
         {
             action(_value);
@@ -218,8 +218,8 @@ public sealed class Optional<T>
     /// <exception cref="ArgumentNullException"><paramref name="emptyAction"/> 为 <see langword="null"/> 时抛出。</exception>
     public void IfPresent(Action<T> action, Action emptyAction)
     {
-        ArgumentAssert.ThrowIfNull(action);
-        ArgumentAssert.ThrowIfNull(emptyAction);
+        ArgumentNullException.ThrowIfNull(action);
+        ArgumentNullException.ThrowIfNull(emptyAction);
         if (_hasValue)
         {
             action(_value);

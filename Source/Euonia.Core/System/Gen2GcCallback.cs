@@ -41,16 +41,6 @@ public sealed class Gen2GcCallback : CriticalFinalizerObject
 	/// <param name="target">作为参数传递给 <paramref name="callback"/> 的目标对象。</param>
 	public static void Register(Action<object> callback, object target)
 	{
-#if NETSTANDARD2_0
-        if (RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework"))
-        {
-            // 在 .NET Framework 上使用 GC 回调会导致应用程序域卸载问题，
-            // 因此如果检测到该运行时，则不注册回调并忽略。
-            // 如果希望在 .NET Framework 上使用，用户将需要手动清理 messenger。
-            return;
-        }
-#endif
-
 		_ = new Gen2GcCallback(callback, target);
 	}
 

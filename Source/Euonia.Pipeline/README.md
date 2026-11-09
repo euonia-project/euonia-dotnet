@@ -4,7 +4,7 @@
 
 ASP.NET Core-inspired typed middleware pipeline for Euonia: compose `IPipelineBehavior<TRequest, TResponse>` behaviors with delegates, typed behaviors, priorities and dependency injection.
 
-- **目标框架**：`netstandard2.1`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.Pipeline`
 - **NuGet 包**：`Euonia.Pipeline`
 

@@ -34,10 +34,8 @@ public static partial class Extensions
 		typeof(DateTimeOffset),
 		typeof(TimeSpan),
 		typeof(Guid),
-#if NET5_0_OR_GREATER
 		typeof(DateOnly),
 		typeof(TimeOnly),
-#endif
 	};
 
 	/// <summary>

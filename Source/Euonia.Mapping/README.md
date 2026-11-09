@@ -4,7 +4,7 @@ Euonia 的对象映射抽象：以 `ITypeAdapter` / `ITypeAdapterFactory` 定义
 
 Object mapping abstractions for Euonia: projection contracts defined by `ITypeAdapter` / `ITypeAdapterFactory`, with `TypeAdapter` and extension methods providing a library-agnostic entry point. Concrete implementations are supplied by the AutoMapper and Mapster packages.
 
-- **目标框架**：`netstandard2.1`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.Mapping`
 - **NuGet 包**：`Euonia.Mapping`
 

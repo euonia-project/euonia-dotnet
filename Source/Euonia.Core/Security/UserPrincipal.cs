@@ -49,15 +49,11 @@ public class UserPrincipal
 				"Jwt" or "Bearer" or "JwtBearer" => Claims.FindFirst(UserClaimTypes.Subject)?.Value,
 				// 对于 Windows、Cookie 身份验证，优先使用 NameIdentifier 声明
 				"Windows" or "Cookies" or "Cookie"  => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-#if NET8_0_OR_GREATER
 				_ => PriorityValueFinder.Find<string?>(queue =>
 				{
 					queue.Enqueue(() => Claims.FindFirst(UserClaimTypes.Subject)?.Value, 1);
 					queue.Enqueue(() => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value, 2);
 				}, value => !string.IsNullOrEmpty(value))
-#else
-				_ => (Claims.FindFirst(UserClaimTypes.Subject) ?? Claims.FindFirst(ClaimTypes.NameIdentifier))?.Value
-#endif
 			};
 		}
 	}
@@ -79,15 +75,11 @@ public class UserPrincipal
 				"Jwt" or "Bearer" or "JwtBearer" => Claims?.FindFirst(UserClaimTypes.Name)?.Value,
 				// 对于 Windows、Cookie 身份验证，优先使用 Name 声明
 				"Windows" or "Cookies" or "Cookie" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
-#if NET8_0_OR_GREATER
 				_ => PriorityValueFinder.Find<string?>(queue =>
 				{
 					queue.Enqueue(() => Claims.FindFirst(UserClaimTypes.Name)?.Value, 1);
 					queue.Enqueue(() => Claims.FindFirst(ClaimTypes.Name)?.Value, 2);
 				}, value => !string.IsNullOrEmpty(value))
-#else
-				_ => (Claims.FindFirst(UserClaimTypes.Name) ?? Claims.FindFirst(ClaimTypes.Name))?.Value
-#endif
 			};
 		}
 	}
@@ -184,11 +176,7 @@ public class UserPrincipal
 	/// <returns>如果用户已通过身份验证且至少属于一个解析出的角色，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool IsInRoles(string role, string separator = ",")
 	{
-#if NET5_0_OR_GREATER
 		ArgumentNullException.ThrowIfNull(role);
-#else
-		ArgumentAssert.ThrowIfNull(role, nameof(role));
-#endif
 
 		var roles = role.Split(separator, StringSplitOptions.RemoveEmptyEntries)
 		                .Select(t => t.Trim())

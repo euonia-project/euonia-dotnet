@@ -4,7 +4,7 @@ Euonia 的 LINQ 工具库：规约模式（Specification）、谓词与表达式
 
 LINQ utilities for Euonia: the specification pattern, predicate and expression builders, and `IQueryable` extensions for filtering, pagination and ordering. Query criteria can be modeled as composable, reusable objects.
 
-- **目标框架**：`netstandard2.1`、`net9.0`、`net10.0`
+- **目标框架**：`net9.0`、`net10.0`
 - **根命名空间**：`Nerosoft.Euonia.Linq`
 - **NuGet 包**：`Euonia.Linq`
 

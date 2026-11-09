@@ -382,24 +382,15 @@ public sealed class ShortUniqueId
 		var halfLength = _alphabet.Length / 2;
 
 		var stringBuilder = _stringBuilderPool.Get();
-#if NETSTANDARD2_0
-            stringBuilder.Append(result.Slice(0, hashLength).ToArray());
-#else
 		stringBuilder.Append(result[..hashLength]);
-#endif
 
 		while (stringBuilder.Length < _minHashLength)
 		{
 			alphabet.CopyTo(shuffleBuffer);
 			ConsistentShuffle(alphabet, shuffleBuffer);
 
-#if NETSTANDARD2_0
-                stringBuilder.Insert(0, alphabet.Slice(halfLength, _alphabet.Length - halfLength).ToArray());
-                stringBuilder.Append(alphabet.Slice(0, halfLength).ToArray());
-#else
 			stringBuilder.Insert(0, alphabet[halfLength.._alphabet.Length]);
 			stringBuilder.Append(alphabet[..halfLength]);
-#endif
 
 			var excess = stringBuilder.Length - _minHashLength;
 			if (excess > 0)
@@ -411,12 +402,7 @@ public sealed class ShortUniqueId
 
 		hashLength = stringBuilder.Length;
 
-#if NETSTANDARD2_0
-            for (var i = 0; i < stringBuilder.Length; i++)
-                result[i] = stringBuilder[i];
-#else
 		stringBuilder.CopyTo(0, result, stringBuilder.Length);
-#endif
 
 		_stringBuilderPool.Return(stringBuilder);
 
@@ -498,13 +484,8 @@ public sealed class ShortUniqueId
 			alphabet.CopyTo(shuffleBuffer);
 			ConsistentShuffle(alphabet, shuffleBuffer);
 
-#if NETSTANDARD2_0
-                stringBuilder.Insert(0, alphabet.Slice(halfLength, _alphabet.Length - halfLength).ToArray());
-                stringBuilder.Append(alphabet.Slice(0, halfLength).ToArray());
-#else
 			stringBuilder.Insert(0, alphabet[halfLength.._alphabet.Length]);
 			stringBuilder.Append(alphabet[..halfLength]);
-#endif
 
 			var excess = stringBuilder.Length - _minHashLength;
 			if (excess > 0)
@@ -516,12 +497,7 @@ public sealed class ShortUniqueId
 
 		var resultLength = stringBuilder.Length;
 
-#if NETSTANDARD2_0
-            for (var i = 0; i < stringBuilder.Length; i++)
-                result[i] = stringBuilder[i];
-#else
 		stringBuilder.CopyTo(0, result, stringBuilder.Length);
-#endif
 
 		_stringBuilderPool.Return(stringBuilder);
 		return resultLength;

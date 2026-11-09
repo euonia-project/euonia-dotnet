@@ -9,6 +9,7 @@
 
 ### 全库
 
+- **目标框架**：移除 `netstandard2.1` 支持，所有项目仅面向 `net9.0` / `net10.0`；删除相关条件编译分支、仅 netstandard 使用的包引用与 `ArgumentAssert` 兼容 polyfill（改用 `ArgumentNullException.ThrowIfNull`）。
 - **可空引用类型**：所有项目（含测试与示例）启用 `<Nullable>enable</Nullable>`，公开 API 补充可空性标注。
 - **消息信封契约**：`IMessageEnvelope` / `IMessageContext` 的 `RequestTraceId`、`Authorization` 改为 `string?`，
   `User` 改为可空；请求作用域外或外部消息未携带时确实为 `null`，不再用 `null!` 掩盖。

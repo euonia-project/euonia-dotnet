@@ -1,4 +1,3 @@
-#if NET5_0_OR_GREATER
 using System.Collections.Concurrent;
 using System.Runtime.Loader;
 
@@ -90,4 +89,3 @@ public static class AssemblyLoadContextManager
         }
     }
 }
-#endif

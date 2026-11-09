@@ -15,7 +15,7 @@ partial class MessengerExtensions
 	public static IObservable<TMessage> CreateObservable<TMessage>(this IMessenger messenger)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(messenger);
 
 		return new Observable<TMessage>(messenger);
 	}
@@ -33,8 +33,8 @@ partial class MessengerExtensions
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(token);
 
 		return new Observable<TMessage, TToken>(messenger, token);
 	}

@@ -66,7 +66,7 @@ public class AsyncCollectionRequestMessage<T> : IAsyncEnumerable<T>
 	/// <exception cref="System.ArgumentNullException">当 <paramref name="response"/> 为 <see langword="null"/> 时引发。</exception>
 	public void Reply(Task<T> response)
 	{
-		ArgumentAssert.ThrowIfNull(response);
+		ArgumentNullException.ThrowIfNull(response);
 
 		_responses.Add((response, null));
 	}
@@ -78,7 +78,7 @@ public class AsyncCollectionRequestMessage<T> : IAsyncEnumerable<T>
 	/// <exception cref="System.ArgumentNullException">当 <paramref name="response"/> 为 <see langword="null"/> 时引发。</exception>
 	public void Reply(Func<CancellationToken, Task<T>> response)
 	{
-		ArgumentAssert.ThrowIfNull(response);
+		ArgumentNullException.ThrowIfNull(response);
 
 		_responses.Add((null, response));
 	}
