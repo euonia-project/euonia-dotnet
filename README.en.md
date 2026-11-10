@@ -33,37 +33,90 @@ Euonia follows a layered design: the lower layers are capability packages that h
 
 ```mermaid
 flowchart LR
-    Core[Euonia.Core]
-    Core --> Modularity[Euonia.Modularity]
-    Core --> Pipeline[Euonia.Pipeline]
-    Core --> Linq[Euonia.Linq]
-    Core --> Domain[Euonia.Domain]
-    Core --> Security[Euonia.Security]
-    Core --> Caching[Euonia.Caching]
-    Core --> Concurrency[Euonia.Concurrency]
+    subgraph F["Foundation"]
+        direction TB
+        Core(["Euonia.Core"])
+        Modularity["Euonia.Modularity"]
+        Pipeline["Euonia.Pipeline"]
+        Linq["Euonia.Linq"]
+        Mapping["Euonia.Mapping<br/>AutoMapper · Mapster"]
+        Validation["Euonia.Validation"]
+        Caching["Euonia.Caching<br/>Memory · Redis · Runtime"]
+        Concurrency["Euonia.Concurrency<br/>Redis · ZooKeeper · FileSystem · Azure"]
+    end
 
-    Modularity --> Application[Euonia.Application]
-    Modularity --> Hosting[Euonia.Hosting]
+    subgraph D["Domain & Application"]
+        direction TB
+        Domain["Euonia.Domain"]
+        Application["Euonia.Application"]
+        Uow["Euonia.Uow"]
+        Repository["Euonia.Repository<br/>EF Core · MongoDB"]
+        Osba["Euonia.Osba"]
+        Security["Euonia.Security"]
+    end
+
+    subgraph M["Messaging"]
+        direction TB
+        BusAbstract["Euonia.Bus.Abstract"]
+        Bus["Euonia.Bus"]
+        Transports["Transports<br/>InMemory · RabbitMQ · ActiveMQ<br/>HTTP · gRPC"]
+        BusHealth["Euonia.Bus.HealthChecks"]
+    end
+
+    subgraph H["Hosting & Endpoints"]
+        direction TB
+        Hosting["Euonia.Hosting"]
+        Endpoint["Euonia.Endpoint"]
+        EndpointImpl["Endpoint.Http · Endpoint.Grpc<br/>Endpoint.SourceGenerator"]
+        Quartz["Euonia.Quartz"]
+    end
+
+    Core --> Modularity
+    Core --> Pipeline
+    Core --> Linq
+    Core --> Caching
+    Core --> Concurrency
+    Core --> Domain
+    Core --> Security
+    Modularity --> Application
+    Modularity --> Hosting
+    Modularity --> Validation
     Domain --> Application
-    Domain --> Repository[Euonia.Repository]
-    Pipeline --> Bus[Euonia.Bus]
-    BusAbstract[Euonia.Bus.Abstract] --> Bus
-    Bus --> Transports["InMemory / RabbitMQ / ActiveMQ / HTTP / gRPC"]
-    Application --> Osba[Euonia.Osba]
+    Domain --> Repository
     Application --> Bus
-    Application --> Uow[Euonia.Uow]
+    Application --> Osba
+    Application --> Uow
     Uow --> Repository
-    Repository --> RepositoryEfCore[Euonia.Repository.EfCore]
-    Repository --> RepositoryMongo[Euonia.Repository.Mongo]
+    Pipeline --> Bus
+    BusAbstract --> Bus
+    Bus --> Transports
+    Bus --> BusHealth
+    Hosting --> Endpoint
+    Endpoint --> EndpointImpl
 
-    Caching --> CachingProviders["Memory / Redis / Runtime"]
-    Concurrency --> ConcurrencyProviders["Redis / ZooKeeper / FileSystem / Azure"]
-    Mapping[Euonia.Mapping] --> MappingProviders["AutoMapper / Mapster"]
-    Hosting --> Endpoint[Euonia.Endpoint]
-    Endpoint --> EndpointImpl["Endpoint.Http / Endpoint.Grpc / SourceGenerator"]
+    classDef core fill:#1F6FEB,stroke:#0B4FB3,color:#FFFFFF,stroke-width:2px
+    classDef foundation fill:#EAF2FB,stroke:#7EB3E8,color:#173A5E,stroke-width:1.5px
+    classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
+    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
+    classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
+    classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
+
+    class Core core
+    class Modularity,Pipeline,Linq,Mapping,Validation,Caching,Concurrency foundation
+    class Domain,Application,Uow,Repository,Osba,Security domain
+    class BusAbstract,Bus,BusHealth messaging
+    class Hosting,Endpoint,Quartz hosting
+    class Transports,EndpointImpl aggregate
+
+    style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
+    style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
+    style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
+    style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
+
+    linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
 
-> Arrows indicate the main dependency or composition relationships and do not cover every project reference; the complete dependency set is defined by each project's `.csproj`.
+> Dashed boxes group adapter/provider packages. Arrows indicate the main dependency or composition relationships and do not cover every project reference; the complete dependency set is defined by each project's `.csproj`.
 
 ### Design Orientation
 
