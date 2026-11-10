@@ -23,6 +23,12 @@
         <Project Path="Source/Euonia.Quartz/Euonia.Quartz.csproj" />
         <Project Path="Source/Euonia.Validation/Euonia.Validation.csproj" />
     </Folder>
+    <Folder Name="/Source/Endpoint/">
+        <Project Path="Source/Euonia.Endpoint/Euonia.Endpoint.csproj" />
+        <Project Path="Source/Euonia.Endpoint.Http/Euonia.Endpoint.Http.csproj" />
+        <Project Path="Source/Euonia.Endpoint.Grpc/Euonia.Endpoint.Grpc.csproj" />
+        <Project Path="Source/Euonia.Endpoint.SourceGenerator/Euonia.Endpoint.SourceGenerator.csproj" />
+    </Folder>
     <Folder Name="/Source/Domain/">
         <Project Path="Source/Euonia.Application/Euonia.Application.csproj" />
         <Project Path="Source/Euonia.Domain/Euonia.Domain.csproj" />

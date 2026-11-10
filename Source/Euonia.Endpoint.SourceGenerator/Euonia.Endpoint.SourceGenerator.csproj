@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\common.props" />
+    <PropertyGroup>
+        <!-- net10.0 仅用于 C# Dev Kit / 本地 IDE 体验；发布包只包含 netstandard2.0 analyzer。 -->
+        <TargetFrameworks>netstandard2.0;net10.0</TargetFrameworks>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <Nullable>enable</Nullable>
+        <LangVersion>latest</LangVersion>
+        <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+        <IsPackable>true</IsPackable>
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <NoWarn>RS2008</NoWarn>
+        <!-- Roslyn 不允许编译器扩展 target 具体 .NET 版本；net10.0 仅用于 IDE，不作为 analyzer 发布。 -->
+        <NoWarn Condition="'$(TargetFramework)' == 'net10.0'">$(NoWarn);RS1041</NoWarn>
+        <TargetsForTfmSpecificContentInPackage>$(TargetsForTfmSpecificContentInPackage);IncludeAnalyzerInPackage</TargetsForTfmSpecificContentInPackage>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" PrivateAssets="all" />
+    </ItemGroup>
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
+    </ItemGroup>
+    <Target Name="IncludeAnalyzerInPackage" Condition="'$(TargetFramework)' == 'netstandard2.0'">
+        <ItemGroup>
+            <TfmSpecificPackageFile Include="$(TargetPath)" PackagePath="analyzers/dotnet/cs" />
+        </ItemGroup>
+    </Target>
+</Project>

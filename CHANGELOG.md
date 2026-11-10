@@ -23,6 +23,35 @@
 - **异常类型**：`Lambda.GetAttribute` / `GetAttributes` 在表达式无法解析出成员时抛出 `ArgumentNullException`
   （原为 `NullReferenceException`）。
 
+### Euonia.Endpoint
+
+- **新能力族**：新增 `Euonia.Endpoint`、`Euonia.Endpoint.Http`、`Euonia.Endpoint.Grpc`、`Euonia.Endpoint.SourceGenerator`。
+- **契约特性**：`ExposeWebApiAttribute`（`Prefix` / `Route` / `Method` 字符串数组）与 `ExposeGrpcAttribute`（`Prefix` / `Route` / `GrpcMethod`）。
+- **HTTP**：运行时扫描 + Source Generator 生成强类型 Minimal API 映射；支持开关 `Euonia:Endpoint:Http:EnableExposeApplicationServiceAsWebApi`。
+- **gRPC**：基于 `protobuf-net.Grpc` 的代码优先服务，Source Generator 生成 `[Service]` 契约与适配器，支持 unary/server/client/duplex streaming；开关 `Euonia:Endpoint:Grpc:EnableExposeApplicationServiceAsGrpc`。
+- **proto 导出**：`EndpointProtoExporter` 使用 `protobuf-net.Grpc.Reflection` 生成 `.proto`；当前类型映射沿用 protobuf-net 内建 BCL schema。
+- **测试**：新增 `Euonia.Endpoint.Http.Tests` 与 `Euonia.Endpoint.Grpc.Tests`。
+- **路由冲突**：区分“生成路径已映射”和“运行时方法间冲突”；后者按 `ThrowOnRouteConflict` 抛异常或记警告。
+- **参数绑定**：空 body 的必填引用类型返回 400；绑定异常区分 400/500，Problem `detail` 不再外泄原始异常消息。
+- **Generator 对齐**：跳过 `HttpContext` / `IFormFile` / `IAsyncEnumerable` 等运行时拒绝或特殊处理的签名；按参数类型精确匹配重载；`GrpcMethod` 与流式签名不一致时报诊断并跳过。
+- **安全默认值**：HTTP 与 gRPC 的 `RequireAuthorization` 均默认 `true`。
+- **gRPC 注册**：生成适配器仅在开关开启时注册；重复 `Prefix + Route` 自动跳过。
+- **扫描范围**：HTTP 与 gRPC 均支持 `ScanAssemblies` / `ScanEntryAssembly`（HTTP 另支持 `ScanNamespaces` / `ScanTypes`）；未配置时只扫描入口程序集，不再回退到所有模块程序集。
+- **认证特性继承**：HTTP 端点元数据会合并接口方法、实现类、实现方法上的 `[Authorize]` / `[AllowAnonymous]`。
+- **生成路径 body 语义**：生成端点的空 body、JSON `null`、非法 JSON 与非 JSON Content-Type 统一返回 400，与运行时兜底一致。
+- **扫描范围一致性**：`ScanNamespaces` / `ScanTypes` 同时作用于生成路径和运行时兜底；命名空间匹配按段边界判断。
+- **gRPC 启动校验**：生成契约对应的应用服务未注册时默认在 `MapDynamicGrpcEndpoint` 抛出；新增 `ThrowOnUnregisteredService`。
+- **gRPC 认证元数据**：实现类上的 `[Authorize]` / `[AllowAnonymous]` 会合并到 gRPC 服务端点元数据。
+- **路由与类型细节**：运行时兜底支持部分动词预留（如同一路由生成 PUT、运行时补 PATCH）；`TimestampValue` 修正 1970 年之前的时间小数秒；生成参数名对 C# 关键字安全转义。
+- **SourceGenerator 工具链**：Roslyn 包升级到 5.9.0；项目目标 `netstandard2.0;net10.0`，NuGet 包只携带 `netstandard2.0` analyzer。
+- **注册/映射方法命名**：`AddEndpointWebApi` → `AddDynamicHttpEndpoint`、`MapEndpointWebApi` → `MapDynamicHttpEndpoint`、`AddEndpointGrpc` → `AddDynamicGrpcEndpoint`、`MapEndpointGrpc` → `MapDynamicGrpcEndpoint`。
+- **多实现授权**：HTTP/gRPC 仅在接口只有一个实现时合并实现类/方法认证特性；多实现时只用接口元数据，避免任一实现 `[AllowAnonymous]` 误放开端点。
+- **gRPC 插件**：明确 gRPC 仅支持编译期生成；未生成映射但包含 `[ExposeGrpc]` 的程序集在映射时记录 Warning。
+- **生成器对齐**：gRPC 跳过带默认值参数的方法；HTTP 拒绝 ref struct 参数；简单集合生成 `[FromQuery]`；运行时支持 `IReadOnlySet<T>`；`nint`/`nuint` 按简单类型处理；生成参数名规避 `__` 保留前缀。
+- **错误响应**：生成路径 body 绑定失败返回与运行时一致的 ProblemDetails；gRPC 未注册服务在跳过时记录 Warning；gRPC 程序集解析失败记录 Warning。
+- **可选集合**：缺失的可选 query 集合参数返回空集合而不是 `null`。
+- **数值与调用**：`DurationValue` 负小数改为 floor + 正 `Nanos`；反射调用生成映射时解包 `TargetInvocationException`；删除 HTTP 生成器死变量。
+
 ### Euonia.Modularity
 
 - **模块依赖图**：加载阶段新增循环依赖、模块依赖自身与非法模块类型校验，错误信息包含具体模块；模块描述符的依赖快照改为不可变列表，并按类型字典查找依赖（O(1)）。

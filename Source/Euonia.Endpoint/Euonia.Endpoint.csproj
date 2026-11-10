@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <PropertyGroup>
+        <Description>Euonia Endpoint contracts: attributes and shared data contracts for exposing services as HTTP/gRPC endpoints. / Euonia Endpoint 契约：把服务暴露为 HTTP/gRPC 端点的特性与共享数据契约。</Description>
+        <PackageTags>euonia, endpoint, webapi, grpc, contract</PackageTags>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
+    </ItemGroup>
+
+</Project>

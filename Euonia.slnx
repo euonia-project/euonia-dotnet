@@ -52,6 +52,12 @@
         <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
         <Project Path="Source/Euonia.Security/Euonia.Security.csproj" />
     </Folder>
+    <Folder Name="/Source/Endpoint/">
+        <Project Path="Source/Euonia.Endpoint/Euonia.Endpoint.csproj" />
+        <Project Path="Source/Euonia.Endpoint.Http/Euonia.Endpoint.Http.csproj" />
+        <Project Path="Source/Euonia.Endpoint.Grpc/Euonia.Endpoint.Grpc.csproj" />
+        <Project Path="Source/Euonia.Endpoint.SourceGenerator/Euonia.Endpoint.SourceGenerator.csproj" />
+    </Folder>
     <Folder Name="/Source/Domain/">
         <Project Path="Source/Euonia.Application/Euonia.Application.csproj" />
         <Project Path="Source/Euonia.Domain/Euonia.Domain.csproj" />
@@ -70,6 +76,8 @@
         <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
         <Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
         <Project Path="Tests/Euonia.Application.Tests/Euonia.Application.Tests.csproj" />
+        <Project Path="Tests/Euonia.Endpoint.Http.Tests/Euonia.Endpoint.Http.Tests.csproj" />
+        <Project Path="Tests/Euonia.Endpoint.Grpc.Tests/Euonia.Endpoint.Grpc.Tests.csproj" />
         <Project Path="Tests/Euonia.Domain.Tests/Euonia.Domain.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Tests/Euonia.Osba.Tests.csproj" />
         <Project Path="Tests/Euonia.Osba.Standalone.Tests/Euonia.Osba.Standalone.Tests.csproj" />
