@@ -2,6 +2,7 @@ using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Endpoint.Grpc;
 
@@ -12,18 +13,22 @@ public sealed class GrpcMethodAuthorizationInterceptor : Interceptor
 {
 	private readonly IReadOnlyDictionary<string, GrpcMethodAuthorizationDescriptor> _descriptors;
 	private readonly GrpcMetadataRegistry _metadataRegistry;
+	private readonly GrpcExposureOptions _options;
 
 	/// <summary>
 	/// 初始化 <see cref="GrpcMethodAuthorizationInterceptor"/> 的新实例。
 	/// </summary>
 	/// <param name="descriptors">生成代码注册的方法映射。</param>
 	/// <param name="metadataRegistry">认证元数据注册表。</param>
+	/// <param name="options">gRPC 暴露选项。</param>
 	public GrpcMethodAuthorizationInterceptor(
 		IEnumerable<GrpcMethodAuthorizationDescriptor> descriptors,
-		GrpcMetadataRegistry metadataRegistry)
+		GrpcMetadataRegistry metadataRegistry,
+		IOptions<GrpcExposureOptions> options)
 	{
 		_descriptors = descriptors.ToDictionary(item => item.MethodPath, StringComparer.Ordinal);
 		_metadataRegistry = metadataRegistry;
+		_options = options.Value;
 	}
 
 	/// <inheritdoc/>
@@ -81,13 +86,18 @@ public sealed class GrpcMethodAuthorizationInterceptor : Interceptor
 			return;
 		}
 
+		var httpContext = context.GetHttpContext();
 		var authorizeData = metadata.OfType<IAuthorizeData>().ToArray();
 		if (authorizeData.Length == 0)
 		{
+			if (_options.RequireAuthorization && httpContext.User.Identity?.IsAuthenticated != true)
+			{
+				throw new RpcException(new Status(StatusCode.PermissionDenied, "Unauthorized"));
+			}
+
 			return;
 		}
 
-		var httpContext = context.GetHttpContext();
 		var services = httpContext.RequestServices;
 		var policyProvider = services.GetRequiredService<IAuthorizationPolicyProvider>();
 		var authorizationService = services.GetRequiredService<IAuthorizationService>();

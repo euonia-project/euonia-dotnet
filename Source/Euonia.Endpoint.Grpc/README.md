@@ -95,7 +95,7 @@ app.UseEndpoints(endpoints =>
 | 选项 | 默认值 | 说明 |
 |---|---|---|
 | `EnableExposeApplicationServiceAsGrpc` | `false` | 总开关 |
-| `RequireAuthorization` | `true` | 对每个 gRPC 服务端点调用 `.RequireAuthorization()` |
+| `RequireAuthorization` | `true` | 拦截器对无显式授权特性的方法要求已认证用户 |
 | `EnableReflection` | `false` | 是否映射 gRPC reflection 服务 |
 | `ThrowOnUnregisteredService` | `true` | 生成契约对应的应用服务未注册时抛异常；`false` 时跳过 |
 | `ScanAssemblies` | 空 | 要扫描的程序集名称；配置后不再回退入口程序集 |
@@ -222,9 +222,12 @@ IAsyncEnumerable<OrderDto> ChatAsync(IAsyncEnumerable<OrderDto> request, Cancell
 
 ## 认证
 
-默认 `RequireAuthorization = true`。
+默认 `RequireAuthorization = true`，由 `GrpcMethodAuthorizationInterceptor` 在调用前执行。
 
-实现类上的 `[Authorize]` / `[AllowAnonymous]` 会合并到 gRPC 服务端点元数据；多实现时只使用接口元数据，避免任一实现误放开：
+- 无显式授权特性：要求已认证用户；
+- `[Authorize]`：按策略/角色执行；
+- `[AllowAnonymous]`：跳过授权；
+- 多实现时只使用接口元数据，避免任一实现误放开。
 
 ```csharp
 [Authorize(Roles = "admin")]
@@ -282,7 +285,6 @@ builder.Services.AddDynamicGrpcEndpoint(
 
 ## 限制
 
-- 方法级 gRPC 授权尚未实现；
 - 未注册服务默认在映射阶段失败，适合快速暴露配置错误；
 - 共享契约类型尚未接入自动 wire-DTO 映射；
 - 生成器不处理带 `CallContext` 参数的方法（会跳过）；

@@ -289,10 +289,7 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 			builder.AppendLine("		}");
 			builder.AppendLine("		else");
 			builder.AppendLine("		{");
-			builder.AppendLine("			var metadata = endpoints.ServiceProvider.GetService<global::Nerosoft.Euonia.Endpoint.Grpc.GrpcMetadataRegistry>()?.GetServiceMetadata(typeof(" + contract.ServiceType + "));");
-			builder.AppendLine("			var builder = endpoints.MapGrpcService<" + contract.Adapter + ">();");
-			builder.AppendLine("			if (metadata is { Count: > 0 }) builder.WithMetadata(metadata.ToArray());");
-			builder.AppendLine("			if (options.RequireAuthorization) builder.RequireAuthorization();");
+			builder.AppendLine("			endpoints.MapGrpcService<" + contract.Adapter + ">();");
 			builder.AppendLine("		}");
 		}
 		builder.AppendLine("	}");

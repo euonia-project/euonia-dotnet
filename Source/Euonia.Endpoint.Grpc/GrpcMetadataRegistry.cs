@@ -102,18 +102,23 @@ public sealed class GrpcMetadataRegistry
 			}
 
 			var metadata = new List<object>();
+			AddMetadata(metadata, serviceType);
 			var interfaceMethod = serviceType.GetMethods().FirstOrDefault(method => method.Name == methodName);
 			if (interfaceMethod != null)
 			{
 				AddMethodMetadata(metadata, interfaceMethod);
 			}
 
-			if (_implementations.TryGetValue(serviceType, out var implementations) && implementations.Count == 1 && interfaceMethod != null)
+			if (_implementations.TryGetValue(serviceType, out var implementations) && implementations.Count == 1)
 			{
-				var implementationMethod = FindImplementationMethod(implementations[0], serviceType, interfaceMethod);
-				if (implementationMethod != null)
+				AddMetadata(metadata, implementations[0]);
+				if (interfaceMethod != null)
 				{
-					AddMethodMetadata(metadata, implementationMethod);
+					var implementationMethod = FindImplementationMethod(implementations[0], serviceType, interfaceMethod);
+					if (implementationMethod != null)
+					{
+						AddMethodMetadata(metadata, implementationMethod);
+					}
 				}
 			}
 
