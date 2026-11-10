@@ -22,7 +22,9 @@ public class GeneralityTests
 
 	#region 操作集可扩展
 
-	/// <summary>宿主自定义的操作未声明策略时以自身为键，不会占用 <c>@</c> 保留命名空间。</summary>
+	/// <summary>
+	/// 宿主自定义的操作未声明策略时以自身为键，不会占用 <c>@</c> 保留命名空间。
+	/// </summary>
 	[Fact]
 	public void Host_Defined_Operation_Should_Resolve_Its_Own_Key()
 	{
@@ -45,7 +47,9 @@ public class GeneralityTests
 		Assert.Equal(approve, key);
 	}
 
-	/// <summary>自定义操作键与内置操作的键不冲突。</summary>
+	/// <summary>
+	/// 自定义操作键与内置操作的键不冲突。
+	/// </summary>
 	[Fact]
 	public void Custom_Operation_Key_Should_Not_Collide_With_Default_Operations()
 	{
@@ -53,7 +57,9 @@ public class GeneralityTests
 		Assert.Equal("approve", ScopeKeys.KeyFor("approve"));
 	}
 
-	/// <summary>以 <c>@</c> 开头的保留前缀不能用作操作名，声明时抛出 <see cref="InvalidOperationException"/>。</summary>
+	/// <summary>
+	/// 以 <c>@</c> 开头的保留前缀不能用作操作名，声明时抛出 <see cref="InvalidOperationException"/>。
+	/// </summary>
 	[Fact]
 	public void Operation_Name_With_Reserved_Prefix_Should_Be_Rejected()
 	{
@@ -63,7 +69,9 @@ public class GeneralityTests
 		Assert.Contains("@", exception.Message);
 	}
 
-	/// <summary>为操作声明策略时可显式指定授予键，标识集合仍包含该操作。</summary>
+	/// <summary>
+	/// 为操作声明策略时可显式指定授予键，标识集合仍包含该操作。
+	/// </summary>
 	[Fact]
 	public void ScopePolicySet_Should_Accept_An_Explicit_Grant_Key()
 	{
@@ -77,7 +85,9 @@ public class GeneralityTests
 		Assert.Contains(BusinessOperation.Update, policies.Identifiers);
 	}
 
-	/// <summary>声明的授予键可作为标识寻址，解析到同一对（策略，键）。</summary>
+	/// <summary>
+	/// 声明的授予键可作为标识寻址，解析到同一对（策略，键）。
+	/// </summary>
 	[Fact]
 	public void Declared_Grant_Key_Should_Be_Addressable_As_An_Identifier()
 	{
@@ -98,7 +108,9 @@ public class GeneralityTests
 		Assert.Equal(operationKey, codeKey);
 	}
 
-	/// <summary>按授予键寻址命中为操作声明的策略，而不是回落到默认策略；未声明的标识才回落。</summary>
+	/// <summary>
+	/// 按授予键寻址命中为操作声明的策略，而不是回落到默认策略；未声明的标识才回落。
+	/// </summary>
 	[Fact]
 	public void Addressed_By_Grant_Key_Should_Use_The_Declared_Policy_Not_The_Default()
 	{
@@ -130,7 +142,9 @@ public class GeneralityTests
 		Assert.True(guard.Allows(asset, "not-declared"));
 	}
 
-	/// <summary>只用 <c>For</c> 声明时，权限码既是标识也是授予键。</summary>
+	/// <summary>
+	/// 只用 <c>For</c> 声明时，权限码既是标识也是授予键。
+	/// </summary>
 	[Fact]
 	public void For_Should_Declare_A_Code_As_Both_Identifier_And_Grant_Key()
 	{
@@ -178,7 +192,9 @@ public class GeneralityTests
 		Assert.False(guard.Allows(asset, KeyedAssetModel.Delete));
 	}
 
-	/// <summary>标识与授予键共用同一命名空间，任一侧重复都会在声明时抛错。</summary>
+	/// <summary>
+	/// 标识与授予键共用同一命名空间，任一侧重复都会在声明时抛错。
+	/// </summary>
 	[Fact]
 	public void Identifier_And_Grant_Key_Should_Share_One_Namespace()
 	{
@@ -203,7 +219,9 @@ public class GeneralityTests
 
 	#region 通用权限码来源
 
-	/// <summary><c>OperationCodeSource</c> 可按特性匹配操作并产出具名权限码。</summary>
+	/// <summary>
+	/// <c>OperationCodeSource</c> 可按特性匹配操作并产出具名权限码。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Match_By_Attribute()
 	{
@@ -214,7 +232,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:approve"], source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Execute));
 	}
 
-	/// <summary>按方法名约定匹配同样产出对应的权限码。</summary>
+	/// <summary>
+	/// 按方法名约定匹配同样产出对应的权限码。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Match_By_Convention_Name()
 	{
@@ -225,7 +245,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:approve"], source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Execute));
 	}
 
-	/// <summary>类型级权限码总是包含在结果中，但只属于其声明所覆盖的操作。</summary>
+	/// <summary>
+	/// 类型级权限码总是包含在结果中，但只属于其声明所覆盖的操作。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Always_Include_Type_Level_Codes()
 	{
@@ -238,7 +260,9 @@ public class GeneralityTests
 		Assert.DoesNotContain("asset:read", source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Execute));
 	}
 
-	/// <summary>不同操作之间互不串码。</summary>
+	/// <summary>
+	/// 不同操作之间互不串码。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Distinguish_Operations()
 	{
@@ -249,7 +273,9 @@ public class GeneralityTests
 		Assert.DoesNotContain("asset:approve", source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Read));
 	}
 
-	/// <summary>多个特性命中同一操作时权限码去重。</summary>
+	/// <summary>
+	/// 多个特性命中同一操作时权限码去重。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Deduplicate_Codes()
 	{
@@ -261,7 +287,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:approve"], source.CodesFor(typeof(ApproveOnlyAsset), BusinessOperation.Execute));
 	}
 
-	/// <summary>要求集合保留角色信息，而不只是权限码。</summary>
+	/// <summary>
+	/// 要求集合保留角色信息，而不只是权限码。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Expose_Full_Requirements_For_Roles()
 	{
@@ -274,7 +302,9 @@ public class GeneralityTests
 		Assert.Contains(requirements, x => x.Roles is { Length: > 0 });
 	}
 
-	/// <summary>操作全集只包含实际声明过的操作。</summary>
+	/// <summary>
+	/// 操作全集只包含实际声明过的操作。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Report_Only_Declared_Operations()
 	{
@@ -285,14 +315,18 @@ public class GeneralityTests
 		Assert.Equal([BusinessOperation.Read], source.AllOperations);
 	}
 
-	/// <summary>没有任何规则时构建失败，抛出 <see cref="InvalidOperationException"/>。</summary>
+	/// <summary>
+	/// 没有任何规则时构建失败，抛出 <see cref="InvalidOperationException"/>。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_Should_Reject_Empty_Rule_Set()
 	{
 		Assert.Throws<InvalidOperationException>(() => OperationCodeSource.Create().Build());
 	}
 
-	/// <summary>约定名在给定前缀与不带前缀两种情况下都能派生。</summary>
+	/// <summary>
+	/// 约定名在给定前缀与不带前缀两种情况下都能派生。
+	/// </summary>
 	[Fact]
 	public void OperationConventions_Should_Derive_Names_With_And_Without_Prefix()
 	{
@@ -307,7 +341,9 @@ public class GeneralityTests
 
 	#region 程序化注册模型
 
-	/// <summary>可注册模型实例。</summary>
+	/// <summary>
+	/// 可注册模型实例。
+	/// </summary>
 	[Fact]
 	public void Builder_Should_Register_Model_Instance()
 	{
@@ -318,7 +354,9 @@ public class GeneralityTests
 		Assert.True(registry.IsDeclared(typeof(Asset)));
 	}
 
-	/// <summary>可注册模型类型。</summary>
+	/// <summary>
+	/// 可注册模型类型。
+	/// </summary>
 	[Fact]
 	public void Builder_Should_Register_Model_Type()
 	{
@@ -329,7 +367,9 @@ public class GeneralityTests
 		Assert.True(registry.IsDeclared(typeof(Asset)));
 	}
 
-	/// <summary>程序集扫描与手工实例注册可以混合使用。</summary>
+	/// <summary>
+	/// 程序集扫描与手工实例注册可以混合使用。
+	/// </summary>
 	[Fact]
 	public void Builder_Should_Combine_Instance_And_Assembly()
 	{
@@ -342,7 +382,9 @@ public class GeneralityTests
 		Assert.True(registry.IsDeclared(typeof(Widget)));
 	}
 
-	/// <summary>未注册任何模型时返回 <see cref="ScopeModelRegistry.Empty"/>。</summary>
+	/// <summary>
+	/// 未注册任何模型时返回 <see cref="ScopeModelRegistry.Empty"/>。
+	/// </summary>
 	[Fact]
 	public void Builder_Should_Return_Empty_When_Nothing_Registered()
 	{
@@ -352,7 +394,9 @@ public class GeneralityTests
 		Assert.False(registry.HasDeclarations);
 	}
 
-	/// <summary>同一资源注册两个模型时抛出 <see cref="ScopeModelValidationException"/> 并给出诊断。</summary>
+	/// <summary>
+	/// 同一资源注册两个模型时抛出 <see cref="ScopeModelValidationException"/> 并给出诊断。
+	/// </summary>
 	[Fact]
 	public void Builder_Should_Reject_Duplicate_Model_For_One_Resource()
 	{
@@ -365,7 +409,9 @@ public class GeneralityTests
 		Assert.Contains(exception.Diagnostics, x => x.Message.Contains("more than one permission model"));
 	}
 
-	/// <summary>扫描得到的模型与手工注册的模型走同一套校验，诊断内容一致。</summary>
+	/// <summary>
+	/// 扫描得到的模型与手工注册的模型走同一套校验，诊断内容一致。
+	/// </summary>
 	[Fact]
 	public void Scanned_And_Manual_Models_Should_Be_Validated_Identically()
 	{
@@ -388,7 +434,9 @@ public class GeneralityTests
 
 	#region 诊断聚合
 
-	/// <summary>校验一次汇报全部问题，而不是遇到第一个就停。</summary>
+	/// <summary>
+	/// 校验一次汇报全部问题，而不是遇到第一个就停。
+	/// </summary>
 	[Fact]
 	public void Validation_Should_Report_All_Problems_At_Once()
 	{
@@ -403,7 +451,9 @@ public class GeneralityTests
 		Assert.Contains("can never allow structurally", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
-	/// <summary>异常携带每条诊断的模型名与消息。</summary>
+	/// <summary>
+	/// 异常携带每条诊断的模型名与消息。
+	/// </summary>
 	[Fact]
 	public void ValidationException_Should_Carry_Each_Diagnostic()
 	{
@@ -422,7 +472,9 @@ public class GeneralityTests
 
 	#region 用户主体
 
-	/// <summary>已认证用户命中授予时放行，权限集合包含授予的权限码。</summary>
+	/// <summary>
+	/// 已认证用户命中授予时放行，权限集合包含授予的权限码。
+	/// </summary>
 	[Fact]
 	public void Authenticated_User_Should_Pass_Grant()
 	{
@@ -464,7 +516,9 @@ public class GeneralityTests
 		Assert.Same(snapshot, guard.GetSubjects());
 	}
 
-	/// <summary>未认证用户即使解析器返回授予也一律拒绝。</summary>
+	/// <summary>
+	/// 未认证用户即使解析器返回授予也一律拒绝。
+	/// </summary>
 	[Fact]
 	public void Unauthenticated_User_Should_Deny_Even_When_Resolver_Returns_Grants()
 	{
@@ -480,7 +534,9 @@ public class GeneralityTests
 		Assert.False(guard.Allows(new Asset { DeptId = "team-a", OwnerId = "other", Level = "normal" }));
 	}
 
-	/// <summary>缺少 <c>UserPrincipal</c> 注册时，解析守卫抛出 <see cref="InvalidOperationException"/> 并在消息中点名。</summary>
+	/// <summary>
+	/// 缺少 <c>UserPrincipal</c> 注册时，解析守卫抛出 <see cref="InvalidOperationException"/> 并在消息中点名。
+	/// </summary>
 	[Fact]
 	public void Missing_UserPrincipal_Should_Be_Reported_When_Guard_Resolved()
 	{
@@ -493,7 +549,9 @@ public class GeneralityTests
 		Assert.Contains("UserPrincipal", exception.Message);
 	}
 
-	/// <summary>已注册用户与主体解析器时，启动期校验通过。</summary>
+	/// <summary>
+	/// 已注册用户与主体解析器时，启动期校验通过。
+	/// </summary>
 	[Fact]
 	public void Setup_Validation_Should_Pass_When_User_Registered()
 	{
@@ -516,7 +574,9 @@ public class GeneralityTests
 	{
 	}
 
-	/// <summary>派生代理实例按基类的声明类型判定，<c>Allows</c> 与 <c>AllowsObject</c> 结论一致。</summary>
+	/// <summary>
+	/// 派生代理实例按基类的声明类型判定，<c>Allows</c> 与 <c>AllowsObject</c> 结论一致。
+	/// </summary>
 	[Fact]
 	public void Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance()
 	{
@@ -543,7 +603,9 @@ public class GeneralityTests
 
 	#region 授权数据校验
 
-	/// <summary>授予集合拒绝保留命名空间（<c>@</c> 前缀与默认键）的权限码。</summary>
+	/// <summary>
+	/// 授予集合拒绝保留命名空间（<c>@</c> 前缀与默认键）的权限码。
+	/// </summary>
 	[Fact]
 	public void AddCode_Should_Reject_Reserved_Namespace()
 	{
@@ -557,7 +619,9 @@ public class GeneralityTests
 
 	#region 多模块合并
 
-	/// <summary>多次调用 <c>AddPermission</c> 时，后注册模块的模型不会被丢弃。</summary>
+	/// <summary>
+	/// 多次调用 <c>AddPermission</c> 时，后注册模块的模型不会被丢弃。
+	/// </summary>
 	[Fact]
 	public void Second_Module_Should_Not_Be_Silently_Dropped()
 	{
@@ -572,7 +636,9 @@ public class GeneralityTests
 		Assert.True(registry.IsDeclared(typeof(Widget)));
 	}
 
-	/// <summary>守卫能看到后注册的模型并按授予正确判定。</summary>
+	/// <summary>
+	/// 守卫能看到后注册的模型并按授予正确判定。
+	/// </summary>
 	[Fact]
 	public void Guard_Should_See_Late_Registered_Models()
 	{
@@ -591,7 +657,9 @@ public class GeneralityTests
 		Assert.False(guard.Allows(new Widget { DeptId = "team-b", OwnerId = "other" }));
 	}
 
-	/// <summary>不同模块的权限码来源合并，同一操作下的码按声明顺序取并集。</summary>
+	/// <summary>
+	/// 不同模块的权限码来源合并，同一操作下的码按声明顺序取并集。
+	/// </summary>
 	[Fact]
 	public void Code_Sources_From_Different_Modules_Should_Merge()
 	{
@@ -613,7 +681,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:read", "asset:approve"], source.CodesFor(typeof(ApprovableAsset), BusinessOperation.Read));
 	}
 
-	/// <summary>合并后的操作全集按声明顺序取并集。</summary>
+	/// <summary>
+	/// 合并后的操作全集按声明顺序取并集。
+	/// </summary>
 	[Fact]
 	public void Merged_Operations_Should_Be_Union_In_Declaration_Order()
 	{
@@ -636,7 +706,9 @@ public class GeneralityTests
 		Assert.Equal([BusinessOperation.Read, "approve"], source.AllOperations);
 	}
 
-	/// <summary>空来源不会压制其他模块的声明。</summary>
+	/// <summary>
+	/// 空来源不会压制其他模块的声明。
+	/// </summary>
 	[Fact]
 	public void Empty_Source_Should_Not_Suppress_Other_Modules()
 	{
@@ -656,7 +728,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:read", "asset:approve"], source.CodesFor(typeof(ApprovableAsset), BusinessOperation.Read));
 	}
 
-	/// <summary>注册结果覆盖所有模块的声明，需要主体解析器。</summary>
+	/// <summary>
+	/// 注册结果覆盖所有模块的声明，需要主体解析器。
+	/// </summary>
 	[Fact]
 	public void Registration_Should_Cover_All_Modules_Declarations()
 	{
@@ -670,7 +744,9 @@ public class GeneralityTests
 		Assert.True(registration.RequiresSubjectResolver);
 	}
 
-	/// <summary>同一来源实例注册两次是幂等的：操作与权限码都不重复。</summary>
+	/// <summary>
+	/// 同一来源实例注册两次是幂等的：操作与权限码都不重复。
+	/// </summary>
 	[Fact]
 	public void Registering_Same_Source_Instance_Twice_Should_Be_Idempotent()
 	{
@@ -689,7 +765,9 @@ public class GeneralityTests
 		Assert.Equal(["asset:read", "asset:approve"], merged.CodesFor(typeof(ApprovableAsset), BusinessOperation.Read));
 	}
 
-	/// <summary>同一程序集被重复扫描时只处理一次。</summary>
+	/// <summary>
+	/// 同一程序集被重复扫描时只处理一次。
+	/// </summary>
 	[Fact]
 	public void Assemblies_Should_Be_Scanned_Once_Even_If_Shared()
 	{

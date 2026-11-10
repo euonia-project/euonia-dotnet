@@ -11,27 +11,43 @@ namespace Nerosoft.Euonia.Sample.Persist;
 /// </summary>
 public interface IApplicationDataContext
 {
-	/// <summary>用户账号。</summary>
+	/// <summary>
+	/// 用户账号。
+	/// </summary>
 	DbSet<UserEntity> Users { get; }
 
-	/// <summary>代码仓库。</summary>
+	/// <summary>
+	/// 代码仓库。
+	/// </summary>
 	DbSet<CodeRepository> CodeRepositories { get; }
 
-	/// <summary>获取团队实体集合。</summary>
+	/// <summary>
+	/// 获取团队实体集合。
+	/// </summary>
 	DbSet<Team> Teams { get; }
 
-	/// <summary>团队成员关系（子表：谁属于哪个团队）。</summary>
+	/// <summary>
+	/// 团队成员关系（子表：谁属于哪个团队）。
+	/// </summary>
 	DbSet<TeamMember> TeamMembers { get; }
 
-	/// <summary>获取项目实体集合。</summary>
+	/// <summary>
+	/// 获取项目实体集合。
+	/// </summary>
 	DbSet<Project> Projects { get; }
 
-	/// <summary>授权数据（角色 / 权限码 / 团队范围 / 显示名）。</summary>
+	/// <summary>
+	/// 授权数据（角色 / 权限码 / 团队范围 / 显示名）。
+	/// </summary>
 	DbSet<AuthorizationRecord> Authorizations { get; }
 
-	/// <summary>保存上下文中的所有变更。</summary>
+	/// <summary>
+	/// 保存上下文中的所有变更。
+	/// </summary>
 	Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
-	/// <summary>把实体标记为已修改（写入更新前的对象数据）。</summary>
+	/// <summary>
+	/// 把实体标记为已修改（写入更新前的对象数据）。
+	/// </summary>
 	EntityEntry Update(object entity);
 }

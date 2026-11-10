@@ -25,21 +25,33 @@ internal class SampleDataContext : DataContextWithBus<SampleDataContext>, IAppli
 	{
 	}
 
-	/// <summary>用户账号。</summary>
+	/// <summary>
+	/// 用户账号。
+	/// </summary>
 	public virtual DbSet<UserEntity> Users => Set<UserEntity>();
 
-	/// <summary>代码仓库。</summary>
+	/// <summary>
+	/// 代码仓库。
+	/// </summary>
 	public virtual DbSet<CodeRepository> CodeRepositories => Set<CodeRepository>();
 
-	/// <summary>获取团队实体集合。</summary>
+	/// <summary>
+	/// 获取团队实体集合。
+	/// </summary>
 	public virtual DbSet<Team> Teams => Set<Team>();
 
-	/// <summary>团队成员关系（子表：谁属于哪个团队）。</summary>
+	/// <summary>
+	/// 团队成员关系（子表：谁属于哪个团队）。
+	/// </summary>
 	public virtual DbSet<TeamMember> TeamMembers => Set<TeamMember>();
 
-	/// <summary>获取项目实体集合。</summary>
+	/// <summary>
+	/// 获取项目实体集合。
+	/// </summary>
 	public virtual DbSet<Project> Projects => Set<Project>();
 
-	/// <summary>授权数据（角色 / 权限码 / 团队范围 / 显示名）。</summary>
+	/// <summary>
+	/// 授权数据（角色 / 权限码 / 团队范围 / 显示名）。
+	/// </summary>
 	public virtual DbSet<AuthorizationRecord> Authorizations => Set<AuthorizationRecord>();
 }

@@ -363,10 +363,16 @@ internal sealed class CircuitState
 /// </summary>
 internal enum CircuitStateKind
 {
-	/// <summary>关闭状态：正常放行调用并累计连续失败次数。</summary>
+	/// <summary>
+	/// 关闭状态：正常放行调用并累计连续失败次数。
+	/// </summary>
 	Closed,
-	/// <summary>打开状态：直接快速失败，直到重置超时结束。</summary>
+	/// <summary>
+	/// 打开状态：直接快速失败，直到重置超时结束。
+	/// </summary>
 	Open,
-	/// <summary>半开状态：放行单个探测请求，以确认依赖是否已恢复。</summary>
+	/// <summary>
+	/// 半开状态：放行单个探测请求，以确认依赖是否已恢复。
+	/// </summary>
 	HalfOpen
 }

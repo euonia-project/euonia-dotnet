@@ -3,19 +3,27 @@ using Nerosoft.Euonia.Sample.Domain.Aggregates;
 
 namespace Nerosoft.Euonia.Sample.Persist.Specifications;
 
-/// <summary>仓库查询规范。</summary>
+/// <summary>
+/// 仓库查询规范。
+/// </summary>
 internal static class RepositorySpecification
 {
-	/// <summary>匹配所有代码仓库的规范，以主键非空作为条件。</summary>
+	/// <summary>
+	/// 匹配所有代码仓库的规范，以主键非空作为条件。
+	/// </summary>
 	public static readonly Specification<CodeRepository> All = new DirectSpecification<CodeRepository>(t => t.Id != null);
 
-	/// <summary>Id 等于 <paramref name="id"/>。</summary>
+	/// <summary>
+	/// Id 等于 <paramref name="id"/>。
+	/// </summary>
 	public static Specification<CodeRepository> IdEquals(string id)
 	{
 		return new DirectSpecification<CodeRepository>(t => t.Id == id);
 	}
 
-	/// <summary>名称包含 <paramref name="keyword"/>。</summary>
+	/// <summary>
+	/// 名称包含 <paramref name="keyword"/>。
+	/// </summary>
 	public static Specification<CodeRepository> NameContains(string keyword)
 	{
 		return new DirectSpecification<CodeRepository>(t => t.Name.Contains(keyword));

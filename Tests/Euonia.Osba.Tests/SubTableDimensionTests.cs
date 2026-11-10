@@ -160,16 +160,24 @@ public class SubTableDimensionTests
 
 #region 受控资源与解析器
 
-/// <summary>子表行：团队成员（真实系统里就是 <c>team_member</c> 表的一行）。</summary>
+/// <summary>
+/// 子表行：团队成员（真实系统里就是 <c>team_member</c> 表的一行）。
+/// </summary>
 public sealed class TeamMemberRow
 {
-	/// <summary>所属团队的标识，与 <see cref="MemberTeam.Id"/> 对应。</summary>
+	/// <summary>
+	/// 所属团队的标识，与 <see cref="MemberTeam.Id"/> 对应。
+	/// </summary>
 	public string TeamId { get; set; } = null!;
 
-	/// <summary>成员的用户标识，判定时与授予值比较。</summary>
+	/// <summary>
+	/// 成员的用户标识，判定时与授予值比较。
+	/// </summary>
 	public string UserId { get; set; } = null!;
 
-	/// <summary>成员关系状态；仅 <c>active</c> 视为有效成员。</summary>
+	/// <summary>
+	/// 成员关系状态；仅 <c>active</c> 视为有效成员。
+	/// </summary>
 	public string Status { get; set; } = null!;
 }
 
@@ -178,13 +186,19 @@ public sealed class TeamMemberRow
 /// </summary>
 public class MemberTeam : EditableObject<MemberTeam>
 {
-	/// <summary>团队标识。</summary>
+	/// <summary>
+	/// 团队标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
-	/// <summary>负责人（<c>owner</c> 维度）的用户标识。</summary>
+	/// <summary>
+	/// 负责人（<c>owner</c> 维度）的用户标识。
+	/// </summary>
 	public string LeaderId { get; set; } = null!;
 
-	/// <summary>子表行。刻意不初始化：未加载时为空引用，单行判定会明确报错而不是静默拒绝。</summary>
+	/// <summary>
+	/// 子表行。刻意不初始化：未加载时为空引用，单行判定会明确报错而不是静默拒绝。
+	/// </summary>
 	public List<TeamMemberRow> Members { get; set; } = null!;
 
 	/// <summary>

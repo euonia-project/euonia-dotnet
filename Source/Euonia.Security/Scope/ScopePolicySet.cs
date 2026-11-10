@@ -30,10 +30,14 @@ namespace Nerosoft.Euonia.Security;
 public sealed class ScopePolicySet<T>
 	where T : class
 {
-	/// <summary>标识 → (键, 策略)。</summary>
+	/// <summary>
+	/// 标识 → (键, 策略)。
+	/// </summary>
 	private readonly Dictionary<string, (string Key, ScopePolicy<T> Policy)> _byIdentifier = new(StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>键 → 标识：让「拿权限码当标识传」也能命中为同名操作声明的那条策略。</summary>
+	/// <summary>
+	/// 键 → 标识：让「拿权限码当标识传」也能命中为同名操作声明的那条策略。
+	/// </summary>
 	private readonly Dictionary<string, string> _byKey = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>

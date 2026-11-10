@@ -8,7 +8,9 @@ namespace Nerosoft.Euonia.Endpoint.Grpc;
 /// </remarks>
 public static class EndpointProtoModel
 {
-	/// <summary>确保类型模型已配置。</summary>
+	/// <summary>
+	/// 确保类型模型已配置。
+	/// </summary>
 	public static void Configure()
 	{
 	}

@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [Produces("application/json")]
 public class RepositoryController(IRepositoryApplicationService service) : ControllerBase
 {
-	/// <summary>分页查询仓库（匿名可见公开行；已登录须持有 repository:view 码并按行范围过滤）。</summary>
+	/// <summary>
+	/// 分页查询仓库（匿名可见公开行；已登录须持有 repository:view 码并按行范围过滤）。
+	/// </summary>
 	[AllowAnonymous]
 	[HttpGet]
 	[ProducesResponseType(StatusCodes.Status200OK)]
@@ -26,7 +28,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return InvokeAsync(() => service.FindAsync(keyword, sortBy, page, pageSize, cancellationToken));
 	}
 
-	/// <summary>查看仓库详情（行级视图判定）。</summary>
+	/// <summary>
+	/// 查看仓库详情（行级视图判定）。
+	/// </summary>
 	[AllowAnonymous]
 	[HttpGet("{id}")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
@@ -37,7 +41,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return InvokeAsync(() => service.GetAsync(id, cancellationToken));
 	}
 
-	/// <summary>创建仓库（仓库名 + 归属团队；密级与公开性可省略）。</summary>
+	/// <summary>
+	/// 创建仓库（仓库名 + 归属团队；密级与公开性可省略）。
+	/// </summary>
 	[HttpPost]
 	[ProducesResponseType(StatusCodes.Status201Created)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -47,7 +53,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return Created($"/api/repository/{id}", new { id });
 	}
 
-	/// <summary>更新仓库（仅名称/密级/公开性；push 边界）。</summary>
+	/// <summary>
+	/// 更新仓库（仅名称/密级/公开性；push 边界）。
+	/// </summary>
 	[HttpPut("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -58,7 +66,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return NoContent();
 	}
 
-	/// <summary>删除仓库。</summary>
+	/// <summary>
+	/// 删除仓库。
+	/// </summary>
 	[HttpDelete("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -69,7 +79,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return NoContent();
 	}
 
-	/// <summary>对仓库执行 push（行级 push 判定；update 与其共用同一权限码）。</summary>
+	/// <summary>
+	/// 对仓库执行 push（行级 push 判定；update 与其共用同一权限码）。
+	/// </summary>
 	[HttpPost("{id}/push")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -80,7 +92,9 @@ public class RepositoryController(IRepositoryApplicationService service) : Contr
 		return Ok(new { id });
 	}
 
-	/// <summary>解释仓库在当前用户数据范围内的判定结论（调试用）。</summary>
+	/// <summary>
+	/// 解释仓库在当前用户数据范围内的判定结论（调试用）。
+	/// </summary>
 	[HttpGet("{id}/explain")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]

@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// </summary>
 public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 {
-	/// <summary>行级授予维度：值为仓库标识。解析器经 <c>AddGrant(码, 本维度, 仓库id集合)</c> 展开。</summary>
+	/// <summary>
+	/// 行级授予维度：值为仓库标识。解析器经 <c>AddGrant(码, 本维度, 仓库id集合)</c> 展开。
+	/// </summary>
 	public const string RepositoryDimension = "repository";
 
 	/// <summary>
@@ -87,17 +89,23 @@ public sealed class RepositoryScopeModel : ScopeModel<CodeRepository>
 /// </remarks>
 public readonly record struct RepositoryGrant(string Operation, string RepositoryId)
 {
-	/// <summary>操作码与仓库标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。</summary>
+	/// <summary>
+	/// 操作码与仓库标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。
+	/// </summary>
 	public const string Separator = "|";
 
-	/// <summary>编码为授权行的值。</summary>
+	/// <summary>
+	/// 编码为授权行的值。
+	/// </summary>
 	/// <returns>形如 <c>"repository:push|&lt;repository-id&gt;"</c> 的字符串。</returns>
 	public override string ToString()
 	{
 		return string.Concat(Operation, Separator, RepositoryId);
 	}
 
-	/// <summary>解析授权行的值；格式非法时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 解析授权行的值；格式非法时返回 <see langword="null"/>。
+	/// </summary>
 	/// <param name="value">授权行上存储的值。</param>
 	/// <returns>解析结果；格式非法时返回 <see langword="null"/>。</returns>
 	public static RepositoryGrant? Parse(string value)

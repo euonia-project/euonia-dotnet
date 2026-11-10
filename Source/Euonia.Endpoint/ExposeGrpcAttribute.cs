@@ -27,15 +27,23 @@ public sealed class ExposeGrpcAttribute : Attribute
 /// </summary>
 public enum GrpcMethod
 {
-	/// <summary>一元调用。</summary>
+	/// <summary>
+	/// 一元调用。
+	/// </summary>
 	Unary = 0,
 
-	/// <summary>服务端流。</summary>
+	/// <summary>
+	/// 服务端流。
+	/// </summary>
 	ServerStreaming = 1,
 
-	/// <summary>客户端流。</summary>
+	/// <summary>
+	/// 客户端流。
+	/// </summary>
 	ClientStreaming = 2,
 
-	/// <summary>双向流。</summary>
+	/// <summary>
+	/// 双向流。
+	/// </summary>
 	DuplexStreaming = 3
 }

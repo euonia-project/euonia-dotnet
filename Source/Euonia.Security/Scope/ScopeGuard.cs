@@ -23,10 +23,14 @@ public sealed class ScopeGuard : IScopeGuard, IDisposable
 	private readonly Dictionary<(Type Type, string ScopeKey), Func<object, bool>> _evaluators = [];
 	private readonly Lock _sync = new();
 
-	/// <summary>串行化授权数据解析，兑现「每请求只解析一次」。</summary>
+	/// <summary>
+	/// 串行化授权数据解析，兑现「每请求只解析一次」。
+	/// </summary>
 	private readonly SemaphoreSlim _resolveGate = new(1, 1);
 
-	/// <summary>授权数据的代数：每次发布新快照时自增，供在闸门之外进行的编译比对（见 GetPolicy）。</summary>
+	/// <summary>
+	/// 授权数据的代数：每次发布新快照时自增，供在闸门之外进行的编译比对（见 GetPolicy）。
+	/// </summary>
 	private int _version;
 
 	/// <summary>

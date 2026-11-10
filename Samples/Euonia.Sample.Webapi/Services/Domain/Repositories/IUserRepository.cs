@@ -73,12 +73,18 @@ public interface IUserRepository
 	/// <returns>满足条件的分页账号列表。</returns>
 	Task<List<UserEntity>> FindAsync(Expression<Func<UserEntity, bool>> predicate, string[] properties, int skip, int take, CancellationToken cancellationToken = default);
 
-	/// <summary>读取账号的角色名列表。</summary>
+	/// <summary>
+	/// 读取账号的角色名列表。
+	/// </summary>
 	Task<List<string>> GetRolesAsync(string userId, CancellationToken cancellationToken = default);
 
-	/// <summary>为一个存在的账号追加角色（<see cref="UserRoleEntity.Create"/> 校验角色名合法性）。</summary>
+	/// <summary>
+	/// 为一个存在的账号追加角色（<see cref="UserRoleEntity.Create"/> 校验角色名合法性）。
+	/// </summary>
 	Task AddRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default);
 
-	/// <summary>移除账号的角色。</summary>
+	/// <summary>
+	/// 移除账号的角色。
+	/// </summary>
 	Task RemoveRolesAsync(string userId, IEnumerable<string> roles, CancellationToken cancellationToken = default);
 }

@@ -33,10 +33,14 @@ public sealed class ScopeSubjectSet
 	private readonly Dictionary<string, ScopeSubject> _subjects;
 	private readonly HashSet<string> _codes;
 
-	/// <summary>只读视图：绝不把底层 HashSet 直接暴露出去。</summary>
+	/// <summary>
+	/// 只读视图：绝不把底层 HashSet 直接暴露出去。
+	/// </summary>
 	private readonly IReadOnlyCollection<string> _codesView;
 
-	/// <summary>只读视图：同上。</summary>
+	/// <summary>
+	/// 只读视图：同上。
+	/// </summary>
 	private readonly IReadOnlyCollection<string> _keysView;
 
 	private ScopeSubjectSet(Dictionary<string, ScopeSubject> subjects, HashSet<string> codes)

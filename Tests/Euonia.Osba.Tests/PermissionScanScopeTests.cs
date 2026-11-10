@@ -74,7 +74,9 @@ public class PermissionScanScopeTests
 
 #region 受控资源
 
-/// <summary>基类：更新方法上声明了权限要求。</summary>
+/// <summary>
+/// 基类：更新方法上声明了权限要求。
+/// </summary>
 public class BaseScopedEntity : EditableObject<BaseScopedEntity>
 {
 	/// <summary>
@@ -89,7 +91,9 @@ public class BaseScopedEntity : EditableObject<BaseScopedEntity>
 	}
 }
 
-/// <summary>遮蔽了基类的更新方法：工厂会调用本类型这一层的方法。</summary>
+/// <summary>
+/// 遮蔽了基类的更新方法：工厂会调用本类型这一层的方法。
+/// </summary>
 public class DerivedScopedEntity : BaseScopedEntity
 {
 	/// <summary>
@@ -103,12 +107,16 @@ public class DerivedScopedEntity : BaseScopedEntity
 	}
 }
 
-/// <summary>没有遮蔽任何方法的派生类型：工厂上溯基类。</summary>
+/// <summary>
+/// 没有遮蔽任何方法的派生类型：工厂上溯基类。
+/// </summary>
 public class PlainDerivedScopedEntity : BaseScopedEntity
 {
 }
 
-/// <summary>不打特性、只按约定名成为入口的资源。</summary>
+/// <summary>
+/// 不打特性、只按约定名成为入口的资源。
+/// </summary>
 public class ConventionNamedEntity : EditableObject<ConventionNamedEntity>
 {
 	/// <summary>

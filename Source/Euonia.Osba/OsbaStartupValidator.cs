@@ -17,13 +17,19 @@ public sealed record OsbaDiagnostic(OsbaDiagnosticSeverity Severity, string Code
 /// </summary>
 public enum OsbaDiagnosticSeverity
 {
-	/// <summary>信息级别。</summary>
+	/// <summary>
+	/// 信息级别。
+	/// </summary>
 	Information,
 
-	/// <summary>警告；不阻止启动。</summary>
+	/// <summary>
+	/// 警告；不阻止启动。
+	/// </summary>
 	Warning,
 
-	/// <summary>错误；启动期校验开启时阻止启动。</summary>
+	/// <summary>
+	/// 错误；启动期校验开启时阻止启动。
+	/// </summary>
 	Error
 }
 

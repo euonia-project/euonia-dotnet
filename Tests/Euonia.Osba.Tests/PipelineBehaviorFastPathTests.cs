@@ -87,7 +87,9 @@ public class AttributedTarget : BusinessObject<AttributedTarget>
 /// </summary>
 public class TrackingBehavior : IPipelineBehavior<AttributedTarget, AttributedTarget>
 {
-	/// <summary>行为执行次数。</summary>
+	/// <summary>
+	/// 行为执行次数。
+	/// </summary>
 	public static int Ran;
 
 	/// <summary>

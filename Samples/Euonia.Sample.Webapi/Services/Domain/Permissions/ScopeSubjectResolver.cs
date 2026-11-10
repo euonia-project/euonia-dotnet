@@ -117,7 +117,9 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		}
 	}
 
-	/// <summary>解析 <c>"{op}|{id}"</c> 形态的行级授予；格式非法时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 解析 <c>"{op}|{id}"</c> 形态的行级授予；格式非法时返回 <see langword="null"/>。
+	/// </summary>
 	private static (string Operation, string Id)? ParseGrant(string value)
 	{
 		if (string.IsNullOrWhiteSpace(value))
@@ -134,7 +136,9 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		return (value[..index], value[(index + 1)..]);
 	}
 
-	/// <summary>按操作码前缀把行级授予路由到相应资源的行级维度；未知前缀忽略。</summary>
+	/// <summary>
+	/// 按操作码前缀把行级授予路由到相应资源的行级维度；未知前缀忽略。
+	/// </summary>
 	private static string? ResolveDimension(string operation)
 	{
 		if (operation.StartsWith("repository:", StringComparison.Ordinal))

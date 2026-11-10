@@ -21,10 +21,14 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [ApiController]
 public class AuthController(IConfiguration configuration, IUserRepository users) : ControllerBase
 {
-	/// <summary>登录入参。</summary>
+	/// <summary>
+	/// 登录入参。
+	/// </summary>
 	public record LoginInput(string Username, string Password);
 
-	/// <summary>按用户名与密码登录，成功时返回 JWT 令牌。</summary>
+	/// <summary>
+	/// 按用户名与密码登录，成功时返回 JWT 令牌。
+	/// </summary>
 	[HttpPost("login")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]

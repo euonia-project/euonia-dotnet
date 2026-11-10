@@ -12,16 +12,24 @@ namespace Nerosoft.Euonia.Security.Tests.Fixtures;
 /// </remarks>
 public sealed class GuardedAsset
 {
-	/// <summary>资源标识。</summary>
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
-	/// <summary>负责人用户标识，对应 <c>owner</c> 维度。</summary>
+	/// <summary>
+	/// 负责人用户标识，对应 <c>owner</c> 维度。
+	/// </summary>
 	public string OwnerId { get; set; } = null!;
 
-	/// <summary>所属部门标识，对应 <c>dept</c> 维度。</summary>
+	/// <summary>
+	/// 所属部门标识，对应 <c>dept</c> 维度。
+	/// </summary>
 	public string DeptId { get; set; } = null!;
 
-	/// <summary>带 <c>guarded:run</c> 权限码的示例操作，方法体为空。</summary>
+	/// <summary>
+	/// 带 <c>guarded:run</c> 权限码的示例操作，方法体为空。
+	/// </summary>
 	[Permission("guarded:run")]
 	public void Run() { }
 }
@@ -35,7 +43,9 @@ public sealed class GuardedAsset
 /// </remarks>
 public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 {
-	/// <summary>映射 owner 与 dept 两个行内维度。</summary>
+	/// <summary>
+	/// 映射 owner 与 dept 两个行内维度。
+	/// </summary>
 	/// <param name="builder">权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<GuardedAsset> builder)
 	{
@@ -43,7 +53,9 @@ public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 		       .Map(ScopeDimensions.Dept, x => x.DeptId);
 	}
 
-	/// <summary>默认策略：仅当负责人维度命中时放行。</summary>
+	/// <summary>
+	/// 默认策略：仅当负责人维度命中时放行。
+	/// </summary>
 	public override ScopePolicy<GuardedAsset> Policy =>
 		ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Owner);
 

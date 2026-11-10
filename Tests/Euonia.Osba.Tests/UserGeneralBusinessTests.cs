@@ -10,14 +10,18 @@ public class UserGeneralBusinessTests
 {
 	private IObjectFactory _factory;
 
-	/// <summary>注入对象工厂，供各用例创建业务对象。</summary>
+	/// <summary>
+	/// 注入对象工厂，供各用例创建业务对象。
+	/// </summary>
 	/// <param name="factory">Osba 对象工厂。</param>
 	public UserGeneralBusinessTests(IObjectFactory factory)
 	{
 		_factory = factory;
 	}
 
-	/// <summary>工厂创建的对象带有可用的 <c>LazyServiceProvider</c>，依赖可在首次使用时惰性解析。</summary>
+	/// <summary>
+	/// 工厂创建的对象带有可用的 <c>LazyServiceProvider</c>，依赖可在首次使用时惰性解析。
+	/// </summary>
 	[Fact]
 	public async Task LazyServiceProviderShouldWork()
 	{

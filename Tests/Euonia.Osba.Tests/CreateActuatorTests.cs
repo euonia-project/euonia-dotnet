@@ -74,7 +74,9 @@ public class CreateActuatorTests
 /// </summary>
 public class CreateProbeEditable : EditableObject<CreateProbeEditable>
 {
-	/// <summary>可编辑探针名称的属性元数据。</summary>
+	/// <summary>
+	/// 可编辑探针名称的属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>

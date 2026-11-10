@@ -18,13 +18,19 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeModelRegistration
 {
-	/// <summary>授权标识 → 策略；实际类型是 <see cref="ScopePolicy{T}"/>。</summary>
+	/// <summary>
+	/// 授权标识 → 策略；实际类型是 <see cref="ScopePolicy{T}"/>。
+	/// </summary>
 	private readonly IReadOnlyDictionary<string, object> _policies;
 
-	/// <summary>授权标识 → 授予键。</summary>
+	/// <summary>
+	/// 授权标识 → 授予键。
+	/// </summary>
 	private readonly IReadOnlyDictionary<string, string> _keys;
 
-	/// <summary>授予键 → 授权标识（键与标识共用命名空间，因此这是一一对应的反向索引）。</summary>
+	/// <summary>
+	/// 授予键 → 授权标识（键与标识共用命名空间，因此这是一一对应的反向索引）。
+	/// </summary>
 	private readonly Dictionary<string, string> _byKey;
 
 	/// <summary>

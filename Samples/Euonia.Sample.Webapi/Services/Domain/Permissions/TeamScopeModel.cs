@@ -32,7 +32,9 @@ public sealed class TeamScopeModel : ScopeModel<Team>
 		                t => t.Members.Where(m => m.Status == TeamMemberStatus.Active).Select(m => m.UserId));
 	}
 
-	/// <summary>默认策略（按码策略之外的兜底）：仅按行内列判定，不要求加载子表。</summary>
+	/// <summary>
+	/// 默认策略（按码策略之外的兜底）：仅按行内列判定，不要求加载子表。
+	/// </summary>
 	public override ScopePolicy<Team> Policy => ScopePolicy<Team>.Grant(ScopeDimensions.Owner);
 
 	/// <summary>

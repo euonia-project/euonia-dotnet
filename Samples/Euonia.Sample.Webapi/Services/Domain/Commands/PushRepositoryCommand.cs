@@ -15,10 +15,14 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </summary>
 public sealed class PushRepositoryCommand : ServiceObjectBase<PushRepositoryCommand>
 {
-	/// <summary>目标仓库标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
+	/// <summary>
+	/// 目标仓库标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
 	public string RepoId { get; set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Pushed { get; private set; }
 
 	[FactoryCreate]

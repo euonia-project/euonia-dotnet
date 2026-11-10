@@ -8,17 +8,23 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class UserGeneralBusiness : EditableObjectBase<UserGeneralBusiness>
 {
-	/// <summary>用户名属性的注册句柄，供 <see cref="Name"/> 读写与规则校验使用。</summary>
+	/// <summary>
+	/// 用户名属性的注册句柄，供 <see cref="Name"/> 读写与规则校验使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
-	/// <summary>用户名；新建时须通过 <c>UsernameCheckRule</c> 校验。</summary>
+	/// <summary>
+	/// 用户名；新建时须通过 <c>UsernameCheckRule</c> 校验。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>注册用户名检查规则（<c>UsernameCheckRule</c>），使其参与保存时的校验线。</summary>
+	/// <summary>
+	/// 注册用户名检查规则（<c>UsernameCheckRule</c>），使其参与保存时的校验线。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<UsernameCheckRule>();

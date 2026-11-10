@@ -12,17 +12,23 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public class AddPermissionTests
 {
-	/// <summary>没有任何权限声明的框架程序集，用作「未使用权限」的干净扫描目标。</summary>
+	/// <summary>
+	/// 没有任何权限声明的框架程序集，用作「未使用权限」的干净扫描目标。
+	/// </summary>
 	private static readonly Assembly CleanAssembly = typeof(ServiceCollection).Assembly;
 
 	private static readonly Assembly TestAssembly = typeof(AddPermissionTests).Assembly;
 
-	/// <summary>含「方法级权限码 + 按码声明策略」的程序集，必须配合真正的权限码来源。</summary>
+	/// <summary>
+	/// 含「方法级权限码 + 按码声明策略」的程序集，必须配合真正的权限码来源。
+	/// </summary>
 	private static readonly Assembly FixturesAssembly = typeof(GuardedAssetModel).Assembly;
 
 	#region 注册归属
 
-	/// <summary>注册后容器能解析权限引擎的四项核心服务。</summary>
+	/// <summary>
+	/// 注册后容器能解析权限引擎的四项核心服务。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Register_Engine_Services()
 	{
@@ -34,7 +40,9 @@ public class AddPermissionTests
 		Assert.NotNull(provider.GetService<IScopeGuard>());
 	}
 
-	/// <summary>只引用权限引擎、不做对象建模时，注册、建模与判定仍可端到端使用。</summary>
+	/// <summary>
+	/// 只引用权限引擎、不做对象建模时，注册、建模与判定仍可端到端使用。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Not_Require_Object_Model()
 	{
@@ -50,7 +58,9 @@ public class AddPermissionTests
 		Assert.False(guard.Allows(new Asset { Id = "2", DeptId = "team-x", OwnerId = "other", Level = "normal" }));
 	}
 
-	/// <summary>模型注册表以单例注册：两次解析得到同一实例，且能识别已声明的资源。</summary>
+	/// <summary>
+	/// 模型注册表以单例注册：两次解析得到同一实例，且能识别已声明的资源。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Register_Model_Registry_As_Singleton()
 	{
@@ -62,7 +72,9 @@ public class AddPermissionTests
 		Assert.Same(registry, provider.GetRequiredService<ScopeModelRegistry>());
 	}
 
-	/// <summary>返回传入的同一个服务集合，便于链式调用。</summary>
+	/// <summary>
+	/// 返回传入的同一个服务集合，便于链式调用。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Return_Same_Service_Collection()
 	{
@@ -71,7 +83,9 @@ public class AddPermissionTests
 		Assert.Same(services, services.AddPermission(p => { p.Scan(CleanAssembly); p.NoOperationCodes(); }));
 	}
 
-	/// <summary>权限码来源为 <c>null</c> 时抛出 <see cref="ArgumentNullException"/>。</summary>
+	/// <summary>
+	/// 权限码来源为 <c>null</c> 时抛出 <see cref="ArgumentNullException"/>。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Throw_On_Null_Code_Source()
 	{
@@ -80,7 +94,9 @@ public class AddPermissionTests
 		Assert.Throws<ArgumentNullException>(() => services.AddPermission(p => p.Source(null!)));
 	}
 
-	/// <summary>服务集合为 <c>null</c> 时抛出 <see cref="ArgumentNullException"/>。</summary>
+	/// <summary>
+	/// 服务集合为 <c>null</c> 时抛出 <see cref="ArgumentNullException"/>。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Throw_On_Null_Service_Collection()
 	{
@@ -112,7 +128,9 @@ public class AddPermissionTests
 		Assert.Contains(requirements, requirement => requirement.Permission == "asset:approve" && requirement.Roles.Length > 0);
 	}
 
-	/// <summary>只有权限码、没有角色的来源被折算为「有码无角色」的要求，而不是空要求。</summary>
+	/// <summary>
+	/// 只有权限码、没有角色的来源被折算为「有码无角色」的要求，而不是空要求。
+	/// </summary>
 	[Fact]
 	public void Code_Source_Should_Synthesize_CodeOnly_Requirements()
 	{
@@ -126,7 +144,9 @@ public class AddPermissionTests
 		Assert.Contains(requirements, requirement => requirement.Permission == "guarded:run" && requirement.Roles.Length == 0);
 	}
 
-	/// <summary>宿主已注册的 <see cref="IScopeSubjectResolver"/> 不会被权限注册覆盖。</summary>
+	/// <summary>
+	/// 宿主已注册的 <see cref="IScopeSubjectResolver"/> 不会被权限注册覆盖。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Not_Overwrite_Host_Subject_Resolver()
 	{
@@ -138,7 +158,9 @@ public class AddPermissionTests
 		Assert.Same(expected, provider.GetRequiredService<IScopeSubjectResolver>());
 	}
 
-	/// <summary>显式提供的权限码来源被注册为 <see cref="IPermissionCodeSource"/> 单例。</summary>
+	/// <summary>
+	/// 显式提供的权限码来源被注册为 <see cref="IPermissionCodeSource"/> 单例。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Register_Code_Source()
 	{
@@ -148,7 +170,9 @@ public class AddPermissionTests
 		Assert.Same(expected, provider.GetRequiredService<IPermissionCodeSource>());
 	}
 
-	/// <summary>未注册操作解析器时，<see cref="IScopeGuard"/> 仍可解析并按模型默认策略判定。</summary>
+	/// <summary>
+	/// 未注册操作解析器时，<see cref="IScopeGuard"/> 仍可解析并按模型默认策略判定。
+	/// </summary>
 	[Fact]
 	public void ScopeGuard_Should_Resolve_Without_Operation_Resolver()
 	{
@@ -169,7 +193,9 @@ public class AddPermissionTests
 
 	#region 启动期声明探测
 
-	/// <summary>扫描范围内没有任何声明时，启动期不要求主体解析器，守卫可直接解析。</summary>
+	/// <summary>
+	/// 扫描范围内没有任何声明时，启动期不要求主体解析器，守卫可直接解析。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Not_Require_Subject_Resolver_When_Nothing_Declared()
 	{
@@ -195,7 +221,9 @@ public class AddPermissionTests
 		Assert.Contains("NoModels", exception.Message, StringComparison.Ordinal);
 	}
 
-	/// <summary>显式调用 <c>NoModels</c> 断言「没有模型」后，空扫描范围通过启动期校验。</summary>
+	/// <summary>
+	/// 显式调用 <c>NoModels</c> 断言「没有模型」后，空扫描范围通过启动期校验。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Without_Any_Assembly_Should_Pass_Validation_After_Explicit_Assertion()
 	{
@@ -205,7 +233,9 @@ public class AddPermissionTests
 		provider.GetRequiredService<IScopeGuard>();
 	}
 
-	/// <summary>断言与注册顺序无关：先断言后注册同样生效。</summary>
+	/// <summary>
+	/// 断言与注册顺序无关：先断言后注册同样生效。
+	/// </summary>
 	[Fact]
 	public void Explicit_Assertion_Should_Be_Honored_When_Declared_Before_AddPermission()
 	{
@@ -216,7 +246,9 @@ public class AddPermissionTests
 		provider.GetRequiredService<IScopeGuard>();
 	}
 
-	/// <summary>扫描过（即便没有声明）本身就构成显式断言，无需再调用 <c>NoModels</c>。</summary>
+	/// <summary>
+	/// 扫描过（即便没有声明）本身就构成显式断言，无需再调用 <c>NoModels</c>。
+	/// </summary>
 	[Fact]
 	public void Scanning_Any_Assembly_Should_Count_As_The_Assertion_And_Need_No_Extra_Step()
 	{
@@ -227,7 +259,9 @@ public class AddPermissionTests
 		provider.GetRequiredService<IScopeGuard>();
 	}
 
-	/// <summary>扫描到声明后，注册结果标记为需要主体解析器。</summary>
+	/// <summary>
+	/// 扫描到声明后，注册结果标记为需要主体解析器。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Require_Subject_Resolver_When_Declared()
 	{
@@ -249,7 +283,9 @@ public class AddPermissionTests
 		Assert.Contains(nameof(IScopeSubjectResolver), exception.Message);
 	}
 
-	/// <summary>主体解析器可在注册之后补充，容器定稿时存在即可通过校验。</summary>
+	/// <summary>
+	/// 主体解析器可在注册之后补充，容器定稿时存在即可通过校验。
+	/// </summary>
 	[Fact]
 	public void Guard_Resolution_Should_Pass_When_Resolver_Registered_After_AddPermission()
 	{
@@ -261,7 +297,9 @@ public class AddPermissionTests
 		provider.GetRequiredService<IScopeGuard>();
 	}
 
-	/// <summary>配合权限码来源时，方法级权限声明同样使注册结果要求主体解析器。</summary>
+	/// <summary>
+	/// 配合权限码来源时，方法级权限声明同样使注册结果要求主体解析器。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Detect_Method_Level_Permission_With_Code_Source()
 	{
@@ -270,7 +308,9 @@ public class AddPermissionTests
 		Assert.True(provider.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 	}
 
-	/// <summary>模型为 <c>execute</c> 显式声明的键（<c>guarded:run</c>）优先于操作自身。</summary>
+	/// <summary>
+	/// 模型为 <c>execute</c> 显式声明的键（<c>guarded:run</c>）优先于操作自身。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Key_Execute_From_Model_Declaration()
 	{
@@ -280,7 +320,9 @@ public class AddPermissionTests
 		Assert.Equal("guarded:run", ResolveExecuteKey(provider, typeof(GuardedAsset)));
 	}
 
-	/// <summary>模型未声明策略时，操作以自身为键。</summary>
+	/// <summary>
+	/// 模型未声明策略时，操作以自身为键。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Key_Execute_From_Operation_When_Model_Declares_None()
 	{
@@ -290,7 +332,9 @@ public class AddPermissionTests
 		Assert.Equal(BusinessOperation.Execute, ResolveExecuteKey(provider, typeof(Asset)));
 	}
 
-	/// <summary>声明按标识生效：为 <c>execute</c> 声明的键不会作用于 <c>read</c>。</summary>
+	/// <summary>
+	/// 声明按标识生效：为 <c>execute</c> 声明的键不会作用于 <c>read</c>。
+	/// </summary>
 	[Fact]
 	public void AddPermission_Should_Not_Key_Declared_Operation_From_Other_Declarations()
 	{
@@ -309,14 +353,18 @@ public class AddPermissionTests
 
 	#region 装配边界
 
-	/// <summary>权限引擎程序集不得引用 Osba，以保持独立的行级数据权限能力。</summary>
+	/// <summary>
+	/// 权限引擎程序集不得引用 Osba，以保持独立的行级数据权限能力。
+	/// </summary>
 	[Fact]
 	public void Security_Assembly_Should_Not_Reference_Osba()
 	{
 		Assert.DoesNotContain("Euonia.Osba", ReferencedBy(typeof(ScopeGuard).Assembly));
 	}
 
-	/// <summary>本测试程序集不得引用 Osba，确保用例只依赖权限引擎。</summary>
+	/// <summary>
+	/// 本测试程序集不得引用 Osba，确保用例只依赖权限引擎。
+	/// </summary>
 	[Fact]
 	public void This_Assembly_Should_Not_Reference_Osba()
 	{
@@ -328,7 +376,9 @@ public class AddPermissionTests
 
 	#region 只追加扫描范围
 
-	/// <summary>扫描后注册表包含该程序集声明的模型。</summary>
+	/// <summary>
+	/// 扫描后注册表包含该程序集声明的模型。
+	/// </summary>
 	[Fact]
 	public void Scan_Should_Extend_Scan_Scope()
 	{
@@ -346,7 +396,9 @@ public class AddPermissionTests
 		Assert.True(provider.GetRequiredService<ScopeModelRegistry>().IsDeclared(typeof(Asset)));
 	}
 
-	/// <summary>多次注册是替换而非追加：每种引擎服务在容器中只保留一条描述符。</summary>
+	/// <summary>
+	/// 多次注册是替换而非追加：每种引擎服务在容器中只保留一条描述符。
+	/// </summary>
 	[Fact]
 	public void Registering_Twice_Should_Keep_One_Descriptor_Per_Service()
 	{

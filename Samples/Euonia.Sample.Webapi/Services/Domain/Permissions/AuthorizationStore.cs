@@ -39,7 +39,9 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return await LoadAsync(userId, cancellationToken);
 	}
 
-	/// <summary>返回全部授权数据的快照（用户标识 → 授权）。</summary>
+	/// <summary>
+	/// 返回全部授权数据的快照（用户标识 → 授权）。
+	/// </summary>
 	public async Task<IReadOnlyDictionary<string, SecurityProfile>> SnapshotAsync(CancellationToken cancellationToken = default)
 	{
 		var records = await context.Authorizations.AsNoTracking().ToListAsync(cancellationToken);
@@ -52,25 +54,33 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return result;
 	}
 
-	/// <summary>授予权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 授予权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
 	public async Task<SecurityProfile?> GrantCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
 	{
 		return await GrantAsync(userId, AuthorizationKinds.Code, codes, cancellationToken);
 	}
 
-	/// <summary>撤销权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 撤销权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
 	public async Task<SecurityProfile?> RevokeCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
 	{
 		return await RevokeAsync(userId, AuthorizationKinds.Code, codes, cancellationToken);
 	}
 
-	/// <summary>授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
 	public async Task<SecurityProfile?> AddGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
 	{
 		return await GrantAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);
 	}
 
-	/// <summary>撤销行级权限（立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 撤销行级权限（立即生效）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
 	public async Task<SecurityProfile?> RemoveGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
 	{
 		return await RevokeAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);

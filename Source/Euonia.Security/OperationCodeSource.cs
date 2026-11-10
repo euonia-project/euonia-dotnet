@@ -25,7 +25,9 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 internal sealed class OperationCodeSource : IPermissionCodeSource
 {
-	/// <summary>方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。</summary>
+	/// <summary>
+	/// 方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。
+	/// </summary>
 	private const BindingFlags MethodFlags =
 		BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 

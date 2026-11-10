@@ -8,7 +8,9 @@ namespace Nerosoft.Euonia.Endpoint;
 [DataContract]
 public sealed class EndpointEmpty
 {
-	/// <summary>获取共享实例。</summary>
+	/// <summary>
+	/// 获取共享实例。
+	/// </summary>
 	public static EndpointEmpty Instance { get; } = new();
 }
 
@@ -19,15 +21,21 @@ public sealed class EndpointEmpty
 [DataContract]
 public sealed class DecimalValue
 {
-	/// <summary>整数部分。</summary>
+	/// <summary>
+	/// 整数部分。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public long Units { get; set; }
 
-	/// <summary>小数部分，单位为 10^-9。</summary>
+	/// <summary>
+	/// 小数部分，单位为 10^-9。
+	/// </summary>
 	[DataMember(Order = 2)]
 	public int Nanos { get; set; }
 
-	/// <summary>把 <see cref="decimal"/> 转换为 <see cref="DecimalValue"/>。</summary>
+	/// <summary>
+	/// 把 <see cref="decimal"/> 转换为 <see cref="DecimalValue"/>。
+	/// </summary>
 	public static DecimalValue FromDecimal(decimal value)
 	{
 		if (value > long.MaxValue || value < long.MinValue)
@@ -51,13 +59,19 @@ public sealed class DecimalValue
 		return new DecimalValue { Units = (long)units, Nanos = nanos };
 	}
 
-	/// <summary>把 <see cref="DecimalValue"/> 转换为 <see cref="decimal"/>。</summary>
+	/// <summary>
+	/// 把 <see cref="DecimalValue"/> 转换为 <see cref="decimal"/>。
+	/// </summary>
 	public decimal ToDecimal() => Units + Nanos / 1_000_000_000m;
 
-	/// <summary>隐式转换为 <see cref="DecimalValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="DecimalValue"/>。
+	/// </summary>
 	public static implicit operator DecimalValue(decimal value) => FromDecimal(value);
 
-	/// <summary>隐式转换为 <see cref="decimal"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="decimal"/>。
+	/// </summary>
 	public static implicit operator decimal(DecimalValue value) => value.ToDecimal();
 }
 
@@ -68,14 +82,20 @@ public sealed class DecimalValue
 [DataContract]
 public sealed class GuidValue
 {
-	/// <summary>标准 D 格式的 GUID 字符串。</summary>
+	/// <summary>
+	/// 标准 D 格式的 GUID 字符串。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public string Value { get; set; } = string.Empty;
 
-	/// <summary>隐式转换为 <see cref="GuidValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="GuidValue"/>。
+	/// </summary>
 	public static implicit operator GuidValue(Guid value) => new() { Value = value.ToString("D") };
 
-	/// <summary>隐式转换为 <see cref="Guid"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="Guid"/>。
+	/// </summary>
 	public static implicit operator Guid(GuidValue value) => Guid.Parse(value.Value);
 }
 
@@ -88,15 +108,21 @@ public sealed class TimestampValue
 {
 	private static readonly DateTime _unixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-	/// <summary>Unix 秒。</summary>
+	/// <summary>
+	/// Unix 秒。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public long Seconds { get; set; }
 
-	/// <summary>纳秒部分。</summary>
+	/// <summary>
+	/// 纳秒部分。
+	/// </summary>
 	[DataMember(Order = 2)]
 	public int Nanos { get; set; }
 
-	/// <summary>隐式转换为 <see cref="TimestampValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="TimestampValue"/>。
+	/// </summary>
 	public static implicit operator TimestampValue(DateTime value)
 	{
 		var utc = value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value.ToUniversalTime();
@@ -116,7 +142,9 @@ public sealed class TimestampValue
 		};
 	}
 
-	/// <summary>隐式转换为 <see cref="DateTime"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="DateTime"/>。
+	/// </summary>
 	public static implicit operator DateTime(TimestampValue value)
 	{
 		return _unixEpoch.AddSeconds(value.Seconds).AddTicks(value.Nanos / 100);
@@ -130,15 +158,21 @@ public sealed class TimestampValue
 [DataContract]
 public sealed class DurationValue
 {
-	/// <summary>秒。</summary>
+	/// <summary>
+	/// 秒。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public long Seconds { get; set; }
 
-	/// <summary>纳秒。</summary>
+	/// <summary>
+	/// 纳秒。
+	/// </summary>
 	[DataMember(Order = 2)]
 	public int Nanos { get; set; }
 
-	/// <summary>隐式转换为 <see cref="DurationValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="DurationValue"/>。
+	/// </summary>
 	public static implicit operator DurationValue(TimeSpan value)
 	{
 		var seconds = value.Ticks / TimeSpan.TicksPerSecond;
@@ -156,7 +190,9 @@ public sealed class DurationValue
 		};
 	}
 
-	/// <summary>隐式转换为 <see cref="TimeSpan"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="TimeSpan"/>。
+	/// </summary>
 	public static implicit operator TimeSpan(DurationValue value)
 	{
 		return TimeSpan.FromSeconds(value.Seconds).Add(TimeSpan.FromTicks(value.Nanos / 100));
@@ -170,22 +206,32 @@ public sealed class DurationValue
 [DataContract]
 public sealed class DateOnlyValue
 {
-	/// <summary>年。</summary>
+	/// <summary>
+	/// 年。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public int Year { get; set; }
 
-	/// <summary>月。</summary>
+	/// <summary>
+	/// 月。
+	/// </summary>
 	[DataMember(Order = 2)]
 	public int Month { get; set; }
 
-	/// <summary>日。</summary>
+	/// <summary>
+	/// 日。
+	/// </summary>
 	[DataMember(Order = 3)]
 	public int Day { get; set; }
 
-	/// <summary>隐式转换为 <see cref="DateOnlyValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="DateOnlyValue"/>。
+	/// </summary>
 	public static implicit operator DateOnlyValue(DateOnly value) => new() { Year = value.Year, Month = value.Month, Day = value.Day };
 
-	/// <summary>隐式转换为 <see cref="DateOnly"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="DateOnly"/>。
+	/// </summary>
 	public static implicit operator DateOnly(DateOnlyValue value) => new(value.Year, value.Month, value.Day);
 }
 
@@ -196,23 +242,33 @@ public sealed class DateOnlyValue
 [DataContract]
 public sealed class TimeOnlyValue
 {
-	/// <summary>时。</summary>
+	/// <summary>
+	/// 时。
+	/// </summary>
 	[DataMember(Order = 1)]
 	public int Hour { get; set; }
 
-	/// <summary>分。</summary>
+	/// <summary>
+	/// 分。
+	/// </summary>
 	[DataMember(Order = 2)]
 	public int Minute { get; set; }
 
-	/// <summary>秒。</summary>
+	/// <summary>
+	/// 秒。
+	/// </summary>
 	[DataMember(Order = 3)]
 	public int Second { get; set; }
 
-	/// <summary>纳秒。</summary>
+	/// <summary>
+	/// 纳秒。
+	/// </summary>
 	[DataMember(Order = 4)]
 	public int Nanosecond { get; set; }
 
-	/// <summary>隐式转换为 <see cref="TimeOnlyValue"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="TimeOnlyValue"/>。
+	/// </summary>
 	public static implicit operator TimeOnlyValue(TimeOnly value)
 	{
 		return new TimeOnlyValue
@@ -224,7 +280,9 @@ public sealed class TimeOnlyValue
 		};
 	}
 
-	/// <summary>隐式转换为 <see cref="TimeOnly"/>。</summary>
+	/// <summary>
+	/// 隐式转换为 <see cref="TimeOnly"/>。
+	/// </summary>
 	public static implicit operator TimeOnly(TimeOnlyValue value)
 	{
 		return new TimeOnly(value.Hour, value.Minute, value.Second).Add(TimeSpan.FromTicks(value.Nanosecond / 100));

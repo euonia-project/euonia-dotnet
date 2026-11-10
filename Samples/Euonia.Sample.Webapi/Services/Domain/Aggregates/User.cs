@@ -12,25 +12,39 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 internal class User : EditableObjectBase<User, string>
 {
-	/// <summary>用户名的属性元数据，供属性系统、规则与持久化映射共享同一属性标识。</summary>
+	/// <summary>
+	/// 用户名的属性元数据，供属性系统、规则与持久化映射共享同一属性标识。
+	/// </summary>
 	public static readonly PropertyInfo<string> UsernameProperty = RegisterProperty<string>(p => p.Username);
 
-	/// <summary>口令的明文属性元数据；空值由密码强度规则负责校验。</summary>
+	/// <summary>
+	/// 口令的明文属性元数据；空值由密码强度规则负责校验。
+	/// </summary>
 	public static readonly PropertyInfo<string> PasswordProperty = RegisterProperty<string>(p => p.Password);
 
-	/// <summary>口令最近一次变更时间的属性元数据，供密码过期策略读取。</summary>
+	/// <summary>
+	/// 口令最近一次变更时间的属性元数据，供密码过期策略读取。
+	/// </summary>
 	public static readonly PropertyInfo<DateTime?> PasswordChangedTimeProperty = RegisterProperty<DateTime?>(p => p.PasswordChangedTime);
 
-	/// <summary>昵称的属性元数据，昵称不参与唯一性校验。</summary>
+	/// <summary>
+	/// 昵称的属性元数据，昵称不参与唯一性校验。
+	/// </summary>
 	public static readonly PropertyInfo<string> NicknameProperty = RegisterProperty<string>(p => p.Nickname);
 
-	/// <summary>电子邮件地址的属性元数据，唯一性由 <see cref="EmailAddressCheckRule"/> 校验。</summary>
+	/// <summary>
+	/// 电子邮件地址的属性元数据，唯一性由 <see cref="EmailAddressCheckRule"/> 校验。
+	/// </summary>
 	public static readonly PropertyInfo<string> EmailProperty = RegisterProperty<string>(p => p.Email);
 
-	/// <summary>联系电话的属性元数据，格式由电话号码规则校验。</summary>
+	/// <summary>
+	/// 联系电话的属性元数据，格式由电话号码规则校验。
+	/// </summary>
 	public static readonly PropertyInfo<string> PhoneProperty = RegisterProperty<string>(p => p.Phone);
 
-	/// <summary>角色名称集合的属性元数据，角色经由 <see cref="SetRoles"/> 去重后写入。</summary>
+	/// <summary>
+	/// 角色名称集合的属性元数据，角色经由 <see cref="SetRoles"/> 去重后写入。
+	/// </summary>
 	public static readonly PropertyInfo<string[]> RolesProperty = RegisterProperty<string[]>(p => p.Roles);
 
 	/// <summary>

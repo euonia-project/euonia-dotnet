@@ -21,7 +21,9 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [ApiController]
 public class UserController(IUserApplicationService service, UserPrincipal identity) : ControllerBase
 {
-	/// <summary>查看当前登录用户自己的资料。</summary>
+	/// <summary>
+	/// 查看当前登录用户自己的资料。
+	/// </summary>
 	[HttpGet("me")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	public async Task<IActionResult> GetSelfAsync()
@@ -30,7 +32,9 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 		return Ok(result);
 	}
 
-	/// <summary>更新当前登录用户自己的资料（昵称 / 邮箱 / 手机号）。</summary>
+	/// <summary>
+	/// 更新当前登录用户自己的资料（昵称 / 邮箱 / 手机号）。
+	/// </summary>
 	[HttpPut("me")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	public async Task<IActionResult> UpdateSelfAsync([FromBody] UserUpdateDto data)
@@ -39,7 +43,9 @@ public class UserController(IUserApplicationService service, UserPrincipal ident
 		return NoContent();
 	}
 
-	/// <summary>修改当前登录用户的密码（须校验旧密码）。</summary>
+	/// <summary>
+	/// 修改当前登录用户的密码（须校验旧密码）。
+	/// </summary>
 	[HttpPost("me/password")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]

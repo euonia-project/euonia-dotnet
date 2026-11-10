@@ -116,7 +116,9 @@ public class RuleAndFactoryBenchmarks
 	}
 }
 
-/// <summary>无规则对象。</summary>
+/// <summary>
+/// 无规则对象。
+/// </summary>
 public sealed class PlainObject : EditableObject<PlainObject>
 {
 	/// <summary>
@@ -163,7 +165,9 @@ public sealed class PlainObject : EditableObject<PlainObject>
 	}
 }
 
-/// <summary>带一条属性级规则的对象。</summary>
+/// <summary>
+/// 带一条属性级规则的对象。
+/// </summary>
 public sealed class RuledObject : EditableObject<RuledObject>
 {
 	/// <summary>

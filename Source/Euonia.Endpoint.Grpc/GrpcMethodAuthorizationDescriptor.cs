@@ -18,12 +18,18 @@ public sealed class GrpcMethodAuthorizationDescriptor
 		MethodName = methodName;
 	}
 
-	/// <summary>获取 gRPC 方法完整路径。</summary>
+	/// <summary>
+	/// 获取 gRPC 方法完整路径。
+	/// </summary>
 	public string MethodPath { get; }
 
-	/// <summary>获取应用服务接口类型。</summary>
+	/// <summary>
+	/// 获取应用服务接口类型。
+	/// </summary>
 	public Type ServiceType { get; }
 
-	/// <summary>获取应用服务方法名称。</summary>
+	/// <summary>
+	/// 获取应用服务方法名称。
+	/// </summary>
 	public string MethodName { get; }
 }

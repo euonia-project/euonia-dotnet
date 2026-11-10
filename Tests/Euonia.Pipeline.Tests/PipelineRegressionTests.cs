@@ -86,7 +86,9 @@ public class PipelineRegressionTests
 		Assert.True(provider.GetRequiredService<Marker>().Called);
 	}
 
-	/// <summary>静态 <c>Pipeline.Run</c> 先按顺序执行行为、再执行累积委托，并返回累积委托的结果。</summary>
+	/// <summary>
+	/// 静态 <c>Pipeline.Run</c> 先按顺序执行行为、再执行累积委托，并返回累积委托的结果。
+	/// </summary>
 	[Fact]
 	public void StaticRun_returns_accumulate_result_and_runs_behaviors_in_order()
 	{
@@ -103,7 +105,9 @@ public class PipelineRegressionTests
 		Assert.Equal(new[] { "Behavior", "Accumulate" }, log);
 	}
 
-	/// <summary>没有行为时，静态 <c>Pipeline.Run</c> 直接执行累积委托并返回其结果。</summary>
+	/// <summary>
+	/// 没有行为时，静态 <c>Pipeline.Run</c> 直接执行累积委托并返回其结果。
+	/// </summary>
 	[Fact]
 	public void StaticRun_without_behaviors_returns_accumulate_result()
 	{
@@ -120,7 +124,9 @@ public class PipelineRegressionTests
 		Assert.Equal(new[] { "Accumulate" }, log);
 	}
 
-	/// <summary>无返回值的静态 <c>Pipeline.Run</c> 同样先执行行为、再执行累积委托。</summary>
+	/// <summary>
+	/// 无返回值的静态 <c>Pipeline.Run</c> 同样先执行行为、再执行累积委托。
+	/// </summary>
 	[Fact]
 	public void StaticRun_void_runs_behaviors_then_accumulate()
 	{

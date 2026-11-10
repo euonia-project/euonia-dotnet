@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Endpoint.Http.Tests;
 /// </summary>
 public class HttpEndpointTests
 {
-	/// <summary>验证端点元数据会继承实现类与实现方法的认证特性。</summary>
+	/// <summary>
+	/// 验证端点元数据会继承实现类与实现方法的认证特性。
+	/// </summary>
 	[Fact]
 	public void Metadata_InheritsImplementationClassAndMethodAuthorization()
 	{
@@ -42,7 +44,9 @@ public class HttpEndpointTests
 		Assert.Contains(methodEndpoint.Metadata.OfType<AuthorizeAttribute>(), attribute => attribute.Roles == "admin");
 	}
 
-	/// <summary>验证只映射标记了 <c>ExposeWebApiAttribute</c> 的方法。</summary>
+	/// <summary>
+	/// 验证只映射标记了 <c>ExposeWebApiAttribute</c> 的方法。
+	/// </summary>
 	[Fact]
 	public void Map_AddsOnlyMarkedEndpoints()
 	{
@@ -55,7 +59,9 @@ public class HttpEndpointTests
 		Assert.Contains(endpoints, endpoint => endpoint.RoutePattern.RawText == "api/test/create" && HasMethod(endpoint, "POST"));
 	}
 
-	/// <summary>验证 GET 请求的路由、查询字符串与取消令牌绑定。</summary>
+	/// <summary>
+	/// 验证 GET 请求的路由、查询字符串与取消令牌绑定。
+	/// </summary>
 	[Fact]
 	public async Task Get_BindsRouteQueryAndCancellation()
 	{
@@ -72,7 +78,9 @@ public class HttpEndpointTests
 		Assert.Equal("\"abc:42\"", await ReadBodyAsync(context));
 	}
 
-	/// <summary>验证 POST 请求的 JSON 请求体绑定。</summary>
+	/// <summary>
+	/// 验证 POST 请求的 JSON 请求体绑定。
+	/// </summary>
 	[Fact]
 	public async Task Post_BindsJsonBody()
 	{
@@ -91,7 +99,9 @@ public class HttpEndpointTests
 		Assert.Equal("\"hello\"", await ReadBodyAsync(context));
 	}
 
-	/// <summary>验证生成端点对空请求体返回 400。</summary>
+	/// <summary>
+	/// 验证生成端点对空请求体返回 400。
+	/// </summary>
 	[Fact]
 	public async Task Post_EmptyBody_ReturnsBadRequest()
 	{
@@ -108,7 +118,9 @@ public class HttpEndpointTests
 		Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 	}
 
-	/// <summary>验证生成端点对 JSON <c>null</c> 请求体返回 400。</summary>
+	/// <summary>
+	/// 验证生成端点对 JSON <c>null</c> 请求体返回 400。
+	/// </summary>
 	[Fact]
 	public async Task Post_NullBody_ReturnsBadRequest()
 	{
@@ -128,7 +140,9 @@ public class HttpEndpointTests
 		Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 	}
 
-	/// <summary>验证生成端点对非 JSON Content-Type 返回 400。</summary>
+	/// <summary>
+	/// 验证生成端点对非 JSON Content-Type 返回 400。
+	/// </summary>
 	[Fact]
 	public async Task Post_NonJsonContentType_ReturnsBadRequest()
 	{
@@ -148,7 +162,9 @@ public class HttpEndpointTests
 		Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
 	}
 
-	/// <summary>验证 <c>ScanTypes</c> 同样过滤生成路径。</summary>
+	/// <summary>
+	/// 验证 <c>ScanTypes</c> 同样过滤生成路径。
+	/// </summary>
 	[Fact]
 	public void ScanTypes_FiltersGeneratedEndpoints()
 	{
@@ -172,7 +188,9 @@ public class HttpEndpointTests
 		Assert.DoesNotContain(endpoints, endpoint => endpoint.RoutePattern.RawText!.StartsWith("api/auth", StringComparison.Ordinal));
 	}
 
-	/// <summary>验证生成路径与运行时兜底的路由预留语义。</summary>
+	/// <summary>
+	/// 验证生成路径与运行时兜底的路由预留语义。
+	/// </summary>
 	[Fact]
 	public void Registry_DistinguishesGeneratedAndRuntimeReservations()
 	{
@@ -190,7 +208,9 @@ public class HttpEndpointTests
 		Assert.Equal(new[] { "PATCH" }, available);
 	}
 
-	/// <summary>验证必填引用类型参数在空请求体时绑定失败。</summary>
+	/// <summary>
+	/// 验证必填引用类型参数在空请求体时绑定失败。
+	/// </summary>
 	[Fact]
 	public async Task Binder_EmptyRequiredBody_ReturnsFailure()
 	{
@@ -209,7 +229,9 @@ public class HttpEndpointTests
 		Assert.False(result.IsInternal);
 	}
 
-	/// <summary>验证必填引用类型参数在 JSON <c>null</c> 时绑定失败。</summary>
+	/// <summary>
+	/// 验证必填引用类型参数在 JSON <c>null</c> 时绑定失败。
+	/// </summary>
 	[Fact]
 	public async Task Binder_NullRequiredBody_ReturnsFailure()
 	{
@@ -231,7 +253,9 @@ public class HttpEndpointTests
 		Assert.False(result.IsInternal);
 	}
 
-	/// <summary>验证运行时兜底请求委托可以完成 body 绑定与响应。</summary>
+	/// <summary>
+	/// 验证运行时兜底请求委托可以完成 body 绑定与响应。
+	/// </summary>
 	[Fact]
 	public async Task RuntimeFactory_BindsBodyAndReturnsOk()
 	{
@@ -253,7 +277,9 @@ public class HttpEndpointTests
 		Assert.Equal("\"runtime\"", await ReadBodyAsync(context));
 	}
 
-	/// <summary>验证多实现时不合并实现类授权，避免 AllowAnonymous 误放开。</summary>
+	/// <summary>
+	/// 验证多实现时不合并实现类授权，避免 AllowAnonymous 误放开。
+	/// </summary>
 	[Fact]
 	public void Metadata_DoesNotMergeAuthorizationAcrossMultipleImplementations()
 	{
@@ -268,7 +294,9 @@ public class HttpEndpointTests
 		Assert.DoesNotContain(metadata, item => item is AuthorizeAttribute);
 	}
 
-	/// <summary>验证缺失的可选集合参数返回空集合而不是 null。</summary>
+	/// <summary>
+	/// 验证缺失的可选集合参数返回空集合而不是 null。
+	/// </summary>
 	[Fact]
 	public async Task Binder_MissingOptionalCollection_ReturnsEmptyCollection()
 	{
@@ -287,7 +315,9 @@ public class HttpEndpointTests
 		Assert.Empty(values);
 	}
 
-	/// <summary>验证 nint 参数与复杂 body 参数可以同时生成并正常调用。</summary>
+	/// <summary>
+	/// 验证 nint 参数与复杂 body 参数可以同时生成并正常调用。
+	/// </summary>
 	[Fact]
 	public async Task Post_WithNintParameter_BindsBodyAndQuery()
 	{
@@ -317,7 +347,9 @@ public class HttpEndpointTests
 		Assert.Equal("\"hello\"", await ReadBodyAsync(context));
 	}
 
-	/// <summary>验证生成路径把简单集合绑定为 query。</summary>
+	/// <summary>
+	/// 验证生成路径把简单集合绑定为 query。
+	/// </summary>
 	[Fact]
 	public async Task Get_BindsSimpleCollectionFromQuery()
 	{
@@ -343,7 +375,9 @@ public class HttpEndpointTests
 		Assert.Equal("2", await ReadBodyAsync(context));
 	}
 
-	/// <summary>验证配置的扫描程序集范围生效。</summary>
+	/// <summary>
+	/// 验证配置的扫描程序集范围生效。
+	/// </summary>
 	[Fact]
 	public void ConfigurationScanScope_IsUsed()
 	{
@@ -369,7 +403,9 @@ public class HttpEndpointTests
 		Assert.NotEmpty(GetEndpoints(builder));
 	}
 
-	/// <summary>验证关闭入口程序集扫描后不产生端点。</summary>
+	/// <summary>
+	/// 验证关闭入口程序集扫描后不产生端点。
+	/// </summary>
 	[Fact]
 	public void DisabledEntryAssembly_AddsNoEndpoints()
 	{
@@ -390,7 +426,9 @@ public class HttpEndpointTests
 		Assert.Empty(GetEndpoints(builder));
 	}
 
-	/// <summary>验证功能开关关闭时不映射端点。</summary>
+	/// <summary>
+	/// 验证功能开关关闭时不映射端点。
+	/// </summary>
 	[Fact]
 	public void DisabledToggle_AddsNoEndpoints()
 	{
@@ -400,7 +438,9 @@ public class HttpEndpointTests
 		Assert.Empty(GetEndpoints(builder));
 	}
 
-	/// <summary>验证接口方法上的授权元数据会复制到端点。</summary>
+	/// <summary>
+	/// 验证接口方法上的授权元数据会复制到端点。
+	/// </summary>
 	[Fact]
 	public void AuthorizeMetadata_IsCopied()
 	{
@@ -469,7 +509,9 @@ public class HttpEndpointTests
 /// </summary>
 public sealed class TestInput
 {
-	/// <summary>获取或设置名称。</summary>
+	/// <summary>
+	/// 获取或设置名称。
+	/// </summary>
 	public string Name { get; set; } = string.Empty;
 }
 
@@ -478,7 +520,9 @@ public sealed class TestInput
 /// </summary>
 public interface ITestEndpointService
 {
-	/// <summary>读取测试值。</summary>
+	/// <summary>
+	/// 读取测试值。
+	/// </summary>
 	/// <param name="id">路由标识。</param>
 	/// <param name="value">查询值。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
@@ -487,20 +531,26 @@ public interface ITestEndpointService
 	[Authorize]
 	Task<string> GetAsync(string id, int value, CancellationToken cancellationToken = default);
 
-	/// <summary>创建测试值。</summary>
+	/// <summary>
+	/// 创建测试值。
+	/// </summary>
 	/// <param name="input">输入 DTO。</param>
 	/// <returns>输入名称。</returns>
 	[ExposeWebApi(Prefix = "api/test", Method = new[] { "POST" })]
 	Task<string> CreateAsync(TestInput input);
 
-	/// <summary>更新测试值。</summary>
+	/// <summary>
+	/// 更新测试值。
+	/// </summary>
 	/// <param name="id">路由标识。</param>
 	/// <param name="input">输入 DTO。</param>
 	/// <returns>表示异步操作的任务。</returns>
 	[ExposeWebApi(Prefix = "api/test", Route = "{id}", Method = new[] { "PUT", "PATCH" })]
 	Task UpdateAsync(string id, TestInput input);
 
-	/// <summary>删除测试值。</summary>
+	/// <summary>
+	/// 删除测试值。
+	/// </summary>
 	/// <returns>表示异步操作的任务。</returns>
 	[ExposeWebApi(Prefix = "api/test", Route = "delete", Method = new[] { "DELETE" })]
 	Task DeleteAsync();
@@ -526,12 +576,16 @@ public sealed class TestEndpointService : ITestEndpointService
 /// </summary>
 public interface IAuthEndpointService
 {
-	/// <summary>读取类级授权结果。</summary>
+	/// <summary>
+	/// 读取类级授权结果。
+	/// </summary>
 	/// <returns>固定字符串。</returns>
 	[ExposeWebApi(Prefix = "api/auth", Route = "class", Method = new[] { "GET" })]
 	Task<string> ClassAuthAsync();
 
-	/// <summary>读取方法级授权结果。</summary>
+	/// <summary>
+	/// 读取方法级授权结果。
+	/// </summary>
 	/// <returns>固定字符串。</returns>
 	[ExposeWebApi(Prefix = "api/auth", Route = "method", Method = new[] { "GET" })]
 	Task<string> MethodAuthAsync();
@@ -542,7 +596,9 @@ public interface IAuthEndpointService
 /// </summary>
 public interface IReservedNameEndpointService
 {
-	/// <summary>回显查询值。</summary>
+	/// <summary>
+	/// 回显查询值。
+	/// </summary>
 	/// <param name="__http">以保留前缀开头的参数名。</param>
 	/// <returns>输入值。</returns>
 	[ExposeWebApi(Prefix = "api/reserved", Route = "echo", Method = new[] { "GET" })]
@@ -554,7 +610,9 @@ public interface IReservedNameEndpointService
 /// </summary>
 public interface INintEndpointService
 {
-	/// <summary>混合复杂 body 与 nint 参数。</summary>
+	/// <summary>
+	/// 混合复杂 body 与 nint 参数。
+	/// </summary>
 	/// <param name="input">输入 DTO。</param>
 	/// <param name="offset">原生整数偏移。</param>
 	/// <returns>输入名称。</returns>
@@ -576,7 +634,9 @@ public sealed class NintEndpointService : INintEndpointService
 /// </summary>
 public sealed class NintInput
 {
-	/// <summary>获取或设置名称。</summary>
+	/// <summary>
+	/// 获取或设置名称。
+	/// </summary>
 	public string Name { get; set; } = string.Empty;
 }
 
@@ -585,7 +645,9 @@ public sealed class NintInput
 /// </summary>
 public interface IOptionalCollectionService
 {
-	/// <summary>统计数组长度。</summary>
+	/// <summary>
+	/// 统计数组长度。
+	/// </summary>
 	/// <param name="ids">可选数组参数。</param>
 	/// <returns>数组长度。</returns>
 	[ExposeWebApi(Prefix = "api/optional", Route = "count", Method = new[] { "GET" })]
@@ -597,7 +659,9 @@ public interface IOptionalCollectionService
 /// </summary>
 public interface IArrayEndpointService
 {
-	/// <summary>统计数组长度。</summary>
+	/// <summary>
+	/// 统计数组长度。
+	/// </summary>
 	/// <param name="ids">查询字符串中的数组。</param>
 	/// <returns>数组长度。</returns>
 	[ExposeWebApi(Prefix = "api/array", Route = "count", Method = new[] { "GET" })]
@@ -618,7 +682,9 @@ public sealed class ArrayEndpointService : IArrayEndpointService
 /// </summary>
 public interface IMultiAuthService
 {
-	/// <summary>读取测试值。</summary>
+	/// <summary>
+	/// 读取测试值。
+	/// </summary>
 	/// <returns>固定字符串。</returns>
 	Task<string> GetAsync();
 }

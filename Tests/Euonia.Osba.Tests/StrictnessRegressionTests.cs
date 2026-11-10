@@ -369,7 +369,9 @@ public class StrictnessRegressionTests
 	}
 }
 
-/// <summary>ValueTask 工厂方法探针。</summary>
+/// <summary>
+/// ValueTask 工厂方法探针。
+/// </summary>
 public class ValueTaskPersistObject : EditableObject<ValueTaskPersistObject>
 {
 	/// <summary>
@@ -402,12 +404,16 @@ public class ValueTaskPersistObject : EditableObject<ValueTaskPersistObject>
 	}
 }
 
-/// <summary>没有实现 Insert 的对象：保存必须失败，而不是静默 no-op。</summary>
+/// <summary>
+/// 没有实现 Insert 的对象：保存必须失败，而不是静默 no-op。
+/// </summary>
 public class NoPersistenceObject : EditableObject<NoPersistenceObject>
 {
 }
 
-/// <summary>同步工厂方法抛出的业务异常必须原样传播。</summary>
+/// <summary>
+/// 同步工厂方法抛出的业务异常必须原样传播。
+/// </summary>
 public class ThrowingInsertObject : EditableObject<ThrowingInsertObject>
 {
 	/// <summary>
@@ -434,7 +440,9 @@ public class ThrowingInsertObject : EditableObject<ThrowingInsertObject>
 	}
 }
 
-/// <summary>没有实现 Execute 的命令：执行必须失败，而不是静默 no-op。</summary>
+/// <summary>
+/// 没有实现 Execute 的命令：执行必须失败，而不是静默 no-op。
+/// </summary>
 public class NoExecuteCommand : ServiceObject<NoExecuteCommand>
 {
 	[FactoryCreate]
@@ -444,7 +452,9 @@ public class NoExecuteCommand : ServiceObject<NoExecuteCommand>
 	}
 }
 
-/// <summary>字段模式 + DataAnnotations/CommonRule 探针。</summary>
+/// <summary>
+/// 字段模式 + DataAnnotations/CommonRule 探针。
+/// </summary>
 public class RefBackedRuleObject : EditableObject<RefBackedRuleObject>
 {
 	/// <summary>
@@ -473,7 +483,9 @@ public class RefBackedRuleObject : EditableObject<RefBackedRuleObject>
 	}
 }
 
-/// <summary>非泛型 SetProperty 探针。</summary>
+/// <summary>
+/// 非泛型 SetProperty 探针。
+/// </summary>
 public class NonGenericSetObject : EditableObject<NonGenericSetObject>
 {
 	/// <summary>
@@ -491,7 +503,9 @@ public class NonGenericSetObject : EditableObject<NonGenericSetObject>
 	}
 }
 
-/// <summary>只在工厂装载作用域内可填充的只读对象。</summary>
+/// <summary>
+/// 只在工厂装载作用域内可填充的只读对象。
+/// </summary>
 public class LoadableReadOnlyObject : ReadOnlyObject<LoadableReadOnlyObject>
 {
 	/// <summary>
@@ -512,12 +526,16 @@ public class LoadableReadOnlyObject : ReadOnlyObject<LoadableReadOnlyObject>
 	}
 }
 
-/// <summary>规则范围栈探针。</summary>
+/// <summary>
+/// 规则范围栈探针。
+/// </summary>
 public class ScopeProbeObject : EditableObject<ScopeProbeObject>
 {
 }
 
-/// <summary>总是失败的对象级规则。</summary>
+/// <summary>
+/// 总是失败的对象级规则。
+/// </summary>
 public sealed class AlwaysFailRule : ObjectRuleBase
 {
 	/// <summary>
@@ -533,7 +551,9 @@ public sealed class AlwaysFailRule : ObjectRuleBase
 	}
 }
 
-/// <summary>总是通过的对象级规则。</summary>
+/// <summary>
+/// 总是通过的对象级规则。
+/// </summary>
 public sealed class AlwaysPassRule : ObjectRuleBase
 {
 	/// <summary>
@@ -548,7 +568,9 @@ public sealed class AlwaysPassRule : ObjectRuleBase
 	}
 }
 
-/// <summary>命令对象不跟踪属性变化。</summary>
+/// <summary>
+/// 命令对象不跟踪属性变化。
+/// </summary>
 public sealed class TrackingCommand : ServiceObject<TrackingCommand>
 {
 	/// <summary>
@@ -557,12 +579,16 @@ public sealed class TrackingCommand : ServiceObject<TrackingCommand>
 	public string Name { get; set; } = null!;
 }
 
-/// <summary>构造注入依赖。</summary>
+/// <summary>
+/// 构造注入依赖。
+/// </summary>
 public sealed class SampleDependency
 {
 }
 
-/// <summary>通过构造函数获取依赖的业务对象。</summary>
+/// <summary>
+/// 通过构造函数获取依赖的业务对象。
+/// </summary>
 public sealed class ConstructorInjectedObject : EditableObject<ConstructorInjectedObject>
 {
 	/// <summary>
@@ -580,7 +606,9 @@ public sealed class ConstructorInjectedObject : EditableObject<ConstructorInject
 	public SampleDependency Dependency { get; }
 }
 
-/// <summary>用于启动期校验的非法 [Inject] 属性。</summary>
+/// <summary>
+/// 用于启动期校验的非法 [Inject] 属性。
+/// </summary>
 public class BadInjectObject : BusinessObject<BadInjectObject>
 {
 	/// <summary>
@@ -590,7 +618,9 @@ public class BadInjectObject : BusinessObject<BadInjectObject>
 	public int Number { get; set; }
 }
 
-/// <summary>工厂方法返回 Task&lt;IAsyncEnumerable&lt;T&gt;&gt; 的对象，校验器应报 OSBA-F002。</summary>
+/// <summary>
+/// 工厂方法返回 Task&lt;IAsyncEnumerable&lt;T&gt;&gt; 的对象，校验器应报 OSBA-F002。
+/// </summary>
 public class WrappedAsyncEnumerableObject : BusinessObject<WrappedAsyncEnumerableObject>
 {
 	/// <summary>
@@ -608,7 +638,9 @@ public class WrappedAsyncEnumerableObject : BusinessObject<WrappedAsyncEnumerabl
 	}
 }
 
-/// <summary>记录收到值的观察者。</summary>
+/// <summary>
+/// 记录收到值的观察者。
+/// </summary>
 internal sealed class ListObserver<T> : IObserver<T>
 {
 	/// <summary>

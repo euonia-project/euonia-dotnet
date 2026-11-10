@@ -85,7 +85,9 @@ internal sealed class CompositeCodeSource : IPermissionCodeSource
 		return requirements.AsReadOnly();
 	}
 
-	/// <summary>要求的去重键：权限码 + 角色集合。</summary>
+	/// <summary>
+	/// 要求的去重键：权限码 + 角色集合。
+	/// </summary>
 	private static string Describe(PermissionAttribute requirement)
 	{
 		return $"{requirement.Permission}\u001f{string.Join("\u001e", requirement.Roles)}";

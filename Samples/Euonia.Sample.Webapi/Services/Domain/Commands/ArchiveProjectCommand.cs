@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </summary>
 public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectCommand>
 {
-	/// <summary>目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
+	/// <summary>
+	/// 目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
 	public string ProjectId { get; set; } = null!;
 
 	/// <summary>
@@ -26,7 +28,9 @@ public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectComm
 	/// </summary>
 	public Project Project { get; private set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Archived { get; private set; }
 
 	// 装载放在 Create 而非 Execute：工厂在命令体之前先做一次行级判定（EnsureAuthorizedBefore），

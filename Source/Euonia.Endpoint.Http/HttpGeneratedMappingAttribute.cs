@@ -6,13 +6,17 @@ namespace Nerosoft.Euonia.Endpoint.Http;
 [AttributeUsage(AttributeTargets.Assembly, AllowMultiple = true, Inherited = false)]
 public sealed class HttpGeneratedMappingAttribute : Attribute
 {
-	/// <summary>初始化 <see cref="HttpGeneratedMappingAttribute"/> 的新实例。</summary>
+	/// <summary>
+	/// 初始化 <see cref="HttpGeneratedMappingAttribute"/> 的新实例。
+	/// </summary>
 	/// <param name="mappingType">包含 <c>MapGenerated</c> 方法的映射类型。</param>
 	public HttpGeneratedMappingAttribute(Type mappingType)
 	{
 		MappingType = mappingType;
 	}
 
-	/// <summary>获取映射类型。</summary>
+	/// <summary>
+	/// 获取映射类型。
+	/// </summary>
 	public Type MappingType { get; }
 }

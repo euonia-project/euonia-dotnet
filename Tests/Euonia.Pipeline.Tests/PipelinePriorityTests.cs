@@ -90,7 +90,9 @@ public class PipelinePriorityTests
 		}
 	}
 
-	/// <summary>组件按优先级构建：数字高的靠后执行，与注册顺序无关。</summary>
+	/// <summary>
+	/// 组件按优先级构建：数字高的靠后执行，与注册顺序无关。
+	/// </summary>
 	[Fact]
 	public async Task Build_orders_components_by_priority_higher_later()
 	{
@@ -129,7 +131,9 @@ public class PipelinePriorityTests
 		Assert.Equal(new[] { "Component", "Accumulate" }, context.Executed);
 	}
 
-	/// <summary>同优先级的组件保持注册顺序执行。</summary>
+	/// <summary>
+	/// 同优先级的组件保持注册顺序执行。
+	/// </summary>
 	[Fact]
 	public async Task Build_keeps_registration_order_for_equal_priority()
 	{
@@ -145,7 +149,9 @@ public class PipelinePriorityTests
 		Assert.Equal(new[] { "First", "Second" }, context.Executed);
 	}
 
-	/// <summary><c>UseOf</c> 按特性声明的优先级注册行为，与手工注册的组件共同排序。</summary>
+	/// <summary>
+	/// <c>UseOf</c> 按特性声明的优先级注册行为，与手工注册的组件共同排序。
+	/// </summary>
 	[Fact]
 	public async Task UseOf_registers_behaviors_with_attribute_priority()
 	{
@@ -163,7 +169,9 @@ public class PipelinePriorityTests
 		Assert.Equal(new[] { "SecondBehavior", "Manual", "FirstBehavior" }, context.Executed);
 	}
 
-	/// <summary><c>UseOf</c> 的 <c>useAheadOfOthers</c> 标志把行为放到手工注册组件之前。</summary>
+	/// <summary>
+	/// <c>UseOf</c> 的 <c>useAheadOfOthers</c> 标志把行为放到手工注册组件之前。
+	/// </summary>
 	[Fact]
 	public async Task UseOf_with_ahead_flag_places_behaviors_first()
 	{
@@ -180,7 +188,9 @@ public class PipelinePriorityTests
 		Assert.Equal(new[] { "FirstBehavior", "Manual" }, context.Executed);
 	}
 
-	/// <summary>未显式指定优先级时，<c>Use</c> 读取行为类型上的 <c>PipelineBehavior</c> 特性优先级。</summary>
+	/// <summary>
+	/// 未显式指定优先级时，<c>Use</c> 读取行为类型上的 <c>PipelineBehavior</c> 特性优先级。
+	/// </summary>
 	[Fact]
 	public async Task Use_TBehavior_reads_priority_from_attribute_when_not_specified()
 	{
@@ -198,7 +208,9 @@ public class PipelinePriorityTests
 		Assert.Equal(new[] { "Manual", "AttributedBehavior" }, context.Executed);
 	}
 
-	/// <summary>带累积委托的运行时先执行请求声明的行为，再执行累积委托并返回其结果。</summary>
+	/// <summary>
+	/// 带累积委托的运行时先执行请求声明的行为，再执行累积委托并返回其结果。
+	/// </summary>
 	[Fact]
 	public async Task RunAsync_with_accumulate_executes_behaviors_before_accumulate()
 	{

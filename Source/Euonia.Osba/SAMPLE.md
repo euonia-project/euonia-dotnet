@@ -679,7 +679,9 @@ protected override Task DeleteAsync(CancellationToken cancellationToken = defaul
 不需要重新签发令牌。
 
 ```csharp
-/// <summary>行级授权数据（真实系统里是数据库里的一张 ACL 表）。</summary>
+/// <summary>
+/// 行级授权数据（真实系统里是数据库里的一张 ACL 表）。
+/// </summary>
 public sealed class RepoAcl
 {
     public List<(string RepoId, string UserId, string Operation)> Entries { get; } = [];

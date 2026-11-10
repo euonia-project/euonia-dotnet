@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Sample.Filters;
 /// </summary>
 public class ApiExceptionMiddleware(RequestDelegate next, ILogger<ApiExceptionMiddleware> logger, IHostEnvironment environment)
 {
-	/// <summary>执行管道；发生异常时记录日志并映射为统一错误响应。</summary>
+	/// <summary>
+	/// 执行管道；发生异常时记录日志并映射为统一错误响应。
+	/// </summary>
 	public async Task InvokeAsync(HttpContext context)
 	{
 		try

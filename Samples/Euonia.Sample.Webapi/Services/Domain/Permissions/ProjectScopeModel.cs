@@ -17,7 +17,9 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// </summary>
 public sealed class ProjectScopeModel : ScopeModel<Project>
 {
-	/// <summary>行级授予维度：值为项目标识。解析器经 <c>AddGrant(码, 本维度, 项目id集合)</c> 展开。</summary>
+	/// <summary>
+	/// 行级授予维度：值为项目标识。解析器经 <c>AddGrant(码, 本维度, 项目id集合)</c> 展开。
+	/// </summary>
 	public const string ProjectDimension = "project";
 
 	/// <summary>
@@ -92,17 +94,23 @@ public sealed class ProjectScopeModel : ScopeModel<Project>
 /// </remarks>
 public readonly record struct ProjectGrant(string Operation, string ProjectId)
 {
-	/// <summary>操作码与项目标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。</summary>
+	/// <summary>
+	/// 操作码与项目标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。
+	/// </summary>
 	public const string Separator = "|";
 
-	/// <summary>编码为授权行的值。</summary>
+	/// <summary>
+	/// 编码为授权行的值。
+	/// </summary>
 	/// <returns>形如 <c>"project:edit|&lt;project-id&gt;"</c> 的字符串。</returns>
 	public override string ToString()
 	{
 		return string.Concat(Operation, Separator, ProjectId);
 	}
 
-	/// <summary>解析授权行的值；格式非法时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 解析授权行的值；格式非法时返回 <see langword="null"/>。
+	/// </summary>
 	/// <param name="value">授权行上存储的值。</param>
 	/// <returns>解析结果；格式非法时返回 <see langword="null"/>。</returns>
 	public static ProjectGrant? Parse(string value)

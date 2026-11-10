@@ -48,21 +48,33 @@ public sealed class OsbaOptions
 /// </summary>
 public enum OsbaDiagnosticLevel
 {
-	/// <summary>详细跟踪。</summary>
+	/// <summary>
+	/// 详细跟踪。
+	/// </summary>
 	Trace,
 
-	/// <summary>调试信息。</summary>
+	/// <summary>
+	/// 调试信息。
+	/// </summary>
 	Debug,
 
-	/// <summary>一般信息。</summary>
+	/// <summary>
+	/// 一般信息。
+	/// </summary>
 	Information,
 
-	/// <summary>警告级别。</summary>
+	/// <summary>
+	/// 警告级别。
+	/// </summary>
 	Warning,
 
-	/// <summary>错误级别。</summary>
+	/// <summary>
+	/// 错误级别。
+	/// </summary>
 	Error,
 
-	/// <summary>关闭诊断日志。</summary>
+	/// <summary>
+	/// 关闭诊断日志。
+	/// </summary>
 	None
 }

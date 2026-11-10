@@ -18,7 +18,9 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [Produces("application/json")]
 public class ProjectController(IProjectApplicationService service) : ControllerBase
 {
-	/// <summary>分页查询项目（已登录须持有 project:view 码并按行范围过滤；项目不公开）。</summary>
+	/// <summary>
+	/// 分页查询项目（已登录须持有 project:view 码并按行范围过滤；项目不公开）。
+	/// </summary>
 	[HttpGet]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	public Task<IActionResult> List([FromQuery] string? keyword = null, [FromQuery] string? sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
@@ -26,7 +28,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return InvokeAsync(() => service.FindAsync(keyword, sortBy, page, pageSize, cancellationToken));
 	}
 
-	/// <summary>查看项目详情（行级视图判定；归档项目仍可查看）。</summary>
+	/// <summary>
+	/// 查看项目详情（行级视图判定；归档项目仍可查看）。
+	/// </summary>
 	[HttpGet("{id}")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -36,7 +40,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return InvokeAsync(() => service.GetAsync(id, cancellationToken));
 	}
 
-	/// <summary>创建项目（项目名；描述可省略）。</summary>
+	/// <summary>
+	/// 创建项目（项目名；描述可省略）。
+	/// </summary>
 	[HttpPost]
 	[ProducesResponseType(StatusCodes.Status201Created)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -46,7 +52,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return Created($"/api/project/{id}", new { id });
 	}
 
-	/// <summary>更新项目（仅名称/描述；归档项目不可改）。</summary>
+	/// <summary>
+	/// 更新项目（仅名称/描述；归档项目不可改）。
+	/// </summary>
 	[HttpPut("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -57,7 +65,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return NoContent();
 	}
 
-	/// <summary>归档项目（归档即只读凝固：仍可查看，不可再编辑/归档/删除）。</summary>
+	/// <summary>
+	/// 归档项目（归档即只读凝固：仍可查看，不可再编辑/归档/删除）。
+	/// </summary>
 	[HttpPost("{id}/archive")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -68,7 +78,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return NoContent();
 	}
 
-	/// <summary>删除项目（归档项目不可删）。</summary>
+	/// <summary>
+	/// 删除项目（归档项目不可删）。
+	/// </summary>
 	[HttpDelete("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -79,7 +91,9 @@ public class ProjectController(IProjectApplicationService service) : ControllerB
 		return NoContent();
 	}
 
-	/// <summary>解释项目在当前用户数据范围内的判定结论（调试用）。</summary>
+	/// <summary>
+	/// 解释项目在当前用户数据范围内的判定结论（调试用）。
+	/// </summary>
 	[HttpGet("{id}/explain")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]

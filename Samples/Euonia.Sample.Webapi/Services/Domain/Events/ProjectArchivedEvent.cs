@@ -19,9 +19,13 @@ public class ProjectArchivedEvent : DomainEvent
 		ArchivedAt = archivedAt;
 	}
 
-	/// <summary>被归档的项目标识。</summary>
+	/// <summary>
+	/// 被归档的项目标识。
+	/// </summary>
 	public string ProjectId { get; }
 
-	/// <summary>归档时间。</summary>
+	/// <summary>
+	/// 归档时间。
+	/// </summary>
 	public DateTime ArchivedAt { get; }
 }

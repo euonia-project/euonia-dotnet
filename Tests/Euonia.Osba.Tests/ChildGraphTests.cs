@@ -358,53 +358,79 @@ public class ChildGraphTests
 	}
 }
 
-/// <summary>子对象探针。</summary>
+/// <summary>
+/// 子对象探针。
+/// </summary>
 public sealed class ChildProbe : ObservableObject<ChildProbe>
 {
-	/// <summary>子对象名称的属性元数据。</summary>
+	/// <summary>
+	/// 子对象名称的属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
-	/// <summary>子对象的名称，写入时触发变更追踪与父对象通知。</summary>
+	/// <summary>
+	/// 子对象的名称，写入时触发变更追踪与父对象通知。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>供测试观察当前流是否处于绕过状态。</summary>
+	/// <summary>
+	/// 供测试观察当前流是否处于绕过状态。
+	/// </summary>
 	public bool IsBypassing => IsBypassingRuleChecks;
 
-	/// <summary>供测试开启绕过。</summary>
+	/// <summary>
+	/// 供测试开启绕过。
+	/// </summary>
 	public IDisposable Bypass() => BypassRuleChecks;
 }
 
-/// <summary>父对象探针。</summary>
+/// <summary>
+/// 父对象探针。
+/// </summary>
 public sealed class ParentProbe : ObservableObject<ParentProbe>
 {
-	/// <summary>父对象所持有的子对象属性元数据。</summary>
+	/// <summary>
+	/// 父对象所持有的子对象属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<ChildProbe> ChildProperty = RegisterProperty<ChildProbe>(p => p.Child);
 
-	/// <summary>父对象持有的子对象，赋值时建立子图变更通知关系。</summary>
+	/// <summary>
+	/// 父对象持有的子对象，赋值时建立子图变更通知关系。
+	/// </summary>
 	public ChildProbe Child
 	{
 		get => GetProperty(ChildProperty);
 		set => SetProperty(ChildProperty, value);
 	}
 
-	/// <summary>供测试观察当前流是否处于绕过状态。</summary>
+	/// <summary>
+	/// 供测试观察当前流是否处于绕过状态。
+	/// </summary>
 	public bool IsBypassing => IsBypassingRuleChecks;
 
-	/// <summary>供测试开启绕过。</summary>
+	/// <summary>
+	/// 供测试开启绕过。
+	/// </summary>
 	public IDisposable Bypass() => BypassRuleChecks;
 }
 
-/// <summary>双向引用父对象探针。</summary>
+/// <summary>
+/// 双向引用父对象探针。
+/// </summary>
 public sealed class CyclicParentProbe : ObservableObject<CyclicParentProbe>
 {
-	/// <summary>双向引用场景中父对象持有的子对象属性元数据。</summary>
+	/// <summary>
+	/// 双向引用场景中父对象持有的子对象属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<CyclicChildProbe> ChildProperty = RegisterProperty<CyclicChildProbe>(p => p.Child);
 
-	/// <summary>双向引用场景中父对象持有的子对象。</summary>
+	/// <summary>
+	/// 双向引用场景中父对象持有的子对象。
+	/// </summary>
 	public CyclicChildProbe Child
 	{
 		get => GetProperty(ChildProperty);
@@ -412,22 +438,32 @@ public sealed class CyclicParentProbe : ObservableObject<CyclicParentProbe>
 	}
 }
 
-/// <summary>双向引用子对象探针。</summary>
+/// <summary>
+/// 双向引用子对象探针。
+/// </summary>
 public sealed class CyclicChildProbe : ObservableObject<CyclicChildProbe>
 {
-	/// <summary>双向引用场景中子对象名称的属性元数据。</summary>
+	/// <summary>
+	/// 双向引用场景中子对象名称的属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
-	/// <summary>双向引用场景中子对象指回父对象的属性元数据。</summary>
+	/// <summary>
+	/// 双向引用场景中子对象指回父对象的属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<CyclicParentProbe> ParentProperty = RegisterProperty<CyclicParentProbe>(p => p.Parent);
 
-	/// <summary>双向引用场景中子对象的名称，写入时用于验证通知不会递归。</summary>
+	/// <summary>
+	/// 双向引用场景中子对象的名称，写入时用于验证通知不会递归。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>双向引用场景中子对象指回的父对象。</summary>
+	/// <summary>
+	/// 双向引用场景中子对象指回的父对象。
+	/// </summary>
 	public CyclicParentProbe Parent
 	{
 		get => GetProperty(ParentProperty);
@@ -435,55 +471,79 @@ public sealed class CyclicChildProbe : ObservableObject<CyclicChildProbe>
 	}
 }
 
-/// <summary>持有子集合的父对象探针。</summary>
+/// <summary>
+/// 持有子集合的父对象探针。
+/// </summary>
 public sealed class ParentListProbe : ObservableObject<ParentListProbe>
 {
-	/// <summary>父对象所持有的子对象列表属性元数据。</summary>
+	/// <summary>
+	/// 父对象所持有的子对象列表属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<ObservableList<ChildProbe>> ChildrenProperty =
 		RegisterProperty<ObservableList<ChildProbe>>(p => p.Children);
 
-	/// <summary>父对象持有的可观察子对象列表，元素与集合变更均会传播。</summary>
+	/// <summary>
+	/// 父对象持有的可观察子对象列表，元素与集合变更均会传播。
+	/// </summary>
 	public ObservableList<ChildProbe> Children
 	{
 		get => GetProperty(ChildrenProperty);
 		set => SetProperty(ChildrenProperty, value);
 	}
 
-	/// <summary>供测试开启绕过。</summary>
+	/// <summary>
+	/// 供测试开启绕过。
+	/// </summary>
 	public IDisposable Bypass() => BypassRuleChecks;
 }
 
-/// <summary>持有子字典的父对象探针。</summary>
+/// <summary>
+/// 持有子字典的父对象探针。
+/// </summary>
 public sealed class ParentDictionaryProbe : ObservableObject<ParentDictionaryProbe>
 {
-	/// <summary>父对象所持有的子对象字典属性元数据。</summary>
+	/// <summary>
+	/// 父对象所持有的子对象字典属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<ObservableDictionary<string, ChildProbe>> ChildrenProperty =
 		RegisterProperty<ObservableDictionary<string, ChildProbe>>(p => p.Children);
 
-	/// <summary>父对象持有的可观察子对象字典，值变更与集合变更均会传播。</summary>
+	/// <summary>
+	/// 父对象持有的可观察子对象字典，值变更与集合变更均会传播。
+	/// </summary>
 	public ObservableDictionary<string, ChildProbe> Children
 	{
 		get => GetProperty(ChildrenProperty);
 		set => SetProperty(ChildrenProperty, value);
 	}
 
-	/// <summary>供测试开启绕过。</summary>
+	/// <summary>
+	/// 供测试开启绕过。
+	/// </summary>
 	public IDisposable Bypass() => BypassRuleChecks;
 }
 
-/// <summary>祖父对象探针。</summary>
+/// <summary>
+/// 祖父对象探针。
+/// </summary>
 public sealed class GrandParentProbe : ObservableObject<GrandParentProbe>
 {
-	/// <summary>祖父对象所持有的父对象属性元数据。</summary>
+	/// <summary>
+	/// 祖父对象所持有的父对象属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<ParentProbe> ChildProperty = RegisterProperty<ParentProbe>(p => p.Child);
 
-	/// <summary>祖父对象持有的父对象，用于验证跨代变更传播。</summary>
+	/// <summary>
+	/// 祖父对象持有的父对象，用于验证跨代变更传播。
+	/// </summary>
 	public ParentProbe Child
 	{
 		get => GetProperty(ChildProperty);
 		set => SetProperty(ChildProperty, value);
 	}
 
-	/// <summary>供测试开启绕过。</summary>
+	/// <summary>
+	/// 供测试开启绕过。
+	/// </summary>
 	public IDisposable Bypass() => BypassRuleChecks;
 }

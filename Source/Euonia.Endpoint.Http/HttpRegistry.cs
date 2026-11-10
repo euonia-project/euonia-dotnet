@@ -5,13 +5,19 @@ namespace Nerosoft.Euonia.Endpoint.Http;
 /// </summary>
 public enum HttpReservation
 {
-	/// <summary>预留成功。</summary>
+	/// <summary>
+	/// 预留成功。
+	/// </summary>
 	Reserved,
 
-	/// <summary>生成路径已经映射过该路由。</summary>
+	/// <summary>
+	/// 生成路径已经映射过该路由。
+	/// </summary>
 	AlreadyGenerated,
 
-	/// <summary>与另一个运行时/生成端点冲突。</summary>
+	/// <summary>
+	/// 与另一个运行时/生成端点冲突。
+	/// </summary>
 	Conflict
 }
 
@@ -23,7 +29,9 @@ public sealed class HttpRegistry
 	private readonly object _gate = new();
 	private readonly Dictionary<string, bool> _keys = new(StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>预留路由与动词。</summary>
+	/// <summary>
+	/// 预留路由与动词。
+	/// </summary>
 	/// <param name="routePattern">路由模板。</param>
 	/// <param name="methods">HTTP 方法。</param>
 	/// <param name="generated">是否由生成代码预留。</param>

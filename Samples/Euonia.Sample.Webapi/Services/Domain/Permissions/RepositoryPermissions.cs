@@ -7,18 +7,28 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// </summary>
 public static class RepositoryPermissions
 {
-	/// <summary>创建仓库（工厂 Create/Insert），允许 开发、项目管理。</summary>
+	/// <summary>
+	/// 创建仓库（工厂 Create/Insert），允许 开发、项目管理。
+	/// </summary>
 	public const string Create = "repository:create";
 
-	/// <summary>查看仓库（工厂 Fetch），允许 开发、测试、项目管理。</summary>
+	/// <summary>
+	/// 查看仓库（工厂 Fetch），允许 开发、测试、项目管理。
+	/// </summary>
 	public const string View = "repository:view";
 
-	/// <summary>推送/更新仓库（工厂 Update，对齐 SAMPLE.md 的 push 语义；行级按单行授予），允许 开发、项目管理。</summary>
+	/// <summary>
+	/// 推送/更新仓库（工厂 Update，对齐 SAMPLE.md 的 push 语义；行级按单行授予），允许 开发、项目管理。
+	/// </summary>
 	public const string Push = "repository:push";
 
-	/// <summary>删除仓库（工厂 Delete），仅允许 项目管理。</summary>
+	/// <summary>
+	/// 删除仓库（工厂 Delete），仅允许 项目管理。
+	/// </summary>
 	public const string Delete = "repository:delete";
 
-	/// <summary>仓库全部权限码（用于初始化与管理授权）。</summary>
+	/// <summary>
+	/// 仓库全部权限码（用于初始化与管理授权）。
+	/// </summary>
 	public static readonly string[] All = [Create, View, Push, Delete];
 }

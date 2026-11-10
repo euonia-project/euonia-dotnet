@@ -19,46 +19,66 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class CodeRepository : EditableObjectBase<CodeRepository, string>
 {
-	/// <summary>注册的仓库名称属性元数据，供属性读写、规则与数据范围映射使用。</summary>
+	/// <summary>
+	/// 注册的仓库名称属性元数据，供属性读写、规则与数据范围映射使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
-	/// <summary>注册的所属团队属性元数据，同时是行级数据范围的团队维度。</summary>
+	/// <summary>
+	/// 注册的所属团队属性元数据，同时是行级数据范围的团队维度。
+	/// </summary>
 	public static readonly PropertyInfo<string> TeamIdProperty = RegisterProperty<string>(p => p.TeamId);
-	/// <summary>注册的仓库所有者属性元数据，同时是行级数据范围的负责人维度。</summary>
+	/// <summary>
+	/// 注册的仓库所有者属性元数据，同时是行级数据范围的负责人维度。
+	/// </summary>
 	public static readonly PropertyInfo<string> OwnerIdProperty = RegisterProperty<string>(p => p.OwnerId);
-	/// <summary>注册的密级属性元数据，同时是行级数据范围的密级维度。</summary>
+	/// <summary>
+	/// 注册的密级属性元数据，同时是行级数据范围的密级维度。
+	/// </summary>
 	public static readonly PropertyInfo<string> LevelProperty = RegisterProperty<string>(p => p.Level);
-	/// <summary>注册的公开性属性元数据，同时是行级数据范围的公开性维度。</summary>
+	/// <summary>
+	/// 注册的公开性属性元数据，同时是行级数据范围的公开性维度。
+	/// </summary>
 	public static readonly PropertyInfo<bool> IsPublicProperty = RegisterProperty<bool>(p => p.IsPublic);
 
-	/// <summary>仓库名称，必填且只能包含小写字母、数字和连字符。</summary>
+	/// <summary>
+	/// 仓库名称，必填且只能包含小写字母、数字和连字符。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>所属团队（<c>team.id</c>），决定仓库的团队维可见性。</summary>
+	/// <summary>
+	/// 所属团队（<c>team.id</c>），决定仓库的团队维可见性。
+	/// </summary>
 	public string TeamId
 	{
 		get => GetProperty(TeamIdProperty);
 		set => SetProperty(TeamIdProperty, value);
 	}
 
-	/// <summary>仓库所有者（使用者标识）。建仓时取当前用户，不可经普通更新路径修改。</summary>
+	/// <summary>
+	/// 仓库所有者（使用者标识）。建仓时取当前用户，不可经普通更新路径修改。
+	/// </summary>
 	public string OwnerId
 	{
 		get => GetProperty(OwnerIdProperty);
 		set => SetProperty(OwnerIdProperty, value);
 	}
 
-	/// <summary>密级：normal（普通）/ secret（机密，任何用户都不可见、不可改）。</summary>
+	/// <summary>
+	/// 密级：normal（普通）/ secret（机密，任何用户都不可见、不可改）。
+	/// </summary>
 	public string Level
 	{
 		get => GetProperty(LevelProperty);
 		set => SetProperty(LevelProperty, value);
 	}
 
-	/// <summary>是否公开：公开行对匿名访问显式放行（见 <see cref="RepositoryScopeModel"/> 的 <c>Where(IsPublic)</c>）。</summary>
+	/// <summary>
+	/// 是否公开：公开行对匿名访问显式放行（见 <see cref="RepositoryScopeModel"/> 的 <c>Where(IsPublic)</c>）。
+	/// </summary>
 	public bool IsPublic
 	{
 		get => GetProperty(IsPublicProperty);
@@ -160,12 +180,18 @@ public sealed class CodeRepository : EditableObjectBase<CodeRepository, string>
 	}
 }
 
-/// <summary>仓库密级的取值。仅 <see cref="CodeRepository.Level"/> 区分授权语义（secret 一律否决）。</summary>
+/// <summary>
+/// 仓库密级的取值。仅 <see cref="CodeRepository.Level"/> 区分授权语义（secret 一律否决）。
+/// </summary>
 public static class RepositoryLevel
 {
-	/// <summary>普通密级，按常规行级策略参与判定。</summary>
+	/// <summary>
+	/// 普通密级，按常规行级策略参与判定。
+	/// </summary>
 	public const string Normal = "normal";
 
-	/// <summary>机密密级，任何用户都不可见、不可修改。</summary>
+	/// <summary>
+	/// 机密密级，任何用户都不可见、不可修改。
+	/// </summary>
 	public const string Secret = "secret";
 }

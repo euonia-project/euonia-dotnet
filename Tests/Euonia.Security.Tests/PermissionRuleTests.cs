@@ -143,7 +143,9 @@ public class PermissionRuleTests
 
 	#region 辅助
 
-	/// <summary>用一组配置构建容器。</summary>
+	/// <summary>
+	/// 用一组配置构建容器。
+	/// </summary>
 	private static ServiceProvider Build(params Action<IServiceCollection>[] configure)
 	{
 		var services = new ServiceCollection();
@@ -156,7 +158,9 @@ public class PermissionRuleTests
 		return services.BuildServiceProvider();
 	}
 
-	/// <summary>解析某资源在 execute 操作上应使用的策略键。</summary>
+	/// <summary>
+	/// 解析某资源在 execute 操作上应使用的策略键。
+	/// </summary>
 	private static string ResolveExecuteKey(IServiceProvider provider, Type resourceType)
 	{
 		var registry = provider.GetRequiredService<ScopeModelRegistry>();

@@ -386,11 +386,15 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		}
 	}
 
-	/// <summary>当前正在回滚的对象集合；阻断环形对象图的递归。</summary>
+	/// <summary>
+	/// 当前正在回滚的对象集合；阻断环形对象图的递归。
+	/// </summary>
 	[ThreadStatic]
 	private static HashSet<object>? RejectingGraphs;
 
-	/// <summary>当前正在提交的对象集合；阻断环形对象图的递归。</summary>
+	/// <summary>
+	/// 当前正在提交的对象集合；阻断环形对象图的递归。
+	/// </summary>
 	[ThreadStatic]
 	private static HashSet<object>? AcceptingGraphs;
 

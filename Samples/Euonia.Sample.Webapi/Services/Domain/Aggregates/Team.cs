@@ -14,19 +14,27 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class Team : EditableObjectBase<Team, string>
 {
-	/// <summary>注册的团队名称属性元数据，供属性读写与数据范围映射使用。</summary>
+	/// <summary>
+	/// 注册的团队名称属性元数据，供属性读写与数据范围映射使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
-	/// <summary>注册的团队负责人属性元数据，同时是行级数据范围的负责人维度。</summary>
+	/// <summary>
+	/// 注册的团队负责人属性元数据，同时是行级数据范围的负责人维度。
+	/// </summary>
 	public static readonly PropertyInfo<string> LeaderIdProperty = RegisterProperty<string>(p => p.LeaderId);
 
-	/// <summary>团队名称。</summary>
+	/// <summary>
+	/// 团队名称。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>团队负责人（使用者标识），建团队时取当前用户。</summary>
+	/// <summary>
+	/// 团队负责人（使用者标识），建团队时取当前用户。
+	/// </summary>
 	public string LeaderId
 	{
 		get => GetProperty(LeaderIdProperty);

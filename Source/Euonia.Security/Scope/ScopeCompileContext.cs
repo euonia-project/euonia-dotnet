@@ -25,7 +25,9 @@ internal sealed class ScopeCompileContext<T>
 	private readonly ScopeModelDescriptor _descriptor;
 	private readonly ScopeSubjectSet _subjects;
 
-	/// <summary>本次编译中真正被策略引用的集合维度：加载探测只针对它们。</summary>
+	/// <summary>
+	/// 本次编译中真正被策略引用的集合维度：加载探测只针对它们。
+	/// </summary>
 	private readonly HashSet<string> _referencedCollectionDimensions = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>

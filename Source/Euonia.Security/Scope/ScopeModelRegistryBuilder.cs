@@ -14,7 +14,9 @@ internal sealed class ScopeModelRegistryBuilder
 {
 	private readonly List<(string Name, Func<IScopeModel> Factory)> _entries = [];
 
-	/// <summary>注册一个模型实例。</summary>
+	/// <summary>
+	/// 注册一个模型实例。
+	/// </summary>
 	/// <param name="model">权限模型。</param>
 	/// <returns>当前构造器，便于链式声明。</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="model"/> 为 <see langword="null"/> 时抛出。</exception>
@@ -28,7 +30,9 @@ internal sealed class ScopeModelRegistryBuilder
 		return this;
 	}
 
-	/// <summary>注册一个模型类型，要求公共无参构造。</summary>
+	/// <summary>
+	/// 注册一个模型类型，要求公共无参构造。
+	/// </summary>
 	/// <typeparam name="TModel">权限模型类型。</typeparam>
 	/// <returns>当前构造器，便于链式声明。</returns>
 	public ScopeModelRegistryBuilder Add<TModel>()
@@ -39,7 +43,9 @@ internal sealed class ScopeModelRegistryBuilder
 		return this;
 	}
 
-	/// <summary>扫描给定程序集并注册其中发现的全部权限模型。</summary>
+	/// <summary>
+	/// 扫描给定程序集并注册其中发现的全部权限模型。
+	/// </summary>
 	/// <param name="assemblies">要扫描的程序集。</param>
 	/// <returns>当前构造器，便于链式声明。</returns>
 	public ScopeModelRegistryBuilder AddFrom(params Assembly[] assemblies)
@@ -52,7 +58,9 @@ internal sealed class ScopeModelRegistryBuilder
 		return this;
 	}
 
-	/// <summary>完成注册期校验并构建注册表。</summary>
+	/// <summary>
+	/// 完成注册期校验并构建注册表。
+	/// </summary>
 	/// <returns>构建好的注册表；没有任何模型时返回 <see cref="ScopeModelRegistry.Empty"/>。</returns>
 	/// <exception cref="ScopeModelValidationException">存在配置问题时抛出，携带全部诊断。</exception>
 	public ScopeModelRegistry Build()

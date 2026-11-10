@@ -17,13 +17,19 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </remarks>
 public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePasswordCommand>
 {
-	/// <summary>新密码的最小长度。</summary>
+	/// <summary>
+	/// 新密码的最小长度。
+	/// </summary>
 	public const int MinPasswordLength = 8;
 
-	/// <summary>被改密的账号标识（由工厂执行时解析当前用户填入）。</summary>
+	/// <summary>
+	/// 被改密的账号标识（由工厂执行时解析当前用户填入）。
+	/// </summary>
 	public string UserId { get; private set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Changed { get; private set; }
 
 	[FactoryCreate]
@@ -34,10 +40,14 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 		return Task.CompletedTask;
 	}
 
-	/// <summary>当前密码。</summary>
+	/// <summary>
+	/// 当前密码。
+	/// </summary>
 	public string OldPassword { get; private set; } = null!;
 
-	/// <summary>新密码。</summary>
+	/// <summary>
+	/// 新密码。
+	/// </summary>
 	public string NewPassword { get; private set; } = null!;
 
 	/// <summary>
@@ -87,7 +97,9 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 		Changed = true;
 	}
 
-	/// <summary>常量时间比对，避免按字节比较泄露密码前缀信息。</summary>
+	/// <summary>
+	/// 常量时间比对，避免按字节比较泄露密码前缀信息。
+	/// </summary>
 	private static bool Verify(string hash, string salt, string password)
 	{
 		if (string.IsNullOrWhiteSpace(hash) || string.IsNullOrWhiteSpace(salt) || password == null)

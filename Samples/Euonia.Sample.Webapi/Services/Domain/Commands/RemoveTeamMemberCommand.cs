@@ -13,10 +13,14 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </summary>
 public sealed class RemoveTeamMemberCommand : ServiceObjectBase<RemoveTeamMemberCommand>
 {
-	/// <summary>目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
+	/// <summary>
+	/// 目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
 	public string TeamId { get; set; } = null!;
 
-	/// <summary>要移出的账号标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
+	/// <summary>
+	/// 要移出的账号标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
 	public string UserId { get; set; } = null!;
 
 	[FactoryCreate]

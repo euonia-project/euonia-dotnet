@@ -337,20 +337,28 @@ public class DomainControlTests
 /// </summary>
 public sealed class DomainControlEditable : EditableObject<DomainControlEditable>
 {
-	/// <summary>名称属性的元数据。</summary>
+	/// <summary>
+	/// 名称属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty(p => p.Name);
 
-	/// <summary>代码属性的元数据。</summary>
+	/// <summary>
+	/// 代码属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> CodeProperty = RegisterProperty(p => p.Code);
 
-	/// <summary>可编辑对象的名称。</summary>
+	/// <summary>
+	/// 可编辑对象的名称。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>可编辑对象的代码，支持经类型转换写入。</summary>
+	/// <summary>
+	/// 可编辑对象的代码，支持经类型转换写入。
+	/// </summary>
 	public string Code
 	{
 		get => GetProperty(CodeProperty);
@@ -389,10 +397,14 @@ public sealed class DomainControlEditable : EditableObject<DomainControlEditable
 /// </summary>
 public sealed class ParentEditable : EditableObject<ParentEditable>
 {
-	/// <summary>父对象所持有的子对象属性元数据。</summary>
+	/// <summary>
+	/// 父对象所持有的子对象属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<ChildEditable> ChildProperty = RegisterProperty(p => p.Child);
 
-	/// <summary>父对象持有的可编辑子对象。</summary>
+	/// <summary>
+	/// 父对象持有的可编辑子对象。
+	/// </summary>
 	public ChildEditable Child
 	{
 		get => GetProperty(ChildProperty);
@@ -405,10 +417,14 @@ public sealed class ParentEditable : EditableObject<ParentEditable>
 /// </summary>
 public sealed class ChildEditable : EditableObject<ChildEditable>
 {
-	/// <summary>子对象标题属性的元数据。</summary>
+	/// <summary>
+	/// 子对象标题属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> TitleProperty = RegisterProperty(p => p.Title);
 
-	/// <summary>子对象的标题，用于验证父对象回滚的级联效果。</summary>
+	/// <summary>
+	/// 子对象的标题，用于验证父对象回滚的级联效果。
+	/// </summary>
 	public string Title
 	{
 		get => GetProperty(TitleProperty);

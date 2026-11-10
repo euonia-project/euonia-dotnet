@@ -20,37 +20,53 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class Project : EditableObjectBase<Project, string>
 {
-	/// <summary>注册的项目名称属性元数据，供属性读写、规则与数据范围映射使用。</summary>
+	/// <summary>
+	/// 注册的项目名称属性元数据，供属性读写、规则与数据范围映射使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
-	/// <summary>注册的项目描述属性元数据。</summary>
+	/// <summary>
+	/// 注册的项目描述属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> DescriptionProperty = RegisterProperty<string>(p => p.Description);
-	/// <summary>注册的项目负责人属性元数据，同时是行级数据范围的负责人维度。</summary>
+	/// <summary>
+	/// 注册的项目负责人属性元数据，同时是行级数据范围的负责人维度。
+	/// </summary>
 	public static readonly PropertyInfo<string> OwnerIdProperty = RegisterProperty<string>(p => p.OwnerId);
-	/// <summary>注册的归档标记属性元数据，同时是行级数据范围的归档维度。</summary>
+	/// <summary>
+	/// 注册的归档标记属性元数据，同时是行级数据范围的归档维度。
+	/// </summary>
 	public static readonly PropertyInfo<bool> IsArchivedProperty = RegisterProperty<bool>(p => p.IsArchived);
 
-	/// <summary>项目名称，必填。</summary>
+	/// <summary>
+	/// 项目名称，必填。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
 		set => SetProperty(NameProperty, value);
 	}
 
-	/// <summary>项目描述。</summary>
+	/// <summary>
+	/// 项目描述。
+	/// </summary>
 	public string Description
 	{
 		get => GetProperty(DescriptionProperty);
 		set => SetProperty(DescriptionProperty, value);
 	}
 
-	/// <summary>项目负责人（使用者标识）。建项目时取当前用户，不可经普通更新路径修改。</summary>
+	/// <summary>
+	/// 项目负责人（使用者标识）。建项目时取当前用户，不可经普通更新路径修改。
+	/// </summary>
 	public string OwnerId
 	{
 		get => GetProperty(OwnerIdProperty);
 		set => SetProperty(OwnerIdProperty, value);
 	}
 
-	/// <summary>是否已归档。归档即只读凝固：仍可查看，但不可再编辑 / 归档 / 删除（见 <see cref="ProjectScopeModel"/>）。</summary>
+	/// <summary>
+	/// 是否已归档。归档即只读凝固：仍可查看，但不可再编辑 / 归档 / 删除（见 <see cref="ProjectScopeModel"/>）。
+	/// </summary>
 	public bool IsArchived
 	{
 		get => GetProperty(IsArchivedProperty);

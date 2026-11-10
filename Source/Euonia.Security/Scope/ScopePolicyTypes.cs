@@ -108,10 +108,14 @@ internal abstract class CompositeScopePolicy<T> : ScopePolicy<T>
 		_policies = policies;
 	}
 
-	/// <summary>审计输出用的算子名：<c>All</c> 或 <c>Any</c>。</summary>
+	/// <summary>
+	/// 审计输出用的算子名：<c>All</c> 或 <c>Any</c>。
+	/// </summary>
 	private protected abstract string OperatorName { get; }
 
-	/// <summary>把收集到的允许条件折叠成一个表达式；空集的取值决定本节点的默认语义。</summary>
+	/// <summary>
+	/// 把收集到的允许条件折叠成一个表达式；空集的取值决定本节点的默认语义。
+	/// </summary>
 	private protected abstract Expression FoldAllows(List<Expression> allows);
 
 	/// <inheritdoc />

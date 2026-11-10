@@ -52,19 +52,29 @@ public class LifecycleHookTests
 /// </summary>
 public sealed class LifecycleEditable : EditableObject<LifecycleEditable>
 {
-	/// <summary>可编辑对象名称的属性元数据。</summary>
+	/// <summary>
+	/// 可编辑对象名称的属性元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty(p => p.Name);
 
-	/// <summary>按触发顺序记录生命周期步骤的名称。</summary>
+	/// <summary>
+	/// 按触发顺序记录生命周期步骤的名称。
+	/// </summary>
 	public List<string> Steps { get; } = [];
 
-	/// <summary><see cref="OnSavingAsync(CancellationToken)"/> 被调用的次数。</summary>
+	/// <summary>
+	/// <see cref="OnSavingAsync(CancellationToken)"/> 被调用的次数。
+	/// </summary>
 	public int SavingCount { get; private set; }
 
-	/// <summary><see cref="OnSavedAsync(object, CancellationToken)"/> 被调用的次数。</summary>
+	/// <summary>
+	/// <see cref="OnSavedAsync(object, CancellationToken)"/> 被调用的次数。
+	/// </summary>
 	public int SavedCount { get; private set; }
 
-	/// <summary>可编辑对象的名称。</summary>
+	/// <summary>
+	/// 可编辑对象的名称。
+	/// </summary>
 	public string Name
 	{
 		get => GetProperty(NameProperty);
@@ -114,13 +124,19 @@ public sealed class LifecycleEditable : EditableObject<LifecycleEditable>
 /// </summary>
 public sealed class LifecycleService : ServiceObject<LifecycleService>
 {
-	/// <summary>按触发顺序记录生命周期步骤的名称。</summary>
+	/// <summary>
+	/// 按触发顺序记录生命周期步骤的名称。
+	/// </summary>
 	public List<string> Steps { get; } = [];
 
-	/// <summary><see cref="OnExecutingAsync(CancellationToken)"/> 被调用的次数。</summary>
+	/// <summary>
+	/// <see cref="OnExecutingAsync(CancellationToken)"/> 被调用的次数。
+	/// </summary>
 	public int ExecutingCount { get; private set; }
 
-	/// <summary><see cref="OnExecutedAsync(CancellationToken)"/> 被调用的次数。</summary>
+	/// <summary>
+	/// <see cref="OnExecutedAsync(CancellationToken)"/> 被调用的次数。
+	/// </summary>
 	public int ExecutedCount { get; private set; }
 
 	/// <summary>

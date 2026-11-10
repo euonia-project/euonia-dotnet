@@ -238,7 +238,9 @@ public class PermissionWithoutEngineTests
 
 #region 受控资源与宿主实现
 
-/// <summary>要求由实体自己声明（<c>[Permission]</c>），判定由宿主实现。</summary>
+/// <summary>
+/// 要求由实体自己声明（<c>[Permission]</c>），判定由宿主实现。
+/// </summary>
 public class GroundedEntity : EditableObject<GroundedEntity>
 {
 	/// <summary>
@@ -246,7 +248,9 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 	/// </summary>
 	public string Name { get; set; } = string.Empty;
 
-	/// <summary>本实体在更新操作上要求的权限码，由宿主的要求来源读取。</summary>
+	/// <summary>
+	/// 本实体在更新操作上要求的权限码，由宿主的要求来源读取。
+	/// </summary>
 	public string RequiredCode { get; set; } = string.Empty;
 
 	/// <summary>
@@ -262,7 +266,9 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 		return authorizer == null || authorizer.Allows(this, operation, context!.CurrentServiceProvider);
 	}
 
-	/// <summary>业务方法内的行级判定说明。</summary>
+	/// <summary>
+	/// 业务方法内的行级判定说明。
+	/// </summary>
 	/// <param name="operation">当前操作；行级策略由它决定。</param>
 	/// <returns>判定说明。</returns>
 	public string ExplainOwnRow(string operation)
@@ -284,7 +290,9 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 	}
 }
 
-/// <summary>没有任何权限要求的实体：不需要任何权限装配。</summary>
+/// <summary>
+/// 没有任何权限要求的实体：不需要任何权限装配。
+/// </summary>
 public class PlainEntity : EditableObject<PlainEntity>
 {
 	/// <summary>
@@ -303,7 +311,9 @@ public class PlainEntity : EditableObject<PlainEntity>
 	}
 }
 
-/// <summary>把「要求」当作数据提供的来源（模拟配置表 / 权限表）。</summary>
+/// <summary>
+/// 把「要求」当作数据提供的来源（模拟配置表 / 权限表）。
+/// </summary>
 internal sealed class TableRequirementProvider : IPermissionCodeSource
 {
 	/// <summary>
@@ -364,7 +374,9 @@ internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 	}
 }
 
-/// <summary>行级判定：一切可见（真实宿主这里会按租户/部门/归属人比较对象属性）。</summary>
+/// <summary>
+/// 行级判定：一切可见（真实宿主这里会按租户/部门/归属人比较对象属性）。
+/// </summary>
 internal sealed class VisibleScopeAuthorizer : IObjectScopeAuthorizer
 {
 	/// <inheritdoc />

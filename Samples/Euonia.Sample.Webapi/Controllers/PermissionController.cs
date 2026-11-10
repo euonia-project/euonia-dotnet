@@ -22,7 +22,9 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [ApiController]
 public class PermissionController(AuthorizationStore store, IUserRepository users, ITeamStore teams) : ControllerBase
 {
-	/// <summary>列出全部账号的授权。</summary>
+	/// <summary>
+	/// 列出全部账号的授权。
+	/// </summary>
 	[HttpGet]
 	public async Task<IActionResult> List(CancellationToken cancellationToken)
 	{
@@ -38,7 +40,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(items);
 	}
 
-	/// <summary>查看指定账号的授权。</summary>
+	/// <summary>
+	/// 查看指定账号的授权。
+	/// </summary>
 	[HttpGet("{userId}")]
 	public async Task<IActionResult> Get(string userId, CancellationToken cancellationToken)
 	{
@@ -51,7 +55,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(view);
 	}
 
-	/// <summary>调整指定账号的角色（增/删，可都留空）。</summary>
+	/// <summary>
+	/// 调整指定账号的角色（增/删，可都留空）。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/roles")]
 	public async Task<IActionResult> UpdateRoles(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -67,7 +73,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(await ToViewAsync(userId, cancellationToken));
 	}
 
-	/// <summary>授予/撤销指定账号的权限码。撤销即时生效。</summary>
+	/// <summary>
+	/// 授予/撤销指定账号的权限码。撤销即时生效。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/codes")]
 	public Task<IActionResult> UpdateCodes(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -75,7 +83,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Mutate(userId, input, store.GrantCodesAsync, store.RevokeCodesAsync, cancellationToken);
 	}
 
-	/// <summary>授予/撤销指定账号的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|&lt;repository-id&gt;"</c>）。即时生效。</summary>
+	/// <summary>
+	/// 授予/撤销指定账号的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|&lt;repository-id&gt;"</c>）。即时生效。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/grants")]
 	public Task<IActionResult> UpdateGrants(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -83,7 +93,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Mutate(userId, input, store.AddGrantsAsync, store.RemoveGrantsAsync, cancellationToken);
 	}
 
-	/// <summary>账号列表（账号标识 + 显示名）。</summary>
+	/// <summary>
+	/// 账号列表（账号标识 + 显示名）。
+	/// </summary>
 	[HttpGet("users")]
 	public async Task<IActionResult> Users(CancellationToken cancellationToken)
 	{

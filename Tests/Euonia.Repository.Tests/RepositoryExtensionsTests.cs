@@ -20,7 +20,9 @@ public class RepositoryExtensionsTests
 		Assert.Empty(page);
 	}
 
-	/// <summary>页大小为负数时返回空页，而不是抛出异常。</summary>
+	/// <summary>
+	/// 页大小为负数时返回空页，而不是抛出异常。
+	/// </summary>
 	[Fact]
 	public void Paginate_NegativeSize_ShouldReturnEmpty()
 	{

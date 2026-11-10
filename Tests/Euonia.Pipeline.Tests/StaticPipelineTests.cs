@@ -5,7 +5,9 @@ namespace Nerosoft.Euonia.Pipeline.Tests;
 /// </summary>
 public class StaticPipelineTests
 {
-	/// <summary>行为按枚举顺序由外向内执行，最终处理器最后执行。</summary>
+	/// <summary>
+	/// 行为按枚举顺序由外向内执行，最终处理器最后执行。
+	/// </summary>
 	[Fact]
 	public async Task RunAsync_ShouldExecuteBehaviorsInEnumerationOrder()
 	{
@@ -22,7 +24,9 @@ public class StaticPipelineTests
 		Assert.Equal(["A", "B", "Handler"], log);
 	}
 
-	/// <summary>同步门面只调用一次下游委托，即便注册了多个透传行为。</summary>
+	/// <summary>
+	/// 同步门面只调用一次下游委托，即便注册了多个透传行为。
+	/// </summary>
 	[Fact]
 	public void Run_ShouldInvokeDownstreamOnlyOnce()
 	{

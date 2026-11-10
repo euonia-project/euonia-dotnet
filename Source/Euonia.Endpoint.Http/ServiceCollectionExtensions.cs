@@ -10,7 +10,9 @@ namespace Microsoft.Extensions.DependencyInjection;
 /// </summary>
 public static class ServiceCollectionExtensions
 {
-	/// <summary>从配置注册 HTTP 端点暴露。</summary>
+	/// <summary>
+	/// 从配置注册 HTTP 端点暴露。
+	/// </summary>
 	/// <param name="services">服务集合。</param>
 	/// <param name="configuration">应用配置。</param>
 	/// <param name="assemblies">显式指定的扫描程序集；为空时使用配置中的扫描范围。</param>
@@ -28,7 +30,9 @@ public static class ServiceCollectionExtensions
 		return services;
 	}
 
-	/// <summary>使用回调注册 HTTP 端点暴露。</summary>
+	/// <summary>
+	/// 使用回调注册 HTTP 端点暴露。
+	/// </summary>
 	/// <param name="services">服务集合。</param>
 	/// <param name="configure">选项配置回调。</param>
 	/// <param name="assemblies">显式指定的扫描程序集；为空时使用配置中的扫描范围。</param>

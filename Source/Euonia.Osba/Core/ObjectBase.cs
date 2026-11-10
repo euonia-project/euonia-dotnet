@@ -972,10 +972,14 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// </summary>
 	private sealed class ChildLink(ObjectBase parent, IPropertyInfo property)
 	{
-		/// <summary>父对象。</summary>
+		/// <summary>
+		/// 父对象。
+		/// </summary>
 		public ObjectBase Parent { get; } = parent;
 
-		/// <summary>父对象上持有子对象的属性。</summary>
+		/// <summary>
+		/// 父对象上持有子对象的属性。
+		/// </summary>
 		public IPropertyInfo Property { get; } = property;
 	}
 

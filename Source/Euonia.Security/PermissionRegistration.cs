@@ -86,7 +86,9 @@ internal sealed class PermissionRegistration
 	/// </summary>
 	public ScopeModelRegistry? LastRegistry { get; private set; }
 
-	/// <summary>最近一次成功构建时的程序集集合；用于判断下一次注册是否真的改变了输入。</summary>
+	/// <summary>
+	/// 最近一次成功构建时的程序集集合；用于判断下一次注册是否真的改变了输入。
+	/// </summary>
 	private Assembly[]? _lastBuiltAssemblies;
 
 	/// <summary>

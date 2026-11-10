@@ -191,32 +191,50 @@ public class EfCoreCollectionDimensionTests
 
 #region 受控资源与模型
 
-/// <summary>EF 实体：工作区（父行）。</summary>
+/// <summary>
+/// EF 实体：工作区（父行）。
+/// </summary>
 public sealed class EfWorkspace
 {
-	/// <summary>工作区标识。</summary>
+	/// <summary>
+	/// 工作区标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
-	/// <summary>工作区名称。</summary>
+	/// <summary>
+	/// 工作区名称。
+	/// </summary>
 	public string Name { get; set; } = null!;
 
-	/// <summary>子表行。刻意不初始化：EF 未加载时保持 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 子表行。刻意不初始化：EF 未加载时保持 <see langword="null"/>。
+	/// </summary>
 	public List<EfWorkspaceMember> Members { get; set; } = null!;
 }
 
-/// <summary>EF 实体：工作区成员（子表行，带状态属性）。</summary>
+/// <summary>
+/// EF 实体：工作区成员（子表行，带状态属性）。
+/// </summary>
 public sealed class EfWorkspaceMember
 {
-	/// <summary>成员关系标识。</summary>
+	/// <summary>
+	/// 成员关系标识。
+	/// </summary>
 	public string Id { get; set; } = null!;
 
-	/// <summary>所属工作区标识。</summary>
+	/// <summary>
+	/// 所属工作区标识。
+	/// </summary>
 	public string WorkspaceId { get; set; } = null!;
 
-	/// <summary>成员的用户标识。</summary>
+	/// <summary>
+	/// 成员的用户标识。
+	/// </summary>
 	public string UserId { get; set; } = null!;
 
-	/// <summary>成员关系状态，仅 <c>active</c> 视为有效。</summary>
+	/// <summary>
+	/// 成员关系状态，仅 <c>active</c> 视为有效。
+	/// </summary>
 	public string Status { get; set; } = null!;
 }
 
@@ -235,7 +253,9 @@ public sealed class EfWorkspaceScopeModel : ScopeModel<EfWorkspace>
 		builder.MapMany(ScopeDimensions.Member, x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId));
 	}
 
-	/// <summary>默认行范围策略：要求成员维度授予后才允许访问。</summary>
+	/// <summary>
+	/// 默认行范围策略：要求成员维度授予后才允许访问。
+	/// </summary>
 	public override ScopePolicy<EfWorkspace> Policy => ScopePolicy<EfWorkspace>.Grant(ScopeDimensions.Member);
 
 	/// <summary>
@@ -253,7 +273,9 @@ public sealed class EfWorkspaceScopeModel : ScopeModel<EfWorkspace>
 	}
 }
 
-/// <summary>子表维度的检查用 SQLite 上下文。</summary>
+/// <summary>
+/// 子表维度的检查用 SQLite 上下文。
+/// </summary>
 internal sealed class WorkspaceDbContext(DbContextOptions<WorkspaceDbContext> options) : DbContext(options)
 {
 	/// <summary>

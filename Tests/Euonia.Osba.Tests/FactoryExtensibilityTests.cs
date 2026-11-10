@@ -43,7 +43,9 @@ public class FactoryExtensibilityTests
 /// </summary>
 public sealed class CountingFactory(IServiceProvider provider) : BusinessObjectFactory(provider)
 {
-	/// <summary>该工厂累计创建的实例数量。</summary>
+	/// <summary>
+	/// 该工厂累计创建的实例数量。
+	/// </summary>
 	public int Instances { get; private set; }
 
 	/// <summary>
@@ -63,7 +65,9 @@ public sealed class CountingFactory(IServiceProvider provider) : BusinessObjectF
 /// </summary>
 public sealed class FactoryProbe : BusinessObject<FactoryProbe>
 {
-	/// <summary>指示创建工厂方法是否已执行。</summary>
+	/// <summary>
+	/// 指示创建工厂方法是否已执行。
+	/// </summary>
 	public bool Created { get; private set; }
 
 	[FactoryCreate]

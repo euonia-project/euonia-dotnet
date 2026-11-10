@@ -191,7 +191,9 @@ public static class ServiceCollectionExtensions
 				nameof(UserPrincipal));
 	}
 
-	/// <summary>只读取已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 只读取已累积的状态；尚未注册时返回 <see langword="null"/>。
+	/// </summary>
 	private static PermissionRegistration? TryGetRegistration(IServiceCollection services)
 	{
 		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionRegistration))
