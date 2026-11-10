@@ -234,7 +234,7 @@ public sealed class OrderService : IOrderService
 }
 ```
 
-方法级 gRPC 授权目前不能按 RPC 方法单独写入端点元数据；如需逐方法策略校验，应额外实现 gRPC 授权拦截器。
+接口/实现方法上的 `[Authorize]` / `[AllowAnonymous]` 由内置 `GrpcMethodAuthorizationInterceptor` 在调用前检查：根据生成的 gRPC 方法路径找到应用服务方法，使用 `IAuthorizationService` 执行策略/角色校验，失败返回 `PermissionDenied`。
 
 ## 未注册服务校验
 

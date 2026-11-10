@@ -51,4 +51,9 @@ internal sealed class WebApiParameterDescriptor
 
 	/// <summary>获取用于转换的目标类型。</summary>
 	public required Type ValueType { get; init; }
+
+	/// <summary>
+	/// 获取一次性构建的集合工厂；参数不是集合时为 <c>null</c>。
+	/// </summary>
+	public Func<Array, object>? CollectionFactory { get; init; }
 }

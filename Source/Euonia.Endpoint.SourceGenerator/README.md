@@ -155,7 +155,7 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 ## 限制
 
 - 不扫描实现类方法；
-- 不处理方法级 gRPC 授权；
+- 生成 gRPC 方法授权描述符，由运行时 `GrpcMethodAuthorizationInterceptor` 执行方法级授权；
 - 共享契约类型尚未生成 wire-DTO 映射；
 - 生成代码只覆盖当前编译，跨程序集接口需要在对应程序集也启用生成器。
 

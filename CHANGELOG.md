@@ -50,6 +50,8 @@
 - **生成器对齐**：gRPC 跳过带默认值参数的方法；HTTP 拒绝 ref struct 参数；简单集合生成 `[FromQuery]`；运行时支持 `IReadOnlySet<T>`；`nint`/`nuint` 按简单类型处理；生成参数名规避 `__` 保留前缀。
 - **错误响应**：生成路径 body 绑定失败返回与运行时一致的 ProblemDetails；gRPC 未注册服务在跳过时记录 Warning；gRPC 程序集解析失败记录 Warning。
 - **可选集合**：缺失的可选 query 集合参数返回空集合而不是 `null`。
+- **gRPC 方法级授权**：新增 `GrpcMethodAuthorizationInterceptor`，按生成的方法描述符读取接口/实现方法上的 `[Authorize]` / `[AllowAnonymous]` 并执行策略校验。
+- **增量与兜底性能**：生成器只缓存运行时引用布尔值，避免 `CompilationProvider` 每次编辑触发全量重算；运行时集合绑定在 descriptor 构建阶段缓存工厂。
 - **数值与调用**：`DurationValue` 负小数改为 floor + 正 `Nanos`；反射调用生成映射时解包 `TargetInvocationException`；删除 HTTP 生成器死变量。
 
 ### Euonia.Modularity

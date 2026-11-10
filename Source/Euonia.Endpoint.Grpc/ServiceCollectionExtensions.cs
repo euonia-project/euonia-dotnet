@@ -30,6 +30,8 @@ public static class ServiceCollectionExtensions
 		var options = configuration.GetSection(GrpcExposureOptions.SectionName).Get<GrpcExposureOptions>() ?? new GrpcExposureOptions();
 		services.AddOptions<GrpcExposureOptions>().Bind(configuration.GetSection(GrpcExposureOptions.SectionName));
 		services.AddCodeFirstGrpc();
+		services.AddSingleton<GrpcMethodAuthorizationInterceptor>();
+		services.AddGrpc(options => options.Interceptors.Add<GrpcMethodAuthorizationInterceptor>());
 		services.TryAddSingleton<GrpcMetadataRegistry>();
 		services.TryAddSingleton(new GrpcAssemblyRegistry(assemblies));
 		if (options.EnableExposeApplicationServiceAsGrpc)
@@ -55,6 +57,8 @@ public static class ServiceCollectionExtensions
 		configure(options);
 		services.AddOptions<GrpcExposureOptions>().Configure(configure);
 		services.AddCodeFirstGrpc();
+		services.AddSingleton<GrpcMethodAuthorizationInterceptor>();
+		services.AddGrpc(options => options.Interceptors.Add<GrpcMethodAuthorizationInterceptor>());
 		services.TryAddSingleton<GrpcMetadataRegistry>();
 		services.TryAddSingleton(new GrpcAssemblyRegistry(assemblies));
 		if (options.EnableExposeApplicationServiceAsGrpc)

@@ -220,6 +220,11 @@ internal static class WebApiParameterBinder
 		}
 
 		var targetType = descriptor.Parameter.ParameterType;
+		if (descriptor.CollectionFactory != null)
+		{
+			return descriptor.CollectionFactory(array);
+		}
+
 		if (targetType.IsArray)
 		{
 			return array;

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.IO.Pipelines;
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
@@ -125,7 +126,10 @@ internal sealed class WebApiActionDescriptorBuilder
 					: null,
 				IsCollection = isCollection,
 				ElementType = elementType,
-				ValueType = valueType
+				ValueType = valueType,
+				CollectionFactory = isCollection && elementType != null
+					? CreateCollectionFactory(parameter.ParameterType, elementType)
+					: null
 			});
 		}
 
@@ -195,6 +199,55 @@ internal sealed class WebApiActionDescriptorBuilder
 		}
 
 		return Type.GetTypeCode(target) != TypeCode.Object;
+	}
+
+	private static Func<Array, object>? CreateCollectionFactory(Type targetType, Type elementType)
+	{
+		if (targetType.IsArray)
+		{
+			return static array => array;
+		}
+
+		if (!targetType.IsGenericType)
+		{
+			return null;
+		}
+
+		var definition = targetType.GetGenericTypeDefinition();
+		if (definition == typeof(HashSet<>) || definition == typeof(ISet<>) || definition == typeof(IReadOnlySet<>))
+		{
+			var setType = typeof(HashSet<>).MakeGenericType(elementType);
+			var add = setType.GetMethod(nameof(HashSet<int>.Add))!;
+			return array =>
+			{
+				var set = Activator.CreateInstance(setType)!;
+				foreach (var item in array)
+				{
+					add.Invoke(set, new[] { item });
+				}
+
+				return set;
+			};
+		}
+
+		if (definition == typeof(IEnumerable<>) || definition == typeof(ICollection<>)
+		    || definition == typeof(IList<>) || definition == typeof(IReadOnlyCollection<>)
+		    || definition == typeof(IReadOnlyList<>) || definition == typeof(List<>))
+		{
+			var listType = typeof(List<>).MakeGenericType(elementType);
+			return array =>
+			{
+				var list = (IList)Activator.CreateInstance(listType)!;
+				foreach (var item in array)
+				{
+					list.Add(item);
+				}
+
+				return list;
+			};
+		}
+
+		return null;
 	}
 
 	private static (bool IsCollection, Type? ElementType) GetCollectionElementType(Type type)

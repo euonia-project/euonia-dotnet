@@ -208,7 +208,7 @@ public sealed class OrderDto
 - 生成端点优先映射；运行时扫描覆盖插件程序集和生成器跳过的签名。
 - HTTP 与 gRPC 的 `RequireAuthorization` 默认都是 `true`。
 - HTTP 合并接口方法、实现类、实现方法上的 `[Authorize]` / `[AllowAnonymous]`；多实现时只用接口方法元数据，避免 `AllowAnonymous` 误放开。
-- gRPC 合并接口/实现类上的 `[Authorize]` / `[AllowAnonymous]`；多实现时只用接口元数据。方法级 gRPC 授权需要额外拦截器。
+- gRPC 合并接口/实现类上的 `[Authorize]` / `[AllowAnonymous]`；多实现时只用接口元数据。方法级特性由内置 `GrpcMethodAuthorizationInterceptor` 在调用前校验。
 - 扫描范围默认只包含入口程序集；插件或 Application 程序集需要显式加入 `ScanAssemblies`。
 - 生成器只处理当前编译中的接口；被引用程序集里的接口需要在那个程序集里也引用生成器。
 

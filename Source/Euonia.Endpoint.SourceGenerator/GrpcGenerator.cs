@@ -40,16 +40,18 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 				static (node, _) => node is MethodDeclarationSyntax,
 				static (ctx, _) => (IMethodSymbol)ctx.TargetSymbol)
 			.Where(static method => method.ContainingType is { TypeKind: TypeKind.Interface })
-			.Collect()
-			.Combine(context.CompilationProvider);
+			.Collect();
 
-		context.RegisterSourceOutput(methods, static (production, source) =>
+		var hasRuntimeReference = context.CompilationProvider.Select(static (compilation, _) =>
+			compilation.ReferencedAssemblyNames.Any(assembly => assembly.Name == "Euonia.Endpoint.Grpc"));
+
+		context.RegisterSourceOutput(methods.Combine(hasRuntimeReference), static (production, source) =>
 			Execute(production, source.Left, source.Right));
 	}
 
-	private static void Execute(SourceProductionContext context, ImmutableArray<IMethodSymbol> methods, Compilation compilation)
+	private static void Execute(SourceProductionContext context, ImmutableArray<IMethodSymbol> methods, bool hasRuntimeReference)
 	{
-		if (!compilation.ReferencedAssemblyNames.Any(assembly => assembly.Name == "Euonia.Endpoint.Grpc"))
+		if (!hasRuntimeReference)
 		{
 			return;
 		}
@@ -77,6 +79,7 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 		builder.AppendLine();
 
 		var contracts = new List<(string Contract, string Adapter, string ServiceName, string ServiceType)>();
+		var authorizations = new List<(string MethodPath, string ServiceType, string MethodName)>();
 		var serviceNames = new HashSet<string>(StringComparer.Ordinal);
 		var index = 0;
 
@@ -140,7 +143,12 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 				}
 
 				EmitContract(builder, serviceType, contractName, adapterName, serviceName, plans);
-				contracts.Add((contractName, adapterName, serviceName, serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+				var serviceTypeName = serviceType.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+				contracts.Add((contractName, adapterName, serviceName, serviceTypeName));
+				foreach (var plan in plans)
+				{
+					authorizations.Add(("/" + serviceName + "/" + plan.Route, serviceTypeName, plan.Method.Name));
+				}
 			}
 		}
 
@@ -149,7 +157,7 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 			return;
 		}
 
-		EmitRegistration(builder, contracts);
+		EmitRegistration(builder, contracts, authorizations);
 		context.AddSource("GrpcGenerated.g.cs", builder.ToString());
 	}
 
@@ -243,7 +251,7 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 		builder.AppendLine("	}");
 	}
 
-	private static void EmitRegistration(StringBuilder builder, List<(string Contract, string Adapter, string ServiceName, string ServiceType)> contracts)
+	private static void EmitRegistration(StringBuilder builder, List<(string Contract, string Adapter, string ServiceName, string ServiceType)> contracts, List<(string MethodPath, string ServiceType, string MethodName)> authorizations)
 	{
 		builder.AppendLine("internal static class GrpcMappings");
 		builder.AppendLine("{");
@@ -260,6 +268,10 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 		foreach (var contract in contracts.GroupBy(item => item.Adapter).Select(group => group.First()))
 		{
 			builder.AppendLine("		services.AddScoped<" + contract.Adapter + ">();");
+		}
+		foreach (var authorization in authorizations)
+		{
+			builder.AppendLine("		services.AddSingleton(new global::Nerosoft.Euonia.Endpoint.Grpc.GrpcMethodAuthorizationDescriptor(" + Quote(authorization.MethodPath) + ", typeof(" + authorization.ServiceType + "), " + Quote(authorization.MethodName) + "));");
 		}
 		builder.AppendLine("	}");
 		builder.AppendLine();
@@ -505,6 +517,11 @@ public sealed class GrpcGenerator : IIncrementalGenerator
 			return "Value";
 		}
 		return char.ToUpperInvariant(name[0]) + name.Substring(1);
+	}
+
+	private static string Quote(string value)
+	{
+		return Microsoft.CodeAnalysis.CSharp.SymbolDisplay.FormatLiteral(value, quote: true);
 	}
 
 	private static string Sanitize(string value)

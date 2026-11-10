@@ -24,16 +24,18 @@ public sealed class HttpGenerator : IIncrementalGenerator
 				static (node, _) => node is MethodDeclarationSyntax,
 				static (ctx, _) => (IMethodSymbol)ctx.TargetSymbol)
 			.Where(static method => method.ContainingType is { TypeKind: TypeKind.Interface })
-			.Collect()
-			.Combine(context.CompilationProvider);
+			.Collect();
 
-		context.RegisterSourceOutput(methods, static (production, source) =>
+		var hasRuntimeReference = context.CompilationProvider.Select(static (compilation, _) =>
+			compilation.ReferencedAssemblyNames.Any(assembly => assembly.Name == "Euonia.Endpoint.Http"));
+
+		context.RegisterSourceOutput(methods.Combine(hasRuntimeReference), static (production, source) =>
 			Execute(production, source.Left, source.Right));
 	}
 
-	private static void Execute(SourceProductionContext context, ImmutableArray<IMethodSymbol> methods, Compilation compilation)
+	private static void Execute(SourceProductionContext context, ImmutableArray<IMethodSymbol> methods, bool hasRuntimeReference)
 	{
-		if (!compilation.ReferencedAssemblyNames.Any(assembly => assembly.Name == "Euonia.Endpoint.Http"))
+		if (!hasRuntimeReference)
 		{
 			return;
 		}

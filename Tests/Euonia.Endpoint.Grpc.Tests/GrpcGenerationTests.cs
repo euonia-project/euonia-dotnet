@@ -1,5 +1,6 @@
 using System.Runtime.Serialization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Endpoint;
 using Nerosoft.Euonia.Endpoint.Grpc;
 
@@ -68,6 +69,7 @@ public interface IEchoService
 public sealed class EchoService : IEchoService
 {
 	/// <inheritdoc/>
+	[Authorize(Policy = "grpc-method-policy")]
 	public Task<EchoReply> EchoAsync(EchoRequest request, CancellationToken cancellationToken = default)
 	{
 		return Task.FromResult(new EchoReply { Value = request.Value });
@@ -144,6 +146,32 @@ public class GrpcGenerationTests
 		Assert.Equal(-1, duration.Seconds);
 		Assert.Equal(500_000_000, duration.Nanos);
 		Assert.Equal(value, (TimeSpan)duration);
+	}
+
+	/// <summary>验证 gRPC 注册会添加方法授权拦截器与描述符。</summary>
+	[Fact]
+	public void AddDynamicGrpcEndpoint_RegistersMethodAuthorizationInterceptor()
+	{
+		var services = new ServiceCollection();
+		services.AddLogging();
+		services.AddDynamicGrpcEndpoint(options => options.EnableExposeApplicationServiceAsGrpc = true);
+
+		using var provider = services.BuildServiceProvider();
+
+		Assert.NotNull(provider.GetService<GrpcMethodAuthorizationInterceptor>());
+		Assert.Contains(provider.GetServices<GrpcMethodAuthorizationDescriptor>(), descriptor => descriptor.MethodPath.EndsWith("/Echo", StringComparison.Ordinal));
+	}
+
+	/// <summary>验证 gRPC 元数据注册表读取实现方法授权特性。</summary>
+	[Fact]
+	public void MetadataRegistry_ReadsImplementationMethodAuthorization()
+	{
+		var registry = new GrpcMetadataRegistry();
+		registry.Build(new[] { typeof(EchoService).Assembly });
+
+		var metadata = registry.GetMethodMetadata(typeof(IEchoService), nameof(IEchoService.EchoAsync));
+
+		Assert.Contains(metadata.OfType<AuthorizeAttribute>(), attribute => attribute.Policy == "grpc-method-policy");
 	}
 
 	/// <summary>验证 gRPC 元数据注册表读取实现类授权特性。</summary>
