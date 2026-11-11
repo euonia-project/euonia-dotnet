@@ -4,7 +4,7 @@ Euonia 的 ASP.NET Core 托管基础设施：以 `HostUtility` 构建并运行�
 
 ASP.NET Core hosting infrastructure for Euonia: `HostUtility` builds and runs the host, `HostingModule` wires request context, user principal, exception handling and request-trace middleware, plus JWT/introspection authentication and role/scope-based authorization extensions.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Hosting`
 - **NuGet 包**：`Euonia.Hosting`
 

@@ -4,7 +4,7 @@ Euonia 分布式同步的 Azure 提供程序：基于 Azure Blob 租约（lease�
 
 Azure provider for Euonia distributed synchronization: distributed locks based on Azure Blob leases, with configurable lease duration, automatic renewal cadence and busy-wait backoff.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency.Azure`
 - **NuGet 包**：`Euonia.Concurrency.Azure`
 

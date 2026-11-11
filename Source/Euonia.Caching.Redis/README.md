@@ -4,7 +4,7 @@ Euonia 缓存的 Redis 提供程序：基于 `StackExchange.Redis` 实现分布�
 
 Redis provider for Euonia Caching: a StackExchange.Redis-backed distributed cache handle with backplane synchronization and connection management, also usable directly as an `ICacheService`.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Caching.Redis`
 - **NuGet 包**：`Euonia.Caching.Redis`
 

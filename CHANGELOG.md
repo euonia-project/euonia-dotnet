@@ -9,7 +9,7 @@
 
 ### 全库
 
-- **目标框架**：移除 `netstandard2.1` 支持，所有项目仅面向 `net9.0` / `net10.0`；删除相关条件编译分支、仅 netstandard 使用的包引用与 `ArgumentAssert` 兼容 polyfill（改用 `ArgumentNullException.ThrowIfNull`）。
+- **目标框架**：移除 `netstandard2.1` 支持；当前 Source 库项目面向 `net10.0` / `net11.0`，测试与示例项目面向 `net11.0`。删除相关条件编译分支、仅 netstandard 使用的包引用与 `ArgumentAssert` 兼容 polyfill（改用 `ArgumentNullException.ThrowIfNull`）。
 - **可空引用类型**：所有项目（含测试与示例）启用 `<Nullable>enable</Nullable>`，公开 API 补充可空性标注。
 - **消息信封契约**：`IMessageEnvelope` / `IMessageContext` 的 `RequestTraceId`、`Authorization` 改为 `string?`，
   `User` 改为可空；请求作用域外或外部消息未携带时确实为 `null`，不再用 `null!` 掩盖。
@@ -76,7 +76,7 @@
 - **Quartz.NET 4.6.2**：迁移到 Quartz 4 API。配置入口由 `IServiceCollectionQuartzConfigurator` 改为 `IQuartzBuilder`；
   `QuartzOptions.Scheduling` 改为 `OverwriteExistingData`（原 `OverWriteExistingData`）；调度器设置移入 `QuartzSchedulerOptions`；
   `IJob` / `IJobFactory` / `IJobStore` / `IThreadPool` / `ITypeLoader` 等 SPI 类型移至 `Quartz.Extensibility`。
-- **目标框架**：Quartz 4 仅提供 `net10.0` 资产，`Euonia.Quartz` 相应只面向 `net10.0`；面向 `net9.0` 的应用请继续使用 `2026.4.6`。
+- **目标框架**：`Euonia.Quartz` 随全库升级为 `net10.0` / `net11.0`，不再限制为单一目标框架。
 - **依赖**：移除已合并进 `Quartz` 包的 `Quartz.Extensions.DependencyInjection` 与 `Quartz.Extensions.Hosting`。
 - **行为对齐**：`SchedulerId = "AUTO" / "SYS_PROP"` 映射为 `GenerateInstanceId`；两个 `InterruptJobsOnShutdown*` 标志合并为
   `ShutdownJobInterruption`；`MisfireThreshold` 通过 `quartz.jobStore.misfireThreshold` 同时作用于内存与持久化存储；

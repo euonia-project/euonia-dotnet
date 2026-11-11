@@ -1,6 +1,6 @@
 # Euonia.Osba 设计文档
 
-> 状态：与当前源码同步（`2026.4.6` 版本线）
+> 状态：与当前源码同步（`2026.4.7` 版本线）
 > 范围：对象模型、规则、工厂、执行器、权限边界、性能与公共 API 兼容性
 > 配套文档：[`README.md`](README.md)（使用与文件结构）、[`SAMPLE.md`](SAMPLE.md)（端到端示例）、[`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)（权限设计）
 

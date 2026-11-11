@@ -4,7 +4,7 @@ Euonia 分布式同步的文件系统提供程序：以本地/共享目录中的
 
 File system provider for Euonia distributed synchronization: cross-process mutual exclusion using lock files in a local or shared directory. Suitable for multi-process single-host deployments or mounted shared volumes, with no extra infrastructure.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency.FileSystem`
 - **NuGet 包**：`Euonia.Concurrency.FileSystem`
 

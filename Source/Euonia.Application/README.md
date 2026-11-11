@@ -4,7 +4,7 @@ Euonia 应用层构建块：用例（Use Case）、应用服务基类、基于 C
 
 Application layer building blocks for Euonia: use cases, application service base classes, Castle DynamicProxy interceptors and message pipeline behaviors for cross-cutting concerns such as logging, validation, authorization and tracing.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Application`
 - **NuGet 包**：`Euonia.Application`
 

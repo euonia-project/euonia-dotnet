@@ -4,7 +4,7 @@ Euonia 对象映射的 Mapster 实现：将 Mapster 的 `IMapper` 适配为 `ITy
 
 Mapster implementation for Euonia object mapping: adapts Mapster's `IMapper` to `ITypeAdapter` and installs it as the current mapping factory during module initialization via `MapsterModule`. It is lighter and faster to start than AutoMapper.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Mapping`
 - **NuGet 包**：`Euonia.Mapping.Mapster`
 

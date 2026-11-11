@@ -4,7 +4,7 @@ Euonia 对象映射的 AutoMapper 实现：将 `IMapper` 适配为 `ITypeAdapter
 
 AutoMapper implementation for Euonia object mapping: adapts `IMapper` to `ITypeAdapter` and installs it as the current mapping factory during module initialization via `AutomapperModule`.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Mapping`
 - **NuGet 包**：`Euonia.Mapping.Automapper`
 

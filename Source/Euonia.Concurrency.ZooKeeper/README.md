@@ -4,7 +4,7 @@ Euonia 分布式同步的 Apache ZooKeeper 提供程序：基于临时顺序节�
 
 Apache ZooKeeper provider for Euonia distributed synchronization: distributed locks and semaphores built on ephemeral sequential nodes, with session timeout, connect timeout, authentication and access control.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency.ZooKeeper`
 - **NuGet 包**：`Euonia.Concurrency.ZooKeeper`
 

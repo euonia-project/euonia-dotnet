@@ -4,7 +4,7 @@ Euonia 仓储抽象的 MongoDB 实现：提供 `DataContextBase<TContext>`（基
 
 MongoDB implementation for Euonia repository abstractions: `DataContextBase<TContext>` (based on `MongoDbContext`) and `MongoRepository<TContext, TEntity, TKey>`, with `AddMongoRepository` registering contexts and repositories.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Repository.Mongo`
 - **NuGet 包**：`Euonia.Repository.Mongo`
 

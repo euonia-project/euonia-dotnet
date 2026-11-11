@@ -4,7 +4,7 @@ Euonia 的分布式同步抽象：定义锁（`ILockFactory` / `ILockProvider`�
 
 Distributed synchronization abstractions for Euonia: contracts for locks (`ILockFactory` / `ILockProvider`) and semaphores (`ISemaphoreFactory` / `ISemaphoreProvider`) with unified synchronous, asynchronous, timeout and cancellation semantics. Concrete implementations live in the Redis, ZooKeeper, file system and Azure Blob provider packages.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency`
 - **NuGet 包**：`Euonia.Concurrency`
 

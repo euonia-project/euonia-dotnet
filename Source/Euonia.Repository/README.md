@@ -4,7 +4,7 @@ Euonia 的持久化无关仓储抽象：定义实体契约、`IRepository<TEntit
 
 Persistence-agnostic repository abstractions for Euonia: entity contracts, the `IRepository<TEntity>` family, context providers (`IContextProvider` / `IContextFactory`) and paging/sorting extensions. Concrete implementations are supplied by the EF Core and MongoDB packages.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Repository`
 - **NuGet 包**：`Euonia.Repository`
 

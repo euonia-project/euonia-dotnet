@@ -4,7 +4,7 @@ Euonia 分布式同步的 Redis 提供程序：基于 `StackExchange.Redis` 实�
 
 Redis provider for Euonia distributed synchronization: distributed locks and semaphores backed by `StackExchange.Redis`, with automatic lease renewal, minimum validity time and busy-wait backoff.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency.Redis`
 - **NuGet 包**：`Euonia.Concurrency.Redis`
 

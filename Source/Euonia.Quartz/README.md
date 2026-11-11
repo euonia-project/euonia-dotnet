@@ -4,7 +4,7 @@ Euonia 的 Quartz 后台作业集成：以 `[BackgroundJob]` 与调度特性 dec
 
 Quartz background job integration for Euonia: declare jobs, groups and triggers with `[BackgroundJob]` and schedule attributes, and register scheduler, jobs and hosted service through `AddQuartz`.
 
-- **目标框架**：`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Quartz`
 - **NuGet 包**：`Euonia.Quartz`
 

@@ -4,7 +4,7 @@ Euonia 总线的 ASP.NET Core 健康检查：报告已注册的传输器数量�
 
 Health checks for Euonia Bus: report configured transporters and outbox, inbox and dead-letter backlog, ready to plug into ASP.NET Core health endpoints.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.HealthChecks`
 - **NuGet 包**：`Euonia.Bus.HealthChecks`
 

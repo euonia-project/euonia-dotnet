@@ -5,7 +5,7 @@
 Euonia 是用于构建企业级 .NET 应用与服务的开发框架。它把**面向对象可扩展业务架构（OSBA）**与**领域驱动设计（DDD）**结合起来，提供从基础原语、模块化宿主、领域建模、业务对象、权限策略、消息总线，到仓储、缓存、分布式同步、动态 HTTP/gRPC 端点的完整基础设施。
 
 - **当前版本**：2026.4.7（见 [project.props](project.props)）
-- **目标框架**：.NET 9 / .NET 10；Quartz 集成仅面向 .NET 10，Endpoint Source Generator 以 `netstandard2.0` analyzer 发布
+- **目标框架**：.NET 10 / .NET 11；测试与示例项目面向 .NET 11，Endpoint Source Generator 以 `netstandard2.0` analyzer 发布
 - **包规模**：Source 下 39 个可打包项目，每个包都附带独立 README
 - **测试**：27 个测试/夹具项目，1,100+ 个测试用例；另有 2 个 BenchmarkDotNet 基准项目
 - **许可**：GPL-3.0（见 [LICENSE](LICENSE)）
@@ -132,60 +132,60 @@ flowchart LR
 
 | 包 | 目标框架 | 说明 |
 |---|---|---|
-| [Euonia.Core](Source/Euonia.Core/README.md) | net9.0 / net10.0 | 基础原语：ID 生成、集合、反射、异步协调、释放模式、HTTP 异常、权限契约与扩展方法 |
-| [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net9.0 / net10.0 | 模块系统、依赖图、约定式服务注册、同步/异步生命周期、插件模块与访问器 |
-| [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net9.0 / net10.0 | 受 ASP.NET Core 启发的类型化中间件管道，支持优先级、DI 与自动行为发现 |
-| [Euonia.Linq](Source/Euonia.Linq/README.md) | net9.0 / net10.0 | 规约模式、谓词/表达式构建器、分页排序与 `IQueryable` 扩展 |
-| [Euonia.Mapping](Source/Euonia.Mapping/README.md) | net9.0 / net10.0 | 与映射库解耦的 `ITypeAdapter` 抽象与 `ProjectedAs` 门面 |
-| [Euonia.Mapping.Automapper](Source/Euonia.Mapping.Automapper/README.md) | net9.0 / net10.0 | AutoMapper 后端与模块注册 |
-| [Euonia.Mapping.Mapster](Source/Euonia.Mapping.Mapster/README.md) | net9.0 / net10.0 | Mapster 后端与模块注册 |
-| [Euonia.Validation](Source/Euonia.Validation/README.md) | net9.0 / net10.0 | FluentValidation 集成、泛型/范围/正则校验器与可绑定校验对象 |
-| [Euonia.Caching](Source/Euonia.Caching/README.md) | net9.0 / net10.0 | 多级缓存框架：分层缓存句柄、缓存管理器、背板同步与流式配置 |
-| [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net9.0 / net10.0 | `Microsoft.Extensions.Caching.Memory` 提供程序与 `ICacheService` 实现 |
-| [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net9.0 / net10.0 | Redis 分布式缓存句柄、背板与 `ICacheService` 实现 |
-| [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net9.0 / net10.0 | `System.Runtime.Caching` 提供程序与 `ICacheService` 实现 |
-| [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net9.0 / net10.0 | 分布式锁与信号量抽象：超时、取消、异步获取与句柄丢失监控 |
-| [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net9.0 / net10.0 | 基于 StackExchange.Redis 的锁与信号量实现，支持租约续期 |
-| [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net9.0 / net10.0 | 基于 ZooKeeper 临时顺序节点的锁与信号量实现 |
-| [Euonia.Concurrency.FileSystem](Source/Euonia.Concurrency.FileSystem/README.md) | net9.0 / net10.0 | 基于锁文件的跨进程互斥，适用于单机或共享卷 |
-| [Euonia.Concurrency.Azure](Source/Euonia.Concurrency.Azure/README.md) | net9.0 / net10.0 | 基于 Azure Blob 租约的分布式锁 |
+| [Euonia.Core](Source/Euonia.Core/README.md) | net10.0 / net11.0 | 基础原语：ID 生成、集合、反射、异步协调、释放模式、HTTP 异常、权限契约与扩展方法 |
+| [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net10.0 / net11.0 | 模块系统、依赖图、约定式服务注册、同步/异步生命周期、插件模块与访问器 |
+| [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net10.0 / net11.0 | 受 ASP.NET Core 启发的类型化中间件管道，支持优先级、DI 与自动行为发现 |
+| [Euonia.Linq](Source/Euonia.Linq/README.md) | net10.0 / net11.0 | 规约模式、谓词/表达式构建器、分页排序与 `IQueryable` 扩展 |
+| [Euonia.Mapping](Source/Euonia.Mapping/README.md) | net10.0 / net11.0 | 与映射库解耦的 `ITypeAdapter` 抽象与 `ProjectedAs` 门面 |
+| [Euonia.Mapping.Automapper](Source/Euonia.Mapping.Automapper/README.md) | net10.0 / net11.0 | AutoMapper 后端与模块注册 |
+| [Euonia.Mapping.Mapster](Source/Euonia.Mapping.Mapster/README.md) | net10.0 / net11.0 | Mapster 后端与模块注册 |
+| [Euonia.Validation](Source/Euonia.Validation/README.md) | net10.0 / net11.0 | FluentValidation 集成、泛型/范围/正则校验器与可绑定校验对象 |
+| [Euonia.Caching](Source/Euonia.Caching/README.md) | net10.0 / net11.0 | 多级缓存框架：分层缓存句柄、缓存管理器、背板同步与流式配置 |
+| [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net10.0 / net11.0 | `Microsoft.Extensions.Caching.Memory` 提供程序与 `ICacheService` 实现 |
+| [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net10.0 / net11.0 | Redis 分布式缓存句柄、背板与 `ICacheService` 实现 |
+| [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net10.0 / net11.0 | `System.Runtime.Caching` 提供程序与 `ICacheService` 实现 |
+| [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net10.0 / net11.0 | 分布式锁与信号量抽象：超时、取消、异步获取与句柄丢失监控 |
+| [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net10.0 / net11.0 | 基于 StackExchange.Redis 的锁与信号量实现，支持租约续期 |
+| [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net10.0 / net11.0 | 基于 ZooKeeper 临时顺序节点的锁与信号量实现 |
+| [Euonia.Concurrency.FileSystem](Source/Euonia.Concurrency.FileSystem/README.md) | net10.0 / net11.0 | 基于锁文件的跨进程互斥，适用于单机或共享卷 |
+| [Euonia.Concurrency.Azure](Source/Euonia.Concurrency.Azure/README.md) | net10.0 / net11.0 | 基于 Azure Blob 租约的分布式锁 |
 
 ### 领域、应用与权限
 
 | 包 | 目标框架 | 说明 |
 |---|---|---|
-| [Euonia.Domain](Source/Euonia.Domain/README.md) | net9.0 / net10.0 | DDD 构建块：实体、聚合根、值对象、领域事件、命令、审计与实体缓存契约 |
-| [Euonia.Application](Source/Euonia.Application/README.md) | net9.0 / net10.0 | 用例、应用服务、Castle 拦截器与消息管道行为 |
-| [Euonia.Uow](Source/Euonia.Uow/README.md) | net9.0 / net10.0 | 工作单元、事务边界、环境上下文与 `[UnitOfWork]` 拦截器 |
-| [Euonia.Repository](Source/Euonia.Repository/README.md) | net9.0 / net10.0 | 持久化无关仓储抽象、上下文提供者、实体契约与分页排序扩展 |
-| [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net9.0 / net10.0 | EF Core 上下文基类、仓储实现、值转换与 ID 值生成器 |
-| [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net9.0 / net10.0 | MongoDB 上下文、仓储、模型配置与事务支持 |
-| [Euonia.Osba](Source/Euonia.Osba/README.md) | net9.0 / net10.0 | 面向对象可扩展业务架构：富业务对象运行时、规则、工厂、执行器、生命周期与权限边界 |
-| [Euonia.Security](Source/Euonia.Security/README.md) | net9.0 / net10.0 | 操作权限与行级数据权限的策略引擎，可脱离 Osba 独立使用 |
+| [Euonia.Domain](Source/Euonia.Domain/README.md) | net10.0 / net11.0 | DDD 构建块：实体、聚合根、值对象、领域事件、命令、审计与实体缓存契约 |
+| [Euonia.Application](Source/Euonia.Application/README.md) | net10.0 / net11.0 | 用例、应用服务、Castle 拦截器与消息管道行为 |
+| [Euonia.Uow](Source/Euonia.Uow/README.md) | net10.0 / net11.0 | 工作单元、事务边界、环境上下文与 `[UnitOfWork]` 拦截器 |
+| [Euonia.Repository](Source/Euonia.Repository/README.md) | net10.0 / net11.0 | 持久化无关仓储抽象、上下文提供者、实体契约与分页排序扩展 |
+| [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net10.0 / net11.0 | EF Core 上下文基类、仓储实现、值转换与 ID 值生成器 |
+| [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net10.0 / net11.0 | MongoDB 上下文、仓储、模型配置与事务支持 |
+| [Euonia.Osba](Source/Euonia.Osba/README.md) | net10.0 / net11.0 | 面向对象可扩展业务架构：富业务对象运行时、规则、工厂、执行器、生命周期与权限边界 |
+| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | 操作权限与行级数据权限的策略引擎，可脱离 Osba 独立使用 |
 
 ### 消息总线
 
 | 包 | 目标框架 | 说明 |
 |---|---|---|
-| [Euonia.Bus.Abstract](Source/Euonia.Bus.Abstract/README.md) | net9.0 / net10.0 | 信封/上下文、消息约定、传输策略、可靠性存储、接收者与事件契约 |
-| [Euonia.Bus](Source/Euonia.Bus/README.md) | net9.0 / net10.0 | 总线引擎：处理器发现、分发、序列化、发件箱/收件箱/死信与遥测 |
-| [Euonia.Bus.InMemory](Source/Euonia.Bus.InMemory/README.md) | net9.0 / net10.0 | 进程内传输，适合开发、测试与单进程场景 |
-| [Euonia.Bus.RabbitMq](Source/Euonia.Bus.RabbitMq/README.md) | net9.0 / net10.0 | RabbitMQ 传输：扇出交换机、直连队列、优先级、死信与 Polly 重试 |
-| [Euonia.Bus.ActiveMq](Source/Euonia.Bus.ActiveMq/README.md) | net9.0 / net10.0 | ActiveMQ 传输：Topic/Queue、临时回复队列与关联 ID |
-| [Euonia.Bus.Http](Source/Euonia.Bus.Http/README.md) | net9.0 / net10.0 | HTTP 远程调用传输（`CallAsync`），与 gRPC 共用 `RemoteReply` 协议 |
-| [Euonia.Bus.Grpc](Source/Euonia.Bus.Grpc/README.md) | net9.0 / net10.0 | gRPC 泛化调用、服务端接收、拦截器、健康检查与自动发现 |
-| [Euonia.Bus.HealthChecks](Source/Euonia.Bus.HealthChecks/README.md) | net9.0 / net10.0 | 传输器、发件箱、收件箱与死信积压健康检查 |
+| [Euonia.Bus.Abstract](Source/Euonia.Bus.Abstract/README.md) | net10.0 / net11.0 | 信封/上下文、消息约定、传输策略、可靠性存储、接收者与事件契约 |
+| [Euonia.Bus](Source/Euonia.Bus/README.md) | net10.0 / net11.0 | 总线引擎：处理器发现、分发、序列化、发件箱/收件箱/死信与遥测 |
+| [Euonia.Bus.InMemory](Source/Euonia.Bus.InMemory/README.md) | net10.0 / net11.0 | 进程内传输，适合开发、测试与单进程场景 |
+| [Euonia.Bus.RabbitMq](Source/Euonia.Bus.RabbitMq/README.md) | net10.0 / net11.0 | RabbitMQ 传输：扇出交换机、直连队列、优先级、死信与 Polly 重试 |
+| [Euonia.Bus.ActiveMq](Source/Euonia.Bus.ActiveMq/README.md) | net10.0 / net11.0 | ActiveMQ 传输：Topic/Queue、临时回复队列与关联 ID |
+| [Euonia.Bus.Http](Source/Euonia.Bus.Http/README.md) | net10.0 / net11.0 | HTTP 远程调用传输（`CallAsync`），与 gRPC 共用 `RemoteReply` 协议 |
+| [Euonia.Bus.Grpc](Source/Euonia.Bus.Grpc/README.md) | net10.0 / net11.0 | gRPC 泛化调用、服务端接收、拦截器、健康检查与自动发现 |
+| [Euonia.Bus.HealthChecks](Source/Euonia.Bus.HealthChecks/README.md) | net10.0 / net11.0 | 传输器、发件箱、收件箱与死信积压健康检查 |
 
 ### 宿主、端点与调度
 
 | 包 | 目标框架 | 说明 |
 |---|---|---|
-| [Euonia.Hosting](Source/Euonia.Hosting/README.md) | net9.0 / net10.0 | ASP.NET Core 宿主引导、请求上下文、异常/追踪中间件、JWT/内省认证与授权扩展 |
-| [Euonia.Endpoint](Source/Euonia.Endpoint/README.md) | net9.0 / net10.0 | `[ExposeWebApi]` / `[ExposeGrpc]` 契约与共享数据契约，不依赖 ASP.NET Core |
-| [Euonia.Endpoint.Http](Source/Euonia.Endpoint.Http/README.md) | net9.0 / net10.0 | 把标记的服务方法映射为 Minimal API，生成优先 + 运行时兜底 |
-| [Euonia.Endpoint.Grpc](Source/Euonia.Endpoint.Grpc/README.md) | net9.0 / net10.0 | 基于 protobuf-net.Grpc 的 code-first gRPC 运行时、方法级授权与 proto 导出 |
+| [Euonia.Hosting](Source/Euonia.Hosting/README.md) | net10.0 / net11.0 | ASP.NET Core 宿主引导、请求上下文、异常/追踪中间件、JWT/内省认证与授权扩展 |
+| [Euonia.Endpoint](Source/Euonia.Endpoint/README.md) | net10.0 / net11.0 | `[ExposeWebApi]` / `[ExposeGrpc]` 契约与共享数据契约，不依赖 ASP.NET Core |
+| [Euonia.Endpoint.Http](Source/Euonia.Endpoint.Http/README.md) | net10.0 / net11.0 | 把标记的服务方法映射为 Minimal API，生成优先 + 运行时兜底 |
+| [Euonia.Endpoint.Grpc](Source/Euonia.Endpoint.Grpc/README.md) | net10.0 / net11.0 | 基于 protobuf-net.Grpc 的 code-first gRPC 运行时、方法级授权与 proto 导出 |
 | [Euonia.Endpoint.SourceGenerator](Source/Euonia.Endpoint.SourceGenerator/README.md) | netstandard2.0 analyzer | 构建期生成 HTTP lambda、gRPC 契约/适配器与注册标记 |
-| [Euonia.Quartz](Source/Euonia.Quartz/README.md) | net10.0 | Quartz.NET 4 集成：特性化作业、四类触发器与流式配置 |
+| [Euonia.Quartz](Source/Euonia.Quartz/README.md) | net10.0 / net11.0 | Quartz.NET 4 集成：特性化作业、四类触发器与流式配置 |
 
 ## 核心层
 
@@ -880,7 +880,7 @@ app.MapDynamicGrpcEndpoint();
 | `[CalendarIntervalSchedule(identity, interval, unit)]` | 日历单位间隔，可跨夏令时 |
 | `[DailyTimeIntervalSchedule(identity, interval, unit)]` | 每日时间窗口内的间隔触发 |
 
-`AddJobs(assembly)` 扫描程序集中的 `IJob`；`BackgroundBuildOptions` 配置调度器标识、失火阈值、重复作业处理、启动延迟与 `WaitForJobsToComplete`。Quartz 4 仅提供 `net10.0` 资产，面向 `net9.0` 的应用请使用 `2026.4.6`。
+`AddJobs(assembly)` 扫描程序集中的 `IJob`；`BackgroundBuildOptions` 配置调度器标识、失火阈值、重复作业处理、启动延迟与 `WaitForJobsToComplete`。Quartz 集成与框架一致，面向 `net10.0` / `net11.0`。
 
 ## 示例应用
 
@@ -1056,7 +1056,7 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks
 ```
 
-CI 使用 .NET 10、Release 配置：`dotnet-build.yml` 构建 `Euonia.Build.slnx`，`dotnet-test.yml` 测试 `Euonia.Test.slnx`，标签推送触发 `push-nuget.yml` 打包并发布到 NuGet。
+CI 使用 .NET 11、Release 配置：`dotnet-build.yml` 构建 `Euonia.Build.slnx`，`dotnet-test.yml` 测试 `Euonia.Test.slnx`，标签推送触发 `push-nuget.yml` 打包并发布到 NuGet。
 
 ## 项目结构
 
@@ -1091,7 +1091,7 @@ euonia-net/
 ## 版本与兼容性
 
 - **版本号**：`年份.主版本.修订号`（如 `2026.4.7`），统一由 [project.props](project.props) 的 `<Version>` 控制。
-- **目标框架**：全部项目为 `net9.0;net10.0`；`Euonia.Quartz` 仅 `net10.0`；`Euonia.Endpoint.SourceGenerator` 为 `netstandard2.0;net10.0`，NuGet 包只携带 `netstandard2.0` analyzer。
+- **目标框架**：Source 库项目为 `net10.0;net11.0`；测试与示例项目为 `net11.0`；`Euonia.Endpoint.SourceGenerator` 为 `netstandard2.0;net10.0`，NuGet 包只携带 `netstandard2.0` analyzer。
 - **已移除 `netstandard2.1`**：不再提供相关条件编译分支与兼容 polyfill。
 - **可空引用类型**：所有项目启用 `<Nullable>enable</Nullable>`，公开 API 带可空性标注。
 - **中央包管理**：统一使用 `Directory.Packages.props`；`Euonia.Build.slnx` 负责打包，包内包含各项目 README。

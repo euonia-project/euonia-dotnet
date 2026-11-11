@@ -4,7 +4,7 @@ Euonia 总线的 Apache ActiveMQ 传输：基于 NMS 实现主题（Topic）发�
 
 Apache ActiveMQ transport for Euonia Bus: topic-based publish/subscribe and queue-based point-to-point messaging over NMS, with request-response handled through temporary reply queues and correlation ids, plus persistent connections and Polly-based retries.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.ActiveMq`
 - **NuGet 包**：`Euonia.Bus.ActiveMq`
 

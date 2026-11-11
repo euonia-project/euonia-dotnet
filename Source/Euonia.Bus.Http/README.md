@@ -4,7 +4,7 @@ Euonia 总线的 HTTP 远程传输：客户端通过 HTTP POST 执行请求-响�
 
 HTTP remote transport for Euonia Bus: client-side `CallAsync` over HTTP POST and a server endpoint that executes handlers and returns results, sharing the `RemoteReply<TResult>` wire protocol with the gRPC transport.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.Http`
 - **NuGet 包**：`Euonia.Bus.Http`
 

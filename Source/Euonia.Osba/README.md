@@ -89,8 +89,8 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 | 项目 | 值 |
 |---|---|
-| 目标框架 | `net9.0;net10.0` |
-| 当前版本 | `2026.4.6`（见仓库根 `project.props`） |
+| 目标框架 | `net10.0;net11.0` |
+| 当前版本 | `2026.4.7`（见仓库根 `project.props`） |
 | 根命名空间 | `Nerosoft.Euonia.Osba` |
 | 包名 | `Euonia.Osba` |
 | 许可 | GPL-3.0（见仓库根 `LICENSE`） |
@@ -124,7 +124,7 @@ dotnet add package Euonia.Osba
 或直接在项目中引用：
 
 ```xml
-<PackageReference Include="Euonia.Osba" Version="2026.4.6" />
+<PackageReference Include="Euonia.Osba" Version="2026.4.7" />
 ```
 
 ### 2.2 装配
@@ -1582,7 +1582,7 @@ flowchart TB
 flowchart TB
     R["Euonia.Osba/"]
 
-    R --> R1["Euonia.Osba.csproj<br/>项目文件：net9.0;net10.0，引用 Core / Modularity / Pipeline / Validation，配置 resx 生成"]
+    R --> R1["Euonia.Osba.csproj<br/>项目文件：net10.0;net11.0，引用 Core / Modularity / Pipeline / Validation，配置 resx 生成"]
     R --> R2["ServiceCollectionExtensions.cs<br/>AddBusinessObject 装配入口：注册上下文、工厂、执行器、规则注册表与业务对象"]
     R --> R3["OsbaOptions.cs<br/>装配选项：ValidateOnStartup / StrictFactoryMethods / EnableDiagnostics / DiagnosticLevel"]
     R --> R4["OsbaStartupValidator.cs<br/>启动期反射校验：工厂签名、Inject、属性元数据、持久化方法；OsbaConfigurationException"]
@@ -1875,8 +1875,8 @@ flowchart TB
 
 ## 8. 版本与许可
 
-- 当前版本：`2026.4.6`（见仓库根 `project.props`）。
-- 目标框架：`net9.0`、`net10.0`。
+- 当前版本：`2026.4.7`（见仓库根 `project.props`）。
+- 目标框架：`net10.0`、`net11.0`。
 - 许可：GNU General Public License v3.0，见仓库根 [`LICENSE`](../../LICENSE)。
 
 ---

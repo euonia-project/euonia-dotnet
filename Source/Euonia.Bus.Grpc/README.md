@@ -4,7 +4,7 @@ Euonia 总线的 gRPC 远程传输与集成：客户端无需生成桩代码即�
 
 gRPC remote transport and integration for Euonia Bus: generic unary client invocation without generated stubs, a server-side `RemoteMessageService` that executes handlers, plus gRPC interceptors, health checks and automatic service discovery.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.Grpc`
 - **NuGet 包**：`Euonia.Bus.Grpc`
 

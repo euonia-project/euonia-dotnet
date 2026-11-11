@@ -20,7 +20,7 @@ dotnet add package Euonia.Endpoint.Grpc
 dotnet add package Euonia.Endpoint.SourceGenerator
 ```
 
-运行时包目标框架为 `net9.0` / `net10.0`；SourceGenerator 为 `netstandard2.0` + `net10.0`（仅 `netstandard2.0` 进入 NuGet analyzer）。
+运行时包目标框架为 `net10.0` / `net11.0`；SourceGenerator 为 `netstandard2.0` + `net10.0`（仅 `netstandard2.0` 进入 NuGet analyzer）。
 
 ## 快速开始
 

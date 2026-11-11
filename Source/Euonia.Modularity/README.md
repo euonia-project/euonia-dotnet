@@ -4,7 +4,7 @@ Euonia 的模块化与依赖注入基础设施：把应用拆分为可组合模�
 
 Modularity and dependency injection infrastructure for Euonia: compose an application from modules loaded in `[DependsOn]` topological order, with unified service registration, conventional auto-registration, initialization/shutdown lifecycle, plus request context, lazy service provider and named service resolution.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Modularity`
 - **NuGet 包**：`Euonia.Modularity`
 

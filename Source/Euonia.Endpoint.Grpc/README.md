@@ -4,8 +4,8 @@
 
 ## 目标框架
 
-- `net9.0`
 - `net10.0`
+- `net11.0`
 
 依赖 `protobuf-net.Grpc` 1.3.14。
 

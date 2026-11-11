@@ -4,7 +4,7 @@ Euonia 的领域驱动设计（DDD）构建块：实体、聚合根、值对象�
 
 Domain-Driven Design building blocks for Euonia: entities, aggregate roots, value objects, domain events, commands and auditing contracts. The package is persistence-agnostic and can be used on its own for domain modeling.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Domain`
 - **NuGet 包**：`Euonia.Domain`
 

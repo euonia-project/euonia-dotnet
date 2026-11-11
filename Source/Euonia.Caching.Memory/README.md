@@ -4,7 +4,7 @@ Euonia 缓存的 `Microsoft.Extensions.Caching.Memory` 提供程序：把进程�
 
 Microsoft.Extensions.Caching.Memory provider for Euonia Caching: wraps an in-process `IMemoryCache` as a cache handle for multi-level configurations or exposes it directly as an `ICacheService`.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Caching.Memory`
 - **NuGet 包**：`Euonia.Caching.Memory`
 

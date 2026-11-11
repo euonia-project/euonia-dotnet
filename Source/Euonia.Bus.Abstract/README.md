@@ -4,7 +4,7 @@ Euonia 消息总线的抽象契约层：消息信封与上下文、消息分类�
 
 Messaging abstractions for Euonia Bus: message envelopes and contexts, conventions, transport strategies, annotations, serialization, reliability stores (outbox, inbox and dead letter) and the event system. This package is the extension base for all bus transports and the `Euonia.Bus` engine.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus`
 - **NuGet 包**：`Euonia.Bus.Abstract`
 

@@ -4,7 +4,7 @@ Euonia 仓储抽象的 Entity Framework Core 实现：提供 `DataContextBase<TC
 
 Entity Framework Core implementation for Euonia repository abstractions: `DataContextBase<TContext>` context base and `EfCoreRepository<TContext, TEntity, TKey>`, with `AddEfCoreRepository` registering contexts, repositories and unit of work together.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Repository.EfCore`
 - **NuGet 包**：`Euonia.Repository.EfCore`
 

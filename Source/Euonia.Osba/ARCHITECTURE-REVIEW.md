@@ -1,6 +1,6 @@
 # Euonia.Osba 架构与实现评审报告
 
-> 评审对象：`Source/Euonia.Osba`（版本线 `2026.4.5`，目标框架 `net9.0;net10.0`）
+> 评审对象：`Source/Euonia.Osba`（版本线 `2026.4.5`；评审时目标框架为 `net9.0;net10.0`，当前已升级为 `net10.0;net11.0`）
 > 评审方式：源码逐文件审阅 + 构建 + 240 个既有测试 + 独立基准/复现程序（Release、net10.0、Apple Silicon）。
 > 本报告只记录问题、证据与修复方案，不包含已实施的代码改动。基准数字用于判断数量级，不是正式 BenchmarkDotNet 结果。
 

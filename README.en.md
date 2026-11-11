@@ -5,7 +5,7 @@
 Euonia is a development framework for building enterprise-grade .NET applications and services. It combines **Object-Oriented Scalable Business Architecture (OSBA)** with **Domain-Driven Design (DDD)** and provides complete infrastructure: from base primitives, modular hosting, domain modeling, business objects, permission policies, and the message bus, all the way to repositories, caching, distributed synchronization, and dynamic HTTP/gRPC endpoints.
 
 - **Current version**: 2026.4.7 (see [project.props](project.props))
-- **Target frameworks**: .NET 9 / .NET 10; the Quartz integration targets .NET 10 only, and the Endpoint Source Generator ships as a `netstandard2.0` analyzer
+- **Target frameworks**: .NET 10 / .NET 11; test and sample projects target .NET 11, and the Endpoint Source Generator ships as a `netstandard2.0` analyzer
 - **Package scale**: 39 packable projects under Source, each with its own README
 - **Tests**: 27 test/fixture projects with 1,100+ test cases; plus 2 BenchmarkDotNet benchmark projects
 - **License**: GPL-3.0 (see [LICENSE](LICENSE))
@@ -132,60 +132,60 @@ flowchart LR
 
 | Package | Target framework | Description |
 |---|---|---|
-| [Euonia.Core](Source/Euonia.Core/README.md) | net9.0 / net10.0 | Base primitives: ID generation, collections, reflection, async coordination, disposal patterns, HTTP exceptions, permission contracts, and extension methods |
-| [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net9.0 / net10.0 | Module system, dependency graph, conventional service registration, sync/async lifecycle, plugin modules, and accessors |
-| [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net9.0 / net10.0 | Typed middleware pipeline inspired by ASP.NET Core, with priority ordering, DI, and automatic behavior discovery |
-| [Euonia.Linq](Source/Euonia.Linq/README.md) | net9.0 / net10.0 | Specification pattern, predicate/expression builders, paging and sorting, and `IQueryable` extensions |
-| [Euonia.Mapping](Source/Euonia.Mapping/README.md) | net9.0 / net10.0 | `ITypeAdapter` abstraction decoupled from mapping libraries, plus the `ProjectedAs` facade |
-| [Euonia.Mapping.Automapper](Source/Euonia.Mapping.Automapper/README.md) | net9.0 / net10.0 | AutoMapper backend and module registration |
-| [Euonia.Mapping.Mapster](Source/Euonia.Mapping.Mapster/README.md) | net9.0 / net10.0 | Mapster backend and module registration |
-| [Euonia.Validation](Source/Euonia.Validation/README.md) | net9.0 / net10.0 | FluentValidation integration, generic/range/regex validators, and bindable validatable objects |
-| [Euonia.Caching](Source/Euonia.Caching/README.md) | net9.0 / net10.0 | Multi-level caching framework: layered cache handles, cache manager, backplane synchronization, and fluent configuration |
-| [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net9.0 / net10.0 | `Microsoft.Extensions.Caching.Memory` provider and `ICacheService` implementation |
-| [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net9.0 / net10.0 | Redis distributed cache handle, backplane, and `ICacheService` implementation |
-| [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net9.0 / net10.0 | `System.Runtime.Caching` provider and `ICacheService` implementation |
-| [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net9.0 / net10.0 | Distributed lock and semaphore abstractions: timeouts, cancellation, async acquisition, and handle-loss monitoring |
-| [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net9.0 / net10.0 | Lock and semaphore implementations built on StackExchange.Redis, with lease renewal |
-| [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net9.0 / net10.0 | Lock and semaphore implementations based on ZooKeeper ephemeral sequential nodes |
-| [Euonia.Concurrency.FileSystem](Source/Euonia.Concurrency.FileSystem/README.md) | net9.0 / net10.0 | Cross-process mutual exclusion based on lock files, for single machines or shared volumes |
-| [Euonia.Concurrency.Azure](Source/Euonia.Concurrency.Azure/README.md) | net9.0 / net10.0 | Distributed locks based on Azure Blob leases |
+| [Euonia.Core](Source/Euonia.Core/README.md) | net10.0 / net11.0 | Base primitives: ID generation, collections, reflection, async coordination, disposal patterns, HTTP exceptions, permission contracts, and extension methods |
+| [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net10.0 / net11.0 | Module system, dependency graph, conventional service registration, sync/async lifecycle, plugin modules, and accessors |
+| [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net10.0 / net11.0 | Typed middleware pipeline inspired by ASP.NET Core, with priority ordering, DI, and automatic behavior discovery |
+| [Euonia.Linq](Source/Euonia.Linq/README.md) | net10.0 / net11.0 | Specification pattern, predicate/expression builders, paging and sorting, and `IQueryable` extensions |
+| [Euonia.Mapping](Source/Euonia.Mapping/README.md) | net10.0 / net11.0 | `ITypeAdapter` abstraction decoupled from mapping libraries, plus the `ProjectedAs` facade |
+| [Euonia.Mapping.Automapper](Source/Euonia.Mapping.Automapper/README.md) | net10.0 / net11.0 | AutoMapper backend and module registration |
+| [Euonia.Mapping.Mapster](Source/Euonia.Mapping.Mapster/README.md) | net10.0 / net11.0 | Mapster backend and module registration |
+| [Euonia.Validation](Source/Euonia.Validation/README.md) | net10.0 / net11.0 | FluentValidation integration, generic/range/regex validators, and bindable validatable objects |
+| [Euonia.Caching](Source/Euonia.Caching/README.md) | net10.0 / net11.0 | Multi-level caching framework: layered cache handles, cache manager, backplane synchronization, and fluent configuration |
+| [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net10.0 / net11.0 | `Microsoft.Extensions.Caching.Memory` provider and `ICacheService` implementation |
+| [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net10.0 / net11.0 | Redis distributed cache handle, backplane, and `ICacheService` implementation |
+| [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net10.0 / net11.0 | `System.Runtime.Caching` provider and `ICacheService` implementation |
+| [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net10.0 / net11.0 | Distributed lock and semaphore abstractions: timeouts, cancellation, async acquisition, and handle-loss monitoring |
+| [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net10.0 / net11.0 | Lock and semaphore implementations built on StackExchange.Redis, with lease renewal |
+| [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net10.0 / net11.0 | Lock and semaphore implementations based on ZooKeeper ephemeral sequential nodes |
+| [Euonia.Concurrency.FileSystem](Source/Euonia.Concurrency.FileSystem/README.md) | net10.0 / net11.0 | Cross-process mutual exclusion based on lock files, for single machines or shared volumes |
+| [Euonia.Concurrency.Azure](Source/Euonia.Concurrency.Azure/README.md) | net10.0 / net11.0 | Distributed locks based on Azure Blob leases |
 
 ### Domain, Application, and Permissions
 
 | Package | Target framework | Description |
 |---|---|---|
-| [Euonia.Domain](Source/Euonia.Domain/README.md) | net9.0 / net10.0 | DDD building blocks: entities, aggregate roots, value objects, domain events, commands, auditing, and entity cache contracts |
-| [Euonia.Application](Source/Euonia.Application/README.md) | net9.0 / net10.0 | Use cases, application services, Castle interceptors, and message pipeline behaviors |
-| [Euonia.Uow](Source/Euonia.Uow/README.md) | net9.0 / net10.0 | Unit of work, transaction boundaries, ambient context, and the `[UnitOfWork]` interceptor |
-| [Euonia.Repository](Source/Euonia.Repository/README.md) | net9.0 / net10.0 | Persistence-agnostic repository abstractions, context providers, entity contracts, and paging/sorting extensions |
-| [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net9.0 / net10.0 | EF Core context base classes, repository implementation, value converters, and ID value generators |
-| [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net9.0 / net10.0 | MongoDB context, repository, model configuration, and transaction support |
-| [Euonia.Osba](Source/Euonia.Osba/README.md) | net9.0 / net10.0 | Object-Oriented Scalable Business Architecture: rich business object runtime, rules, factories, actuators, lifecycle, and permission boundaries |
-| [Euonia.Security](Source/Euonia.Security/README.md) | net9.0 / net10.0 | Policy engine for operation permissions and row-level data permissions, usable standalone without Osba |
+| [Euonia.Domain](Source/Euonia.Domain/README.md) | net10.0 / net11.0 | DDD building blocks: entities, aggregate roots, value objects, domain events, commands, auditing, and entity cache contracts |
+| [Euonia.Application](Source/Euonia.Application/README.md) | net10.0 / net11.0 | Use cases, application services, Castle interceptors, and message pipeline behaviors |
+| [Euonia.Uow](Source/Euonia.Uow/README.md) | net10.0 / net11.0 | Unit of work, transaction boundaries, ambient context, and the `[UnitOfWork]` interceptor |
+| [Euonia.Repository](Source/Euonia.Repository/README.md) | net10.0 / net11.0 | Persistence-agnostic repository abstractions, context providers, entity contracts, and paging/sorting extensions |
+| [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net10.0 / net11.0 | EF Core context base classes, repository implementation, value converters, and ID value generators |
+| [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net10.0 / net11.0 | MongoDB context, repository, model configuration, and transaction support |
+| [Euonia.Osba](Source/Euonia.Osba/README.md) | net10.0 / net11.0 | Object-Oriented Scalable Business Architecture: rich business object runtime, rules, factories, actuators, lifecycle, and permission boundaries |
+| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | Policy engine for operation permissions and row-level data permissions, usable standalone without Osba |
 
 ### Message Bus
 
 | Package | Target framework | Description |
 |---|---|---|
-| [Euonia.Bus.Abstract](Source/Euonia.Bus.Abstract/README.md) | net9.0 / net10.0 | Envelope/context, message conventions, transport strategies, reliability stores, recipients, and event contracts |
-| [Euonia.Bus](Source/Euonia.Bus/README.md) | net9.0 / net10.0 | Bus engine: handler discovery, dispatch, serialization, outbox/inbox/dead letters, and telemetry |
-| [Euonia.Bus.InMemory](Source/Euonia.Bus.InMemory/README.md) | net9.0 / net10.0 | In-process transport, suitable for development, testing, and single-process scenarios |
-| [Euonia.Bus.RabbitMq](Source/Euonia.Bus.RabbitMq/README.md) | net9.0 / net10.0 | RabbitMQ transport: fanout exchanges, direct queues, priority, dead lettering, and Polly retries |
-| [Euonia.Bus.ActiveMq](Source/Euonia.Bus.ActiveMq/README.md) | net9.0 / net10.0 | ActiveMQ transport: topics/queues, temporary reply queues, and correlation IDs |
-| [Euonia.Bus.Http](Source/Euonia.Bus.Http/README.md) | net9.0 / net10.0 | HTTP remote-call transport (`CallAsync`), sharing the `RemoteReply` protocol with gRPC |
-| [Euonia.Bus.Grpc](Source/Euonia.Bus.Grpc/README.md) | net9.0 / net10.0 | gRPC generic invocation, server-side receiving, interceptors, health checks, and auto-discovery |
-| [Euonia.Bus.HealthChecks](Source/Euonia.Bus.HealthChecks/README.md) | net9.0 / net10.0 | Health checks for transporters, the outbox, the inbox, and dead-letter backlog |
+| [Euonia.Bus.Abstract](Source/Euonia.Bus.Abstract/README.md) | net10.0 / net11.0 | Envelope/context, message conventions, transport strategies, reliability stores, recipients, and event contracts |
+| [Euonia.Bus](Source/Euonia.Bus/README.md) | net10.0 / net11.0 | Bus engine: handler discovery, dispatch, serialization, outbox/inbox/dead letters, and telemetry |
+| [Euonia.Bus.InMemory](Source/Euonia.Bus.InMemory/README.md) | net10.0 / net11.0 | In-process transport, suitable for development, testing, and single-process scenarios |
+| [Euonia.Bus.RabbitMq](Source/Euonia.Bus.RabbitMq/README.md) | net10.0 / net11.0 | RabbitMQ transport: fanout exchanges, direct queues, priority, dead lettering, and Polly retries |
+| [Euonia.Bus.ActiveMq](Source/Euonia.Bus.ActiveMq/README.md) | net10.0 / net11.0 | ActiveMQ transport: topics/queues, temporary reply queues, and correlation IDs |
+| [Euonia.Bus.Http](Source/Euonia.Bus.Http/README.md) | net10.0 / net11.0 | HTTP remote-call transport (`CallAsync`), sharing the `RemoteReply` protocol with gRPC |
+| [Euonia.Bus.Grpc](Source/Euonia.Bus.Grpc/README.md) | net10.0 / net11.0 | gRPC generic invocation, server-side receiving, interceptors, health checks, and auto-discovery |
+| [Euonia.Bus.HealthChecks](Source/Euonia.Bus.HealthChecks/README.md) | net10.0 / net11.0 | Health checks for transporters, the outbox, the inbox, and dead-letter backlog |
 
 ### Hosting, Endpoints, and Scheduling
 
 | Package | Target framework | Description |
 |---|---|---|
-| [Euonia.Hosting](Source/Euonia.Hosting/README.md) | net9.0 / net10.0 | ASP.NET Core host bootstrap, request context, exception/tracing middleware, JWT/introspection authentication, and authorization extensions |
-| [Euonia.Endpoint](Source/Euonia.Endpoint/README.md) | net9.0 / net10.0 | `[ExposeWebApi]` / `[ExposeGrpc]` contracts and shared data contracts; does not depend on ASP.NET Core |
-| [Euonia.Endpoint.Http](Source/Euonia.Endpoint.Http/README.md) | net9.0 / net10.0 | Maps marked service methods to Minimal APIs, generation first with a runtime fallback |
-| [Euonia.Endpoint.Grpc](Source/Euonia.Endpoint.Grpc/README.md) | net9.0 / net10.0 | Code-first gRPC runtime based on protobuf-net.Grpc, with method-level authorization and proto export |
+| [Euonia.Hosting](Source/Euonia.Hosting/README.md) | net10.0 / net11.0 | ASP.NET Core host bootstrap, request context, exception/tracing middleware, JWT/introspection authentication, and authorization extensions |
+| [Euonia.Endpoint](Source/Euonia.Endpoint/README.md) | net10.0 / net11.0 | `[ExposeWebApi]` / `[ExposeGrpc]` contracts and shared data contracts; does not depend on ASP.NET Core |
+| [Euonia.Endpoint.Http](Source/Euonia.Endpoint.Http/README.md) | net10.0 / net11.0 | Maps marked service methods to Minimal APIs, generation first with a runtime fallback |
+| [Euonia.Endpoint.Grpc](Source/Euonia.Endpoint.Grpc/README.md) | net10.0 / net11.0 | Code-first gRPC runtime based on protobuf-net.Grpc, with method-level authorization and proto export |
 | [Euonia.Endpoint.SourceGenerator](Source/Euonia.Endpoint.SourceGenerator/README.md) | netstandard2.0 analyzer | Generates HTTP lambdas, gRPC contracts/adapters, and registration markers at build time |
-| [Euonia.Quartz](Source/Euonia.Quartz/README.md) | net10.0 | Quartz.NET 4 integration: attributed jobs, four trigger types, and fluent configuration |
+| [Euonia.Quartz](Source/Euonia.Quartz/README.md) | net10.0 / net11.0 | Quartz.NET 4 integration: attributed jobs, four trigger types, and fluent configuration |
 
 ## Core Layer
 
@@ -880,7 +880,7 @@ For the complete documentation, see [`Source/Euonia.Endpoint/README.md`](Source/
 | `[CalendarIntervalSchedule(identity, interval, unit)]` | Calendar-unit interval that can span daylight saving time |
 | `[DailyTimeIntervalSchedule(identity, interval, unit)]` | Interval triggers within a daily time window |
 
-`AddJobs(assembly)` scans the assembly for `IJob`; `BackgroundBuildOptions` configures the scheduler identity, misfire threshold, duplicate-job handling, startup delay, and `WaitForJobsToComplete`. Quartz 4 only ships `net10.0` assets; applications targeting `net9.0` should use `2026.4.6`.
+`AddJobs(assembly)` scans the assembly for `IJob`; `BackgroundBuildOptions` configures the scheduler identity, misfire threshold, duplicate-job handling, startup delay, and `WaitForJobsToComplete`. The Quartz integration follows the framework and targets `net10.0` / `net11.0`.
 
 ## Sample Application
 
@@ -1056,7 +1056,7 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks
 ```
 
-CI uses .NET 10 and the Release configuration: `dotnet-build.yml` builds `Euonia.Build.slnx`, `dotnet-test.yml` tests `Euonia.Test.slnx`, and a tag push triggers `push-nuget.yml` to pack and publish to NuGet.
+CI uses .NET 11 and the Release configuration: `dotnet-build.yml` builds `Euonia.Build.slnx`, `dotnet-test.yml` tests `Euonia.Test.slnx`, and a tag push triggers `push-nuget.yml` to pack and publish to NuGet.
 
 ## Project Structure
 
@@ -1091,7 +1091,7 @@ euonia-net/
 ## Versioning and Compatibility
 
 - **Version number**: `year.major.revision` (for example `2026.4.7`), controlled centrally by `<Version>` in [project.props](project.props).
-- **Target frameworks**: all projects target `net9.0;net10.0`; `Euonia.Quartz` targets `net10.0` only; `Euonia.Endpoint.SourceGenerator` targets `netstandard2.0;net10.0`, and the NuGet package carries only the `netstandard2.0` analyzer.
+- **Target frameworks**: Source library projects target `net10.0;net11.0`; test and sample projects target `net11.0`; `Euonia.Endpoint.SourceGenerator` targets `netstandard2.0;net10.0`, and the NuGet package carries only the `netstandard2.0` analyzer.
 - **`netstandard2.1` removed**: the related conditional compilation branches and compatibility polyfills are no longer provided.
 - **Nullable reference types**: all projects enable `<Nullable>enable</Nullable>`, and public APIs carry nullability annotations.
 - **Central package management**: `Directory.Packages.props` is used throughout; `Euonia.Build.slnx` handles packing, and packages include each project's README.

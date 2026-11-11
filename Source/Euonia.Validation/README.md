@@ -4,7 +4,7 @@ Euonia 的对象校验框架：提供统一的 `Validator.Validate<T>` 入口、
 
 Object validation framework for Euonia: a unified `Validator.Validate<T>` entry point, bindable `ValidatableObject<T>`, lightweight rules (generic, regex, range) and automatic FluentValidation registration.
 
-- **目标框架**：`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Validation`
 - **NuGet 包**：`Euonia.Validation`
 
