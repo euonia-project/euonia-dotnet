@@ -6,8 +6,6 @@
     <PropertyGroup>
         <Description>Euonia 的 Quartz.NET 作业调度集成：基于特性的后台作业与触发器（Simple、Cron、CalendarInterval、DailyTimeInterval）及流式配置。 / Quartz.NET job scheduling integration for Euonia: attribute-based background jobs and triggers (simple, cron, calendar interval and daily time interval) with fluent configuration.</Description>
         <PackageTags>euonia, quartz, scheduling, jobs, background-jobs, cron</PackageTags>
-        <!-- Quartz.NET 4.x only ships net10.0 assets. -->
-        <TargetFrameworks>net10.0</TargetFrameworks>
     </PropertyGroup>
 
     <ItemGroup>
