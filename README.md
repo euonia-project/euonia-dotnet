@@ -6,8 +6,8 @@ Euonia 是用于构建企业级 .NET 应用与服务的开发框架。它把**�
 
 - **当前版本**：2026.4.7（见 [project.props](project.props)）
 - **目标框架**：.NET 10 / .NET 11；测试与示例项目面向 .NET 11，Endpoint Source Generator 以 `netstandard2.0` analyzer 发布
-- **包规模**：Source 下 39 个可打包项目，每个包都附带独立 README
-- **测试**：27 个测试/夹具项目，1,100+ 个测试用例；另有 2 个 BenchmarkDotNet 基准项目
+- **包规模**：Source 下 45 个可打包项目，每个包都附带独立 README
+- **测试**：28 个测试/夹具项目，1,100+ 个测试用例；另有 3 个 BenchmarkDotNet 基准项目
 - **许可**：GPL-3.0（见 [LICENSE](LICENSE)）
 
 Euonia 同时提供 **[Java 版本](https://github.com/euonia-project/euonia-java)**；本仓库是 **.NET 版本**。
@@ -17,6 +17,7 @@ Euonia 同时提供 **[Java 版本](https://github.com/euonia-project/euonia-jav
 - [模块总览](#模块总览)
 - [包一览](#包一览)
 - [核心层](#核心层)
+- [平台能力（Tenancy / Auditing / Telemetry）](#平台能力tenancy--auditing--telemetry)
 - [领域与应用层](#领域与应用层)
 - [消息总线](#消息总线)
 - [宿主与端点](#宿主与端点)
@@ -43,6 +44,14 @@ flowchart LR
         Validation["Euonia.Validation"]
         Caching["Euonia.Caching<br/>Memory · Redis · Runtime"]
         Concurrency["Euonia.Concurrency<br/>Redis · ZooKeeper · FileSystem · Azure"]
+    end
+
+    subgraph P["平台能力 · Platform"]
+        direction TB
+        Tenancy["Euonia.Tenancy"]
+        Auditing["Euonia.Auditing<br/>EF Core · Mongo"]
+        Telemetry["Euonia.Telemetry"]
+        Otel["Euonia.Telemetry.Otel"]
     end
 
     subgraph D["领域与应用层 · Domain & Application"]
@@ -78,6 +87,15 @@ flowchart LR
     Core --> Concurrency
     Core --> Domain
     Core --> Security
+    Core --> Tenancy
+    Core --> Auditing
+    Core --> Telemetry
+    Telemetry --> Otel
+    Repository -.-> Tenancy
+    Quartz -.-> Tenancy
+    Hosting --> Tenancy
+    Hosting --> Auditing
+    Hosting --> Telemetry
     Modularity --> Application
     Modularity --> Hosting
     Modularity --> Validation
@@ -99,6 +117,7 @@ flowchart LR
     classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
     classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
     classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
+    classDef platform fill:#ECFDF5,stroke:#6EC5A8,color:#134E3A,stroke-width:1.5px
     classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
 
     class Core core
@@ -106,12 +125,15 @@ flowchart LR
     class Domain,Application,Uow,Repository,Osba,Security domain
     class BusAbstract,Bus,BusHealth messaging
     class Hosting,Endpoint,Quartz hosting
+    class Tenancy,Auditing,Telemetry platform
+    class Otel aggregate
     class Transports,EndpointImpl aggregate
 
     style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
     style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
     style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
     style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
+    style P fill:#F4FEFB,stroke:#BFEADB,stroke-width:1.5px,color:#134E3A
 
     linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
@@ -125,6 +147,7 @@ flowchart LR
 - **授权值不固化**：权限码与行级授予从应用数据实时解析，撤销立即生效，不依赖重新签发令牌。
 - **契约稳定**：公共 API 尽量保持源码兼容；破坏性变更集中记录在 [CHANGELOG.md](CHANGELOG.md)。
 - **可观测**：Bus、Osba 等模块通过 `ActivitySource`、`Meter` 与结构化日志暴露运行状态，可直接接入 OpenTelemetry。
+- **平台能力可组合**：多租户、审计、遥测均为独立包，默认关闭；启用后通过执行上下文串联，关闭时不改变既有行为。
 
 ## 包一览
 
@@ -133,6 +156,12 @@ flowchart LR
 | 包 | 目标框架 | 说明 |
 |---|---|---|
 | [Euonia.Core](Source/Euonia.Core/README.md) | net10.0 / net11.0 | 基础原语：ID 生成、集合、反射、异步协调、释放模式、HTTP 异常、权限契约与扩展方法 |
+| [Euonia.Tenancy](Source/Euonia.Tenancy/README.md) | net10.0 / net11.0 | 多租户内核：租户作用域、解析链、存储、写入守卫与跨租户保护 |
+| [Euonia.Auditing](Source/Euonia.Auditing/README.md) | net10.0 / net11.0 | 审计内核：作用域/动作模型、写入队列、脱敏序列化、查询/保留与 durable spool |
+| [Euonia.Auditing.EfCore](Source/Euonia.Auditing.EfCore/README.md) | net10.0 / net11.0 | 独立审计库的 EF Core 存储、索引与幂等落库 |
+| [Euonia.Auditing.Mongo](Source/Euonia.Auditing.Mongo/README.md) | net10.0 / net11.0 | MongoDB 审计存储与唯一索引 |
+| [Euonia.Telemetry](Source/Euonia.Telemetry/README.md) | net10.0 / net11.0 | 遥测内核：Activity/Meter 源、标签脱敏、上下文、W3C 传播与日志 Scope |
+| [Euonia.Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md) | net10.0 / net11.0 | OpenTelemetry 适配：显式源目录、Resource 与 OTLP 接入 |
 | [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net10.0 / net11.0 | 模块系统、依赖图、约定式服务注册、同步/异步生命周期、插件模块与访问器 |
 | [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net10.0 / net11.0 | 受 ASP.NET Core 启发的类型化中间件管道，支持优先级、DI 与自动行为发现 |
 | [Euonia.Linq](Source/Euonia.Linq/README.md) | net10.0 / net11.0 | 规约模式、谓词/表达式构建器、分页排序与 `IQueryable` 扩展 |
@@ -330,6 +359,96 @@ await using var handle = await locker.AcquireAsync(
 
 // 临界区
 ```
+
+## 平台能力（Tenancy / Auditing / Telemetry）
+
+三个能力包互相独立，只依赖 `Euonia.Core` 与 `Microsoft.Extensions.*`；组合与 HTTP/消息接入由 `Euonia.Hosting`、`Euonia.Bus` 的适配层完成。默认全部关闭，`Enabled=false` 时不注册中间件、不产生 Span、不改变既有行为。
+
+### Tenancy（Euonia.Tenancy）
+
+> 租户身份只有一处来源：`Nerosoft.Euonia.Execution` 的执行上下文；EF、Mongo、缓存、消息、Quartz 均从该处读取。
+
+- **隔离模式**：`SharedTable`（影子 `TenantId` + 命名过滤器）、`DatabasePerTenant`（按租户连接串）、`SharedSchema`（按租户 schema，模型缓存键区分）。
+- **解析链**：Header / Claim / Host / Route / Message，按 `Order` 组合；结果带候选与失败码，冲突返回 `Conflict`。
+- **写入守卫**：新增自动写入租户；跨租户更新/删除/迁移抛 `CrossTenantOperationException`；`Begin` / `BeginIsolated` / `BeginCrossTenant` 区分操作人与目标租户。
+- **边界适配**：EF Core 模型与过滤器、Mongo 过滤器与写入打标、Quartz 作业租户作用域、缓存/锁/幂等键前缀与 `RemoveByPrefixAsync`。
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;          // 可选租户时设为 false
+    options.HeaderName = "X-Tenant-Id";
+    options.TrustHeaderForAnonymous = false;
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+// 或 AddConfigurationTenantStore(...) / 自定义 ITenantStore
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseTenancy();
+```
+
+EF 上下文继承 `MultiTenantDataContextBase<TContext>`，或对已有上下文调用 `modelBuilder.ApplyTenantModel()`；非基类上下文需替换 `IModelCacheKeyFactory` 以区分 SharedSchema 模型。消息路径由 `TenantMessageScopeParticipant` 从信封恢复租户，并按 `TenantMessageTrustPolicy` 拒绝不可信 Broker 伪造的租户。
+
+### Auditing（Euonia.Auditing）
+
+> 以 `ScopeId` 幂等的“一次请求/一条消息”审计：记录 + 动作，零动作也落库。
+
+- **入口**：HTTP 中间件、Bus 参与者、Application 的 Castle 拦截器（`Order = -1000`，最外层）。
+- **存储**：`InMemoryAuditingStore`、`EfCoreAuditingStore`（独立审计库）、`MongoAuditingStore`；`IAuditingStoreRouter` 支持每租户审计库。
+- **可靠性**：有界队列 + 文件 durable spool；成功默认批量、失败立即投递；关闭时排空队列。
+- **语义**：`AuditingTriggerMode`（All / WritesOnly）、`RecordAnonymous`、失败开放（存储不可用不影响业务）、查询越权防护。
+
+```csharp
+services.AddAuditing(options =>
+{
+    options.Enabled = true;
+    options.SuccessDelivery = AuditingDelivery.Batched;
+    options.FailureDelivery = AuditingDelivery.Immediate;
+});
+services.AddAuditingEfCore<AuditingDbContext>(options =>
+    options.UseSqlServer(configuration.GetConnectionString("Audit")));
+// 或 AddInMemoryAuditingStore() / AddAuditingMongo(database) / AddFileAuditingSpool(...)
+
+app.UseAuditing();
+```
+
+DDL 与索引见 [docs/sql/euonia_audit.sql](docs/sql/euonia_audit.sql)，租户列迁移步骤见 [docs/sql/README.md](docs/sql/README.md)。
+
+### Telemetry（Euonia.Telemetry / Euonia.Telemetry.Otel）
+
+> 内核只定义 Source/Meter、脱敏、上下文与传播；OTel 适配层负责导出。
+
+- **内核**：`TelemetrySource` / `TelemetryActivity`、`DefaultTelemetryRedactor`、`ITelemetryPropagator`（W3C `traceparent`）、`TelemetryLogScope`。
+- **组件埋点**：Bus（消费 Span、四种传输标签、`ActivityLink`）、HTTP、Caching、Repository、Security、Quartz、Osba。
+- **约束**：租户标签只进 Trace / 日志，不进指标；消息体、Token、Cookie、完整 SQL、用户 ID 默认不采集。
+
+```csharp
+services.AddEuoniaTelemetry(options =>
+{
+    options.Enabled = true;
+    options.TracesEnabled = true;
+    options.MetricsEnabled = true;
+});
+
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+app.UseEuoniaTelemetry();
+```
+
+`AddEuoniaOpenTelemetry` 会启用 OTel Logs（含 Scope 与格式化消息）、显式注册 Euonia 源目录，并在注册期读取 Resource；导出器与宿主 instrumentation 由调用方添加。
+
+### 中间件顺序
+
+```text
+UseExecutionContext → UseAuditing → UseTenancy → UseEuoniaTelemetry → UseAuthorization
+```
+
+审计需要请求上下文来记录方法/状态码；租户在审计之后解析，审计完成时会回填租户字段；遥测在租户之后补充 `tenant.id` / `tenant.cross` 标签。
 
 ## 领域与应用层
 
@@ -925,6 +1044,10 @@ dotnet run
 <PackageReference Include="Euonia.Caching" Version="2026.4.7" />
 <PackageReference Include="Euonia.Caching.Memory" Version="2026.4.7" />
 <PackageReference Include="Euonia.Concurrency" Version="2026.4.7" />
+<PackageReference Include="Euonia.Tenancy" Version="2026.4.7" />
+<PackageReference Include="Euonia.Auditing" Version="2026.4.7" />
+<PackageReference Include="Euonia.Telemetry" Version="2026.4.7" />
+<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.4.7" />
 ```
 
 ### 2. 模块化宿主
@@ -1019,7 +1142,38 @@ public sealed class OrderCreatedSubscriber : IHandler<OrderCreated>
 await bus.PublishAsync(new OrderCreated { OrderId = 42 });
 ```
 
-### 5. 动态端点
+### 5. 平台能力（可选）
+
+租户、审计、遥测三件套按需启用；`Enabled=false` 时与未引用这些包的行为一致。
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+
+services.AddAuditing(options => options.Enabled = true);
+services.AddInMemoryAuditingStore();
+
+services.AddEuoniaTelemetry(options => options.Enabled = true);
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseAuditing();
+app.UseTenancy();
+app.UseEuoniaTelemetry();
+app.UseAuthorization();
+```
+
+完整说明见[平台能力](#平台能力tenancy--auditing--telemetry)与各包 README。
+
+### 6. 动态端点
 
 ```csharp
 public interface IOrderService
@@ -1054,6 +1208,7 @@ dotnet pack Euonia.Build.slnx -c Release -o artifacts
 # 基准
 dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks
+dotnet run -c Release --project Benchmarks/Euonia.Platform.Benchmarks -- --filter '*' --job Short
 ```
 
 CI 使用 .NET 11、Release 配置：`dotnet-build.yml` 构建 `Euonia.Build.slnx`，`dotnet-test.yml` 测试 `Euonia.Test.slnx`，标签推送触发 `push-nuget.yml` 打包并发布到 NuGet。
@@ -1062,7 +1217,7 @@ CI 使用 .NET 11、Release 配置：`dotnet-build.yml` 构建 `Euonia.Build.sln
 
 ```text
 euonia-net/
-├── Source/                     39 个框架/NuGet 项目
+├── Source/                     45 个框架/NuGet 项目
 │   ├── Euonia.Core/            基础原语与权限契约
 │   ├── Euonia.Modularity/      模块系统与应用生命周期
 │   ├── Euonia.Hosting/         ASP.NET Core 宿主
@@ -1075,9 +1230,12 @@ euonia-net/
 │   ├── Euonia.Repository*/     仓储抽象与 EF Core/MongoDB 实现
 │   ├── Euonia.Caching*/        多级缓存与提供程序
 │   ├── Euonia.Concurrency*/    分布式同步与提供程序
+│   ├── Euonia.Tenancy/         多租户：作用域、解析链、存储与 EF/Mongo/Quartz 适配
+│   ├── Euonia.Auditing*/       审计：内核、EF Core / Mongo 存储与查询
+│   ├── Euonia.Telemetry*/      遥测：内核与 OpenTelemetry 适配
 │   └── Euonia.*                Mapping / Validation / Linq / Pipeline / Quartz / Uow
-├── Tests/                      27 个测试与夹具项目
-├── Benchmarks/                 2 个 BenchmarkDotNet 项目
+├── Tests/                      28 个测试与夹具项目
+├── Benchmarks/                 3 个 BenchmarkDotNet 项目
 ├── Samples/
 │   └── Euonia.Sample.Webapi/   完整示例：模块、Osba、权限、总线、EF Core
 ├── Directory.Packages.props    中央包版本管理
@@ -1105,6 +1263,8 @@ euonia-net/
 - **Osba**：[README](Source/Euonia.Osba/README.md)、[DESIGN](Source/Euonia.Osba/DESIGN.md)、[SAMPLE](Source/Euonia.Osba/SAMPLE.md)、[PERMISSION](Source/Euonia.Osba/PERMISSION.md)
 - **Security**：[README](Source/Euonia.Security/README.md)、[DESIGN](Source/Euonia.Security/DESIGN.md)
 - **Bus 示例**：[SAMPLE](Source/Euonia.Bus/SAMPLE.md)、[HTTP SAMPLE](Source/Euonia.Bus.Http/SAMPLE.md)、[gRPC SAMPLE](Source/Euonia.Bus.Grpc/SAMPLE.md)
+- **平台能力**：[Tenancy](Source/Euonia.Tenancy/README.md)、[Auditing](Source/Euonia.Auditing/README.md)、[Telemetry](Source/Euonia.Telemetry/README.md)、[Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md)
+- **SQL / 迁移**：[审计库 DDL](docs/sql/euonia_audit.sql)、[租户列迁移 playbook](docs/sql/README.md)
 - **示例应用**：[Samples/Euonia.Sample.Webapi](Samples/Euonia.Sample.Webapi)
 
 ### 项目链接

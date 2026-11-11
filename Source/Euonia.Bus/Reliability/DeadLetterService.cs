@@ -115,6 +115,7 @@ internal sealed class DeadLetterService : IDeadLetterService
 		using var context = new MessageContext(entry.Content)
 		{
 			ExecutionDescriptor = MessageExecutionDescriptor.Replay,
+			Transport = "deadletter",
 		};
 
 		// 重放必须绕过收件箱去重：原条目仍以 DeadLettered 状态存在，

@@ -133,6 +133,52 @@ internal static class OsbaDiagnostics
 	}
 
 	/// <summary>
+	/// 开启一次 Osba 操作活动（fetch / execute / authorize / rule）。
+	/// </summary>
+	/// <param name="operation">操作名称。</param>
+	/// <param name="targetType">目标类型名。</param>
+	/// <returns>活动；未启用或无监听者时为 <see langword="null"/>。</returns>
+	public static Activity? StartOperation(string operation, string? targetType)
+	{
+		if (!Enabled)
+		{
+			return null;
+		}
+
+		var activity = ActivitySource.StartActivity($"euonia.osba.{operation}");
+		if (activity != null)
+		{
+			activity.SetTag("osba.activity", operation);
+			activity.SetTag("osba.target.type", targetType);
+		}
+
+		return activity;
+	}
+
+	/// <summary>
+	/// 结束 Osba 操作活动并记录结果。
+	/// </summary>
+	/// <param name="activity">活动。</param>
+	/// <param name="operation">操作名称。</param>
+	/// <param name="startTimestamp">起始时间戳。</param>
+	/// <param name="succeeded">是否成功。</param>
+	public static void CompleteOperation(Activity? activity, string operation, long startTimestamp, bool succeeded)
+	{
+		if (activity == null)
+		{
+			return;
+		}
+
+		activity.SetTag("osba.outcome", succeeded ? "success" : "failure");
+		if (!succeeded)
+		{
+			activity.SetStatus(ActivityStatusCode.Error);
+		}
+
+		activity.Dispose();
+	}
+
+	/// <summary>
 	/// 记录一次授权判定结果。
 	/// </summary>
 	/// <param name="startTimestamp">起始时间戳。</param>

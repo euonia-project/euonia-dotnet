@@ -24,7 +24,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Euonia.Auditing\Euonia.Auditing.csproj" />
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
+        <ProjectReference Include="..\Euonia.Telemetry\Euonia.Telemetry.csproj" />
+        <ProjectReference Include="..\Euonia.Tenancy\Euonia.Tenancy.csproj" />
         <ProjectReference Include="..\Euonia.Validation\Euonia.Validation.csproj" />
     </ItemGroup>
 

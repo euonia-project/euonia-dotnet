@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -210,6 +210,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		var context = new MessageContext(message)
 		{
 			ExecutionDescriptor = MessageExecutionDescriptor.DistributedInbound,
+			Transport = "rabbitmq",
 		};
 		// {
 		// 	MessageId = props.MessageId,

@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Caching;
+namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
 /// 此接口是本库主要体系的基础约定。
@@ -266,4 +266,18 @@ public interface ICache<TValue> : IDisposable
     /// 如果 <paramref name="key"/> 或 <paramref name="region"/> 为 null。
     /// </exception>
     bool Remove(string key, string region);
+
+    /// <summary>
+    /// 按前缀移除缓存项；默认实现不支持时返回 0。
+    /// </summary>
+    /// <param name="prefix">键前缀；应按原样前缀匹配。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>移除的条目数。</returns>
+    /// <remarks>
+    /// 带租户前缀的缓存键应传入 <c>t:{tenantId}:</c>。内存与 Redis 实现提供实际删除；其他实现默认不支持。
+    /// </remarks>
+    Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(0L);
+    }
 }

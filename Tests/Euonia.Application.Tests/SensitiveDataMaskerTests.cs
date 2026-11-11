@@ -1,4 +1,5 @@
 using System.Collections;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application.Tests;
 

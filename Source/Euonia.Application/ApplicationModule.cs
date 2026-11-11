@@ -1,5 +1,7 @@
-﻿using Castle.DynamicProxy;
+using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Nerosoft.Euonia.Auditing;
 using Nerosoft.Euonia.Modularity;
 using Nerosoft.Euonia.Pipeline;
 
@@ -11,6 +13,9 @@ public class ApplicationModule : ModuleContextBase
 	/// <inheritdoc />
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
+		// 未调用 AddAuditing() 时也注册空记录器：拦截器只做一次 IsEnabled 判断后放行。
+		context.Services.TryAddSingleton<IAuditingRecorder>(NullAuditingRecorder.Instance);
+		context.Services.AddTransient<IInterceptor, AuditingInterceptor>();
 		context.Services.AddTransient<IInterceptor, LoggingInterceptor>();
 		context.Services.AddTransient<IInterceptor, AuthorizationInterceptor>();
 		context.Services.AddTransient<IInterceptor, ValidationInterceptor>();

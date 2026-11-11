@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Caching.Redis;
 
 namespace Nerosoft.Euonia.Caching;
@@ -14,10 +14,16 @@ public class RedisCacheService : BaseCacheService, ICacheService
 	/// 初始化 <see cref="RedisCacheService"/> 类的新实例。
 	/// </summary>
 	/// <param name="options">包含 Redis 缓存选项（如键前缀）的选项包装器。</param>
-	public RedisCacheService(IOptions<RedisCacheOptions> options)
+	/// <param name="keyTransformer">租户键转换器；未注册时为 <c>null</c>。</param>
+	public RedisCacheService(IOptions<RedisCacheOptions> options, IKeyTransformer? keyTransformer = null)
 	{
 		_manager = new RedisCacheManager(options.Value);
 		KeyPrefix = options.Value.KeyPrefix;
+
+		if (keyTransformer != null)
+		{
+			KeyTransformer = keyTransformer;
+		}
 	}
 
 	/// <inheritdoc />

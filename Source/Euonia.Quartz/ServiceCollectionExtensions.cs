@@ -1,5 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Quartz;
+using Quartz.Extensibility;
 using Quartz;
 
 // ReSharper disable UnusedMember.Global
@@ -30,6 +32,11 @@ public static class ServiceCollectionExtensions
 
 		services.Configure(options);
 		services.AddQuartz(configure);
+		// 作业工厂：从容器解析作业，并把作业数据里的 tenantId 转换为租户作用域。
+		// 注册在 AddQuartz 之后：Quartz 自身也会注册作业工厂，后注册者生效。
+		services.TryAddSingleton<DefaultJobFactory>();
+		services.AddSingleton<IJobFactory>(provider => provider.GetRequiredService<DefaultJobFactory>());
+
 		services.AddQuartzHostedService(ConfigureHostedService(buildOptions));
 		return services;
 	}
@@ -59,8 +66,16 @@ public static class ServiceCollectionExtensions
 				.ToString(CultureInfo.InvariantCulture);
 		}
 
+		services.TryAddSingleton<DefaultJobFactory>();
+
 		services.AddQuartz(properties, quartz =>
 		{
+			// 作业执行 Span 与耗时指标；无监听者时不产生开销。
+			quartz.AddJobMiddleware(new QuartzTelemetryMiddleware());
+
+			// 作业工厂：从容器解析作业并安装租户作用域。
+			quartz.UseJobFactory<DefaultJobFactory>();
+
 			quartz.ConfigureOptions<QuartzOptions>(options =>
 			{
 				// Quartz 4 拒绝同时声明这两个标志。覆盖开启时优先；
@@ -91,7 +106,15 @@ public static class ServiceCollectionExtensions
 			{
 				quartz.AddJob(type, config);
 			}
+
+			// 最后设置作业工厂，避免后续配置覆盖。
+			quartz.UseJobFactory<DefaultJobFactory>();
 		});
+		// 作业工厂：从容器解析作业，并把作业数据里的 tenantId 转换为租户作用域。
+		// 注册在 AddQuartz 之后：Quartz 自身也会注册作业工厂，后注册者生效。
+		services.TryAddSingleton<DefaultJobFactory>();
+		services.AddSingleton<IJobFactory>(provider => provider.GetRequiredService<DefaultJobFactory>());
+
 		services.AddQuartzHostedService(ConfigureHostedService(buildOptions));
 		return services;
 	}

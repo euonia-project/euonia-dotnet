@@ -122,4 +122,18 @@ public sealed class RequestContext
 	/// 获取或设置在跟踪日志中表示此请求的唯一标识符。
 	/// </summary>
 	public string? TraceIdentifier { get; set; }
+
+	/// <summary>
+	/// 获取或设置当前租户标识的镜像字段，供日志、诊断与消息传播使用。
+	/// </summary>
+	/// <remarks>
+	/// 该字段不是租户上下文的唯一来源；租户解析与隔离以 <c>Nerosoft.Euonia.Execution</c>
+	/// 中的执行上下文为准。此处仅作为既有请求上下文的结构化镜像，便于日志与传输层读取。
+	/// </remarks>
+	public string? TenantId { get; set; }
+
+	/// <summary>
+	/// 获取或设置业务关联标识的镜像字段，供日志与消息传播使用。
+	/// </summary>
+	public string? CorrelationId { get; set; }
 }

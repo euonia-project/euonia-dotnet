@@ -2,6 +2,7 @@
     <Folder Name="/Benchmarks/">
         <Project Path="Benchmarks/Euonia.Bus.Benchmarks/Euonia.Bus.Benchmarks.csproj" />
         <Project Path="Benchmarks/Euonia.Osba.Benchmarks/Euonia.Osba.Benchmarks.csproj" />
+        <Project Path="Benchmarks/Euonia.Platform.Benchmarks/Euonia.Platform.Benchmarks.csproj" />
     </Folder>
     <Folder Name="/Samples/">
         <Project Path="Samples/Euonia.Sample.Webapi/Euonia.Sample.Webapi.csproj" />
@@ -42,7 +43,13 @@
         <Project Path="Source/Euonia.Concurrency/Euonia.Concurrency.csproj" />
     </Folder>
     <Folder Name="/Source/Core/">
+        <Project Path="Source/Euonia.Auditing/Euonia.Auditing.csproj" />
+        <Project Path="Source/Euonia.Auditing.EfCore/Euonia.Auditing.EfCore.csproj" />
+        <Project Path="Source/Euonia.Auditing.Mongo/Euonia.Auditing.Mongo.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
+        <Project Path="Source/Euonia.Telemetry/Euonia.Telemetry.csproj" />
+        <Project Path="Source/Euonia.Telemetry.Otel/Euonia.Telemetry.Otel.csproj" />
+        <Project Path="Source/Euonia.Tenancy/Euonia.Tenancy.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
         <Project Path="Source/Euonia.Linq/Euonia.Linq.csproj" />
         <Project Path="Source/Euonia.Modularity/Euonia.Modularity.csproj" />

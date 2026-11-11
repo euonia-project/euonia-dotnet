@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Nerosoft.Euonia.Execution;
 using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Hosting;
@@ -17,6 +18,9 @@ public class HostingModule : ModuleContextBase
 	/// <param name="context">服务配置上下文。</param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
+		context.Services.TryAddSingleton<IExecutionContextAccessor, ExecutionContextAccessor>();
+		context.Services.TryAddSingleton<IExecutionContextScopeFactory, ExecutionContextScopeFactory>();
+
 		context.Services.TryAddScoped<DefaultRequestContextAccessor>();
 		context.Services.TryAddScoped<DelegateRequestContextAccessor>(provider =>
 		{

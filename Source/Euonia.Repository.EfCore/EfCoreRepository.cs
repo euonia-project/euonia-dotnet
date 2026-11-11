@@ -1,5 +1,7 @@
-﻿using System.Linq.Expressions;
+using System.Diagnostics;
+using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Nerosoft.Euonia.Repository;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
 
@@ -51,6 +53,23 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 
 	/// <inheritdoc />
 	public override async Task<TEntity?> GetAsync(TKey key, CancellationToken cancellationToken = default)
+	{
+		var activity = RepositoryTelemetry.Start("SELECT", typeof(TEntity).Name);
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
+		try
+		{
+			var entity = await GetCoreAsync(key, cancellationToken).ConfigureAwait(false);
+			success = true;
+			return entity;
+		}
+		finally
+		{
+			RepositoryTelemetry.Complete(activity, "SELECT", success, stopwatch);
+		}
+	}
+
+	private async Task<TEntity?> GetCoreAsync(TKey key, CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(key);
 		return await Context.FindAsync<TEntity>([key], cancellationToken);
@@ -108,14 +127,26 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	/// <inheritdoc />
 	public override async Task<TEntity> InsertAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default)
 	{
-		ArgumentNullException.ThrowIfNull(entity);
-		var entry = await Context.AddAsync(entity, cancellationToken);
-		if (autoSave)
-		{
-			await SaveChangesAsync(cancellationToken);
-		}
+		var activity = RepositoryTelemetry.Start("INSERT", typeof(TEntity).Name);
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		return entry.Entity;
+		try
+		{
+			ArgumentNullException.ThrowIfNull(entity);
+			var entry = await Context.AddAsync(entity, cancellationToken);
+			if (autoSave)
+			{
+				await SaveChangesAsync(cancellationToken);
+			}
+
+			success = true;
+			return entry.Entity;
+		}
+		finally
+		{
+			RepositoryTelemetry.Complete(activity, "INSERT", success, stopwatch);
+		}
 	}
 
 	/// <inheritdoc />
@@ -132,11 +163,24 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	/// <inheritdoc />
 	public override async Task UpdateAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default)
 	{
-		ArgumentNullException.ThrowIfNull(entity);
-		var _ = Context.Update(entity);
-		if (autoSave)
+		var activity = RepositoryTelemetry.Start("UPDATE", typeof(TEntity).Name);
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
+
+		try
 		{
-			await SaveChangesAsync(cancellationToken);
+			ArgumentNullException.ThrowIfNull(entity);
+			var _ = Context.Update(entity);
+			if (autoSave)
+			{
+				await SaveChangesAsync(cancellationToken);
+			}
+
+			success = true;
+		}
+		finally
+		{
+			RepositoryTelemetry.Complete(activity, "UPDATE", success, stopwatch);
 		}
 	}
 
@@ -154,11 +198,24 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	/// <inheritdoc />
 	public override async Task DeleteAsync(TEntity entity, bool autoSave = true, CancellationToken cancellationToken = default)
 	{
-		ArgumentNullException.ThrowIfNull(entity);
-		var _ = Context.Remove(entity);
-		if (autoSave)
+		var activity = RepositoryTelemetry.Start("DELETE", typeof(TEntity).Name);
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
+
+		try
 		{
-			await SaveChangesAsync(cancellationToken);
+			ArgumentNullException.ThrowIfNull(entity);
+			var _ = Context.Remove(entity);
+			if (autoSave)
+			{
+				await SaveChangesAsync(cancellationToken);
+			}
+
+			success = true;
+		}
+		finally
+		{
+			RepositoryTelemetry.Complete(activity, "DELETE", success, stopwatch);
 		}
 	}
 

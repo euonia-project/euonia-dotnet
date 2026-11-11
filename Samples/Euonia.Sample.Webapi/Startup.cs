@@ -1,6 +1,10 @@
-﻿namespace Nerosoft.Euonia.Sample;
+namespace Nerosoft.Euonia.Sample;
 
+using Nerosoft.Euonia.Auditing;
+using Nerosoft.Euonia.Hosting;
 using Nerosoft.Euonia.Sample.Filters;
+using Nerosoft.Euonia.Telemetry;
+using Nerosoft.Euonia.Tenancy;
 
 /// <summary>
 /// 示例应用的启动配置，负责注册服务并构建 HTTP 请求管道。
@@ -42,6 +46,16 @@ public class Startup
 
         services.AddModularityApplication<HostModuleContext>(Configuration);
 
+        // 平台能力：租户可选（示例无租户体系时仍可运行）、审计落内存、遥测仅埋点。
+        services.AddTenancyAspNetCore(options =>
+        {
+            options.Enabled = true;
+            options.RequireTenant = false;
+        });
+        services.AddInMemoryTenantStore([new TenantInfo { Id = "sample", Name = "Sample", Status = TenantStatus.Active }]);
+        services.AddAuditing(options => options.Enabled = true);
+        services.AddInMemoryAuditingStore();
+        services.AddEuoniaTelemetry(options => options.Enabled = true);
     }
 
     // 此方法由运行时调用。使用此方法配置 HTTP 请求管道。
@@ -66,9 +80,13 @@ public class Startup
         app.UseHttpsRedirection();
 
         app.UseAuthentication();
+        app.UseExecutionContext();
+        app.UseAuditing();
 
         app.UseRouting();
 
+        app.UseTenancy();
+        app.UseEuoniaTelemetry();
         app.UseAuthorization();
 
         app.UseEndpoints(endpoints =>

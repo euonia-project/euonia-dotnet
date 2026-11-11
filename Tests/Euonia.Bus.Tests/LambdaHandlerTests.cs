@@ -73,6 +73,7 @@ public class LambdaHandlerTests
 		public System.Security.Principal.IPrincipal User => null!;
 		public IReadOnlyDictionary<string, string> Headers => new Dictionary<string, string>();
 		public MessageMetadata Metadata => new();
+		public string? Transport => null;
 		public void Response<TMessage>(TMessage message)
 		{
 		}

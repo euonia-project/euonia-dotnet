@@ -27,6 +27,9 @@
         <PackageVersion Include="MediatR.Contracts" Version="2.0.1" />
         <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
         <PackageVersion Include="Polly" Version="8.9.1" />
         <PackageVersion Include="protobuf-net" Version="3.4.40" />
         <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
@@ -62,6 +65,8 @@
         <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="$(ExtensionsPackageVersion)" />
+        <PackageVersion Include="Microsoft.AspNetCore.TestHost" Version="$(ExtensionsPackageVersion)" />
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.CommandLine" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="$(ExtensionsPackageVersion)" />
         <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="$(ExtensionsPackageVersion)" />

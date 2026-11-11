@@ -184,6 +184,7 @@ internal static class ScopeAuthorization
 	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("authorize", operation);
 		var succeeded = false;
 		try
 		{
@@ -205,6 +206,7 @@ internal static class ScopeAuthorization
 		finally
 		{
 			OsbaDiagnostics.RecordAuthorization(started, "scope", operation, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "authorize", started, succeeded);
 		}
 	}
 }

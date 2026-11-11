@@ -1,4 +1,4 @@
-﻿using Nerosoft.Euonia.Caching.Internal;
+using Nerosoft.Euonia.Caching.Internal;
 using StackExchange.Redis;
 
 namespace Nerosoft.Euonia.Caching.Redis;
@@ -158,6 +158,44 @@ return result";
 			// 近似大小，仅统计主节点上的数量..
 			return count;
 		}
+	}
+
+	/// <summary>
+	/// 按前缀移除缓存项；使用 Redis <c>SCAN</c> 分批删除，避免 <c>KEYS</c> 阻塞。
+	/// </summary>
+	/// <param name="prefix">键前缀。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>移除的条目数。</returns>
+	public override async Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+		long removed = 0;
+		var batch = new List<RedisKey>(256);
+
+		foreach (var server in Servers.Where(p => p.IsConnected))
+		{
+			foreach (var key in server.Keys(_redisConfiguration.Database, $"{prefix}*", 250))
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				batch.Add(key);
+
+				if (batch.Count < 256)
+				{
+					continue;
+				}
+
+				removed += await _connection.Database.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
+				batch.Clear();
+			}
+		}
+
+		if (batch.Count > 0)
+		{
+			removed += await _connection.Database.KeyDeleteAsync(batch.ToArray()).ConfigureAwait(false);
+		}
+
+		return removed;
 	}
 
 	/// <summary>

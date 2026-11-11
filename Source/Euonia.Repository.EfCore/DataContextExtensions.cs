@@ -1,9 +1,10 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Nerosoft.Euonia.Tenancy;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
 
@@ -80,7 +81,8 @@ public static class DataContextExtensions
         }
 
         var filter = methodToCall.Invoke(null, Array.Empty<object>());
-        entity.SetQueryFilter((LambdaExpression)filter!);
+        // 使用命名过滤器：EF Core 不允许匿名与命名过滤器混用，租户过滤器也是命名的。
+        entity.SetQueryFilter(TenantFilterNames.Tombstone, (LambdaExpression)filter!);
     }
 
     private static LambdaExpression GetTombstoneFilter<TEntity>()

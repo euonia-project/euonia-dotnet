@@ -871,6 +871,7 @@ public class Rules : IRules
 	private static Task RunRule(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("rule", rule.Name);
 		Task task;
 		try
 		{
@@ -879,6 +880,7 @@ public class Rules : IRules
 		catch (OperationCanceledException)
 		{
 			OsbaDiagnostics.RecordRule(started, rule.Name, false);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, false);
 			context.Complete();
 			throw;
 		}
@@ -886,6 +888,7 @@ public class Rules : IRules
 		{
 			context.AddErrorResult(Describe(rule, ex));
 			OsbaDiagnostics.RecordRule(started, rule.Name, false);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, false);
 			context.Complete();
 			return Task.CompletedTask;
 		}
@@ -894,11 +897,12 @@ public class Rules : IRules
 		{
 			var succeeded = !context.Results.Any(result => result.Severity == RuleSeverity.Error);
 			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, succeeded);
 			context.Complete();
 			return Task.CompletedTask;
 		}
 
-		return AwaitRuleAsync(rule, task, context, started);
+		return AwaitRuleAsync(rule, task, context, started, activity);
 	}
 
 	/// <summary>
@@ -908,8 +912,9 @@ public class Rules : IRules
 	/// <param name="task">规则任务。</param>
 	/// <param name="context">上下文。</param>
 	/// <param name="started">起始时间戳。</param>
+	/// <param name="activity">规则执行活动；可为 <c>null</c>。</param>
 	/// <returns>规则任务。</returns>
-	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context, long started)
+	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context, long started, Activity? activity)
 	{
 		var succeeded = false;
 		try
@@ -934,6 +939,7 @@ public class Rules : IRules
 		finally
 		{
 			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, succeeded);
 			context.Complete();
 		}
 	}

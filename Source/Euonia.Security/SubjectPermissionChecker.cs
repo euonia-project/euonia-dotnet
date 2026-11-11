@@ -38,9 +38,19 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// <inheritdoc />
 	public bool IsGranted(string permission)
 	{
-		var fast = FastVerdict(permission, _user);
+		var activity = SecurityTelemetry.Start(permission);
+		var granted = false;
 
-		return fast ?? Holds(permission);
+		try
+		{
+			var fast = FastVerdict(permission, _user);
+			granted = fast ?? Holds(permission);
+			return granted;
+		}
+		finally
+		{
+			SecurityTelemetry.Complete(activity, granted);
+		}
 	}
 
 	/// <inheritdoc />
@@ -55,6 +65,22 @@ public class SubjectPermissionChecker : IPermissionChecker
 	/// （默认实现会直接调用 <see cref="IsGranted"/>，那会在首次判定时阻塞线程）。
 	/// </remarks>
 	public async ValueTask<bool> IsGrantedAsync(string permission, CancellationToken cancellationToken = default)
+	{
+		var activity = SecurityTelemetry.Start(permission);
+		var granted = false;
+
+		try
+		{
+			granted = await IsGrantedCoreAsync(permission, cancellationToken).ConfigureAwait(false);
+			return granted;
+		}
+		finally
+		{
+			SecurityTelemetry.Complete(activity, granted);
+		}
+	}
+
+	private async ValueTask<bool> IsGrantedCoreAsync(string permission, CancellationToken cancellationToken)
 	{
 		var fast = FastVerdict(permission, _user);
 		if (fast.HasValue)

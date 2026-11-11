@@ -41,8 +41,9 @@ public static class RemoteReceiver
 	/// <param name="payload">包含 <see cref="IMessageEnvelope"/> JSON 数据的请求负载。</param>
 	/// <param name="requestServices">入站请求作用域的服务提供程序；为 <c>null</c> 时创建新作用域。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <param name="transport">消息来源传输名称，用于租户信任策略与遥测标签。</param>
 	/// <returns>序列化后的 <see cref="RemoteReply{TResult}"/> JSON 字符串。</returns>
-	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, IServiceProvider? requestServices, CancellationToken cancellationToken = default)
+	public static async Task<string> ReceiveAsync(IMessageSerializer serializer, IHandlerContext handler, string payload, IServiceProvider? requestServices, CancellationToken cancellationToken = default, string transport = "http")
 	{
 		IMessageEnvelope message;
 		MessageContext context;
@@ -53,6 +54,7 @@ public static class RemoteReceiver
 			context = new MessageContext(message)
 			{
 				ExecutionDescriptor = MessageExecutionDescriptor.RemoteInboundBorrowed(requestServices),
+				Transport = transport,
 			};
 		}
 		catch (OperationCanceledException)

@@ -15,7 +15,13 @@
     <Folder Name="/Source/Core/">
         <Project Path="Source/Euonia.Osba/Euonia.Osba.csproj" />
         <Project Path="Source/Euonia.Security/Euonia.Security.csproj" />
+        <Project Path="Source/Euonia.Auditing/Euonia.Auditing.csproj" />
+        <Project Path="Source/Euonia.Auditing.EfCore/Euonia.Auditing.EfCore.csproj" />
+        <Project Path="Source/Euonia.Auditing.Mongo/Euonia.Auditing.Mongo.csproj" />
         <Project Path="Source/Euonia.Core/Euonia.Core.csproj" />
+        <Project Path="Source/Euonia.Telemetry/Euonia.Telemetry.csproj" />
+        <Project Path="Source/Euonia.Telemetry.Otel/Euonia.Telemetry.Otel.csproj" />
+        <Project Path="Source/Euonia.Tenancy/Euonia.Tenancy.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
         <Project Path="Source/Euonia.Linq/Euonia.Linq.csproj" />
         <Project Path="Source/Euonia.Modularity/Euonia.Modularity.csproj" />

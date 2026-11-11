@@ -118,6 +118,7 @@ internal abstract class ActiveMqRecipient : DisposableObject
 		var context = new MessageContext(envelope)
 		{
 			ExecutionDescriptor = MessageExecutionDescriptor.DistributedInbound,
+			Transport = "activemq",
 		};
 
 		MessageReceived?.Invoke(this, new MessageReceivedEventArgs(envelope.Payload, context));

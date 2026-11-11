@@ -2,6 +2,7 @@ using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application.Tests;
 

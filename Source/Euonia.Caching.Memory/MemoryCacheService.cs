@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Caching.Memory;
 
@@ -13,10 +13,16 @@ public class MemoryCacheService : BaseCacheService, ICacheService
 	/// 初始化 <see cref="MemoryCacheService"/> 类的新实例。
 	/// </summary>
 	/// <param name="options">包含缓存选项（如键前缀）的选项包装器。</param>
-	public MemoryCacheService(IOptions<MemoryCacheOptions> options)
+	/// <param name="keyTransformer">租户键转换器；未注册时为 <c>null</c>。</param>
+	public MemoryCacheService(IOptions<MemoryCacheOptions> options, IKeyTransformer? keyTransformer = null)
 	{
 		_manager = new MemoryCacheManager(options.Value);
 		KeyPrefix = options.Value.KeyPrefix;
+
+		if (keyTransformer != null)
+		{
+			KeyTransformer = keyTransformer;
+		}
 	}
 
 	/// <inheritdoc />

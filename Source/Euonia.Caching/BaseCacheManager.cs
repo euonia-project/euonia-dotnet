@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Runtime.ExceptionServices;
 using Nerosoft.Euonia.Caching.Internal;
@@ -132,7 +132,28 @@ public partial class BaseCacheManager<TValue> : BaseCache<TValue>, ICacheManager
 	/// <inheritdoc />
 	public CacheManagerConfiguration Configuration { get; }
 
-	/// <inheritdoc />
+	/// <summary>
+	/// 按前缀移除所有缓存句柄中的条目。
+	/// </summary>
+	/// <param name="prefix">键前缀。</param>
+	/// <param name="cancellationToken">取消令牌。</param>
+	/// <returns>移除的条目数。</returns>
+	public virtual async Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+
+		long removed = 0;
+		foreach (var handle in _cacheHandles)
+		{
+			removed += await handle.RemoveByPrefixAsync(prefix, cancellationToken).ConfigureAwait(false);
+		}
+
+		return removed;
+	}
+
+	/// <summary>
+	/// 获取按顺序排列的缓存句柄只读视图。
+	/// </summary>
 	public IEnumerable<BaseCacheHandle<TValue>> CacheHandles
 		=> _cacheHandlesCollection;
 

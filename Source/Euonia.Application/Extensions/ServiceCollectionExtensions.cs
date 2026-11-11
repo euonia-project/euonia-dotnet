@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Application;
@@ -249,6 +249,16 @@ public static class ServiceCollectionExtensions
 		}
 
 		/// <summary>
+		/// 按 <see cref="IOrderedInterceptor.Order"/> 稳定排序拦截器；数字小的在外层。
+		/// </summary>
+		private static IInterceptor[] OrderInterceptors(IServiceProvider provider)
+		{
+			return provider.GetServices<IInterceptor>()
+			               .OrderBy(interceptor => interceptor is IOrderedInterceptor ordered ? ordered.Order : 0)
+			               .ToArray();
+		}
+
+		/// <summary>
 		/// 创建实现类的类代理，使直接解析实现类型时拦截器同样生效。
 		/// </summary>
 		/// <param name="provider">用于解析目标实例持有者、拦截器等服务的服务提供程序。</param>
@@ -277,7 +287,7 @@ public static class ServiceCollectionExtensions
 			}
 
 			var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
-			var interceptors = provider.GetServices<IInterceptor>().ToArray();
+			var interceptors = OrderInterceptors(provider);
 			return proxyGenerator.CreateClassProxyWithTarget(implementationType, instance, interceptors);
 		}
 
@@ -300,7 +310,7 @@ public static class ServiceCollectionExtensions
 			}
 
 			var proxyGenerator = provider.GetRequiredService<ProxyGenerator>();
-			var interceptors = provider.GetServices<IInterceptor>().ToArray();
+			var interceptors = OrderInterceptors(provider);
 			return proxyGenerator.CreateInterfaceProxyWithTarget(serviceType, instance, interceptors);
 		}
 

@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 
@@ -36,6 +36,11 @@ public static class ServiceCollectionExtensions
 			// 发件箱轮询是独立后台组件：单例激活，每次轮询自行创建作用域，避免每个作用域各起一个定时器。
 			services.TryAddActivatedSingleton<OutboxDispatcher>();
 			services.AddHostedService<ServiceActivator>();
+
+			// 执行作用域参与者：执行上下文（Order 0）、租户（Order 100）。未注册租户能力时租户参与者自行跳过。
+			services.TryAddEnumerable(ServiceDescriptor.Transient<IMessageExecutionScopeParticipant, ExecutionContextMessageScopeParticipant>());
+			services.TryAddEnumerable(ServiceDescriptor.Transient<IMessageExecutionScopeParticipant, TenantMessageScopeParticipant>());
+			services.TryAddEnumerable(ServiceDescriptor.Transient<IMessageExecutionScopeParticipant, AuditingMessageScopeParticipant>());
 
 			return services;
 		}

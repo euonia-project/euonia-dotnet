@@ -22,7 +22,13 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	private readonly RequestContext? _inheritedRequestContext;
 	private readonly bool _requestContextInstalled;
 	private readonly IServiceScope? _ownedScope;
+	private readonly List<IDisposable> _leases = [];
 	private bool _disposed;
+
+	/// <summary>
+	/// 获取参与者对本次消息处理的裁决。
+	/// </summary>
+	internal MessageExecutionScopeAction Action { get; private set; } = MessageExecutionScopeAction.Continue;
 
 	/// <summary>
 	/// 初始化消息执行作用域：解析或创建服务提供程序，并按描述符安装请求上下文。
@@ -84,6 +90,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		catch
 		{
 			// 构造失败时对象不会被释放，必须在此恢复已修改的上下文并释放自有作用域。
+			ReleaseParticipants();
 			RestoreRequestContext();
 			_ownedScope?.Dispose();
 			throw;
@@ -104,6 +111,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		}
 
 		_disposed = true;
+		ReleaseParticipants();
 		RestoreRequestContext();
 		_ownedScope?.Dispose();
 	}
@@ -117,6 +125,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		}
 
 		_disposed = true;
+		ReleaseParticipants();
 		RestoreRequestContext();
 
 		if (_ownedScope is IAsyncDisposable asyncScope)
@@ -127,6 +136,64 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		{
 			_ownedScope?.Dispose();
 		}
+	}
+
+	/// <summary>
+	/// 按 <see cref="IMessageExecutionScopeParticipant.Order"/> 升序安装参与者；任一参与者返回
+	/// <see cref="MessageExecutionScopeAction.Skip"/> 或 <see cref="MessageExecutionScopeAction.DeadLetter"/> 时停止后续进入。
+	/// </summary>
+	internal async Task<IReadOnlyList<MessageExecutionScopeEntry>> ResolveParticipantsAsync(MessageContext? message, CancellationToken cancellationToken = default)
+	{
+		if (message == null)
+		{
+			return [];
+		}
+
+		var entries = new List<MessageExecutionScopeEntry>();
+		foreach (var participant in ServiceProvider.GetServices<IMessageExecutionScopeParticipant>().OrderBy(x => x.Order))
+		{
+			entries.Add(await participant.EnterAsync(message, ServiceProvider, cancellationToken).ConfigureAwait(false));
+		}
+
+		return entries;
+	}
+
+	/// <summary>
+	/// 在调用方执行流中同步安装参与者，直到出现非 <see cref="MessageExecutionScopeAction.Continue"/> 的裁决。
+	/// </summary>
+	/// <param name="entries">按 <see cref="IMessageExecutionScopeParticipant.Order"/> 排序的参与者决议。</param>
+	/// <returns>最终裁决。</returns>
+	internal MessageExecutionResult ApplyParticipants(IReadOnlyList<MessageExecutionScopeEntry> entries)
+	{
+		foreach (var entry in entries)
+		{
+			var lease = entry.Install?.Invoke();
+			if (lease != null)
+			{
+				_leases.Add(lease);
+			}
+
+			if (entry.Action != MessageExecutionScopeAction.Continue)
+			{
+				Action = entry.Action;
+				return new MessageExecutionResult(entry.Action);
+			}
+		}
+
+		return MessageExecutionResult.Completed;
+	}
+
+	/// <summary>
+	/// 逆序释放已进入的参与者。
+	/// </summary>
+	private void ReleaseParticipants()
+	{
+		for (var index = _leases.Count - 1; index >= 0; index--)
+		{
+			_leases[index].Dispose();
+		}
+
+		_leases.Clear();
 	}
 
 	/// <summary>

@@ -6,8 +6,8 @@ Euonia is a development framework for building enterprise-grade .NET application
 
 - **Current version**: 2026.4.7 (see [project.props](project.props))
 - **Target frameworks**: .NET 10 / .NET 11; test and sample projects target .NET 11, and the Endpoint Source Generator ships as a `netstandard2.0` analyzer
-- **Package scale**: 39 packable projects under Source, each with its own README
-- **Tests**: 27 test/fixture projects with 1,100+ test cases; plus 2 BenchmarkDotNet benchmark projects
+- **Package scale**: 45 packable projects under Source, each with its own README
+- **Tests**: 28 test/fixture projects with 1,100+ test cases; plus 3 BenchmarkDotNet benchmark projects
 - **License**: GPL-3.0 (see [LICENSE](LICENSE))
 
 Euonia is also available for **[Java](https://github.com/euonia-project/euonia-java)**; this repository is the **.NET edition**.
@@ -17,6 +17,7 @@ Euonia is also available for **[Java](https://github.com/euonia-project/euonia-j
 - [Modules Overview](#modules-overview)
 - [Package Overview](#package-overview)
 - [Core Layer](#core-layer)
+- [Platform Capabilities (Tenancy / Auditing / Telemetry)](#platform-capabilities-tenancy--auditing--telemetry)
 - [Domain and Application Layer](#domain-and-application-layer)
 - [Message Bus](#message-bus)
 - [Hosting and Endpoints](#hosting-and-endpoints)
@@ -43,6 +44,14 @@ flowchart LR
         Validation["Euonia.Validation"]
         Caching["Euonia.Caching<br/>Memory · Redis · Runtime"]
         Concurrency["Euonia.Concurrency<br/>Redis · ZooKeeper · FileSystem · Azure"]
+    end
+
+    subgraph P["Platform"]
+        direction TB
+        Tenancy["Euonia.Tenancy"]
+        Auditing["Euonia.Auditing<br/>EF Core · Mongo"]
+        Telemetry["Euonia.Telemetry"]
+        Otel["Euonia.Telemetry.Otel"]
     end
 
     subgraph D["Domain & Application"]
@@ -78,6 +87,15 @@ flowchart LR
     Core --> Concurrency
     Core --> Domain
     Core --> Security
+    Core --> Tenancy
+    Core --> Auditing
+    Core --> Telemetry
+    Telemetry --> Otel
+    Repository -.-> Tenancy
+    Quartz -.-> Tenancy
+    Hosting --> Tenancy
+    Hosting --> Auditing
+    Hosting --> Telemetry
     Modularity --> Application
     Modularity --> Hosting
     Modularity --> Validation
@@ -99,6 +117,7 @@ flowchart LR
     classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
     classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
     classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
+    classDef platform fill:#ECFDF5,stroke:#6EC5A8,color:#134E3A,stroke-width:1.5px
     classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
 
     class Core core
@@ -106,12 +125,15 @@ flowchart LR
     class Domain,Application,Uow,Repository,Osba,Security domain
     class BusAbstract,Bus,BusHealth messaging
     class Hosting,Endpoint,Quartz hosting
+    class Tenancy,Auditing,Telemetry platform
+    class Otel aggregate
     class Transports,EndpointImpl aggregate
 
     style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
     style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
     style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
     style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
+    style P fill:#F4FEFB,stroke:#BFEADB,stroke-width:1.5px,color:#134E3A
 
     linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
@@ -125,6 +147,7 @@ flowchart LR
 - **Authorization values are never frozen**: permission codes and row-level grants are resolved live from application data, so revocation takes effect immediately without reissuing tokens.
 - **Stable contracts**: public APIs aim to remain source-compatible; breaking changes are collected in [CHANGELOG.md](CHANGELOG.md).
 - **Observable**: modules such as Bus and Osba expose runtime state through `ActivitySource`, `Meter`, and structured logging, and can be wired into OpenTelemetry directly.
+- **Composable platform capabilities**: multi-tenancy, auditing, and telemetry are separate packages, disabled by default, linked through the execution context, and inert when disabled.
 
 ## Package Overview
 
@@ -144,6 +167,12 @@ flowchart LR
 | [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net10.0 / net11.0 | `Microsoft.Extensions.Caching.Memory` provider and `ICacheService` implementation |
 | [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net10.0 / net11.0 | Redis distributed cache handle, backplane, and `ICacheService` implementation |
 | [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net10.0 / net11.0 | `System.Runtime.Caching` provider and `ICacheService` implementation |
+| [Euonia.Tenancy](Source/Euonia.Tenancy/README.md) | net10.0 / net11.0 | Multi-tenancy kernel: tenant scopes, resolution chain, stores, write guard, and cross-tenant protection |
+| [Euonia.Auditing](Source/Euonia.Auditing/README.md) | net10.0 / net11.0 | Auditing kernel: scope/action model, write queue, redacted serialization, query/retention, and durable spool |
+| [Euonia.Auditing.EfCore](Source/Euonia.Auditing.EfCore/README.md) | net10.0 / net11.0 | EF Core store for a dedicated audit database, with indexes and idempotent writes |
+| [Euonia.Auditing.Mongo](Source/Euonia.Auditing.Mongo/README.md) | net10.0 / net11.0 | MongoDB audit store and unique index |
+| [Euonia.Telemetry](Source/Euonia.Telemetry/README.md) | net10.0 / net11.0 | Telemetry kernel: Activity/Meter sources, tag redaction, context, W3C propagation, and log scopes |
+| [Euonia.Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md) | net10.0 / net11.0 | OpenTelemetry adapter: explicit source catalog, resource, and OTLP wiring |
 | [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net10.0 / net11.0 | Distributed lock and semaphore abstractions: timeouts, cancellation, async acquisition, and handle-loss monitoring |
 | [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net10.0 / net11.0 | Lock and semaphore implementations built on StackExchange.Redis, with lease renewal |
 | [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net10.0 / net11.0 | Lock and semaphore implementations based on ZooKeeper ephemeral sequential nodes |
@@ -329,6 +358,77 @@ await using var handle = await locker.AcquireAsync(
     cancellationToken);
 
 // critical section
+```
+
+## Platform Capabilities (Tenancy / Auditing / Telemetry)
+
+Three independent packages share one source of tenant identity: the execution context in `Nerosoft.Euonia.Execution`. They depend only on `Euonia.Core` and `Microsoft.Extensions.*`; composition and HTTP/message integration live in `Euonia.Hosting` and `Euonia.Bus`. Everything is disabled by default and inert when `Enabled = false`.
+
+### Tenancy (`Euonia.Tenancy`)
+
+- **Isolation modes**: `SharedTable` (shadow `TenantId` plus named filters), `DatabasePerTenant` (per-tenant connection string), `SharedSchema` (per-tenant schema, distinct EF model cache keys).
+- **Resolution chain**: header, claim, host, route, and message contributors combined by `Order`; conflicts fail with `Conflict`.
+- **Write guard**: inserts get the current tenant automatically; cross-tenant update/delete/migration throws `CrossTenantOperationException`; `Begin` / `BeginIsolated` / `BeginCrossTenant` separate actor and target tenants.
+- **Adapters**: EF Core model and query filters, Mongo filters and stamping, Quartz job scope, and cache/lock/idempotency key prefixes with `RemoveByPrefixAsync`.
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;          // set false for optional tenants
+    options.HeaderName = "X-Tenant-Id";
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseTenancy();
+```
+
+EF contexts inherit `MultiTenantDataContextBase<TContext>`, or call `modelBuilder.ApplyTenantModel()` on an existing model; replace `IModelCacheKeyFactory` to distinguish SharedSchema models. Messages restore the tenant from the envelope through `TenantMessageScopeParticipant`, subject to `TenantMessageTrustPolicy`.
+
+### Auditing (`Euonia.Auditing`)
+
+- **Entry points**: HTTP middleware, Bus participant, and the Castle interceptor (`Order = -1000`).
+- **Stores**: in-memory, EF Core (dedicated audit DB), and MongoDB; `IAuditingStoreRouter` allows one audit database per tenant.
+- **Reliability**: bounded queue plus a durable file spool; successful records are batched by default, failures are written immediately, and the queue drains on shutdown.
+- **Semantics**: `AuditingTriggerMode` (All / WritesOnly), `RecordAnonymous`, fail-open writes, and query authorization scoped to the actor tenant.
+
+```csharp
+services.AddAuditing(options =>
+{
+    options.Enabled = true;
+    options.SuccessDelivery = AuditingDelivery.Batched;
+    options.FailureDelivery = AuditingDelivery.Immediate;
+});
+services.AddAuditingEfCore<AuditingDbContext>(options =>
+    options.UseSqlServer(configuration.GetConnectionString("Audit")));
+
+app.UseAuditing();
+```
+
+DDL and indexes: [docs/sql/euonia_audit.sql](docs/sql/euonia_audit.sql); tenant column migration: [docs/sql/README.md](docs/sql/README.md).
+
+### Telemetry (`Euonia.Telemetry` / `Euonia.Telemetry.Otel`)
+
+- **Kernel**: `TelemetrySource` / `TelemetryActivity`, redaction, `ITelemetryPropagator` (W3C `traceparent`), and `TelemetryLogScope`.
+- **Components**: Bus consumer spans (four transports, `ActivityLink`), HTTP, caching, repositories, security, Quartz, and Osba.
+- **Constraints**: tenant labels go to traces and logs only, never metrics; message bodies, tokens, cookies, full SQL, and user IDs are not captured by default.
+
+```csharp
+services.AddEuoniaTelemetry(options => options.Enabled = true);
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+app.UseEuoniaTelemetry();
+```
+
+### Middleware order
+
+```text
+UseExecutionContext → UseAuditing → UseTenancy → UseEuoniaTelemetry → UseAuthorization
 ```
 
 ## Domain and Application Layer
@@ -925,6 +1025,10 @@ The following are examples for the core packages; see [Package Overview](#packag
 <PackageReference Include="Euonia.Caching" Version="2026.4.7" />
 <PackageReference Include="Euonia.Caching.Memory" Version="2026.4.7" />
 <PackageReference Include="Euonia.Concurrency" Version="2026.4.7" />
+<PackageReference Include="Euonia.Tenancy" Version="2026.4.7" />
+<PackageReference Include="Euonia.Auditing" Version="2026.4.7" />
+<PackageReference Include="Euonia.Telemetry" Version="2026.4.7" />
+<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.4.7" />
 ```
 
 ### 2. Modular Host
@@ -1019,7 +1123,38 @@ public sealed class OrderCreatedSubscriber : IHandler<OrderCreated>
 await bus.PublishAsync(new OrderCreated { OrderId = 42 });
 ```
 
-### 5. Dynamic Endpoints
+### 5. Platform Capabilities (optional)
+
+Tenancy, auditing, and telemetry are opt-in; with `Enabled = false` behavior matches an app that never referenced them.
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+
+services.AddAuditing(options => options.Enabled = true);
+services.AddInMemoryAuditingStore();
+
+services.AddEuoniaTelemetry(options => options.Enabled = true);
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseAuditing();
+app.UseTenancy();
+app.UseEuoniaTelemetry();
+app.UseAuthorization();
+```
+
+See [Platform Capabilities](#platform-capabilities-tenancy--auditing--telemetry) and the package READMEs for details.
+
+### 6. Dynamic Endpoints
 
 ```csharp
 public interface IOrderService
@@ -1054,6 +1189,7 @@ dotnet pack Euonia.Build.slnx -c Release -o artifacts
 # Benchmarks
 dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
 dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks
+dotnet run -c Release --project Benchmarks/Euonia.Platform.Benchmarks -- --filter '*' --job Short
 ```
 
 CI uses .NET 11 and the Release configuration: `dotnet-build.yml` builds `Euonia.Build.slnx`, `dotnet-test.yml` tests `Euonia.Test.slnx`, and a tag push triggers `push-nuget.yml` to pack and publish to NuGet.
@@ -1062,7 +1198,7 @@ CI uses .NET 11 and the Release configuration: `dotnet-build.yml` builds `Euonia
 
 ```text
 euonia-net/
-├── Source/                     39 framework/NuGet projects
+├── Source/                     45 framework/NuGet projects
 │   ├── Euonia.Core/            Base primitives and permission contracts
 │   ├── Euonia.Modularity/      Module system and application lifecycle
 │   ├── Euonia.Hosting/         ASP.NET Core hosting
@@ -1075,9 +1211,12 @@ euonia-net/
 │   ├── Euonia.Repository*/     Repository abstractions and EF Core/MongoDB implementations
 │   ├── Euonia.Caching*/        Multi-level caching and providers
 │   ├── Euonia.Concurrency*/    Distributed synchronization and providers
+│   ├── Euonia.Tenancy/         Multi-tenancy: scopes, resolution, stores, EF/Mongo/Quartz adapters
+│   ├── Euonia.Auditing*/       Auditing: kernel, EF Core / Mongo stores, and queries
+│   ├── Euonia.Telemetry*/      Telemetry: kernel and OpenTelemetry adapter
 │   └── Euonia.*                Mapping / Validation / Linq / Pipeline / Quartz / Uow
-├── Tests/                      27 test and fixture projects
-├── Benchmarks/                 2 BenchmarkDotNet projects
+├── Tests/                      28 test and fixture projects
+├── Benchmarks/                 3 BenchmarkDotNet projects
 ├── Samples/
 │   └── Euonia.Sample.Webapi/   Complete sample: modules, Osba, permissions, bus, EF Core
 ├── Directory.Packages.props    Central package version management
@@ -1104,6 +1243,8 @@ euonia-net/
 - **Per-package documentation**: see the links in [Package Overview](#package-overview); each NuGet package also embeds the corresponding README
 - **Osba**: [README](Source/Euonia.Osba/README.md), [DESIGN](Source/Euonia.Osba/DESIGN.md), [SAMPLE](Source/Euonia.Osba/SAMPLE.md), [PERMISSION](Source/Euonia.Osba/PERMISSION.md)
 - **Security**: [README](Source/Euonia.Security/README.md), [DESIGN](Source/Euonia.Security/DESIGN.md)
+- **Platform capabilities**: [Tenancy](Source/Euonia.Tenancy/README.md), [Auditing](Source/Euonia.Auditing/README.md), [Telemetry](Source/Euonia.Telemetry/README.md), [Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md)
+- **SQL / migrations**: [audit DDL](docs/sql/euonia_audit.sql), [tenant column playbook](docs/sql/README.md)
 - **Bus samples**: [SAMPLE](Source/Euonia.Bus/SAMPLE.md), [HTTP SAMPLE](Source/Euonia.Bus.Http/SAMPLE.md), [gRPC SAMPLE](Source/Euonia.Bus.Grpc/SAMPLE.md)
 - **Sample application**: [Samples/Euonia.Sample.Webapi](Samples/Euonia.Sample.Webapi)
 

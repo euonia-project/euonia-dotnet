@@ -119,6 +119,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 		if (result)
 		{
 			_cache.Remove(fullKey);
+			MemoryCacheStoreRegistry.Untrack(_cache, fullKey);
 		}
 
 		return result;
@@ -136,6 +137,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 
 		var options = GetOptions(item);
 		_cache.Set(key, item, options);
+		MemoryCacheStoreRegistry.Track(_cache, key);
 
 		if (item.Region != null)
 		{
@@ -152,11 +154,19 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 
 		var options = GetOptions(item);
 		_cache.Set(key, item, options);
+		MemoryCacheStoreRegistry.Track(_cache, key);
 
 		if (item.Region != null)
 		{
 			_cache.RegisterChild(item.Region, key);
 		}
+	}
+
+	/// <inheritdoc />
+	public override Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+		return Task.FromResult(MemoryCacheStoreRegistry.RemoveByPrefix(_cache, prefix));
 	}
 
 	private string GetItemKey(CacheItem<TCacheValue> item) => GetItemKey(item.Key, item.Region);

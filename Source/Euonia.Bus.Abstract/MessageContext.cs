@@ -1,4 +1,4 @@
-﻿using System.Security.Principal;
+using System.Security.Principal;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -107,6 +107,14 @@ public sealed class MessageContext : IMessageContext
 	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
 	public MessageMetadata Metadata { get; set; } = null!;
+
+	/// <summary>
+	/// 获取或设置消息来源传输名称（如 <c>rabbitmq</c>、<c>activemq</c>、<c>http</c>、<c>grpc</c>、<c>inmemory</c>、<c>outbox</c>、<c>inbox</c>、<c>deadletter</c>）。
+	/// </summary>
+	/// <remarks>
+	/// 由传输适配器填充；用于租户信任策略判断与遥测标签。缺失时视为不可信来源。
+	/// </remarks>
+	public string? Transport { get; set; }
 
 	/// <summary>
 	/// 获取或设置本次消息处理的执行环境描述符，决定服务作用域与请求上下文的来源。

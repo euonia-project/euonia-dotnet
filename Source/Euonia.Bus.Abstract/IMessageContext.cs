@@ -1,4 +1,4 @@
-﻿using System.Security.Principal;
+using System.Security.Principal;
 
 namespace Nerosoft.Euonia.Bus;
 
@@ -46,6 +46,11 @@ public interface IMessageContext : IDisposable
 	/// 获取或设置包含消息元数据信息的 <see cref="MessageMetadata"/> 实例。
 	/// </summary>
 	MessageMetadata Metadata { get; }
+
+	/// <summary>
+	/// 获取消息来源传输名称；未知时为 <c>null</c>。
+	/// </summary>
+	string? Transport { get; }
 
 	/// <summary>
 	/// 向消息分发器回复消息处理结果。

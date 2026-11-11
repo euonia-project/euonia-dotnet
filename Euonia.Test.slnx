@@ -7,6 +7,7 @@
     <Project Path="Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj" />
 	<Project Path="Tests/Euonia.Pipeline.Tests/Euonia.Pipeline.Tests.csproj" />
     <Project Path="Tests/Euonia.Application.Tests/Euonia.Application.Tests.csproj" />
+    <Project Path="Tests/Euonia.Hosting.Tests/Euonia.Hosting.Tests.csproj" />
     <Project Path="Tests/Euonia.Endpoint.Http.Tests/Euonia.Endpoint.Http.Tests.csproj" />
     <Project Path="Tests/Euonia.Endpoint.Grpc.Tests/Euonia.Endpoint.Grpc.Tests.csproj" />
     <Project Path="Tests/Euonia.Domain.Tests/Euonia.Domain.Tests.csproj" />

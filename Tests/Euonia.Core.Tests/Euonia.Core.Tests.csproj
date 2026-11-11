@@ -4,6 +4,8 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\Source\Euonia.Core\Euonia.Core.csproj" />
+		<ProjectReference Include="..\..\Source\Euonia.Tenancy\Euonia.Tenancy.csproj" />
+		<ProjectReference Include="..\..\Source\Euonia.Telemetry\Euonia.Telemetry.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

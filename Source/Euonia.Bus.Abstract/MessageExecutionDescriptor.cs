@@ -149,6 +149,8 @@ public readonly record struct MessageExecutionDescriptor
 			Path = source.Path,
 			RequestAborted = source.RequestAborted,
 			TraceIdentifier = source.TraceIdentifier,
+			TenantId = source.TenantId,
+			CorrelationId = source.CorrelationId,
 		};
 	}
 }

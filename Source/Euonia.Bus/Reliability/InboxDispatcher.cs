@@ -241,7 +241,10 @@ internal sealed class InboxDispatcher : IDisposable
 
 	private async Task ExecuteAsync(HandlerRegistration registration, InboxEntry entry)
 	{
-		var context = new MessageContext(entry.Content);
+		var context = new MessageContext(entry.Content)
+		{
+			Transport = "inbox",
+		};
 
 		// 重执行按原消息的身份进行，而不是触发本轮重试的调用方身份。
 		await _execution.RunAsync(

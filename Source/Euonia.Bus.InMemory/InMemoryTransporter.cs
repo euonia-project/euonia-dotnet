@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Modularity;
@@ -271,6 +271,7 @@ public class InMemoryTransporter : DisposableObject, ITransporter
 		return new MessageContext(message)
 		{
 			ExecutionDescriptor = CreateExecutionDescriptor(borrowCallerScope),
+			Transport = "inmemory",
 		};
 	}
 

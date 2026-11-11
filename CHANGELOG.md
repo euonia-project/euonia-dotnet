@@ -23,6 +23,22 @@
 - **异常类型**：`Lambda.GetAttribute` / `GetAttributes` 在表达式无法解析出成员时抛出 `ArgumentNullException`
   （原为 `NullReferenceException`）。
 
+### 平台能力（Tenancy / Auditing / Telemetry）
+
+- **新增产品包**：`Euonia.Tenancy`、`Euonia.Auditing`、`Euonia.Auditing.EfCore`、`Euonia.Auditing.Mongo`、`Euonia.Telemetry`、`Euonia.Telemetry.Otel`，均面向 `net10.0` / `net11.0`。
+- **执行上下文**：新增 `Nerosoft.Euonia.Execution`（`ExecutionContextValues` / `AmbientExecutionContext` / accessor / scope factory），Tenant / User / Correlation 只维护一份来源；后进先出恢复，乱序释放不覆盖。
+- **多租户**：租户作用域（普通 / 隔离 / 跨租户）、解析链（Claim / Host / Route / Header / Message）、配置与缓存存储、写入守卫；EF 影子属性 `tenant_id` + 命名过滤器 `Tenant`、DatabasePerTenant 连接路由、SharedSchema 模型缓存键、Mongo 过滤与写入打标、Quartz 作业租户作用域、缓存键前缀与 `RemoveByPrefixAsync`。
+- **审计**：`IAuditingRecorder` 作用域/动作模型、Castle 拦截器（`[Audited]`，Order -1000）、HTTP 中间件、Bus 参与者、参数脱敏、内存/EF/Mongo 存储、查询与按时间保留、文件 durable spool。
+- **遥测**：`TelemetrySource` / `TelemetryActivity`、标签脱敏与上下文补充、W3C 传播、Bus 消费 Span、HTTP 标签补充、OpenTelemetry 显式源目录与 Resource 接入。
+- **消息**：`MessageContext.Transport`、`IMessageExecutionScopeParticipant`、`MessageExecutionResult`（Skip / DeadLetter）、租户与审计参与者；发布侧把租户 / 用户 / `traceparent` 写入信封元数据。
+- **破坏性变更**：
+  - `SensitiveDataAttribute` / `SensitiveDataMasker` 从 `Nerosoft.Euonia.Application` 迁至 `Euonia.Core/Security`（命名空间 `Nerosoft.Euonia.Security`）。
+  - 软删除查询过滤器改为命名过滤器 `Tombstone`（EF 不允许匿名与命名混用）；`IgnoreQueryFilters()` 仍忽略全部过滤器。
+  - `IMessageContext` 新增 `Transport` 成员；自定义实现需补齐。
+  - `IMessageExecutionScopeParticipant` 采用“异步决议 + 同步安装”模型：`EnterAsync` 只计算，返回 `Install` 委托由执行作用域同步调用。
+  - 应用服务代理新增 `IOrderedInterceptor`；`AuditingInterceptor` 固定最外层。
+- **测试**：Core 103、Repository 14、Application 196、Bus 157、Bus.InMemory 33、Caching.Default 5。
+
 ### Euonia.Endpoint
 
 - **新能力族**：新增 `Euonia.Endpoint`、`Euonia.Endpoint.Http`、`Euonia.Endpoint.Grpc`、`Euonia.Endpoint.SourceGenerator`。

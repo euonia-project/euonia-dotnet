@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application;
 

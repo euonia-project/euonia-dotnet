@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +6,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Bus.Telemetry;
+using System.Security.Claims;
+using Nerosoft.Euonia.Execution;
+using Nerosoft.Euonia.Messaging;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Telemetry;
 using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
@@ -453,7 +457,7 @@ internal sealed class MessageBus : IBus
 	/// <see cref="IMessageEnvelope.User"/> 在接口中声明为非空，但请求作用域外没有这些信息，
 	/// 未提供时保持信封默认值而不是写入空对象。
 	/// </remarks>
-	private static void ApplyRequestContext<TMessage>(RoutedMessage<TMessage> message, RequestContext? context)
+	private void ApplyRequestContext<TMessage>(RoutedMessage<TMessage> message, RequestContext? context)
 	{
 		if (context == null)
 		{
@@ -469,6 +473,22 @@ internal sealed class MessageBus : IBus
 		{
 			message.User = context.User;
 		}
+
+		// 租户与用户标识写入信封元数据，供 Outbox/Inbox 与跨进程消费端重建租户作用域。
+		var tenantId = AmbientExecutionContext.Current?.TenantId ?? context.TenantId;
+		if (!string.IsNullOrEmpty(tenantId))
+		{
+			message.Metadata[MessageMetadataKeys.TenantId] = tenantId;
+		}
+
+		var userId = AmbientExecutionContext.Current?.UserId ?? context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		if (!string.IsNullOrEmpty(userId))
+		{
+			message.Metadata[MessageMetadataKeys.UserId] = userId;
+		}
+
+		// W3C 跟踪上下文写入信封，跨进程消费端据此延续链路。
+		_provider.GetService<ITelemetryPropagator>()?.Inject(message.Metadata);
 	}
 
 	/// <summary>

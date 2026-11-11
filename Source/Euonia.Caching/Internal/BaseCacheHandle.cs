@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Caching.Internal;
+namespace Nerosoft.Euonia.Caching.Internal;
 
 /// <summary>
 /// <c>BaseCacheHandle</c> 实现了所有缓存句柄可能共用的逻辑。它抽象了 <see cref="ICache{T}"/> 接口，
@@ -9,6 +9,17 @@
 public abstract class BaseCacheHandle<TCacheValue> : BaseCache<TCacheValue>
 {
     private readonly object _updateLock = new();
+
+    /// <summary>
+    /// 按前缀移除缓存项；默认实现不支持并返回 0。
+    /// </summary>
+    /// <param name="prefix">键前缀。</param>
+    /// <param name="cancellationToken">取消令牌。</param>
+    /// <returns>移除的条目数。</returns>
+    public virtual Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(0L);
+    }
 
     /// <summary>
     /// 初始化 <see cref="BaseCacheHandle{TCacheValue}"/> 类的新实例。

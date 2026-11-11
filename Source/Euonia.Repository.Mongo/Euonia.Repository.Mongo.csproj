@@ -15,6 +15,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Repository\Euonia.Repository.csproj" />
+        <ProjectReference Include="..\Euonia.Tenancy\Euonia.Tenancy.csproj" />
     </ItemGroup>
 
     <ItemGroup>

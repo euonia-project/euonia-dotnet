@@ -2,14 +2,14 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace Nerosoft.Euonia.Application;
+namespace Nerosoft.Euonia.Security;
 
 /// <summary>
 /// 提供对象图脱敏能力：将可枚举/对象的敏感成员（标注 <see cref="SensitiveDataAttribute"/>
 /// 的属性、字段，或对象自身类型标注了该特性）替换为掩码文本。
 /// </summary>
 /// <remarks>
-/// 返回的是面向日志输出的脱敏副本（字典/列表结构），不修改原对象。字符串与标量原样返回，
+/// 返回的是面向日志/审计输出的脱敏副本（字典/列表结构），不修改原对象。字符串与标量原样返回，
 /// 类库/框架类型（命名空间以 <c>System</c>、<c>Microsoft</c>、<c>Newtonsoft</c>、<c>Castle</c> 等开头）
 /// 不递归展开，而替换为「类型名 + 掩码」占位，既避免把常见的运行时结构炸成巨型日志，又保留可辨识信息。
 /// </remarks>

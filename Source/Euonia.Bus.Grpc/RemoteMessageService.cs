@@ -47,7 +47,7 @@ public class RemoteMessageService : ReplierService.ReplierServiceBase
 		_logger.LogDebug("Received remote gRPC request '{RequestId}'", request.RequestId);
 
 		// 服务注册为 Scoped：provider 即本次 gRPC 调用的作用域，处理时复用它。
-		var reply = await RemoteReceiver.ReceiveAsync(_serializer, _handler, payload, _provider, context.CancellationToken);
+		var reply = await RemoteReceiver.ReceiveAsync(_serializer, _handler, payload, _provider, context.CancellationToken, "grpc");
 
 		return new Google.Protobuf.GrpcResponse
 		{

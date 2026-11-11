@@ -172,6 +172,7 @@ internal static class ObjectAuthorization
 	private static void Enforce(ObjectBase businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("authorize", operation);
 		var succeeded = false;
 		try
 		{
@@ -198,6 +199,7 @@ internal static class ObjectAuthorization
 		finally
 		{
 			OsbaDiagnostics.RecordAuthorization(started, "object", operation, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "authorize", started, succeeded);
 		}
 	}
 
