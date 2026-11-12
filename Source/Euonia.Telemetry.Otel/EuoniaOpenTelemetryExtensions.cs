@@ -111,9 +111,18 @@ public static class EuoniaOpenTelemetryExtensions
 
 		var builder = services.AddOpenTelemetry()
 		                      .ConfigureResource(resource => ApplyResource(resource, options))
-		                      .WithTracing(tracing => tracing.AddEuoniaSources(registry))
-		                      .WithMetrics(metrics => metrics.AddEuoniaSources(registry))
 		                      .WithLogging();
+
+		// 启动期开关决定是否构建对应管道；关闭时不订阅任何 Euonia 源。
+		if (options.Enabled && options.TracesEnabled)
+		{
+			builder.WithTracing(tracing => tracing.AddEuoniaSources(registry));
+		}
+
+		if (options.Enabled && options.MetricsEnabled)
+		{
+			builder.WithMetrics(metrics => metrics.AddEuoniaSources(registry));
+		}
 
 		// Scope 带 TraceId / SpanId / TenantId，日志可与 Trace 对齐。
 		services.Configure<OpenTelemetryLoggerOptions>(logging =>

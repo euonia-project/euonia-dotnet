@@ -94,32 +94,56 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 
 		var declaredType = invocation.MethodInvocationTarget?.DeclaringType ?? invocation.TargetType ?? invocation.Method.DeclaringType!;
 		var actionName = attribute?.ActionName ?? $"{declaredType.Name}.{invocation.Method.Name}";
-		// [Audited] 在全局关闭时强制创建作用域（合规要求的少量方法）。
-		var scope = _recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true }, force: attribute != null);
-		var action = scope.BeginAction(declaredType.FullName ?? declaredType.Name, invocation.Method.Name, actionName);
+		var previousScope = _recorder.CurrentScope;
+		IAuditingScope? scope = null;
+		IAuditingAction? action = null;
 
-		if (attribute is { RecordResult: false })
+		try
 		{
-			action.SetRecordResult(false);
-		}
+			// [Audited] 在全局关闭时强制创建作用域（合规要求的少量方法）。
+			scope = _recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true }, force: attribute != null);
+			action = scope.BeginAction(declaredType.FullName ?? declaredType.Name, invocation.Method.Name, actionName);
 
-		// 参数元数据优先取实现方法，保证 [SensitiveData] 与参数名和实现一致。
-		var parameters = targetMethod.GetParameters();
-		if (parameters.Length != invocation.Arguments.Length)
-		{
-			parameters = invocation.Method.GetParameters();
-		}
-		for (var index = 0; index < parameters.Length && index < invocation.Arguments.Length; index++)
-		{
-			var parameter = parameters[index];
-			var value = invocation.Arguments[index];
-
-			if (parameter.GetCustomAttribute<SensitiveDataAttribute>(true) is { } sensitive)
+			if (attribute is { RecordResult: false })
 			{
-				value = sensitive.Mask;
+				action.SetRecordResult(false);
 			}
 
-			action.SetParameter(parameter.Name ?? $"arg{index}", value);
+			// 参数元数据优先取实现方法，保证 [SensitiveData] 与参数名和实现一致。
+			var parameters = targetMethod.GetParameters();
+			if (parameters.Length != invocation.Arguments.Length)
+			{
+				parameters = invocation.Method.GetParameters();
+			}
+
+			for (var index = 0; index < parameters.Length && index < invocation.Arguments.Length; index++)
+			{
+				var parameter = parameters[index];
+				var value = invocation.Arguments[index];
+
+				if (parameter.GetCustomAttribute<SensitiveDataAttribute>(true) is { } sensitive)
+				{
+					value = sensitive.Mask;
+				}
+
+				action.SetParameter(parameter.Name ?? $"arg{index}", value);
+			}
+		}
+		catch (Exception exception)
+		{
+			// 审计初始化失败开放：已开始的动作标记失败并封口；仅本次新建且无动作的作用域才分离。
+			if (action != null)
+			{
+				action.Fail(exception);
+			}
+			else if (scope != null && !ReferenceEquals(previousScope, scope))
+			{
+				_recorder.Detach(scope);
+			}
+
+			System.Diagnostics.Trace.TraceWarning($"Failed to initialize auditing for {declaredType.FullName}.{invocation.Method.Name}: {exception.Message}");
+			invocation.Proceed();
+			return;
 		}
 
 		try

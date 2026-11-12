@@ -36,7 +36,9 @@ internal sealed class AuditingMiddleware
 			return;
 		}
 
-		var scope = recorder.EnsureScope(new AuditingScopeOptions
+		// HTTP 中间件必须拥有自己的作用域：不能复用/提前完成外层消息或宿主作用域。
+		var previousScope = recorder.CurrentScope;
+		var scope = recorder.CreateDetachedScope(new AuditingScopeOptions
 		{
 			OperationKey = $"req:{Guid.CreateVersion7():N}",
 			AutoComplete = false,
@@ -68,6 +70,12 @@ internal sealed class AuditingMiddleware
 			{
 				// 审计失败开放：回填或提交失败只记录日志，不能覆盖原始业务异常。
 				logger.LogError(exception, "Failed to complete auditing scope {ScopeId}.", scope.ScopeId);
+			}
+			finally
+			{
+				// 只恢复本中间件替换掉的外层作用域。
+				recorder.Detach(scope);
+				recorder.Attach(previousScope);
 			}
 		}
 	}

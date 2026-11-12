@@ -122,8 +122,7 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 		context.TenantId = tenant.Id;
 		context.TenantName = tenant.Name;
 
-		// 系统级全租户作用域内进入具体租户时，把 target 收敛到该租户而不是继续保持“全租户”；
-		// 这样既保留操作人/原因，又不会让下游按任意租户授权。
+		// 系统级全租户作用域内进入具体租户时，把 target 收敛到该租户而不是继续保持“全租户”。
 		if (context.IsCrossTenant == true && !string.Equals(context.TargetTenantId, tenant.Id, StringComparison.Ordinal))
 		{
 			context.TargetTenantId = tenant.Id;
@@ -131,6 +130,16 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 
 		// 操作人租户：首次进入租户作用域时记录，跨租户切换时保留，审计据此区分 Actor/Target。
 		context.ActorTenantId ??= tenant.Id;
+
+		// 进入操作人自己的租户（或 target 已等于 actor）时不再具有跨租户语义，
+		// 否则会同时出现“可读系统作用域”和“删除被拒绝”的矛盾行为。
+		if (context.IsCrossTenant == true
+		    && (string.Equals(context.ActorTenantId, tenant.Id, StringComparison.Ordinal)
+		        || string.Equals(context.TargetTenantId, context.ActorTenantId, StringComparison.Ordinal)))
+		{
+			context.IsCrossTenant = false;
+			context.CrossTenantReason = null;
+		}
 		context.Items[TenantContextKeys.Info] = tenant;
 	}
 

@@ -103,7 +103,11 @@ public static class AuditingServiceCollectionExtensions
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		services.TryAddSingleton<InMemoryAuditingStore>();
-		services.TryAddSingleton<IAuditingStore>(provider => provider.GetRequiredService<InMemoryAuditingStore>());
+		if (!services.Any(descriptor => descriptor.ServiceType == typeof(IAuditingStore)))
+		{
+			services.AddSingleton<IAuditingStore>(provider => provider.GetRequiredService<InMemoryAuditingStore>());
+			services.AddSingleton<IAuditingStoreQuery>(provider => provider.GetRequiredService<InMemoryAuditingStore>());
+		}
 		return services;
 	}
 }

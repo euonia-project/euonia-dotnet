@@ -97,11 +97,12 @@ public readonly struct TelemetryActivity : IDisposable
 
 		Activity.SetTag(TelemetryNames.ErrorType, exception.GetType().FullName);
 		Activity.SetStatus(ActivityStatusCode.Error);
-		Activity.AddEvent(new ActivityEvent("exception", tags: new ActivityTagsCollection
-		{
-			["exception.type"] = exception.GetType().FullName,
-			["exception.stacktrace"] = exception.StackTrace,
-		}));
+
+		// 复用 AddEvent 的脱敏路径，保证 exception.stacktrace 也受 Redaction.Keys 控制。
+		AddEvent(
+			"exception",
+			new KeyValuePair<string, object?>("exception.type", exception.GetType().FullName),
+			new KeyValuePair<string, object?>("exception.stacktrace", exception.StackTrace));
 	}
 
 	/// <inheritdoc />

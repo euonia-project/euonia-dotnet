@@ -95,10 +95,11 @@ public class TenancyCoreTests
 		using (factory.BeginCrossTenant("retention"))
 		using (factory.Begin(NewTenant("a")))
 		{
+			// 无操作人身份的全租户作用域进入具体租户后，actor 与 target 相同，不再具有跨租户语义。
 			Assert.Equal("a", AmbientExecutionContext.Current!.TenantId);
-			Assert.True(AmbientExecutionContext.Current!.IsCrossTenant);
+			Assert.False(AmbientExecutionContext.Current!.IsCrossTenant);
 			Assert.Equal("a", AmbientExecutionContext.Current!.TargetTenantId);
-			Assert.Equal("retention", AmbientExecutionContext.Current!.CrossTenantReason);
+			Assert.Null(AmbientExecutionContext.Current!.CrossTenantReason);
 		}
 	}
 

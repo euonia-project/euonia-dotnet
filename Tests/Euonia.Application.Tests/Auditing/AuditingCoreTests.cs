@@ -215,6 +215,21 @@ public class AuditingCoreTests
 	}
 
 	/// <summary>
+	/// 内存存储同时注册写入与查询契约，且指向同一实例。
+	/// </summary>
+	[Fact]
+	public void AddInMemoryAuditingStore_ShouldRegisterQueryContract()
+	{
+		var services = new ServiceCollection();
+		services.AddInMemoryAuditingStore();
+		using var provider = services.BuildServiceProvider();
+
+		Assert.Same(
+			provider.GetRequiredService<IAuditingStore>(),
+			provider.GetRequiredService<IAuditingStoreQuery>());
+	}
+
+	/// <summary>
 	/// 定向跨租户保留删除只删除目标租户记录。
 	/// </summary>
 	[Fact]

@@ -160,7 +160,7 @@ public sealed class TelemetrySource : IDisposable
 	/// <returns>计数器。</returns>
 	public Counter<long> Counter(string name, string? unit = null, string? description = null)
 	{
-		if (Volatile.Read(ref _disposed) == 1)
+		if (Volatile.Read(ref _disposed) == 1 || Volatile.Read(ref _metricsEnabled) == 0)
 		{
 			return FallbackCounter;
 		}
@@ -177,7 +177,7 @@ public sealed class TelemetrySource : IDisposable
 	/// <returns>直方图。</returns>
 	public Histogram<double> Histogram(string name, string? unit = null, string? description = null)
 	{
-		if (Volatile.Read(ref _disposed) == 1)
+		if (Volatile.Read(ref _disposed) == 1 || Volatile.Read(ref _metricsEnabled) == 0)
 		{
 			return FallbackHistogram;
 		}

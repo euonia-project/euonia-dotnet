@@ -158,20 +158,24 @@ public sealed class CachedTenantStore : ITenantStore
 
 	private void TrackIdentifier(string tenantId, string identifier)
 	{
-		if (!_identifiers.ContainsKey(tenantId) && _identifiers.Count >= 1024)
+		lock (_cacheLock)
 		{
-			// 反向索引有上界：淘汰一个最旧租户及其标识缓存，保证“缓存存在 ⇒ 可失效”。
-			var oldest = _identifiers.Keys.FirstOrDefault();
-			if (oldest != null && _identifiers.TryRemove(oldest, out var staleIdentifiers))
+			if (!_identifiers.ContainsKey(tenantId) && _identifiers.Count >= 1024)
 			{
-				foreach (var staleIdentifier in staleIdentifiers.Keys)
+				// 有上界淘汰（并发字典不保证“最旧”）：连同其标识缓存一起移除，
+				// 并持有缓存锁，避免与 GetByIdentifier 的回填交错产生不可失效的条目。
+				var victim = _identifiers.Keys.FirstOrDefault();
+				if (victim != null && _identifiers.TryRemove(victim, out var staleIdentifiers))
 				{
-					_cache.TryRemove($"identifier:{staleIdentifier}", out _);
+					foreach (var staleIdentifier in staleIdentifiers.Keys)
+					{
+						_cache.TryRemove($"identifier:{staleIdentifier}", out _);
+					}
 				}
 			}
-		}
 
-		_identifiers.GetOrAdd(tenantId, _ => new ConcurrentDictionary<string, byte>(StringComparer.Ordinal))[identifier] = 0;
+			_identifiers.GetOrAdd(tenantId, _ => new ConcurrentDictionary<string, byte>(StringComparer.Ordinal))[identifier] = 0;
+		}
 	}
 
 	private void PruneIfNeeded(DateTimeOffset now)

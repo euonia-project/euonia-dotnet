@@ -20,5 +20,6 @@ public sealed class TelemetryRedactionOptions
 		"db.statement",
 		"messaging.message.payload",
 		"exception.message",
+		"exception.stacktrace",
 	];
 }

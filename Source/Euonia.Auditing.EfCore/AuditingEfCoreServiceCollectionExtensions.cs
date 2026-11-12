@@ -21,14 +21,18 @@ public static class AuditingEfCoreServiceCollectionExtensions
 	public static IServiceCollection AddAuditingEfCore<TContext>(
 		this IServiceCollection services,
 		Action<DbContextOptionsBuilder> configure)
-		where TContext : DbContext
+		where TContext : AuditingDbContext
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configure);
 
 		// 审计存储是单例；上下文工厂为单例，连接串固定为审计库。
 		services.AddDbContextFactory<TContext>(configure, ServiceLifetime.Singleton);
-		services.TryAddSingleton<IAuditingStore, EfCoreAuditingStore<TContext>>();
+		if (!services.Any(descriptor => descriptor.ServiceType == typeof(IAuditingStore)))
+		{
+			services.AddSingleton<IAuditingStore, EfCoreAuditingStore<TContext>>();
+			services.AddSingleton<IAuditingStoreQuery>(provider => (IAuditingStoreQuery)provider.GetRequiredService<IAuditingStore>());
+		}
 
 		return services;
 	}

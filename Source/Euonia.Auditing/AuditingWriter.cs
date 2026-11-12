@@ -449,9 +449,9 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 						await DeleteSpoolSafeAsync(pending).ConfigureAwait(false);
 					}
 				}
-				catch (Exception exception) when (batched.Length > 1)
+				catch (Exception exception)
 				{
-					// 批量失败退化为逐条写入，避免一条坏记录拖垮整批。
+					// 任何批量失败都退化为逐条写入，避免单条分组失败中止后续存储组。
 					_logger?.LogWarning(exception, "Batch auditing write failed; falling back to per-record writes.");
 					foreach (var pending in batched)
 					{

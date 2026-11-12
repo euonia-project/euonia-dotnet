@@ -17,5 +17,5 @@ services.AddAuditingMongo(database);   // collection 默认 euonia_audit_log
 ## 说明
 
 - 同一 `ScopeId` 重复保存不会产生重复文档；动作按 `IdempotencyKey` 合并。
-- 查询 / 保留由 `IAuditingStoreQuery` 的内存或 EF 实现提供；Mongo 当前只提供写入。
+- Mongo 同时实现 `IAuditingStoreQuery`（查询、按 scope 查找、保留删除），注册时与 `IAuditingStore` 指向同一实例。
 - 审计失败开放：写入异常由 `AuditingWriter` 捕获，不改变业务结果。

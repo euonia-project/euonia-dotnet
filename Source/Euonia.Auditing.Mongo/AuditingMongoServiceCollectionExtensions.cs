@@ -27,7 +27,12 @@ public static class AuditingMongoServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(database);
 
-		services.TryAddSingleton<IAuditingStore>(_ => new MongoAuditingStore(database, collectionName));
+		services.TryAddSingleton<MongoAuditingStore>(_ => new MongoAuditingStore(database, collectionName));
+		if (!services.Any(descriptor => descriptor.ServiceType == typeof(IAuditingStore)))
+		{
+			services.AddSingleton<IAuditingStore>(provider => provider.GetRequiredService<MongoAuditingStore>());
+			services.AddSingleton<IAuditingStoreQuery>(provider => provider.GetRequiredService<MongoAuditingStore>());
+		}
 		return services;
 	}
 }
