@@ -27,7 +27,7 @@ services.AddPermission(permission => permission
         .Scan(typeof(Order).Assembly)
         .OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)));
 
-services.AddSingleton(UserPrincipal.Current);
+services.AddSingleton(new UserPrincipal(claimsPrincipal)); // claimsPrincipal 来自 HttpContext.User 或认证中间件
 ```
 
 完整写法、多模块合并、`NoOperationCodes` / `NoModels` 断言与自定义来源见 [§3 装配](#3-装配)。
@@ -90,7 +90,7 @@ services.AddPermission(permission => permission
         .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
 
 // 当前用户主体（判定主体）：由宿主注册，取其 Claims 即 ClaimsPrincipal
-services.AddSingleton(UserPrincipal.Current);
+services.AddSingleton(new UserPrincipal(claimsPrincipal)); // claimsPrincipal 来自 HttpContext.User 或认证中间件
 ```
 
 规则必须**显式**给出——引擎不猜「哪个方法对应哪个业务操作」。载体有两种，语义完全一致：

@@ -171,7 +171,7 @@ Guid 生成策略枚举：`Empty`、`Simple`（随机 v4）、`SequentialAsStrin
 
 ```csharp
 var svc = Singleton<MyService>.Get(() => new MyService());
-MyService same = Singleton<MyService>.InstanceDOIs;
+MyService same = Singleton<MyService>.Instance;
 ```
 
 #### `ObjectPool<T>` 与 `IObjectPoolPolicy<T>`
