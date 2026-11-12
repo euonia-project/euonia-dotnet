@@ -232,7 +232,7 @@ public sealed class OrderService(IBus bus)
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`Microsoft.Extensions.Options`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **已知边界**：`LazyInitialize`、`MaxConcurrentCalls` 仅保留属性、当前实现不读取；无持久化、无跨进程投递。
 
 ## 相关包

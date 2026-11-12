@@ -288,7 +288,7 @@ public sealed class DeadLetterController(IDeadLetterService deadLetters)
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Pipeline`、`Euonia.Modularity`、`Euonia.Telemetry`、`Euonia.Tenancy`、`Euonia.Auditing`；另引用 `Newtonsoft.Json`、`System.Reactive`。
-- **版本策略**：包版本随仓库 `Source/project.props` 统一管理，本文不固定具体版本号。
+- **版本策略**：包版本随仓库 `project.props` 统一管理，本文不固定具体版本号。
 - **升级注意**：`RoutedMessage` 系列在本包而非 `Euonia.Bus.Abstract`；两个包共用 `Nerosoft.Euonia.Bus` 命名空间；`UseInbox` 只是发送侧标记，收件箱去重只由 `Inbox:Enabled` 决定。
 
 ## 相关包

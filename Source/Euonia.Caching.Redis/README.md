@@ -155,10 +155,6 @@ public static void AddRedisCache(IServiceCollection services, IConfiguration con
 - [`Euonia.Caching.Runtime`](../Euonia.Caching.Runtime/README.md) —— `System.Runtime.Caching` 提供程序
 - [`Euonia.Concurrency.Redis`](../Euonia.Concurrency.Redis/README.md) —— Redis 分布式锁与信号量
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 启动时报 InvalidOperationException: Connection to '...' failed
@@ -195,3 +191,7 @@ public static void AddRedisCache(IServiceCollection services, IConfiguration con
 - **关键依赖**：`StackExchange.Redis`、`Euonia.Caching`；按 Redis 服务端能力自动选择 LUA 或兼容路径。
 - **已知边界**：`RedisCacheService` 构造时固定装配句柄与背板；`Clear` 依赖 `allowAdmin`；键空间通知需要服务端配置；前缀删除使用 `SCAN`，不是 O(1)。
 - **升级注意**：缓存值含程序集限定类型名，升级前评估 DTO 兼容性；滚动升级期间新旧实例共享同一数据库时，建议先灰度并保留回滚窗口。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

@@ -239,10 +239,6 @@ public sealed class OrderDto
 - [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 构建期生成 HTTP lambda、gRPC 契约与注册标记
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 装了包却没有任何端点
@@ -289,3 +285,7 @@ public sealed class OrderDto
 - **契约稳定优先**：`ExposeWebApi` / `ExposeGrpc` 的公开属性（`Prefix` / `Route` / `Method`）与 `GrpcMethod` 枚举值是兼容性边界，扩展只会新增成员。
 - **共享契约类型仍在演进**：`EndpointEmpty` / `DecimalValue` / `TimestampValue` 等尚未接入自动 wire-DTO 映射，行为以当前源码为准（见「共享契约类型」）。
 - 传输能力随运行时包升级，本包不单独引入 TFM 之外的依赖。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

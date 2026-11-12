@@ -330,10 +330,6 @@ app.Run();
 - [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 构建期生成强类型映射
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 启动抛 `HttpRegistry is not registered. Call AddDynamicHttpEndpoint first.`
@@ -380,3 +376,7 @@ app.Run();
 - **配置键稳定**：`Euonia:Endpoint:Http` 下的 9 个选项是兼容性边界，新增选项会有默认值，不改变既有行为。
 - **与生成器的版本要配套**：生成代码调用 `HttpGeneratedMapper` 的签名，升级运行时包后请同时升级 `Euonia.Endpoint.SourceGenerator`。
 - **路由推导规则属于契约**：服务名/方法名转 kebab-case 的规则变化会改变 URL，按破坏性变更处理。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

@@ -196,10 +196,6 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 - [`Euonia.Endpoint.Grpc`](../Euonia.Endpoint.Grpc/README.md) —— 消费生成契约的 gRPC 运行时
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 构建通过，但生成代码/端点不存在
@@ -240,3 +236,7 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 - **包只含 analyzer**：`IncludeBuildOutput=false`、`SuppressDependenciesWhenPacking=true`，包内只有 `analyzers/dotnet/cs/Euonia.Endpoint.SourceGenerator.dll`，不会引入运行时依赖。
 - **`DevelopmentDependency=true`**：默认不参与传递引用，升级消费方不会被动带入新版本。
 - **诊断 ID 稳定**：`EUONIA001` / `EUONIA002` 属于兼容性边界，新增诊断会使用新 ID。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

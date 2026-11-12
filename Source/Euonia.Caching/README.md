@@ -181,10 +181,6 @@ public sealed class UserProfileService(ICacheManager<UserProfile> cache)
 - [`Euonia.Application`](../Euonia.Application/README.md) —— `[Cache]` / `[CacheEvict]` 拦截器
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— `IKeyTransformer` 租户键前缀
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 注入 ICacheManager<T> 失败，只能拿到非泛型 ICacheManager
@@ -221,3 +217,7 @@ public sealed class UserProfileService(ICacheManager<UserProfile> cache)
 - **关键依赖**：抽象层仅依赖 `Microsoft.Extensions.DependencyInjection.Abstractions` 与 `Euonia.Core`；具体能力由 Memory/Redis/Runtime 提供程序包决定。
 - **已知边界**：字典/内存句柄只在进程内共享，只有配置了分布式提供程序与背板才跨节点；`CacheUpdateMode.Up` 只回填句柄链，不代表写穿所有节点。
 - **升级注意**：Redis 缓存值含程序集限定类型名，DTO 改名或迁移程序集后旧键可能无法反序列化；滚动升级期间新旧实例可能同时消费背板，建议先小流量验证并按提供程序清理不兼容键。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

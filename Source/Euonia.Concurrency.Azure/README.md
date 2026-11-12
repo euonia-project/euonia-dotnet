@@ -155,10 +155,6 @@ await using var handle = await provider.AcquireAsync(TimeSpan.FromSeconds(5));
 - [`Euonia.Concurrency.FileSystem`](../Euonia.Concurrency.FileSystem/README.md) —— 文件系统实现
 - [`Euonia.Application`](../Euonia.Application/README.md) —— `[DistributedLock]` 拦截器
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 启动时报 ContainerNotFound
@@ -195,3 +191,7 @@ await using var handle = await provider.AcquireAsync(TimeSpan.FromSeconds(5));
 - **关键依赖**：`Azure.Storage.Blobs`、`Euonia.Concurrency`、`Euonia.Modularity`。
 - **已知边界**：只实现锁，不实现信号量；不创建容器；非无限租约限制 15–60 秒；存储模拟器下 Blob 名称上限更短（256）。
 - **升级注意**：锁状态在 Azure 侧，升级不迁移数据；改动锁名前缀会让新旧实例锁不同 Blob，滚动升级期间需保持命名一致。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

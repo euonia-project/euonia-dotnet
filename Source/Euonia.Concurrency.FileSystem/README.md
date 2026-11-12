@@ -125,10 +125,6 @@ FILESYNCHRONIZATION_DIRECTORY=/var/lib/myapp/locks     # 仓库 alias
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块、配置绑定与环境变量 alias
 - [`Euonia.Application`](../Euonia.Application/README.md) —— `[DistributedLock]` / `[SemaphoreLock]` 拦截器
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### InvalidOperationException: FileSynchronizationOptions.Directory is not configured
@@ -165,3 +161,7 @@ FILESYNCHRONIZATION_DIRECTORY=/var/lib/myapp/locks     # 仓库 alias
 - **关键依赖**：`Euonia.Concurrency`、`Euonia.Modularity`；不需要额外基础设施。
 - **已知边界**：仅锁、无信号量；忙等待固定 50ms–1s；`UnauthorizedAccessException` 最多重试 400 次；文件名使用“安全前缀 + Base32 哈希 + `.lock`”，极长路径可能抛 `PathTooLongException`。
 - **升级注意**：锁文件在释放时删除，不承载数据，无需迁移；升级后保持 `Directory` 与锁名不变即可继续互斥。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

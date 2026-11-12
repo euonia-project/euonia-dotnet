@@ -158,10 +158,6 @@ public sealed class AuditQueryService(IAuditingStoreQuery store)
 - [`Euonia.Auditing.EfCore`](../Euonia.Auditing.EfCore/README.md) —— EF Core 存储适配
 - [`Euonia.Repository.Mongo`](../Euonia.Repository.Mongo/README.md) —— MongoDB 仓储与 `MongoDbOptions`
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 启动时 EnsureIndexesAsync 报唯一键冲突
@@ -197,3 +193,7 @@ public sealed class AuditQueryService(IAuditingStoreQuery store)
 - **关键依赖**：`MongoDB.Driver`、`Euonia.Auditing`；持久化模型为 `AuditingRecord`/`AuditingAction` 的 BSON 映射。
 - **升级注意**：新增可空字段可直接兼容；重命名/删除字段或改变 `ScopeId` 生成规则需要数据迁移或双写；旧集合若已有重复 `ScopeId`，必须先清理再建唯一索引。
 - **已知边界**：单文档 upsert 保证同一 `ScopeId` 幂等，但跨文档无事务；查询受租户授权约束；不创建 TTL 索引。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

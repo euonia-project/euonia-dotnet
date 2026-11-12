@@ -375,10 +375,6 @@ app.Run();
 - [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 生成 gRPC 契约、适配器与注册标记
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 启动抛 `gRPC service 'X' is not registered.`
@@ -425,3 +421,7 @@ app.Run();
 - **wire 兼容由 `DataMember(Order)` 决定**：字段号是跨语言契约，升级本包不会改变序列化格式。
 - **共享契约类型尚未接入自动 wire-DTO 映射**：`Guid` / `DateTime` / `TimeSpan` 仍用 protobuf-net 内建 BCL schema，升级到标准 `google.protobuf.*` 映射会按破坏性变更处理。
 - **生成器与运行时需配套升级**：生成代码依赖 `GrpcMappings` / `GrpcMetadataRegistry` / `GrpcMethodAuthorizationDescriptor` 的签名，两者版本不一致可能出现编译或运行期错误。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

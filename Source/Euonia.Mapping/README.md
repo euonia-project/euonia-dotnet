@@ -175,10 +175,6 @@ var list = new List<object> { order }.ProjectedAsCollection<OrderDto>();
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块初始化与依赖注入
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 调用 `ProjectedAs<T>()` 抛 `NullReferenceException`
@@ -225,3 +221,7 @@ var list = new List<object> { order }.ProjectedAsCollection<OrderDto>();
 - **全局命名空间的 `Extensions` 是兼容边界**：扩展方法位置不变，`ProjectedAs*` 的方法名与泛型约束属于公开契约。
 - **实现库升级由实现包承担**：AutoMapper 17 / Mapster 10 的破坏性变更只会影响对应的 `Euonia.Mapping.*` 包，抽象包本身不感知。
 - **静态工厂不提供并发切换语义**：多容器/多租户宿主需要隔离时应各自维护 `ITypeAdapter` 实例，而不是共享 `TypeAdapterFactory`。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

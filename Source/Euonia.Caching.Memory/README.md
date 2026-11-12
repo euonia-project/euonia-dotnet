@@ -139,10 +139,6 @@ services.AddSingleton<ICacheService, MemoryCacheService>();
 - [`Euonia.Caching.Runtime`](../Euonia.Caching.Runtime/README.md) —— `System.Runtime.Caching` 提供程序
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— `IKeyTransformer` 租户键前缀
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### WithMemoryCacheHandle 里设置的 Expires、UpdateMode 不生效
@@ -179,3 +175,7 @@ services.AddSingleton<ICacheService, MemoryCacheService>();
 - **关键依赖**：`Microsoft.Extensions.Caching.Memory`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
 - **已知边界**：`InstanceName` 只是句柄标识，存储按 `MemoryCacheOptions` 实例共享；进程/应用池回收后缓存丢失；没有跨进程失效。
 - **升级注意**：缓存内容不落盘，升级重启即清空，无需数据迁移；升级后若改了 `KeyPrefix` 或泛型类型，旧键自然不可达，需接受一次冷启动。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

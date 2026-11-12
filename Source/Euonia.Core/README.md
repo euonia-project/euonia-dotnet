@@ -913,10 +913,6 @@ SynchronizationContextSwitcher.NoContext(() => { });
 - [`Euonia.Security`](../Euonia.Security/README.md) —— 操作权限与行级数据权限策略引擎
 - [`Euonia.Validation`](../Euonia.Validation/README.md) —— 参数与对象校验
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 多实例部署时 `ObjectId.Snowflake()` 生成重复 ID
@@ -963,3 +959,7 @@ SynchronizationContextSwitcher.NoContext(() => { });
 - 文档标注的命名空间即当前源码位置（`Check` / `ObjectId` / `Extensions` 在全局，`Optional<T>` / `Singleton<T>` 在 `System`）；升级后若发现位置变化，以源码为准并回提本文档。
 - `SnowflakeId` 是 `internal`，不在兼容性承诺内；外部只应依赖 `ObjectId` 的公开工厂方法。
 - 更低 TFM（`net8.0` / `net9.0`）不在支持范围；跨大版本升级时先升 TFM，再升包。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

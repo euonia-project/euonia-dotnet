@@ -148,10 +148,6 @@ services.AddSingleton<ICacheService, RuntimeCacheService>();
 - [`Euonia.Caching.Memory`](../Euonia.Caching.Memory/README.md) —— `Microsoft.Extensions.Caching.Memory` 提供程序
 - [`Euonia.Caching.Redis`](../Euonia.Caching.Redis/README.md) —— Redis 分布式提供程序
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 设置了 CacheMemoryLimitMegabytes 但内存限制没有生效
@@ -188,3 +184,7 @@ services.AddSingleton<ICacheService, RuntimeCacheService>();
 - **关键依赖**：`System.Runtime.Caching`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
 - **已知边界**：默认实例不能通过代码配置限制；无租户键转换与前缀删除；进程内、不跨节点。
 - **升级注意**：缓存不持久化，升级重启即清空；命名实例的历史 `app.config`/`web.config` 配置不会自动迁移到 `RuntimeCacheOptions`，升级时需显式迁移限额与轮询参数。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

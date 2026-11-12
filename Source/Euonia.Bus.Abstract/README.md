@@ -232,7 +232,7 @@ public sealed class MyOutboxStore : IOutboxStore
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Euonia.Core`、`Microsoft.Extensions.DependencyInjection.Abstractions`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **升级注意**：与 `Euonia.Bus` 共用根命名空间，类型归属按程序集区分；仅引用本包不会得到传输器、默认约定/策略或可靠性存储实现。
 
 ## 相关包

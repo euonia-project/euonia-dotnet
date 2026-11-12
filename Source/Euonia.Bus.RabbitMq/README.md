@@ -267,7 +267,7 @@ public sealed class OrderService(IBus bus)
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`RabbitMQ.Client`、`Polly`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **已知边界**：`Enabled` 只由模块读取；`AddRabbitMqBus` 手动注册时忽略该开关；发送前要求目标队列已有消费者。
 
 ## 相关包

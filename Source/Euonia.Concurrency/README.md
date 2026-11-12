@@ -122,10 +122,6 @@ if (handle is null)
 - [`Euonia.Concurrency.Azure`](../Euonia.Concurrency.Azure/README.md) —— Azure Blob 租约实现
 - [`Euonia.Application`](../Euonia.Application/README.md) —— `[DistributedLock]` / `[SemaphoreLock]` 拦截器
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### Unable to resolve service for type 'ILockFactory'
@@ -162,3 +158,7 @@ if (handle is null)
 - **关键依赖**：`Euonia.Core`（`Nerosoft.Euonia.Threading.TimeoutValue`）；提供程序包各自依赖 Redis/ZooKeeper/Azure SDK。
 - **已知边界**：抽象层不注册服务、不读取配置；信号量与句柄丢失监视并非所有实现都支持。
 - **升级注意**：升级抽象包时同步升级提供程序包，避免接口实现缺失；锁/票据本身不持久化业务数据，无数据迁移。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

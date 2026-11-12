@@ -719,10 +719,6 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 - [`Euonia.Telemetry.Otel`](../Euonia.Telemetry.Otel/README.md) —— 采集本包的 `Nerosoft.Euonia.Security` ActivitySource 与 Meter
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 多租户上下文（租户维度由使用方自行接入授权值）
 
-## 许可证
-
-本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
-
 ## 常见问题与故障排查
 
 ### 同步判定抛「授权数据尚未解析」
@@ -770,3 +766,7 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 - **命名空间**：全部类型位于 `Nerosoft.Euonia.Security`（`Scope/` 目录不另立子命名空间），DI 扩展在 `Microsoft.Extensions.DependencyInjection`。
 - **不提供默认 `IScopeSubjectResolver`** 是设计承诺而非遗漏，升级不会补一个默认实现；若该边界变更，会以主版本说明。
 - `IScopeGuard` / `IPermissionChecker` 按作用域注册（`IObjectScopeAuthorizer` 为单例，`Source/Euonia.Security/ServiceCollectionExtensions.cs:116-136`）；跨作用域缓存判定结果不在支持范围。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

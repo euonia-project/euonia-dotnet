@@ -177,7 +177,7 @@ app.MapGet("/health/bus", async (HealthCheckService health, CancellationToken ca
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Microsoft.AspNetCore.App` 框架引用、`Euonia.Bus`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **已知边界**：`transports` 是策略数量；未注册存储的项不参与判定；重复注册会产生多条同名检查。
 
 ## 相关包

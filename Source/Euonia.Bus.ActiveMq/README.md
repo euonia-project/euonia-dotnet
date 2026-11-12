@@ -218,7 +218,7 @@ await bus.Send(new CancelOrder { OrderId = 42 })
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`Apache.NMS` 系列、`Polly`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **已知边界**：无死信队列选项；重试仅覆盖连接级异常；主题共享订阅依赖 `SubscriptionId`。
 
 ## 相关包

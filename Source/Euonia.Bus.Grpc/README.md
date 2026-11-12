@@ -254,7 +254,7 @@ public sealed class OrderClient(IBus bus)
 
 - **目标框架**：`net10.0`、`net11.0`。
 - **关键依赖**：`Microsoft.AspNetCore.App`、`Grpc.AspNetCore`、`Grpc.Net.Client`、`Grpc.Core`、`Grpc.HealthCheck`、`Google.Protobuf`、`Euonia.Bus`。
-- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **版本策略**：随仓库 `project.props` 统一管理，本文不固定版本号。
 - **已知边界**：只支持请求-响应；`Enabled` 选项当前不控制注册；默认 `ServiceName` 为源码原值 `nerorsoft.bus.ReplierService`。
 
 ## 相关包
