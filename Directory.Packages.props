@@ -4,8 +4,9 @@
         <EnablePackageVersionOverride>true</EnablePackageVersionOverride>
         <ExtensionsPackageVersion>11.0.0</ExtensionsPackageVersion>
         <GrpcAspNetCoreVersion>2.85.0</GrpcAspNetCoreVersion>
-        <QuartzVersion>4.6.2</QuartzVersion>
+        <QuartzVersion>4.7.3</QuartzVersion>
         <RefitVersion>16.4.0</RefitVersion>
+        <OpenTelemetryVersion>1.21.0</OpenTelemetryVersion>
         <FrameworkCurrentVersion>[11.0.0,12.0.0)</FrameworkCurrentVersion>
         <FrameworkPreviousVersion>[10.0.15,11.0.0)</FrameworkPreviousVersion>
     </PropertyGroup>
@@ -14,7 +15,7 @@
         <PackageVersion Include="Autofac" Version="9.3.4" />
         <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
         <PackageVersion Include="Autofac.Extras.DynamicProxy" Version="8.1.0" />
-        <PackageVersion Include="AutoMapper" Version="16.3.0" />
+        <PackageVersion Include="AutoMapper" Version="17.0.0" />
         <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
         <PackageVersion Include="Castle.Core" Version="5.2.1" />
         <PackageVersion Include="Consul" Version="1.8.0" />
@@ -27,9 +28,9 @@
         <PackageVersion Include="MediatR.Contracts" Version="2.0.1" />
         <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
-        <PackageVersion Include="OpenTelemetry" Version="1.20.1" />
-        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.1" />
-        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.1" />
+        <PackageVersion Include="OpenTelemetry" Version="$(OpenTelemetryVersion)" />
+        <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+        <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
         <PackageVersion Include="Polly" Version="8.9.1" />
         <PackageVersion Include="protobuf-net" Version="3.4.40" />
         <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
@@ -46,8 +47,8 @@
         <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
-        <PackageVersion Include="StackExchange.Redis" Version="3.4.31" />
-        <PackageVersion Include="Swashbuckle.AspNetCore" Version="11.0.0" />
+        <PackageVersion Include="StackExchange.Redis" Version="3.4.35" />
+        <PackageVersion Include="Swashbuckle.AspNetCore" Version="11.0.1" />
         <PackageVersion Include="System.Collections.Immutable" Version="11.0.0" />
         <PackageVersion Include="System.Configuration.ConfigurationManager" Version="11.0.0" />
         <PackageVersion Include="System.ComponentModel.Annotations" Version="5.0.0" />
