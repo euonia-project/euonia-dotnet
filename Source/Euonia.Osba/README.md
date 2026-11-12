@@ -34,6 +34,10 @@
 8. [相关文档](#8-相关文档)
 9. [版本与许可](#9-版本与许可)
 
+- [常见问题与故障排查](#常见问题与故障排查)
+- [最佳实践](#最佳实践)
+- [版本与兼容](#版本与兼容)
+
 ---
 
 ## 1. 定位与能力
@@ -95,7 +99,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 | 项目 | 值 |
 |---|---|
 | 目标框架 | `net10.0;net11.0` |
-| 当前版本 | `2026.4.7`（见仓库根 `project.props`） |
+| 当前版本 | `2026.5.0`（见仓库根 `project.props`） |
 | 根命名空间 | `Nerosoft.Euonia.Osba` |
 | 包名 | `Euonia.Osba` |
 | 许可 | GPL-3.0（见仓库根 `LICENSE`） |
@@ -129,7 +133,7 @@ dotnet add package Euonia.Osba
 或直接在项目中引用：
 
 ```xml
-<PackageReference Include="Euonia.Osba" Version="2026.4.7" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
 ```
 
 ### 2.2 装配
@@ -1900,10 +1904,57 @@ flowchart TB
 
 ## 9. 版本与许可
 
-- 当前版本：`2026.4.7`（见仓库根 `project.props`）。
+- 当前版本：`2026.5.0`（见仓库根 `project.props`）。
 - 目标框架：`net10.0`、`net11.0`。
 - 许可：GNU General Public License v3.0，见仓库根 [`LICENSE`](../../LICENSE)。
 
 ---
 
 > 本文档描述的是**当前源码行为**。如果文档与代码不一致，以代码和测试为准；欢迎在修改行为时同步更新本文件与相关示例。
+
+## 常见问题与故障排查
+
+### 读写属性时抛 `Property 'X' is not registered.`
+
+**原因**：属性没有通过 `RegisterProperty` 注册为静态 `PropertyInfo<T>`，或访问器里传入的名称与注册名不一致（`Source/Euonia.Osba/Core/ObjectBase.cs:1169`、`Resources.IDS_PROPERTY_NOT_REGISTERED`）。
+**解决**：为每个属性声明 `public static readonly PropertyInfo<T> XProperty = RegisterProperty(p => p.X);`，访问器统一走 `GetProperty(XProperty)` / `SetProperty(XProperty, value)`；不要用字符串名绕过注册。
+
+### 抛 `Object state transition from 'A' to 'B' is not allowed.`
+
+**原因**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 之间的迁移不满足默认状态机（`Source/Euonia.Osba/Core/ObservableObject.cs:98`）。
+**解决**：确认没有对已删除对象再标记修改；确有自定义迁移时重写 `CanTransitionTo` 并在 `StateChanged` 里记录，不要直接改状态字段。
+
+### 启动正常，第一次 `SaveAsync` 才报缺少持久化方法
+
+**原因**：`OsbaOptions.ValidateOnStartup` 默认 `false`，`AddBusinessObject` 不做启动期校验（`Source/Euonia.Osba/OsbaOptions.cs:24`、`ServiceCollectionExtensions.cs:67`）。
+**解决**：生产宿主显式 `options.ValidateOnStartup = true`，让缺 `[FactoryInsert]` / `[FactoryUpdate]` / `[FactoryDelete]` 的对象在启动阶段失败；测试程序集可保持关闭。
+
+### 声明了 `[Permission]` 后调用即抛异常
+
+**原因**：对象声明了权限要求，但容器里没有 `IPermissionChecker`（资源 `Resources.resx:136`：`... but {1} is not registered in the container. Call AddPermission ...`）。
+**解决**：宿主 `services.AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })`，或自行注册 `IPermissionChecker` / `IObjectScopeAuthorizer`（§3.8.4、§6 第 49 条）。
+
+### `[Inject]` 注入带 key 的服务报 `IKeyedServiceProvider` 错误
+
+**原因**：`[Inject]` 指定了 `ServiceKey`，但当前容器未实现 `IKeyedServiceProvider`（`Source/Euonia.Osba/Factory/BusinessObjectFactory.cs:676`）。
+**解决**：升级到 .NET 8+ 的内置容器（本包目标 `net10.0` 已满足），或去掉 `ServiceKey` 改用普通注册。
+
+## 最佳实践
+
+- **生产开 `ValidateOnStartup`**：把工厂签名、`[Inject]` 可解析性、属性元数据问题提前到启动阶段，配合 `DiagnosticLevel = Warning` 让警告可见。
+- **按程序集注册一次**：`services.AddBusinessObject(options, typeof(Repo).Assembly)`；选项以第一次装配为准，模块化宿主在根模块里配置。
+- **服务对象用对象级规则**：`ServiceObject<T>` 没有 `ChangedProperties` / `SaveAsync`，校验写成 `ObjectRuleBase` 子类而不是属性规则。
+- **读模型单独声明 `ScopeModel<T>`**：不声明就没有行级约束（§6 第 48 条），不要指望写模型上的策略覆盖读侧。
+- **权限只在宿主接线**：Osba 不引用 `Euonia.Security`，用 `AddPermission` 一行接引擎；不要为了权限在业务对象里手写鉴权分支。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 依赖 | `Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation` |
+
+- **不引用 `Euonia.Security` / `Euonia.Domain`**：权限契约来自 Core，DDD 只是可选投影；升级时不会因这两个包引入传递依赖（§1.5）。
+- **公共 API 兼容策略**见 [§3.16](#316-公共-api-兼容性策略)：新增成员优先，破坏性变更走主版本。
+- 文档结构（§1–§9）保持稳定；新增的 FAQ / 最佳实践 / 兼容说明是无编号章节，不会占用既有编号。

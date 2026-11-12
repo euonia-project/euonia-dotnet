@@ -180,6 +180,36 @@ public sealed class CreateOrderData
 - [`Euonia.Linq`](../Euonia.Linq/README.md) —— 规约与查询扩展
 - [`Euonia.Core`](../Euonia.Core/README.md) —— `ObjectId` 等基础类型
 
+## 常见问题与故障排查
+
+### `RaiseEvent` 之后消息总线没有收到事件
+`Aggregate.RaiseEvent` 只把事件加入本地 `_events` 队列并调用 `Register<T>` 注册的处理器，不会自动发布到总线。应用层需要在保存前后调用 `GetAndClearEvents()`，再交给总线或领域事件分发器；`ClearEvents()` 会直接丢弃未处理事件。
+
+### 两个属性相同的值对象却不相等
+`ValueObject<T>` 用反射比较公共属性，但嵌套值对象属性走引用比较（`left is TValueObject` 时使用 `ReferenceEquals`）。把嵌套值对象拆成原始字段、重写 `Equals`，或确保比较的是同一实例。
+
+### EF Core 加载的实体与内存实体不相等
+`Entity<TKey>.Equals` 要求 `GetType()` 完全相同；EF Core 动态代理是派生类型，与普通实体比较会返回 `false`。不要在代理对象上依赖实体相等性，改用 `Id` 比较。
+
+### 标注了 `[Audited]` 却没有审计记录
+本包的 `AuditedAttribute` 位于 `Nerosoft.Euonia.Domain`，只是旧版契约，不会被 `Euonia.Application` 的审计拦截器识别；应用层审计请使用 `Nerosoft.Euonia.Auditing.AuditedAttribute`，并确认 `AddAuditing` 与存储已注册。
+
+### `Register<T>` 的处理器没有被调用
+`Register<T>` 是 `protected`，必须在派生类构造函数中调用；`LoadFromHistory` 只重放已注册处理器，不会重新入队，也不处理未注册的事件类型。检查注册顺序与事件运行时类型是否完全匹配。
+
+## 最佳实践
+
+- 在聚合构造函数中 `Register<T>` 事件处理器，业务方法只 `RaiseEvent`；应用层在持久化后统一 `GetAndClearEvents()` 并分发。
+- 值对象保持属性不可变，嵌套值对象尽量扁平化；需要集合语义时重写 `Equals`/`GetHashCode`。
+- 实体相等性只用于同一运行时类型；跨代理/跨层比较使用 `Id`。
+- 审计统一使用 `Nerosoft.Euonia.Auditing` 的契约与特性，不要混用 Domain 中的旧版同名类型。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Core`、`Euonia.Linq`、`Microsoft.Extensions.DependencyInjection` / `Logging.Abstractions`；具体版本由仓库构建属性决定。
+- 已知边界：领域事件不自动发布；`ValueObject<T>` 嵌套值对象按引用比较；Domain 的审计类型与 `Euonia.Auditing` 同名但不同命名空间。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

@@ -177,6 +177,36 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias：大�
 - [`Euonia.Linq`](../Euonia.Linq/README.md) —— 查询与规约
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— `RepositoryModule` 所在框架
 
+## 常见问题与故障排查
+
+### 配置了连接串，但仓储没有使用它
+`AddEfCoreRepository<TContext>(options => ...)` 直接接收 `DbContextOptionsBuilder`，不会读取 `ConnectionStrings`。要使用名称回退、环境变量与 `{provider}://` 前缀，改用 `AddDataContextFactory<TContext>()`；同时确认 `[ConnectionString(Name = "...")]` 的名称与配置键一致，且为该 provider 注册了键控 `ConnectionConfigurator`。
+
+### 工作单元回滚了，数据却已经写入
+仓储的 `autoSave` 默认是 `true`，每次 `InsertAsync`/`UpdateAsync`/`DeleteAsync` 都会立即保存，工作单元之后无法回滚已提交的数据。工作单元内统一传 `autoSave: false`，由 `IUnitOfWork.CompleteAsync()` 统一保存。
+
+### 排序参数不生效
+`Sort` 只接受 `[+|-]属性名` 格式，例如 `-CreatedAt`；写成 `"CreateTime desc"` 或带空格的字符串会被正则忽略，查询保持原顺序。`Paginate` 也会把小于 1 的页码按 1、小于 0 的页大小按 0 处理。
+
+### `GetAsync(key)` 总是返回 `null`
+`IRepository<TEntity, TKey>` 按键查询依赖 `IEntity<TKey>.Id` 属性；实体没有实现该接口、`Id` 名称不匹配，或 Mongo 的键不是可解析的 `ObjectId` 字符串时都会查不到；Mongo 的键格式错误会抛 `FormatException`。检查实体契约与键类型，Mongo 场景不要用 `long`/`Guid` 作为 `TKey`。
+
+### 自定义上下文的 `BeginTransactionAsync` 没有开启事务
+`IRepositoryContext.BeginTransactionAsync` 的默认实现只是调用 `GetConnection().BeginTransaction()` 并丢弃返回值；自定义上下文必须重写它并保存事务句柄，否则后续 `CommitAsync`/`RollbackAsync` 无法作用于真实事务。
+
+## 最佳实践
+
+- 用稳定的 `[ConnectionString(Name = "Orders")]` 命名连接串，环境差异用 `ConnectionStrings__Orders` 或 `CONNECTION_STRING_ORDERS` 覆盖；需要解析链时统一走 `AddDataContextFactory`。
+- 工作单元内 `autoSave: false`，仓储按 Scoped 解析，不要把 `IRepository` 捕获到单例或跨请求复用。
+- 分页排序使用 `Paginate(page, size, "-CreatedAt")` 这类格式；对外部传入的页码/页大小先做边界校验。
+- 连接串与凭据放环境变量或密钥库，不要写进源码；用 `RepositoryTelemetry` 观察操作耗时，不记录 SQL 与参数。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Linq`、`Euonia.Modularity`、`Euonia.Uow`；具体包版本由仓库构建属性决定。
+- 已知边界：连接串解析由 EF Core 适配包与 `IContextFactory` 实现，本包只定义契约；默认 `BeginTransactionAsync` 不保存事务；Mongo 的键与事务语义由 Mongo 适配包决定。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

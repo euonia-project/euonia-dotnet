@@ -112,6 +112,38 @@ TypeAdapterFactory.SetCurrent(new AutomapperTypeAdapterFactory(mapper));
 - `ProjectedAs`/`ProjectedAsCollection` 定义在**全局命名空间**的 `Extensions` 类中，不需要 `using Nerosoft.Euonia.Mapping;`；`TypeAdapterFactory`、`ITypeAdapter`、`ITypeAdapterFactory` 才在 `Nerosoft.Euonia.Mapping` 命名空间。
 - `validate: true` 只是把 Profile 加入校验列表；真正的 `AssertConfigurationIsValid()` 在映射器构建阶段执行，配置错误会在首次解析 `IMapper` 时暴露。
 
+## 常见问题与故障排查
+
+### `ProjectedAs` 抛 `NullReferenceException`
+**原因**：`ProjectedAs` 通过全局 `TypeAdapterFactory.CreateAdapter()` 取适配器；没有调用 `TypeAdapterFactory.SetCurrent(...)`（模块未初始化或手动装配漏了这一步）时返回 `null`，随后调用 `Adapt` 触发空引用。
+**解决**：模块化应用确认 `[DependsOn(typeof(AutomapperModule))]` 且应用已初始化；手动装配在解析 `IMapper` 后调用 `TypeAdapterFactory.SetCurrent(new AutomapperTypeAdapterFactory(mapper))`。
+
+### Profile 没注册，映射时抛 AutoMapper 配置异常
+**原因**：`AutomapperModule` 调用无参 `AddAutomapper()`，只应用 `AutomapperOptions` 中累积的 `AddMaps`/`AddProfile`；没有配置任何 Profile 时，`IMapper` 没有任何映射。
+**解决**：在解析 `IMapper` 之前配置 `services.Configure<AutomapperOptions>(options => options.AddMaps(typeof(Program).Assembly))`；确认 Profile 在扫描程序集内且不是抽象/泛型类型。
+
+### `validate: true` 没有在启动时报配置错误
+**原因**：`AddMaps(..., validate: true)` / `AddProfile(..., validate: true)` 只把 Profile 加入校验列表；真正的 `AssertConfigurationIsValid()` 在 `IMapper` 构建阶段执行，而 `AddAutomapper()` 的映射器是首次解析时才创建。
+**解决**：在启动冒烟测试中显式 `provider.GetRequiredService<IMapper>()`；或使用带 `assertConfiguration: true` 的 `AddAutomapper` 重载，让构建时立即断言。
+
+### 找不到 `ProjectedAs` 或 `AddAutomapper`
+**原因**：`ProjectedAs`/`ProjectedAsCollection` 在全局命名空间的 `Extensions` 类中，不在 `Nerosoft.Euonia.Mapping`；`AddAutomapper` 是 `Microsoft.Extensions.DependencyInjection` 的扩展方法。
+**解决**：`ProjectedAs` 不需要额外 `using`；`AddAutomapper` 确保引入 `Microsoft.Extensions.DependencyInjection`；`AutomapperOptions`、`TypeAdapterFactory` 才需要 `using Nerosoft.Euonia.Mapping;`。
+
+## 最佳实践
+
+- 在首次解析 `IMapper` 前完成 `AutomapperOptions` 配置；模块化应用把配置放在依赖 `AutomapperModule` 的模块里，避免顺序问题。
+- 启动时解析一次 `IMapper` 并开启 `validate: true`/`assertConfiguration: true`，把映射配置错误挡在启动阶段。
+- Profile 按聚合/场景拆分并放在应用程序集，统一 `AddMaps(assembly)`；不要同时手工 `AddProfile` 同一类型造成重复配置。
+- 需要与 Mapster 并存时保留 `"automapper"` 键控 `ITypeAdapterFactory`（模块已注册）；手动装配时按相同键注册并设置当前工厂。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：AutoMapper 17.0.0、Newtonsoft.Json 13.0.4（由 `Directory.Packages.props` 锁定）；`AutomapperOptions` 为纯代码配置。
+- 已知边界：`ProjectedAs` 在全局命名空间；`AutomapperModule` 注册 `IMapper` 与键控工厂，并在初始化时设置当前工厂；配置校验延迟到映射器构建。
+- 升级提示：升级 AutoMapper 后复核 Profile 注册方式、`MapperConfigurationExpression` API 与 `AssertConfigurationIsValid` 行为。
+
 ## 相关包
 
 - [`Euonia.Mapping`](../Euonia.Mapping/README.md) —— 映射抽象

@@ -221,7 +221,54 @@ public sealed class OrderService(IBus bus)
 3. **优先级需要队列声明支持**：`MaxPriority` 只在队列以 `x-max-priority` 首次声明时生效；同名队列已用其他参数创建时该声明会被 broker 忽略。
 4. **模块开关不作用于手动注册**：`Enabled` 只由 `RabbitMqBusModule` 读取；直接调用 `AddRabbitMqBus` 时即使 `Enabled=false` 也会注册传输器。
 5. **发布是异步确认**：`PublishAsync` 使用 publisher confirmations，但不可路由消息只记录警告日志（`OnBasicReturnAsync`），不会抛异常。
-6. **单播/请求依赖队列消费**：目标队列没有消费者时，请求会一直等待；`CallAsync` 建议设置 `WithTimeout`，`SendAsync` 请传入取消令牌（`SendOptions.Timeout` 不参与发送路径）。
+6. **单播/请求要求队列已有消费者**：发送前会 `QueueDeclarePassiveAsync` 检查队列，队列不存在或 `ConsumerCount < 1` 时直接抛 `MessageDeliverException`（`Source/Euonia.Bus.RabbitMq/RabbitMqTransporter.cs:346-366`），因此消费端必须先启动。
+
+## 常见问题与故障排查
+
+### 发送/调用抛 `MessageDeliverException`（队列不存在或无消费者）
+
+**原因**：`SendAsync` / `CallAsync` 在发布前用 `QueueDeclarePassiveAsync` 检查目标队列，队列不存在或 `ConsumerCount < 1` 都会直接失败。
+
+**解决**：先启动消费端；核对两端 `SubscriptionId`、`QueueNamePrefix` 一致（`RabbitMqTransporter.cs:346-366`）。
+
+### 模块已加载但传输器没有注册
+
+**原因**：`RabbitMqBusModule` 只在 `Euonia:Bus:RabbitMq:Enabled=true` 且 `Connection` 非空时调用 `AddRabbitMqBus`。
+
+**解决**：补齐这两个键，或改为手动 `AddRabbitMqBus(name, o => o.Connection = ...)`（`RabbitMqBusModule.cs:18-28`）。
+
+### 发布成功但订阅端收不到
+
+**原因**：发布端与订阅端 `ExchangeNamePrefix` 不一致导致交换机名不同；或消息未被约定识别为多播，订阅者没有在对应通道启动。
+
+**解决**：统一前缀；确认 `SetConvention` 能识别该消息；检查订阅队列是否绑定到 `{prefix}:{channel}` 交换机。
+
+### 同一条消息被重复消费
+
+**原因**：`AutoAck=false` 时处理失败不会确认，broker 会重新投递；这是至少一次语义的预期行为。
+
+**解决**：处理器做幂等；或开启 `Inbox:Enabled` 并注册 `IInboxStore` 去重。
+
+### `MaxPriority` 配了但优先级无效
+
+**原因**：`MaxPriority=0` 表示不启用；或同名队列已用不同参数声明过，broker 会忽略新的 `x-max-priority`。
+
+**解决**：设置 `MaxPriority` 为 1-9，并在首次部署时创建队列；已有队列需删除重建（`RabbitMqDelivery.cs:90-117`）。
+
+## 最佳实践
+
+1. **每个服务/部署组使用唯一 `SubscriptionId`**：队列名由它推导，同名会共享消费，改名会导致新队列无人绑定。
+2. **始终启用并监控死信**：保持 `IsDeadLetterEnabled=true`，对 `{queue}.dlq` 建告警，而不是只依赖日志。
+3. **按处理耗时调 `PrefetchCount`**：默认 1 适合慢处理；吞吐优先时可提高到 10-50，并配合 `AutoAck=false`。
+4. **关键消息保持 `Persistent=true` 与 publisher confirmations**：当前发布路径固定开启确认，不要改成瞬时投递来换吞吐。
+5. **前缀与连接串走环境变量**：`Euonia__Bus__RabbitMq__Connection`、`EUONIA_BUS_RABBITMQ_CONNECTION`；前缀一旦上线不要随意修改，否则队列/交换机全部重建。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`RabbitMQ.Client`、`Polly`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：`Enabled` 只由模块读取；`AddRabbitMqBus` 手动注册时忽略该开关；发送前要求目标队列已有消费者。
 
 ## 相关包
 

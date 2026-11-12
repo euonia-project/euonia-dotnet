@@ -18,7 +18,7 @@ dotnet add package Euonia.Endpoint.SourceGenerator
 `dotnet add package` 只写入普通 `PackageReference`，而 analyzer 必须带上 `PrivateAssets="all"` / `OutputItemType="Analyzer"` 才不会作为运行时依赖传递。把引用改成下面的形式（包引用）：
 
 ```xml
-<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.4.7"
+<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.5.0"
                   PrivateAssets="all"
                   OutputItemType="Analyzer"
                   ReferenceOutputAssembly="false" />
@@ -199,3 +199,44 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 构建通过，但生成代码/端点不存在
+
+**原因**：引用没有 analyzer 元数据——普通 `PackageReference` 不会加载生成器；或引用加在了不声明接口的项目上（生成器只处理**引用它的编译**）。
+**解决**：确认 `csproj` 里是 `OutputItemType="Analyzer"` + `PrivateAssets="all"`（包引用）或 `OutputItemType="Analyzer"`（项目引用），然后重新构建；仍不出现时用 `EmitCompilerGeneratedFiles` 检查 `obj/` 下的生成文件。
+
+### 某个方法没被生成
+
+**原因**：带非 `CancellationToken` 的默认参数会被跳过（`Source/Euonia.Endpoint.SourceGenerator/HttpGenerator.cs:122`、`GrpcGenerator.cs:307`）；gRPC 侧带 `CallContext` 参数的方法也会跳过（`GrpcGenerator.cs:302`）。
+**解决**：去掉多余默认值或改由重载提供；HTTP 侧被跳过的方法还能靠运行时兜底，gRPC 侧等于不暴露，必须修正签名。
+
+### 构建出现 `EUONIA001` / `EUONIA002` 警告
+
+**原因**：`EUONIA001` 表示 `GrpcMethod` 与流式签名不匹配（`GrpcGenerator.cs:129`）；`EUONIA002` 表示多个契约推导出同一个 gRPC 服务名（`GrpcGenerator.cs:112`）。两者都不中断构建。
+**解决**：按「四种方法类型」对齐签名；服务名冲突时显式写 `[ExposeGrpc(Prefix = "...")]`；建议在 CI 里把这两个 ID 提升为错误。
+
+### 多目标项目报 `RS1041`
+
+**原因**：Roslyn 不允许分析器目标具体 .NET 版本，而本项目有 `net10.0` 目标（仅用于 C# Dev Kit / IDE）。
+**解决**：消费方无需处理；仓库内已在 `net10.0` 目标上条件抑制该诊断（`Euonia.Endpoint.SourceGenerator.csproj:17-18`），发布包只含 `netstandard2.0` analyzer。
+
+## 最佳实践
+
+- **引用加到声明接口的项目**：analyzer 不会跨项目传播，多项目解决方案要逐个项目引用。
+- **把诊断当门禁**：`<WarningsAsErrors>EUONIA001;EUONIA002</WarningsAsErrors>`，避免「构建绿了但端点没生成」。
+- **只在排障时开 `EmitCompilerGeneratedFiles`**：生成目录属于构建产物，不要提交，也不要手工修改。
+- **版本与运行时配套**：生成代码依赖 `HttpGeneratedMapper` / `GrpcMappings` 的签名，升级时与 `Euonia.Endpoint.Http` / `Euonia.Endpoint.Grpc` 同步。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `netstandard2.0`（analyzer）、`net10.0`（IDE，仅本地） |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| Roslyn | `Microsoft.CodeAnalysis.CSharp` 5.9.0（`PrivateAssets="all"`） |
+
+- **包只含 analyzer**：`IncludeBuildOutput=false`、`SuppressDependenciesWhenPacking=true`，包内只有 `analyzers/dotnet/cs/Euonia.Endpoint.SourceGenerator.dll`，不会引入运行时依赖。
+- **`DevelopmentDependency=true`**：默认不参与传递引用，升级消费方不会被动带入新版本。
+- **诊断 ID 稳定**：`EUONIA001` / `EUONIA002` 属于兼容性边界，新增诊断会使用新 ID。

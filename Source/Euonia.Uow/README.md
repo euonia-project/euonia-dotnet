@@ -171,6 +171,33 @@ public sealed class OrderAppService : IUnitOfWorkEnabled
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— `UnitOfWorkModule` 的模块框架
 - [`Euonia.Application`](../Euonia.Application/README.md) —— 拦截器管线
 
+## 常见问题与故障排查
+
+### 事务没有提交，数据却已经写入
+`UnitOfWorkOptions.IsTransactional` 默认是 `false`，`Normalize` 也不会把它改成 `true`；非事务性工作单元只调用上下文的 `SaveChangesAsync`，不会开启数据库事务。另一个常见原因是仓储使用 `autoSave: true`，在 `CompleteAsync` 之前就提交了。解决：在 `Euonia:Uow:IsTransactional`、`[UnitOfWork(true, ...)]` 或 `Begin(new UnitOfWorkOptions(isTransactional: true))` 中显式开启事务，并在工作单元内统一使用 `autoSave: false`。
+
+### 方法抛异常后没有回滚
+拦截器在目标方法抛出异常时不会调用 `CompleteAsync`；事务性工作单元在 `Dispose` 时通过 `AsyncContext.Run` 回滚。若目标类型没有被 `Euonia.Application` 的代理管线拦截，`[UnitOfWork]` 完全不生效。检查模块是否依赖 `UnitOfWorkModule`、服务是否由 DI 创建，以及 `Options.IsTransactional` 是否为 `true`。
+
+### 嵌套调用提前提交或提交无效
+未指定 `requiresNew: true` 时，`Begin` 返回 `ChildUnitOfWork`，它的 `CompleteAsync` 是空操作，真正的提交由根工作单元负责；在子作用域里调用 `CompleteAsync` 不会落库。需要独立事务时显式传 `requiresNew: true`，并确保最外层调用 `CompleteAsync`。
+
+### `[UnitOfWork(Timeout = ...)]` 编译失败
+`UnitOfWorkAttribute.Timeout` 的类型是 `TimeSpan?`，C# 特性实参不支持 `TimeSpan`，因此无法在特性上直接设置。改用 `Euonia:Uow:Timeout` 或手动构造 `UnitOfWorkOptions.Timeout`；该超时只用于 `CompleteAsync` 的取消令牌，不会中断业务方法本身。
+
+## 最佳实践
+
+- 用环境变量覆盖事务开关：`Euonia__Uow__IsTransactional=true` 或 `EUONIA_UOW_ISTRANSACTIONAL=true`，避免把环境差异写进代码。
+- 应用服务边界统一标注 `[UnitOfWork(true, IsolationLevel.ReadCommitted)]`，仓储统一 `autoSave: false`，只在最外层调用一次 `CompleteAsync`。
+- 长事务拆成短工作单元；`Timeout` 只保护完成阶段，业务耗时仍需自己的 `CancellationToken` 与超时。
+- 排障时先看 `IUnitOfWork.Current` 与 `Options.IsTransactional`，再检查 `UnitOfWorkAccessor` 是否因 `Reserve`、`Dispose` 或 `IsCompleted` 跳过了当前实例。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Modularity`、Castle DynamicProxy、`Microsoft.Extensions.Options` / 依赖注入抽象；具体包版本由仓库构建属性决定，本文不固定版本号。
+- 已知边界：`UnitOfWorkAttribute.Timeout` 无法用特性实参设置；`IUnitOfWork.Items` 不是线程安全字典；`AddUnitOfWork()` 不注册拦截器，需要 `UnitOfWorkModule` 或自行装配。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

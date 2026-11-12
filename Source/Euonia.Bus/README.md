@@ -244,6 +244,53 @@ public sealed class DeadLetterController(IDeadLetterService deadLetters)
 7. **收件箱只认全局开关**：消息级 `UseInbox` 仅是发送侧标记，内置传输器不会透传，单独设置对消费端去重没有影响。
 8. **远程传输只支持请求-响应**：HTTP 与 gRPC 传输器的 `PublishAsync` / `SendAsync` 返回失败任务（`NotSupportedException`），应使用 `CallAsync`。
 
+## 常见问题与故障排查
+
+### 发布消息抛 `MessageTypeException`
+
+**原因**：默认只注册 `DefaultMessageConvention`（识别 `IUnicast` / `IMulticast` / `IRequest<>` 标记接口）；使用 `[Unicast]` 等特性但未注册 `AnnotationMessageConvention`；或没有任何策略匹配且 `DefaultTransporter` 为空；或单播消息同时匹配多个传输器。
+
+**解决**：在 `SetConvention` 中补 `convention.Add<AnnotationMessageConvention>()`；设置 `Euonia:Bus:DefaultTransporter`；单播消息只保留一个出站策略（`StrategicDispatcher.cs:63-65`）。
+
+### `Euonia:Bus` 配置节不生效
+
+**原因**：`AddEuoniaBus()` 只注册引擎服务，不读取配置节；未使用 `MessageBusModule` 也未手动绑定。
+
+**解决**：`services.AddOptions<MessageBusOptions>().BindConfiguration("Euonia:Bus")`，或改用 `[DependsOn(typeof(MessageBusModule))]`（`MessageBusModule.cs:18-20`）。
+
+### `EUONIA_BUS_*` 大写单下划线变量不生效
+
+**原因**：该 alias 配置源由 `Euonia.Modularity` 的配置构建注册；普通 `Host.CreateApplicationBuilder` 只认原生双下划线。
+
+**解决**：使用 `HostUtility` / `AddModularityApplication`，或改用 `Euonia__Bus__DefaultTransporter=...`。
+
+### 开启 Outbox 后发布抛 `MessagePersistentException`
+
+**原因**：`Outbox:Enabled=true` 或消息级 `UseOutbox` 生效，但容器中没有 `IOutboxStore`；或同一 `MessageId` 重复插入。
+
+**解决**：注册 `services.AddInMemoryOutbox()` 或自定义存储；发送侧保证 `MessageId` 唯一（`MessageBus.cs:139-150`）。
+
+### HTTP / gRPC 传输器调用 `Publish` / `Send` 抛 `NotSupportedException`
+
+**原因**：远程传输只实现请求-响应，多播/单播没有对应的服务端协议。
+
+**解决**：改用 `CallAsync` 或 `CallBuilder.ExecuteAsync`；需要多播时换用 broker 传输。
+
+## 最佳实践
+
+1. **按边界选传输器**：单进程与测试用 `Euonia.Bus.InMemory`；跨服务事件用 RabbitMQ/ActiveMQ；同步 RPC 用 HTTP/gRPC，并只走 `CallAsync`。
+2. **默认传输器显式配置**：即使只注册一个传输器，也设置 `Euonia:Bus:DefaultTransporter`，避免策略漏配时抛 `MessageTypeException`。
+3. **Outbox 只覆盖需要至少一次投递的路径**：开启 `Outbox:Enabled` 后为 `PollingInterval`、`MaxRetryAttempts`、`RetentionPeriod` 给出明确值，并用 `AddInMemoryDeadLetters()` 接住终态失败。
+4. **消费端做幂等**：至少一次语义下重复不可避免；按业务键或 `MessageId` 去重，或开启 `Inbox:Enabled` 并注册 `IInboxStore`。
+5. **环境变量分层部署**：容器/CI 用 `Euonia__Bus__Outbox__Enabled=true`，模块化宿主可用 `EUONIA_BUS_OUTBOX_ENABLED=true`；两种写法不要混用于同一键。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Pipeline`、`Euonia.Modularity`、`Euonia.Telemetry`、`Euonia.Tenancy`、`Euonia.Auditing`；另引用 `Newtonsoft.Json`、`System.Reactive`。
+- **版本策略**：包版本随仓库 `Source/project.props` 统一管理，本文不固定具体版本号。
+- **升级注意**：`RoutedMessage` 系列在本包而非 `Euonia.Bus.Abstract`；两个包共用 `Nerosoft.Euonia.Bus` 命名空间；`UseInbox` 只是发送侧标记，收件箱去重只由 `Inbox:Enabled` 决定。
+
 ## 相关包
 
 - [`Euonia.Bus.Abstract`](../Euonia.Bus.Abstract/README.md) —— 信封、约定、策略、可靠性契约

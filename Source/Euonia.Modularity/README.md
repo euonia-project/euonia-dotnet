@@ -295,6 +295,38 @@ public sealed class OrderService : IOrderService
 - `ModuleContextBase.ConfigurationContext`（以及 `Services`、`Configure<T>`）只在模块执行服务配置期间可用；在 `ConfigureServices` 之外访问会抛出 `InvalidOperationException`。
 - 对普通 `IConfigurationRoot` 调用 `ConfigurationHelper.EnsureEnvironmentVariables` 返回的是新的分层视图，不保证与宿主配置引用相等；`ConfigurationManager` 路径才会就地修改同一实例。
 
+## 常见问题与故障排查
+
+### `OnApplicationInitialization` 没有执行
+**原因**：`ApplicationFactory.Create<T>` / `AddModularityApplication<T>` 只完成模块加载与服务注册，不会自动调用模块初始化；必须再调用 `Initialize(serviceProvider)`（ASP.NET Core 中由 `app.InitializeApplication()` 完成）。
+**解决**：独立宿主在 `BuildServiceProvider()` 后调用 `application.Initialize(provider)`；Web 宿主在 `Startup.Configure` 最前面调用 `app.InitializeApplication()`，并确认返回值没有被提前丢弃。
+
+### 模块没有加载，或启动时报循环依赖
+**原因**：模块未出现在 `[DependsOn]` 依赖链中；自依赖/循环依赖会由 `ModuleLoader.SortByDependency` 抛 `ArgumentException`；依赖模块不存在时抛 `InvalidOperationException`。
+**解决**：从启动模块开始补齐 `[DependsOn]`；用 `application.Modules`、`IsModuleLoaded<T>()`、`FindModule<T>()` 检查实际加载结果；模块类型必须实现 `IModuleContext` 且可被无参构造。
+
+### 环境变量没有生效，或映射到了错误的键
+**原因**：设置了 `EnvironmentVariablesPrefix` 后，前缀会先被剥离再映射；把前缀设为 `EUONIA_` 时，`EUONIA_BUS_ENABLED` 会变成 `BUS:ENABLED` 而不是 `Euonia:Bus:Enabled`。另外原生 `__` 源位于自定义 `_` 源之后，同键时原生格式优先。
+**解决**：需要 `Euonia:*` 键时使用独立前缀（如 `APP_`）或不设前缀；用 `ConfigurationHelper.BuildConfiguration` 构建后打印最终键集合验证，不要混用多个前缀后依赖顺序。
+
+### `GetNamedService<T>` 返回 `null`，或注册同名服务抛异常
+**原因**：名称未注册、名称拼写不一致，或同一服务类型下重复注册同名实现。`GetNamedService` 找不到时返回 `null`；`GetNamedRequiredService` 才会抛异常。重复名称由 `RegisterNamedService` 抛 `InvalidOperationException`。
+**解决**：集中管理名称常量；需要失败语义时用 `GetNamedRequiredService<T>(name)`；注册前检查名称是否已存在，避免在多个模块重复注册同一名称。
+
+## 最佳实践
+
+- 按能力拆分模块（领域、基础设施、应用层），`[DependsOn]` 只指向更底层模块，避免把启动模块作为其他模块的依赖。
+- 在宿主启动路径只调用一次 `Initialize`，在停止路径调用 `Shutdown`；对同一服务提供程序重复调用是幂等的，测试中可安全清理。
+- 配置统一走 `ConfigurationHelper.BuildConfiguration`，部署变量使用独立前缀或原生 `__`；对最终配置键集合做启动断言。
+- 模块图测试用 `ApplicationFactory.Create` + `IsModuleLoaded`/`Modules`，配置用内存集合，避免依赖当前目录的 `appsettings.json`。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：`Castle.Core` 5.2.1、`Microsoft.Extensions.*` 11.0.0（由 `Directory.Packages.props` 锁定）。
+- 已知边界：环境变量源位于配置末尾；普通 `IConfigurationRoot` 包装后返回新视图；带前缀的配置交给自动包装时，前缀隔离不是强保证。
+- 升级提示：环境变量优先于命令行、原生 `__` 优先于自定义 `_` 的规则已固定；升级后如仍依赖旧顺序，需要显式调整配置源。
+
 ## 相关包
 
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础工具

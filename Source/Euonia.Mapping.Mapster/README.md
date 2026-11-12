@@ -149,6 +149,36 @@ public sealed class OrderQueryService(IMapper mapper)
 - [`Euonia.Mapping.Automapper`](../Euonia.Mapping.Automapper/README.md) —— AutoMapper 实现
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块与依赖注入
 
+## 常见问题与故障排查
+
+### `ProjectedAs` 抛 `NullReferenceException`
+扩展方法通过 `TypeAdapterFactory.CreateAdapter()` 取当前工厂；未执行 `MapsterModule.OnApplicationInitialization`、未手动 `TypeAdapterFactory.SetCurrent(...)`，或当前工厂被其他映射后端覆盖时，`CreateAdapter()` 返回 `null`。确认模块已加载，且初始化顺序在首次投影之前。
+
+### `MapsterOptions` 里注册的 Profile 没有生效
+`AddMapster()` 在首次解析 `TypeAdapterConfig` 时应用 `MapsterOptions`；如果在此之前已经解析过 `IMapper`/`TypeAdapterConfig`，后续修改 options 不会重新应用。把 `services.Configure<MapsterOptions>(...)` 放在首次解析之前，或重启宿主。
+
+### `ValidateScopes` 开启后启动失败
+键控工厂 `MapsterTypeAdapterFactory` 依赖作用域的 `IMapper`，不能按普通单例注册；本包用键 `"mapster"` 注册键控单例并在内部构造 `ServiceMapper`。自定义注册时不要把 `IMapper` 捕获到单例，仓库的 `MapsterModuleTests` 覆盖了该场景。
+
+### AutoMapper 与 Mapster 同时安装后行为不确定
+`TypeAdapterFactory.SetCurrent` 是进程级静态状态，最后执行 `OnApplicationInitialization` 的模块获胜。一个进程只保留一个当前映射后端；需要并存时使用键控 `ITypeAdapterFactory` 显式解析，不要依赖全局投影。
+
+### `config.NewConfig<,>()` 没有生效
+`NewConfig` 是 Mapster 原生 API，只有在 `IRegister.Register` 被应用后才会进入配置。确认 Profile 已通过 `AddProfile`/`AddProfiles(Assembly[])` 注册，且 `AddMapster()` 在解析映射器前执行；扫描不到的程序集不会自动加载。
+
+## 最佳实践
+
+- 用 `[DependsOn(typeof(MapsterModule))]` 统一注册，避免手工 `AddMapster()` 与 `SetCurrent` 顺序不一致。
+- 在模块 `ConfigureServices` 中注册 Profile，并确保首次解析 `IMapper` 发生在所有 `MapsterOptions` 配置之后。
+- 业务代码优先使用全局 `ProjectedAs`；需要构造注入时使用作用域 `IMapper`，不要在单例中缓存。
+- 同一进程只选 AutoMapper 或 Mapster 之一作为全局后端；多后端场景显式使用键控工厂。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Mapping`、`Euonia.Modularity`、`Mapster` / `Mapster.DependencyInjection`；具体版本由仓库构建属性决定。
+- 已知边界：`TypeAdapterConfig.GlobalSettings` 与 `TypeAdapterFactory` 都是进程级静态状态；`MapsterOptions` 只在首次构建配置时应用；内置转换只有 `byte[]` → `long`。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

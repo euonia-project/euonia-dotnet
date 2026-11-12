@@ -210,6 +210,53 @@ public sealed class OrderClient(IBus bus)
 6. **端点解析顺序固定**：精确通道名 → 通配符（按声明顺序，首个匹配）→ `Endpoint` 默认端点；连接按端点缓存复用（`Source/Euonia.Bus.Grpc/GrpcBusOptions.cs:45-63`）。
 7. **`Enabled` 不控制注册**：是否注册传输器取决于是否调用 `AddGrpcBus`，配置节里的 `Enabled` 目前不被读取。
 
+## 常见问题与故障排查
+
+### 调用返回 `Unimplemented` / 404
+
+**原因**：服务端没有 `MapGrpcBusService()`，或客户端 `ServiceName` / `MethodName` 与服务端生成的服务不一致。
+
+**解决**：服务端同时完成 `AddGrpcBusServer()` 与 `MapGrpcBusService()`；自定义 proto 时同步配置 `ServiceName`（服务全名，不含方法）与 `MethodName`（`RemoteMessageService.cs:14`、`GrpcEndpointExtensions.cs:21-35`）。
+
+### 明文连接失败或报 HTTP/2 协议错误
+
+**原因**：Kestrel 未启用 `HttpProtocols.Http2`，或客户端用 `http://` 而服务端只开 TLS（反之亦然）。
+
+**解决**：h2c 场景显式配置 Kestrel `HttpProtocols.Http2` 并用 `http://`；TLS 场景两端统一 `https://`。
+
+### 首次解析传输器抛 `InvalidOperationException`
+
+**原因**：`GrpcTransporter` 构造时要求默认 `Endpoint` 非空，即使只用 `Endpoints` 做通道路由也会校验。
+
+**解决**：始终设置 `options.Endpoint`（`GrpcTransporter.cs:51-54`）。
+
+### 调用返回 401 / 403
+
+**原因**：`RequireAuthorization` 默认 `true`，`MapGrpcBusService` 会调用 `RequireAuthorization()`。
+
+**解决**：客户端在请求作用域内调用以携带令牌，或显式写入信封 `Authorization`；仅测试环境可关闭。
+
+### 自定义类型反序列化失败
+
+**原因**：泛化调用把消息信封序列化进 `GrpcRequest.Data`，两端序列化器/类型程序集必须一致；服务端还会按已注册处理器做类型白名单校验。
+
+**解决**：统一 `SerializerProvider` 与契约程序集；确认服务端已 `RegisterChannel` 该消息类型。
+
+## 最佳实践
+
+1. **服务端统一用 `AddGrpcService()`**：一次性启用异常映射与追踪拦截器、反射，避免只调用 `AddGrpc()` 丢失可观测性。
+2. **按通道拆分端点**：`Endpoints` 精确键优先于通配符；连接按端点缓存，不要为每次调用新建 `GrpcChannel`。
+3. **明确传输安全边界**：生产用 TLS；内网 h2c 必须显式配置 Kestrel，避免明文与 TLS 混用。
+4. **客户端设置超时**：`CallAsync` 配合 `WithTimeout`，避免远端无响应时长期占用连接。
+5. **复用同一 `ServiceName`/`MethodName` 契约**：自定义 proto 时把这两个值纳入配置管理，避免环境间漂移。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Microsoft.AspNetCore.App`、`Grpc.AspNetCore`、`Grpc.Net.Client`、`Grpc.Core`、`Grpc.HealthCheck`、`Google.Protobuf`、`Euonia.Bus`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：只支持请求-响应；`Enabled` 选项当前不控制注册；默认 `ServiceName` 为源码原值 `nerorsoft.bus.ReplierService`。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线引擎

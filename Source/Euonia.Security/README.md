@@ -722,3 +722,51 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 同步判定抛「授权数据尚未解析」
+
+**原因**：`IDS_SCOPE_NOT_RESOLVED` —— 当前作用域还没解析授权数据，同步读不会隐式等待（`Source/Euonia.Security/Properties/Resources.resx:159`、§5.5）。
+**解决**：在任何同步判定前 `await guard.EnsureResolvedAsync(ct)`；后台任务先建作用域、注册 `UserPrincipal`，再预热。
+
+### 启动抛「权限配置是空的」
+
+**原因**：`AddPermission` 回调里既没有入口规则、也没有 `Source` / `NoOperationCodes` / `NoModels` / `Scan`，等于没有表达任何意图（`Resources.resx:120`、§3.1）。
+**解决**：有方法级权限码就写 `OnAttributeOrName` / `OnMethod`；没有就显式断言 `p.NoOperationCodes()`；只想追加扫描范围就 `p.Scan(asm)`。
+
+### 启动抛「名称 'x' 已被 'y' 占用」/「标识 'x' 的策略被重复声明」
+
+**原因**：两个声明占用了同一个名字（标识或授予键，任意方向），共用名字等于共用同一份行级授予（§5.8）。
+**解决**：按权限码声明改用 `For(code, ...)`，或为每个操作指定各自的键；名字冲突要在 `Define` 里消歧，不要靠注册顺序。
+
+### `Apply` 之后 SQL 里没有过滤条件
+
+**原因**：在投影成 DTO 之后才 `Apply`，集合已物化，表达式无法翻译；或对 `IEnumerable` 调用而不是 `IQueryable`（§7「下推相关问题」）。
+**解决**：把 `guard.Apply(query)` 作用在实体 `IQueryable` 上、投影之前，用 `ToQueryString()` 确认 WHERE 已下推。
+
+### 判定结果恒为拒绝
+
+**原因**：维度未映射、授予值与维度选择器取值不同源，或子表维度方向反了（把资源标识授予了成员维度）。
+**解决**：先 `guard.Explain(entity, identifier)` 看命中维度；核对 `AddGrant(key, "order", ids)` 与 `Map("order", x => x.Id)` 是否同一套值；子表维度确认父→子方向与已加载集合。
+
+## 最佳实践
+
+- **规则显式化**：每个 `AddPermission` 回调要么给入口规则，要么断言 `NoOperationCodes` / `NoModels`；不要留「只 Scan 不表态」的配置。
+- **启动即预热**：在应用启动早期解析一次 `IScopeGuard`（`provider.GetRequiredService<IScopeGuard>()`），把缺 `IScopeSubjectResolver` / `UserPrincipal` 的问题挡在启动阶段。
+- **下推优先于逐行判定**：列表查询用 `Apply`，只有单条详情才用 `Allows` / `AllowsObject`。
+- **为子表维度建索引**：`MapMany` 产生的 `EXISTS` 子查询按过滤列取数，建议在 `(父标识, 值)` 上建组合索引。
+- **授权数据变更后刷新**：调用 `RefreshAsync()` 失效已编译策略，否则旧结论会继续生效。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 依赖 | `Euonia.Core`、`Microsoft.Extensions.DependencyInjection.Abstractions` |
+
+- **不依赖 EF Core**：下推只生成表达式树，SQL 翻译由宿主的 ORM 完成；换 ORM 只需保证表达式可翻译。
+- **命名空间**：全部类型位于 `Nerosoft.Euonia.Security`（`Scope/` 目录不另立子命名空间），DI 扩展在 `Microsoft.Extensions.DependencyInjection`。
+- **不提供默认 `IScopeSubjectResolver`** 是设计承诺而非遗漏，升级不会补一个默认实现；若该边界变更，会以主版本说明。
+- `IScopeGuard` / `IPermissionChecker` 按作用域注册（`IObjectScopeAuthorizer` 为单例，`Source/Euonia.Security/ServiceCollectionExtensions.cs:116-136`）；跨作用域缓存判定结果不在支持范围。

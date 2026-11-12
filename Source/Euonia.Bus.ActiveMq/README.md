@@ -174,6 +174,53 @@ await bus.Send(new CancelOrder { OrderId = 42 })
 5. **重试只覆盖连接级异常**：`SendAsync` 只重试 `SocketException`、`IOException`、`NMSConnectionException`；请求超时不重试，避免 broker 已接收消息导致重复投递。
 6. **发布使用持久投递**：`PublishAsync` 固定 `MsgDeliveryMode.Persistent`，无法通过选项关闭。
 
+## 常见问题与故障排查
+
+### 模块加载后没有注册传输器
+
+**原因**：`ActiveMqBusModule` 只在 `Euonia:Bus:ActiveMq:Enabled=true` 且 `Connection` 非空时注册；手动 `AddActiveMqBus` 时 `Enabled` 不参与判断。
+
+**解决**：补齐 `Enabled` 与 `Connection`，或直接调用 `AddActiveMqBus` 并显式赋值 `options.Connection`（`ActiveMqBusModule.cs:18-28`）。
+
+### 请求-响应一直挂起
+
+**原因**：目标队列没有消费者，或 broker 不允许创建临时回复队列；请求发出后没有回复可匹配。
+
+**解决**：先启动消费端；确认账号有临时队列权限；调用侧设置取消令牌/`WithTimeout`（`ActiveMqTransporter.cs:91-152`）。
+
+### 主题（Topic）订阅收不到消息
+
+**原因**：共享订阅名 `SubscriptionId` 不一致，消费端未在对应主题上启动；或消息未被约定识别为多播。
+
+**解决**：固定 `SubscriptionId`（为空时回退入口程序集简单名称，再回退 `DefaultSubscription`）；确认 `SetConvention` 与 `SetStrategy` 覆盖该通道。
+
+### 失败重试没有发生
+
+**原因**：发布路径对任意异常重试 `MaxFailureRetries`；发送/调用路径只重试连接级异常（`SocketException`、`IOException`、`NMSConnectionException`），请求超时不重试。
+
+**解决**：业务失败在处理器内自行重试/补偿；连接失败检查 `MaxFailureRetries` 与 broker 连通性（`ActiveMqTransporter.cs:61-70,109-120`）。
+
+### `WithQueue` 后消息无人消费
+
+**原因**：消费端按通道名监听队列；`WithQueue` 只改发送目标，不会自动创建对应消费者。
+
+**解决**：保持默认队列名（即通道名），或确保消费端也监听该覆盖队列。
+
+## 最佳实践
+
+1. **队列名即通道名**：不要随意 `WithQueue`，除非消费端明确监听同一队列。
+2. **每个服务固定共享订阅名**：`SubscriptionId` 保持一致，滚动发布时不会产生重复订阅。
+3. **优先级依赖 broker 策略**：`WithPriority` 只写 NMS 优先级，需在 ActiveMQ 端启用 per-destination policy 才真正生效。
+4. **持久投递 + 幂等处理**：发布固定 `Persistent`，消费端按 `MessageId` 去重，避免重投导致重复副作用。
+5. **连接串走环境变量**：`Euonia__Bus__ActiveMq__Connection` / `EUONIA_BUS_ACTIVEMQ_CONNECTION`，避免把凭据写进仓库。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`Apache.NMS` 系列、`Polly`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：无死信队列选项；重试仅覆盖连接级异常；主题共享订阅依赖 `SubscriptionId`。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线引擎

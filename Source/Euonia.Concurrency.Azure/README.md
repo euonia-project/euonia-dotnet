@@ -158,3 +158,40 @@ await using var handle = await provider.AcquireAsync(TimeSpan.FromSeconds(5));
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 启动时报 ContainerNotFound
+原因：本包只在容器内创建锁 Blob，不会创建 Blob 容器；容器不存在或名称拼错时获取租约失败。
+解决：在基础设施/启动阶段创建容器（或 `CreateIfNotExists`），确认 `BlobContainerClient` 指向正确账户与容器。
+
+### TryAcquire 返回 null，或 Acquire 等待后超时
+原因：同一锁 Blob 的租约被其他实例持有；竞争时按 `BusyWaitSleepTime` 区间随机休眠重试。
+解决：这通常是预期互斥；需要立即返回时用 `TryAcquire(TimeSpan.Zero)`；需要等待时给 `Acquire` 足够超时并缩短持锁时间。
+
+### 配置 Duration 时抛 ArgumentOutOfRangeException
+原因：非无限租约必须在 15–60 秒之间；`RenewalCadence` 必须小于 `Duration`，忙等待的最大值必须是有限值且不小于最小值。
+解决：使用 `Timeout.InfiniteTimeSpan` 或 15–60 秒内的值，并保证 `RenewalCadence < Duration`、`max >= min`。
+
+### 通过 AzureLockModule 注册后自定义选项没有生效
+原因：模块只注册 `AzureSynchronizationFactory`，不会自动读取代码里的 builder；选项来自容器中的 `Action<AzureSynchronizationOptionsBuilder>`。
+解决：注册该委托（`services.AddSingleton<Action<AzureSynchronizationOptionsBuilder>>(...)`），或像快速开始那样手工构造工厂。
+
+### 长任务执行中租约丢失但业务没有感知
+原因：租约因续约失败/网络中断而丢失；只有读取 `HandleCancellationToken` 才能感知。
+解决：用 `handle.HandleCancellationToken.Register(...)` 触发取消并及时退出；不要让无限租约掩盖进程崩溃。
+
+## 最佳实践
+
+- **按环境隔离容器**：开发/测试/生产使用不同容器或名称前缀，避免不同环境争用同一锁 Blob。
+- **租约时长匹配任务**：任务通常短于租约时用 30 秒并保持续约；任务不可中断时不要用无限租约掩盖故障。
+- **最小权限**：容器客户端只需 Blob 读写/租约权限，不要把账户密钥写进代码。
+- **处理瞬时错误**：对 `RequestFailedException` 区分租约竞争与存储错误；存储错误交给 Azure SDK 重试策略并记录。
+- **清理锁 Blob**：由锁创建的 Blob 在释放时删除；外部创建的 Blob 只释放租约，需自行管理生命周期。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`Azure.Storage.Blobs`、`Euonia.Concurrency`、`Euonia.Modularity`。
+- **已知边界**：只实现锁，不实现信号量；不创建容器；非无限租约限制 15–60 秒；存储模拟器下 Blob 名称上限更短（256）。
+- **升级注意**：锁状态在 Azure 侧，升级不迁移数据；改动锁名前缀会让新旧实例锁不同 Blob，滚动升级期间需保持命名一致。

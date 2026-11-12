@@ -161,6 +161,38 @@ public sealed class CancelOrderEndpoint(IUseCaseExecutor executor)
 - `ApplicationModule` 用 `TryAddSingleton<IAuditingRecorder>(NullAuditingRecorder.Instance)` 兜底；需要真实审计时应在模块之外调用 `AddAuditing()` 并注册审计存储。
 - 拦截器按 `IOrderedInterceptor.Order` 稳定排序（数字小的在外层），其余按注册顺序；不要在拦截器内部再次解析同一应用服务，以免代理递归。
 
+## 常见问题与故障排查
+
+### 拦截器完全不生效
+**原因**：拦截器只对容器解析出的 Castle 代理生效；直接 `new` 应用服务、方法不是 `virtual`，或实现类没有无参构造函数时，类代理路径不会拦截该方法（无参构造缺失时直接回退为裸实例）。
+**解决**：从 DI 解析应用服务；把被拦截方法声明为 `virtual`；保留公共无参构造函数。按接口解析始终会创建接口代理，可作为类代理不可用时的替代路径。
+
+### 应用服务没有被自动注册
+**原因**：`Register<TContext>()` 只扫描 `IApplicationService` 实现与 `IPipelineBehavior<,>` 实现；类型未实现 `IApplicationService`、不在 `ServiceContextBase.Assembly` 指向的程序集，或被 `ApplicationServiceTypeFilter` 排除时不会注册。
+**解决**：让应用服务实现 `IApplicationService`（通常继承 `BaseApplicationService`）；检查上下文 `Assembly` 是否指向实现所在程序集；临时移除 `ApplicationServiceTypeFilter` 排查。
+
+### `[Cache]` 没有缓存结果
+**原因**：容器中没有 `ICacheService` 时缓存拦截器会直接放行；方法返回 `void`、非泛型 `Task`/`ValueTask`，或结果为 `null` 时也不会写缓存。
+**解决**：注册缓存实现（如 `AddDefaultCacheManager<TComponent>` 或具体缓存模块）；把方法改为返回 `Task<T>`/`ValueTask<T>`；确认缓存键模板与参数匹配，且结果非空。
+
+### 用例执行器报无法解析 `TUseCase`
+**原因**：`ExecuteAsync<TUseCase, TInput, TOutput>` 会创建新作用域并调用 `GetRequiredService<TUseCase>()`；`Register<TContext>()` 不会注册用例，未显式注册时解析失败，异常会写入 presenter 的 `OnFailed` 而不是向外抛出。
+**解决**：在模块中 `context.Services.AddScoped<CancelOrderUseCase>()`（或按实际生命周期注册）；若使用 presenter，订阅 `OnFailed` 记录异常，避免静默失败。
+
+## 最佳实践
+
+- 用例显式注册，应用服务靠 `Register<TContext>()` 扫描；不要把用例塞进 `IApplicationService` 自动注册路径。
+- 应用服务保持无状态、方法 `virtual`、公共无参构造；依赖通过构造函数或 `LazyServiceProvider` 获取。
+- 缓存/锁/幂等等拦截器依赖的基础设施在宿主统一注册；缓存只标注在有返回值且结果非空的方法上。
+- 用 DI 容器写代理测试：分别按接口与实现类型解析，断言拦截器执行且同一作用域共享目标实例。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：`Euonia.Modularity`（Castle.Core 5.2.1）、`Euonia.Caching`、`Euonia.Concurrency`、`Euonia.Pipeline`、`Euonia.Validation`、`Euonia.Uow`。
+- 已知边界：类代理要求无参构造与 `virtual` 方法；`Register<T>` 不注册用例；缓存拦截器在缺少 `ICacheService` 时静默退化。
+- 升级提示：代理注册与拦截器排序以当前源码为准；升级 Modularity/Castle 后重跑应用服务注册与拦截器测试。
+
 ## 相关包
 
 - [`Euonia.Domain`](../Euonia.Domain/README.md) —— DDD 构建块

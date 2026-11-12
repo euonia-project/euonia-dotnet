@@ -188,6 +188,53 @@ public sealed class MyOutboxStore : IOutboxStore
 5. **信封字段可能为空**：`Authorization`、`User`、`RequestTraceId` 在请求作用域外为 `null`，消费端必须判空后再使用。
 6. **可靠性存储需自行保证幂等**：`IOutboxStore.Insert` 对重复 `MessageId` 应返回 `false`，`IInboxStore` 需按消息标识去重，否则 at-least-once 语义会退化为重复处理。
 
+## 常见问题与故障排查
+
+### 只引用 `Euonia.Bus.Abstract` 时找不到 `RoutedMessage`
+
+**原因**：`RoutedMessage` / `RoutedMessage<T>` / `RoutedMessage<T, TResponse>` 定义在 `Euonia.Bus`，抽象包只声明 `IMessageEnvelope` 契约。
+
+**解决**：引用 `Euonia.Bus`，或只面向 `IMessageEnvelope<T>` 编程。
+
+### 自定义 `IHandler<T>` 没有被调用
+
+**原因**：只把处理器注册进 DI（`AddMessageHandler`）还不够，通道注册来自 `RegisterChannel(...)` 或 `Euonia:Bus:AutoLoadAssemblies`；方法签名也必须是 `HandleAsync(TMessage, IMessageContext, CancellationToken)`。
+
+**解决**：在 `AddConfiguratorBuilder` 中调用 `config.RegisterChannel(typeof(Program).Assembly)`；确认处理器实现了 `IHandler<,>` 且不是抽象类。
+
+### 自定义 `IMessageConvention` 不生效
+
+**原因**：约定未通过 `SetConvention` 加入构建器；或首次判定后直接替换了字段而没有经过 `IMessageConventionBuilder`（构建器才会重置判定缓存）。
+
+**解决**：统一用 `convention.Add<TConvention>()` 或 `Evaluate*` 注册（`BaseMessageConvention.cs:137-165`）。
+
+### 自定义 `IOutboxStore` 编译不通过
+
+**原因**：`Insert(OutboxEntry)`、`MarkAsSuccess`、`MarkAsFailed`、`MarkAsDeadLettered`、`Get`、`GetFailedMessages` 是抽象成员；`Insert(IMessageEnvelope, IReadOnlyList<string>)` 等只是带默认实现的便捷重载。
+
+**解决**：按 `IOutboxStore` 的必选成员补齐；重复 `MessageId` 的 `Insert` 返回 `false`，终态必须走 `MarkAsDeadLettered`。
+
+### 消费端读到的 `Authorization` / `User` 为 `null`
+
+**原因**：请求作用域外（后台任务、定时任务）没有这些信息，接口声明为可空。
+
+**解决**：判空后再使用；需要跨进程身份时由发送端显式写入 `Metadata` 或自定义头。
+
+## 最佳实践
+
+1. **把消息契约放进独立程序集**：生产端与消费端共享同一份消息类型与 `[Channel]` 定义，避免通道名/类型名漂移。
+2. **约定与策略写成纯函数**：`IsUnicast` / `Outgoing` 会在分发热路径上被调用并缓存，不要在其中做 I/O 或依赖可变全局状态。
+3. **自定义存储必须幂等且可清理**：`Insert` 对重复键返回 `false`，并实现 `Cleanup(DateTime)` 防止存储无界增长。
+4. **不要缓存 `IMessageContext`**：它实现 `IDisposable`，生命周期由总线管理，处理结束即失效。
+5. **序列化器按名称解析**：内置键为 `SystemTestJson` 与 `NewtonsoftJson`，传输器通过 `SerializerProvider` 选择，自定义序列化器需用相同键注册。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Euonia.Core`、`Microsoft.Extensions.DependencyInjection.Abstractions`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **升级注意**：与 `Euonia.Bus` 共用根命名空间，类型归属按程序集区分；仅引用本包不会得到传输器、默认约定/策略或可靠性存储实现。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线运行时引擎

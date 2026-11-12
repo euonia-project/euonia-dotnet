@@ -151,3 +151,40 @@ services.AddSingleton<ICacheService, RuntimeCacheService>();
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 设置了 CacheMemoryLimitMegabytes 但内存限制没有生效
+原因：`InstanceName = "default"` 时句柄使用全局 `MemoryCache.Default`，`RuntimeCacheManager` 明确不传代码选项（默认实例只能由历史配置管理）。
+解决：改用非默认 `InstanceName`（例如 `app-memory`），代码选项才会传给新建的 `MemoryCache`。
+
+### RemoveByPrefixAsync 总是返回 0
+原因：`RuntimeCacheHandle` 没有重写前缀删除，基类默认实现返回 0；`ICacheService` 本身也不暴露该方法。
+解决：维护键索引并逐个 `Remove`，或改用支持前缀删除的 `Euonia.Caching.Memory`/`Euonia.Caching.Redis`。
+
+### 多租户键没有自动加租户前缀
+原因：`RuntimeCacheService` 的构造函数只接收 `IOptions<RuntimeCacheOptions>`，不会注入 `IKeyTransformer`。
+解决：调用方自行拼租户前缀，或改用会注入 `IKeyTransformer` 的 Memory/Redis 服务实现。
+
+### 多个服务使用默认实例时键互相覆盖
+原因：默认实例共享全局 `MemoryCache.Default`，所有使用 `"default"` 的代码看到同一键空间。
+解决：为每个逻辑缓存分配唯一 `InstanceName`，并统一 `KeyPrefix`；不要依赖默认实例做隔离。
+
+### 滑动过期时间看起来不精确
+原因：句柄在访问时重新 `Set` 续期，但 `System.Runtime.Caching` 的过期扫描粒度较粗。
+解决：不要依赖秒级精确过期；对强时效数据使用绝对过期或缩短 TTL，并在读取时自行校验时间戳。
+
+## 最佳实践
+
+- **非默认实例 + 显式上限**：生产环境使用唯一 `InstanceName` 并设置 `CacheMemoryLimitMegabytes`/`PhysicalMemoryLimitPercentage`/`PollingInterval`。
+- **只用于进程内场景**：跨节点共享请选 Redis；Runtime 更适合兼容既有 `System.Runtime.Caching` 配置的宿主。
+- **TTL 优先**：所有键设置 `Expires` 或写入时 `timeout`，避免依赖粗粒度扫描回收。
+- **前缀删除需自建索引**：需要按租户清理时记录键集合，或切换提供程序；不要假设基类支持。
+- **单例注册并释放**：`RuntimeCacheService` 注册为单例；非默认实例的 `MemoryCache` 由句柄释放，避免重复创建。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`System.Runtime.Caching`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
+- **已知边界**：默认实例不能通过代码配置限制；无租户键转换与前缀删除；进程内、不跨节点。
+- **升级注意**：缓存不持久化，升级重启即清空；命名实例的历史 `app.config`/`web.config` 配置不会自动迁移到 `RuntimeCacheOptions`，升级时需显式迁移限额与轮询参数。

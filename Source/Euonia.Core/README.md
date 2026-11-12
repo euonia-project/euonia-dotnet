@@ -916,3 +916,50 @@ SynchronizationContextSwitcher.NoContext(() => { });
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 多实例部署时 `ObjectId.Snowflake()` 生成重复 ID
+
+**原因**：`SnowflakeId` 是 `internal` 单例，machineId 与 datacenterId 固定为 0（`Source/Euonia.Core/System/SnowflakeId.cs:4`），同一毫秒内两个进程会算出相同值（`Source/Euonia.Core/System/ObjectId.cs:191`）。
+**解决**：分布式场景改用 `ObjectId.Ulid()` 或 `ObjectId.Guid(GuidType)`；确实需要雪花 ID 时由宿主生成并保证机器位唯一，再 `new ObjectId(long)`。
+
+### 读 `Singleton<T>.Instance` 抛 `KeyNotFoundException`
+
+**原因**：`Instance` 的 getter 直接索引 `ConcurrentDictionary`，未初始化就抛异常（`Source/Euonia.Core/System/Singleton.cs:12-16`）。
+**解决**：先 `Singleton<T>.Get(() => new T())`，或显式赋值 `Singleton<T>.Instance = ...`；需要随容器释放的对象不要放进 `Singleton<T>`。
+
+### 异步锁偶发卡死
+
+**原因**：`AsyncLock` 不可重入（`Source/Euonia.Core/Threading/Coordination/AsyncLock.cs:10-12`），同一异步流里嵌套 `await _lock.LockAsync()` 会等待自己已持有的锁。
+**解决**：把加锁范围收敛到单个方法；跨方法时改用 `AsyncMonitor`，或给 `LockAsync(ct)` 传超时令牌。
+
+### 业务代码里 `Check` / `ObjectId` 报 CS0104 二义性
+
+**原因**：这些类型位于全局命名空间，与 `using` 引入的同名类型同时可见。
+**解决**：用 `global::Check` / `global::ObjectId` 限定，或在文件顶部起别名；不要为此修改库的命名空间。
+
+### `Check.Ensure` 抛的是 `InvalidOperationException`
+
+**原因**：`Ensure` 表示状态断言，失败抛 `InvalidOperationException`；只有 `EnsureNotNull` 抛 `ArgumentNullException`（`Source/Euonia.Core/System/Check.cs:106-133`）。
+**解决**：参数校验用 `EnsureNotNull` / `EnsureNotNullOrEmpty`，业务前置条件用 `Ensure`，并在调用方 catch 对应类型。
+
+## 最佳实践
+
+- **ID 选型跟着部署形态走**：单进程用 `ObjectId.Snowflake()`，分布式默认 `ObjectId.Ulid()`，需要与 Guid 生态互操作时用 `ObjectId.Guid(GuidType)`。
+- **锁只包住共享可变状态**：`using (await _lock.LockAsync(ct))` 里不要放长耗时 I/O 或再次获取同一把锁。
+- **异步原语一律传 `CancellationToken`**：请求取消时等待能及时退出，避免线程与请求堆积。
+- **进程级单例只放无状态工具**：有生命周期的东西交给 DI 容器，不要塞进 `Singleton<T>`。
+- **升级前读 `## 版本与兼容`**：本包被所有 Euonia 包引用，TFM 或 BCL 行为变化会向下游扩散。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 第三方依赖 | 无（仅 BCL） |
+
+- 文档标注的命名空间即当前源码位置（`Check` / `ObjectId` / `Extensions` 在全局，`Optional<T>` / `Singleton<T>` 在 `System`）；升级后若发现位置变化，以源码为准并回提本文档。
+- `SnowflakeId` 是 `internal`，不在兼容性承诺内；外部只应依赖 `ObjectId` 的公开工厂方法。
+- 更低 TFM（`net8.0` / `net9.0`）不在支持范围；跨大版本升级时先升 TFM，再升包。

@@ -242,3 +242,50 @@ public sealed class OrderDto
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 装了包却没有任何端点
+
+**原因**：`Euonia.Endpoint` 只有特性与共享契约，不含运行时；没有 `Euonia.Endpoint.Http` / `Euonia.Endpoint.Grpc` 时不会映射任何东西（本页开头「包职责」表）。
+**解决**：按传输加运行时包，并调用 `AddDynamicHttpEndpoint` + `MapDynamicHttpEndpoint`（或 gRPC 对应方法）；确认总开关已打开。
+
+### 特性标了但没生效
+
+**原因**：特性必须标在**接口方法**上；标在实现类方法上不会被生成器或运行时扫描识别（`ExposeWebApiAttribute.cs:6` 的 `AttributeTargets.Method`）。
+**解决**：把 `[ExposeWebApi]` / `[ExposeGrpc]` 移到接口方法；实现类只负责方法体。
+
+### gRPC 端点缺失且日志只有 Warning
+
+**原因**：gRPC 没有运行时兜底，程序集没生成映射时只记录「contains [ExposeGrpc] methods but no generated gRPC mapping」。
+**解决**：在声明该接口的项目里引用 `Euonia.Endpoint.SourceGenerator`（analyzer 形式），重新构建后确认生成了 `GrpcMappings`。
+
+### 请求返回 401 / `PermissionDenied`
+
+**原因**：HTTP 与 gRPC 的 `RequireAuthorization` 默认都是 `true`，未配置认证方案时会拒绝请求。
+**解决**：匿名端点显式标 `[AllowAnonymous]`；需要授权时配置认证方案，或用 `AddDynamicHttpEndpoint(options => options.RequireAuthorization = false)` 按需关闭。
+
+### gRPC 客户端解析旧字段失败
+
+**原因**：`DataMember(Order = n)` 就是 protobuf 字段号，改动、复用或重排会破坏旧客户端。
+**解决**：已发布字段号只增不改；删除字段保留字段号；新增字段用更大的 `Order`。
+
+## 最佳实践
+
+- **接口集中放 Application 程序集**：接口所在程序集必须引用生成器，插件/多程序集场景把该程序集显式加入 `ScanAssemblies`。
+- **字段号分段规划**：为每个 DTO 预留区间（如 1–50 业务字段、51+ 实验字段），避免多人并行开发时撞号。
+- **HTTP-only DTO 不标 `DataContract`**：这些特性只服务 protobuf-net，加上去会让 DTO 被误认为 wire 契约。
+- **先开开关再排障**：`EnableExposeApplicationServiceAsWebApi` / `EnableExposeApplicationServiceAsGrpc` 默认 `false`，排障第一步是确认配置已绑定。
+- **契约先行**：先把接口方法签名与 `[DataMember]` 定下来再写实现，避免后期改签名导致生成器跳过后退回运行时路径。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 第三方依赖 | 无（不引用 ASP.NET Core，也不引用 protobuf-net） |
+
+- **契约稳定优先**：`ExposeWebApi` / `ExposeGrpc` 的公开属性（`Prefix` / `Route` / `Method`）与 `GrpcMethod` 枚举值是兼容性边界，扩展只会新增成员。
+- **共享契约类型仍在演进**：`EndpointEmpty` / `DecimalValue` / `TimestampValue` 等尚未接入自动 wire-DTO 映射，行为以当前源码为准（见「共享契约类型」）。
+- 传输能力随运行时包升级，本包不单独引入 TFM 之外的依赖。

@@ -142,3 +142,40 @@ services.AddSingleton<ICacheService, MemoryCacheService>();
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### WithMemoryCacheHandle 里设置的 Expires、UpdateMode 不生效
+原因：句柄构建器只把 `MemoryCacheOptions` 当作底层存储标识（含 `SizeLimit` 等基类选项）；`Expires`/`UpdateMode`/`MaxRetries` 由 `MemoryCacheService` 内部的 `MemoryCacheManager` 读取，`KeyPrefix` 由服务构造函数读取，直接建句柄时都不会应用。
+解决：多级缓存用 `.WithExpiration(CacheExpirationMode.Absolute, ttl)`、`.WithUpdateMode(...)`、`.WithMaxRetries(...)`；需要 `Expires`/`KeyPrefix` 时改用 `MemoryCacheService`。
+
+### 多实例部署时各节点缓存不一致
+原因：`Euonia.Caching.Memory` 是进程内实现，节点之间不共享存储，也没有背板。
+解决：跨节点场景改用 `Euonia.Caching.Redis`；或明确接受最终一致，把缓存只当本地加速层。
+
+### RemoveByPrefixAsync 返回 0 或删不掉外部写入的键
+原因：前缀删除依赖 `MemoryCacheStoreRegistry` 对“通过本句柄写入”的键登记；绕过缓存管理器直接写 `IMemoryCache` 的键不在索引中。
+解决：所有写入统一走 `ICacheService`/`ICacheManager<TValue>`；不要直接操作同一个 `IMemoryCache`。
+
+### TryGet<object> 读不到以具体类型写入的条目
+原因：条目以 `CacheItem<TValue>` 存储且不协变，跨类型读取会被视为未命中；这是已由 `CacheTypeAgnosticTests` 固定的契约。
+解决：读取使用写入时的泛型实参；只有 `Remove<TValue>`/`Exists` 是按键、与类型无关的。
+
+### 高负载下未到 TTL 的条目消失
+原因：`MemoryCache` 会因容量或内存压力压缩并逐出条目，`SizeLimit` 与 `CompactionPercentage` 决定该行为。
+解决：为生产环境设置合适的 `SizeLimit`，把未命中视为正常路径并能回源；不要把大对象或无界集合放进进程内缓存。
+
+## 最佳实践
+
+- **给存储设上限**：在创建句柄前设置 `SizeLimit`、`CompactionPercentage`、`ExpirationScanFrequency`，避免进程内存无界增长。
+- **一个逻辑缓存一份选项**：存储按 `MemoryCacheOptions` 实例共享，不同业务应使用不同实例，避免键空间与容量互相影响。
+- **键前缀与租户**：`KeyPrefix` 保持稳定（`{prefix}.Cache.{key}`），多租户由 `AddTenancy()` 注入 `IKeyTransformer`。
+- **TTL 与失效成对设计**：写入时给 `timeout` 或 `Expires`，变更时显式 `Remove` 或按前缀清理。
+- **注册为单例**：`MemoryCacheService` 持有按类型复用的管理器，按请求创建会重复建缓存并放大内存占用。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`Microsoft.Extensions.Caching.Memory`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
+- **已知边界**：`InstanceName` 只是句柄标识，存储按 `MemoryCacheOptions` 实例共享；进程/应用池回收后缓存丢失；没有跨进程失效。
+- **升级注意**：缓存内容不落盘，升级重启即清空，无需数据迁移；升级后若改了 `KeyPrefix` 或泛型类型，旧键自然不可达，需接受一次冷启动。

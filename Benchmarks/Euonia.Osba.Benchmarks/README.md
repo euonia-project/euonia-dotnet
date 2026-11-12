@@ -63,6 +63,43 @@ dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks -- --filter '*
 - 同一机器前后两次 `Release` 结果才可比；跨机器对比需固定 CPU 与 GC 配置。
 - `RuleAndFactoryBenchmarks` 的工厂 / 执行器缓存若被改动，`FetchFactory`、`FetchActuator` 会先于业务基准报警。
 
+## 常见问题与故障排查
+
+### `[GlobalSetup]` 抛 `InvalidOperationException`（业务上下文未设置）
+
+**原因**：`RuleAndFactoryBenchmarks` 在 Setup 中构造 DI 并调用 `BusinessContextAccessor.SetCurrent(...)`（`RuleAndFactoryBenchmarks.cs:28-35`），对象属性读写依赖这个静态上下文。
+**解决**：通过 `BenchmarkSwitcher` 运行以保证 Setup/Cleanup 成对执行；改了装配代码要重新确认 `Clear()` 在 Cleanup 中（`:49-55`）。
+
+### `--job short` 的结果与门禁值差很多
+
+**原因**：`--job short` 缩短迭代，属于冒烟模式；门禁阈值针对默认 job 的稳定结果。
+**解决**：门禁用默认 job 或更长的 job，冒烟只用来确认基准能跑完。
+
+### CI 判定“回归 20%”与本地不一致
+
+**原因**：20% 阈值来自架构评审 §4.3，代码里没有常量，CI 需自行实现比较逻辑；不同机器的 `Ratio` 不能直接比。
+**解决**：先在同一台机器采集基线，再对 6 个门禁方法做比值比较；同时把“分配翻倍”作为独立判据。
+
+### 改完 Osba 后只有 `FetchFactory` / `FetchActuator` 变慢
+
+**原因**：这两个方法测的是工厂与执行器的解析路径（`RuleAndFactoryBenchmarks.cs:103-116`），与业务写入无关；缓存或注册方式变化会优先体现在这里。
+**解决**：对比 `WritePlain`（基线）确认不是整体环境漂移，再检查工厂/执行器的注册与缓存。
+
+## 最佳实践
+
+- **门禁锁定 6 个指标**：`WriteExisting`、`WriteWithPropertyRule`、`SavePlain`、`FetchFactory`、`FetchActuator`、`RejectChanges`，其余方法只做参考。
+- **基线随机器固定**：把基线 JSON 与 CPU/GC 配置一起存档，换机器必须重采。
+- **先改文档再改阈值**：20% 与“分配翻倍”写在 `ARCHITECTURE-REVIEW.md` §4.3，调整时两边同步。
+- **冒烟用短 job，门禁用默认 job**：命令分开写在 CI 脚本里，避免混用。
+- **报告目录隔离**：CI 每次清空 `BenchmarkDotNet.Artifacts/`，防止旧报告被误读。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`（`Euonia.Osba.Benchmarks.csproj:5`），不打包（`IsPackable=false`）。
+- **关键依赖**：BenchmarkDotNet `0.15.8`（`Directory.Packages.props:141`）、`Microsoft.Extensions.DependencyInjection`；被测包 `Euonia.Osba`。
+- **升级注意**：Osba 的属性跟踪、规则或工厂注册方式变化会同时影响写入与拉取两类基准，升级后必须重采全部 6 个门禁指标。
+- **已知边界**：全部使用内存对象与空钩子（`[FactoryInsert]` / `[FactoryUpdate]` 返回已完成任务），不含数据库往返。
+
 ## 相关包
 
 - [`Euonia.Osba`](../../Source/Euonia.Osba/README.md) —— 被测业务对象框架

@@ -378,3 +378,50 @@ app.Run();
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 启动抛 `gRPC service 'X' is not registered.`
+
+**原因**：生成的 `AddGenerated` 在 `AddDynamicGrpcEndpoint` 里执行，发现契约对应的应用服务没注册（`Source/Euonia.Endpoint.SourceGenerator/GrpcGenerator.cs:287`）。
+**解决**：补 `builder.Services.AddScoped<IOrderService, OrderService>()`；确认注册的是**接口**而不是实现类；确实要跳过时设 `ThrowOnUnregisteredService = false`。
+
+### 端点缺失，日志只有「contains [ExposeGrpc] methods but no generated gRPC mapping」
+
+**原因**：gRPC 没有运行时兜底，该程序集没生成映射（`Source/Euonia.Endpoint.Grpc/EndpointRouteBuilderExtensions.cs:68`）。
+**解决**：在声明接口的项目里以 analyzer 形式引用 `Euonia.Endpoint.SourceGenerator`；插件程序集必须自己引用，宿主引用不生效。
+
+### `grpcurl list` 返回空
+
+**原因**：`EnableReflection` 默认 `false`，`MapGrpcReflectionService()` 不会被调用（`EndpointRouteBuilderExtensions.cs:74`）。
+**解决**：开发/测试环境设 `options.EnableReflection = true`（或 `Euonia:Endpoint:Grpc:EnableReflection=true`）；生产环境按需开启并限制访问。
+
+### 调用返回 `PermissionDenied`
+
+**原因**：`RequireAuthorization` 默认 `true`，`GrpcMethodAuthorizationInterceptor` 对无显式授权特性的方法要求已认证用户。
+**解决**：配置认证方案并在客户端带上凭据；确需匿名的方法标 `[AllowAnonymous]`，或按需关闭 `RequireAuthorization`。
+
+### 构建只有 `EUONIA001` 警告且方法没暴露
+
+**原因**：`GrpcMethod` 与实际签名不匹配（例如标了 `ServerStreaming` 却返回 `Task<T>`），生成器跳过该方法（`GrpcGenerator.cs:129`）。
+**解决**：按「四种方法类型」表对齐签名；警告不阻断构建，容易被忽略，建议纳入 CI 检查。
+
+## 最佳实践
+
+- **显式写 `Prefix`**：服务全名是 wire 契约，靠接口名推导会在重命名接口时静默改变 gRPC 路径。
+- **Reflection 只在非生产开启**：`EnableReflection = true` 会暴露服务描述，生产环境默认关闭并配合鉴权。
+- **把 proto 导出纳入 CI**：`EndpointProtoExporter.Export(assembly, "obj/EuoniaEndpoint/Protos")` 生成快照并做 diff，能提前发现字段号破坏性变更。
+- **生产保留 `ThrowOnUnregisteredService = true`**：让漏注册在启动阶段失败，而不是首个请求 404。
+- **契约接口与实现分离**：接口放 Application 程序集（引用生成器），实现类由 DI 注册，避免生成器把实现细节写进契约。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0`（`FrameworkReference Microsoft.AspNetCore.App`） |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 关键依赖 | `protobuf-net` 3.4.40、`protobuf-net.Grpc` / `protobuf-net.Grpc.AspNetCore` / `protobuf-net.Grpc.Reflection` 1.3.14、`Grpc.AspNetCore.Server.Reflection` |
+
+- **wire 兼容由 `DataMember(Order)` 决定**：字段号是跨语言契约，升级本包不会改变序列化格式。
+- **共享契约类型尚未接入自动 wire-DTO 映射**：`Guid` / `DateTime` / `TimeSpan` 仍用 protobuf-net 内建 BCL schema，升级到标准 `google.protobuf.*` 映射会按破坏性变更处理。
+- **生成器与运行时需配套升级**：生成代码依赖 `GrpcMappings` / `GrpcMetadataRegistry` / `GrpcMethodAuthorizationDescriptor` 的签名，两者版本不一致可能出现编译或运行期错误。

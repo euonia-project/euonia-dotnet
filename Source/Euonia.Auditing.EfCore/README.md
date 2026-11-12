@@ -166,6 +166,36 @@ CONNECTION_STRING_AUDIT="Server=localhost;Database=euonia_audit;Trusted_Connecti
 - [`Euonia.Repository.EfCore`](../Euonia.Repository.EfCore/README.md) —— EF Core 仓储与上下文基类
 - [`Euonia.Hosting`](../Euonia.Hosting/README.md) —— `UseAuditing()` 中间件
 
+## 常见问题与故障排查
+
+### 业务成功，但审计库没有数据
+先确认表已创建：本包不含迁移，只注册存储不会建表。为 `AuditingDbContext` 生成并应用迁移，或在测试中调用 `EnsureCreated`。表不存在时写入异常会被审计写入器按失败开放处理，业务仍返回成功，但记录会丢失。
+
+### 已注册 `AddAuditingEfCore`，实际却写到了别的存储
+`AddAuditingEfCore` 只在容器中尚无 `IAuditingStore` 时注册自己的存储；如果先注册了 InMemory 或 Mongo 存储，本包不会覆盖。调整注册顺序，或移除其他存储注册。
+
+### 同一 `ScopeId` 重复保存报唯一冲突或出现重复行
+`euonia_audit_log.scope_id` 有唯一索引 `ux_audit_log_scope`，`EfCoreAuditingStore` 在冲突时会重新加载并合并终态与动作。若自定义上下文没有调用 `ApplyAuditingModel()`，唯一索引不会创建，重复行就会出现；请直接使用 `AuditingDbContext` 或在其 `OnModelCreating` 中应用该约定。
+
+### `ScopeId` 为空导致 `ArgumentException`
+`EfCoreAuditingStore` 要求 `ScopeId` 非空白；正常路径由 `AuditingRecorder` 生成 `{tenant}:{opKey}`。直接调用 `IAuditingStore.SaveAsync` 或手工构造 `AuditingRecord` 时必须自行填充 `ScopeId`。
+
+### 单例工厂中解析 Scoped 服务失败
+`AddAuditingEfCore` 以单例注册 `IDbContextFactory<TContext>`，其 `configure` 回调只接收 `DbContextOptionsBuilder`，没有 `IServiceProvider` 重载。不要在回调中解析 Scoped 服务；需要动态连接串时在宿主侧提前计算。
+
+## 最佳实践
+
+- 把 `AuditingDbContext` 迁移纳入部署流水线，并在发布前执行 `dotnet ef database update`；不要依赖运行时自动建表。
+- 审计库使用独立连接串（示例 `ConnectionStrings:Audit`），不要指向业务库；环境差异用 `ConnectionStrings__Audit` 或 `CONNECTION_STRING_AUDIT` 覆盖。
+- 按保留策略定期调用 `IAuditingStoreQuery.DeleteBeforeAsync`，并确保处于显式跨租户上下文；清理前确认 `ix_audit_log_time` 可用。
+- 批量写入依赖 `SaveManyAsync` 的预取与唯一冲突降级；保留 `SuccessDelivery=Batched`，并监控审计写入失败日志。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Auditing`、`Microsoft.EntityFrameworkCore` 与 `Microsoft.EntityFrameworkCore.Relational`；具体版本由仓库构建属性决定。
+- 已知边界：包内无迁移；唯一冲突检测覆盖 SQL Server、PostgreSQL、MySQL、SQLite，其他提供程序会把异常原样抛出；`DeleteBeforeAsync` 依赖 `ExecuteDeleteAsync`，需要关系型提供程序。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

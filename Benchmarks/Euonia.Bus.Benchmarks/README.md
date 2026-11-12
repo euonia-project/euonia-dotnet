@@ -70,6 +70,43 @@ dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks/Euonia.Bus.Benc
 - 跨机器、跨 SDK 版本的数字不可直接比较；回归判断应使用同一机器上的前后两次 `Release` 结果。
 - 结论不能外推到 `Euonia.Osba.Benchmarks` / `Euonia.Platform.Benchmarks` 的场景。
 
+## 常见问题与故障排查
+
+### `Setup` 阶段抛 `MessageTransportException`（传输器未注册）
+
+**原因**：基准把默认传输器固定为 `bench` 并注册同名 keyed 传输器（`BusDispatchBenchmarks.cs:35,38`），改常量或删掉注册后总线解析不到它。
+**解决**：保持 `MessageBusOptions.DefaultTransporter` 与 `AddKeyedSingleton<ITransporter>("bench", ...)` 名称一致；改名前同步改两处。
+
+### 报告里的数字比上次小/大一大截
+
+**原因**：两个基准类都带 `[ShortRunJob]`（`BusDispatchBenchmarks.cs:14`、`SerializationBenchmarks.cs:11`），默认迭代少、噪声大；用 `--job medium` 改变迭代规模后数字必然不同。
+**解决**：对比时锁定同一个 job；门禁场景显式传 `--job medium` 或 `--job long`，并把 job 写进基线记录。
+
+### `--filter` 匹配不到任何基准
+
+**原因**：过滤的是完整名称，`*BusDispatchBenchmarks*` 能匹配；写成 `BusDispatch` 或方法名片段可能匹配不到。
+**解决**：先用 `--job Dry` 加宽通配（如 `--filter '*Bus*'`）确认能选中，再收窄。
+
+### 序列化基准的结果为 0 或抛空引用
+
+**原因**：`SerializationBenchmarks` 依赖 `[GlobalSetup]` 里创建的序列化器与预生成载荷（`SerializationBenchmarks.cs:30-38`），跳过 Setup（例如手工改 Main）会拿到 `null`。
+**解决**：通过 `BenchmarkSwitcher` 运行，不要直接调基准方法；改了序列化器构造参数要同步改 Setup。
+
+## 最佳实践
+
+- **结论只用于对比**：`NoopTransporter` 把传输成本归零，得到的是“总线框架开销”，不要当端到端吞吐。
+- **保留 `DirectTransportPublish` 与 `ResolvePipeline` 两个探针**：分别定位“传输调用”和“DI 装配”的回归。
+- **升级总线后先跑 Dry**：`--job Dry` 能快速暴露 `IConfigurator` / `ITransporter` 签名变化。
+- **序列化基准只比同格式**：System.Text.Json 与 Newtonsoft.Json 的 `Ratio` 以 System.Text.Json 为基线，跨格式看绝对值。
+- **告警阈值按比值设**：例如 `PublishAsync` 相对 `DirectTransportPublish` 的差值变化超过 20% 才提示。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`（`Euonia.Bus.Benchmarks.csproj:5`），不打包（`IsPackable=false`）。
+- **关键依赖**：BenchmarkDotNet `0.15.8`（`Directory.Packages.props:141`）；被测包 `Euonia.Bus` / `Euonia.Bus.Abstract` / `Euonia.Modularity`。
+- **升级注意**：基准依赖 keyed DI（`AddKeyedSingleton`）与 `MessageBusOptions.DefaultTransporter`，总线重命名传输器或改配置键时基准会先失败。
+- **已知边界**：不加载任何真实传输；RabbitMQ / InMemory 的网络与确认开销不在覆盖范围内。
+
 ## 相关包
 
 - [`Euonia.Bus`](../../Source/Euonia.Bus/README.md) —— 总线抽象、`IConfigurator`、序列化器

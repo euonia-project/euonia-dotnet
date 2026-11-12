@@ -221,6 +221,48 @@ if (tenantId != null)
 - `TenantStartupValidator` 只做静态校验（存储缺失、`DefaultTenantId` 非法、`CrossTenantRoles` 含空值、`DatabasePerTenant` 缺模板）；租户模型扫描由 EF 适配层在首次创建上下文时完成。
 - `DatabasePerTenant` 依赖 `ConnectionStringTemplate` 或每个租户的 `ConnectionString`，两者都没有时启动失败。
 
+## 常见问题与故障排查
+
+### 宿主启动即抛 `ConfigurationException: Multi-tenancy is enabled but no ITenantStore is registered`
+
+**原因**：`TenantStartupValidator` 在 `Enabled=true` 时强制要求 `ITenantStore`（`TenantStartupValidator.cs:33-42`）。
+**解决**：链上 `AddConfigurationTenantStore()`（读 `Euonia:MultiTenancy:Tenants`）或 `AddInMemoryTenantStore(...)`，否则把 `Enabled` 置为 `false`。
+
+### 每个请求都返回 400 `TenantRequired`
+
+**原因**：没有任何解析来源给出候选值。请求头来源在匿名请求下会被忽略（`HeaderTenantResolver.cs:30-34`），而 `UseTenancy` 若放在 `UseAuthentication` 之前，身份还没建立，头也会被忽略。
+**解决**：管道顺序固定为 `UseAuthentication → UseRouting → UseTenancy`；内网可信场景才开 `TrustHeaderForAnonymous=true`，对外服务应改用 `ClaimType` 或 `HostFormat`。
+
+### 400 `TenantConflict`：多个冲突租户被解析
+
+**原因**：解析链按优先级收集候选（消息 100 → Claim 200 → Host 300 → Route 400 → Header 500），多个来源给出不同 `Id` 时直接失败（`TenantResolver.cs:91-95`）。
+**解决**：只启用一种来源——不需要子域名解析就把 `HostFormat` 置空，不需要路由参数就把 `RouteKey` 置空；或保证各来源值一致。
+
+### 409 / `TenantScopeConflictException`：请求与已有租户作用域冲突
+
+**原因**：同一异步流里已安装不同租户的作用域，`EnsureCanSwitch` 拒绝切换（`TenantScopeFactory.cs:161-168`），中间件将其映射为 409（`TenancyMiddleware.cs:87-93`）。
+**解决**：进入其他租户必须用 `BeginIsolated`（全新快照）或 `BeginCrossTenant`（显式跨租户），不要再次 `Begin`。
+
+### `BeginCrossTenant` 抛 `UnauthorizedAccessException`
+
+**原因**：跨租户默认全部拒绝，需要 `CrossTenantScopeAuthorizer` 返回 `true`，或全租户场景下 `AllowSystemCrossTenant=true`（`TenantScopeFactory.cs:124-133`）。
+**解决**：配置授权回调（校验平台管理员角色或服务身份），并让 `CrossTenantRoles` 与回调判断保持一致。
+
+## 最佳实践
+
+- **只启用需要的解析来源**：认证用户用 `ClaimType` 作为权威来源，`HostFormat` / `RouteKey` 默认关闭，减少冲突面。
+- **对外服务不要开 `TrustHeaderForAnonymous`**：该开关只适用于内网或网关已完成鉴权的部署。
+- **跨租户授权成对配置**：`CrossTenantRoles` 决定“谁是平台管理员”，`CrossTenantScopeAuthorizer` 决定“能否进入”，两者缺一都会导致 403。
+- **租户状态变更后主动失效缓存**：`CachedTenantStore` 的 TTL 由 `StoreCacheDuration` 控制（默认 60 秒），写租户的入口应调用 `Invalidate(tenantId)`。
+- **`ExcludedPaths` 用路径段**：`/health` 不会排除 `/healthz`，探针路径需逐条列出。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.0`（`project.props:3`）。
+- **关键依赖**：`Euonia.Core` + `Microsoft.Extensions.*` `11.0.0`（`Directory.Packages.props:5`）；HTTP 解析器与中间件在 `Euonia.Hosting`，需同版本对齐。
+- **升级注意**：`MultiTenancyOptions` 的属性名即配置键，重命名属于破坏性变更；`Euonia:MultiTenancy:Tenants` 为数组，环境变量需带索引。
+- **已知边界**：启动校验只做静态检查（存储缺失、`DefaultTenantId` 非法、`CrossTenantRoles` 含空、`DatabasePerTenant` 缺模板）；租户模型扫描由 EF 适配层在首次建上下文时完成。
+
 ## 相关包
 
 - [`Euonia.Core`](../Euonia.Core/README.md) —— `AmbientExecutionContext` 与执行上下文

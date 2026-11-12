@@ -178,3 +178,50 @@ var list = new List<object> { order }.ProjectedAsCollection<OrderDto>();
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 调用 `ProjectedAs<T>()` 抛 `NullReferenceException`
+
+**原因**：没有设置当前工厂，`TypeAdapterFactory.CreateAdapter()` 返回 `null`，随后对 `null` 调用 `Adapt`（`Source/Euonia.Mapping/TypeAdapterFactory.cs:32-35`）。
+**解决**：启动时执行一次 `TypeAdapterFactory.SetCurrent(new AutomapperTypeAdapterFactory(mapper))`；模块化宿主引用 `AutomapperModule` / `MapsterModule` 会在初始化阶段自动完成。
+
+### 编译报 `ProjectedAsCollection` 参数不匹配 / 泛型约束错误
+
+**原因**：扩展方法签名是 `ProjectedAs<TDestination>(this object source)` 与 `ProjectedAsCollection<TDestination>(this IEnumerable<object> items)`，且要求 `where TDestination : class`（`Source/Euonia.Mapping/Extensions.cs:21/48`）。
+**解决**：值类型集合先 `Cast<object>()`；目标类型必须是引用类型，值类型投影改用 `TypeAdapter` 的实现库原生 API。
+
+### `GetRequiredService<ITypeAdapterFactory>()` 解析失败
+
+**原因**：`AutomapperModule` / `MapsterModule` 以 **keyed** 单例注册工厂（键 `"automapper"` / `"mapster"`），普通按类型解析取不到（`Source/Euonia.Mapping.Automapper/AutomapperModule.cs:22`）。
+**解决**：用 `GetKeyedService<ITypeAdapterFactory>("automapper")`，或按你的键自行 `AddSingleton<ITypeAdapterFactory, ...>()`。
+
+### AutoMapper 报缺少类型映射配置
+
+**原因**：`AddAutomapper()` 在解析 `IMapper` 时读取 `IOptions<AutomapperOptions>`，没有 `Configure<AutomapperOptions>` 就没有任何 Profile（`Source/Euonia.Mapping.Automapper/ServiceCollectionExtensions.cs:61-68`）。
+**解决**：`services.Configure<AutomapperOptions>(o => o.AddProfile<OrderProfile>())` 或 `o.AddMaps(assembly, validate: true)`；后者会把 Profile 加入启动校验。
+
+### Mapster 在 `ValidateScopes` 下启动失败
+
+**原因**：`MapsterTypeAdapterFactory` 依赖作用域的 `IMapper`，按类型注册为单例会捕获根作用域（`Source/Euonia.Mapping.Mapster/MapsterModule.cs:25-32`）。
+**解决**：使用 `MapsterModule` 的 keyed 注册；自己接线时用 `new MapsterTypeAdapterFactory(new ServiceMapper(provider, provider.GetRequiredService<TypeAdapterConfig>()))`。
+
+## 最佳实践
+
+- **只在启动时 `SetCurrent` 一次**：静态工厂是进程级状态，运行时反复切换会影响所有并发请求。
+- **优先用模块**：`AutomapperModule` / `MapsterModule` 同时完成服务注册与 `SetCurrent`，比手写接线少一个易漏步骤。
+- **开启配置校验**：`AddMaps(assembly, validate: true)` 或 `AddProfile<T>(validate: true)` 让 `AssertConfigurationIsValid` 在启动阶段暴露漏映射。
+- **投影只用于读模型**：`ProjectedAs` 面向 DTO/ViewModel，不要把 DTO 映射回聚合根，避免绕过领域行为与校验。
+- **抽象包与实现包同版本**：升级 `Euonia.Mapping` 时同步升级 `Euonia.Mapping.Automapper` / `Euonia.Mapping.Mapster`。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 实现包依赖 | AutoMapper 17.0.0、Mapster / Mapster.DependencyInjection 10.0.14（`Directory.Packages.props`） |
+
+- **全局命名空间的 `Extensions` 是兼容边界**：扩展方法位置不变，`ProjectedAs*` 的方法名与泛型约束属于公开契约。
+- **实现库升级由实现包承担**：AutoMapper 17 / Mapster 10 的破坏性变更只会影响对应的 `Euonia.Mapping.*` 包，抽象包本身不感知。
+- **静态工厂不提供并发切换语义**：多容器/多租户宿主需要隔离时应各自维护 `ITypeAdapter` 实例，而不是共享 `TypeAdapterFactory`。

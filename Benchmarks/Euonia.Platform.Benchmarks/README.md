@@ -70,6 +70,48 @@ dotnet run -c Release --project Benchmarks/Euonia.Platform.Benchmarks/Euonia.Pla
 - 不要在共享 CI 容器中采集正式基线：CPU 争用与 GC 模式会让 `Ratio` 失真。`--job Dry` / `--job short` 只用于验证基准能跑通。
 - 跨机器、跨 SDK 版本的数字不可直接比较；回归判断应使用同一机器上的前后两次 `Release` 结果。
 
+## 常见问题与故障排查
+
+### 命令跑完什么都没输出就退出
+
+**原因**：`BenchmarkSwitcher` 按 `--filter` 的**完整名称**（`命名空间.类名.方法名`）匹配，写错类名时没有任何基准被选中（`Program.cs:16`）。
+**解决**：用通配包住类名，例如 `-- --filter '*TenantEntryGuard*'`；先跑 `--job Dry` 确认能匹配到，再采集正式数据。
+
+### 不加 `--filter` 时 CI 卡住不动
+
+**原因**：`BenchmarkSwitcher.Run(args)` 在无参数、无过滤器时进入交互式选择列表，等待标准输入。
+**解决**：CI 中始终显式传 `--filter`；本地想全量跑用 `--filter '*'`。
+
+### 报告里出现 `Dry` / 数字明显偏小
+
+**原因**：`--job Dry` 只做一次预热与少量迭代（`--job short` 同理），用于验证基准能跑通，不代表真实开销。
+**解决**：正式数据去掉 `--job`；跨次对比必须保持 job、机器与 SDK 版本一致。
+
+### `TelemetryBenchmarks` 的分配量全是 0
+
+**原因**：基准没有挂任何监听器，`StartActivity` 直接返回空句柄（`TelemetrySource.IsTraceEnabled` 依赖 `HasListeners()`），分配为 0 是预期结果。
+**解决**：不要把它当“遥测零成本”的绝对结论；需要测有监听器路径时另建基准并显式 `AddSource` 一个空的 `ActivityListener`。
+
+### `TenantKeyTransformerBenchmarks` 的结果明显低于预期或跨机器差异巨大
+
+**原因**：该基准在 `[GlobalSetup]` 用 `new TenantScopeFactory().Begin(...)` 安装租户作用域，测的是**命中前缀**的路径；没有租户上下文时 `Transform` 直接返回原键，开销完全不同。
+**解决**：确认 `GlobalSetup` / `GlobalCleanup` 未被裁剪；比较时确保两边都在有租户作用域的前提下运行。
+
+## 最佳实践
+
+- **固定 job 与机器**：门禁只用同一台机器、同一个 `--job`，并在报告里记下 `net10.0` SDK 版本。
+- **结果落盘对比**：`--exporters json` 输出到 `BenchmarkDotNet.Artifacts/`，用 `Ratio` 与 `Allocated` 两列做回归判断。
+- **先冒烟再采集**：每次改基准代码先 `--job Dry`，确认 `[GlobalSetup]` 不抛异常。
+- **只钉关键方法**：CI 只跑 `TenantEntryGuard`、`TenantKeyTransformer`、`Telemetry` 这几条热路径，全量留给本地。
+- **平台基准与业务基准一起看**：改动 `AmbientExecutionContext` 会同时影响 Tenancy、Telemetry 与 Bus，回归时至少各跑一组。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`（`Euonia.Platform.Benchmarks.csproj:5`），不打包（`IsPackable=false`）。
+- **关键依赖**：BenchmarkDotNet `0.15.8`（`Directory.Packages.props:141`）；被测包 `Euonia.Tenancy` / `Euonia.Telemetry` / `Euonia.Security` 支持 `net10.0` 与 `net11.0`。
+- **升级注意**：升级 BenchmarkDotNet 会改变默认 job 与报告列，历史基线需重新采集。
+- **已知边界**：基准全在进程内，不覆盖网络、存储与序列化；结论不能外推到 Bus / Osba 场景。
+
 ## 相关包
 
 - [`Euonia.Tenancy`](../../Source/Euonia.Tenancy/README.md) —— `TenantEntryGuard`、`TenantKeyTransformer`

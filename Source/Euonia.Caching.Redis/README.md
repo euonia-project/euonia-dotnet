@@ -158,3 +158,40 @@ public static void AddRedisCache(IServiceCollection services, IConfiguration con
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 启动时报 InvalidOperationException: Connection to '...' failed
+原因：连接串不可达、密码/TLS 不匹配、防火墙拦截，或只连到副本（会抛 `No writeable endpoint found`）。
+解决：先用 `redis-cli -u <connection-string> PING` 验证；检查 `ssl`、`password`、端点与网络；多节点至少保留一个可写主节点。
+
+### 调用 Clear() 抛 NotSupportedException，提示需要 allowAdmin
+原因：`Clear` 的实现是对当前逻辑库执行 `FLUSHDB`，连接未启用 `allowAdmin` 时 Redis 拒绝；而且 `FLUSHDB` 会清空整个库，不只是本缓存。
+解决：为缓存使用独立数据库；确需 `Clear` 时在连接串加 `allowAdmin=true`（或配置构建器 `WithAllowAdmin()`），否则改用按前缀删除。
+
+### 升级/重构后读取缓存报 Could not load type 或类型转换失败
+原因：Redis 中的值以 `AssemblyQualifiedName` 记录原类型，DTO 改名、换命名空间或迁移程序集后无法还原。
+解决：上线前清理相关键或使用新前缀；无法立即清键时用 `TypeCache.RegisterResolveType` 注册旧名到新类型的解析器。
+
+### 启动时报 No Redis configuration has been registered for the key 'x'
+原因：`WithRedisCacheHandle`/`WithRedisBackplane` 之前没有用同一配置键调用 `WithRedisConfiguration`。
+解决：先注册连接配置，键名保持一致；`RedisCacheService` 路径由内部固定键自动注册，不需要手工调用。
+
+### 开启键空间通知后仍收不到逐出/过期事件
+原因：只配置了客户端开关，Redis 服务端 `notify-keyspace-events` 未包含 `Exe`；或背板缺少数据源句柄。
+解决：服务端执行 `CONFIG SET notify-keyspace-events Exe`（并持久化配置），客户端使用 `enableKeyspaceNotifications: true` 或 `EnableKeyspaceEvents()`。
+
+## 最佳实践
+
+- **默认带 TTL**：所有写入使用 `Expires` 或 `CacheItem` 过期；永久键必须有明确的失效责任方。
+- **独立数据库与前缀**：缓存使用独立 logical database；键前缀包含应用与租户，避免与其他系统或环境冲突。
+- **谨慎使用 Clear**：优先 `RemoveByPrefixAsync` 定向失效；必须 `Clear` 时限制 `allowAdmin` 的作用域并确认库是专用的。
+- **连接串显式化**：设置合理的 `connectTimeout`/`syncTimeout`，并为连接失败与重连建立告警；同一连接串在进程内复用多路复用器。
+- **DTO 保持可序列化**：使用公开属性的简单 DTO，避免依赖运行时多态；类型移动时同步规划键迁移。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`StackExchange.Redis`、`Euonia.Caching`；按 Redis 服务端能力自动选择 LUA 或兼容路径。
+- **已知边界**：`RedisCacheService` 构造时固定装配句柄与背板；`Clear` 依赖 `allowAdmin`；键空间通知需要服务端配置；前缀删除使用 `SCAN`，不是 O(1)。
+- **升级注意**：缓存值含程序集限定类型名，升级前评估 DTO 兼容性；滚动升级期间新旧实例共享同一数据库时，建议先灰度并保留回滚窗口。

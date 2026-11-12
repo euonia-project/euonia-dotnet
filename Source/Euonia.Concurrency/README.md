@@ -125,3 +125,40 @@ if (handle is null)
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### Unable to resolve service for type 'ILockFactory'
+原因：抽象包只定义接口，不注册任何服务；未引用/未加载具体提供程序模块时容器无法解析。
+解决：引用 `Euonia.Concurrency.Redis`/`FileSystem`/`Azure` 等实现包，并在模块上声明 `[DependsOn(typeof(RedisLockModule))]` 等依赖。
+
+### Acquire 抛 TimeoutException: Timeout exceeded when trying to acquire the lock
+原因：锁被其他实例持有，或传入的 `timeout` 小于实际等待时间；`Acquire` 超时按异常处理。
+解决：先确认是否必须阻塞；可用 `TryAcquire`/`TryAcquireAsync`（失败返回 `null`），或增大超时并缩短临界区。
+
+### 注入 ISemaphoreFactory 失败
+原因：该能力并非所有提供程序都实现；文件系统与 Azure Blob 包只实现 `ILockFactory`。
+解决：信号量改用 `Euonia.Concurrency.Redis` 或 `Euonia.Concurrency.ZooKeeper` 并加载对应 `*SemaphoreModule`。
+
+### HandleCancellationToken 一直不会取消
+原因：并非所有锁实现都支持句柄丢失监视；不支持时返回 `CancellationToken.None`。
+解决：先检查 `CanBeCanceled`；不要把该令牌当作任务取消令牌，业务取消仍应使用方法参数上的 `cancellationToken`。
+
+### 锁在临界区完成前就被释放
+原因：句柄在 `await using` 作用域结束时释放；提前 `return`、把句柄存到字段或让作用域覆盖不到异步后续都会导致提前释放。
+解决：让整个临界区位于句柄作用域内，不要跨作用域传递句柄；长任务定期检查 `HandleCancellationToken`。
+
+## 最佳实践
+
+- **按资源粒度命名**：锁名精确到业务资源（如 `order:{id}:ship`）并加应用前缀，避免全局大锁。
+- **始终设置超时与取消**：`Acquire` 用有限超时，配合请求 `cancellationToken`；不要在请求线程上无限等待。
+- **优先 TryAcquire**：可跳过的工作用 `TryAcquire`（`TimeSpan.Zero`）快速失败，避免堆积等待者。
+- **临界区尽量短**：锁内只做必要的互斥操作；耗时 IO 或外部调用移到锁外，或改用信号量限制并发。
+- **监控等待时间**：记录获取耗时与超时率，持续升高通常意味着锁粒度过粗或持有时间过长。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`Euonia.Core`（`Nerosoft.Euonia.Threading.TimeoutValue`）；提供程序包各自依赖 Redis/ZooKeeper/Azure SDK。
+- **已知边界**：抽象层不注册服务、不读取配置；信号量与句柄丢失监视并非所有实现都支持。
+- **升级注意**：升级抽象包时同步升级提供程序包，避免接口实现缺失；锁/票据本身不持久化业务数据，无数据迁移。

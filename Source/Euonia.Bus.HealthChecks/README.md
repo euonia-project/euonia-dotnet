@@ -133,6 +133,53 @@ app.MapGet("/health/bus", async (HealthCheckService health, CancellationToken ca
 5. **不会实例化 `IBus`**：检查用 `IConfigurator` 判断总线是否装配，避免触发发件箱轮询等后台工作（`BusHealthCheck.cs:51-57`）。
 6. **重复注册会产生多条同名检查**：`AddEuoniaBusHealthChecks` 直接调用 `builder.Add`，多次调用不会去重。
 
+## 常见问题与故障排查
+
+### 明明有死信，检查仍然返回 Healthy
+
+**原因**：没有注册 `IDeadLetterStore`（例如未调用 `AddInMemoryDeadLetters()`），该项被跳过；或 `MaxDeadLetters` 设得过大。
+
+**解决**：注册死信存储；把 `MaxDeadLetters` 设为可接受上限；通过响应 `data["deadLetters"]` 确认实际计数（`BusHealthCheck.cs:67-77`）。
+
+### `transports` 一直是 0
+
+**原因**：检查统计的是 `IConfigurator.StrategyAssignedTypes.Count`，即调用过 `SetStrategy` 的传输器名称，而不是 `ITransporter` 的注册数量。
+
+**解决**：为实际使用的传输器调用 `SetStrategy`；或把 `RequireTransporter` 保持 `false`（`BusHealthCheck.cs:59-65`）。
+
+### 检查报错“无法从根容器解析 scoped 服务”
+
+**原因**：`IOutboxStore` / `IInboxStore` / `IDeadLetterStore` 可能注册为 Scoped，而健康检查运行在根容器上下文。
+
+**解决**：`BusHealthCheck` 已在独立作用域中解析（`BusHealthCheck.cs:32-44`）；自定义存储若仍失败，检查其构造函数是否依赖请求级服务。
+
+### 健康端点出现多条同名检查
+
+**原因**：`AddEuoniaBusHealthChecks` 直接调用 `builder.Add`，重复调用不会去重。
+
+**解决**：只在组合根注册一次；需要区分用途时用 `tags`，不要重复注册。
+
+### 健康端点返回 404
+
+**原因**：只调用了 `AddEuoniaBusHealthChecks`，没有调用 `app.MapHealthChecks(...)`；前者只注册检查，不创建路由。
+
+**解决**：显式映射端点并确认路径与探针一致，例如 `app.MapHealthChecks("/health")`。
+
+## 最佳实践
+
+1. **为死信设置可执行阈值**：`MaxDeadLetters` 用业务可接受值（例如 0 或 10），并让告警直接指向 `{queue}.dlq`。
+2. **按用途打标签**：liveness 只关心进程存活，readiness 才挂总线检查；用 `tags: ["bus", "ready"]` + `MapHealthChecks` 的 `Predicate` 分离。
+3. **只有注册了存储才启用积压阈值**：`MaxOutboxFailed` / `MaxInboxFailed` 默认 `-1`，未注册存储时保持默认，避免误判。
+4. **保持检查轻量**：不要在其中做远程调用或大数据扫描；设置 `timeout`（例如 3 秒）防止拖垮探针。
+5. **阈值走环境变量**：`Euonia__Bus__HealthChecks__MaxDeadLetters` 或 `EUONIA_BUS_HEALTHCHECKS_MAXDEADLETTERS`，按环境调整。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Microsoft.AspNetCore.App` 框架引用、`Euonia.Bus`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：`transports` 是策略数量；未注册存储的项不参与判定；重复注册会产生多条同名检查。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线引擎与可靠性存储

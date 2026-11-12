@@ -184,3 +184,40 @@ public sealed class UserProfileService(ICacheManager<UserProfile> cache)
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 注入 ICacheManager<T> 失败，只能拿到非泛型 ICacheManager
+原因：`AddDefaultCacheManager<TComponent>` 注册的是组件级非泛型 `ICacheManager`，不会注册 `ICacheManager<TValue>`。
+解决：需要泛型契约时用 `CacheFactory.Build<TValue>` 构建并注册实例；只需组件级简化 API 时注入非泛型 `ICacheManager`。
+
+### GetOrAdd 偶发 InvalidOperationException: Could not get or add the item
+原因：`GetOrAdd` 以“读取—添加—重试”实现，达到 `MaxRetries`（默认 50）后仍无法写入同一键时抛出。
+解决：降低同一键的并发写、提高 `WithMaxRetries` 或 `WithRetryTimeout`，跨节点场景配合分布式锁串行化重建。
+
+### 一个节点更新后，另一个节点仍读到旧值
+原因：没有配置背板，或没有任何句柄被标记为背板源（`isBackplaneSource`）；背板只广播失效/更新，不保证强一致。
+解决：为提供程序配置背板并至少保留一个背板源句柄（例如 Redis 的 `WithRedisBackplane` 加默认 `isBackplaneSource: true` 的句柄）。
+
+### 写入成功却读不到
+原因：读取的 `TValue` 与写入时不一致（`CacheItem<TValue>` 不协变），或键被 `KeyPrefix`/租户 `IKeyTransformer` 改写。
+解决：读写使用同一泛型实参；按 `{KeyPrefix}.Cache.{key}` 与租户前缀核对实际键；失效可用 `Remove<object>(key)`。
+
+### Expire 在并发下表现不一致
+原因：`Expire`/`RemoveExpiration` 通过重新 `Put` 实现，不是原子操作。
+解决：不要用它做分布式协调；需要严格 TTL 时在写入时用 `CacheItem` 指定 `Absolute`/`Sliding`。
+
+## 最佳实践
+
+- **单例构建**：每个进程只 `CacheFactory.Build` 一次并注册为单例，禁止按请求构建管理器或句柄。
+- **按数据分类设 TTL**：外部可重建数据用绝对过期，热点数据用滑动过期；无 TTL 的键必须有显式失效路径。
+- **统一键规范**：固定 `{app}:{tenant}:{entity}:{id}` 前缀，配合 `RemoveByPrefixAsync`（Memory/Redis）做批量失效。
+- **监控命中与耗时**：需要统计时对句柄调用 `EnableStatistics()`；用 `CacheTelemetry` 的 `ActivitySource`/`Meter` 接入观测。
+- **缓存不承担正确性**：把缓存当加速层，数据库/服务仍是事实来源；分布式场景用锁与幂等保护重建。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：抽象层仅依赖 `Microsoft.Extensions.DependencyInjection.Abstractions` 与 `Euonia.Core`；具体能力由 Memory/Redis/Runtime 提供程序包决定。
+- **已知边界**：字典/内存句柄只在进程内共享，只有配置了分布式提供程序与背板才跨节点；`CacheUpdateMode.Up` 只回填句柄链，不代表写穿所有节点。
+- **升级注意**：Redis 缓存值含程序集限定类型名，DTO 改名或迁移程序集后旧键可能无法反序列化；滚动升级期间新旧实例可能同时消费背板，建议先小流量验证并按提供程序清理不兼容键。

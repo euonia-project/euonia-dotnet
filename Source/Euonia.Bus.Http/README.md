@@ -178,6 +178,53 @@ app.Run();
 5. **授权不会自动携带**：只有信封上的 `Authorization` 会被写成 `Authorization` 请求头；后台任务等无请求作用域的调用需要自行写入。
 6. **`Enabled` 不控制注册**：是否注册传输器取决于是否调用 `AddHttpBus`，配置里的 `Enabled` 目前不被读取。
 
+## 常见问题与故障排查
+
+### 客户端调用返回 404
+
+**原因**：服务端没有调用 `app.MapBusEndpoint()`，或客户端 `Route` 与服务端映射的路由不一致。
+
+**解决**：服务端映射端点；两端共用同一 `Route`（默认 `/bus/call`），并通过 `Euonia:Bus:Http:Route` 统一覆盖（`BusEndpointExtensions.cs:23-32`）。
+
+### 调用返回 401 / 403
+
+**原因**：`RequireAuthorization` 默认 `true`，端点要求授权；后台任务等无请求作用域的调用没有信封 `Authorization`。
+
+**解决**：客户端在请求作用域内调用以自动携带令牌，或显式写入信封 `Authorization`；受控内网可设 `RequireAuthorization=false`，但不要在生产关闭。
+
+### 配置了 `Euonia:Bus:Http` 但 `Route` / `RequireAuthorization` 没变化
+
+**原因**：服务端只调用了 `AddEuoniaBus()`，没有注册 `HttpBusOptions`；`MapBusEndpoint` 读取的是 `IOptions<HttpBusOptions>`。
+
+**解决**：服务端也调用 `AddHttpBus()`，或显式 `services.AddOptions<HttpBusOptions>().BindConfiguration(HttpBusOptions.SectionName)`。
+
+### 远端异常类型没有还原
+
+**原因**：`RemoteError.ToException` 只还原系统程序集异常或 `MessageBusException` 子类，并要求类型有 `(string)` 构造函数；应用自定义异常一律回退为 `MessageDeliverException`（`RemoteError.cs:49-78`）。
+
+**解决**：业务错误用 `MessageBusException` 子类或返回结果对象表达；客户端按 `MessageDeliverException` 兜底。
+
+### 多服务场景请求发到了错误端点
+
+**原因**：`Endpoints` 解析顺序为「精确键 → 通配符键（按声明顺序，首个匹配）→ 默认 `Endpoint`」，顺序或键写错会命中错误地址。
+
+**解决**：精确通道优先；通配符按从具体到宽泛排列，并在启动日志中核对实际请求地址（`HttpTransporter.cs:138-185`）。
+
+## 最佳实践
+
+1. **共享消息契约程序集**：服务端处理器注册的通道与客户端路由键依赖同一份消息类型定义；异常还原只覆盖系统异常与 `MessageBusException`。
+2. **单次调用用 `WithTimeout`**：`RequestTimeout` 会改单例 `HttpClient.Timeout`，影响所有调用；按调用设置更安全。
+3. **生产保持 `RequireAuthorization=true` 并使用 TLS**：仅测试/受控内网显式关闭，且不要暴露 `/bus/call` 到公网。
+4. **端点表集中配置**：`Endpoints` 通过 `Euonia:Bus:Http:Endpoints` 或环境变量下发，避免硬编码多套地址。
+5. **为总线端点单独做健康检查**：用 `Euonia.Bus.HealthChecks` 监控积压，再对 `/bus/call` 做连通性探测。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Microsoft.AspNetCore.App` 框架引用、`Euonia.Bus`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：只支持请求-响应；`Enabled` 选项当前不控制注册；旧节 `HttpBus` 仍绑定但新节 `Euonia:Bus:Http` 优先。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线引擎

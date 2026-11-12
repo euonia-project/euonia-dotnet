@@ -175,6 +175,36 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 - [`Euonia.Linq`](../Euonia.Linq/README.md) —— 查询与规约
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 多租户过滤器与连接串
 
+## 常见问题与故障排查
+
+### 解析仓储时报 `Unable to resolve service for type 'IContextProvider'`
+`AddEfCoreRepository` 只注册 `DbContext`、开放式仓储与 `IContextFactory`，不会注册 `IContextProvider`。在模块上添加 `[DependsOn(typeof(RepositoryModule))]`，或显式调用 `services.AddContextProvider()`。
+
+### `AddDataContextFactory` 抛 `ArgumentException` / `NotSupportedException`
+连接串必须带 `{provider}://` 前缀，例如 `sqlite://Data Source=app.db`；前缀对应的 provider 还必须注册键控 `ConnectionConfigurator`。缺少前缀会抛 `ArgumentException`，provider 未注册会抛 `NotSupportedException`。
+
+### `AutoSetEntryValues => true`，审计字段仍为空
+`DataContextBase` 只提供 `SetEntryValues` 钩子，基类实现为空；`AutoSetEntryValues` 为 `true` 仅表示保存前调用它。需要在派生上下文中重写 `SetEntryValues` 并填充 `CreatedAt`/`UpdatedAt` 等字段。
+
+### 实体配置没有生效
+`DataContextBase.OnModelCreating` 只加载带 `[DbContext(typeof(TContext))]` 的 `IEntityTypeConfiguration`。没有该特性、或指向其他上下文类型的配置不会被应用。
+
+### `ValidateScopes` 下启动失败
+把 `DbContext` 或仓储注册为 `Singleton` 会与 EF Core 的线程模型冲突；`AddEfCoreRepository<TContext>(..., ServiceLifetime.Singleton)` 与 `AddEfCoreRepository(ServiceLifetime.Singleton)` 都可能触发。生产环境保持 `Scoped`。
+
+## 最佳实践
+
+- 模块同时使用 `[DependsOn(typeof(RepositoryModule))]` 与 `AddDataContextFactory<TContext>()`，让连接串按名称/环境变量解析。
+- 每个 provider 注册一个键控 `ConnectionConfigurator`（如 `"sqlite"`），连接串用 `ConnectionStrings__Default` 或 `CONNECTION_STRING_DEFAULT` 覆盖。
+- 迁移与建库放在部署阶段；不要在请求路径里 `EnsureCreated`。
+- 派生上下文重写 `SetEntryValues` 与 `ConfigureModel`，保持审计字段、软删除过滤器和租户过滤器顺序一致。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Repository`、`Euonia.Uow`、`Microsoft.EntityFrameworkCore` / `Relational`；具体版本由仓库构建属性决定。
+- 已知边界：`AddEfCoreRepository` 不解析 `ConnectionStrings`；`DataContextBase` 的审计填充是空钩子；软删除使用命名过滤器，不能与匿名过滤器混用。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

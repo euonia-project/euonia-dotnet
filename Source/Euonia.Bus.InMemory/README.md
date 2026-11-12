@@ -188,6 +188,53 @@ public sealed class OrderService(IBus bus)
 5. **无持久化**：进程退出即丢失全部未处理消息，也不提供发件箱/收件箱存储；需要可靠性时注册 `Euonia.Bus` 的内存存储或改用 broker 传输。
 6. **`LazyInitialize` / `MaxConcurrentCalls` 目前不生效**：这两个属性仅为兼容保留，修改它们不会改变行为。
 
+## 常见问题与故障排查
+
+### `CallAsync` / `SendAsync` 一直挂起
+
+**原因**：目标通道没有注册接收者（未 `RegisterChannel`、约定不识别该消息），单播/请求依赖接收者触发 `Completed` / `Failed`。
+
+**解决**：确认 `SetConvention` 能识别消息类型、`RegisterChannel` 覆盖了处理器所在程序集；调用时传入取消令牌，`CallAsync` 可配合 `WithTimeout`（`InMemoryTransporter.cs:90-129`）。
+
+### `PublishAsync` 返回后处理器没有执行
+
+**原因**：多播是即发即忘，接收者把消息投递到自己的后台串行泵；处理器异常只写日志并调用 `context.Failure`，不会回传给发布方。
+
+**解决**：确认通道上有 `InMemorySubscriber` 注册；在测试里用信号量/`TaskCompletionSource` 等待，而不是发布后立即断言（`InMemoryRecipient.cs:74-80,165-181`）。
+
+### 同一条消息被处理两次
+
+**原因**：同一进程同时启用了多个传输器（例如 InMemory + RabbitMq），策略对同一通道都返回 `true`，多播消息会向每个传输器各投递一次；也可能是业务侧重复发布。
+
+**解决**：用 `EvaluateOutgoing` / `EvaluateIncoming` 按通道或消息类型限定唯一传输器；消费端按 `MessageId` 幂等；`MultipleSubscriberInstance` 保持默认 `false`。
+
+### 把 `InMemoryTransporter` 注入单例服务时报作用域错误
+
+**原因**：传输器注册为 `Scoped`（`ServiceCollectionExtensions.cs:45`），不能从根容器或单例构造函数解析。
+
+**解决**：在请求/消息作用域内解析，或改为注入 `IBus`（同样 Scoped）。
+
+### 新建的 `ServiceProvider` 收不到另一个容器的消息
+
+**原因**：信使按容器隔离，`InMemoryMessengerProvider` 为每个容器提供独立的一对强弱引用信使，这是刻意设计。
+
+**解决**：跨容器/跨进程改用 RabbitMQ 或 ActiveMQ；不要尝试共享进程级 `WeakReferenceMessenger.Default`。
+
+## 最佳实践
+
+1. **开发与单测固定用 InMemory**：设置 `Euonia:Bus:DefaultTransporter=InMemory`，测试无需外部 broker。
+2. **测试里显式注册通道并等待异步完成**：`AddConfiguratorBuilder(c => c.RegisterChannel(typeof(Test).Assembly))`，处理器内用 `TaskCompletionSource` 通知断言。
+3. **默认保持 `MultipleSubscriberInstance=false`**：只有确实需要同一通道多个独立订阅者实例时才开启。
+4. **所有调用传取消令牌**：无接收者时不会自动失败，取消令牌是唯一的兜底。
+5. **生产环境不要依赖进程内可靠性**：InMemory 无持久化，进程退出即丢失；需要重试/死信请改用 broker 或外置存储。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`。
+- **关键依赖**：`Euonia.Bus.Abstract`、`Euonia.Core`、`Euonia.Modularity`、`Microsoft.Extensions.Options`。
+- **版本策略**：随仓库 `Source/project.props` 统一管理，本文不固定版本号。
+- **已知边界**：`LazyInitialize`、`MaxConcurrentCalls` 仅保留属性、当前实现不读取；无持久化、无跨进程投递。
+
 ## 相关包
 
 - [`Euonia.Bus`](../Euonia.Bus/README.md) —— 总线引擎与约定/策略配置

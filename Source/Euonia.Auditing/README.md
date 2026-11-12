@@ -209,6 +209,36 @@ EUONIA_AUDITING_ENABLED=true            # 仓库 alias：大写单下划线
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 租户字段来源
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型
 
+## 常见问题与故障排查
+
+### 已启用审计，但存储里没有记录
+依次检查：`Euonia:Auditing:Enabled` 是否为 `true`；是否注册了 `IAuditingStore`（`AddInMemoryAuditingStore`、`AddAuditingEfCore` 或 `AddAuditingMongo`）；HTTP 请求是否经过 `UseAuditing()`；`Mode=WritesOnly` 时读方法是否被跳过；匿名调用是否被 `RecordAnonymous=false` 过滤。若记录已入队，测试或停机前还需 `IAuditingRecorder.FlushAsync()`。
+
+### InMemory 存储的 `Records` 一直为空
+默认 `SuccessDelivery=Batched`、`BatchInterval=2s`，写入器在后台按批落库；请求返回时记录可能仍在队列里。测试中先调用 `IAuditingRecorder.FlushAsync()` 再断言 `InMemoryAuditingStore.Records`（仓库的 HTTP 管道测试即采用该做法）。
+
+### 同一 `ScopeId` 重复保存会不会产生重复行
+`IAuditingStore` 契约要求按 `ScopeId` 幂等：InMemory 存储按键合并动作，EF Core 存储用 `scope_id` 唯一索引并在冲突时合并终态与动作。自定义存储必须自行实现同样的幂等语义，否则重放或重试会产生重复行。
+
+### 接口返回 200，但审计记录是失败或没有异常堆栈
+审计失败开放：存储异常只记日志，不影响业务结果，所以 200 不代表审计一定成功。端点内显式调用 `AbortAsync` 或动作 `Fail` 时，记录会保持 `IsSuccess=false`，即使 HTTP 状态是 200；异常堆栈默认不记录，需设置 `RecordStackTrace=true`。
+
+### 跨租户查询被拒绝
+查询其他租户必须同时设置 `AllowCrossTenant=true` 和 `CrossTenantReason`，并由宿主通过 `CrossTenantQueryAuthorizer` 显式放行；没有租户上下文（后台任务）时也必须声明跨租户与原因。默认 `null` 授权器拒绝所有跨租户查询。
+
+## 最佳实践
+
+- 生产环境使用 EF Core / Mongo 存储，并按需叠加 `AddFileAuditingSpool`；`AddInMemoryAuditingStore` 只用于测试与本地开发。
+- 成功记录保持 `SuccessDelivery=Batched`，失败记录使用 `FailureDelivery=Immediate`；有界 `QueueCapacity` 配合 `euonia.auditing.records.dropped` / `.rejected` 指标观察丢弃。
+- 管道顺序固定为 `UseAuditing()` 在 `UseTenancy()` 之前；合规要求的方法用 `[Audited]` 强制记录，不依赖全局开关。
+- 测试与停机时调用 `FlushAsync()` 排空队列；环境差异用 `Euonia__Auditing__Enabled=true` 或 `EUONIA_AUDITING_ENABLED=true` 覆盖。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Core` 与 `Microsoft.Extensions.*` 抽象包；EF Core / Mongo 适配分别由 `Euonia.Auditing.EfCore`、`Euonia.Auditing.Mongo` 提供，包版本由仓库构建属性决定。
+- 已知边界：写入器与记录器在构造时读取 `AuditingOptions`，运行期修改需重启；未注册 `IAuditingStore` 时记录会被丢弃；`CrossTenantQueryAuthorizer` 只能代码配置。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

@@ -124,6 +124,38 @@ Quartz 集成没有框架自带的配置节；所有选项都通过 `AddQuartz` 
 - Quartz.NET 4 不再支持零大小线程池和专用线程池；`UseZeroSizeThreadPool`、`UseDedicatedThreadPool` 会直接抛出 `NotSupportedException`，请改用 `UseDefaultThreadPool` 或 `UseThreadPool<T>`。
 - 作业数据中的 `tenantId` 需要容器中存在 `ITenantStore`；租户不存在时抛出 `TenantNotFoundException`。租户作用域在作业执行体内安装，而不是在作业工厂阶段。
 
+## 常见问题与故障排查
+
+### `AddJobs(assembly)` 启动时抛 `InvalidOperationException`
+**原因**：`AddJobs` 会为程序集中每个导出 `IJob` 类型调用无选项的 `AddJob(type)`，因此完全依赖类型上的 `BackgroundJobScheduleAttribute`；若没有特性，触发器集合为空，`AddJob` 抛出异常。
+**解决**：给作业加至少一个调度特性（如 `[CronExpressionSchedule]`、`[SimpleSchedule]`），或改用 `options.AddJob<TJob>(job => job.TriggerConfigure.Add(...))` 显式配置触发器。
+
+### `SimpleSchedule` 配置 `RepeatCount = -1` 时抛异常
+**原因**：`SimpleScheduleAttribute.Configure()` 只接受 `null`（永久重复）或非负的 `RepeatCount`；负数会在构建触发器时抛出 `InvalidOperationException`。
+**解决**：要永久重复就省略 `RepeatCount`；要有限次数就填 `0` 或正整数（总触发次数为值加 1）。
+
+### 作业被注册两次或重复执行
+**原因**：`AddQuartz` 使用共享的 `Singleton<BackgroundBuildOptions>`；每次调用都会把共享字典中的作业再次注册到调度器，同一类型后一次 `AddJob` 会覆盖字典项，但之前的托管服务/触发器可能已经注册。多个模块各自调用 `AddQuartz` 时尤其容易重复。
+**解决**：整个宿主只保留一处 `AddQuartz`；作业集中在一个模块里通过 `options.Configure(quartz => quartz.AddJobs(...))` 注册，避免同时在多个模块调用 `AddJob<TJob>`。
+
+### 作业带 `tenantId` 时抛 `TenantNotFoundException`
+**原因**：`DefaultJobFactory` 在作业数据中读到 `tenantId` 后会通过 `ITenantStore` 查询租户；未注册租户存储或查不到对应租户都会抛出该异常。
+**解决**：调用 `AddTenancy(...)` 并注册 `ITenantStore`（如 `AddInMemoryTenantStore`）；确认 `JobDataMap` 的键名是 `tenantId`，值来自真实租户 ID。
+
+## 最佳实践
+
+- 集中注册：一个宿主只调用一次 `AddQuartz`，用 `options.Configure(quartz => quartz.AddJobs(typeof(Program).Assembly))` 统一扫描，避免分散注册导致顺序与重复问题。
+- 启动与关闭：生产环境保留 `AwaitApplicationStarted = true`，需要优雅停机时设置 `WaitForJobsToComplete = true`，并用 `StartDelay` 错开启动高峰。
+- 测试替身：作业测试使用 `UseInMemoryStore()`，通过 `ISchedulerFactory.GetScheduler()` 手动 `ScheduleJob`，不要依赖真实持久化存储。
+- 时区显式化：Cron 作业显式设置 `TimeZoneName`（默认 `UTC`）；跨时区部署时避免使用 `LOCAL`，并在测试中覆盖夏令时边界。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：Quartz.NET 4.7.3（由 `Directory.Packages.props` 锁定）；`BackgroundBuildOptions` 与 `BackgroundJobOptions` 都是代码配置。
+- 已知边界：Quartz 4 的 `IJob.Execute` 返回 `ValueTask` 并接收 `CancellationToken`；不再支持零大小/专用线程池；租户作用域在作业执行体内安装。
+- 升级提示：从 Quartz 3 升级时先改 `IJob` 签名，再移除 `UseZeroSizeThreadPool`/`UseDedicatedThreadPool` 调用，并复核 `MisfireThreshold` 与持久化存储配置。
+
 ## 相关包
 
 - [`Euonia.Core`](../Euonia.Core/README.md) —— `Singleton`、集合工具

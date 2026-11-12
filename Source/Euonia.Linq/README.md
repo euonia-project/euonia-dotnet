@@ -98,6 +98,38 @@ var result = await db.People.Where(predicate).ToListAsync();
 - `SegmentSpecification` 要求 `min` 与 `max` 至少提供一个；两者都提供时最小值不得大于最大值，否则构造失败。`RangeBoundary` 决定两端是否包含。
 - `QueryHandler<T>` 持有可变的页码、大小、谓词与排序状态，不是线程安全的；不要跨请求共享同一个实例。
 
+## 常见问题与故障排查
+
+### `Where("PropertyName", value)` 没有产生过滤条件
+**原因**：按属性名动态构造条件时，属性名不存在、拼写/大小写不匹配，或值无法转换为属性类型（如字符串转 `int` 失败）时，`QueryableExtensions.Where` 会静默返回原查询，不抛异常。
+**解决**：用 `nameof` 或启动时缓存的属性白名单校验属性名；对值先做 `TryParse`/类型转换，再调用动态 `Where`；关键查询优先使用强类型表达式。
+
+### `WhereIfNotEmpty` 抛 `InvalidOperationException`
+**原因**：该方法只允许一个条件属性，内部用 `Lambda.GetConditionCount` 统计 `AndAlso`/`OrElse`；谓词包含多个条件（如 `t => t.Name == "a" && t.Age > 1`）时会抛异常，而不是自动拆分。
+**解决**：拆成多个 `WhereIfNotEmpty` 调用，或改用 `WhereIf(predicate, condition)`/`Where(specification)` 组合；空字符串和 `null` 值会被忽略，不要依赖它处理多条件。
+
+### `QueryHandler.GetCount()` 与分页结果数量不一致
+**原因**：`GetCount()` 基于**未分页**的过滤结果计数，`SetPage`/`SetSize` 只影响 `Query()`；这是设计行为，不是分页总数计算错误。
+**解决**：列表用 `Query()`，总数用 `GetCount()`；需要异步时用 `QueryAsync`/`GetCountAsync`，不要在分页后的集合上再 `Count()`。
+
+### `OrderBy("PropertyName", sortType)` 没有排序
+**原因**：属性名无法解析为成员表达式，或 `SortType` 不是 `Ascending`/`Descending` 时，扩展方法直接返回原查询；不会抛异常。
+**解决**：校验属性名与 `SortType`；需要稳定排序时使用 `QueryHandler.OrderByAscending/OrderByDescending` 或 `SetCollator` 的强类型重载。
+
+## 最佳实践
+
+- 动态查询的字段名来自外部输入时，先按白名单映射到强类型表达式，避免静默失效和意外字段访问。
+- 规约组合优先继承 `Specification<T>`，以便使用 `&`、`|`、`!`；只有 `ISpecification<T>` 时用 `And`/`AndIf` 扩展并注意其强制转换。
+- `QueryHandler<T>` 每个请求创建一个实例；页码从 1 开始，`SetSize(0)` 会返回空列表，分页参数在入口处校验。
+- 对 EF Core 查询写翻译测试，覆盖可空导航属性、`Between` 边界与动态 `OrderBy`；LINQ to Objects 与数据库 provider 行为可能不同。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：仅依赖 `Euonia.Core`；没有 DI 注册、配置节或第三方查询 provider。
+- 已知边界：动态属性名失败时静默返回原查询；`WhereIfNotEmpty` 仅支持单条件；`QueryHandler<T>` 非线程安全。
+- 升级提示：表达式树由调用方 provider 执行，升级 EF Core/数据库 provider 后应重跑动态查询与边界测试。
+
 ## 相关包
 
 - [`Euonia.Core`](../Euonia.Core/README.md) —— 基础工具

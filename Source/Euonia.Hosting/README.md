@@ -165,6 +165,38 @@ public void Configure(IApplicationBuilder app)
 - `UseTenancy()` 应位于 `UseAuthentication()` 与 `UseRouting()` 之后、`UseAuthorization()` 之前，否则 Header 解析拿不到已认证身份；`UseAuditing()` 应位于租户中间件之前，`UseEuoniaTelemetry()` 应位于租户中间件之后。对应 `*Options.Enabled` 为 `false` 或选项未注册时，这些扩展是空操作。
 - `HostBuilderOptions.ApplicationName` 保存入口程序集名，默认构建路径未消费该值；实际应用名以宿主 `HostingEnvironment.ApplicationName` 为准，并写入 `SERVICE_NAME` 环境变量。
 
+## 常见问题与故障排查
+
+### 调用 `AddJwtAuthentication(string)` 时抛 `ArgumentNullException`
+**原因**：该重载从已注册的 `IConfiguration` 读取调用方指定的配置节；节不存在或未提供 `SigningKey` 时，绑定结果缺少签名密钥（可能为空对象或 `null`），注册阶段会失败：前者在 `ArgumentNullException.ThrowIfNull`，后者在 `Encoding.UTF8.GetBytes`。若 `IConfiguration` 本身未注册，还会先在 `GetConfiguration()!` 处抛 `NullReferenceException`。
+**解决**：确认模块执行 `ConfigureServices` 时配置已注册；优先用 `AddJwtAuthentication(options => options.SigningKey = ...)` 显式赋值，或先 `services.AddSingleton<IConfiguration>(configuration)` 再使用字符串重载。
+
+### 租户请求头或子域名解析不到租户
+**原因**：`UseTenancy()` 在 `MultiTenancyOptions` 未注册或 `Enabled = false` 时直接返回；中间件顺序错误（位于 `UseAuthentication` 之前）会让 Header 解析拿不到已认证身份；`RequireTenant = true` 时解析失败会由租户中间件写出错误。
+**解决**：先 `AddTenancyAspNetCore(options => options.Enabled = true)`；按 `UseAuthentication` → `UseRouting` → `UseTenancy` → `UseAuthorization` 排序；匿名请求需要租户头时设置 `TrustHeaderForAnonymous = true`，并确认 `HeaderName` 与客户端一致。
+
+### 模块初始化没有执行，或 `RequestTraceMiddleware` 不生效
+**原因**：`AddModularityApplication<T>` 只注册模块与服务；不调用 `app.InitializeApplication()` 就不会执行 `OnApplicationInitialization`。模块未通过 `[DependsOn(typeof(HostingModule))]` 引入时，请求上下文与 `x-request-trace-id` 也不会安装。
+**解决**：在 `Startup.Configure` 最前面调用 `app.InitializeApplication()`；检查模块依赖链包含 `HostingModule`，并用 `application.IsModuleLoaded<HostingModule>()` 或启动日志确认。
+
+### 异常响应仍是 HTML 或没有统一 JSON
+**原因**：`ExceptionHandlingMiddleware` 是内部类型，`HostingModule` 只把它注册为 Transient，**不会**自动插入请求管道；自动插入的只有 `RequestTraceMiddleware`。
+**解决**：在应用侧实现异常中间件并放在管道最外层（示例应用使用 `ApiExceptionMiddleware`），按需把 `HttpStatusException`、校验异常、认证/授权异常与超时异常映射为 400/401/403/504 等状态码；不要依赖 `UseMiddleware<ExceptionHandlingMiddleware>()`，该类型无法从应用程序集引用。
+
+## 最佳实践
+
+- JWT 使用代码配置或宿主已有的密钥源，避免把 `SigningKey` 写进仓库；注册前先确保 `IConfiguration` 单例存在，再按需使用字符串重载。
+- 固定管道顺序：`InitializeApplication` → `UseAuthentication` → `UseExecutionContext`/`UseAuditing` → `UseRouting` → `UseTenancy` → `UseEuoniaTelemetry` → `UseAuthorization`。
+- 生产环境将 `HostBuilderOptions.CaptureStartupErrors` 设为 `false`，让启动配置错误直接失败，而不是带病运行。
+- 用 `Microsoft.AspNetCore.TestHost` 或 `WebApplicationFactory` 写集成测试，断言认证、租户与追踪头在真实管道中的顺序。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：`Microsoft.AspNetCore.App` 共享框架、`Duende.IdentityModel` 8.1.0、`Duende.AspNetCore.Authentication.OAuth2Introspection` 7.0.2；JwtBearer/OpenIdConnect 随目标框架版本。
+- 已知边界：`JwtAuthenticationOptions` 没有框架默认配置节；`ExceptionHandlingMiddleware` 为内部类型；`AddJwtAuthentication` 会清空进程级入站声明映射。
+- 升级提示：升级 ASP.NET Core 或 Duende 包后，重新验证 `AddIdentityServerAuthentication` 的 JWT/内省子方案与 `TokenValidationParameters` 行为。
+
 ## 相关包
 
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块与应用生命周期

@@ -154,6 +154,48 @@ app.UseAuthorization();
 - 示例中的 `JwtAuthenticationOptions` 含演示用签名密钥，**不要**直接用于生产。
 - 示例的租户能力以 `RequireTenant=false` 接入单租户数据，不演示 `DatabasePerTenant` 隔离。
 
+## 常见问题与故障排查
+
+### 启动报 `IOException: Failed to bind to address http://localhost:5240: address already in use`
+
+**原因**：`launchSettings.json` 的 `http` 配置固定占用 5240（`Properties/launchSettings.json:17`），上一次的进程或另一个服务仍占用该端口。
+**解决**：`dotnet run --project Samples/Euonia.Sample.Webapi --urls http://localhost:5241`，或先 `lsof -i :5240` 结束占用进程。
+
+### 发布消息抛 `MessageTransportException`（传输器未注册）
+
+**原因**：`RabbitMqBusModule` 只在 `Euonia:Bus:RabbitMq:Enabled=true` **且** `Connection` 非空时才注册传输器（`RabbitMqBusModule.cs:18-28`）；只写 `Enabled` 不写 `Connection` 时总线会在发布时找不到名为 `RabbitMq` 的传输器。
+**解决**：同时配 `Connection`，或把 `Enabled` 关掉让消息走 `InMemory`；broker 未启动时不会阻断启动，但连接会按 `MaxFailureRetries` 指数退避重试并记录 critical 日志（`DefaultPersistentConnection.cs:91-110`）。
+
+### 用 `admin123` 登录返回 401
+
+**原因**：种子只在 `Users` 表为空时执行（`PersistServiceModule.cs:83-93`）。已有 `euonia-sample.db` 时不会重置密码；连续失败还会累加 `AccessFailedCount` 并临时锁定（`AuthController.cs:51-62`）。
+**解决**：删除 `euonia-sample.db` 重新种子，或用已有密码调 `POST /api/user/me/password` 修改；锁定需等待 `LockoutEnd` 过期。
+
+### 换实体后启动报 `SQLite Error 1: no such table` / 缺列
+
+**原因**：示例用 `EnsureCreated()` 建库，没有迁移（`PersistServiceModule.cs:77`），旧库结构不会随实体更新。
+**解决**：停掉应用、删除 `euonia-sample.db`（含 `-wal` / `-shm`）后重启，让 `EnsureCreated` 重建。
+
+### Swagger 打开 404
+
+**原因**：`UseSwagger` / `UseSwaggerUI` 只在 `env.IsDevelopment()` 下注册（`Startup.cs:75-79`），`dotnet run` 的默认 profile 设置了 `ASPNETCORE_ENVIRONMENT=Development`，但外部 `dotnet Samples/.../bin/...dll` 启动时可能不是 Development。
+**解决**：设置 `ASPNETCORE_ENVIRONMENT=Development`，或直接用 `--launch-profile http` 启动。
+
+## 最佳实践
+
+- **外部依赖用环境变量开关**：本地无 broker 时 `Euonia__Bus__RabbitMq__Enabled=false`，不要改 `appsettings.json` 以免误提交。
+- **首跑前清库**：种子与结构都依赖干净数据库，重置顺序是“停进程 → 删 db → 启动”。
+- **固定启动 profile**：`dotnet run --project Samples/Euonia.Sample.Webapi --launch-profile http` 保证 5240 与 Swagger 路径稳定，便于照文档验证。
+- **排障先看分级别日志**：Serilog 把 Fatal/Error/Warning/Info 分文件写到 `Logs/`（`Program.cs:31-40`），异常细节优先查 `Logs/Error`。
+- **只把 InMemory 实现当接线示例**：`AddInMemoryAuditingStore` / `AddInMemoryTenantStore` 与示例签名密钥都不可用于生产。
+
+## 版本与兼容
+
+- **目标框架**：`net11.0` 单目标（`Samples/common.props:5`），不打包（`IsPackable=false`）。
+- **关键依赖**：EF Core 走仓库中央版本区间 `[11.0.0,12.0.0)`（`Directory.Packages.props:10,98-107`）；Serilog `4.4.0`、Swashbuckle `11.0.1`、RabbitMQ.Client `7.2.2`（`Directory.Packages.props:42,46,51`）。
+- **升级注意**：升级 EF Core 主版本需同步删除本地 `euonia-sample.db` 重新建库；`TargetFramework` 跟随仓库 SDK，不要单独改示例的 TFM。
+- **已知边界**：示例不演示多租户隔离（`RequireTenant=false`）、不演示 OTLP 导出，也没有数据库迁移。
+
 ## 相关包
 
 - [`Euonia.Hosting`](../../Source/Euonia.Hosting/README.md) —— `HostUtility`、`AddJwtAuthentication`、`UseTenancy`

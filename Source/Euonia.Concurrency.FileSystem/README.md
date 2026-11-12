@@ -128,3 +128,40 @@ FILESYNCHRONIZATION_DIRECTORY=/var/lib/myapp/locks     # 仓库 alias
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### InvalidOperationException: FileSynchronizationOptions.Directory is not configured
+原因：模块没有绑定到目录：配置节/环境变量/显式 `Configure` 都为空，或模块没有随应用加载。
+解决：设置 `FileSynchronization:Directory` 或 `FileSynchronization__Directory`，或在 `services.Configure<FileSynchronizationOptions>` 中赋值；确保声明了 `[DependsOn(typeof(FileSystemLockModule))]`。
+
+### 获取锁时抛 UnauthorizedAccessException
+原因：进程账号对目录或锁文件没有写权限；目录可能由其他用户创建。
+解决：用运行账号检查 `Directory` 的读写权限；在容器中挂载可写卷；确认不是只读文件系统。
+
+### InvalidOperationException: ... because it is already the name of a directory
+原因：清理后的锁文件路径恰好是一个已存在目录（通常是手工创建的目录占用了名称）。
+解决：换一个专用且空的锁目录，或移除与锁文件同名的目录；不要手工在锁目录中创建同名文件/目录。
+
+### 跨主机部署时锁偶尔失效
+原因：`FileShare.None` 在 NFS/SMB 等网络文件系统上的原子性取决于服务端实现与挂载参数，不能等同于本地磁盘。
+解决：跨主机强互斥改用 Redis/ZooKeeper/Azure；若必须共享卷，先在目标环境做并发抢占验证并固定挂载选项。
+
+### 注入 ISemaphoreFactory 失败
+原因：本包只实现 `ILockFactory`，没有信号量实现。
+解决：需要并发限流时改用 `Euonia.Concurrency.Redis` 或 `Euonia.Concurrency.ZooKeeper` 的信号量模块。
+
+## 最佳实践
+
+- **专用目录**：每个应用/环境使用独立的绝对路径目录，避免不同服务互相清理锁文件。
+- **确保可写且持久**：目录对运行账号可写；容器部署使用持久卷而不是临时层。
+- **锁名带前缀**：使用 `{app}:{resource}:{id}` 形式，名称会哈希成可移植文件名，避免特殊字符与大小写差异。
+- **短临界区**：竞争时以 50ms–1s 随机退避轮询，长任务会持续占用等待者；把耗时工作移到锁外。
+- **监控失败率**：持续出现权限异常或等待超时通常意味着目录权限/网络卷语义问题，应告警而不是无限重试。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`Euonia.Concurrency`、`Euonia.Modularity`；不需要额外基础设施。
+- **已知边界**：仅锁、无信号量；忙等待固定 50ms–1s；`UnauthorizedAccessException` 最多重试 400 次；文件名使用“安全前缀 + Base32 哈希 + `.lock`”，极长路径可能抛 `PathTooLongException`。
+- **升级注意**：锁文件在释放时删除，不承载数据，无需迁移；升级后保持 `Directory` 与锁名不变即可继续互斥。

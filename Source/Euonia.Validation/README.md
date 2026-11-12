@@ -153,6 +153,38 @@ amount.Validate();
 - 对实现 `IValidatableObject` 的对象，`Validator.Validate` 会把错误统一包装成 `PropertyName = "Value"` 的 `ValidationResult`；FluentValidation 路径则保留各属性的名称与消息。
 - `ValidationException.Message` 在 FluentValidation 路径下为空字符串，调用方应遍历 `Errors` 而不是依赖异常消息。
 
+## 常见问题与故障排查
+
+### `Validator.Validate` 不抛异常，验证器像没执行
+**原因**：`Validator.Validate` 通过全局 `ValidatorFactory` 创建验证器；`AddValidator` 只注册服务，不会调用 `ValidatorFactory.SetCurrent`。非模块化宿主未显式设置工厂时，`ValidatorFactory.Create()` 返回 `null`，校验被静默跳过。
+**解决**：模块化应用依赖 `ValidationModule`；非模块化宿主在构建容器后执行 `ValidatorFactory.SetCurrent(provider.GetRequiredService<IValidatorFactory>())`，并在启动测试中断言工厂非空。
+
+### `AddValidator` 注册了验证器但目标类型仍不校验
+**原因**：`AddValidator` 只接受实现 `FluentValidation.IValidator<T>` 的类，且 `T` 必须是类、非抽象、非枚举；结构体/枚举验证器会被跳过。传入空集合时还会直接返回，连 `IValidatorFactory` 都不会注册。
+**解决**：确认验证器是类并实现 `IValidator<T>`，目标类型是类；不要用空集合“占位”，需要工厂时显式注册 `DefaultValidatorFactory`。
+
+### `RegularValidator` 对空值抛异常
+**原因**：`RegularValidator.Validate` 直接调用 `Regex.IsMatch(value, Pattern)`，`value` 为 `null` 时 .NET 正则 API 抛 `ArgumentNullException`。
+**解决**：在规则前增加空值处理，或改用 `GenericValidator<T>` 组合“非空 + 正则”判断；不要把可空字段直接交给 `RegularValidator`。
+
+### 捕获到的 `ValidationException.Message` 是空字符串
+**原因**：FluentValidation 路径使用 `new ValidationException(string.Empty, errors)` 构造异常，错误明细在 `Errors` 集合中，消息本身为空。
+**解决**：遍历 `ex.Errors` 读取 `PropertyName`/`ErrorMessage`；需要单条消息时自行拼接，不要依赖 `ex.Message` 判断失败原因。
+
+## 最佳实践
+
+- 模块化应用统一依赖 `ValidationModule`；非模块化宿主只设置一次全局工厂，并在启动时解析一次验证器做冒烟测试。
+- 验证器保持无状态、线程安全；不要在验证器构造函数中注入 Scoped 服务，因为 `AddValidator` 以 Singleton 注册。
+- 在 API/消息边界执行 `Validator.Validate`，把 `ValidationException.Errors` 映射为 400 响应字段错误，而不是让异常冒泡成 500。
+- 为可空字段、空集合与多条件规则写测试；`ValidatableObject<T>` 的 `ValidateOnChanged` 只在值变化时触发，测试中显式调用 `Validate()`。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 关键依赖：FluentValidation 12.2.0（由 `Directory.Packages.props` 锁定）；没有配置节或 `*Options`。
+- 已知边界：验证器以 Singleton 注册；结构体/枚举目标被跳过；全局工厂需手动设置；FluentValidation 异常的 `Message` 为空。
+- 升级提示：升级 FluentValidation 后复核 `IValidator<T>` 接口实现与 `ValidationResult.Errors` 结构，并重跑空值/多条件规则测试。
+
 ## 相关包
 
 - [`Euonia.Application`](../Euonia.Application/README.md) —— 应用层校验拦截器与管道行为

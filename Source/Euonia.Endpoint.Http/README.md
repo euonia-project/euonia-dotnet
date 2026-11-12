@@ -333,3 +333,50 @@ app.Run();
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 启动抛 `HttpRegistry is not registered. Call AddDynamicHttpEndpoint first.`
+
+**原因**：生成代码 `HttpMappings.MapGenerated` 被提前调用（例如手工在 `UseEndpoints` 里先跑），此时 `HttpRegistry` 还没注册（`Source/Euonia.Endpoint.Http/HttpGeneratedMapper.cs:81`）。
+**解决**：只调用 `app.MapDynamicHttpEndpoint()`，由它内部先跑生成映射；`AddDynamicHttpEndpoint` 必须在 `Build()` 之前执行。
+
+### 启动抛 `Service 'X' is marked with ExposeWebApiAttribute but is not registered.`
+
+**原因**：接口方法标了 `[ExposeWebApi]`，但实现类没有注册到容器（`EndpointRouteBuilderExtensions.cs:99`）。
+**解决**：补 `builder.Services.AddScoped<IOrderService, OrderService>()`；确实要跳过时把 `ThrowOnUnregisteredService` 设为 `false`（会降级为 Warning）。
+
+### 启动抛 `Duplicate HTTP endpoint 'route' for ...`
+
+**原因**：两个方法映射到同一「路由 + HTTP 方法」组合（`EndpointRouteBuilderExtensions.cs:114`），常见于 `Prefix` 为空导致服务名推导相同。
+**解决**：显式给 `Prefix` / `Route`；或临时设 `ThrowOnRouteConflict = false` 观察日志后修正，不要长期关闭。
+
+### 请求返回 400
+
+**原因**：请求体规则：必填 body 为空、JSON 字面量 `null`、非法 JSON、Content-Type 非 JSON 都返回 400；绑定内部异常才返回 500（见「参数绑定」）。
+**解决**：确认客户端 `Content-Type: application/json`、body 非空且合法；复杂参数只能有一个 body，其余走 route/query。
+
+### 插件或 Application 程序集的端点没出现
+
+**原因**：默认只扫描入口程序集（`ScanEntryAssembly = true`，`ScanAssemblies` 为空）。
+**解决**：`options.ScanAssemblies = new[] { "MyApp.Application", "MyPlugin" }` 并把 `ScanEntryAssembly` 设为 `false`；或直接给 `AddDynamicHttpEndpoint(options, assemblies)` 传程序集。
+
+## 最佳实践
+
+- **生产保留 `ThrowOnUnregisteredService` / `ThrowOnRouteConflict` 为 `true`**：启动即失败比运行期 404 更容易定位。
+- **显式声明扫描范围**：插件或多程序集宿主一律配置 `ScanAssemblies`，不要依赖入口程序集回退。
+- **优先走生成路径**：让声明接口的项目引用 `Euonia.Endpoint.SourceGenerator`，运行时只兜底插件与生成器跳过的签名。
+- **授权默认开启**：`RequireAuthorization = true` 时逐个端点确认是否需要匿名，用 `[AllowAnonymous]` 显式放开。
+- **收窄扫描用 `ScanNamespaces` / `ScanTypes`**：两者同时作用于生成与运行时路径，是控制暴露面的首选开关。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0`（`FrameworkReference Microsoft.AspNetCore.App`） |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 依赖 | `Euonia.Endpoint`、`Microsoft.Extensions.Logging.Abstractions`、`Microsoft.Extensions.Options.ConfigurationExtensions` |
+
+- **配置键稳定**：`Euonia:Endpoint:Http` 下的 9 个选项是兼容性边界，新增选项会有默认值，不改变既有行为。
+- **与生成器的版本要配套**：生成代码调用 `HttpGeneratedMapper` 的签名，升级运行时包后请同时升级 `Euonia.Endpoint.SourceGenerator`。
+- **路由推导规则属于契约**：服务名/方法名转 kebab-case 的规则变化会改变 URL，按破坏性变更处理。

@@ -173,6 +173,36 @@ services.AddMongoRepository<AppDbContext>(
 - [`Euonia.Domain`](../Euonia.Domain/README.md) —— 实体与聚合
 - [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 多租户
 
+## 常见问题与故障排查
+
+### 解析 Mongo 仓储时报 `IContextProvider` 缺失
+`AddMongoRepository` 只注册 `IMongoDatabase`、上下文与开放式仓储，不注册 `IContextProvider`。添加 `[DependsOn(typeof(RepositoryModule))]` 或显式 `services.AddContextProvider()`；否则 `MongoRepository` 的构造函数无法解析。
+
+### `ObjectId.Parse` 抛格式异常
+`MongoRepository` 的按键查询、更新、删除都会执行 `ObjectId.Parse(entity.Id.ToString())`。`TKey` 必须是 24 位十六进制字符串或 `ObjectId`；`long`、`Guid` 或普通业务编号会直接抛异常。
+
+### 事务在本地 MongoDB 上失败
+`BeginTransactionAsync` 依赖副本集或分片集群；单机 `mongod` 不支持多文档事务，提交/回滚会失败。开发环境使用单节点副本集，或在非事务模式下运行。
+
+### `SaveChangesAsync` 返回 0，回滚也没有撤销写入
+`DataContextBase.SaveChangesAsync` 固定返回 0，Mongo 的插入/更新/删除在仓储调用时已经发送；只有显式开启会话事务后，`CommitAsync`/`RollbackAsync` 才有意义。需要原子性时用 `IsTransactional=true` 的工作单元。
+
+### 事务性工作单元没有复用同一个 Mongo 上下文
+`AddMongoRepository` 不显式注册 Mongo 的 `IContextFactory`（源码中的 `UnitOfWorkContextFactory` 是 internal）；事务性工作单元的上下文复用需要宿主自行注册工厂或通过模块扫描装配。单库非事务场景使用默认 `DefaultContextFactory` 即可。
+
+## 最佳实践
+
+- 实体键使用 `ObjectId` 或 24 位十六进制字符串，并在 `OnModelCreating` 中用 `HasKey` 配置 `ObjectIdSerializer`。
+- 用 `ModelBuilder.For<T>` 明确集合名、元素名与必填约束；`OnModelCreating` 每个上下文类型只执行一次，运行期不要再改模型。
+- 生产环境使用副本集并配置唯一索引；批量写入前评估 `UpdateAsync` 的逐条请求成本。
+- 连接串与数据库名通过代码配置或密钥库注入；本包不读取 `IConfiguration`，不要为它编写 `appsettings.json` 节。
+
+## 版本与兼容
+
+- 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
+- 关键依赖：`Euonia.Repository`、`Euonia.Tenancy`、`MongoDB.Driver`；具体版本由仓库构建属性决定。
+- 已知边界：事务需要副本集；`SaveChangesAsync` 不参与提交；`GetConnection`/`GetTransaction` 不支持；`AddMongoRepository` 不注册 `IContextProvider`。
+
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

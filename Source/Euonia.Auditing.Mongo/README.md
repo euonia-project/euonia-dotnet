@@ -161,3 +161,39 @@ public sealed class AuditQueryService(IAuditingStoreQuery store)
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 启动时 EnsureIndexesAsync 报唯一键冲突
+原因：集合中已存在重复 `ScopeId`（历史数据或手工导入），唯一索引 `ux_audit_log_scope` 无法创建。
+解决：先用运维脚本按 `ScopeId` 去重（保留最新 `RecordedAt`）再重试；失败结果不会被缓存，`SaveAsync` 下次仍会尝试建索引。
+
+### 已调用 AddAuditingMongo，记录却写进了内存存储
+原因：`AddAuditingMongo` 只在容器中尚无 `IAuditingStore` 时注册；之前调用 `AddInMemoryAuditingStore` 或 `AddAuditingEfCore` 会先占位。
+解决：调整注册顺序或移除先前的存储注册，并确认 `IAuditingStore` 实际解析为 `MongoAuditingStore`。
+
+### FindByScopeAsync 抛 UnauthorizedAccessException
+原因：`EnsureScopeAccess` 要求环境上下文中的租户与 `ScopeId` 前缀（`{tenant}:{operation}`）一致；没有租户上下文会直接拒绝。
+解决：在租户上下文中调用；确实需要跨租户读取时改用 `AuditingQuery`，并配置 `AuditingOptions.CrossTenantQueryAuthorizer`。
+
+### 按时间查询没有返回预期记录
+原因：`QueryAsync` 的 `From`/`To` 过滤的是 `ExecutionTime`，不是 `RecordedAt`；默认 `Take` 为 50，结果按 `ExecutionTime` 倒序。
+解决：用 `ExecutionTime` 构造时间窗，显式设置 `Take`/`Skip`，并用 `TenantId`、`CorrelationId` 缩小范围。
+
+### DeleteBeforeAsync 被拒绝
+原因：保留删除要求显式跨租户上下文（actor/target 不同且带 `CrossTenantReason`），普通请求上下文会抛 `UnauthorizedAccessException`。
+解决：在后台保留作业中建立跨租户上下文后调用，或按租户分别清理。
+
+## 最佳实践
+
+- **启动预热索引**：开始接收流量前解析 `MongoAuditingStore` 并 `await EnsureIndexesAsync()`，避免首批写入承担建索引与冲突重试。
+- **稳定幂等键**：为可重放的业务动作提供固定 `IdempotencyKey`；不要每次重试生成新键，否则动作会在文档中持续追加。
+- **控制保留期**：定时调用 `DeleteBeforeAsync` 清理历史记录，避免集合无限增长；生产环境使用独立数据库/集合与最小权限账号。
+- **把审计失败当告警**：写入失败是开放语义（只记日志），应监控 `AuditingWriter` 的错误日志与 `AuditingOptions.WriteRetryCount` 重试情况。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`MongoDB.Driver`、`Euonia.Auditing`；持久化模型为 `AuditingRecord`/`AuditingAction` 的 BSON 映射。
+- **升级注意**：新增可空字段可直接兼容；重命名/删除字段或改变 `ScopeId` 生成规则需要数据迁移或双写；旧集合若已有重复 `ScopeId`，必须先清理再建唯一索引。
+- **已知边界**：单文档 upsert 保证同一 `ScopeId` 幂等，但跨文档无事务；查询受租户授权约束；不创建 TTL 索引。

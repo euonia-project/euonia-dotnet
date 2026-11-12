@@ -154,3 +154,40 @@ REDISSYNCHRONIZATION_CONNECTIONSTRING=localhost:6379    # 仓库 alias
 ## 许可证
 
 本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
+
+## 常见问题与故障排查
+
+### 首次解析 ILockFactory 时连接失败或抛参数异常
+原因：`RedisSynchronization:ConnectionString` 为空/不可达；模块直接用它创建 `ConnectionMultiplexer`，没有兜底默认值。
+解决：设置 `RedisSynchronization:ConnectionString`（或 `REDISSYNCHRONIZATION_CONNECTIONSTRING`），先用 `redis-cli PING` 验证网络与认证。
+
+### ArgumentOutOfRangeException 提示时间参数必须小于某个值
+原因：选项要求 `MinValidityTime < Expiry` 且 `ExtensionCadence < MinValidityTime`；`ExtensionCadence` 不能设为无限（自动续期不可关闭）。
+解决：按 `Expiry = 30s`、`MinValidityTime = 25s`、`ExtensionCadence = 5s` 之类的顺序配置，三者都必须是有限正数。
+
+### 模块已加载，但容器里没有 ILockFactory 或 ISemaphoreFactory
+原因：只依赖了内部同步模块，或加错了模块：`RedisLockModule` 只注册锁，`RedisSemaphoreModule` 只注册信号量。
+解决：在模块上声明对应的 `[DependsOn(typeof(RedisLockModule))]` / `[DependsOn(typeof(RedisSemaphoreModule))]`；两个都需要时同时声明。
+
+### 修改 RedisSynchronization 配置后没有生效
+原因：连接与选项由单例工厂在首次解析时读取一次，之后不会重新绑定 `IConfiguration`。
+解决：修改配置后重启宿主；需要热更新时改为手工构造 `RedisSynchronizationFactory` 并自行管理生命周期。
+
+### 不同应用共用同一 Redis 数据库时锁互相干扰
+原因：锁键由锁名称直接构成，没有自动应用名空间前缀。
+解决：所有锁名统一加应用/环境前缀（如 `orders:prod:order:{id}:ship`），或为各应用分配独立 database。
+
+## 最佳实践
+
+- **七个键显式配置**：生产环境明确设置 `ConnectionString`、`Database`、`Expiry`、`MinValidityTime`、`ExtensionCadence` 与忙等待区间，不要依赖隐式默认。
+- **锁粒度到资源**：锁名精确到业务实体并加环境前缀；避免 `global-lock` 之类的粗粒度锁。
+- **临界区短于租约**：预期执行时间应显著小于 `Expiry`；长任务依赖续期时监控续期失败与 Redis 延迟。
+- **信号量做容量控制**：批量任务用 `ISemaphoreFactory.Create(name, maxCount)` 限制并发，而不是让所有实例争抢同一把锁。
+- **操作幂等**：锁过期/续期失败时可能短暂重叠执行，业务写操作应具备幂等键或唯一约束。
+
+## 版本与兼容
+
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **关键依赖**：`StackExchange.Redis`、`Euonia.Concurrency`、`Euonia.Modularity`。
+- **已知边界**：配置键是模块内手写字符串（无常量类型）；`Database` 默认 `-1`；自动续期不可禁用；锁键无自动前缀。
+- **升级注意**：锁状态在 Redis 侧，升级不迁移数据；若升级改变锁键格式或名称，新旧实例会锁定不同键，需停写窗口或双写过渡。
