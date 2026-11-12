@@ -13,7 +13,8 @@ internal sealed class NullAuditingScope : IAuditingScope
 
 	public string ScopeId => string.Empty;
 
-	public AuditingRecord Record { get; } = new();
+	// 空作用域不持有可变记录：每次访问返回新实例，避免跨请求/租户串数据。
+	public AuditingRecord Record => new();
 
 	public IAuditingAction BeginAction(string serviceName, string methodName, string? actionName = null)
 	{
@@ -64,6 +65,10 @@ internal sealed class NullAuditingAction : IAuditingAction
 	}
 
 	public void Fail(Exception exception)
+	{
+	}
+
+	public void SetRecordResult(bool recordResult)
 	{
 	}
 }

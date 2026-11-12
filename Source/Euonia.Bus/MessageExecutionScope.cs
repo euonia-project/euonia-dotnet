@@ -152,7 +152,12 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		var entries = new List<MessageExecutionScopeEntry>();
 		foreach (var participant in ServiceProvider.GetServices<IMessageExecutionScopeParticipant>().OrderBy(x => x.Order))
 		{
-			entries.Add(await participant.EnterAsync(message, ServiceProvider, cancellationToken).ConfigureAwait(false));
+			var entry = await participant.EnterAsync(message, ServiceProvider, cancellationToken).ConfigureAwait(false);
+			entries.Add(entry);
+			if (entry.Action != MessageExecutionScopeAction.Continue)
+			{
+				break;
+			}
 		}
 
 		return entries;
@@ -167,16 +172,28 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	{
 		foreach (var entry in entries)
 		{
-			var lease = entry.Install?.Invoke();
-			if (lease != null)
-			{
-				_leases.Add(lease);
-			}
-
 			if (entry.Action != MessageExecutionScopeAction.Continue)
 			{
 				Action = entry.Action;
 				return new MessageExecutionResult(entry.Action);
+			}
+
+			IDisposable? lease;
+			try
+			{
+				lease = entry.Install?.Invoke();
+			}
+			catch (Exception exception)
+			{
+				// 安装失败（例如租户作用域冲突）是不可处理消息，转为死信而不是基础设施重试。
+				_ = exception;
+				Action = MessageExecutionScopeAction.DeadLetter;
+				return new MessageExecutionResult(MessageExecutionScopeAction.DeadLetter);
+			}
+
+			if (lease != null)
+			{
+				_leases.Add(lease);
 			}
 		}
 

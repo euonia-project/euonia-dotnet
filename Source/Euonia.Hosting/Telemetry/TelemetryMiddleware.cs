@@ -12,27 +12,43 @@ namespace Nerosoft.Euonia.Hosting;
 internal sealed class TelemetryMiddleware
 {
 	private readonly RequestDelegate _next;
+	private readonly Microsoft.Extensions.Options.IOptionsMonitor<TelemetryOptions>? _options;
 
-	public TelemetryMiddleware(RequestDelegate next)
+	public TelemetryMiddleware(
+		RequestDelegate next,
+		Microsoft.Extensions.Options.IOptionsMonitor<TelemetryOptions>? options = null)
 	{
 		_next = next;
+		_options = options;
 	}
 
 	public async Task InvokeAsync(HttpContext context)
 	{
+		// 入口捕获，避免下游创建未释放的子 Activity 导致标签打错 span。
+		var activity = Activity.Current;
+		var failed = false;
 		try
 		{
 			await _next(context);
 		}
+		catch
+		{
+			failed = true;
+			if (activity != null)
+			{
+				activity.SetStatus(ActivityStatusCode.Error);
+			}
+
+			throw;
+		}
 		finally
 		{
-			Enrich(context);
+			Enrich(context, activity, failed);
 		}
 	}
 
-	private static void Enrich(HttpContext context)
+	private void Enrich(HttpContext context, Activity? activity, bool failed)
 	{
-		var activity = Activity.Current;
 		if (activity == null)
 		{
 			return;
@@ -40,8 +56,22 @@ internal sealed class TelemetryMiddleware
 
 		try
 		{
-			activity.SetTag("http.response.status_code", context.Response.StatusCode);
-			activity.SetTag(TelemetryNames.Outcome, context.Response.StatusCode < 500 ? "success" : "failure");
+			if (failed)
+			{
+				// 异常在 finally 阶段尚未被外层异常处理器改写状态码，这里统一标记失败。
+				activity.SetTag("http.response.status_code", 500);
+				activity.SetTag(TelemetryNames.Outcome, "failure");
+			}
+			else
+			{
+				activity.SetTag("http.response.status_code", context.Response.StatusCode);
+				activity.SetTag(TelemetryNames.Outcome, context.Response.StatusCode switch
+				{
+					< 400 => "success",
+					< 500 => "client_error",
+					_ => "failure",
+				});
+			}
 
 			var route = context.GetEndpoint() is RouteEndpoint endpoint ? endpoint.RoutePattern.RawText : null;
 			if (!string.IsNullOrWhiteSpace(route))
@@ -49,13 +79,16 @@ internal sealed class TelemetryMiddleware
 				activity.SetTag("url.path", route);
 			}
 
-			if (context.Items.TryGetValue(TenantHttpKeys.Context, out var value) && value is TenantContext tenant)
+			if (_options?.CurrentValue.RecordTenantId != false
+			    && context.Items.TryGetValue(TenantHttpKeys.Context, out var value)
+			    && value is TenantContext tenant)
 			{
 				activity.SetTag(TelemetryNames.TenantId, tenant.TenantId);
 				activity.SetTag(TelemetryNames.TenantActorId, tenant.ActorTenantId);
 				if (tenant.IsCrossTenant)
 				{
 					activity.SetTag(TelemetryNames.TenantCross, true);
+					activity.SetTag(TelemetryNames.TenantCrossReason, tenant.CrossTenantReason);
 				}
 			}
 		}

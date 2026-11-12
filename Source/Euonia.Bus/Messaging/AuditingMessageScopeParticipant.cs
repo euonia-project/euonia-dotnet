@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Auditing;
 
@@ -20,14 +21,22 @@ public sealed class AuditingMessageScopeParticipant : IMessageExecutionScopePart
 			return ValueTask.FromResult(new MessageExecutionScopeEntry());
 		}
 
-		var scope = recorder.EnsureScope(new AuditingScopeOptions
+		var options = new AuditingScopeOptions
 		{
 			OperationKey = $"msg:{message.MessageId}",
 			IdempotencyKey = message.MessageId,
 			AutoComplete = false,
-		});
+		};
 
-		Func<IDisposable?> install = () => new ScopeLease(scope, message);
+		// EnsureScope 会修改 AsyncLocal；必须放到 Install 中，由执行作用域在调用方同步执行，
+		// 否则处理器内的审计拦截器看不到该作用域，会另建作用域并产生重复记录。
+		Func<IDisposable?> install = () =>
+		{
+			// 消息作用域必须自有：复用外层 HTTP 作用域会导致它被提前提交（劫持）。
+			var previous = recorder.CurrentScope;
+			var scope = recorder.CreateDetachedScope(options);
+			return new ScopeLease(scope, message, recorder, previous);
+		};
 		return ValueTask.FromResult(new MessageExecutionScopeEntry(install));
 	}
 
@@ -37,34 +46,64 @@ public sealed class AuditingMessageScopeParticipant : IMessageExecutionScopePart
 	private sealed class ScopeLease : IDisposable
 	{
 		private readonly IAuditingScope _scope;
-		private readonly MessageContext? _context;
-		private readonly EventHandler<Exception>? _onFailed;
-		private readonly EventHandler<MessageHandledEventArgs>? _onCompleted;
+		private readonly IAuditingRecorder _recorder;
+		private readonly IAuditingScope? _previous;
+		private readonly IMessageContext _message;
+		private readonly EventInfo? _failedEvent;
+		private readonly EventInfo? _completedEvent;
+		private readonly Delegate? _onFailed;
+		private readonly Delegate? _onCompleted;
 		private bool _disposed;
 
-		public ScopeLease(IAuditingScope scope, IMessageContext message)
+		public ScopeLease(IAuditingScope scope, IMessageContext message, IAuditingRecorder recorder, IAuditingScope? previous)
 		{
 			_scope = scope;
-			_context = message as MessageContext;
-			if (_context == null)
+			_recorder = recorder;
+			_previous = previous;
+			_message = message;
+
+			// 不向下转型具体 MessageContext：任何实现只要暴露 Failed/Completed 事件即可获得终态。
+			_failedEvent = message.GetType().GetEvent("Failed");
+			_completedEvent = message.GetType().GetEvent("Completed");
+
+			if (_failedEvent?.EventHandlerType != null)
 			{
-				return;
+				_onFailed = Delegate.CreateDelegate(_failedEvent.EventHandlerType, this, nameof(OnFailed), ignoreCase: false, throwOnBindFailure: false);
+				if (_onFailed == null)
+				{
+					System.Diagnostics.Trace.TraceWarning($"Auditing participant cannot bind Failed event of '{message.GetType().FullName}'; failure outcome will not be recorded.");
+				}
 			}
 
-			_onFailed = (_, exception) =>
+			if (_completedEvent?.EventHandlerType != null)
 			{
-				_scope.Record.IsSuccess = false;
-				_scope.Record.ExtraProperties = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string>
-				{
-					["error"] = exception.GetType().Name,
-					["message"] = exception.Message,
-				});
-			};
+				_onCompleted = Delegate.CreateDelegate(_completedEvent.EventHandlerType, this, nameof(OnCompleted), ignoreCase: false, throwOnBindFailure: false);
+			}
 
-			_onCompleted = (_, args) => _scope.Record.IsSuccess ??= true;
+			if (_onFailed != null)
+			{
+				_failedEvent!.AddEventHandler(message, _onFailed);
+			}
 
-			_context.Failed += _onFailed;
-			_context.Completed += _onCompleted;
+			if (_onCompleted != null)
+			{
+				_completedEvent!.AddEventHandler(message, _onCompleted);
+			}
+		}
+
+		private void OnFailed(object? sender, Exception exception)
+		{
+			_scope.Record.IsSuccess = false;
+			_scope.Record.MergeExtraProperties(new Dictionary<string, string>
+			{
+				["error"] = exception.GetType().Name,
+				["message"] = AuditingRecordExtensions.MaskExceptionMessage(exception.Message) ?? string.Empty,
+			});
+		}
+
+		private void OnCompleted(object? sender, MessageHandledEventArgs args)
+		{
+			_scope.Record.IsSuccess ??= true;
 		}
 
 		public void Dispose()
@@ -76,14 +115,20 @@ public sealed class AuditingMessageScopeParticipant : IMessageExecutionScopePart
 
 			_disposed = true;
 
-			if (_context != null)
+			if (_onFailed != null)
 			{
-				_context.Failed -= _onFailed;
-				_context.Completed -= _onCompleted;
+				_failedEvent!.RemoveEventHandler(_message, _onFailed);
 			}
 
-			// 作用域在消息结束后完成；提交走后台队列，不阻塞接收器。
-			_ = _scope.CompleteAsync(CancellationToken.None);
+			if (_onCompleted != null)
+			{
+				_completedEvent!.RemoveEventHandler(_message, _onCompleted);
+			}
+
+			// 先同步分离再从后台完成，避免已完成的 scope 残留在调用方的 AsyncLocal 中；
+			// 随后恢复外层作用域（如果存在）。
+			_recorder.CompleteInBackground(_scope);
+			_recorder.Attach(_previous);
 		}
 	}
 }

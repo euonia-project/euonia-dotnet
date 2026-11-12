@@ -6,8 +6,8 @@ namespace Nerosoft.Euonia.Repository.EfCore;
 /// 模型构建期可见的租户 schema 上下文。
 /// </summary>
 /// <remarks>
-/// EF 的内部服务提供程序无法解析应用注册的 <see cref="ITenantAccessor"/>，
-/// 因此由 options 配置回调在解析上下文前写入当前异步流的 schema，工厂只读该值。
+/// 正常路径由 <see cref="ITenantModelCacheKeySource"/> 从上下文读取租户；
+/// 本类型仅作为设计时/手工构建模型时的兼容回退。
 /// </remarks>
 public static class TenantModelCacheKeyContext
 {
@@ -21,6 +21,14 @@ public static class TenantModelCacheKeyContext
 	public static void Set(TenantIsolation isolation, string? schema)
 	{
 		_current.Value = new State(isolation, schema);
+	}
+
+	/// <summary>
+	/// 清除当前异步流的租户 schema。
+	/// </summary>
+	public static void Clear()
+	{
+		_current.Value = null;
 	}
 
 	/// <summary>

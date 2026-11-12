@@ -30,7 +30,8 @@ public class MongoTenantFilterTests
 	{
 		var document = Render(MongoTenantFilters.For<MongoOrder>(null, ignore: false));
 
-		Assert.Equal("__no_tenant__", document["TenantId"].AsString);
+		// 空 $in 集合保证匹配不到任何文档；不再使用可能与真实租户冲突的哨兵值。
+		Assert.Empty(document["TenantId"].AsBsonDocument["$in"].AsBsonArray);
 	}
 
 	/// <summary>

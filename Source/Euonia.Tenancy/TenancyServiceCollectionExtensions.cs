@@ -57,9 +57,10 @@ public static class TenancyServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 
 		services.TryAddSingleton<ConfigurationTenantStore>();
-		services.TryAddSingleton<ITenantStore>(provider => new CachedTenantStore(
+		services.TryAddSingleton(provider => new CachedTenantStore(
 			provider.GetRequiredService<ConfigurationTenantStore>(),
 			provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions>>()));
+		services.TryAddSingleton<ITenantStore>(provider => provider.GetRequiredService<CachedTenantStore>());
 
 		return services;
 	}
@@ -75,9 +76,10 @@ public static class TenancyServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 
 		services.TryAddSingleton(new InMemoryTenantStore(tenants));
-		services.TryAddSingleton<ITenantStore>(provider => new CachedTenantStore(
+		services.TryAddSingleton(provider => new CachedTenantStore(
 			provider.GetRequiredService<InMemoryTenantStore>(),
 			provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions>>()));
+		services.TryAddSingleton<ITenantStore>(provider => provider.GetRequiredService<CachedTenantStore>());
 
 		return services;
 	}

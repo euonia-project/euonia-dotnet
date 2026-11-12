@@ -11,7 +11,7 @@ public sealed partial class EfCoreAuditingStore<TContext> : IAuditingStoreQuery
 	/// <inheritdoc />
 	public async Task<IReadOnlyList<AuditingRecord>> QueryAsync(AuditingQuery query, CancellationToken cancellationToken = default)
 	{
-		AuditingQueryAuthorizer.EnsureScope(query);
+		query = AuditingQueryAuthorizer.Normalize(query);
 		ArgumentNullException.ThrowIfNull(query);
 
 		await using var context = await _factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
@@ -58,6 +58,7 @@ public sealed partial class EfCoreAuditingStore<TContext> : IAuditingStoreQuery
 	public async Task<AuditingRecord?> FindByScopeAsync(string scopeId, CancellationToken cancellationToken = default)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(scopeId);
+		AuditingQueryAuthorizer.EnsureScopeAccess(scopeId);
 
 		await using var context = await _factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
 		return await context.Set<AuditingRecord>()
@@ -70,10 +71,15 @@ public sealed partial class EfCoreAuditingStore<TContext> : IAuditingStoreQuery
 	/// <inheritdoc />
 	public async Task<int> DeleteBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default)
 	{
+		AuditingQueryAuthorizer.EnsureDeleteAuthorized();
+
 		await using var context = await _factory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
-		return await context.Set<AuditingRecord>()
-		                    .Where(record => record.ExecutionTime < cutoff)
-		                    .ExecuteDeleteAsync(cancellationToken)
-		                    .ConfigureAwait(false);
+		var query = context.Set<AuditingRecord>().Where(record => record.ExecutionTime < cutoff);
+		if (AuditingQueryAuthorizer.DeleteTenantScope is { Length: > 0 } tenantId)
+		{
+			query = query.Where(record => record.TenantId == tenantId);
+		}
+
+		return await query.ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 	}
 }

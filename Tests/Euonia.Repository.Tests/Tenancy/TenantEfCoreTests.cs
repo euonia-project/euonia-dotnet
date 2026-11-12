@@ -30,6 +30,7 @@ public sealed class TenantEfCoreTests : IDisposable
 
 		_options = new DbContextOptionsBuilder<TenantTestContext>()
 		           .UseSqlite(_connection)
+		           .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, Nerosoft.Euonia.Repository.EfCore.TenantModelCacheKeyFactory>()
 		           .Options;
 
 		using var context = CreateContext();

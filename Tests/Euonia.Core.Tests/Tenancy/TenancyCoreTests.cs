@@ -69,7 +69,7 @@ public class TenancyCoreTests
 		{
 			Assert.Equal("a", AmbientExecutionContext.Current!.TenantId);
 
-			using (factory.BeginCrossTenant("support", "b"))
+			using (new TenantScopeFactory(new MultiTenancyOptions { CrossTenantScopeAuthorizer = _ => true }).BeginCrossTenant("support", "b"))
 			{
 				Assert.Equal("b", AmbientExecutionContext.Current!.TenantId);
 				Assert.True(AmbientExecutionContext.Current!.IsCrossTenant);
@@ -84,6 +84,37 @@ public class TenancyCoreTests
 	}
 
 	/// <summary>
+	/// 系统级跨租户作用域内进入具体租户时，target 收敛到该租户，不继续代表全租户。
+	/// </summary>
+	[Fact]
+	public void TenantScopeFactory_ShouldNarrowFullCrossTenantWhenEnteringTenant()
+	{
+		AmbientExecutionContext.Reset();
+		var factory = new TenantScopeFactory(new MultiTenancyOptions { AllowSystemCrossTenant = true });
+
+		using (factory.BeginCrossTenant("retention"))
+		using (factory.Begin(NewTenant("a")))
+		{
+			Assert.Equal("a", AmbientExecutionContext.Current!.TenantId);
+			Assert.True(AmbientExecutionContext.Current!.IsCrossTenant);
+			Assert.Equal("a", AmbientExecutionContext.Current!.TargetTenantId);
+			Assert.Equal("retention", AmbientExecutionContext.Current!.CrossTenantReason);
+		}
+	}
+
+	/// <summary>
+	/// 未配置授权回调时跨租户作用域默认拒绝。
+	/// </summary>
+	[Fact]
+	public void TenantScopeFactory_ShouldRejectUnauthorizedCrossTenant()
+	{
+		AmbientExecutionContext.Reset();
+		var factory = new TenantScopeFactory(new MultiTenancyOptions());
+
+		Assert.Throws<UnauthorizedAccessException>(() => factory.BeginCrossTenant("support", "b"));
+	}
+
+	/// <summary>
 	/// 同一作用域内切换到另一个租户应被拒绝。
 	/// </summary>
 	[Fact]
@@ -94,7 +125,7 @@ public class TenancyCoreTests
 
 		using (factory.Begin(NewTenant("a")))
 		{
-			Assert.Throws<InvalidOperationException>(() => factory.Begin(NewTenant("b")));
+			Assert.Throws<TenantScopeConflictException>(() => factory.Begin(NewTenant("b")));
 		}
 
 		AmbientExecutionContext.Reset();

@@ -36,6 +36,12 @@ public interface IAuditingAction
 	void Complete(object? result);
 
 	/// <summary>
+	/// 设置是否记录返回值；由 <c>[Audited(RecordResult = false)]</c> 使用。
+	/// </summary>
+	/// <param name="recordResult">是否记录返回值。</param>
+	void SetRecordResult(bool recordResult);
+
+	/// <summary>
 	/// 标记动作失败。
 	/// </summary>
 	/// <param name="exception">导致失败的异常。</param>

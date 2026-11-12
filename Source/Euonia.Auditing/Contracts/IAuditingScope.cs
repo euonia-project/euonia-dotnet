@@ -16,6 +16,11 @@ public interface IAuditingScope : IAsyncDisposable
 	AuditingRecord Record { get; }
 
 	/// <summary>
+	/// 获取一个值，指示作用域是否已完成；已完成的作用域不应再被复用。
+	/// </summary>
+	bool IsCompleted => false;
+
+	/// <summary>
 	/// 开始一个动作。
 	/// </summary>
 	/// <param name="serviceName">服务名称。</param>

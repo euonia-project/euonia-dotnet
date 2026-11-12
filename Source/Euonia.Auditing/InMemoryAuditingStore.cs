@@ -29,7 +29,8 @@ public sealed partial class InMemoryAuditingStore : IAuditingStore
 	{
 		ArgumentNullException.ThrowIfNull(record);
 
-		var key = record.ScopeId ?? record.Id.ToString("N");
+		ArgumentException.ThrowIfNullOrWhiteSpace(record.ScopeId);
+		var key = record.ScopeId;
 		lock (_sync)
 		{
 			if (!_records.TryGetValue(key, out var existing))
@@ -42,18 +43,38 @@ public sealed partial class InMemoryAuditingStore : IAuditingStore
 			foreach (var action in record.Actions)
 			{
 				var key2 = action.IdempotencyKey;
-				if (key2 == null || existing.Actions.All(x => x.IdempotencyKey != key2))
+				var duplicate = key2 != null
+					                ? existing.Actions.Any(x => x.IdempotencyKey == key2)
+					                : existing.Actions.Any(x => x.ActionId == action.ActionId);
+				if (!duplicate)
 				{
-					existing.Actions.Add(action);
+					// 存副本：调用方在 SaveAsync 返回后修改动作对象不应影响已存储数据。
+					existing.Actions.Add(Clone(action));
 				}
 			}
 
 			existing.HttpStatusCode ??= record.HttpStatusCode;
 			existing.IsSuccess ??= record.IsSuccess;
 			existing.TenantId ??= record.TenantId;
+			existing.TenantName ??= record.TenantName;
 			existing.TargetTenantId ??= record.TargetTenantId;
+			existing.CrossTenantReason ??= record.CrossTenantReason;
 			existing.UserId ??= record.UserId;
+			existing.UserName ??= record.UserName;
+			existing.ClientId ??= record.ClientId;
+			existing.CorrelationId ??= record.CorrelationId;
+			existing.TraceId ??= record.TraceId;
+			existing.SpanId ??= record.SpanId;
+			existing.RequestTraceId ??= record.RequestTraceId;
+			existing.ApplicationName ??= record.ApplicationName;
+			existing.ClientIpAddress ??= record.ClientIpAddress;
+			existing.ClientName ??= record.ClientName;
+			existing.BrowserInfo ??= record.BrowserInfo;
+			existing.HttpMethod ??= record.HttpMethod;
+			existing.Url ??= record.Url;
 			existing.ExtraProperties ??= record.ExtraProperties;
+			existing.IsCrossTenant = existing.IsCrossTenant || record.IsCrossTenant;
+			existing.ExecutionDuration = Math.Max(existing.ExecutionDuration, record.ExecutionDuration);
 		}
 
 		return Task.CompletedTask;

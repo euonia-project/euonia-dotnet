@@ -26,7 +26,7 @@ public static class TenantDbContextServiceCollectionExtensions
 		this IServiceCollection services,
 		Action<DbContextOptionsBuilder, string> configureProvider,
 		ServiceLifetime lifetime = ServiceLifetime.Scoped)
-		where TContext : DbContext, IRepositoryContext
+		where TContext : DbContext, IRepositoryContext, ITenantModelCacheKeySource
 	{
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentNullException.ThrowIfNull(configureProvider);
@@ -41,10 +41,8 @@ public static class TenantDbContextServiceCollectionExtensions
 			                       ?? throw new ConfigurationException(
 				                       $"No connection string could be resolved for tenant '{tenant?.Id ?? "<none>"}'. Configure TenantInfo.ConnectionString or MultiTenancyOptions.ConnectionStringTemplate.");
 
-			// 模型缓存键在 EF 内部提供程序中创建，无法解析应用服务；用 AsyncLocal 传递当前租户 schema。
-			TenantModelCacheKeyContext.Set(
-				tenant?.Isolation ?? TenantIsolation.SharedTable,
-				tenant?.Isolation == TenantIsolation.SharedSchema ? tenant.Schema : null);
+			// 模型缓存键优先从上下文读取；这里只清理历史 AsyncLocal 值，避免跨请求残留。
+			TenantModelCacheKeyContext.Clear();
 
 			configureProvider(options, connectionString);
 			options.ReplaceService<IModelCacheKeyFactory, TenantModelCacheKeyFactory>();

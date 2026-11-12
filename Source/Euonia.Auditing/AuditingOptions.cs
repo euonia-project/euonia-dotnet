@@ -3,6 +3,9 @@ namespace Nerosoft.Euonia.Auditing;
 /// <summary>
 /// 审计能力的全局选项。
 /// </summary>
+/// <remarks>
+/// 多数选项（队列容量、批大小、投递方式、脱敏深度）在写入器/记录器构造时读取一次，修改后需重启宿主。
+/// </remarks>
 public sealed class AuditingOptions
 {
 	/// <summary>
@@ -21,6 +24,11 @@ public sealed class AuditingOptions
 	public string? ApplicationName { get; set; }
 
 	/// <summary>
+	/// 获取或设置跨租户审计查询授权回调；为 <c>null</c> 时拒绝所有跨租户查询。
+	/// </summary>
+	public Func<AuditingQuery, bool>? CrossTenantQueryAuthorizer { get; set; }
+
+	/// <summary>
 	/// 获取或设置一个值，指示是否记录匿名成功调用。
 	/// </summary>
 	public bool RecordAnonymous { get; set; }
@@ -29,6 +37,11 @@ public sealed class AuditingOptions
 	/// 获取或设置一个值，指示是否记录动作参数。
 	/// </summary>
 	public bool RecordParameters { get; set; } = true;
+
+	/// <summary>
+	/// 获取或设置一个值，指示是否记录异常堆栈（默认关闭，避免敏感参数进入审计库）。
+	/// </summary>
+	public bool RecordStackTrace { get; set; }
 
 	/// <summary>
 	/// 获取或设置一个值，指示是否记录返回值。

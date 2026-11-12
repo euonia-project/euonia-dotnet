@@ -24,14 +24,34 @@ internal sealed class TenancyMiddleware
 		ITenantAccessValidator validator,
 		ITenantScopeFactory scopeFactory,
 		IRequestContextAccessor requestContextAccessor,
-		IOptions<MultiTenancyOptions> optionsAccessor,
+		IOptionsMonitor<MultiTenancyOptions> optionsAccessor,
 		ILogger<TenancyMiddleware> logger)
 	{
-		var options = optionsAccessor.Value;
+		var options = optionsAccessor.CurrentValue;
 
 		if (IsExcluded(context, options))
 		{
 			await _next(context);
+			return;
+		}
+
+		// 携带了非法租户头却按“无租户”继续会绕过隔离，必须显式拒绝。
+		var rawHeaderValues = context.Request.Headers[options.HeaderName]
+		                             .Where(value => !string.IsNullOrWhiteSpace(value))
+		                             .Distinct(StringComparer.Ordinal)
+		                             .ToArray();
+		var rawHeader = rawHeaderValues.FirstOrDefault();
+		if (rawHeaderValues.Length > 1)
+		{
+			context.Items[TenantHttpKeys.Failure] = TenantFailureCodes.Conflict;
+			await TenantErrorWriter.WriteAsync(context, StatusCodes.Status400BadRequest, TenantFailureCodes.Conflict, "Multiple conflicting tenant headers were provided.");
+			return;
+		}
+
+		if (!string.IsNullOrEmpty(rawHeader) && !TenantIdValidator.IsValid(rawHeader))
+		{
+			context.Items[TenantHttpKeys.Failure] = TenantFailureCodes.Invalid;
+			await TenantErrorWriter.WriteAsync(context, StatusCodes.Status400BadRequest, TenantFailureCodes.Invalid, "The tenant identifier is invalid.");
 			return;
 		}
 
@@ -59,8 +79,20 @@ internal sealed class TenancyMiddleware
 			return;
 		}
 
-		using var scope = scopeFactory.Begin(result.Tenant!);
+		ITenantScope scope;
+		try
+		{
+			scope = scopeFactory.Begin(result.Tenant!);
+		}
+		catch (TenantScopeConflictException)
+		{
+			// 外层已存在不同租户作用域（例如消息管道内再走 HTTP）：映射为冲突而不是 500。
+			context.Items[TenantHttpKeys.Failure] = TenantFailureCodes.Conflict;
+			await TenantErrorWriter.WriteAsync(context, StatusCodes.Status409Conflict, TenantFailureCodes.Conflict, "The request conflicts with an active tenant scope.");
+			return;
+		}
 
+		using var _ = scope;
 		context.Items[TenantHttpKeys.Context] = scope.Context;
 		context.Items[TenantHttpKeys.Candidates] = result.Candidates;
 
@@ -83,8 +115,20 @@ internal sealed class TenancyMiddleware
 		var path = context.Request.Path.Value ?? string.Empty;
 		foreach (var excluded in options.ExcludedPaths)
 		{
-			if (!string.IsNullOrWhiteSpace(excluded)
-			    && path.StartsWith(excluded, StringComparison.OrdinalIgnoreCase))
+			if (string.IsNullOrWhiteSpace(excluded))
+			{
+				continue;
+			}
+
+			// 规范化尾斜杠后按路径段边界匹配：/api 不应排除 /apix 或 /api-docs。
+			var normalized = excluded.TrimEnd('/');
+			if (normalized.Length == 0)
+			{
+				normalized = "/";
+			}
+
+			if (path.Equals(normalized, StringComparison.OrdinalIgnoreCase)
+			    || path.StartsWith(normalized + "/", StringComparison.OrdinalIgnoreCase))
 			{
 				return true;
 			}

@@ -12,23 +12,39 @@ public sealed class DefaultTelemetryRedactor : ITelemetryRedactor
 	/// </summary>
 	public const string Mask = "***";
 
-	private readonly TelemetryRedactionOptions _options;
-	private readonly HashSet<string> _keys;
+	private readonly IOptionsMonitor<TelemetryOptions>? _options;
+	private readonly object _sync = new();
+	private volatile TelemetryRedactionOptions? _snapshot;
+	private volatile string[]? _keysSource;
+	private volatile HashSet<string> _keys = new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>
 	/// 初始化 <see cref="DefaultTelemetryRedactor"/> 的新实例。
 	/// </summary>
-	/// <param name="options">遥测选项。</param>
-	public DefaultTelemetryRedactor(IOptions<TelemetryOptions> options)
+	/// <param name="options">遥测选项监视器；支持键集合热更新。</param>
+	public DefaultTelemetryRedactor(IOptionsMonitor<TelemetryOptions> options)
 	{
-		_options = options.Value.Redaction;
-		_keys = new HashSet<string>(_options.Keys, StringComparer.OrdinalIgnoreCase);
+		_options = options;
 	}
 
 	/// <inheritdoc />
 	public bool ShouldRedact(string key)
 	{
-		return _options.Enabled && _keys.Contains(key);
+		var redaction = _options!.CurrentValue.Redaction;
+		if (!ReferenceEquals(redaction, _snapshot) || !ReferenceEquals(redaction.Keys, _keysSource))
+		{
+			lock (_sync)
+			{
+				if (!ReferenceEquals(redaction, _snapshot) || !ReferenceEquals(redaction.Keys, _keysSource))
+				{
+					_keys = new HashSet<string>(redaction.Keys, StringComparer.OrdinalIgnoreCase);
+					_snapshot = redaction;
+					_keysSource = redaction.Keys;
+				}
+			}
+		}
+
+		return redaction.Enabled && _keys.Contains(key);
 	}
 
 	/// <inheritdoc />

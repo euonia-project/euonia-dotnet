@@ -17,27 +17,36 @@ public static class TenantIdValidator
 	/// <exception cref="TenantInvalidException">标识为空、过长或包含非法字符时抛出。</exception>
 	public static void Validate(string? tenantId)
 	{
-		if (string.IsNullOrWhiteSpace(tenantId)
-		    || tenantId.Length > MaxLength
-		    || tenantId.Contains(':', StringComparison.Ordinal)
-		    || tenantId.Any(char.IsWhiteSpace)
-		    || tenantId.Any(char.IsControl))
+		if (!IsValid(tenantId))
 		{
 			throw new TenantInvalidException(tenantId);
 		}
 	}
 
 	/// <summary>
+	/// 判断租户标识/短标识是否可作为解析候选（允许域名式标识，长度与存储列宽对齐）。
+	/// </summary>
+	/// <param name="identifier">候选值。</param>
+	/// <returns>合法时为 <c>true</c>。</returns>
+	public static bool IsValidIdentifier(string? identifier)
+	{
+		return !string.IsNullOrWhiteSpace(identifier)
+		       && identifier.Length <= MaxLength
+		       && identifier != "-"
+		       && !identifier.Contains(':', StringComparison.Ordinal)
+		       && !identifier.Any(char.IsControl)
+		       && !identifier.Any(char.IsWhiteSpace)
+		       && !identifier.Any(character => character is '/' or '\\' or '"' or '\'');
+	}
+
+	/// <summary>
 	/// 判断租户标识是否合法。
 	/// </summary>
-	/// <param name="tenantId">待判断的租户标识。</param>
-	/// <returns>合法时为 <see langword="true"/>。</returns>
+	/// <param name="tenantId">待校验的租户标识。</param>
+	/// <returns>合法时为 <c>true</c>。</returns>
 	public static bool IsValid(string? tenantId)
 	{
-		return !string.IsNullOrWhiteSpace(tenantId)
-		       && tenantId.Length <= MaxLength
-		       && !tenantId.Contains(':', StringComparison.Ordinal)
-		       && !tenantId.Any(char.IsWhiteSpace)
-		       && !tenantId.Any(char.IsControl);
+		return IsValidIdentifier(tenantId);
 	}
+
 }

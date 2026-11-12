@@ -20,6 +20,26 @@ public static class MessageMetadataKeys
 	public const string TenantId = "$nerosoft:tenant.id";
 
 	/// <summary>
+	/// 操作人租户元数据键；跨租户消息使用。
+	/// </summary>
+	public const string ActorTenantId = "$nerosoft:tenant.actor";
+
+	/// <summary>
+	/// 目标租户元数据键；跨租户消息使用。
+	/// </summary>
+	public const string TargetTenantId = "$nerosoft:tenant.target";
+
+	/// <summary>
+	/// 是否跨租户元数据键。
+	/// </summary>
+	public const string IsCrossTenant = "$nerosoft:tenant.cross";
+
+	/// <summary>
+	/// 跨租户原因元数据键。
+	/// </summary>
+	public const string CrossTenantReason = "$nerosoft:tenant.reason";
+
+	/// <summary>
 	/// 租户显示名称元数据键；仅诊断使用。
 	/// </summary>
 	public const string TenantName = "$nerosoft:tenant.name";

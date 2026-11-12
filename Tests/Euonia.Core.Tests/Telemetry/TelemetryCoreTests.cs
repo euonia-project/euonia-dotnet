@@ -26,7 +26,7 @@ public class TelemetryCoreTests
 			"test-source",
 			tracesEnabled: enabled,
 			metricsEnabled: enabled,
-			redactor: new DefaultTelemetryRedactor(Options.Create(options)),
+			redactor: new DefaultTelemetryRedactor(new StaticOptionsMonitor(options)),
 			enrichers: enrichers,
 			contextProvider: contextProvider);
 	}
@@ -99,7 +99,7 @@ public class TelemetryCoreTests
 	{
 		AmbientExecutionContext.Reset();
 		var options = Options.Create(new TelemetryOptions { Enabled = true, RecordTenantId = true });
-		var enricher = new TelemetryContextEnricher(options);
+		var enricher = new TelemetryContextEnricher(new StaticOptionsMonitor(options.Value));
 		var source = CreateSource(enrichers: [enricher]);
 		using var listener = Listen(source);
 
@@ -137,6 +137,30 @@ public class TelemetryCoreTests
 		var extracted = propagator.Extract(carrier);
 		Assert.NotNull(extracted);
 		Assert.Equal(activity.TraceId, extracted!.Value.TraceId);
+	}
+
+	/// <summary>
+	/// 富化器抛异常时结束活动并恢复 Activity.Current。
+	/// </summary>
+	[Fact]
+	public void StartActivity_WhenEnricherThrows_ShouldRestoreCurrent()
+	{
+		var source = CreateSource(enrichers: [new ThrowingEnricher()]);
+		using var listener = Listen(source);
+		using var parent = new Activity("parent").Start();
+
+		var result = source.StartActivity("child");
+
+		Assert.Null(result.Activity);
+		Assert.Same(parent, Activity.Current);
+	}
+
+	private sealed class ThrowingEnricher : ITelemetryEnricher
+	{
+		public void Enrich(Activity activity, TelemetryContext? context)
+		{
+			throw new InvalidOperationException("boom");
+		}
 	}
 
 	/// <summary>
@@ -186,7 +210,7 @@ public class TelemetryCoreTests
 		options.Components["Nerosoft.Euonia.Bus"] = new TelemetryComponentOptions { Enabled = false };
 
 		var monitor = new StaticOptionsMonitor(options);
-		var factory = new TelemetrySourceFactory(monitor, new DefaultTelemetryRedactor(Options.Create(options)), []);
+		var factory = new TelemetrySourceFactory(monitor, new DefaultTelemetryRedactor(monitor), []);
 
 		var enabled = factory.Create("Nerosoft.Euonia.Caching");
 		var disabled = factory.Create("Nerosoft.Euonia.Bus");

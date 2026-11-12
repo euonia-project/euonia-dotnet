@@ -41,6 +41,17 @@ public sealed class TenantStartupValidator : IHostedService
 				"Multi-tenancy is enabled but no ITenantStore is registered. Register a tenant store (for example AddConfigurationTenantStore or AddInMemoryTenantStore) before starting the host.");
 		}
 
+		if (!string.IsNullOrWhiteSpace(options.DefaultTenantId)
+		    && !TenantIdValidator.IsValidIdentifier(options.DefaultTenantId))
+		{
+			throw new ConfigurationException("Euonia:MultiTenancy:DefaultTenantId is not a valid tenant identifier.");
+		}
+
+		if (options.CrossTenantRoles.Any(string.IsNullOrWhiteSpace))
+		{
+			throw new ConfigurationException("Euonia:MultiTenancy:CrossTenantRoles contains an empty role name.");
+		}
+
 		if (options.DefaultIsolation == TenantIsolation.DatabasePerTenant
 		    && string.IsNullOrWhiteSpace(options.ConnectionStringTemplate))
 		{

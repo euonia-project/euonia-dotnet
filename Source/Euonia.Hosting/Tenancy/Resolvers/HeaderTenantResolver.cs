@@ -8,9 +8,9 @@ namespace Nerosoft.Euonia.Hosting;
 /// </summary>
 internal sealed class HeaderTenantResolver : ITenantResolveContributor
 {
-	private readonly IOptions<MultiTenancyOptions> _options;
+	private readonly IOptionsMonitor<MultiTenancyOptions> _options;
 
-	public HeaderTenantResolver(IOptions<MultiTenancyOptions> options)
+	public HeaderTenantResolver(IOptionsMonitor<MultiTenancyOptions> options)
 	{
 		_options = options;
 	}
@@ -19,7 +19,7 @@ internal sealed class HeaderTenantResolver : ITenantResolveContributor
 
 	public ValueTask<string?> ResolveAsync(TenantResolveContext context, CancellationToken cancellationToken = default)
 	{
-		var options = _options.Value;
+		var options = _options.CurrentValue;
 		if (context.Headers == null
 		    || !context.Headers.TryGetValue(options.HeaderName, out var value)
 		    || string.IsNullOrWhiteSpace(value))
@@ -33,6 +33,9 @@ internal sealed class HeaderTenantResolver : ITenantResolveContributor
 			return ValueTask.FromResult<string?>(null);
 		}
 
-		return ValueTask.FromResult<string?>(value);
+		// 未校验的值会进入缓存键与存储查询：超长/含分隔符/控制字符直接视为未解析。
+		return TenantIdValidator.IsValidIdentifier(value)
+			       ? ValueTask.FromResult<string?>(value)
+			       : ValueTask.FromResult<string?>(null);
 	}
 }

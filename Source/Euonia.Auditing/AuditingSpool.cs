@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Nerosoft.Euonia.Auditing;
 
@@ -40,15 +41,18 @@ public sealed class FileAuditingSpool : IAuditingSpool
 	private static readonly JsonSerializerOptions _options = new(JsonSerializerDefaults.Web);
 
 	private readonly string _directory;
+	private readonly Microsoft.Extensions.Logging.ILogger<FileAuditingSpool>? _logger;
 
 	/// <summary>
 	/// 初始化 <see cref="FileAuditingSpool"/> 的新实例。
 	/// </summary>
 	/// <param name="directory">暂存目录；不存在时自动创建。</param>
-	public FileAuditingSpool(string directory)
+	/// <param name="logger">可选日志记录器。</param>
+	public FileAuditingSpool(string directory, Microsoft.Extensions.Logging.ILogger<FileAuditingSpool>? logger = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(directory);
 		_directory = directory;
+		_logger = logger;
 		Directory.CreateDirectory(directory);
 	}
 
@@ -59,7 +63,8 @@ public sealed class FileAuditingSpool : IAuditingSpool
 
 		var key = CreateKey(record);
 		var path = Path.Combine(_directory, key + ".json");
-		var temp = path + ".tmp";
+		// 唯一临时名：同一 key 的并发写入不会互相覆盖/删除对方的临时文件。
+		var temp = $"{path}.{Guid.NewGuid():N}.tmp";
 
 		await File.WriteAllTextAsync(temp, JsonSerializer.Serialize(record, _options), cancellationToken).ConfigureAwait(false);
 		File.Move(temp, path, overwrite: true);
@@ -85,6 +90,22 @@ public sealed class FileAuditingSpool : IAuditingSpool
 	{
 		var result = new List<KeyValuePair<string, AuditingRecord>>();
 
+		// 只清理明显陈旧的临时文件（多进程共享目录时不能删除其他进程正在写的文件）。
+		foreach (var temp in Directory.EnumerateFiles(_directory, "*.tmp"))
+		{
+			try
+			{
+				if (DateTime.UtcNow - File.GetLastWriteTimeUtc(temp) >= TimeSpan.FromHours(1))
+				{
+					File.Delete(temp);
+				}
+			}
+			catch (IOException exception)
+			{
+				_logger?.LogWarning(exception, "Failed to delete stale auditing spool temp file {Path}.", temp);
+			}
+		}
+
 		foreach (var file in Directory.EnumerateFiles(_directory, "*.json"))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -98,9 +119,14 @@ public sealed class FileAuditingSpool : IAuditingSpool
 					result.Add(new KeyValuePair<string, AuditingRecord>(Path.GetFileNameWithoutExtension(file), record));
 				}
 			}
-			catch (Exception)
+			catch (OperationCanceledException)
 			{
-				// 损坏文件不阻断启动；保留现场供人工排查。
+				throw;
+			}
+			catch (Exception exception)
+			{
+				// 损坏文件保留现场，并留下可检索的告警。
+				_logger?.LogError(exception, "Corrupt auditing spool file {Path}; it will be skipped.", file);
 			}
 		}
 

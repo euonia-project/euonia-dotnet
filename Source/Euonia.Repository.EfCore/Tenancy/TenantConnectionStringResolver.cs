@@ -9,13 +9,13 @@ namespace Nerosoft.Euonia.Repository.EfCore;
 /// <typeparam name="TContext">数据上下文类型。</typeparam>
 public sealed class TenantConnectionStringResolver<TContext> : ITenantConnectionStringResolver<TContext>
 {
-	private readonly IOptions<MultiTenancyOptions> _options;
+	private readonly IOptionsMonitor<MultiTenancyOptions> _options;
 
 	/// <summary>
 	/// 初始化 <see cref="TenantConnectionStringResolver{TContext}"/> 的新实例。
 	/// </summary>
 	/// <param name="options">多租户选项。</param>
-	public TenantConnectionStringResolver(IOptions<MultiTenancyOptions> options)
+	public TenantConnectionStringResolver(IOptionsMonitor<MultiTenancyOptions> options)
 	{
 		_options = options;
 	}
@@ -28,7 +28,7 @@ public sealed class TenantConnectionStringResolver<TContext> : ITenantConnection
 			return connectionString;
 		}
 
-		var template = _options.Value.ConnectionStringTemplate;
+		var template = _options.CurrentValue.ConnectionStringTemplate;
 		if (string.IsNullOrWhiteSpace(template) || tenant == null)
 		{
 			return null;

@@ -7,12 +7,14 @@ namespace Nerosoft.Euonia.Auditing;
 /// </summary>
 internal sealed class AuditingActionImpl : IAuditingAction
 {
-	private readonly Dictionary<string, object?> _parameters = new(StringComparer.Ordinal);
+	// 参数在 SetParameter 时立即序列化，避免调用方后续修改对象影响审计内容。
+	private readonly Dictionary<string, string?> _parameters = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, object?> _extraProperties = new(StringComparer.Ordinal);
 	private readonly Action<AuditingActionImpl, AuditingAction> _onSealed;
 	private readonly AuditingOptions _options;
 	private readonly Stopwatch _stopwatch;
 	private int _sealed;
+	private int _recordResult;
 
 	public AuditingActionImpl(
 		Guid actionId,
@@ -31,9 +33,15 @@ internal sealed class AuditingActionImpl : IAuditingAction
 		ActionName = actionName;
 		IdempotencyKey = idempotencyKey;
 		_options = options;
+		_recordResult = options.RecordResult ? 1 : 0;
 		_onSealed = onSealed;
 		ExecutionTime = DateTime.UtcNow;
 		_stopwatch = Stopwatch.StartNew();
+	}
+
+	public void SetRecordResult(bool recordResult)
+	{
+		Volatile.Write(ref _recordResult, recordResult ? 1 : 0);
 	}
 
 	public Guid ActionId { get; }
@@ -53,9 +61,15 @@ internal sealed class AuditingActionImpl : IAuditingAction
 	public void SetParameter(string name, object? value)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(name);
+		if (!_options.RecordParameters)
+		{
+			return;
+		}
+
+		var snapshot = AuditingSerializer.Serialize(value, maxDepth: _options.MaxDepth);
 		lock (_parameters)
 		{
-			_parameters[name] = value;
+			_parameters[name] = snapshot;
 		}
 	}
 
@@ -101,7 +115,10 @@ internal sealed class AuditingActionImpl : IAuditingAction
 			{
 				if (_parameters.Count > 0)
 				{
-					parameters = AuditingSerializer.Serialize(new Dictionary<string, object?>(_parameters, StringComparer.Ordinal));
+					// 各参数已是 JSON 片段，直接拼装为对象，保持原始类型结构。
+					parameters = "{" + string.Join(
+						             ",",
+						             _parameters.Select(pair => $"{System.Text.Json.JsonSerializer.Serialize(pair.Key)}:{pair.Value ?? "null"}")) + "}";
 				}
 			}
 		}
@@ -111,7 +128,7 @@ internal sealed class AuditingActionImpl : IAuditingAction
 		{
 			if (_extraProperties.Count > 0)
 			{
-				extra = AuditingSerializer.Serialize(new Dictionary<string, object?>(_extraProperties, StringComparer.Ordinal));
+				extra = AuditingSerializer.Serialize(new Dictionary<string, object?>(_extraProperties, StringComparer.Ordinal), maxDepth: _options.MaxDepth);
 			}
 		}
 
@@ -127,10 +144,10 @@ internal sealed class AuditingActionImpl : IAuditingAction
 			ExecutionDuration = (int)_stopwatch.ElapsedMilliseconds,
 			IsSuccess = success,
 			Parameters = parameters,
-			Result = success && _options.RecordResult ? AuditingSerializer.Serialize(result) : null,
+			Result = success && Volatile.Read(ref _recordResult) == 1 ? AuditingSerializer.Serialize(result, maxDepth: _options.MaxDepth) : null,
 			ExceptionType = exception?.GetType().FullName,
-			ExceptionMessage = exception?.Message,
-			ExceptionStackTrace = exception?.StackTrace,
+			ExceptionMessage = AuditingSerializer.MaskExceptionMessage(exception?.Message),
+			ExceptionStackTrace = _options.RecordStackTrace ? exception?.StackTrace : null,
 			ExtraProperties = extra,
 		};
 	}

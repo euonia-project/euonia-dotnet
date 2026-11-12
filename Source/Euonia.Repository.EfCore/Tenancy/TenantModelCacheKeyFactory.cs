@@ -7,12 +7,16 @@ namespace Nerosoft.Euonia.Repository.EfCore;
 /// <summary>
 /// 把租户 schema / 隔离模式纳入 EF 模型缓存键，避免 SharedSchema 下不同租户复用同一模型。
 /// </summary>
-public sealed class TenantModelCacheKeyFactory : IModelCacheKeyFactory
+public class TenantModelCacheKeyFactory : IModelCacheKeyFactory
 {
 	/// <inheritdoc />
 	public object Create(DbContext context, bool designTime)
 	{
-		var (isolation, schema) = TenantModelCacheKeyContext.Current;
+		// 优先从上下文自身读取；AsyncLocal 仅作为设计时/手动构建模型的兼容回退。
+		var tenant = (context as ITenantModelCacheKeySource)?.CurrentTenant;
+		var (isolation, schema) = tenant != null
+			                          ? (tenant.Isolation, tenant.Isolation == TenantIsolation.SharedSchema ? tenant.Schema : null)
+			                          : TenantModelCacheKeyContext.Current;
 		return new TenantModelCacheKey(context.GetType(), isolation, schema, designTime);
 	}
 

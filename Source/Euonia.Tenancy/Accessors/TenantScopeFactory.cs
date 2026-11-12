@@ -7,6 +7,34 @@ namespace Nerosoft.Euonia.Tenancy;
 /// </summary>
 public sealed class TenantScopeFactory : ITenantScopeFactory
 {
+	private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions>? _options;
+	private readonly MultiTenancyOptions? _staticOptions;
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	public TenantScopeFactory()
+	{
+	}
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	/// <param name="options">多租户选项，用于跨租户授权。</param>
+	public TenantScopeFactory(Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions> options)
+	{
+		_options = options;
+	}
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	/// <param name="options">固定的多租户选项。</param>
+	public TenantScopeFactory(MultiTenancyOptions options)
+	{
+		_staticOptions = options;
+	}
+
 	/// <inheritdoc />
 	public ITenantScope Begin(ITenantInfo tenant)
 	{
@@ -31,12 +59,51 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 	}
 
 	/// <inheritdoc />
+	public ITenantScope Begin(ITenantInfo tenant, string? actorTenantId, string? targetTenantId, string? crossTenantReason)
+	{
+		ArgumentNullException.ThrowIfNull(tenant);
+
+		if (string.IsNullOrEmpty(actorTenantId) || string.IsNullOrEmpty(targetTenantId) || string.IsNullOrWhiteSpace(crossTenantReason))
+		{
+			throw new ArgumentException("Cross-tenant scope requires actorTenantId, targetTenantId and crossTenantReason together.");
+		}
+
+		EnsureCanSwitch(tenant.Id);
+		if (!string.Equals(tenant.Id, targetTenantId, StringComparison.Ordinal))
+		{
+			throw new ArgumentException($"Target tenant '{targetTenantId}' does not match the scope tenant '{tenant.Id}'.");
+		}
+
+		TenantIdValidator.Validate(actorTenantId);
+		TenantIdValidator.Validate(targetTenantId);
+
+		return new Scope(AmbientExecutionContext.Push(context =>
+		{
+			Apply(context, tenant);
+			context.ActorTenantId = actorTenantId;
+			context.TargetTenantId = targetTenantId;
+
+			// 同租户不得被标记为跨租户，否则下游删除/查询会误判为全租户授权。
+			context.IsCrossTenant = !string.Equals(actorTenantId, targetTenantId, StringComparison.Ordinal);
+			context.CrossTenantReason = context.IsCrossTenant ? crossTenantReason : null;
+		}));
+	}
+
+	/// <inheritdoc />
 	public ITenantScope BeginCrossTenant(string reason, string? targetTenantId = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(reason);
 		if (targetTenantId != null)
 		{
 			TenantIdValidator.Validate(targetTenantId);
+		}
+
+		var options = _options?.CurrentValue ?? _staticOptions;
+		var authorized = options?.CrossTenantScopeAuthorizer?.Invoke(targetTenantId) == true
+		                 || (targetTenantId == null && options?.AllowSystemCrossTenant == true);
+		if (!authorized)
+		{
+			throw new UnauthorizedAccessException("Cross-tenant scope is not authorized by the host policy.");
 		}
 
 		return new Scope(AmbientExecutionContext.Push(context =>
@@ -54,9 +121,13 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 	{
 		context.TenantId = tenant.Id;
 		context.TenantName = tenant.Name;
-		context.TargetTenantId = null;
-		context.IsCrossTenant = false;
-		context.CrossTenantReason = null;
+
+		// 系统级全租户作用域内进入具体租户时，把 target 收敛到该租户而不是继续保持“全租户”；
+		// 这样既保留操作人/原因，又不会让下游按任意租户授权。
+		if (context.IsCrossTenant == true && !string.Equals(context.TargetTenantId, tenant.Id, StringComparison.Ordinal))
+		{
+			context.TargetTenantId = tenant.Id;
+		}
 
 		// 操作人租户：首次进入租户作用域时记录，跨租户切换时保留，审计据此区分 Actor/Target。
 		context.ActorTenantId ??= tenant.Id;
@@ -68,7 +139,7 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 		var current = AmbientExecutionContext.Current;
 		if (current?.TenantId != null && !string.Equals(current.TenantId, tenantId, StringComparison.Ordinal))
 		{
-			throw new InvalidOperationException($"Cannot switch tenant from '{current.TenantId}' to '{tenantId}' inside an active tenant scope. Use BeginIsolated or BeginCrossTenant instead.");
+			throw new TenantScopeConflictException(current.TenantId, tenantId);
 		}
 	}
 

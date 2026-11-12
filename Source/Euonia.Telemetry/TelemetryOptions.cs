@@ -63,5 +63,8 @@ public sealed class TelemetryOptions
 	/// <summary>
 	/// 获取或设置按组件覆盖的开关。
 	/// </summary>
+	/// <remarks>
+	/// 仅作用于通过 <c>TelemetrySource</c> 创建的埋点；组件内直接使用静态 <c>Meter</c>/<c>ActivitySource</c> 的指标不受此开关控制。
+	/// </remarks>
 	public Dictionary<string, TelemetryComponentOptions> Components { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

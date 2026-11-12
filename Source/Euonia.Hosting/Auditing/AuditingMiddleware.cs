@@ -62,14 +62,13 @@ internal sealed class AuditingMiddleware
 			try
 			{
 				FillRecord(scope, context, requestContextAccessor, error);
+				await scope.CompleteAsync(CancellationToken.None);
 			}
 			catch (Exception exception)
 			{
-				// 审计失败开放：回填或提交失败只记录日志。
+				// 审计失败开放：回填或提交失败只记录日志，不能覆盖原始业务异常。
 				logger.LogError(exception, "Failed to complete auditing scope {ScopeId}.", scope.ScopeId);
 			}
-
-			await scope.CompleteAsync(CancellationToken.None);
 		}
 	}
 
@@ -77,7 +76,7 @@ internal sealed class AuditingMiddleware
 	{
 		var record = scope.Record;
 		record.HttpStatusCode = context.Response.StatusCode;
-		record.IsSuccess = error == null && context.Response.StatusCode < 500;
+		record.IsSuccess = error == null && context.Response.StatusCode < 400;
 
 		if (context.Items.TryGetValue(TenantHttpKeys.Context, out var value) && value is TenantContext tenant)
 		{
@@ -92,10 +91,12 @@ internal sealed class AuditingMiddleware
 		if (context.Items.TryGetValue(TenantHttpKeys.Failure, out var failure) && failure is string failureCode)
 		{
 			record.IsSuccess = false;
-			record.ExtraProperties = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, object?>
+			record.MergeExtraProperties(new Dictionary<string, string>
 			{
 				["tenant.failure"] = failureCode,
-				["tenant.candidates"] = context.Items.TryGetValue(TenantHttpKeys.Candidates, out var candidates) ? candidates : null,
+				["tenant.candidates"] = context.Items.TryGetValue(TenantHttpKeys.Candidates, out var candidates)
+					                        ? System.Text.Json.JsonSerializer.Serialize(candidates)
+					                        : string.Empty,
 			});
 		}
 

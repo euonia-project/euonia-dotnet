@@ -180,6 +180,7 @@ public class AuditingCoreTests
 	[Fact]
 	public async Task Query_ShouldEnforceTenantScope()
 	{
+		AuditingQueryAuthorizer.ConfigureCrossTenantAuthorization(_ => true);
 		AmbientExecutionContext.Reset();
 		var store = new InMemoryAuditingStore();
 		await store.SaveAsync(new AuditingRecord
@@ -205,9 +206,34 @@ public class AuditingCoreTests
 				new AuditingQuery { TenantId = "t2", AllowCrossTenant = true, CrossTenantReason = "support" },
 				TestContext.Current.CancellationToken);
 			Assert.Empty(cross);
+
+			await Assert.ThrowsAsync<UnauthorizedAccessException>(
+				() => store.FindByScopeAsync("t2:secret", TestContext.Current.CancellationToken));
 		}
 
 		AmbientExecutionContext.Reset();
+	}
+
+	/// <summary>
+	/// 定向跨租户保留删除只删除目标租户记录。
+	/// </summary>
+	[Fact]
+	public async Task DeleteBefore_ShouldOnlyDeleteTargetTenant()
+	{
+		var store = new InMemoryAuditingStore();
+		var now = DateTime.UtcNow;
+		await store.SaveAsync(new AuditingRecord { Id = Guid.CreateVersion7(), ScopeId = "t1:req:old", TenantId = "t1", ExecutionTime = now.AddHours(-2), RecordedAt = now });
+		await store.SaveAsync(new AuditingRecord { Id = Guid.CreateVersion7(), ScopeId = "t2:req:old", TenantId = "t2", ExecutionTime = now.AddHours(-2), RecordedAt = now });
+
+		using (new TenantScopeFactory(new MultiTenancyOptions { CrossTenantScopeAuthorizer = _ => true }).BeginCrossTenant("retention", "t1"))
+		{
+			Assert.Equal(1, await store.DeleteBeforeAsync(now.AddHours(-1), TestContext.Current.CancellationToken));
+		}
+
+		using (new TenantScopeFactory().BeginIsolated(new TenantInfo { Id = "t2" }))
+		{
+			Assert.NotNull(await store.FindByScopeAsync("t2:req:old", TestContext.Current.CancellationToken));
+		}
 	}
 
 	/// <summary>
@@ -222,7 +248,7 @@ public class AuditingCoreTests
 
 		using (new TenantScopeFactory().Begin(new TenantInfo { Id = "t1" }))
 		{
-			using (new TenantScopeFactory().BeginCrossTenant("support-ticket-1", "t2"))
+			using (new TenantScopeFactory(new MultiTenancyOptions { CrossTenantScopeAuthorizer = _ => true }).BeginCrossTenant("support-ticket-1", "t2"))
 			{
 				var scope = recorder.EnsureScope(new AuditingScopeOptions { OperationKey = "req:cross", AutoComplete = false });
 				await scope.CompleteAsync(TestContext.Current.CancellationToken);
@@ -244,6 +270,7 @@ public class AuditingCoreTests
 	[Fact]
 	public async Task Store_ShouldQueryAndDeleteBefore()
 	{
+		AuditingQueryAuthorizer.ConfigureCrossTenantAuthorization(_ => true);
 		var store = new InMemoryAuditingStore();
 		var now = DateTime.UtcNow;
 
@@ -277,16 +304,29 @@ public class AuditingCoreTests
 			RecordedAt = now,
 		}, TestContext.Current.CancellationToken);
 
-		var failures = await store.QueryAsync(new AuditingQuery { TenantId = "t1", IsSuccess = false }, TestContext.Current.CancellationToken);
+		var failures = await store.QueryAsync(
+			new AuditingQuery { TenantId = "t1", IsSuccess = false, AllowCrossTenant = true, CrossTenantReason = "test" },
+			TestContext.Current.CancellationToken);
 		Assert.Single(failures);
 		Assert.Equal("t1:new", failures[0].ScopeId);
 
-		var found = await store.FindByScopeAsync("t2:new", TestContext.Current.CancellationToken);
+		AuditingRecord? found;
+		using (new TenantScopeFactory().BeginIsolated(new TenantInfo { Id = "t2" }))
+		{
+			found = await store.FindByScopeAsync("t2:new", TestContext.Current.CancellationToken);
+		}
+
 		Assert.NotNull(found);
 
-		var deleted = await store.DeleteBeforeAsync(now.AddHours(-1), TestContext.Current.CancellationToken);
+		int deleted;
+		using (new TenantScopeFactory(new MultiTenancyOptions { AllowSystemCrossTenant = true }).BeginCrossTenant("retention"))
+		{
+			deleted = await store.DeleteBeforeAsync(now.AddHours(-1), TestContext.Current.CancellationToken);
+		}
 		Assert.Equal(1, deleted);
-		Assert.Equal(2, (await store.QueryAsync(new AuditingQuery(), TestContext.Current.CancellationToken)).Count);
+		Assert.Equal(2, (await store.QueryAsync(
+			                 new AuditingQuery { AllowCrossTenant = true, CrossTenantReason = "test" },
+			                 TestContext.Current.CancellationToken)).Count);
 	}
 
 	/// <summary>
@@ -399,6 +439,218 @@ public class AuditingCoreTests
 	}
 
 	/// <summary>
+	/// 有界队列丢弃记录后计数仍能归零，FlushAsync 不会挂起。
+	/// </summary>
+	[Fact]
+	public async Task Writer_ShouldNotHangWhenQueueIsFull()
+	{
+		var store = new RecordingStore();
+		var services = new ServiceCollection();
+		services.AddSingleton<IAuditingStore>(store);
+		await using var provider = services.BuildServiceProvider();
+
+		await using var writer = new AuditingWriter(
+			provider,
+			Microsoft.Extensions.Options.Options.Create(new AuditingOptions { Enabled = true, QueueCapacity = 1 }));
+
+		// 未启动消费者：第一条入队，第二条因容量满被丢弃。
+		await writer.WriteAsync(NewRecord("t1:full:1", true), TestContext.Current.CancellationToken);
+		await writer.WriteAsync(NewRecord("t1:full:2", true), TestContext.Current.CancellationToken);
+
+		await writer.StartAsync(TestContext.Current.CancellationToken);
+
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+		await writer.FlushAsync(timeout.Token);
+
+		Assert.Equal(1, store.RecordCount);
+	}
+
+	/// <summary>
+	/// 同一作用域内的动作各自拥有唯一幂等键。
+	/// </summary>
+	[Fact]
+	public async Task Scope_ShouldGenerateUniqueIdempotencyKeys()
+	{
+		var writer = new CapturingWriter();
+		var recorder = CreateRecorder(writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions
+		{
+			OperationKey = "req:keys",
+			IdempotencyKey = "msg-1",
+			AutoComplete = false,
+		});
+
+		scope.BeginAction("Orders", "Create").Complete(null);
+		scope.BeginAction("Orders", "Update").Complete(null);
+
+		var keys = scope.Record.Actions.Select(action => action.IdempotencyKey).ToArray();
+		Assert.Equal(2, keys.Distinct(StringComparer.Ordinal).Count());
+		Assert.All(keys, key => Assert.StartsWith("msg-1:", key));
+
+		await scope.CompleteAsync(TestContext.Current.CancellationToken);
+
+		// 重投递：新作用域重放同样的动作序，键必须稳定，才能命中 (LogId, IdempotencyKey)。
+		var replay = recorder.CreateScope(new AuditingScopeOptions
+		{
+			OperationKey = "req:keys",
+			IdempotencyKey = "msg-1",
+			AutoComplete = false,
+		});
+		replay.BeginAction("Orders", "Create").Complete(null);
+		replay.BeginAction("Orders", "Update").Complete(null);
+
+		var replayKeys = replay.Record.Actions.Select(action => action.IdempotencyKey).ToArray();
+		Assert.Equal(keys, replayKeys);
+		await replay.CompleteAsync(TestContext.Current.CancellationToken);
+	}
+
+	/// <summary>
+	/// 后台完成前同步分离作用域，后续 EnsureScope 不会复用已完成作用域。
+	/// </summary>
+	[Fact]
+	public async Task CompleteInBackground_ShouldDetachScope()
+	{
+		var writer = new CapturingWriter();
+		var recorder = CreateRecorder(writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = false });
+
+		recorder.CompleteInBackground(scope);
+		Assert.Null(recorder.CurrentScope);
+
+		var next = recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = false });
+		Assert.NotSame(scope, next);
+
+		await recorder.FlushAsync(TestContext.Current.CancellationToken);
+		Assert.Single(writer.Records);
+	}
+
+	/// <summary>
+	/// 动作乱序完成（外层先完成）仍提交整条记录。
+	/// </summary>
+	[Fact]
+	public async Task AutoComplete_ShouldSubmitWhenOuterCompletesFirst()
+	{
+		var writer = new CapturingWriter();
+		var recorder = CreateRecorder(writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true });
+
+		var outer = scope.BeginAction("Orders", "Outer");
+		var inner = scope.BeginAction("Orders", "Inner");
+
+		outer.Complete(null);
+		inner.Complete(null);
+
+		await WaitAsync(() => writer.Records.Count == 1);
+		var record = Assert.Single(writer.Records);
+		Assert.Equal(2, record.Actions.Count);
+	}
+
+	/// <summary>
+	/// 动作乱序完成（内层先完成）仍提交整条记录。
+	/// </summary>
+	[Fact]
+	public async Task AutoComplete_ShouldSubmitWhenInnerCompletesFirst()
+	{
+		var writer = new CapturingWriter();
+		var recorder = CreateRecorder(writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true });
+
+		var outer = scope.BeginAction("Orders", "Outer");
+		var inner = scope.BeginAction("Orders", "Inner");
+
+		inner.Complete(null);
+		outer.Complete(null);
+
+		await WaitAsync(() => writer.Records.Count == 1);
+		var record = Assert.Single(writer.Records);
+		Assert.Equal(2, record.Actions.Count);
+	}
+
+	/// <summary>
+	/// 子异步流完成作用域后，父流的 EnsureScope 不会再复用已完成实例。
+	/// </summary>
+	[Fact]
+	public async Task EnsureScope_ShouldIgnoreCompletedScopeFromChildFlow()
+	{
+		var writer = new CapturingWriter();
+		var recorder = CreateRecorder(writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions { OperationKey = "req:child", AutoComplete = false });
+
+		await CompleteInChildFlowAsync(recorder, scope);
+
+		Assert.True(scope.IsCompleted);
+		Assert.Same(scope, recorder.CurrentScope);
+
+		var next = recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = false });
+		Assert.NotSame(scope, next);
+
+		await recorder.FlushAsync(TestContext.Current.CancellationToken);
+	}
+
+	private static async Task CompleteInChildFlowAsync(IAuditingRecorder recorder, IAuditingScope scope)
+	{
+		await Task.Yield();
+		recorder.CompleteInBackground(scope);
+	}
+
+	/// <summary>
+	/// 后台完成未入队前，FlushAsync 必须等待（异步 spool 场景）。
+	/// </summary>
+	[Fact]
+	public async Task FlushAsync_ShouldWaitForBackgroundCompletion()
+	{
+		var store = new RecordingStore();
+		var services = new ServiceCollection();
+		services.AddSingleton<IAuditingStore>(store);
+		await using var provider = services.BuildServiceProvider();
+
+		var gate = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var spool = new SlowSpool(gate.Task);
+		var options = Microsoft.Extensions.Options.Options.Create(new AuditingOptions { Enabled = true });
+		await using var writer = new AuditingWriter(provider, options, null, spool);
+		await writer.StartAsync(TestContext.Current.CancellationToken);
+
+		var recorder = new AuditingRecorder(options.Value, writer);
+		var scope = recorder.EnsureScope(new AuditingScopeOptions { OperationKey = "req:spool", AutoComplete = false });
+		recorder.CompleteInBackground(scope);
+
+		var flush = recorder.FlushAsync(TestContext.Current.CancellationToken);
+		await Task.Delay(100, TestContext.Current.CancellationToken);
+		Assert.False(flush.IsCompleted);
+
+		gate.SetResult("spool-key");
+		await flush.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+		Assert.Equal(1, store.RecordCount);
+		await writer.StopAsync(TestContext.Current.CancellationToken);
+	}
+
+	private sealed class SlowSpool : IAuditingSpool
+	{
+		private readonly Task<string> _gate;
+
+		public SlowSpool(Task<string> gate)
+		{
+			_gate = gate;
+		}
+
+		public async ValueTask<string> PersistAsync(AuditingRecord record, CancellationToken cancellationToken = default)
+		{
+			return await _gate.ConfigureAwait(false);
+		}
+
+		public ValueTask DeleteAsync(string key, CancellationToken cancellationToken = default)
+		{
+			return ValueTask.CompletedTask;
+		}
+
+		public ValueTask<IReadOnlyList<KeyValuePair<string, AuditingRecord>>> LoadPendingAsync(CancellationToken cancellationToken = default)
+		{
+			return ValueTask.FromResult<IReadOnlyList<KeyValuePair<string, AuditingRecord>>>([]);
+		}
+	}
+
+	/// <summary>
 	/// 停止写入器时排空队列，业务关闭不丢记录。
 	/// </summary>
 	[Fact]
@@ -425,6 +677,44 @@ public class AuditingCoreTests
 		await writer.StopAsync(TestContext.Current.CancellationToken);
 
 		Assert.Single(store.Records);
+	}
+
+	/// <summary>
+	/// Start→Stop→Start 后仍能继续消费，不丢弃记录。
+	/// </summary>
+	[Fact]
+	public async Task Writer_ShouldRestartAfterStop()
+	{
+		var store = new InMemoryAuditingStore();
+		var services = new ServiceCollection();
+		services.AddSingleton<IAuditingStore>(store);
+		await using var provider = services.BuildServiceProvider();
+
+		await using var writer = new AuditingWriter(
+			provider,
+			Microsoft.Extensions.Options.Options.Create(new AuditingOptions { Enabled = true }));
+
+		await writer.StartAsync(TestContext.Current.CancellationToken);
+		await writer.WriteAsync(new AuditingRecord
+		{
+			Id = Guid.CreateVersion7(),
+			ScopeId = "t1:req:restart-1",
+			ExecutionTime = DateTime.UtcNow,
+			RecordedAt = DateTime.UtcNow,
+		}, TestContext.Current.CancellationToken);
+		await writer.StopAsync(TestContext.Current.CancellationToken);
+
+		await writer.StartAsync(TestContext.Current.CancellationToken);
+		await writer.WriteAsync(new AuditingRecord
+		{
+			Id = Guid.CreateVersion7(),
+			ScopeId = "t1:req:restart-2",
+			ExecutionTime = DateTime.UtcNow,
+			RecordedAt = DateTime.UtcNow,
+		}, TestContext.Current.CancellationToken);
+		await writer.StopAsync(TestContext.Current.CancellationToken);
+
+		Assert.Equal(2, store.Records.Count);
 	}
 
 	private static async Task WaitAsync(Func<bool> condition)

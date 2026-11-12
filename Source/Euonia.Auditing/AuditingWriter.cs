@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,7 +10,7 @@ namespace Nerosoft.Euonia.Auditing;
 /// 审计写入队列：单读者后台消费 <see cref="IAuditingStore"/>，失败开放。
 /// </summary>
 /// <remarks>
-/// 写入不进业务事务、不阻塞业务线程；队列积压时按容量丢弃最旧记录并记录日志。
+/// 写入不进业务事务、不阻塞业务线程；队列满时丢弃当前记录并计入 `dropped` 指标（日志限流）。
 /// 注册 <see cref="IAuditingSpool"/> 后先落暂存再入队，落库成功后清理，进程崩溃可重放。
 /// 未注册 <see cref="IAuditingStore"/> 时本类型退化为丢弃并告警，保证可选依赖不阻断宿主启动。
 /// </remarks>
@@ -22,12 +23,19 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 	private readonly int _batchSize;
 	private readonly TimeSpan _batchInterval;
 	private readonly AuditingDelivery _failureDelivery;
-	private readonly Channel<PendingRecord> _channel;
+	private readonly AuditingDelivery _successDelivery;
+	private readonly SemaphoreSlim _lifecycle = new(1, 1);
+	private Channel<PendingRecord> _channel;
 	private readonly object _sync = new();
 	private TaskCompletionSource _drained = CreateCompletedSource();
 	private Task? _loop;
 	private CancellationTokenSource? _stopping;
 	private int _pending;
+	private int _accepting = 1;
+	private int _started;
+	private int _stopped;
+	private int _restartBlocked;
+	private long _lastDropLogTimestamp;
 
 	/// <summary>
 	/// 初始化 <see cref="AuditingWriter"/> 的新实例。
@@ -49,17 +57,25 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 		_batchSize = Math.Max(1, _options.BatchSize);
 		_batchInterval = _options.BatchInterval > TimeSpan.Zero ? _options.BatchInterval : TimeSpan.FromSeconds(1);
 		_failureDelivery = _options.FailureDelivery;
+		_successDelivery = _options.SuccessDelivery;
 
-		_channel = _options.QueueCapacity > 0
-			           ? Channel.CreateBounded<PendingRecord>(new BoundedChannelOptions(_options.QueueCapacity)
-			           {
-				           FullMode = BoundedChannelFullMode.DropOldest,
-				           SingleReader = true,
-			           })
-			           : Channel.CreateUnbounded<PendingRecord>(new UnboundedChannelOptions
-			           {
-				           SingleReader = true,
-			           });
+		_channel = CreateChannel();
+	}
+
+	private Channel<PendingRecord> CreateChannel()
+	{
+		return _options.QueueCapacity > 0
+			       ? Channel.CreateBounded<PendingRecord>(new BoundedChannelOptions(_options.QueueCapacity)
+			       {
+				       // Wait 模式下 TryWrite 在队列满时返回 false，可准确回收入队计数；
+				       // DropOldest / DropWrite 会静默丢弃并返回 true，导致 _pending 永不归零、FlushAsync 挂死。
+				       FullMode = BoundedChannelFullMode.Wait,
+				       SingleReader = true,
+			       })
+			       : Channel.CreateUnbounded<PendingRecord>(new UnboundedChannelOptions
+			       {
+				       SingleReader = true,
+			       });
 	}
 
 	/// <inheritdoc />
@@ -106,42 +122,143 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 	/// <inheritdoc />
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
-		if (_spool != null)
+		await _lifecycle.WaitAsync(cancellationToken).ConfigureAwait(false);
+		try
 		{
-			try
+			if (Volatile.Read(ref _restartBlocked) == 1)
 			{
-				foreach (var pending in await _spool.LoadPendingAsync(cancellationToken).ConfigureAwait(false))
+				throw new InvalidOperationException("Auditing writer cannot restart because the previous stop timed out.");
+			}
+
+			if (Interlocked.Exchange(ref _started, 1) == 1)
+			{
+				return;
+			}
+
+			if (Interlocked.Exchange(ref _stopped, 0) == 1)
+			{
+				// 支持 Start→Stop→Start：上一代通道已关闭，重建并复位计数。
+				lock (_sync)
 				{
-					Enqueue(pending.Value, pending.Key);
+					_channel = CreateChannel();
+					_pending = 0;
+					_drained = CreateCompletedSource();
 				}
 			}
-			catch (Exception exception)
+
+			Interlocked.Exchange(ref _accepting, 1);
+
+			// 先启动消费循环，再重放 spool：有界队列由消费者持续排空，避免重放被容量截断。
+			_stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+			_loop = Task.Run(() => ProcessAsync(_stopping.Token, _channel), CancellationToken.None);
+
+			if (_spool != null)
 			{
-				_logger?.LogError(exception, "Failed to replay auditing records from the durable spool.");
+				try
+				{
+					foreach (var pending in await _spool.LoadPendingAsync(cancellationToken).ConfigureAwait(false))
+					{
+						await EnqueueReplayAsync(pending.Value, pending.Key, cancellationToken).ConfigureAwait(false);
+					}
+				}
+				catch (Exception exception) when (exception is not OperationCanceledException)
+				{
+					_logger?.LogError(exception, "Failed to replay auditing records from the durable spool.");
+				}
 			}
 		}
-
-		_stopping = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-		_loop = Task.Run(() => ProcessAsync(_stopping.Token), CancellationToken.None);
+		finally
+		{
+			_lifecycle.Release();
+		}
 	}
 
 	/// <inheritdoc />
 	public async Task StopAsync(CancellationToken cancellationToken)
 	{
-		_channel.Writer.TryComplete();
-
-		if (_loop != null)
+		await _lifecycle.WaitAsync(CancellationToken.None).ConfigureAwait(false);
+		try
 		{
-			await _loop.WaitAsync(cancellationToken).ConfigureAwait(false);
-		}
+			if (Interlocked.Exchange(ref _stopped, 1) == 1)
+			{
+				return;
+			}
 
-		_stopping?.Dispose();
+			Interlocked.Exchange(ref _started, 0);
+			Interlocked.Exchange(ref _accepting, 0);
+			_channel.Writer.TryComplete();
+
+			var completed = _loop == null;
+
+			if (_loop != null)
+			{
+				// 不使用宿主停止令牌等待循环：令牌取消会让 WaitAsync 立即抛出，而循环可能仍在刷写。
+				try
+				{
+					await _loop.WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None).ConfigureAwait(false);
+					completed = true;
+				}
+				catch (TimeoutException)
+				{
+					// 存储挂起：取消内部令牌并再等一次，避免 StopAsync 永久阻塞；仍未结束则跳过释放。
+					_stopping?.Cancel();
+					try
+					{
+						await _loop.WaitAsync(TimeSpan.FromSeconds(5), CancellationToken.None).ConfigureAwait(false);
+						completed = true;
+					}
+					catch (TimeoutException)
+					{
+						// 旧循环仍在运行：禁止重启，避免两个消费者共享/重建通道。
+						Interlocked.Exchange(ref _restartBlocked, 1);
+						_stopping?.Dispose();
+						_stopping = null;
+						_loop = null;
+						_logger?.LogWarning("Auditing writer did not stop within the timeout; restart is disabled for this instance.");
+					}
+				}
+			}
+
+			if (completed)
+			{
+				_stopping?.Dispose();
+				_stopping = null;
+				_loop = null;
+			}
+		}
+		finally
+		{
+			_lifecycle.Release();
+		}
 	}
 
 	/// <inheritdoc />
 	public async ValueTask DisposeAsync()
 	{
 		await StopAsync(CancellationToken.None).ConfigureAwait(false);
+	}
+
+	private async ValueTask EnqueueReplayAsync(AuditingRecord record, string? spoolKey, CancellationToken cancellationToken)
+	{
+		var pending = new PendingRecord(record, spoolKey);
+		lock (_sync)
+		{
+			if (_pending++ == 0)
+			{
+				_drained = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+			}
+		}
+
+		try
+		{
+			// 重放使用等待容量，而不是 TryWrite 丢弃。
+			await _channel.Writer.WriteAsync(pending, cancellationToken).ConfigureAwait(false);
+		}
+		catch
+		{
+			MarkProcessed();
+			throw;
+		}
 	}
 
 	private void Enqueue(AuditingRecord record, string? spoolKey)
@@ -156,11 +273,40 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 
 		if (!_channel.Writer.TryWrite(new PendingRecord(record, spoolKey)))
 		{
+			if (Volatile.Read(ref _accepting) == 0)
+			{
+				// 写入器已停止：与“队列满”区分，便于告警判断。
+				AuditingMetrics.RecordRejected();
+				_logger?.LogDebug("Auditing writer is stopping; record {ScopeId} was rejected.", record.ScopeId);
+			}
+			else
+			{
+				AuditingMetrics.RecordDropped();
+				LogDrop(record);
+			}
+
 			MarkProcessed();
 		}
 	}
 
-	private async Task ProcessAsync(CancellationToken cancellationToken)
+	private void LogDrop(AuditingRecord record)
+	{
+		// 持续溢出时限制日志频率，避免在业务线程上形成日志风暴。
+		var now = Environment.TickCount64;
+		var last = Interlocked.Read(ref _lastDropLogTimestamp);
+		if (now - last >= 5000 && Interlocked.CompareExchange(ref _lastDropLogTimestamp, now, last) == last)
+		{
+			_logger?.LogWarning(
+				"Auditing queue is full (capacity {Capacity}); record {ScopeId} was dropped.",
+				_options.QueueCapacity,
+				record.ScopeId);
+			return;
+		}
+
+		_logger?.LogDebug("Auditing queue is full; record {ScopeId} was dropped.", record.ScopeId);
+	}
+
+	private async Task ProcessAsync(CancellationToken cancellationToken, Channel<PendingRecord> channel)
 	{
 		var buffer = new List<PendingRecord>();
 
@@ -168,31 +314,47 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 		{
 			while (!cancellationToken.IsCancellationRequested)
 			{
-				var waitTask = _channel.Reader.WaitToReadAsync(cancellationToken).AsTask();
-				var completed = await Task.WhenAny(waitTask, Task.Delay(_batchInterval, cancellationToken)).ConfigureAwait(false);
+				if (buffer.Count == 0)
+				{
+					if (!await channel.Reader.WaitToReadAsync(cancellationToken).ConfigureAwait(false))
+					{
+						break;
+					}
+				}
+
+				while (buffer.Count < _batchSize && channel.Reader.TryRead(out var item))
+				{
+					buffer.Add(item);
+				}
+
+				if (buffer.Count >= _batchSize)
+				{
+					await FlushBufferAsync(buffer, cancellationToken).ConfigureAwait(false);
+					continue;
+				}
+
+				// 批窗口内继续等待新记录；窗口到期才刷写已到达的部分批次。
+				using var delayCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+				var waitTask = channel.Reader.WaitToReadAsync(cancellationToken).AsTask();
+				var completed = await Task.WhenAny(waitTask, Task.Delay(_batchInterval, delayCancellation.Token)).ConfigureAwait(false);
 
 				if (completed == waitTask)
 				{
+					delayCancellation.Cancel();
 					if (!await waitTask.ConfigureAwait(false))
 					{
-						// 通道已关闭：结束循环并刷写剩余记录。
+						// 通道已关闭：刷写剩余记录后退出。
+						if (buffer.Count > 0)
+						{
+							await FlushBufferAsync(buffer, cancellationToken).ConfigureAwait(false);
+						}
+
 						break;
 					}
-
-					while (buffer.Count < _batchSize && _channel.Reader.TryRead(out var item))
-					{
-						buffer.Add(item);
-					}
-
-					// 缓冲已满则按批刷写；未满说明当前没有更多可读记录，同样立即刷写（低延迟）。
-					if (buffer.Count > 0)
-					{
-						await FlushBufferAsync(buffer, cancellationToken).ConfigureAwait(false);
-					}
 				}
-				else if (buffer.Count > 0)
+				else
 				{
-					// 批窗口到期，刷写已缓存的记录。
+					// 批窗口到期。
 					await FlushBufferAsync(buffer, cancellationToken).ConfigureAwait(false);
 				}
 			}
@@ -213,10 +375,20 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 	private async Task FlushBufferAsync(List<PendingRecord> buffer, CancellationToken cancellationToken)
 	{
 		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		var succeeded = false;
+		var persisted = new HashSet<PendingRecord>();
+
 		try
 		{
-			var router = _services.GetService(typeof(IAuditingStoreRouter)) as IAuditingStoreRouter;
-			var defaultStore = _services.GetService(typeof(IAuditingStore)) as IAuditingStore;
+			// 每批创建一个作用域：内置存储是单例，但宿主注册的 scoped 存储也能正确解析并释放。
+			// 作用域创建放在 try 内：ValidateScopes 等异常按批失败处理，不会终止消费循环。
+			using var flushScope = _services.GetService(typeof(IServiceScopeFactory)) is IServiceScopeFactory scopeFactory
+				                       ? scopeFactory.CreateScope()
+				                       : null;
+			var services = flushScope?.ServiceProvider ?? _services;
+
+			var router = services.GetService(typeof(IAuditingStoreRouter)) as IAuditingStoreRouter;
+			var defaultStore = services.GetService(typeof(IAuditingStore)) as IAuditingStore;
 
 			if (router == null && defaultStore == null)
 			{
@@ -224,29 +396,44 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 				return;
 			}
 
+			var allPersisted = true;
+
 			// 每租户审计库：按路由把记录分组，同一存储的记录合并为一次批量写入。
-			foreach (var group in buffer.GroupBy(item => router?.GetStore(item.Record) ?? defaultStore))
+			foreach (var group in buffer.GroupBy(item => router != null ? router.GetStore(item.Record) : defaultStore))
 			{
 				var store = group.Key;
 				var items = group.ToArray();
 
 				if (store == null)
 				{
+					allPersisted = false;
 					_logger?.LogWarning("No auditing store could be resolved for {Count} record(s); they were dropped.", items.Length);
 					continue;
 				}
 
 				var immediate = items
-				                .Where(item => _failureDelivery == AuditingDelivery.Immediate && item.Record.IsSuccess == false)
+				                .Where(item => item.Record.IsSuccess == false
+				                               ? _failureDelivery == AuditingDelivery.Immediate
+				                               : _successDelivery == AuditingDelivery.Immediate)
 				                .ToArray();
 
 				foreach (var pending in immediate)
 				{
-					await SaveAsync(store, pending.Record, cancellationToken).ConfigureAwait(false);
-					await DeleteSpoolAsync(pending).ConfigureAwait(false);
+					try
+					{
+						await SaveAsync(store, pending.Record, cancellationToken).ConfigureAwait(false);
+						persisted.Add(pending);
+						await DeleteSpoolSafeAsync(pending).ConfigureAwait(false);
+					}
+					catch (Exception exception)
+					{
+						allPersisted = false;
+						_logger?.LogError(exception, "Failed to persist auditing record {ScopeId}.", pending.Record.ScopeId);
+					}
 				}
 
-				var batched = items.Where(item => !immediate.Contains(item)).ToArray();
+				var immediateSet = immediate.ToHashSet();
+				var batched = items.Where(item => !immediateSet.Contains(item)).ToArray();
 				if (batched.Length == 0)
 				{
 					continue;
@@ -258,7 +445,8 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 
 					foreach (var pending in batched)
 					{
-						await DeleteSpoolAsync(pending).ConfigureAwait(false);
+						persisted.Add(pending);
+						await DeleteSpoolSafeAsync(pending).ConfigureAwait(false);
 					}
 				}
 				catch (Exception exception) when (batched.Length > 1)
@@ -267,17 +455,24 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 					_logger?.LogWarning(exception, "Batch auditing write failed; falling back to per-record writes.");
 					foreach (var pending in batched)
 					{
-						await SaveAsync(store, pending.Record, cancellationToken).ConfigureAwait(false);
-						await DeleteSpoolAsync(pending).ConfigureAwait(false);
+						try
+						{
+							await SaveAsync(store, pending.Record, cancellationToken).ConfigureAwait(false);
+							persisted.Add(pending);
+							await DeleteSpoolSafeAsync(pending).ConfigureAwait(false);
+						}
+						catch (Exception recordException)
+						{
+							// 单条失败不阻断后续记录；spool 键保留，便于重启重放。
+							allPersisted = false;
+							_logger?.LogError(recordException, "Failed to persist auditing record {ScopeId} during fallback.", pending.Record.ScopeId);
+						}
 					}
 				}
 			}
 
 			stopwatch.Stop();
-			foreach (var _ in buffer)
-			{
-				AuditingMetrics.RecordWrite(true, stopwatch.Elapsed.TotalSeconds / buffer.Count);
-			}
+			succeeded = allPersisted;
 		}
 		catch (Exception exception)
 		{
@@ -285,12 +480,36 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 		}
 		finally
 		{
-			foreach (var _ in buffer)
+			stopwatch.Stop();
+			var count = Math.Max(1, buffer.Count);
+			var elapsedSeconds = stopwatch.Elapsed.TotalSeconds / count;
+
+			foreach (var pending in buffer)
 			{
+				var persistedRecord = persisted.Contains(pending);
+				if (!persistedRecord && pending.SpoolKey == null)
+				{
+					AuditingMetrics.RecordDropped();
+				}
+
+				AuditingMetrics.RecordWrite(persistedRecord, elapsedSeconds);
 				MarkProcessed();
 			}
 
 			buffer.Clear();
+		}
+	}
+
+	private async Task DeleteSpoolSafeAsync(PendingRecord pending)
+	{
+		try
+		{
+			await DeleteSpoolAsync(pending).ConfigureAwait(false);
+		}
+		catch (Exception exception)
+		{
+			// 已落库；删除失败只保留 spool 供下次重放（写入幂等）。
+			_logger?.LogWarning(exception, "Failed to delete auditing spool entry {SpoolKey}.", pending.SpoolKey);
 		}
 	}
 
@@ -300,18 +519,6 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 		{
 			await _spool.DeleteAsync(pending.SpoolKey, CancellationToken.None).ConfigureAwait(false);
 		}
-	}
-
-	private async Task SaveAsync(AuditingRecord record, CancellationToken cancellationToken)
-	{
-		var store = _services.GetService(typeof(IAuditingStore)) as IAuditingStore;
-		if (store == null)
-		{
-			_logger?.LogWarning("Auditing is enabled but no IAuditingStore is registered; the record {ScopeId} was dropped.", record.ScopeId);
-			return;
-		}
-
-		await SaveAsync(store, record, cancellationToken).ConfigureAwait(false);
 	}
 
 	private async Task SaveAsync(IAuditingStore store, AuditingRecord record, CancellationToken cancellationToken)
@@ -324,7 +531,7 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 				await store.SaveAsync(record, cancellationToken).ConfigureAwait(false);
 				return;
 			}
-			catch (Exception) when (attempt < attempts)
+			catch (Exception exception) when (exception is not OperationCanceledException && attempt < attempts)
 			{
 				await Task.Delay(TimeSpan.FromMilliseconds(50 * attempt), cancellationToken).ConfigureAwait(false);
 			}

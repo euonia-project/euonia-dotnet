@@ -44,7 +44,8 @@ public class FullChainTests
 		builder.Services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "T1", Status = TenantStatus.Active }]);
 		builder.Services.AddAuditing(options => options.Enabled = true);
 		builder.Services.AddInMemoryAuditingStore();
-		builder.Services.AddDbContext<OrdersContext>(options => options.UseSqlite(connection));
+		builder.Services.AddDbContext<OrdersContext>(options => options.UseSqlite(connection)
+		                                                               .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, Nerosoft.Euonia.Repository.EfCore.TenantModelCacheKeyFactory>());
 
 		var app = builder.Build();
 		app.UseExecutionContext();

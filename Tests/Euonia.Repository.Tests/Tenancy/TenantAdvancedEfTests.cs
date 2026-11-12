@@ -96,6 +96,7 @@ public sealed class TenantAdvancedEfTests
 
 		var options = new DbContextOptionsBuilder<RoutedContext>()
 		              .UseSqlite("DataSource=:memory:")
+		              .ReplaceService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory, Nerosoft.Euonia.Repository.EfCore.TenantModelCacheKeyFactory>()
 		              .Options;
 
 		using var context = new RoutedContext(options, accessor, Options.Create(new MultiTenancyOptions { Enabled = true }));

@@ -27,6 +27,39 @@ public sealed class NullAuditingRecorder : IAuditingRecorder
 	}
 
 	/// <inheritdoc />
+	public IAuditingScope EnsureScope(AuditingScopeOptions? options, bool force)
+	{
+		return NullAuditingScope.Instance;
+	}
+
+	/// <inheritdoc />
+	public IAuditingScope CreateScope(AuditingScopeOptions? options = null)
+	{
+		return NullAuditingScope.Instance;
+	}
+
+	/// <inheritdoc />
+	public IAuditingScope CreateDetachedScope(AuditingScopeOptions? options = null)
+	{
+		return NullAuditingScope.Instance;
+	}
+
+	/// <inheritdoc />
+	public void Attach(IAuditingScope? scope)
+	{
+	}
+
+	/// <inheritdoc />
+	public void Detach(IAuditingScope scope)
+	{
+	}
+
+	/// <inheritdoc />
+	public void CompleteInBackground(IAuditingScope scope)
+	{
+	}
+
+	/// <inheritdoc />
 	public ValueTask SubmitAsync(AuditingRecord record, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.CompletedTask;

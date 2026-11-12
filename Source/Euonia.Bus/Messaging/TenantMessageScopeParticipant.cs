@@ -78,8 +78,40 @@ public sealed class TenantMessageScopeParticipant : IMessageExecutionScopePartic
 			}
 		}
 
-		Func<IDisposable?> install = () => scopeFactory.Begin(tenant);
+		var actorTenantId = ReadString(message, MessageMetadataKeys.ActorTenantId);
+		var targetTenantId = ReadString(message, MessageMetadataKeys.TargetTenantId);
+		var isCrossTenant = false;
+		if (message.Metadata.TryGetValue(MessageMetadataKeys.IsCrossTenant, out var cross) && cross is not null)
+		{
+			if (!bool.TryParse(cross.ToString(), out isCrossTenant))
+			{
+				logger?.LogWarning("Message {MessageId} carries an invalid cross-tenant flag; dead-lettered.", message.MessageId);
+				return new MessageExecutionScopeEntry(null, MessageExecutionScopeAction.DeadLetter);
+			}
+		}
+
+		var reason = ReadString(message, MessageMetadataKeys.CrossTenantReason);
+		if (isCrossTenant && (string.IsNullOrWhiteSpace(actorTenantId)
+		                      || string.IsNullOrWhiteSpace(targetTenantId)
+		                      || string.IsNullOrWhiteSpace(reason)
+		                      || !string.Equals(targetTenantId, tenant.Id, StringComparison.Ordinal)))
+		{
+			logger?.LogWarning("Message {MessageId} carries incomplete or inconsistent cross-tenant metadata; dead-lettered.", message.MessageId);
+			return new MessageExecutionScopeEntry(null, MessageExecutionScopeAction.DeadLetter);
+		}
+
+		Func<IDisposable?> install = () => isCrossTenant
+			                                   ? scopeFactory.Begin(tenant, actorTenantId, targetTenantId ?? tenant.Id, reason)
+			                                   : scopeFactory.Begin(tenant);
+
 		return new MessageExecutionScopeEntry(install);
+	}
+
+	private static string? ReadString(IMessageContext message, string key)
+	{
+		return message.Metadata.TryGetValue(key, out var value) && value is string text && !string.IsNullOrWhiteSpace(text)
+			       ? text
+			       : null;
 	}
 
 	private static string? ReadTenantId(IMessageContext message)

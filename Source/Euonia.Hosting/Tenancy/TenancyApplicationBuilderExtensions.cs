@@ -15,11 +15,15 @@ public static class TenancyApplicationBuilderExtensions
 	/// </summary>
 	/// <param name="app">应用构建器。</param>
 	/// <returns>应用构建器。</returns>
+	/// <remarks>
+	/// 必须放在 <c>UseAuthentication()</c> 之后，否则 Header 解析拿不到已认证身份，
+	/// 默认 <c>TrustHeaderForAnonymous=false</c> 时会忽略租户头。
+	/// </remarks>
 	public static IApplicationBuilder UseTenancy(this IApplicationBuilder app)
 	{
 		ArgumentNullException.ThrowIfNull(app);
 
 		var options = app.ApplicationServices.GetService<IOptions<MultiTenancyOptions>>()?.Value;
-		return options is { Enabled: false } ? app : app.UseMiddleware<TenancyMiddleware>();
+		return options is null or { Enabled: false } ? app : app.UseMiddleware<TenancyMiddleware>();
 	}
 }

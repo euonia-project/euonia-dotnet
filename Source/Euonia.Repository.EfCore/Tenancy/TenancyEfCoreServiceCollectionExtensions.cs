@@ -29,7 +29,8 @@ public static class TenancyEfCoreServiceCollectionExtensions
 
 		// IDbContextPool<T> 位于 EF Core 内部命名空间；按服务类型形状探测，避免依赖 internal 命名空间。
 		if (services.Any(x => x.ServiceType.IsGenericType
-		                      && x.ServiceType.GetGenericTypeDefinition().Name == "IDbContextPool`1"))
+		                      && x.ServiceType.GetGenericTypeDefinition().Name == "IDbContextPool`1"
+		                      && x.ServiceType.GetGenericArguments()[0] == typeof(TContext)))
 		{
 			throw new ConfigurationException(
 				$"'{typeof(TContext).FullName}' is registered with AddDbContextPool, which is not compatible with tenant-aware connection routing. Use AddDbContext or a scoped AddDbContextFactory instead.");

@@ -16,6 +16,11 @@ public sealed class MultiTenancyOptions
 	public bool Enabled { get; set; }
 
 	/// <summary>
+	/// 获取或设置一个值，指示 SharedSchema 下是否校验模型缓存键工厂。
+	/// </summary>
+	public bool ValidateModelCacheKeyFactory { get; set; } = true;
+
+	/// <summary>
 	/// 获取或设置一个值，指示是否要求每个请求/消息必须解析到租户。
 	/// </summary>
 	public bool RequireTenant { get; set; } = true;
@@ -74,6 +79,17 @@ public sealed class MultiTenancyOptions
 	/// 获取或设置平台管理员角色列表，这些角色可进入跨租户作用域。
 	/// </summary>
 	public string[] CrossTenantRoles { get; set; } = [];
+
+	/// <summary>
+	/// 获取或设置跨租户作用域授权回调；返回 <c>true</c> 才允许进入跨租户上下文。
+	/// </summary>
+	/// <remarks>未配置时拒绝所有跨租户作用域；宿主应在此校验平台管理员角色或服务身份。</remarks>
+	public Func<string?, bool>? CrossTenantScopeAuthorizer { get; set; }
+
+	/// <summary>
+	/// 获取或设置一个值，指示是否允许无操作人身份的系统作业进入全租户（target 为空）跨租户作用域。
+	/// </summary>
+	public bool AllowSystemCrossTenant { get; set; }
 
 	/// <summary>
 	/// 获取或设置跳过租户要求的路径前缀。

@@ -23,6 +23,11 @@ public static class AuditingServiceCollectionExtensions
 	{
 		ArgumentNullException.ThrowIfNull(services);
 
+		// 幂等：重复调用不能重复注册 IHostedService，但选项配置仍应生效。
+		var alreadyRegistered = services.Any(descriptor => descriptor.ServiceType == typeof(AuditingRegistrationMarker));
+		var writerInterface = services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(IAuditingWriter));
+		var writerConcrete = services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(AuditingWriter));
+
 		var builder = services.AddOptions<AuditingOptions>();
 		if (services.Any(x => x.ServiceType == typeof(Microsoft.Extensions.Configuration.IConfiguration)))
 		{
@@ -34,19 +39,40 @@ public static class AuditingServiceCollectionExtensions
 			builder.Configure(configure);
 		}
 
+		// 无 Host 场景也能在首次解析 Options 时安装授权策略。
+		builder.PostConfigure(options => AuditingQueryAuthorizer.ConfigureCrossTenantAuthorization(options.CrossTenantQueryAuthorizer));
+
+		if (alreadyRegistered)
+		{
+			return services;
+		}
+
+		services.AddSingleton<AuditingRegistrationMarker>();
+
 		services.TryAddSingleton<IAuditingRecorder>(provider => new AuditingRecorder(
 			provider.GetRequiredService<IOptions<AuditingOptions>>().Value,
 			provider.GetService<IAuditingWriter>(),
 			provider.GetService<Microsoft.Extensions.Logging.ILogger<AuditingRecorder>>()));
 
-		services.TryAddSingleton<AuditingWriter>(provider => new AuditingWriter(
-			provider,
-			provider.GetRequiredService<IOptions<AuditingOptions>>(),
-			provider.GetService<Microsoft.Extensions.Logging.ILogger<AuditingWriter>>(),
-			provider.GetService<IAuditingSpool>()));
-		services.TryAddSingleton<IAuditingWriter>(provider => provider.GetRequiredService<AuditingWriter>());
-		// TryAddEnumerable 不支持工厂描述符；宿主服务与 IAuditingWriter 必须是同一实例。
-		services.AddSingleton<IHostedService>(provider => provider.GetRequiredService<AuditingWriter>());
+		if (writerInterface == null && writerConcrete == null)
+		{
+			// 没有任何写入器：注册内置写入器（单实例 + hosted service）。
+			services.TryAddSingleton<AuditingWriter>(provider => new AuditingWriter(
+				provider,
+				provider.GetRequiredService<IOptions<AuditingOptions>>(),
+				provider.GetService<Microsoft.Extensions.Logging.ILogger<AuditingWriter>>(),
+				provider.GetService<IAuditingSpool>()));
+			services.TryAddSingleton<IAuditingWriter>(provider => provider.GetRequiredService<AuditingWriter>());
+		}
+		else if (writerInterface == null)
+		{
+			// 宿主只注册了具体 AuditingWriter：补 IAuditingWriter 别名并启动同一实例。
+			services.TryAddSingleton<IAuditingWriter>(provider => provider.GetRequiredService<AuditingWriter>());
+		}
+
+		// 无论接口注册是类型、实例还是工厂，hosted service 都解析同一个 IAuditingWriter；
+		// 仅当它确实是内置 AuditingWriter 时才启动，自定义写入器自行管理生命周期。
+		services.AddSingleton<IHostedService, AuditingWriterHostedService>();
 
 		return services;
 	}
@@ -62,7 +88,9 @@ public static class AuditingServiceCollectionExtensions
 		ArgumentNullException.ThrowIfNull(services);
 		ArgumentException.ThrowIfNullOrWhiteSpace(directory);
 
-		services.TryAddSingleton<IAuditingSpool>(_ => new FileAuditingSpool(directory));
+		services.TryAddSingleton<IAuditingSpool>(provider => new FileAuditingSpool(
+			directory,
+			provider.GetService<Microsoft.Extensions.Logging.ILogger<FileAuditingSpool>>()));
 		return services;
 	}
 

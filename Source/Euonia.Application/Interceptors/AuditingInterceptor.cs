@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Castle.DynamicProxy;
 using Nerosoft.Euonia.Auditing;
@@ -15,10 +16,21 @@ namespace Nerosoft.Euonia.Application;
 /// </remarks>
 public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 {
+	private static readonly MethodInfo AwaitTaskResultMethod =
+		typeof(AuditingInterceptor).GetMethod(nameof(AwaitTaskResultAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+	private static readonly MethodInfo AwaitTaskMethod =
+		typeof(AuditingInterceptor).GetMethod(nameof(AwaitTaskAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+	private static readonly MethodInfo AwaitValueTaskResultMethod =
+		typeof(AuditingInterceptor).GetMethod(nameof(AwaitValueTaskResultAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
+
 	private static readonly string[] _readPrefixes =
 	{
-		"Get", "Find", "Query", "List", "Count", "Exists", "Search", "Has", "Is", "Read",
+		"Get", "Find", "Query", "List", "Count", "Exists", "Search", "Read",
 	};
+
+	private static readonly ConcurrentDictionary<(System.Reflection.MethodInfo Interface, System.Reflection.MethodInfo Target), AuditedAttribute?> _attributeCache = new();
 
 	private readonly IAuditingRecorder _recorder;
 	private readonly AuditingOptions _options;
@@ -43,6 +55,7 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 			return false;
 		}
 
+		// 仅跳过明确的读方法；不按写动词白名单，避免 Issue/Approve/Cancel 等写操作漏审。
 		return _readPrefixes.Any(prefix => methodName.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
 	}
 
@@ -52,8 +65,13 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 	/// <inheritdoc />
 	public void Intercept(IInvocation invocation)
 	{
-		var attribute = invocation.Method.GetCustomAttribute<AuditedAttribute>(true)
-		                ?? invocation.Method.DeclaringType?.GetCustomAttribute<AuditedAttribute>(true);
+		var targetMethod = invocation.MethodInvocationTarget ?? invocation.Method;
+		var attribute = _attributeCache.GetOrAdd(
+			(invocation.Method, targetMethod),
+			key => key.Target.GetCustomAttribute<AuditedAttribute>(true)
+			       ?? key.Target.DeclaringType?.GetCustomAttribute<AuditedAttribute>(true)
+			       ?? key.Interface.GetCustomAttribute<AuditedAttribute>(true)
+			       ?? key.Interface.DeclaringType?.GetCustomAttribute<AuditedAttribute>(true));
 
 		if (!_recorder.IsEnabled && attribute == null)
 		{
@@ -76,10 +94,21 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 
 		var declaredType = invocation.MethodInvocationTarget?.DeclaringType ?? invocation.TargetType ?? invocation.Method.DeclaringType!;
 		var actionName = attribute?.ActionName ?? $"{declaredType.Name}.{invocation.Method.Name}";
-		var scope = _recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true });
+		// [Audited] 在全局关闭时强制创建作用域（合规要求的少量方法）。
+		var scope = _recorder.EnsureScope(new AuditingScopeOptions { AutoComplete = true }, force: attribute != null);
 		var action = scope.BeginAction(declaredType.FullName ?? declaredType.Name, invocation.Method.Name, actionName);
 
-		var parameters = invocation.Method.GetParameters();
+		if (attribute is { RecordResult: false })
+		{
+			action.SetRecordResult(false);
+		}
+
+		// 参数元数据优先取实现方法，保证 [SensitiveData] 与参数名和实现一致。
+		var parameters = targetMethod.GetParameters();
+		if (parameters.Length != invocation.Arguments.Length)
+		{
+			parameters = invocation.Method.GetParameters();
+		}
 		for (var index = 0; index < parameters.Length && index < invocation.Arguments.Length; index++)
 		{
 			var parameter = parameters[index];
@@ -117,10 +146,37 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 
 			case Task task:
 			{
-				var method = task.GetType().IsGenericType
-					             ? typeof(AuditingInterceptor).GetMethod(nameof(AwaitTaskResultAsync), BindingFlags.NonPublic | BindingFlags.Static)!
-					                                        .MakeGenericMethod(task.GetType().GetGenericArguments()[0])
-					             : typeof(AuditingInterceptor).GetMethod(nameof(AwaitTaskAsync), BindingFlags.NonPublic | BindingFlags.Static)!;
+				// 用声明的返回类型判断：async Task 的运行时类型是 Task<VoidTaskResult>，
+				// 按运行时泛型参数会错误地生成 Task<VoidTaskResult> 强转。
+				var declared = invocation.Method.ReturnType;
+				var isGenericTask = declared.IsGenericType && declared.GetGenericTypeDefinition() == typeof(Task<>);
+
+				if (declared != typeof(Task) && !isGenericTask)
+				{
+					// 自定义 Task 派生类型：替换返回值会破坏代理签名，只附加完成后封口。
+					_ = task.ContinueWith(
+						(completed, state) =>
+						{
+							var (auditAction, proxy) = ((IAuditingAction, Task))state!;
+							if (completed.IsFaulted)
+							{
+								auditAction.Fail(completed.Exception!.GetBaseException());
+							}
+							else
+							{
+								auditAction.Complete(null);
+							}
+						},
+						(action, task),
+						CancellationToken.None,
+						TaskContinuationOptions.ExecuteSynchronously,
+						TaskScheduler.Default);
+					return;
+				}
+
+				var method = isGenericTask
+					             ? AwaitTaskResultMethod.MakeGenericMethod(declared.GetGenericArguments()[0])
+					             : AwaitTaskMethod;
 				invocation.ReturnValue = method.Invoke(null, [task, action]);
 				return;
 			}
@@ -133,10 +189,18 @@ public class AuditingInterceptor : IInterceptor, IOrderedInterceptor
 		var type = returnValue.GetType();
 		if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(ValueTask<>))
 		{
-			var generic = typeof(AuditingInterceptor)
-			              .GetMethod(nameof(AwaitValueTaskResultAsync), BindingFlags.NonPublic | BindingFlags.Static)!
-			              .MakeGenericMethod(type.GetGenericArguments()[0]);
+			var generic = AwaitValueTaskResultMethod.MakeGenericMethod(type.GetGenericArguments()[0]);
 			invocation.ReturnValue = generic.Invoke(null, [returnValue, action]);
+			return;
+		}
+
+		var declaredReturn = invocation.Method.ReturnType;
+		if (declaredReturn.IsGenericType && declaredReturn.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>))
+		{
+			// 仅包装声明类型就是 IAsyncEnumerable<T> 的情况；自定义流实现替换返回值会破坏代理签名。
+			var elementType = declaredReturn.GetGenericArguments()[0];
+			var wrapperType = typeof(AuditingAsyncEnumerable<>).MakeGenericType(elementType);
+			invocation.ReturnValue = Activator.CreateInstance(wrapperType, returnValue, action);
 			return;
 		}
 

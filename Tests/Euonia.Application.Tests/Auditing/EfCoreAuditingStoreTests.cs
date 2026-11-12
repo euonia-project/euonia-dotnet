@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Nerosoft.Euonia.Auditing;
 using Nerosoft.Euonia.Auditing.EfCore;
+using Nerosoft.Euonia.Tenancy;
 
 namespace Nerosoft.Euonia.Application.Tests.Auditing;
 
@@ -78,6 +79,7 @@ public sealed class EfCoreAuditingStoreTests : IDisposable
 	[Fact]
 	public async Task QueryAndDelete_ShouldWork()
 	{
+		AuditingQueryAuthorizer.ConfigureCrossTenantAuthorization(_ => true);
 		var store = new EfCoreAuditingStore<AuditingDbContext>(new TestFactory(_options));
 		var now = DateTime.UtcNow;
 
@@ -101,17 +103,63 @@ public sealed class EfCoreAuditingStoreTests : IDisposable
 			IsSuccess = false,
 		}, TestContext.Current.CancellationToken);
 
-		var failures = await store.QueryAsync(new AuditingQuery { TenantId = "t1", IsSuccess = false }, TestContext.Current.CancellationToken);
+		var failures = await store.QueryAsync(
+			new AuditingQuery { TenantId = "t1", IsSuccess = false, AllowCrossTenant = true, CrossTenantReason = "test" },
+			TestContext.Current.CancellationToken);
 		Assert.Single(failures);
 		Assert.Equal("t1:new", failures[0].ScopeId);
 
-		Assert.NotNull(await store.FindByScopeAsync("t1:old", TestContext.Current.CancellationToken));
+		using (new TenantScopeFactory().BeginIsolated(new TenantInfo { Id = "t1" }))
+		{
+			Assert.NotNull(await store.FindByScopeAsync("t1:old", TestContext.Current.CancellationToken));
+		}
 
-		var deleted = await store.DeleteBeforeAsync(now.AddHours(-1), TestContext.Current.CancellationToken);
+		int deleted;
+		using (new TenantScopeFactory(new MultiTenancyOptions { AllowSystemCrossTenant = true }).BeginCrossTenant("retention"))
+		{
+			deleted = await store.DeleteBeforeAsync(now.AddHours(-1), TestContext.Current.CancellationToken);
+		}
 		Assert.Equal(1, deleted);
 
 		await using var context = new AuditingDbContext(_options);
 		Assert.Equal(1, await context.Records.CountAsync(TestContext.Current.CancellationToken));
+	}
+
+	/// <summary>
+	/// 后续保存可把 null 终态回填为最终结果，耗时不回退。
+	/// </summary>
+	[Fact]
+	public async Task SaveAsync_ShouldBackfillTerminalState()
+	{
+		var store = new EfCoreAuditingStore<AuditingDbContext>(new TestFactory(_options));
+		var record = new AuditingRecord
+		{
+			Id = Guid.CreateVersion7(),
+			ScopeId = "t1:req:terminal",
+			TenantId = "t1",
+			ExecutionTime = DateTime.UtcNow,
+			RecordedAt = DateTime.UtcNow,
+		};
+		await store.SaveAsync(record, TestContext.Current.CancellationToken);
+
+		var terminal = new AuditingRecord
+		{
+			Id = Guid.CreateVersion7(),
+			ScopeId = "t1:req:terminal",
+			TenantId = "t1",
+			ExecutionTime = DateTime.UtcNow,
+			RecordedAt = DateTime.UtcNow,
+			IsSuccess = false,
+			HttpStatusCode = 500,
+			ExecutionDuration = 42,
+		};
+		await store.SaveAsync(terminal, TestContext.Current.CancellationToken);
+
+		await using var context = new AuditingDbContext(_options);
+		var saved = await context.Records.SingleAsync(item => item.ScopeId == "t1:req:terminal", TestContext.Current.CancellationToken);
+		Assert.False(saved.IsSuccess);
+		Assert.Equal(500, saved.HttpStatusCode);
+		Assert.Equal(42, saved.ExecutionDuration);
 	}
 
 	private static AuditingRecord CreateRecord(string scopeId, Guid actionId, string idempotencyKey)

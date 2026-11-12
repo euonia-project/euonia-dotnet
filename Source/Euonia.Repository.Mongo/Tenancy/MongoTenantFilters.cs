@@ -26,8 +26,9 @@ public static class MongoTenantFilters
 			return FilterDefinition<TEntity>.Empty;
 		}
 
+		// 无租户时使用空集合过滤：匹配不到任何文档（fail-closed），也不引入可能与业务值冲突的哨兵。
 		return string.IsNullOrEmpty(tenantId)
-			       ? Builders<TEntity>.Filter.Eq("TenantId", "__no_tenant__")
+			       ? Builders<TEntity>.Filter.In<string>("TenantId", Array.Empty<string>())
 			       : Builders<TEntity>.Filter.Eq("TenantId", tenantId);
 	}
 

@@ -48,16 +48,13 @@ public static class TenantModelBuilderExtensions
 	{
 		var entity = modelBuilder.Entity<TEntity>();
 
-		if (typeof(TEntity).GetProperty(nameof(IMultiTenantEntity.TenantId)) == null)
-		{
-			entity.Property<string>(nameof(IMultiTenantEntity.TenantId))
-			      .HasMaxLength(64)
-			      .IsRequired()
-			      .HasColumnName("tenant_id");
+		entity.Property<string>(nameof(IMultiTenantEntity.TenantId))
+		      .HasMaxLength(64)
+		      .IsRequired()
+		      .HasColumnName("tenant_id");
 
-			// 共享表下租户列是每次查询的第一过滤条件，默认建索引。
-			entity.HasIndex(nameof(IMultiTenantEntity.TenantId));
-		}
+		// 共享表下租户列是每次查询的第一过滤条件，默认建索引；显式属性与影子属性使用同一约定。
+		entity.HasIndex(nameof(IMultiTenantEntity.TenantId));
 
 		Expression<Func<TEntity, bool>> filter = item =>
 			context.IgnoreTenantFilter

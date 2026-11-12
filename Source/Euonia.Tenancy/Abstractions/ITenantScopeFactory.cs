@@ -26,4 +26,14 @@ public interface ITenantScopeFactory
 	/// <param name="targetTenantId">目标租户；为 <c>null</c> 时是全租户只读模式。</param>
 	/// <returns>释放时恢复进入前上下文的租户作用域。</returns>
 	ITenantScope BeginCrossTenant(string reason, string? targetTenantId = null);
+
+	/// <summary>
+	/// 以消息信封中的操作人/目标语义安装作用域。
+	/// </summary>
+	/// <param name="tenant">目标租户。</param>
+	/// <param name="actorTenantId">操作人租户；必填。</param>
+	/// <param name="targetTenantId">目标租户；必填，且必须等于 <paramref name="tenant"/> 的标识。</param>
+	/// <param name="crossTenantReason">跨租户原因；必填。</param>
+	/// <returns>租户作用域。</returns>
+	ITenantScope Begin(ITenantInfo tenant, string? actorTenantId, string? targetTenantId, string? crossTenantReason);
 }

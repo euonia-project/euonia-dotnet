@@ -15,7 +15,7 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public static class SensitiveDataMasker
 {
-	private const int MaxDepth = 8;
+	private const int DefaultMaxDepth = 8;
 
 	private static readonly string[] _opaqueNamespacePrefixes =
 	{
@@ -30,13 +30,14 @@ public static class SensitiveDataMasker
 	/// </summary>
 	/// <param name="instance">要脱敏的对象。</param>
 	/// <param name="mask">敏感值替换用的掩码文本。</param>
+	/// <param name="maxDepth">递归深度上限；小于 1 时使用默认值 8。</param>
 	/// <returns>脱敏后的对象（字符串/标量/<c>null</c> 原样返回；对象转为字典；序列转为列表）。</returns>
-	public static object? Mask(object? instance, string mask = "***")
+	public static object? Mask(object? instance, string mask = "***", int maxDepth = DefaultMaxDepth)
 	{
-		return MaskCore(instance, mask, new HashSet<object>(ReferenceEqualityComparer.Instance), 0);
+		return MaskCore(instance, mask, new HashSet<object>(ReferenceEqualityComparer.Instance), 0, Math.Max(1, maxDepth));
 	}
 
-	private static object? MaskCore(object? instance, string mask, HashSet<object> visited, int depth)
+	private static object? MaskCore(object? instance, string mask, HashSet<object> visited, int depth, int maxDepth)
 	{
 		if (instance == null)
 		{
@@ -44,48 +45,105 @@ public static class SensitiveDataMasker
 		}
 
 		var type = instance.GetType();
-		if (type.IsValueType || type == typeof(string))
+		if (type == typeof(string))
 		{
 			return instance;
 		}
 
-		// 深度受限或已访问过（循环引用）时不再展开，直接返回掩码占位（对象不会原样泄漏）。
-		if (depth >= MaxDepth || !visited.Add(instance))
-		{
-			return mask;
-		}
-
-		if (instance is IDictionary dictionaryType)
-		{
-			var dictionary = new Dictionary<object, object?>();
-			foreach (DictionaryEntry entry in dictionaryType)
-			{
-				// 字典条目的键契约上非空（Hashtable/Dictionary 均拒绝 null 键）。
-				dictionary[entry.Key!] = MaskCore(entry.Value, mask, visited, depth + 1);
-			}
-
-			return dictionary;
-		}
-
-		if (instance is IEnumerable items and not string)
-		{
-			return items.Cast<object>()
-			            .Select(item => MaskCore(item, mask, visited, depth + 1))
-			            .ToList();
-		}
-
+		// 类型级敏感标记必须先于“值类型直接返回”，否则带 [SensitiveData] 的 struct 会泄漏。
 		if (type.GetCustomAttribute<SensitiveDataAttribute>() != null)
 		{
 			return mask;
 		}
 
-		if (IsOpaque(type))
+		if (type.IsValueType && IsSafeValueType(type))
 		{
-			// 不透明类型：保留类型名 + 掩码，便于定位来源同时避免展开庞大的运行时结构。
+			return instance;
+		}
+
+		// 深度受限时不再展开，直接返回掩码占位（对象不会原样泄漏）。
+		if (depth >= maxDepth)
+		{
+			return mask;
+		}
+
+		// 惰性查询/异步序列：枚举会执行数据库查询，绝不能为了日志触发。
+		// IAsyncEnumerable<T> 对 T 不变，不能靠 IAsyncEnumerable<object> 判断，需按接口定义检测。
+		if (instance is IQueryable || IsAsyncStream(type))
+		{
 			return $"{type.Name}:{mask}";
 		}
 
-		return MaskObject(instance, mask, visited, depth);
+		// visited 表示“当前递归路径”，进入时加入、退出时移除：同一实例在兄弟分支出现不会被误判为循环。
+		if (!visited.Add(instance))
+		{
+			return mask;
+		}
+
+		try
+		{
+			if (instance is IDictionary dictionaryType)
+			{
+				var dictionary = new Dictionary<object, object?>();
+				foreach (DictionaryEntry entry in dictionaryType)
+				{
+					// 字典条目的键契约上非空（Hashtable/Dictionary 均拒绝 null 键）。
+					dictionary[entry.Key!] = MaskCore(entry.Value, mask, visited, depth + 1, maxDepth);
+				}
+
+				return dictionary;
+			}
+
+			if (instance is IEnumerable items and not string)
+			{
+				// 限制集合宽度：误传大集合时只保留前 100 项并标记截断，避免拖垮请求。
+				const int maxItems = 100;
+				var result = new List<object?>();
+				foreach (var item in items)
+				{
+					if (result.Count >= maxItems)
+					{
+						result.Add($"... (truncated, {type.Name})");
+						break;
+					}
+
+					result.Add(MaskCore(item, mask, visited, depth + 1, maxDepth));
+				}
+
+				return result;
+			}
+
+			if (IsOpaque(type))
+			{
+				// 不透明类型：保留类型名 + 掩码，便于定位来源同时避免展开庞大的运行时结构。
+				return $"{type.Name}:{mask}";
+			}
+
+			return MaskObject(instance, mask, visited, depth, maxDepth);
+		}
+		finally
+		{
+			visited.Remove(instance);
+		}
+	}
+
+	private static bool IsSafeValueType(Type type)
+	{
+		return type.IsPrimitive
+		       || type.IsEnum
+		       || type == typeof(decimal)
+		       || type == typeof(DateTime)
+		       || type == typeof(DateTimeOffset)
+		       || type == typeof(TimeSpan)
+		       || type == typeof(DateOnly)
+		       || type == typeof(TimeOnly)
+		       || type == typeof(Guid);
+	}
+
+	private static bool IsAsyncStream(Type type)
+	{
+		return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>)
+		       || type.GetInterfaces().Any(contract => contract.IsGenericType && contract.GetGenericTypeDefinition() == typeof(IAsyncEnumerable<>));
 	}
 
 	private static bool IsOpaque(Type type)
@@ -98,7 +156,7 @@ public static class SensitiveDataMasker
 
 		foreach (var prefix in _opaqueNamespacePrefixes)
 		{
-			if (fullName.StartsWith(prefix, StringComparison.Ordinal))
+			if (fullName == prefix || fullName.StartsWith(prefix + ".", StringComparison.Ordinal))
 			{
 				return true;
 			}
@@ -107,7 +165,7 @@ public static class SensitiveDataMasker
 		return false;
 	}
 
-	private static Dictionary<string, object?> MaskObject(object instance, string mask, HashSet<object> visited, int depth)
+	private static Dictionary<string, object?> MaskObject(object instance, string mask, HashSet<object> visited, int depth, int maxDepth)
 	{
 		var result = new Dictionary<string, object?>(StringComparer.Ordinal);
 		var members = _memberCache.GetOrAdd(instance.GetType(), ResolveMembers);
@@ -119,7 +177,7 @@ public static class SensitiveDataMasker
 				var value = member.GetValue(instance);
 				result[member.Name] = member.IsSensitive
 					? (string.IsNullOrEmpty(member.Mask) ? mask : member.Mask)
-					: MaskCore(value, mask, visited, depth + 1);
+					: MaskCore(value, mask, visited, depth + 1, maxDepth);
 			}
 			catch
 			{

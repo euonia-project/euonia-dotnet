@@ -48,6 +48,11 @@ public sealed class TenantResolver : ITenantResolver
 
 			if (!string.IsNullOrWhiteSpace(value))
 			{
+				if (!TenantIdValidator.IsValidIdentifier(value))
+				{
+					return Fail(TenantFailureCodes.Invalid, candidates);
+				}
+
 				candidates.Add((contributor.Order, value, contributor.GetType().Name));
 			}
 		}
@@ -55,6 +60,11 @@ public sealed class TenantResolver : ITenantResolver
 		var options = _options.CurrentValue;
 		if (candidates.Count == 0 && !string.IsNullOrWhiteSpace(options.DefaultTenantId))
 		{
+			if (!TenantIdValidator.IsValidIdentifier(options.DefaultTenantId))
+			{
+				throw new ConfigurationException("Euonia:MultiTenancy:DefaultTenantId is not a valid tenant identifier.");
+			}
+
 			candidates.Add((int.MaxValue, options.DefaultTenantId, nameof(MultiTenancyOptions.DefaultTenantId)));
 		}
 

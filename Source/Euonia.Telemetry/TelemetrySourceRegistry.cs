@@ -5,7 +5,7 @@ namespace Nerosoft.Euonia.Telemetry;
 /// <summary>
 /// 已创建遥测源的注册表，供 OTel 适配层显式采集。
 /// </summary>
-public sealed class TelemetrySourceRegistry
+public sealed class TelemetrySourceRegistry : IDisposable
 {
 	private readonly ConcurrentDictionary<string, TelemetrySource> _sources = new(StringComparer.Ordinal);
 
@@ -16,7 +16,7 @@ public sealed class TelemetrySourceRegistry
 	public void Register(TelemetrySource source)
 	{
 		ArgumentNullException.ThrowIfNull(source);
-		_sources[source.SourceName] = source;
+		_sources[$"{source.SourceName}|{source.MeterName}"] = source;
 	}
 
 	/// <summary>
@@ -28,4 +28,10 @@ public sealed class TelemetrySourceRegistry
 		return _sources.Values.ToArray();
 	}
 
+	/// <inheritdoc />
+	/// <remarks>注册表不持有源的所有权；源由创建它的工厂释放。</remarks>
+	public void Dispose()
+	{
+		_sources.Clear();
+	}
 }

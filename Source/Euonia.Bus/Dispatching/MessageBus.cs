@@ -481,6 +481,26 @@ internal sealed class MessageBus : IBus
 			message.Metadata[MessageMetadataKeys.TenantId] = tenantId;
 		}
 
+		var ambient = AmbientExecutionContext.Current;
+		if (!string.IsNullOrEmpty(ambient?.ActorTenantId))
+		{
+			message.Metadata[MessageMetadataKeys.ActorTenantId] = ambient.ActorTenantId;
+		}
+
+		if (!string.IsNullOrEmpty(ambient?.TargetTenantId))
+		{
+			message.Metadata[MessageMetadataKeys.TargetTenantId] = ambient.TargetTenantId;
+		}
+
+		if (ambient?.IsCrossTenant == true)
+		{
+			message.Metadata[MessageMetadataKeys.IsCrossTenant] = true;
+			if (!string.IsNullOrWhiteSpace(ambient.CrossTenantReason))
+			{
+				message.Metadata[MessageMetadataKeys.CrossTenantReason] = ambient.CrossTenantReason;
+			}
+		}
+
 		var userId = AmbientExecutionContext.Current?.UserId ?? context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 		if (!string.IsNullOrEmpty(userId))
 		{

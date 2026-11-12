@@ -8,7 +8,7 @@ public sealed partial class InMemoryAuditingStore : IAuditingStoreQuery
 	/// <inheritdoc />
 	public Task<IReadOnlyList<AuditingRecord>> QueryAsync(AuditingQuery query, CancellationToken cancellationToken = default)
 	{
-		AuditingQueryAuthorizer.EnsureScope(query);
+		query = AuditingQueryAuthorizer.Normalize(query);
 		ArgumentNullException.ThrowIfNull(query);
 
 		lock (_sync)
@@ -34,6 +34,7 @@ public sealed partial class InMemoryAuditingStore : IAuditingStoreQuery
 	public Task<AuditingRecord?> FindByScopeAsync(string scopeId, CancellationToken cancellationToken = default)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(scopeId);
+		AuditingQueryAuthorizer.EnsureScopeAccess(scopeId);
 
 		lock (_sync)
 		{
@@ -44,9 +45,17 @@ public sealed partial class InMemoryAuditingStore : IAuditingStoreQuery
 	/// <inheritdoc />
 	public Task<int> DeleteBeforeAsync(DateTime cutoff, CancellationToken cancellationToken = default)
 	{
+		AuditingQueryAuthorizer.EnsureDeleteAuthorized();
+		return DeleteBeforeCoreAsync(cutoff, cancellationToken);
+	}
+
+	private Task<int> DeleteBeforeCoreAsync(DateTime cutoff, CancellationToken cancellationToken)
+	{
 		lock (_sync)
 		{
-			var keys = _records.Where(item => item.Value.ExecutionTime < cutoff)
+			var tenantId = AuditingQueryAuthorizer.DeleteTenantScope;
+			var keys = _records.Where(item => item.Value.ExecutionTime < cutoff
+			                                  && (tenantId == null || item.Value.TenantId == tenantId))
 			                   .Select(item => item.Key)
 			                   .ToArray();
 

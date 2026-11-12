@@ -11,15 +11,20 @@ namespace Nerosoft.Euonia.Telemetry;
 /// 无监听者或关闭时所有方法空操作；异常一律吞掉，绝不改变业务控制流。
 /// 标签在写入前经过 <see cref="ITelemetryRedactor"/>，Activity 创建后执行 <see cref="ITelemetryEnricher"/>。
 /// </remarks>
-public sealed class TelemetrySource
+public sealed class TelemetrySource : IDisposable
 {
 	private readonly ConcurrentDictionary<string, Counter<long>> _counters = new(StringComparer.Ordinal);
 	private readonly ConcurrentDictionary<string, Histogram<double>> _histograms = new(StringComparer.Ordinal);
 	private readonly ITelemetryRedactor? _redactor;
 	private readonly IReadOnlyList<ITelemetryEnricher> _enrichers;
 	private readonly ITelemetryContextProvider? _contextProvider;
-	private readonly bool _tracesEnabled;
-	private readonly bool _metricsEnabled;
+	private static readonly Meter FallbackMeter = new("Euonia.Telemetry.Disposed");
+	private static readonly Counter<long> FallbackCounter = FallbackMeter.CreateCounter<long>("noop");
+	private static readonly Histogram<double> FallbackHistogram = FallbackMeter.CreateHistogram<double>("noop");
+
+	private int _tracesEnabled;
+	private int _metricsEnabled;
+	private int _disposed;
 
 	/// <summary>
 	/// 初始化 <see cref="TelemetrySource"/> 的新实例。
@@ -44,8 +49,8 @@ public sealed class TelemetrySource
 
 		SourceName = sourceName;
 		MeterName = meterName ?? sourceName;
-		_tracesEnabled = tracesEnabled;
-		_metricsEnabled = metricsEnabled;
+		_tracesEnabled = tracesEnabled ? 1 : 0;
+		_metricsEnabled = metricsEnabled ? 1 : 0;
 		_redactor = redactor;
 		_enrichers = enrichers ?? [];
 		_contextProvider = contextProvider;
@@ -77,12 +82,23 @@ public sealed class TelemetrySource
 	/// <summary>
 	/// 获取一个值，指示跟踪是否可用（已启用且存在监听者）。
 	/// </summary>
-	public bool IsTraceEnabled => _tracesEnabled && ActivitySource.HasListeners();
+	public bool IsTraceEnabled => Volatile.Read(ref _tracesEnabled) == 1 && ActivitySource.HasListeners();
 
 	/// <summary>
 	/// 获取一个值，指示指标是否可用。
 	/// </summary>
-	public bool IsMetricEnabled => _metricsEnabled;
+	public bool IsMetricEnabled => Volatile.Read(ref _metricsEnabled) == 1;
+
+	/// <summary>
+	/// 运行时更新开关；由工厂在配置变更时调用。
+	/// </summary>
+	/// <param name="tracesEnabled">是否启用跟踪。</param>
+	/// <param name="metricsEnabled">是否启用指标。</param>
+	internal void Update(bool tracesEnabled, bool metricsEnabled)
+	{
+		Volatile.Write(ref _tracesEnabled, tracesEnabled ? 1 : 0);
+		Volatile.Write(ref _metricsEnabled, metricsEnabled ? 1 : 0);
+	}
 
 	/// <summary>
 	/// 启动活动；不可用时返回空实例。
@@ -105,10 +121,13 @@ public sealed class TelemetrySource
 			return default;
 		}
 
+		var previous = Activity.Current;
+		Activity? activity = null;
+
 		try
 		{
-			var parentContext = parent ?? Activity.Current?.Context ?? default;
-			var activity = ActivitySource.StartActivity(name, kind, parentContext, ApplyRedaction(tags), links);
+			var parentContext = parent ?? previous?.Context ?? default;
+			activity = ActivitySource.StartActivity(name, kind, parentContext, ApplyRedaction(tags), links);
 
 			if (activity == null)
 			{
@@ -125,6 +144,9 @@ public sealed class TelemetrySource
 		}
 		catch (Exception)
 		{
+			// 富化失败：必须结束已启动的活动并恢复 Activity.Current，否则 span 永不结束且后续 TraceId 错位。
+			activity?.Stop();
+			Activity.Current = previous;
 			return default;
 		}
 	}
@@ -138,6 +160,11 @@ public sealed class TelemetrySource
 	/// <returns>计数器。</returns>
 	public Counter<long> Counter(string name, string? unit = null, string? description = null)
 	{
+		if (Volatile.Read(ref _disposed) == 1)
+		{
+			return FallbackCounter;
+		}
+
 		return _counters.GetOrAdd(name, key => Meter.CreateCounter<long>(key, unit, description));
 	}
 
@@ -150,6 +177,11 @@ public sealed class TelemetrySource
 	/// <returns>直方图。</returns>
 	public Histogram<double> Histogram(string name, string? unit = null, string? description = null)
 	{
+		if (Volatile.Read(ref _disposed) == 1)
+		{
+			return FallbackHistogram;
+		}
+
 		return _histograms.GetOrAdd(name, key => Meter.CreateHistogram<double>(key, unit, description));
 	}
 
@@ -164,5 +196,17 @@ public sealed class TelemetrySource
 			             tag.Key,
 			             _redactor?.Redact(tag.Key, tag.Value) ?? tag.Value))
 		           .ToArray();
+	}
+
+	/// <inheritdoc />
+	public void Dispose()
+	{
+		if (Interlocked.Exchange(ref _disposed, 1) == 1)
+		{
+			return;
+		}
+
+		ActivitySource.Dispose();
+		Meter.Dispose();
 	}
 }

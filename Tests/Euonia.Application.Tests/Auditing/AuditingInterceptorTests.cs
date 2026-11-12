@@ -109,6 +109,22 @@ public class AuditingInterceptorTests
 	}
 
 	/// <summary>
+	/// 全局关闭时 [Audited] 仍强制记录。
+	/// </summary>
+	[Fact]
+	public void AuditedAttribute_ShouldForceWhenGloballyDisabled()
+	{
+		var writer = new CapturingWriter();
+		var options = new AuditingOptions { Enabled = false, RecordAnonymous = true };
+		var recorder = new AuditingRecorder(options, writer);
+		var proxy = new ProxyGenerator().CreateClassProxy<AuditedService>(new AuditingInterceptor(recorder, options));
+
+		proxy.Forced("value");
+
+		Assert.Single(writer.Records);
+	}
+
+	/// <summary>
 	/// 审计拦截器排在最外层。
 	/// </summary>
 	[Fact]
@@ -170,6 +186,15 @@ public class AuditedService
 	{
 		await Task.Yield();
 		return $"{credentials.Name}:{value}";
+	}
+
+	/// <summary>
+	/// 强制审计方法。
+	/// </summary>
+	[Audited]
+	public virtual string Forced(string value)
+	{
+		return value;
 	}
 
 	/// <summary>

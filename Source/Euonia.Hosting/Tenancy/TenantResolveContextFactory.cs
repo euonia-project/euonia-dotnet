@@ -13,7 +13,8 @@ internal static class TenantResolveContextFactory
 		var headers = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
 		foreach (var header in context.Request.Headers)
 		{
-			headers[header.Key] = header.Value.FirstOrDefault();
+			// 与中间件保持一致：忽略空白项，避免 ["", "acme"] 取到空值。
+			headers[header.Key] = header.Value.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
 		}
 
 		string? routeTenant = null;

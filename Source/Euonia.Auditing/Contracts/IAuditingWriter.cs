@@ -8,6 +8,10 @@ public interface IAuditingWriter
 	/// <summary>
 	/// 入队一条审计记录。
 	/// </summary>
+	/// <remarks>
+	/// 配置审计 spool 时，本方法会在调用方线程执行一次 spool 持久化 I/O；
+	/// 对延迟敏感的路径应使用低延迟 spool 后端或关闭 spool。
+	/// </remarks>
 	/// <param name="record">审计记录。</param>
 	/// <param name="cancellationToken">取消令牌。</param>
 	/// <returns>表示入队操作的任务。</returns>

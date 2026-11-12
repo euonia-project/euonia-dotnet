@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.MultiTenancy;
 using Nerosoft.Euonia.Tenancy;
@@ -23,29 +24,65 @@ namespace Nerosoft.Euonia.Repository.EfCore;
 /// 过滤器按“软删除 + 租户”组合后一次性设置，兼容 EF Core 9/10/11 的替换语义；
 /// TPH 派生类型跳过，避免“过滤器已在基类型定义”异常。
 /// </para>
+/// <para>
+/// SharedSchema 依赖 <c>AddTenantDbContext</c> 注册的 <c>TenantModelCacheKeyFactory</c>；
+/// 若改用普通 <c>AddDbContext</c>，必须自行替换 <c>IModelCacheKeyFactory</c>，否则模型会被第一个租户的 schema 缓存。
+/// </para>
+/// <para>
+/// 构造时会校验多租户开关：<c>Enabled=false</c> 时直接抛 <c>ConfigurationException</c>，这是有意的 fail-fast，
+/// 避免租户上下文在关闭租户能力后静默读写全量数据。
+/// </para>
 /// </remarks>
-public abstract class MultiTenantDataContextBase<TContext> : DataContextBase<TContext>, ITenantFilterState
+public abstract class MultiTenantDataContextBase<TContext> : DataContextBase<TContext>, ITenantFilterState, ITenantModelCacheKeySource
 	where TContext : DbContext, IRepositoryContext
 {
+	/// <inheritdoc />
+	public ITenantInfo? CurrentTenant => _tenantAccessor.Current?.Tenant;
+
 	private readonly ITenantAccessor _tenantAccessor;
-	private readonly IOptions<MultiTenancyOptions>? _options;
+	private readonly IOptions<MultiTenancyOptions> _options;
 
 	/// <summary>
 	/// 初始化 <see cref="MultiTenantDataContextBase{TContext}"/> 的新实例。
 	/// </summary>
 	/// <param name="options">上下文选项。</param>
 	/// <param name="tenantAccessor">租户访问器。</param>
-	/// <param name="tenancyOptions">多租户选项；省略时按默认选项处理。</param>
+	/// <param name="tenancyOptions">多租户选项；必填。</param>
 	protected MultiTenantDataContextBase(
 		DbContextOptions<TContext> options,
 		ITenantAccessor tenantAccessor,
-		IOptions<MultiTenancyOptions>? tenancyOptions = null)
+		IOptions<MultiTenancyOptions> tenancyOptions)
 		: base(options)
 	{
+		ArgumentNullException.ThrowIfNull(tenantAccessor);
+		ArgumentNullException.ThrowIfNull(tenancyOptions);
+
 		_tenantAccessor = tenantAccessor;
 		_options = tenancyOptions;
 
-		if (tenancyOptions is { Value.Enabled: false })
+		// 只有 SharedSchema 需要把 schema 纳入模型缓存键；SharedTable/DatabasePerTenant 允许普通 AddDbContext。
+		try
+		{
+			var tenant = _tenantAccessor.Current?.Tenant;
+			var validate = _options.Value.ValidateModelCacheKeyFactory;
+			var sharedSchema = tenant is { Isolation: TenantIsolation.SharedSchema }
+			                   || (tenant == null && _options.Value.DefaultIsolation == TenantIsolation.SharedSchema);
+			if (validate && sharedSchema)
+			{
+				var cacheKeyFactory = this.GetService<Microsoft.EntityFrameworkCore.Infrastructure.IModelCacheKeyFactory>();
+				if (cacheKeyFactory != null && cacheKeyFactory is not TenantModelCacheKeyFactory)
+				{
+					throw new ConfigurationException(
+						$"'{GetType().FullName}' uses SharedSchema but the registered IModelCacheKeyFactory is '{cacheKeyFactory.GetType().Name}'. Use 'AddTenantDbContext' or set 'Euonia:MultiTenancy:ValidateModelCacheKeyFactory=false'.");
+				}
+			}
+		}
+		catch (InvalidOperationException)
+		{
+			// 设计时/尚未构建内部提供程序：交给首次模型构建处理。
+		}
+
+		if (tenancyOptions.Value.Enabled == false)
 		{
 			throw new ConfigurationException(
 				$"'{GetType().FullName}' derives from MultiTenantDataContextBase but multi-tenancy is disabled. Enable 'Euonia:MultiTenancy:Enabled' or remove the tenant base class.");
@@ -155,7 +192,7 @@ public abstract class MultiTenantDataContextBase<TContext> : DataContextBase<TCo
 			return (null, null);
 		}
 
-		var shadowCurrent = operation == TenantEntryOperation.Added ? null : shadow.CurrentValue as string;
+		var shadowCurrent = shadow.CurrentValue as string;
 		var shadowOriginal = operation == TenantEntryOperation.Added ? null : shadow.OriginalValue as string;
 		return (shadowCurrent, shadowOriginal);
 	}
