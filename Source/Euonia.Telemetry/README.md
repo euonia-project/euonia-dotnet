@@ -214,7 +214,7 @@ public sealed class OrderService(ILogger<OrderService> logger, ITelemetryContext
 - 脱敏是**键名**匹配（大小写不敏感），不解析值内容；键命中时整个值替换为 `***`。
 - 组件内直接使用静态 `Meter` / `ActivitySource` 的埋点不受 `Components` 开关控制，只有经 `TelemetrySource` 创建的源受影响。
 - 选项热更新只切换已创建源的跟踪 / 指标开关；`ServiceName` 等 Resource 属性在 OTel Provider 构建期固定。
-- `TelemetryOptions.MessageTypeTag` 当前仅在选项中声明，本包内没有消费点（消息适配层需自行读取）；待确认。
+- `TelemetryOptions.MessageTypeTag` 当前仅在选项中声明，本包内没有消费点（消息适配层可自行读取）；这是预留扩展点，不是缺失配置。
 
 ## 常见问题与故障排查
 
