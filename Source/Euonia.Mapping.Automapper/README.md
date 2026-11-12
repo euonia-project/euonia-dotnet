@@ -2,8 +2,6 @@
 
 Euonia 对象映射的 AutoMapper 实现：将 `IMapper` 适配为 `ITypeAdapter`，并通过 `AutomapperModule` 在模块初始化时设为当前映射工厂。
 
-AutoMapper implementation for Euonia object mapping: adapts `IMapper` to `ITypeAdapter` and installs it as the current mapping factory during module initialization via `AutomapperModule`.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Mapping`
 - **NuGet 包**：`Euonia.Mapping.Automapper`
@@ -89,6 +87,30 @@ TypeAdapterFactory.SetCurrent(new AutomapperTypeAdapterFactory(mapper));
 | `AutomapperTypeAdapterFactory` / `AutomapperTypeAdapter` | `ITypeAdapterFactory` / `ITypeAdapter` 实现 |
 | `AutomapperOptions` | Profile 与配置注册 |
 | `AddAutomapper(...)` | 注册 `IMapper`（键控工厂由模块注册） |
+
+## 选项（代码配置）
+
+`Euonia.Mapping.Automapper` 没有配置节或 `*Options` 配置绑定；`AutomapperOptions` 是纯代码配置对象：
+
+| 配置点 | 说明 |
+|--------|------|
+| `AutomapperOptions.AddMaps(Assembly, bool validate = false)` | 添加程序集中的 Profile；`validate` 为 `true` 时把 Profile 类型加入校验列表 |
+| `AutomapperOptions.AddProfile<TProfile>(bool validate = false)` | 添加 Profile 类型，要求 `TProfile : Profile, new()` |
+| `AutomapperOptions.AddProfile<TProfile>(TProfile profile, bool validate = false)` | 添加 Profile 实例，适用于没有无参构造函数的 Profile |
+| `AutomapperOptions.AddProfile(Type profileType, bool validate = false)` | 按类型添加 Profile |
+| `AutomapperOptions.AddProfile(ICollection<Type> profileTypes, bool validate = false)` | 批量添加；`null`、空集合或全 `null` 时直接返回 |
+| `AutomapperOptions.Configure(Action<IServiceProvider, MapperConfigurationExpression>)` | 追加自定义映射配置委托 |
+| `AddAutomapper(..., bool assertConfiguration = false)` | 构建映射器时是否立即执行 `AssertConfigurationIsValid()` |
+
+## 注意事项 / 限制
+
+- `AutomapperOptions` 在解析 `IMapper` 时读取；必须在首次解析之前完成 `services.Configure<AutomapperOptions>(...)`，之后再修改不会影响已创建的映射器。
+- `AddAutomapper()` 注册的是 `IMapper` 单例；键为 `"automapper"` 的 `ITypeAdapterFactory` 由 `AutomapperModule` 注册。手动装配时还需要调用 `TypeAdapterFactory.SetCurrent(...)`，否则 `ProjectedAs` 会得到 `null` 适配器并抛出 `NullReferenceException`。
+- `AutomapperModule` 调用的是无参 `AddAutomapper()`，只应用 `AutomapperOptions` 中累积的配置；没有配置任何 `AddMaps`/`AddProfile` 时，映射器没有任何 Profile。
+- `AddProfile<TProfile>(bool validate = false)` 约束 `new()`；Profile 没有无参构造函数时改用实例重载或 `AddProfile(Type)`。
+- `AddProfile(ICollection<Type>)` 对 `null`、空集合或全 `null` 集合静默返回；集合中的 `null` 项会被跳过。
+- `ProjectedAs`/`ProjectedAsCollection` 定义在**全局命名空间**的 `Extensions` 类中，不需要 `using Nerosoft.Euonia.Mapping;`；`TypeAdapterFactory`、`ITypeAdapter`、`ITypeAdapterFactory` 才在 `Nerosoft.Euonia.Mapping` 命名空间。
+- `validate: true` 只是把 Profile 加入校验列表；真正的 `AssertConfigurationIsValid()` 在映射器构建阶段执行，配置错误会在首次解析 `IMapper` 时暴露。
 
 ## 相关包
 

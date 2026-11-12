@@ -2,12 +2,35 @@
 
 `Euonia.Endpoint` 的构建期增量生成器。
 
-## 目标框架
+## 目标框架与元信息
 
-- `netstandard2.0`：发布用 analyzer
-- `net10.0`：C# Dev Kit / 本地 IDE
+- **目标框架**：`netstandard2.0`（发布用 analyzer）、`net10.0`（仅 C# Dev Kit / 本地 IDE）
+- **根命名空间**：`Nerosoft.Euonia.Endpoint.SourceGenerator`；生成代码位于 `Nerosoft.Euonia.Endpoint.Generated`
+- **NuGet 包**：`Euonia.Endpoint.SourceGenerator`（`DevelopmentDependency`，只含 analyzer，不含运行时程序集）
+- **Roslyn 版本**：基于 `Microsoft.CodeAnalysis.CSharp` 5.9.0（`PrivateAssets="all"`）
 
-基于 Roslyn 5.9.0。
+## 安装
+
+```bash
+dotnet add package Euonia.Endpoint.SourceGenerator
+```
+
+`dotnet add package` 只写入普通 `PackageReference`，而 analyzer 必须带上 `PrivateAssets="all"` / `OutputItemType="Analyzer"` 才不会作为运行时依赖传递。把引用改成下面的形式（包引用）：
+
+```xml
+<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.4.7"
+                  PrivateAssets="all"
+                  OutputItemType="Analyzer"
+                  ReferenceOutputAssembly="false" />
+```
+
+项目引用写法见 [引用方式](#引用方式)。多项目解决方案要在每个声明了 `[ExposeWebApi]` / `[ExposeGrpc]` 接口的项目里分别引用：生成器只处理引用它的那个编译。
+
+## 快速开始
+
+1. 按 [引用方式](#引用方式) 把本包作为 analyzer 引用到**声明接口**的项目（analyzer 只在引用它的那个编译里生效）；
+2. 在接口方法上标注 `[ExposeWebApi]` / `[ExposeGrpc]`，签名要求见 [使用前提](#使用前提)；
+3. 宿主仍要引用运行时包并注册：`builder.Services.AddDynamicHttpEndpoint(builder.Configuration);` + `app.MapDynamicHttpEndpoint();`（gRPC 侧为 `AddDynamicGrpcEndpoint` / `MapDynamicGrpcEndpoint`）。
 
 ## 生成内容
 
@@ -152,15 +175,27 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 
 运行时兜底受 `ScanAssemblies` / `ScanNamespaces` / `ScanTypes` 限制，默认只扫描入口程序集。
 
-## 限制
+## 注意事项 / 限制
 
 - 不扫描实现类方法；
 - 生成 gRPC 方法授权描述符，由运行时 `GrpcMethodAuthorizationInterceptor` 执行方法级授权；
 - 共享契约类型尚未生成 wire-DTO 映射；
 - 生成代码只覆盖当前编译，跨程序集接口需要在对应程序集也启用生成器。
 
-## 相关文档
+其它边界：
 
-- [Euonia.Endpoint](../Euonia.Endpoint/README.md)
-- [Euonia.Endpoint.Http](../Euonia.Endpoint.Http/README.md)
-- [Euonia.Endpoint.Grpc](../Euonia.Endpoint.Grpc/README.md)
+- 诊断 `EUONIA001` / `EUONIA002` 只是 Warning，**不会中断构建**；被跳过的契约/方法要到运行时才会发现没暴露。
+- 生成器不参与运行时：`Euonia.Endpoint.Http` / `Euonia.Endpoint.Grpc` 仍是必需的运行时包，只装 analyzer 无法映射端点。
+- 非 `CancellationToken` 的默认参数会让方法跳过生成，交由运行时兜底（gRPC 侧没有兜底，等于不暴露）。
+- 打开 `EmitCompilerGeneratedFiles` 后生成目录不要提交；生成文件是构建产物，手工修改会在下次构建被覆盖。
+
+## 相关包
+
+- [`Euonia.Endpoint`](../Euonia.Endpoint/README.md) —— 暴露特性与共享契约（生成器的输入）
+- [`Euonia.Endpoint.Http`](../Euonia.Endpoint.Http/README.md) —— 消费生成映射的 HTTP 运行时
+- [`Euonia.Endpoint.Grpc`](../Euonia.Endpoint.Grpc/README.md) —— 消费生成契约的 gRPC 运行时
+- [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

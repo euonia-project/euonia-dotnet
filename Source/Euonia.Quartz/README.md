@@ -1,11 +1,9 @@
 # Euonia.Quartz
 
-Euonia 的 Quartz 后台作业集成：以 `[BackgroundJob]` 与调度特性 declaratively 定义作业、分组与触发器，`AddQuartz` 统一注册调度器、作业与托管服务。
-
-Quartz background job integration for Euonia: declare jobs, groups and triggers with `[BackgroundJob]` and schedule attributes, and register scheduler, jobs and hosted service through `AddQuartz`.
+Euonia 的 Quartz.NET 作业调度集成：用 `[BackgroundJob]` 与调度特性声明作业、分组和触发器，`AddQuartz` 统一注册调度器、作业、DI 作业工厂与托管服务。
 
 - **目标框架**：`net10.0`、`net11.0`
-- **根命名空间**：`Nerosoft.Euonia.Quartz`
+- **根命名空间**：`Nerosoft.Euonia.Quartz`（`AddQuartz` 扩展位于 `Microsoft.Extensions.DependencyInjection`）
 - **NuGet 包**：`Euonia.Quartz`
 
 ## 安装
@@ -13,14 +11,6 @@ Quartz background job integration for Euonia: declare jobs, groups and triggers 
 ```bash
 dotnet add package Euonia.Quartz
 ```
-
-## 主要功能
-
-- **声明式作业**：`[BackgroundJob("name")]` 指定名称、分组、说明与恢复策略。
-- **多种触发器**：简单间隔、Cron、日历间隔、每日时间间隔。
-- **自动扫描**：`AddJobs(assembly)` 注册程序集中所有 `IJob` 实现。
-- **统一配置**：`BackgroundBuildOptions` 配置调度器标识、失火阈值、重复作业处理与启动延迟。
-- **托管运行**：自动注册 Quartz 托管服务，并支持 `WaitForJobsToComplete` 等选项。
 
 ## 快速开始
 
@@ -32,13 +22,13 @@ using Quartz;
 
 [BackgroundJob("order-cleanup", Group = "maintenance")]
 [CronExpressionSchedule("order-cleanup", "0 0 2 * * ?")]
-[SimpleSchedule("order-cleanup-heartbeat", milliseconds: 60_000, RepeatCount = -1)]
+[SimpleSchedule("order-cleanup-heartbeat", milliseconds: 60_000)]
 public sealed class OrderCleanupJob : IJob
 {
-    public Task Execute(IJobExecutionContext context)
+    public ValueTask Execute(IJobExecutionContext context, CancellationToken cancellationToken)
     {
         // 清理逻辑
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 }
 ```
@@ -68,13 +58,16 @@ services.AddQuartz(_ => { }, quartz => quartz.AddJob<OrderCleanupJob>());
 手动指定作业选项：
 
 ```csharp
+using Quartz;
+
 services.AddQuartz(options =>
 {
     options.AddJob<OrderCleanupJob>(job =>
     {
         job.Name = "order-cleanup";
         job.Group = "maintenance";
-        job.TriggerConfigure.Add(trigger => trigger.WithCronSchedule("0 0 2 * * ?"));
+        job.TriggerConfigure.Add(trigger =>
+            trigger.WithCronSchedule("0 0 2 * * ?", schedule => schedule.InTimeZone(TimeZoneInfo.Utc)));
     });
 });
 ```
@@ -83,29 +76,59 @@ services.AddQuartz(options =>
 
 | 特性 | 说明 |
 |------|------|
-| `[SimpleSchedule(identity, milliseconds)]` | 固定间隔触发；也可指定时/分/秒 |
-| `[CronExpressionSchedule(identity, cron)]` | Cron 表达式（`TimeZoneName` 默认 `UTC`） |
+| `[SimpleSchedule(identity, milliseconds)]` | 固定间隔触发；也可用 `(identity, hour, minute, second)` 指定间隔 |
+| `[CronExpressionSchedule(identity, cron)]` | Cron 表达式；`TimeZoneName` 默认 `UTC`，可设为 `LOCAL` 或系统时区名 |
 | `[CalendarIntervalSchedule(identity, interval, unit)]` | 日历单位间隔，可跨夏令时 |
 | `[DailyTimeIntervalSchedule(identity, interval, unit)]` | 每日时间窗口内的间隔触发 |
 
-所有调度特性均支持 `Delay`、`Priority`、`Description` 与 `MisfirePolicy`。
+所有调度特性均支持 `Delay`、`Priority`、`Description` 与 `MisfirePolicy`；`SimpleSchedule` 额外支持 `RepeatCount`（省略即永久重复）。
 
 ## 核心类型
 
 | 类型 | 作用 |
 |------|------|
 | `BackgroundJobAttribute` | 作业名称、分组、说明、恢复与持久化选项 |
-| `BackgroundJobScheduleAttribute` | 调度特性基类 |
-| `BackgroundJobOptions` | 手动注册时的名称、分组与触发器配置 |
-| `BackgroundBuildOptions` | 调度器与托管服务配置 |
-| `AddQuartz(...)` | 注册 Quartz、作业与托管服务 |
+| `BackgroundJobScheduleAttribute` | 调度特性基类，提供 `Identity`、`Delay`、`Priority`、`MisfirePolicy` |
+| `BackgroundJobOptions` | 手动注册时的名称、分组、作业配置与触发器配置 |
+| `BackgroundBuildOptions` | 调度器、作业集合与托管服务配置 |
+| `AddQuartz(...)` | 注册 Quartz、作业、DI 作业工厂与托管服务 |
 | `AddJob<TJob>` / `AddJobs(assembly)` | 注册单个/程序集内作业 |
-| `DefaultJobFactory` | 从 DI 创建作业实例 |
+| `DefaultJobFactory` | 从 DI 创建作业实例，并按作业数据中的 `tenantId` 安装租户作用域 |
+
+## 选项（代码配置）
+
+Quartz 集成没有框架自带的配置节；所有选项都通过 `AddQuartz` 的回调配置。
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `BackgroundBuildOptions.SchedulerId` | `string?` | `null` | `AUTO` / `SYS_PROP` 表示启动时生成实例 ID |
+| `BackgroundBuildOptions.SchedulerName` | `string?` | `null` | 调度器实例名称 |
+| `BackgroundBuildOptions.MisfireThreshold` | `TimeSpan?` | `null` | 写入 `quartz.jobStore.misfireThreshold`（毫秒） |
+| `BackgroundBuildOptions.IgnoreDuplicates` | `bool` | `true` | 忽略重复调度数据；`OverWriteExistingData` 为 `true` 时不生效 |
+| `BackgroundBuildOptions.OverWriteExistingData` | `bool` | `true` | 覆盖同标识的现有调度数据 |
+| `BackgroundBuildOptions.WaitForJobsToComplete` | `bool` | `false` | 关闭时等待正在执行的作业完成 |
+| `BackgroundBuildOptions.AwaitApplicationStarted` | `bool` | `true` | 应用启动完成后才启动作业 |
+| `BackgroundBuildOptions.StartDelay` | `TimeSpan?` | `null` | 调度器启动延迟 |
+| `BackgroundBuildOptions.MaxBatchSize` | `int?` | `null` | 单次批处理获取的最大触发器数 |
+| `BackgroundBuildOptions.TypeLoader` | `Type?` | `null` | 仅保存类型，不会自动注册；需调用 `UseTypeLoader<T>()` |
+| `BackgroundJobOptions.Name` / `Group` | `string?` | 特性值或类型名 / `default` | 作业键为 `{Name}.job` |
+| `BackgroundJobOptions.TriggerConfigure` | `List<Action<ITriggerConfigurator<IJob>>>` | 空 | 每个元素追加一个触发器配置 |
+
+## 注意事项 / 限制
+
+- `AddQuartz(Action<BackgroundBuildOptions>)` 使用 `Singleton<BackgroundBuildOptions>` 中的共享实例；重复调用会累积配置与作业，同一作业类型后一次注册会覆盖前一次（包括其选项）。
+- `AddJobs(assembly)` 只扫描程序集的导出类型中实现 `IJob` 的类型；通过它注册的作业必须至少有一个 `BackgroundJobScheduleAttribute`，否则 `AddJob` 抛出 `InvalidOperationException`；单独用 `AddJob(type, options)` 时可由 `TriggerConfigure` 提供触发器。
+- `SimpleScheduleAttribute.RepeatCount` 必须为 `null`（永久重复）或非负数；传负数会在构建触发器时抛出 `InvalidOperationException`。
+- `CronExpressionScheduleAttribute.TimeZoneName` 默认 `UTC`，`LOCAL` 表示本地时区；其他值必须是系统时区 ID，否则在配置触发器时抛出时区异常。
+- `AddQuartz(Action<QuartzOptions>, Action<IQuartzBuilder>)` 直接使用第二个回调配置构建器，**不会**应用共享 `BackgroundBuildOptions` 上的作业、扁平属性与构建器配置集合；托管服务选项仍取自该共享实例。
+- Quartz.NET 4 不再支持零大小线程池和专用线程池；`UseZeroSizeThreadPool`、`UseDedicatedThreadPool` 会直接抛出 `NotSupportedException`，请改用 `UseDefaultThreadPool` 或 `UseThreadPool<T>`。
+- 作业数据中的 `tenantId` 需要容器中存在 `ITenantStore`；租户不存在时抛出 `TenantNotFoundException`。租户作用域在作业执行体内安装，而不是在作业工厂阶段。
 
 ## 相关包
 
 - [`Euonia.Core`](../Euonia.Core/README.md) —— `Singleton`、集合工具
-- [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块化宿主
+- [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块化宿主与依赖注入
+- [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 作业租户作用域
 - [`Euonia.Hosting`](../Euonia.Hosting/README.md) —— ASP.NET Core 宿主
 
 ## 许可证

@@ -4,6 +4,10 @@
 >
 > 面向对象、可扩展的业务对象框架：把「一次业务操作」建模成对象，由框架在正确的时机完成属性存储、变更追踪、规则校验、工厂分派、执行器编排与权限裁决。
 
+- **目标框架**：`net10.0`、`net11.0`
+- **根命名空间**：`Nerosoft.Euonia.Osba`
+- **NuGet 包**：`Euonia.Osba`
+
 `Euonia.Osba` 不是 ORM，也不是 DDD 专用框架。它的定位是**业务模型（Business Model）运行时**：对象拥有属性、行为、规则、状态、生命周期与权限边界，而不是贫血的数据容器。DDD、MVVM、CQRS、CRUD、低代码都可以在同一组原语上组合；DDD 只是其中一种可选投影。
 
 它解决的是富业务对象在服务端落地时反复出现的几件事：
@@ -26,8 +30,9 @@
 4. [使用方法](#4-使用方法)
 5. [文件结构](#5-文件结构)
 6. [设计约定与常见陷阱](#6-设计约定与常见陷阱)
-7. [相关文档](#7-相关文档)
-8. [版本与许可](#8-版本与许可)
+7. [注意事项 / 限制](#7-注意事项--限制)
+8. [相关文档](#8-相关文档)
+9. [版本与许可](#9-版本与许可)
 
 ---
 
@@ -69,7 +74,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 > `ServiceObject<T>` 刻意不继承 `BusinessObject<T>`：它只保留属性存储与规则能力，没有 `ChangedProperties`、没有 `SaveAsync`、没有编辑状态。它的校验应写成**对象级规则**。
 
-### 1.4 能力清单
+### 1.4 主要功能
 
 - **属性系统**：静态注册、类型级元数据缓存、实例级字段数组、环形撤销历史、按需可观察值。
 - **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段；属性直接改回基线后自动移出 `ChangedProperties`。
@@ -1192,6 +1197,8 @@ services.AddBusinessObject(options =>
 
 `AddBusinessObject` 返回 `IServiceCollection`，可链式调用；内部全部使用 `TryAdd*`，已注册的服务不会被覆盖。
 
+`OsbaOptions` 没有对应的配置节：本包不读取 `IConfiguration`，全部选项都在 `AddBusinessObject(options => ...)` 回调里以代码给出（选项以第一次装配为准，见 [§7 注意事项 / 限制](#7-注意事项--限制)）。
+
 ### 4.2 属性注册
 
 ```csharp
@@ -1857,7 +1864,21 @@ flowchart TB
 
 ---
 
-## 7. 相关文档
+## 7. 注意事项 / 限制
+
+以下边界与 §6 的逐条陷阱互补，都是跨切面的使用约束：
+
+- **作用域**：`BusinessContext` / `BusinessContextAccessor` 是 scoped 并按异步流传播；后台任务必须通过 `IServiceScopeFactory` 新建作用域，复用请求作用域会把业务上下文泄漏到其他工作项（§3.9）。
+- **装配选项首次注册为准**：`AddBusinessObject` 用 `TryAddSingleton(options)` 注册 `OsbaOptions`，重复调用不会覆盖宿主已经做出的选择；需要改选项请在第一次装配时给出（`ServiceCollectionExtensions.cs:44`）。
+- **启动期校验默认关闭**：`OsbaOptions.ValidateOnStartup` 默认 `false`，测试程序集里的半成品对象不会让启动失败；生产宿主应显式开启，否则「缺持久化方法」这类问题要到第一次保存才暴露（`OsbaOptions.cs:24`、`ServiceCollectionExtensions.cs:67`）。
+- **不注册权限服务**：`AddBusinessObject` 只注册对象模型、工厂、执行器与规则注册表；需要权限时由宿主 `AddPermission(...)` 接引擎或自建 `IPermissionChecker` / `IObjectScopeAuthorizer`，未接时声明了 `[Permission]` 的类型会在强制点抛异常（§3.8、§6）。
+- **规则注册表的共享边界是容器**：`IRuleRegistry` 按容器注册为单例，测试、租户、插件之间互不可见；不要依赖进程级全局规则（§3.6.3）。
+- **不绑定持久化**：本包不引用 EF Core 或任何数据库，创建/保存/删除都由业务对象的工厂方法经 `BusinessContext` 自行完成；事务边界由宿主决定（§1.5、§3.5）。
+- **诊断开关是进程级的**：`EnableDiagnostics` 写入 `OsbaDiagnostics.Enabled` 静态仪表，最后一次装配的取值对整个进程生效，多容器宿主需要自行协调（`ServiceCollectionExtensions.cs:47`）。
+
+---
+
+## 8. 相关文档
 
 | 文档 | 内容 |
 |---|---|
@@ -1869,11 +1890,15 @@ flowchart TB
 | [`ARCHITECTURE-REVIEW.md`](ARCHITECTURE-REVIEW.md) | 架构 / 性能 / 正确性评审报告（历史基线，部分问题已修复，阅读时以当前代码为准） |
 | [`../Euonia.Security/README.md`](../Euonia.Security/README.md) | 策略引擎用法 |
 | [`../Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) | 策略引擎设计取舍 |
+| [`../Euonia.Core/README.md`](../Euonia.Core/README.md) | 权限契约（`IPermissionChecker` 等）、反射工具、`AsyncContext`、`Check` |
+| [`../Euonia.Modularity/README.md`](../Euonia.Modularity/README.md) | `IHasLazyServiceProvider` / `InjectAttribute` 与模块启动 |
+| [`../Euonia.Pipeline/README.md`](../Euonia.Pipeline/README.md) | `IPipeline<TRequest,TResponse>` / `IPipelineBehavior` |
+| [`../Euonia.Validation/README.md`](../Euonia.Validation/README.md) | `ValidationException` / `ValidationResult` |
 | [`../../README.md`](../../README.md) | 仓库总览与其他模块 |
 
 ---
 
-## 8. 版本与许可
+## 9. 版本与许可
 
 - 当前版本：`2026.4.7`（见仓库根 `project.props`）。
 - 目标框架：`net10.0`、`net11.0`。

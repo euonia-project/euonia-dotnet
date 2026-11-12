@@ -2,8 +2,6 @@
 
 Euonia 分布式同步的 Apache ZooKeeper 提供程序：基于临时顺序节点（ephemeral sequential node）实现分布式锁与信号量，支持会话超时、连接超时、认证信息与访问控制。
 
-Apache ZooKeeper provider for Euonia distributed synchronization: distributed locks and semaphores built on ephemeral sequential nodes, with session timeout, connect timeout, authentication and access control.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency.ZooKeeper`
 - **NuGet 包**：`Euonia.Concurrency.ZooKeeper`
@@ -62,7 +60,7 @@ public sealed class ElectionService(ILockFactory lockFactory)
 }
 ```
 
-自定义超时与认证：
+自定义超时与认证（不经过 DI 时直接构造）：
 
 ```csharp
 var factory = new ZooKeeperSynchronizationFactory(
@@ -71,15 +69,34 @@ var factory = new ZooKeeperSynchronizationFactory(
         .SessionTimeout(TimeSpan.FromSeconds(30))
         .ConnectTimeout(TimeSpan.FromSeconds(10))
         .AddAuthInfo("digest", "user:password"u8.ToArray()));
+
+// Create 为显式接口实现，必须经接口调用
+var lockProvider = ((ILockFactory)factory).Create("cluster:leader");
 ```
 
 ## 配置项
 
+配置节 `ZooKeeperSynchronization` 由 `ZooKeeperSynchronizationModule`（`internal`，被锁/信号量模块共同依赖）在首次解析时读取，键名无常量类。
+
 | 配置键 | 默认值 | 说明 |
 |--------|--------|------|
-| `ZooKeeperSynchronization:ConnectionString` | 必填 | ZooKeeper 连接字符串 |
-| `ZooKeeperSynchronization:SessionTimeout` | 构建器默认 `20s` | 会话超时（毫秒），`> 0` 时生效 |
-| `ZooKeeperSynchronization:ConnectTimeout` | 构建器默认 `15s` | 连接超时（毫秒），`> 0` 时生效 |
+| `ZooKeeperSynchronization:ConnectionString` | 必填 | ZooKeeper 连接字符串，如 `localhost:2181` |
+| `ZooKeeperSynchronization:SessionTimeout` | 构建器默认 `20s` | 会话超时（毫秒），`> 0` 时才覆盖默认值 |
+| `ZooKeeperSynchronization:ConnectTimeout` | 构建器默认 `15s` | 连接超时（毫秒），`> 0` 时才覆盖默认值 |
+
+```bash
+# .NET 原生：双下划线表示层级
+ZooKeeperSynchronization__ConnectionString=localhost:2181
+ZooKeeperSynchronization__SessionTimeout=20000
+ZooKeeperSynchronization__ConnectTimeout=15000
+
+# 仓库 alias：大写单下划线（Euonia.Modularity）
+ZOOKEEPERSYNCHRONIZATION_CONNECTIONSTRING=localhost:2181
+ZOOKEEPERSYNCHRONIZATION_SESSIONTIMEOUT=20000
+ZOOKEEPERSYNCHRONIZATION_CONNECTTIMEOUT=15000
+```
+
+认证（`AddAuthInfo`）与 ACL（`AddAccessControl`）没有配置键，只能在构造 `ZooKeeperSynchronizationFactory` 时通过构建器委托设置。
 
 ## 核心类型
 
@@ -87,16 +104,73 @@ var factory = new ZooKeeperSynchronizationFactory(
 |------|------|
 | `ZooKeeperLockModule` | 注册 `ILockFactory` |
 | `ZooKeeperSemaphoreModule` | 注册 `ISemaphoreFactory` |
-| `ZooKeeperSynchronizationFactory` | 同时实现 `ILockFactory` 与 `ISemaphoreFactory` |
-| `ZooKeeperSynchronizationOptionsBuilder` | 会话/连接超时、认证与 ACL |
-| `ZooKeeperLockProvider` / `ZooKeeperSemaphoreProvider` | ZooKeeper 上的锁与信号量实现 |
-| `ZooKeeperPath` / `ZooKeeperNodeHandle` | 节点路径与句柄辅助 |
+| `ZooKeeperSynchronizationFactory` | 同时实现 `ILockFactory` 与 `ISemaphoreFactory`，按名称创建 provider |
+| `ZooKeeperSynchronizationOptionsBuilder` | `SessionTimeout`、`ConnectTimeout`、`AddAuthInfo`、`AddAccessControl` |
+| `ZooKeeperLockProvider` / `ZooKeeperSemaphoreProvider` | ZooKeeper 上的锁与信号量实现，节点前缀分别为 `lock-` / `semaphore-` |
+| `ZooKeeperSynchronizationHandle` | 同步句柄；释放即释放锁或许可 |
+| `ZooKeeperPath` / `ZooKeeperNodeHandle` | 节点路径（构造时校验）与节点句柄辅助 |
+
+## 使用示例
+
+同一进程内同时使用锁与信号量（无模块系统时手工构造）：
+
+```csharp
+using System.Text;
+using Nerosoft.Euonia.Concurrency;
+using Nerosoft.Euonia.Concurrency.ZooKeeper;
+
+var factory = new ZooKeeperSynchronizationFactory(
+    "localhost:2181",
+    builder => builder
+        .SessionTimeout(TimeSpan.FromSeconds(30))
+        .ConnectTimeout(TimeSpan.FromSeconds(10))
+        .AddAuthInfo("digest", Encoding.UTF8.GetBytes("user:password")));
+
+// 互斥：最多 1 个持有者
+await using (var handle = await ((ILockFactory)factory).Create("orders:nightly-job")
+                                             .TryAcquireAsync(TimeSpan.FromSeconds(5)))
+{
+    if (handle is not null)
+    {
+        await RunNightlyJobAsync();
+    }
+}
+
+// 并发限流：最多 4 个持有者
+await using (var slot = await ((ISemaphoreFactory)factory).Create("orders:export", 4).TryAcquireAsync(TimeSpan.FromSeconds(5)))
+{
+    if (slot is not null)
+    {
+        await ExportAsync();
+    }
+}
+```
+
+把节点建在子目录下（默认建在根 `/`）：
+
+```csharp
+var underDir = new ZooKeeperSynchronizationFactory(
+    new ZooKeeperPath("/euonia/locks"),
+    "localhost:2181");
+```
+
+## 注意事项 / 限制
+
+- 连接字符串为 `null` 时构造函数抛 `ArgumentNullException`；配置节缺失会在首次解析 `ILockFactory` 时暴露，而不是启动期。
+- 锁与信号量的节点名会经 `ZooKeeperPath` 规范化（非法字符替换为 `_`、必要时附加哈希）；`Name` 返回的是含前导 `/` 的完整路径，不是传入的名称。
+- 信号量 `maxCount < 1` 直接抛 `ArgumentOutOfRangeException`；`maxCount` 在创建时固定。
+- 同步 API（`Acquire` / `TryAcquire`）内部对 ZooKeeperNetEx 的异步接口做 sync-over-async，**不要在异步方法中优先使用**。
+- `SessionTimeout` 越小，持锁进程崩溃后释放越快，但短暂网络抖动导致锁丢失的风险越高；不要小于 ZooKeeper 的 2 倍 tick 时间。
+- 未设置 `AddAccessControl` 时节点 ACL 为 `(world, anyone)` 全权限；生产环境应显式配置或依赖已加固的 ZooKeeper。
+- 未传 `AddAuthInfo` / `AddAccessControl` 时模块版本无法通过配置节补充，需要认证必须自行构造 `ZooKeeperSynchronizationFactory`。
 
 ## 相关包
 
-- [`Euonia.Concurrency`](../Euonia.Concurrency/README.md) —— 同步抽象
+- [`Euonia.Concurrency`](../Euonia.Concurrency/README.md) —— 同步抽象与扩展方法
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块与依赖注入
 - [`Euonia.Application`](../Euonia.Application/README.md) —— `[DistributedLock]` / `[SemaphoreLock]` 拦截器
+- [`Euonia.Concurrency.Redis`](../Euonia.Concurrency.Redis/README.md) —— Redis 同步提供程序
+- [`Euonia.Concurrency.FileSystem`](../Euonia.Concurrency.FileSystem/README.md) —— 单机文件锁提供程序
 
 ## 许可证
 

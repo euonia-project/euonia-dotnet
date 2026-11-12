@@ -2,8 +2,6 @@
 
 Euonia 的 LINQ 工具库：规约模式（Specification）、谓词与表达式构建器，以及过滤、分页、排序等 `IQueryable` 扩展，用于把查询条件建模为可组合、可复用的对象。
 
-LINQ utilities for Euonia: the specification pattern, predicate and expression builders, and `IQueryable` extensions for filtering, pagination and ordering. Query criteria can be modeled as composable, reusable objects.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Linq`
 - **NuGet 包**：`Euonia.Linq`
@@ -78,6 +76,27 @@ var result = await db.People.Where(predicate).ToListAsync();
 | `QueryHandler<T>` | 流式查询构建器 |
 | `QueryCriteria<T>` / `Orderable<T>` | 查询条件与排序描述 |
 | `QueryableExtensions` | `Where`、`WhereIf`、`Between`、`OrderBy` 等扩展 |
+
+## 选项（代码配置）
+
+`Euonia.Linq` 是纯静态工具库，没有 `Add*` 注册、配置节或 `*Options`；可调参数都通过方法实参与对象属性传入：
+
+| 配置点 | 默认值 | 说明 |
+|--------|--------|------|
+| `QueryHandler<T>.SetPage(int)` | `1` | 页码从 1 开始，小于 1 抛 `ArgumentOutOfRangeException` |
+| `QueryHandler<T>.SetSize(int)` | `int.MaxValue` | 每页大小，`0` 返回空列表，小于 0 抛异常 |
+| `QueryHandler<T>.SetCollator(...)` | 无排序 | 用 `Orderable<T>` 或 `Func<IQueryable<T>, IOrderedQueryable<T>>` 指定排序 |
+| `QueryableExtensions.Between(..., boundary)` | `RangeBoundary.Both` | `DateTime` 的 `includeTime: false` 分支默认 `RangeBoundary.Left` |
+| `QueryableExtensions.WhereIf(predicate, condition)` | — | `condition` 为 `false` 时返回原查询 |
+
+## 注意事项 / 限制
+
+- `WhereIfNotEmpty` 只允许一个条件属性（例如 `t => t.Name == "a"`）；包含 `&&`/`||` 的谓词会抛 `InvalidOperationException`，空字符串或 `null` 值会被忽略。
+- 按属性名动态调用的 `Where(propertyName, value)`、`OrderBy(propertyName, sortType)` 在属性不存在或值无法转换时**静默返回原查询**，不会抛异常；来自外部输入的属性名应先校验。
+- `QueryHandler<T>.Query()` 每次基于原始查询重新构建，重复调用不会叠加过滤条件；`GetCount()` 基于未分页查询计算总数，不受 `SetPage`/`SetSize` 影响。
+- `Specification<T>` 的 `&`、`|`、`!` 运算符定义在抽象类上，不是 `ISpecification<T>` 接口；`ISpecification<T>` 可用 `And`/`AndIf` 扩展，但内部会强制转换为 `Specification<T>`，其他实现会抛 `InvalidCastException`。
+- `SegmentSpecification` 要求 `min` 与 `max` 至少提供一个；两者都提供时最小值不得大于最大值，否则构造失败。`RangeBoundary` 决定两端是否包含。
+- `QueryHandler<T>` 持有可变的页码、大小、谓词与排序状态，不是线程安全的；不要跨请求共享同一个实例。
 
 ## 相关包
 

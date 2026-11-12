@@ -2,8 +2,6 @@
 
 Euonia 总线的 HTTP 远程传输：客户端通过 HTTP POST 执行请求-响应调用（`CallAsync`），服务端端点接收消息、执行处理器并回传结果。与 gRPC 传输共用 `RemoteReply<TResult>` 线路协议。
 
-HTTP remote transport for Euonia Bus: client-side `CallAsync` over HTTP POST and a server endpoint that executes handlers and returns results, sharing the `RemoteReply<TResult>` wire protocol with the gRPC transport.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.Http`
 - **NuGet 包**：`Euonia.Bus.Http`
@@ -45,9 +43,10 @@ services.Configure<MessageBusOptions>(options =>
 
 ```csharp
 services.AddEuoniaBus();
+services.AddHttpBus();   // 绑定 Euonia:Bus:Http，并注册 HttpBusOptions
 
 var app = builder.Build();
-app.MapBusEndpoint();   // POST /bus/call
+app.MapBusEndpoint();    // POST /bus/call
 ```
 
 调用远程处理器：
@@ -60,14 +59,43 @@ var status = await bus.CallAsync<GetOrderStatus, OrderStatus>(new GetOrderStatus
 
 | 选项 | 默认值 | 说明 |
 |------|--------|------|
-| `Enabled` | `true` | 是否启用 |
+| `Enabled` | `true` | 预留开关；`AddHttpBus` 不读取该值，注册与否取决于是否调用该方法 |
 | `Name` | `http` | 传输器名称 |
 | `Endpoint` | `null` | 服务端基础地址 |
 | `Route` | `/bus/call` | 服务端端点路由 |
 | `SerializerProvider` | `SystemTestJson` | 序列化器名称 |
 | `RequestTimeout` | `null` | 请求超时 |
 | `RequireAuthorization` | `true` | 服务端端点是否要求授权 |
-| `MessageHandlerFactory` | `null` | 自定义 `HttpMessageHandler` 工厂 |
+| `MessageHandlerFactory` | `null` | 自定义 `HttpMessageHandler` 工厂，主要用于测试 |
+| `Endpoints` | 空 | 通道 → 端点路由表；键可为精确通道名或含 `*`/`?` 的通配符，值可含 `{channel}`/`{1}`…`{9}` 占位符 |
+
+`HttpBusOptions` 同时绑定旧节 `HttpBus` 与新节 `Euonia:Bus:Http`，新节优先，显式 `Configure` 回调最高（`Source/Euonia.Bus.Http/HttpBusOptions.cs:8-20`、`ServiceCollectionExtensions.cs:32-40`）。
+
+```json
+{
+  "Euonia": {
+    "Bus": {
+      "Http": {
+        "Endpoint": "https://orders.local",
+        "Route": "/bus/call",
+        "RequestTimeout": "00:00:30",
+        "RequireAuthorization": true,
+        "Endpoints": {
+          "payments": "https://payments.local",
+          "orders-*": "https://orders.local"
+        }
+      }
+    }
+  }
+}
+```
+
+```bash
+Euonia__Bus__Http__Endpoint=https://orders.local     # .NET 原生：双下划线表示层级
+EUONIA_BUS_HTTP_ENDPOINT=https://orders.local        # 仓库 alias：大写单下划线
+Euonia__Bus__Http__RequireAuthorization=false
+EUONIA_BUS_HTTP_REQUIREAUTHORIZATION=false
+```
 
 ## 核心类型
 
@@ -76,9 +104,79 @@ var status = await bus.CallAsync<GetOrderStatus, OrderStatus>(new GetOrderStatus
 | `AddHttpBus(name, configure)` | 注册 HTTP 传输器与键控 `ITransporter` |
 | `MapBusEndpoint()` | 映射服务端请求端点 |
 | `HttpBusOptions` | 传输配置 |
-| `HttpTransporter` | `ITransporter` 实现（仅调用） |
+| `HttpTransporter` | `ITransporter` 实现（仅调用）；`internal`，通过 `AddHttpBus` 注册 |
 | `RemoteReply<TResult>` / `RemoteError` | 线路协议与错误还原（定义于 `Euonia.Bus`） |
 | `RemoteReceiver` | 服务端接收、执行与回复（定义于 `Euonia.Bus`） |
+
+## 使用示例
+
+按通道把请求路由到不同服务，并为单次调用设置超时：
+
+```csharp
+using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.Http;
+
+services.AddHttpBus("http", options =>
+{
+    options.Endpoint = "https://gateway.local";     // 默认端点
+    options.Endpoints["orders"] = "https://orders.local";
+    options.Endpoints["payments"] = "https://payments.local";
+    options.Endpoints["report-*"] = "https://report-{channel}.local";
+    options.RequireAuthorization = false;           // 仅受控内网/测试环境
+});
+```
+
+```csharp
+using Nerosoft.Euonia.Bus;
+
+// [Channel] 同时决定服务端处理器注册的通道与客户端路由键
+[Channel("orders")]
+public sealed class GetOrderStatus : IRequest<OrderStatus>
+{
+    public long OrderId { get; init; }
+}
+
+public sealed class OrderStatus
+{
+    public long OrderId { get; init; }
+    public string State { get; init; } = null!;
+}
+
+public sealed class OrderClient(IBus bus)
+{
+    public Task<OrderStatus> GetStatusAsync(long orderId, CancellationToken cancellationToken)
+        => bus.Call<GetOrderStatus, OrderStatus>(new GetOrderStatus { OrderId = orderId })
+              .WithTimeout(TimeSpan.FromSeconds(5))
+              .ExecuteAsync(cancellationToken);
+}
+```
+
+服务端最小宿主：
+
+```csharp
+using Nerosoft.Euonia.Bus;
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddEuoniaBus();
+builder.Services.AddHttpBus();
+builder.Services.AddMessageHandler(ServiceLifetime.Scoped, typeof(Program).Assembly);
+builder.Services.AddConfiguratorBuilder(config => config
+    .SetConvention(convention => convention.Add<DefaultMessageConvention>())
+    .RegisterChannel(typeof(Program).Assembly));
+
+var app = builder.Build();
+app.MapBusEndpoint();
+app.Run();
+```
+
+## 注意事项 / 限制
+
+1. **只支持请求-响应**：`PublishAsync` 与 `SendAsync` 返回失败任务并抛 `NotSupportedException`，必须使用 `CallAsync`（`Source/Euonia.Bus.Http/HttpTransporter.cs:106-128`）。
+2. **服务端也需要绑定选项**：`MapBusEndpoint()` 从 `IOptions<HttpBusOptions>` 读取 `Route` 与 `RequireAuthorization`；只调用 `AddEuoniaBus()` 时使用默认值，配置节不会生效。
+3. **`RequestTimeout` 是传输器级超时**：它直接设置单例 `HttpClient.Timeout`，影响该传输器的所有调用；单次调用请用 `WithTimeout`（走取消令牌）。
+4. **端点解析有固定顺序**：精确键（忽略大小写）→ 通配符键（按声明顺序，首个匹配生效）→ `Endpoint` 默认端点（`HttpTransporter.cs:138-185`）。
+5. **授权不会自动携带**：只有信封上的 `Authorization` 会被写成 `Authorization` 请求头；后台任务等无请求作用域的调用需要自行写入。
+6. **`Enabled` 不控制注册**：是否注册传输器取决于是否调用 `AddHttpBus`，配置里的 `Enabled` 目前不被读取。
 
 ## 相关包
 

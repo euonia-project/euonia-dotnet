@@ -2,12 +2,11 @@
 
 把 `Euonia.Endpoint` 标记的接口方法映射为 ASP.NET Core Minimal API 端点。
 
-## 目标框架
+## 目标框架与元信息
 
-- `net10.0`
-- `net11.0`
-
-依赖 ASP.NET Core 共享框架。
+- **目标框架**：`net10.0`、`net11.0`（依赖 ASP.NET Core 共享框架）
+- **根命名空间**：`Nerosoft.Euonia.Endpoint.Http`（`AddDynamicHttpEndpoint` / `MapDynamicHttpEndpoint` 位于 `Microsoft.Extensions.DependencyInjection` / `Microsoft.AspNetCore.Builder`）
+- **NuGet 包**：`Euonia.Endpoint.Http`
 
 ## 工作方式
 
@@ -28,7 +27,9 @@ dotnet add package Euonia.Endpoint.Http
 dotnet add package Euonia.Endpoint.SourceGenerator
 ```
 
-## 注册
+## 快速开始
+
+注册端点暴露有三条路径，任选其一；注册之后还需要 [映射](#映射) 才会真正产生端点。
 
 ### 从配置注册
 
@@ -75,6 +76,18 @@ builder.Services.AddDynamicHttpEndpoint(
 
 显式传入程序集后，不再使用配置中的 `ScanAssemblies` / 入口程序集回退。
 
+## 核心类型
+
+| 类型 | 作用 |
+|---|---|
+| `HttpExposureOptions` | 配置节 `Euonia:Endpoint:Http` 的选项（见 [配置项](#配置项)） |
+| `HttpRegistry` | 「路由 + HTTP 方法」占用表：`TryReserve(routePattern, methods, generated)` 去重并检测冲突 |
+| `HttpReservation` | 占用结果：`Reserved` / `AlreadyGenerated` / `Conflict` |
+| `HttpGeneratedMapper` | 生成代码调用的映射入口：`Map(...)`、`ReadBodyAsync<T>(...)` |
+| `HttpGeneratedMappingAttribute` | 程序集级标记，指向生成的 `HttpMappings` 类型 |
+| `EndpointRouteBuilderExtensions` | `MapDynamicHttpEndpoint()` |
+| `ServiceCollectionExtensions` | `AddDynamicHttpEndpoint(configuration, assemblies)` / `AddDynamicHttpEndpoint(configure, assemblies)` |
+
 ## 映射
 
 ```csharp
@@ -94,7 +107,9 @@ app.UseEndpoints(endpoints =>
 });
 ```
 
-## 选项
+## 配置项
+
+选项类型：`HttpExposureOptions`，配置节：`Euonia:Endpoint:Http`（`HttpExposureOptions.SectionName`）。
 
 | 选项 | 默认值 | 说明 |
 |---|---|---|
@@ -109,6 +124,18 @@ app.UseEndpoints(endpoints =>
 | `ScanEntryAssembly` | `true` | 未配置 `ScanAssemblies` 时是否扫描入口程序集 |
 
 `ScanNamespaces` / `ScanTypes` 同时作用于生成路径与运行时兜底，不会出现“配置收窄了但生成端点仍全部暴露”的情况。
+
+环境变量（两种写法等价，原生格式优先）：
+
+```bash
+Euonia__Endpoint__Http__EnableExposeApplicationServiceAsWebApi=true   # .NET 原生：双下划线表示层级
+EUONIA_ENDPOINT_HTTP_ENABLEEXPOSEAPPLICATIONSERVICEASWEBAPI=true      # 仓库 alias：大写单下划线（Euonia.Modularity）
+
+Euonia__Endpoint__Http__DefaultRoutePrefix=api
+EUONIA_ENDPOINT_HTTP_DEFAULTROUTEPREFIX=api
+```
+
+alias 格式的每一段下划线都对应一个层级，段内不拆词；含 `__` 的变量只按原生格式处理。
 
 ## 路由规则
 
@@ -232,7 +259,7 @@ builder.Services.AddDynamicHttpEndpoint(
     });
 ```
 
-## 不支持或限制
+## 注意事项 / 限制
 
 - 文件上传（`IFormFile` / `IFormFileCollection`）；
 - 流式返回（`IAsyncEnumerable<T>`）；
@@ -243,6 +270,14 @@ builder.Services.AddDynamicHttpEndpoint(
 - 非 `Authorize` / `AllowAnonymous` 的自定义特性不会进入端点元数据。
 
 这些签名在生成路径会被跳过，运行时路径可能支持一部分，也可能在启动/请求时拒绝。
+
+其它边界：
+
+- `RequireAuthorization` 默认 `true`：所有映射端点都会追加默认授权要求，未配置认证方案时请求会被拒绝，需要匿名访问的端点用 `[AllowAnonymous]`。
+- `ScanNamespaces` / `ScanTypes` 同时作用于生成路径与运行时兜底；显式传入程序集（`AddDynamicHttpEndpoint(options, assemblies)`）后，配置里的 `ScanAssemblies` 与入口程序集回退都不再生效。
+- 路由去重粒度是「路由 + HTTP 方法」：同一路由上不同动词可以共存，同一组合只会注册一次。
+- `EnableExposeApplicationServiceAsWebApi` 默认 `false`：忘记打开时既不注册服务也不映射端点，且不会报错。
+- 端点元数据只合并接口方法与实现类/实现方法上的 `[Authorize]` / `[AllowAnonymous]`；多实现时只用接口方法元数据。
 
 ## 完整示例
 
@@ -288,8 +323,13 @@ app.MapDynamicHttpEndpoint();
 app.Run();
 ```
 
-## 相关文档
+## 相关包
 
-- [Euonia.Endpoint](../Euonia.Endpoint/README.md)
-- [Euonia.Endpoint.Grpc](../Euonia.Endpoint.Grpc/README.md)
-- [Euonia.Endpoint.SourceGenerator](../Euonia.Endpoint.SourceGenerator/README.md)
+- [`Euonia.Endpoint`](../Euonia.Endpoint/README.md) —— 暴露特性与共享契约
+- [`Euonia.Endpoint.Grpc`](../Euonia.Endpoint.Grpc/README.md) —— gRPC 侧运行时
+- [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 构建期生成强类型映射
+- [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

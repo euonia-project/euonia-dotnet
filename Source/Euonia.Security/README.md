@@ -6,6 +6,36 @@
 
 > 设计动因、被否决的方案与已知边界见 [DESIGN.md](DESIGN.md)（面向维护者与评审者）。
 
+- **目标框架**：`net10.0`、`net11.0`
+- **根命名空间**：`Nerosoft.Euonia.Security`（`AddPermission` / `PermissionOptions` 位于 `Microsoft.Extensions.DependencyInjection`）
+- **NuGet 包**：`Euonia.Security`
+
+## 安装
+
+```bash
+dotnet add package Euonia.Security
+```
+
+本包只依赖 `Euonia.Core` 与 `Microsoft.Extensions.DependencyInjection.Abstractions`：不引入 EF Core、ASP.NET Core，也不绑定任何鉴权引擎。装配入口只有 `AddPermission`，完整装配与规则写法见 [§3 装配](#3-装配)。
+
+## 快速开始
+
+最小装配只有两步：用 `AddPermission` 声明扫描范围与操作入口规则，再注册判定主体 `UserPrincipal`。
+
+```csharp
+services.AddPermission(permission => permission
+        .Scan(typeof(Order).Assembly)
+        .OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)));
+
+services.AddSingleton(UserPrincipal.Current);
+```
+
+完整写法、多模块合并、`NoOperationCodes` / `NoModels` 断言与自定义来源见 [§3 装配](#3-装配)。
+
+## 选项（代码配置）
+
+本包没有 `IConfiguration` 读取点，也没有 `appsettings` 配置节：`PermissionOptions` 只在 `AddPermission(options => ...)` 回调里使用，可用的声明为 `Scan`（可多次，程序集取并集）、`OnAttributeOrName`、`OnMethod`、`Source`、`NoOperationCodes`、`NoModels`。它们的语义与组合约束见 [§3 装配](#3-装配) 与 [§6 核心类型与关键成员速查](#6-核心类型与关键成员速查)。
+
 ---
 
 ## 1. 核心原则：能预定义的进代码，不能预定义的走数据
@@ -544,7 +574,7 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 
 ---
 
-## 6. 关键成员速查
+## 6. 核心类型与关键成员速查
 
 ### 授权数据（使用方实现）
 
@@ -669,3 +699,26 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 1. 把各处手写的行级条件改写为 `ScopeModel<T>` 的 `Policy` / `Declare`。
 2. 把原本写死在代码里的授权值改为由 `IScopeSubjectResolver` 实时解析。
 3. 把原先分散的判定位置改为在统一的边界调用 `IScopeGuard`。
+
+---
+
+## 10. 注意事项 / 限制
+
+- **不提供默认授权数据源**：`IScopeSubjectResolver` 只有契约，没有实现；未注册而使用了权限时，首次解析 `IScopeGuard` 的启动校验会直接失败（§2、§5.6）。
+- **判定一律 fail-closed**：取不到授权数据、维度未映射、策略结构性恒不放行都按拒绝处理，不存在「配置缺失时放行」的回退（§1、§5.3）。
+- **不决定强制执行点**：本包不会给 Minimal API、MVC 过滤器或 EF 查询自动挂上判定；调用方必须在自己的边界显式调用 `IPermissionChecker` / `IScopeGuard.Allows*` / `IScopeGuard.Apply`（§1、§5.1）。
+- **`IScopeGuard` 依赖当前 `UserPrincipal`**：后台任务或非请求线程需要自建作用域并提供判定主体；同步判定前要先 `await guard.EnsureResolvedAsync(ct)`，冷缓存下同步读会抛 `IDS_SCOPE_NOT_RESOLVED`（§5.5、§7）。
+- **授权值是缓存而非快照**：已编译策略按（资源类型，授予键）缓存，授权数据变更后必须调用 `RefreshAsync()`，否则旧结论会继续生效（§8）。
+- **启动期校验是有意的 fail-fast**：模型缺维度、标识/名称重复、扫描范围为空等都在注册或首次解析时抛异常，不要用 try/catch 吞掉（§5.6、§7）。
+- **不提供多租户隔离**：租户维度如何进入授权值完全由 `IScopeSubjectResolver` 与维度选择器决定，本包不认识租户概念。
+
+## 相关包
+
+- [`Euonia.Core`](../Euonia.Core/README.md) —— `UserPrincipal`、`IPermissionChecker`、`IObjectScopeAuthorizer` 等契约
+- [`Euonia.Osba`](../Euonia.Osba/README.md) —— 业务对象运行时：把 `[Permission]` 与行级策略接到工厂/执行器边界
+- [`Euonia.Telemetry.Otel`](../Euonia.Telemetry.Otel/README.md) —— 采集本包的 `Nerosoft.Euonia.Security` ActivitySource 与 Meter
+- [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 多租户上下文（租户维度由使用方自行接入授权值）
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

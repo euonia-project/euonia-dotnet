@@ -2,6 +2,10 @@
 
 把应用服务接口方法同时暴露为 HTTP Minimal API 与 gRPC 服务的契约包。
 
+- **目标框架**：`net10.0`、`net11.0`
+- **根命名空间**：`Nerosoft.Euonia.Endpoint`
+- **NuGet 包**：`Euonia.Endpoint`
+
 `Euonia.Endpoint` 只包含特性和共享契约类型，不依赖 ASP.NET Core 或具体传输实现。传输运行时与构建期生成器分别由以下包提供：
 
 | 包 | 作用 |
@@ -70,6 +74,13 @@ app.MapDynamicGrpcEndpoint();
     }
   }
 }
+```
+
+配置节由运行时包绑定（`Euonia:Endpoint:Http` / `Euonia:Endpoint:Grpc`），环境变量两种写法：
+
+```bash
+Euonia__Endpoint__Http__EnableExposeApplicationServiceAsWebApi=true   # .NET 原生：双下划线表示层级
+EUONIA_ENDPOINT_HTTP_ENABLEEXPOSEAPPLICATIONSERVICEASWEBAPI=true      # 仓库 alias：大写单下划线（Euonia.Modularity）
 ```
 
 ## 暴露特性
@@ -212,8 +223,22 @@ public sealed class OrderDto
 - 扫描范围默认只包含入口程序集；插件或 Application 程序集需要显式加入 `ScanAssemblies`。
 - 生成器只处理当前编译中的接口；被引用程序集里的接口需要在那个程序集里也引用生成器。
 
-## 相关文档
+## 注意事项 / 限制
 
-- [Euonia.Endpoint.Http](../Euonia.Endpoint.Http/README.md)
-- [Euonia.Endpoint.Grpc](../Euonia.Endpoint.Grpc/README.md)
-- [Euonia.Endpoint.SourceGenerator](../Euonia.Endpoint.SourceGenerator/README.md)
+- 本包**只有契约**：`ExposeWebApi` / `ExposeGrpc` 特性与共享 `DataContract` 类型；不引用 ASP.NET Core、不包含运行时映射逻辑，单独安装不会暴露任何端点。
+- 特性必须标在**接口方法**上（`AttributeTargets.Method`）；标在实现类方法上不会被生成器或运行时扫描识别。
+- 生成器只处理**当前编译**中的接口；被引用程序集里的接口需要在那个程序集里也引用 `Euonia.Endpoint.SourceGenerator`。
+- gRPC 侧**没有运行时兜底**：没有生成映射的程序集只会在映射阶段记录 Warning，方法不会被暴露。
+- `DataMember(Order = n)` 是 protobuf 字段号，发布后不能修改、复用或重排；字段号从 1 开始且在同一类型内唯一。
+- `RequireAuthorization` 在 HTTP 与 gRPC 的默认值都是 `true`，未配置认证时会拒绝匿名请求。
+
+## 相关包
+
+- [`Euonia.Endpoint.Http`](../Euonia.Endpoint.Http/README.md) —— Minimal API 运行时、参数绑定、认证元数据
+- [`Euonia.Endpoint.Grpc`](../Euonia.Endpoint.Grpc/README.md) —— protobuf-net.Grpc 运行时、生成契约注册、proto 导出
+- [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 构建期生成 HTTP lambda、gRPC 契约与注册标记
+- [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

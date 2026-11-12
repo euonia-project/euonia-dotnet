@@ -1,12 +1,11 @@
 # Euonia.Concurrency
 
-Euonia 的分布式同步抽象：定义锁（`ILockFactory` / `ILockProvider`）与信号量（`ISemaphoreFactory` / `ISemaphoreProvider`）契约，并提供同步、异步、超时与取消的统一获取方式。具体实现由 Redis、ZooKeeper、文件系统或 Azure Blob 等提供程序包完成。
-
-Distributed synchronization abstractions for Euonia: contracts for locks (`ILockFactory` / `ILockProvider`) and semaphores (`ISemaphoreFactory` / `ISemaphoreProvider`) with unified synchronous, asynchronous, timeout and cancellation semantics. Concrete implementations live in the Redis, ZooKeeper, file system and Azure Blob provider packages.
+Euonia 的分布式同步抽象：定义锁（`ILockFactory` / `ILockProvider`）与信号量（`ISemaphoreFactory` / `ISemaphoreProvider`）契约，并统一同步、异步、超时与取消语义；具体实现由 Redis、ZooKeeper、文件系统或 Azure Blob 提供程序包完成。
 
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Concurrency`
 - **NuGet 包**：`Euonia.Concurrency`
+- **依赖**：`Euonia.Core`（`Nerosoft.Euonia.Threading` 中的 `TimeoutValue`）
 
 ## 安装
 
@@ -22,14 +21,6 @@ dotnet add package Euonia.Concurrency.ZooKeeper
 dotnet add package Euonia.Concurrency.FileSystem
 dotnet add package Euonia.Concurrency.Azure
 ```
-
-## 主要功能
-
-- **锁契约**：`ILockProvider` 提供 `Acquire` / `TryAcquire` 及其异步版本。
-- **信号量契约**：`ISemaphoreProvider` 以 `maxCount` 限制并发持有者数量。
-- **工厂模式**：`ILockFactory.Create(name)` 与 `ISemaphoreFactory.Create(name, maxCount)` 按名称创建实例，便于依赖注入。
-- **统一句柄**：`ISynchronizationHandle` 封装释放与句柄丢失监视（`HandleCancellationToken`），实现 `IDisposable` 与 `IAsyncDisposable`。
-- **便捷扩展**：`Extensions` 直接在工厂上提供 `Acquire`、`TryAcquire`、`AcquireAsync`、`TryAcquireAsync` 重载。
 
 ## 快速开始
 
@@ -81,6 +72,14 @@ if (handle is null)
 }
 ```
 
+## 主要功能
+
+- **锁契约**：`ILockProvider` 提供 `Acquire`/`TryAcquire` 及异步版本，超时抛 `TimeoutException` 或返回 `null`。
+- **信号量契约**：`ISemaphoreProvider` 以 `MaxCount` 限制并发持有者数量。
+- **工厂模式**：`ILockFactory.Create(name)` 与 `ISemaphoreFactory.Create(name, maxCount)` 按名称创建实例，便于依赖注入。
+- **统一句柄**：`ISynchronizationHandle` 封装释放与句柄丢失监视（`HandleCancellationToken`），实现 `IDisposable` 与 `IAsyncDisposable`。
+- **便捷扩展**：`Extensions` 直接在工厂上提供按名称获取的重载，省去先 `Create` 再获取。
+
 ## 核心类型
 
 | 类型 | 作用 |
@@ -90,13 +89,34 @@ if (handle is null)
 | `ISemaphoreFactory` | 按名称与最大并发数创建 `ISemaphoreProvider` |
 | `ISemaphoreProvider` / `ISemaphoreProvider<THandle>` | 信号量获取与释放契约 |
 | `ISynchronizationHandle` | 同步句柄：释放与句柄丢失监视（`HandleCancellationToken`） |
-| `Acquire` / `TryAcquire` / `AcquireAsync` / `TryAcquireAsync` | 工厂扩展方法 |
+| `Extensions` | 工厂级 `TryAcquire`/`Acquire`/`TryAcquireAsync`/`AcquireAsync` 重载 |
+| `TimeoutValue` | 支持“无限”的超时值（来自 `Nerosoft.Euonia.Threading`） |
 
-> 说明：包内只包含抽象与内部等待辅助（忙等待退避、租约监视），不注册任何服务；需要 `ILockFactory` / `ISemaphoreFactory` 时请引用对应提供程序包。
+## 选项（代码配置）
+
+抽象层本身不读取 `IConfiguration`，也没有 `*Options` 类型或配置节；行为参数在调用点或由具体提供程序包决定。
+
+| 参数 / 来源 | 默认值 | 说明 |
+|-------------|--------|------|
+| `Acquire` 的 `timeout` | `Timeout.InfiniteTimeSpan` | 超时抛 `TimeoutException` |
+| `TryAcquire` 的 `timeout` | `TimeSpan.Zero` | 非阻塞，失败返回 `null` |
+| `cancellationToken` | `default` | 取消等待并抛出 `OperationCanceledException` |
+| `ISemaphoreFactory.Create(name, maxCount)` | 无默认 | `maxCount` 为可同时授予的票据数 |
+| `TimeoutValue` 重载 | 无 | 支持无限等待且避免与 `TimeSpan` 重载混淆 |
+| 提供程序选项 | 各包不同 | Redis/Azure 的过期、续租、忙等待参数由对应包提供 |
+
+## 注意事项 / 限制
+
+- **抽象层不注册服务**：本包不包含 `IServiceCollection` 扩展；需要 `ILockFactory`/`ISemaphoreFactory` 时必须引用具体提供程序包并注册。
+- **并非所有实现都支持信号量**：文件系统与 Azure Blob 提供程序只实现锁（`ILockFactory`）；Redis 与 ZooKeeper 的工厂同时实现 `ILockFactory` 和 `ISemaphoreFactory`。
+- **句柄必须释放**：锁/票据通过释放句柄归还；进程崩溃时依赖实现自身的过期或句柄回收，恢复时间取决于提供程序的租约/过期配置。
+- **超时语义不同**：`Acquire` 超时抛异常，`TryAcquire` 超时返回 `null`；不要混用两者的错误处理。
+- **`HandleCancellationToken` 可能不可取消**：提供程序不支持句柄丢失监视时返回 `CancellationToken.None`，可用 `CanBeCanceled` 判断。
+- **取消只影响等待**：取消获取不会自动释放已获取的句柄，仍需 `await using` 或显式 `Dispose`。
 
 ## 相关包
 
-- [`Euonia.Concurrency.Redis`](../Euonia.Concurrency.Redis/README.md) —— Redis 实现
+- [`Euonia.Concurrency.Redis`](../Euonia.Concurrency.Redis/README.md) —— Redis 锁与信号量实现
 - [`Euonia.Concurrency.ZooKeeper`](../Euonia.Concurrency.ZooKeeper/README.md) —— ZooKeeper 实现
 - [`Euonia.Concurrency.FileSystem`](../Euonia.Concurrency.FileSystem/README.md) —— 文件系统实现
 - [`Euonia.Concurrency.Azure`](../Euonia.Concurrency.Azure/README.md) —— Azure Blob 租约实现

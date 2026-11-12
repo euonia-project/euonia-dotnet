@@ -2,8 +2,6 @@
 
 Euonia 总线的 Apache ActiveMQ 传输：基于 NMS 实现主题（Topic）发布/订阅、队列点对点发送，以及通过临时回复队列与关联 ID 完成请求-响应。支持持久连接与 Polly 重试。
 
-Apache ActiveMQ transport for Euonia Bus: topic-based publish/subscribe and queue-based point-to-point messaging over NMS, with request-response handled through temporary reply queues and correlation ids, plus persistent connections and Polly-based retries.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Bus.ActiveMq`
 - **NuGet 包**：`Euonia.Bus.ActiveMq`
@@ -29,8 +27,9 @@ dotnet add package Euonia.Bus.ActiveMq
 
 ```csharp
 using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.ActiveMq;
 
-services.AddActiveMqBus("activemq", options =>
+services.AddActiveMqBus("ActiveMq", options =>
 {
     options.Connection = "activemq:tcp://localhost:61616";
     options.SubscriptionId = "orders-service";
@@ -39,7 +38,7 @@ services.AddActiveMqBus("activemq", options =>
 
 services.Configure<MessageBusOptions>(options =>
 {
-    options.DefaultTransporter = "activemq";
+    options.DefaultTransporter = "ActiveMq";
 });
 ```
 
@@ -51,7 +50,7 @@ services.Configure<MessageBusOptions>(options =>
     "Bus": {
       "ActiveMq": {
         "Enabled": true,
-        "Name": "activemq",
+        "Name": "ActiveMq",
         "Connection": "activemq:tcp://localhost:61616",
         "SubscriptionId": "orders-service",
         "MaxFailureRetries": 3
@@ -61,11 +60,10 @@ services.Configure<MessageBusOptions>(options =>
 }
 ```
 
-发送消息时覆盖目标队列与优先级：
+发送消息时设置优先级：
 
 ```csharp
 await bus.Send(new CancelOrder { OrderId = 42 })
-    .WithQueue("orders.priority")
     .WithPriority(5)
     .ExecuteAsync();
 ```
@@ -77,20 +75,104 @@ await bus.Send(new CancelOrder { OrderId = 42 })
 | `Enabled` | `false` | 是否启用（配置节绑定模式） |
 | `Name` | `ActiveMq` | 传输器名称 |
 | `Connection` | `null` | ActiveMQ 连接字符串 |
-| `MaxFailureRetries` | `3` | 失败重试次数 |
-| `SubscriptionId` | `null` | 订阅标识，用于推导队列名 |
+| `MaxFailureRetries` | `3` | 连接级失败的重试次数（Polly，间隔 3 秒） |
+| `SubscriptionId` | `null` | 主题共享订阅名；为空时回退入口程序集简单名称，再回退 `DefaultSubscription` |
 | `SerializerProvider` | `SystemTestJson` | 序列化器名称，可设为 `NewtonsoftJson` |
+
+```bash
+Euonia__Bus__ActiveMq__Connection=activemq:tcp://localhost:61616   # .NET 原生：双下划线表示层级
+EUONIA_BUS_ACTIVEMQ_CONNECTION=activemq:tcp://localhost:61616        # 仓库 alias：大写单下划线
+Euonia__Bus__ActiveMq__Enabled=true
+EUONIA_BUS_ACTIVEMQ_ENABLED=true
+```
 
 ## 核心类型
 
 | 类型 | 作用 |
 |------|------|
-| `ActiveMqTransporter` | 完整传输实现 |
+| `ActiveMqTransporter` | 完整传输实现（`internal`，通过 `AddActiveMqBus` 注册） |
 | `ActiveMqBusOptions` | 传输配置 |
 | `ActiveMqConsumer` / `ActiveMqSubscriber` / `ActiveMqExecutor` | 单播、多播与请求接收者 |
 | `ActiveMqRecipientRegistrar` | 创建并释放接收者 |
 | `DefaultPersistentConnection` | 持久连接管理 |
 | `AddActiveMqBus(name, configure)` | 注册传输器与键控 `ITransporter` |
+
+## 使用示例
+
+模块化装配与手动装配二选一：
+
+```csharp
+using Nerosoft.Euonia.Bus;
+using Nerosoft.Euonia.Bus.ActiveMq;
+using Nerosoft.Euonia.Modularity;
+
+[DependsOn(typeof(MessageBusModule), typeof(ActiveMqBusModule))]
+public sealed class AppModule : ModuleContextBase
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddConfiguratorBuilder(config => config
+            .SetConvention(convention =>
+            {
+                convention.Add<DefaultMessageConvention>();
+                convention.Add<AnnotationMessageConvention>();
+            })
+            .SetStrategy("ActiveMq", strategy =>
+            {
+                strategy.Add<DistributedMessageTransportStrategy>();
+                strategy.EvaluateIncoming((_, _) => true);
+                strategy.EvaluateOutgoing((_, _) => true);
+            })
+            .RegisterChannel(typeof(AppModule).Assembly));
+    }
+}
+```
+
+```csharp
+services.AddActiveMqBus("ActiveMq", options =>
+{
+    options.Connection = "activemq:tcp://localhost:61616";
+    options.SubscriptionId = "orders-service";
+    options.MaxFailureRetries = 3;
+});
+services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "ActiveMq");
+services.AddConfiguratorBuilder(config => config
+    .SetConvention(convention => convention.Add<DefaultMessageConvention>())
+    .SetStrategy("ActiveMq", strategy =>
+    {
+        strategy.Add<DistributedMessageTransportStrategy>();
+        strategy.EvaluateIncoming((_, _) => true);
+        strategy.EvaluateOutgoing((_, _) => true);
+    })
+    .RegisterChannel(typeof(Program).Assembly));
+```
+
+发送时设置优先级：
+
+```csharp
+using Nerosoft.Euonia.Bus;
+
+[Unicast]
+public sealed class CancelOrder
+{
+    public long OrderId { get; init; }
+}
+
+await bus.Send(new CancelOrder { OrderId = 42 })
+    .WithPriority(5)
+    .ExecuteAsync(cancellationToken);
+```
+
+> ActiveMQ 的队列名默认就是通道名（`ActiveMqDelivery.ResolveQueueName`）；`WithQueue` 会完整替换它，但消费端仍按通道名监听，只有该队列上确有消费者时消息才会被处理。优先级收敛到 NMS 的 0-9，是否生效取决于 broker 的 per-destination policy。
+
+## 注意事项 / 限制
+
+1. **模块开关与手动注册不同**：`ActiveMqBusModule` 只在 `Enabled=true` 且 `Connection` 非空时注册（`Source/Euonia.Bus.ActiveMq/ActiveMqBusModule.cs:18-28`）；直接调用 `AddActiveMqBus` 时 `Enabled` 不参与判断。
+2. **`Connection` 必填**：传输器构造时用 `new NMSConnectionFactory(options.Connection!)` 创建连接工厂，为空会在解析时抛异常（`ServiceCollectionExtensions.cs:32-44`）。
+3. **队列名由通道直接决定**：与 RabbitMQ 不同，没有 `{prefix}:{channel}@{subscription}` 组合；`SubscriptionId` 只用于主题共享订阅。
+4. **请求-响应依赖临时回复队列**：每次调用都会创建并删除临时队列，broker 不可用或权限不足时调用会失败。
+5. **重试只覆盖连接级异常**：`SendAsync` 只重试 `SocketException`、`IOException`、`NMSConnectionException`；请求超时不重试，避免 broker 已接收消息导致重复投递。
+6. **发布使用持久投递**：`PublishAsync` 固定 `MsgDeliveryMode.Persistent`，无法通过选项关闭。
 
 ## 相关包
 

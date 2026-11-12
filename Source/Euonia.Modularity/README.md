@@ -2,8 +2,6 @@
 
 Euonia 的模块化与依赖注入基础设施：把应用拆分为可组合模块，按 `[DependsOn]` 拓扑加载，统一管理服务注册、自动注册、初始化与关闭生命周期，并提供请求上下文、懒加载服务提供者与命名服务解析。
 
-Modularity and dependency injection infrastructure for Euonia: compose an application from modules loaded in `[DependsOn]` topological order, with unified service registration, conventional auto-registration, initialization/shutdown lifecycle, plus request context, lazy service provider and named service resolution.
-
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Modularity`
 - **NuGet 包**：`Euonia.Modularity`
@@ -77,6 +75,37 @@ public sealed class OrderService(ILazyServiceProvider lazyProvider, IServiceAcce
     }
 }
 ```
+
+## 配置项
+
+`ConfigurationBuilderOptions` 是 `ConfigurationHelper.BuildConfiguration` 的选项对象（代码配置；模块化框架没有 `Euonia:Modularity` 之类的配置节）：
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `FileName` | `string` | `appsettings` | JSON 文件名（不含扩展名） |
+| `EnvironmentName` | `string?` | `null` | 环境名；未设置时读取 `DOTNET_ENVIRONMENT` / `ASPNETCORE_ENVIRONMENT` |
+| `BasePath` | `string?` | `null` | 配置文件基础路径；未设置时使用当前工作目录 |
+| `ReloadOnChange` | `bool` | `true` | 配置文件变更时是否重新加载 |
+| `UserSecretsId` / `UserSecretsAssembly` | `string?` / `Assembly?` | `null` | 仅 Development 环境加载用户机密；`UserSecretsId` 优先 |
+| `CommandLineArgs` | `string[]?` | `null` | 追加到配置的命令行参数 |
+| `EnvironmentVariablesPrefix` | `string?` | `null` | 环境变量前缀；同时作用于原生与自定义两种格式 |
+
+`ConnectionStrings` 是模块化配置中可用的标准节（连接串解析支持名称回退）：
+
+```json
+{
+  "ConnectionStrings": {
+    "Default": "Server=localhost;Database=euonia;User Id=sa;Password=change-me"
+  }
+}
+```
+
+```bash
+ConnectionStrings__Default="Server=localhost;Database=euonia;User Id=sa;Password=change-me"
+CONNECTION_STRING_DEFAULT="Server=localhost;Database=euonia;User Id=sa;Password=change-me"
+```
+
+两种写法都映射到 `ConnectionStrings:Default`；第二种是模块化框架的别名规则。环境变量源的完整优先级、前缀陷阱与数组索引写法见下一节。
 
 ## 配置与环境变量
 
@@ -213,6 +242,58 @@ var effectiveAlias = ConfigurationHelper.EnsureEnvironmentVariables(hostConfigur
 | `DisableAutomaticRegistrationAttribute` | 跳过约定式自动注册 |
 | `ILazyServiceProvider` | 懒加载服务解析 |
 | `IServiceAccessor` / `IRequestContextAccessor` / `IObjectAccessor<T>` | 全局与请求级访问器 |
+
+## 使用示例
+
+模块内注册命名服务，并在运行时按名称解析：
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Modularity;
+
+public sealed class SalesModule : ModuleContextBase
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddScoped<IOrderService, OrderService>("primary");
+
+        context.Services.AddNamedService<IPricingService>((name, provider) => name switch
+        {
+            "retail" => provider.GetRequiredService<RetailPricingService>(),
+            _ => provider.GetRequiredService<WholesalePricingService>()
+        });
+    }
+}
+```
+
+```csharp
+var orderService = serviceProvider.GetNamedService<IOrderService>("primary");
+var required = serviceProvider.GetNamedRequiredService<IOrderService>("primary");
+```
+
+也可以让约定式自动注册处理导出：
+
+```csharp
+using Microsoft.Extensions.DependencyInjection;
+using Nerosoft.Euonia.Modularity;
+
+[ExportService(ServiceLifetime.Scoped, typeof(IOrderService))]
+public sealed class OrderService : IOrderService
+{
+}
+```
+
+模块的 `AutomaticRegisterService` 默认为 `true`；加载器会按 `[ExportService]`、`[ExposeServices]` 与约定注册该类型。需要跳过约定扫描时使用 `[DisableAutomaticRegistration]`，显式 `services.AddXxx` 不受影响。
+
+## 注意事项 / 限制
+
+- `[DependsOn]` 声明的是模块依赖图；同一模块类型只加载一次，循环依赖或无法构造的模块会在创建应用时失败。模块类型必须是实现 `IModuleContext` 的类。
+- `AddModularityApplication<T>` / `ApplicationFactory.Create<T>` 只完成模块加载与服务注册；必须再调用返回实例的 `Initialize(serviceProvider)`（ASP.NET Core 中由 `app.InitializeApplication()` 完成）才会执行 `OnApplicationInitialization`。
+- 约定式自动注册仅在模块的 `AutomaticRegisterService` 为 `true` 时执行；`[DisableAutomaticRegistration]` 只影响约定注册，不会移除已显式注册的服务。
+- 命名服务的名称不能为空；同一服务类型下重复注册同名实现会抛出 `InvalidOperationException`，`GetNamedService<T>(name)` 在名称不存在时返回 `null`，需要失败语义时用 `GetNamedRequiredService<T>(name)`。
+- 环境变量源位于配置末尾，原生 `__` 格式优先于自定义大写单下划线格式；前缀会在映射前剥离，把前缀设为 `EUONIA_` 会让 `EUONIA_BUS_ENABLED` 变成 `BUS:ENABLED`，需要 `Euonia:*` 键时应使用独立前缀或不设前缀。
+- `ModuleContextBase.ConfigurationContext`（以及 `Services`、`Configure<T>`）只在模块执行服务配置期间可用；在 `ConfigureServices` 之外访问会抛出 `InvalidOperationException`。
+- 对普通 `IConfigurationRoot` 调用 `ConfigurationHelper.EnsureEnvironmentVariables` 返回的是新的分层视图，不保证与宿主配置引用相等；`ConfigurationManager` 路径才会就地修改同一实例。
 
 ## 相关包
 

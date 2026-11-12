@@ -2,12 +2,12 @@
 
 基于 `protobuf-net.Grpc` 的 code-first gRPC 运行时，把 `Euonia.Endpoint` 标记的接口方法暴露为 gRPC 服务。
 
-## 目标框架
+## 目标框架与元信息
 
-- `net10.0`
-- `net11.0`
-
-依赖 `protobuf-net.Grpc` 1.3.14。
+- **目标框架**：`net10.0`、`net11.0`（依赖 ASP.NET Core 共享框架）
+- **根命名空间**：`Nerosoft.Euonia.Endpoint.Grpc`（`AddDynamicGrpcEndpoint` 位于 `Microsoft.Extensions.DependencyInjection`，`MapDynamicGrpcEndpoint` 位于 `Microsoft.AspNetCore.Builder`）
+- **NuGet 包**：`Euonia.Endpoint.Grpc`
+- **主要依赖**：`protobuf-net` 3.4.40、`protobuf-net.Grpc` / `protobuf-net.Grpc.AspNetCore` / `protobuf-net.Grpc.Reflection` 1.3.14、`Grpc.AspNetCore.Server.Reflection`
 
 ## 工作方式
 
@@ -29,7 +29,9 @@ dotnet add package Euonia.Endpoint.Grpc
 dotnet add package Euonia.Endpoint.SourceGenerator
 ```
 
-## 注册
+## 快速开始
+
+注册与映射的最小路径：
 
 ```csharp
 builder.Services.AddDynamicGrpcEndpoint(builder.Configuration);
@@ -90,7 +92,22 @@ app.UseEndpoints(endpoints =>
 });
 ```
 
-## 选项
+## 核心类型
+
+| 类型 | 作用 |
+|---|---|
+| `GrpcExposureOptions` | 配置节 `Euonia:Endpoint:Grpc` 的选项（见 [配置项](#配置项)） |
+| `GrpcMetadataRegistry` | 方法级授权元数据：`Build(assemblies)` / `GetServiceMetadata` / `GetMethodMetadata` |
+| `GrpcMethodAuthorizationInterceptor` | 内置拦截器，在调用前执行方法级授权 |
+| `GrpcMethodAuthorizationDescriptor` | 方法级授权描述符：`MethodPath` / `ServiceType` / `MethodName` |
+| `GrpcGeneratedMappingAttribute` | 程序集级标记，指向生成的 `GrpcMappings` 类型 |
+| `EndpointProtoExporter` | `Export(assembly, outputDirectory)` 导出 `.proto` |
+| `EndpointProtoModel` | protobuf 模型配置：`Configure()`，注册时自动调用 |
+| `EndpointRouteBuilderExtensions` / `ServiceCollectionExtensions` | `MapDynamicGrpcEndpoint()` / `AddDynamicGrpcEndpoint(...)` |
+
+## 配置项
+
+选项类型：`GrpcExposureOptions`，配置节：`Euonia:Endpoint:Grpc`（`GrpcExposureOptions.SectionName`）。
 
 | 选项 | 默认值 | 说明 |
 |---|---|---|
@@ -100,6 +117,18 @@ app.UseEndpoints(endpoints =>
 | `ThrowOnUnregisteredService` | `true` | 生成契约对应的应用服务未注册时抛异常；`false` 时跳过 |
 | `ScanAssemblies` | 空 | 要扫描的程序集名称；配置后不再回退入口程序集 |
 | `ScanEntryAssembly` | `true` | 未配置 `ScanAssemblies` 时是否扫描入口程序集 |
+
+环境变量（两种写法等价，原生格式优先）：
+
+```bash
+Euonia__Endpoint__Grpc__EnableExposeApplicationServiceAsGrpc=true     # .NET 原生：双下划线表示层级
+EUONIA_ENDPOINT_GRPC_ENABLEEXPOSEAPPLICATIONSERVICEASGRPC=true        # 仓库 alias：大写单下划线（Euonia.Modularity）
+
+Euonia__Endpoint__Grpc__EnableReflection=true
+EUONIA_ENDPOINT_GRPC_ENABLEREFLECTION=true
+```
+
+alias 格式的每一段下划线都对应一个层级，段内不拆词；含 `__` 的变量只按原生格式处理。
 
 ## 特性
 
@@ -283,12 +312,20 @@ builder.Services.AddDynamicGrpcEndpoint(
 
 注意：Source Generator 只处理**当前编译**中的接口。gRPC **没有运行时兜底**；插件程序集如果包含 `[ExposeGrpc]` 接口，插件项目本身必须引用 `Euonia.Endpoint.SourceGenerator`。未生成映射的程序集会在 `MapDynamicGrpcEndpoint` 记录 Warning。
 
-## 限制
+## 注意事项 / 限制
 
 - 未注册服务默认在映射阶段失败，适合快速暴露配置错误；
 - 共享契约类型尚未接入自动 wire-DTO 映射；
 - 生成器不处理带 `CallContext` 参数的方法（会跳过）；
 - 生成器只处理接口方法，不扫描实现类方法。
+
+其它边界：
+
+- `EnableExposeApplicationServiceAsGrpc` 默认 `false`：关闭时既不执行生成的 `AddGenerated` 注册，也不映射服务，且不会报错。
+- gRPC **没有运行时兜底**：插件或独立程序集里的 `[ExposeGrpc]` 接口必须由该程序集自己引用 `Euonia.Endpoint.SourceGenerator`，否则 `MapDynamicGrpcEndpoint` 只会记录 Warning。
+- `RequireAuthorization` 默认 `true`，由 `GrpcMethodAuthorizationInterceptor` 执行；未配置认证方案时调用会返回 `PermissionDenied`。
+- `Prefix` / `Route` 推导出的服务名在同一程序集内必须唯一，重复时报告 `EUONIA002` 并跳过后续契约。
+- 导出的 proto 使用 protobuf-net 内建 BCL schema，`Guid` / `DateTime` / `TimeSpan` 等还不是标准 `google.protobuf.*` wire 类型。
 
 ## 完整示例
 
@@ -331,8 +368,13 @@ app.MapDynamicGrpcEndpoint();
 app.Run();
 ```
 
-## 相关文档
+## 相关包
 
-- [Euonia.Endpoint](../Euonia.Endpoint/README.md)
-- [Euonia.Endpoint.Http](../Euonia.Endpoint.Http/README.md)
-- [Euonia.Endpoint.SourceGenerator](../Euonia.Endpoint.SourceGenerator/README.md)
+- [`Euonia.Endpoint`](../Euonia.Endpoint/README.md) —— 暴露特性与共享契约
+- [`Euonia.Endpoint.Http`](../Euonia.Endpoint.Http/README.md) —— HTTP 侧运行时
+- [`Euonia.Endpoint.SourceGenerator`](../Euonia.Endpoint.SourceGenerator/README.md) —— 生成 gRPC 契约、适配器与注册标记
+- [`Euonia.Core`](../Euonia.Core/README.md) —— 基础类型与扩展方法
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。
