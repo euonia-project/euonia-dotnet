@@ -64,11 +64,20 @@ internal sealed class AuditingMiddleware
 			try
 			{
 				FillRecord(scope, context, requestContextAccessor, error);
+			}
+			catch (Exception exception)
+			{
+				// 回填失败只记录日志，不能阻断后续提交，否则整条审计记录会静默丢失。
+				logger.LogError(exception, "Failed to fill auditing scope {ScopeId}.", scope.ScopeId);
+			}
+
+			try
+			{
 				await scope.CompleteAsync(CancellationToken.None);
 			}
 			catch (Exception exception)
 			{
-				// 审计失败开放：回填或提交失败只记录日志，不能覆盖原始业务异常。
+				// 审计失败开放：提交失败只记录日志，不能覆盖原始业务异常。
 				logger.LogError(exception, "Failed to complete auditing scope {ScopeId}.", scope.ScopeId);
 			}
 			finally
@@ -84,7 +93,12 @@ internal sealed class AuditingMiddleware
 	{
 		var record = scope.Record;
 		record.HttpStatusCode = context.Response.StatusCode;
-		record.IsSuccess = error == null && context.Response.StatusCode < 400;
+
+		// 记录上的显式失败（如 AbortAsync）与失败动作优先于 HTTP 状态，避免“返回 200 即成功”的假成功。
+		// 动作列表由作用域后台封口，必须在 AuditingScope 的锁内取快照判定，不能直接枚举。
+		var hasFailure = record.IsSuccess == false
+		                 || (scope is AuditingScope auditingScope && auditingScope.HasFailedActions());
+		record.IsSuccess = hasFailure ? false : error == null && context.Response.StatusCode < 400;
 
 		if (context.Items.TryGetValue(TenantHttpKeys.Context, out var value) && value is TenantContext tenant)
 		{

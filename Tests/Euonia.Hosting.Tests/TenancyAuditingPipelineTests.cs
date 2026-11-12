@@ -148,6 +148,61 @@ public class TenancyAuditingPipelineTests
 	}
 
 	/// <summary>
+	/// 在显式放行后才对记录做快照的存储：让“响应返回后中间件已完成回填”成为确定时序。
+	/// </summary>
+	private sealed class GatedSnapshotStore : IAuditingStore
+	{
+		private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		private readonly List<AuditingRecord> _records = [];
+		private readonly object _sync = new();
+
+		public IReadOnlyList<AuditingRecord> Records
+		{
+			get
+			{
+				lock (_sync)
+				{
+					return _records.ToArray();
+				}
+			}
+		}
+
+		public void Release()
+		{
+			_gate.TrySetResult();
+		}
+
+		public async Task SaveAsync(AuditingRecord record, CancellationToken cancellationToken = default)
+		{
+			await _gate.Task.WaitAsync(cancellationToken);
+			Snapshot(record);
+		}
+
+		public async Task SaveManyAsync(IReadOnlyCollection<AuditingRecord> records, CancellationToken cancellationToken = default)
+		{
+			await _gate.Task.WaitAsync(cancellationToken);
+			foreach (var record in records)
+			{
+				Snapshot(record);
+			}
+		}
+
+		private void Snapshot(AuditingRecord record)
+		{
+			lock (_sync)
+			{
+				_records.Add(new AuditingRecord
+				{
+					ScopeId = record.ScopeId,
+					IsSuccess = record.IsSuccess,
+					HttpStatusCode = record.HttpStatusCode,
+					Url = record.Url,
+				});
+			}
+		}
+	}
+
+	/// <summary>
 	/// 未知租户：返回 404，审计记录带 tenant.failure。
 	/// </summary>
 	[Fact]
@@ -249,6 +304,106 @@ public class TenancyAuditingPipelineTests
 		Assert.Equal("t1", record.TenantId);
 		Assert.Equal(200, record.HttpStatusCode);
 		Assert.Equal("/orders", record.Url);
+		Assert.True(record.IsSuccess);
+
+		await app.StopAsync(TestContext.Current.CancellationToken);
+	}
+
+	/// <summary>
+	/// 端点内 AbortAsync 后即使返回 200，落库记录仍为失败。
+	/// </summary>
+	[Fact]
+	public async Task AuditScope_AbortInEndpoint_ShouldRemainFailureOnHttp200()
+	{
+		var builder = WebApplication.CreateBuilder();
+		builder.WebHost.UseTestServer();
+		builder.Services.AddOptions();
+		builder.Services.AddLogging();
+		builder.Services.AddScoped<DefaultRequestContextAccessor>();
+		builder.Services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
+		builder.Services.AddTenancyAspNetCore(options =>
+		{
+			options.Enabled = true;
+			options.RequireTenant = false;
+		});
+		builder.Services.AddInMemoryTenantStore([]);
+		builder.Services.AddAuditing(options => options.Enabled = true);
+
+		// 存储在响应结束、中间件完成回填后才快照记录：修复前 FillRecord 会把 200 覆盖成成功，用例必然失败；
+		// 修复后显式失败优先，快照必须保持 IsSuccess=false，不依赖 2s 批窗口的时序。
+		var store = new GatedSnapshotStore();
+		builder.Services.AddSingleton<IAuditingStore>(store);
+
+		var app = builder.Build();
+		app.UseExecutionContext();
+		app.UseAuditing();
+		app.UseTenancy();
+		app.MapGet("/orders", async (IAuditingRecorder recorder) =>
+		{
+			await recorder.CurrentScope!.AbortAsync(new InvalidOperationException("boom"));
+			return Results.Ok();
+		});
+
+		await app.StartAsync(TestContext.Current.CancellationToken);
+		using var client = app.GetTestClient();
+		using var response = await client.GetAsync("/orders", TestContext.Current.CancellationToken);
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+		store.Release();
+
+		var auditor = app.Services.GetRequiredService<IAuditingRecorder>();
+		await auditor.FlushAsync(TestContext.Current.CancellationToken);
+
+		var record = Assert.Single(store.Records);
+		Assert.False(record.IsSuccess);
+		Assert.Equal(200, record.HttpStatusCode);
+
+		await app.StopAsync(TestContext.Current.CancellationToken);
+	}
+
+	/// <summary>
+	/// 端点内失败动作后即使返回 200，落库记录仍为失败。
+	/// </summary>
+	[Fact]
+	public async Task AuditScope_ActionFailureInEndpoint_ShouldRemainFailureOnHttp200()
+	{
+		var builder = WebApplication.CreateBuilder();
+		builder.WebHost.UseTestServer();
+		builder.Services.AddOptions();
+		builder.Services.AddLogging();
+		builder.Services.AddScoped<DefaultRequestContextAccessor>();
+		builder.Services.TryAddScoped<IRequestContextAccessor, RequestContextAccessor>();
+		builder.Services.AddTenancyAspNetCore(options =>
+		{
+			options.Enabled = true;
+			options.RequireTenant = false;
+		});
+		builder.Services.AddInMemoryTenantStore([]);
+		builder.Services.AddAuditing(options => options.Enabled = true);
+		builder.Services.AddInMemoryAuditingStore();
+
+		var app = builder.Build();
+		app.UseExecutionContext();
+		app.UseAuditing();
+		app.UseTenancy();
+		app.MapGet("/orders", (IAuditingRecorder recorder) =>
+		{
+			recorder.CurrentScope!.BeginAction("Orders", "Create").Fail(new InvalidOperationException("boom"));
+			return Results.Ok();
+		});
+
+		await app.StartAsync(TestContext.Current.CancellationToken);
+		using var client = app.GetTestClient();
+		using var response = await client.GetAsync("/orders", TestContext.Current.CancellationToken);
+		Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+		var auditor = app.Services.GetRequiredService<IAuditingRecorder>();
+		await auditor.FlushAsync(TestContext.Current.CancellationToken);
+
+		var store = app.Services.GetRequiredService<InMemoryAuditingStore>();
+		var record = Assert.Single(store.Records);
+		Assert.False(record.IsSuccess);
+		Assert.Equal(200, record.HttpStatusCode);
 
 		await app.StopAsync(TestContext.Current.CancellationToken);
 	}

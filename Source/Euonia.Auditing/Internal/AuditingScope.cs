@@ -91,6 +91,18 @@ internal sealed class AuditingScope : IAuditingScope
 		return action;
 	}
 
+	/// <summary>
+	/// 在与动作封口相同的锁内判定是否存在失败动作，供 HTTP 审计回填安全使用。
+	/// </summary>
+	/// <returns>存在 <see cref="AuditingAction.IsSuccess"/> 为 <c>false</c> 的动作时返回 <c>true</c>。</returns>
+	internal bool HasFailedActions()
+	{
+		lock (_sync)
+		{
+			return Record.Actions.Any(action => action.IsSuccess == false);
+		}
+	}
+
 	private static string Truncate(string value, int maxLength)
 	{
 		if (maxLength <= 0)

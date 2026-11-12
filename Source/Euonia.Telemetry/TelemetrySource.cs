@@ -8,13 +8,14 @@ namespace Nerosoft.Euonia.Telemetry;
 /// 组件的遥测入口：集中持有 <see cref="ActivitySource"/> 与 <see cref="Meter"/>，并缓存指标实例。
 /// </summary>
 /// <remarks>
-/// 无监听者或关闭时所有方法空操作；异常一律吞掉，绝不改变业务控制流。
+/// 无监听者或关闭时所有方法空操作；除 <see cref="Counter"/> / <see cref="Histogram"/> 同名元数据冲突抛出
+/// <see cref="InvalidOperationException"/> 外，其余遥测异常一律吞掉，不改变业务控制流。
 /// 标签在写入前经过 <see cref="ITelemetryRedactor"/>，Activity 创建后执行 <see cref="ITelemetryEnricher"/>。
 /// </remarks>
 public sealed class TelemetrySource : IDisposable
 {
-	private readonly ConcurrentDictionary<string, Counter<long>> _counters = new(StringComparer.Ordinal);
-	private readonly ConcurrentDictionary<string, Histogram<double>> _histograms = new(StringComparer.Ordinal);
+	private readonly ConcurrentDictionary<string, MetricEntry<Counter<long>>> _counters = new(StringComparer.Ordinal);
+	private readonly ConcurrentDictionary<string, MetricEntry<Histogram<double>>> _histograms = new(StringComparer.Ordinal);
 	private readonly ITelemetryRedactor? _redactor;
 	private readonly IReadOnlyList<ITelemetryEnricher> _enrichers;
 	private readonly ITelemetryContextProvider? _contextProvider;
@@ -165,7 +166,11 @@ public sealed class TelemetrySource : IDisposable
 			return FallbackCounter;
 		}
 
-		return _counters.GetOrAdd(name, key => Meter.CreateCounter<long>(key, unit, description));
+		// 先取已有条目再决定是否创建指标：元数据冲突时绝不向 Meter 注册第二个同名 instrument。
+		var entry = _counters.GetOrAdd(
+			name,
+			key => new MetricEntry<Counter<long>>(unit, description, () => Meter.CreateCounter<long>(key, unit, description)));
+		return entry.Resolve(name, unit, description);
 	}
 
 	/// <summary>
@@ -182,7 +187,10 @@ public sealed class TelemetrySource : IDisposable
 			return FallbackHistogram;
 		}
 
-		return _histograms.GetOrAdd(name, key => Meter.CreateHistogram<double>(key, unit, description));
+		var entry = _histograms.GetOrAdd(
+			name,
+			key => new MetricEntry<Histogram<double>>(unit, description, () => Meter.CreateHistogram<double>(key, unit, description)));
+		return entry.Resolve(name, unit, description);
 	}
 
 	private KeyValuePair<string, object?>[]? ApplyRedaction(IEnumerable<KeyValuePair<string, object?>>? tags)
@@ -196,6 +204,49 @@ public sealed class TelemetrySource : IDisposable
 			             tag.Key,
 			             _redactor?.Redact(tag.Key, tag.Value) ?? tag.Value))
 		           .ToArray();
+	}
+
+	/// <summary>
+	/// 指标缓存条目：同时保存创建时的元数据，用于检测同名但定义不同的指标。
+	/// </summary>
+	/// <typeparam name="T">指标实例类型。</typeparam>
+	private sealed class MetricEntry<T>
+		where T : Instrument
+	{
+		private readonly string? _unit;
+		private readonly string? _description;
+		private readonly Lazy<T> _instrument;
+
+		public MetricEntry(string? unit, string? description, Func<T> instrumentFactory)
+		{
+			_unit = unit;
+			_description = description;
+
+			// 延迟创建：并发 GetOrAdd 落败的条目会在校验元数据前抛出，不能提前向 Meter 注册指标。
+			_instrument = new Lazy<T>(instrumentFactory, LazyThreadSafetyMode.ExecutionAndPublication);
+		}
+
+		public T Resolve(string name, string? unit, string? description)
+		{
+			var conflicts = new List<string>(2);
+			if (!string.Equals(_unit, unit, StringComparison.Ordinal))
+			{
+				conflicts.Add($"unit '{_unit ?? "<null>"}' != '{unit ?? "<null>"}'");
+			}
+
+			if (!string.Equals(_description, description, StringComparison.Ordinal))
+			{
+				conflicts.Add($"description '{_description ?? "<null>"}' != '{description ?? "<null>"}'");
+			}
+
+			if (conflicts.Count > 0)
+			{
+				// 同名指标的元数据冲突会让埋点失真，必须显式暴露而不是静默复用。
+				throw new InvalidOperationException($"Metric '{name}' was already defined with different metadata: {string.Join(", ", conflicts)}.");
+			}
+
+			return _instrument.Value;
+		}
 	}
 
 	/// <inheritdoc />

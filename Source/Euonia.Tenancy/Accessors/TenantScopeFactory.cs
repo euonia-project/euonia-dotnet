@@ -77,6 +77,12 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 		TenantIdValidator.Validate(actorTenantId);
 		TenantIdValidator.Validate(targetTenantId);
 
+		// 四参数入口同样可能表达跨租户语义（消息信封），必须走宿主授权策略；同租户无需授权。
+		if (!string.Equals(actorTenantId, targetTenantId, StringComparison.Ordinal))
+		{
+			EnsureCrossTenantAuthorized(targetTenantId);
+		}
+
 		return new Scope(AmbientExecutionContext.Push(context =>
 		{
 			Apply(context, tenant);
@@ -98,13 +104,7 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 			TenantIdValidator.Validate(targetTenantId);
 		}
 
-		var options = _options?.CurrentValue ?? _staticOptions;
-		var authorized = options?.CrossTenantScopeAuthorizer?.Invoke(targetTenantId) == true
-		                 || (targetTenantId == null && options?.AllowSystemCrossTenant == true);
-		if (!authorized)
-		{
-			throw new UnauthorizedAccessException("Cross-tenant scope is not authorized by the host policy.");
-		}
+		EnsureCrossTenantAuthorized(targetTenantId);
 
 		return new Scope(AmbientExecutionContext.Push(context =>
 		{
@@ -115,6 +115,21 @@ public sealed class TenantScopeFactory : ITenantScopeFactory
 			context.CrossTenantReason = reason;
 			context.Items.Remove(TenantContextKeys.Info);
 		}));
+	}
+
+	/// <summary>
+	/// 按宿主策略校验跨租户访问；未授权时抛出 <see cref="UnauthorizedAccessException"/>。
+	/// </summary>
+	/// <param name="targetTenantId">目标租户；为 <c>null</c> 时表示系统级全租户作用域。</param>
+	private void EnsureCrossTenantAuthorized(string? targetTenantId)
+	{
+		var options = _options?.CurrentValue ?? _staticOptions;
+		var authorized = options?.CrossTenantScopeAuthorizer?.Invoke(targetTenantId) == true
+		                 || (targetTenantId == null && options?.AllowSystemCrossTenant == true);
+		if (!authorized)
+		{
+			throw new UnauthorizedAccessException("Cross-tenant scope is not authorized by the host policy.");
+		}
 	}
 
 	private static void Apply(ExecutionContextValues context, ITenantInfo tenant)

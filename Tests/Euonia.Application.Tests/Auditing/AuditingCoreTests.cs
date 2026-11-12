@@ -411,6 +411,48 @@ public class AuditingCoreTests
 		Assert.Equal(1, storeB.RecordCount);
 	}
 
+	/// <summary>
+	/// 路由对单条记录抛异常时只隔离该条，其余记录仍落库、spool 保留失败条目且 Flush 不挂起。
+	/// </summary>
+	[Fact]
+	public async Task Writer_ShouldIsolateRoutingFailure()
+	{
+		var goodStore = new RecordingStore();
+		var spool = new RecordingSpool();
+		var services = new ServiceCollection();
+		services.AddSingleton<IAuditingStoreRouter>(new ThrowingTenantRouter(goodStore));
+		await using var provider = services.BuildServiceProvider();
+
+		await using var writer = new AuditingWriter(
+			provider,
+			Microsoft.Extensions.Options.Options.Create(new AuditingOptions { Enabled = true, BatchSize = 10 }),
+			null,
+			spool);
+
+		await writer.WriteAsync(RoutedRecord("bad:1", "bad"), TestContext.Current.CancellationToken);
+		await writer.WriteAsync(RoutedRecord("good:1", "good"), TestContext.Current.CancellationToken);
+
+		await writer.StartAsync(TestContext.Current.CancellationToken);
+		using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+		await writer.FlushAsync(timeout.Token);
+
+		Assert.Equal(1, goodStore.RecordCount);
+		var saved = Assert.Single(goodStore.Records);
+		Assert.Equal("good", saved.TenantId);
+		Assert.DoesNotContain(goodStore.Records, record => record.TenantId == "bad");
+
+		// 路由失败的 bad 记录保留 spool 供重放；已落库的 good 记录必须清理 spool。
+		Assert.Contains("spool:bad:1", spool.PendingKeys);
+		Assert.DoesNotContain("spool:bad:1", spool.DeletedKeys);
+		Assert.Contains("spool:good:1", spool.DeletedKeys);
+		Assert.DoesNotContain("spool:good:1", spool.PendingKeys);
+
+		// 单条隔离不能拖死消费循环：后续记录仍应正常落库。
+		await writer.WriteAsync(RoutedRecord("good:2", "good"), TestContext.Current.CancellationToken);
+		await writer.FlushAsync(timeout.Token);
+		Assert.Equal(2, goodStore.RecordCount);
+	}
+
 	private static AuditingRecord RoutedRecord(string scopeId, string tenantId)
 	{
 		return new AuditingRecord
@@ -438,6 +480,26 @@ public class AuditingCoreTests
 		public IAuditingStore? GetStore(AuditingRecord record)
 		{
 			return record.TenantId == "a" ? _a : _b;
+		}
+	}
+
+	private sealed class ThrowingTenantRouter : IAuditingStoreRouter
+	{
+		private readonly IAuditingStore _store;
+
+		public ThrowingTenantRouter(IAuditingStore store)
+		{
+			_store = store;
+		}
+
+		public IAuditingStore? GetStore(AuditingRecord record)
+		{
+			if (record.TenantId == "bad")
+			{
+				throw new InvalidOperationException("routing failed");
+			}
+
+			return _store;
 		}
 	}
 
@@ -751,10 +813,13 @@ public class AuditingCoreTests
 
 		public int RecordCount { get; private set; }
 
+		public List<AuditingRecord> Records { get; } = [];
+
 		public Task SaveAsync(AuditingRecord record, CancellationToken cancellationToken = default)
 		{
 			SaveCalls++;
 			RecordCount++;
+			Records.Add(record);
 			return Task.CompletedTask;
 		}
 
@@ -762,7 +827,68 @@ public class AuditingCoreTests
 		{
 			SaveManyCalls++;
 			RecordCount += records.Count;
+			Records.AddRange(records);
 			return Task.CompletedTask;
+		}
+	}
+
+	private sealed class RecordingSpool : IAuditingSpool
+	{
+		private readonly object _sync = new();
+		private readonly Dictionary<string, AuditingRecord> _pending = new(StringComparer.Ordinal);
+		private readonly HashSet<string> _deleted = new(StringComparer.Ordinal);
+
+		public IReadOnlyCollection<string> PendingKeys
+		{
+			get
+			{
+				lock (_sync)
+				{
+					return _pending.Keys.ToArray();
+				}
+			}
+		}
+
+		public IReadOnlyCollection<string> DeletedKeys
+		{
+			get
+			{
+				lock (_sync)
+				{
+					return _deleted.ToArray();
+				}
+			}
+		}
+
+		public ValueTask<string> PersistAsync(AuditingRecord record, CancellationToken cancellationToken = default)
+		{
+			ArgumentNullException.ThrowIfNull(record);
+
+			var key = $"spool:{record.ScopeId}";
+			lock (_sync)
+			{
+				_pending[key] = record;
+			}
+
+			return ValueTask.FromResult(key);
+		}
+
+		public ValueTask DeleteAsync(string key, CancellationToken cancellationToken = default)
+		{
+			ArgumentNullException.ThrowIfNull(key);
+
+			lock (_sync)
+			{
+				_pending.Remove(key);
+				_deleted.Add(key);
+			}
+
+			return ValueTask.CompletedTask;
+		}
+
+		public ValueTask<IReadOnlyList<KeyValuePair<string, AuditingRecord>>> LoadPendingAsync(CancellationToken cancellationToken = default)
+		{
+			return ValueTask.FromResult<IReadOnlyList<KeyValuePair<string, AuditingRecord>>>([]);
 		}
 	}
 

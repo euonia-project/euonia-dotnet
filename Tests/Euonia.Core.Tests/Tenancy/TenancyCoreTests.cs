@@ -116,6 +116,70 @@ public class TenancyCoreTests
 	}
 
 	/// <summary>
+	/// 四参数 Begin 在未配置授权回调时拒绝跨租户作用域。
+	/// </summary>
+	[Fact]
+	public void TenantScopeFactory_BeginWithActorAndTarget_ShouldRejectUnauthorizedCrossTenant()
+	{
+		AmbientExecutionContext.Reset();
+		var factory = new TenantScopeFactory(new MultiTenancyOptions());
+
+		Assert.Throws<UnauthorizedAccessException>(() => factory.Begin(NewTenant("b"), "a", "b", "support"));
+
+		AmbientExecutionContext.Reset();
+	}
+
+	/// <summary>
+	/// 四参数 Begin 经宿主授权后安装跨租户作用域，操作人、目标与原因均正确。
+	/// </summary>
+	[Fact]
+	public void TenantScopeFactory_BeginWithActorAndTarget_ShouldAuthorizeCrossTenant()
+	{
+		AmbientExecutionContext.Reset();
+		var factory = new TenantScopeFactory(new MultiTenancyOptions { CrossTenantScopeAuthorizer = _ => true });
+
+		using (var scope = factory.Begin(NewTenant("b"), "a", "b", "support"))
+		{
+			Assert.Equal("a", AmbientExecutionContext.Current!.ActorTenantId);
+			Assert.Equal("b", AmbientExecutionContext.Current!.TargetTenantId);
+			Assert.True(AmbientExecutionContext.Current!.IsCrossTenant);
+			Assert.Equal("support", AmbientExecutionContext.Current!.CrossTenantReason);
+
+			Assert.Equal("a", scope.Context.ActorTenantId);
+			Assert.Equal("b", scope.Context.TargetTenantId);
+			Assert.True(scope.Context.IsCrossTenant);
+			Assert.Equal("support", scope.Context.CrossTenantReason);
+		}
+
+		Assert.Null(AmbientExecutionContext.Current);
+	}
+
+	/// <summary>
+	/// 四参数 Begin 在 actor 与 target 相同时无需授权，也不标记为跨租户。
+	/// </summary>
+	[Fact]
+	public void TenantScopeFactory_BeginWithSameActorAndTarget_ShouldNotRequireAuthorization()
+	{
+		AmbientExecutionContext.Reset();
+		var factory = new TenantScopeFactory(new MultiTenancyOptions());
+
+		using (var scope = factory.Begin(NewTenant("a"), "a", "a", "support"))
+		{
+			Assert.Equal("a", AmbientExecutionContext.Current!.ActorTenantId);
+			Assert.Equal("a", AmbientExecutionContext.Current!.TargetTenantId);
+			Assert.False(AmbientExecutionContext.Current!.IsCrossTenant);
+			Assert.Null(AmbientExecutionContext.Current!.CrossTenantReason);
+
+			Assert.Equal("a", scope.Context.ActorTenantId);
+			Assert.Equal("a", scope.Context.TargetTenantId);
+			Assert.False(scope.Context.IsCrossTenant);
+			Assert.Null(scope.Context.CrossTenantReason);
+		}
+
+		Assert.Null(AmbientExecutionContext.Current);
+	}
+
+	/// <summary>
 	/// 同一作用域内切换到另一个租户应被拒绝。
 	/// </summary>
 	[Fact]

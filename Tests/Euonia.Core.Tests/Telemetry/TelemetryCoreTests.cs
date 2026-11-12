@@ -223,6 +223,40 @@ public class TelemetryCoreTests
 		Assert.False(disabled.IsMetricEnabled);
 	}
 
+	/// <summary>
+	/// 同名且 unit/description 相同的计数器与直方图复用同一实例。
+	/// </summary>
+	[Fact]
+	public void Metric_WithSameMetadata_ShouldReturnSameInstance()
+	{
+		using var source = new TelemetrySource("test-metric-same-metadata");
+
+		var counter = source.Counter("orders.created", "count", "Created orders");
+		var sameCounter = source.Counter("orders.created", "count", "Created orders");
+		Assert.Same(counter, sameCounter);
+
+		var histogram = source.Histogram("orders.duration", "ms", "Order duration");
+		var sameHistogram = source.Histogram("orders.duration", "ms", "Order duration");
+		Assert.Same(histogram, sameHistogram);
+	}
+
+	/// <summary>
+	/// 同名但 unit 或 description 不同时显式抛出冲突，避免静默复用错误元数据。
+	/// </summary>
+	[Fact]
+	public void Metric_WithConflictingMetadata_ShouldThrow()
+	{
+		using var source = new TelemetrySource("test-metric-conflicting-metadata");
+
+		source.Counter("orders.created", "count", "Created orders");
+		Assert.Throws<InvalidOperationException>(() => source.Counter("orders.created", "requests", "Created orders"));
+		Assert.Throws<InvalidOperationException>(() => source.Counter("orders.created", "count", "Different description"));
+
+		source.Histogram("orders.duration", "ms", "Order duration");
+		Assert.Throws<InvalidOperationException>(() => source.Histogram("orders.duration", "s", "Order duration"));
+		Assert.Throws<InvalidOperationException>(() => source.Histogram("orders.duration", "ms", "Different description"));
+	}
+
 	private sealed class StaticOptionsMonitor : IOptionsMonitor<TelemetryOptions>
 	{
 		private readonly TelemetryOptions _value;

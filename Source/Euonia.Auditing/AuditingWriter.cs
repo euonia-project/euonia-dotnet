@@ -398,18 +398,54 @@ public sealed class AuditingWriter : IAuditingWriter, IHostedService, IAsyncDisp
 
 			var allPersisted = true;
 
-			// 每租户审计库：按路由把记录分组，同一存储的记录合并为一次批量写入。
-			foreach (var group in buffer.GroupBy(item => router != null ? router.GetStore(item.Record) : defaultStore))
+			// 先逐条解析存储：单条路由异常或空结果只影响该条记录，不能让 GroupBy 键选择器把整批一起丢掉。
+			var resolved = new List<(PendingRecord Pending, IAuditingStore Store)>(buffer.Count);
+			var resolutionFailures = 0;
+			Exception? firstResolutionException = null;
+			foreach (var pending in buffer)
 			{
-				var store = group.Key;
-				var items = group.ToArray();
+				IAuditingStore? store;
+				try
+				{
+					store = router != null ? router.GetStore(pending.Record) : defaultStore;
+				}
+				catch (Exception exception)
+				{
+					// 审计失败开放：路由异常按该条失败处理，事务性 OCE 也不例外，避免消费循环被单条存储异常终止。
+					resolutionFailures++;
+					firstResolutionException ??= exception;
+					continue;
+				}
 
 				if (store == null)
 				{
-					allPersisted = false;
-					_logger?.LogWarning("No auditing store could be resolved for {Count} record(s); they were dropped.", items.Length);
+					resolutionFailures++;
 					continue;
 				}
+
+				resolved.Add((pending, store));
+			}
+
+			if (resolutionFailures > 0)
+			{
+				allPersisted = false;
+
+				// 按批聚合日志：持续失败的租户不应让每条记录各刷一条日志。
+				if (firstResolutionException != null)
+				{
+					_logger?.LogError(firstResolutionException, "Failed to resolve auditing store for {Count} record(s); they remain in the durable spool if configured.", resolutionFailures);
+				}
+				else
+				{
+					_logger?.LogWarning("No auditing store could be resolved for {Count} record(s); they were dropped.", resolutionFailures);
+				}
+			}
+
+			// 每租户审计库：按成功解析的存储分组，同一存储的记录合并为一次批量写入。
+			foreach (var group in resolved.GroupBy(item => item.Store))
+			{
+				var store = group.Key;
+				var items = group.Select(item => item.Pending).ToArray();
 
 				var immediate = items
 				                .Where(item => item.Record.IsSuccess == false
