@@ -25,7 +25,7 @@ public class UnitOfWorkModule : ModuleContextBase
 	{
 		// 将 UnitOfWorkInterceptor 注册为瞬态的 IInterceptor，使每次注入都获得新实例。
 		context.Services.AddTransient<IInterceptor, UnitOfWorkInterceptor>();
-		context.Services.Configure<UnitOfWorkOptions>(Configuration.GetSection("Euonia:Uow"));
+		context.Services.Configure<UnitOfWorkOptions>(Configuration.GetSection(Constants.ConfigurationSection));
 	}
 
 	/// <summary>

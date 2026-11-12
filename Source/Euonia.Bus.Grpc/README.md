@@ -76,6 +76,39 @@ app.MapGrpcBusService();
 | `Endpoints` | 空 | 通道 → 端点路由表 |
 | `RequireAuthorization` | `true` | 服务端端点是否要求授权 |
 
+## 配置绑定与环境变量
+
+`AddGrpcBus`（客户端）与 `AddGrpcBusServer`（服务端）都会**自动绑定**配置节 `Euonia:Bus:Grpc`，
+无需手工 `Bind`。该绑定以**最低优先级**注册为选项默认值：
+
+- 宿主的 `services.Configure<GrpcBusOptions>(...)` 无论写在 `AddGrpcBus`/`AddGrpcBusServer` 之前还是之后，都会覆盖配置节的值；
+- `AddGrpcBus(..., configure)` 的 `configure` 形参同样优先，因此客户端与服务端在同一进程共存时互不覆盖；
+- 环境变量的优先级高于配置文件，例如：
+
+```bash
+export Euonia__Bus__Grpc__Endpoint=https://env-grpc.example
+export Euonia__Bus__Grpc__RequireAuthorization=false
+```
+
+```jsonc
+// appsettings.json
+{
+  "Euonia": {
+    "Bus": {
+      "Grpc": {
+        "Enabled": true,
+        "Endpoint": "https://localhost:5001",
+        "ServiceName": "nerorsoft.bus.ReplierService",
+        "MethodName": "Call",
+        "RequireAuthorization": true
+      }
+    }
+  }
+}
+```
+
+> 配置节不存在时保持类型默认值；没有任何 `IConfiguration` 注册时自动绑定为 no-op（不报错）。
+
 ## 核心类型
 
 | 类型 | 作用 |

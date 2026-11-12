@@ -78,6 +78,127 @@ public sealed class OrderService(ILazyServiceProvider lazyProvider, IServiceAcce
 }
 ```
 
+## 配置与环境变量
+
+`ConfigurationHelper.BuildConfiguration` 依次加载 JSON 配置文件、环境 JSON 配置文件、用户机密、命令行参数、
+`builderAction` 追加的配置源，然后追加自定义大写单下划线格式的环境变量源，**最后**追加原生 `__` 格式的环境变量源：
+
+```text
+原生 __ 环境变量 > 自定义 _ 环境变量 > appsettings/用户机密/命令行/builderAction 追加的源 > 代码默认值
+```
+
+两种格式并存：
+
+- **原生格式**：配置键的层级分隔符 `:` 对应环境变量中的双下划线 `__`，单下划线 `_` 是普通字符，例如
+  `Euonia:Bus:RabbitMq:Connection` 对应 `Euonia__Bus__RabbitMq__Connection`。
+- **自定义格式**：全大写 + 单下划线，每个下划线都是层级分隔符，例如 `EUONIA_BUS_ENABLED` 对应
+  `Euonia:Bus:Enabled`（详见下一小节）。
+- 数组使用索引：`Euonia__Endpoint__Http__ScanAssemblies__0`，或自定义格式 `EUONIA_ENDPOINT_HTTP_SCANASSEMBLIES_0`。
+- 设置为空字符串表示显式空值；要回退到配置文件或默认值，应**不设置**该变量。
+- 可选用 `ConfigurationBuilderOptions.EnvironmentVariablesPrefix` 限定前缀（前缀比较忽略大小写，同时作用于两种格式）。
+
+```csharp
+var configuration = ConfigurationHelper.BuildConfiguration(new ConfigurationBuilderOptions
+{
+    EnvironmentName = "Production",
+    // EnvironmentVariablesPrefix = "EUONIA_" // 仅加载 EUONIA_ 开头的变量
+});
+
+// 对宿主已有配置（如 ASP.NET Core 的 ConfigurationManager）追加环境变量源：
+// 同一实例被直接追加；普通 IConfigurationRoot 返回分层视图，原实例不变。
+var effective = ConfigurationHelper.EnsureEnvironmentVariables(configuration);
+```
+
+`ApplicationFactory.Create<T>(services, configuration)` 与 `AddModularityApplication<T>(configuration)`
+都会先确保环境变量源位于最后再注册配置，因此 `application.Configuration` 与模块内的 `Configuration`
+读到的值同样遵循“环境变量优先”。显式传入的 `ConfigurationRoot` 会被包装成分层视图，不保证与原实例引用相等；
+`ConfigurationManager`（实现 `IConfigurationBuilder`）则保持同一实例。
+
+### 自定义大写单下划线格式
+
+除原生 `__` 格式外，`ConfigurationHelper` 还识别“全大写 + 单下划线”的部署变量：每个 `_` 是一个配置层级分隔符，
+配置段内部不再拆分单词，读取时按配置键大小写不敏感匹配。
+
+| 环境变量 | 映射到的配置键 | 说明 |
+|---|---|---|
+| `EUONIA_BUS_ENABLED` | `Euonia:Bus:Enabled` | 值原样写入，bool/string 均可 |
+| `EUONIA_BUS_HEALTHCHECKS_MAXDEADLETTERS` | `Euonia:Bus:HealthChecks:MaxDeadLetters` | 四个层级；`HEALTHCHECKS` 是一个完整配置段 |
+| `EUONIA_ENDPOINT_HTTP_SCANASSEMBLIES_0` | `Euonia:Endpoint:Http:ScanAssemblies:0` | 数组索引 |
+| `CONNECTION_STRING_DEFAULT` | `ConnectionStrings:Default` | `configuration.GetConnectionString("Default")` 生效 |
+| `CONNECTIONSTRINGS_DEFAULT` | `ConnectionStrings:Default` | 同上，别名拼写 |
+
+规则与边界：
+
+- **候选更严格**：只映射匹配 `^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$` 的变量名；`euonia_bus_enabled`、`EUONIA-BUS-ENABLED`、
+  `EUONIABUSENABLED` 均不映射，含 `__` 的变量仍由原生格式处理。
+- **原生格式优先**：同一配置键同时由两种格式提供时，原生 `__` 格式获胜（配置源按“自定义 → 原生”的顺序追加）。
+- **连接串只在根级**：`CONNECTION_STRING_<NAME>` / `CONNECTIONSTRINGS_<NAME>` → `ConnectionStrings:<NAME>`，
+  `<NAME>` 原样保留（含下划线，例如 `CONNECTION_STRING_MAIN_DB` 读取为 `GetConnectionString("Main_Db")`）；
+  不写单数 `ConnectionString:`。两种拼写同时设置时 `CONNECTION_STRING_<NAME>` 获胜。
+  **无前缀时** `EUONIA_CONNECTION_STRING_DEFAULT` 走通用规则（`EUONIA:CONNECTION:STRING:DEFAULT`），命名空间下的连接串请用
+  `Euonia__ConnectionStrings__Default`；若前缀为 `EUONIA_`，该变量会先剥前缀得到 `CONNECTION_STRING_DEFAULT`，
+  再命中特殊规则映射为 `ConnectionStrings:DEFAULT`（同样可由 `GetConnectionString("Default")` 读取）。
+- **token 内不拆词**：`HEALTH_CHECKS` 会被当成两个层级而不是 `HealthChecks`；一个配置段内不要用下划线分词。
+- **任意大写单下划线变量都会额外成为配置键**：没有黑名单，例如 `HTTP_PROXY` 还会产生 `HTTP:PROXY`、
+  `DOTNET_ENVIRONMENT` 产生 `DOTNET:ENVIRONMENT`；若与某个配置节大小写不敏感同名冲突，请避免该节或使用前缀隔离
+  （见本节末“模块化包装的前缀边界”）。
+- **不改变原生语义**：原生格式仍把 `EUONIA_BUS_ENABLED` 暴露为字面键 `EUONIA_BUS_ENABLED`，自定义格式只是额外提供嵌套键。
+- **无动态 reload**：环境变量在配置构建时快照，运行中修改需重新构建配置或重启进程（与原生的环境变量源一致）。
+
+**前缀陷阱**：`EnvironmentVariablesPrefix` 对两种格式都生效，并且是“先剥前缀、再映射”。若把前缀设为 `EUONIA_`，
+则 `EUONIA_BUS_ENABLED` 去掉前缀后得到 `BUS_ENABLED`，映射为 `BUS:ENABLED` 而不是 `Euonia:Bus:Enabled`；
+要得到 `Euonia:Bus:Enabled` 需写成 `EUONIA_EUONIA_BUS_ENABLED`，推荐改用独立前缀（如 `APP_`）或不设置前缀：
+
+```csharp
+var aliasConfiguration = ConfigurationHelper.BuildConfiguration(new ConfigurationBuilderOptions
+{
+    EnvironmentVariablesPrefix = "APP_" // APP_EUONIA_BUS_ENABLED → Euonia:Bus:Enabled
+});
+
+// 已有宿主配置（如 ConfigurationManager）：
+// 同一实例上按“自定义 → 原生”的顺序补齐两个源，重复调用幂等。
+var effectiveAlias = ConfigurationHelper.EnsureEnvironmentVariables(hostConfiguration, "APP_");
+```
+
+宿主默认路径（`HostUtility.CreateHostBuilder`）同样先追加自定义格式的源、再追加原生 `__` 格式的源；
+自定义 `createHostBuilder` 需自行按该顺序调用 `ConfigurationHelper.AddEnvironmentVariableAliases` 与
+`AddEnvironmentVariables`。
+
+**模块化包装的前缀边界**：`ApplicationFactory.Create` 与 `AddModularityApplication` 在包装宿主配置时会调用
+`ConfigurationHelper.EnsureEnvironmentVariables`，并且**以无前缀方式**补齐 alias/native 源。若宿主先用
+`ConfigurationBuilderOptions.EnvironmentVariablesPrefix` 构建了带前缀隔离的配置、再交给模块化包装，则无前缀的
+`EUONIA_BUS_ENABLED` 等变量仍会在包装阶段被映射进来，前缀隔离**不是强保证**。需要严格隔离时，应避免把带前缀的配置
+交给 `AddModularityApplication`/`ApplicationFactory.Create` 的自动包装，或确保进程中没有无前缀的可匹配变量；
+如仍使用自动包装，应在包装后由应用侧显式校验/拒绝意外键（例如核对最终配置的键集合）。
+
+### 自动绑定配置节的选项
+
+以下选项类型暴露了配置节常量，并在注册扩展方法中自动绑定（无需宿主手工 `Configure`）：
+
+| 选项类型 | 配置节 | 环境变量示例 |
+|---|---|---|
+| `HttpBusOptions.SectionName` | `Euonia:Bus:Http`（旧节 `HttpBus` 仍兼容） | `Euonia__Bus__Http__Endpoint` |
+| `GrpcBusOptions.SectionName` | `Euonia:Bus:Grpc` | `Euonia__Bus__Grpc__Endpoint` |
+| `BusHealthCheckOptions.SectionName` | `Euonia:Bus:HealthChecks` | `Euonia__Bus__HealthChecks__MaxDeadLetters` |
+| `FileSynchronizationOptions.ConfigurationSection` | `FileSynchronization` | `FileSynchronization__Directory` |
+
+自动绑定以**最低优先级**注册（配置节绑定作为 `IConfigureOptions<T>` 插入服务集合最前面），
+因此 `services.Configure<T>(...)` 与 `AddX(..., configure)` 形参**无论写在 `AddX` 之前还是之后**都会覆盖
+配置节与环境变量的值；显式编程入参始终优先。
+
+### 环境变量优先的边界
+
+- **后注册的配置源会覆盖环境变量**：`ConfigureAppConfiguration`（含 `HostUtility` 的
+  `HostBuilderOptions.ConfigureHostBuilder`、ASP.NET Core `Startup.ConfigureAppConfiguration` 等）在环境变量源之后追加的
+  JSON/内存/命令行源，仍会覆盖同名环境变量。需要绝对优先级时，请避免把这些键放进后续追加的源。
+- **两种包装行为不同**：`ConfigurationManager`（ASP.NET Core `WebApplicationBuilder` 的 `Configuration`）路径会直接改写宿主配置，
+  因此 Kestrel/Logging 等全局键同样变成“环境变量 > 命令行”；普通 `ConfigurationRoot` 路径只返回供模块化应用读取的分层视图，
+  不会回写 `HostBuilderContext.Configuration`。
+- **命令行不再覆盖环境变量**：`BuildConfiguration` 把环境变量源放在命令行参数与 `builderAction` 之后，与此前行为相反；
+  如需命令行仍覆盖环境变量，应在构建完成后自行包装配置（例如 `.AddConfiguration(configuration).AddCommandLine(args)`）并明确承担优先级。
+- **只读入口不影响全局**：`AddModularityApplication` 传入 `IConfiguration` 时只影响模块化应用与其注册的 `IConfiguration` 单例，
+  非模块化的宿主组件仍读取宿主自己的配置。
+
 ## 核心类型
 
 | 类型 | 作用 |

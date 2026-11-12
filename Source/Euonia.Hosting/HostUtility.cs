@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Hosting;
 
@@ -99,6 +101,15 @@ public static class HostUtility
 		where TStartup : class
 	{
 		var host = Host.CreateDefaultBuilder(args);
+
+		// 显式追加无前缀的环境变量源：不依赖宿主默认行为，并使其位于已有配置源之后（环境变量优先）。
+		// 先追加自定义“大写单下划线”格式的源，再追加原生 __ 格式的源，保证同一键上原生格式优先。
+		host = host.ConfigureAppConfiguration((_, config) =>
+		{
+			ConfigurationHelper.AddEnvironmentVariableAliases(config);
+			config.AddEnvironmentVariables();
+		});
+
 		host = host.ConfigureServices((context, _) =>
 		{
 			Environment.SetEnvironmentVariable(HostBuilderOptions.ApplicationNameVariable, context.HostingEnvironment.ApplicationName);

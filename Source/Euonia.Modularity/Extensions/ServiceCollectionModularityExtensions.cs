@@ -39,21 +39,38 @@ public static class ServiceCollectionModularityExtensions
     }
 
     /// <summary>
-    /// 注册模块加载与类型发现所需的单例服务，并在尚未注册配置时使用显式配置或本次创建选项提供的配置。
+    /// 注册模块加载与类型发现所需的单例服务，并注册已确保环境变量源位于最后的应用程序配置。
     /// </summary>
     /// <param name="services">要注册服务的服务集合。</param>
     /// <param name="application">当前的模块化应用程序实例，用于定位其程序集。</param>
     /// <param name="creationOptions">应用程序创建选项，提供用于构建配置的初始配置来源。</param>
-    /// <param name="configuration">显式提供的应用程序配置；为 <see langword="null"/> 时按创建选项构建。</param>
+    /// <param name="configuration">显式提供的应用程序配置；为 <see langword="null"/> 时使用已注册的单例配置或宿主上下文配置，均不存在时按创建选项构建。</param>
+    /// <remarks>
+    /// <para>
+    /// 显式配置、已注册的 <see cref="IConfiguration"/> 单例与 <see cref="HostBuilderContext.Configuration"/> 三条路径
+    /// 都会先经过 <see cref="ConfigurationHelper.EnsureEnvironmentVariables"/> 包装，再作为单例注册，
+    /// 从而保证模块读取配置时环境变量源的优先级最高。
+    /// </para>
+    /// <para>
+    /// 若上述三条路径都取不到配置实例，但服务集合中已存在 <see cref="IConfiguration"/> 的**非实例注册**
+    /// （工厂或实现类型），则保留宿主原有注册，不新建也不替换配置；此时 <see cref="GetConfiguration"/> 返回
+    /// <see langword="null"/>，由应用程序以 <c>IDS_CONFIGURATION_NOT_AVAILABLE</c> 明确失败，而不是静默使用错误的当前目录配置。
+    /// </para>
+    /// </remarks>
     internal static void AddCoreServices(this IServiceCollection services, IModularityApplication application, ApplicationCreationOptions creationOptions, IConfiguration? configuration)
     {
         var moduleLoader = new ModuleLoader();
         var assemblyFinder = new AssemblyFinder(application);
         var typeFinder = new TypeFinder(assemblyFinder);
 
-        if (configuration != null)
+        // 优先使用显式配置，其次是已注册的单例配置，最后是宿主上下文配置；均不存在时按创建选项构建。
+        var configurationToRegister = configuration
+                                      ?? services.GetSingletonInstanceOrNull<IConfiguration>()
+                                      ?? services.GetSingletonInstanceOrNull<HostBuilderContext>()?.Configuration;
+
+        if (configurationToRegister != null)
         {
-            services.ReplaceConfiguration(configuration);
+            services.ReplaceConfiguration(ConfigurationHelper.EnsureEnvironmentVariables(configurationToRegister)!);
         }
         else if (!services.IsAdded<IConfiguration>())
         {
@@ -96,19 +113,29 @@ public static class ServiceCollectionModularityExtensions
     /// </summary>
     /// <param name="services">服务集合。</param>
     /// <returns>
-    /// 若存在 <see cref="HostBuilderContext"/> 且其配置非空，则返回该配置；
-    /// 否则返回服务集合中注册的 <see cref="IConfiguration"/>；均不存在时返回 <see langword="null"/>。
+    /// 优先返回服务集合中注册的 <see cref="IConfiguration"/> 单例（该实例已确保环境变量源位于最后）；
+    /// 若不存在单例实例，则返回 <see cref="HostBuilderContext.Configuration"/>；均不存在时返回 <see langword="null"/>。
     /// </returns>
+    /// <remarks>
+    /// <para>
+    /// 仅以工厂或实现类型注册的 <see cref="IConfiguration"/> 无法在构建服务提供程序之前解析出实例，
+    /// 此时回退到 <see cref="HostBuilderContext.Configuration"/>，避免用新建配置覆盖宿主的注册。
+    /// </para>
+    /// <para>
+    /// 若既没有单例实例也没有 <see cref="HostBuilderContext"/>，则返回 <see langword="null"/>；
+    /// 应用程序随后以 <c>IDS_CONFIGURATION_NOT_AVAILABLE</c> 明确失败，不会静默改用当前目录的配置文件。
+    /// </para>
+    /// </remarks>
     public static IConfiguration? GetConfiguration(this IServiceCollection services)
     {
         Check.EnsureNotNull(services, nameof(services));
 
-        var hostBuilderContext = services.GetSingletonInstanceOrNull<HostBuilderContext>();
-        if (hostBuilderContext?.Configuration != null)
+        var configuration = services.GetSingletonInstanceOrNull<IConfiguration>();
+        if (configuration != null)
         {
-            return hostBuilderContext.Configuration;
+            return configuration;
         }
 
-        return services.GetSingletonInstanceOrNull<IConfiguration>();
+        return services.GetSingletonInstanceOrNull<HostBuilderContext>()?.Configuration;
     }
 }

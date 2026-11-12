@@ -14,6 +14,7 @@
     <Project Path="Tests/Euonia.Linq.Tests/Euonia.Linq.Tests.csproj" />
     <Project Path="Tests/Euonia.Modularity.Tests/Euonia.Modularity.Tests.csproj" />
     <Project Path="Tests/Euonia.Repository.Tests/Euonia.Repository.Tests.csproj" />
+    <Project Path="Tests/Euonia.Concurrency.FileSystem.Tests/Euonia.Concurrency.FileSystem.Tests.csproj" />
     <Folder Name="/Bus/">
         <Project Path="Tests/Euonia.Bus.InMemory.Tests/Euonia.Bus.InMemory.Tests.csproj"/>
         <Project Path="Tests/Euonia.Bus.RabbitMq.Tests/Euonia.Bus.RabbitMq.Tests.csproj"/>

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Http;
+using Nerosoft.Euonia.Modularity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -27,6 +28,12 @@ public static class ServiceCollectionExtensions
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
+
+			// 自动绑定配置：一次调用按“旧节 HttpBus → 新节 Euonia:Bus:Http”顺序绑定，新节优先。
+			// 自动绑定是最低优先级的默认值：显式 services.Configure<HttpBusOptions> 与该方法的 configure 形参始终优先，与调用先后无关。
+			services.AddOptions<HttpBusOptions>()
+			        .BindConfigurationIfAvailable(HttpBusOptions.LegacySectionName, HttpBusOptions.SectionName);
+
 			if (configureOptions != null)
 			{
 				services.Configure(configureOptions);

@@ -23,14 +23,7 @@ dotnet add package Euonia.Concurrency.FileSystem
 
 ## 快速开始
 
-配置目录（模块本身不绑定配置节，需要显式注册选项）：
-
-```csharp
-using Nerosoft.Euonia.Concurrency.FileSystem;
-
-services.Configure<FileSynchronizationOptions>(
-    configuration.GetSection("FileSynchronization"));
-```
+配置目录（`FileSystemLockModule` 会自动绑定配置节 `FileSynchronization`，通常无需手工注册选项）：
 
 ```json
 {
@@ -39,6 +32,26 @@ services.Configure<FileSynchronizationOptions>(
   }
 }
 ```
+
+也可用环境变量覆盖（优先级高于 appsettings）：
+
+```bash
+export FileSynchronization__Directory=/var/lib/myapp/locks
+```
+
+如需在代码中覆盖配置值（自动绑定是最低优先级的默认值，显式配置始终优先，
+写在模块注册之前或之后均可；为便于阅读建议放在模块注册之后）：
+
+```csharp
+using Nerosoft.Euonia.Concurrency.FileSystem;
+
+services.Configure<FileSynchronizationOptions>(options =>
+{
+    options.Directory = "/var/lib/myapp/locks";
+});
+```
+
+> 未配置 `Directory` 时，创建 `ILockFactory` 会抛出带有配置键提示的 `InvalidOperationException`。
 
 声明模块依赖：
 

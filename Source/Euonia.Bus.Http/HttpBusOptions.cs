@@ -6,6 +6,20 @@ namespace Nerosoft.Euonia.Bus.Http;
 public class HttpBusOptions
 {
 	/// <summary>
+	/// 选项对应的配置节名称（推荐使用）：<c>Euonia:Bus:Http</c>。
+	/// </summary>
+	/// <remarks>对应环境变量前缀为 <c>Euonia__Bus__Http__</c>。</remarks>
+	public const string SectionName = "Euonia:Bus:Http";
+
+	/// <summary>
+	/// 兼容旧版配置节名称：<c>HttpBus</c>。
+	/// </summary>
+	/// <remarks>
+	/// 为兼容既有部署保留；<see cref="SectionName"/> 在绑定顺序上晚于该旧节，因此新节优先，显式 <c>Configure</c> 回调最高。
+	/// </remarks>
+	public const string LegacySectionName = "HttpBus";
+
+	/// <summary>
 	/// 获取或设置一个值，指示该功能是否启用。
 	/// </summary>
 	public bool Enabled { get; set; } = true;

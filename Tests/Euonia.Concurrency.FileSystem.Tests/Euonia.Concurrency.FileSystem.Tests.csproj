@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Concurrency.FileSystem\Euonia.Concurrency.FileSystem.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Modularity\Euonia.Modularity.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
 using Nerosoft.Euonia.Grpc;
+using Nerosoft.Euonia.Modularity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -29,6 +30,12 @@ public static class ServiceCollectionExtensions
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
+
+			// 自动绑定配置节 Euonia:Bus:Grpc，作为最低优先级的默认值；
+			// 显式 services.Configure<GrpcBusOptions> 与该方法的 configure 形参始终优先，与调用先后无关。
+			services.AddOptions<GrpcBusOptions>()
+			        .BindConfigurationIfAvailable(GrpcBusOptions.SectionName);
+
 			if (configureOptions != null)
 			{
 				services.Configure(configureOptions);
@@ -54,6 +61,12 @@ public static class ServiceCollectionExtensions
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
+
+			// 服务端同样需要配置节支持（例如 Euonia:Bus:Grpc:RequireAuthorization）。
+			// 绑定以 Insert(0) 注册为最低优先级，因此与 AddGrpcBus 共存时不会覆盖客户端或宿主的显式配置。
+			services.AddOptions<GrpcBusOptions>()
+			        .BindConfigurationIfAvailable(GrpcBusOptions.SectionName);
+
 			services.TryAddScoped<RemoteMessageService>();
 			return services;
 		}

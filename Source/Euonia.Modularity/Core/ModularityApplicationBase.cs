@@ -57,8 +57,9 @@ public abstract class ModularityApplicationBase : IModularityApplication
         services.AddCoreServices();
         services.AddCoreServices(this, options, configuration);
 
-        Configuration = configuration
-                        ?? services.GetConfiguration()
+        // 统一使用 AddCoreServices 注册（并已确保环境变量源位于最后）的配置，
+        // 避免显式传入的原始配置绕过环境变量包装。
+        Configuration = services.GetConfiguration()
                         ?? throw new InvalidOperationException(Resources.IDS_CONFIGURATION_NOT_AVAILABLE);
 
         // ReSharper disable once VirtualMemberCallInConstructor
@@ -90,6 +91,11 @@ public abstract class ModularityApplicationBase : IModularityApplication
     /// <summary>
     /// 获取当前应用程序的配置实例。
     /// </summary>
+    /// <remarks>
+    /// 该实例来自依赖注入容器中注册的配置，已确保环境变量源位于最后（环境变量优先级最高）。
+    /// 显式传入的配置在注册时会被 <see cref="ConfigurationHelper.EnsureEnvironmentVariables"/> 包装，
+    /// 因此不一定与传入的原始实例引用相等。
+    /// </remarks>
     public IConfiguration Configuration { get; }
 
     /// <summary>

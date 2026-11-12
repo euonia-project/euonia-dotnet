@@ -6,6 +6,12 @@ namespace Nerosoft.Euonia.Bus.HealthChecks;
 public class BusHealthCheckOptions
 {
 	/// <summary>
+	/// 选项对应的配置节名称：<c>Euonia:Bus:HealthChecks</c>。
+	/// </summary>
+	/// <remarks>对应环境变量前缀为 <c>Euonia__Bus__HealthChecks__</c>。</remarks>
+	public const string SectionName = "Euonia:Bus:HealthChecks";
+
+	/// <summary>
 	/// 获取或设置允许的未投递死信条数上限。
 	/// </summary>
 	/// <remarks>

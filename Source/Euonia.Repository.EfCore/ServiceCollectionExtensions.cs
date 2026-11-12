@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -143,15 +143,22 @@ public static class ServiceCollectionExtensions
 		/// <returns>注册完成后的 <paramref name="services"/>，以便链式调用。</returns>
 		/// <exception cref="InvalidOperationException">无法解析到任何有效连接字符串时抛出。</exception>
 		/// <remarks>
-		/// 连接字符串按以下优先级依次尝试，取第一个非空白结果：
+		/// <para>连接字符串按以下优先级依次尝试，取第一个非空白结果：</para>
 		/// <list type="number">
-		/// <item><paramref name="connectionStringFactory"/> 的返回值。</item>
-		/// <item><see cref="ConnectionStringAttribute"/> 的 <see cref="ConnectionStringAttribute.Value"/>。</item>
-		/// <item>以 <see cref="ConnectionStringAttribute"/> 的 <see cref="ConnectionStringAttribute.Name"/> 为键读取配置。</item>
-		/// <item>以数据上下文类型名称为键读取配置。</item>
-		/// <item><c>Default</c> 连接字符串，以及可选的 <see cref="IConnectionStringResolver{TContext}"/>。</item>
+		/// <item><paramref name="connectionStringFactory"/> 的返回值（显式编程入参，优先级最高）。</item>
+		/// <item>以 <see cref="ConnectionStringAttribute"/> 的 <see cref="ConnectionStringAttribute.Name"/> 为键读取配置（<c>ConnectionStrings:&lt;Name&gt;</c>）。</item>
+		/// <item>以数据上下文类型名称为键读取配置（<c>ConnectionStrings:&lt;TContext&gt;</c>）。</item>
+		/// <item><c>Default</c> 连接字符串。</item>
+		/// <item>可选的 <see cref="IConnectionStringResolver{TContext}"/> 实现（异步解析）。</item>
+		/// <item><see cref="ConnectionStringAttribute"/> 的 <see cref="ConnectionStringAttribute.Value"/>（代码默认值，优先级最低）。</item>
 		/// </list>
-		/// 连接字符串需包含 <c>{provider}://{connection}</c> 格式的提供程序前缀，用于选择已注册的 <see cref="ConnectionConfigurator"/>。
+		/// <para>
+		/// 配置项（第 2-4 步）同时覆盖 appsettings 与环境变量：设置 <c>ConnectionStrings__&lt;Name&gt;</c> 等环境变量即可覆盖配置文件与
+		/// <see cref="ConnectionStringAttribute.Value"/> 提供的默认值；自定义大写单下划线格式同样可用，例如
+		/// <c>CONNECTION_STRING_DEFAULT</c> 映射为 <c>ConnectionStrings:Default</c>。
+		/// 同一键上原生 <c>__</c> 格式优先于自定义 <c>_</c> 格式。
+		/// </para>
+		/// <para>连接字符串需包含 <c>{provider}://{connection}</c> 格式的提供程序前缀，用于选择已注册的 <see cref="ConnectionConfigurator"/>。</para>
 		/// </remarks>
 		public IServiceCollection AddDataContextFactory<TContext>(Func<IServiceProvider, string?>? connectionStringFactory, Func<DbContext, bool, CancellationToken, Task>? seeding = null, ServiceLifetime lifetime = ServiceLifetime.Scoped)
 			where TContext : DataContextBase<TContext>
@@ -162,12 +169,10 @@ public static class ServiceCollectionExtensions
 
 				var connection = PriorityValueFinder.Find<string?>(queue =>
 				{
+					// 1. 显式工厂：调用方明确意图，优先级最高。
 					queue.Enqueue(() => connectionString, 1);
-					queue.Enqueue(() =>
-					{
-						var attribute = typeof(TContext).GetCustomAttribute<ConnectionStringAttribute>();
-						return attribute?.Value;
-					}, 2);
+
+					// 2. ConnectionStrings:<ConnectionStringAttribute.Name>
 					queue.Enqueue(() =>
 					{
 						var attribute = typeof(TContext).GetCustomAttribute<ConnectionStringAttribute>();
@@ -177,9 +182,15 @@ public static class ServiceCollectionExtensions
 						}
 
 						return null;
-					}, 3);
-					queue.Enqueue(() => provider.GetRequiredService<IConfiguration>().GetConnectionString(typeof(TContext).Name), 5);
-					queue.Enqueue(() => provider.GetRequiredService<IConfiguration>().GetConnectionString("Default"), 6);
+					}, 2);
+
+					// 3. ConnectionStrings:<TContext 类型名>
+					queue.Enqueue(() => provider.GetRequiredService<IConfiguration>().GetConnectionString(typeof(TContext).Name), 3);
+
+					// 4. ConnectionStrings:Default
+					queue.Enqueue(() => provider.GetRequiredService<IConfiguration>().GetConnectionString("Default"), 4);
+
+					// 5. IConnectionStringResolver<TContext>（异步解析器）
 					queue.Enqueue(() =>
 					{
 						var connectionStringResolver = provider.GetService<IConnectionStringResolver<TContext>>();
@@ -195,6 +206,9 @@ public static class ServiceCollectionExtensions
 
 						return AsyncContext.Run(() => connectionStringResolver.GetConnectionStringAsync());
 					}, 5);
+
+					// 6. ConnectionStringAttribute.Value：代码默认值，优先级最低，可被配置/环境变量覆盖。
+					queue.Enqueue(() => typeof(TContext).GetCustomAttribute<ConnectionStringAttribute>()?.Value, 6);
 				}, t => !string.IsNullOrWhiteSpace(t));
 
 				if (string.IsNullOrWhiteSpace(connection))
