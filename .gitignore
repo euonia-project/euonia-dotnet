@@ -374,3 +374,8 @@ nupkg/
 *.db-wal
 
 agent-presets/
+
+# 过程文档（不纳入版本控制）
+/PLAN.md
+/TEST_REPORT.md
+/REVIEW_FEEDBACK.md
