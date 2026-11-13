@@ -1,6 +1,7 @@
 # Euonia.Bus.Grpc API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的 gRPC 远程传输：客户端无需生成桩代码即可做泛化一元调用，服务端由 `RemoteMessageService` 接收并执行处理器；同时提供拦截器、健康检查与自动服务发现。本页给出服务端/客户端端到端示例；完整选项见 [项目 README](../../../Source/Euonia.Bus.Grpc/README.md)。
 

@@ -1,6 +1,7 @@
 # Euonia.Bus.Abstract API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 消息总线的契约层：信封与上下文、消息约定、传输策略、注解、序列化、可靠性存储与事件。本页用一个自定义约定 + 自定义策略 + 自定义传输器的端到端示例说明扩展点；完整契约清单见 [项目 README](../../../Source/Euonia.Bus.Abstract/README.md)。
 

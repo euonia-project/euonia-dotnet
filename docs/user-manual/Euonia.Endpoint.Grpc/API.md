@@ -1,6 +1,7 @@
 # Euonia.Endpoint.Grpc API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 基于 `protobuf-net.Grpc` 的 code-first gRPC 运行时：把 `Euonia.Endpoint` 标记的接口方法暴露为 gRPC 服务，支持四种方法类型、方法级授权与 proto 导出。本页是 API 速查；完整规则见 [项目 README](../../../Source/Euonia.Endpoint.Grpc/README.md)。
 

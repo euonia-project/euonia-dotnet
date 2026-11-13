@@ -1,6 +1,7 @@
 # Euonia.Endpoint.SourceGenerator API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Endpoint` 的构建期增量生成器（Roslyn analyzer）：为带 `[ExposeWebApi]` / `[ExposeGrpc]` 的接口方法生成强类型 HTTP lambda、gRPC 契约与适配器、注册代码与程序集标记。本页是 API 速查；打包与调试细节见 [项目 README](../../../Source/Euonia.Endpoint.SourceGenerator/README.md)。
 

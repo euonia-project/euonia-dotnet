@@ -1,6 +1,7 @@
 # Euonia.Sample.Webapi API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 可运行的 Euonia 全栈示例：模块化宿主、消息总线、EF Core 仓储、权限、审计、租户与遥测在一次启动里全部接好。
 

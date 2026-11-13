@@ -1,6 +1,7 @@
 # Euonia.Concurrency.FileSystem API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用目录中的锁文件实现跨进程互斥，适合单机多进程、容器共享卷或已确认语义的共享文件系统。本页用“夜间订单汇总只跑一次”演示配置、模块与双进程验证。
 

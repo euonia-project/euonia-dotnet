@@ -1,6 +1,7 @@
 # Euonia.Bus.InMemory API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的进程内传输：基于容器级强/弱引用信使实现多播、单播与请求-响应，不需要任何外部基础设施。本页演示如何在单进程/单测中可靠地等待异步投递；安装与完整选项见 [项目 README](../../../Source/Euonia.Bus.InMemory/README.md)。
 

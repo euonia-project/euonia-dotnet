@@ -1,6 +1,7 @@
 # Euonia.Application API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Application` 提供用例、应用服务基类与 Castle 拦截器，把日志、校验、授权、缓存、锁、重试、熔断等横切逻辑从业务代码中剥离。
 

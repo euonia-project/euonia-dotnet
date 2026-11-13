@@ -1,6 +1,7 @@
 # Euonia.Concurrency.Azure API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用 Azure Blob 租约实现分布式锁：每个锁名对应一个 Blob，靠租约互斥并自动续约。本页用“月末对账任务只允许一个实例执行”演示容器注入、选项、模块接线与租约丢失处理。
 

@@ -1,6 +1,7 @@
 # Euonia.Mapping.Automapper API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Mapping.Automapper` 把 AutoMapper 的 `IMapper` 适配为 Euonia 的 `ITypeAdapter`，并通过 `AutomapperModule` 在应用初始化时安装全局映射工厂。
 

@@ -1,6 +1,7 @@
 # Euonia.Osba API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 面向对象的业务对象运行时：属性元数据与变更追踪、状态机、规则校验、反射驱动的工厂分派、执行器管道与权限边界。本页是 API 速查；架构与 50 条陷阱见 [项目 README](../../../Source/Euonia.Osba/README.md)。
 

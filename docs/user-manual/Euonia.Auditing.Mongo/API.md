@@ -1,6 +1,7 @@
 # Euonia.Auditing.Mongo API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 把 Euonia 审计记录持久化到 MongoDB，并用 `ScopeId` 唯一索引保证重复上报幂等。本页给出一个可运行的“月末关账”场景。
 

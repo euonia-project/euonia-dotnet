@@ -1,6 +1,7 @@
 # Euonia.Caching API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 多级缓存核心：用缓存句柄组合进程内与分布式缓存，由 `ICacheManager<TValue>` 统一读取、写入、过期与失效。本页用一个商品目录读穿缓存场景串起构建、注册、失效与验证。
 

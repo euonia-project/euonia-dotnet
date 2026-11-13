@@ -1,6 +1,7 @@
 # Euonia.Bus.ActiveMq API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的 Apache ActiveMQ 传输：主题（Topic）做发布/订阅、队列做点对点与请求-响应，基于 NMS 与持久连接，并用 Polly 处理连接级失败。本页给出本机可复现的端到端场景；完整选项见 [项目 README](../../../Source/Euonia.Bus.ActiveMq/README.md)。
 

@@ -1,6 +1,7 @@
 # Euonia.Caching.Memory API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用 `Microsoft.Extensions.Caching.Memory` 提供进程内缓存，可作为多级缓存的 L1，也可通过 `ICacheService` 直接注入业务服务。本页用“用户资料读穿缓存 + 更新失效”演示完整接线。
 

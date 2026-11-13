@@ -1,6 +1,7 @@
 # Euonia.Repository.Mongo API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Repository.Mongo` 是仓储抽象的 MongoDB 实现：提供 `MongoDbContext`、`DataContextBase<TContext>`、`MongoRepository<,,>` 与流式模型配置。
 

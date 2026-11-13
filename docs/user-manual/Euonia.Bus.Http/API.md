@@ -1,6 +1,7 @@
 # Euonia.Bus.Http API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的 HTTP 远程传输：客户端用 HTTP POST 执行 `CallAsync`，服务端用 `MapBusEndpoint()` 接收消息、执行处理器并回传结果。本页给出两个 ASP.NET Core 服务的端到端接线；完整选项见 [项目 README](../../../Source/Euonia.Bus.Http/README.md)。
 

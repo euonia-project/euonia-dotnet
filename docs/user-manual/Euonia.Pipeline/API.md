@@ -1,6 +1,7 @@
 # Euonia.Pipeline API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Pipeline` 提供受 ASP.NET Core 中间件启发的类型化管道：用 `IPipelineBehavior<TRequest, TResponse>` 环绕最终处理器，按优先级组合并支持依赖注入。
 

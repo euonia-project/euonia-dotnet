@@ -1,6 +1,7 @@
 # Euonia.Domain API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Domain` 提供实体、聚合根、值对象、领域事件与命令等 DDD 构建块，不依赖具体持久化技术。
 

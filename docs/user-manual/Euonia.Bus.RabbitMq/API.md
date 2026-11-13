@@ -1,6 +1,7 @@
 # Euonia.Bus.RabbitMq API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的 RabbitMQ 传输：fanout 交换机做多播、队列做单播与请求-响应，内置持久连接、发布确认、优先级、死信与重试。本页用一个可本机复现的生产者/消费者场景说明接线；完整选项见 [项目 README](../../../Source/Euonia.Bus.RabbitMq/README.md)。
 

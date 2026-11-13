@@ -1,6 +1,7 @@
 # Euonia.Caching.Redis API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 把缓存放到 Redis，让多个实例共享同一份数据，并用 Redis 发布/订阅背板广播失效。本页用“购物车缓存”演示连接配置、读穿、按前缀清理与运行验证。
 

@@ -1,6 +1,7 @@
 # Euonia.Quartz API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Quartz` 把 Quartz.NET 作业调度接入 Euonia：用特性声明作业与触发器，`AddQuartz` 注册调度器、DI 作业工厂与托管服务。
 

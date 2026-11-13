@@ -1,6 +1,7 @@
 # Euonia.Endpoint API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 把应用服务接口方法同时暴露为 HTTP Minimal API 与 gRPC 服务的**契约包**：暴露特性、共享 `DataContract` 类型与方法签名约定。本页是 API 速查；运行时细节见 [项目 README](../../../Source/Euonia.Endpoint/README.md)。
 

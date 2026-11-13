@@ -1,6 +1,7 @@
 # Euonia.Telemetry API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 遥测内核：用统一的 `TelemetrySource` 同时产出 `Activity` 与指标，并把租户、关联标识写进 Trace 而不污染指标。
 

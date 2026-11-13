@@ -1,6 +1,7 @@
 # Euonia.Osba.Benchmarks API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 业务对象生命周期、规则求值、保存路径与领域控制的性能门禁：6 个方法、20% 回归阈值、分配翻倍判据。
 

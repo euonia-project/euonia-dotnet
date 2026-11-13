@@ -1,6 +1,7 @@
 # Euonia.Tenancy API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 多租户内核：解析租户 → 安装作用域 → 用写入守卫保证行级隔离，跨租户访问必须显式授权。
 

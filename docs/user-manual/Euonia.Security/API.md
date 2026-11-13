@@ -1,6 +1,7 @@
 # Euonia.Security API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 操作权限与行级数据权限的策略引擎：预定义判定语义，授权值由使用方从数据实时解析；读侧下推与单行判定共用同一份编译结果。本页是 API 速查；设计取舍见 [项目 README](../../../Source/Euonia.Security/README.md)。
 

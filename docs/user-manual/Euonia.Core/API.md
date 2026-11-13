@@ -1,6 +1,7 @@
 # Euonia.Core API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释放模式、反射/集合工具与常用扩展方法。本页是 API 速查；安装、完整类型清单与注意事项见 [项目 README](../../../Source/Euonia.Core/README.md)。
 

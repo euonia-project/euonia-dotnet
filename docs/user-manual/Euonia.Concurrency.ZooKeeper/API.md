@@ -1,6 +1,7 @@
 # Euonia.Concurrency.ZooKeeper API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 基于 ZooKeeper 临时顺序节点的分布式锁与信号量：崩溃自动释放，配置只覆盖连接与超时。
 

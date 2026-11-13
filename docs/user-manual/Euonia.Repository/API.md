@@ -1,6 +1,7 @@
 # Euonia.Repository API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Repository` 定义持久化无关的仓储契约、上下文提供者与分页排序扩展；EF Core / MongoDB 包提供具体实现。
 

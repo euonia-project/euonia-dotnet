@@ -1,6 +1,7 @@
 # Euonia.Bus.Benchmarks API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用空传输器把总线框架开销与真实传输开销分离，从而定位 `PublishAsync` / `SendAsync` / `CallAsync` 的回归来源。
 

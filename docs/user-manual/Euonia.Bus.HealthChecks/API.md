@@ -1,6 +1,7 @@
 # Euonia.Bus.HealthChecks API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 总线的 ASP.NET Core 健康检查：统计已分配传输策略的数量，并按阈值报告死信、发件箱失败与收件箱失败的积压。本页用运维视角演示就绪/存活探针与阈值验证；完整说明见 [项目 README](../../../Source/Euonia.Bus.HealthChecks/README.md)。
 

@@ -1,6 +1,7 @@
 # Euonia.Uow API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Uow` 用工作单元（Unit of Work）把多个仓储操作包进同一个事务边界，并提供环境上下文、嵌套工作单元与 Castle 拦截器。
 

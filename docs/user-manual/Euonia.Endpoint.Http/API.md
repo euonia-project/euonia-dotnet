@@ -1,6 +1,7 @@
 # Euonia.Endpoint.Http API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 把 `Euonia.Endpoint` 标记的接口方法映射为 ASP.NET Core Minimal API 端点：生成优先 + 运行时兜底、参数绑定、认证元数据与扫描范围控制。本页是 API 速查；完整规则见 [项目 README](../../../Source/Euonia.Endpoint.Http/README.md)。
 

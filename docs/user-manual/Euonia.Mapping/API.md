@@ -1,6 +1,7 @@
 # Euonia.Mapping API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 与映射库无关的对象投影抽象：`ITypeAdapter` / `ITypeAdapterFactory` 定义契约，`TypeAdapter` 与 `ProjectedAs*` 扩展方法提供统一入口，具体实现由 AutoMapper 或 Mapster 包提供。本页是 API 速查；完整说明见 [项目 README](../../../Source/Euonia.Mapping/README.md)。
 

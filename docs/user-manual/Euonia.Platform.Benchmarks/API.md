@@ -1,6 +1,7 @@
 # Euonia.Platform.Benchmarks API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 平台热路径基准：租户写入守卫、租户键转换、执行上下文安装与遥测空操作开销，用来守住 Tenancy / Telemetry / Security 的每请求成本。
 

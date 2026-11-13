@@ -1,6 +1,7 @@
 # Euonia.Mapping.Mapster API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Mapping.Mapster` 把 Mapster 的 `IMapper` 适配为 Euonia 的 `ITypeAdapter`，并在模块初始化时安装为当前映射工厂。
 

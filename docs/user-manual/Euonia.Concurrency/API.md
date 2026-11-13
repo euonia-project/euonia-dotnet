@@ -1,6 +1,7 @@
 # Euonia.Concurrency API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 的分布式同步抽象：用 `ILockFactory` 获取互斥锁、`ISemaphoreFactory` 限制并发数，业务代码只依赖接口，具体实现由文件系统/Redis/Azure/ZooKeeper 提供程序包决定。本页用“库存扣减 + 报表导出限流”演示。
 

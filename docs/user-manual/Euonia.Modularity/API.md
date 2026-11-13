@@ -1,6 +1,7 @@
 # Euonia.Modularity API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Modularity` 把应用拆成可组合模块，按 `[DependsOn]` 拓扑加载，并统一管理服务注册、约定式自动注册、初始化与关闭生命周期。
 

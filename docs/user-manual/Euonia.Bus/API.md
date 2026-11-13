@@ -1,6 +1,7 @@
 # Euonia.Bus API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 Euonia 消息总线的运行时引擎：消息分类、传输策略路由、处理器调用、管道、发件箱/收件箱与遥测。本页是 API 速查；安装与完整选项见 [项目 README](../../../Source/Euonia.Bus/README.md)。
 

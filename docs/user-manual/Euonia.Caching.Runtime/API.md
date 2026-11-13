@@ -1,6 +1,7 @@
 # Euonia.Caching.Runtime API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用 `System.Runtime.Caching.MemoryCache` 作为 Euonia 缓存提供程序，适合已有该配置模型（内存上限、物理内存百分比、轮询间隔）的宿主。本页用报表缓存演示命名实例、限额与失效。
 

@@ -1,6 +1,7 @@
 # Euonia.Auditing API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Auditing` 提供审计作用域、动作模型、异步写入队列、脱敏序列化与 InMemory 存储；持久化由 EF Core / Mongo 适配包完成。
 

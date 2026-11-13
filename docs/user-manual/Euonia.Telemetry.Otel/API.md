@@ -1,6 +1,7 @@
 # Euonia.Telemetry.Otel API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 把 Euonia 遥测源接入 OpenTelemetry：显式源目录、Resource 快照、日志 Scope 与传播器桥接，导出交给宿主选定的 exporter。
 

@@ -1,6 +1,7 @@
 # Euonia.Repository.EfCore API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Repository.EfCore` 是仓储抽象的 EF Core 实现：提供 `DataContextBase<TContext>`、`EfCoreRepository<,,>`、连接串解析与工作单元上下文工厂。
 

@@ -1,6 +1,7 @@
 # Euonia.Concurrency.Redis API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 用 Redis 实现跨节点分布式锁与信号量，支持自动续期与最短有效时间。本页用“订单发货互斥 + 报表导出限流”演示配置、模块、并发验证与故障定位。
 

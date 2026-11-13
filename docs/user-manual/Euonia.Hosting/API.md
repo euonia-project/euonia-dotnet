@@ -1,6 +1,7 @@
 # Euonia.Hosting API 参考
 
 > 本页是 API 参考；教程见 [TUTORIAL.md](TUTORIAL.md)。
+> 完整公开类型与成员签名见 [API-FULL.md](API-FULL.md)。
 
 `Euonia.Hosting` 负责 ASP.NET Core 宿主启动、模块初始化、请求上下文与 JWT/IdentityServer 认证，并提供租户、审计、遥测中间件的接入扩展。
 
