@@ -23,7 +23,7 @@ public class MapsterOptions
 	/// 获取已注册的 Profile 映射（按注册类型索引）。
 	/// </summary>
 	/// <remarks>值为 <see langword="null"/> 表示该类型尚未实例化，注册服务时会通过服务提供程序创建实例。</remarks>
-	internal Dictionary<Type, IRegister> Profiles { get; } = new();
+	internal Dictionary<Type, IRegister?> Profiles { get; } = new();
 
 	/// <summary>
 	/// 将指定类型的映射注册（Profile）添加到配置中。
@@ -58,7 +58,7 @@ public class MapsterOptions
 			throw new ArgumentException(string.Format(Resources.IDS_REGISTER_TYPE_MUST_ASSIGNABLE, registerType!.FullName));
 		}
 
-		Profiles.TryAdd(registerType, (IRegister)Activator.CreateInstance(registerType));
+		Profiles.TryAdd(registerType, (IRegister?)Activator.CreateInstance(registerType));
 	}
 
 	/// <summary>

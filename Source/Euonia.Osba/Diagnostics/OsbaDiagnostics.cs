@@ -85,7 +85,7 @@ internal static class OsbaDiagnostics
 	/// <param name="objectType">对象类型名。</param>
 	/// <param name="operation">业务操作。</param>
 	/// <returns>活动；无监听者时为 <see langword="null"/>。</returns>
-	public static Activity StartSave(string objectType, string operation)
+	public static Activity? StartSave(string objectType, string operation)
 	{
 		if (!Enabled)
 		{
@@ -119,17 +119,63 @@ internal static class OsbaDiagnostics
 		if (SaveDuration.Enabled)
 		{
 			SaveDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-				new KeyValuePair<string, object>("osba.object.type", objectType),
-				new KeyValuePair<string, object>("osba.operation", operation),
-				new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+				new KeyValuePair<string, object?>("osba.object.type", objectType),
+				new KeyValuePair<string, object?>("osba.operation", operation),
+				new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 		}
 
 		if (!succeeded && SaveFailures.Enabled)
 		{
 			SaveFailures.Add(1,
-				new KeyValuePair<string, object>("osba.object.type", objectType),
-				new KeyValuePair<string, object>("osba.operation", operation));
+				new KeyValuePair<string, object?>("osba.object.type", objectType),
+				new KeyValuePair<string, object?>("osba.operation", operation));
 		}
+	}
+
+	/// <summary>
+	/// 开启一次 Osba 操作活动（fetch / execute / authorize / rule）。
+	/// </summary>
+	/// <param name="operation">操作名称。</param>
+	/// <param name="targetType">目标类型名。</param>
+	/// <returns>活动；未启用或无监听者时为 <see langword="null"/>。</returns>
+	public static Activity? StartOperation(string operation, string? targetType)
+	{
+		if (!Enabled)
+		{
+			return null;
+		}
+
+		var activity = ActivitySource.StartActivity($"euonia.osba.{operation}");
+		if (activity != null)
+		{
+			activity.SetTag("osba.activity", operation);
+			activity.SetTag("osba.target.type", targetType);
+		}
+
+		return activity;
+	}
+
+	/// <summary>
+	/// 结束 Osba 操作活动并记录结果。
+	/// </summary>
+	/// <param name="activity">活动。</param>
+	/// <param name="operation">操作名称。</param>
+	/// <param name="startTimestamp">起始时间戳。</param>
+	/// <param name="succeeded">是否成功。</param>
+	public static void CompleteOperation(Activity? activity, string operation, long startTimestamp, bool succeeded)
+	{
+		if (activity == null)
+		{
+			return;
+		}
+
+		activity.SetTag("osba.outcome", succeeded ? "success" : "failure");
+		if (!succeeded)
+		{
+			activity.SetStatus(ActivityStatusCode.Error);
+		}
+
+		activity.Dispose();
 	}
 
 	/// <summary>
@@ -147,9 +193,9 @@ internal static class OsbaDiagnostics
 		}
 
 		AuthorizationDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-			new KeyValuePair<string, object>("osba.auth.kind", kind),
-			new KeyValuePair<string, object>("osba.operation", operation),
-			new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+			new KeyValuePair<string, object?>("osba.auth.kind", kind),
+			new KeyValuePair<string, object?>("osba.operation", operation),
+			new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 	}
 
 	/// <summary>
@@ -168,13 +214,13 @@ internal static class OsbaDiagnostics
 		if (RuleDuration.Enabled)
 		{
 			RuleDuration.Record(Stopwatch.GetElapsedTime(startTimestamp).TotalMilliseconds,
-				new KeyValuePair<string, object>("osba.rule.name", ruleName),
-				new KeyValuePair<string, object>("osba.outcome", succeeded ? "success" : "failure"));
+				new KeyValuePair<string, object?>("osba.rule.name", ruleName),
+				new KeyValuePair<string, object?>("osba.outcome", succeeded ? "success" : "failure"));
 		}
 
 		if (!succeeded && RuleFailures.Enabled)
 		{
-			RuleFailures.Add(1, new KeyValuePair<string, object>("osba.rule.name", ruleName));
+			RuleFailures.Add(1, new KeyValuePair<string, object?>("osba.rule.name", ruleName));
 		}
 	}
 
@@ -185,7 +231,7 @@ internal static class OsbaDiagnostics
 	/// <param name="level">级别。</param>
 	/// <param name="message">消息。</param>
 	/// <param name="exception">异常；可为 <see langword="null"/>。</param>
-	public static void Log(IServiceProvider provider, OsbaDiagnosticLevel level, string message, Exception exception = null)
+	public static void Log(IServiceProvider? provider, OsbaDiagnosticLevel level, string message, Exception? exception = null)
 	{
 		if (level == OsbaDiagnosticLevel.None)
 		{

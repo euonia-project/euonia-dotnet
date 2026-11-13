@@ -20,11 +20,13 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard, IObjectFactory factory)
 	: BaseApplicationService, IProjectApplicationService
 {
-	public Task<PagedResult<ProjectDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
+	/// <inheritdoc/>
+	public Task<PagedResult<ProjectDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new ProjectListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<ProjectDto> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		if (guard.User?.Identity?.IsAuthenticated != true)
@@ -48,6 +50,7 @@ internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard,
 		return ToDto(project);
 	}
 
+	/// <inheritdoc/>
 	public async Task<string> CreateAsync(ProjectCreateInput input, CancellationToken cancellationToken = default)
 	{
 		var command = new CreateProjectCommand
@@ -64,12 +67,13 @@ internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard,
 	{
 		var tcs = new TaskCompletionSource<string>();
 		var subject = new Subject<string>();
-		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null!));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;
 	}
 
+	/// <inheritdoc/>
 	public Task UpdateAsync(string id, ProjectUpdateInput input, CancellationToken cancellationToken = default)
 	{
 		var command = new UpdateProjectCommand
@@ -81,17 +85,20 @@ internal class ProjectApplicationService(IProjectStore store, IScopeGuard guard,
 		return Bus.SendAsync(command, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task ArchiveAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var command = await factory.CreateAsync<ArchiveProjectCommand>(id, cancellationToken);
 		await factory.ExecuteAsync(command, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new DeleteProjectCommand { Id = id }, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<object> ExplainAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var project = await factory.FetchAsync<Project>(id, cancellationToken);

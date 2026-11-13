@@ -14,6 +14,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class InboxOutboxIntegrationTests
 {
+	/// <summary>
+	/// 验证启用发件箱后发布消息会写入发件箱条目，并将传输状态标记为 <see cref="OutboxTransportStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithOutboxEnabled_InsertsEntryAndMarksSuccess()
 	{
@@ -59,6 +62,9 @@ public class InboxOutboxIntegrationTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证默认未启用发件箱时，发布消息不会写入发件箱。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithOutboxDisabledByDefault_DoesNotInsert()
 	{
@@ -89,6 +95,9 @@ public class InboxOutboxIntegrationTests
 		Assert.Null(store.Get("publish-plain-2"));
 	}
 
+	/// <summary>
+	/// 验证消息级 <c>UseOutbox</c> 可在全局未启用发件箱时强制写入条目。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithPerMessageUseOutbox_InsertsEvenWhenGlobalDisabled()
 	{
@@ -119,6 +128,9 @@ public class InboxOutboxIntegrationTests
 		Assert.NotNull(store.Get("publish-override-3"));
 	}
 
+	/// <summary>
+	/// 验证启用收件箱后重复投递的多播消息只执行一次处理器，并将处理状态标记为 <see cref="InboxHandlerStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_Multicast_WithInboxEnabled_DeduplicatesRedeliveryAndMarksSuccess()
 	{
@@ -158,6 +170,9 @@ public class InboxOutboxIntegrationTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证未启用收件箱时，重复投递的多播消息会被重复执行。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_Multicast_WithInboxDisabled_DoesNotDeduplicate()
 	{
@@ -188,6 +203,9 @@ public class InboxOutboxIntegrationTests
 		Assert.Equal(2, handled);
 	}
 
+	/// <summary>
+	/// 验证启用发件箱但未注册存储时，发布消息抛出 <see cref="MessagePersistentException"/>。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithOutboxEnabled_WithoutStore_ThrowsMessagePersistentException()
 	{
@@ -218,6 +236,9 @@ public class InboxOutboxIntegrationTests
 			null, TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// 验证启用收件箱但未注册存储时，处理消息抛出 <see cref="MessagePersistentException"/>。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_WithInboxEnabled_WithoutStore_ThrowsMessagePersistentException()
 	{

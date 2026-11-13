@@ -2,6 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace Nerosoft.Euonia.Osba;
 
+/// <summary>
+/// 通用业务规则集合；此分部类提供基于正则表达式的属性验证规则。
+/// </summary>
 public partial class CommonRule
 {
 	/// <summary>

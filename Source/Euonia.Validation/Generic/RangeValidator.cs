@@ -1,33 +1,33 @@
 ﻿namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Class RangeValidator.
-/// Implements the <see cref="AbstractValidator{TValue}" />
+/// RangeValidator 类。
+/// 实现 <see cref="AbstractValidator{TValue}" />
 /// </summary>
-/// <typeparam name="TValue">The type of the t value.</typeparam>
+/// <typeparam name="TValue">值类型。</typeparam>
 /// <seealso cref="AbstractValidator{TValue}" />
 public class RangeValidator<TValue> : AbstractValidator<TValue>
     where TValue : IComparable, IComparable<TValue>
 {
     /// <summary>
-    /// Gets the minimum.
+    /// 获取最小值。
     /// </summary>
-    /// <value>The minimum.</value>
+    /// <value>最小值。</value>
     public TValue Minimum { get; }
 
     /// <summary>
-    /// Gets the maximum.
+    /// 获取最大值。
     /// </summary>
-    /// <value>The maximum.</value>
+    /// <value>最大值。</value>
     public TValue Maximum { get; }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RangeValidator{TValue}"/> class.
+    /// 初始化 <see cref="RangeValidator{TValue}"/> 类的新实例。
     /// </summary>
-    /// <param name="minimum">The minimum.</param>
-    /// <param name="maximum">The maximum.</param>
-    /// <param name="message">The error message.</param>
-    /// <exception cref="ArgumentException">Minimum value could not greater than or equals maximum value.</exception>
+    /// <param name="minimum">最小值。</param>
+    /// <param name="maximum">最大值。</param>
+    /// <param name="message">错误消息。</param>
+    /// <exception cref="ArgumentException">最小值不能大于或等于最大值。</exception>
     public RangeValidator(TValue minimum, TValue maximum, string message)
         : base(message)
     {
@@ -41,10 +41,10 @@ public class RangeValidator<TValue> : AbstractValidator<TValue>
     }
 
     /// <summary>
-    /// Validates the specified value.
+    /// 验证指定的值。
     /// </summary>
-    /// <param name="value">The value.</param>
-    /// <returns><c>true</c> if the value is valid, <c>false</c> otherwise.</returns>
+    /// <param name="value">要验证的值。</param>
+    /// <returns>如果值有效则为 <c>true</c>，否则为 <c>false</c>。</returns>
     public override bool Validate(TValue value)
     {
         return value.CompareTo(Minimum) >= 0 && value.CompareTo(Maximum) <= 0;

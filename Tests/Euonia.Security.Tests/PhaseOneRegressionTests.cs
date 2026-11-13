@@ -21,6 +21,9 @@ public class PhaseOneRegressionTests
 
 	#region 行级授权的接线
 
+	/// <summary>
+	/// 第二次 <c>AddPermission</c> 注册的权限模型，应被 <see cref="IObjectScopeAuthorizer"/> 视为受约束，而不是静默跳过行级校验。
+	/// </summary>
 	[Fact]
 	public void ObjectScopeAuthorizer_Should_See_Models_Registered_By_A_Later_AddPermission()
 	{
@@ -43,6 +46,10 @@ public class PhaseOneRegressionTests
 
 	#region 授权数据不得被调用方回写
 
+	/// <summary>
+	/// <see cref="ScopeSubjectSet"/> 的 <see cref="ScopeSubjectSet.Codes"/> 与 <see cref="ScopeSubjectSet.KeysWithGrants"/> 不得以可写集合暴露；
+	/// 维度值即使可写也只写入副本，不得回写到授权数据。
+	/// </summary>
 	[Fact]
 	public void SubjectSet_Should_Not_Hand_Out_Writable_Collections()
 	{
@@ -68,6 +75,9 @@ public class PhaseOneRegressionTests
 		Assert.DoesNotContain("team-forged", subjects.ValuesOf(ScopeKeys.Default, ScopeDimensions.Dept));
 	}
 
+	/// <summary>
+	/// 共享的 <see cref="ScopeSubjectSet.Empty"/> 应拒绝就地添加权限码并保持为空，避免向匿名用户发权限。
+	/// </summary>
 	[Fact]
 	public void Shared_Empty_Instance_Should_Not_Be_Writable()
 	{
@@ -79,6 +89,9 @@ public class PhaseOneRegressionTests
 		Assert.Empty(ScopeSubjectSet.Empty.Codes);
 	}
 
+	/// <summary>
+	/// <c>Build()</c> 应发布独立快照，构建器此后的追加不得影响已发布的授权数据。
+	/// </summary>
 	[Fact]
 	public void Build_Should_Publish_A_Snapshot_Not_The_Builder_State()
 	{
@@ -99,6 +112,9 @@ public class PhaseOneRegressionTests
 
 	#region 权限码大小写口径
 
+	/// <summary>
+	/// 类型级闸门 <see cref="ScopeSubjectSet.HoldsPermission"/> 与按码取授予的维度查找应统一按忽略大小写处理，给出同一答案。
+	/// </summary>
 	[Fact]
 	public void Type_Gate_And_Row_Grant_Lookup_Should_Agree_On_Case()
 	{
@@ -118,6 +134,9 @@ public class PhaseOneRegressionTests
 		Assert.Equal(["team-scoped"], subjects.ValuesOf("repo:delete", ScopeDimensions.Dept));
 	}
 
+	/// <summary>
+	/// 维度名匹配忽略大小写，而维度值匹配区分大小写：<c>DEPT/TeamA</c> 命中，<c>dept/teama</c> 不命中。
+	/// </summary>
 	[Fact]
 	public void Dimension_Name_Case_Insensitive_Value_Case_Sensitive_Rule_Should_Hold()
 	{
@@ -133,6 +152,9 @@ public class PhaseOneRegressionTests
 
 	#region null 资源的判定与解释必须同口径
 
+	/// <summary>
+	/// <c>null</c> 资源应被判定与解释两个入口一致拒绝，且不因类型未注册权限模型而放行。
+	/// </summary>
 	[Fact]
 	public void Null_Resource_Should_Be_Refused_By_Both_Judging_And_Explaining()
 	{
@@ -157,6 +179,9 @@ public class PhaseOneRegressionTests
 
 	#region 注册期
 
+	/// <summary>
+	/// 输入完全相同的重复 <c>AddPermission</c> 应复用原来的 <see cref="ScopeModelRegistry"/> 实例，而不整表重建。
+	/// </summary>
 	[Fact]
 	public void Repeating_An_Idempotent_AddPermission_Should_Not_Rebuild_The_Registry()
 	{
@@ -186,6 +211,9 @@ public class PhaseOneRegressionTests
 		Assert.True(third.GetRequiredService<PermissionRegistration>().RequiresSubjectResolver);
 	}
 
+	/// <summary>
+	/// 新增模块时注册表必须照常重建，新模型应出现在新的 <see cref="ScopeModelRegistry"/> 中。
+	/// </summary>
 	[Fact]
 	public void Adding_A_New_Module_Should_Still_Rebuild()
 	{
@@ -210,6 +238,9 @@ public class PhaseOneRegressionTests
 
 	#region 撤销生效
 
+	/// <summary>
+	/// 撤销后调用 <see cref="IScopeGuard.RefreshAsync"/>，后续判定应基于最新授权数据重新编译策略。
+	/// </summary>
 	[Fact]
 	public async Task Refresh_Should_Recompile_The_Policy_From_Fresh_Authorization_Data()
 	{
@@ -234,7 +265,7 @@ public class PhaseOneRegressionTests
 
 	#region Helpers
 
-	private static ServiceProvider BuildGuard(IScopeSubjectResolver resolver = null)
+	private static ServiceProvider BuildGuard(IScopeSubjectResolver? resolver = null)
 	{
 		var services = new ServiceCollection();
 
@@ -271,12 +302,17 @@ internal sealed class SwappableSubjectResolver : IScopeSubjectResolver
 {
 	private ScopeSubjectSet _subjects = Build("team-a");
 
+	/// <summary>
+	/// 替换当前授予的部门范围，用于验证撤销授权后策略重新编译。
+	/// </summary>
+	/// <param name="dept">新的部门维度值。</param>
 	public void Grant(string dept)
 	{
 		_subjects = Build(dept);
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	/// <inheritdoc />
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		=> new(_subjects);
 
 	private static ScopeSubjectSet Build(string dept)

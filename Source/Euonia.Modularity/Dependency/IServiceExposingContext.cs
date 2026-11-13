@@ -1,17 +1,17 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The service exposing context.
+/// 服务公开上下文。
 /// </summary>
 public interface IServiceExposingContext
 {
     /// <summary>
-    /// Gets the implementation type.
+    /// 获取实现类型。
     /// </summary>
     Type ImplementationType { get; }
 
     /// <summary>
-    /// Gets the exposed types of the implementation type.
+    /// 获取实现类型所公开的类型。
     /// </summary>
     List<Type> ExposedTypes { get; }
 }

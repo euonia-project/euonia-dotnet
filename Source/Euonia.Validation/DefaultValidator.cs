@@ -4,26 +4,27 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// The default validator.
+/// 默认验证器。
 /// </summary>
 public class DefaultValidator : IValidator
 {
 	private readonly IServiceProvider _provider;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="DefaultValidator"/> class.
+	/// 初始化 <see cref="DefaultValidator"/> 类的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
+	/// <param name="provider">用于解析 FluentValidation 验证器的服务提供程序。</param>
 	public DefaultValidator(IServiceProvider provider)
 	{
 		_provider = provider;
 	}
 
 	/// <summary>
-	/// Validate the given item.
+	/// 验证给定的项。
 	/// </summary>
-	/// <param name="item"></param>
-	/// <typeparam name="T"></typeparam>
+	/// <typeparam name="T">要验证的对象的类型。</typeparam>
+	/// <param name="item">要验证的实例。</param>
+	/// <exception cref="ValidationException">找到对应的 FluentValidation 验证器且验证失败时抛出，包含各字段的错误信息。</exception>
 	public void Validate<T>(T item) where T : class
 	{
 		var validator = _provider.GetService<IValidator<T>>();
@@ -43,12 +44,12 @@ public class DefaultValidator : IValidator
 	}
 
 	/// <summary>
-	/// Validate the given item asynchronously.
+	/// 异步验证给定的项。
 	/// </summary>
-	/// <typeparam name="T"></typeparam>
-	/// <param name="item"></param>
-	/// <returns></returns>
-	/// <exception cref="ValidationException"></exception>
+	/// <typeparam name="T">要验证的对象的类型。</typeparam>
+	/// <param name="item">要验证的实例。</param>
+	/// <returns>表示异步验证过程的任务。</returns>
+	/// <exception cref="ValidationException">找到对应的 FluentValidation 验证器且验证失败时抛出，包含各字段的错误信息。</exception>
 	public Task ValidateAsync<T>(T item) where T : class
 	{
 		var validator = _provider.GetService<IValidator<T>>();

@@ -2,6 +2,9 @@ using System.Collections.Concurrent;
 
 namespace Nerosoft.Euonia.Threading;
 
+/// <summary>
+/// 单线程异步上下文；此分部类包含其内部使用的阻塞任务队列。
+/// </summary>
 public sealed partial class AsyncContext
 {
     /// <summary>

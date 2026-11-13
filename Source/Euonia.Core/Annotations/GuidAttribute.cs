@@ -20,7 +20,7 @@ public class GuidAttribute : ValidationAttribute
 	/// 当值有效时返回 <see cref="ValidationResult.Success"/>；否则返回包含
 	/// 配置的 <see cref="ValidationAttribute.ErrorMessage"/>（或默认消息）和成员名称的 <see cref="ValidationResult"/>。
 	/// </returns>
-	protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+	protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
 	{
 		return value switch
 		{
@@ -29,7 +29,7 @@ public class GuidAttribute : ValidationAttribute
 			string str when Guid.TryParse(str, out _) => ValidationResult.Success,
 			_ => new ValidationResult(
 				ErrorMessage ?? string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_INVALID_GUID, validationContext.MemberName),
-				[validationContext.MemberName])
+				[validationContext.MemberName!])
 		};
 	}
 }

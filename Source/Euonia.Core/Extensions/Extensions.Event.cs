@@ -1,3 +1,6 @@
+/// <summary>
+/// 提供安全触发事件的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
     /// <summary>

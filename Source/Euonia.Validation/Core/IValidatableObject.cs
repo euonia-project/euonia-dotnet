@@ -3,24 +3,24 @@
 namespace Nerosoft.Euonia.Validation;
 
 /// <summary>
-/// Interface for validating objects.
+/// 用于验证对象的接口。
 /// </summary>
 public interface IValidatableObject
 {
     /// <summary>
-    /// Gets the errors.
+    /// 获取错误集合。
     /// </summary>
-    /// <value>The errors.</value>
+    /// <value>错误集合。</value>
     ObservableCollection<string> Errors { get; }
 
     /// <summary>
-    /// Returns true if ... is valid.
+    /// 如果对象有效则返回 true。
     /// </summary>
-    /// <value><c>true</c> if this instance is valid; otherwise, <c>false</c>.</value>
+    /// <value>如果此实例有效则为 <c>true</c>；否则为 <c>false</c>。</value>
     bool IsValid { get; }
 
     /// <summary>
-    /// Validates this instance.
+    /// 验证此实例。
     /// </summary>
     void Validate();
 }

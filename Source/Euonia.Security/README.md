@@ -6,6 +6,36 @@
 
 > 设计动因、被否决的方案与已知边界见 [DESIGN.md](DESIGN.md)（面向维护者与评审者）。
 
+- **目标框架**：`net10.0`、`net11.0`
+- **根命名空间**：`Nerosoft.Euonia.Security`（`AddPermission` / `PermissionOptions` 位于 `Microsoft.Extensions.DependencyInjection`）
+- **NuGet 包**：`Euonia.Security`
+
+## 安装
+
+```bash
+dotnet add package Euonia.Security
+```
+
+本包只依赖 `Euonia.Core` 与 `Microsoft.Extensions.DependencyInjection.Abstractions`：不引入 EF Core、ASP.NET Core，也不绑定任何鉴权引擎。装配入口只有 `AddPermission`，完整装配与规则写法见 [§3 装配](#3-装配)。
+
+## 快速开始
+
+最小装配只有两步：用 `AddPermission` 声明扫描范围与操作入口规则，再注册判定主体 `UserPrincipal`。
+
+```csharp
+services.AddPermission(permission => permission
+        .Scan(typeof(Order).Assembly)
+        .OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute)));
+
+services.AddSingleton(new UserPrincipal(claimsPrincipal)); // claimsPrincipal 来自 HttpContext.User 或认证中间件
+```
+
+完整写法、多模块合并、`NoOperationCodes` / `NoModels` 断言与自定义来源见 [§3 装配](#3-装配)。
+
+## 选项（代码配置）
+
+本包没有 `IConfiguration` 读取点，也没有 `appsettings` 配置节：`PermissionOptions` 只在 `AddPermission(options => ...)` 回调里使用，可用的声明为 `Scan`（可多次，程序集取并集）、`OnAttributeOrName`、`OnMethod`、`Source`、`NoOperationCodes`、`NoModels`。它们的语义与组合约束见 [§3 装配](#3-装配) 与 [§6 核心类型与关键成员速查](#6-核心类型与关键成员速查)。
+
 ---
 
 ## 1. 核心原则：能预定义的进代码，不能预定义的走数据
@@ -60,7 +90,7 @@ services.AddPermission(permission => permission
         .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
 
 // 当前用户主体（判定主体）：由宿主注册，取其 Claims 即 ClaimsPrincipal
-services.AddSingleton(UserPrincipal.Current);
+services.AddSingleton(new UserPrincipal(claimsPrincipal)); // claimsPrincipal 来自 HttpContext.User 或认证中间件
 ```
 
 规则必须**显式**给出——引擎不猜「哪个方法对应哪个业务操作」。载体有两种，语义完全一致：
@@ -544,7 +574,7 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 
 ---
 
-## 6. 关键成员速查
+## 6. 核心类型与关键成员速查
 
 ### 授权数据（使用方实现）
 
@@ -669,3 +699,74 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 1. 把各处手写的行级条件改写为 `ScopeModel<T>` 的 `Policy` / `Declare`。
 2. 把原本写死在代码里的授权值改为由 `IScopeSubjectResolver` 实时解析。
 3. 把原先分散的判定位置改为在统一的边界调用 `IScopeGuard`。
+
+---
+
+## 10. 注意事项 / 限制
+
+- **不提供默认授权数据源**：`IScopeSubjectResolver` 只有契约，没有实现；未注册而使用了权限时，首次解析 `IScopeGuard` 的启动校验会直接失败（§2、§5.6）。
+- **判定一律 fail-closed**：取不到授权数据、维度未映射、策略结构性恒不放行都按拒绝处理，不存在「配置缺失时放行」的回退（§1、§5.3）。
+- **不决定强制执行点**：本包不会给 Minimal API、MVC 过滤器或 EF 查询自动挂上判定；调用方必须在自己的边界显式调用 `IPermissionChecker` / `IScopeGuard.Allows*` / `IScopeGuard.Apply`（§1、§5.1）。
+- **`IScopeGuard` 依赖当前 `UserPrincipal`**：后台任务或非请求线程需要自建作用域并提供判定主体；同步判定前要先 `await guard.EnsureResolvedAsync(ct)`，冷缓存下同步读会抛 `IDS_SCOPE_NOT_RESOLVED`（§5.5、§7）。
+- **授权值是缓存而非快照**：已编译策略按（资源类型，授予键）缓存，授权数据变更后必须调用 `RefreshAsync()`，否则旧结论会继续生效（§8）。
+- **启动期校验是有意的 fail-fast**：模型缺维度、标识/名称重复、扫描范围为空等都在注册或首次解析时抛异常，不要用 try/catch 吞掉（§5.6、§7）。
+- **不提供多租户隔离**：租户维度如何进入授权值完全由 `IScopeSubjectResolver` 与维度选择器决定，本包不认识租户概念。
+
+## 相关包
+
+- [`Euonia.Core`](../Euonia.Core/README.md) —— `UserPrincipal`、`IPermissionChecker`、`IObjectScopeAuthorizer` 等契约
+- [`Euonia.Osba`](../Euonia.Osba/README.md) —— 业务对象运行时：把 `[Permission]` 与行级策略接到工厂/执行器边界
+- [`Euonia.Telemetry.Otel`](../Euonia.Telemetry.Otel/README.md) —— 采集本包的 `Nerosoft.Euonia.Security` ActivitySource 与 Meter
+- [`Euonia.Tenancy`](../Euonia.Tenancy/README.md) —— 多租户上下文（租户维度由使用方自行接入授权值）
+
+## 常见问题与故障排查
+
+### 同步判定抛「授权数据尚未解析」
+
+**原因**：`IDS_SCOPE_NOT_RESOLVED` —— 当前作用域还没解析授权数据，同步读不会隐式等待（`Source/Euonia.Security/Properties/Resources.resx:159`、§5.5）。
+**解决**：在任何同步判定前 `await guard.EnsureResolvedAsync(ct)`；后台任务先建作用域、注册 `UserPrincipal`，再预热。
+
+### 启动抛「权限配置是空的」
+
+**原因**：`AddPermission` 回调里既没有入口规则、也没有 `Source` / `NoOperationCodes` / `NoModels` / `Scan`，等于没有表达任何意图（`Resources.resx:120`、§3.1）。
+**解决**：有方法级权限码就写 `OnAttributeOrName` / `OnMethod`；没有就显式断言 `p.NoOperationCodes()`；只想追加扫描范围就 `p.Scan(asm)`。
+
+### 启动抛「名称 'x' 已被 'y' 占用」/「标识 'x' 的策略被重复声明」
+
+**原因**：两个声明占用了同一个名字（标识或授予键，任意方向），共用名字等于共用同一份行级授予（§5.8）。
+**解决**：按权限码声明改用 `For(code, ...)`，或为每个操作指定各自的键；名字冲突要在 `Define` 里消歧，不要靠注册顺序。
+
+### `Apply` 之后 SQL 里没有过滤条件
+
+**原因**：在投影成 DTO 之后才 `Apply`，集合已物化，表达式无法翻译；或对 `IEnumerable` 调用而不是 `IQueryable`（§7「下推相关问题」）。
+**解决**：把 `guard.Apply(query)` 作用在实体 `IQueryable` 上、投影之前，用 `ToQueryString()` 确认 WHERE 已下推。
+
+### 判定结果恒为拒绝
+
+**原因**：维度未映射、授予值与维度选择器取值不同源，或子表维度方向反了（把资源标识授予了成员维度）。
+**解决**：先 `guard.Explain(entity, identifier)` 看命中维度；核对 `AddGrant(key, "order", ids)` 与 `Map("order", x => x.Id)` 是否同一套值；子表维度确认父→子方向与已加载集合。
+
+## 最佳实践
+
+- **规则显式化**：每个 `AddPermission` 回调要么给入口规则，要么断言 `NoOperationCodes` / `NoModels`；不要留「只 Scan 不表态」的配置。
+- **启动即预热**：在应用启动早期解析一次 `IScopeGuard`（`provider.GetRequiredService<IScopeGuard>()`），把缺 `IScopeSubjectResolver` / `UserPrincipal` 的问题挡在启动阶段。
+- **下推优先于逐行判定**：列表查询用 `Apply`，只有单条详情才用 `Allows` / `AllowsObject`。
+- **为子表维度建索引**：`MapMany` 产生的 `EXISTS` 子查询按过滤列取数，建议在 `(父标识, 值)` 上建组合索引。
+- **授权数据变更后刷新**：调用 `RefreshAsync()` 失效已编译策略，否则旧结论会继续生效。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 依赖 | `Euonia.Core`、`Microsoft.Extensions.DependencyInjection.Abstractions` |
+
+- **不依赖 EF Core**：下推只生成表达式树，SQL 翻译由宿主的 ORM 完成；换 ORM 只需保证表达式可翻译。
+- **命名空间**：全部类型位于 `Nerosoft.Euonia.Security`（`Scope/` 目录不另立子命名空间），DI 扩展在 `Microsoft.Extensions.DependencyInjection`。
+- **不提供默认 `IScopeSubjectResolver`** 是设计承诺而非遗漏，升级不会补一个默认实现；若该边界变更，会以主版本说明。
+- `IScopeGuard` / `IPermissionChecker` 按作用域注册（`IObjectScopeAuthorizer` 为单例，`Source/Euonia.Security/ServiceCollectionExtensions.cs:116-136`）；跨作用域缓存判定结果不在支持范围。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

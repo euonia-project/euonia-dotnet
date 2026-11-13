@@ -1,57 +1,60 @@
 namespace Nerosoft.Euonia.Bus.InMemory;
 
+/// <summary>
+/// <see cref="MessengerExtensions"/> 的响应式扩展：把消息信使的订阅包装为 <see cref="IObservable{T}"/>。
+/// </summary>
 partial class MessengerExtensions
 {
 	/// <summary>
-	/// Creates an <see cref="IObservable{T}"/> instance that can be used to be notified whenever a message of a given type is broadcast by a messenger.
+	/// 创建一个 <see cref="IObservable{T}"/> 实例，可用于在消息信使广播给定类型的消息时收到通知。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to use to receive notification for through the resulting <see cref="IObservable{T}"/> instance.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <returns>An <see cref="IObservable{T}"/> instance to receive notifications for <typeparamref name="TMessage"/> messages being broadcast.</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> is <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要通过生成的 <see cref="IObservable{T}"/> 实例接收通知的消息类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <returns>一个 <see cref="IObservable{T}"/> 实例，用于接收 <typeparamref name="TMessage"/> 消息被广播时的通知。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 为 <see langword="null"/> 时引发。</exception>
 	public static IObservable<TMessage> CreateObservable<TMessage>(this IMessenger messenger)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(messenger);
 
 		return new Observable<TMessage>(messenger);
 	}
 
 	/// <summary>
-	/// Creates an <see cref="IObservable{T}"/> instance that can be used to be notified whenever a message of a given type is broadcast by a messenger.
+	/// 创建一个 <see cref="IObservable{T}"/> 实例，可用于在消息信使广播给定类型的消息时收到通知。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to use to receive notification for through the resulting <see cref="IObservable{T}"/> instance.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to receive messages.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="token">A token used to determine the receiving channel to use.</param>
-	/// <returns>An <see cref="IObservable{T}"/> instance to receive notifications for <typeparamref name="TMessage"/> messages being broadcast.</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要通过生成的 <see cref="IObservable{T}"/> 实例接收通知的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识接收消息所使用通道的令牌类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="token">用于确定要使用的接收通道的令牌。</param>
+	/// <returns>一个 <see cref="IObservable{T}"/> 实例，用于接收 <typeparamref name="TMessage"/> 消息被广播时的通知。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
 	public static IObservable<TMessage> CreateObservable<TMessage, TToken>(this IMessenger messenger, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(token);
 
 		return new Observable<TMessage, TToken>(messenger, token);
 	}
 
 	/// <summary>
-	/// An <see cref="IObservable{T}"/> implementations for a given message type.
+	/// 用于给定消息类型的 <see cref="IObservable{T}"/> 实现。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of messages to listen to.</typeparam>
+	/// <typeparam name="TMessage">要侦听的消息类型。</typeparam>
 	private sealed class Observable<TMessage> : IObservable<TMessage>
 		where TMessage : class
 	{
 		/// <summary>
-		/// The <see cref="IMessenger"/> instance to use to register the recipient.
+		/// 用于注册接收方的 <see cref="IMessenger"/> 实例。
 		/// </summary>
 		private readonly IMessenger _messenger;
 
 		/// <summary>
-		/// Creates a new <see cref="Observable{TMessage}"/> instance with the given parameters.
+		/// 使用给定参数创建新的 <see cref="Observable{TMessage}"/> 实例。
 		/// </summary>
-		/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
+		/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
 		public Observable(IMessenger messenger)
 		{
 			_messenger = messenger;
@@ -64,25 +67,25 @@ partial class MessengerExtensions
 		}
 
 		/// <summary>
-		/// An <see cref="IRecipient{TMessage}"/> implementation for <see cref="Observable{TMessage}"/>.
+		/// 用于 <see cref="Observable{TMessage}"/> 的 <see cref="IRecipient{TMessage}"/> 实现。
 		/// </summary>
 		private sealed class Recipient : IRecipient<TMessage>, IDisposable
 		{
 			/// <summary>
-			/// The <see cref="IMessenger"/> instance to use to register the recipient.
+			/// 用于注册接收方的 <see cref="IMessenger"/> 实例。
 			/// </summary>
 			private readonly IMessenger _messenger;
 
 			/// <summary>
-			/// The target <see cref="IObserver{T}"/> instance currently in use.
+			/// 当前正在使用的目标 <see cref="IObserver{T}"/> 实例。
 			/// </summary>
 			private readonly IObserver<TMessage> _observer;
 
 			/// <summary>
-			/// Creates a new <see cref="Recipient"/> instance with the specified parameters.
+			/// 使用指定参数创建新的 <see cref="Recipient"/> 实例。
 			/// </summary>
-			/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-			/// <param name="observer">The <see cref="IObserver{T}"/> instance to use to create the recipient for.</param>
+			/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+			/// <param name="observer">用于创建接收方的 <see cref="IObserver{T}"/> 实例。</param>
 			public Recipient(IMessenger messenger, IObserver<TMessage> observer)
 			{
 				_messenger = messenger;
@@ -106,29 +109,29 @@ partial class MessengerExtensions
 	}
 
 	/// <summary>
-	/// An <see cref="IObservable{T}"/> implementations for a given pair of message and token types.
+	/// 用于给定消息和令牌类型对的 <see cref="IObservable{T}"/> 实现。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of messages to listen to.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to receive messages.</typeparam>
+	/// <typeparam name="TMessage">要侦听的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识接收消息所使用通道的令牌类型。</typeparam>
 	private sealed class Observable<TMessage, TToken> : IObservable<TMessage>
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
 		/// <summary>
-		/// The <see cref="IMessenger"/> instance to use to register the recipient.
+		/// 用于注册接收方的 <see cref="IMessenger"/> 实例。
 		/// </summary>
 		private readonly IMessenger _messenger;
 
 		/// <summary>
-		/// The token used to determine the receiving channel to use.
+		/// 用于确定要使用的接收通道的令牌。
 		/// </summary>
 		private readonly TToken _token;
 
 		/// <summary>
-		/// Creates a new <see cref="Observable{TMessage, TToken}"/> instance with the given parameters.
+		/// 使用给定参数创建新的 <see cref="Observable{TMessage, TToken}"/> 实例。
 		/// </summary>
-		/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-		/// <param name="token">A token used to determine the receiving channel to use.</param>
+		/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+		/// <param name="token">用于确定要使用的接收通道的令牌。</param>
 		public Observable(IMessenger messenger, TToken token)
 		{
 			_messenger = messenger;
@@ -142,31 +145,31 @@ partial class MessengerExtensions
 		}
 
 		/// <summary>
-		/// An <see cref="IRecipient{TMessage}"/> implementation for <see cref="Observable{TMessage, TToken}"/>.
+		/// 用于 <see cref="Observable{TMessage, TToken}"/> 的 <see cref="IRecipient{TMessage}"/> 实现。
 		/// </summary>
 		private sealed class Recipient : IRecipient<TMessage>, IDisposable
 		{
 			/// <summary>
-			/// The <see cref="IMessenger"/> instance to use to register the recipient.
+			/// 用于注册接收方的 <see cref="IMessenger"/> 实例。
 			/// </summary>
 			private readonly IMessenger _messenger;
 
 			/// <summary>
-			/// The target <see cref="IObserver{T}"/> instance currently in use.
+			/// 当前正在使用的目标 <see cref="IObserver{T}"/> 实例。
 			/// </summary>
 			private readonly IObserver<TMessage> _observer;
 
 			/// <summary>
-			/// The token used to determine the receiving channel to use.
+			/// 用于确定要使用的接收通道的令牌。
 			/// </summary>
 			private readonly TToken _token;
 
 			/// <summary>
-			/// Creates a new <see cref="Recipient"/> instance with the specified parameters.
+			/// 使用指定参数创建新的 <see cref="Recipient"/> 实例。
 			/// </summary>
-			/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-			/// <param name="observer">The <see cref="IObserver{T}"/> instance to use to create the recipient for.</param>
-			/// <param name="token">A token used to determine the receiving channel to use.</param>
+			/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+			/// <param name="observer">用于创建接收方的 <see cref="IObserver{T}"/> 实例。</param>
+			/// <param name="token">用于确定要使用的接收通道的令牌。</param>
 			public Recipient(IMessenger messenger, IObserver<TMessage> observer, TToken token)
 			{
 				_messenger = messenger;

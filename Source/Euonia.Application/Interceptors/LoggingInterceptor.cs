@@ -1,8 +1,9 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 using Castle.DynamicProxy;
 using Microsoft.Extensions.Logging;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Application;
 
@@ -95,13 +96,13 @@ public class LoggingInterceptor : IInterceptor
 	/// </summary>
 	/// <param name="invocation">被拦截的方法调用，提供参数元数据与实参。</param>
 	/// <returns>以参数名为键、实参为值的字典（敏感参数值为掩码）。</returns>
-	private static Dictionary<string, object> GetArguments(IInvocation invocation)
+	private static Dictionary<string, object?> GetArguments(IInvocation invocation)
 	{
 		var method = invocation.MethodInvocationTarget ?? invocation.Method;
 		var parameters = method.GetParameters();
 		var sensitive = _sensitiveCache.GetOrAdd(method, GetSensitiveParameters);
 		var masks = _maskCache.GetOrAdd(method, GetParameterMasks);
-		var dictionary = new Dictionary<string, object>();
+		var dictionary = new Dictionary<string, object?>();
 		for (var index = 0; index < parameters.Length; index++)
 		{
 			var parameter = parameters[index];

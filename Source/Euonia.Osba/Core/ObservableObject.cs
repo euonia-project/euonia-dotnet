@@ -39,7 +39,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// <summary>
 	/// 当对象编辑状态发生变化时发生。
 	/// </summary>
-	public event EventHandler<ObjectStateChangedEventArgs> StateChanged;
+	public event EventHandler<ObjectStateChangedEventArgs>? StateChanged;
 
 	/// <summary>
 	/// 将对象状态标记为 <see cref="ObjectEditState.New"/>。
@@ -180,7 +180,7 @@ public abstract class ObservableObject<T> : BusinessObject<T>, IOperableProperty
 	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
 	/// 并发订阅/退订不会静默丢失处理器。
 	/// </remarks>
-	public event BusyChangedEventHandler BusyChanged;
+	public event BusyChangedEventHandler? BusyChanged;
 
 	/// <summary>
 	/// 引发 <see cref="BusyChanged"/> 事件。

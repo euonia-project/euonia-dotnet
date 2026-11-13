@@ -32,12 +32,12 @@ public class BusinessContext
 	/// 获取当前活动用户的 <see cref="ClaimsPrincipal"/>（如果可用）。
 	/// 当未设置用户时返回 <c>null</c>。
 	/// </summary>
-	public ClaimsPrincipal Principal => User?.Claims;
+	public ClaimsPrincipal? Principal => User?.Claims;
 
 	/// <summary>
 	/// 获取或设置表示应用程序用户上下文的当前 <see cref="UserPrincipal"/>。
 	/// </summary>
-	public UserPrincipal User { get; }
+	public UserPrincipal? User { get; }
 
 	/// <summary>
 	/// 从 <see cref="ContextAccessor"/> 获取当前的 <see cref="IServiceProvider"/>。
@@ -63,8 +63,8 @@ public class BusinessContext
 			throw new NullReferenceException(nameof(CurrentServiceProvider));
 		}
 
-		var result = CurrentServiceProvider.GetRequiredService<T>();
-		return result;
+		var result = CurrentServiceProvider.GetRequiredService(typeof(T));
+		return (T)result;
 	}
 
 	/// <summary>
@@ -90,7 +90,7 @@ public class BusinessContext
 	/// <typeparam name="T">要解析的服务类型。</typeparam>
 	/// <returns>解析出的服务实例；如果未找到，则为 <c>null</c>。</returns>
 	/// <exception cref="NullReferenceException">当 <see cref="CurrentServiceProvider"/> 为 <c>null</c> 时抛出。</exception>
-	public T GetService<T>()
+	public T? GetService<T>()
 	{
 		if (CurrentServiceProvider == null)
 		{
@@ -110,7 +110,7 @@ public class BusinessContext
 	/// <returns>解析出的键服务实例。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c>（在 .NET 5+ 上）时抛出。</exception>
 	/// <exception cref="NullReferenceException">当 <see cref="CurrentServiceProvider"/> 为 <c>null</c> 时抛出。</exception>
-	public T GetKeyedService<T>(object key)
+	public T? GetKeyedService<T>(object key)
 	{
 		ArgumentNullException.ThrowIfNull(key);
 		if (CurrentServiceProvider == null)
@@ -157,7 +157,7 @@ public class BusinessContext
 		}
 		else
 		{
-			result = Activator.CreateInstance(objectType, parameters);
+			result = Activator.CreateInstance(objectType, parameters)!;
 		}
 
 		if (result is IUseBusinessContext tmp)

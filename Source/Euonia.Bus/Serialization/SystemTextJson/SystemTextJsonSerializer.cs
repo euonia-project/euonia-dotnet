@@ -62,7 +62,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <c>IRequest&lt;T&gt;</c> 之类的空接口（如 <c>CallAsync(IRequest&lt;T&gt;)</c> 重载），
 	/// 直接序列化会得到 <c>"payload": {}</c>。这里把 payload 节点替换为按运行时类型的序列化结果。
 	/// </remarks>
-	private JsonNode SerializeToNode<T>(T source)
+	private JsonNode? SerializeToNode<T>(T source)
 	{
 		if (source is IMessageEnvelope { Payload: not null } envelope)
 		{
@@ -86,7 +86,8 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public async Task<T> DeserializeAsync<T>(Stream source, CancellationToken cancellationToken = default)
 	{
-		return await JsonSerializer.DeserializeAsync<T>(source, _options, cancellationToken: cancellationToken);
+		// IMessageSerializer 的契约声明反序列化结果非空。
+		return (await JsonSerializer.DeserializeAsync<T>(source, _options, cancellationToken: cancellationToken))!;
 	}
 
 	/// <summary>
@@ -110,7 +111,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(byte[] source)
 	{
-		return JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(source), _options);
+		return JsonSerializer.Deserialize<T>(Encoding.UTF8.GetString(source), _options)!;
 	}
 
 	/// <summary>
@@ -121,7 +122,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(string source)
 	{
-		return JsonSerializer.Deserialize<T>(source, _options);
+		return JsonSerializer.Deserialize<T>(source, _options)!;
 	}
 
 	/// <summary>
@@ -132,7 +133,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public T Deserialize<T>(Stream stream)
 	{
-		return JsonSerializer.Deserialize<T>(stream, _options);
+		return JsonSerializer.Deserialize<T>(stream, _options)!;
 	}
 
 	/// <summary>
@@ -154,7 +155,7 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	/// <returns>反序列化后的对象。</returns>
 	public object Deserialize(string source, Type type)
 	{
-		return JsonSerializer.Deserialize(source, type, _options);
+		return JsonSerializer.Deserialize(source, type, _options)!;
 	}
 
 	/// <summary>
@@ -166,6 +167,6 @@ public class SystemTextJsonSerializer : IMessageSerializer
 	public IMessageEnvelope DeserializeEnvelope(string source, Type payloadType)
 	{
 		var type = typeof(RoutedMessage<>).MakeGenericType(payloadType);
-		return (IMessageEnvelope)JsonSerializer.Deserialize(source, type, _options);
+		return (IMessageEnvelope)JsonSerializer.Deserialize(source, type, _options)!;
 	}
 }

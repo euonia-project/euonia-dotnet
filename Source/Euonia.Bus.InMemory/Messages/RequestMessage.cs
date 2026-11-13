@@ -3,17 +3,17 @@
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A <see langword="class"/> for request messages, which can either be used directly or through derived classes.
+/// 用于请求消息的 <see langword="class"/>，既可直接使用，也可通过派生类使用。
 /// </summary>
-/// <typeparam name="T">The type of request to make.</typeparam>
+/// <typeparam name="T">要发起的请求类型。</typeparam>
 public class RequestMessage<T>
 {
-	private T _response;
+	private T _response = default!;
 
 	/// <summary>
-	/// Gets the message response.
+	/// 获取消息响应。
 	/// </summary>
-	/// <exception cref="InvalidOperationException">Thrown when <see cref="HasReceivedResponse"/> is <see langword="false"/>.</exception>
+	/// <exception cref="InvalidOperationException">当 <see cref="HasReceivedResponse"/> 为 <see langword="false"/> 时引发。</exception>
 	public T Response
 	{
 		get
@@ -28,15 +28,15 @@ public class RequestMessage<T>
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether a response has already been assigned to this instance.
+	/// 获取一个值，指示是否已为当前实例分配了响应。
 	/// </summary>
 	public bool HasReceivedResponse { get; private set; }
 
 	/// <summary>
-	/// Replies to the current request message.
+	/// 回复当前请求消息。
 	/// </summary>
-	/// <param name="response">The response to use to reply to the request message.</param>
-	/// <exception cref="InvalidOperationException">Thrown if <see cref="Response"/> has already been set.</exception>
+	/// <param name="response">用于回复请求消息的响应。</param>
+	/// <exception cref="InvalidOperationException">当 <see cref="Response"/> 已被设置时引发。</exception>
 	public void Reply(T response)
 	{
 		if (HasReceivedResponse)
@@ -50,20 +50,20 @@ public class RequestMessage<T>
 	}
 
 	/// <summary>
-	/// Implicitly gets the response from a given <see cref="RequestMessage{T}"/> instance.
+	/// 从给定的 <see cref="RequestMessage{T}"/> 实例隐式获取响应。
 	/// </summary>
-	/// <param name="message">The input <see cref="RequestMessage{T}"/> instance.</param>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="message"/> is <see langword="null"/>.</exception>
-	/// <exception cref="InvalidOperationException">Thrown when <see cref="HasReceivedResponse"/> is <see langword="false"/>.</exception>
+	/// <param name="message">输入的 <see cref="RequestMessage{T}"/> 实例。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="message"/> 为 <see langword="null"/> 时引发。</exception>
+	/// <exception cref="InvalidOperationException">当 <see cref="HasReceivedResponse"/> 为 <see langword="false"/> 时引发。</exception>
 	public static implicit operator T(RequestMessage<T> message)
 	{
-		ArgumentAssert.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(message);
 
 		return message.Response;
 	}
 
 	/// <summary>
-	/// Throws an <see cref="InvalidOperationException"/> when a response is not available.
+	/// 当响应不可用时引发 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForNoResponseReceived()
@@ -72,7 +72,7 @@ public class RequestMessage<T>
 	}
 
 	/// <summary>
-	/// Throws an <see cref="InvalidOperationException"/> when <see cref="Reply"/> is called twice.
+	/// 当 <see cref="Reply"/> 被调用两次时引发 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	[DoesNotReturn]
 	private static void ThrowInvalidOperationExceptionForDuplicateReply()

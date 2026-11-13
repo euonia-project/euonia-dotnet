@@ -1,26 +1,26 @@
 ﻿namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The interface used to generate a value.
+/// 用于生成值的接口。
 /// </summary>
 public interface IValueGenerator
 {
     /// <summary>
-    /// Generates a value.
+    /// 生成值。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>生成的值。</returns>
     object Generate();
 }
 
 /// <summary>
-/// The interface used to generate a value.
+/// 用于生成值的接口。
 /// </summary>
-/// <typeparam name="TValue"></typeparam>
+/// <typeparam name="TValue">生成值的类型。</typeparam>
 public interface IValueGenerator<out TValue> : IValueGenerator
 {
     /// <summary>
-    /// Generates a value.
+    /// 生成值。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>生成的 <typeparamref name="TValue"/> 值。</returns>
     new TValue Generate();
 }

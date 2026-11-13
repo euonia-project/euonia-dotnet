@@ -36,5 +36,5 @@ public interface IPropertyInfo : IMemberInfo, IComparable
 	/// 获取 System.Reflection.PropertyInfo 对象。
 	/// </summary>
 	/// <returns>反射属性信息。</returns>
-	System.Reflection.PropertyInfo GetPropertyInfo();
+	System.Reflection.PropertyInfo? GetPropertyInfo();
 }

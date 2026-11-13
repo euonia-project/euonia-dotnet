@@ -17,14 +17,17 @@ public class StoreCleanupTests
 
 	private static void Age(IOutboxStore store, string messageId, TimeSpan age)
 	{
-		store.Get(messageId).CreatedAt = DateTime.Now - age;
+		store.Get(messageId)!.CreatedAt = DateTime.Now - age;
 	}
 
 	private static void Age(IInboxStore store, string messageId, TimeSpan age)
 	{
-		store.Get(messageId).CreatedAt = DateTime.Now - age;
+		store.Get(messageId)!.CreatedAt = DateTime.Now - age;
 	}
 
+	/// <summary>
+	/// 验证清理会移除已成功且早于保留阈值的发件箱条目。
+	/// </summary>
 	[Fact]
 	public void OutboxCleanup_RemovesExpiredSucceededEntry()
 	{
@@ -38,6 +41,9 @@ public class StoreCleanupTests
 		Assert.Null(store.Get("cleanup-outbox-done"));
 	}
 
+	/// <summary>
+	/// 验证尚未超过保留阈值的已成功条目不会被清理。
+	/// </summary>
 	[Fact]
 	public void OutboxCleanup_KeepsEntryThatIsNotYetExpired()
 	{
@@ -67,12 +73,15 @@ public class StoreCleanupTests
 		Assert.Single(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证已进入终态的死信条目在超过保留阈值后被清理。
+	/// </summary>
 	[Fact]
 	public void OutboxCleanup_RemovesExpiredDeadLetteredEntry()
 	{
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(CreateEnvelope("cleanup-outbox-dead"), ["transport-a"]);
-		store.Get("cleanup-outbox-dead").GetTransport("transport-a").MarkAsDeadLettered("exhausted");
+		store.Get("cleanup-outbox-dead")!.GetTransport("transport-a")!.MarkAsDeadLettered("exhausted");
 		Age(store, "cleanup-outbox-dead", TimeSpan.FromHours(2));
 
 		store.Cleanup(DateTime.Now - TimeSpan.FromHours(1));
@@ -80,6 +89,9 @@ public class StoreCleanupTests
 		Assert.Null(store.Get("cleanup-outbox-dead"));
 	}
 
+	/// <summary>
+	/// 验证收件箱清理只移除过期的已成功条目，仍等待重试的失败条目必须保留。
+	/// </summary>
 	[Fact]
 	public void InboxCleanup_RemovesExpiredSucceededEntryAndKeepsFailedOne()
 	{
@@ -125,7 +137,7 @@ public class StoreCleanupTests
 
 		public OutboxEntry Get(string messageId)
 		{
-			return _inner.Get(messageId);
+			return _inner.Get(messageId)!;
 		}
 
 		public void MarkAsSuccess(string messageId, string transport)

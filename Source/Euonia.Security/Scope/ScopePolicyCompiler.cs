@@ -28,7 +28,7 @@ public static class ScopePolicyCompiler
 	/// <returns>编译结果。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="policy"/> 或 <paramref name="model"/> 为 <see langword="null"/> 时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当策略引用了模型中未映射的维度时抛出。</exception>
-	public static CompiledScopePolicy<T> Compile<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet subjects, string scopeKey = null)
+	public static CompiledScopePolicy<T> Compile<T>(ScopePolicy<T> policy, ScopeModelDescriptor model, ScopeSubjectSet? subjects, string? scopeKey = null)
 		where T : class
 	{
 		Check.EnsureNotNull(policy, nameof(policy));

@@ -28,7 +28,7 @@ internal class HttpTransporter : ITransporter, IDisposable
 	/// <summary>
 	/// 当消息成功投递到远端时触发。
 	/// </summary>
-	public event EventHandler<MessageDeliveredEventArgs> Delivered;
+	public event EventHandler<MessageDeliveredEventArgs> Delivered = null!;
 
 	/// <summary>
 	/// 获取传输器名称。
@@ -98,9 +98,9 @@ internal class HttpTransporter : ITransporter, IDisposable
 			throw reply.Error?.ToException() ?? new MessageDeliverException("Remote call failed without detailed error information.");
 		}
 
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 
-		return reply.Result;
+		return reply.Result!;
 	}
 
 	/// <summary>
@@ -189,7 +189,7 @@ internal class HttpTransporter : ITransporter, IDisposable
 	/// </summary>
 	/// <param name="options">HTTP 总线选项。</param>
 	/// <param name="baseAddressOverride">目标端点覆盖值；为 <c>null</c> 时使用选项的 <see cref="HttpBusOptions.Endpoint"/>。</param>
-	private static string BuildRequestUri(HttpBusOptions options, string baseAddressOverride)
+	private static string BuildRequestUri(HttpBusOptions options, string? baseAddressOverride)
 	{
 		var route = options.Route ?? string.Empty;
 		if (route.Length == 0)

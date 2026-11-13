@@ -38,7 +38,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <summary>
 	/// 当前的 RabbitMQ 连接实例。
 	/// </summary>
-	private IConnection _connection;
+	private IConnection? _connection;
 
 	/// <summary>
 	/// 获取或设置一个值，指示当前实例是否已被释放。
@@ -96,13 +96,13 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 			                            })
 			                            .ExecuteAsync(() => _factory.CreateConnectionAsync());
 
-			if (IsConnected)
+			if (IsConnected && _connection is { } connection)
 			{
-				_connection.ConnectionShutdownAsync += OnConnectionShutdownAsync;
-				_connection.CallbackExceptionAsync += OnCallbackExceptionAsync;
-				_connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
+				connection.ConnectionShutdownAsync += OnConnectionShutdownAsync;
+				connection.CallbackExceptionAsync += OnCallbackExceptionAsync;
+				connection.ConnectionBlockedAsync += OnConnectionBlockedAsync;
 
-				_logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", _connection.Endpoint.HostName);
+				_logger.LogInformation("RabbitMQ Client acquired a persistent connection to '{HostName}' and is subscribed to failure events", connection.Endpoint.HostName);
 			}
 			else
 			{
@@ -133,7 +133,7 @@ internal class DefaultPersistentConnection : DisposableObject, IPersistentConnec
 	/// <param name="options">通道创建选项；为 <c>null</c> 时使用客户端默认值。</param>
 	/// <returns>表示异步操作的任务，包含创建的 <see cref="IChannel"/> 实例。</returns>
 	/// <exception cref="ObjectDisposedException">当连接对象已被释放时抛出。</exception>
-	public async Task<IChannel> CreateChannelAsync(CreateChannelOptions options)
+	public async Task<IChannel> CreateChannelAsync(CreateChannelOptions? options)
 	{
 		while (true)
 		{

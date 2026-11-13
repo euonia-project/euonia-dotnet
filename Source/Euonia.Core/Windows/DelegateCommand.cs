@@ -15,7 +15,7 @@ public class DelegateCommand<T> : ICommand
     /// <summary>
     /// 用于判断命令是否可以执行的回调函数。
     /// </summary>
-    private readonly Func<T, bool> _canExecute;
+    private readonly Func<T, bool>? _canExecute;
 
     /// <summary>
     /// 命令执行时要调用的操作。
@@ -28,7 +28,7 @@ public class DelegateCommand<T> : ICommand
     /// <param name="executeAction">命令执行时要调用的操作。</param>
     /// <param name="canExecute">用于判断命令是否可以执行的回调函数。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="executeAction"/> 为 null 时抛出。</exception>
-    public DelegateCommand(Action<T> executeAction, Func<T, bool> canExecute = null)
+    public DelegateCommand(Action<T> executeAction, Func<T, bool>? canExecute = null)
     {
         _executeAction = executeAction ?? throw new ArgumentNullException(nameof(executeAction));
         _canExecute = canExecute;
@@ -39,13 +39,13 @@ public class DelegateCommand<T> : ICommand
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
         var result = true;
         var canExecuteHandler = _canExecute;
         if (canExecuteHandler != null)
         {
-            result = canExecuteHandler((T)parameter);
+            result = canExecuteHandler((T)parameter!);
         }
 
         return result;
@@ -55,7 +55,7 @@ public class DelegateCommand<T> : ICommand
     /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
     /// <returns>事件参数，包含与事件相关的数据。</returns>
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler? CanExecuteChanged;
 
     /// <summary>
     /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
@@ -69,9 +69,9 @@ public class DelegateCommand<T> : ICommand
     /// 定义在调用命令时要调用的方法。
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
-    public void Execute(object parameter)
+    public void Execute(object? parameter)
     {
-        _executeAction((T)parameter);
+        _executeAction((T)parameter!);
     }
 }
 
@@ -87,7 +87,7 @@ public class DelegateCommand : ICommand
     /// <summary>
     /// 用于判断命令是否可以执行的回调函数。
     /// </summary>
-    private readonly Func<object, bool> _canExecute;
+    private readonly Func<object, bool>? _canExecute;
 
     /// <summary>
     /// 命令执行时要调用的操作。
@@ -100,7 +100,7 @@ public class DelegateCommand : ICommand
     /// <param name="executeAction">命令执行时要调用的操作。</param>
     /// <param name="canExecute">用于判断命令是否可以执行的回调函数。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="executeAction"/> 为 null 时抛出。</exception>
-    public DelegateCommand(Action<object> executeAction, Func<object, bool> canExecute = null)
+    public DelegateCommand(Action<object> executeAction, Func<object, bool>? canExecute = null)
     {
         _executeAction = executeAction ?? throw new ArgumentNullException(nameof(executeAction));
         _canExecute = canExecute;
@@ -111,13 +111,13 @@ public class DelegateCommand : ICommand
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
     /// <returns>如果此命令可以执行，则为 true；否则为 false。</returns>
-    public bool CanExecute(object parameter)
+    public bool CanExecute(object? parameter)
     {
         var result = true;
         var canExecuteHandler = _canExecute;
         if (canExecuteHandler != null)
         {
-            result = canExecuteHandler(parameter);
+            result = canExecuteHandler(parameter!);
         }
 
         return result;
@@ -127,7 +127,7 @@ public class DelegateCommand : ICommand
     /// 当发生影响命令是否应执行的更改时发生。
     /// </summary>
     /// <returns>事件参数，包含与事件相关的数据。</returns>
-    public event EventHandler CanExecuteChanged;
+    public event EventHandler? CanExecuteChanged;
 
     /// <summary>
     /// 引发 <see cref="CanExecuteChanged"/> 事件以通知命令的可执行状态已更改。
@@ -142,8 +142,8 @@ public class DelegateCommand : ICommand
     /// 定义在调用命令时要调用的方法。
     /// </summary>
     /// <param name="parameter">命令使用的数据。如果命令不需要传递数据，则可以将此对象设置为 null。</param>
-    public void Execute(object parameter)
+    public void Execute(object? parameter)
     {
-        _executeAction(parameter);
+        _executeAction(parameter!);
     }
 }

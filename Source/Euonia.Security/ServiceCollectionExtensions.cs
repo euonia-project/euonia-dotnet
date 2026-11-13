@@ -191,8 +191,10 @@ public static class ServiceCollectionExtensions
 				nameof(UserPrincipal));
 	}
 
-	/// <summary>只读取已累积的状态；尚未注册时返回 <see langword="null"/>。</summary>
-	private static PermissionRegistration TryGetRegistration(IServiceCollection services)
+	/// <summary>
+	/// 只读取已累积的状态；尚未注册时返回 <see langword="null"/>。
+	/// </summary>
+	private static PermissionRegistration? TryGetRegistration(IServiceCollection services)
 	{
 		return services.FirstOrDefault(descriptor => descriptor.ServiceType == typeof(PermissionRegistration))
 					   ?.ImplementationInstance as PermissionRegistration;
@@ -218,7 +220,7 @@ public static class ServiceCollectionExtensions
 	/// </summary>
 	internal static bool HasPermissionDeclarations(IEnumerable<Assembly> assemblies, IPermissionCodeSource codeSource)
 	{
-		foreach (var type in AssemblyHelper.LoadTypes(assemblies))
+		foreach (var type in AssemblyHelper.LoadTypes(assemblies)!)
 		{
 			if (!type.IsClass || type.IsAbstract)
 			{

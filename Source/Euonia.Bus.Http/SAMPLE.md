@@ -45,13 +45,12 @@ builder.Services.Configure<MessageBusOptions>(options => options.DefaultTranspor
 
 // 示例省略了 ASP.NET Core 认证配置，因此显式关闭端点授权。
 // 生产环境必须保留默认值 true，并为端点配置认证/授权中间件。
+// 自动绑定（配置节/环境变量）是最低优先级的默认值，因此显式配置写在 AddHttpBus 之前或之后都生效。
 builder.Services.Configure<HttpBusOptions>(options => options.RequireAuthorization = false);
 
-// 一条调用即登记核心总线 + keyed ITransporter("http") + HttpTransporter（重复调用安全）
+// 一条调用即登记核心总线 + keyed ITransporter("http") + HttpTransporter（重复调用安全），
+// 并自动绑定 HttpBus（旧节）与 Euonia:Bus:Http（新节）两个配置节。
 builder.Services.AddHttpBus("http");
-
-// 可配置化绑定 HttpBusOptions（与 services.Configure 等价）
-// builder.Services.Configure<HttpBusOptions>(builder.Configuration.GetSection("HttpBus"));
 
 var app = builder.Build();
 
@@ -136,25 +135,46 @@ configurator.SetConvention(convention => convention.Add<DefaultMessageConvention
 
 ### 2.1 配置绑定
 
-`HttpBusOptions` 可直接进配置（与代码里 `AddHttpBus` 的 `configure` 参数**二选一**，不要同时用）：
+`AddHttpBus` 会**自动绑定**配置节（无需手工 `Bind`），按以下顺序生效：
+
+1. 旧节 `HttpBus`（兼容既有部署）；
+2. 新节 `Euonia:Bus:Http`（推荐，覆盖旧节的同名键）；
+3. 显式配置：`AddHttpBus` 的 `configure` 形参，以及宿主的 `services.Configure<HttpBusOptions>(...)`。
+
+自动绑定以**最低优先级**注册（`IConfigureOptions<HttpBusOptions>` 插入服务集合最前面），
+因此无论 `services.Configure<HttpBusOptions>(...)` 写在 `AddHttpBus` **之前还是之后**，都会覆盖配置节与环境变量的值。
 
 ```jsonc
-// appsettings.json
+// appsettings.json（新节；也继续支持 "HttpBus": { ... } 旧节）
 {
-  "HttpBus": {
-    "Enabled": true,
-    "Name": "http",
-    "Endpoint": "http://localhost:5080",
-    "Route": "/bus/call",
-    "SerializerProvider": "SystemTestJson",
-    "RequestTimeout": "00:00:10"
+  "Euonia": {
+    "Bus": {
+      "Http": {
+        "Enabled": true,
+        "Name": "http",
+        "Endpoint": "http://localhost:5080",
+        "Route": "/bus/call",
+        "SerializerProvider": "SystemTestJson",
+        "RequestTimeout": "00:00:10"
+      }
+    }
   }
 }
 ```
 
 ```csharp
-builder.Services.AddOptions<HttpBusOptions>().Bind(builder.Configuration.GetSection("HttpBus"));
 builder.Services.AddHttpBus("http");
+// 环境变量优先于 appsettings，例如：Euonia__Bus__Http__Endpoint=https://env.example
+```
+
+显式覆盖（以下两种写法二选一；均写在 `AddHttpBus` 之前或之后均可）：
+
+```csharp
+// 方式一（推荐）：直接使用 configure 形参
+builder.Services.AddHttpBus("http", options => options.RequireAuthorization = false);
+
+// 方式二：使用 services.Configure —— 自动绑定优先级最低，因此依然生效
+builder.Services.Configure<HttpBusOptions>(options => options.RequireAuthorization = false);
 ```
 
 ### 2.2 `HttpBusOptions` 选项表

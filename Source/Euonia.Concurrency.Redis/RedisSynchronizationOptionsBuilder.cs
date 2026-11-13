@@ -4,15 +4,18 @@ using Nerosoft.Euonia.Threading;
 namespace Nerosoft.Euonia.Concurrency.Redis;
 
 /// <summary>
-/// Options for configuring a redis-based distributed synchronization algorithm
+/// 用于配置基于 Redis 的分布式同步算法的选项
 /// </summary>
 public sealed class RedisSynchronizationOptionsBuilder
 {
+	/// <summary>
+	/// 未显式配置时使用的默认锁过期时间，为 30 秒。
+	/// </summary>
 	internal static readonly TimeoutValue DefaultExpiry = TimeSpan.FromSeconds(30);
 
 	/// <summary>
-	/// We don't want to allow expiry to go too low, since then the lock doesn't even work (and the default
-	/// min observed expiry will end up greater than the default expiry)
+	/// 我们不希望允许过期时间设得过低，因为那样锁甚至无法工作（并且默认的
+	/// 最小观测过期时间最终会大于默认过期时间）
 	/// </summary>
 	internal static readonly TimeoutValue MinimumExpiry = TimeSpan.FromSeconds(.1);
 
@@ -22,18 +25,21 @@ public sealed class RedisSynchronizationOptionsBuilder
 	                      _minBusyWaitSleepTime,
 	                      _maxBusyWaitSleepTime;
 
+	/// <summary>
+	/// 初始化选项构建器；实例仅由 <see cref="GetOptions"/> 创建，调用方通过公开的链式方法设置各项选项。
+	/// </summary>
 	internal RedisSynchronizationOptionsBuilder()
 	{
 	}
 
 	/// <summary>
-	/// Specifies how long the lock will last, absent auto-extension. Because auto-extension exists,
-	/// this value generally will have little effect on program behavior. However, making the expiry longer means that
-	/// auto-extension requests can occur less frequently, saving resources. On the other hand, when a lock is abandoned
-	/// without explicit release (e. g. if the holding process crashes), the expiry determines how long other processes
-	/// would need to wait in order to acquire it.
+	/// 指定在没有自动续期的情况下锁的持续时间。由于自动续期的存在，
+	/// 此值通常对程序行为影响不大。不过，将过期时间设得更长意味着
+	/// 自动续期请求可以更少地发生，从而节省资源。另一方面，当锁被放弃
+	/// 而没有显式释放时（例如持有进程崩溃），过期时间决定其他进程
+	/// 需要等待多久才能获取它。
 	/// 
-	/// Defaults to 30s.
+	/// 默认值为 30 秒。
 	/// </summary>
 	public RedisSynchronizationOptionsBuilder Expiry(TimeSpan expiry)
 	{
@@ -48,11 +54,11 @@ public sealed class RedisSynchronizationOptionsBuilder
 	}
 
 	/// <summary>
-	/// Determines how frequently the lock will be extended while held. More frequent extension means more unnecessary requests
-	/// but also a lower chance of losing the lock due to the process hanging or otherwise failing to get its extension request in
-	/// before the lock expiry elapses.
+	/// 确定锁在被持有时续期的频率。更频繁的续期意味着更多不必要的请求，
+	/// 但也降低了因进程挂起或未能在锁过期之前发出续期请求
+	/// 而丢失锁的可能性。
 	/// 
-	/// Defaults to 1/3 of the specified <see cref="MinValidityTime(TimeSpan)"/>.
+	/// 默认为所指定 <see cref="MinValidityTime(TimeSpan)"/> 的 1/3。
 	/// </summary>
 	public RedisSynchronizationOptionsBuilder ExtensionCadence(TimeSpan extensionCadence)
 	{
@@ -61,12 +67,12 @@ public sealed class RedisSynchronizationOptionsBuilder
 	}
 
 	/// <summary>
-	/// The lock expiry determines how long the lock will be held without being extended. However, since it takes some amount
-	/// of time to acquire the lock, we will not have all of expiry available upon acquisition.
+	/// 锁过期时间决定锁在未续期的情况下能被持有多久。不过，由于获取锁需要
+	/// 花费一些时间，我们在获取完成时并不会拥有全部过期时间。
 	/// 
-	/// This value sets a minimum amount which we'll be guaranteed to have left once acquisition completes.
+	/// 此值设定一个最小量，一旦获取完成，我们将保证至少还剩这么多时间。
 	/// 
-	/// Defaults to 90% of the specified lock expiry.
+	/// 默认为所指定锁过期时间的 90%。
 	/// </summary>
 	public RedisSynchronizationOptionsBuilder MinValidityTime(TimeSpan minValidityTime)
 	{
@@ -81,16 +87,16 @@ public sealed class RedisSynchronizationOptionsBuilder
 	}
 
 	/// <summary>
-	/// Waiting to acquire a lock requires a busy wait that alternates acquire attempts and sleeps.
-	/// This determines how much time is spent sleeping between attempts. Lower values will raise the
-	/// volume of acquire requests under contention but will also raise the responsiveness (how long
-	/// it takes a waiter to notice that a contended the lock has become available).
+	/// 等待获取锁需要一种在获取尝试与休眠之间交替的忙等待。
+	/// 这决定了每次尝试之间休眠多长时间。较低的值会在争用情况下提高
+	/// 获取请求的数量，但也会提高响应性（即等待者需要多久
+	/// 才能注意到被争用的锁已可用）。
 	/// 
-	/// Specifying a range of values allows the implementation to select an actual value in the range 
-	/// at random for each sleep. This helps avoid the case where two clients become "synchronized"
-	/// in such a way that results in one client monopolizing the lock.
+	/// 指定一个取值范围可让实现为每次休眠在该范围内
+	/// 随机选择一个实际值。这有助于避免两个客户端以某种方式
+	/// "同步化"，从而导致其中一个客户端独占锁的情况。
 	/// 
-	/// The default is [10ms, 800ms]
+	/// 默认值为 [10ms, 800ms]
 	/// </summary>
 	public RedisSynchronizationOptionsBuilder BusyWaitSleepTime(TimeSpan min, TimeSpan max)
 	{
@@ -112,9 +118,15 @@ public sealed class RedisSynchronizationOptionsBuilder
 		return this;
 	}
 
-	internal static RedisSynchronizationOptions GetOptions(Action<RedisSynchronizationOptionsBuilder> optionsBuilder)
+	/// <summary>
+	/// 应用调用方提供的配置委托，补齐默认值并校验各时间之间的关系，最终生成不可变的选项。
+	/// </summary>
+	/// <param name="optionsBuilder">用于设置选项的委托；为 <see langword="null"/> 时全部采用默认值。</param>
+	/// <returns>包含锁超时、续期节奏与忙等休眠范围的选项。</returns>
+	/// <exception cref="ArgumentOutOfRangeException">最小有效期不小于过期时间，或续期节奏不小于最小有效期。</exception>
+	internal static RedisSynchronizationOptions GetOptions(Action<RedisSynchronizationOptionsBuilder>? optionsBuilder)
 	{
-		RedisSynchronizationOptionsBuilder options;
+		RedisSynchronizationOptionsBuilder? options;
 		if (optionsBuilder != null)
 		{
 			options = new RedisSynchronizationOptionsBuilder();
@@ -146,9 +158,9 @@ public sealed class RedisSynchronizationOptionsBuilder
 		TimeoutValue extensionCadence;
 		if (options?._extensionCadence is { } specifiedExtensionCadence)
 		{
-			// Note: we do not allow for disabling auto-extension here because it leads to traps
-			// where people might abandon the handle and then have it be closed due to GC.
-			// See discussion here: https://github.com/madelson/DistributedLock/issues/130.
+			// 注意：我们不允许在此处禁用自动续期，因为这会导致陷阱：
+			// 人们可能放弃句柄，然后因 GC 导致其被关闭。
+			// 参见此处的讨论：https://github.com/madelson/DistributedLock/issues/130。
 			if (specifiedExtensionCadence.CompareTo(minValidityTime) >= 0)
 			{
 				var message = string.Format(Resources.IDS_TIME_MUST_BE_LESS_THAN_EXPIRY, nameof(extensionCadence), expiry, expiry.TimeSpan);

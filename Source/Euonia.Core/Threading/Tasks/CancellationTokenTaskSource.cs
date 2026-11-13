@@ -8,7 +8,7 @@ public sealed class CancellationTokenTaskSource<T> : IDisposable
     /// <summary>
     /// 取消令牌注册（如果存在）。如果不需要注册，则为 <c>null</c>。
     /// </summary>
-    private readonly IDisposable _registration;
+    private readonly IDisposable? _registration;
 
     /// <summary>
     /// 为指定的取消令牌创建任务，并在必要时注册到令牌。

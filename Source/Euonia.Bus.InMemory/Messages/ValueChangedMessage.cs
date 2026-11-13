@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A base message that signals whenever a specific value has changed.
+/// 在特定值发生更改时发出信号的基础消息。
 /// </summary>
-/// <typeparam name="T">The type of value that has changed.</typeparam>
+/// <typeparam name="T">发生更改的值的类型。</typeparam>
 public class ValueChangedMessage<T>
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ValueChangedMessage{T}"/> class.
+	/// 初始化 <see cref="ValueChangedMessage{T}"/> 类的新实例。
 	/// </summary>
-	/// <param name="value">The value that has changed.</param>
+	/// <param name="value">发生更改的值。</param>
 	public ValueChangedMessage(T value)
 	{
 		Value = value;
 	}
 
 	/// <summary>
-	/// Gets the value that has changed.
+	/// 获取发生更改的值。
 	/// </summary>
 	public T Value { get; }
 }

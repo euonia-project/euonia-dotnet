@@ -1,44 +1,40 @@
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// An interface for a type providing the ability to exchange messages between different objects.
-/// This can be useful to decouple different modules of an application without having to keep strong
-/// references to types being referenced. It is also possible to send messages to specific channels, uniquely
-/// identified by a token, and to have different messengers in different sections of an applications.
-/// In order to use the <see cref="IMessenger"/> functionalities, first define a message type, like so:
+/// 用于在不同对象之间交换消息的类型接口。
+/// 这有助于解耦应用中的不同模块，而无需持有被引用类型的强引用。
+/// 还可以将消息发送到由令牌唯一标识的特定通道，并在应用的不同部分使用不同的消息信使。
+/// 若要使用 <see cref="IMessenger"/> 的功能，首先定义一个消息类型，如下所示：
 /// <code>
 /// public sealed class LoginCompletedMessage { }
 /// </code>
-/// Then, register your a recipient for this message:
+/// 然后，为该消息注册接收方：
 /// <code>
 /// Messenger.Default.Register&lt;MyRecipientType, LoginCompletedMessage&gt;(this, (r, m) =>
 /// {
 ///     // Handle the message here...
 /// });
 /// </code>
-/// The message handler here is a lambda expression taking two parameters: the recipient and the message.
-/// This is done to avoid the allocations for the closures that would've been generated if the expression
-/// had captured the current instance. The recipient type parameter is used so that the recipient can be
-/// directly accessed within the handler without the need to manually perform type casts. This allows the
-/// code to be less verbose and more reliable, as all the checks are done just at build time. If the handler
-/// is defined within the same type as the recipient, it is also possible to directly access private members.
-/// This allows the message handler to be a static method, which enables the C# compiler to perform a number
-/// of additional memory optimizations (such as caching the delegate, avoiding unnecessary memory allocations).
-/// Finally, send a message when needed, like so:
+/// 这里的消息处理程序是一个接受两个参数的 lambda 表达式：接收方和消息。
+/// 这样做是为了避免在表达式捕获当前实例时产生闭包分配。使用接收方类型参数，
+/// 是为了让处理程序可以直接访问接收方，而无需手动进行类型转换。这使代码更简洁、
+/// 更可靠，因为所有检查都在编译时完成。如果处理程序定义在接收方所在的类型中，
+/// 还可以直接访问私有成员。这使得消息处理程序可以是静态方法，从而让 C# 编译器
+/// 执行多项额外的内存优化（例如缓存委托、避免不必要的内存分配）。
+/// 最后，在需要时发送消息，如下所示：
 /// <code>
 /// Messenger.Default.Send&lt;LoginCompletedMessage&gt;();
 /// </code>
-/// Additionally, the method group syntax can also be used to specify the message handler
-/// to invoke when receiving a message, if a method with the right signature is available
-/// in the current scope. This is helpful to keep the registration and handling logic separate.
-/// Following up from the previous example, consider a class having this method:
+/// 此外，如果当前作用域中存在签名正确的方法，还可以使用方法组语法指定
+/// 接收消息时要调用的消息处理程序。这有助于将注册逻辑与处理逻辑分开。
+/// 继续前面的示例，假设某个类具有以下方法：
 /// <code>
 /// private static void Receive(MyRecipientType recipient, LoginCompletedMessage message)
 /// {
 ///     // Handle the message there
 /// }
 /// </code>
-/// The registration can then be performed in a single line like so:
+/// 然后就可以像下面这样用一行代码完成注册：
 /// <code>
 /// Messenger.Default.Register(this, Receive);
 /// </code>
@@ -46,93 +42,92 @@ namespace Nerosoft.Euonia.Bus.InMemory;
 public interface IMessenger
 {
 	/// <summary>
-	/// Checks whether or not a given recipient has already been registered for a message.
+	/// 检查指定的接收方是否已针对某条消息注册。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to check for the given recipient.</typeparam>
-	/// <typeparam name="TToken">The type of token to check the channel for.</typeparam>
-	/// <param name="recipient">The target recipient to check the registration for.</param>
-	/// <param name="token">The token used to identify the target channel to check.</param>
-	/// <returns>Whether or not <paramref name="recipient"/> has already been registered for the specified message.</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="recipient"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要检查指定接收方注册情况的消息类型。</typeparam>
+	/// <typeparam name="TToken">要检查的通道的令牌类型。</typeparam>
+	/// <param name="recipient">要检查注册情况的目标接收方。</param>
+	/// <param name="token">用于标识要检查的目标通道的令牌。</param>
+	/// <returns><paramref name="recipient"/> 是否已针对指定消息注册。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="recipient"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
 	bool IsRegistered<TMessage, TToken>(object recipient, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>;
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TRecipient">The type of recipient for the message.</typeparam>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <typeparam name="TToken">The type of token to use to pick the messages to receive.</typeparam>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="token">A token used to determine the receiving channel to use.</param>
-	/// <param name="handler">The <see cref="MessageHandler{TRecipient,TMessage}"/> to invoke when a message is received.</param>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="recipient"/>, <paramref name="token"/> or <paramref name="handler"/> are <see langword="null"/>.</exception>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
+	/// <typeparam name="TRecipient">消息接收方的类型。</typeparam>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于选择要接收的消息的令牌类型。</typeparam>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="token">用于确定要使用的接收通道的令牌。</param>
+	/// <param name="handler">接收消息时要调用的 <see cref="MessageHandler{TRecipient,TMessage}"/>。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="recipient"/>、<paramref name="token"/> 或 <paramref name="handler"/> 为 <see langword="null"/> 时引发。</exception>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
 	void Register<TRecipient, TMessage, TToken>(TRecipient recipient, TToken token, MessageHandler<TRecipient, TMessage> handler)
 		where TRecipient : class
 		where TMessage : class
 		where TToken : IEquatable<TToken>;
 
 	/// <summary>
-	/// Unregisters a recipient from all registered messages.
+	/// 从所有已注册的消息中注销某个接收方。
 	/// </summary>
-	/// <param name="recipient">The recipient to unregister.</param>
+	/// <param name="recipient">要注销的接收方。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="recipient"/> 为 <see langword="null"/> 时引发。</exception>
 	/// <remarks>
-	/// This method will unregister the target recipient across all channels.
-	/// Use this method as an easy way to lose all references to a target recipient.
-	/// If the recipient has no registered handler, this method does nothing.
+	/// 此方法将在所有通道中注销目标接收方。
+	/// 可通过此方法便捷地释放对目标接收方的全部引用。
+	/// 如果该接收方没有已注册的处理程序，此方法不执行任何操作。
 	/// </remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="recipient"/> is <see langword="null"/>.</exception>
 	void UnregisterAll(object recipient);
 
 	/// <summary>
-	/// Unregisters a recipient from all messages on a specific channel.
+	/// 从指定通道上的所有消息中注销某个接收方。
 	/// </summary>
-	/// <typeparam name="TToken">The type of token to identify what channel to unregister from.</typeparam>
-	/// <param name="recipient">The recipient to unregister.</param>
-	/// <param name="token">The token to use to identify which handlers to unregister.</param>
-	/// <remarks>If the recipient has no registered handler, this method does nothing.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="recipient"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TToken">用于标识要从哪个通道注销的令牌类型。</typeparam>
+	/// <param name="recipient">要注销的接收方。</param>
+	/// <param name="token">用于标识要注销哪些处理程序的令牌。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="recipient"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
+	/// <remarks>如果该接收方没有已注册的处理程序，此方法不执行任何操作。</remarks>
 	void UnregisterAll<TToken>(object recipient, TToken token)
 		where TToken : IEquatable<TToken>;
 
 	/// <summary>
-	/// Unregisters a recipient from messages of a given type.
+	/// 从指定类型的消息中注销某个接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to stop receiving.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to unregister from.</typeparam>
-	/// <param name="recipient">The recipient to unregister.</param>
-	/// <param name="token">The token to use to identify which handlers to unregister.</param>
-	/// <remarks>If the recipient has no registered handler, this method does nothing.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="recipient"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要停止接收的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识要从哪个通道注销的令牌类型。</typeparam>
+	/// <param name="recipient">要注销的接收方。</param>
+	/// <param name="token">用于标识要注销哪些处理程序的令牌。</param>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="recipient"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
+	/// <remarks>如果该接收方没有已注册的处理程序，此方法不执行任何操作。</remarks>
 	void Unregister<TMessage, TToken>(object recipient, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>;
 
 	/// <summary>
-	/// Sends a message of the specified type to all registered recipients.
+	/// 将指定类型的消息发送给所有已注册的接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to send the message.</typeparam>
-	/// <param name="message">The message to send.</param>
-	/// <param name="token">The token indicating what channel to use.</param>
-	/// <returns>The message that was sent (ie. <paramref name="message"/>).</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="message"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识发送消息时使用哪个通道的令牌类型。</typeparam>
+	/// <param name="message">要发送的消息。</param>
+	/// <param name="token">指示要使用哪个通道的令牌。</param>
+	/// <returns>已发送的消息（即 <paramref name="message"/>）。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="message"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
 	TMessage Send<TMessage, TToken>(TMessage message, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>;
 
 	/// <summary>
-	/// Performs a cleanup on the current messenger.
-	/// Invoking this method does not unregister any of the currently registered
-	/// recipient, and it can be used to perform cleanup operations such as
-	/// trimming the internal data structures of a messenger implementation.
+	/// 对当前消息信使执行清理。
+	/// 调用此方法不会注销任何当前已注册的接收方，
+	/// 它可用于执行清理操作，例如精简消息信使实现的内部数据结构。
 	/// </summary>
 	void Cleanup();
 
 	/// <summary>
-	/// Resets the <see cref="IMessenger"/> instance and unregisters all the existing recipients.
+	/// 重置 <see cref="IMessenger"/> 实例，并注销所有现有接收方。
 	/// </summary>
 	void Reset();
 }

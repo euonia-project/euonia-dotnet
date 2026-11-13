@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class InMemoryTransporterDisposeTests
 {
+	/// <summary>
+	/// 释放一个传输器实例不应清除进程级信使中其他对象的注册。
+	/// </summary>
 	[Fact]
 	public void Dispose_DoesNotClearProcessWideMessengerRegistrations()
 	{
@@ -47,6 +50,9 @@ public class InMemoryTransporterDisposeTests
 	{
 	}
 
+	/// <summary>
+	/// 记录收到消息次数的接收者，用于验证释放传输器不会清除进程级信使中的注册。
+	/// </summary>
 	private sealed class RecordingRecipient
 	{
 		public int Count { get; set; }

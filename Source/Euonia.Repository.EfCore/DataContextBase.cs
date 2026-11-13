@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -44,7 +44,11 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	public override int SaveChanges(bool acceptAllChangesOnSuccess)
 	{
 		var entries = ChangeTracker.Entries();
-		SetEntryValues(entries);
+		if (AutoSetEntryValues)
+		{
+			SetEntryValues(entries);
+		}
+
 		var result = base.SaveChanges(acceptAllChangesOnSuccess);
 		return result;
 	}
@@ -61,7 +65,7 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	/// 获取当前上下文所使用的数据库提供程序名称。
 	/// </summary>
 	/// <value>EF Core 数据提供程序的名称。</value>
-	public virtual string Provider => Database.ProviderName;
+	public virtual string Provider => Database.ProviderName!;
 
 	/// <inheritdoc />
 	public IQueryable<TEntity> SetOf<TEntity>()
@@ -77,7 +81,7 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	}
 
 	/// <inheritdoc />
-	public IDbTransaction GetTransaction()
+	public IDbTransaction? GetTransaction()
 	{
 		return Database.CurrentTransaction?.GetDbTransaction();
 	}
@@ -137,11 +141,20 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	{
 	}
 
+	/// <summary>
+	/// 在应用实体配置与软删除过滤器之后、模型最终化之前配置模型，供派生上下文追加租户等全局过滤器。
+	/// </summary>
+	/// <param name="modelBuilder">要配置的模型构建器。</param>
+	protected virtual void ConfigureModel(ModelBuilder modelBuilder)
+	{
+	}
+
 	/// <inheritdoc />
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		modelBuilder.ApplyConfigurationsFromAssembly(typeof(TContext).Assembly, type => type.GetCustomAttribute<DbContextAttribute>()?.ContextType == typeof(TContext));
 		modelBuilder.SetTombstoneQueryFilter();
+		ConfigureModel(modelBuilder);
 		base.OnModelCreating(modelBuilder);
 	}
 }

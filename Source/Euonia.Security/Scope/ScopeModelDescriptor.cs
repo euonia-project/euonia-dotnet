@@ -115,6 +115,7 @@ public sealed class ScopeModelDescriptor
 			dimension,
 _dimensions.Count == 0 ? Resources.IDS_COMMON_NONE : string.Join(", ", _dimensions.Keys));
 
-		return mapping;
+		// Check.Ensure 在 TryGetValue 返回 false 时抛出，走到这里 mapping 必不为 null。
+		return mapping!;
 	}
 }

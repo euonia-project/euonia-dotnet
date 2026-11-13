@@ -22,19 +22,29 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public static class BusinessOperation
 {
-	/// <summary>读取操作。</summary>
+	/// <summary>
+	/// 读取操作。
+	/// </summary>
 	public const string Read = "read";
 
-	/// <summary>创建（插入）操作。</summary>
+	/// <summary>
+	/// 创建（插入）操作。
+	/// </summary>
 	public const string Create = "create";
 
-	/// <summary>更新操作。</summary>
+	/// <summary>
+	/// 更新操作。
+	/// </summary>
 	public const string Update = "update";
 
-	/// <summary>删除操作。</summary>
+	/// <summary>
+	/// 删除操作。
+	/// </summary>
 	public const string Delete = "delete";
 
-	/// <summary>命令执行操作。</summary>
+	/// <summary>
+	/// 命令执行操作。
+	/// </summary>
 	public const string Execute = "execute";
 
 	/// <summary>

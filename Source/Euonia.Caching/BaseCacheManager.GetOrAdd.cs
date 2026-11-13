@@ -1,5 +1,10 @@
-﻿namespace Nerosoft.Euonia.Caching;
+﻿using System.Diagnostics.CodeAnalysis;
 
+namespace Nerosoft.Euonia.Caching;
+
+/// <summary>
+/// 定义 <see cref="BaseCacheManager{TValue}"/> 的“获取或添加”成员：未命中时通过值工厂创建并写入缓存。
+/// </summary>
 public partial class BaseCacheManager<TValue>
 {
     /// <inheritdoc />
@@ -49,7 +54,7 @@ public partial class BaseCacheManager<TValue>
     }
 
     /// <inheritdoc />
-    public bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, out TValue value)
+    public bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
         Check.EnsureNotNull(valueFactory, nameof(valueFactory));
@@ -73,7 +78,7 @@ public partial class BaseCacheManager<TValue>
     }
 
     /// <inheritdoc />
-    public bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, out TValue value)
+    public bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
         Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
@@ -98,7 +103,7 @@ public partial class BaseCacheManager<TValue>
     }
 
     /// <inheritdoc />
-    public bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item)
+    public bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
         Check.EnsureNotNull(valueFactory, nameof(valueFactory));
@@ -107,7 +112,7 @@ public partial class BaseCacheManager<TValue>
     }
 
     /// <inheritdoc />
-    public bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item)
+    public bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item)
     {
         Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
         Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
@@ -124,9 +129,9 @@ public partial class BaseCacheManager<TValue>
     /// <param name="valueFactory">用于创建缓存项的值工厂函数。</param>
     /// <param name="item">获取到或新创建的缓存项。</param>
     /// <returns>如果成功获取或添加缓存项，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-    private bool TryGetOrAddInternal(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item)
+    private bool TryGetOrAddInternal(string key, string? region, Func<string, string, CacheItem<TValue>?> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item)
     {
-        CacheItem<TValue> newItem = null;
+        CacheItem<TValue>? newItem = null;
         var tries = 0;
         do
         {
@@ -138,7 +143,7 @@ public partial class BaseCacheManager<TValue>
             }
 
             // 重试时仅调用一次值工厂
-            newItem ??= valueFactory(key, region);
+            newItem ??= valueFactory(key, region!);
 
             if (newItem == null)
             {
@@ -164,9 +169,9 @@ public partial class BaseCacheManager<TValue>
     /// <param name="valueFactory">用于创建缓存项的值工厂函数。</param>
     /// <returns>获取到或新创建的缓存项。</returns>
     /// <exception cref="InvalidOperationException">当值工厂返回 <c>null</c>，或在重试次数耗尽后仍无法获取或添加缓存项时抛出。</exception>
-    private CacheItem<TValue> GetOrAddInternal(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory)
+    private CacheItem<TValue> GetOrAddInternal(string key, string? region, Func<string, string, CacheItem<TValue>> valueFactory)
     {
-        CacheItem<TValue> newItem = null;
+        CacheItem<TValue>? newItem = null;
         var tries = 0;
         do
         {
@@ -178,7 +183,7 @@ public partial class BaseCacheManager<TValue>
             }
 
             // 重试时仅调用一次值工厂
-            newItem ??= valueFactory(key, region);
+            newItem ??= valueFactory(key, region!);
 
             // 显式抛出异常以保持行为一致；否则稍后最终也会抛出。
             if (newItem == null)

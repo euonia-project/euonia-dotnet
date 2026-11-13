@@ -4,32 +4,32 @@ using Nerosoft.Euonia.Bus.InMemory;
 namespace System.Runtime.CompilerServices;
 
 /// <summary>
-/// A custom <see cref="ConditionalWeakTable{TKey, TValue}"/> instance that is specifically optimized to be used
-/// by <see cref="WeakReferenceMessenger"/>. In particular, it offers zero-allocation enumeration of stored items.
+/// 一个自定义的 <see cref="ConditionalWeakTable{TKey, TValue}"/> 实例，专门针对
+/// <see cref="WeakReferenceMessenger"/> 的使用进行了优化。特别是，它提供对已存储项的零分配枚举。
 /// </summary>
-/// <typeparam name="TKey">Tke key of items to store in the table.</typeparam>
-/// <typeparam name="TValue">The values to store in the table.</typeparam>
+/// <typeparam name="TKey">要存储在表中的项的键。</typeparam>
+/// <typeparam name="TValue">要存储在表中的值。</typeparam>
 internal sealed class ConditionalWeakTable2<TKey, TValue>
 	where TKey : class
 	where TValue : class
 {
 	/// <summary>
-	/// Initial length of the table. Must be a power of two.
+	/// 表的初始长度。必须是二的幂。
 	/// </summary>
 	private const int INITIAL_CAPACITY = 8;
 	
 	/// <summary>
-	/// This lock protects all mutation of data in the table. Readers do not take this lock.
+	/// 此锁保护表中数据的所有变更操作。读取方不获取此锁。
 	/// </summary>
 	private readonly object _lockObject;
 
 	/// <summary>
-	/// The actual storage for the table; swapped out as the table grows.
+	/// 表的实际存储；随着表增长而替换。
 	/// </summary>
 	private volatile Container _container;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="ConditionalWeakTable2{TKey, TValue}"/> class.
+	/// 初始化 <see cref="ConditionalWeakTable2{TKey, TValue}"/> 类的新实例。
 	/// </summary>
 	public ConditionalWeakTable2()
 	{
@@ -44,11 +44,11 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Tries to add a new pair to the table.
+	/// 尝试向表中添加一个新的键值对。
 	/// </summary>
-	/// <param name="key">The key to add.</param>
-	/// <param name="value">The value to associate with key.</param>
-	public bool TryAdd(TKey key, TValue value)
+	/// <param name="key">要添加的键。</param>
+	/// <param name="value">要与键关联的值。</param>
+	public bool TryAdd(TKey key, TValue? value)
 	{
 		lock (_lockObject)
 		{
@@ -85,31 +85,31 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Implements the functionality for <see cref="GetValue(TKey, ConditionalWeakTable{TKey, TValue}.CreateValueCallback)"/> under a lock.
+	/// 在锁的保护下实现 <see cref="GetValue(TKey, ConditionalWeakTable{TKey, TValue}.CreateValueCallback)"/> 的功能。
 	/// </summary>
-	/// <param name="key">The input key.</param>
-	/// <param name="createValueCallback">The callback to use to create a new item.</param>
-	/// <returns>The new <typeparamref name="TValue"/> item to store.</returns>
+	/// <param name="key">输入的键。</param>
+	/// <param name="createValueCallback">用于创建新项的调用方回调。</param>
+	/// <returns>要存储的新 <typeparamref name="TValue"/> 项。</returns>
 	[UnconditionalSuppressMessage(
 		"ReflectionAnalysis",
 		"IL2091",
 		Justification = "ConditionalWeakTable<TKey, TValue> is only referenced to reuse the callback delegate type, but no value is ever created through reflection.")]
 	private TValue GetValueLocked(TKey key, ConditionalWeakTable<TKey, TValue>.CreateValueCallback createValueCallback)
 	{
-		// If we got here, the key was not in the table. Invoke the callback
-		// (outside the lock) to generate the new value for the key.
+		// 如果执行到这里，说明该键不在表中。在锁外调用回调
+		// 为该键生成新值。
 		var newValue = createValueCallback(key);
 
 		lock (_lockObject)
 		{
-			// Now that we've taken the lock, must recheck in case we lost a race to add the key
+			// 既然已获取锁，必须重新检查，以防在添加该键的竞争中被抢先
 			if (_container.TryGetValueWorker(key, out var existingValue))
 			{
 				return existingValue;
 			}
 			else
 			{
-				// Verified in-lock that we won the race to add the key. Add it now
+				// 已在锁内确认我们在添加该键的竞争中获胜。现在添加它
 				CreateEntry(key, newValue);
 
 				return newValue;
@@ -117,111 +117,118 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 	}
 
+	/// <summary>
+	/// 获取用于遍历当前表项的结构化枚举器；调用方必须在 <see langword="using"/> 中释放它。
+	/// </summary>
+	/// <returns>预先持有表锁、在释放前保证表结构稳定的枚举器。</returns>
+	/// <remarks>
+	/// 为减少逐项加锁开销，枚举期间会一直持有内部锁，因此不适合在枚举过程中执行可能阻塞或重入的操作。
+	/// </remarks>
 	public Enumerator GetEnumerator()
 	{
-		// This is an optimization specific for this custom table that relies on the way the enumerator is being
-		// used within the messenger type. Specifically, enumerators are always used in a using block, meaning
-		// Dispose() is always guaranteed to be executed. Given we cannot remove the internal lock for the table
-		// as it's needed to ensure consistency in case a container is resurrected (see below), the solution to
-		// speedup iteration is to avoid taking and releasing a lock repeatedly every single time MoveNext() is
-		// invoked. This is fine in this specific scenario because we're the only users of the enumerators so
-		// there's no concern about blocking other threads while enumerating. So here we just preemptively take
-		// a lock for the entire lifetime of the enumerator, and just release it once once we're done.
+		// 这是针对此自定义表的一项优化，依赖于枚举器在消息信使类型中的使用方式。
+		// 具体而言，枚举器始终在 using 块中使用，这意味着 Dispose() 保证一定会被执行。
+		// 鉴于我们无法移除表的内部锁（需要它来确保容器被复活时的一致性，见下文），
+		// 加速迭代的方案是避免在每次调用 MoveNext() 时反复获取和释放锁。
+		// 在此特定场景下这样做没有问题，因为我们是这些枚举器的唯一使用者，
+		// 所以无需担心枚举时阻塞其他线程。因此，这里我们预先获取锁并覆盖
+		// 枚举器的整个生命周期，只在完成后释放一次。
 		Monitor.Enter(_lockObject);
 
 		return new(this);
 	}
 
 	/// <summary>
-	/// Provides an enumerator for the current <see cref="ConditionalWeakTable2{TKey, TValue}"/> instance.
+	/// 为当前 <see cref="ConditionalWeakTable2{TKey, TValue}"/> 实例提供枚举器。
 	/// </summary>
 	public ref struct Enumerator
 	{
 		/// <summary>
-		/// Parent table, set to null when disposed.
+		/// 父表，在释放时设置为 null。
 		/// </summary>
 		private ConditionalWeakTable2<TKey, TValue> _table;
 
 		/// <summary>
-		/// Last index in the container that should be enumerated.
+		/// 容器中应被枚举的最后一个索引。
 		/// </summary>
 		private readonly int _maxIndexInclusive;
 
 		/// <summary>
-		/// The current index into the container.
+		/// 容器中的当前索引。
 		/// </summary>
 		private int _currentIndex;
 
 		/// <summary>
-		/// The current key, if available.
+		/// 当前键（如果可用）。
 		/// </summary>
 		private TKey _key;
 
 		/// <summary>
-		/// The current value, if available.
+		/// 当前值（如果可用）。
 		/// </summary>
 		private TValue _value;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Enumerator"/> class.
+		/// 初始化 <see cref="Enumerator"/> 类的新实例。
 		/// </summary>
-		/// <param name="table">The input <see cref="ConditionalWeakTable2{TKey, TValue}"/> instance being enumerated.</param>
+		/// <param name="table">正在被枚举的输入 <see cref="ConditionalWeakTable2{TKey, TValue}"/> 实例。</param>
 		public Enumerator(ConditionalWeakTable2<TKey, TValue> table)
 		{
-			// Store a reference to the parent table and increase its active enumerator count
+			// 存储对父表的引用并增加其活动枚举器计数
 			_table = table;
 
 			var container = table._container;
 
 			if (container is null || container.FirstFreeEntry == 0)
 			{
-				// The max index is the same as the current to prevent enumeration
+				// 最大索引与当前索引相同，以防止枚举
 				_maxIndexInclusive = -1;
 			}
 			else
 			{
-				// Store the max index to be enumerated
+				// 存储要枚举的最大索引
 				_maxIndexInclusive = container.FirstFreeEntry - 1;
 			}
 
 			_currentIndex = -1;
-			_key = null;
-			_value = null;
+			_key = null!;
+			_value = null!;
 		}
 
 		/// <inheritdoc cref="IDisposable.Dispose"/>
 		public void Dispose()
 		{
-			// Release the lock
+			// 释放锁
 			Monitor.Exit(_table._lockObject);
 
 			_table = null!;
 
-			// Ensure we don't keep the last current alive unnecessarily
-			_key = null;
-			_value = null;
+			// 确保不会不必要地使最后一个当前项保持存活
+			_key = null!;
+			_value = null!;
 		}
 
 		/// <inheritdoc cref="IEnumerator.MoveNext"/>
 		public bool MoveNext()
 		{
-			// From the table, we have to get the current container. This could have changed
-			// since we grabbed the enumerator, but the index-to-pair mapping should not have
-			// due to there being at least one active enumerator. If the table (or rather its
-			// container at the time) has already been finalized, this will be null.
+			// 必须从表中获取当前容器。自我们获取枚举器以来它可能已经改变，
+			// 但由于至少存在一个活动枚举器，索引到键值对的映射不应改变。
+			// 如果表（或更确切地说其当时的容器）已被终结，则此值为 null。
 			var c = _table._container;
 
 			var currentIndex = _currentIndex;
 			var maxIndexInclusive = _maxIndexInclusive;
 
-			// We have the container. Find the next entry to return, if there is one. We need to loop as we
-			// may try to get an entry that's already been removed or collected, in which case we try again.
+			// 我们已获得容器。查找下一个要返回的项（如果存在）。需要循环，
+			// 因为可能尝试获取已被移除或回收的项，此时需重试。
 			while (currentIndex < maxIndexInclusive)
 			{
 				currentIndex++;
 
-				if (c.TryGetEntry(currentIndex, out _key, out _value))
+				if (c.TryGetEntry(currentIndex, out var key, out var value))
 				{
+					_key = key;
+					_value = value;
 					_currentIndex = currentIndex;
 
 					return true;
@@ -234,7 +241,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the current key.
+		/// 获取当前键。
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public TKey GetKey()
@@ -243,7 +250,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the current value.
+		/// 获取当前值。
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public TValue GetValue()
@@ -253,11 +260,11 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	}
 
 	/// <summary>
-	/// Worker for adding a new key/value pair. Will resize the container if it is full.
+	/// 添加新键值对的辅助方法。如果容器已满，将调整其大小。
 	/// </summary>
-	/// <param name="key">The key for the new entry.</param>
-	/// <param name="value">The value for the new entry.</param>
-	private void CreateEntry(TKey key, TValue value)
+	/// <param name="key">新项的键。</param>
+	/// <param name="value">新项的值。</param>
+	private void CreateEntry(TKey key, TValue? value)
 	{
 		var container = _container;
 
@@ -270,73 +277,72 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 	}
 
 	/// <summary>
-	/// A single entry within a <see cref="ConditionalWeakTable2{TKey, TValue}"/> instance.
+	/// <see cref="ConditionalWeakTable2{TKey, TValue}"/> 实例中的单个项。
 	/// </summary>
 	private struct Entry
 	{
 		/// <summary>
-		/// Holds key and value using a weak reference for the key and a strong reference for the
-		/// value that is traversed only if the key is reachable without going through the value.
+		/// 使用对键的弱引用和对值的强引用来保存键和值，仅当不经过值即可访问键时才会遍历该值。
 		/// </summary>
 		public DependentHandle DepHnd;
 
 		/// <summary>
-		/// Cached copy of key's hashcode.
+		/// 键的哈希码的缓存副本。
 		/// </summary>
 		public int HashCode;
 
 		/// <summary>
-		/// Index of next entry, -1 if last.
+		/// 下一个项的索引，如果是最后一项则为 -1。
 		/// </summary>
 		public int Next;
 	}
 
 	/// <summary>
-	/// Container holds the actual data for the table. A given instance of Container always has the same capacity. When we need
-	/// more capacity, we create a new Container, copy the old one into the new one, and discard the old one. This helps enable
-	/// lock-free reads from the table, as readers never need to deal with motion of entries due to rehashing.
+	/// Container 保存表的实际数据。Container 的给定实例始终具有相同的容量。当需要更大容量时，
+	/// 我们会创建一个新的 Container，将旧的复制到新的中，并丢弃旧的。这有助于实现对表的无锁读取，
+	/// 因为读取方永远不需要处理因重新哈希而导致的项移动。
 	/// </summary>
 	private sealed class Container
 	{
 		/// <summary>
-		/// The <see cref="ConditionalWeakTable2{TKey, TValue}"/> with which this container is associated.
+		/// 与此容器关联的 <see cref="ConditionalWeakTable2{TKey, TValue}"/>。
 		/// </summary>
 		private readonly ConditionalWeakTable2<TKey, TValue> _parent;
 
 		/// <summary>
-		/// <c>buckets[hashcode &amp; (buckets.Length - 1)]</c> contains index of the first entry in bucket (-1 if empty).
+		/// <c>buckets[hashcode &amp; (buckets.Length - 1)]</c> 包含桶中第一个项的索引（如果为空则为 -1）。
 		/// </summary>
 		private int[] _buckets;
 
 		/// <summary>
-		/// The table entries containing the stored dependency handles
+		/// 包含已存储依赖句柄的表项
 		/// </summary>
 		private Entry[] _entries;
 
 		/// <summary>
-		/// <c>firstFreeEntry &lt; entries.Length => table</c> has capacity, entries grow from the bottom of the table.
+		/// <c>firstFreeEntry &lt; entries.Length => table</c> 表示表有容量，项从表的底部开始增长。
 		/// </summary>
 		private int _firstFreeEntry;
 
 		/// <summary>
-		/// Flag detects if OOM or other background exception threw us out of the lock.
+		/// 标志，用于检测是否因 OOM 或其他后台异常而使我们退出锁。
 		/// </summary>
 		private bool _invalid;
 
 		/// <summary>
-		/// Set to true when initially finalized
+		/// 在首次终结时设置为 true
 		/// </summary>
 		private bool _finalized;
 
 		/// <summary>
-		/// Used to ensure the next allocated container isn't finalized until this one is GC'd.
+		/// 用于确保下一个分配的容器在此容器被 GC 之前不被终结。
 		/// </summary>
-		private volatile object _oldKeepAlive;
+		private volatile object? _oldKeepAlive;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Container"/> class.
+		/// 初始化 <see cref="Container"/> 类的新实例。
 		/// </summary>
-		/// <param name="parent">The input <see cref="ConditionalWeakTable2{TKey, TValue}"/> object associated with the current instance.</param>
+		/// <param name="parent">与当前实例关联的输入 <see cref="ConditionalWeakTable2{TKey, TValue}"/> 对象。</param>
 		internal Container(ConditionalWeakTable2<TKey, TValue> parent)
 		{
 			_buckets = new int[INITIAL_CAPACITY];
@@ -348,20 +354,20 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 
 			_entries = new Entry[INITIAL_CAPACITY];
 
-			// Only store the parent after all of the allocations have happened successfully.
-			// Otherwise, as part of growing or clearing the container, we could end up allocating
-			// a new Container that fails (OOMs) part way through construction but that gets finalized
-			// and ends up clearing out some other container present in the associated CWT.
+			// 仅在所有分配成功完成之后才存储父对象。
+			// 否则，在增长或清空容器期间，可能会分配一个新的 Container，
+			// 它在构造中途失败（OOM），但仍会被终结，
+			// 并最终清除关联 CWT 中存在的其他容器。
 			_parent = parent;
 		}
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Container"/> class.
+		/// 初始化 <see cref="Container"/> 类的新实例。
 		/// </summary>
-		/// <param name="parent">The input <see cref="ConditionalWeakTable2{TKey, TValue}"/> object associated with the current instance.</param>
-		/// <param name="buckets">The array of buckets.</param>
-		/// <param name="entries">The array of entries.</param>
-		/// <param name="firstFreeEntry">The index of the first free entry.</param>
+		/// <param name="parent">与当前实例关联的输入 <see cref="ConditionalWeakTable2{TKey, TValue}"/> 对象。</param>
+		/// <param name="buckets">桶数组。</param>
+		/// <param name="entries">项数组。</param>
+		/// <param name="firstFreeEntry">第一个空闲项的索引。</param>
 		private Container(ConditionalWeakTable2<TKey, TValue> parent, int[] buckets, Entry[] entries, int firstFreeEntry)
 		{
 			_parent = parent;
@@ -371,19 +377,19 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the capacity of the current container.
+		/// 获取当前容器的容量。
 		/// </summary>
 		internal bool HasCapacity => _firstFreeEntry < _entries.Length;
 
 		/// <summary>
-		/// Gets the index of the first free entry.
+		/// 获取第一个空闲项的索引。
 		/// </summary>
 		internal int FirstFreeEntry => _firstFreeEntry;
 
 		/// <summary>
-		/// Worker for adding a new key/value pair. Container must NOT be full.
+		/// 添加新键值对的辅助方法。容器绝不能已满。
 		/// </summary>
-		internal void CreateEntryNoResize(TKey key, TValue value)
+		internal void CreateEntryNoResize(TKey key, TValue? value)
 		{
 			VerifyIntegrity();
 
@@ -399,15 +405,15 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 
 			_entries[newEntry].Next = _buckets[bucket];
 
-			// This write must be volatile, as we may be racing with concurrent readers. If they
-			// see the new entry, they must also see all of the writes earlier in this method.
+			// 此写入必须是易失的，因为我们可能与并发读取方竞争。如果它们
+			// 看到新的项，也必须看到此方法中更早的所有写入。
 			Volatile.Write(ref _buckets[bucket], newEntry);
 
 			_invalid = false;
 		}
 
 		/// <summary>
-		/// Worker for finding a key/value pair. Must hold lock.
+		/// 查找键值对的辅助方法。必须持有锁。
 		/// </summary>
 		internal bool TryGetValueWorker(TKey key, [MaybeNullWhen(false)] out TValue value)
 		{
@@ -419,11 +425,11 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Returns -1 if not found (if key expires during FindEntry, this can be treated as "not found.").
-		/// Must hold lock, or be prepared to retry the search while holding lock.
+		/// 如果未找到则返回 -1（如果键在 FindEntry 期间过期，可视为“未找到”）。
+		/// 必须持有锁，或准备好持锁重试搜索。
 		/// </summary>
-		/// <remarks>This method requires <paramref name="value"/> to be on the stack to be properly tracked.</remarks>
-		internal int FindEntry(TKey key, out object value)
+		/// <remarks>此方法要求 <paramref name="value"/> 位于堆栈上才能被正确跟踪。</remarks>
+		internal int FindEntry(TKey key, out object? value)
 		{
 			var hashCode = RuntimeHelpers.GetHashCode(key) & int.MaxValue;
 			var bucket = hashCode & (_buckets.Length - 1);
@@ -437,7 +443,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 
 					if (oKey == key)
 					{
-						// Ensure we don't get finalized while accessing DependentHandle
+						// 确保在访问 DependentHandle 时不被终结
 						GC.KeepAlive(this);
 
 						return entriesIndex;
@@ -445,7 +451,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 				}
 			}
 
-			// Ensure we don't get finalized while accessing DependentHandle
+			// 确保在访问 DependentHandle 时不被终结
 			GC.KeepAlive(this);
 
 			value = null;
@@ -454,7 +460,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Gets the entry at the specified entry index.
+		/// 获取指定项索引处的项。
 		/// </summary>
 		internal bool TryGetEntry(int index, [NotNullWhen(true)] out TKey key, [MaybeNullWhen(false)] out TValue value)
 		{
@@ -463,7 +469,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 				// object? oKey = entries[index].depHnd.UnsafeGetTargetAndDependent(out object? oValue);
 				var (oKey, oValue) = _entries[index].DepHnd.TargetAndDependent;
 
-				// Ensure we don't get finalized while accessing DependentHandle
+				// 确保在访问 DependentHandle 时不被终结
 				GC.KeepAlive(this);
 
 				if (oKey != null)
@@ -475,14 +481,14 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 				}
 			}
 
-			key = default;
+			key = default!;
 			value = default;
 
 			return false;
 		}
 
 		/// <summary>
-		/// Removes the specified key from the table, if it exists.
+		/// 如果存在，从表中移除指定的键。
 		/// </summary>
 		internal bool Remove(TKey key)
 		{
@@ -501,42 +507,42 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Removes a given entry at a specified index.
+		/// 移除指定索引处的给定项。
 		/// </summary>
-		/// <param name="entryIndex">The index of the entry to remove.</param>
+		/// <param name="entryIndex">要移除的项的索引。</param>
 		private void RemoveIndex(int entryIndex)
 		{
 			ref var entry = ref _entries[entryIndex];
 
-			// We do not free the handle here, as we may be racing with readers who already saw the hash code.
-			// Instead, we simply overwrite the entry's hash code, so subsequent reads will ignore it.
-			// The handle will be free'd in Container's finalizer, after the table is resized or discarded.
+			// 此处不释放句柄，因为我们可能与已经看到哈希码的读取方竞争。
+			// 我们只是覆盖该项的哈希码，以便后续读取忽略它。
+			// 句柄将在表调整大小或丢弃之后，在 Container 的终结器中释放。
 			Volatile.Write(ref entry.HashCode, -1);
 
-			// Also, clear the key to allow GC to collect objects pointed to by the entry
+			// 同时清除键，以便 GC 回收该项所指向的对象
 			// entry.depHnd.UnsafeSetTargetToNull();
 			entry.DepHnd.Target = null;
 		}
 
 		/// <summary>
-		/// Resize, and scrub expired keys off bucket lists. Must hold <see cref="ConditionalWeakTable2{TKey,TValue}._lockObject"/>.
+		/// 调整大小，并从桶列表中清除过期的键。必须持有 <see cref="ConditionalWeakTable2{TKey,TValue}._lockObject"/>。
 		/// </summary>
 		/// <remarks>
-		/// <see cref="_firstFreeEntry"/> is less than <c>entries.Length</c> on exit, that is, the table has at least one free entry.
+		/// 退出时 <see cref="_firstFreeEntry"/> 小于 <c>entries.Length</c>，即表至少有一个空闲项。
 		/// </remarks>
 		internal Container Resize()
 		{
 			var hasExpiredEntries = false;
 			var newSize = _buckets.Length;
 
-			// If any expired or removed keys exist, we won't resize
+			// 如果存在任何过期或已移除的键，则不会调整大小
 			for (var entriesIndex = 0; entriesIndex < _entries.Length; entriesIndex++)
 			{
 				ref var entry = ref _entries[entriesIndex];
 
 				if (entry.HashCode == -1)
 				{
-					// the entry was removed
+					// 该项已被移除
 					hasExpiredEntries = true;
 
 					break;
@@ -546,7 +552,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 				    // entry.depHnd.UnsafeGetTarget() is null)
 				    entry.DepHnd.Target is null)
 				{
-					// the entry has expired
+					// 该项已过期
 					hasExpiredEntries = true;
 
 					break;
@@ -555,7 +561,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 
 			if (!hasExpiredEntries)
 			{
-				// Not necessary to check for overflow here, the attempt to allocate new arrays will throw
+				// 此处无需检查溢出，尝试分配新数组时会抛出异常
 				newSize = _buckets.Length * 2;
 			}
 
@@ -563,14 +569,14 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Creates a new <see cref="Container"/> of a specified size with the current items.
+		/// 使用当前项创建指定大小的新 <see cref="Container"/>。
 		/// </summary>
-		/// <param name="newSize">The new requested size.</param>
-		/// <returns>The new <see cref="Container"/> instance with the requested size.</returns>
+		/// <param name="newSize">请求的新大小。</param>
+		/// <returns>具有所请求大小的新 <see cref="Container"/> 实例。</returns>
 		internal Container Resize(int newSize)
 		{
-			// Reallocate both buckets and entries and rebuild the bucket and entries from scratch.
-			// This serves both to scrub entries with expired keys and to put the new entries in the proper bucket.
+			// 重新分配桶和项，并从头重建桶和项。
+			// 这既用于清除具有过期键的项，也用于将新项放入正确的桶中。
 			var newBuckets = new int[newSize];
 
 			for (var bucketIndex = 0; bucketIndex < newBuckets.Length; bucketIndex++)
@@ -581,7 +587,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 			var newEntries = new Entry[newSize];
 			var newEntriesIndex = 0;
 
-			// There are no active enumerators, which means we want to compact by removing expired/removed entries
+			// 没有活动枚举器，这意味着我们希望移除过期/已移除的项来进行压缩
 			for (var entriesIndex = 0; entriesIndex < _entries.Length; entriesIndex++)
 			{
 				ref var oldEntry = ref _entries[entriesIndex];
@@ -595,7 +601,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 					{
 						ref var newEntry = ref newEntries[newEntriesIndex];
 
-						// Entry is used and has not expired. Link it into the appropriate bucket list
+						// 该项正在使用且尚未过期。将其链接到相应的桶列表
 						newEntry.HashCode = hashCode;
 						newEntry.DepHnd = depHnd;
 
@@ -607,31 +613,31 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 					}
 					else
 					{
-						// Pretend the item was removed, so that this container's finalizer will clean up this dependent handle
+						// 假装该项已被移除，以便此容器的终结器清理此依赖句柄
 						Volatile.Write(ref oldEntry.HashCode, -1);
 					}
 				}
 			}
 
-			// Create the new container. We want to transfer the responsibility of freeing the handles from
-			// the old container to the new container, and also ensure that the new container isn't finalized
-			// while the old container may still be in use. As such, we store a reference from the old container
-			// to the new one, which will keep the new container alive as long as the old one is.
+			// 创建新的容器。我们希望将释放句柄的责任从旧容器转移到新容器，
+			// 同时确保在旧容器仍可能被使用时新容器不会被终结。
+			// 因此，我们存储一个从旧容器到新容器的引用，
+			// 这会使新容器在旧容器存活期间保持存活。
 			Container newContainer = new(_parent!, newBuckets, newEntries, newEntriesIndex);
 
-			// Once this is set, the old container's finalizer will not free transferred dependent handles
+			// 一旦设置此项，旧容器的终结器将不会释放已转移的依赖句柄
 			_oldKeepAlive = newContainer;
 
-			// Ensure we don't get finalized while accessing DependentHandles
+			// 确保在访问 DependentHandles 时不被终结
 			GC.KeepAlive(this);
 
 			return newContainer;
 		}
 
 		/// <summary>
-		/// Verifies that the current instance is valid.
+		/// 验证当前实例是否有效。
 		/// </summary>
-		/// <exception cref="InvalidOperationException">Thrown if the current instance is invalid.</exception>
+		/// <exception cref="InvalidOperationException">如果当前实例无效则抛出。</exception>
 		private void VerifyIntegrity()
 		{
 			if (_invalid)
@@ -645,24 +651,23 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 		}
 
 		/// <summary>
-		/// Finalizes the current <see cref="Container"/> instance.
+		/// 终结当前 <see cref="Container"/> 实例。
 		/// </summary>
 		~Container()
 		{
-			// Skip doing anything if the container is invalid, including if somehow
-			// the container object was allocated but its associated table never set.
+			// 如果容器无效，则不做任何操作，包括容器对象已分配
+			// 但从未设置其关联表的情况。
 			if (_invalid || _parent is null)
 			{
 				return;
 			}
 
-			// It's possible that the ConditionalWeakTable2 could have been resurrected, in which case code could
-			// be accessing this Container as it's being finalized.  We don't support usage after finalization,
-			// but we also don't want to potentially corrupt state by allowing dependency handles to be used as
-			// or after they've been freed.  To avoid that, if it's at all possible that another thread has a
-			// reference to this container via the CWT, we remove such a reference and then re-register for
-			// finalization: the next time around, we can be sure that no references remain to this and we can
-			// clean up the dependency handles without fear of corruption.
+			// ConditionalWeakTable2 有可能已被复活，在这种情况下，代码可能会在此 Container
+			// 被终结时访问它。我们不支持在终结后使用，但也不希望允许依赖句柄在被释放时
+			// 或释放后被使用，从而可能破坏状态。为避免这种情况，如果完全有可能另一个线程
+			// 通过 CWT 持有对此容器的引用，我们会移除该引用，然后重新注册以进行终结：
+			// 下一次终结时，我们可以确信不存在对此对象的剩余引用，
+			// 从而可以放心清理依赖句柄而无需担心状态损坏。
 			if (!_finalized)
 			{
 				_finalized = true;
@@ -675,7 +680,7 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 					}
 				}
 
-				// Next time it's finalized, we'll be sure there are no remaining refs
+				// 下次终结时，我们将确信没有剩余引用
 				GC.ReRegisterForFinalize(this);
 
 				return;
@@ -691,11 +696,11 @@ internal sealed class ConditionalWeakTable2<TKey, TValue>
 			{
 				for (var entriesIndex = 0; entriesIndex < entries.Length; entriesIndex++)
 				{
-					// We need to free handles in two cases:
-					// - If this container still owns the dependency handle (meaning ownership hasn't been transferred
-					//   to another container that replaced this one), then it should be freed.
-					// - If this container had the entry removed, then even if in general ownership was transferred to
-					//   another container, removed entries are not, therefore this container must free them.
+					// 需要在两种情况下释放句柄：
+					// - 如果此容器仍拥有该依赖句柄（意味着所有权尚未转移到
+					//   替代此容器的另一个容器），则应释放它。
+					// - 如果此容器已移除该项，那么即使通常所有权已转移到
+					//   另一个容器，已移除的项也不会转移，因此此容器必须释放它们。
 					if (_oldKeepAlive is null || entries[entriesIndex].HashCode == -1)
 					{
 						entries[entriesIndex].DepHnd.Dispose();

@@ -10,7 +10,10 @@ internal static class TestMessages
 	/// </summary>
 	public sealed class OrderPlacedEvent : IMulticast
 	{
-		public string OrderId { get; set; }
+		/// <summary>
+		/// 获取或设置订单标识，用于在断言中区分不同的消息实例。
+		/// </summary>
+		public string OrderId { get; set; } = string.Empty;
 	}
 
 	/// <summary>

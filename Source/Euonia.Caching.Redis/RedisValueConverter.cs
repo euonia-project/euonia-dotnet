@@ -4,20 +4,54 @@ using StackExchange.Redis;
 
 namespace Nerosoft.Euonia.Caching.Redis;
 
+/// <summary>
+/// 非泛型的 Redis 值转换契约：在运行时按类型名序列化与反序列化缓存值。
+/// </summary>
 internal interface IRedisValueConverter
 {
+	/// <summary>
+	/// 把指定值序列化为 Redis 可存储的表示。
+	/// </summary>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要序列化的值。</param>
+	/// <returns>序列化后的 Redis 值。</returns>
 	RedisValue ToRedisValue<T>(T value);
 
+	/// <summary>
+	/// 按目标类型名把 Redis 值反序列化为对象。
+	/// </summary>
+	/// <typeparam name="T">期望的返回类型。</typeparam>
+	/// <param name="value">Redis 中存储的值。</param>
+	/// <param name="valueType">原始值类型的名称，用于还原具体类型。</param>
+	/// <returns>反序列化后的值。</returns>
 	T FromRedisValue<T>(RedisValue value, string valueType);
 }
 
+/// <summary>
+/// 针对单一值类型的 Redis 值转换契约，避免装箱与运行时类型判断。
+/// </summary>
+/// <typeparam name="T">要转换的值类型。</typeparam>
 internal interface IRedisValueConverter<T>
 {
+	/// <summary>
+	/// 把指定值转换为 Redis 可存储的表示。
+	/// </summary>
+	/// <param name="value">要转换的值。</param>
+	/// <returns>转换后的 Redis 值。</returns>
 	RedisValue ToRedisValue(T value);
 
+	/// <summary>
+	/// 把 Redis 值还原为 <typeparamref name="T"/> 类型的值。
+	/// </summary>
+	/// <param name="value">Redis 中存储的值。</param>
+	/// <param name="valueType">原始值类型的名称，保留以兼容非泛型契约。</param>
+	/// <returns>还原后的值。</returns>
 	T FromRedisValue(RedisValue value, string valueType);
 }
 
+/// <summary>
+/// 默认的 Redis 值转换实现：原生支持常用基元类型，其余类型使用 JSON 序列化。
+/// </summary>
 internal class RedisValueConverter : IRedisValueConverter,
                                      IRedisValueConverter<byte[]>,
                                      IRedisValueConverter<string>,
@@ -44,11 +78,11 @@ internal class RedisValueConverter : IRedisValueConverter,
 
 	RedisValue IRedisValueConverter<byte[]>.ToRedisValue(byte[] value) => value;
 
-	byte[] IRedisValueConverter<byte[]>.FromRedisValue(RedisValue value, string valueType) => value;
+	byte[] IRedisValueConverter<byte[]>.FromRedisValue(RedisValue value, string valueType) => ((byte[]?)value)!;
 
 	RedisValue IRedisValueConverter<string>.ToRedisValue(string value) => value;
 
-	string IRedisValueConverter<string>.FromRedisValue(RedisValue value, string valueType) => value;
+	string IRedisValueConverter<string>.FromRedisValue(RedisValue value, string valueType) => ((string?)value)!;
 
 	RedisValue IRedisValueConverter<int>.ToRedisValue(int value) => value;
 
@@ -78,11 +112,11 @@ internal class RedisValueConverter : IRedisValueConverter,
 
 	long IRedisValueConverter<long>.FromRedisValue(RedisValue value, string valueType) => (long)value;
 
-	// ulong can exceed the supported lenght of storing integers (which is signed 64bit integer)
-	// also, even if we do not exceed long.MaxValue, the SA client stores it as double for no parent reason => cast to long fixes it.
+	// ulong 可能超出 Redis 可存储整数（有符号 64 位整数）的上限；
+	// 即使不超过 long.MaxValue，StackExchange.Redis 客户端也会无故按 double 存储，因此强制转换为 long。
 	RedisValue IRedisValueConverter<ulong>.ToRedisValue(ulong value) => value > long.MaxValue ? (RedisValue)value.ToString() : checked((long)value);
 
-	ulong IRedisValueConverter<ulong>.FromRedisValue(RedisValue value, string valueType) => ulong.Parse(value);
+	ulong IRedisValueConverter<ulong>.FromRedisValue(RedisValue value, string valueType) => ulong.Parse(value.ToString());
 
 	RedisValue IRedisValueConverter<object>.ToRedisValue(object value)
 	{
@@ -218,12 +252,25 @@ internal class RedisValueConverter : IRedisValueConverter,
 
 		{
 		}
-		return Deserialize(value, type);
+		return Deserialize(value.ToString(), type);
 	}
 
+	/// <summary>
+	/// 使用 JSON 把指定值序列化为 Redis 值。
+	/// </summary>
+	/// <typeparam name="T">值的类型。</typeparam>
+	/// <param name="value">要序列化的值。</param>
+	/// <returns>JSON 文本形式的 Redis 值。</returns>
 	public RedisValue ToRedisValue<T>(T value) => JsonSerializer.Serialize(value);
 
-	public T FromRedisValue<T>(RedisValue value, string valueType) => (T)Deserialize(value, valueType);
+	/// <summary>
+	/// 按类型名把 Redis 中的 JSON 文本反序列化为 <typeparamref name="T"/>。
+	/// </summary>
+	/// <typeparam name="T">期望的返回类型。</typeparam>
+	/// <param name="value">Redis 中存储的值。</param>
+	/// <param name="valueType">原始值类型的名称。</param>
+	/// <returns>反序列化后的值。</returns>
+	public T FromRedisValue<T>(RedisValue value, string valueType) => (T)Deserialize(value.ToString(), valueType);
 
 	private static object Deserialize(string value, string valueType)
 	{
@@ -233,6 +280,6 @@ internal class RedisValueConverter : IRedisValueConverter,
 			throw new NullReferenceException(string.Format(Resources.IDS_TYPE_COULD_NOT_BE_LOADED, valueType));
 		}
 
-		return JsonSerializer.Deserialize(value, type);
+		return JsonSerializer.Deserialize(value, type)!;
 	}
 }

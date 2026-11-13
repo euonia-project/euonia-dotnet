@@ -69,12 +69,12 @@ public class RuleManager
 	/// 读到半初始化的字典。Volatile.Read 提供 acquire 栅栏，与锁内的写入构成
 	/// release/acquire 对，命中路径仍无锁、无分配。
 	/// </summary>
-	private Dictionary<IPropertyInfo, IRuleBase[]> _propertyRules;
+	private Dictionary<IPropertyInfo, IPropertyRule[]>? _propertyRules;
 
 	/// <summary>
 	/// 对象级（无属性绑定）的类型级规则缓存，按优先级升序。
 	/// </summary>
-	private IRuleBase[] _objectRules;
+	private IReadOnlyList<IRuleBase>? _objectRules;
 
 	/// <summary>
 	/// 向规则列表添加规则。
@@ -123,7 +123,7 @@ public class RuleManager
 
 			lock (_sync)
 			{
-				return _objectRules ??= Rules.Where(rule => rule.Property == null)
+				return _objectRules ??= Rules.Where(rule => rule is not IPropertyRule)
 				                             .OrderBy(rule => rule.Priority)
 				                             .ToArray();
 			}
@@ -152,16 +152,16 @@ public class RuleManager
 			}
 		}
 
-		return index.TryGetValue(property, out var rules) ? rules : Array.Empty<IRuleBase>();
+		return index.TryGetValue(property, out var rules) ? rules : Array.Empty<IPropertyRule>();
 	}
 
 	/// <summary>
 	/// 构建「属性 → 类型级规则」索引。
 	/// </summary>
 	/// <returns>索引。</returns>
-	private Dictionary<IPropertyInfo, IRuleBase[]> BuildPropertyRules()
+	private Dictionary<IPropertyInfo, IPropertyRule[]> BuildPropertyRules()
 	{
-		return Rules.Where(rule => rule.Property != null)
+		return Rules.OfType<IPropertyRule>()
 					.GroupBy(rule => rule.Property)
 					.ToDictionary(group => group.Key, group => group.OrderBy(rule => rule.Priority).ToArray());
 	}

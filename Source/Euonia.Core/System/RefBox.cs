@@ -11,6 +11,10 @@ public sealed class RefBox<T> where T : struct
 {
     private readonly T _value;
 
+    /// <summary>
+    /// 使用指定的值初始化引用盒；实例创建后值不可更改。
+    /// </summary>
+    /// <param name="value">要包装的值。</param>
     internal RefBox(T value)
     {
         _value = value;
@@ -46,7 +50,7 @@ public sealed class RefBox
     /// <param name="boxRef">要消费的引用盒引用。</param>
     /// <param name="value">输出的值。</param>
     /// <returns>如果成功消费则为 true；否则为 false。</returns>
-    public static bool TryConsume<T>(ref RefBox<T> boxRef, out T value)
+    public static bool TryConsume<T>(ref RefBox<T>? boxRef, out T value)
         where T : struct
     {
         var box = Interlocked.Exchange(ref boxRef, null);

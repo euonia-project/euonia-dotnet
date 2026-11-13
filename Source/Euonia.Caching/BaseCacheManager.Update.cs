@@ -2,6 +2,9 @@
 
 namespace Nerosoft.Euonia.Caching;
 
+/// <summary>
+/// 定义 <see cref="BaseCacheManager{TValue}"/> 的添加或更新、尝试更新与更新成员。
+/// </summary>
 public partial class BaseCacheManager<TValue>
 {
     /// <inheritdoc />
@@ -66,7 +69,7 @@ public partial class BaseCacheManager<TValue>
         while (tries <= maxRetries);
 
         // 重试次数已耗尽，操作失败...（在 99.99% 的情况下不应发生，但也许应抛出异常？）
-        return default;
+        return default!;
     }
 
     /// <inheritdoc />
@@ -162,7 +165,7 @@ public partial class BaseCacheManager<TValue>
     /// <returns>如果更新成功，则为 <c>true</c>；否则为 <c>false</c>。</returns>
     private bool UpdateInternal(BaseCacheHandle<TValue>[] handles,
                                 string key,
-                                string region,
+                                string? region,
                                 Func<TValue, TValue> updateValue,
                                 int maxRetries,
                                 bool throwOnFailure,
@@ -171,7 +174,7 @@ public partial class BaseCacheManager<TValue>
         CheckDisposed();
 
         // 赋默认值
-        value = default;
+        value = default!;
 
         if (handles.Length == 0)
         {
@@ -189,7 +192,7 @@ public partial class BaseCacheManager<TValue>
         {
             case CacheItemUpdateResultState.Success:
                 // 仅在成功时，返回值不会为 null
-                value = result.Value.Value;
+                value = result.Value!.Value;
                 handle.Stats.OnUpdate(key, region, result);
 
                 // 逐出其他句柄中的该项，因为我们不知道其他句柄上的更新是否真的能成功……

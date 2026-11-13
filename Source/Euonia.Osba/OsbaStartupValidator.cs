@@ -10,20 +10,26 @@ namespace Nerosoft.Euonia.Osba;
 /// <param name="Code">稳定诊断码，便于宿主忽略/过滤。</param>
 /// <param name="Message">可读消息。</param>
 /// <param name="Type">相关类型。</param>
-public sealed record OsbaDiagnostic(OsbaDiagnosticSeverity Severity, string Code, string Message, Type Type = null);
+public sealed record OsbaDiagnostic(OsbaDiagnosticSeverity Severity, string Code, string Message, Type? Type = null);
 
 /// <summary>
 /// 诊断严重级别。
 /// </summary>
 public enum OsbaDiagnosticSeverity
 {
-	/// <summary>信息。</summary>
+	/// <summary>
+	/// 信息级别。
+	/// </summary>
 	Information,
 
-	/// <summary>警告；不阻止启动。</summary>
+	/// <summary>
+	/// 警告；不阻止启动。
+	/// </summary>
 	Warning,
 
-	/// <summary>错误；启动期校验开启时阻止启动。</summary>
+	/// <summary>
+	/// 错误；启动期校验开启时阻止启动。
+	/// </summary>
 	Error
 }
 
@@ -239,7 +245,7 @@ public static class OsbaStartupValidator
 	/// <summary>
 	/// 解开 <see cref="Task{TResult}"/> / <see cref="ValueTask{TResult}"/> 的结果类型；非可等待泛型返回 <see langword="null"/>。
 	/// </summary>
-	private static Type UnwrapAwaitable(Type returnType)
+	private static Type? UnwrapAwaitable(Type returnType)
 	{
 		if (!returnType.IsGenericType)
 		{

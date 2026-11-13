@@ -12,12 +12,12 @@ public class InboxHandler
 	/// <summary>
 	/// 获取或设置关联消息的标识符。
 	/// </summary>
-	public string MessageId { get; set; }
+	public string MessageId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置处理程序的类型名称。
 	/// </summary>
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置当前执行状态。
@@ -32,7 +32,7 @@ public class InboxHandler
 	/// <summary>
 	/// 获取或设置最后一次执行失败时的错误信息。
 	/// </summary>
-	public string Error { get; set; }
+	public string? Error { get; set; }
 
 	/// <summary>
 	/// 将当前状态标记为处理成功，并清除错误信息。

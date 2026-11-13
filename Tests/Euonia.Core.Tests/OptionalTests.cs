@@ -3,14 +3,23 @@ using Xunit;
 
 namespace Euonia.Core.Tests
 {
+    /// <summary>
+    /// 验证 <see cref="Optional{T}"/> 的构造、取值、转换与相等性语义。
+    /// </summary>
     public class OptionalTests
     {
+        /// <summary>
+        /// 验证 <c>Of</c> 在传入 <see langword="null"/> 时抛出 <see cref="ArgumentNullException"/>。
+        /// </summary>
         [Fact]
         public void OfThrowsWhenValueIsNull()
         {
             Assert.Throws<ArgumentNullException>(() => Optional<string>.Of(null!));
         }
 
+        /// <summary>
+        /// 验证 <c>Of</c> 创建包含值的实例，<c>HasValue</c> 为 <see langword="true"/>、<c>IsEmpty</c> 为 <see langword="false"/> 且 <c>Value</c> 返回原值。
+        /// </summary>
         [Fact]
         public void OfCreatesOptionalWithValue()
         {
@@ -20,10 +29,13 @@ namespace Euonia.Core.Tests
             Assert.Equal("hello", opt.Value);
         }
 
+        /// <summary>
+        /// 验证 <c>OfNullable</c> 对 <see langword="null"/> 返回空实例，对非空值返回包含该值的实例。
+        /// </summary>
         [Fact]
         public void OfNullableReturnsEmptyForNullAndValueForNonNull()
         {
-            var empty = Optional<string>.OfNullable(null);
+            var empty = Optional<string>.OfNullable(null!);
             Assert.False(empty.HasValue);
 
             var val = Optional<string>.OfNullable("x");
@@ -31,6 +43,9 @@ namespace Euonia.Core.Tests
             Assert.Equal("x", val.Value);
         }
 
+        /// <summary>
+        /// 验证访问空实例的 <c>Value</c> 会抛出 <see cref="InvalidOperationException"/>。
+        /// </summary>
         [Fact]
         public void ValueThrowsOnEmpty()
         {
@@ -38,6 +53,9 @@ namespace Euonia.Core.Tests
             Assert.Throws<InvalidOperationException>(() => { var v = empty.Value; });
         }
 
+        /// <summary>
+        /// 验证 <c>Where</c> 在谓词为 <see langword="true"/> 时保留值，为 <see langword="false"/> 时返回空实例。
+        /// </summary>
         [Fact]
         public void WhereReturnsEmptyWhenPredicateFalseAndKeepsWhenTrue()
         {
@@ -49,6 +67,9 @@ namespace Euonia.Core.Tests
             Assert.False(filtered.HasValue);
         }
 
+        /// <summary>
+        /// 验证对空实例调用 <c>Where</c> 返回同一个空实例。
+        /// </summary>
         [Fact]
         public void WhereOnEmptyReturnsSameEmptyInstance()
         {
@@ -57,6 +78,9 @@ namespace Euonia.Core.Tests
             Assert.Same(empty, result);
         }
 
+        /// <summary>
+        /// 验证 <c>Select</c> 在有值实例上转换值，在空实例上返回空实例。
+        /// </summary>
         [Fact]
         public void SelectTransformsValueOrReturnsEmpty()
         {
@@ -70,6 +94,9 @@ namespace Euonia.Core.Tests
             Assert.False(mappedEmpty.HasValue);
         }
 
+        /// <summary>
+        /// 验证 <c>SelectMany</c> 将嵌套的 <see cref="Optional{T}"/> 扁平化为单层，空实例保持为空。
+        /// </summary>
         [Fact]
         public void SelectManyFlattensOptionals()
         {
@@ -83,6 +110,9 @@ namespace Euonia.Core.Tests
             Assert.False(result.HasValue);
         }
 
+        /// <summary>
+        /// 验证 <c>Or</c> 在空实例上返回替代值，在有值实例上返回原有值。
+        /// </summary>
         [Fact]
         public void OrReturnsOtherWhenEmptyAndValueWhenPresent()
         {
@@ -93,6 +123,9 @@ namespace Euonia.Core.Tests
             Assert.Equal("v", some.Or("fallback"));
         }
 
+        /// <summary>
+        /// 验证带供应器的 <c>Or</c> 仅在空实例时调用供应器，有值时不会调用。
+        /// </summary>
         [Fact]
         public void OrWithSupplierUsesSupplierWhenEmptyAndDoesNotCallWhenPresent()
         {
@@ -113,6 +146,9 @@ namespace Euonia.Core.Tests
             Assert.False(called);
         }
 
+        /// <summary>
+        /// 验证 <c>GetOrThrow</c> 在空实例上抛出 <see cref="InvalidOperationException"/>，有值时返回该值。
+        /// </summary>
         [Fact]
         public void GetOrThrowThrowsWhenEmptyAndReturnsValueWhenPresent()
         {
@@ -123,6 +159,9 @@ namespace Euonia.Core.Tests
             Assert.Equal(3, some.GetOrThrow());
         }
 
+        /// <summary>
+        /// 验证带异常工厂的 <c>GetOrThrow</c> 在空实例上抛出工厂提供的异常并保留其消息。
+        /// </summary>
         [Fact]
         public void GetOrThrowWithSupplierThrowsSuppliedExceptionWhenEmpty()
         {
@@ -131,6 +170,9 @@ namespace Euonia.Core.Tests
             Assert.Equal("boom", ex.Message);
         }
 
+        /// <summary>
+        /// 验证 <c>IfPresent</c> 仅在有值实例上执行动作，空实例不触发动作。
+        /// </summary>
         [Fact]
         public void IfPresentInvokesActionOnlyWhenPresent()
         {
@@ -144,6 +186,9 @@ namespace Euonia.Core.Tests
             Assert.Null(captured);
         }
 
+        /// <summary>
+        /// 验证空实例调用带空动作重载的 <c>IfPresent</c> 时执行空动作。
+        /// </summary>
         [Fact]
         public void IfPresentWithEmptyActionInvokesEmptyActionWhenEmpty()
         {
@@ -152,6 +197,9 @@ namespace Euonia.Core.Tests
             Assert.True(emptyCalled);
         }
 
+        /// <summary>
+        /// 验证 <c>GetValueOrDefault</c> 在空实例上返回默认值或指定回退值，有值时返回自身值。
+        /// </summary>
         [Fact]
         public void GetValueOrDefaultBehavesCorrectly()
         {
@@ -164,6 +212,9 @@ namespace Euonia.Core.Tests
             Assert.Equal(4, some.GetValueOrDefault(7));
         }
 
+        /// <summary>
+        /// 验证相等性、哈希码与 <c>ToString</c> 输出的文本格式符合预期。
+        /// </summary>
         [Fact]
         public void EqualsAndHashCodeAndToStringBehaveAsExpected()
         {

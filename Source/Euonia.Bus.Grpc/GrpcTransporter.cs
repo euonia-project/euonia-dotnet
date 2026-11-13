@@ -30,7 +30,7 @@ internal class GrpcTransporter : ITransporter, IDisposable
 	/// <summary>
 	/// 当消息成功投递到远端时触发。
 	/// </summary>
-	public event EventHandler<MessageDeliveredEventArgs> Delivered;
+	public event EventHandler<MessageDeliveredEventArgs> Delivered = null!;
 
 	/// <summary>
 	/// 获取传输器名称。
@@ -100,9 +100,9 @@ internal class GrpcTransporter : ITransporter, IDisposable
 			throw reply.Error?.ToException() ?? new MessageDeliverException("Remote call failed without detailed error information.");
 		}
 
-		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+		Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 
-		return reply.Result;
+		return reply.Result!;
 	}
 
 	/// <summary>
@@ -211,7 +211,7 @@ internal class GrpcTransporter : ITransporter, IDisposable
 		SetProperty(request, MessageHeaders.Authorization, message.Authorization);
 	}
 
-	private static void SetProperty(Google.Protobuf.GrpcRequest request, string key, string value)
+	private static void SetProperty(Google.Protobuf.GrpcRequest request, string key, string? value)
 	{
 		if (!string.IsNullOrWhiteSpace(value))
 		{

@@ -7,35 +7,34 @@ using Microsoft.IdentityModel.Tokens;
 namespace Nerosoft.Euonia.Sample.Facade;
 
 /// <summary>
-/// Resolves user identities from JWT authorization headers.
+/// 从 JWT 授权头中解析用户身份。
 /// </summary>
 internal class JwtIdentityAccessor
 {
 	/// <summary>
-	/// Resolves an <see cref="IPrincipal"/> from the provided JWT authorization header.
+	/// 从提供的 JWT 授权头中解析 <see cref="IPrincipal"/>。
 	/// </summary>
 	/// <param name="jwt">
-	/// The authorization header value expected in the form "Bearer {token}".
-	/// If <c>null</c> or not containing a token the method returns an empty principal.
+	/// 期望格式为 "Bearer {token}" 的授权头值。
+	/// 若为 <c>null</c> 或不包含令牌，则方法返回空主体。
 	/// </param>
 	/// <param name="configuration">
-	/// The application's <see cref="IConfiguration"/> instance. The method reads the
-	/// following settings from the <c>JwtAuthenticationOptions</c> section:
+	/// 应用程序的 <see cref="IConfiguration"/> 实例。该方法从 <c>JwtAuthenticationOptions</c> 节读取
+	/// 以下设置：
 	/// <list type="bullet">
-	/// <item><description><c>SigningKey</c> (string) — symmetric signing key.</description></item>
-	/// <item><description><c>Issuer</c> (string[]) — valid issuers.</description></item>
-	/// <item><description><c>ValidateIssuer</c> (bool) — whether to validate issuer.</description></item>
-	/// <item><description><c>ValidateAudience</c> (bool) — whether to validate audience.</description></item>
+	/// <item><description><c>SigningKey</c> (string) — 对称签名密钥。</description></item>
+	/// <item><description><c>Issuer</c> (string[]) — 有效的颁发者。</description></item>
+	/// <item><description><c>ValidateIssuer</c> (bool) — 是否验证颁发者。</description></item>
+	/// <item><description><c>ValidateAudience</c> (bool) — 是否验证受众。</description></item>
 	/// </list>
 	/// </param>
 	/// <returns>
-	/// A validated <see cref="ClaimsPrincipal"/> when the token is valid; otherwise an empty <see cref="ClaimsPrincipal"/>.
-	/// The returned instance implements <see cref="IPrincipal"/>.
+	/// 令牌有效时返回经过验证的 <see cref="ClaimsPrincipal"/>；否则返回空的 <see cref="ClaimsPrincipal"/>。
+	/// 返回的实例实现 <see cref="IPrincipal"/>。
 	/// </returns>
 	/// <remarks>
-	/// The method extracts the token using a regular expression that looks for the
-	/// prefix "Bearer ". Token validation is performed with <see cref="JwtSecurityTokenHandler"/>.
-	/// All validation exceptions are swallowed and an empty principal is returned on failure.
+	/// 该方法使用正则表达式提取令牌，查找前缀 "Bearer "。令牌验证通过
+	/// <see cref="JwtSecurityTokenHandler"/> 执行。所有验证异常都会被忽略，失败时返回空主体。
 	/// </remarks>
 	public static IPrincipal Resolve(string jwt, IConfiguration configuration)
 	{
@@ -50,7 +49,7 @@ internal class JwtIdentityAccessor
 			const string prefix = "JwtAuthenticationOptions";
 
 			var signingKey = configuration.GetValue<string>($"{prefix}:SigningKey");
-			var key = Encoding.UTF8.GetBytes(signingKey);
+			var key = Encoding.UTF8.GetBytes(signingKey!);
 
 			var validation = new TokenValidationParameters
 			{

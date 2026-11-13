@@ -19,6 +19,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class AuthorizationWarmupTests
 {
+	/// <summary>
+	/// 验证异步授权入口在给出判定之前调用一次预热，且允许的判定结论不受影响。
+	/// </summary>
 	[Fact]
 	public async Task EnsureAuthorizedAsync_Should_Warm_The_Checker_Before_Judging()
 	{
@@ -37,6 +40,9 @@ public class AuthorizationWarmupTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证判定被拒绝时仍先完成预热：抛出 <see cref="SecurityException"/> 之前预热计数已为 1。
+	/// </summary>
 	[Fact]
 	public async Task EnsureAuthorizedAsync_Should_Warm_Even_When_The_Verdict_Is_Denied()
 	{
@@ -57,6 +63,9 @@ public class AuthorizationWarmupTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证同步授权入口在入口处显式预热一次，使等待点可枚举而不落在判定路径深处。
+	/// </summary>
 	[Fact]
 	public void EnsureAuthorized_Sync_Should_Warm_At_The_Entry()
 	{
@@ -77,6 +86,9 @@ public class AuthorizationWarmupTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证工厂的 <see cref="EditableObject{T}.SaveAsync(bool, CancellationToken)"/> 入口端到端走异步授权并完成一次预热。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Factory_Entry_Should_Warm_The_Checker()
 	{
@@ -97,6 +109,9 @@ public class AuthorizationWarmupTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证异步范围授权在判定前预热一次，且预热与判定使用同一个服务作用域。
+	/// </summary>
 	[Fact]
 	public async Task ScopeAuthorization_Async_Should_Warm_The_Authorizer_Through_The_Same_Scope()
 	{
@@ -119,6 +134,9 @@ public class AuthorizationWarmupTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证同步范围授权在入口处预热一次，并复用调用方传入的同一服务作用域。
+	/// </summary>
 	[Fact]
 	public void ScopeAuthorization_Sync_Should_Warm_At_The_Entry()
 	{
@@ -163,6 +181,9 @@ public class AuthorizationWarmupTests
 		return scope;
 	}
 
+	/// <summary>
+	/// 记录预热次数的权限检查器替身，按构造参数返回固定的判定结果。
+	/// </summary>
 	private sealed class RecordingPermissionChecker(bool granted) : IPermissionChecker
 	{
 		public int WarmupCount { get; private set; }
@@ -178,11 +199,14 @@ public class AuthorizationWarmupTests
 		}
 	}
 
+	/// <summary>
+	/// 记录预热次数与预热所用作用域的行级授权器替身，返回固定的行级判定结果。
+	/// </summary>
 	private sealed class RecordingScopeAuthorizer(bool allowed) : IObjectScopeAuthorizer
 	{
 		public int WarmupCount { get; private set; }
 
-		public IServiceProvider LastWarmupScope { get; private set; }
+		public IServiceProvider LastWarmupScope { get; private set; } = null!;
 
 		public bool IsConstrained(Type resourceType) => true;
 

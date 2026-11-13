@@ -1,10 +1,12 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nerosoft.Euonia.Collections;
 
 /// <summary>
 /// 双端队列集合类。此类不能被继承。
 /// 实现了 <see cref="IList{T}" />、<see cref="IReadOnlyList{T}" />、<see cref="IList" />
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">双端队列中元素的类型。</typeparam>
 /// <seealso cref="IList{T}" />
 /// <seealso cref="IReadOnlyList{T}" />
 /// <seealso cref="IList" />
@@ -267,7 +269,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// </summary>
 	/// <param name="value">要检查的值。</param>
 	/// <returns>如果指定的值是类型 T，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	private static bool IsT(object value)
+	private static bool IsT([NotNullWhen(true)] object? value)
 	{
 		if (value is T)
 			return true;
@@ -283,7 +285,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// <returns>新元素的索引。</returns>
 	/// <exception cref="ArgumentNullException">value - 值不能为 null。</exception>
 	/// <exception cref="ArgumentException">值的类型不正确。 - value</exception>
-	int IList.Add(object value)
+	int IList.Add(object? value)
 	{
 		if (value == null && default(T) != null)
 		{
@@ -304,7 +306,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// </summary>
 	/// <param name="value">要定位的值。</param>
 	/// <returns>如果包含指定的值，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	bool IList.Contains(object value)
+	bool IList.Contains(object? value)
 	{
 		return IsT(value) && ((ICollection<T>)this).Contains((T)value);
 	}
@@ -314,7 +316,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// </summary>
 	/// <param name="value">要定位的值。</param>
 	/// <returns>值的索引。</returns>
-	int IList.IndexOf(object value)
+	int IList.IndexOf(object? value)
 	{
 		return IsT(value) ? IndexOf((T)value) : -1;
 	}
@@ -326,7 +328,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// <param name="value">要插入的值。</param>
 	/// <exception cref="ArgumentNullException">value - 值不能为 null。</exception>
 	/// <exception cref="ArgumentException">值的类型不正确。 - value</exception>
-	void IList.Insert(int index, object value)
+	void IList.Insert(int index, object? value)
 	{
 		if (value == null && default(T) != null)
 		{
@@ -357,7 +359,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// 移除指定的值。
 	/// </summary>
 	/// <param name="value">要移除的值。</param>
-	void IList.Remove(object value)
+	void IList.Remove(object? value)
 	{
 		if (IsT(value))
 		{
@@ -372,7 +374,7 @@ public sealed class DequeCollection<T> : IList<T>, IReadOnlyList<T>, IList
 	/// <returns>指定索引处的对象。</returns>
 	/// <exception cref="ArgumentNullException">value - 值不能为 null。</exception>
 	/// <exception cref="ArgumentException">值的类型不正确。 - value</exception>
-	object IList.this[int index]
+	object? IList.this[int index]
 	{
 		get => this[index];
 

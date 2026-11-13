@@ -45,7 +45,7 @@ public interface ILockProvider
     ///     // dispose releases the lock if we took it
     /// </code>
     /// </example>
-    ISynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    ISynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 异步获取锁，如果尝试超时则抛出 <see cref="TimeoutException"/>。
@@ -79,7 +79,7 @@ public interface ILockProvider
     ///     // dispose releases the lock if we took it
     /// </code>
     /// </example>
-    ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// 尝试异步获取锁。
@@ -96,7 +96,7 @@ public interface ILockProvider
     ///     // dispose releases the lock if we took it
     /// </code>
     /// </example>
-    ValueTask<ISynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
+    ValueTask<ISynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -139,7 +139,7 @@ public interface ILockProvider<THandle> : ILockProvider
     ///     // dispose releases the lock
     /// </code>
     /// </example>
-    new THandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    new THandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 尝试异步获取锁。
@@ -173,7 +173,7 @@ public interface ILockProvider<THandle> : ILockProvider
     ///     // dispose releases the lock if we took it
     /// </code>
     /// </example>
-    new ValueTask<THandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
+    new ValueTask<THandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default);
     
     /// <summary>
     /// 尝试异步获取锁。
@@ -190,5 +190,5 @@ public interface ILockProvider<THandle> : ILockProvider
     ///     // dispose releases the lock if we took it
     /// </code>
     /// </example>
-    new ValueTask<THandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
+    new ValueTask<THandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken = default);
 }

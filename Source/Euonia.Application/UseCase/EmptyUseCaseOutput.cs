@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Represents the use case should not return any output.
+/// 表示不应返回任何输出的用例。
 /// </summary>
 public sealed record EmptyUseCaseOutput : IUseCaseOutput
 {
 	/// <summary>
-	/// Gets a new instance of <see cref="EmptyUseCaseOutput"/>.
+	/// 获取 <see cref="EmptyUseCaseOutput"/> 的新实例。
 	/// </summary>
 	public static EmptyUseCaseOutput Instance { get; } = new();
 }

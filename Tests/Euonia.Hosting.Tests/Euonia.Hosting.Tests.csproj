@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+        <PackageReference Include="Microsoft.AspNetCore.TestHost" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Hosting\Euonia.Hosting.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Auditing\Euonia.Auditing.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Tenancy\Euonia.Tenancy.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Repository.EfCore\Euonia.Repository.EfCore.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Quartz\Euonia.Quartz.csproj" />
+    </ItemGroup>
+
+</Project>

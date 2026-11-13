@@ -1,3 +1,6 @@
+/// <summary>
+/// 提供数值范围比较的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
     /// <summary>

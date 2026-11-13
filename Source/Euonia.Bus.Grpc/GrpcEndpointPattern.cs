@@ -69,9 +69,9 @@ internal sealed class GrpcEndpointPattern
 	/// <param name="channel">通道名称。</param>
 	/// <param name="endpoint">解析出的端点地址；未命中时为 <c>null</c>。</param>
 	/// <returns>命中则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool TryResolve(string channel, out string endpoint)
+	public bool TryResolve(string channel, [System.Diagnostics.CodeAnalysis.MaybeNullWhen(false)] out string endpoint)
 	{
-		endpoint = null;
+		endpoint = null!;
 		if (string.IsNullOrWhiteSpace(channel))
 		{
 			return false;

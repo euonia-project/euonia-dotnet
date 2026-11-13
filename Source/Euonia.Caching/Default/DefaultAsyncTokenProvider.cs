@@ -4,17 +4,17 @@ using System.Security;
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Class DefaultAsyncTokenProvider.
-/// Implements the <see cref="IAsyncTokenProvider" />
+/// <see cref="DefaultAsyncTokenProvider"/> 类。
+/// 实现 <see cref="IAsyncTokenProvider" />。
 /// </summary>
 /// <seealso cref="IAsyncTokenProvider" />
 public class DefaultAsyncTokenProvider : IAsyncTokenProvider
 {
     /// <summary>
-    /// Gets the token.
+    /// 获取令牌。
     /// </summary>
-    /// <param name="task">The task.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <param name="task">任务。</param>
+    /// <returns>IVolatileToken。</returns>
     public IVolatileToken GetToken(Action<Action<IVolatileToken>> task)
     {
         var token = new VolatileToken(task);
@@ -22,14 +22,17 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
         return token;
     }
 
+    /// <summary>
+    /// 在线程池上执行令牌收集委托的易变令牌：任务完成前始终视为有效，完成后以收集到的子令牌状态为准。
+    /// </summary>
     private class VolatileToken : IVolatileToken
     {
         /// <summary>
-        /// The task
+        /// 用于启动异步令牌生成任务的回调。
         /// </summary>
         private readonly Action<Action<IVolatileToken>> _task;
         /// <summary>
-        /// The task tokens
+        /// 任务令牌集合。
         /// </summary>
         private readonly List<IVolatileToken> _taskTokens = new();
         /// <summary>
@@ -37,29 +40,29 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
         /// </summary>
         private readonly object _lock = new();
         /// <summary>
-        /// The task exception
+        /// 任务异常。
         /// </summary>
-        private volatile Exception _taskException;
+        private volatile Exception? _taskException;
         /// <summary>
-        /// The is task finished
+        /// 任务是否已完成。
         /// </summary>
         private volatile bool _isTaskFinished;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="VolatileToken"/> class.
+        /// 初始化 <see cref="VolatileToken"/> 类的新实例。
         /// </summary>
-        /// <param name="task">The task.</param>
+        /// <param name="task">任务。</param>
         public VolatileToken(Action<Action<IVolatileToken>> task)
         {
             _task = task;
         }
 
         /// <summary>
-        /// Queues the work item.
+        /// 将工作项排队。
         /// </summary>
         public void QueueWorkItem()
         {
-            // Start a work item to collect tokens in our internal array
+            // 启动一个工作项，将令牌收集到内部数组中
             ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
@@ -96,14 +99,14 @@ public class DefaultAsyncTokenProvider : IAsyncTokenProvider
         }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is current.
+        /// 获取一个值，指示此实例是否为当前状态。
         /// </summary>
-        /// <value><c>true</c> if this instance is current; otherwise, <c>false</c>.</value>
+        /// <value>若此实例为当前状态，则为 <c>true</c>；否则为 <c>false</c>。</value>
         public bool IsCurrent
         {
             get
             {
-                // We are current until the task has finished
+                // 任务完成前一直视为当前状态
                 if (_taskException != null)
                 {
                     return false;

@@ -33,13 +33,13 @@ internal sealed class DeadLetterService : IDeadLetterService
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry Get(string messageId)
+	public DeadLetterEntry? Get(string messageId)
 	{
 		return string.IsNullOrWhiteSpace(messageId) ? null : _store.Get(messageId);
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry GetById(string id)
+	public DeadLetterEntry? GetById(string id)
 	{
 		return string.IsNullOrWhiteSpace(id) ? null : _store.GetById(id);
 	}
@@ -115,6 +115,7 @@ internal sealed class DeadLetterService : IDeadLetterService
 		using var context = new MessageContext(entry.Content)
 		{
 			ExecutionDescriptor = MessageExecutionDescriptor.Replay,
+			Transport = "deadletter",
 		};
 
 		// 重放必须绕过收件箱去重：原条目仍以 DeadLettered 状态存在，

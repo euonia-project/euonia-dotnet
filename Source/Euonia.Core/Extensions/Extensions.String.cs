@@ -6,6 +6,9 @@ using System.Text.RegularExpressions;
 
 // ReSharper disable MemberCanBePrivate.Global
 
+/// <summary>
+/// 提供字符串校验、命名转换、截断与 HTML 清理的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>
@@ -177,7 +180,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="postFixes">要移除的后缀数组。</param>
 		/// <returns>移除后缀后的字符串。</returns>
-		public string RemovePostFix(params string[] postFixes)
+		public string? RemovePostFix(params string[] postFixes)
 		{
 			return source.RemovePostFix(StringComparison.Ordinal, postFixes);
 		}
@@ -188,7 +191,7 @@ public static partial class Extensions
 		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
 		/// <param name="postFixes">要移除的后缀数组。</param>
 		/// <returns>移除后缀后的字符串。</returns>
-		public string RemovePostFix(StringComparison comparisonType, params string[] postFixes)
+		public string? RemovePostFix(StringComparison comparisonType, params string[] postFixes)
 		{
 			if (source.IsNullOrEmpty())
 			{
@@ -216,7 +219,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="preFixes">要移除的前缀数组。</param>
 		/// <returns>移除前缀后的字符串。</returns>
-		public string RemovePreFix(params string[] preFixes)
+		public string? RemovePreFix(params string[] preFixes)
 		{
 			return source.RemovePreFix(StringComparison.Ordinal, preFixes);
 		}
@@ -227,7 +230,7 @@ public static partial class Extensions
 		/// <param name="comparisonType">用于比较的字符串比较类型。</param>
 		/// <param name="preFixes">要移除的前缀数组。</param>
 		/// <returns>移除前缀后的字符串。</returns>
-		public string RemovePreFix(StringComparison comparisonType, params string[] preFixes)
+		public string? RemovePreFix(StringComparison comparisonType, params string[] preFixes)
 		{
 			if (source.IsNullOrEmpty())
 			{
@@ -501,7 +504,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="maxLength">最大长度。</param>
 		/// <returns>截取后的字符串。</returns>
-		public string TruncateFromBeginning(int maxLength)
+		public string? TruncateFromBeginning(int maxLength)
 		{
 			if (source == null)
 			{
@@ -521,7 +524,7 @@ public static partial class Extensions
 		/// </summary>
 		/// <param name="maxLength">最大长度。</param>
 		/// <returns>截取后的字符串。</returns>
-		public string TruncateWithPostfix(int maxLength)
+		public string? TruncateWithPostfix(int maxLength)
 		{
 			return source.TruncateWithPostfix(maxLength, "...");
 		}
@@ -532,7 +535,7 @@ public static partial class Extensions
 		/// <param name="maxLength">最大长度。</param>
 		/// <param name="postfix">后缀字符串。</param>
 		/// <returns>截取后的字符串。</returns>
-		public string TruncateWithPostfix(int maxLength, string postfix)
+		public string? TruncateWithPostfix(int maxLength, string postfix)
 		{
 			if (source == null)
 			{
@@ -600,7 +603,7 @@ public static partial class Extensions
 		/// 返回移除 HTML 注释、脚本、样式和标签后的字符串。
 		/// </summary>
 		/// <returns>移除 HTML 内容后的字符串。</returns>
-		public string DecodeHtml()
+		public string? DecodeHtml()
 		{
 			if (source == null)
 			{

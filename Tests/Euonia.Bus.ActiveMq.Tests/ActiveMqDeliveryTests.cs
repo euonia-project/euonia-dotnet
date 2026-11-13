@@ -11,12 +11,18 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class ActiveMqDeliveryTests
 {
+	/// <summary>
+	/// 提供队列覆盖名时应优先使用覆盖值。
+	/// </summary>
 	[Fact]
 	public void ResolveQueueName_WithOverride_UsesOverride()
 	{
 		Assert.Equal("explicit.queue", ActiveMqDelivery.ResolveQueueName("orders.created", "explicit.queue"));
 	}
 
+	/// <summary>
+	/// 未提供覆盖名时应以通道名作为队列名。
+	/// </summary>
 	[Fact]
 	public void ResolveQueueName_WithoutOverride_UsesChannel()
 	{
@@ -32,6 +38,11 @@ public class ActiveMqDeliveryTests
 		Assert.Equal("orders.created", ActiveMqDelivery.ResolveQueueName("orders.created", "   "));
 	}
 
+	/// <summary>
+	/// 整数优先级应映射到对应的 NMS 优先级，越界值按最近的有效范围处理。
+	/// </summary>
+	/// <param name="priority">声明的整数优先级。</param>
+	/// <param name="expected">期望映射到的 NMS 优先级。</param>
 	[Theory]
 	[InlineData(1, MsgPriority.VeryLow)]
 	[InlineData(5, MsgPriority.Normal)]

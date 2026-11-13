@@ -4,19 +4,19 @@ using Nerosoft.Euonia.Threading;
 namespace Nerosoft.Euonia.Concurrency.ZooKeeper;
 
 /// <summary>
-/// An implementation of <see cref="ISemaphoreProvider"/> based on ZooKeeper. Uses an approach similar to <see cref="ZooKeeperLockProvider"/>.
+/// 基于 ZooKeeper 的 <see cref="ISemaphoreProvider"/> 实现。采用与 <see cref="ZooKeeperLockProvider"/> 类似的方式。
 /// </summary>
 public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooKeeperSynchronizationHandle>
 {
     private readonly ZooKeeperSynchronizationHelper _synchronizationHelper;
 
     /// <summary>
-    /// Constructs a new semaphore based on the provided <paramref name="path"/>, <paramref name="connectionString"/>, and <paramref name="options"/>.
+    /// 基于提供的 <paramref name="path"/>、<paramref name="connectionString"/> 和 <paramref name="options"/> 构造一个新信号量。
     /// 
-    /// If <paramref name="assumePathExists"/> is specified, then the node will not be created as part of acquiring nor will it be 
-    /// deleted after releasing (defaults to false).
+    /// 如果指定了 <paramref name="assumePathExists"/>，则在获取信号量时不会创建该节点，释放后也不会删除它
+    /// （默认为 false）。
     /// </summary>
-    public ZooKeeperSemaphoreProvider(ZooKeeperPath path, int maxCount, string connectionString, bool assumePathExists = false, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(ZooKeeperPath path, int maxCount, string connectionString, bool assumePathExists = false, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(path, maxCount, assumePathExists: assumePathExists, connectionString, options)
     {
         if (path == default)
@@ -31,22 +31,22 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     }
 
     /// <summary>
-    /// Constructs a new semaphore based on the provided <paramref name="name"/>, <paramref name="connectionString"/>, and <paramref name="options"/>.
-    /// The semaphore's path will be a parent node of the root directory '/'. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
-    /// validity.
+    /// 基于提供的 <paramref name="name"/>、<paramref name="connectionString"/> 和 <paramref name="options"/> 构造一个新信号量。
+    /// 信号量的路径将是根目录 '/' 下的父节点。如果 <paramref name="name"/> 不是有效的节点名称，将对其进行转换以确保有效性。
     /// </summary>
-    public ZooKeeperSemaphoreProvider(string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(ZooKeeperPath.Root, name, maxCount, connectionString, options)
     {
     }
 
     /// <summary>
-    /// Constructs a new semaphore based on the provided <paramref name="directoryPath"/>, <paramref name="name"/>, <paramref name="connectionString"/>, and <paramref name="options"/>.
+    /// 基于提供的 <paramref name="directoryPath"/>、<paramref name="name"/>、<paramref name="connectionString"/> 和
+    /// <paramref name="options"/> 构造一个新信号量。
     /// 
-    /// The semaphore's path will be a parent node of <paramref name="directoryPath"/>. If <paramref name="name"/> is not a valid node name, it will be transformed to ensure
-    /// validity.
+    /// 信号量的路径将是 <paramref name="directoryPath"/> 下的父节点。如果 <paramref name="name"/> 不是有效的节点名称，
+    /// 将对其进行转换以确保有效性。
     /// </summary>
-    public ZooKeeperSemaphoreProvider(ZooKeeperPath directoryPath, string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> options = null)
+    public ZooKeeperSemaphoreProvider(ZooKeeperPath directoryPath, string name, int maxCount, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? options = null)
         : this(
             (directoryPath == default ? throw new ArgumentNullException(nameof(directoryPath)) : directoryPath).GetChildNodePathWithSafeName(name),
             maxCount,
@@ -56,7 +56,7 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
     {
     }
 
-    private ZooKeeperSemaphoreProvider(ZooKeeperPath nodePath, int maxCount, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder> optionsBuilder)
+    private ZooKeeperSemaphoreProvider(ZooKeeperPath nodePath, int maxCount, bool assumePathExists, string connectionString, Action<ZooKeeperSynchronizationOptionsBuilder>? optionsBuilder)
     {
         if (maxCount < 1)
         {
@@ -64,31 +64,32 @@ public sealed partial class ZooKeeperSemaphoreProvider : ISemaphoreProvider<ZooK
         }
 
         MaxCount = maxCount;
-        // setAcquiredMarker is needed because we use data changes as part of our wait procedure below
+        // 需要使用 setAcquiredMarker，因为下面的等待过程会利用数据变化
         _synchronizationHelper = new ZooKeeperSynchronizationHelper(nodePath, assumePathExists, connectionString, optionsBuilder, setAcquiredMarker: true);
     }
 
     /// <summary>
-    /// The zookeeper node path
+    /// ZooKeeper 节点路径
     /// </summary>
     public ZooKeeperPath Path => _synchronizationHelper.Path;
 
     /// <summary>
-    /// Implements <see cref="ISemaphoreProvider.Name"/>. Implemented explicitly to avoid confusion with the fact
-    /// that this will include the leading "/" and base directory alongside the passed-in name.
+    /// 实现 <see cref="ISemaphoreProvider.Name"/>。显式实现该接口，以避免与以下事实混淆：
+    /// 该名称会同时包含前导的 "/" 和基础目录，而不仅是传入的名称。
     /// </summary>
     public string Name => Path.ToString();
 
-    /// <summary>
-    /// Implements <see cref="ISemaphoreProvider.MaxCount"/>
-    /// </summary>
+    /// <inheritdoc />
     public int MaxCount { get; }
 }
 
+/// <summary>
+/// 提供 <see cref="ZooKeeperSemaphoreProvider"/> 的信号量获取方法的分部实现。
+/// </summary>
 public sealed partial class ZooKeeperSemaphoreProvider
 {
     /// <inheritdoc />
-    public ZooKeeperSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ZooKeeperSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
@@ -100,7 +101,7 @@ public sealed partial class ZooKeeperSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+    public ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
@@ -112,7 +113,7 @@ public sealed partial class ZooKeeperSemaphoreProvider
     }
 
     /// <inheritdoc />
-    public async ValueTask<ZooKeeperSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    public async ValueTask<ZooKeeperSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         var nodeHandle = await _synchronizationHelper.TryAcquireAsync(
                                                          hasAcquired: state => Array.FindIndex(state.SortedChildren, t => t.Path == state.EphemeralNodePath) < MaxCount,
@@ -121,28 +122,27 @@ public sealed partial class ZooKeeperSemaphoreProvider
                                                              var ephemeralNodeIndex = Array.FindIndex(state.SortedChildren, t => t.Path == state.EphemeralNodePath);
                                                              Invariant.Require(ephemeralNodeIndex >= MaxCount);
 
-                                                             // if we're the next node in line for a ticket, wait for any changes in the collection of children
+                                                             // 如果我们是下一个排队等待许可的节点，则等待子节点集合中的任何变化
                                                              if (ephemeralNodeIndex == MaxCount)
                                                              {
                                                                  var childNames = new HashSet<string>((await zooKeeper.getChildrenAsync(Path.ToString(), watcher).ConfigureAwait(false)).Children);
-                                                                 // If any of the children in front of us are missing, then the wait is done. Otherwise,
-                                                                 // let the watcher notify us when there is any change to the set of children
+                                                                 // 如果排在我们前面的任何子节点已不存在，则等待结束。否则，
+                                                                 // 让监视器在子节点集合发生任何变化时通知我们
                                                                  return state.SortedChildren.Take(ephemeralNodeIndex)
                                                                              .Any(t => !childNames.Contains(t.Path[(t.Path.LastIndexOf(ZooKeeperPath.Separator) + 1)..]));
                                                              }
 
-                                                             // Otherwise, we just watch for the node ahead of us in line to have its data changed to the acquired marker. While we could
-                                                             // watch all children in this case as well, that approach is less efficient because it will generate a herd effect where each
-                                                             // new waiter or released waiter wakes up everyone else.
+                                                             // 否则，我们只监视排在我们前面的节点，等待其数据变为已获取标记。虽然在这种情况下我们也可以
+                                                             // 监视所有子节点，但那种方式效率较低，因为它会产生羊群效应，每个新的等待者或刚释放的等待者都会唤醒其他所有人。
                                                              var nextLowestChildData = await zooKeeper.getDataAsync(state.SortedChildren[ephemeralNodeIndex - 1].Path, watcher).ConfigureAwait(false);
-                                                             // If it's already acquired, then the wait is done. Otherwise, the watcher will notify us on any data change or on deletion of that node
+                                                             // 如果它已被获取，则等待结束。否则，监视器会在任何数据变化或该节点被删除时通知我们
                                                              return nextLowestChildData.Data.SequenceEqual(ZooKeeperSynchronizationHelper.AcquiredMarker);
                                                          },
                                                          timeout,
                                                          cancellationToken,
                                                          nodePrefix: "semaphore-"
                                                      )
-                                                     // we're forced to use sync-over-async here because ZooKeeperNetEx doesn't have synchronous APIs
+                                                     // 这里被迫使用 sync-over-async，因为 ZooKeeperNetEx 没有同步 API
                                                      .AwaitSyncOverAsync()
                                                      .ConfigureAwait(false);
 
@@ -150,6 +150,9 @@ public sealed partial class ZooKeeperSemaphoreProvider
     }
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ISemaphoreProvider"/> 接口成员。
+/// </summary>
 public sealed partial class ZooKeeperSemaphoreProvider
 {
     ISynchronizationHandle ISemaphoreProvider.Acquire(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -157,14 +160,14 @@ public sealed partial class ZooKeeperSemaphoreProvider
         return Acquire(timeout, cancellationToken);
     }
 
-    ISynchronizationHandle ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ISemaphoreProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     ValueTask<ISynchronizationHandle> ISemaphoreProvider.AcquireAsync(TimeSpan? timeout, CancellationToken cancellationToken)
@@ -172,8 +175,8 @@ public sealed partial class ZooKeeperSemaphoreProvider
         return AcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
-    ValueTask<ISynchronizationHandle> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ISemaphoreProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

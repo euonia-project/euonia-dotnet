@@ -6,6 +6,12 @@ namespace Nerosoft.Euonia.Bus.Grpc;
 public class GrpcBusOptions
 {
 	/// <summary>
+	/// 选项对应的配置节名称：<c>Euonia:Bus:Grpc</c>。
+	/// </summary>
+	/// <remarks>对应环境变量前缀为 <c>Euonia__Bus__Grpc__</c>。</remarks>
+	public const string SectionName = "Euonia:Bus:Grpc";
+
+	/// <summary>
 	/// 获取或设置一个值，指示该功能是否启用。
 	/// </summary>
 	public bool Enabled { get; set; } = true;
@@ -18,7 +24,7 @@ public class GrpcBusOptions
 	/// <summary>
 	/// 获取或设置客户端连接的服务端地址，例如 <c>https://localhost:5001</c>。
 	/// </summary>
-	public string Endpoint { get; set; }
+	public string Endpoint { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 获取或设置序列化器提供程序名称。

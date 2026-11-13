@@ -53,7 +53,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 	/// 因此这里按「引用 → 出现次数」计数：0→1 订阅、1→0 退订，中间增减均不动事件。
 	/// 计数器用引用相等比较（<see cref="ReferenceEqualityComparer{TItem}"/>），与去重语义一致。
 	/// </remarks>
-	private readonly Dictionary<TItem, int> _hookedItems = new(new ReferenceEqualityComparer<TItem>());
+	private readonly Dictionary<object, int> _hookedItems = new(new ReferenceEqualityComparer<object>());
 
 	/// <summary>
 	/// 父对象链接；集合作为另一对象的属性时，集合变化与元素变化都要通知父对象。
@@ -173,7 +173,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 	/// 采用字段式事件（编译器生成 <c>Interlocked.CompareExchange</c> 循环）：
 	/// 手写 <c>Delegate.Combine/Remove</c> 的读-改-写不是原子的，并发订阅/退订会静默丢失处理器。
 	/// </remarks>
-	public event EventHandler<ObjectChangedEventArgs> ChildChanged;
+	public event EventHandler<ObjectChangedEventArgs>? ChildChanged;
 
 	/// <summary>
 	/// 获取或设置一个值，指示列表在其内容被修改时是否引发更改通知事件。
@@ -192,7 +192,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
 	/// 并发订阅不会静默丢失处理器。
 	/// </remarks>
-	public event BusyChangedEventHandler BusyChanged;
+	public event BusyChangedEventHandler? BusyChanged;
 
 	/// <summary>
 	/// 重写此方法以在 IsBusy 属性改变时收到通知。
@@ -327,18 +327,18 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 			return;
 		}
 
-		if (!_hookedItems.TryGetValue(item, out var count))
+		if (!_hookedItems.TryGetValue(item!, out var count))
 		{
 			return;
 		}
 
 		if (count > 1)
 		{
-			_hookedItems[item] = count - 1;
+			_hookedItems[item!] = count - 1;
 			return;
 		}
 
-		_hookedItems.Remove(item);
+		_hookedItems.Remove(item!);
 
 		if (item is INotifyBusy busy)
 		{
@@ -370,9 +370,9 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 			return;
 		}
 
-		if (!_hookedItems.TryAdd(item, 1))
+		if (!_hookedItems.TryAdd(item!, 1))
 		{
-			_hookedItems[item]++;
+			_hookedItems[item!]++;
 			return;
 		}
 
@@ -419,9 +419,9 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 		OnPropertyChanged(new PropertyChangedEventArgs("Item[]"));
 	}
 
-	private void RaiseChildChanged(object childObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs collectionChangedArgs)
+	private void RaiseChildChanged(object? childObject, PropertyChangedEventArgs propertyChangedArgs, NotifyCollectionChangedEventArgs? collectionChangedArgs)
 	{
-		var args = new ObjectChangedEventArgs(childObject, propertyChangedArgs, collectionChangedArgs);
+		var args = new ObjectChangedEventArgs(childObject!, propertyChangedArgs, collectionChangedArgs);
 		OnChildChanged(args);
 	}
 
@@ -443,7 +443,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 		OnBusyChanged(e);
 	}
 
-	private void OnItemPropertyChanged(object sender, PropertyChangedEventArgs e)
+	private void OnItemPropertyChanged(object? sender, PropertyChangedEventArgs e)
 	{
 		RaiseChildChanged(sender, e, null);
 	}
@@ -489,7 +489,7 @@ public class ObservableList<TItem> : ObservableCollection<TItem>, INotifyBusy, I
 	/// </summary>
 	private sealed class ReferenceEqualityComparer<T> : IEqualityComparer<T>
 	{
-		public bool Equals(T x, T y)
+		public bool Equals(T? x, T? y)
 		{
 			return ReferenceEquals(x, y);
 		}

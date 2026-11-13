@@ -17,13 +17,13 @@ public class PredicateExpressionBuilder<TEntity>
     }
 
     /// <summary>
-    /// 参数。
+    /// 构建谓词表达式时使用的参数表达式（通常代表源对象）。
     /// </summary>
     private readonly ParameterExpression _parameter;
     /// <summary>
     /// 结果表达式。
     /// </summary>
-    private Expression _result;
+    private Expression? _result;
 
     /// <summary>
     /// 获取参数。
@@ -56,7 +56,8 @@ public class PredicateExpressionBuilder<TEntity>
         };
         var access = ParameterRebinder.ReplaceParameters(rebinder, body);
 
-        _result = _result.And(access.Operation(@operator, value));
+        var condition = access.Operation(@operator, value);
+        _result = _result == null ? condition : _result.And(condition);
     }
 
     /// <summary>
@@ -67,7 +68,8 @@ public class PredicateExpressionBuilder<TEntity>
     /// <param name="value">值。</param>
     public void Append(string property, QueryOperator @operator, object value)
     {
-        _result = _result.And(_parameter.Property(property).Operation(@operator, value));
+        var condition = _parameter.Property(property).Operation(@operator, value);
+        _result = _result == null ? condition : _result.And(condition);
     }
 
     /// <summary>

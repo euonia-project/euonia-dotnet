@@ -10,25 +10,39 @@ namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 /// </summary>
 public sealed class TeamMember
 {
-	/// <summary>关系标识。</summary>
-	public string Id { get; set; }
+	/// <summary>
+	/// 关系标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	/// <summary>所属团队（<c>team.id</c>）。</summary>
-	public string TeamId { get; set; }
+	/// <summary>
+	/// 所属团队（<c>team.id</c>）。
+	/// </summary>
+	public string TeamId { get; set; } = null!;
 
-	/// <summary>成员（账号标识，<c>user.id</c>）。</summary>
-	public string UserId { get; set; }
+	/// <summary>
+	/// 成员（账号标识，<c>user.id</c>）。
+	/// </summary>
+	public string UserId { get; set; } = null!;
 
-	/// <summary>关系状态，见 <see cref="TeamMemberStatus"/>。</summary>
-	public string Status { get; set; }
+	/// <summary>
+	/// 关系状态，见 <see cref="TeamMemberStatus"/>。
+	/// </summary>
+	public string Status { get; set; } = null!;
 }
 
-/// <summary>成员关系状态。失效的关系保留在表里（审计），但不参与判定。</summary>
+/// <summary>
+/// 成员关系状态。失效的关系保留在表里（审计），但不参与判定。
+/// </summary>
 public static class TeamMemberStatus
 {
-	/// <summary>有效成员。</summary>
+	/// <summary>
+	/// 有效成员。
+	/// </summary>
 	public const string Active = "active";
 
-	/// <summary>已失效（移出团队）。</summary>
+	/// <summary>
+	/// 已失效（移出团队）。
+	/// </summary>
 	public const string Expired = "expired";
 }

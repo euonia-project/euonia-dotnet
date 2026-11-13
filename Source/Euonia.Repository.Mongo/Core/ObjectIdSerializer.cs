@@ -4,14 +4,14 @@ using MongoDB.Bson.Serialization;
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The class used to serialize a <see cref="ObjectId"/> to a <see cref="string"/>.
+/// 用于将 <see cref="ObjectId"/> 序列化为 <see cref="string"/> 的类。
 /// </summary>
 public class ObjectIdSerializer : IBsonSerializer
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ObjectIdSerializer"/> class.
+    /// 初始化 <see cref="ObjectIdSerializer"/> 类的新实例。
     /// </summary>
-    /// <param name="valueType"></param>
+    /// <param name="valueType">序列化器要处理的值的 CLR 类型。</param>
     public ObjectIdSerializer(Type valueType)
     {
         ValueType = valueType;
@@ -21,7 +21,7 @@ public class ObjectIdSerializer : IBsonSerializer
     public object Deserialize(BsonDeserializationContext context, BsonDeserializationArgs args)
     {
         var id = context.Reader.ReadObjectId().ToString();
-        return TypeDescriptor.GetConverter(ValueType).ConvertFrom(id);
+        return TypeDescriptor.GetConverter(ValueType).ConvertFrom(id)!;
     }
 
     /// <inheritdoc />
@@ -46,7 +46,7 @@ public class ObjectIdSerializer : IBsonSerializer
     /// 对无法表示的键类型现在会显式失败，而不是静默写入错误的标识符。
     /// </para>
     /// </remarks>
-    private static MongoDB.Bson.ObjectId ToObjectId(object value)
+    private static MongoDB.Bson.ObjectId ToObjectId(object? value)
     {
         switch (value)
         {
@@ -68,9 +68,9 @@ public class ObjectIdSerializer : IBsonSerializer
 }
 
 /// <summary>
-/// The class used to serialize a <see cref="ObjectId"/> to a <see cref="string"/>.
+/// 用于将 <see cref="ObjectId"/> 序列化为 <see cref="string"/> 的类。
 /// </summary>
-/// <typeparam name="T"></typeparam>
+/// <typeparam name="T">要序列化为 <see cref="ObjectId"/>（或从其反序列化）的键类型。</typeparam>
 public class ObjectIdSerializer<T> : ObjectIdSerializer, IBsonSerializer<T>
 {
 	/// <inheritdoc />
@@ -88,6 +88,6 @@ public class ObjectIdSerializer<T> : ObjectIdSerializer, IBsonSerializer<T>
 	/// <inheritdoc />
 	public void Serialize(BsonSerializationContext context, BsonSerializationArgs args, T value)
     {
-        base.Serialize(context, args, value);
+        base.Serialize(context, args, value!);
     }
 }

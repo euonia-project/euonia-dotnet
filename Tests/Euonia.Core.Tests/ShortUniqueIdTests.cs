@@ -5,6 +5,9 @@ namespace Nerosoft.Euonia.Core.Tests;
 /// </summary>
 public class ShortUniqueIdTests
 {
+	/// <summary>
+	/// 验证在小字符集下编码 <see cref="long.MaxValue"/> 不会溢出，且编码结果可正确解码回原值。
+	/// </summary>
 	[Fact]
 	public void EncodeInt64_WithSmallAlphabet_ShouldRoundTrip()
 	{
@@ -18,6 +21,9 @@ public class ShortUniqueIdTests
 		Assert.Equal(long.MaxValue, id.DecodeSingleInt64(encoded));
 	}
 
+	/// <summary>
+	/// 验证仅由守卫字符组成的输入不会导致 <see cref="IndexOutOfRangeException"/>，且 <c>TryDecodeSingleInt64</c> 返回 <see langword="false"/>。
+	/// </summary>
 	[Fact]
 	public void DecodeSingleInt64_WithGuardOnlyHash_ShouldNotThrowIndexOutOfRange()
 	{

@@ -3,27 +3,27 @@
 namespace Nerosoft.Euonia.Sample.Domain.Commands;
 
 /// <summary>
-/// Update user profile command (nickname / email / phone).
+/// 更新用户资料命令（昵称 / 邮箱 / 手机号）。
 /// </summary>
 public class UserUpdateCommand : Command
 {
 	/// <summary>
-	/// Gets or sets the identifier of the user to update.
+	/// 获取或设置要更新的用户标识。
 	/// </summary>
-	public string Id { get; set; }
+	public string Id { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the nickname.
+	/// 获取或设置昵称。
 	/// </summary>
-	public string Nickname { get; set; }
+	public string Nickname { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the email address.
+	/// 获取或设置电子邮箱地址。
 	/// </summary>
-	public string Email { get; set; }
+	public string Email { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the phone number.
+	/// 获取或设置电话号码。
 	/// </summary>
-	public string Phone { get; set; }
+	public string Phone { get; set; } = null!;
 }

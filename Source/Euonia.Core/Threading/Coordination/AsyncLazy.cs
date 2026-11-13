@@ -54,6 +54,9 @@ public sealed class AsyncLazy<T>
     /// </summary>
     private int _id;
 
+    /// <summary>
+    /// 获取供调试器显示的延迟初始化状态。
+    /// </summary>
     [DebuggerNonUserCode]
     internal LazyState GetStateForDebugger
     {
@@ -74,7 +77,7 @@ public sealed class AsyncLazy<T>
     /// <param name="flags">影响异步延迟语义的标志。</param>
     public AsyncLazy(Func<Task<T>> factory, AsyncLazyFlags flags = AsyncLazyFlags.None)
     {
-		ArgumentAssert.ThrowIfNull(factory);
+		ArgumentNullException.ThrowIfNull(factory);
 
         _factory = factory;
         if ((flags & AsyncLazyFlags.RetryOnFailure) == AsyncLazyFlags.RetryOnFailure)
@@ -168,25 +171,53 @@ public sealed class AsyncLazy<T>
 // ReSharper restore UnusedVariable
     }
 
+    /// <summary>
+    /// 描述 <see cref="AsyncLazy{T}"/> 的延迟初始化阶段。
+    /// </summary>
     internal enum LazyState
     {
+        /// <summary>
+        /// 尚未启动工厂方法。
+        /// </summary>
         NotStarted,
+
+        /// <summary>
+        /// 工厂方法已启动但尚未完成。
+        /// </summary>
         Executing,
+
+        /// <summary>
+        /// 工厂方法已完成，结果已可用。
+        /// </summary>
         Completed
     }
 
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露延迟初始化状态、任务与结果值。
+    /// </summary>
     [DebuggerNonUserCode]
     internal sealed class DebugView
     {
         private readonly AsyncLazy<T> _lazy;
 
+        /// <summary>
+        /// 初始化调试视图。
+        /// </summary>
+        /// <param name="lazy">要检查的异步延迟实例。</param>
         public DebugView(AsyncLazy<T> lazy)
         {
             _lazy = lazy;
         }
 
+        /// <summary>
+        /// 获取当前的延迟初始化状态。
+        /// </summary>
         public LazyState State => _lazy.GetStateForDebugger;
 
+        /// <summary>
+        /// 获取底层延迟任务；尚未创建时访问将抛出异常。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">工厂方法尚未启动。</exception>
         public Task Task
         {
             get
@@ -197,6 +228,10 @@ public sealed class AsyncLazy<T>
             }
         }
 
+        /// <summary>
+        /// 获取初始化完成后的结果值；尚未完成时访问将抛出异常。
+        /// </summary>
+        /// <exception cref="InvalidOperationException">工厂方法尚未启动或尚未完成。</exception>
         public T Value
         {
             get

@@ -64,7 +64,8 @@ public static class ServiceCollectionExtensions
 		/// <returns>传入的 <paramref name="services"/>，以便链式调用。</returns>
 		public IServiceCollection AddJwtAuthentication(string configurationSectionName)
 		{
-			var bearerOptions = services.GetConfiguration().GetSection(configurationSectionName).Get<JwtAuthenticationOptions>();
+			var bearerOptions = services.GetConfiguration()!.GetSection(configurationSectionName).Get<JwtAuthenticationOptions>();
+			ArgumentNullException.ThrowIfNull(bearerOptions);
 			return services.AddJwtAuthentication(bearerOptions);
 		}
 

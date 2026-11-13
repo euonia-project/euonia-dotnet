@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="configureOptions">用于配置 ActiveMQ 总线选项的操作。</param>
 		/// <returns>返回已添加服务的 <see cref="IServiceCollection"/> 实例。</returns>
 		/// <exception cref="InvalidOperationException">当 <see cref="ActiveMqBusOptions"/> 未正确配置时抛出。</exception>
-		public IServiceCollection AddActiveMqBus(string name, Action<ActiveMqBusOptions> configureOptions = null)
+		public IServiceCollection AddActiveMqBus(string name, Action<ActiveMqBusOptions>? configureOptions = null)
 		{
 			if (configureOptions != null)
 			{
@@ -39,7 +39,7 @@ public static class ServiceCollectionExtensions
 				}
 
 				// 使用提供的连接 URI 创建并返回 ActiveMQ 连接工厂。
-				var factory = new NMSConnectionFactory(options.Connection);
+				var factory = new NMSConnectionFactory(options.Connection!);
 				return factory;
 			});
 			

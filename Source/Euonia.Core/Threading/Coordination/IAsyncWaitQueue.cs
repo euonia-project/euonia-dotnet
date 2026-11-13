@@ -24,13 +24,13 @@ internal interface IAsyncWaitQueue<T>
     /// 移除等待队列中的单个条目并完成它。此方法只能在 <see cref="IsEmpty"/> 为 <c>false</c> 时调用。已完成任务的任务继续必须异步执行。
     /// </summary>
     /// <param name="result">用于完成等待队列条目的结果。如果不需要，请使用 <c>default(T)</c>。</param>
-    void Dequeue(T result = default);
+    void Dequeue(T result = default!);
 
     /// <summary>
     /// 移除等待队列中的所有条目并完成它们。已完成任务的任务继续必须异步执行。
     /// </summary>
     /// <param name="result">用于完成等待队列条目的结果。如果不需要，请使用 <c>default(T)</c>。</param>
-    void DequeueAll(T result = default);
+    void DequeueAll(T result = default!);
 
     /// <summary>
     /// 尝试从等待队列中移除一个条目并取消它。已完成任务的任务继续必须异步执行。
@@ -131,16 +131,26 @@ internal sealed class DefaultAsyncWaitQueue<T> : IAsyncWaitQueue<T>
         _queue.Clear();
     }
 
+    /// <summary>
+    /// 供调试器显示的只读视图，以数组形式暴露等待队列中的任务。
+    /// </summary>
     [DebuggerNonUserCode]
     internal sealed class DebugView
     {
         private readonly DefaultAsyncWaitQueue<T> _queue;
 
+        /// <summary>
+        /// 初始化调试视图。
+        /// </summary>
+        /// <param name="queue">要检查的等待队列。</param>
         public DebugView(DefaultAsyncWaitQueue<T> queue)
         {
             _queue = queue;
         }
 
+        /// <summary>
+        /// 获取等待队列中当前所有任务的快照。
+        /// </summary>
         [DebuggerBrowsable(DebuggerBrowsableState.RootHidden)]
         public Task<T>[] Tasks
         {

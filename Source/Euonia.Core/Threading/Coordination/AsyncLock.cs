@@ -76,7 +76,7 @@ public sealed class AsyncLock
     /// 使用指定的等待队列创建一个新的异步兼容互斥锁。
     /// </summary>
     /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
-    internal AsyncLock(IAsyncWaitQueue<IDisposable> queue)
+    internal AsyncLock(IAsyncWaitQueue<IDisposable>? queue)
     {
         _queue = queue ?? new DefaultAsyncWaitQueue<IDisposable>();
         _mutex = new object();
@@ -181,6 +181,9 @@ public sealed class AsyncLock
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露锁的标识、占用状态与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

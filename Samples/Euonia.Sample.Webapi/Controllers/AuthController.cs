@@ -21,10 +21,14 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [ApiController]
 public class AuthController(IConfiguration configuration, IUserRepository users) : ControllerBase
 {
-	/// <summary>登录入参。</summary>
+	/// <summary>
+	/// 登录入参。
+	/// </summary>
 	public record LoginInput(string Username, string Password);
 
-	/// <summary>按用户名与密码登录，成功时返回 JWT 令牌。</summary>
+	/// <summary>
+	/// 按用户名与密码登录，成功时返回 JWT 令牌。
+	/// </summary>
 	[HttpPost("login")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -76,7 +80,7 @@ public class AuthController(IConfiguration configuration, IUserRepository users)
 	private string IssueToken(UserEntity user)
 	{
 		var section = configuration.GetSection("JwtAuthenticationOptions");
-		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(section["SigningKey"]));
+		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(section["SigningKey"]!));
 		var issuer = section.GetSection("Issuer").Get<string[]>()?.FirstOrDefault() ?? "euonia.com";
 
 		var claims = new List<Claim>

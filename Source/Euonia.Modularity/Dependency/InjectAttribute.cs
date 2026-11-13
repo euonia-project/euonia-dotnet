@@ -4,22 +4,22 @@
 namespace System;
 
 /// <summary>
-/// Indicate that the property or parameter would resolve from service container.
+/// 指示属性或参数将从服务容器解析。
 /// </summary>
 [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.Property)]
 public class InjectAttribute : Attribute
 {
     /// <summary>
-    /// Initialize a new instance of <see cref="InjectAttribute"/>.
+    /// 初始化 <see cref="InjectAttribute"/> 的新实例。
     /// </summary>
-    /// <param name="serviceKey">An object that specifies the key of service object to get.</param>
-    public InjectAttribute(object serviceKey = null)
+    /// <param name="serviceKey">一个对象，指定要获取的服务对象的键。</param>
+    public InjectAttribute(object? serviceKey = null)
     {
         ServiceKey = serviceKey;
     }
 
     /// <summary>
-    /// An object that specifies the key of service object to get.
+    /// 一个对象，指定要获取的服务对象的键。
     /// </summary>
-    public object ServiceKey { get; }
+    public object? ServiceKey { get; }
 }

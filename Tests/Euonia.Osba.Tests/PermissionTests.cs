@@ -15,6 +15,9 @@ public class PermissionTests
 {
 	#region 操作权限
 
+	/// <summary>
+	/// 验证用户不具备插入权限时，新增对象的保存抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Insert_WithoutPermission_ShouldThrowSecurityException()
 	{
@@ -29,6 +32,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证用户具备插入权限时，新增对象保存成功并复位为干净状态。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Insert_WithPermission_ShouldSucceed()
 	{
@@ -46,6 +52,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证用户仅具备插入权限时，更新已变更对象会因缺少更新权限而抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Update_WithoutPermission_ShouldThrowSecurityException()
 	{
@@ -60,6 +69,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证通配权限码（<c>order:*</c>）覆盖更新操作，更新保存成功并复位状态。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Update_WithWildcardPermission_ShouldSucceed()
 	{
@@ -76,6 +88,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证用户不具备删除权限时，已标记删除的对象保存抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_Delete_WithoutPermission_ShouldThrowSecurityException()
 	{
@@ -90,6 +105,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证执行命令时缺少所需权限会抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteAsync_WithoutPermission_ShouldThrowSecurityException()
 	{
@@ -103,6 +121,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证用户具备所需权限时，命令执行成功并记录已执行状态。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteAsync_WithPermission_ShouldSucceed()
 	{
@@ -118,6 +139,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证类型级权限要求缺少授权时，读、增、改、删全部操作均不可执行。
+	/// </summary>
 	[Fact]
 	public void ClassLevelRequirement_ShouldDenyAllOperations_WithoutPermission()
 	{
@@ -136,6 +160,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证类型级权限要求获得授权后，读、增、改、删全部操作均可执行。
+	/// </summary>
 	[Fact]
 	public void ClassLevelRequirement_ShouldAllowAllOperations_WithPermission()
 	{
@@ -154,6 +181,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证类型级权限要求未获授权时，保存新增对象抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ClassLevelRequirement_Denied_ShouldThrowSecurityException()
 	{
@@ -168,6 +198,10 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证权限检查器正确反映用户的授权码与角色：已授权码与角色返回 <see langword="true"/>，未授权项返回
+	/// <see langword="false"/>。
+	/// </summary>
 	[Fact]
 	public void Permission_Checker_Should_Reflect_Grants_And_Roles()
 	{
@@ -188,6 +222,10 @@ public class PermissionTests
 
 	#region 操作权限：工厂方法发现与权限要求收集一致
 
+	/// <summary>
+	/// 验证按命名约定发现的工厂方法（<c>FactoryUpdateAsync</c>）上的权限要求同样生效，
+	/// 未授权时保存抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ConventionNamedFactoryMethod_ShouldEnforcePermission()
 	{
@@ -206,6 +244,10 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证文档写法 <c>UpdateAsync</c>（不带 Factory 前缀）的命名约定方法同样受权限约束，
+	/// 未授权时保存抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_PlainConventionNamedMethod_ShouldEnforcePermission()
 	{
@@ -223,6 +265,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证具备更新权限时，按命名约定发现的工厂方法能够完成保存并复位状态。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ConventionNamedFactoryMethod_WithPermission_ShouldSucceed()
 	{
@@ -241,6 +286,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证保存入口与其它工厂入口一致，会调用对象激活器完成一次初始化与一次终结。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ShouldInvokeActivator()
 	{
@@ -276,6 +324,10 @@ public class PermissionTests
 
 	#region 无法判定时必须失败，不能静默放行
 
+	/// <summary>
+	/// 验证目标声明了权限要求却未接入业务上下文时，保存抛出 <see cref="InvalidOperationException"/>
+	/// 暴露配置错误，而不是静默放行。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing()
 	{
@@ -295,6 +347,9 @@ public class PermissionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证没有任何权限要求的类型不受权限线影响，保存成功且不强制接线。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WithoutRequirements_ShouldNotForceWiring()
 	{
@@ -360,6 +415,10 @@ public class PermissionTests
 /// </summary>
 public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 {
+	/// <summary>
+	/// 插入操作的工厂实现，要求 <c>order:create</c> 权限。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryInsert]
 	[Permission("order:create")]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
@@ -367,6 +426,10 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 更新操作的工厂实现，要求 <c>order:update</c> 权限。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryUpdate]
 	[Permission("order:update")]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
@@ -374,6 +437,10 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 删除操作的工厂实现，要求 <c>order:delete</c> 权限。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryDelete]
 	[Permission("order:delete")]
 	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
@@ -388,18 +455,30 @@ public class SecuredEditableObject : EditableObject<SecuredEditableObject>
 [Permission("admin")]
 public class AdminEditableObject : EditableObject<AdminEditableObject>
 {
+	/// <summary>
+	/// 插入操作的工厂实现，受类型级 <c>admin</c> 权限要求约束。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryInsert]
 	protected internal override async Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 更新操作的工厂实现，受类型级 <c>admin</c> 权限要求约束。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 删除操作的工厂实现，受类型级 <c>admin</c> 权限要求约束。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryDelete]
 	protected internal override async Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
@@ -450,6 +529,10 @@ public class SecuredCommand : ServiceObject<SecuredCommand>
 	/// </summary>
 	public bool Executed { get; private set; }
 
+	/// <summary>
+	/// 执行命令的工厂实现，要求 <c>report:export</c> 权限并记录命令已执行。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryExecute]
 	[Permission("report:export")]
 	protected internal override async Task ExecuteAsync(CancellationToken cancellationToken = default)
@@ -498,7 +581,7 @@ public class TestSubjectResolver : IScopeSubjectResolver
 	}
 
 	/// <inheritdoc />
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder().AddCodes(_permissions).Build());
 	}
@@ -509,6 +592,10 @@ public class TestSubjectResolver : IScopeSubjectResolver
 /// </summary>
 public class UnsecuredEditableObject : EditableObject<UnsecuredEditableObject>
 {
+	/// <summary>
+	/// 不带任何权限要求的更新工厂实现，测试中不执行实际操作。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	[FactoryUpdate]
 	protected internal override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{

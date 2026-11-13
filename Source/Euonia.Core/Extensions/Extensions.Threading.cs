@@ -1,6 +1,10 @@
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using Nerosoft.Euonia.Threading;
 
+/// <summary>
+/// 提供任务等待、同步上下文调度与任务工厂执行的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
     /// <summary>
@@ -13,20 +17,8 @@ public static partial class Extensions
     /// <returns>如果此方法完成了任务完成源，则为 <c>true</c>；如果已经完成，则为 <c>false</c>。</returns>
     public static bool TryCompleteFromCompletedTask<TResult, TSourceResult>(this TaskCompletionSource<TResult> @this, Task<TSourceResult> task) where TSourceResult : TResult
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		if (task.IsFaulted)
         {
@@ -59,24 +51,9 @@ public static partial class Extensions
     /// <returns>如果此方法完成了任务完成源，则为 <c>true</c>；如果已经完成，则为 <c>false</c>。</returns>
     public static bool TryCompleteFromCompletedTask<TResult>(this TaskCompletionSource<TResult> @this, Task task, Func<TResult> resultFunc)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-		if (resultFunc == null)
-		{
-			throw new ArgumentNullException(nameof(resultFunc));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(task);
 		ArgumentNullException.ThrowIfNull(resultFunc);
-#endif
 
 		if (task.IsFaulted)
 		{
@@ -114,14 +91,7 @@ public static partial class Extensions
     /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task WaitAsync(this Task @this, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		if (!cancellationToken.CanBeCanceled)
         {
@@ -152,14 +122,7 @@ public static partial class Extensions
     /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<TResult> WaitAsync<TResult>(this Task<TResult> @this, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		if (!cancellationToken.CanBeCanceled)
 		{
@@ -189,14 +152,7 @@ public static partial class Extensions
     /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<Task> WhenAny(this IEnumerable<Task> @this, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAny(@this).WaitAsync(cancellationToken);
     }
@@ -207,14 +163,7 @@ public static partial class Extensions
     /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<Task> WhenAny(this IEnumerable<Task> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAny(@this);
     }
@@ -227,14 +176,7 @@ public static partial class Extensions
     /// <param name="cancellationToken">用于取消等待的取消令牌。</param>
     public static Task<Task<TResult>> WhenAny<TResult>(this IEnumerable<Task<TResult>> @this, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAny(@this).WaitAsync(cancellationToken);
     }
@@ -246,14 +188,7 @@ public static partial class Extensions
     /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<Task<TResult>> WhenAny<TResult>(this IEnumerable<Task<TResult>> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAny(@this);
     }
@@ -264,14 +199,7 @@ public static partial class Extensions
     /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task WhenAll(this IEnumerable<Task> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAll(@this);
     }
@@ -283,14 +211,7 @@ public static partial class Extensions
     /// <param name="this">要等待的任务集合。不能为 <c>null</c>。</param>
     public static Task<TResult[]> WhenAll<TResult>(this IEnumerable<Task<TResult>> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 
 		return Task.WhenAll(@this);
     }
@@ -336,14 +257,7 @@ public static partial class Extensions
     /// <param name="this">要按完成顺序排序的任务集合。不能为 <c>null</c>。</param>
     public static List<Task<T>> OrderByCompletion<T>(this IEnumerable<Task<T>> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 		// 这是 Jon Skeet 的方法和 Stephen Toub 的方法的结合：
 		//  http://msmvps.com/blogs/jon_skeet/archive/2012/01/16/eduasync-part-19-ordering-by-completion-ahead-of-time.aspx
 		//  http://blogs.msdn.com/b/pfxteam/archive/2012/08/02/processing-tasks-as-they-complete.aspx
@@ -382,14 +296,7 @@ public static partial class Extensions
     /// <param name="this">要按完成顺序排序的任务集合。不能为 <c>null</c>。</param>
     public static List<Task> OrderByCompletion(this IEnumerable<Task> @this)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
-#endif
 		// 这是 Jon Skeet 的方法和 Stephen Toub 的方法的结合：
 		//  http://msmvps.com/blogs/jon_skeet/archive/2012/01/16/eduasync-part-19-ordering-by-completion-ahead-of-time.aspx
 		//  http://blogs.msdn.com/b/pfxteam/archive/2012/08/02/processing-tasks-as-they-complete.aspx
@@ -399,7 +306,7 @@ public static partial class Extensions
 
         // 分配 TCS 数组和结果任务数组。
         var numTasks = taskArray.Length;
-        var tcs = new TaskCompletionSource<object>[numTasks];
+        var tcs = new TaskCompletionSource<object?>[numTasks];
         var ret = new List<Task>(numTasks);
 
         // 每个任务完成时，完成下一个 tcs。
@@ -414,7 +321,7 @@ public static partial class Extensions
 		// 填充数组并附加延续任务。
 		for (var i = 0; i != numTasks; ++i)
         {
-            tcs[i] = new TaskCompletionSource<object>();
+            tcs[i] = new TaskCompletionSource<object?>();
             ret.Add(tcs[i].Task);
             taskArray[i].ContinueWith(Continuation, CancellationToken.None, TaskContinuationOptions.ExecuteSynchronously | TaskContinuationOptions.DenyChildAttach, TaskScheduler.Default);
         }
@@ -428,14 +335,7 @@ public static partial class Extensions
     /// <param name="task">任务。不能为 <c>null</c>。</param>
     public static void WaitAndUnwrapException(this Task task)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		task.GetAwaiter().GetResult();
     }
@@ -448,14 +348,7 @@ public static partial class Extensions
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消，或 <paramref name="task"/> 引发了 <see cref="OperationCanceledException"/>。</exception>
     public static void WaitAndUnwrapException(this Task task, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		try
 		{
@@ -463,7 +356,7 @@ public static partial class Extensions
         }
         catch (AggregateException ex)
         {
-            throw ex.InnerException.PrepareForRethrow();
+            throw ex.InnerException!.PrepareForRethrow();
         }
     }
 
@@ -475,14 +368,7 @@ public static partial class Extensions
     /// <returns>任务的结果。</returns>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		return task.GetAwaiter().GetResult();
     }
@@ -497,14 +383,7 @@ public static partial class Extensions
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消，或 <paramref name="task"/> 引发了 <see cref="OperationCanceledException"/>。</exception>
     public static TResult WaitAndUnwrapException<TResult>(this Task<TResult> task, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		try
 		{
@@ -513,7 +392,7 @@ public static partial class Extensions
         }
         catch (AggregateException ex)
         {
-            throw ex.InnerException.PrepareForRethrow();
+            throw ex.InnerException!.PrepareForRethrow();
         }
     }
 
@@ -523,14 +402,7 @@ public static partial class Extensions
     /// <param name="task">任务。不能为 <c>null</c>。</param>
     public static void WaitWithoutException(this Task task)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		try
         {
@@ -549,14 +421,7 @@ public static partial class Extensions
     /// <exception cref="OperationCanceledException"><paramref name="cancellationToken"/> 在 <paramref name="task"/> 完成之前被取消。</exception>
     public static void WaitWithoutException(this Task task, CancellationToken cancellationToken)
     {
-#if NETSTANDARD
-		if (task == null)
-		{
-			throw new ArgumentNullException(nameof(task));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(task);
-#endif
 
 		try
 		{
@@ -568,7 +433,7 @@ public static partial class Extensions
         }
     }
 
-    private static Func<object> NullResultFunc { get; } = () => null;
+    private static Func<object?> NullResultFunc { get; } = () => null;
 
     #region SynchronizationContext
 
@@ -588,6 +453,7 @@ public static partial class Extensions
     /// <typeparam name="T">结果的类型。</typeparam>
     /// <param name="context">同步上下文。</param>
     /// <param name="action">要执行的委托。</param>
+    [return: MaybeNull]
     public static T Send<T>(this SynchronizationContext context, Func<T> action)
     {
         var result = default(T);
@@ -611,7 +477,7 @@ public static partial class Extensions
             try
             {
                 ((Action)state!)();
-                taskCompletionSource.TrySetResult(null);
+                taskCompletionSource.TrySetResult(null!);
             }
             catch (OperationCanceledException ex)
             {
@@ -661,12 +527,12 @@ public static partial class Extensions
     {
         var taskCompletionSource = CreateAsyncTaskSource<object>();
 
-        async void PostCallback(object state)
+        async void PostCallback(object? state)
         {
             try
             {
                 await ((Func<Task>)state!)().ConfigureAwait(false);
-                taskCompletionSource.TrySetResult(null);
+                taskCompletionSource.TrySetResult(null!);
             }
             catch (OperationCanceledException ex)
             {
@@ -692,7 +558,7 @@ public static partial class Extensions
     {
         var taskCompletionSource = CreateAsyncTaskSource<T>();
 
-        async void PostCallback(object state)
+        async void PostCallback(object? state)
         {
             try
             {
@@ -724,19 +590,8 @@ public static partial class Extensions
     /// <returns>已启动的任务。</returns>
     public static Task Run(this TaskFactory @this, Action action)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-		if (action == null)
-		{
-			throw new ArgumentNullException(nameof(action));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
-#endif
 
 		return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default);
     }
@@ -749,20 +604,8 @@ public static partial class Extensions
     /// <returns>已启动的任务。</returns>
     public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<TResult> action)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-
-		if (action == null)
-		{
-			throw new ArgumentNullException(nameof(action));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
-#endif
 
 		return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default);
     }
@@ -775,20 +618,8 @@ public static partial class Extensions
     /// <returns>已启动的任务。</returns>
     public static Task Run(this TaskFactory @this, Func<Task> action)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-
-		if (action == null)
-		{
-			throw new ArgumentNullException(nameof(action));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
-#endif
 
 		return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default).Unwrap();
     }
@@ -801,19 +632,8 @@ public static partial class Extensions
     /// <returns>已启动的任务。</returns>
     public static Task<TResult> Run<TResult>(this TaskFactory @this, Func<Task<TResult>> action)
     {
-#if NETSTANDARD
-		if (@this == null)
-		{
-			throw new ArgumentNullException(nameof(@this));
-		}
-		if (action == null)
-		{
-			throw new ArgumentNullException(nameof(action));
-		}
-#else
 		ArgumentNullException.ThrowIfNull(@this);
 		ArgumentNullException.ThrowIfNull(action);
-#endif
 		return @this.StartNew(action, @this.CancellationToken, @this.CreationOptions | TaskCreationOptions.DenyChildAttach, @this.Scheduler ?? TaskScheduler.Default).Unwrap();
     }
 

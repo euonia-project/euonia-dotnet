@@ -45,7 +45,7 @@ public static class TaskConstants<T>
     /// <summary>
     /// 以 <typeparamref name="T"/> 的默认值完成的任务。
     /// </summary>
-    public static Task<T> Default => Task.FromResult(default(T));
+    public static Task<T> Default => Task.FromResult(default(T)!);
 
     /// <summary>
     /// 已取消的任务。

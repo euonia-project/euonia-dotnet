@@ -20,6 +20,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 internal class TeamRequestHandler(ITeamStore store, IScopeGuard guard)
 	: IHandler<TeamListQueryRequest, PagedResult<TeamDto>>
 {
+	/// <inheritdoc/>
 	public async Task<PagedResult<TeamDto>> HandleAsync(TeamListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var page = message.Page < 1 ? 1 : message.Page;
@@ -52,7 +53,7 @@ internal class TeamRequestHandler(ITeamStore store, IScopeGuard guard)
 		return new PagedResult<TeamDto>(total, page, pageSize, items);
 	}
 
-	private static IQueryable<Team> ApplySort(IQueryable<Team> query, string sortBy)
+	private static IQueryable<Team> ApplySort(IQueryable<Team> query, string? sortBy)
 	{
 		// 排序白名单：只允许按实体列排序，非法值回落默认（Id）。
 		return sortBy?.ToLowerInvariant() switch

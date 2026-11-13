@@ -3,16 +3,23 @@
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Used to build a <c>CacheManagerConfiguration</c>.
+/// 用于构建 <c>CacheManagerConfiguration</c>。
 /// </summary>
 /// <see cref="CacheManagerConfiguration"/>
 public class ConfigurationBuilderCachePart
 {
+    /// <summary>
+    /// 初始化 <see cref="ConfigurationBuilderCachePart"/> 的新实例，并创建空的缓存管理器配置。
+    /// </summary>
     internal ConfigurationBuilderCachePart()
     {
         Configuration = new CacheManagerConfiguration();
     }
 
+    /// <summary>
+    /// 初始化 <see cref="ConfigurationBuilderCachePart"/> 的新实例，在已有配置上继续构建。
+    /// </summary>
+    /// <param name="forConfiguration">要继续构建的缓存管理器配置。</param>
     internal ConfigurationBuilderCachePart(CacheManagerConfiguration forConfiguration)
     {
         Check.EnsureNotNull(forConfiguration, nameof(forConfiguration));
@@ -20,28 +27,27 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Gets the configuration.
+    /// 获取配置。
     /// </summary>
-    /// <value>The configuration.</value>
+    /// <value>配置。</value>
     internal CacheManagerConfiguration Configuration { get; }
 
     /// <summary>
-    /// Configures the backplane for the cache manager.
+    /// 为缓存管理器配置背板。
     /// <para>
-    /// This is an optional feature. If specified, see the documentation for the
-    /// <paramref name="backplaneType"/>. The <paramref name="configurationKey"/> might be used to
-    /// reference another configuration item.
+    /// 这是可选功能。若指定，请参阅 <paramref name="backplaneType"/> 的文档。
+    /// <paramref name="configurationKey"/> 可用于引用另一个配置项。
     /// </para>
     /// <para>
-    /// If a backplane is defined, at least one cache handle must be marked as backplane
-    /// source. The cache manager then will try to synchronize multiple instances of the same configuration.
+    /// 如果定义了背板，则必须至少将一个缓存句柄标记为背板来源。
+    /// 随后缓存管理器将尝试同步同一配置的多个实例。
     /// </para>
     /// </summary>
-    /// <param name="backplaneType">The type of the backplane implementation.</param>
-    /// <param name="configurationKey">The name.</param>
-    /// <param name="args">Additional arguments the type might need to get initialized.</param>
-    /// <returns>The builder instance.</returns>
-    /// <exception cref="ArgumentNullException">If <paramref name="configurationKey"/> is null.</exception>
+    /// <param name="backplaneType">背板实现的类型。</param>
+    /// <param name="configurationKey">名称。</param>
+    /// <param name="args">该类型初始化时可能需要的额外参数。</param>
+    /// <returns>构建器实例。</returns>
+    /// <exception cref="ArgumentNullException">如果 <paramref name="configurationKey"/> 为 null。</exception>
     public ConfigurationBuilderCachePart WithBackplane(Type backplaneType, string configurationKey, params object[] args)
     {
         Check.EnsureNotNull(backplaneType, nameof(backplaneType));
@@ -54,24 +60,23 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Configures the backplane for the cache manager.
+    /// 为缓存管理器配置背板。
     /// <para>
-    /// This is an optional feature. If specified, see the documentation for the
-    /// <paramref name="backplaneType"/>. The <paramref name="configurationKey"/> might be used to
-    /// reference another configuration item.
+    /// 这是可选功能。若指定，请参阅 <paramref name="backplaneType"/> 的文档。
+    /// <paramref name="configurationKey"/> 可用于引用另一个配置项。
     /// </para>
     /// <para>
-    /// If a backplane is defined, at least one cache handle must be marked as backplane
-    /// source. The cache manager then will try to synchronize multiple instances of the same configuration.
+    /// 如果定义了背板，则必须至少将一个缓存句柄标记为背板来源。
+    /// 随后缓存管理器将尝试同步同一配置的多个实例。
     /// </para>
     /// </summary>
-    /// <param name="backplaneType">The type of the backplane implementation.</param>
-    /// <param name="configurationKey">The configuration key.</param>
-    /// <param name="channelName">The backplane channel name.</param>
-    /// <param name="args">Additional arguments the type might need to get initialized.</param>
-    /// <returns>The builder instance.</returns>
+    /// <param name="backplaneType">背板实现的类型。</param>
+    /// <param name="configurationKey">配置键。</param>
+    /// <param name="channelName">背板通道名称。</param>
+    /// <param name="args">该类型初始化时可能需要的额外参数。</param>
+    /// <returns>构建器实例。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="configurationKey"/> or <paramref name="channelName"/> is null.
+    /// 如果 <paramref name="configurationKey"/> 或 <paramref name="channelName"/> 为 null。
     /// </exception>
     public ConfigurationBuilderCachePart WithBackplane(Type backplaneType, string configurationKey, string channelName, params object[] args)
     {
@@ -87,47 +92,47 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Adds a cache dictionary cache handle to the cache manager.
+    /// 向缓存管理器添加一个基于字典的缓存句柄。
     /// </summary>
     /// <param name="isBackplaneSource">
-    /// Set this to true if this cache handle should be the source of the backplane.
-    /// <para>This setting will be ignored if no backplane is configured.</para>
+    /// 如果此缓存句柄应作为背板来源，请设为 true。
+    /// <para>如果未配置背板，则忽略此设置。</para>
     /// </param>
-    /// <returns>The builder part.</returns>
+    /// <returns>构建器部件。</returns>
     public ConfigurationBuilderCacheHandlePart WithDictionaryHandle(bool isBackplaneSource = false) =>
         WithHandle(typeof(DictionaryCacheHandle<>), Guid.NewGuid().ToString("N"), isBackplaneSource);
 
     /// <summary>
-    /// Adds a cache dictionary cache handle to the cache manager.
+    /// 向缓存管理器添加一个基于字典的缓存句柄。
     /// </summary>
-    /// <returns>The builder part.</returns>
-    /// <param name="handleName">The name of the cache handle.</param>
+    /// <returns>构建器部件。</returns>
+    /// <param name="handleName">缓存句柄的名称。</param>
     /// <param name="isBackplaneSource">
-    /// Set this to true if this cache handle should be the source of the backplane.
-    /// <para>This setting will be ignored if no backplane is configured.</para>
+    /// 如果此缓存句柄应作为背板来源，请设为 true。
+    /// <para>如果未配置背板，则忽略此设置。</para>
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="handleName"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">如果 <paramref name="handleName"/> 为 null，则抛出此异常。</exception>
     public ConfigurationBuilderCacheHandlePart WithDictionaryHandle(string handleName, bool isBackplaneSource = false) =>
         WithHandle(typeof(DictionaryCacheHandle<>), handleName, isBackplaneSource);
 
     /// <summary>
-    /// Adds a cache handle with the given <c>Type</c> and name.
-    /// The type must be an open generic.
+    /// 添加具有指定 <c>Type</c> 和名称的缓存句柄。
+    /// 该类型必须是开放泛型。
     /// </summary>
-    /// <param name="cacheHandleBaseType">The cache handle type.</param>
-    /// <param name="handleName">The name to be used for the cache handle.</param>
+    /// <param name="cacheHandleBaseType">缓存句柄类型。</param>
+    /// <param name="handleName">用于该缓存句柄的名称。</param>
     /// <param name="isBackplaneSource">
-    /// Set this to true if this cache handle should be the source of the backplane.
-    /// <para>This setting will be ignored if no backplane is configured.</para>
+    /// 如果此缓存句柄应作为背板来源，请设为 true。
+    /// <para>如果未配置背板，则忽略此设置。</para>
     /// </param>
-    /// <param name="configurationTypes">Internally used only.</param>
-    /// <returns>The builder part.</returns>
-    /// <exception cref="ArgumentNullException">If handleName is null.</exception>
+    /// <param name="configurationTypes">仅供内部使用。</param>
+    /// <returns>构建器部件。</returns>
+    /// <exception cref="ArgumentNullException">如果 handleName 为 null。</exception>
     /// <exception cref="InvalidOperationException">
-    /// Only one cache handle can be the backplane's source.
+    /// 只能有一个缓存句柄作为背板来源。
     /// </exception>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if handleName or cacheHandleBaseType are null.
+    /// 如果 handleName 或 cacheHandleBaseType 为 null，则抛出此异常。
     /// </exception>
     public ConfigurationBuilderCacheHandlePart WithHandle(Type cacheHandleBaseType, string handleName, bool isBackplaneSource, params object[] configurationTypes)
     {
@@ -152,41 +157,41 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Adds a cache handle with the given <c>Type</c> and name.
-    /// The type must be an open generic.
+    /// 添加具有指定 <c>Type</c> 和名称的缓存句柄。
+    /// 该类型必须是开放泛型。
     /// </summary>
-    /// <param name="cacheHandleBaseType">The cache handle type.</param>
-    /// <param name="handleName">The name to be used for the cache handle.</param>
-    /// <returns>The builder part.</returns>
+    /// <param name="cacheHandleBaseType">缓存句柄类型。</param>
+    /// <param name="handleName">用于该缓存句柄的名称。</param>
+    /// <returns>构建器部件。</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if handleName or cacheHandleBaseType are null.
+    /// 如果 handleName 或 cacheHandleBaseType 为 null，则抛出此异常。
     /// </exception>
     public ConfigurationBuilderCacheHandlePart WithHandle(Type cacheHandleBaseType, string handleName)
         => WithHandle(cacheHandleBaseType, handleName, false);
 
     /// <summary>
-    /// Adds a cache handle with the given <c>Type</c>.
-    /// The type must be an open generic.
+    /// 添加具有指定 <c>Type</c> 的缓存句柄。
+    /// 该类型必须是开放泛型。
     /// </summary>
-    /// <param name="cacheHandleBaseType">The cache handle type.</param>
-    /// <returns>The builder part.</returns>
+    /// <param name="cacheHandleBaseType">缓存句柄类型。</param>
+    /// <returns>构建器部件。</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown if handleName or cacheHandleBaseType are null.
+    /// 如果 handleName 或 cacheHandleBaseType 为 null，则抛出此异常。
     /// </exception>
     public ConfigurationBuilderCacheHandlePart WithHandle(Type cacheHandleBaseType)
         => WithHandle(cacheHandleBaseType, Guid.NewGuid().ToString("N"), false);
 
     /// <summary>
-    /// Sets the maximum number of retries per action.
-    /// <para>Default is 50.</para>
+    /// 设置每个操作的最大重试次数。
+    /// <para>默认为 50。</para>
     /// <para>
-    /// Not every cache handle implements this, usually only distributed caches will use it.
+    /// 并非所有缓存句柄都实现此项，通常只有分布式缓存会用到。
     /// </para>
     /// </summary>
-    /// <param name="retries">The maximum number of retries.</param>
-    /// <returns>The configuration builder.</returns>
+    /// <param name="retries">最大重试次数。</param>
+    /// <returns>配置构建器。</returns>
     /// <exception cref="InvalidOperationException">
-    /// Maximum number of retries must be greater than 0.
+    /// 最大重试次数必须大于 0。
     /// </exception>
     public ConfigurationBuilderCachePart WithMaxRetries(int retries)
     {
@@ -197,16 +202,16 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Sets the timeout between each retry of an action in milliseconds.
-    /// <para>Default is 100.</para>
+    /// 设置每次操作重试之间的超时时间（毫秒）。
+    /// <para>默认为 100。</para>
     /// <para>
-    /// Not every cache handle implements this, usually only distributed caches will use it.
+    /// 并非所有缓存句柄都实现此项，通常只有分布式缓存会用到。
     /// </para>
     /// </summary>
-    /// <param name="timeoutMillis">The timeout in milliseconds.</param>
-    /// <returns>The configuration builder.</returns>
+    /// <param name="timeoutMillis">超时时间（毫秒）。</param>
+    /// <returns>配置构建器。</returns>
     /// <exception cref="InvalidOperationException">
-    /// Retry timeout must be greater than or equal to zero.
+    /// 重试超时时间必须大于或等于零。
     /// </exception>
     public ConfigurationBuilderCachePart WithRetryTimeout(int timeoutMillis)
     {
@@ -217,11 +222,11 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Sets the update mode of the cache.
-    /// <para>If nothing is set, the default will be <c>CacheUpdateMode.None</c>.</para>
+    /// 设置缓存的更新模式。
+    /// <para>如果未设置任何值，默认使用 <c>CacheUpdateMode.None</c>。</para>
     /// </summary>
-    /// <param name="updateMode">The update mode.</param>
-    /// <returns>The builder part.</returns>
+    /// <param name="updateMode">更新模式。</param>
+    /// <returns>构建器部件。</returns>
     /// <seealso cref="CacheUpdateMode"/>
     public ConfigurationBuilderCachePart WithUpdateMode(CacheUpdateMode updateMode)
     {
@@ -230,9 +235,9 @@ public class ConfigurationBuilderCachePart
     }
 
     /// <summary>
-    /// Hands back the new <see cref="CacheManagerConfiguration"/> instance.
+    /// 返回新的 <see cref="CacheManagerConfiguration"/> 实例。
     /// </summary>
-    /// <returns>The <see cref="CacheManagerConfiguration"/>.</returns>
+    /// <returns>该 <see cref="CacheManagerConfiguration"/>。</returns>
     public CacheManagerConfiguration Build()
     {
         return Configuration;

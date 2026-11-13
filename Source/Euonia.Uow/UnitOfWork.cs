@@ -12,10 +12,10 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	#region Events
 
 	/// <inheritdoc />
-	public event EventHandler<UnitOfWorkEventArgs> Completed;
+	public event EventHandler<UnitOfWorkEventArgs>? Completed;
 
 	/// <inheritdoc />
-	public event EventHandler<UnitOfWorkFailedEventArgs> Failed;
+	public event EventHandler<UnitOfWorkFailedEventArgs>? Failed;
 
 	#endregion
 
@@ -69,13 +69,13 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	public override IServiceProvider ServiceProvider { get; }
 
 	/// <inheritdoc />
-	public IUnitOfWork Outer { get; private set; }
+	public IUnitOfWork? Outer { get; private set; }
 
 	/// <inheritdoc />
 	public bool IsReserved { get; private set; }
 
 	/// <inheritdoc />
-	public string ReservationName { get; private set; }
+	public string? ReservationName { get; private set; }
 
 	/// <inheritdoc />
 	public bool IsDisposed { get; private set; }
@@ -93,12 +93,12 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	private List<Func<Task>> CompletedHandlers { get; } = new();
 
 	/// <inheritdoc />
-	public IUnitOfWorkOptions Options { get; private set; }
+	public IUnitOfWorkOptions Options { get; private set; } = null!;
 
 	/// <summary>
 	/// 完成过程中发生失败时捕获的异常。
 	/// </summary>
-	private Exception Exception { get; set; }
+	private Exception? Exception { get; set; }
 
 	/// <summary>
 	/// 指示该工作单元是否已回滚。
@@ -148,7 +148,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	public IUnitOfWorkContext FindContext(string key)
+	public IUnitOfWorkContext? FindContext(string key)
 	{
 		return _contexts.GetOrDefault(key);
 	}
@@ -185,7 +185,7 @@ public sealed class UnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	public void SetOuter(IUnitOfWork outer)
+	public void SetOuter(IUnitOfWork? outer)
 	{
 		Outer = outer;
 	}

@@ -25,10 +25,18 @@ internal sealed class ScopeCompileContext<T>
 	private readonly ScopeModelDescriptor _descriptor;
 	private readonly ScopeSubjectSet _subjects;
 
-	/// <summary>本次编译中真正被策略引用的集合维度：加载探测只针对它们。</summary>
+	/// <summary>
+	/// 本次编译中真正被策略引用的集合维度：加载探测只针对它们。
+	/// </summary>
 	private readonly HashSet<string> _referencedCollectionDimensions = new(StringComparer.OrdinalIgnoreCase);
 
-	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string scopeKey)
+	/// <summary>
+	/// 初始化编译上下文，并创建所有叶子条件共用的规范参数。
+	/// </summary>
+	/// <param name="descriptor">资源模型描述。</param>
+	/// <param name="subjects">用户主体集合，提供各维度被授予的值。</param>
+	/// <param name="scopeKey">策略键；为 <see langword="null"/>、空或仅空白时回落到 <see cref="ScopeKeys.Default"/>。</param>
+	internal ScopeCompileContext(ScopeModelDescriptor descriptor, ScopeSubjectSet subjects, string? scopeKey)
 	{
 		_descriptor = descriptor;
 		_subjects = subjects;
@@ -86,7 +94,8 @@ internal sealed class ScopeCompileContext<T>
 
 		if (!mapping.IsCollection)
 		{
-			return Contains(granted, Rebind(mapping.Value));
+			// 单值维度的映射必然带取值选择器（见 ScopeDimensionMapping.Create）。
+			return Contains(granted, Rebind(mapping.Value!));
 		}
 
 		// 记下「本策略确实用到了这个子表维度」：加载探测只对用到的维度生效，
@@ -107,7 +116,9 @@ internal sealed class ScopeCompileContext<T>
 	private Expression CollectionCondition(ScopeDimensionMapping mapping, Expression granted)
 	{
 		var element = Expression.Parameter(mapping.ElementType, "v");
-		var source = Rebind(mapping.Collection);
+
+		// CollectionCondition 只由 IsCollection 为真的映射进入（见 GrantCondition）。
+		var source = Rebind(mapping.Collection!);
 
 		foreach (var filter in mapping.Filters)
 		{

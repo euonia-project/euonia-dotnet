@@ -1,29 +1,28 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Provides the current Utc <see cref="DateTime" />, and time related method for cache management.
-/// This service should be used whenever the current date and time are needed, instead of <seealso cref="DateTime" /> directly.
-/// It also makes implementations more testable, as time can be mocked.
-/// Implements the <see cref="IVolatileProvider" />
+/// 提供当前 UTC <see cref="DateTime" />，以及用于缓存管理的时间相关方法。
+/// 凡需要当前日期和时间时，都应使用此服务，而不是直接使用 <seealso cref="DateTime" />。
+/// 它还使实现更易于测试，因为时间可以被模拟。
+/// 实现 <see cref="IVolatileProvider" />
 /// </summary>
 /// <seealso cref="IVolatileProvider" />
 public interface ICacheClock : IVolatileProvider
 {
     /// <summary>
-    /// Gets the current <see cref="DateTime" /> of the system, expressed in Utc
+    /// 获取系统的当前 <see cref="DateTime" />，以 UTC 表示
     /// </summary>
-    /// <value>The UTC now.</value>
+    /// <value>当前 UTC 时间。</value>
     DateTime UtcNow { get; }
 
     /// <summary>
-    /// Provides a <see cref="IVolatileToken" /> instance which can be used to cache some information for a
-    /// specific duration.
+    /// 提供一个 <see cref="IVolatileToken" /> 实例，可用于在指定时长内缓存某些信息。
     /// </summary>
-    /// <param name="duration">The duration that the token must be valid.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <param name="duration">令牌必须保持有效的时长。</param>
+    /// <returns>IVolatileToken。</returns>
     /// <example>
-    /// This sample shows how to use the <see cref="When" /> method by returning the result of
-    /// a method named LoadVotes(), which is computed every 10 minutes only.
+    /// 此示例演示如何通过返回名为 LoadVotes() 的方法结果来使用 <see cref="When" /> 方法，
+    /// 该方法每 10 分钟才计算一次。
     /// <code>
     /// _cacheManager.Get("votes",
     /// ctx =&gt; {
@@ -34,14 +33,13 @@ public interface ICacheClock : IVolatileProvider
     IVolatileToken When(TimeSpan duration);
 
     /// <summary>
-    /// Provides a <see cref="IVolatileToken" /> instance which can be used to cache some
-    /// until a specific date and time.
+    /// 提供一个 <see cref="IVolatileToken" /> 实例，可用于将某些内容缓存到指定的日期和时间之前。
     /// </summary>
-    /// <param name="absoluteUtc">The date and time that the token must be valid until.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <param name="absoluteUtc">令牌必须保持有效的截止日期和时间。</param>
+    /// <returns>IVolatileToken。</returns>
     /// <example>
-    /// This sample shows how to use the <see cref="WhenUtc" /> method by returning the result of
-    /// a method named LoadVotes(), which is computed once, and no more until the end of the year.
+    /// 此示例演示如何通过返回名为 LoadVotes() 的方法结果来使用 <see cref="WhenUtc" /> 方法，
+    /// 该方法只计算一次，直到年末之前不再计算。
     /// <code>
     /// var endOfYear = _clock.UtcNow;
     /// endOfYear.Month = 12;

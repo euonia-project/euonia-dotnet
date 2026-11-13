@@ -1,21 +1,21 @@
 ﻿namespace System;
 
 /// <summary>
-/// Represent the inherited class/interface would injected as a singleton service.
+/// 表示继承的类/接口将作为瞬态服务注入。
 /// </summary>
 public interface ITransientDependency
 {
 }
 
 /// <summary>
-/// Represent the inherited class/interface would injected as a singleton service.
+/// 表示继承的类/接口将作为单例服务注入。
 /// </summary>
 public interface ISingletonDependency
 {
 }
 
 /// <summary>
-/// Represent the inherited class/interface would injected as a scoped service.
+/// 表示继承的类/接口将作为作用域服务注入。
 /// </summary>
 public interface IScopedDependency
 {

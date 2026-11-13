@@ -23,9 +23,9 @@ public interface IMessageEnvelope
 	string ConversationId { get; }
 
 	/// <summary>
-	/// 获取请求追踪标识符，用于追踪请求链路。
+	/// 获取请求追踪标识符，用于追踪请求链路；消息未携带时为 <c>null</c>。
 	/// </summary>
-	string RequestTraceId { get; }
+	string? RequestTraceId { get; }
 
 	/// <summary>
 	/// 获取消息通道名称。
@@ -33,9 +33,9 @@ public interface IMessageEnvelope
 	string Channel { get; }
 
 	/// <summary>
-	/// 获取授权信息，如令牌或凭证。
+	/// 获取授权信息，如令牌或凭证；请求作用域外（例如后台任务）为 <c>null</c>。
 	/// </summary>
-	string Authorization { get; }
+	string? Authorization { get; }
 
 	/// <summary>
 	/// 获取消息的时间戳（Unix 毫秒）。
@@ -53,9 +53,9 @@ public interface IMessageEnvelope
 	MessageMetadata Metadata { get; }
 
 	/// <summary>
-	/// 用户信息
+	/// 用户信息；请求作用域外没有用户信息时为 <c>null</c>。
 	/// </summary>
-	ClaimsPrincipal User { get; }
+	ClaimsPrincipal? User { get; }
 	
 	/// <summary>
 	/// 获取消息负载内容。

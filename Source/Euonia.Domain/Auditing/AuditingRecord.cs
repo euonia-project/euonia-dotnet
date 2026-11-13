@@ -8,22 +8,22 @@ public class AuditingRecord
     /// <summary>
     /// 获取或设置用户标识符。
     /// </summary>
-    public string UserId { get; set; }
+    public string? UserId { get; set; }
 
     /// <summary>
     /// 获取或设置用户名。
     /// </summary>
-    public string UserName { get; set; }
+    public string? UserName { get; set; }
 
     /// <summary>
     /// 获取或设置租户标识符。
     /// </summary>
-    public string TenantId { get; set; }
+    public string? TenantId { get; set; }
 
     /// <summary>
     /// 获取或设置租户名称。
     /// </summary>
-    public string TenantName { get; set; }
+    public string? TenantName { get; set; }
 
     /// <summary>
     /// 获取或设置操作执行时间。
@@ -38,32 +38,32 @@ public class AuditingRecord
     /// <summary>
     /// 获取或设置客户端标识符。
     /// </summary>
-    public string ClientId { get; set; }
+    public string? ClientId { get; set; }
 
     /// <summary>
     /// 获取或设置关联标识符。
     /// </summary>
-    public string CorrelationId { get; set; }
+    public string? CorrelationId { get; set; }
 
     /// <summary>
     /// 获取或设置客户端 IP 地址。
     /// </summary>
-    public string ClientIpAddress { get; set; }
+    public string? ClientIpAddress { get; set; }
 
     /// <summary>
     /// 获取或设置客户端名称。
     /// </summary>
-    public string ClientName { get; set; }
+    public string? ClientName { get; set; }
 
     /// <summary>
     /// 获取或设置浏览器信息。
     /// </summary>
-    public string BrowserInfo { get; set; }
+    public string? BrowserInfo { get; set; }
 
     /// <summary>
     /// 获取或设置 HTTP 方法。
     /// </summary>
-    public string HttpMethod { get; set; }
+    public string? HttpMethod { get; set; }
 
     /// <summary>
     /// 获取或设置 HTTP 状态码。
@@ -73,5 +73,5 @@ public class AuditingRecord
     /// <summary>
     /// 获取或设置请求 URL。
     /// </summary>
-    public string Url { get; set; }
+    public string? Url { get; set; }
 }

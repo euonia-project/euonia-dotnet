@@ -21,10 +21,12 @@ namespace Nerosoft.Euonia.Application;
 public class LockInterceptor : IInterceptor
 {
 	// 缓存 WrapAsync 方法的 MethodInfo，避免每次拦截都通过反射重新查找。
-	private static readonly MethodInfo _wrapAsyncMethod = typeof(LockInterceptor).GetMethod(nameof(WrapAsync), BindingFlags.Instance | BindingFlags.NonPublic);
+	private static readonly MethodInfo _wrapAsyncMethod = typeof(LockInterceptor).GetMethod(nameof(WrapAsync), BindingFlags.Instance | BindingFlags.NonPublic)
+	                                                      ?? throw new InvalidOperationException(string.Format(Resources.IDS_INTERCEPTOR_MEMBER_NOT_FOUND, nameof(LockInterceptor), nameof(WrapAsync)));
 
 	// 缓存每个方法上的锁特性，避免每次拦截调用都执行反射特性查找。
-	private static readonly ConcurrentDictionary<(MethodInfo Target, MethodInfo Interface), LockAttribute> _attributeCache = new();
+	// 方法未标注锁特性时缓存 null，避免每次重复反射。
+	private static readonly ConcurrentDictionary<(MethodInfo Target, MethodInfo Interface), LockAttribute?> _attributeCache = new();
 
 	// 缓存 WrapAsync 的闭包泛型 MethodInfo（按结果类型），避免每次调用 MakeGenericMethod。
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _wrapAsyncMethods = new();
@@ -92,7 +94,8 @@ public class LockInterceptor : IInterceptor
 	{
 		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
 		proceedInfo.Invoke();
-		await (Task)invocation.ReturnValue;
+		// Proceed 之后返回 Task 的方法其 ReturnValue 必为任务实例。
+		await (Task)invocation.ReturnValue!;
 	}
 
 	/// <summary>
@@ -108,7 +111,7 @@ public class LockInterceptor : IInterceptor
 	{
 		using var lease = await AcquireAsync(attribute, token).ConfigureAwait(false);
 		proceedInfo.Invoke();
-		return await (Task<T>)invocation.ReturnValue;
+		return await (Task<T>)invocation.ReturnValue!;
 	}
 
 	/// <summary>
@@ -181,7 +184,7 @@ public class LockInterceptor : IInterceptor
 	/// <param name="method">要检查的方法。</param>
 	/// <param name="resultType">当方法返回 <see cref="Task{TResult}"/> 时输出其结果类型；返回 <see cref="Task"/> 时为 <c>null</c>。</param>
 	/// <returns>若方法返回 <see cref="Task"/> 或 <see cref="Task{TResult}"/> 则为 <c>true</c>，否则为 <c>false</c>。</returns>
-	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
+	private static bool IsTaskMethod(MethodInfo method, out Type? resultType)
 	{
 		if (method.ReturnType == typeof(Task))
 		{
@@ -258,9 +261,9 @@ public class LockInterceptor : IInterceptor
 	/// <param name="parameterName">占位符中的参数名，用于错误消息。</param>
 	/// <returns>属性路径对应的值；当路径中间遇到 <c>null</c> 对象时返回空字符串。</returns>
 	/// <exception cref="InvalidOperationException">当属性路径中的某个属性在对应类型上不存在时抛出。</exception>
-	private static string ResolvePropertyPath(object argument, string propertyPath, string parameterName)
+	private static string ResolvePropertyPath(object? argument, string propertyPath, string? parameterName)
 	{
-		object current = argument;
+		object? current = argument;
 		foreach (var part in propertyPath.Split('.'))
 		{
 			if (current == null)
@@ -279,12 +282,12 @@ public class LockInterceptor : IInterceptor
 			current = property.GetValue(current);
 		}
 
-		return Convert.ToString(current, CultureInfo.InvariantCulture);
+		return Convert.ToString(current, CultureInfo.InvariantCulture) ?? string.Empty;
 	}
 
 	private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> _propertyCache = new();
 
-	private static PropertyInfo GetProperty(Type type, string name)
+	private static PropertyInfo? GetProperty(Type type, string name)
 	{
 		return _propertyCache.GetOrAdd(type, t => t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
 			                                  .ToDictionary(p => p.Name, StringComparer.Ordinal))
@@ -302,6 +305,10 @@ public class LockInterceptor : IInterceptor
 /// </remarks>
 internal static class SemaphoreLockStore
 {
+	/// <summary>
+	/// 单个锁键对应的条目：持有信号量，并统计当前持有或等待该锁的使用者数量，
+	/// 以便计数归零时把条目从存储中移除。
+	/// </summary>
 	private sealed class LockEntry
 	{
 		public LockEntry(int maximumCount)

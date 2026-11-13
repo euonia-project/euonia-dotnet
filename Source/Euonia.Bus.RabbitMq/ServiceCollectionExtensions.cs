@@ -25,7 +25,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="configureOptions">用于配置 <see cref="RabbitMqBusOptions"/> 的可选委托。</param>
 		/// <returns>原始服务集合，以支持链式调用。</returns>
 		/// <exception cref="InvalidOperationException">当 <see cref="RabbitMqBusOptions"/> 未正确配置时抛出。</exception>
-		public IServiceCollection AddRabbitMqBus(string name, Action<RabbitMqBusOptions> configureOptions = null)
+		public IServiceCollection AddRabbitMqBus(string name, Action<RabbitMqBusOptions>? configureOptions = null)
 		{
 			if (configureOptions != null)
 			{
@@ -43,7 +43,7 @@ public static class ServiceCollectionExtensions
 				}
 
 				// 使用提供的连接 URI 创建并返回 RabbitMQ 连接工厂。
-				var factory = new ConnectionFactory { Uri = new Uri(options.Connection) };
+				var factory = new ConnectionFactory { Uri = new Uri(options.Connection!) };
 				return factory;
 			});
 

@@ -88,7 +88,7 @@ internal static class BusTelemetry
 	/// <param name="envelope">消息信封，用于填充标签。</param>
 	/// <param name="transport">目标传输器名称；未知时可为 <c>null</c>。</param>
 	/// <returns>已启动的 <see cref="Activity"/>；无监听者时为 <c>null</c>。</returns>
-	public static Activity StartActivity(string name, IMessageEnvelope envelope, string transport = null)
+	public static Activity? StartActivity(string name, IMessageEnvelope? envelope, string? transport = null)
 	{
 		var activity = Source.StartActivity(name, ActivityKind.Producer);
 
@@ -115,7 +115,7 @@ internal static class BusTelemetry
 	/// <param name="messageType">消息运行时类型。</param>
 	/// <param name="transport">传输器名称；未知时可为 <c>null</c>。</param>
 	/// <returns>可直接用于计数器的标签集。</returns>
-	public static TagList Tags(string channel, Type messageType, string transport = null)
+	public static TagList Tags(string channel, Type messageType, string? transport = null)
 	{
 		var tags = new TagList
 		{
@@ -134,7 +134,7 @@ internal static class BusTelemetry
 	/// <summary>
 	/// 在标签值非空时写入标签，避免产生空值标签。
 	/// </summary>
-	private static void SetTag(Activity activity, string key, string value)
+	private static void SetTag(Activity activity, string key, string? value)
 	{
 		if (!string.IsNullOrEmpty(value))
 		{

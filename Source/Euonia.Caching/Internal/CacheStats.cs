@@ -234,7 +234,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// 当调用缓存 Get 时调用。
 	/// </summary>
 	/// <param name="region">区域。</param>
-	public void OnGet(string region = null)
+	public void OnGet(string? region = null)
 	{
 		if (!_isStatsEnabled)
 		{
@@ -251,7 +251,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// 当 Get 成功时调用。
 	/// </summary>
 	/// <param name="region">区域。</param>
-	public void OnHit(string region = null)
+	public void OnHit(string? region = null)
 	{
 		if (!_isStatsEnabled)
 		{
@@ -268,7 +268,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// 当 Get 未成功时调用。
 	/// </summary>
 	/// <param name="region">区域。</param>
-	public void OnMiss(string region = null)
+	public void OnMiss(string? region = null)
 	{
 		if (!_isStatsEnabled)
 		{
@@ -311,7 +311,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// 当缓存项从缓存中被移除时调用。
 	/// </summary>
 	/// <param name="region">区域。</param>
-	public void OnRemove(string region = null)
+	public void OnRemove(string? region = null)
 	{
 		if (!_isStatsEnabled)
 		{
@@ -332,7 +332,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// <param name="region">区域。</param>
 	/// <param name="result">更新结果。</param>
 	/// <exception cref="ArgumentNullException">当 <c>key</c> 或 <c>result</c> 为 <c>null</c> 时抛出。</exception>
-	public void OnUpdate(string key, string region, CacheItemUpdateResult<TValue> result)
+	public void OnUpdate(string key, string? region, CacheItemUpdateResult<TValue> result)
 	{
 		if (!_isStatsEnabled)
 		{
@@ -386,7 +386,7 @@ public sealed class CacheStats<TValue> : IDisposable
 	/// </summary>
 	/// <param name="region">区域名称；可为 <c>null</c>。</param>
 	/// <returns>工作计数器序列。</returns>
-	private IEnumerable<CacheStatsCounter> GetWorkingCounters(string region)
+	private IEnumerable<CacheStatsCounter> GetWorkingCounters(string? region)
 	{
 		yield return GetCounter(_nullRegionKey);
 

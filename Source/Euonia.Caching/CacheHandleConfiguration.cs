@@ -88,8 +88,12 @@ public sealed class CacheHandleConfiguration
     /// 获取或设置句柄的类型。
     /// </summary>
     /// <value>句柄的类型。</value>
-    public Type HandleType { get; set; }
+    public Type HandleType { get; set; } = null!;
 
+    /// <summary>
+    /// 获取或设置创建缓存句柄时额外传给构造函数的配置参数。
+    /// </summary>
+    /// <value>按顺序追加到句柄构造函数参数之后的配置对象；默认为空数组。</value>
     internal object[] ConfigurationTypes { get; set; } = [];
 
     /// <inheritdoc />

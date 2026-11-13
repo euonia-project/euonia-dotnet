@@ -1,771 +1,744 @@
-﻿using Nerosoft.Euonia.Caching.Internal;
+﻿using System.Diagnostics.CodeAnalysis;
+using Nerosoft.Euonia.Caching.Internal;
 
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// This interface extends the <c>ICache</c> interface by some cache manager specific methods and events.
+/// 此接口通过一些缓存管理器特有的方法和事件扩展了 <c>ICache</c> 接口。
 /// </summary>
-/// <typeparam name="TValue">The type of the cache item value.</typeparam>
+/// <typeparam name="TValue">缓存项值的类型。</typeparam>
 public interface ICacheManager<TValue> : ICache<TValue>
 {
     /// <summary>
-    /// Occurs when an item was successfully added to the cache.
-    /// <para>The event will not get triggered if <c>Add</c> would return false.</para>
+    /// 当某项已成功添加到缓存时发生。
+    /// <para>如果 <c>Add</c> 返回 false，则不会触发该事件。</para>
     /// </summary>
     event EventHandler<CacheActionEventArgs> OnAdd;
 
     /// <summary>
-    /// Occurs when <c>Clear</c> gets called, after the cache has been cleared.
+    /// 当调用 <c>Clear</c> 且缓存已被清空后发生。
     /// </summary>
     event EventHandler<CacheClearEventArgs> OnClear;
 
     /// <summary>
-    /// Occurs when <c>ClearRegion</c> gets called, after the cache region has been cleared.
+    /// 当调用 <c>ClearRegion</c> 且缓存区域已被清空后发生。
     /// </summary>
     event EventHandler<CacheClearRegionEventArgs> OnClearRegion;
 
     /// <summary>
-    /// Occurs when an item was retrieved from the cache.
-    /// <para>The event will only get triggered on cache hit. Misses do not trigger!</para>
+    /// 当从缓存中检索到某项时发生。
+    /// <para>该事件仅在缓存命中时触发，未命中不会触发！</para>
     /// </summary>
     event EventHandler<CacheActionEventArgs> OnGet;
 
     /// <summary>
-    /// Occurs when an item was put into the cache.
+    /// 当某项被放入缓存时发生。
     /// </summary>
     event EventHandler<CacheActionEventArgs> OnPut;
 
     /// <summary>
-    /// Occurs when an item was successfully removed from the cache.
+    /// 当某项已成功从缓存中移除时发生。
     /// </summary>
     event EventHandler<CacheActionEventArgs> OnRemove;
 
     /// <summary>
-    /// Occurs when an item was removed by the cache handle due to expiration or e.g. memory pressure eviction.
-    /// The <see cref="CacheItemRemovedEventArgs.Reason"/> property indicates the reason while the <see cref="CacheItemRemovedEventArgs.Level"/> indicates
-    /// which handle triggered the event.
+    /// 当某项因过期或例如内存压力驱逐而被缓存句柄移除时发生。
+    /// <see cref="CacheItemRemovedEventArgs.Reason"/> 属性指示原因，而 <see cref="CacheItemRemovedEventArgs.Level"/> 指示
+    /// 是哪个句柄触发了该事件。
     /// </summary>
     event EventHandler<CacheItemRemovedEventArgs> OnRemoveByHandle;
 
     /// <summary>
-    /// Occurs when an item was successfully updated.
+    /// 当某项已成功更新时发生。
     /// </summary>
     event EventHandler<CacheActionEventArgs> OnUpdate;
 
     /// <summary>
-    /// Gets the configuration.
+    /// 获取配置。
     /// </summary>
-    /// <value>The configuration.</value>
+    /// <value>配置。</value>
     CacheManagerConfiguration Configuration { get; }
 
     /// <summary>
-    /// Gets the cache name.
+    /// 获取缓存名称。
     /// </summary>
-    /// <value>The cache name.</value>
+    /// <value>缓存名称。</value>
     string Name { get; }
 
     /// <summary>
-    /// Gets a list of cache handles currently registered within the cache manager.
+    /// 获取当前在缓存管理器中注册的缓存句柄列表。
     /// </summary>
-    /// <value>The cache handles.</value>
+    /// <value>缓存句柄。</value>
     /// <remarks>
-    /// This list is read only, any changes to the returned list instance will not affect the
-    /// state of the cache manager instance.
+    /// 此列表为只读，对返回的列表实例所做的任何更改都不会影响
+    /// 缓存管理器实例的状态。
     /// </remarks>
     IEnumerable<BaseCacheHandle<TValue>> CacheHandles { get; }
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
+    /// <param name="key">要更新的键。</param>
     /// <param name="addValue">
-    /// The value which should be added in case the item doesn't already exist.
+    /// 项不存在时应添加的值。
     /// </param>
     /// <param name="updateValue">
-    /// The function to perform the update in case the item does already exist.
+    /// 项已存在时执行更新的函数。
     /// </param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> are null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     TValue AddOrUpdate(string key, TValue addValue, Func<TValue, TValue> updateValue);
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
     /// <param name="addValue">
-    /// The value which should be added in case the item doesn't already exist.
+    /// 项不存在时应添加的值。
     /// </param>
     /// <param name="updateValue">
-    /// The function to perform the update in case the item does already exist.
+    /// 项已存在时执行更新的函数。
     /// </param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/>
-    /// are null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/>
+    /// 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     TValue AddOrUpdate(string key, string region, TValue addValue, Func<TValue, TValue> updateValue);
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
+    /// <param name="key">要更新的键。</param>
     /// <param name="addValue">
-    /// The value which should be added in case the item doesn't already exist.
+    /// 项不存在时应添加的值。
     /// </param>
     /// <param name="updateValue">
-    /// The function to perform the update in case the item does already exist.
+    /// 项已存在时执行更新的函数。
     /// </param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>Null</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>Null</c>。
     /// </param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     TValue AddOrUpdate(string key, TValue addValue, Func<TValue, TValue> updateValue, int maxRetries);
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
     /// <param name="addValue">
-    /// The value which should be added in case the item doesn't already exist.
+    /// 项不存在时应添加的值。
     /// </param>
     /// <param name="updateValue">
-    /// The function to perform the update in case the item does already exist.
+    /// 项已存在时执行更新的函数。
     /// </param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>Null</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>Null</c>。
     /// </param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     TValue AddOrUpdate(string key, string region, TValue addValue, Func<TValue, TValue> updateValue, int maxRetries);
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="addItem">The item which should be added or updated.</param>
-    /// <param name="updateValue">The function to perform the update, if the item does exist.</param>
+    /// <param name="addItem">应添加或更新的项。</param>
+    /// <param name="updateValue">项存在时执行更新的函数。</param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="addItem"/> or <paramref name="updateValue"/> are null.
+    /// 如果 <paramref name="addItem"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     TValue AddOrUpdate(CacheItem<TValue> addItem, Func<TValue, TValue> updateValue);
 
     /// <summary>
-    /// Adds an item to the cache or, if the item already exists, updates the item using the
-    /// <paramref name="updateValue"/> function.
+    /// 向缓存中添加项，如果该项已存在，则使用
+    /// <paramref name="updateValue"/> 函数更新该项。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="addItem">The item which should be added or updated.</param>
-    /// <param name="updateValue">The function to perform the update, if the item does exist.</param>
+    /// <param name="addItem">应添加或更新的项。</param>
+    /// <param name="updateValue">项存在时执行更新的函数。</param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>Null</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>Null</c>。
     /// </param>
     /// <returns>
-    /// The value which has been added or updated, or null, if the update was not successful.
+    /// 已添加或已更新的值；如果更新未成功，则为 null。
     /// </returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="addItem"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="addItem"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     TValue AddOrUpdate(CacheItem<TValue> addItem, Func<TValue, TValue> updateValue, int maxRetries);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The method returns either the existing item's value or the newly added <paramref name="value"/>.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 该方法返回现有项的值或新添加的 <paramref name="value"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="value">The value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="value">应添加的值。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="value"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="value"/> 为 null。
     /// </exception>
     TValue GetOrAdd(string key, TValue value);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The method returns either the existing item's value or the newly added <paramref name="value"/>.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 该方法返回现有项的值或新添加的 <paramref name="value"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="value">The value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="value">应添加的值。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/>, <paramref name="region"/> or <paramref name="value"/> is null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="value"/> 为 null。
     /// </exception>
     TValue GetOrAdd(string key, string region, TValue value);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
     TValue GetOrAdd(string key, Func<string, TValue> valueFactory);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
     TValue GetOrAdd(string key, string region, Func<string, string, TValue> valueFactory);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
     CacheItem<TValue> GetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory);
 
     /// <summary>
-    /// Returns an existing item or adds the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 返回现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <returns>Either the added or the existing value.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <returns>已添加的值或现有值。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
     CacheItem<TValue> GetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory);
 
     /// <summary>
-    /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 尝试检索现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <param name="value">The cache value.</param>
-    /// <returns><c>True</c> if the operation succeeds, <c>False</c> in case there are too many retries or the <paramref name="valueFactory"/> returns null.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <param name="value">缓存值。</param>
+    /// <returns><c>True</c> 表示操作成功；如果重试次数过多或 <paramref name="valueFactory"/> 返回 null，则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
-    bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, out TValue value);
+    bool TryGetOrAdd(string key, Func<string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value);
 
     /// <summary>
-    /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
-    /// The <paramref name="valueFactory"/> will be evaluated only if the item does not exist.
+    /// 尝试检索现有项，如果该项不存在则将其添加到缓存。
+    /// 仅当该项不存在时才会计算 <paramref name="valueFactory"/>。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <param name="value">The cache value.</param>
-    /// <returns><c>True</c> if the operation succeeds, <c>False</c> in case there are too many retries or the <paramref name="valueFactory"/> returns null.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <param name="value">缓存值。</param>
+    /// <returns><c>True</c> 表示操作成功；如果重试次数过多或 <paramref name="valueFactory"/> 返回 null，则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
-    bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, out TValue value);
+    bool TryGetOrAdd(string key, string region, Func<string, string, TValue> valueFactory, [MaybeNullWhen(false)] out TValue value);
 
     /// <summary>
-    /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
+    /// 尝试检索现有项，如果该项不存在则将其添加到缓存。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <param name="item">The cache item.</param>
-    /// <returns><c>True</c> if the operation succeeds, <c>False</c> in case there are too many retries or the <paramref name="valueFactory"/> returns null.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <param name="item">缓存项。</param>
+    /// <returns><c>True</c> 表示操作成功；如果重试次数过多或 <paramref name="valueFactory"/> 返回 null，则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
-    bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item);
+    bool TryGetOrAdd(string key, Func<string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item);
 
     /// <summary>
-    /// Tries to either retrieve an existing item or add the item to the cache if it does not exist.
+    /// 尝试检索现有项，如果该项不存在则将其添加到缓存。
     /// </summary>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="valueFactory">The method which creates the value which should be added.</param>
-    /// <param name="item">The cache item.</param>
-    /// <returns><c>True</c> if the operation succeeds, <c>False</c> in case there are too many retries or the <paramref name="valueFactory"/> returns null.</returns>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="valueFactory">创建应添加的值的方法。</param>
+    /// <param name="item">缓存项。</param>
+    /// <returns><c>True</c> 表示操作成功；如果重试次数过多或 <paramref name="valueFactory"/> 返回 null，则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentException">
-    /// If either <paramref name="key"/> or <paramref name="valueFactory"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="valueFactory"/> 为 null。
     /// </exception>
-    bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, out CacheItem<TValue> item);
+    bool TryGetOrAdd(string key, string region, Func<string, string, CacheItem<TValue>> valueFactory, [MaybeNullWhen(false)] out CacheItem<TValue> item);
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
-    /// <param name="key">The key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <returns>The updated value, or null, if the update was not successful.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
+    /// <returns>已更新的值；如果更新未成功，则为 null。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> are null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     TValue Update(string key, Func<TValue, TValue> updateValue);
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <returns>The updated value, or null, if the update was not successful.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
+    /// <returns>已更新的值；如果更新未成功，则为 null。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/>
-    /// are null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/>
+    /// 为 null。
     /// </exception>
     TValue Update(string key, string region, Func<TValue, TValue> updateValue);
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
-    /// <param name="key">The key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>Null</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>Null</c>。
     /// </param>
-    /// <returns>The updated value, or null, if the update was not successful.</returns>
+    /// <returns>已更新的值；如果更新未成功，则为 null。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     TValue Update(string key, Func<TValue, TValue> updateValue, int maxRetries);
 
     /// <summary>
-    /// Updates an existing key in the cache.
+    /// 更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>Null</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>Null</c>。
     /// </param>
-    /// <returns>The updated value, or null, if the update was not successful.</returns>
+    /// <returns>已更新的值；如果更新未成功，则为 null。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     TValue Update(string key, string region, Func<TValue, TValue> updateValue, int maxRetries);
 
     /// <summary>
-    /// Tries to update an existing key in the cache.
+    /// 尝试更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <param name="value">The updated value, or null, if the update was not successful.</param>
-    /// <returns><c>True</c> if the update operation was successful, <c>False</c> otherwise.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
+    /// <param name="value">已更新的值；如果更新未成功，则为 null。</param>
+    /// <returns><c>True</c> 表示更新操作成功，否则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> are null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     bool TryUpdate(string key, Func<TValue, TValue> updateValue, out TValue value);
 
     /// <summary>
-    /// Tries to update an existing key in the cache.
+    /// 尝试更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
-    /// <param name="value">The updated value, or null, if the update was not successful.</param>
-    /// <returns><c>True</c> if the update operation was successful, <c>False</c> otherwise.</returns>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
+    /// <param name="value">已更新的值；如果更新未成功，则为 null。</param>
+    /// <returns><c>True</c> 表示更新操作成功，否则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/>
-    /// are null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/>
+    /// 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     bool TryUpdate(string key, string region, Func<TValue, TValue> updateValue, out TValue value);
 
     /// <summary>
-    /// Tries to update an existing key in the cache.
+    /// 尝试更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>False</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>False</c>。
     /// </param>
-    /// <param name="value">The updated value, or null, if the update was not successful.</param>
-    /// <returns><c>True</c> if the update operation was successful, <c>False</c> otherwise.</returns>
+    /// <param name="value">已更新的值；如果更新未成功，则为 null。</param>
+    /// <returns><c>True</c> 表示更新操作成功，否则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     bool TryUpdate(string key, Func<TValue, TValue> updateValue, int maxRetries, out TValue value);
 
     /// <summary>
-    /// Tries to update an existing key in the cache.
+    /// 尝试更新缓存中的现有键。
     /// <para>
-    /// The cache manager will make sure the update will always happen on the most recent version.
+    /// 缓存管理器将确保更新始终针对最新版本进行。
     /// </para>
     /// <para>
-    /// If version conflicts occur, if for example multiple cache clients try to write the same
-    /// key, and during the update process, someone else changed the value for the key, the
-    /// cache manager will retry the operation.
+    /// 如果发生版本冲突，例如多个缓存客户端尝试写入同一个键，
+    /// 而在更新过程中其他客户端更改了该键的值，
+    /// 缓存管理器将重试该操作。
     /// </para>
     /// <para>
-    /// The <paramref name="updateValue"/> function will get invoked on each retry with the most
-    /// recent value which is stored in cache.
+    /// 每次重试时，都会以缓存中存储的最新值调用 <paramref name="updateValue"/> 函数。
     /// </para>
     /// </summary>
-    /// <param name="key">The key to update.</param>
-    /// <param name="region">The region of the key to update.</param>
-    /// <param name="updateValue">The function to perform the update.</param>
+    /// <param name="key">要更新的键。</param>
+    /// <param name="region">要更新的键所属的区域。</param>
+    /// <param name="updateValue">执行更新的函数。</param>
     /// <param name="maxRetries">
-    /// The number of tries which should be performed in case of version conflicts.
-    /// If the cache cannot perform an update within the number of <paramref name="maxRetries"/>,
-    /// this method will return <c>False</c>.
+    /// 发生版本冲突时应执行的尝试次数。
+    /// 如果缓存在 <paramref name="maxRetries"/> 次尝试内无法完成更新，
+    /// 此方法将返回 <c>False</c>。
     /// </param>
-    /// <param name="value">The updated value, or null, if the update was not successful.</param>
-    /// <returns><c>True</c> if the update operation was successful, <c>False</c> otherwise.</returns>
+    /// <param name="value">已更新的值；如果更新未成功，则为 null。</param>
+    /// <returns><c>True</c> 表示更新操作成功，否则为 <c>False</c>。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="key"/> or <paramref name="region"/> or <paramref name="updateValue"/> is null.
+    /// 如果 <paramref name="key"/>、<paramref name="region"/> 或 <paramref name="updateValue"/> 为 null。
     /// </exception>
     /// <remarks>
-    /// If the cache does not use a distributed cache system. Update is doing exactly the same
-    /// as Get plus Put.
+    /// 如果缓存不使用分布式缓存系统，Update 的行为与 Get 加 Put 完全相同。
     /// </remarks>
     bool TryUpdate(string key, string region, Func<TValue, TValue> updateValue, int maxRetries, out TValue value);
 
     /// <summary>
-    /// Explicitly sets the expiration <paramref name="mode"/> and <paramref name="timeout"/> for the
-    /// <paramref name="key"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中的 <paramref name="key"/> 显式设置过期 <paramref name="mode"/> 和 <paramref name="timeout"/>。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
-    /// <param name="mode">The expiration mode.</param>
-    /// <param name="timeout">The expiration timeout.</param>
+    /// <param name="key">缓存键。</param>
+    /// <param name="mode">过期模式。</param>
+    /// <param name="timeout">过期超时时间。</param>
     void Expire(string key, CacheExpirationMode mode, TimeSpan timeout);
 
     /// <summary>
-    /// Explicitly sets the expiration <paramref name="mode"/> and <paramref name="timeout"/> for the
-    /// <paramref name="key"/> in <paramref name="region"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中 <paramref name="region"/> 内的 <paramref name="key"/> 显式设置过期 <paramref name="mode"/> 和 <paramref name="timeout"/>。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
-    /// <param name="mode">The expiration mode.</param>
-    /// <param name="timeout">The expiration timeout.</param>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
+    /// <param name="mode">过期模式。</param>
+    /// <param name="timeout">过期超时时间。</param>
     void Expire(string key, string region, CacheExpirationMode mode, TimeSpan timeout);
 
     /// <summary>
-    /// Explicitly sets an absolute expiration date for the <paramref name="key"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中的 <paramref name="key"/> 显式设置绝对过期日期。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
+    /// <param name="key">缓存键。</param>
     /// <param name="absoluteExpiration">
-    /// The expiration date. The value must be greater than zero.
+    /// 过期日期，该值必须大于零。
     /// </param>
     void Expire(string key, DateTimeOffset absoluteExpiration);
 
     /// <summary>
-    /// Explicitly sets an absolute expiration date for the <paramref name="key"/> in <paramref name="region"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中 <paramref name="region"/> 内的 <paramref name="key"/> 显式设置绝对过期日期。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
     /// <param name="absoluteExpiration">
-    /// The expiration date. The value must be greater than zero.
+    /// 过期日期，该值必须大于零。
     /// </param>
     void Expire(string key, string region, DateTimeOffset absoluteExpiration);
 
     /// <summary>
-    /// Explicitly sets a sliding expiration date for the <paramref name="key"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中的 <paramref name="key"/> 显式设置滑动过期时间。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
+    /// <param name="key">缓存键。</param>
     /// <param name="slidingExpiration">
-    /// The expiration timeout. The value must be greater than zero.
+    /// 过期超时时间，该值必须大于零。
     /// </param>
     void Expire(string key, TimeSpan slidingExpiration);
 
     /// <summary>
-    /// Explicitly sets a sliding expiration date for the <paramref name="key"/> in <paramref name="region"/> in all cache layers.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 为所有缓存层中 <paramref name="region"/> 内的 <paramref name="key"/> 显式设置滑动过期时间。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
     /// <param name="slidingExpiration">
-    /// The expiration timeout. The value must be greater than zero.
+    /// 过期超时时间，该值必须大于零。
     /// </param>
     void Expire(string key, string region, TimeSpan slidingExpiration);
 
     /// <summary>
-    /// Explicitly removes any expiration settings previously defined for the <paramref name="key"/>
-    /// in all cache layers and sets the expiration mode to <see cref="CacheExpirationMode.None"/>.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 显式移除之前为所有缓存层中的 <paramref name="key"/> 定义的任何过期设置，
+    /// 并将过期模式设置为 <see cref="CacheExpirationMode.None"/>。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
+    /// <param name="key">缓存键。</param>
     void RemoveExpiration(string key);
 
     /// <summary>
-    /// Explicitly removes any expiration settings previously defined for the <paramref name="key"/> in <paramref name="region"/>
-    /// in all cache layers and sets the expiration mode to <see cref="CacheExpirationMode.None"/>.
-    /// This operation overrides any configured expiration per cache handle for this particular item.
+    /// 显式移除之前为所有缓存层中 <paramref name="region"/> 内的 <paramref name="key"/> 定义的任何过期设置，
+    /// 并将过期模式设置为 <see cref="CacheExpirationMode.None"/>。
+    /// 此操作会覆盖为此特定项按缓存句柄配置的任何过期设置。
     /// </summary>
     /// <remarks>
-    /// Don't use this in concurrency critical scenarios if you are using distributed caches as <code>Expire</code> is not atomic;
-    /// <code>Expire</code> uses <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> to store the item with the new expiration.
+    /// 如果在使用分布式缓存，请勿在对并发要求严格的场景中使用此方法，因为 <code>Expire</code> 不是原子操作；
+    /// <code>Expire</code> 使用 <see cref="ICache{TCacheValue}.Put(CacheItem{TCacheValue})"/> 存储带有新过期设置的项。
     /// </remarks>
-    /// <param name="key">The cache key.</param>
-    /// <param name="region">The cache region.</param>
+    /// <param name="key">缓存键。</param>
+    /// <param name="region">缓存区域。</param>
     void RemoveExpiration(string key, string region);
 }

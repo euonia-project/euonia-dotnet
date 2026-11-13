@@ -12,6 +12,9 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public class SnapshotWritebackRegressionTests
 {
+	/// <summary>
+	/// <see cref="OperationCodeSource"/> 返回的要求集合不得通过 <see cref="IList"/> 索引器就地改写，否则会污染其按（类型，操作）缓存的快照。
+	/// </summary>
 	[Fact]
 	public void OperationCodeSource_RequirementsFor_Should_Not_Be_Writable_Through_The_Returned_Reference()
 	{
@@ -31,6 +34,9 @@ public class SnapshotWritebackRegressionTests
 		Assert.Throws<NotSupportedException>(() => asList[0] = requirements[0]);
 	}
 
+	/// <summary>
+	/// 共享的 <see cref="ScopeSubject.Empty"/> 应拒绝 <c>Add</c> 并保持为空，避免向所有无授予主体注入维度值。
+	/// </summary>
 	[Fact]
 	public void ScopeSubject_Empty_Should_Reject_Mutations()
 	{

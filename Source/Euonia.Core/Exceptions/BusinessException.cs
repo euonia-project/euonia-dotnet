@@ -6,7 +6,7 @@ namespace System;
 [Serializable]
 public class BusinessException : Exception
 {
-	private readonly string _code;
+	private readonly string _code = string.Empty;
 
 	/// <summary>
 	/// 获取业务错误代码。
@@ -62,7 +62,7 @@ public class BusinessException : Exception
 	public BusinessException(SerializationInfo info, StreamingContext context)
 		: base(info, context)
 	{
-		_code = info.GetString(nameof(Code));
+		_code = info.GetString(nameof(Code)) ?? string.Empty;
 	}
 
 #pragma warning disable CS0672 // Member overrides obsolete member

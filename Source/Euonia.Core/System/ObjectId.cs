@@ -273,7 +273,7 @@ public readonly struct ObjectId
 	}
 
 	/// <inheritdoc/>
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		if (obj is not ObjectId id)
 		{
@@ -342,7 +342,7 @@ public readonly struct ObjectId<T>
 	}
 
 	/// <inheritdoc/>
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		return obj is ObjectId<T> id &&
 		       EqualityComparer<T>.Default.Equals(Value, id.Value);

@@ -2,687 +2,822 @@
 
 > *Eunoia* — from Greek *εὔνοια*: beautiful thinking, goodwill, a well-disposed mind.
 
-Euonia is a development framework for building enterprise .NET applications and services. It combines **Object-Oriented Scalable Business Architecture (OSBA)** with **Domain-Driven Design (DDD)** principles to provide a comprehensive foundation for creating robust, maintainable business applications. The framework is built on **.NET 9/10** and integrates seamlessly with **ASP.NET Core**.
+Euonia is a development framework for building enterprise-grade .NET applications and services. It combines **Object-Oriented Scalable Business Architecture (OSBA)** with **Domain-Driven Design (DDD)** and provides complete infrastructure: from base primitives, modular hosting, domain modeling, business objects, permission policies, and the message bus, all the way to repositories, caching, distributed synchronization, and dynamic HTTP/gRPC endpoints.
 
-Euonia is also available for **[Java](https://github.com/euonia-project/euonia-java)** — this repository hosts the **.NET edition**.
+- **Current version**: 2026.5.0 (see [project.props](project.props))
+- **Target frameworks**: .NET 10 / .NET 11; test and sample projects target .NET 11, and the Endpoint Source Generator ships as a `netstandard2.0` analyzer
+- **Package scale**: 45 packable projects under Source, each with its own README
+- **Tests**: 29 test/fixture projects with 1,300+ test cases; plus 3 BenchmarkDotNet benchmark projects
+- **License**: GPL-3.0 (see [LICENSE](LICENSE))
 
----
+Euonia is also available for **[Java](https://github.com/euonia-project/euonia-java)**; this repository is the **.NET edition**.
 
-## Modules
+## Table of Contents
+
+- [Modules Overview](#modules-overview)
+- [Package Overview](#package-overview)
+- [Core Layer](#core-layer)
+- [Platform Capabilities (Tenancy / Auditing / Telemetry)](#platform-capabilities-tenancy--auditing--telemetry)
+- [Domain and Application Layer](#domain-and-application-layer)
+- [Message Bus](#message-bus)
+- [Hosting and Endpoints](#hosting-and-endpoints)
+- [Sample Application](#sample-application)
+- [Getting Started](#getting-started)
+- [Build, Test, and Benchmarks](#build-test-and-benchmarks)
+- [Project Structure](#project-structure)
+- [Versioning and Compatibility](#versioning-and-compatibility)
+- [Documentation and Links](#documentation-and-links)
+
+## Modules Overview
+
+Euonia follows a layered design: the lower layers are capability packages that have no business dependencies, and the upper layers are composed into applications through the module system. Dependencies between packages stay unidirectional, and the business object runtime and the permission engine can be used independently.
 
 ```mermaid
-graph TD
-    subgraph "Euonia .NET"
+flowchart LR
+    subgraph F["Foundation"]
         direction TB
-        Modularity --> Core
-        Hosting --> Modularity
-        DDD["Domain"] --> Core
-        DDD --> Linq
-        Application --> Bus
-        Application --> Pipeline
-        Application --> Validation
-        Bus --> BusAbstract
-        Bus --> DDD
-        Bus --> Modularity
-        BusAbstract --> Core
-        BusInMemory --> BusAbstract
-        BusInMemory --> Core
-        BusRabbitMq --> BusAbstract
-        BusRabbitMq --> Core
-        BusActiveMq --> BusAbstract
-        BusHttp --> Bus
-        BusGrpc --> Bus
-        BusHealthChecks --> Bus
-        Repository --> DDD
-        Repository --> Modularity
-        RepositoryEfCore --> Repository
-        RepositoryMongo --> Repository
-        UoW --> DDD
-        UoW --> Repository
-        Pipeline --> Core
-        OSBA --> Core
-        CachingRedis --> Caching
-        CachingMemory --> Caching
-        CachingRuntime --> Caching
-        ThrdZooKeeper["Threading.ZooKeeper"] --> Threading
-        ThrdRedis["Threading.Redis"] --> Threading
-        ThrdFS["Threading.FileSystem"] --> Threading
-        ThrdAzure["Threading.Azure"] --> Threading
-        Threading --> Core
-        MappingMapster --> Mapping
-        MappingAutomapper --> Mapping
-        Sample --> Application
-        Sample --> OSBA
-        Sample --> Modularity
-        Sample --> Hosting
-        Sample --> RepositoryEfCore
-        Sample --> BusInMemory
-        Sample --> BusRabbitMq
-        Sample --> MappingAutomapper
-        Sample --> MappingMapster
+        Core(["Euonia.Core"])
+        Modularity["Euonia.Modularity"]
+        Pipeline["Euonia.Pipeline"]
+        Linq["Euonia.Linq"]
+        Mapping["Euonia.Mapping<br/>AutoMapper · Mapster"]
+        Validation["Euonia.Validation"]
+        Caching["Euonia.Caching<br/>Memory · Redis · Runtime"]
+        Concurrency["Euonia.Concurrency<br/>Redis · ZooKeeper · FileSystem · Azure"]
     end
 
-    style Core fill:#4A90D9,color:#fff
-    style DDD fill:#50B86C,color:#fff
-    style UoW fill:#1F6FEB,color:#fff
-    style OSBA fill:#E8833A,color:#fff
-    style Pipeline fill:#E74C3C,color:#fff
-    style Modularity fill:#2ECC71,color:#fff
-    style BusAbstract fill:#F39C12,color:#fff
-    style Bus fill:#E67E22,color:#fff
-    style BusInMemory fill:#D35400,color:#fff
-    style BusRabbitMq fill:#C0392B,color:#fff
-    style BusActiveMq fill:#8E44AD,color:#fff
-    style BusHttp fill:#1ABC9C,color:#fff
-    style BusGrpc fill:#16A085,color:#fff
-    style BusHealthChecks fill:#27AE60,color:#fff
-    style Sample fill:#9B59B6,color:#fff
+    subgraph P["Platform"]
+        direction TB
+        Tenancy["Euonia.Tenancy"]
+        Auditing["Euonia.Auditing<br/>EF Core · Mongo"]
+        Telemetry["Euonia.Telemetry"]
+        Otel["Euonia.Telemetry.Otel"]
+    end
+
+    subgraph D["Domain & Application"]
+        direction TB
+        Domain["Euonia.Domain"]
+        Application["Euonia.Application"]
+        Uow["Euonia.Uow"]
+        Repository["Euonia.Repository<br/>EF Core · MongoDB"]
+        Osba["Euonia.Osba"]
+        Security["Euonia.Security"]
+    end
+
+    subgraph M["Messaging"]
+        direction TB
+        BusAbstract["Euonia.Bus.Abstract"]
+        Bus["Euonia.Bus"]
+        Transports["Transports<br/>InMemory · RabbitMQ · ActiveMQ<br/>HTTP · gRPC"]
+        BusHealth["Euonia.Bus.HealthChecks"]
+    end
+
+    subgraph H["Hosting & Endpoints"]
+        direction TB
+        Hosting["Euonia.Hosting"]
+        Endpoint["Euonia.Endpoint"]
+        EndpointImpl["Endpoint.Http · Endpoint.Grpc<br/>Endpoint.SourceGenerator"]
+        Quartz["Euonia.Quartz"]
+    end
+
+    Core --> Modularity
+    Core --> Pipeline
+    Core --> Linq
+    Core --> Caching
+    Core --> Concurrency
+    Core --> Domain
+    Core --> Security
+    Core --> Tenancy
+    Core --> Auditing
+    Core --> Telemetry
+    Telemetry --> Otel
+    Repository -.-> Tenancy
+    Quartz -.-> Tenancy
+    Hosting --> Tenancy
+    Hosting --> Auditing
+    Hosting --> Telemetry
+    Modularity --> Application
+    Modularity --> Hosting
+    Modularity --> Validation
+    Domain --> Application
+    Domain --> Repository
+    Application --> Bus
+    Application --> Osba
+    Application --> Uow
+    Uow --> Repository
+    Pipeline --> Bus
+    BusAbstract --> Bus
+    Bus --> Transports
+    Bus --> BusHealth
+    Hosting --> Endpoint
+    Endpoint --> EndpointImpl
+
+    classDef core fill:#1F6FEB,stroke:#0B4FB3,color:#FFFFFF,stroke-width:2px
+    classDef foundation fill:#EAF2FB,stroke:#7EB3E8,color:#173A5E,stroke-width:1.5px
+    classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
+    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
+    classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
+    classDef platform fill:#ECFDF5,stroke:#6EC5A8,color:#134E3A,stroke-width:1.5px
+    classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
+
+    class Core core
+    class Modularity,Pipeline,Linq,Mapping,Validation,Caching,Concurrency foundation
+    class Domain,Application,Uow,Repository,Osba,Security domain
+    class BusAbstract,Bus,BusHealth messaging
+    class Hosting,Endpoint,Quartz hosting
+    class Tenancy,Auditing,Telemetry platform
+    class Otel aggregate
+    class Transports,EndpointImpl aggregate
+
+    style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
+    style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
+    style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
+    style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
+    style P fill:#F4FEFB,stroke:#BFEADB,stroke-width:1.5px,color:#134E3A
+
+    linkStyle default stroke:#94A3B8,stroke-width:1.5px
 ```
 
+> Dashed boxes group adapter/provider packages. Arrows indicate the main dependency or composition relationships and do not cover every project reference; the complete dependency set is defined by each project's `.csproj`.
+
+### Design Orientation
+
+- **Not tied to a single architecture**: DDD, CQRS, MVVM, CRUD, and low-code can all be composed on the same set of primitives; Osba does not depend on `Euonia.Domain`, and Domain is only an optional higher-level modeling approach.
+- **Secure by default**: permission decisions are fail-closed, Endpoint HTTP/gRPC requires authorization by default, and message bus remote endpoints require authorization by default.
+- **Authorization values are never frozen**: permission codes and row-level grants are resolved live from application data, so revocation takes effect immediately without reissuing tokens.
+- **Stable contracts**: public APIs aim to remain source-compatible; breaking changes are collected in [CHANGELOG.md](CHANGELOG.md).
+- **Observable**: modules such as Bus and Osba expose runtime state through `ActivitySource`, `Meter`, and structured logging, and can be wired into OpenTelemetry directly.
+- **Composable platform capabilities**: multi-tenancy, auditing, and telemetry are separate packages, disabled by default, linked through the execution context, and inert when disabled.
+
+## Package Overview
+
+### Foundation and Cross-Cutting Capabilities
+
+| Package | Target framework | Description |
+|---|---|---|
+| [Euonia.Core](Source/Euonia.Core/README.md) | net10.0 / net11.0 | Base primitives: ID generation, collections, reflection, async coordination, disposal patterns, HTTP exceptions, permission contracts, and extension methods |
+| [Euonia.Modularity](Source/Euonia.Modularity/README.md) | net10.0 / net11.0 | Module system, dependency graph, conventional service registration, sync/async lifecycle, plugin modules, and accessors |
+| [Euonia.Pipeline](Source/Euonia.Pipeline/README.md) | net10.0 / net11.0 | Typed middleware pipeline inspired by ASP.NET Core, with priority ordering, DI, and automatic behavior discovery |
+| [Euonia.Linq](Source/Euonia.Linq/README.md) | net10.0 / net11.0 | Specification pattern, predicate/expression builders, paging and sorting, and `IQueryable` extensions |
+| [Euonia.Mapping](Source/Euonia.Mapping/README.md) | net10.0 / net11.0 | `ITypeAdapter` abstraction decoupled from mapping libraries, plus the `ProjectedAs` facade |
+| [Euonia.Mapping.Automapper](Source/Euonia.Mapping.Automapper/README.md) | net10.0 / net11.0 | AutoMapper backend and module registration |
+| [Euonia.Mapping.Mapster](Source/Euonia.Mapping.Mapster/README.md) | net10.0 / net11.0 | Mapster backend and module registration |
+| [Euonia.Validation](Source/Euonia.Validation/README.md) | net10.0 / net11.0 | FluentValidation integration, generic/range/regex validators, and bindable validatable objects |
+| [Euonia.Caching](Source/Euonia.Caching/README.md) | net10.0 / net11.0 | Multi-level caching framework: layered cache handles, cache manager, backplane synchronization, and fluent configuration |
+| [Euonia.Caching.Memory](Source/Euonia.Caching.Memory/README.md) | net10.0 / net11.0 | `Microsoft.Extensions.Caching.Memory` provider and `ICacheService` implementation |
+| [Euonia.Caching.Redis](Source/Euonia.Caching.Redis/README.md) | net10.0 / net11.0 | Redis distributed cache handle, backplane, and `ICacheService` implementation |
+| [Euonia.Caching.Runtime](Source/Euonia.Caching.Runtime/README.md) | net10.0 / net11.0 | `System.Runtime.Caching` provider and `ICacheService` implementation |
+| [Euonia.Tenancy](Source/Euonia.Tenancy/README.md) | net10.0 / net11.0 | Multi-tenancy kernel: tenant scopes, resolution chain, stores, write guard, and cross-tenant protection |
+| [Euonia.Auditing](Source/Euonia.Auditing/README.md) | net10.0 / net11.0 | Auditing kernel: scope/action model, write queue, redacted serialization, query/retention, and durable spool |
+| [Euonia.Auditing.EfCore](Source/Euonia.Auditing.EfCore/README.md) | net10.0 / net11.0 | EF Core store for a dedicated audit database, with indexes and idempotent writes |
+| [Euonia.Auditing.Mongo](Source/Euonia.Auditing.Mongo/README.md) | net10.0 / net11.0 | MongoDB audit store and unique index |
+| [Euonia.Telemetry](Source/Euonia.Telemetry/README.md) | net10.0 / net11.0 | Telemetry kernel: Activity/Meter sources, tag redaction, context, W3C propagation, and log scopes |
+| [Euonia.Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md) | net10.0 / net11.0 | OpenTelemetry adapter: explicit source catalog, resource, and OTLP wiring |
+| [Euonia.Concurrency](Source/Euonia.Concurrency/README.md) | net10.0 / net11.0 | Distributed lock and semaphore abstractions: timeouts, cancellation, async acquisition, and handle-loss monitoring |
+| [Euonia.Concurrency.Redis](Source/Euonia.Concurrency.Redis/README.md) | net10.0 / net11.0 | Lock and semaphore implementations built on StackExchange.Redis, with lease renewal |
+| [Euonia.Concurrency.ZooKeeper](Source/Euonia.Concurrency.ZooKeeper/README.md) | net10.0 / net11.0 | Lock and semaphore implementations based on ZooKeeper ephemeral sequential nodes |
+| [Euonia.Concurrency.FileSystem](Source/Euonia.Concurrency.FileSystem/README.md) | net10.0 / net11.0 | Cross-process mutual exclusion based on lock files, for single machines or shared volumes |
+| [Euonia.Concurrency.Azure](Source/Euonia.Concurrency.Azure/README.md) | net10.0 / net11.0 | Distributed locks based on Azure Blob leases |
+
+### Domain, Application, and Permissions
+
+| Package | Target framework | Description |
+|---|---|---|
+| [Euonia.Domain](Source/Euonia.Domain/README.md) | net10.0 / net11.0 | DDD building blocks: entities, aggregate roots, value objects, domain events, commands, auditing, and entity cache contracts |
+| [Euonia.Application](Source/Euonia.Application/README.md) | net10.0 / net11.0 | Use cases, application services, Castle interceptors, and message pipeline behaviors |
+| [Euonia.Uow](Source/Euonia.Uow/README.md) | net10.0 / net11.0 | Unit of work, transaction boundaries, ambient context, and the `[UnitOfWork]` interceptor |
+| [Euonia.Repository](Source/Euonia.Repository/README.md) | net10.0 / net11.0 | Persistence-agnostic repository abstractions, context providers, entity contracts, and paging/sorting extensions |
+| [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net10.0 / net11.0 | EF Core context base classes, repository implementation, value converters, and ID value generators |
+| [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net10.0 / net11.0 | MongoDB context, repository, model configuration, and transaction support |
+| [Euonia.Osba](Source/Euonia.Osba/README.md) | net10.0 / net11.0 | Object-Oriented Scalable Business Architecture: rich business object runtime, rules, factories, actuators, lifecycle, and permission boundaries |
+| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | Policy engine for operation permissions and row-level data permissions, usable standalone without Osba |
+
+### Message Bus
+
+| Package | Target framework | Description |
+|---|---|---|
+| [Euonia.Bus.Abstract](Source/Euonia.Bus.Abstract/README.md) | net10.0 / net11.0 | Envelope/context, message conventions, transport strategies, reliability stores, recipients, and event contracts |
+| [Euonia.Bus](Source/Euonia.Bus/README.md) | net10.0 / net11.0 | Bus engine: handler discovery, dispatch, serialization, outbox/inbox/dead letters, and telemetry |
+| [Euonia.Bus.InMemory](Source/Euonia.Bus.InMemory/README.md) | net10.0 / net11.0 | In-process transport, suitable for development, testing, and single-process scenarios |
+| [Euonia.Bus.RabbitMq](Source/Euonia.Bus.RabbitMq/README.md) | net10.0 / net11.0 | RabbitMQ transport: fanout exchanges, direct queues, priority, dead lettering, and Polly retries |
+| [Euonia.Bus.ActiveMq](Source/Euonia.Bus.ActiveMq/README.md) | net10.0 / net11.0 | ActiveMQ transport: topics/queues, temporary reply queues, and correlation IDs |
+| [Euonia.Bus.Http](Source/Euonia.Bus.Http/README.md) | net10.0 / net11.0 | HTTP remote-call transport (`CallAsync`), sharing the `RemoteReply` protocol with gRPC |
+| [Euonia.Bus.Grpc](Source/Euonia.Bus.Grpc/README.md) | net10.0 / net11.0 | gRPC generic invocation, server-side receiving, interceptors, health checks, and auto-discovery |
+| [Euonia.Bus.HealthChecks](Source/Euonia.Bus.HealthChecks/README.md) | net10.0 / net11.0 | Health checks for transporters, the outbox, the inbox, and dead-letter backlog |
+
+### Hosting, Endpoints, and Scheduling
+
+| Package | Target framework | Description |
+|---|---|---|
+| [Euonia.Hosting](Source/Euonia.Hosting/README.md) | net10.0 / net11.0 | ASP.NET Core host bootstrap, request context, exception/tracing middleware, JWT/introspection authentication, and authorization extensions |
+| [Euonia.Endpoint](Source/Euonia.Endpoint/README.md) | net10.0 / net11.0 | `[ExposeWebApi]` / `[ExposeGrpc]` contracts and shared data contracts; does not depend on ASP.NET Core |
+| [Euonia.Endpoint.Http](Source/Euonia.Endpoint.Http/README.md) | net10.0 / net11.0 | Maps marked service methods to Minimal APIs, generation first with a runtime fallback |
+| [Euonia.Endpoint.Grpc](Source/Euonia.Endpoint.Grpc/README.md) | net10.0 / net11.0 | Code-first gRPC runtime based on protobuf-net.Grpc, with method-level authorization and proto export |
+| [Euonia.Endpoint.SourceGenerator](Source/Euonia.Endpoint.SourceGenerator/README.md) | netstandard2.0 analyzer | Generates HTTP lambdas, gRPC contracts/adapters, and registration markers at build time |
+| [Euonia.Quartz](Source/Euonia.Quartz/README.md) | net10.0 / net11.0 | Quartz.NET 4 integration: attributed jobs, four trigger types, and fluent configuration |
+
+## Core Layer
+
 ### Core (`Euonia.Core`)
-> Foundation library: base classes, ID generation, reflection utilities, tuples, HTTP exceptions, security primitives, async coordination, and disposable patterns.
 
-| Namespace | Description |
-|-----------|-------------|
-| `Nerosoft.Euonia` | `ObjectId` (unified ID — supports Snowflake, UUID, ULID, Random), `ShortUniqueId` (Hashids-based short IDs), `Singleton<T>`, `Clock`, `Check` (assertions), `Unit` (void replacement), `Weak<T>` |
-| `Nerosoft.Euonia.Collections` | `DequeCollection<T>`, `PageableCollection<T>`, `TreeView<T>`, `TypeList<T>`, `ObservableGroup<TKey,TValue>`, `ViewCollection<T>` |
-| `Nerosoft.Euonia.Disposing` | `SingleDisposable<T>`, `AsyncSingleDisposable<T>`, `CollectionDisposable`, `NoopDisposable` — exactly-once, thread-safe disposal (sync & async) |
-| `Nerosoft.Euonia.Reflection` | `AssemblyHelper`, `TypeHelper`, `Reflect` / `Reflect<TTarget>`, `EnumHelper`, `PropertyAccessorCache<T>`, `MethodInvokerBuilder` |
-| `Nerosoft.Euonia.Security` | `UserPrincipal` (wraps `ClaimsPrincipal`), `UserClaimTypes` (OIDC constants), exception hierarchy: `AccountException`, `CredentialException`, `AuthenticationException` |
-| `Nerosoft.Euonia.Threading` | `AsyncLock`, `AsyncSemaphore`, `AsyncManualResetEvent`, `AsyncAutoResetEvent`, `AsyncConditionVariable`, `AsyncMonitor`, `AsyncCountdownEvent`, `AsyncLazy<T>`, `AsyncProducerConsumerQueue<T>`, `AsyncCollection<T>`, `AsyncContext` (single-threaded async context), `PauseToken` |
-| `System` (extensions) | `ObjectId` (struct), `SnowflakeId`, `UlidGenerator`, `ShortUniqueId`, `ObjectPool<T>`, `ManagedFinalizerQueue`, `WeakEventManager`, `DisposableObject` |
-| `System` (exceptions) | `BadRequestException` (400), `ForbiddenException` (403), `NotFoundException` (404), `ConflictException` (409), `InternalServerErrorException` (500), `ServiceUnavailableException` (503), `BusinessException` (with error codes) — all map to HTTP status codes via `[HttpStatusCode]` |
+> The foundation library reused by every other package.
 
-**String & Collection Extensions** (global `Extensions` static class):
-- String: `ToCamelCase()`, `ToPascalCase()`, `ToSnakeCase()`, `ToKebabCase()`, `ToSentenceCase()`, `Truncate()`, `IsEmail()`, `IsNumeric()`, `IsPhoneNumber()`, `Mask()`, `NormalizeLineEndings()`
-- Collection: `ForEach()`, `IsNullOrEmpty()`, `Join()`, `Shuffle()`, `SortByDependencies()` (topological sort), `WhereIf()`, `Paginate()`, `ToObservable()`
-- Threading: `WaitAsync()`, `WhenAny()`, `WhenAll()`, `OrderByCompletion()`, `Ignore()`
+| Namespace | Contents |
+|---|---|
+| `Nerosoft.Euonia` | `ObjectId` (Snowflake / UUID / ULID / Random), `ShortUniqueId`, `GuidGenerator`, `UlidGenerator`, `SnowflakeId`, `Singleton<T>`, `Clock`, `Check`, `Optional<T>`, `Unit`, `Weak<T>`, `ObjectPool<T>` |
+| `Nerosoft.Euonia.Collections` | `DequeCollection<T>`, `PageableCollection<T>`, `TreeView<T>`, `TypeList<T>`, `ObservableGroup<TKey,TValue>`, `ObservableGroupedCollection<T>`, `ViewCollection<T>` |
+| `Nerosoft.Euonia.Disposing` | Synchronous/asynchronous exactly-once disposal primitives: `SingleDisposable<T>`, `AsyncSingleDisposable<T>`, `CollectionDisposable`, `NoopDisposable` |
+| `Nerosoft.Euonia.Reflection` | `AssemblyHelper`, `AssemblyLoadContextManager`, `TypeHelper`, `Reflect` / `Reflect<T>`, `EnumHelper`, `EnumParser<T>`, `PropertyAccessorCache<T>`, `MethodInvokerBuilder` |
+| `Nerosoft.Euonia.Threading` | `AsyncLock`, `AsyncSemaphore`, `AsyncManualResetEvent`, `AsyncAutoResetEvent`, `AsyncConditionVariable`, `AsyncMonitor`, `AsyncCountdownEvent`, `AsyncLazy<T>`, `AsyncProducerConsumerQueue<T>`, `AsyncCollection<T>`, `AsyncContext`, `PauseToken`, `StatefulMutex` |
+| `Nerosoft.Euonia.Security` | `UserPrincipal`, `UserClaimTypes`, `BusinessOperation`, `PermissionAttribute`, `IPermissionChecker`, `IPermissionCodeSource`, `IObjectScopeAuthorizer`, `IObjectOperationResolver`, and other permission contracts |
+| `System` (exceptions) | `BadRequestException`, `ForbiddenException`, `NotFoundException`, `ConflictException`, `InternalServerErrorException`, `BadGatewayException`, `GatewayTimeoutException`, `MethodNotAllowedException`, `RequestTimeoutException`, `TooManyRequestsException`, `ServiceUnavailableException`, `UpgradeRequiredException`, `BusinessException`, `ConfigurationException`, `InvalidValueException` |
 
-### DDD (`Euonia.Domain`)
-> Domain-Driven Design abstractions: entities, aggregates, value objects, domain events, commands, and auditing support.
+Common extension methods cover string casing/validation/masking, collection topological sorting and paging, types and assemblies, claims, events, task coordination, and more. Exception types are uniformly mapped to HTTP status codes through `[HttpStatusCode]` and `HttpStatusException`.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `Entity<TKey>` / `Entity` | abstract class | Base classes for domain entities with typed identity |
-| `Aggregate<TKey>` | abstract class | Aggregate root with domain event management (`RaiseEvent`, `ClearEvents`, `AttachToEvents`) |
-| `ValueObject<TValueObject>` | abstract class | Immutable value object with reflection-based `Equals`, `GetHashCode`, and `==`/`!=` operators |
-| `DomainEvent` | abstract class | Domain event with `EventAggregate` projection, aggregate attachment, and metadata (Sequence, Intent, Originator) |
-| `ApplicationEvent` | abstract class | Application-level integration event marker |
-| `EventAggregate` | class | Persisted event snapshot: Id, EventId, Timestamp, TypeName, EventPayload, EventSequence |
-| `Command` / `Command<TData>` | abstract class | Command pattern with auto-generated `CommandId`, extensible `Properties` dictionary |
-| `CommandResponse` / `CommandResponse<TResult>` | class | Command execution result with Status, Code, Message, and Error |
-| `IAggregateRoot<TKey>` | interface | Aggregate root marker contract |
-| `IHasDomainEvents` | interface | Contract for domain event carriers |
-| `IDomainService` | interface | Domain service marker |
-| `AuditedAttribute` / `AuditingRecord` | class | Change auditing support |
-| `CommandStatus` | enum | `Succeed`, `Failure`, `Canceled` |
+> `Euonia.Core` only defines the permission **contracts**; policy compilation and evaluation live in `Euonia.Security`, and the two can be used independently.
 
-### Application (`Euonia.Application`)
-> Application layer: use cases, application services, interceptors, and pipeline behaviors for cross-cutting concerns.
+### Modularity (`Euonia.Modularity`)
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `BaseApplicationService` | abstract class | Application service base with lazy-resolved `IBus`, `UserPrincipal`, `IHttpContextAccessor` |
-| `IUseCase<TInput, TOutput>` | interface | Typed use case contract with input/output ports |
-| `IUseCasePresenter<TOutput>` | interface | Presenter with `OnSucceed` / `OnFailed` / `OnCanceled` events |
-| `ServiceContextBase` | abstract class | Service registration context with auto-discovery for application services and pipeline behaviors |
-| `ApplicationModule` | module | Registers all interceptors and pipeline behaviors into DI |
+> Split an application into composable modules, load them along the dependency graph, and manage service registration and lifecycle in one place.
 
-**Interceptors** (Castle DynamicProxy):
+| Capability | Description |
+|---|---|
+| Modules and dependencies | `ModuleContextBase`, `[DependsOn]`; the load phase validates circular dependencies, self-dependencies, and invalid module types, and the dependency snapshot is immutable |
+| Application factory | `ApplicationFactory.Create/CreateAsync<TStartupModule>`, `AddModularityApplication<TStartupModule>`; `Initialize` / `Shutdown` / `Dispose` are idempotent and thread-safe |
+| Lifecycle | `AheadConfigureServices` → `ConfigureServices` → `AfterConfigureServices` → `OnApplicationInitialization` → `OnApplicationShutdown`, each with an asynchronous version; when an async method is not overridden it falls back to the synchronous implementation |
+| Plugin modules | `IModuleSource`, `DelegateModuleSource`, `FileModuleSource`, `FolderModuleSource`; `ApplicationCreationOptions.AddModuleSource/AddModuleFolder/AddModuleFiles` |
+| Automatic registration | `ITransientDependency` / `IScopedDependency` / `ISingletonDependency`, `[ExposeServices]`, `[ExportService]` (may appear multiple times), `[DisableAutomaticRegistration]`; `AddAssemblyOf(Type)`, `AddTypes(...)` |
+| Accessors | Scoped `IServiceAccessor`, `IRequestContextAccessor`, `IObjectAccessor<T>`, `ILazyServiceProvider` (including keyed resolution) |
+| Named services | `GetNamedService<T>(name)`; the named registry is isolated per `IServiceCollection` to avoid name collisions across containers |
+| Configuration | An explicit `IConfiguration` is no longer ignored; when no environment name is specified it falls back to `DOTNET_ENVIRONMENT` / `ASPNETCORE_ENVIRONMENT`; `ReloadOnChange` is supported |
 
-| Type | Purpose |
-|------|---------|
-| `LoggingInterceptor` | Logs method arguments and errors |
-| `AuthorizationInterceptor` | Validates `[Authorize]` attributes, checks roles |
-| `ValidationInterceptor` | Validates `[NotNull]` / `[Validation]` decorated arguments |
-| `TracingInterceptor` | Captures and logs stack traces |
-| `LockInterceptor` | Acquires named `SemaphoreSlim` for `[Lock]` decorated methods |
-
-**Pipeline Behaviors:**
-
-| Type | Purpose |
-|------|---------|
-| `MessageLoggingBehavior` | Logs routed message details |
-| `ValidationBehavior` | Validates message data before processing |
-| `AuthorizationBehavior` | Attaches user identity metadata to routed messages |
-| `UnitOfWorkPipelineBehavior` | Begins/completes a unit of work around message processing |
-
-### UoW (`Euonia.Uow`)
-> Unit of Work abstraction for transaction boundaries, commit/rollback lifecycle, and consistent persistence orchestration.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `IUnitOfWork` | interface | Unit-of-work contract: `SaveChangesAsync`, `RollbackAsync`, `CompleteAsync`, `Items` dictionary, nested `Outer` support |
-| `IUnitOfWorkManager` | interface | Creates/manages unit-of-work scope: `Begin(options, requiresNew)` |
-| `IUnitOfWorkAccessor` | interface | Accesses the current ambient unit of work (stored in `AsyncLocal`) |
-| `UnitOfWork` | class | Full implementation with concurrent context management, completion lifecycle, and events (`Completed`, `Failed`, `Disposed`) |
-| `ChildUnitOfWork` | class | Lightweight proxy for nested UoW — delegates to parent, `CompleteAsync` is a no-op |
-| `UnitOfWorkInterceptor` | class | Castle DynamicProxy interceptor that auto-wraps `[UnitOfWork]` / `IUnitOfWorkEnabled` methods |
-| `UnitOfWorkOptions` | class | Configuration: `IsTransactional`, `IsolationLevel`, `Timeout` |
-| `UnitOfWorkModule` | module | Registers UoW infrastructure and interceptor |
-
-### Pipeline (`Euonia.Pipeline`)
-> Middleware pipeline framework inspired by ASP.NET Core — unified `IPipeline<TRequest, TResponse>` with chainable behaviors, delegates, and dependency injection integration.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `IPipeline<TRequest, TResponse>` | interface | Typed pipeline: chain components via `Use()`, build delegate, run async |
-| `IPipelineBehavior<TRequest, TResponse>` | interface | Middleware behavior: `HandleAsync(TRequest, PipelineDelegate<TRequest,TResponse>)` |
-| `PipelineBase<TRequest, TResponse>` | abstract class | Base implementation with reverse-chain construction (innermost executes first) |
-| `DefaultPipelineProvider<TRequest, TResponse>` | class | Concrete provider resolving behaviors via `IServiceProvider` with compiled expression trees |
-| `PipelineBehaviorAttribute` | attribute | `[PipelineBehavior(typeof(MyBehavior))]` — auto-attach behaviors by context type |
-
-**Key Features:**
-- Fluent API: chain behaviors via `.Use()` with lambda, class, or `[PipelineBehavior]` auto-discovery
-- Single `IPipeline<TRequest, TResponse>` covers both fire-and-forget and typed request/response scenarios
-- Delegate-based composition with reverse-chain construction (innermost executes first)
-- Convention-based behavior resolution (methods named `Handle` / `HandleAsync`)
-- Expression tree compilation for DI-injected behavior parameters
+Plugin module example:
 
 ```csharp
-// Create a pipeline
-var pipeline = new DefaultPipelineProvider<MyContext, Void>(serviceProvider)
-    .Use(async (ctx, next) => {
-        Console.WriteLine("Before");
-        await next(ctx);
-        Console.WriteLine("After");
-    })
-    .Use<LoggingBehavior>();
+var application = await ApplicationFactory.CreateAsync<HostModule>(
+    services,
+    configuration,
+    options =>
+    {
+        options.AddModuleFolder("plugins", SearchOption.AllDirectories);
+        options.AddModuleFiles("extensions/Reporting.dll");
+    });
+```
 
-// Run
-await pipeline.RunAsync(new MyContext());
+### Pipeline (`Euonia.Pipeline`)
+
+> A typed middleware pipeline where `IPipeline<TRequest, TResponse>` uniformly covers both fire-and-forget and request/response scenarios.
+
+| Type | Purpose |
+|---|---|
+| `IPipeline<TRequest, TResponse>` | Pipeline contract: `Use`, `Build`, `RunAsync` |
+| `IPipelineBehavior<TRequest, TResponse>` | Behavior that wraps the inner handler: `HandleAsync(request, next)` |
+| `PipelineBase<TRequest, TResponse>` | Base implementation that builds the chain in reverse, so the innermost handler executes first |
+| `DefaultPipelineProvider<TRequest, TResponse>` | Resolves behaviors from `IServiceProvider` and compiles the delegate |
+| `PipelineBehaviorAttribute` | Declares behaviors and their priority on the request type |
+| `AddPipeline()` | Registers the pipeline infrastructure services |
+
+```csharp
+var pipeline = new DefaultPipelineProvider<OrderContext, OrderResult>(serviceProvider)
+    .Use<LoggingBehavior>()
+    .Use(async (context, next) =>
+    {
+        var result = await next(context);
+        return result;
+    });
+
+var result = await pipeline.RunAsync(new OrderContext(42));
+```
+
+### Linq (`Euonia.Linq`)
+
+> Model query conditions as composable, reusable objects.
+
+- **Specifications**: `Specification<T>` supports `&`, `|`, and `!`, and `ISpecification<T>` can be passed directly to repositories / `IQueryable`.
+- **Expression building**: `PredicateBuilder`, `Lambda.ParsePredicate`, `PredicateExpressionBuilder<T>`.
+- **Range specifications**: `SegmentSpecification` for integers, longs, floating point, decimal, date, time, and time span.
+- **Query builder**: `QueryHandler<T>` composes filtering, paging, and sorting, and also provides `GetCount`.
+- **Extensions**: `Where(specification)`, `WhereIf`, `WhereIfNotEmpty`, `Between`, `OrderBy(propertyName, sortType)`.
+
+### Mapping (`Euonia.Mapping`)
+
+> Business code depends only on the abstraction, so the concrete mapping library can be replaced.
+
+| Package | Entry points |
+|---|---|
+| `Euonia.Mapping` | `ITypeAdapter`, `ITypeAdapterFactory`, `TypeAdapter.ProjectedAs<T>()`, `ProjectedAsCollection<T>()` |
+| `Euonia.Mapping.Automapper` | `AutomapperModule`, `AutomapperOptions`, `AutomapperTypeAdapterFactory` |
+| `Euonia.Mapping.Mapster` | `MapsterModule`, `MapsterOptions`, `MapsterTypeAdapterFactory` |
+
+### Validation (`Euonia.Validation`)
+
+- **Single entry point**: `Validator.Validate<T>` / `ValidateAsync<T>`; a failure throws `ValidationException`.
+- **FluentValidation integration**: `AddValidator(types)`, and `ValidationModule` automatically registers `IValidator<T>`.
+- **Bindable objects**: `ValidatableObject<T>` supports validation as values change and exposes an error collection.
+- **Lightweight rules**: `GenericValidator<T>`, `RegularValidator`, `RangeValidator<T>`.
+- **Result model**: `ValidationResult`, `ValidationException`.
+
+### Caching (`Euonia.Caching`)
+
+> Organize memory and distributed caches into layers through cache handles, orchestrated by `ICacheManager<T>`.
+
+| Package | Providers |
+|---|---|
+| `Euonia.Caching` | Multi-level orchestration, `CacheFactory`, `ConfigurationBuilder`, `DictionaryCacheHandle<T>`, `CacheBackplane`, `ICacheService` / `BaseCacheService` |
+| `Euonia.Caching.Memory` | `MemoryCacheHandle<T>`, `MemoryCacheService`, `WithMemoryCacheHandle(...)` |
+| `Euonia.Caching.Redis` | `RedisCacheHandle<T>`, `RedisCacheService`, Redis backplane, `WithRedisCacheHandle(...)` |
+| `Euonia.Caching.Runtime` | `RuntimeCacheHandle<T>`, `RuntimeCacheService`, `WithRuntimeCacheHandle(...)` |
+
+```csharp
+var cache = CacheFactory.Build<string>("app", settings =>
+{
+    settings.WithUpdateMode(CacheUpdateMode.Up)
+            .WithMemoryCacheHandle("memory");
+});
+
+cache.Add("greeting", "hello");
+var value = cache.GetOrAdd("user:1", _ => LoadUserName(1));
+```
+
+### Concurrency (`Euonia.Concurrency`)
+
+> A unified contract for distributed locks and semaphores. Handle acquisition supports synchronous and asynchronous modes, timeouts, and cancellation, and notifies the caller through `HandleCancellationToken` when the connection or lease is lost.
+
+| Package | Capabilities |
+|---|---|
+| `Euonia.Concurrency` | `ILockFactory`, `ILockProvider`, `ISemaphoreFactory`, `ISemaphoreProvider`, `ISynchronizationHandle`, and convenience extensions |
+| `Euonia.Concurrency.Redis` | Redis locks/semaphores, lease renewal, `MinValidityTime`, busy-wait backoff |
+| `Euonia.Concurrency.ZooKeeper` | Ephemeral sequential node locks/semaphores, session and connection timeouts, authentication, and ACLs |
+| `Euonia.Concurrency.FileSystem` | Cross-process mutual exclusion via lock files, for single machines or shared volumes |
+| `Euonia.Concurrency.Azure` | Blob lease locks, automatic renewal, lease duration, and backoff configuration |
+
+```csharp
+var locker = lockFactory.Create($"inventory:{sku}");
+await using var handle = await locker.AcquireAsync(
+    TimeSpan.FromSeconds(10),
+    cancellationToken);
+
+// critical section
+```
+
+## Platform Capabilities (Tenancy / Auditing / Telemetry)
+
+Three independent packages share one source of tenant identity: the execution context in `Nerosoft.Euonia.Execution`. They depend only on `Euonia.Core` and `Microsoft.Extensions.*`; composition and HTTP/message integration live in `Euonia.Hosting` and `Euonia.Bus`. Everything is disabled by default and inert when `Enabled = false`.
+
+### Tenancy (`Euonia.Tenancy`)
+
+- **Isolation modes**: `SharedTable` (shadow `TenantId` plus named filters), `DatabasePerTenant` (per-tenant connection string), `SharedSchema` (per-tenant schema, distinct EF model cache keys).
+- **Resolution chain**: header, claim, host, route, and message contributors combined by `Order`; conflicts fail with `Conflict`.
+- **Write guard**: inserts get the current tenant automatically; cross-tenant update/delete/migration throws `CrossTenantOperationException`; `Begin` / `BeginIsolated` / `BeginCrossTenant` separate actor and target tenants.
+- **Adapters**: EF Core model and query filters, Mongo filters and stamping, Quartz job scope, and cache/lock/idempotency key prefixes with `RemoveByPrefixAsync`.
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;          // set false for optional tenants
+    options.HeaderName = "X-Tenant-Id";
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseTenancy();
+```
+
+EF contexts inherit `MultiTenantDataContextBase<TContext>`, or call `modelBuilder.ApplyTenantModel()` on an existing model; replace `IModelCacheKeyFactory` to distinguish SharedSchema models. Messages restore the tenant from the envelope through `TenantMessageScopeParticipant`, subject to `TenantMessageTrustPolicy`.
+
+### Auditing (`Euonia.Auditing`)
+
+- **Entry points**: HTTP middleware, Bus participant, and the Castle interceptor (`Order = -1000`).
+- **Stores**: in-memory, EF Core (dedicated audit DB), and MongoDB; `IAuditingStoreRouter` allows one audit database per tenant.
+- **Reliability**: bounded queue plus a durable file spool; successful records are batched by default, failures are written immediately, and the queue drains on shutdown.
+- **Semantics**: `AuditingTriggerMode` (All / WritesOnly), `RecordAnonymous`, fail-open writes, and query authorization scoped to the actor tenant.
+
+```csharp
+services.AddAuditing(options =>
+{
+    options.Enabled = true;
+    options.SuccessDelivery = AuditingDelivery.Batched;
+    options.FailureDelivery = AuditingDelivery.Immediate;
+});
+services.AddAuditingEfCore<AuditingDbContext>(options =>
+    options.UseSqlServer(configuration.GetConnectionString("Audit")));
+
+app.UseAuditing();
+```
+
+DDL and indexes: [docs/sql/euonia_audit.sql](docs/sql/euonia_audit.sql); tenant column migration: [docs/sql/README.md](docs/sql/README.md).
+
+### Telemetry (`Euonia.Telemetry` / `Euonia.Telemetry.Otel`)
+
+- **Kernel**: `TelemetrySource` / `TelemetryActivity`, redaction, `ITelemetryPropagator` (W3C `traceparent`), and `TelemetryLogScope`.
+- **Components**: Bus consumer spans (four transports, `ActivityLink`), HTTP, caching, repositories, security, Quartz, and Osba.
+- **Constraints**: tenant labels go to traces and logs only, never metrics; message bodies, tokens, cookies, full SQL, and user IDs are not captured by default.
+
+```csharp
+services.AddEuoniaTelemetry(options => options.Enabled = true);
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+app.UseEuoniaTelemetry();
+```
+
+### Middleware order
+
+```text
+UseExecutionContext → UseAuditing → UseTenancy → UseEuoniaTelemetry → UseAuthorization
+```
+
+## Domain and Application Layer
+
+### Domain (`Euonia.Domain`)
+
+> Persistence-agnostic DDD building blocks.
+
+| Type | Purpose |
+|---|---|
+| `Entity` / `Entity<TKey>` | Typed identity, transient detection, and identity-based equality |
+| `Aggregate<TKey>` | Aggregate root and domain event management: `RaiseEvent`, `GetEvents`, `GetAndClearEvents`, `LoadFromHistory` |
+| `ValueObject<T>` | Reflection-based immutable value object that automatically implements `Equals`, `GetHashCode`, and `==` / `!=` |
+| `DomainEvent` / `ApplicationEvent` | Domain events and application-layer integration events; can produce an `EventAggregate` snapshot carrying sequence number, intent, and origin |
+| `EventAggregate` | Event persistence snapshot: Id, EventId, Timestamp, TypeName, EventPayload, EventSequence |
+| `Command` / `Command<TData>` | Automatically generates `CommandId`; extensible `Properties` dictionary |
+| `CommandResponse` / `CommandStatus` | Command execution result and status (`Succeed` / `Failure` / `Canceled`) |
+| `IAggregateRoot<TKey>` / `IHasDomainEvents` / `IDomainService` | Contracts for aggregate roots, event carriers, and domain services |
+| `AuditedAttribute` / `AuditingRecord` / `IAuditingStore` / `AuditingOptions` | Change auditing |
+| `EntityCacheAttribute` / `IEntityCache` | Entity cache contracts |
+
+### Application (`Euonia.Application`)
+
+> Application-layer building blocks: use cases, application services, Castle interceptors, and bus pipeline behaviors.
+
+**Core types**
+
+| Type | Purpose |
+|---|---|
+| `IServiceContext` / `ServiceContextBase` | Describe assemblies, lifetime, and the automatic registration switch; `services.Register<TContext>()` scans and registers application services and pipeline behaviors |
+| `IApplicationService` / `BaseApplicationService` | Application service contract and base class; lazily loads `IBus`, `UserPrincipal`, the request context, logging, and the use case executor through `ILazyServiceProvider` |
+| `IUseCase<TInput,TOutput>` / `IUseCaseExecutor` | Typed use cases and executor; results are dispatched to a presenter |
+| `IUseCasePresenter<TOutput>` / `DefaultUseCasePresenter<TOutput>` | Presentation of success/failure/cancellation results |
+| `ApplicationModule` | Registers all interceptors, pipeline behaviors, presenters, and the use case executor |
+
+**Interceptors (11)**
+
+| Interceptor | Trigger | Purpose |
+|---|---|---|
+| `LoggingInterceptor` | All application service methods | Logs arguments at Debug level (sensitive arguments masked); logs exceptions and rethrows them unchanged |
+| `AuthorizationInterceptor` | `[Authorize]` | Validates sign-in state and roles |
+| `ValidationInterceptor` | `[NotNull]` / `[Validation]` | Validates arguments through `Validator` |
+| `TracingInterceptor` | All methods (when Debug is enabled) | Records the call chain, `X-Request-Trace-Id`, and `X-Correlation-ID` |
+| `LockInterceptor` | `[Lock]` / `[DistributedLock]` / `[SemaphoreLock]` | In-process semaphore, distributed lock, or distributed semaphore |
+| `TimingInterceptor` | `[Timing]` | Records elapsed time and warns when the threshold is exceeded |
+| `CacheInterceptor` | `[Cache]` | Caches method results |
+| `CacheEvictionInterceptor` | `[CacheEvict]` | Evicts cached entries by group/key |
+| `IdempotentInterceptor` | `[Idempotent]` | Executes the same fingerprint only once within the idempotency window |
+| `RetryInterceptor` | `[Retry]` | Fixed/linear/exponential backoff retries |
+| `CircuitBreakerInterceptor` | `[CircuitBreaker]` | Short-circuits once the failure rate exceeds the threshold |
+
+**Pipeline behaviors (3)**
+
+| Behavior | Purpose |
+|---|---|
+| `ValidationBehavior` | Performs validation before the message is handled |
+| `UserContextBehavior` | Writes the current user identity into message metadata |
+| `CorrelationIdBehavior` | Ensures the message carries a correlation ID |
+
+```csharp
+internal sealed class SalesServiceContext : ServiceContextBase
+{
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        // Additional services
+    }
+}
+
+builder.Services.Register<SalesServiceContext>();
+
+public sealed class OrderApplicationService : BaseApplicationService, IApplicationService
+{
+    [Cache(Key = "order:{0}", TimeoutSeconds = 60, Groups = new[] { "orders" })]
+    public Task<OrderDto?> GetAsync(long id, CancellationToken cancellationToken)
+        => throw new NotImplementedException();
+
+    [Retry(MaxRetries = 3, DelayMs = 200, Backoff = RetryBackoffMode.Exponential)]
+    [DistributedLock("order:{id}")]
+    public Task SubmitAsync(long id, CancellationToken cancellationToken)
+        => throw new NotImplementedException();
+}
+```
+
+> The message logging behavior `MessageLoggingBehavior` belongs to `Euonia.Bus` and is registered by `MessageBusModule`; it is not part of `ApplicationModule`.
+
+### UoW (`Euonia.Uow`)
+
+> Defines transaction boundaries, the commit/rollback lifecycle, and the ambient unit of work.
+
+| Type | Purpose |
+|---|---|
+| `IUnitOfWork` | `SaveChangesAsync`, `RollbackAsync`, `CompleteAsync`, the `Items` dictionary, and the nested `Outer` |
+| `IUnitOfWorkManager` | Creates/manages unit-of-work scopes: `Begin(options, requiresNew)` |
+| `IUnitOfWorkAccessor` | Accesses the current ambient unit of work (`AsyncLocal`) |
+| `UnitOfWork` / `ChildUnitOfWork` | Full implementation and nested lightweight proxy (`CompleteAsync` delegates to the parent) |
+| `UnitOfWorkInterceptor` | Castle interceptor that automatically wraps `[UnitOfWork]` / `IUnitOfWorkEnabled` methods |
+| `UnitOfWorkOptions` | `IsTransactional`, `IsolationLevel`, `Timeout` |
+| `UnitOfWorkModule` / `AddUnitOfWork()` | Registers the UoW infrastructure and interceptor |
+
+With `IsTransactional = true` a real database transaction is opened: `CompleteAsync` commits, and disposing without completion rolls back. `[UnitOfWork]` supports `Task`, `Task<T>`, `ValueTask`, and `ValueTask<T>`, and never commits early.
+
+### Repository (`Euonia.Repository`)
+
+> Persistence-agnostic repository abstractions, with implementations provided by EF Core and MongoDB.
+
+| Type | Purpose |
+|---|---|
+| `IRepository<TEntity>` | Query, CRUD, and paging; every write operation supports `autoSave` |
+| `IRepository<TEntity,TKey>` / `IRepository<TContext,TEntity,TKey>` | Key-based queries / context-bound repositories |
+| `IRepositoryContext` | `SetOf<T>()`, `SaveChangesAsync`, transactions, commit/rollback |
+| `IContextProvider` / `IContextFactory` | Resolves contexts through an ordered factory chain |
+| `IConnectionStringResolver` / `[ConnectionString]` | Connection string resolution |
+| Entity contracts | `IEntity`, `IAuditable`, `IHasCreateTime`, `IHasUpdateTime`, `IHasDeleteTime`, `IHasSnowflakeId`, `ITombstone`, `IConcurrentEntity` |
+| `RepositoryExtensions` | `Paginate`, `Sort`, `GetPagedCollectionAsync` |
+
+**EF Core**
+
+- `DataContextBase<TContext>` implements `IRepositoryContext` and automatically applies configurations, soft-delete query filters, and audit fields.
+- `AddEfCoreRepository<TContext>(options, lifetime)` registers the `DbContext`, the open-generic repository, and the unit of work; `AddDataContextFactory<TContext>(lifetime)` registers `IDbContextFactory`.
+- Value generators: `SnowflakeIdValueGenerator`, `UlidValueGenerator`, `ShortUniqueIdValueGenerator`, `SequentialGuidValueGenerator`, `GuidVersion7ValueGenerator`, `RowVersionValueGenerator`, `UtcTimeValueGenerator`.
+- Value converters: `UniversalTimeConverter`; connection configuration: `ConnectionConfigurator`.
+
+**MongoDB**
+
+- `DataContextBase<TContext>` is based on `MongoDbContext` and supports client sessions and typed collection access.
+- `AddMongoRepository<TContext>(options, lifetime)` registers the context, the repository, and the unit-of-work factory.
+- `MongoDbOptions.UseConnection(...)` / `UseDatabase(...)`; `ModelProfile<T>` / `ModelBuilder` configure collection mappings.
+- Replica-set environments support `BeginTransactionAsync` / `CommitAsync` / `RollbackAsync`.
+
+```csharp
+services.AddEfCoreRepository<AppDbContext>(options =>
+{
+    options.UseSqlite(configuration.GetConnectionString("Default"));
+});
+
+public sealed class OrderService(IRepository<AppDbContext, Order, long> repository)
+{
+    public Task<Order?> GetAsync(long id, CancellationToken cancellationToken)
+        => repository.GetAsync(id, cancellationToken);
+
+    public async Task<Order> CreateAsync(Order order, CancellationToken cancellationToken)
+        => await repository.InsertAsync(order, autoSave: true, cancellationToken);
+}
 ```
 
 ### OSBA (`Euonia.Osba`)
-> **Object-Oriented Scalable Business Architecture** — a rich business object framework with rule-based validation, property change tracking, state management, and reflection-driven factories.
 
-#### Business Object Hierarchy
+> **Object-Oriented Scalable Business Architecture**: models "one business operation" as an object, and the framework performs property storage, change tracking, rule validation, factory dispatch, actuator orchestration, and permission adjudication at the right moments.
 
+Osba is neither an ORM nor a DDD-only framework; it is a **business model runtime**. It does not depend on `Euonia.Domain`, EF Core, or `Euonia.Security`; DDD and a concrete authorization engine are both optional upper-layer compositions.
+
+#### Object Hierarchy
+
+```text
+ObjectBase                         —— Common root: properties, rules, context, lifecycle, permissions
+└── ObjectBase<T>                  —— Property registration (RegisterProperty)
+     ├── BusinessObject<T>         —— Change tracking (ChangedProperties / AcceptChanges)
+     │    ├── ObservableObject<T>  —— NEW / CHANGED / DELETED state
+     │    │    └── EditableObject<T> —— Async rule validation and saving
+     │    └── ReadOnlyObject<T>    —— Read-only object (populatable within a factory-load scope)
+     └── ServiceObject<T>          —— Standalone business operation; has properties and rules, no change tracking
 ```
-BusinessObject<T>              — Core: rules, context, property management
-    └── ObservableObject<T>    — Change tracking: NEW / CHANGED / DELETED state
-        └── EditableObject<T>  — Savable with async rule validation & lifecycle
-        ├── CommandObject<T>   — Command-style object with ExecuteAsync
-        └── ReadOnlyObject<T>  — Immutable with permission-based access
+
+> `IServiceObject` only composes `IOsbaObject` and `IHasRuleCheck` and does not extend `IBusinessObject`; only `IBusinessObject` promises editable-object contracts such as `INotifyPropertyChanged` / `INotifyPropertyChanging`.
+
+#### Capability List
+
+- **Property system**: type-level metadata cache, per-instance field array, ring-buffer undo history, observable values, and parent/child object graphs.
+- **Change tracking**: `ChangedProperties`, `HasChangedProperties`, `AcceptChanges`, `MarkAsClean`; a property changed back to its baseline value is automatically removed from the changed set.
+- **Domain object control**: `GetOriginalValue`, `GetOriginalValues`, `GetChangedValues`, `RejectChanges`, and overridable `CanTransitionTo` / `StateChanged`.
+- **Rule system**: object-level `ObjectRuleBase` / `IObjectRule`, property-level `PropertyRuleBase` / `IPropertyRule`, `CommonRule.Required/Regular/Lambda`, `DataAnnotationRule`, `ExecuteOnStateAttribute`; supports priority, severity, and per-operation bypass.
+- **Factories**: lookup over two channels, conventional name plus attribute; supports optional parameters, `params`, `Task` / `ValueTask`; the public operations of `BusinessObjectFactory` can be overridden by derived types.
+- **Actuators**: `IActuator.For<T>().Fetch/Create/Update/Delete/Execute(...)` chains "fetch object → Handle → finalize" into a pipeline and can attach `IActuatorBehavior<T>`.
+- **Lifecycle callbacks**: `IObjectLifecycle` provides `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync`.
+- **Permission boundary**: type-level/method-level `[Permission]` and row-level data permissions; the contracts live in `Euonia.Core`, and Osba implements only its own half without referencing `Euonia.Security`.
+- **Diagnostics**: `ActivitySource("Euonia.Osba")`, `Meter("Euonia.Osba")`, and the host's `ILoggerFactory`.
+- **Startup validation**: `OsbaOptions.ValidateOnStartup` checks factory signatures, `[Inject]` resolvability, property metadata, and missing persistence methods.
+
+#### Wiring
+
+```csharp
+services.AddBusinessObject(options =>
+{
+    options.ValidateOnStartup = true;      // recommended for production hosts
+    options.StrictFactoryMethods = true;   // saving fails immediately when Insert/Update/Delete are missing
+    options.EnableDiagnostics = true;      // ActivitySource / Meter
+}, typeof(Order).Assembly);
 ```
 
-#### Key Concepts
+`BusinessContextAccessor` no longer writes the ambient context automatically on resolve; ASP.NET middleware or manual scopes should call `SetCurrent(...)` explicitly and `Clear()` in a `finally` block.
 
-| Concept | Description |
-|---------|-------------|
-| **`BusinessContext`** | Ambient context wrapping `IServiceProvider` and `UserPrincipal` |
-| **`PropertyInfo<T>`** | Typed property metadata: name, type, friendly name, default value, field reference |
-| **`FieldDataManager`** | Per-instance reflection-based field value management with undo history |
-| **Rule System** | Async rule validation with `RuleManager` (per-type singleton) & `Rules` (per-instance executor) |
-| **Permission System** | Operation permissions (type-level + row-level) and data permissions; grants resolved live from application data |
-| **`ObjectEditState`** | Lifecycle state machine: `None → New → Changed → Deleted` |
-| **`IObjectFactory`** | Reflection-driven CRUD factory: `[FactoryCreate]`, `[FactoryFetch]`, `[FactoryInsert]`, `[FactoryUpdate]`, `[FactoryDelete]`, `[FactoryExecute]` |
-
-#### Rule System
-
-Rules come in two kinds: **object-level** (`Property == null`, evaluated on save) and
-**property-level** (bound to a property registered via `RegisterProperty<T>`, matched by reference equality).
+#### Rules
 
 ```csharp
 protected override void AddRules()
 {
-    // Object-level: parameterless ctor ⇒ Property == null
+    // Object-level: parameterless ctor ⇒ Property == null, runs on save
     Rules.AddRule<PasswordStrengthRule>();
 
     // Property-level: pass the registered PropertyInfo<T>
-    Rules.AddRule(new UsernameCheckRule(NameProperty));
     Rules.AddRule<CommonRule.Required>(NameProperty);
     Rules.AddRule(new CommonRule.Regular(EmailProperty, @"^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$"));
 
-    // Convenience lambda overloads (RulesExtensions)
-    Rules.AddRule<MyObject>(AgeProperty, o => o.Age >= 18, "Must be 18+");
+    // Convenience lambda overload
+    Rules.AddRule<Order>(AmountProperty, order => order.Amount > 0, "Amount must be greater than 0");
 }
 ```
 
-| Type | Description |
-|------|-------------|
-| `RuleBase` | Abstract rule with URI-style name (`rule://type/...`), `Priority`, and `RelatedProperties` |
-| `CommonRule.Required` | Non-null property validation |
-| `CommonRule.Regular` | Regex-based string validation |
-| `CommonRule.Lambda<T>` | Lambda-based property rule |
-| `DataAnnotationRule` | Wraps `System.ComponentModel.DataAnnotations.ValidationAttribute` (auto-registered by `AddDataAnnotations()`) |
-| `ExecuteOnStateAttribute` | Restricts a rule to specific `ObjectEditState` values |
-| `BrokenRule` / `BrokenRuleCollection` | Validation result with severity |
-| `RuleSeverity` | enum: `Error`, `Warning`, `Information`, `Success` — **only `Error` invalidates the object** |
+Rule instances are **type-level shared singletons** and must not hold per-instance or per-request state; when dependencies are needed, obtain them from `IRuleContext.ServiceProvider` or `context.Target → BusinessContext`.
 
-> Rule instances are **per-type shared singletons** (held by `RuleManager`), so rules must not hold
-> per-instance or per-request state — read everything from `context.Target → BusinessContext`.
+#### Permissions
 
-#### Permission System
+How Osba and the permission engine divide the work:
 
-The policy engine ships as its own library, `Euonia.Security` (depends on `Euonia.Core` only).
-`Euonia.Osba` does **not** reference it: Osba implements its own half of the Core-level permission
-contracts (object state to operation, requirement source, enforcement at the factory boundary) while
-the engine implements the other half (policy compilation, row scope, policy selection by
-authorization identifier — an operation name or a permission code).
-There is **no adapter package** between them: a host wires the engine with two lines —
-`AddBusinessObject(asm)` plus `AddPermission(p => { p.Scan(asm); p.Source(ObjectPermissionCodeSource.Instance); })` —
-or registers its own implementations and skips the engine entirely. The two are
-complementary. **Grants are always resolved live from
-application data — never baked into tokens.**
-
-| | Operation Permission | Data Permission |
+| | Operation permission | Data permission |
 |---|---|---|
-| Answers | **Can this user perform this operation?** | **Which rows can this user see / act on?** |
-| Granularity | Type-level `[Permission]` + **row-level** (policy declared by authorization identifier, grants written under the permission code) | Row-level |
-| Enforcement | `BusinessObjectFactory` call boundary | Query pushdown + save boundary |
-| Failure | `SecurityException` | Row excluded / `SecurityException` on save |
+| Answers | **Whether the current user can perform an operation** | **Which data rows the current user can see/act on** |
+| Granularity | Type-level `[Permission]` + row-level (policies declared by authorization identifier) | Row-level |
+| Enforcement point | `BusinessObjectFactory` call boundary | Query pushdown + factory save boundary |
+| Failure mode | `SecurityException` | The row is excluded from queries / saving throws `SecurityException` |
 
-Data permission has **exactly one implementation**: a policy compiles to a single
-`Allow`/`Deny` expression pair shared by query pushdown and single-row checks.
+The two are not an adapter relationship: Osba only faces the Core permission contracts, and a host wires them together with two lines, `AddBusinessObject(asm)` + `AddPermission(...)`, or it can register only its own implementations. For complete wiring and multi-scenario examples, see [`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md), [`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md), and [`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md).
+
+#### Reading Entry Points
+
+- Architecture, usage, and file-by-file structure: [`Source/Euonia.Osba/README.md`](Source/Euonia.Osba/README.md)
+- Design trade-offs: [`DESIGN.md`](Source/Euonia.Osba/DESIGN.md)
+- End-to-end example: [`SAMPLE.md`](Source/Euonia.Osba/SAMPLE.md)
+
+### Security (`Euonia.Security`)
+
+> A standalone permission policy engine for operation permissions and row-level data permissions, with no dependency on any object model, user model, or application framework.
+
+#### The Two Tracks
+
+| | Operation permission | Data permission |
+|---|---|---|
+| Answers | **Whether the current user can perform an operation** | **Which data rows the current user can see/act on** |
+| Output | `IPermissionChecker` | `IScopeGuard` |
+| Basis | `[Permission]` permission code/role, or a host-defined decision | Resource dimension × authorization set resolved live from application data |
+| Failure | Assertion failure, adjudicated by the caller | Evaluated as inaccessible |
+
+#### Wiring
 
 ```csharp
-// 1) Grant source (implemented by the app; resolved live, cached per request)
-public sealed class MySubjectResolver : IScopeSubjectResolver
-{
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
-        => ScopeSubjectSet.CreateBuilder()
-                          .AddCodes(await GetPermissionCodesAsync(user, ct))   // permission codes
-                          .AddSelf(userId)                                     // the user themself
-                          .AddGrant("repo:delete", "repo", await GetDeletableReposAsync(user, ct))  // row-level
-                          .Build();
-}
+services.AddPermission(permission => permission
+    .Scan(typeof(Order).Assembly)
+    .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
+    .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
 
-// 2) Resource declaration: model + policy in one place
-public sealed class RepoScope : ScopeModel<Repo>
-{
-    public override void Define(ScopeModelBuilder<Repo> builder)
-        => builder.Map("repo", x => x.RepoId).Map(ScopeDimensions.Dept, x => x.TeamId);
-
-    public override ScopePolicy<Repo> Policy => ScopePolicy<Repo>.Grant(ScopeDimensions.Dept);
-
-    public override void Declare(ScopePolicySet<Repo> policies)
-        => policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");  // row-level operation permission
-}
-
-// 3) Enforcement
-services.AddBusinessObject(typeof(Repo).Assembly);
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
-var provider = services.BuildServiceProvider();
-provider.GetRequiredService<IScopeGuard>();  // resolving the guard runs startup validation: missing resolver fails immediately
-
-var guard = provider.GetRequiredService<IScopeGuard>();
-await guard.EnsureResolvedAsync();             // warm up before synchronous checks (idempotent)
-var visible = guard.Apply(dbContext.Repos);    // pushed down to the database
-guard.Allows(repo, BusinessOperation.Delete);  // single-row check
-guard.Explain(repo, BusinessOperation.Delete); // audit: which policy matched
+services.AddUserPrincipal();   // ASP.NET Core hosts; non-web hosts must register the current principal themselves
 ```
 
-**Key design points**:
+- Rules must be stated explicitly; when there is no method-level permission code, use `p.NoOperationCodes()` to assert so explicitly rather than silently allowing access by "forgetting to configure".
+- `AddPermission` can be called multiple times; the scanned assemblies, permission code sources, and operation rules of each module are merged as a union.
+- There is no default `IScopeSubjectResolver`: authorization values are resolved live from data by the application, so revocation takes effect immediately.
 
-- **Permission codes come from data, not tokens** — a large code set never bloats the token, and
-  **revocation takes effect immediately** without reissuing tokens.
-- **Row-level operation permissions**: map the resource identity as a dimension and declare a
-  different row range per authorization identifier (the grant key defaults to the identifier
-  itself, or is an explicit permission code), so
-  "A1 allows push+delete, A2 allows push only" is directly expressible.
-- **`Deny` is first-class**: the verdict is `Allow && !Deny`, and denies always float to the top
-  (deny wins).
-- **Permission and validation are two separate lines**: permission is decided solely at the
-  factory boundary, and a denial (insert / update / delete / command) always throws
-  `SecurityException` with **no way to bypass it**. The rule channel does data validation only
-  and throws `ValidationException`
-  (see [`PERMISSION-DESIGN.md` §1.2](Source/Euonia.Osba/PERMISSION-DESIGN.md)).
+#### Evaluation
 
-Engine usage and troubleshooting:
-[`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md).
-Engine design rationale and trade-offs:
-[`Source/Euonia.Security/DESIGN.md`](Source/Euonia.Security/DESIGN.md).
-Full wiring usage and multi-scenario examples:
-[`Source/Euonia.Osba/PERMISSION.md`](Source/Euonia.Osba/PERMISSION.md) and
-[`PERMISSION-SAMPLE.md`](Source/Euonia.Osba/PERMISSION-SAMPLE.md);
-wiring decisions:
-[`PERMISSION-DESIGN.md`](Source/Euonia.Osba/PERMISSION-DESIGN.md).
+```csharp
+var guard = provider.GetRequiredService<IScopeGuard>();
+await guard.EnsureResolvedAsync();              // warm up before synchronous evaluation
+var visible = guard.Apply(dbContext.Orders);    // pushed down to the database
+guard.Allows(order, BusinessOperation.Read);    // single-row evaluation
+guard.Explain(order, BusinessOperation.Read);   // audit: which policy matched
+```
+
+Core invariant: a policy compiles into a pair of `Allow` / `Deny` expressions, and **read-side pushdown and single-row evaluation share the same compiled result**; the final verdict is `Allow && !Deny`, and `Deny` always takes precedence. The data permission model and policy are declared in the same `ScopeModel<T>` declaration, fully validated at startup, and configuration errors fail fast.
+
+For more, see [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md) and [`DESIGN.md`](Source/Euonia.Security/DESIGN.md).
+
+## Message Bus
 
 ### Bus Abstract (`Euonia.Bus.Abstract`)
-> Foundational messaging abstractions: message envelope, context, conventions, transport strategies, annotations, abstract transport interface, and event system. Extension base for all bus modules.
 
-**Core Contracts**
+> The extension foundation for all bus transports and the `Euonia.Bus` engine.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ITransporter` | interface | Transport abstraction: `PublishAsync` (multicast), `SendAsync<TMessage,TResponse>` (unicast/request-response), `CallAsync` |
-| `IMessageEnvelope` / `IMessageEnvelope<T>` | interface | Envelope: MessageId, CorrelationId, ConversationId, RequestTraceId, Channel, Authorization, User, Metadata, Payload |
-| `RoutedMessage` | abstract class | Base routed message with identity/tracing/timestamp properties |
-| `RoutedMessage<TData>` | class | Generic routed message with typed payload (setting the payload records its type in metadata) |
-| `RoutedMessage<TData,TResponse>` | class | Generic routed message with request-response semantics |
-| `IMessageContext` | interface | Runtime context: Message access, `Response()`, `Failure()`, `Complete()` |
-| `MessageContext` | sealed class | Default implementation with weak-event based response/completion flow |
-| `IMessageSerializer` | interface | Serialization contract (to/from byte[], string, Stream + envelope deserialization) |
-| `IHandlerContext` | interface | Handler execution context: `MessageSubscribed` event, `HandleAsync()` |
-| `ChannelRegistration` / `ChannelHandler` | class | Channel registration and handler descriptor (type + method + instance) |
-| `MessageMetadata` | class | Typed metadata bag (`IDictionary<string,object>`) |
-| `MessageHeaders` / `MessageProperties` | static class | Header keys; delivery-property (target queue, priority) metadata keys and read/write helpers |
-| `MessageConventionType` | enum | `None`, `Unicast`, `Multicast`, `Request` |
-| `MessageProcessType` | enum | `Send`, `Dispatch`, `Receive` |
-
-**Message Classification** (Marker Interfaces)
-
-| Interface | Purpose |
-|-----------|---------|
-| `ITransportable` | Base interface for all transportable messages |
-| `IUnicast` | Point-to-point unicast message |
-| `IMulticast` | Publish-subscribe multicast message |
-| `IRequest<TResponse>` | Request-response message with typed response |
-
-**Annotations** (11 attribute types)
-
-| Attribute | Target | Purpose |
-|-----------|--------|---------|
-| `[Channel("name")]` | Class | Overrides default channel name |
-| `[Unicast]` | Class | Marks as unicast |
-| `[Multicast]` | Class | Marks as multicast |
-| `[Request(typeof(R))]` | Class | Marks as request with response type |
-| `[Transportable]` | Class | Marks as transportable (participates in channel resolution) |
-| `[LocalMessage]` | Class | Restricts to local transport only |
-| `[DistributedMessage]` | Class | Restricts to distributed transport only |
-| `[DispatchIn("t1","t2")]` | Class | Constrains outbound transports |
-| `[ReceiveIn("t1","t2")]` | Class | Constrains inbound transports |
-| `[Enqueue("name")]` | Class | Queue name + priority |
-| `[Subscribe("channel")]` | Method | Declares a handler method and its channel |
-
-**Convention & Strategy**
-
-| Type | Purpose |
-|------|---------|
-| `IMessageConvention` | Classifies message types: `IsUnicast`, `IsMulticast`, `IsRequest` |
-| `DefaultMessageConvention` | Checks for marker interfaces (`IUnicast` / `IMulticast` / `IRequest<>`) |
-| `AnnotationMessageConvention` | Checks for attributes (`[Unicast]` / `[Multicast]` / `[Request]`) |
-| `BaseMessageConvention` / `OverridableMessageConvention` | Composes conventions, caches verdicts and invalidates them on change |
-| `DefaultMessageConventionBuilder` | Fluent builder to compose conventions |
-| `ITransportStrategy` | Routes messages to transports: `Outgoing` / `Incoming` |
-| `BaseTransportStrategy` / `DefaultTransportStrategyBuilder` | Composes strategy chains, caches verdicts and invalidates them on change |
-| `AnnotationTransportStrategy` | Matches `[DispatchIn]` / `[ReceiveIn]` attributes |
-| `LocalMessageTransportStrategy` | Matches `[LocalMessage]` types |
-| `DistributedMessageTransportStrategy` | Matches `[DistributedMessage]` types |
-
-**Reliability Contracts** (Outbox / Inbox / Dead Letter)
-
-| Type | Purpose |
-|------|---------|
-| `IOutboxStore` | Outbox store: `Insert`, `MarkAsSuccess`/`MarkAsFailed`/`MarkAsDeadLettered`, `GetFailedMessages`, `Cleanup` |
-| `IInboxStore` | Inbox store: same surface, tracked per handler |
-| `IDeadLetterStore` | Dead-letter store: `Add`, `Get`, `GetAll`, `Remove` |
-| `DeadLetterEntry` / `DeadLetterSource` | Dead-letter record (source, target, error, retry count) and its source enum |
-| `IDeadLetterService` | Dead-letter query and replay: `GetAll`, `ReplayAsync`, `Discard` |
-| `OutboxEntry` / `OutboxTransport` | Outbox entry and per-transport status (`Pending`/`Success`/`Failed`/`DeadLettered`) |
-| `InboxEntry` / `InboxHandler` | Inbox entry and per-handler status |
-
-**Recipient Contracts**
-
-| Type | Purpose |
-|------|---------|
-| `IRecipientRegistrar` | Registers transport-level recipients; extends `IDisposable` / `IAsyncDisposable`, with `DisposeAsync` defaulting to `Dispose`, so they are released on shutdown |
-| `IRecipient` / `IConsumer` / `ISubscriber` / `IExecutor` | Recipient and its unicast/multicast/request role interfaces |
-
-**Event System**
-
-| Type | Purpose |
-|------|---------|
-| `MessageDeliveredEventArgs` | Message delivered to transport |
-| `MessageReceivedEventArgs` | Message received from transport |
-| `MessageAcknowledgedEventArgs` | Message acknowledged |
-| `MessageRepliedEventArgs` | Handler reply (with result) |
-| `MessageHandledEventArgs` | Handler completed (with handler type) |
-| `MessageSubscribedEventArgs` | Subscription metadata |
-
-**Exception Hierarchy**
-
-| Type | Purpose |
-|------|---------|
-| `MessageTypeException` | Invalid/unclassified message type |
-| `MessageProcessingException` | Processing failure |
-| `MessageDeliverException` | Delivery failure |
+- **Message classification**: `IUnicast`, `IMulticast`, `IRequest<TResponse>`, or the `[Unicast]`, `[Multicast]`, `[Request]` attributes.
+- **Envelope and context**: `IMessageEnvelope<T>` carries MessageId, CorrelationId, ConversationId, RequestTraceId, Channel, Authorization, User, Metadata, and Payload; `IMessageContext` provides `Response` / `Failure` / `Complete`.
+- **Transport contract**: `ITransporter` defines `PublishAsync`, `SendAsync<TMessage,TResponse>`, and `CallAsync<TRequest,TResponse>`.
+- **Conventions and strategies**: `IMessageConvention` classifies messages; `ITransportStrategy` decides whether to use local or distributed transport.
+- **Reliability**: `IOutboxStore`, `IInboxStore`, `IDeadLetterStore`, `IDeadLetterService`, and the corresponding entry types.
+- **Recipients**: `IRecipientRegistrar`, `IRecipient`, `IConsumer`, `ISubscriber`, `IExecutor`.
+- **Execution environment**: `MessageExecutionDescriptor` describes where the service provider and request context come from (new scope, borrowing the caller's scope, envelope override, etc.).
+- **Annotations**: `[Channel]`, `[Subscribe]`, `[Enqueue]`, `[LocalMessage]`, `[DistributedMessage]`, `[DispatchIn]`, `[ReceiveIn]`, etc.
 
 ### Bus (`Euonia.Bus`)
-> Runtime orchestration layer: handler discovery, registration, dispatch, convention & strategy composition, and the `IBus` API. Composes all abstract contracts into a working message bus engine.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `IBus` | interface | Top-level bus API: `PublishAsync` (multicast), `SendAsync` (unicast with optional `Subject<T>` callback), `CallAsync` (request-response with direct return) |
-| `MessageBus` | class | Orchestration engine: type validation → context resolution → envelope construction → pipeline execution → dispatch decision → transport delivery |
-| `IHandler<TMessage>` / `IHandler<TMessage,TResponse>` | interface | Typed handler contracts |
-| `SubscribeAttribute` | attribute | `[Subscribe("channel")]` — declares a handler method |
-| `IDispatcher` / `StrategicDispatcher` | interface / class | Strategy matching + cardinality validation + transport-list cache **invalidated on configuration change** |
-| `IHandlerContext` / `DefaultHandlerContext` | interface / class | Per-channel handler registration; unicast executes the first handler (warns when several are registered), multicast fans out in parallel |
-| `ChannelRegistrar` | class | Channel registration with idempotent de-duplication (re-registering the same handler does not create a second entry) |
-| `MessageHandlerFinder` | class | Auto-discovers `[Subscribe]` methods and `IHandler<,>` implementations; uses the **same** channel resolver as dispatch |
-| `DefaultConfigurator` | class | `IConfigurator` implementation: conventions, strategies, channel registration and channel resolver |
-| `ServiceActivator` | class | Runs auto-registration at startup (see `AutoLoadAssemblies`) and starts each transport's recipients; disposes the registrars on shutdown |
-| `ConfiguratorBuilder` | delegate | User configuration callback, invoked by `ServiceActivator` during startup |
-
-**Fluent Options**
+> The runtime for handler discovery, registration, dispatch, serialization, reliability stores, and telemetry.
 
 | Type | Purpose |
-|------|---------|
-| `ExtendableOptions` | Common base: MessageId, Channel, Queue, Priority, RequestTraceId, Delay, Timeout, MetadataSetter, UseOutbox, UseInbox |
-| `PublishOptions` / `SendOptions` / `CallOptions` | Per-operation options (send and call add CorrelationId) |
-| `PublishBuilder` / `SendBuilder` / `CallBuilder` | Fluent builders: `WithChannel`, `WithQueue`, `WithPriority`, `WithDelay`, `WithTimeout`, `WithMetadata`, `WithPipeline` |
+|---|---|
+| `IBus` | Top-level API: `PublishAsync` (multicast), `SendAsync` (unicast, with an optional `Subject<T>` callback), `CallAsync` (request-response) |
+| `MessageBus` | Orchestration engine: type validation → context resolution → envelope construction → pipeline execution → dispatch decision → transport delivery |
+| `IHandler<TMessage>` / `IHandler<TMessage,TResponse>` | Typed handler contracts |
+| `[Subscribe("channel")]` | Declares a handler method |
+| `IDispatcher` / `StrategicDispatcher` | Strategy matching, cardinality validation, and a transporter-list cache invalidated by configuration version changes |
+| `IHandlerContext` / `DefaultHandlerContext` | Manages handlers per channel; unicast executes the first handler, while multicast fans out in parallel to all implementations |
+| `MessageHandlerFinder` / `ChannelRegistrar` | Automatically discovers `[Subscribe]` and `IHandler<,>`; idempotent de-duplication |
+| `DefaultConfigurator` / `ConfiguratorBuilder` | Conventions, strategies, channel registration, and channel resolvers |
+| `ServiceActivator` | Performs automatic assembly and starts transport recipients at startup, and disposes registrars at shutdown |
 
-**Delivery Properties** (set on the sending side, carried to transports via metadata)
+**Execution scopes**
 
-| Option | Semantics |
-|--------|-----------|
-| `Queue` (`WithQueue`) | Overrides the target queue: honoured by RabbitMQ / ActiveMQ `Send`/`Call`; publish goes to an exchange/topic and ignores it |
-| `Priority` (`WithPriority`) | Message priority: RabbitMQ writes it into the message properties, clamped to `[0, min(MaxPriority, 9)]` (the queue must be declared with `x-max-priority`); ActiveMQ maps it to `MsgPriority`; other transports ignore it |
-| `Delay` (`WithDelay`) | Delay **before dispatch** in milliseconds, transport-agnostic and honoured uniformly by all built-in transports; cancellable. This is an in-process delay — a process exit during the delay loses the message, so use the outbox or a transport-native delay for durable delayed delivery |
+- In-process `SendAsync` / `CallAsync` reuse the caller's scope, so handlers can share scoped services such as `DbContext` and transactions.
+- `PublishAsync` is fire-and-forget and uses a dedicated message scope, while preserving the publisher's request context.
+- HTTP/gRPC inbound processing reuses the request scope; cross-process consumption, dead-letter replay, and inbox re-execution use the identity from the envelope.
+- Background schedulers uniformly start through `BackgroundExecution.Run` under `ExecutionContext.SuppressFlow()`.
 
-**Three Message Bus Operations**
+**Three kinds of operations**
 
-| Operation | Method | Message Type | Transport Strategy | Return |
-|-----------|--------|-------------|-------------------|--------|
-| **Publish** | `PublishAsync` | Multicast | Parallel across all matching transports | `Task` |
-| **Send** | `SendAsync` | Unicast | Single transport | `Task` (or with `Subject<T>` callback) |
-| **Call** | `CallAsync` | Request | Single transport | `Task<TResponse>` |
+| Operation | Method | Message type | Transport strategy | Return value |
+|---|---|---|---|---|
+| Publish | `PublishAsync` | Multicast | Sent in parallel to all matching transports | `Task` |
+| Send | `SendAsync` | Unicast | A single transport | `Task` (or a `Subject<T>` callback) |
+| Call | `CallAsync` | Request | A single transport | `Task<TResponse>` |
 
-**Reliability: Outbox / Inbox / Dead Letter**
+**Fluent options and delivery properties**
+
+- `PublishOptions` / `SendOptions` / `CallOptions` and the corresponding builders: `WithChannel`, `WithQueue`, `WithPriority`, `WithDelay`, `WithTimeout`, `WithMetadata`, `WithPipeline`.
+- `Queue`: overrides the `Send` / `Call` target queue for RabbitMQ / ActiveMQ; ignored when publishing goes through an exchange/topic.
+- `Priority`: RabbitMQ writes it into the message properties and clamps it to `[0, min(MaxPriority, 9)]` (the queue must be declared with `x-max-priority`); ActiveMQ maps it to `MsgPriority`.
+- `Delay`: an in-process delay **before dispatch** (in milliseconds) that applies uniformly to all built-in transports; a process exit loses messages that are still delayed, so use the outbox or the transport's own delay capability when durable delay is required.
+
+**Reliability: outbox / inbox / dead letters**
 
 | Type | Purpose |
-|------|---------|
-| `InMemoryOutboxStore` / `InMemoryInboxStore` | In-memory implementations (development/reference only); the entry cache is **isolated per store instance** |
+|---|---|
+| `InMemoryOutboxStore` / `InMemoryInboxStore` | In-memory implementations (development/reference only); the cache is isolated per store instance |
 | `InMemoryDeadLetterStore` | In-memory dead-letter store |
-| `OutboxDispatcher` / `InboxDispatcher` | Background dispatchers: poll failed records and redeliver/re-execute; exhausted records move to a terminal dead-letter state (no longer re-scanned); each round also applies the retention policy |
-| `DeadLetterService` | `IDeadLetterService` implementation: query, replay (redelivery or re-execution depending on source) and discard |
+| `OutboxDispatcher` / `InboxDispatcher` | Poll failed records and redeliver/re-execute them; exhausted retries move to the terminal dead-letter state; each round applies the retention policy |
+| `DeadLetterService` | Query, replay (redelivery or re-execution depending on the source), and discard |
 
 | Option | Semantics |
-|--------|-----------|
-| `OutboxOptions.Enabled` / `MaxRetryAttempts` / `PollingInterval` | Outbox global switch, max redelivery attempts, polling interval |
-| `OutboxOptions.RetentionPeriod` / `InboxOptions.RetentionPeriod` | Retention for terminal entries (default 24 h; `<= 0` disables cleanup) |
-| `InboxOptions.Enabled` | Inbox global switch (`UseInbox` is a sending-side marker only; built-in transports do not consume it) |
-| `MessageBusOptions.AutoLoadAssemblies` | **Simple names** of assemblies scanned for handlers at startup; a load failure fails startup |
-| `MessageBusOptions.DefaultTransporter` | Default transporter (dispatch and recipient registration share this single source) |
+|---|---|
+| `OutboxOptions.Enabled` / `MaxRetryAttempts` / `PollingInterval` | Outbox switch, maximum redelivery attempts, polling interval |
+| `OutboxOptions.RetentionPeriod` / `InboxOptions.RetentionPeriod` | How long terminal entries are retained (default 24 hours; `<= 0` disables cleanup) |
+| `InboxOptions.Enabled` | Inbox switch; `UseInbox` is only a sending-side marker |
+| `MessageBusOptions.AutoLoadAssemblies` | Simple names of the assemblies scanned for handlers at startup; a load failure fails startup |
+| `MessageBusOptions.DefaultTransporter` | Default transporter (shared by dispatch and recipient registration) |
 
-**Registration Extensions** (`Microsoft.Extensions.DependencyInjection`)
-
-| Extension | Purpose |
-|-----------|---------|
-| `AddEuoniaBus()` | Registers the bus core: `IConfigurator`, `IHandlerContext`, `IBus`, `IDispatcher`, keyed serializers, pipeline support and `ServiceActivator` |
-| `AddInMemoryOutbox()` / `AddInMemoryInbox()` / `AddInMemoryDeadLetters()` | Registers the corresponding in-memory store (outbox / inbox / dead letter). None is registered by default — each must be called explicitly |
-| `AddConfiguratorBuilder(configure)` | Registers the user configuration callback (conventions, strategies, channel scanning), invoked by `ServiceActivator` at startup |
-| `AddMessageHandler(lifetime, …)` | Registers `IHandler<,>` handlers by assembly, concrete type or generic argument |
+**Registration**
 
 ```csharp
 services.AddEuoniaBus();
-services.AddInMemoryOutbox();      // outbox (optional)
-services.AddInMemoryInbox();       // inbox (optional)
-services.AddInMemoryDeadLetters(); // dead-letter capture and replay (optional)
+services.AddInMemoryOutbox();       // outbox (optional)
+services.AddInMemoryInbox();        // inbox (optional)
+services.AddInMemoryDeadLetters();  // dead-letter capture and replay (optional)
 services.AddMessageHandler(ServiceLifetime.Scoped, typeof(Program).Assembly);
 
 services.AddConfiguratorBuilder(config => config
     .RegisterChannel(typeof(Program).Assembly)
-    .SetConvention(b => b.Add<DefaultMessageConvention>())
-    .SetStrategy("InMemory", s => s.Add<LocalMessageTransportStrategy>()));
+    .SetConvention(builder => builder.Add<DefaultMessageConvention>())
+    .SetStrategy("InMemory", strategy => strategy.Add<LocalMessageTransportStrategy>()));
 ```
+
+You can also depend directly on `[DependsOn(typeof(MessageBusModule))]`, and the module registers the bus and binds the `Euonia:Bus` configuration section to `MessageBusOptions`.
 
 **Observability**
 
-| Item | Purpose |
-|------|---------|
-| `Meter` = `Nerosoft.Euonia.Bus` | Counters `bus.messages.published` / `.sent` / `.called` / `.failed`, duration histogram `bus.messages.duration`, retries and dead letters `bus.outbox.retries` / `.deadlettered`, `bus.inbox.retries` / `.deadlettered` |
-| `ActivitySource` = `Nerosoft.Euonia.Bus` | `bus.publish` / `bus.send` / `bus.call` with tags message.id, channel, correlation_id, trace_id, destination.name, message.type |
-
-With no listener `ActivitySource.StartActivity` returns `null` and counter writes are negligible, so instrumentation never changes control flow. Wiring it up:
+| Name | Contents |
+|---|---|
+| Meter `Nerosoft.Euonia.Bus` | `bus.messages.published` / `.sent` / `.called` / `.failed`, the duration histogram `bus.messages.duration`, retries and dead letters `bus.outbox.retries` / `.deadlettered`, `bus.inbox.retries` / `.deadlettered` |
+| ActivitySource `Nerosoft.Euonia.Bus` | `bus.publish` / `bus.send` / `bus.call`, with tags `messaging.message.id`, `messaging.channel`, `messaging.correlation_id`, `messaging.request_trace_id`, `messaging.destination.name`, `messaging.message.type` |
 
 ```csharp
 builder.AddOpenTelemetry()
-       .WithMetrics(m => m.AddMeter("Nerosoft.Euonia.Bus"))
-       .WithTracing(t => t.AddSource("Nerosoft.Euonia.Bus"));
+       .WithMetrics(metrics => metrics.AddMeter("Nerosoft.Euonia.Bus"))
+       .WithTracing(tracing => tracing.AddSource("Nerosoft.Euonia.Bus"));
 ```
 
 **Serialization**
 
-| Type | Purpose |
-|------|---------|
-| `NewtonsoftJsonSerializer` | Newtonsoft.Json-based serializer (with `ClaimsPrincipal` converters; `TypeNameHandling.None`, so JSON `$type` is never trusted) |
-| `SystemTextJsonSerializer` | System.Text.Json-based serializer |
-| `MessageSerializerOptions` | Reference loop handling, encoding, null handling |
+The built-in keyed serializers are `SystemTestJson` (`System.Text.Json`) and `NewtonsoftJson` (including a `ClaimsPrincipal` converter, `TypeNameHandling.None`). Each transport selects one through `SerializerProvider`, defaulting to `SystemTestJson`.
 
-**Key Features:**
-- Auto-discovers handlers via `[Subscribe]` methods or `IHandler<M,R>`; duplicate registration is de-duplicated
-- Single-handler channels support request/response; multi-handler channels execute in parallel
-- `TransportStrategy` system maps message types to transports (Local vs Distributed); caches invalidate when strategies change
-- Pipeline integration for middleware-style message processing (logging, validation, authorization)
-- Fluent options API for publish/send/call, including delay and delivery properties
-- Outbox/inbox provide at-least-once delivery and de-duplication; exhausted retries become replayable dead letters
-- Built-in metrics and distributed tracing, OpenTelemetry-ready
+### Transport Adapters
 
-### Bus InMemory (`Euonia.Bus.InMemory`)
-> In-process memory transport adapter — complete `ITransporter` implementation. Provides pure in-memory message dispatch without external infrastructure, ideal for development, testing, and single-process integration.
+| Transport | Semantics and key points |
+|---|---|
+| **InMemory** | In-process messaging; `IUnicast` → `InMemoryConsumer`, `IMulticast` → `InMemorySubscriber`, `IRequest<>` → `InMemoryExecutor`; each container uses its own messenger to avoid cross-container message leakage |
+| **RabbitMQ** | Publishing goes through a fanout exchange, while send/call go through direct queues; the queue name is `{channel}@{subscriptionId}` and prefixes are supported; supports `x-max-priority`, DLX/DLQ, persistence, and Polly retries; `AutoAck` defaults to `false` |
+| **ActiveMQ** | Publishing goes through a topic, while send/call go through queues; temporary reply queue + correlation ID; persistent connections and Polly retries; `Priority` maps to the NMS priority |
+| **HTTP** | Supports `CallAsync` only (`Send` / `Publish` throw `NotSupportedException`); `MapBusEndpoint()` exposes `POST /bus/call`; `RemoteReply<T>` restores exceptions; supports an `Endpoints` channel routing table and `x-*` message headers |
+| **gRPC** | Builds `Method<GrpcRequest, GrpcResponse>` generic unary calls at runtime, with no generated stub required; `AddGrpcBusServer()` + `MapGrpcBusService()`; supports an `Endpoints` routing table, interceptors, health checks, and `MapGrpcServices()` auto-discovery |
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `InMemoryTransporter` | class | `ITransporter` implementation: publish via `WeakReferenceMessenger`; send/call via `StrongReferenceMessenger` with TCS correlation. Disposal never touches the process-wide messengers |
-| `InMemoryRecipientRegistrar` | class | Maps handler registrations to `InMemoryConsumer` / `InMemorySubscriber` / `InMemoryExecutor`; unregisters the recipients it created on disposal |
-| `InMemoryConsumer` | class | Unicast handler via `IHandlerContext` |
-| `InMemorySubscriber` | class | Multicast handler |
-| `InMemoryExecutor` | class | Request handler |
-| `StrongReferenceMessenger` | class | Strong-reference messenger for unicast/request (exact class match, identity-key dedup) |
-| `WeakReferenceMessenger` | class | Weak-reference messenger for multicast (GC auto-unsubscribe, cleanup scan) |
+**Remote endpoint security**: `RequireAuthorization` defaults to `true` for both HTTP and gRPC, so bus endpoints are not exposed to anonymous calls.
 
-**Mapping rules:** `IUnicast` → `InMemoryConsumer` → StrongMessenger; `IMulticast` → `InMemorySubscriber` → WeakMessenger; `IRequest<>` → `InMemoryExecutor` → StrongMessenger.
-
-**Delivery semantics:** recipients process messages through a **serial background pump** — messages for one recipient are handled in enqueue order, but `PublishAsync` no longer blocks the caller until the handlers finish (request-response still waits, since it awaits the TCS the handler writes into).
-
-### Bus RabbitMQ (`Euonia.Bus.RabbitMq`)
-> RabbitMQ transport adapter — complete `ITransporter` implementation. Provides distributed message dispatch via RabbitMQ broker with persistent connections, fanout exchanges, direct queues, and correlation-based RPC.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `RabbitMqTransporter` | class | Full transport: publish → fanout exchange; send/call → direct queue (queue existence and consumer count checked before publishing); Polly-based retry |
-| `RabbitMqRecipient` and derived | class | Recipient base plus `RabbitMqConsumer` (unicast), `RabbitMqSubscriber` (multicast), `RabbitMqExecutor` (request) |
-| `RabbitMqRecipientRegistrar` | class | Creates and starts recipients; disposes each one (and its channel) on shutdown |
-| `RabbitMqDelivery` | class | Pure logic for queue name, subscription id and priority — **shared by publisher and consumers** |
-| `DefaultPersistentConnection` | class | Connection lifecycle with `AsyncLock`, exponential backoff, auto-reconnect; fails fast after disposal instead of spinning |
-| `RabbitMqBusOptions` | class | Options: connection URI, exchange/queue prefixes (empty by default), persistence, auto-ack (default `false`), max retries, **`MaxPriority`** |
-
-**Mapping rules:** `IUnicast` → `RabbitMqConsumer`; `IMulticast` → `RabbitMqSubscriber`; `IRequest<>` → `RabbitMqExecutor`.
-
-**Queues and priority:**
-- Queue name format is `{channel}@{subscriptionId}`, where the subscription id falls back through: `SubscriptionId` → entry assembly **simple name** → channel name
-- The `Queue` option overrides the target queue for `Send`/`Call`; publish goes to an exchange and ignores it
-- With `MaxPriority > 0` consumers declare the queue with `x-max-priority` and the sender writes the message priority — **RabbitMQ only honours priority when the queue is declared with that argument**
-- Dead lettering: with `IsDeadLetterEnabled` the queue is bound to a DLX/DLQ; reply queues are declared exclusive + auto-delete and deleted explicitly in `finally`
-
-> Note: `QueueNamePrefix` / `ExchangeNamePrefix` are currently **unused** — queue and exchange names do not include those prefixes (enabling them would rename existing entities and needs a migration plan).
-
-### Bus HTTP (`Euonia.Bus.Http`)
-> HTTP remote-transport adapter. The client invokes a remote `MapBusEndpoint` endpoint over HTTP POST to complete request-response calls (`CallAsync`); the server receives messages through `RemoteReceiver`, executes handlers, and returns the result. Shares the same wire protocol (`RemoteReply<TResult>`) with the gRPC transport.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `HttpTransporter` | class (internal) | `ITransporter` implementation: `CallAsync` → HTTP POST (propagates `x-*` headers), parses `RemoteReply<T>` and rehydrates exceptions; `Send`/`Publish` → `NotSupportedException` |
-| `HttpBusOptions` | class | Options: `Endpoint`, `Route` (default `/bus/call`), `SerializerProvider` (default `SystemTestJson`), `RequestTimeout`, `RequireAuthorization` (default `true`), `MessageHandlerFactory` |
-| `AddHttpBus(name, configure)` | extension | Registers Options + `HttpTransporter` singleton + named keyed `ITransporter` |
-| `MapBusEndpoint()` | extension | Maps the server endpoint: resolves the serializer and `IHandlerContext`, invokes `RemoteReceiver`, writes the JSON reply |
-
-**Wire protocol** (`Source/Euonia.Bus/Remote/`):
-
-| Type | Purpose |
-|------|---------|
-| `RemoteReply<TResult>` | `{ IsSuccess, Result, Error }` — result or failure details |
-| `RemoteError` | `{ Type, Message, StackTrace }` — `ToException()` rehydrates the original exception type on the client, falling back to `MessageDeliverException` |
-| `RemoteReceiver` | Server receiver: `DeserializeEnvelope` → `MessageContext` (subscribes Responded/Failed/Completed) → `IHandlerContext.HandleAsync` → returns result/exception |
-
-**Usage:**
-
-```csharp
-// Client: register the HTTP transport and set it as default
-services.Configure<MessageBusOptions>(o => o.DefaultTransporter = "http");
-services.AddHttpBus("http", o => o.Endpoint = "https://grain.example.com");
-
-// Server: map the request endpoint (inside an ASP.NET Core app)
-app.MapBusEndpoint();   // POST /bus/call
-```
-
-### Bus gRPC (`Euonia.Bus.Grpc`)
-> gRPC remote-transport adapter. The client uses **generic (universal) invocation** — it constructs
-> `Method<GrpcRequest, GrpcResponse>` at runtime and executes it via `CallInvoker`, with the
-> service/method names supplied dynamically through `GrpcBusOptions` (defaulting to
-> `nerorsoft.bus.ReplierService/Call`), so no generated service stub is required on the client. The
-> server processes messages in `RemoteMessageService`. Reuses the `RemoteReply<TResult>` protocol.
-> Protocol definitions and generic gRPC tooling (interceptors, health checks, auto-discovery) live
-> in this project.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `GrpcTransporter` | class (internal) | `ITransporter` implementation: `GrpcChannel.CreateCallInvoker()` + runtime-built `Method` (`GrpcMethodFactory`); `Data` carries the serialized envelope, properties carry message headers; `Send`/`Publish` → `NotSupportedException` |
-| `GrpcMethodFactory` | class (internal) | Builds `Method<GrpcRequest, GrpcResponse>` at runtime (hand-written protobuf `Marshaller`s); supports dynamic service/method names |
-| `RemoteMessageService` | class | `ReplierService.ReplierServiceBase`: validates the payload (empty → `InvalidArgument`) → `RemoteReceiver` → returns `GrpcResponse` |
-| `GrpcBusOptions` | class | Options: `Endpoint`, `SerializerProvider`, `ServiceName` (default `nerorsoft.bus.ReplierService`), `MethodName` (default `Call`), `RequireAuthorization` (default `true`) |
-| `AddGrpcBus(name, configure)` / `AddGrpcBusServer()` | extension | Client keyed `ITransporter` registration; server `RemoteMessageService` registration |
-| `MapGrpcBusService()` | extension | Maps `MapGrpcService<RemoteMessageService>()` on the server |
-
-**Usage:**
-
-```csharp
-// Client: fixed endpoint + default contract (ReplierService/Call)
-services.AddGrpcBus("grpc", o => o.Endpoint = "https://grain.example.com");
-
-// Client: dynamic method names (generic invocation against any unary service/method)
-services.AddGrpcBus("grpc", o =>
-{
-	o.Endpoint = "https://grain.example.com";
-	o.ServiceName = "acme.InvokeService";
-	o.MethodName = "Invoke";
-});
-
-// Server (HTTP/2 must be enabled; configure HttpProtocols.Http2 for cleartext)
-services.AddGrpc();
-services.AddGrpcBusServer();
-app.MapGrpcBusService();
-```
-
-### Bus ActiveMQ (`Euonia.Bus.ActiveMq`)
-> ActiveMQ transport adapter — complete `ITransporter` implementation. Message dispatch over NMS: publish goes to a topic, send/call go to queues, and calls complete request-response via a temporary reply queue plus a correlation id.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ActiveMqTransporter` | class | Full transport: publish → `GetTopicAsync`; send/call → `GetQueueAsync` + temporary reply queue; Polly-based retry |
-| `ActiveMqRecipient` and derived | class | Recipient base plus `ActiveMqConsumer` (unicast), `ActiveMqSubscriber` (multicast), `ActiveMqExecutor` (request) |
-| `ActiveMqRecipientRegistrar` | class | Creates and starts recipients; disposes each one (and its session) on shutdown |
-| `ActiveMqDelivery` | class | Pure logic for target queue and priority (`MsgPriority`) |
-| `DefaultPersistentConnection` | class | Connection lifecycle; fails fast after disposal instead of spinning |
-| `ActiveMqBusOptions` | class | Options: broker URI, persistence, acknowledgement mode, max retries, etc. |
-
-**Mapping rules:** `IUnicast` → `ActiveMqConsumer`; `IMulticast` → `ActiveMqSubscriber`; `IRequest<>` → `ActiveMqExecutor`.
-
-**Delivery properties:** the `Queue` option overrides the target queue for `Send`/`Call` (publish goes to a topic and ignores it); `Priority` maps to the NMS priority (0-9), and whether it takes effect is decided by the broker's per-destination policy.
-
-### Bus HealthChecks (`Euonia.Bus.HealthChecks`)
-> Message bus health checks. Reports the number of configured transporters and the backlog of outbox, inbox and dead-letter records, ready to plug into ASP.NET Core health endpoints.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `BusHealthCheck` | class | `IHealthCheck` implementation: transporter count, outbox/inbox failure counts and dead-letter count; exceeds a threshold → `Unhealthy` |
-| `BusHealthCheckOptions` | class | Thresholds: `MaxDeadLetters` (default 0 — any dead letter is unhealthy), `MaxOutboxFailed` / `MaxInboxFailed` (default -1 — not checked), `RequireTransporter` |
-| `AddEuoniaBusHealthChecks(configure)` | extension | Registers the check on `IHealthChecksBuilder` |
-
-**Usage:**
+### Bus HealthChecks
 
 ```csharp
 services.AddHealthChecks()
@@ -690,288 +825,259 @@ services.AddHealthChecks()
         {
             options.MaxDeadLetters = 10;
             options.MaxOutboxFailed = 100;
+            options.MaxInboxFailed = 100;
+            options.RequireTransporter = true;
         });
 
 app.MapHealthChecks("/health");
 ```
 
-A store that is not registered simply does not take part in the verdict and does not cause an error, and the check never instantiates `IBus` (which would start background work such as outbox polling).
+When the corresponding store is not registered, that check is skipped automatically; the check process never instantiates `IBus` and never triggers background work such as outbox polling.
 
-### Modularity (`Euonia.Modularity`)
-> Pluggable module system with dependency graph resolution, automatic service registration, and lifecycle management. The foundation upon which all other Euonia modules are built.
-
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ModuleContextBase` | abstract class | Module base with lifecycle hooks: `AheadConfigureServices`, `ConfigureServices`, `AfterConfigureServices`, `OnApplicationInitialization`, `OnApplicationShutdown` |
-| `[DependsOn(typeof(Module))]` | attribute | Declares module dependencies — resolved into an ordered dependency graph |
-| `ApplicationFactory` | static class | `Create<TStartupModule>()` — entry point to build the application |
-| `IModuleLoader` | interface | Loads and topologically sorts modules from a startup type |
-| `IModuleManager` | interface | Initializes and unloads modules with lifecycle contributors |
-
-**Service Registration**
-
-| Marker Interface | Lifetime |
-|------------------|----------|
-| `ITransientDependency` | Transient |
-| `IScopedDependency` | Scoped |
-| `ISingletonDependency` | Singleton |
-
-| Attribute | Purpose |
-|-----------|---------|
-| `[ExposeServices]` | Declares exposed service interfaces with auto-discovery (`IFoo` matched to `Foo`) |
-| `[ExportService]` / `[ExportServiceAsTransient]` / `[ExportServiceAsSingleton]` / `[ExportServiceAsScoped]` | Explicit service registration |
-| `[Inject]` | Property/parameter injection marker |
-
-**Key Features:**
-- Automatic assembly scanning and conventional registration
-- Named service resolution (`GetNamedService<T>(name)`)
-- Lazy service provider with caching (`ILazyServiceProvider`)
-- `IServiceAccessor` — singleton access to `IServiceProvider`
+## Hosting and Endpoints
 
 ### Hosting (`Euonia.Hosting`)
-> ASP.NET Core hosting infrastructure: application bootstrap, middleware, authentication, and authorization.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `HostUtility` | static class | `Run<TStartup>(args, options)` — builds and runs the web host (supports Autofac) |
-| `HostingModule` | module | Registers request context accessors, JWT authentication, user principal, and middleware |
-| `ExceptionHandlingMiddleware` | middleware | Catches exceptions, maps to HTTP status codes, returns JSON error response |
-| `RequestTraceMiddleware` | middleware | Appends `x-request-trace-id` response header |
+> ASP.NET Core host bootstrap, request context, authentication and authorization, and middleware.
 
-**Authentication & Authorization**
-
-| Type | Purpose |
-|------|---------|
-| `JwtAuthenticationOptions` | JWT config: Issuer, SigningKey, Audience, NameClaimType, RoleClaimType |
-| `IdentityServerAuthenticationHandler` | Dual-mode handler: JWT (if token contains `.`) or introspection (reference tokens) |
-| `ScopeClaimsTransformer` | Normalizes space-separated scope claims to individual claims |
+| Type / extension | Purpose |
+|---|---|
+| `HostUtility.Run/RunAsync<TStartup>` | Builds and runs the web host; `HostBuilderOptions` provides `EnableHttp2` (default `true`), `CaptureStartupErrors`, `ApplicationName`, `ConfigureWebHostBuilder`, `ConfigureHostBuilder` |
+| `HostingModule` | Registers the request context accessor, `UserPrincipal`, the `IApplicationBuilder` accessor, and the exception handling and request tracing middleware |
+| `AddJwtAuthentication(...)` | Dual-mode authentication with JWT or reference-token introspection; a token containing `.` is treated as a JWT, otherwise introspection is used |
+| `JwtAuthenticationOptions` | Issuer, Audience, SigningKey, NameClaimType, RoleClaimType |
+| `ScopeClaimsTransformer` | Normalizes space-separated scope claims into individual claims |
+| `AddScopePolicy(...)` / `RequireScope(...)` | Scope-based authorization policies |
 | `[AuthorizeRoles("role1","role2")]` | Role-based authorization attribute |
-| `ScopePolicy` | Creates scope-based `AuthorizationPolicy` |
+| `ExceptionHandlingMiddleware` | Exception → HTTP status code + JSON error response |
+| `RequestTraceMiddleware` | Appends the `x-request-trace-id` response header |
+| `app.InitializeApplication()` | Runs module initialization and mounts the request context |
 
-### Repository (`Euonia.Repository`)
-> Repository abstractions defining `IRepository<TEntity>`, `IRepositoryContext`, entity contracts, and the abstract `Repository<TContext,TEntity,TKey>` base. Completely persistence-agnostic.
+```csharp
+HostUtility.Run<Startup>(args, options =>
+{
+    options.EnableHttp2 = true;
+    options.ConfigureHostBuilder = builder => builder.UseSerilog();
+});
+```
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `IRepository<TEntity>` | interface | Core repository contract: `Queryable()`, `GetAsync`, `FindAsync`, `CountAsync`, `AnyAsync`, `InsertAsync`, `UpdateAsync`, `DeleteAsync`, `SaveChangesAsync` |
-| `IRepositoryContext` | interface | Context contract: `SetOf<TEntity>()`, `SaveChangesAsync()`, `CommitAsync()`, `RollbackAsync()` |
-| `Repository<TContext,TEntity,TKey>` | abstract class | Base implementation: resolves `TContext` from `IContextProvider`, delegates save |
-| `IContextProvider` / `IContextFactory` | interface | Context resolution with ordered factory chain |
-| `IAuditable<TUser>` | interface | Composite: `CreatedBy`, `UpdatedBy`, `DeletedBy`, `CreatedAt`, `UpdatedAt`, timestamps |
-| `ITombstone` | interface | Soft-delete: `IsDeleted` property |
-| `IConcurrentEntity<T>` | interface | Optimistic concurrency: `Version` property |
+`HostingModule` does not handle authentication schemes itself; `AddJwtAuthentication(...)` must be called explicitly in the module's `ConfigureServices`, along with configuring `AddAuthorization()`. Exception handling middleware should be placed on the outer layer of the pipeline, so that the developer exception page does not swallow the unified JSON response.
 
-### Repository EF Core (`Euonia.Repository.EfCore`)
-> Entity Framework Core concrete implementation.
+### Endpoint (`Euonia.Endpoint`)
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `DataContextBase<TContext>` | abstract class | `DbContext` implementing `IRepositoryContext` — auto-applies configurations, tombstone query filters |
-| `EfCoreRepository<TContext,TEntity,TKey>` | class | EF Core repository implementation using `DbSet<TEntity>()` |
-| `SnowflakeIdValueGenerator` | class | EF Core `ValueGenerator<long>` for snowflake IDs |
-| `UlidValueGenerator` | class | EF Core `ValueGenerator<string>` for ULIDs |
-| `ShortUniqueIdValueGenerator` | class | EF Core `ValueGenerator<string>` for compact URL-friendly IDs |
-| `SequentialGuidValueGenerator` | class | EF Core `ValueGenerator<Guid>` for database-optimized GUIDs |
-| `UniversalTimeConverter` | class | UTC/local time conversion value converter |
-| `ConnectionConfigurator` | delegate | Per-provider connection string configuration (InMemory, SQLite, SQL Server, etc.) |
+> Exposes application service interface methods **simultaneously** as HTTP Minimal APIs and gRPC services. HTTP uses "compile-time generation first + runtime fallback"; gRPC uses the protobuf-net.Grpc code-first mode and supports compile-time generation only.
 
-### Repository MongoDB (`Euonia.Repository.Mongo`)
-> MongoDB concrete implementation.
+| Package | Responsibility |
+|---|---|
+| `Euonia.Endpoint` | `[ExposeWebApi]`, `[ExposeGrpc]`, `GrpcMethod`, and shared data contracts; does not depend on ASP.NET Core |
+| `Euonia.Endpoint.Http` | Minimal API mapping, parameter binding, authorization metadata, scanning, and runtime fallback |
+| `Euonia.Endpoint.Grpc` | gRPC runtime, generated contract registration, method-level authorization, and proto export |
+| `Euonia.Endpoint.SourceGenerator` | Build-time generation of HTTP lambdas, gRPC contracts/adapters, and assembly-level mapping markers |
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `DataContextBase<TContext>` | abstract class | MongoDB context implementing `IRepositoryContext` with client session management |
-| `MongoRepository<TContext,TEntity,TKey>` | class | MongoDB repository using `IMongoCollection<TEntity>` |
-| `MongoDbContext` | abstract class | Wraps `IMongoDatabase` with typed collection access |
-| `ModelBuilder` | class | Fluent API for MongoDB class map configuration |
-| `ModelProfile<TModel>` | class | Typed model profile: `HasKey()`, `HasProperty()`, `Map()` |
+#### Contracts
 
-### Caching (`Euonia.Caching`)
-> Multi-level caching framework with layered cache handles, backplane synchronization, and fluent configuration.
+```csharp
+using System.Runtime.Serialization;
+using Nerosoft.Euonia.Endpoint;
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ICache<TValue>` | interface | Core cache contract: Add, Get, Put, Remove, Clear, ClearRegion, Exists |
-| `ICacheManager<TValue>` | interface | Extended contract: `GetOrAdd`, `AddOrUpdate`, `TryUpdate`, `Expire`, events |
-| `BaseCacheManager<TValue>` | class | Multi-level orchestrator — walks handles, promotes items up, publishes backplane sync |
-| `DictionaryCacheHandle<TValue>` | class | In-memory `ConcurrentDictionary`-backed handle with expiration scanning |
-| `CacheBackplane` | abstract class | Distributed cache sync: notifies other nodes on changes |
-| `ConfigurationBuilder` | class | Fluent API for building `CacheManagerConfiguration` |
-| `CacheFactory` | static class | Entry point: `Build<T>()`, `FromConfiguration()` |
+public interface IOrderService
+{
+    [ExposeWebApi(Prefix = "api/orders", Route = "{id}", Method = new[] { "GET" })]
+    [ExposeGrpc(Prefix = "sample.OrderService", Route = "Get")]
+    Task<OrderDto> GetAsync(string id, CancellationToken cancellationToken = default);
 
-### Threading (`Euonia.Threading`)
-> Distributed synchronization abstractions: locks, semaphores, and synchronization handles.
+    [ExposeGrpc(Method = GrpcMethod.ServerStreaming)]
+    IAsyncEnumerable<OrderDto> WatchAsync(WatchRequest request, CancellationToken cancellationToken = default);
+}
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ILockProvider` | interface | Distributed mutex: `Acquire` / `TryAcquire` with timeout and cancellation |
-| `ISemaphoreProvider` | interface | Distributed semaphore: `Acquire` / `TryAcquire` with `MaxCount` |
-| `ISynchronizationHandle` | interface | Held lock/semaphore ticket — disposable, `HandleLostToken` for connectivity monitoring |
-| `ILockFactory` / `ISemaphoreFactory` | interface | Factory interfaces for creating named lock/semaphore providers |
+[DataContract]
+public sealed class OrderDto
+{
+    [DataMember(Order = 1)]
+    public string Id { get; set; } = string.Empty;
+}
+```
 
-**Implementations:** `Euonia.Threading.Redis`, `Euonia.Threading.ZooKeeper`, `Euonia.Threading.FileSystem`, `Euonia.Threading.Azure`
+| Attribute | Properties | Description |
+|---|---|---|
+| `[ExposeWebApi]` | `Prefix` / `Route` / `Method` | HTTP method array, default `POST`; supports GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS/TRACE/CONNECT |
+| `[ExposeGrpc]` | `Prefix` / `Route` / `Method` | gRPC service full name, method name, and `GrpcMethod`: `Unary` / `ServerStreaming` / `ClientStreaming` / `DuplexStreaming` |
 
-### Mapping (`Euonia.Mapping`)
-> Object mapping abstraction with pluggable backends.
+When Prefix/Route are empty they are derived from the interface name and method name: strip the `I` prefix and the `ApplicationService` / `AppService` / `Service` suffixes, strip `Async` from the method name, then convert to kebab-case; the HTTP default prefix is `api`.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ITypeAdapter` | interface | Mapping contract: `Adapt<TSource,TDestination>(source)`, `Adapt<TDestination>(source)` |
-| `ITypeAdapterFactory` | interface | Factory contract: `ITypeAdapter Create()` |
-| `TypeAdapter` | static class | Static facade: `ProjectedAs<TSource,TDestination>(source)` |
+#### Registration and Mapping
 
-**Implementations:** `Euonia.Mapping.Mapster`, `Euonia.Mapping.Automapper`
+```csharp
+builder.Services.AddDynamicHttpEndpoint(builder.Configuration);
+builder.Services.AddDynamicGrpcEndpoint(builder.Configuration);
 
-### Validation (`Euonia.Validation`)
-> Validation framework with FluentValidation integration.
+var app = builder.Build();
+app.MapDynamicHttpEndpoint();
+app.MapDynamicGrpcEndpoint();
+```
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `IValidator` | interface | High-level validator: `Validate<T>(item)`, `ValidateAsync<T>(item)` |
-| `IObjectValidator<TValue>` | interface | Low-level rule: `Validate(TValue) → bool` |
-| `Validator` | static class | Static facade — auto-detects `IValidatableObject` or delegates to configured `IValidator` |
-| `ValidatableObject<TValue>` | class | Self-validating object with observable errors and fluent `UseValidator()` API |
-| `ValidationException` | class | Custom exception carrying `ValidationResult` collection |
-| `GenericValidator<TValue>` | class | Expression-based validation: `Expression<Func<TValue, bool>>` |
-| `RangeValidator<TValue>` | class | Min/max range validation |
-| `RegularValidator` | class | Regex pattern validation |
+Configuration section:
 
-### Linq (`Euonia.Linq`)
-> Specification pattern, expression building, and queryable extensions.
+```json
+{
+  "Euonia": {
+    "Endpoint": {
+      "Http": {
+        "EnableExposeApplicationServiceAsWebApi": true,
+        "DefaultRoutePrefix": "api",
+        "RequireAuthorization": true,
+        "ScanAssemblies": ["MyApp.Application"],
+        "ScanNamespaces": ["MyApp.Application.Services"],
+        "ScanEntryAssembly": false
+      },
+      "Grpc": {
+        "EnableExposeApplicationServiceAsGrpc": true,
+        "RequireAuthorization": true,
+        "EnableReflection": false,
+        "ScanAssemblies": ["MyApp.Application"],
+        "ScanEntryAssembly": false
+      }
+    }
+  }
+}
+```
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `ISpecification<TEntity>` | interface | `Expression<Func<TEntity,bool>> Satisfy()` — composable query specifications |
-| `Specification<TEntity>` | abstract class | Base spec with `&`, `\|`, `!` operators for logical composition |
-| `CompositeSpecification<T>` | class | Aggregates multiple specs with `AndAlso` / `OrElse` |
-| `SegmentSpecification<TTarget,TProperty,TValue>` | abstract class | Range filtering with `RangeBoundary` (Left, Right, Both, Neither) |
-| `PredicateBuilder` | static class | `True<T>()`, `False<T>()`, `GetCompareCondition()`, `GetContainsCondition()` |
-| `Lambda` | static class | `ParsePredicate()` — builds expressions from property name + value + operator |
-| `QueryHandler<TEntity>` | class | Fluent query builder: predicates, pagination, ordering |
-| `QueryableExtensions` | static class | `Where(specification)`, `WhereIf()`, `Between()`, `OrderBy(propertyName, sortType)` |
+#### HTTP Behavior
+
+- **Generation first**: the Source Generator emits strongly-typed lambdas and `[assembly: HttpGeneratedMapping(...)]`; `MapDynamicHttpEndpoint` runs the generated mappings first and then scans the configured assemblies to fill the gaps.
+- **Parameter binding**: a route parameter with the same name → route; primitive types/enums/`Guid`/date-time/`Uri` and collections → query; complex types/`byte[]` → JSON body; `CancellationToken`, `HttpContext`, `HttpRequest`, `HttpResponse`, `ClaimsPrincipal`, `Stream`, and `PipeReader` are injected automatically.
+- **Return values**: `Task` / `ValueTask` → 204; `Task<T>` / `ValueTask<T>` → 200 + JSON; `IResult` → returned as-is.
+- **Errors**: an empty required body, JSON `null`, invalid JSON, or a non-JSON Content-Type → 400; internal binding exceptions → 500, with the original exception written only to logs.
+- **Authorization**: merges `[Authorize]` / `[AllowAnonymous]` from the interface method, the implementation class, and the implementation method; with multiple implementations only the interface metadata is used, so no single implementation can accidentally open access.
+- **Switch**: when `EnableExposeApplicationServiceAsWebApi` is off, nothing is registered or mapped; `ThrowOnRouteConflict` controls whether a route conflict throws or is skipped.
+
+#### gRPC Behavior
+
+- The Source Generator emits the `[Service]` contract interface, request/response wrappers, adapters that call application services, `AddGenerated` / `MapGenerated`, and `[assembly: GrpcGeneratedMapping(...)]`.
+- `MapDynamicGrpcEndpoint` discovers the markers, registers the adapters, and maps the services; **there is no runtime fallback**, so plugin assemblies must reference the generator themselves.
+- When `GrpcMethod` disagrees with the signature, `EUONIA001` is reported and the method is skipped; when multiple contracts derive the same service name, `EUONIA002` is reported.
+- `GrpcMethodAuthorizationInterceptor` reads `[Authorize]` / `[AllowAnonymous]` from the interface/implementation method according to the generated method descriptor and runs policy validation, returning `PermissionDenied` on failure.
+- When an application service is not registered, `MapDynamicGrpcEndpoint` throws by default; with `ThrowOnUnregisteredService = false` the service is skipped and a Warning is logged.
+- `EndpointProtoExporter.Export(assembly, outputDirectory)` can export `.proto` files for clients written in other languages.
+
+#### Limitations
+
+- HTTP does not support file uploads, `IAsyncEnumerable<T>` returns, multiple body parameters, `ref/out/in/params`, generic methods, or static methods; the generator only processes interface methods.
+- gRPC supports compile-time generation only; DTOs require `[DataContract]` / `[DataMember(Order = n)]`, and field numbers cannot be changed or reused after release.
+- The generator only processes interfaces in the current compilation; interfaces in referenced assemblies require the generator to be enabled in that assembly too.
+
+For the complete documentation, see [`Source/Euonia.Endpoint/README.md`](Source/Euonia.Endpoint/README.md), [`Endpoint.Http`](Source/Euonia.Endpoint.Http/README.md), [`Endpoint.Grpc`](Source/Euonia.Endpoint.Grpc/README.md), and [`Endpoint.SourceGenerator`](Source/Euonia.Endpoint.SourceGenerator/README.md).
 
 ### Quartz (`Euonia.Quartz`)
-> Quartz.NET 4 job scheduling integration with attribute-based configuration. Quartz 4 only ships `net10.0` assets, so this module targets `net10.0` only.
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `[BackgroundJob]` | attribute | Decorates `IJob` types with Name, Group, Description, RequestRecovery |
-| `[SimpleSchedule]` | attribute | Simple trigger with interval (ms/h/m/s) and RepeatCount |
-| `[CronExpressionSchedule]` | attribute | Cron trigger with expression and timezone |
-| `[CalendarIntervalSchedule]` | attribute | Calendar interval trigger |
-| `[DailyTimeIntervalSchedule]` | attribute | Daily time interval trigger |
-| `BackgroundBuildOptions` | class | Fluent job and scheduler configuration |
+> Quartz.NET 4 integration: declare jobs and triggers with attributes, and register the scheduler, jobs, and hosted service uniformly with `AddQuartz`.
 
-### gRPC (`Euonia.Bus.Grpc`)
-> gRPC integration (`Euonia.Bus.Grpc`) with interceptors, health checks, auto-discovery, and the message-bus remote-call service (`ReplierService`).
+| Attribute | Description |
+|---|---|
+| `[BackgroundJob("name")]` | Job name, group, description, recovery, and persistence options |
+| `[SimpleSchedule(identity, milliseconds)]` | Fixed interval; time/minute/second may also be specified |
+| `[CronExpressionSchedule(identity, cron)]` | Cron expression, with `TimeZoneName` defaulting to `UTC` |
+| `[CalendarIntervalSchedule(identity, interval, unit)]` | Calendar-unit interval that can span daylight saving time |
+| `[DailyTimeIntervalSchedule(identity, interval, unit)]` | Interval triggers within a daily time window |
 
-| Type | Kind | Purpose |
-|------|------|---------|
-| `GrpcRequest` / `GrpcResponse` | class (partial) | Protobuf extensions with JSON serialization and typed data accessors |
-| `ReplierService` | service (proto) | Unary service in the `nerorsoft.bus` package: `rpc Call(GrpcRequest) returns (GrpcResponse)`; server base class and client emitted for `Euonia.Bus.Grpc` |
-| `ExceptionHandlingInterceptor` | class | Maps .NET exceptions to gRPC status codes |
-| `RequestTraceInterceptor` | class | Propagates `x-request-trace-id` in gRPC calls |
-| `MapGrpcServices()` | extension | Auto-discovers and maps all gRPC services from the entry assembly |
-
----
+`AddJobs(assembly)` scans the assembly for `IJob`; `BackgroundBuildOptions` configures the scheduler identity, misfire threshold, duplicate-job handling, startup delay, and `WaitForJobsToComplete`. The Quartz integration follows the framework and targets `net10.0` / `net11.0`.
 
 ## Sample Application
 
-The `Samples/Euonia.Sample.Webapi` project demonstrates **full Euonia integration with ASP.NET Core**, featuring CQRS command-query separation and message bus:
+`Samples/Euonia.Sample.Webapi` demonstrates a complete integration of Euonia with ASP.NET Core, split into three layers by bounded context:
 
-| Component | Description |
-|-----------|-------------|
-| **`Program.cs` / `Startup.cs`** | ASP.NET Core entry point using `HostUtility.Run<Startup>()` |
-| **`HostModuleContext`** | Top-level module depending on `FacadeServiceModule` and `HostingModule` |
-| **`User` aggregate** | `EditableObjectBase<User,string>` with property tracking, factory attributes, custom rules (username check, password strength, email/phone uniqueness) |
-| **`UserCreateCommand` / `UserUpdateCommand`** | CQRS command objects sent via message bus as unicast |
-| **`UserCommandHandler`** | Command handler using `IObjectFactory` and wrapped in `IUnitOfWorkManager` |
-| **`UserCreatedEvent`** (domain event) | Intra-aggregate domain event |
-| **`UserApplicationService`** | Application service dispatching commands via `IBus.SendAsync()` |
-| **`UserController`** | REST API: `GET /api/user/{id}`, `GET /api/user/search`, `POST /api/user` |
-| **`UserEntity`** | EF Core entity with `IAuditable` and `ITombstone` support |
-| **`DataContextWithBus`** | Custom `DbContext` that auto-publishes domain events on `SaveChangesAsync` |
-| **`MessageBusConfiguration`** | Bus config with RabbitMQ + InMemory dual transports, JSON serialization, conventions/strategies |
-| **`JwtIdentityAccessor`** | JWT Bearer token validation |
-| **`Serilog`** | Structured logging with categorized file sinks |
+| Directory / component | Description |
+|---|---|
+| `Program.cs` / `Startup.cs` | Starts the host with `HostUtility.Run<Startup>()`; Serilog writes separate files per level |
+| `HostModuleContext.cs` | Top-level module that depends on `FacadeServiceModule` and `HostingModule`; registers controllers, health checks, JWT, the user principal, Swagger, and Serilog request logging |
+| `Services/Domain` | Aggregates, commands, domain events, handlers, mapping configuration, rules, permission models, and Osba object base classes |
+| `Services/Facade` | Application service contracts and implementations, pipeline behaviors, message subscribers, the JWT identity accessor, and bus configuration |
+| `Services/Persist` | EF Core entities, repositories, specifications, `SampleDataContext`, `DataContextWithBus` (publishes domain events on save), and seed data |
+| `Permissions/*` | Data permission models such as `TeamScope`, `ProjectScope`, and `RepositoryScope` |
+| `Controllers/*` | `Auth`, `Bus`, `Home`, `Permission`, `Project`, `Repository`, `Team`, and `User` |
+| `Filters/ApiExceptionMiddleware` | Unified exception mapping; sits on the outermost layer and preserves the `{ code, error, details }` JSON response |
+| `Toolkit/Cryptography.*` | Sample utilities for AES/DES/RSA/MD5/SHA and more |
 
-### Tech Stack
+The sample covers: modular composition, mixed Osba + DDD modeling, operation/data permissions, message bus (InMemory + RabbitMQ dual transport), EF Core (InMemory/SQLite/SQL Server), AutoMapper/Mapster, FluentValidation, Serilog, and Swagger.
 
-| Category | Technology |
-|----------|-----------|
-| **Language** | C# (.NET 9 / .NET 10) |
-| **Framework** | ASP.NET Core |
-| **Database** | Entity Framework Core (InMemory, SQLite, SQL Server) |
-| **Messaging** | RabbitMQ (distributed) + InMemory (local) dual transports |
-| **API Docs** | Swagger / Swashbuckle |
-| **Build** | MSBuild / dotnet CLI |
-| **ID Generation** | Snowflake, ULID, ShortUniqueId |
-| **Pipeline** | Custom middleware pipeline (chain-of-responsibility pattern) |
-| **DI Integration** | Built-in `IServiceProvider` with module system auto-registration |
-| **CQRS** | Command / Event separation dispatched via message bus |
-| **Logging** | Serilog with structured file sinks |
-
----
-
-## Quick Start
-
-### NuGet Packages
-
-```xml
-<!-- Core utilities -->
-<PackageReference Include="Euonia.Core" Version="10.0.0" />
-
-<!-- Pipeline middleware -->
-<PackageReference Include="Euonia.Pipeline" Version="10.0.0" />
-
-<!-- Modularity & Hosting -->
-<PackageReference Include="Euonia.Modularity" Version="10.0.0" />
-<PackageReference Include="Euonia.Hosting" Version="10.0.0" />
-
-<!-- Business objects (OSBA) -->
-<PackageReference Include="Euonia.Osba" Version="10.0.0" />
-
-<!-- Domain-Driven Design -->
-<PackageReference Include="Euonia.Domain" Version="10.0.0" />
-<PackageReference Include="Euonia.Application" Version="10.0.0" />
-
-<!-- Message Bus (abstractions + core) -->
-<PackageReference Include="Euonia.Bus.Abstract" Version="10.0.0" />
-<PackageReference Include="Euonia.Bus" Version="10.0.0" />
-
-<!-- Message Bus (transports) -->
-<PackageReference Include="Euonia.Bus.InMemory" Version="10.0.0" />
-<PackageReference Include="Euonia.Bus.RabbitMq" Version="10.0.0" />
-
-<!-- Message Bus (remote calls) -->
-<PackageReference Include="Euonia.Bus.Http" Version="10.0.0" />
-<PackageReference Include="Euonia.Bus.Grpc" Version="10.0.0" />
-
-<!-- Message Bus (health checks) -->
-<PackageReference Include="Euonia.Bus.HealthChecks" Version="10.0.0" />
-
-<!-- Repository -->
-<PackageReference Include="Euonia.Repository" Version="10.0.0" />
-<PackageReference Include="Euonia.Repository.EfCore" Version="10.0.0" />
-
-<!-- Caching -->
-<PackageReference Include="Euonia.Caching" Version="10.0.0" />
-<PackageReference Include="Euonia.Caching.Redis" Version="10.0.0" />
-
-<!-- Object Mapping -->
-<PackageReference Include="Euonia.Mapping" Version="10.0.0" />
-<PackageReference Include="Euonia.Mapping.Mapster" Version="10.0.0" />
-
-<!-- Unit of Work -->
-<PackageReference Include="Euonia.Uow" Version="10.0.0" />
+```bash
+cd Samples/Euonia.Sample.Webapi
+dotnet run
 ```
 
+## Getting Started
+
+### 1. Install
+
+The following are examples for the core packages; see [Package Overview](#package-overview) for the complete list, and versions can be managed centrally through `project.props`:
+
+```xml
+<PackageReference Include="Euonia.Core" Version="2026.5.0" />
+<PackageReference Include="Euonia.Modularity" Version="2026.5.0" />
+<PackageReference Include="Euonia.Hosting" Version="2026.5.0" />
+<PackageReference Include="Euonia.Domain" Version="2026.5.0" />
+<PackageReference Include="Euonia.Application" Version="2026.5.0" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
+<PackageReference Include="Euonia.Security" Version="2026.5.0" />
+<PackageReference Include="Euonia.Bus" Version="2026.5.0" />
+<PackageReference Include="Euonia.Bus.InMemory" Version="2026.5.0" />
+<PackageReference Include="Euonia.Repository.EfCore" Version="2026.5.0" />
+<PackageReference Include="Euonia.Caching" Version="2026.5.0" />
+<PackageReference Include="Euonia.Caching.Memory" Version="2026.5.0" />
+<PackageReference Include="Euonia.Concurrency" Version="2026.5.0" />
+<PackageReference Include="Euonia.Tenancy" Version="2026.5.0" />
+<PackageReference Include="Euonia.Auditing" Version="2026.5.0" />
+<PackageReference Include="Euonia.Telemetry" Version="2026.5.0" />
+<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.5.0" />
+```
+
+### 2. Modular Host
+
 ```csharp
-// Define a business object
-public class Order : EditableObject<Order>
+using Nerosoft.Euonia.Hosting;
+using Nerosoft.Euonia.Modularity;
+
+[DependsOn(typeof(HostingModule))]
+public sealed class AppModule : ModuleContextBase
+{
+    public override void ConfigureServices(ServiceConfigurationContext context)
+    {
+        context.Services.AddControllers();
+        context.Services.AddJwtAuthentication("JwtAuthenticationOptions");
+        context.Services.AddUserPrincipal();
+    }
+}
+
+public sealed class Startup(IConfiguration configuration)
+{
+    public void ConfigureServices(IServiceCollection services)
+        => services.AddModularityApplication<AppModule>(configuration);
+
+    public void Configure(IApplicationBuilder app)
+    {
+        app.InitializeApplication();
+        app.UseRouting();
+        app.UseAuthentication();
+        app.UseAuthorization();
+        app.UseEndpoints(endpoints => endpoints.MapControllers());
+    }
+}
+
+HostUtility.Run<Startup>(args);
+```
+
+### 3. Business Objects
+
+```csharp
+using Nerosoft.Euonia;
+using Nerosoft.Euonia.Osba;
+
+public sealed class Order : EditableObject<Order>
 {
     public static readonly PropertyInfo<string> ProductNameProperty =
         RegisterProperty<string>(nameof(ProductName));
+
+    public long Id { get; set; }
 
     public string ProductName
     {
@@ -982,50 +1088,178 @@ public class Order : EditableObject<Order>
     [FactoryCreate]
     protected void Create(string productName)
     {
-        base.MarkAsNew();
+        MarkAsNew();
         ProductName = productName;
-        Id = ObjectId.Snowflake().GetValue<long>();
+        Id = ObjectId.NewSnowflake();
     }
 
     protected override void AddRules()
     {
-        // Property-level rule: pass the PropertyInfo<T> returned by RegisterProperty (matched by reference)
         Rules.AddRule<CommonRule.Required>(ProductNameProperty);
-
-        // Convenience lambda overload (RulesExtensions): the handler receives the business object itself
         Rules.AddRule<Order>(ProductNameProperty,
-            order => order.ProductName?.Length >= 3, "Product name must be at least 3 characters");
+            order => order.ProductName?.Length >= 3,
+            "Product name must be at least 3 characters");
     }
 }
 
-// Use the factory
-var order = await _objectFactory.CreateAsync<Order>("Widget");
-order = await _objectFactory.SaveAsync(order);
+var order = await objectFactory.CreateAsync<Order>("Widget");
+order = await objectFactory.SaveAsync(order);
 ```
 
----
+### 4. Message Bus
 
-## Build
+```csharp
+services.AddEuoniaBus();
+services.AddMessageHandler(ServiceLifetime.Scoped, typeof(Program).Assembly);
+services.Configure<MessageBusOptions>(options => options.DefaultTransporter = "InMemory");
+
+[Subscribe("orders")]
+public sealed class OrderCreatedSubscriber : IHandler<OrderCreated>
+{
+    public Task HandleAsync(OrderCreated message, IMessageContext context)
+        => Task.CompletedTask;
+}
+
+await bus.PublishAsync(new OrderCreated { OrderId = 42 });
+```
+
+### 5. Platform Capabilities (optional)
+
+Tenancy, auditing, and telemetry are opt-in; with `Enabled = false` behavior matches an app that never referenced them.
+
+```csharp
+services.AddTenancyAspNetCore(options =>
+{
+    options.Enabled = true;
+    options.RequireTenant = true;
+});
+services.AddInMemoryTenantStore([new TenantInfo { Id = "t1", Name = "Tenant One", Status = TenantStatus.Active }]);
+
+services.AddAuditing(options => options.Enabled = true);
+services.AddInMemoryAuditingStore();
+
+services.AddEuoniaTelemetry(options => options.Enabled = true);
+services.AddEuoniaOpenTelemetry(
+    telemetry => telemetry.Enabled = true,
+    otel => otel.WithTracing(tracing => tracing.AddOtlpExporter())
+                .WithMetrics(metrics => metrics.AddOtlpExporter()));
+
+var app = builder.Build();
+app.UseExecutionContext();
+app.UseAuditing();
+app.UseTenancy();
+app.UseEuoniaTelemetry();
+app.UseAuthorization();
+```
+
+See [Platform Capabilities](#platform-capabilities-tenancy--auditing--telemetry) and the package READMEs for details.
+
+### 6. Dynamic Endpoints
+
+```csharp
+public interface IOrderService
+{
+    [ExposeWebApi(Prefix = "api/orders", Route = "{id}", Method = new[] { "GET" })]
+    [ExposeGrpc(Prefix = "sample.OrderService", Route = "Get")]
+    Task<OrderDto> GetAsync(string id, CancellationToken cancellationToken = default);
+}
+
+builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddDynamicHttpEndpoint(builder.Configuration);
+builder.Services.AddDynamicGrpcEndpoint(builder.Configuration);
+
+var app = builder.Build();
+app.MapDynamicHttpEndpoint();
+app.MapDynamicGrpcEndpoint();
+```
+
+## Build, Test, and Benchmarks
 
 ```bash
-# Build all projects
-dotnet build
+# Restore and build all projects
+dotnet restore Euonia.slnx
+dotnet build Euonia.slnx -c Release
 
-# Run the sample application
-cd Samples/Euonia.Sample.Webapi
-dotnet run
+# Run tests (same as CI, using Microsoft.Testing.Platform)
+dotnet test --solution Euonia.Test.slnx -c Release
+
+# Pack (Release enables GeneratePackageOnBuild by default)
+dotnet pack Euonia.Build.slnx -c Release -o artifacts
+
+# Benchmarks
+dotnet run -c Release --project Benchmarks/Euonia.Osba.Benchmarks
+dotnet run -c Release --project Benchmarks/Euonia.Bus.Benchmarks
+dotnet run -c Release --project Benchmarks/Euonia.Platform.Benchmarks -- --filter '*' --job Short
 ```
 
----
+CI uses .NET 11 and the Release configuration: `dotnet-build.yml` builds `Euonia.Build.slnx`, `dotnet-test.yml` tests `Euonia.Test.slnx`, and a tag push triggers `push-nuget.yml` to pack and publish to NuGet.
 
-## Project Links
+## Project Structure
+
+```text
+euonia-net/
+├── Source/                     45 framework/NuGet projects
+│   ├── Euonia.Core/            Base primitives and permission contracts
+│   ├── Euonia.Modularity/      Module system and application lifecycle
+│   ├── Euonia.Hosting/         ASP.NET Core hosting
+│   ├── Euonia.Endpoint*/       Dynamic HTTP/gRPC endpoints
+│   ├── Euonia.Bus*/            Message bus and transports
+│   ├── Euonia.Domain/          DDD building blocks
+│   ├── Euonia.Application/     Use cases, application services, and interceptors
+│   ├── Euonia.Osba/            Business object runtime
+│   ├── Euonia.Security/        Permission policy engine
+│   ├── Euonia.Repository*/     Repository abstractions and EF Core/MongoDB implementations
+│   ├── Euonia.Caching*/        Multi-level caching and providers
+│   ├── Euonia.Concurrency*/    Distributed synchronization and providers
+│   ├── Euonia.Tenancy/         Multi-tenancy: scopes, resolution, stores, EF/Mongo/Quartz adapters
+│   ├── Euonia.Auditing*/       Auditing: kernel, EF Core / Mongo stores, and queries
+│   ├── Euonia.Telemetry*/      Telemetry: kernel and OpenTelemetry adapter
+│   └── Euonia.*                Mapping / Validation / Linq / Pipeline / Quartz / Uow
+├── Tests/                      28 test and fixture projects
+├── Benchmarks/                 3 BenchmarkDotNet projects
+├── Samples/
+│   └── Euonia.Sample.Webapi/   Complete sample: modules, Osba, permissions, bus, EF Core
+├── Directory.Packages.props    Central package version management
+├── Euonia.slnx                 Full solution
+├── Euonia.Build.slnx           Build/pack solution
+├── Euonia.Test.slnx            Test solution
+├── CHANGELOG.md                Version change log
+└── README.md / README.en.md    Chinese / English documentation
+```
+
+## Versioning and Compatibility
+
+- **Version number**: `year.major.revision` (for example `2026.5.0`), controlled centrally by `<Version>` in [project.props](project.props).
+- **Target frameworks**: Source library projects target `net10.0;net11.0`; test and sample projects target `net11.0`; `Euonia.Endpoint.SourceGenerator` targets `netstandard2.0;net10.0`, and the NuGet package carries only the `netstandard2.0` analyzer.
+- **`netstandard2.1` removed**: the related conditional compilation branches and compatibility polyfills are no longer provided.
+- **Nullable reference types**: all projects enable `<Nullable>enable</Nullable>`, and public APIs carry nullability annotations.
+- **Central package management**: `Directory.Packages.props` is used throughout; `Euonia.Build.slnx` handles packing, and packages include each project's README.
+- **Breaking changes**: see the "Unreleased" section and the per-version sections of [CHANGELOG.md](CHANGELOG.md); read the API/behavior changes marked there carefully before upgrading.
+
+## Documentation and Links
+
+- **Overview**: [README.md](README.md) (Chinese), [README.en.md](README.en.md) (English)
+- **Change log**: [CHANGELOG.md](CHANGELOG.md)
+- **Per-package documentation**: see the links in [Package Overview](#package-overview); each NuGet package also embeds the corresponding README
+- **Development guide**: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- **User manual**: [tutorials / API / full API](docs/user-manual/README.md)
+- **Osba**: [README](Source/Euonia.Osba/README.md), [DESIGN](Source/Euonia.Osba/DESIGN.md), [SAMPLE](Source/Euonia.Osba/SAMPLE.md), [PERMISSION](Source/Euonia.Osba/PERMISSION.md)
+- **Security**: [README](Source/Euonia.Security/README.md), [DESIGN](Source/Euonia.Security/DESIGN.md)
+- **Platform capabilities**: [Tenancy](Source/Euonia.Tenancy/README.md), [Auditing](Source/Euonia.Auditing/README.md), [Telemetry](Source/Euonia.Telemetry/README.md), [Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md)
+- **SQL / migrations**: [audit DDL](docs/sql/euonia_audit.sql), [tenant column playbook](docs/sql/README.md)
+- **Bus samples**: [SAMPLE](Source/Euonia.Bus/SAMPLE.md), [HTTP SAMPLE](Source/Euonia.Bus.Http/SAMPLE.md), [gRPC SAMPLE](Source/Euonia.Bus.Grpc/SAMPLE.md)
+- **Sample application**: [Samples/Euonia.Sample.Webapi](Samples/Euonia.Sample.Webapi)
+
+### Project Links
 
 - **GitHub (.NET)**: [github.com/euonia-project/euonia-dotnet](https://github.com/euonia-project/euonia-dotnet)
-- **Java Edition**: [github.com/euonia-project/euonia-java](https://github.com/euonia-project/euonia-java)
+- **Java version**: [github.com/euonia-project/euonia-java](https://github.com/euonia-project/euonia-java)
 
----
+### License
 
-## Donate
+This project is released under the [GNU General Public License v3.0](LICENSE).
+
+### Donation
 
 <img alt="donate" width="512" src="https://github.com/realzhaorong/oss/blob/master/donate.png" />
 
@@ -1033,7 +1267,7 @@ dotnet run
 
 [![JetBrains](https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.svg)](https://www.jetbrains.com/)
 
-Thanks to [JetBrains](https://www.jetbrains.com/) for supporting the project through [All Products Packs](https://www.jetbrains.com/products.html) within their [Free Open Source License](https://www.jetbrains.com/community/opensource) program.
+Thanks to [JetBrains](https://www.jetbrains.com/) for providing [all-products support](https://www.jetbrains.com/products.html) through its [open-source free license program](https://www.jetbrains.com/community/opensource).
 
 ---
 

@@ -18,6 +18,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class DatabaseLifetimeTests
 {
+	/// <summary>
+	/// 多轮 Send、Call 与 Publish 后调用方数据库仍可读写，且新作用域能看到全部已提交数据。
+	/// </summary>
 	[Fact]
 	public async Task MultipleSendCallPublishRounds_KeepDatabaseUsable()
 	{
@@ -79,6 +82,9 @@ public class DatabaseLifetimeTests
 		Assert.Contains(await verifyDatabase.CallLogs.Select(item => item.Value).ToListAsync(TestContext.Current.CancellationToken), value => value == "publish-2");
 	}
 
+	/// <summary>
+	/// 连续排队发布多条事件后调用方数据库仍可继续发送命令、发起请求并写入数据。
+	/// </summary>
 	[Fact]
 	public async Task QueuedPublishRounds_KeepDatabaseUsable()
 	{
@@ -143,21 +149,30 @@ public class DatabaseLifetimeTests
 		return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
 	}
 
+	/// <summary>
+	/// 测试用 EF Core 上下文，仅暴露 <see cref="CallLog"/> 集合；各作用域共享同一内存数据库。
+	/// </summary>
 	private sealed class TestDbContext(DbContextOptions<TestDbContext> options) : DbContext(options)
 	{
 		public DbSet<CallLog> CallLogs => Set<CallLog>();
 	}
 
+	/// <summary>
+	/// 写入数据库的记录实体，用于按行数断言消息处理确实提交了数据。
+	/// </summary>
 	private sealed class CallLog
 	{
 		public int Id { get; set; }
 
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
+	/// <summary>
+	/// 一轮测试的共享状态：记录调用方上下文、各消息路径是否复用它、多播是否新建作用域，以及发布完成信号与异常。
+	/// </summary>
 	private sealed class RoundState
 	{
-		public TestDbContext CallerContext { get; set; }
+		public TestDbContext CallerContext { get; set; } = null!;
 
 		public bool CommandUsedCallerContext { get; set; } = true;
 
@@ -165,28 +180,40 @@ public class DatabaseLifetimeTests
 
 		public bool EventUsedNewContext { get; set; }
 
-		public Exception Error { get; set; }
+		public Exception? Error { get; set; }
 
 		public int PublishRemaining;
 
-		public TaskCompletionSource PublishAllCompleted { get; set; }
+		public TaskCompletionSource PublishAllCompleted { get; set; } = null!;
 	}
 
+	/// <summary>
+	/// 单播命令，携带待写入数据库的值。
+	/// </summary>
 	private sealed class InsertCommand : IUnicast
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
+	/// <summary>
+	/// 请求消息，处理完成后返回插入后的记录总数。
+	/// </summary>
 	private sealed class InsertRequest : IRequest<int>
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
+	/// <summary>
+	/// 多播事件，携带待写入数据库的值。
+	/// </summary>
 	private sealed class InsertEvent : IMulticast
 	{
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 	}
 
+	/// <summary>
+	/// 处理单播命令：写入一条记录，并记录是否复用了调用方的数据库上下文。
+	/// </summary>
 	private sealed class InsertCommandHandler(TestDbContext database, RoundState state) : IHandler<InsertCommand>
 	{
 		public async Task HandleAsync(InsertCommand message, IMessageContext context, CancellationToken cancellationToken = default)
@@ -197,6 +224,9 @@ public class DatabaseLifetimeTests
 		}
 	}
 
+	/// <summary>
+	/// 处理请求：写入一条记录并返回总行数，同时记录是否复用了调用方的数据库上下文。
+	/// </summary>
 	private sealed class InsertRequestHandler(TestDbContext database, RoundState state) : IHandler<InsertRequest, int>
 	{
 		public async Task<int> HandleAsync(InsertRequest message, IMessageContext context, CancellationToken cancellationToken = default)
@@ -208,6 +238,10 @@ public class DatabaseLifetimeTests
 		}
 	}
 
+	/// <summary>
+	/// 处理多播事件：记录是否获得独立于调用方的作用域并写入记录；异常被捕获到共享状态，
+	/// 最后递减待完成计数并在归零时通知测试。
+	/// </summary>
 	private sealed class InsertEventHandler(TestDbContext database, RoundState state) : IHandler<InsertEvent>
 	{
 		public async Task HandleAsync(InsertEvent message, IMessageContext context, CancellationToken cancellationToken = default)

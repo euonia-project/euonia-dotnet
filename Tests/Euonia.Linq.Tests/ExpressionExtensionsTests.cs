@@ -8,11 +8,14 @@ namespace Nerosoft.Euonia.Linq.Tests;
 /// </summary>
 public class ExpressionExtensionsTests
 {
+	/// <summary>
+	/// 表达式组合测试用元素类型。
+	/// </summary>
 	private class Item
 	{
 		public int Id { get; set; }
 
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 	}
 
 	private static List<Item> CreateItems()
@@ -25,6 +28,9 @@ public class ExpressionExtensionsTests
 		return items.Where(predicate.Compile()).Select(x => x.Id).ToList();
 	}
 
+	/// <summary>
+	/// 使用 <see cref="PredicateOperator.OrElse"/> 组合多个谓词时，结果应等价于各谓词取或。
+	/// </summary>
 	[Fact]
 	public void Compose_OrElse_ShouldCombineWithOr()
 	{
@@ -41,6 +47,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 1, 5, 9 }, result);
 	}
 
+	/// <summary>
+	/// 使用默认的 AndAlso 组合多个谓词时，结果应等价于各谓词取与。
+	/// </summary>
 	[Fact]
 	public void Compose_AndAlso_ShouldCombineWithAnd()
 	{
@@ -56,6 +65,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 2, 4, 6, 8 }, result);
 	}
 
+	/// <summary>
+	/// 仅包含一个谓词时，组合结果应与该谓词等价。
+	/// </summary>
 	[Fact]
 	public void Compose_SingleExpression_ShouldReturnIt()
 	{
@@ -66,6 +78,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 3 }, result);
 	}
 
+	/// <summary>
+	/// 空谓词集合按 AndAlso 组合时应返回恒真谓词，从而匹配全部元素。
+	/// </summary>
 	[Fact]
 	public void Compose_Empty_AndAlso_ShouldReturnTrue()
 	{
@@ -75,6 +90,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(10, result.Count);
 	}
 
+	/// <summary>
+	/// 空谓词集合按 OrElse 组合时应返回恒假谓词，从而不匹配任何元素。
+	/// </summary>
 	[Fact]
 	public void Compose_Empty_OrElse_ShouldReturnFalse()
 	{
@@ -84,6 +102,9 @@ public class ExpressionExtensionsTests
 		Assert.Empty(result);
 	}
 
+	/// <summary>
+	/// And 方法应将附加谓词与原谓词按逻辑与组合。
+	/// </summary>
 	[Fact]
 	public void And_ShouldCombinePredicates()
 	{
@@ -92,6 +113,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 6, 7, 8, 9, 10 }, result);
 	}
 
+	/// <summary>
+	/// Or 方法应将附加谓词与原谓词按逻辑或组合。
+	/// </summary>
 	[Fact]
 	public void Or_ShouldCombinePredicates()
 	{
@@ -100,6 +124,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 7 }, result);
 	}
 
+	/// <summary>
+	/// Not 方法应对原谓词取反。
+	/// </summary>
 	[Fact]
 	public void Not_ShouldNegatePredicate()
 	{
@@ -108,6 +135,9 @@ public class ExpressionExtensionsTests
 		Assert.Empty(result);
 	}
 
+	/// <summary>
+	/// Extend 使用默认的 AndAlso 时应将新谓词按逻辑与追加到原谓词。
+	/// </summary>
 	[Fact]
 	public void Extend_AndAlso_ShouldCombineWithAnd()
 	{
@@ -116,6 +146,9 @@ public class ExpressionExtensionsTests
 		Assert.Equal(new[] { 1, 2, 3 }, result);
 	}
 
+	/// <summary>
+	/// Extend 使用 <see cref="PredicateOperator.OrElse"/> 时应将新谓词按逻辑或追加到原谓词。
+	/// </summary>
 	[Fact]
 	public void Extend_OrElse_ShouldCombineWithOr()
 	{

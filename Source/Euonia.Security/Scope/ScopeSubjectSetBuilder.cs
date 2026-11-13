@@ -114,7 +114,7 @@ public sealed class ScopeSubjectSetBuilder
 	/// 该码下的授予会<b>覆盖</b>默认键上的同名维度授予（不是并集），
 	/// 这正是「同一用户、同一类型、不同行权限不同」得以表达的原因。
 	/// </remarks>
-	public ScopeSubjectSetBuilder AddGrant(string scopeKey, string dimension, string value)
+	public ScopeSubjectSetBuilder AddGrant(string? scopeKey, string dimension, string value)
 	{
 		if (string.IsNullOrWhiteSpace(dimension) || value == null)
 		{
@@ -147,7 +147,7 @@ public sealed class ScopeSubjectSetBuilder
 	/// <param name="dimension">维度名。</param>
 	/// <param name="values">该维度上的值序列。</param>
 	/// <returns>当前构建器，便于链式调用。</returns>
-	public ScopeSubjectSetBuilder AddGrant(string scopeKey, string dimension, IEnumerable<string> values)
+	public ScopeSubjectSetBuilder AddGrant(string? scopeKey, string dimension, IEnumerable<string> values)
 	{
 		if (values == null)
 		{

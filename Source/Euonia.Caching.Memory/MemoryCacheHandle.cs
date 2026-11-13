@@ -5,21 +5,21 @@ using Nerosoft.Euonia.Caching.Internal;
 namespace Nerosoft.Euonia.Caching.Memory;
 
 /// <summary>
-/// Implementation of a cache handle using <see cref="Microsoft.Extensions.Caching.Memory"/>.
+/// 使用 <see cref="Microsoft.Extensions.Caching.Memory"/> 的缓存句柄实现。
 /// </summary>
-/// <typeparam name="TCacheValue">The type of the cache value.</typeparam>
+/// <typeparam name="TCacheValue">缓存值的类型。</typeparam>
 public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 {
 	private volatile MemoryCache _cache;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MemoryCacheHandle{TCacheValue}"/> class.
+	/// 初始化 <see cref="MemoryCacheHandle{TCacheValue}"/> 类的新实例。
 	/// </summary>
-	/// <param name="managerConfiguration">The manager configuration.</param>
-	/// <param name="configuration">The cache handle configuration.</param>
-	/// <param name="options">The vendor specific options.</param>
+	/// <param name="managerConfiguration">管理器配置。</param>
+	/// <param name="configuration">缓存句柄配置。</param>
+	/// <param name="options">供应商特定的选项。</param>
 	///
-	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions options = null)
+	public MemoryCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, MemoryCacheOptions? options = null)
 		: base(managerConfiguration, configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
@@ -31,6 +31,9 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	/// <inheritdoc/>
 	public override int Count => _cache.Count;
 
+	/// <summary>
+	/// 获取创建该句柄时使用的内存缓存选项，同时用作共享底层存储的标识。
+	/// </summary>
 	internal MemoryCacheOptions Options { get; }
 
 	/// <inheritdoc/>
@@ -71,13 +74,13 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	}
 
 	/// <inheritdoc/>
-	protected override CacheItem<TCacheValue> GetCacheItemInternal(string key)
+	protected override CacheItem<TCacheValue>? GetCacheItemInternal(string key)
 	{
 		return GetCacheItemInternal(key, null);
 	}
 
 	/// <inheritdoc/>
-	protected override CacheItem<TCacheValue> GetCacheItemInternal(string key, string region)
+	protected override CacheItem<TCacheValue>? GetCacheItemInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 
@@ -109,13 +112,14 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 	}
 
 	/// <inheritdoc/>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 		var result = _cache.Contains(fullKey);
 		if (result)
 		{
 			_cache.Remove(fullKey);
+			MemoryCacheStoreRegistry.Untrack(_cache, fullKey);
 		}
 
 		return result;
@@ -133,6 +137,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 
 		var options = GetOptions(item);
 		_cache.Set(key, item, options);
+		MemoryCacheStoreRegistry.Track(_cache, key);
 
 		if (item.Region != null)
 		{
@@ -149,6 +154,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 
 		var options = GetOptions(item);
 		_cache.Set(key, item, options);
+		MemoryCacheStoreRegistry.Track(_cache, key);
 
 		if (item.Region != null)
 		{
@@ -156,9 +162,16 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 		}
 	}
 
-	private string GetItemKey(CacheItem<TCacheValue> item) => GetItemKey(item?.Key, item?.Region);
+	/// <inheritdoc />
+	public override Task<long> RemoveByPrefixAsync(string prefix, CancellationToken cancellationToken = default)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(prefix);
+		return Task.FromResult(MemoryCacheStoreRegistry.RemoveByPrefix(_cache, prefix));
+	}
 
-	private string GetItemKey(string key, string region = null)
+	private string GetItemKey(CacheItem<TCacheValue> item) => GetItemKey(item.Key, item.Region);
+
+	private string GetItemKey(string key, string? region = null)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -212,7 +225,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 		_cache.Set(region, new ConcurrentDictionary<object, bool>(), options);
 	}
 
-	private void ItemRemoved(object key, object value, EvictionReason reason, object state)
+	private void ItemRemoved(object key, object? value, EvictionReason reason, object? state)
 	{
 		var strKey = key as string;
 		if (string.IsNullOrWhiteSpace(strKey))
@@ -220,7 +233,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 			return;
 		}
 
-		// don't trigger stuff on manual remove
+		// 手动移除时不触发相关事件
 		if (reason == EvictionReason.Removed)
 		{
 			return;
@@ -237,7 +250,7 @@ public class MemoryCacheHandle<TCacheValue> : BaseCacheHandle<TCacheValue>
 				Stats.OnRemove();
 			}
 
-			object originalValue = null;
+			object? originalValue = null;
 			if (value is CacheItem<TCacheValue> item)
 			{
 				originalValue = item.Value;

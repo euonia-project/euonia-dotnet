@@ -1,6 +1,6 @@
 # Euonia.Osba 架构与实现评审报告
 
-> 评审对象：`Source/Euonia.Osba`（版本线 `2026.4.5`，目标框架 `net9.0;net10.0`）
+> 评审对象：`Source/Euonia.Osba`（版本线 `2026.4.5`；评审时目标框架为 `net9.0;net10.0`，当前已升级为 `net10.0;net11.0`）
 > 评审方式：源码逐文件审阅 + 构建 + 240 个既有测试 + 独立基准/复现程序（Release、net10.0、Apple Silicon）。
 > 本报告只记录问题、证据与修复方案，不包含已实施的代码改动。基准数字用于判断数量级，不是正式 BenchmarkDotNet 结果。
 
@@ -574,7 +574,6 @@ Web API
 - 没有 EF Core 映射/部分更新/物化测试（这正好漏掉了 C7）。
 - 没有多容器/多租户规则隔离测试（漏掉 D2）。
 - `System.Interactive` 未使用；`System.Reactive` 只为一个类型服务。
-- `netstandard` 条件编译块永远不会命中（`Lock` 类型要求 .NET 9+），是死代码。
 - `Resources.resources` 二进制入库；`Resources.Designer.cs` 由自定义 target 生成，存在漂移风险。
 - 文档：模块图/继承图与代码不一致；`SAMPLE.md` 991 行但无英文版；`docs/dotnet/osba/` 目录不存在（overview 里的链接是断的）。
 - 版本 2026.4.5 采用 CalVer，但公共 API 无 `PublicAPI.Shipped.txt` 基线，破坏性变更无法自动检测。

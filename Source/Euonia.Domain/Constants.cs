@@ -1,5 +1,8 @@
 ﻿namespace Nerosoft.Euonia.Domain;
 
+/// <summary>
+/// 定义领域事件元数据字典中使用的键名常量。
+/// </summary>
 internal static class Constants
 {
     /// <summary>

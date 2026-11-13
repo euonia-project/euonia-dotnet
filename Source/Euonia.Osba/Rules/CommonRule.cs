@@ -8,7 +8,7 @@ public partial class CommonRule
 	/// <summary>
 	/// 通用规则基类。
 	/// </summary>
-	public abstract class CommonRuleBase : RuleBase
+	public abstract class CommonRuleBase : PropertyRuleBase
 	{
 		/// <summary>
 		/// 初始化 <see cref="CommonRuleBase"/> 类的新实例。
@@ -43,6 +43,6 @@ public partial class CommonRule
 		/// <summary>
 		/// 获取消息生成委托。
 		/// </summary>
-		protected virtual Func<string> MessageFactory { get; }
+		protected virtual Func<string> MessageFactory { get; } = null!;
 	}
 }

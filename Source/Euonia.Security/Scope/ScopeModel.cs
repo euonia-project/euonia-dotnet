@@ -27,14 +27,14 @@ public abstract class ScopeModel<T> : IScopeModel<T>
 	/// <summary>
 	/// 按授权标识声明的策略集合，首次访问时构建。
 	/// </summary>
-	private ScopePolicySet<T> _policies;
+	private ScopePolicySet<T>? _policies;
 
 	/// <summary>
 	/// 类型擦除后的只读视图，首次访问时构建。
 	/// </summary>
-	private IReadOnlyDictionary<string, object> _declaredPolicies;
+	private IReadOnlyDictionary<string, object>? _declaredPolicies;
 
-	private IReadOnlyDictionary<string, string> _declaredKeys;
+	private IReadOnlyDictionary<string, string>? _declaredKeys;
 
 	/// <inheritdoc />
 	public Type ResourceType => typeof(T);

@@ -6,14 +6,18 @@ using StackExchange.Redis;
 
 namespace Nerosoft.Euonia.Concurrency.Redis;
 
+/// <summary>
+/// Redis 同步模块，从配置读取连接串与超时参数，并注册 <see cref="RedisSynchronizationFactory"/> 单例。
+/// </summary>
 internal class RedisSynchronizationModule : ModuleContextBase
 {
+    /// <inheritdoc />
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.TryAddSingleton(provider =>
         {
             var configuration = provider.GetRequiredService<IConfiguration>();
-            var connection = ConnectionMultiplexer.Connect(configuration.GetValue<string>("RedisSynchronization:ConnectionString"));
+            var connection = ConnectionMultiplexer.Connect(configuration.GetValue<string>("RedisSynchronization:ConnectionString")!);
             var database = configuration.GetValue("RedisSynchronization:Database", -1);
             var expiry = configuration.GetValue<TimeSpan?>("RedisSynchronization:Expiry");
             var cadence = configuration.GetValue<TimeSpan?>("RedisSynchronization:ExtensionCadence");
@@ -33,7 +37,7 @@ internal class RedisSynchronizationModule : ModuleContextBase
 }
 
 /// <summary>
-/// The <see cref="RedisLockModule"/> class contains methods used to configure the Redis lock.
+/// <see cref="RedisLockModule"/> 类包含用于配置 Redis 锁的方法。
 /// </summary>
 [DependsOn(typeof(RedisSynchronizationModule))]
 public class RedisLockModule : ModuleContextBase
@@ -46,7 +50,7 @@ public class RedisLockModule : ModuleContextBase
 }
 
 /// <summary>
-/// The <see cref="RedisSemaphoreModule"/> class contains methods used to configure the Redis semaphore.
+/// <see cref="RedisSemaphoreModule"/> 类包含用于配置 Redis 信号量的方法。
 /// </summary>
 [DependsOn(typeof(RedisSynchronizationModule))]
 public class RedisSemaphoreModule : ModuleContextBase

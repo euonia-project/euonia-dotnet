@@ -12,6 +12,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class ResourceLocalizationRegressionTests
 {
+	/// <summary>
+	/// 三处配置错误提示在中英文资源中都存在，英文不含 CJK 且占位符数量一致。
+	/// </summary>
 	[Fact]
 	public void Configuration_Error_Keys_Should_Exist_In_Both_Cultures()
 	{
@@ -47,7 +50,7 @@ public class ResourceLocalizationRegressionTests
 			{
 				var en = Properties.Resources.ResourceManager.GetString(key, CultureInfo.GetCultureInfo("en-US"));
 				var zh = Properties.Resources.ResourceManager.GetString(key, CultureInfo.GetCultureInfo("zh-CN"));
-				Assert.Equal(CountPlaceholders(zh), CountPlaceholders(en));
+				Assert.Equal(CountPlaceholders(zh!), CountPlaceholders(en!));
 				Assert.Contains("{0}", en);
 				Assert.Contains("{1}", en);
 			}

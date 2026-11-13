@@ -24,6 +24,15 @@ internal static class Helpers
     }
 
     /// <summary>
+    /// 对可能为 null 的 <see cref="ValueTask{TResult}"/> 执行类型安全的"转换"。
+    /// </summary>
+    public static async ValueTask<TBase?> ConvertNullable<TDerived, TBase>(this ValueTask<TDerived?> task, TaskConversion<TBase>.ValueTaskConversion _)
+        where TDerived : TBase
+    {
+        return await task.ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// 安全地创建并执行一个返回结果的任务，将同步抛出的异常转换为失败的任务。
     /// </summary>
     /// <typeparam name="TState">传递给任务工厂的状态类型。</typeparam>
@@ -100,16 +109,33 @@ internal static class Helpers
         private readonly TTask _task;
         private readonly ConfiguredTaskAwaitable.ConfiguredTaskAwaiter _taskAwaiter;
 
+        /// <summary>
+        /// 使用要包装的任务初始化等待对象。
+        /// </summary>
+        /// <param name="task">被包装的任务，其完成状态用于驱动等待。</param>
         public NonThrowingAwaitable(TTask task)
         {
             _task = task;
             _taskAwaiter = task.ConfigureAwait(false).GetAwaiter();
         }
 
+        /// <summary>
+        /// 获取等待对象自身，以便 <c>await</c> 表达式可以启动等待流程。
+        /// </summary>
+        /// <returns>当前等待对象。</returns>
         public NonThrowingAwaitable<TTask> GetAwaiter() => this;
 
+        /// <summary>
+        /// 获取被包装的任务是否已完成。
+        /// </summary>
         public bool IsCompleted => _taskAwaiter.IsCompleted;
 
+        /// <summary>
+        /// 获取被包装的任务而不重新抛出其异常。
+        /// </summary>
+        /// <returns>已完成的被包装任务。</returns>
+        /// <exception cref="InvalidOperationException">当任务尚未完成时抛出。</exception>
+        /// <remarks>完成性检查仅在 DEBUG 构建中生效，发布构建下依赖等待协议保证任务已完成。</remarks>
         public TTask GetResult()
         {
             // 不调用 _taskAwaiter.GetResult()，因为它可能抛出异常！
@@ -118,7 +144,16 @@ internal static class Helpers
             return _task;
         }
 
+        /// <summary>
+        /// 注册任务完成时要执行的回调。
+        /// </summary>
+        /// <param name="continuation">任务完成后的延续委托。</param>
         public void OnCompleted(Action continuation) => _taskAwaiter.OnCompleted(continuation);
+
+        /// <summary>
+        /// 以不捕获执行上下文的方式注册任务完成时要执行的回调。
+        /// </summary>
+        /// <param name="continuation">任务完成后的延续委托。</param>
         public void UnsafeOnCompleted(Action continuation) => _taskAwaiter.UnsafeOnCompleted(continuation);
     }
 
@@ -177,7 +212,7 @@ internal static class Helpers
     /// <param name="handleTask">返回 <see cref="ISynchronizationHandle"/> 的任务。</param>
     /// <param name="factory">将句柄转换为目标类型的工厂委托。</param>
     /// <returns>表示异步操作的任务，包含转换后的句柄；若原句柄为 null 则返回 null。</returns>
-    public static async ValueTask<THandle> Wrap<THandle>(this ValueTask<ISynchronizationHandle> handleTask, Func<ISynchronizationHandle, THandle> factory)
+    public static async ValueTask<THandle?> Wrap<THandle>(this ValueTask<ISynchronizationHandle?> handleTask, Func<ISynchronizationHandle, THandle> factory)
         where THandle : class
     {
         var handle = await handleTask.ConfigureAwait(false);
@@ -225,7 +260,7 @@ internal static class Helpers
     /// <param name="timeout">获取锁的超时时间。</param>
     /// <param name="cancellationToken">用于取消操作的令牌。</param>
     /// <returns>获取到的句柄；失败时返回 null。</returns>
-    public static THandle TryAcquire<THandle>(ILockProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
+    public static THandle? TryAcquire<THandle>(ILockProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
         where THandle : class, ISynchronizationHandle
     {
         // 必须传入 TimeoutValue：ILockProvider<THandle> 用 new 隐藏了基接口的
@@ -277,7 +312,7 @@ internal static class Helpers
     /// <param name="timeout">获取信号量的超时时间。</param>
     /// <param name="cancellationToken">用于取消操作的令牌。</param>
     /// <returns>获取到的句柄；失败时返回 null。</returns>
-    public static THandle TryAcquire<THandle>(ISemaphoreProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
+    public static THandle? TryAcquire<THandle>(ISemaphoreProvider<THandle> @lock, TimeSpan timeout, CancellationToken cancellationToken)
         where THandle : class, ISynchronizationHandle =>
         // 同 ILockProvider：以 TimeSpan 实参调用会绑回被 new 隐藏的槽位自身（无限递归），
         // 必须传入 TimeoutValue 才能命中真正的实现。
@@ -293,7 +328,7 @@ internal static class Helpers
     /// </summary>
     /// <param name="object">超时的对象名称，默认值为"lock"。</param>
     /// <returns>包含超时信息的 <see cref="TimeoutException"/>。</returns>
-    private static Exception LockTimeout(string @object = null) => new TimeoutException($"Timeout exceeded when trying to acquire the {@object ?? "lock"}");
+    private static Exception LockTimeout(string? @object = null) => new TimeoutException($"Timeout exceeded when trying to acquire the {@object ?? "lock"}");
 
     /// <summary>
     /// 等待任务完成；若结果为 null 则抛出超时异常。
@@ -302,7 +337,7 @@ internal static class Helpers
     /// <param name="task">要等待的任务。</param>
     /// <param name="object">超时的对象名称，默认值为"lock"。</param>
     /// <returns>表示异步操作的任务，包含结果。</returns>
-    private static async ValueTask<T> ThrowTimeoutIfNull<T>(this ValueTask<T> task, string @object = null) where T : class =>
+    private static async ValueTask<T> ThrowTimeoutIfNull<T>(this ValueTask<T?> task, string? @object = null) where T : class =>
         await task.ConfigureAwait(false) ?? throw LockTimeout(@object);
 }
 

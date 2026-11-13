@@ -19,6 +19,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Repository\Euonia.Repository.csproj" />
+        <ProjectReference Include="..\Euonia.Tenancy\Euonia.Tenancy.csproj" />
     </ItemGroup>
 
     <ItemGroup>
@@ -34,6 +35,14 @@
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>

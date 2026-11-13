@@ -3,6 +3,9 @@ using System.Reflection;
 
 namespace Nerosoft.Euonia.Caching.Internal;
 
+/// <summary>
+/// 缓存配置的反射辅助类：按配置创建背板与缓存句柄实例，并匹配构造函数参数。
+/// </summary>
 internal static class CacheReflectionHelper
 {
 	/// <summary>
@@ -12,7 +15,7 @@ internal static class CacheReflectionHelper
 	/// <param name="configuration">缓存管理器配置。</param>
 	/// <returns>创建的 <see cref="CacheBackplane"/> 实例；未配置背板时返回 <c>null</c>。</returns>
 	/// <exception cref="InvalidOperationException">当配置了背板但没有任何缓存句柄标记为背板源，或背板类型未继承 <see cref="CacheBackplane"/> 时抛出。</exception>
-	internal static CacheBackplane CreateBackplane(CacheManagerConfiguration configuration)
+	internal static CacheBackplane? CreateBackplane(CacheManagerConfiguration configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
 
@@ -127,7 +130,7 @@ internal static class CacheReflectionHelper
 
 		try
 		{
-			return Activator.CreateInstance(instanceType, args);
+			return Activator.CreateInstance(instanceType, args)!;
 		}
 		catch (Exception ex)
 		{
@@ -146,8 +149,8 @@ internal static class CacheReflectionHelper
 	/// <exception cref="InvalidOperationException">当找不到匹配的构造函数时抛出。</exception>
 	private static object[] MatchArguments(IEnumerable<ConstructorInfo> constructors, object[] instances)
 	{
-		ParameterInfo lastParamMiss = null;
-		ConstructorInfo lastCtor = null;
+		ParameterInfo? lastParamMiss = null;
+		ConstructorInfo? lastCtor = null;
 
 		foreach (var constructor in constructors)
 		{
@@ -168,7 +171,7 @@ internal static class CacheReflectionHelper
 					// 否则 WithRuntimeCacheHandle 这类不带 options 的重载永远匹配不到构造函数。
 					if (param.HasDefaultValue)
 					{
-						args.Add(param.DefaultValue);
+						args.Add(param.DefaultValue!);
 						continue;
 					}
 

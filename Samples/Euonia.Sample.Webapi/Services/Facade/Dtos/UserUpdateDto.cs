@@ -1,22 +1,22 @@
 ﻿namespace Nerosoft.Euonia.Sample.Domain.Dtos;
 
 /// <summary>
-/// User profile update input (nickname / email / phone).
+/// 用户资料更新输入（昵称 / 邮箱 / 手机号）。
 /// </summary>
 public class UserUpdateDto
 {
 	/// <summary>
-	/// Gets or sets the nickname.
+	/// 获取或设置昵称。
 	/// </summary>
-	public string Nickname { get; set; }
+	public string Nickname { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the email address.
+	/// 获取或设置邮箱地址。
 	/// </summary>
-	public string Email { get; set; }
+	public string Email { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the phone number.
+	/// 获取或设置手机号码。
 	/// </summary>
-	public string Phone { get; set; }
+	public string Phone { get; set; } = null!;
 }

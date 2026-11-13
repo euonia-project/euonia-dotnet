@@ -32,17 +32,17 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <summary>
 	/// 惰性创建的业务规则集合。
 	/// </summary>
-	private Rules _rules;
+	private Rules _rules = null!;
 
 	/// <summary>
 	/// 惰性创建的字段管理器。
 	/// </summary>
-	private FieldDataManager _fieldManager;
+	private FieldDataManager _fieldManager = null!;
 
 	/// <summary>
 	/// 当前对象解析到的规则管理器；由业务上下文决定是容器级还是进程级默认。
 	/// </summary>
-	private RuleManager _ruleManager;
+	private RuleManager? _ruleManager;
 
 	/// <summary>
 	/// 校验状态；用整数保存以支持无锁读写。
@@ -61,7 +61,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <summary>
 	/// 装载作用域计数（按异步流隔离）；工厂方法执行期间允许写入只读对象。
 	/// </summary>
-	private AsyncLocal<int> _loadScope;
+	private AsyncLocal<int> _loadScope = null!;
 
 	/// <summary>
 	/// 业务对象的事件管理器。
@@ -73,7 +73,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// </summary>
 	public BusinessContext BusinessContext
 	{
-		get;
+		get => field!;
 		set
 		{
 			field = value;
@@ -505,10 +505,10 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	protected internal virtual bool CheckRuleOnPropertyChanged => true;
 
 	/// <inheritdoc/>
-	public event PropertyChangedEventHandler PropertyChanged;
+	public event PropertyChangedEventHandler? PropertyChanged;
 
 	/// <inheritdoc/>
-	public event PropertyChangingEventHandler PropertyChanging;
+	public event PropertyChangingEventHandler? PropertyChanging;
 
 	/// <summary>
 	/// 通知属性值已更改。
@@ -784,7 +784,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <summary>
 	/// 本对象作为子对象时登记的父对象链接。
 	/// </summary>
-	private List<ChildLink> _parentLinks;
+	private List<ChildLink> _parentLinks = null!;
 
 	/// <summary>
 	/// 父链接数量；用于热路径上无锁判断“本对象是否是子对象”。
@@ -913,7 +913,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// 当前通知链上的对象集合，用于阻断父子双向引用形成的环。
 	/// </summary>
 	[ThreadStatic]
-	private static HashSet<ObjectBase> _notifyingParents;
+	private static HashSet<ObjectBase>? _notifyingParents;
 
 	/// <summary>
 	/// 子对象属性变化时的父对象回调：默认把父对象上持有该子对象的属性标脏并通知。
@@ -941,7 +941,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <param name="property">父对象上的属性。</param>
 	/// <param name="oldValue">旧值。</param>
 	/// <param name="newValue">新值。</param>
-	protected void AttachChild(IPropertyInfo property, object oldValue, object newValue)
+	protected void AttachChild(IPropertyInfo property, object? oldValue, object? newValue)
 	{
 		if (ReferenceEquals(oldValue, newValue))
 		{
@@ -972,10 +972,14 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// </summary>
 	private sealed class ChildLink(ObjectBase parent, IPropertyInfo property)
 	{
-		/// <summary>父对象。</summary>
+		/// <summary>
+		/// 父对象。
+		/// </summary>
 		public ObjectBase Parent { get; } = parent;
 
-		/// <summary>父对象上持有子对象的属性。</summary>
+		/// <summary>
+		/// 父对象上持有子对象的属性。
+		/// </summary>
 		public IPropertyInfo Property { get; } = property;
 	}
 
@@ -986,7 +990,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// 状态按<b>实例</b>隔离，流内传播由 <see cref="AsyncLocal{T}"/> 自己负责，因此这里不加
 	/// <c>[ThreadStatic]</c>：该特性只对静态字段生效，写在实例字段上既无效，又会让人误以为存在线程亲和。
 	/// </remarks>
-	private AsyncLocal<bool> _bypassScope;
+	private AsyncLocal<bool> _bypassScope = null!;
 
 	/// <summary>
 	/// 获取本实例自身的绕过值（不含父对象传播）。
@@ -1021,7 +1025,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// </remarks>
 	protected internal sealed class BypassRuleChecksObject : IDisposable
 	{
-		private ObjectBase _target;
+		private ObjectBase? _target;
 		private readonly bool _captured;
 		private bool _disposed;
 
@@ -1036,7 +1040,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 			// 只捕获/恢复“自身”的绕过值：父对象传播的绕过不属于本实例，
 			// 否则父对象退出绕过时，子对象会被错误地永久置为绕过。
 			_captured = target.OwnBypassRuleChecks;
-			_target.OwnBypassRuleChecks = true;
+			target.OwnBypassRuleChecks = true;
 		}
 
 		#region IDisposable Members
@@ -1055,7 +1059,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 
 			// AsyncLocal 的值属于当前异步流，每个 using 实例独立还原即可，
 			// 不需要也不应在并发流之间共享引用计数。
-			_target.IsBypassingRuleChecks = _captured;
+			_target!.IsBypassingRuleChecks = _captured;
 			_target = null;
 		}
 
@@ -1320,7 +1324,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <param name="newValue">要赋给属性的新值。</param>
 	/// <param name="markAsChanged">指示是否将属性标记为已更改并在值已更改时触发更改通知。</param>
 	/// <param name="onChanged">值更改时的回调操作。</param>
-	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged, Action<IPropertyInfo, TValue, TValue> onChanged = null)
+	protected void LoadPropertyValue<TValue>(IPropertyInfo propertyInfo, TValue oldValue, TValue newValue, bool markAsChanged, Action<IPropertyInfo, TValue, TValue>? onChanged = null)
 	{
 		var valuesDiffer = ValuesDiffer(propertyInfo, newValue, oldValue);
 
@@ -1364,7 +1368,7 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <param name="newValue">属性的新值。</param>
 	/// <returns>反射调用的返回值。</returns>
 	/// <exception cref="MissingMethodException">当找不到指定的泛型方法时抛出。</exception>
-	private object LoadPropertyByReflection(string methodName, IPropertyInfo propertyInfo, object newValue)
+	private object? LoadPropertyByReflection(string methodName, IPropertyInfo propertyInfo, object newValue)
 	{
 		var type = GetType();
 		var genericMethod = _loadPropertyMethodCache.GetOrAdd((type, propertyInfo.Type), _ =>

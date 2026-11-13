@@ -9,24 +9,28 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Sample.Domain.Commands;
 
 /// <summary>
-/// 归档项目的命令对象。命令体经 <see cref="IObjectFactory.ExecuteAsync{T}"/> 裁决后才执行：
+/// 归档项目的命令对象。命令体经 <see cref="IObjectFactory"/> 的 <c>ExecuteAsync</c> 裁决后才执行：
 /// <see cref="BusinessOperation.Execute"/> 的类型级闸门（<see cref="ProjectPermissions.Archive"/> 与角色），
 /// 行级判定（单行授予 <c>project:archive</c>）在命令体内做，避免「先归档后判定、拒了也归档」。
-/// 归档后经 <see cref="ProjectStore"/> 落库，聚合上挂起的 <see cref="Events.ProjectArchivedEvent"/>
+/// 归档后经 <see cref="IProjectStore"/> 落库，聚合上挂起的 <see cref="Events.ProjectArchivedEvent"/>
 /// 随保存经总线自动分发。
 /// </summary>
 public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectCommand>
 {
-	/// <summary>目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
-	public string ProjectId { get; set; }
+	/// <summary>
+	/// 目标项目标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
+	public string ProjectId { get; set; } = null!;
 
 	/// <summary>
 	/// 已取到并待归档的项目实体：行级判定以命令自身为资源、以该实体为判定依据
 	/// （见 <see cref="Permissions.ArchiveProjectScopeModel"/>），故必须在判定前装载。
 	/// </summary>
-	public Project Project { get; private set; }
+	public Project Project { get; private set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Archived { get; private set; }
 
 	// 装载放在 Create 而非 Execute：工厂在命令体之前先做一次行级判定（EnsureAuthorizedBefore），
@@ -36,13 +40,21 @@ public sealed class ArchiveProjectCommand : ServiceObjectBase<ArchiveProjectComm
 	private async Task CreateAsync(string projectId, CancellationToken cancellationToken = default)
 	{
 		ProjectId = projectId;
-		Project = await BusinessContext.GetRequiredService<IProjectStore>().GetAsync(projectId, cancellationToken);
-		if (Project == null)
+		var project = await BusinessContext.GetRequiredService<IProjectStore>().GetAsync(projectId, cancellationToken);
+		if (project == null)
 		{
 			throw new NotFoundException($"Project with ID '{projectId}' not found.");
 		}
+
+		Project = project;
 	}
 
+	/// <summary>
+	/// 执行归档：再做一次行级兜底判定，通过后给项目打归档标记并保存，保存时随总线发布归档事件。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="SecurityException">当前用户不具备该项目的 <c>project:archive</c> 行级权限时抛出。</exception>
 	[Permission(ProjectPermissions.Archive, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)

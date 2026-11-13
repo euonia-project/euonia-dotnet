@@ -9,12 +9,12 @@ internal class ActiveMqReply<TResult>
 	/// <summary>
 	/// 获取或设置回复结果。
 	/// </summary>
-	public TResult Result { get; set; }
+	public TResult Result { get; set; } = default!;
 
 	/// <summary>
 	/// 获取或设置错误信息。
 	/// </summary>
-	public TransportError Error { get; set; }
+	public TransportError? Error { get; set; }
 
 	/// <summary>
 	/// 获取一个值，指示此消息处理是否成功。

@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Bus;
 
 /// <summary>
-/// The request context accessor.
+/// 请求上下文访问器。
 /// </summary>
-/// <returns></returns>
+/// <returns>当前请求的标识。</returns>
 public delegate IPrincipal IdentityAccessor();

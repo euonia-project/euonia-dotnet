@@ -4,6 +4,10 @@
 >
 > 面向对象、可扩展的业务对象框架：把「一次业务操作」建模成对象，由框架在正确的时机完成属性存储、变更追踪、规则校验、工厂分派、执行器编排与权限裁决。
 
+- **目标框架**：`net10.0`、`net11.0`
+- **根命名空间**：`Nerosoft.Euonia.Osba`
+- **NuGet 包**：`Euonia.Osba`
+
 `Euonia.Osba` 不是 ORM，也不是 DDD 专用框架。它的定位是**业务模型（Business Model）运行时**：对象拥有属性、行为、规则、状态、生命周期与权限边界，而不是贫血的数据容器。DDD、MVVM、CQRS、CRUD、低代码都可以在同一组原语上组合；DDD 只是其中一种可选投影。
 
 它解决的是富业务对象在服务端落地时反复出现的几件事：
@@ -26,8 +30,13 @@
 4. [使用方法](#4-使用方法)
 5. [文件结构](#5-文件结构)
 6. [设计约定与常见陷阱](#6-设计约定与常见陷阱)
-7. [相关文档](#7-相关文档)
-8. [版本与许可](#8-版本与许可)
+7. [注意事项 / 限制](#7-注意事项--限制)
+8. [相关文档](#8-相关文档)
+9. [版本与许可](#9-版本与许可)
+
+- [常见问题与故障排查](#常见问题与故障排查)
+- [最佳实践](#最佳实践)
+- [版本与兼容](#版本与兼容)
 
 ---
 
@@ -69,13 +78,13 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 > `ServiceObject<T>` 刻意不继承 `BusinessObject<T>`：它只保留属性存储与规则能力，没有 `ChangedProperties`、没有 `SaveAsync`、没有编辑状态。它的校验应写成**对象级规则**。
 
-### 1.4 能力清单
+### 1.4 主要功能
 
 - **属性系统**：静态注册、类型级元数据缓存、实例级字段数组、环形撤销历史、按需可观察值。
 - **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段；属性直接改回基线后自动移出 `ChangedProperties`。
 - **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态迁移（`CanTransitionTo` / `StateChanged`）。
 - **状态机**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted`，保存时由 `ScopeOperationMap` 唯一映射到业务操作。
-- **规则系统**：`RuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
+- **规则系统**：`ObjectRuleBase`、`PropertyRuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；对象级规则通过 `IObjectRule` 约束、不暴露属性，属性级规则通过 `IPropertyRule` 保证 `Property` 非空；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
 - **工厂**：约定名 + 特性双通道查找，支持可选参数、`params`、`Task` / `ValueTask`，并缓存反射结果。
 - **执行器**：`IActuator.For<T>().Fetch/Create/Update/Delete/Execute(...)` 把「取对象 → Handle → 终结」串成管道，可挂 `IActuatorBehavior<T>`。
 - **生命周期回调**：`IObjectLifecycle` 在保存与执行边界提供 `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` 扩展点。
@@ -89,8 +98,8 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 | 项目 | 值 |
 |---|---|
-| 目标框架 | `net9.0;net10.0` |
-| 当前版本 | `2026.4.6`（见仓库根 `project.props`） |
+| 目标框架 | `net10.0;net11.0` |
+| 当前版本 | `2026.5.0`（见仓库根 `project.props`） |
 | 根命名空间 | `Nerosoft.Euonia.Osba` |
 | 包名 | `Euonia.Osba` |
 | 许可 | GPL-3.0（见仓库根 `LICENSE`） |
@@ -124,7 +133,7 @@ dotnet add package Euonia.Osba
 或直接在项目中引用：
 
 ```xml
-<PackageReference Include="Euonia.Osba" Version="2026.4.6" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
 ```
 
 ### 2.2 装配
@@ -1192,6 +1201,8 @@ services.AddBusinessObject(options =>
 
 `AddBusinessObject` 返回 `IServiceCollection`，可链式调用；内部全部使用 `TryAdd*`，已注册的服务不会被覆盖。
 
+`OsbaOptions` 没有对应的配置节：本包不读取 `IConfiguration`，全部选项都在 `AddBusinessObject(options => ...)` 回调里以代码给出（选项以第一次装配为准，见 [§7 注意事项 / 限制](#7-注意事项--限制)）。
+
 ### 4.2 属性注册
 
 ```csharp
@@ -1293,7 +1304,7 @@ protected override void AddRules()
 自定义规则：
 
 ```csharp
-public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
+public sealed class RepoUniqueRule(IPropertyInfo property) : PropertyRuleBase(property)
 {
     public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
     {
@@ -1315,7 +1326,7 @@ public sealed class RepoUniqueRule(IPropertyInfo property) : RuleBase(property)
 }
 ```
 
-- 规则名称形如 `rule://命名空间.类型名/属性名`，由 `RuleBase` 生成。
+- 规则名称形如 `rule://命名空间.类型名/属性名`，由 `PropertyRuleBase`（属性级）或 `RuleBase`（对象级）生成。
 - `Priority` 越小越先执行。
 - `ExecuteOnStateAttribute` 标在规则类上，只对 `IEditableObject` 目标生效；不填状态视为不限制。
 - `AddErrorResult(null)` / 空白描述会用占位消息补上，不会被静默当成通过。
@@ -1582,7 +1593,7 @@ flowchart TB
 flowchart TB
     R["Euonia.Osba/"]
 
-    R --> R1["Euonia.Osba.csproj<br/>项目文件：net9.0;net10.0，引用 Core / Modularity / Pipeline / Validation，配置 resx 生成"]
+    R --> R1["Euonia.Osba.csproj<br/>项目文件：net10.0;net11.0，引用 Core / Modularity / Pipeline / Validation，配置 resx 生成"]
     R --> R2["ServiceCollectionExtensions.cs<br/>AddBusinessObject 装配入口：注册上下文、工厂、执行器、规则注册表与业务对象"]
     R --> R3["OsbaOptions.cs<br/>装配选项：ValidateOnStartup / StrictFactoryMethods / EnableDiagnostics / DiagnosticLevel"]
     R --> R4["OsbaStartupValidator.cs<br/>启动期反射校验：工厂签名、Inject、属性元数据、持久化方法；OsbaConfigurationException"]
@@ -1761,8 +1772,9 @@ flowchart TB
 flowchart TB
     R["Rules/"]
 
-    R --> R1["IRuleBase.cs<br/>规则契约：Name、Property、RelatedProperties、Priority、ExecuteAsync"]
-    R --> R2["RuleBase.cs<br/>规则基类：URI 风格名称、优先级、相关属性"]
+    R --> R1["IRuleBase.cs<br/>通用规则契约：Name、RelatedProperties、Priority、ExecuteAsync"]
+    R --> R2["ObjectRuleBase.cs / PropertyRuleBase.cs<br/>对象级 / 属性级规则基类：URI 风格名称、优先级、相关属性"]
+    R --> R2A["IObjectRule.cs / IPropertyRule.cs<br/>对象级（无 Property）/ 属性级（Property 非空）契约"]
     R --> R3["IRuleContext.cs<br/>规则上下文契约：Target、Results、AddError / Warning / Information / Success、Complete"]
     R --> R4["RuleContext.cs<br/>规则上下文默认实现：结果收集、去重完成、空白消息兜底"]
     R --> R5["RuleResult.cs<br/>单条规则结果：Success、Description、Severity、RuleName、Properties"]
@@ -1856,7 +1868,21 @@ flowchart TB
 
 ---
 
-## 7. 相关文档
+## 7. 注意事项 / 限制
+
+以下边界与 §6 的逐条陷阱互补，都是跨切面的使用约束：
+
+- **作用域**：`BusinessContext` / `BusinessContextAccessor` 是 scoped 并按异步流传播；后台任务必须通过 `IServiceScopeFactory` 新建作用域，复用请求作用域会把业务上下文泄漏到其他工作项（§3.9）。
+- **装配选项首次注册为准**：`AddBusinessObject` 用 `TryAddSingleton(options)` 注册 `OsbaOptions`，重复调用不会覆盖宿主已经做出的选择；需要改选项请在第一次装配时给出（`ServiceCollectionExtensions.cs:44`）。
+- **启动期校验默认关闭**：`OsbaOptions.ValidateOnStartup` 默认 `false`，测试程序集里的半成品对象不会让启动失败；生产宿主应显式开启，否则「缺持久化方法」这类问题要到第一次保存才暴露（`OsbaOptions.cs:24`、`ServiceCollectionExtensions.cs:67`）。
+- **不注册权限服务**：`AddBusinessObject` 只注册对象模型、工厂、执行器与规则注册表；需要权限时由宿主 `AddPermission(...)` 接引擎或自建 `IPermissionChecker` / `IObjectScopeAuthorizer`，未接时声明了 `[Permission]` 的类型会在强制点抛异常（§3.8、§6）。
+- **规则注册表的共享边界是容器**：`IRuleRegistry` 按容器注册为单例，测试、租户、插件之间互不可见；不要依赖进程级全局规则（§3.6.3）。
+- **不绑定持久化**：本包不引用 EF Core 或任何数据库，创建/保存/删除都由业务对象的工厂方法经 `BusinessContext` 自行完成；事务边界由宿主决定（§1.5、§3.5）。
+- **诊断开关是进程级的**：`EnableDiagnostics` 写入 `OsbaDiagnostics.Enabled` 静态仪表，最后一次装配的取值对整个进程生效，多容器宿主需要自行协调（`ServiceCollectionExtensions.cs:47`）。
+
+---
+
+## 8. 相关文档
 
 | 文档 | 内容 |
 |---|---|
@@ -1868,16 +1894,67 @@ flowchart TB
 | [`ARCHITECTURE-REVIEW.md`](ARCHITECTURE-REVIEW.md) | 架构 / 性能 / 正确性评审报告（历史基线，部分问题已修复，阅读时以当前代码为准） |
 | [`../Euonia.Security/README.md`](../Euonia.Security/README.md) | 策略引擎用法 |
 | [`../Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) | 策略引擎设计取舍 |
+| [`../Euonia.Core/README.md`](../Euonia.Core/README.md) | 权限契约（`IPermissionChecker` 等）、反射工具、`AsyncContext`、`Check` |
+| [`../Euonia.Modularity/README.md`](../Euonia.Modularity/README.md) | `IHasLazyServiceProvider` / `InjectAttribute` 与模块启动 |
+| [`../Euonia.Pipeline/README.md`](../Euonia.Pipeline/README.md) | `IPipeline<TRequest,TResponse>` / `IPipelineBehavior` |
+| [`../Euonia.Validation/README.md`](../Euonia.Validation/README.md) | `ValidationException` / `ValidationResult` |
 | [`../../README.md`](../../README.md) | 仓库总览与其他模块 |
 
 ---
 
-## 8. 版本与许可
+## 9. 版本与许可
 
-- 当前版本：`2026.4.6`（见仓库根 `project.props`）。
-- 目标框架：`net9.0`、`net10.0`。
+- 当前版本：`2026.5.0`（见仓库根 `project.props`）。
+- 目标框架：`net10.0`、`net11.0`。
 - 许可：GNU General Public License v3.0，见仓库根 [`LICENSE`](../../LICENSE)。
 
 ---
 
 > 本文档描述的是**当前源码行为**。如果文档与代码不一致，以代码和测试为准；欢迎在修改行为时同步更新本文件与相关示例。
+
+## 常见问题与故障排查
+
+### 读写属性时抛 `Property 'X' is not registered.`
+
+**原因**：属性没有通过 `RegisterProperty` 注册为静态 `PropertyInfo<T>`，或访问器里传入的名称与注册名不一致（`Source/Euonia.Osba/Core/ObjectBase.cs:1169`、`Resources.IDS_PROPERTY_NOT_REGISTERED`）。
+**解决**：为每个属性声明 `public static readonly PropertyInfo<T> XProperty = RegisterProperty(p => p.X);`，访问器统一走 `GetProperty(XProperty)` / `SetProperty(XProperty, value)`；不要用字符串名绕过注册。
+
+### 抛 `Object state transition from 'A' to 'B' is not allowed.`
+
+**原因**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 之间的迁移不满足默认状态机（`Source/Euonia.Osba/Core/ObservableObject.cs:98`）。
+**解决**：确认没有对已删除对象再标记修改；确有自定义迁移时重写 `CanTransitionTo` 并在 `StateChanged` 里记录，不要直接改状态字段。
+
+### 启动正常，第一次 `SaveAsync` 才报缺少持久化方法
+
+**原因**：`OsbaOptions.ValidateOnStartup` 默认 `false`，`AddBusinessObject` 不做启动期校验（`Source/Euonia.Osba/OsbaOptions.cs:24`、`ServiceCollectionExtensions.cs:67`）。
+**解决**：生产宿主显式 `options.ValidateOnStartup = true`，让缺 `[FactoryInsert]` / `[FactoryUpdate]` / `[FactoryDelete]` 的对象在启动阶段失败；测试程序集可保持关闭。
+
+### 声明了 `[Permission]` 后调用即抛异常
+
+**原因**：对象声明了权限要求，但容器里没有 `IPermissionChecker`（资源 `Resources.resx:136`：`... but {1} is not registered in the container. Call AddPermission ...`）。
+**解决**：宿主 `services.AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })`，或自行注册 `IPermissionChecker` / `IObjectScopeAuthorizer`（§3.8.4、§6 第 49 条）。
+
+### `[Inject]` 注入带 key 的服务报 `IKeyedServiceProvider` 错误
+
+**原因**：`[Inject]` 指定了 `ServiceKey`，但当前容器未实现 `IKeyedServiceProvider`（`Source/Euonia.Osba/Factory/BusinessObjectFactory.cs:676`）。
+**解决**：升级到 .NET 8+ 的内置容器（本包目标 `net10.0` 已满足），或去掉 `ServiceKey` 改用普通注册。
+
+## 最佳实践
+
+- **生产开 `ValidateOnStartup`**：把工厂签名、`[Inject]` 可解析性、属性元数据问题提前到启动阶段，配合 `DiagnosticLevel = Warning` 让警告可见。
+- **按程序集注册一次**：`services.AddBusinessObject(options, typeof(Repo).Assembly)`；选项以第一次装配为准，模块化宿主在根模块里配置。
+- **服务对象用对象级规则**：`ServiceObject<T>` 没有 `ChangedProperties` / `SaveAsync`，校验写成 `ObjectRuleBase` 子类而不是属性规则。
+- **读模型单独声明 `ScopeModel<T>`**：不声明就没有行级约束（§6 第 48 条），不要指望写模型上的策略覆盖读侧。
+- **权限只在宿主接线**：Osba 不引用 `Euonia.Security`，用 `AddPermission` 一行接引擎；不要为了权限在业务对象里手写鉴权分支。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 依赖 | `Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation` |
+
+- **不引用 `Euonia.Security` / `Euonia.Domain`**：权限契约来自 Core，DDD 只是可选投影；升级时不会因这两个包引入传递依赖（§1.5）。
+- **公共 API 兼容策略**见 [§3.16](#316-公共-api-兼容性策略)：新增成员优先，破坏性变更走主版本。
+- 文档结构（§1–§9）保持稳定；新增的 FAQ / 最佳实践 / 兼容说明是无编号章节，不会占用既有编号。

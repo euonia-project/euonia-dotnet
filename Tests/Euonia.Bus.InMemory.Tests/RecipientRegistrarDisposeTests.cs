@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class RecipientRegistrarDisposeTests
 {
+	/// <summary>
+	/// 验证容器同步释放持有内存注册器的服务提供程序时不抛出异常，且注册器同时实现同步与异步释放接口。
+	/// </summary>
 	[Fact]
 	public void Dispose_ProviderWithInMemoryRegistrar_DoesNotThrow()
 	{
@@ -27,6 +30,9 @@ public class RecipientRegistrarDisposeTests
 		Assert.Null(exception);
 	}
 
+	/// <summary>
+	/// 验证异步释放注册器时走接口默认实现，转调同步 <c>Dispose</c> 且不抛出异常。
+	/// </summary>
 	[Fact]
 	public async Task DisposeAsync_Registrar_UsesDefaultImplementation()
 	{

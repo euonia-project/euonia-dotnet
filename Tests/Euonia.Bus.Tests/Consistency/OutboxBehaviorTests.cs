@@ -9,6 +9,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class OutboxBehaviorTests
 {
+	/// <summary>
+	/// 验证发件箱行为在后续管道成功后把传输状态标记为 <see cref="OutboxTransportStatus.Success"/>，并保留管道返回值。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_OnSuccess_MarksTransportAsSuccess()
 	{
@@ -22,11 +25,14 @@ public class OutboxBehaviorTests
 		var result = await behavior.HandleAsync(envelope, next);
 
 		Assert.Equal(Unit.Value, result);
-		var transport = store.Get("behavior-1").GetTransport("transport-a");
+		var transport = store.Get("behavior-1")!.GetTransport("transport-a")!;
 		Assert.Equal(OutboxTransportStatus.Success, transport.Status);
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证后续管道抛出异常时，发件箱行为将传输标记为失败、记录错误并原样抛出该异常。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_OnFailure_MarksTransportAsFailedAndRethrows()
 	{
@@ -39,7 +45,7 @@ public class OutboxBehaviorTests
 
 		await Assert.ThrowsAsync<InvalidOperationException>(() => behavior.HandleAsync(envelope, next));
 
-		var transport = store.Get("behavior-2").GetTransport("transport-a");
+		var transport = store.Get("behavior-2")!.GetTransport("transport-a")!;
 		Assert.Equal(OutboxTransportStatus.Failed, transport.Status);
 		Assert.Equal(1, transport.RetryAttempts);
 		Assert.Equal("transport is down", transport.Error);

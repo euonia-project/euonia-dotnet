@@ -28,12 +28,12 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	/// <summary>
 	/// 当前字段值。
 	/// </summary>
-	private T _value;
+	private T _value = default!;
 
 	/// <summary>
 	/// 自上次 <see cref="MarkAsUnchanged"/> 以来的原始值。
 	/// </summary>
-	private T _originalValue;
+	private T _originalValue = default!;
 
 	/// <summary>
 	/// 当前是否存在未提交的修改；独立于历史缓冲区，历史深度为 0 时也能正确判断。
@@ -43,7 +43,7 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	/// <summary>
 	/// 环形历史缓冲区；长度按需增长，最大不超过 <see cref="HistoryDepth"/>。
 	/// </summary>
-	private T[] _history;
+	private T[] _history = null!;
 
 	/// <summary>
 	/// 历史缓冲区中最早一条记录的位置。
@@ -63,7 +63,7 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	/// <summary>
 	/// 按需创建的可观察值；未订阅时为 <see langword="null"/>。
 	/// </summary>
-	private FieldObservable _observable;
+	private FieldObservable _observable = null!;
 
 	/// <summary>
 	/// 初始化 <see cref="FieldData{T}"/> 的新实例。
@@ -80,7 +80,7 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	}
 
 	/// <inheritdoc />
-	public string Name { get; }
+	public string Name { get; } = null!;
 
 	/// <summary>
 	/// 获取或设置历史记录的最大深度；超出后丢弃最旧记录。负数表示不设限。
@@ -245,15 +245,15 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 
 	object IFieldData.Value
 	{
-		get => Value;
-		set => SetValue(value == null ? default : (T)value, trackHistory: true);
+		get => Value!;
+		set => SetValue(value == null ? default! : (T)value, trackHistory: true);
 	}
 
-	object IFieldData.OriginalValue => OriginalValue;
+	object IFieldData.OriginalValue => OriginalValue!;
 
-	void IFieldDataInternal.SetValue(object value, bool trackHistory)
+	void IFieldDataInternal.SetValue(object? value, bool trackHistory)
 	{
-		SetValue(value == null ? default : (T)value, trackHistory);
+		SetValue(value == null ? default! : (T)value, trackHistory);
 	}
 
 	/// <summary>
@@ -335,12 +335,12 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 	/// <summary>
 	/// 当繁忙状态改变时发生。
 	/// </summary>
-	private BusyChangedEventHandler _busyChanged;
+	private BusyChangedEventHandler? _busyChanged;
 
 	event BusyChangedEventHandler INotifyBusy.BusyChanged
 	{
-		add => _busyChanged = (BusyChangedEventHandler)Delegate.Combine(_busyChanged, value);
-		remove => _busyChanged = (BusyChangedEventHandler)Delegate.Remove(_busyChanged, value);
+		add => _busyChanged = (BusyChangedEventHandler?)Delegate.Combine(_busyChanged, value);
+		remove => _busyChanged = (BusyChangedEventHandler?)Delegate.Remove(_busyChanged, value);
 	}
 
 	/// <summary>
@@ -536,6 +536,9 @@ public class FieldData<T> : IFieldData<T>, IFieldDataInternal
 			}
 		}
 
+		/// <summary>
+		/// 表示观察者对字段可观察对象的一次订阅；首次释放时从所有者移除观察者，重复释放无副作用。
+		/// </summary>
 		private sealed class Subscription(FieldObservable owner, IObserver<T> observer) : IDisposable
 		{
 			private int _disposed;

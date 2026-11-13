@@ -12,10 +12,10 @@
 internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 {
 	/// <inheritdoc />
-	public event EventHandler<UnitOfWorkEventArgs> Completed;
+	public event EventHandler<UnitOfWorkEventArgs>? Completed;
 
 	/// <inheritdoc />
-	public event EventHandler<UnitOfWorkFailedEventArgs> Failed;
+	public event EventHandler<UnitOfWorkFailedEventArgs>? Failed;
 
 	/// <inheritdoc />
 	public Guid Id { get; } = Guid.NewGuid();
@@ -33,7 +33,7 @@ internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 	public IUnitOfWorkOptions Options => _parent.Options;
 
 	/// <inheritdoc />
-	public IUnitOfWork Outer => _parent.Outer;
+	public IUnitOfWork? Outer => _parent.Outer;
 
 	/// <inheritdoc />
 	public bool IsReserved => _parent.IsReserved;
@@ -45,7 +45,7 @@ internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 	public bool IsCompleted => _parent.IsCompleted;
 
 	/// <inheritdoc />
-	public string ReservationName => _parent.ReservationName;
+	public string? ReservationName => _parent.ReservationName;
 
 	private readonly IUnitOfWork _parent;
 
@@ -64,7 +64,7 @@ internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 		{
 			Failed?.Invoke(sender, args);
 		};
-		_parent.Disposed += InvokeDisposedEvent;
+		_parent.Disposed += (sender, args) => InvokeDisposedEvent(sender!, args);
 		_parent.Completed += (sender, args) =>
 		{
 			Completed?.Invoke(sender, args);
@@ -101,7 +101,7 @@ internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	public void SetOuter(IUnitOfWork outer)
+	public void SetOuter(IUnitOfWork? outer)
 	{
 		_parent.SetOuter(outer);
 	}
@@ -119,7 +119,7 @@ internal class ChildUnitOfWork : UnitOfWorkBase, IUnitOfWork
 	}
 
 	/// <inheritdoc />
-	public IUnitOfWorkContext FindContext(string key)
+	public IUnitOfWorkContext? FindContext(string key)
 	{
 		return _parent.FindContext(key);
 	}

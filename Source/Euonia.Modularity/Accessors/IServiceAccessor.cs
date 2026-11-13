@@ -33,7 +33,7 @@ public interface IServiceAccessor : IScopedDependency
 	/// <returns>
 	/// 服务实例；如果未注册该类型，则返回 <c>null</c>。
 	/// </returns>
-	T GetService<T>();
+	T? GetService<T>();
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中解析指定类型的服务实例。
@@ -51,7 +51,7 @@ public interface IServiceAccessor : IScopedDependency
 	/// <param name="key">用于标识服务注册的键名。</param>
 	/// <typeparam name="T">要解析的服务类型。</typeparam>
 	/// <returns>与指定键关联的服务实例；如果未注册该类型，则返回 <c>null</c>。</returns>
-	T GetKeyedService<T>(object key);
+	T? GetKeyedService<T>(object key);
 
 	/// <summary>
 	/// 从 <see cref="ServiceProvider"/> 中按指定键解析必需的服务实例。
@@ -74,5 +74,5 @@ public interface IServiceAccessor : IScopedDependency
 	/// <exception cref="ArgumentNullException">
 	/// 当 <paramref name="type"/> 为 <c>null</c> 时抛出。
 	/// </exception>
-	object GetService(Type type);
+	object? GetService(Type type);
 }

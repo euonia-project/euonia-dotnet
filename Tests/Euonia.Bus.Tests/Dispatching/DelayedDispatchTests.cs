@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class DelayedDispatchTests
 {
+	/// <summary>
+	/// 验证设置 <see cref="ExtendableOptions.Delay"/> 后发布操作会等待延迟结束，消息最终送达传输器。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithDelay_DeliversOnlyAfterDelayElapsed()
 	{
@@ -38,6 +41,9 @@ public class DelayedDispatchTests
 		Assert.Contains("delayed-1", delivered);
 	}
 
+	/// <summary>
+	/// 验证未设置延迟时消息立即投递，且在 500 毫秒内完成。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_WithoutDelay_DeliversImmediately()
 	{
@@ -113,7 +119,7 @@ public class DelayedDispatchTests
 			TestContext.Current.CancellationToken));
 	}
 
-	private static ServiceProvider BuildProvider(List<string> delivered, ITransporter transporter = null)
+	private static ServiceProvider BuildProvider(List<string> delivered, ITransporter? transporter = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -131,6 +137,10 @@ public class DelayedDispatchTests
 		return provider;
 	}
 
+	/// <summary>
+	/// 发布操作始终以 <see cref="InvalidOperationException"/> 失败的传输器替身，
+	/// 用于验证传输失败会传播给调用方而不是被吞掉。
+	/// </summary>
 	private sealed class FailingTransporter : ITransporter
 	{
 		public string Name => "test";
@@ -157,6 +167,9 @@ public class DelayedDispatchTests
 		}
 	}
 
+	/// <summary>
+	/// 记录被投递消息标识的传输器替身，用于断言延迟结束前后消息是否已经送达。
+	/// </summary>
 	private sealed class RecordingTransporter : ITransporter
 	{
 		private readonly List<string> _delivered;

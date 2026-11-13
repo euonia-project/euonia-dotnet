@@ -29,7 +29,7 @@ public readonly struct EquatableReadOnlyList<T> : IReadOnlyList<T>, IEquatable<E
     public bool Equals(EquatableReadOnlyList<T> other) => Items.SequenceEqual(other.Items);
 
     /// <inheritdoc />
-    public override bool Equals(object obj) => obj is EquatableReadOnlyList<T> that && Equals(that);
+    public override bool Equals(object? obj) => obj is EquatableReadOnlyList<T> that && Equals(that);
 
     /// <inheritdoc />
     public override int GetHashCode()

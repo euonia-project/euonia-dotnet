@@ -3,27 +3,27 @@
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Provides the default implementation for a cache holder.
-/// The cache holder is responsible for actually storing the references to cached entities.
-/// Implements the <see cref="ICacheHolder" />
+/// 提供缓存持有器的默认实现。
+/// 缓存持有器负责实际存储对已缓存实体的引用。
+/// 实现 <see cref="ICacheHolder" />。
 /// </summary>
 /// <seealso cref="ICacheHolder" />
 public class DefaultCacheHolder : ICacheHolder
 {
     /// <summary>
-    /// The cache context accessor
+    /// 缓存上下文访问器。
     /// </summary>
     private readonly ICacheContextAccessor _accessor;
 
     /// <summary>
-    /// The caches
+    /// 缓存集合。
     /// </summary>
     private readonly ConcurrentDictionary<CacheKey, object> _caches = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultCacheHolder"/> class.
+    /// 初始化 <see cref="DefaultCacheHolder"/> 类的新实例。
     /// </summary>
-    /// <param name="accessor">The cache context accessor.</param>
+    /// <param name="accessor">缓存上下文访问器。</param>
     public DefaultCacheHolder(ICacheContextAccessor accessor)
     {
         _accessor = accessor;

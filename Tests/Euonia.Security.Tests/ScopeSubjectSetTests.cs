@@ -11,6 +11,9 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public class ScopeSubjectSetTests
 {
+	/// <summary>
+	/// <see cref="ScopeSubjectSet.ValuesOf"/> 的维度名匹配忽略大小写，维度值匹配区分大小写。
+	/// </summary>
 	[Fact]
 	public void ValuesOf_Should_Match_Dimension_Case_Insensitively_And_Value_Case_Sensitively()
 	{
@@ -27,6 +30,9 @@ public class ScopeSubjectSetTests
 		Assert.DoesNotContain("teama", subjects.ValuesOf(ScopeKeys.Default, "dept"));
 	}
 
+	/// <summary>
+	/// <see cref="ScopeSubjectSet.Contains"/> 应遵循与 <see cref="ScopeSubjectSet.ValuesOf"/> 相同的大小写规则。
+	/// </summary>
 	[Fact]
 	public void Contains_Should_Follow_The_Same_Rules()
 	{
@@ -40,6 +46,9 @@ public class ScopeSubjectSetTests
 		Assert.False(subjects.Contains(ScopeKeys.Default, "region", "TeamA"));
 	}
 
+	/// <summary>
+	/// 某权限码上有该维度的授予时应覆盖默认键而不是取并集；该码缺失该维度时仍回落到默认键。
+	/// </summary>
 	[Fact]
 	public void Code_Grant_Should_Override_The_Default_Key_Not_Union()
 	{
@@ -55,18 +64,24 @@ public class ScopeSubjectSetTests
 		Assert.Equal(["from-default"], subjects.ValuesOf("order:other", "dept"));
 	}
 
+	/// <summary>
+	/// 无授予时 <see cref="ScopeSubjectSet.ValuesOf"/> 返回空集合，且权限码为 <c>null</c> 时视作默认键。
+	/// </summary>
 	[Fact]
 	public void ValuesOf_Should_Be_Empty_When_Nothing_Is_Granted()
 	{
 		var subjects = ScopeSubjectSet.CreateBuilder().Add("dept", "team-a").Build();
 
 		Assert.Empty(subjects.ValuesOf(ScopeKeys.Default, "region"));
-		Assert.False(subjects.Contains(ScopeKeys.Default, "dept", null));
+		Assert.False(subjects.Contains(ScopeKeys.Default, "dept", null!));
 
 		// 权限码为 null 视作默认键（不是「无授予」）
-		Assert.Equal(["team-a"], subjects.ValuesOf(null, "dept"));
+		Assert.Equal(["team-a"], subjects.ValuesOf(null!, "dept"));
 	}
 
+	/// <summary>
+	/// <see cref="ScopeSubjectSet.KeysWithGrants"/> 只列出实际带有维度值的键，仅持有权限码的键不出现。
+	/// </summary>
 	[Fact]
 	public void KeysWithGrants_Should_List_Only_Keys_That_Have_Values()
 	{
@@ -82,6 +97,10 @@ public class ScopeSubjectSetTests
 		Assert.DoesNotContain("order:read", subjects.KeysWithGrants);
 	}
 
+	/// <summary>
+	/// <see cref="ScopeSubjectSet.HoldsPermission"/> 支持前缀通配（<c>repo:*</c> 命中 <c>repo:push</c>），
+	/// 但通配授予不会被具体的维度查找继承。
+	/// </summary>
 	[Fact]
 	public void HoldsPermission_Should_Support_Prefix_Wildcard_But_Not_Feed_Dimension_Lookup()
 	{

@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Caching;
+namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
 /// 为管理带键前缀支持的缓存操作提供基础实现的缓存服务基类。
@@ -15,7 +15,12 @@ public abstract class BaseCacheService
 	/// <value>
 	/// 表示键前缀的字符串。如果为 <see langword="null"/> 或空，则不向前缀添加任何内容。
 	/// </value>
-	public virtual string KeyPrefix { get; protected set; }
+	public virtual string? KeyPrefix { get; protected set; }
+
+	/// <summary>
+	/// 获取或设置缓存键转换器；未启用多租户时为原样返回。
+	/// </summary>
+	protected IKeyTransformer KeyTransformer { get; set; } = NullKeyTransformer.Instance;
 
 	/// <summary>
 	/// 获取指定类型的缓存管理器实例。
@@ -38,6 +43,9 @@ public abstract class BaseCacheService
 	/// </remarks>
 	protected virtual string RewriteKey(string key)
 	{
+		// 租户前缀先于缓存前缀，保证不同租户的同名键互不干扰。
+		key = KeyTransformer.Transform(key);
+
 		if (string.IsNullOrEmpty(KeyPrefix))
 		{
 			return key;

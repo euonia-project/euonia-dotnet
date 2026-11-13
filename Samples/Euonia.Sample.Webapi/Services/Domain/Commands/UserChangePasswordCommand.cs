@@ -17,13 +17,19 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </remarks>
 public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePasswordCommand>
 {
-	/// <summary>新密码的最小长度。</summary>
+	/// <summary>
+	/// 新密码的最小长度。
+	/// </summary>
 	public const int MinPasswordLength = 8;
 
-	/// <summary>被改密的账号标识（由工厂执行时解析当前用户填入）。</summary>
-	public string UserId { get; private set; }
+	/// <summary>
+	/// 被改密的账号标识（由工厂执行时解析当前用户填入）。
+	/// </summary>
+	public string UserId { get; private set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Changed { get; private set; }
 
 	[FactoryCreate]
@@ -34,12 +40,23 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 		return Task.CompletedTask;
 	}
 
-	/// <summary>当前密码。</summary>
-	public string OldPassword { get; private set; }
+	/// <summary>
+	/// 当前密码。
+	/// </summary>
+	public string OldPassword { get; private set; } = null!;
 
-	/// <summary>新密码。</summary>
-	public string NewPassword { get; private set; }
+	/// <summary>
+	/// 新密码。
+	/// </summary>
+	public string NewPassword { get; private set; } = null!;
 
+	/// <summary>
+	/// 执行改密：校验新密码长度与旧密码，通过后重新生成盐与哈希并保存，同时发布密码变更事件。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="BusinessException">无法识别当前用户、新密码过短或旧密码不正确时抛出。</exception>
+	/// <exception cref="NotFoundException">当前用户不存在时抛出。</exception>
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
@@ -80,7 +97,9 @@ public sealed class UserChangePasswordCommand : ServiceObjectBase<UserChangePass
 		Changed = true;
 	}
 
-	/// <summary>常量时间比对，避免按字节比较泄露密码前缀信息。</summary>
+	/// <summary>
+	/// 常量时间比对，避免按字节比较泄露密码前缀信息。
+	/// </summary>
 	private static bool Verify(string hash, string salt, string password)
 	{
 		if (string.IsNullOrWhiteSpace(hash) || string.IsNullOrWhiteSpace(salt) || password == null)

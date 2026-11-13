@@ -36,7 +36,7 @@ public sealed class AsyncSemaphore
     /// </summary>
     /// <param name="initialCount">此信号量的初始计数。必须大于或等于零。</param>
     /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
-    internal AsyncSemaphore(long initialCount, IAsyncWaitQueue<object> queue)
+    internal AsyncSemaphore(long initialCount, IAsyncWaitQueue<object>? queue)
     {
         _queue = queue ?? new DefaultAsyncWaitQueue<object>();
         _count = initialCount;
@@ -184,6 +184,9 @@ public sealed class AsyncSemaphore
     public IDisposable Lock() => Lock(CancellationToken.None);
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露信号量的标识、当前计数与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

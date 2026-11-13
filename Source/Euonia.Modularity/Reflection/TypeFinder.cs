@@ -1,9 +1,10 @@
-﻿using Nerosoft.Euonia.Reflection;
+﻿using System.Diagnostics;
+using Nerosoft.Euonia.Reflection;
 
 namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// This class uses reflection to find types within assemblies
+/// 此类使用反射在程序集中查找类型。
 /// </summary>
 public class TypeFinder : ITypeFinder
 {
@@ -12,25 +13,26 @@ public class TypeFinder : ITypeFinder
     private readonly Lazy<IReadOnlyList<Type>> _types;
 
     /// <summary>
-    /// Initialize a new instalce of <see cref="TypeFinder"/>.
+    /// 初始化 <see cref="TypeFinder"/> 的新实例。
     /// </summary>
-    /// <param name="assemblyFinder"></param>
+    /// <param name="assemblyFinder">程序集查找器，用于获取待扫描的程序集。</param>
+    /// <exception cref="ArgumentNullException">当 <paramref name="assemblyFinder"/> 为 <see langword="null"/> 时抛出。</exception>
     public TypeFinder(IAssemblyFinder assemblyFinder)
     {
-        _assemblyFinder = assemblyFinder;
+        _assemblyFinder = Check.EnsureNotNull(assemblyFinder, nameof(assemblyFinder));
 
         _types = new Lazy<IReadOnlyList<Type>>(FindAll, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     /// <summary>
-    /// Gets the types list.
+    /// 获取类型列表。
     /// </summary>
     public IReadOnlyList<Type> Types => _types.Value;
 
     /// <summary>
-    /// Finds all types within the assembly.
+    /// 查找程序集中的所有类型。
     /// </summary>
-    /// <returns></returns>
+    /// <returns>所有程序集中加载成功的类型列表；加载失败的程序集会被跳过。</returns>
     private IReadOnlyList<Type> FindAll()
     {
         var allTypes = new List<Type>();
@@ -39,18 +41,18 @@ public class TypeFinder : ITypeFinder
         {
             try
             {
-                var typesInThisAssembly = AssemblyHelper.LoadTypes(assembly);
+                var typesInAssembly = AssemblyHelper.LoadTypes(assembly);
 
-                if (!typesInThisAssembly.Any())
+                if (typesInAssembly.Count == 0)
                 {
                     continue;
                 }
 
-                allTypes.AddRange(typesInThisAssembly.Where(type => type != null));
+                allTypes.AddRange(typesInAssembly.Where(type => type != null));
             }
-            catch
+            catch (Exception exception)
             {
-                //TODO: Trigger a global event?
+                Debug.WriteLine($"Could not load types from assembly '{assembly.FullName}': {exception.Message}");
             }
         }
 

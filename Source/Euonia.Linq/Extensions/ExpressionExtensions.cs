@@ -125,15 +125,9 @@ public static class ExpressionExtensions
         }
 
         var propertyNameList = propertyName.Split('.');
-        Expression result = null;
-        for (var i = 0; i < propertyNameList.Length; i++)
+        Expression result = Expression.Property(expression, propertyNameList[0]);
+        for (var i = 1; i < propertyNameList.Length; i++)
         {
-            if (i == 0)
-            {
-                result = Expression.Property(expression, propertyNameList[0]);
-                continue;
-            }
-
             result = result.Property(propertyNameList[i]);
         }
 
@@ -237,7 +231,7 @@ public static class ExpressionExtensions
     /// <typeparam name="T">目标对象类型。</typeparam>
     /// <param name="expression">lambda 表达式。</param>
     /// <returns>从表达式中提取的值。</returns>
-    public static object Value<T>(this Expression<Func<T, bool>> expression)
+    public static object? Value<T>(this Expression<Func<T, bool>> expression)
     {
         return Lambda.GetValue(expression);
     }
@@ -618,7 +612,7 @@ public static class ExpressionExtensions
     {
         if (body == null)
         {
-            return null;
+            return null!;
         }
         return Expression.Lambda<TDelegate>(body, parameters);
     }

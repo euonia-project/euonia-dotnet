@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -40,7 +41,7 @@ internal static class ObjectAuthorization
 	/// </param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
-	internal static void EnsureAuthorized(object target, string operation, Type requirementType = null)
+	internal static void EnsureAuthorized(object target, string operation, Type? requirementType = null)
 	{
 		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
 		{
@@ -70,7 +71,7 @@ internal static class ObjectAuthorization
 	/// 这里在判定前先 await <see cref="AuthorizationWarmup"/>，授权数据命中暖路径后
 	/// 判定直接走同步快路径，整条异步链路不会退化成 sync-over-async。
 	/// </remarks>
-	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, Type requirementType = null)
+	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, Type? requirementType = null)
 	{
 		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
 		{
@@ -118,7 +119,7 @@ internal static class ObjectAuthorization
 	/// <param name="checker">判定实现。</param>
 	/// <param name="requirements">为目标收集到的权限要求。</param>
 	/// <returns>需要判定则返回 <see langword="true"/>。</returns>
-	private static bool TryPrepare(object target, string operation, Type requirementType, out ObjectBase businessObject, out IPermissionChecker checker, out IReadOnlyList<PermissionAttribute> requirements)
+	private static bool TryPrepare(object target, string operation, Type? requirementType, [NotNullWhen(true)] out ObjectBase? businessObject, [NotNullWhen(true)] out IPermissionChecker? checker, out IReadOnlyList<PermissionAttribute> requirements)
 	{
 		checker = null;
 		requirements = [];
@@ -139,13 +140,14 @@ internal static class ObjectAuthorization
 		}
 
 		// 有要求却判定不了 —— 属配置错误，必须暴露
+		var context = candidate.BusinessContext;
 		Check.Ensure(
-			candidate.BusinessContext != null,
+			context != null,
 			Resources.IDS_OBJECT_CONTEXT_MISSING,
 			candidate.GetType().Name,
 			operation);
 
-		checker = candidate.BusinessContext.GetService<IPermissionChecker>();
+		checker = context!.GetService<IPermissionChecker>();
 
 		Check.Ensure(
 			checker != null,
@@ -153,6 +155,8 @@ internal static class ObjectAuthorization
 			candidate.GetType().Name,
 			nameof(IPermissionChecker));
 
+		var resolvedChecker = checker;
+		checker = resolvedChecker!;
 		businessObject = candidate;
 		return true;
 	}
@@ -168,6 +172,7 @@ internal static class ObjectAuthorization
 	private static void Enforce(ObjectBase businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("authorize", operation);
 		var succeeded = false;
 		try
 		{
@@ -194,6 +199,7 @@ internal static class ObjectAuthorization
 		finally
 		{
 			OsbaDiagnostics.RecordAuthorization(started, "object", operation, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "authorize", started, succeeded);
 		}
 	}
 
@@ -239,7 +245,7 @@ internal static class ObjectAuthorization
 	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
 	/// </param>
 	/// <returns>权限要求列表。</returns>
-	private static IReadOnlyList<PermissionAttribute> Requirements(ObjectBase businessObject, string operation, Type requirementType = null)
+	private static IReadOnlyList<PermissionAttribute> Requirements(ObjectBase businessObject, string operation, Type? requirementType = null)
 	{
 		// 不能只看业务对象自身的上下文：手工构造/反序列化的对象没有 BusinessContext，
 		// 但宿主注册的来源仍应生效；与 ScopeAuthorization 一致地回退到环境作用域。

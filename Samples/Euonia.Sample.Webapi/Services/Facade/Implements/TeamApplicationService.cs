@@ -18,17 +18,20 @@ namespace Nerosoft.Euonia.Sample.Facade.Implements;
 internal class TeamApplicationService(IObjectFactory factory)
 	: BaseApplicationService, ITeamApplicationService
 {
-	public Task<PagedResult<TeamDto>> FindAsync(string keyword, string sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
+	/// <inheritdoc/>
+	public Task<PagedResult<TeamDto>> FindAsync(string? keyword, string? sortBy, int page, int pageSize, CancellationToken cancellationToken = default)
 	{
 		return Bus.CallAsync(new TeamListQueryRequest(keyword, sortBy, page, pageSize), cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public async Task<TeamDto> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		var team = await factory.FetchAsync<Team>(id, cancellationToken);
 		return new TeamDto(team.Id, team.Name, team.LeaderId);
 	}
 
+	/// <inheritdoc/>
 	public async Task<string> CreateAsync(TeamCreateInput input, CancellationToken cancellationToken = default)
 	{
 		var command = new CreateTeamCommand { Name = input.Name };
@@ -41,27 +44,31 @@ internal class TeamApplicationService(IObjectFactory factory)
 	{
 		var tcs = new TaskCompletionSource<string>();
 		var subject = new Subject<string>();
-		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null));
+		subject.Subscribe(tcs.SetResult, tcs.SetException, () => tcs.TrySetResult(null!));
 
 		await Bus.SendAsync(command, subject, cancellationToken);
 		return await tcs.Task;
 	}
 
+	/// <inheritdoc/>
 	public Task UpdateAsync(string id, TeamUpdateInput input, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new UpdateTeamCommand { Id = id, Name = input.Name }, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task DeleteAsync(string id, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new DeleteTeamCommand { Id = id }, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task AddMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new AddTeamMemberCommand { TeamId = teamId, UserId = userId }, cancellationToken);
 	}
 
+	/// <inheritdoc/>
 	public Task RemoveMemberAsync(string teamId, string userId, CancellationToken cancellationToken = default)
 	{
 		return Bus.SendAsync(new RemoveTeamMemberCommand { TeamId = teamId, UserId = userId }, cancellationToken);

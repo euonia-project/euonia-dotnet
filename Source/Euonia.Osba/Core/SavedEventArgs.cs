@@ -20,7 +20,7 @@ public class SavedEventArgs : EventArgs
 	/// <param name="newObject">新保存的对象实例。</param>
 	/// <param name="error">保存操作期间发生的异常；如果成功则为 <c>null</c>。</param>
 	/// <param name="userState">与保存操作关联的用户定义状态信息。</param>
-	public SavedEventArgs(object newObject, Exception error, object userState)
+	public SavedEventArgs(object newObject, Exception? error, object? userState)
 		: this(newObject)
 	{
 		Error = error;
@@ -35,10 +35,10 @@ public class SavedEventArgs : EventArgs
 	/// <summary>
 	/// 获取错误。
 	/// </summary>
-	public Exception Error { get; }
+	public Exception? Error { get; }
 
 	/// <summary>
 	/// 获取用户状态。
 	/// </summary>
-	public object UserState { get; }
+	public object? UserState { get; }
 }

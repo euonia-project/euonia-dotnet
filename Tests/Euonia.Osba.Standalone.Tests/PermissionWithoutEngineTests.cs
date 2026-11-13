@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Osba.Standalone.Tests;
 /// </summary>
 public class PermissionWithoutEngineTests
 {
+	/// <summary>
+	/// Osba 程序集不应直接或间接引用 Euonia.Security，以守卫其可独立于策略引擎使用。
+	/// </summary>
 	[Fact]
 	public void Osba_Assembly_Should_Not_Reference_Security()
 	{
@@ -26,6 +29,9 @@ public class PermissionWithoutEngineTests
 		Assert.DoesNotContain("Euonia.Security", TransitiveReferences(typeof(ObjectBase).Assembly));
 	}
 
+	/// <summary>
+	/// 宿主未授予所需权限码时，保存受控实体应抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task Custom_Implementation_Should_Deny_When_Requirement_Is_Not_Granted()
 	{
@@ -42,6 +48,9 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 宿主已授予所需权限码时，受控实体应能成功保存。
+	/// </summary>
 	[Fact]
 	public async Task Custom_Implementation_Should_Allow_When_Requirement_Is_Granted()
 	{
@@ -59,6 +68,9 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 声明了权限要求却未注册检查器时，保存应失败并提示缺少检查器，而不是静默放行。
+	/// </summary>
 	[Fact]
 	public async Task Requirements_Without_Checker_Should_FailLoudly_Not_Silently_Allow()
 	{
@@ -82,6 +94,9 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 声明了权限要求但未接入业务上下文的对象保存时应失败并给出明确错误。
+	/// </summary>
 	[Fact]
 	public async Task Unwired_Object_With_Declared_Requirement_Should_FailLoudly()
 	{
@@ -99,6 +114,9 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 没有任何权限要求的对象无需额外装配即可正常保存。
+	/// </summary>
 	[Fact]
 	public async Task Object_Without_Requirements_Should_Not_Need_Any_Wiring()
 	{
@@ -116,6 +134,9 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 宿主自定义的行级授权器应同时驱动行级查询与工厂边界的访问控制。
+	/// </summary>
 	[Fact]
 	public void Custom_Row_Authorizer_Should_Drive_Row_Queries_And_The_Gate()
 	{
@@ -140,7 +161,7 @@ public class PermissionWithoutEngineTests
 
 	#region 装配
 
-	private static IServiceScope CreateScope(string[] codes, out IServiceProvider provider)
+	private static IServiceScope CreateScope(string[]? codes, out IServiceProvider provider)
 	{
 		var services = new ServiceCollection();
 
@@ -188,7 +209,7 @@ public class PermissionWithoutEngineTests
 		return new UserPrincipal(new ClaimsPrincipal(identity));
 	}
 
-	private static string[] TransitiveReferences(Assembly assembly, HashSet<string> visited = null)
+	private static string[] TransitiveReferences(Assembly assembly, HashSet<string>? visited = null)
 	{
 		visited ??= [];
 
@@ -196,12 +217,12 @@ public class PermissionWithoutEngineTests
 
 		foreach (var reference in assembly.GetReferencedAssemblies())
 		{
-			if (!visited.Add(reference.Name))
+			if (!visited.Add(reference.Name!))
 			{
 				continue;
 			}
 
-			result.Add(reference.Name);
+			result.Add(reference.Name!);
 
 			if (Assembly.Load(reference) is { } loaded)
 			{
@@ -217,13 +238,20 @@ public class PermissionWithoutEngineTests
 
 #region 受控资源与宿主实现
 
-/// <summary>要求由实体自己声明（<c>[Permission]</c>），判定由宿主实现。</summary>
+/// <summary>
+/// 要求由实体自己声明（<c>[Permission]</c>），判定由宿主实现。
+/// </summary>
 public class GroundedEntity : EditableObject<GroundedEntity>
 {
-	public string Name { get; set; }
+	/// <summary>
+	/// 获取或设置实体名称。
+	/// </summary>
+	public string Name { get; set; } = string.Empty;
 
-	/// <summary>本实体在更新操作上要求的权限码，由宿主的要求来源读取。</summary>
-	public string RequiredCode { get; set; }
+	/// <summary>
+	/// 本实体在更新操作上要求的权限码，由宿主的要求来源读取。
+	/// </summary>
+	public string RequiredCode { get; set; } = string.Empty;
 
 	/// <summary>
 	/// 业务方法内的行级分支：直接问宿主自己的行级授权器（无引擎场景，没有 <c>IScopeGuard</c>）。
@@ -235,10 +263,12 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 		var context = BusinessContext;
 		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null || authorizer.Allows(this, operation, context.CurrentServiceProvider);
+		return authorizer == null || authorizer.Allows(this, operation, context!.CurrentServiceProvider);
 	}
 
-	/// <summary>业务方法内的行级判定说明。</summary>
+	/// <summary>
+	/// 业务方法内的行级判定说明。
+	/// </summary>
 	/// <param name="operation">当前操作；行级策略由它决定。</param>
 	/// <returns>判定说明。</returns>
 	public string ExplainOwnRow(string operation)
@@ -246,9 +276,13 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 		var context = BusinessContext;
 		var authorizer = context?.CurrentServiceProvider.GetService<IObjectScopeAuthorizer>();
 
-		return authorizer == null ? "Data scope is not enabled." : authorizer.Explain(this, operation, context.CurrentServiceProvider);
+		return authorizer == null ? "Data scope is not enabled." : authorizer.Explain(this, operation, context!.CurrentServiceProvider);
 	}
 
+	/// <summary>
+	/// 受控实体在工厂更新路径上执行的更新逻辑。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -256,11 +290,20 @@ public class GroundedEntity : EditableObject<GroundedEntity>
 	}
 }
 
-/// <summary>没有任何权限要求的实体：不需要任何权限装配。</summary>
+/// <summary>
+/// 没有任何权限要求的实体：不需要任何权限装配。
+/// </summary>
 public class PlainEntity : EditableObject<PlainEntity>
 {
-	public string Name { get; set; }
+	/// <summary>
+	/// 获取或设置实体名称。
+	/// </summary>
+	public string Name { get; set; } = string.Empty;
 
+	/// <summary>
+	/// 无权限要求的实体在工厂更新路径上执行的更新逻辑。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
 	[FactoryUpdate]
 	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -268,9 +311,14 @@ public class PlainEntity : EditableObject<PlainEntity>
 	}
 }
 
-/// <summary>把「要求」当作数据提供的来源（模拟配置表 / 权限表）。</summary>
+/// <summary>
+/// 把「要求」当作数据提供的来源（模拟配置表 / 权限表）。
+/// </summary>
 internal sealed class TableRequirementProvider : IPermissionCodeSource
 {
+	/// <summary>
+	/// 获取该来源覆盖的业务操作集合，这里复用 <see cref="BusinessOperation.All"/> 表示全部操作。
+	/// </summary>
 	public IReadOnlyList<string> AllOperations => BusinessOperation.All;
 
 	/// <inheritdoc />
@@ -279,6 +327,13 @@ internal sealed class TableRequirementProvider : IPermissionCodeSource
 		return [.. RequirementsFor(type, operation).Select(requirement => requirement.Permission).Where(permission => !string.IsNullOrEmpty(permission))];
 	}
 
+	/// <summary>
+	/// 获取指定类型在指定操作下声明的权限要求；这里仅对更新操作提出要求，
+	/// 且 <see cref="GroundedEntity"/> 要求 <c>host:update</c> 权限码。
+	/// </summary>
+	/// <param name="type">被检查的实体类型。</param>
+	/// <param name="operation">业务操作名称。</param>
+	/// <returns>匹配的权限要求列表；未配置时返回空集合。</returns>
 	public IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation)
 	{
 		// 只对更新操作提要求，且要求写在实体数据上——真实宿主这里会查配置或权限表
@@ -294,6 +349,7 @@ internal sealed class TableRequirementProvider : IPermissionCodeSource
 /// <remarks>授权数据就在内存里，预热无事可做，直接返回已完成的 <see cref="ValueTask"/>。</remarks>
 internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 {
+	/// <inheritdoc />
 	public bool IsGranted(string permission)
 	{
 		if (string.IsNullOrEmpty(permission))
@@ -305,35 +361,43 @@ internal sealed class CodeSetChecker(string[] codes) : IPermissionChecker
 		                      || (code.EndsWith('*') && permission.StartsWith(code[..^1], StringComparison.OrdinalIgnoreCase)));
 	}
 
+	/// <inheritdoc />
 	public bool IsInRole(string role)
 	{
 		return string.IsNullOrEmpty(role);
 	}
 
+	/// <inheritdoc />
 	public ValueTask EnsureResolvedAsync(CancellationToken cancellationToken = default)
 	{
 		return default;
 	}
 }
 
-/// <summary>行级判定：一切可见（真实宿主这里会按租户/部门/归属人比较对象属性）。</summary>
+/// <summary>
+/// 行级判定：一切可见（真实宿主这里会按租户/部门/归属人比较对象属性）。
+/// </summary>
 internal sealed class VisibleScopeAuthorizer : IObjectScopeAuthorizer
 {
+	/// <inheritdoc />
 	public bool IsConstrained(Type resourceType)
 	{
 		return resourceType == typeof(GroundedEntity);
 	}
 
+	/// <inheritdoc />
 	public bool Allows(object target, string operation, IServiceProvider scope)
 	{
 		return true;
 	}
 
+	/// <inheritdoc />
 	public string Explain(object target, string operation, IServiceProvider scope)
 	{
 		return "可见";
 	}
 
+	/// <inheritdoc />
 	public ValueTask EnsureResolvedAsync(IServiceProvider scope, CancellationToken cancellationToken = default)
 	{
 		return default;

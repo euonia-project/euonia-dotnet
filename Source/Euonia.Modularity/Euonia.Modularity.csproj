@@ -8,14 +8,6 @@
         <PackageTags>euonia, modularity, modules, dependency-injection, lifecycle, plugin</PackageTags>
     </PropertyGroup>
 
-    <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-        <LangVersion>latest</LangVersion>
-    </PropertyGroup>
-
     <ItemGroup>
         <PackageReference Include="Castle.Core" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
@@ -45,6 +37,14 @@
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>

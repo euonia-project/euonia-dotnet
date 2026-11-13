@@ -28,7 +28,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="propertyName">属性名称。</param>
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string friendlyName = null)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string? friendlyName = null)
 	{
 		return RegisterProperty(new PropertyInfo<TValue>(propertyName, friendlyName, typeof(T)));
 	}
@@ -41,7 +41,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="defaultValue">属性的默认值。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string friendlyName, TValue defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string? friendlyName, TValue defaultValue)
 	{
 		var property = new PropertyInfo<TValue>(propertyName, friendlyName, typeof(T), defaultValue);
 		return RegisterProperty(property);
@@ -55,7 +55,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="defaultValue">返回属性默认值的函数；每次创建业务对象实例时都会调用以生成独立默认值。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string friendlyName, Func<TValue> defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(string propertyName, string? friendlyName, Func<TValue> defaultValue)
 	{
 		var property = new PropertyInfo<TValue>(propertyName, friendlyName, typeof(T), defaultValue);
 		return RegisterProperty(property);
@@ -68,7 +68,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="expression">标识属性的表达式。</param>
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string friendlyName = null)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string? friendlyName = null)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty<TValue>(property.Name, friendlyName);
@@ -82,7 +82,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="defaultValue">属性的默认值。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string friendlyName, TValue defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string? friendlyName, TValue defaultValue)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty(property.Name, friendlyName, defaultValue);
@@ -96,7 +96,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="defaultValue">返回属性默认值的函数。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string friendlyName, Func<TValue> defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, object>> expression, string? friendlyName, Func<TValue> defaultValue)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty(property.Name, friendlyName, defaultValue);
@@ -109,7 +109,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="expression">标识属性的表达式。</param>
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string friendlyName = null)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string? friendlyName = null)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty<TValue>(property.Name, friendlyName);
@@ -123,7 +123,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="defaultValue">属性的默认值。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string friendlyName, TValue defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string? friendlyName, TValue defaultValue)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty(property.Name, friendlyName, defaultValue);
@@ -137,7 +137,7 @@ public abstract class ObjectBase<T> : ObjectBase
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="defaultValue">返回属性默认值的函数。</param>
 	/// <returns>注册的属性信息。</returns>
-	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string friendlyName, Func<TValue> defaultValue)
+	protected static PropertyInfo<TValue> RegisterProperty<TValue>(Expression<Func<T, TValue>> expression, string? friendlyName, Func<TValue> defaultValue)
 	{
 		var property = Reflect<T>.GetProperty(expression);
 		return RegisterProperty(property.Name, friendlyName, defaultValue);

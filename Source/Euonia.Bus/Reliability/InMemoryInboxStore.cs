@@ -20,7 +20,7 @@ public class InMemoryInboxStore : IInboxStore
 	}
 
 	/// <inheritdoc/>
-	public InboxEntry Get(string messageId)
+	public InboxEntry? Get(string messageId)
 	{
 		return _entries.GetValueOrDefault(messageId);
 	}

@@ -11,6 +11,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class HttpTransporterTests
 {
+	/// <summary>
+	/// <c>AddHttpBus</c> 应自行注册序列化器、配置器、处理器上下文与 HTTP 传输器。
+	/// </summary>
 	[Fact]
 	public void AddHttpBus_SelfRegistersCoreServices()
 	{
@@ -28,12 +31,18 @@ public class HttpTransporterTests
 		Assert.NotNull(provider.GetRequiredKeyedService<ITransporter>("http"));
 	}
 
+	/// <summary>
+	/// <see cref="HttpBusOptions.RequireAuthorization"/> 默认应为 <see langword="true"/>。
+	/// </summary>
 	[Fact]
 	public void HttpBusOptions_RequireAuthorization_DefaultsToTrue()
 	{
 		Assert.True(new HttpBusOptions().RequireAuthorization);
 	}
 
+	/// <summary>
+	/// 通过模拟 HTTP 服务端调用应返回计算结果，并按约定路由发送请求。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_ReturnsResult()
 	{
@@ -48,6 +57,9 @@ public class HttpTransporterTests
 		Assert.Equal(new Uri("http://localhost/bus/call"), handler.LastRequestUri);
 	}
 
+	/// <summary>
+	/// 远程异常应以原始类型与消息传回客户端。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_PropagatesRemoteErrorAsOriginalType()
 	{
@@ -60,6 +72,9 @@ public class HttpTransporterTests
 		Assert.Equal("boom", exception.Message);
 	}
 
+	/// <summary>
+	/// 请求应携带关联 ID、跟踪 ID、通道与消息类型等头部。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_SetsMessageHeaders()
 	{
@@ -79,6 +94,9 @@ public class HttpTransporterTests
 		Assert.NotNull(handler.LastRequestHeaders["x-message-type"]);
 	}
 
+	/// <summary>
+	/// 服务端返回非成功状态码时应抛出 <see cref="MessageDeliverException"/> 并包含状态码。
+	/// </summary>
 	[Fact]
 	public async Task CallAsync_ThrowsOnNonSuccessStatusCode()
 	{
@@ -275,6 +293,9 @@ public class HttpTransporterTests
 		Assert.Equal(first, third);
 	}
 
+	/// <summary>
+	/// HTTP 传输器不支持 <c>SendAsync</c>，调用应抛出 <see cref="NotSupportedException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SendAsync_ThrowsNotSupported()
 	{
@@ -283,6 +304,9 @@ public class HttpTransporterTests
 		await Assert.ThrowsAsync<NotSupportedException>(async () => await transport.SendAsync<CountRequest, int>(new RoutedMessage<CountRequest>(new CountRequest(), "count"), TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// HTTP 传输器不支持 <c>PublishAsync</c>，调用应抛出 <see cref="NotSupportedException"/>。
+	/// </summary>
 	[Fact]
 	public async Task PublishAsync_ThrowsNotSupported()
 	{
@@ -291,6 +315,9 @@ public class HttpTransporterTests
 		await Assert.ThrowsAsync<NotSupportedException>(async () => await transport.PublishAsync(new RoutedMessage<CountRequest>(new CountRequest(), "count"), TestContext.Current.CancellationToken));
 	}
 
+	/// <summary>
+	/// 载荷缺少类型名时应返回失败结果并携带错误信息。
+	/// </summary>
 	[Fact]
 	public async Task RemoteReceiver_ReturnsFailure_WhenTypeNameMissing()
 	{
@@ -302,6 +329,9 @@ public class HttpTransporterTests
 		Assert.NotNull(parsed.Error);
 	}
 
+	/// <summary>
+	/// 提供请求服务时，未注册的消息类型应被拒绝并返回失败结果。
+	/// </summary>
 	[Fact]
 	public async Task RemoteReceiver_RejectsUnregisteredMessageType_WhenRequestServicesProvided()
 	{
@@ -324,6 +354,9 @@ public class HttpTransporterTests
 		Assert.Contains("not registered", parsed.Error!.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
+	/// <summary>
+	/// 取消令牌应传播为 <see cref="OperationCanceledException"/>。
+	/// </summary>
 	[Fact]
 	public async Task RemoteReceiver_Cancellation_Propagates()
 	{

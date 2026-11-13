@@ -16,6 +16,10 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class RuntimeRequirementSourceTests
 {
+	/// <summary>
+	/// 宿主通过自定义来源补充 <c>host:update</c> 要求后，未授予该权限码的更新必须被工厂边界以
+	/// <see cref="SecurityException"/> 拒绝，而不是按 Osba 自身的约定静默通过。
+	/// </summary>
 	[Fact]
 	public async Task Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing()
 	{
@@ -31,6 +35,10 @@ public class RuntimeRequirementSourceTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 目标对象没有 <c>BusinessContext</c> 时仍应使用环境来源发现宿主要求；由于无法判定，
+	/// 必须抛出 <see cref="InvalidOperationException"/> 而不是静默放行。
+	/// </summary>
 	[Fact]
 	public async Task Factory_Boundary_Should_Use_Ambient_Source_When_Target_Has_No_BusinessContext()
 	{
@@ -50,6 +58,10 @@ public class RuntimeRequirementSourceTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 派生类型用 <c>new</c> 遮蔽基类更新方法时，保存仍按基类方法上的权限要求判定；
+	/// 未授予相应权限时抛出 <see cref="SecurityException"/>。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OnDerivedType_ShouldEnforceHiddenBaseMethodRequirement()
 	{
@@ -71,6 +83,9 @@ public class RuntimeRequirementSourceTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 授予宿主声明的 <c>host:update</c> 后，更新应通过工厂边界，并返回团队标识为 <c>team-a</c> 的对象。
+	/// </summary>
 	[Fact]
 	public async Task Factory_Boundary_Should_Allow_When_Host_Declared_Requirement_Is_Granted()
 	{
@@ -128,6 +143,9 @@ public class RuntimeRequirementSourceTests
 /// </summary>
 public class AmbientTask : EditableObject<AmbientTask>
 {
+	/// <summary>
+	/// 更新工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected new Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -143,18 +161,25 @@ internal sealed class HostUpdateRequirementSource : IPermissionCodeSource
 {
 	private const string Code = "host:update";
 
+	/// <summary>
+	/// 获取该来源覆盖的业务操作集合，这里仅包含更新操作。
+	/// </summary>
 	public IReadOnlyList<string> AllOperations => [BusinessOperation.Update];
 
+	/// <inheritdoc />
 	public IReadOnlyCollection<string> CodesFor(Type type, string operation)
 	{
 		return (type == typeof(ScopedTask) || type == typeof(AmbientTask)) && operation == BusinessOperation.Update ? [Code] : [];
 	}
 }
 
-/// <summary>授予指定权限码与部门范围的解析器（数据范围满足 <see cref="ScopedTaskModel"/> 的部门策略）。</summary>
+/// <summary>
+/// 授予指定权限码与部门范围的解析器（数据范围满足 <see cref="ScopedTaskModel"/> 的部门策略）。
+/// </summary>
 internal sealed class HostRuleResolver(string[] codes) : IScopeSubjectResolver
 {
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	/// <inheritdoc />
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder()
 		                                            .AddCodes(codes)

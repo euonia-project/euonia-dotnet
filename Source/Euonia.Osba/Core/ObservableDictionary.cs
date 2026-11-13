@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
@@ -15,6 +17,7 @@ namespace Nerosoft.Euonia.Osba;
 /// <typeparam name="TKey">字典中键的类型。</typeparam>
 /// <typeparam name="TValue">字典中值的类型。</typeparam>
 public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INotifyBusy, IChildGraphNode
+	where TKey : notnull
 {
 	/// <summary>
 	/// 获取或设置一个值，指示 ObservableDictionary 在子项被修改时是否应引发更改通知。
@@ -95,7 +98,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <summary>
 	/// 从父对象上摘下值。
 	/// </summary>
-	private static void DetachValue(TValue value, ObjectBase parent, IPropertyInfo property)
+	private static void DetachValue(TValue? value, ObjectBase parent, IPropertyInfo property)
 	{
 		switch (value)
 		{
@@ -111,7 +114,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <summary>
 	/// 判断值是否仍被其他键引用；同一实例放在多个键下时不能提前解链。
 	/// </summary>
-	private bool ContainsValueReference(TValue value)
+	private bool ContainsValueReference(TValue? value)
 	{
 		foreach (var candidate in Values)
 		{
@@ -144,7 +147,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子，
 	/// 并发订阅不会静默丢失处理器。
 	/// </remarks>
-	public event DictionaryChangedEventHandler<TKey, TValue> ItemChanged;
+	public event DictionaryChangedEventHandler<TKey, TValue>? ItemChanged;
 
 	/// <summary>
 	/// 引发 ItemChanged 事件。
@@ -155,7 +158,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <param name="action">发生的更改类型。</param>
 	/// <param name="oldValue">更改前与键关联的值。</param>
 	/// <param name="newValue">更改后与键关联的值。</param>
-	protected virtual void OnItemChanged(TKey key, DictionaryChangedAction action, TValue oldValue, TValue newValue)
+	protected virtual void OnItemChanged(TKey key, DictionaryChangedAction action, TValue? oldValue, TValue? newValue)
 	{
 		if (RaiseItemChangedEvents)
 		{
@@ -174,7 +177,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <remarks>
 	/// 字段式事件：订阅/退订由编译器生成的 <c>Interlocked.CompareExchange</c> 循环保证原子。
 	/// </remarks>
-	public event BusyChangedEventHandler BusyChanged;
+	public event BusyChangedEventHandler? BusyChanged;
 
 	/// <summary>
 	/// 重写此方法以在 IsBusy 属性改变时收到通知。
@@ -331,7 +334,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 	/// <param name="key">要移除元素的键。</param>
 	/// <param name="value">当此方法返回时，如果找到并移除了该键，则包含被移除元素的值；否则包含 TValue 类型的默认值。</param>
 	/// <returns>如果成功找到并移除元素，则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public new bool Remove(TKey key, out TValue value)
+	public new bool Remove(TKey key, [MaybeNullWhen(false)] out TValue value)
 	{
 		var result = base.Remove(key, out value);
 		if (result)
@@ -370,7 +373,7 @@ public class ObservableDictionary<TKey, TValue> : Dictionary<TKey, TValue>, INot
 		}
 
 		base.Clear();
-		OnItemChanged(default, DictionaryChangedAction.Clear, default, default);
+		OnItemChanged(default!, DictionaryChangedAction.Clear, default, default);
 	}
 
 	/// <summary>

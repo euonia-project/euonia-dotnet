@@ -1,6 +1,6 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Represents a none input use case.
+/// 表示无输入的用例。
 /// </summary>
 public record EmptyUseCaseInput : IUseCaseInput;

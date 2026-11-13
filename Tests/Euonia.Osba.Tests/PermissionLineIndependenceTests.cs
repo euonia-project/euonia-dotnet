@@ -22,6 +22,10 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </remarks>
 public class PermissionLineIndependenceTests
 {
+	/// <summary>
+	/// 验证即使类型先在未声明权限模型的容器中被触达，越权保存仍会由工厂边界的权限线以
+	/// <see cref="SecurityException"/> 拒绝。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OutOfScope_ShouldFailWithSecurityException_EvenIfTypeWasFirstTouchedWithoutModelDeclarations()
 	{
@@ -48,6 +52,9 @@ public class PermissionLineIndependenceTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证重复为对象接线业务上下文不会产生注入副作用，越权保存依旧被拒绝。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_OutOfScope_ShouldStillBeDenied_WhenContextIsAssignedRepeatedly()
 	{
@@ -69,6 +76,9 @@ public class PermissionLineIndependenceTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证同一容器中未声明权限模型的类型不受数据权限约束，保存能够正常完成。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_UnmodeledType_ShouldNotBeDenied()
 	{
@@ -121,14 +131,25 @@ public class PermissionLineIndependenceTests
 /// </summary>
 public class ScopeOrder : EditableObject<ScopeOrder>
 {
+	/// <summary>
+	/// 团队标识属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> TeamIdProperty = RegisterProperty<string>(p => p.TeamId);
 
+	/// <summary>
+	/// 获取或设置用于数据范围判定的团队标识。
+	/// </summary>
 	public string TeamId
 	{
 		get => GetProperty(TeamIdProperty);
 		set => SetProperty(TeamIdProperty, value);
 	}
 
+	/// <summary>
+	/// 插入操作的工厂实现，测试中不执行实际操作。
+	/// </summary>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示插入完成的任务。</returns>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
@@ -141,11 +162,18 @@ public class ScopeOrder : EditableObject<ScopeOrder>
 /// </summary>
 public sealed class ScopeOrderModel : ScopeModel<ScopeOrder>
 {
+	/// <summary>
+	/// 定义按团队维度映射的数据范围模型。
+	/// </summary>
+	/// <param name="builder">数据范围模型构建器。</param>
 	public override void Define(ScopeModelBuilder<ScopeOrder> builder)
 	{
 		builder.Map("team", order => order.TeamId);
 	}
 
+	/// <summary>
+	/// 获取仅授权 <c>team</c> 维度的数据范围策略。
+	/// </summary>
 	public override ScopePolicy<ScopeOrder> Policy => ScopePolicy<ScopeOrder>.Grant("team");
 }
 
@@ -154,7 +182,13 @@ public sealed class ScopeOrderModel : ScopeModel<ScopeOrder>
 /// </summary>
 public sealed class NoGrantResolver : IScopeSubjectResolver
 {
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 返回一个不授予任何数据范围维度值的主体集合，使所有 <see cref="ScopeOrder"/> 均被视为越权。
+	/// </summary>
+	/// <param name="user">当前用户主体。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>仅包含写入权限码、不含任何范围维度值的主体集合。</returns>
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder().AddCodes(["order:write"]).Build());
 	}

@@ -15,12 +15,12 @@ public class RemoteReply<TResult>
 	/// <summary>
 	/// 获取或设置成功时的回复结果。
 	/// </summary>
-	public TResult Result { get; set; }
+	public TResult? Result { get; set; }
 
 	/// <summary>
 	/// 获取或设置失败时的错误信息。
 	/// </summary>
-	public RemoteError Error { get; set; }
+	public RemoteError? Error { get; set; }
 
 	/// <summary>
 	/// 初始化 <see cref="RemoteReply{TResult}"/> 类的新实例。
@@ -35,7 +35,7 @@ public class RemoteReply<TResult>
 	/// <param name="result">回复结果。</param>
 	/// <param name="isSuccess">是否成功。</param>
 	/// <param name="error">错误信息。</param>
-	public RemoteReply(TResult result, bool isSuccess, RemoteError error)
+	public RemoteReply(TResult? result, bool isSuccess, RemoteError? error)
 	{
 		Result = result;
 		IsSuccess = isSuccess;

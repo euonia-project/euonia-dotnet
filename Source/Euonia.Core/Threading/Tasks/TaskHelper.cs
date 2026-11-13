@@ -62,15 +62,11 @@ public static class TaskHelper
             var task = action(state);
             Invariant.Require(task.IsCompleted);
 
-            // 这几乎不会发生（在调试构建中不可能发生）。然而，为了在发布构建中绝对确保，我们将其作为回退逻辑。
-            // this should never happen (and can't in the debug build). However, to make absolutely sure we have this as
-            // fallback logic for the release build
+            // 这几乎不会发生（在调试构建中不可能发生）。不过，为了在发布构建中绝对确保，我们将其作为回退逻辑。
             if (!task.IsCompleted)
             {
                 // 调用 AsTask()，因为 https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.valuetask-1?view=netcore-3.1
                 // 指出我们不应该在未完成的 ValueTask 上调用 GetAwaiter().GetResult()。
-                // call AsTask(), since https://docs.microsoft.com/en-us/dotnet/api/system.threading.tasks.valuetask-1?view=netcore-3.1
-                // says that we should not call GetAwaiter().GetResult() except on a completed ValueTask
                 return task.AsTask().GetAwaiter().GetResult();
             }
 

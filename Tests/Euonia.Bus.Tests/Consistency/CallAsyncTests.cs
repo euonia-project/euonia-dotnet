@@ -7,7 +7,7 @@ namespace Nerosoft.Euonia.Bus.Tests;
 
 /// <summary>
 /// 针对 <see cref="IBus"/> 请求-响应调用（CallAsync）系列接口的优化与扩展测试：
-/// 取消令牌传播、调用超时（<see cref="CallOptions.Timeout"/>）、
+/// 取消令牌传播、调用超时（<see cref="ExtendableOptions.Timeout"/>）、
 /// <see cref="CallBuilder{TMessage, TResult}"/> 以及两个消息重载合并后的一致性。
 /// </summary>
 /// <remarks>
@@ -16,6 +16,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class CallAsyncTests
 {
+	/// <summary>
+	/// 验证泛型消息重载返回传输器的结果，并将通道写入调用信封。
+	/// </summary>
 	[Fact]
 	public async Task GenericMessageOverload_ReturnsResult()
 	{
@@ -33,6 +36,9 @@ public class CallAsyncTests
 		Assert.Equal("call.plain", transport.LastCallEnvelope?.Channel);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="IRequest{TResult}"/> 重载返回结果，并将通道、消息标识、关联标识与跟踪标识写入调用信封。
+	/// </summary>
 	[Fact]
 	public async Task IRequestOverload_ReturnsResult_AndPropagatesOptions()
 	{
@@ -55,6 +61,9 @@ public class CallAsyncTests
 		Assert.Equal("trace-1", envelope.RequestTraceId);
 	}
 
+	/// <summary>
+	/// 验证设置调用延迟后，<see cref="IRequest{TResult}"/> 重载在调用传输器前至少等待指定时长。
+	/// </summary>
 	[Fact]
 	public async Task IRequestOverload_WithDelay_WaitsBeforeTransport()
 	{
@@ -77,6 +86,9 @@ public class CallAsyncTests
 		Assert.True(stopwatch.ElapsedMilliseconds >= delay * 0.8, $"expected to wait at least {delay * 0.8} ms, waited {stopwatch.ElapsedMilliseconds} ms");
 	}
 
+	/// <summary>
+	/// 验证省略选项的默认调用重载返回传输器结果。
+	/// </summary>
 	[Fact]
 	public async Task DefaultCallAsyncOverload_ReturnsResult()
 	{
@@ -89,6 +101,9 @@ public class CallAsyncTests
 		Assert.Equal(42, result);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="CallBuilder{TMessage, TResult}"/> 返回调用结果并透传通道。
+	/// </summary>
 	[Fact]
 	public async Task CallBuilder_ReturnsResult()
 	{
@@ -104,6 +119,9 @@ public class CallAsyncTests
 		Assert.Equal("call.builder", transport.LastCallEnvelope?.Channel);
 	}
 
+	/// <summary>
+	/// 验证调用超过 <see cref="ExtendableOptions.Timeout"/> 指定的时长时抛出 <see cref="TimeoutException"/>。
+	/// </summary>
 	[Fact]
 	public async Task Timeout_ThrowsTimeoutException()
 	{
@@ -123,6 +141,9 @@ public class CallAsyncTests
 		Assert.NotNull(exception);
 	}
 
+	/// <summary>
+	/// 验证调用超时会取消传递给传输器的取消令牌。
+	/// </summary>
 	[Fact]
 	public async Task Timeout_CancelsTransportOperation()
 	{
@@ -143,6 +164,9 @@ public class CallAsyncTests
 		Assert.True(transport.LastCallToken.IsCancellationRequested, "the timeout token must be propagated to the transporter");
 	}
 
+	/// <summary>
+	/// 验证通过 <c>WithTimeout</c> 设置超时后，调用超时抛出 <see cref="TimeoutException"/>。
+	/// </summary>
 	[Fact]
 	public async Task CallBuilder_WithTimeout_ThrowsTimeoutException()
 	{
@@ -161,6 +185,9 @@ public class CallAsyncTests
 		Assert.NotNull(exception);
 	}
 
+	/// <summary>
+	/// 验证超时设置为 <c>0</c> 时不启用超时，调用正常返回结果。
+	/// </summary>
 	[Fact]
 	public async Task TimeoutDisabled_ReturnsResult()
 	{
@@ -177,6 +204,9 @@ public class CallAsyncTests
 		Assert.Equal(3, result);
 	}
 
+	/// <summary>
+	/// 验证调用方取消令消息重载以 <see cref="OperationCanceledException"/> 结束。
+	/// </summary>
 	[Fact]
 	public async Task MessageOverload_UserCancellation_SurfacesOperationCanceledException()
 	{
@@ -196,6 +226,9 @@ public class CallAsyncTests
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
 	}
 
+	/// <summary>
+	/// 验证接收服务提供程序的委托重载响应取消令牌并抛出 <see cref="OperationCanceledException"/>。
+	/// </summary>
 	[Fact]
 	public async Task DelegateOverload_HonorsCancellation()
 	{
@@ -214,6 +247,9 @@ public class CallAsyncTests
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
 	}
 
+	/// <summary>
+	/// 验证无参函数重载响应取消令牌并抛出 <see cref="OperationCanceledException"/>。
+	/// </summary>
 	[Fact]
 	public async Task FuncOverload_HonorsCancellation()
 	{
@@ -232,6 +268,9 @@ public class CallAsyncTests
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
 	}
 
+	/// <summary>
+	/// 验证接收已解析服务的函数重载响应取消令牌并抛出 <see cref="OperationCanceledException"/>。
+	/// </summary>
 	[Fact]
 	public async Task ServiceFuncOverload_HonorsCancellation()
 	{
@@ -253,7 +292,7 @@ public class CallAsyncTests
 		await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task);
 	}
 
-	private static ServiceProvider CreateProvider(ITransporter transporter, Action<IServiceCollection> configure = null)
+	private static ServiceProvider CreateProvider(ITransporter transporter, Action<IServiceCollection>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();
@@ -285,13 +324,22 @@ public class CallAsyncTests
 		return 1;
 	}
 
+	/// <summary>
+	/// 请求消息，用于驱动 <see cref="IBus"/> 的请求-响应调用并断言传输器收到调用信封。
+	/// </summary>
 	private sealed class CountRequest : IRequest<int>;
 
+	/// <summary>
+	/// 被测的普通服务接口，用于验证接收已解析服务的函数重载。
+	/// </summary>
 	private interface ICalculator
 	{
 		int Add(int left, int right);
 	}
 
+	/// <summary>
+	/// <see cref="ICalculator"/> 的简单实现，注册为单例供函数重载在调用时解析。
+	/// </summary>
 	private sealed class Calculator : ICalculator
 	{
 		public int Add(int left, int right) => left + right;
@@ -311,7 +359,7 @@ public class CallAsyncTests
 
 		public string Name => "test";
 
-		public IMessageEnvelope LastCallEnvelope { get; private set; }
+		public IMessageEnvelope LastCallEnvelope { get; private set; } = null!;
 
 		public CancellationToken LastCallToken { get; private set; }
 

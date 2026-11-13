@@ -1,6 +1,6 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// An implementation of <see cref="IRequestContextAccessor"/> using delegate methods.
+/// 使用委托方法实现的 <see cref="IRequestContextAccessor"/>。
 /// </summary>
 public delegate RequestContext DelegateRequestContextAccessor();

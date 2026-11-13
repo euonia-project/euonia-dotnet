@@ -22,7 +22,8 @@ namespace Nerosoft.Euonia.Application;
 public class AuthorizationInterceptor : IInterceptor
 {
 	// 缓存每个方法上的授权特性，避免每次拦截调用都执行反射特性查找。
-	private static readonly ConcurrentDictionary<(MethodInfo Target, MethodInfo Interface), AuthorizeAttribute> _attributeCache = new();
+	// 方法未标注授权特性时缓存 null，避免每次重复反射。
+	private static readonly ConcurrentDictionary<(MethodInfo Target, MethodInfo Interface), AuthorizeAttribute?> _attributeCache = new();
 
 	private readonly IServiceScopeFactory _scopeFactory;
 

@@ -59,10 +59,27 @@ public class UserContextBehavior<TMessage, TResponse> : IPipelineBehavior<TMessa
 
 		if (user is { IsAuthenticated: true })
 		{
-			context.Metadata.Set(UserContextMetadataKeys.UserName, user.Username);
-			context.Metadata.Set(UserContextMetadataKeys.UserId, user.UserId);
-			context.Metadata.Set(UserContextMetadataKeys.UserCode, user.Code);
-			context.Metadata.Set(UserContextMetadataKeys.UserTenant, user.Tenant);
+			// 缺失的身份声明不写入元数据：下游按「键不存在」与「值为 null」处理的结果一致，
+			// 而 MessageMetadata 的值契约是不接受 null。
+			if (!string.IsNullOrEmpty(user.Username))
+			{
+				context.Metadata.Set(UserContextMetadataKeys.UserName, user.Username);
+			}
+
+			if (!string.IsNullOrEmpty(user.UserId))
+			{
+				context.Metadata.Set(UserContextMetadataKeys.UserId, user.UserId);
+			}
+
+			if (!string.IsNullOrEmpty(user.Code))
+			{
+				context.Metadata.Set(UserContextMetadataKeys.UserCode, user.Code);
+			}
+
+			if (!string.IsNullOrEmpty(user.Tenant))
+			{
+				context.Metadata.Set(UserContextMetadataKeys.UserTenant, user.Tenant);
+			}
 		}
 
 		return await next(context);

@@ -81,7 +81,7 @@ internal sealed class DefaultConfigurator : IConfigurator
 	/// <param name="channelResolver">用于选择通道的委托函数。</param>
 	/// <param name="replaceDefault">是否替换默认的通道解析逻辑；为 <c>true</c> 时，以该委托覆盖默认解析器。</param>
 	/// <returns>返回当前的 <see cref="IConfigurator"/> 实例，以便进行链式调用。</returns>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <exception cref="ArgumentNullException">当 <paramref name="channelResolver"/> 为 <see langword="null"/> 时抛出。</exception>
 	public IConfigurator SetChannelResolver(Func<Type, string> channelResolver, bool replaceDefault = false)
 	{
 		ArgumentNullException.ThrowIfNull(channelResolver);

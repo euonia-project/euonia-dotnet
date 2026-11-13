@@ -27,6 +27,9 @@ public class InboxOutboxRetryTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 验证发件箱重试会重新投递失败消息，累加重试次数并转为 <see cref="OutboxTransportStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_RedeliversFailedMessageAndMarksSuccess()
 	{
@@ -36,19 +39,22 @@ public class InboxOutboxRetryTests
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-retry-1");
 		store.Insert(envelope, ["test"]);
-		var failed = store.Get("outbox-retry-1").GetTransport("test");
+		var failed = store.Get("outbox-retry-1")!.GetTransport("test")!;
 		failed.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions());
 		await dispatcher.RetryAllAsync();
 
 		Assert.Contains("outbox-retry-1", delivered);
-		var transport = store.Get("outbox-retry-1").GetTransport("test");
+		var transport = store.Get("outbox-retry-1")!.GetTransport("test")!;
 		Assert.Equal(OutboxTransportStatus.Success, transport.Status);
 		Assert.Equal(1, transport.RetryAttempts);
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证收件箱重试会重新执行失败的处理器，累加重试次数并转为 <see cref="InboxHandlerStatus.Success"/>。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_ReexecutesFailedHandlerAndMarksSuccess()
 	{
@@ -64,7 +70,7 @@ public class InboxOutboxRetryTests
 				new HandlerRegistration("MyHandler", _ => (message, context, token) =>
 				{
 					handled++;
-					return Task.FromResult<object>(null);
+					return Task.FromResult<object>(null!);
 				})
 			]
 		};
@@ -72,19 +78,22 @@ public class InboxOutboxRetryTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "inbox-retry-1");
 		IInboxStore store = new InMemoryInboxStore();
 		store.Insert("test.events", envelope, ["MyHandler"]);
-		var failed = store.Get("inbox-retry-1").GetHandler("MyHandler");
+		var failed = store.Get("inbox-retry-1")!.GetHandler("MyHandler")!;
 		failed.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true }, container);
 		await dispatcher.RetryAllAsync();
 
 		Assert.Equal(1, handled);
-		var handler = store.Get("inbox-retry-1").GetHandler("MyHandler");
+		var handler = store.Get("inbox-retry-1")!.GetHandler("MyHandler")!;
 		Assert.Equal(InboxHandlerStatus.Success, handler.Status);
 		Assert.Equal(1, handler.RetryAttempts);
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证重试次数耗尽后不再投递，记录转为 <see cref="OutboxTransportStatus.DeadLettered"/> 并移出失败集合。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_RespectsMaxRetryAttempts()
 	{
@@ -94,7 +103,7 @@ public class InboxOutboxRetryTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/retry" }, "test.events", "outbox-retry-2");
 		IOutboxStore store = new InMemoryOutboxStore();
 		store.Insert(envelope, ["test"]);
-		var failed = store.Get("outbox-retry-2").GetTransport("test");
+		var failed = store.Get("outbox-retry-2")!.GetTransport("test")!;
 		failed.MarkAsFailed("first attempt failed");
 		failed.MarkAsFailed("second attempt failed");
 
@@ -102,7 +111,7 @@ public class InboxOutboxRetryTests
 		await dispatcher.RetryAllAsync();
 
 		Assert.DoesNotContain("outbox-retry-2", delivered);
-		var transport = store.Get("outbox-retry-2").GetTransport("test");
+		var transport = store.Get("outbox-retry-2")!.GetTransport("test")!;
 		// 重试耗尽后记录转为终态 DeadLettered（而非停留在 Failed）：
 		// 否则 GetFailedMessages 会每轮都返回它，导致后台调度器反复扫描同一条永不成功的记录。
 		Assert.Equal(OutboxTransportStatus.DeadLettered, transport.Status);
@@ -110,6 +119,9 @@ public class InboxOutboxRetryTests
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证仍处于 <see cref="OutboxTransportStatus.Pending"/> 的在途记录不会被重试投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_DoesNotRedeliverPendingInFlightMessages()
 	{
@@ -124,11 +136,14 @@ public class InboxOutboxRetryTests
 		await dispatcher.RetryAllAsync();
 
 		Assert.Empty(delivered);
-		var transport = store.Get("outbox-inflight-1").GetTransport("test");
+		var transport = store.Get("outbox-inflight-1")!.GetTransport("test")!;
 		Assert.Equal(OutboxTransportStatus.Pending, transport.Status);
 		Assert.Empty(store.GetFailedMessages());
 	}
 
+	/// <summary>
+	/// 验证创建时间早于宽限期的 <see cref="OutboxTransportStatus.Pending"/> 记录会被回收并重新投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsAbandonedPendingMessages()
 	{
@@ -140,7 +155,7 @@ public class InboxOutboxRetryTests
 		store.Insert(envelope, ["test"]);
 
 		// 模拟进程在延迟分发期间崩溃：记录停留在 Pending 且创建时间早于调度器启动。
-		store.Get("outbox-abandoned-1").CreatedAt = DateTime.Now.AddMinutes(-10);
+		store.Get("outbox-abandoned-1")!.CreatedAt = DateTime.Now.AddMinutes(-10);
 
 		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 5 });
 		await dispatcher.RetryAllAsync();
@@ -148,11 +163,14 @@ public class InboxOutboxRetryTests
 		Assert.Contains("outbox-abandoned-1", delivered);
 
 		// 回收会把 Pending 标记为 Failed（计一次重试），随后由正常的重投递路径处理。
-		var transport = store.Get("outbox-abandoned-1").GetTransport("test");
+		var transport = store.Get("outbox-abandoned-1")!.GetTransport("test")!;
 		Assert.Equal(1, transport.RetryAttempts);
 		Assert.NotEqual(OutboxTransportStatus.Pending, transport.Status);
 	}
 
+	/// <summary>
+	/// 验证将宽限期配置为 <see cref="TimeSpan.Zero"/> 后，创建不久的待处理记录也会被立即回收并投递。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RetryAllAsync_ReclaimsPendingAfterConfiguredGracePeriod()
 	{
@@ -165,7 +183,7 @@ public class InboxOutboxRetryTests
 
 		// 记录只比当前时间早一分钟：默认 5 分钟宽限期内不会回收，
 		// 配置为 0 后应立即进入重试流程。
-		store.Get("outbox-abandoned-2").CreatedAt = DateTime.Now.AddMinutes(-1);
+		store.Get("outbox-abandoned-2")!.CreatedAt = DateTime.Now.AddMinutes(-1);
 
 		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions { MaxRetryAttempts = 5, PendingReclaimGracePeriod = TimeSpan.Zero });
 		await dispatcher.RetryAllAsync();
@@ -173,6 +191,9 @@ public class InboxOutboxRetryTests
 		Assert.Contains("outbox-abandoned-2", delivered);
 	}
 
+	/// <summary>
+	/// 验证仍在执行中的收件箱处理器不会被重试路径重复执行。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_RetryAllAsync_DoesNotReexecutePendingInFlightHandlers()
 	{
@@ -188,7 +209,7 @@ public class InboxOutboxRetryTests
 				new HandlerRegistration("MyHandler", _ => (message, context, token) =>
 				{
 					handled++;
-					return Task.FromResult<object>(null);
+					return Task.FromResult<object>(null!);
 				})
 			]
 		};

@@ -73,6 +73,6 @@ internal sealed class ObjectScopeAuthorizer(ScopeModelRegistry registry) : IObje
 			Resources.IDS_SCOPE_GUARD_NOT_RESOLVED,
 			nameof(IScopeGuard));
 
-		return guard;
+		return guard!;
 	}
 }

@@ -25,7 +25,9 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 internal sealed class OperationCodeSource : IPermissionCodeSource
 {
-	/// <summary>方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。</summary>
+	/// <summary>
+	/// 方法可见性范围：与运行时查找操作入口的口径一致（含非公开的受保护方法）。
+	/// </summary>
 	private const BindingFlags MethodFlags =
 		BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
 
@@ -33,6 +35,12 @@ internal sealed class OperationCodeSource : IPermissionCodeSource
 
 	private readonly ConcurrentDictionary<(Type Type, string Operation), IReadOnlyList<PermissionAttribute>> _cache = new();
 
+	/// <summary>
+	/// 用已声明的操作全集与入口判定规则初始化权限码来源。
+	/// </summary>
+	/// <param name="operations">本来源负责的操作全集，构造时复制为只读快照。</param>
+	/// <param name="rules">操作名到入口判定规则列表的映射，由构造器保证已按忽略大小写归一。</param>
+	/// <remarks>规则字典按引用持有，调用方在构造后不应再改动它。</remarks>
 	internal OperationCodeSource(
 		IReadOnlyList<string> operations,
 		IReadOnlyDictionary<string, IReadOnlyList<Func<MethodInfo, bool>>> rules)
@@ -135,7 +143,8 @@ internal sealed class OperationCodeSourceBuilder
 				attributeType != null && typeof(Attribute).IsAssignableFrom(attributeType),
 				Resources.IDS_OPERATION_ATTRIBUTE_TYPE_INVALID);
 
-			OnMethod(operation, method => method.IsDefined(attributeType, true));
+			// 上面的 Check.Ensure 已拒绝 null，闭包捕获的因此是确定非空的类型。
+			OnMethod(operation, method => method.IsDefined(attributeType!, true));
 		}
 
 		return this;

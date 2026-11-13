@@ -188,5 +188,5 @@ public class DefaultPipelineProvider<TRequest, TResponse> : PipelineBase<TReques
 	/// <summary>
 	/// 由编译的表达式树所使用的 <see cref="GetService"/> 方法的 <see cref="MethodInfo"/>。
 	/// </summary>
-	private static readonly MethodInfo GetServiceInfo = typeof(DefaultPipelineProvider<TRequest, TResponse>).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static);
+	private static readonly MethodInfo GetServiceInfo = typeof(DefaultPipelineProvider<TRequest, TResponse>).GetMethod(nameof(GetService), BindingFlags.NonPublic | BindingFlags.Static)!;
 }

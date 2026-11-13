@@ -206,7 +206,7 @@ public sealed partial class AsyncContext : IDisposable
     /// <summary>
     /// 获取当前线程的 <see cref="AsyncContext"/>，如果此线程当前未在 <see cref="AsyncContext"/> 中运行，则返回 <c>null</c>。
     /// </summary>
-    public static AsyncContext Current
+    public static AsyncContext? Current
     {
         get
         {
@@ -233,16 +233,26 @@ public sealed partial class AsyncContext : IDisposable
     [EditorBrowsable(EditorBrowsableState.Never)]
     public TaskFactory Factory => _taskFactory;
 
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露异步上下文的调度器信息。
+    /// </summary>
     [DebuggerNonUserCode]
     internal sealed class DebugView
     {
         private readonly AsyncContext _context;
 
+        /// <summary>
+        /// 初始化调试视图。
+        /// </summary>
+        /// <param name="context">要检查的异步上下文。</param>
         public DebugView(AsyncContext context)
         {
             _context = context;
         }
 
+        /// <summary>
+        /// 获取此上下文的 <see cref="TaskScheduler"/>。
+        /// </summary>
         public TaskScheduler TaskScheduler => _context._taskScheduler;
     }
 }

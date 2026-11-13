@@ -25,6 +25,9 @@ public class OperationCaseInsensitivityTests
 
 	private static readonly Assembly TestAssembly = typeof(OperationCaseInsensitivityTests).Assembly;
 
+	/// <summary>
+	/// 声明端以 <c>"Execute"</c> 注册的操作，运行期用 <see cref="BusinessOperation.Execute"/> 常量仍应查到同一批权限码。
+	/// </summary>
 	[Fact]
 	public void Operation_Declared_With_Different_Casing_Should_Still_Serve_The_Vocabulary_Constant()
 	{
@@ -37,6 +40,9 @@ public class OperationCaseInsensitivityTests
 		Assert.Equal(["guarded:run"], source.CodesFor(typeof(GuardedAsset), BusinessOperation.Execute));
 	}
 
+	/// <summary>
+	/// 两个模块分别以 <c>"Execute"</c> 与 <c>"EXECUTE"</c> 声明操作时，词汇表应只保留一条条目。
+	/// </summary>
 	[Fact]
 	public void Operations_Declared_With_Different_Casing_Should_Collapse_Into_One_Vocabulary_Entry()
 	{
@@ -51,6 +57,9 @@ public class OperationCaseInsensitivityTests
 		Assert.Equal(BusinessOperation.Execute.ToLowerInvariant(), operation.ToLowerInvariant());
 	}
 
+	/// <summary>
+	/// 同一操作上仅大小写不同的权限码（<c>dual:run</c> 与 <c>Dual:Run</c>）应去重为一条。
+	/// </summary>
 	[Fact]
 	public void Permission_Codes_Should_Be_De_Duplicated_Across_Different_Casing()
 	{
@@ -70,9 +79,15 @@ public class OperationCaseInsensitivityTests
 /// </summary>
 public sealed class DualCasedAsset
 {
+	/// <summary>
+	/// 以小写形式声明 <c>dual:run</c> 权限码的执行入口。
+	/// </summary>
 	[Permission("dual:run")]
 	public void Run() { }
 
+	/// <summary>
+	/// 以混合大小写声明 <c>Dual:Run</c> 权限码的执行入口，与 <see cref="Run"/> 仅大小写不同。
+	/// </summary>
 	[Permission("Dual:Run")]
 	public void Execute() { }
 }

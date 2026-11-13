@@ -22,7 +22,7 @@ public class ValidationInterceptor : IInterceptor
 	// 缓存每个方法的参数验证信息，避免每次调用都通过反射重新枚举参数与特性。
 	private static readonly ConcurrentDictionary<MethodInfo, ParameterValidationInfo[]> _parameterCache = new();
 
-	private static readonly MethodInfo _validateMethod = typeof(Validator).GetMethod(nameof(Validator.Validate), BindingFlags.Static | BindingFlags.Public);
+	private static readonly MethodInfo? _validateMethod = typeof(Validator).GetMethod(nameof(Validator.Validate), BindingFlags.Static | BindingFlags.Public);
 
 	// 缓存 Validate&lt;T&gt; 的闭包泛型 MethodInfo（按参数类型），避免每次调用 MakeGenericMethod。
 	private static readonly ConcurrentDictionary<Type, MethodInfo> _validateMethods = new();
@@ -44,7 +44,7 @@ public class ValidationInterceptor : IInterceptor
 		invocation.Proceed();
 	}
 
-	private static void Intercept(MethodInfo method, IReadOnlyList<object> args)
+	private static void Intercept(MethodInfo method, IReadOnlyList<object?> args)
 	{
 		var parameters = _parameterCache.GetOrAdd(method, GetParameterValidationInfos);
 
@@ -89,7 +89,7 @@ public class ValidationInterceptor : IInterceptor
 	/// <param name="argument">待验证的参数实参。</param>
 	/// <param name="parameterType">参数类型，用于构造泛型验证方法。</param>
 	/// <exception cref="ValidationException">验证失败时抛出。</exception>
-	private static void Validate(object argument, Type parameterType)
+	private static void Validate(object? argument, Type parameterType)
 	{
 		if (_validateMethod == null)
 		{
@@ -110,5 +110,8 @@ public class ValidationInterceptor : IInterceptor
 		}
 	}
 
-	private sealed record ParameterValidationInfo(string Name, Type ParameterType, NotNullAttribute NotNullAttribute, ValidationAttribute ValidationAttribute);
+	/// <summary>
+	/// 单个方法参数的验证元数据缓存项：参数名、参数类型以及可选的 <see cref="NotNullAttribute"/> 与 <see cref="ValidationAttribute"/>。
+	/// </summary>
+	private sealed record ParameterValidationInfo(string? Name, Type ParameterType, NotNullAttribute? NotNullAttribute, ValidationAttribute? ValidationAttribute);
 }

@@ -20,13 +20,13 @@ public class InMemoryDeadLetterStore : IDeadLetterStore
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry Get(string messageId)
+	public DeadLetterEntry? Get(string messageId)
 	{
 		return _entries.Values.FirstOrDefault(entry => string.Equals(entry.MessageId, messageId, StringComparison.Ordinal));
 	}
 
 	/// <inheritdoc/>
-	public DeadLetterEntry GetById(string id)
+	public DeadLetterEntry? GetById(string id)
 	{
 		return _entries.GetValueOrDefault(id);
 	}

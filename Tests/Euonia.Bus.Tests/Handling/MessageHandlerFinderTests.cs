@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class MessageHandlerFinderTests
 {
+	/// <summary>
+	/// 验证无参数的处理方法会抛出 <see cref="InvalidOperationException"/>，消息包含处理器类型名与方法名。
+	/// </summary>
 	[Fact]
 	public void Find_MethodWithoutParameters_MessageContainsHandlerAndMethod()
 	{
@@ -24,6 +27,9 @@ public class MessageHandlerFinderTests
 		Assert.Contains("HandleAsync", exception.Message, StringComparison.Ordinal);
 	}
 
+	/// <summary>
+	/// 验证首个参数为消息上下文时抛出的异常包含实际参数类型，便于定位无效处理器。
+	/// </summary>
 	[Fact]
 	public void Find_FirstParameterIsContext_MessageContainsActualParameterTypes()
 	{
@@ -36,6 +42,9 @@ public class MessageHandlerFinderTests
 		Assert.Contains(typeof(IMessageContext).FullName!, exception.Message, StringComparison.Ordinal);
 	}
 
+	/// <summary>
+	/// 验证第二个参数既不是上下文也不是取消令牌时，异常消息包含实际参数类型。
+	/// </summary>
 	[Fact]
 	public void Find_SecondParameterIsNotContextOrToken_MessageContainsActualParameterTypes()
 	{
@@ -48,10 +57,13 @@ public class MessageHandlerFinderTests
 		Assert.Contains(typeof(string).FullName!, exception.Message, StringComparison.Ordinal);
 	}
 
+	/// <summary>
+	/// 验证订阅特性未指定通道名且消息类型为基础类型时抛出异常，消息包含处理器类型名与方法名。
+	/// </summary>
 	[Fact]
 	public void Find_SubscribeAttributeWithoutName_MessageContainsHandlerAndMethod()
 	{
-		var handlerType = DefineHandler("MissingChannelNameHandler", [typeof(string)], channelName: null);
+		var handlerType = DefineHandler("MissingChannelNameHandler", [typeof(string)], channelName: null!);
 
 		var exception = Assert.Throws<InvalidOperationException>(() => Find(handlerType));
 
@@ -59,10 +71,13 @@ public class MessageHandlerFinderTests
 		Assert.Contains("HandleAsync", exception.Message, StringComparison.Ordinal);
 	}
 
+	/// <summary>
+	/// 验证单个未命名订阅特性会以消息类型全名推断通道，并登记正确的消息类型。
+	/// </summary>
 	[Fact]
 	public void Find_SingleSubscribeAttributeWithoutName_InfersChannelFromMessageType()
 	{
-		var handlerType = DefineHandler("InferredChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var handlerType = DefineHandler("InferredChannelHandler", [typeof(InferredChannelMessage)], channelName: null!);
 		var registrations = new List<(string Channel, Type MessageType)>();
 
 		MessageHandlerFinder.Find((channel, messageType, _) => registrations.Add((channel, messageType)), type => type.FullName!, handlerType);
@@ -72,10 +87,13 @@ public class MessageHandlerFinderTests
 		Assert.Equal(typeof(InferredChannelMessage), registration.MessageType);
 	}
 
+	/// <summary>
+	/// 验证单个未命名订阅特性会使用传入的通道解析器生成通道名。
+	/// </summary>
 	[Fact]
 	public void Find_SingleSubscribeAttributeWithoutName_UsesChannelResolver()
 	{
-		var handlerType = DefineHandler("InferredCustomChannelHandler", [typeof(InferredChannelMessage)], channelName: null);
+		var handlerType = DefineHandler("InferredCustomChannelHandler", [typeof(InferredChannelMessage)], channelName: null!);
 		var channels = new List<string>();
 
 		MessageHandlerFinder.Find((channel, _, _) => channels.Add(channel), _ => "custom-channel", handlerType);
@@ -83,6 +101,9 @@ public class MessageHandlerFinderTests
 		Assert.Equal(["custom-channel"], channels);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="SubscribeAttribute"/> 的用法声明不允许在同一成员上多次应用。
+	/// </summary>
 	[Fact]
 	public void SubscribeAttribute_DoesNotAllowMultipleDeclarations()
 	{
@@ -92,6 +113,9 @@ public class MessageHandlerFinderTests
 		Assert.False(usage.AllowMultiple);
 	}
 
+	/// <summary>
+	/// 验证显式接口实现的处理方法同样能被处理器发现逻辑找到。
+	/// </summary>
 	[Fact]
 	public void Find_ExplicitInterfaceImplementation_IsDiscovered()
 	{
@@ -107,14 +131,23 @@ public class MessageHandlerFinderTests
 		MessageHandlerFinder.Find((_, _, _) => { }, type => type.FullName!, handlerType);
 	}
 
+	/// <summary>
+	/// 显式接口实现测试用消息，用于验证查找器能识别显式实现的处理器。
+	/// </summary>
 	private sealed class ExplicitImplementationMessage
 	{
 	}
 
+	/// <summary>
+	/// 通道名由消息类型推断的测试消息，用于验证未命名订阅特性使用类型全名作为通道。
+	/// </summary>
 	private sealed class InferredChannelMessage
 	{
 	}
 
+	/// <summary>
+	/// 显式实现 <see cref="IHandler{TMessage, TResponse}"/> 的处理器，用于验证显式接口实现同样可被发现。
+	/// </summary>
 	private sealed class ExplicitImplementationHandler : IHandler<ExplicitImplementationMessage, int>
 	{
 		Task<int> IHandler<ExplicitImplementationMessage, int>.HandleAsync(ExplicitImplementationMessage message, IMessageContext context, CancellationToken cancellationToken)

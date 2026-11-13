@@ -21,7 +21,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="name">传输器名称。</param>
 		/// <param name="configureOptions">用于配置 <see cref="InMemoryBusOptions"/> 的可选委托。</param>
 		/// <returns>当前的 <see cref="IServiceCollection"/> 实例，以便进行链式调用。</returns>
-		public IServiceCollection AddInMemoryBus(string name, Action<InMemoryBusOptions> configureOptions = null)
+		public IServiceCollection AddInMemoryBus(string name, Action<InMemoryBusOptions>? configureOptions = null)
 		{
 			if (configureOptions != null)
 			{

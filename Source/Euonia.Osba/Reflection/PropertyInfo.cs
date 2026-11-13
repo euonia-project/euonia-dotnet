@@ -26,12 +26,12 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// <summary>
 	/// 注册时指定的静态默认值。
 	/// </summary>
-	private readonly T _defaultValue;
+	private readonly T _defaultValue = default!;
 
 	/// <summary>
 	/// 注册时指定的默认值工厂；为 <see langword="null"/> 时使用 <see cref="_defaultValue"/>。
 	/// </summary>
-	private readonly Func<T> _defaultValueFactory;
+	private readonly Func<T>? _defaultValueFactory;
 
 	/// <inheritdoc />
 	public PropertyInfo(string name)
@@ -40,13 +40,13 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	}
 
 	/// <inheritdoc />
-	public PropertyInfo(string name, string friendlyName, T defaultValue)
+	public PropertyInfo(string name, string? friendlyName, T defaultValue)
 		: this(name, friendlyName, null, defaultValue)
 	{
 	}
 
 	/// <inheritdoc />
-	public PropertyInfo(string name, string friendlyName, Type objectType)
+	public PropertyInfo(string name, string? friendlyName, Type? objectType)
 		: this(name, friendlyName, objectType, GetDefaultValue())
 	{
 	}
@@ -58,10 +58,10 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="objectType">属性所属的对象类型。</param>
 	/// <param name="defaultValue">属性的默认值。</param>
-	public PropertyInfo(string name, string friendlyName, Type objectType, T defaultValue)
+	public PropertyInfo(string name, string? friendlyName, Type? objectType, T defaultValue)
 	{
 		Name = name;
-		FriendlyName = friendlyName;
+		_friendlyName = friendlyName;
 		_propertyInfo = objectType?.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 		_defaultValue = defaultValue;
 	}
@@ -73,10 +73,10 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// <param name="friendlyName">属性的友好名称。</param>
 	/// <param name="objectType">属性所属的对象类型。</param>
 	/// <param name="defaultValueFactory">生成默认值的工厂。</param>
-	internal PropertyInfo(string name, string friendlyName, Type objectType, Func<T> defaultValueFactory)
+	internal PropertyInfo(string name, string? friendlyName, Type? objectType, Func<T> defaultValueFactory)
 	{
 		Name = name;
-		FriendlyName = friendlyName;
+		_friendlyName = friendlyName;
 		_propertyInfo = objectType?.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 		_defaultValueFactory = defaultValueFactory;
 	}
@@ -87,23 +87,12 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// <summary>
 	/// 获取属性的友好显示名称。
 	/// </summary>
-	public string FriendlyName
-	{
-		get
-		{
-			if (field != null)
-			{
-				return field;
-			}
-
-			return _cachedFriendlyName ??= ResolveFriendlyName();
-		}
-	}
+	public string FriendlyName => _friendlyName ??= ResolveFriendlyName();
 
 	/// <summary>
-	/// 缓存的友好名称解析结果。
+	/// 缓存的友好名称；未指定时在首次读取时解析。
 	/// </summary>
-	private string _cachedFriendlyName;
+	private string? _friendlyName;
 
 	/// <summary>
 	/// 从 <see cref="DisplayAttribute"/> 或 <see cref="DisplayNameAttribute"/> 解析友好名称，未找到时回退到属性名。
@@ -134,9 +123,9 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	}
 
 	/// <inheritdoc />
-	public int CompareTo(object obj)
+	public int CompareTo(object? obj)
 	{
-		return string.Compare(Name, (((IPropertyInfo)obj)!).Name, StringComparison.InvariantCulture);
+		return string.Compare(Name, ((IPropertyInfo)obj!).Name, StringComparison.InvariantCulture);
 	}
 
 	/// <inheritdoc />
@@ -147,10 +136,10 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// </summary>
 	public bool IsChild => typeof(IOsbaObject).IsAssignableFrom(typeof(T));
 
-	private readonly PropertyInfo _propertyInfo;
+	private readonly PropertyInfo? _propertyInfo;
 
 	/// <inheritdoc />
-	public PropertyInfo GetPropertyInfo() => _propertyInfo;
+	public PropertyInfo? GetPropertyInfo() => _propertyInfo;
 
 	/// <summary>
 	/// 获取属性的默认初始值。
@@ -164,7 +153,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 			return (T)(object)string.Empty;
 		}
 
-		return default;
+		return default!;
 	}
 
 	IFieldData IPropertyInfo.NewFieldData(string name)
@@ -190,7 +179,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 		}
 	}
 
-	object IPropertyInfo.DefaultValue => DefaultValue;
+	object IPropertyInfo.DefaultValue => DefaultValue!;
 
 	/// <summary>
 	/// 为可变的引用类型默认值创建独立副本；值类型与字符串直接返回原值。
@@ -201,7 +190,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	{
 		if (value == null)
 		{
-			return default;
+			return default!;
 		}
 
 		var type = typeof(T);
@@ -263,7 +252,7 @@ public sealed class PropertyInfo<T> : IPropertyInfo, IIndexedPropertyInfo
 	/// 背后的静态构造函数崩溃）静默成 <see langword="null"/>。降级写入 <see cref="Trace"/>：
 	/// <see cref="Debug.WriteLine(string)"/> 在 Release 下会被编译器剔除，退化将零痕迹。
 	/// </remarks>
-	private static object CreateInstance(Type type)
+	private static object? CreateInstance(Type type)
 	{
 		try
 		{

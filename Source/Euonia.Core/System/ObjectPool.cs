@@ -27,7 +27,7 @@ public interface IObjectPoolPolicy<T>
 public class ObjectPool<T>
     where T : class
 {
-    private readonly T[] _items;
+    private readonly T?[] _items;
     private readonly IObjectPoolPolicy<T> _policy;
 
     /// <summary>
@@ -43,7 +43,7 @@ public class ObjectPool<T>
         }
 
         _policy = policy ?? throw new ArgumentNullException(nameof(policy));
-        _items = new T[maxItems.Value];
+        _items = new T?[maxItems.Value];
     }
 
     /// <summary>

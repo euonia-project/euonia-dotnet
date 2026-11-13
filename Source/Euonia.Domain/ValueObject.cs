@@ -14,9 +14,9 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// </summary>
 	/// <param name="other">要比较的目标对象。</param>
 	/// <returns>如果相等则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public bool Equals(TValueObject other)
+	public bool Equals(TValueObject? other)
 	{
-		if (other == null)
+		if (other is null)
 		{
 			return false;
 		}
@@ -45,7 +45,7 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// <inheritdoc/>
 	/// <param name="obj">要比较的对象。</param>
 	/// <returns>如果相等则为 <c>true</c>；否则为 <c>false</c>。</returns>
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		if (obj == null)
 		{
@@ -63,7 +63,7 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// <summary>
 	/// 判断两个属性值是否相等。支持单值（含可空）与序列（<see cref="System.Collections.IEnumerable"/>，如集合/数组/列表）的语义比较。
 	/// </summary>
-	private static bool ValuesEqual(object left, object right)
+	private static bool ValuesEqual(object? left, object? right)
 	{
 		if (left == null || right == null)
 		{
@@ -159,14 +159,14 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// <summary>
 	/// 将单值或序列格式化为可读文本。
 	/// </summary>
-	private static string FormatValue(object value)
+	private static string FormatValue(object? value)
 	{
 		return value switch
 		{
 			null => "null",
 			string text => text,
-			IEnumerable sequence => $"[{string.Join(", ", sequence.Cast<object>().Select(FormatValue))}]",
-			_ => value.ToString(),
+			IEnumerable sequence => $"[{string.Join(", ", sequence.Cast<object?>().Select(FormatValue))}]",
+			_ => value.ToString() ?? string.Empty,
 		};
 	}
 
@@ -176,7 +176,7 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// <param name="left">左侧操作数。</param>
 	/// <param name="right">右侧操作数。</param>
 	/// <returns>运算符的结果。</returns>
-	public static bool operator ==(ValueObject<TValueObject> left, ValueObject<TValueObject> right)
+	public static bool operator ==(ValueObject<TValueObject>? left, ValueObject<TValueObject>? right)
 	{
 		return left?.Equals(right) ?? Equals(right, null);
 	}
@@ -187,7 +187,7 @@ public class ValueObject<TValueObject> : IValueObject, IEquatable<TValueObject>
 	/// <param name="left">左侧操作数。</param>
 	/// <param name="right">右侧操作数。</param>
 	/// <returns>运算符的结果。</returns>
-	public static bool operator !=(ValueObject<TValueObject> left, ValueObject<TValueObject> right)
+	public static bool operator !=(ValueObject<TValueObject>? left, ValueObject<TValueObject>? right)
 	{
 		return !(left == right);
 	}

@@ -73,7 +73,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 			var isValueTask = returnType.GetGenericTypeDefinition() == typeof(ValueTask<>);
 			invocation.Proceed();
 			_handleTypedMethods.GetOrAdd(resultType, type => _handleTypedMethod.MakeGenericMethod(type))
-				.Invoke(null, new object[] { entry, attribute, invocation.ReturnValue, isValueTask });
+				.Invoke(null, new object?[] { entry, attribute, invocation.ReturnValue, isValueTask });
 			return;
 		}
 
@@ -90,15 +90,17 @@ public class CircuitBreakerInterceptor : IInterceptor
 		}
 	}
 
-	private static void HandleUntypedTask(CircuitState entry, CircuitBreakerAttribute attribute, object rawReturnValue, bool isValueTask)
+	private static void HandleUntypedTask(CircuitState entry, CircuitBreakerAttribute attribute, object? rawReturnValue, bool isValueTask)
 	{
-		var task = isValueTask ? ((ValueTask)rawReturnValue).AsTask() : (Task)rawReturnValue;
+		// 反射传入的是被拦截方法返回的非空 Task/ValueTask 装箱值。
+		var task = isValueTask ? ((ValueTask)rawReturnValue!).AsTask() : (Task)rawReturnValue!;
 		task.ContinueWith(completed => Record(entry, attribute, completed.IsCompletedSuccessfully), TaskScheduler.Default);
 	}
 
-	private static void HandleTypedAsync<T>(CircuitState entry, CircuitBreakerAttribute attribute, object rawReturnValue, bool isValueTask)
+	private static void HandleTypedAsync<T>(CircuitState entry, CircuitBreakerAttribute attribute, object? rawReturnValue, bool isValueTask)
 	{
-		var task = isValueTask ? ((ValueTask<T>)rawReturnValue).AsTask() : (Task<T>)rawReturnValue;
+		// 反射传入的是被拦截方法返回的非空 Task<T>/ValueTask<T> 装箱值。
+		var task = isValueTask ? ((ValueTask<T>)rawReturnValue!).AsTask() : (Task<T>)rawReturnValue!;
 		task.ContinueWith(completed => Record(entry, attribute, completed.IsCompletedSuccessfully), TaskScheduler.Default);
 	}
 
@@ -148,7 +150,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 			if (definition == typeof(ValueTask<>))
 			{
 				invocation.ReturnValue = _wrapValueTaskMethods.GetOrAdd(resultType, type => _wrapValueTaskMethod.MakeGenericMethod(type))
-					.Invoke(null, new object[] { task });
+					.Invoke(null, new object?[] { task });
 				return;
 			}
 
@@ -164,9 +166,9 @@ public class CircuitBreakerInterceptor : IInterceptor
 		return Task.FromException<T>(new CircuitBreakerOpenException(message));
 	}
 
-	private static ValueTask<T> WrapValueTask<T>(object rawTask)
+	private static ValueTask<T> WrapValueTask<T>(object? rawTask)
 	{
-		return new ValueTask<T>((Task<T>)rawTask);
+		return new ValueTask<T>((Task<T>)rawTask!);
 	}
 
 	private static string BuildKey(IInvocation invocation)
@@ -176,7 +178,7 @@ public class CircuitBreakerInterceptor : IInterceptor
 		return $"{serviceType?.FullName}.{method.Name}";
 	}
 
-	private static CircuitBreakerAttribute ResolveAttribute(IInvocation invocation)
+	private static CircuitBreakerAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<CircuitBreakerAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<CircuitBreakerAttribute>()
@@ -197,8 +199,16 @@ internal static class CircuitStateStore
 	/// </summary>
 	public static Func<DateTime> UtcNowProvider { get; set; } = () => DateTime.UtcNow;
 
+	/// <summary>
+	/// 返回当前 UTC 时间；实际取值来自 <see cref="UtcNowProvider"/>，便于测试替换受控时钟。
+	/// </summary>
 	public static DateTime GetUtcNow() => UtcNowProvider();
 
+	/// <summary>
+	/// 获取指定方法键对应的熔断状态；键不存在时创建并登记一个 Closed 状态。
+	/// </summary>
+	/// <param name="key">由服务类型与方法名组成的状态键。</param>
+	/// <returns>该键对应的熔断状态，同一键始终返回同一实例。</returns>
 	public static CircuitState Get(string key)
 	{
 		return _states.GetOrAdd(key, _ => new CircuitState());
@@ -348,9 +358,21 @@ internal sealed class CircuitState
 	}
 }
 
+/// <summary>
+/// 熔断器的状态类型。
+/// </summary>
 internal enum CircuitStateKind
 {
+	/// <summary>
+	/// 关闭状态：正常放行调用并累计连续失败次数。
+	/// </summary>
 	Closed,
+	/// <summary>
+	/// 打开状态：直接快速失败，直到重置超时结束。
+	/// </summary>
 	Open,
+	/// <summary>
+	/// 半开状态：放行单个探测请求，以确认依赖是否已恢复。
+	/// </summary>
 	HalfOpen
 }

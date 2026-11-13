@@ -2,38 +2,41 @@
 
 namespace Nerosoft.Euonia.Sample.Toolkit;
 
+/// <summary>
+/// 提供 DES/AES 加解密兼容实现的 <see cref="Cryptography"/> 分部声明，实际实现位于嵌套类型 <c>Cryptography.DES</c>。
+/// </summary>
 public partial class Cryptography
 {
 	// ReSharper disable once InconsistentNaming
 
 	/// <summary>
-	/// DES helper providing encryption and decryption methods. Note: some methods internally use AES/Rijndael for a 32-byte key overload.
+	/// 提供加密与解密方法的 DES 辅助类。注意：部分方法在处理 32 字节密钥重载时内部使用 AES/Rijndael。
 	/// </summary>
 	public class DES
 	{
 		/// <summary>
-		/// Default 32-byte salt/key used by overloads that accept no key parameter.
+		/// 无密钥参数的重载所使用的默认 32 字节盐/密钥。
 		/// </summary>
 		private static readonly byte[] _defaultSalt = { 0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x33, 0x3B, 0x43, 0x4B, 0x9B, 0x93, 0x8B, 0x83, 0x7B, 0x73, 0x6B, 0x63, 0x5B, 0x53, 0xF3, 0xFB, 0xA3, 0xAB, 0xB3, 0xBB, 0xC3, 0xEB, 0xE3, 0xDB, 0xD3, 0xCB };
 
 		#region Encrypt
 
 		/// <summary>
-		/// Encrypts the specified string using the default 32-byte key (internally uses AES algorithm in ECB mode).
+		/// 使用默认 32 字节密钥加密指定的字符串（内部使用 ECB 模式的 AES 算法）。
 		/// </summary>
-		/// <param name="source">Plain text to encrypt.</param>
-		/// <returns>Base64-encoded cipher text.</returns>
+		/// <param name="source">要加密的明文。</param>
+		/// <returns>Base64 编码的密文。</returns>
 		public static string Encrypt(string source)
 		{
 			return Encrypt(source, _defaultSalt);
 		}
 
 		/// <summary>
-		/// Encrypts the specified string using the provided 32-byte key (internally uses AES algorithm in ECB mode).
+		/// 使用提供的 32 字节密钥加密指定的字符串（内部使用 ECB 模式的 AES 算法）。
 		/// </summary>
-		/// <param name="source">Plain text to encrypt.</param>
-		/// <param name="key">32-byte key to use as AES key.</param>
-		/// <returns>Base64-encoded cipher text.</returns>
+		/// <param name="source">要加密的明文。</param>
+		/// <param name="key">用作 AES 密钥的 32 字节密钥。</param>
+		/// <returns>Base64 编码的密文。</returns>
 		public static string Encrypt(string source, byte[] key)
 		{
 			using SymmetricAlgorithm sa = Aes.Create(); //Rijndael.Create();
@@ -50,11 +53,11 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Encrypts the specified string using DES with the provided key string (key bytes derived from UTF8 of the key).
+		/// 使用提供密钥字符串的 DES 加密指定的字符串（密钥字节由密钥的 UTF8 编码派生）。
 		/// </summary>
-		/// <param name="source">Plain text to encrypt.</param>
-		/// <param name="key">Key string used to derive DES key bytes.</param>
-		/// <returns>Base64-encoded cipher text.</returns>
+		/// <param name="source">要加密的明文。</param>
+		/// <param name="key">用于派生 DES 密钥字节的密钥字符串。</param>
+		/// <returns>Base64 编码的密文。</returns>
 		public static string Encrypt(string source, string key)
 		{
 			using var provider = System.Security.Cryptography.DES.Create();
@@ -77,21 +80,21 @@ public partial class Cryptography
 		#region Decrypt
 
 		/// <summary>
-		/// Decrypts the specified Base64-encoded cipher text using the default 32-byte key (internally uses AES algorithm in ECB mode).
+		/// 使用默认 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES 算法）。
 		/// </summary>
-		/// <param name="source">Base64-encoded cipher text.</param>
-		/// <returns>Decrypted plain text.</returns>
+		/// <param name="source">Base64 编码的密文。</param>
+		/// <returns>解密后的明文。</returns>
 		public static string Decrypt(string source)
 		{
 			return Decrypt(source, _defaultSalt);
 		}
 
 		/// <summary>
-		/// Decrypts the specified Base64-encoded cipher text using the provided 32-byte key (internally uses AES algorithm in ECB mode).
+		/// 使用提供的 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES 算法）。
 		/// </summary>
-		/// <param name="source">Base64-encoded cipher text.</param>
-		/// <param name="key">32-byte key used as AES key.</param>
-		/// <returns>Decrypted plain text.</returns>
+		/// <param name="source">Base64 编码的密文。</param>
+		/// <param name="key">用作 AES 密钥的 32 字节密钥。</param>
+		/// <returns>解密后的明文。</returns>
 		public static string Decrypt(string source, byte[] key)
 		{
 			using SymmetricAlgorithm sa = Aes.Create(); //Rijndael.Create();

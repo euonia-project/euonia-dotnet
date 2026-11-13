@@ -6,12 +6,18 @@ using Nerosoft.Euonia.Validation;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+/// <summary>
+/// 针对 <see cref="ValidationBehavior{TMessage, TResponse}"/> 校验工厂选择、跳过校验与失败短路行为的测试。
+/// </summary>
 [Collection("AppTests")]
 public class ValidationBehaviorTests
 {
+	/// <summary>
+	/// 参与校验的消息负载，用于让校验行为按负载类型选择验证器。
+	/// </summary>
 	private sealed class Payload
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 	}
 
 	/// <summary>
@@ -41,7 +47,7 @@ public class ValidationBehaviorTests
 		}
 	}
 
-	private static ValidationBehavior<IMessageEnvelope, object> CreateBehavior(IValidatorFactory factory)
+	private static ValidationBehavior<IMessageEnvelope, object> CreateBehavior(IValidatorFactory? factory)
 	{
 		var services = new ServiceCollection();
 		if (factory != null)
@@ -60,6 +66,9 @@ public class ValidationBehaviorTests
 		return envelope;
 	}
 
+	/// <summary>
+	/// 注册了 <see cref="IValidatorFactory"/> 时应使用该工厂创建验证器并继续执行管道。
+	/// </summary>
 	[Fact]
 	public async Task DiValidatorFactory_ShouldBeUsedWhenRegistered()
 	{
@@ -72,7 +81,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await behavior.HandleAsync(CreateEnvelope(new Payload()).Object, next);
@@ -81,6 +90,9 @@ public class ValidationBehaviorTests
 		Assert.True(called);
 	}
 
+	/// <summary>
+	/// 未注册验证器工厂时应跳过校验并继续执行管道。
+	/// </summary>
 	[Fact]
 	public async Task NoValidatorRegistered_ShouldSkipValidation()
 	{
@@ -89,7 +101,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await behavior.HandleAsync(CreateEnvelope(new Payload()).Object, next);
@@ -97,6 +109,9 @@ public class ValidationBehaviorTests
 		Assert.True(called);
 	}
 
+	/// <summary>
+	/// 校验失败时应抛出 <see cref="ValidationException"/> 且不调用下一个处理器。
+	/// </summary>
 	[Fact]
 	public async Task ValidationFailure_ShouldThrowAndSkipNext()
 	{
@@ -109,7 +124,7 @@ public class ValidationBehaviorTests
 		PipelineDelegate<IMessageEnvelope, object> next = _ =>
 		{
 			called = true;
-			return Task.FromResult<object>(null);
+			return Task.FromResult<object>(null!);
 		};
 
 		await Assert.ThrowsAsync<ValidationException>(

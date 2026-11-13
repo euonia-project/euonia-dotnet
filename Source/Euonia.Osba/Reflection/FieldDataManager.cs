@@ -33,12 +33,12 @@ public class FieldDataManager
 	/// <summary>
 	/// 按属性索引存放的字段值；首次写入/读取时才分配。
 	/// </summary>
-	private IFieldData[] _fields;
+	private IFieldData[] _fields = null!;
 
 	/// <summary>
 	/// 未注册属性的兜底存储（仅自定义 <see cref="IPropertyInfo"/> 会用到）。
 	/// </summary>
-	private ConcurrentDictionary<string, IFieldData> _unindexed;
+	private ConcurrentDictionary<string, IFieldData> _unindexed = null!;
 
 	/// <summary>
 	/// 初始化 <see cref="FieldDataManager"/> 类的新实例。
@@ -91,7 +91,7 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
 	/// <returns>匹配的属性信息；如果未注册则为 <see langword="null"/>。</returns>
-	internal IPropertyInfo FindRegisteredProperty(string propertyName)
+	internal IPropertyInfo? FindRegisteredProperty(string propertyName)
 	{
 		return _metadata.Find(propertyName);
 	}
@@ -103,7 +103,7 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="property">属性信息。</param>
 	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
-	internal IFieldData GetFieldData(IPropertyInfo property)
+	internal IFieldData? GetFieldData(IPropertyInfo property)
 	{
 		var index = GetIndex(property);
 		if (index >= 0)
@@ -120,7 +120,7 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
 	/// <returns>字段数据；字段尚不存在时返回 <see langword="null"/>。</returns>
-	internal IFieldData GetFieldData(string propertyName)
+	internal IFieldData? GetFieldData(string propertyName)
 	{
 		var index = _metadata.IndexOf(propertyName);
 		if (index >= 0)
@@ -188,13 +188,13 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="property">属性信息。</param>
 	/// <param name="value">要设置的值。</param>
-	internal void SetFieldData(IPropertyInfo property, object value)
+	internal void SetFieldData(IPropertyInfo property, object? value)
 	{
 		var valueType = value != null ? value.GetType() : property.Type;
 
-		value = TypeHelper.CoerceValue(property.Type, valueType, value);
+		var coerced = TypeHelper.CoerceValue(property.Type, valueType, value);
 		var field = GetOrCreateFieldData(property);
-		field.Value = value;
+		field.Value = coerced!;
 	}
 
 	/// <summary>
@@ -212,7 +212,7 @@ public class FieldDataManager
 		}
 		else
 		{
-			field.Value = value;
+			field.Value = value!;
 		}
 	}
 
@@ -226,9 +226,9 @@ public class FieldDataManager
 	{
 		var valueType = value != null ? value.GetType() : property.Type;
 
-		value = TypeHelper.CoerceValue(property.Type, valueType, value);
+		var coerced = TypeHelper.CoerceValue(property.Type, valueType, value);
 		var field = GetOrCreateFieldData(property);
-		SetLoadedValue(field, value);
+		SetLoadedValue(field, coerced);
 		return field;
 	}
 
@@ -253,7 +253,7 @@ public class FieldDataManager
 		}
 		else
 		{
-			field.Value = value;
+			field.Value = value!;
 		}
 
 		field.MarkAsUnchanged();
@@ -265,7 +265,7 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="field">字段数据。</param>
 	/// <param name="value">值。</param>
-	private static void SetLoadedValue(IFieldData field, object value)
+	private static void SetLoadedValue(IFieldData field, object? value)
 	{
 		if (field is IFieldDataInternal internalField)
 		{
@@ -274,7 +274,7 @@ public class FieldDataManager
 			return;
 		}
 
-		field.Value = value;
+		field.Value = value!;
 		field.MarkAsUnchanged();
 	}
 
@@ -315,7 +315,7 @@ public class FieldDataManager
 	/// </summary>
 	/// <param name="propertyName">属性名称。</param>
 	/// <returns>字段数据或 <see langword="null"/>。</returns>
-	private IFieldData GetUnindexed(string propertyName)
+	private IFieldData? GetUnindexed(string propertyName)
 	{
 		return _unindexed != null && _unindexed.TryGetValue(propertyName, out var field) ? field : null;
 	}
@@ -540,7 +540,7 @@ public class FieldDataManager
 		/// </summary>
 		/// <param name="name">名称。</param>
 		/// <returns>属性或 <see langword="null"/>。</returns>
-		public IPropertyInfo Find(string name)
+		public IPropertyInfo? Find(string name)
 		{
 			return name != null && _indices.TryGetValue(name, out var index) ? Properties[index] : null;
 		}
@@ -583,5 +583,5 @@ internal interface IFieldDataInternal
 	/// </summary>
 	/// <param name="value">值。</param>
 	/// <param name="trackHistory">是否记录旧值。</param>
-	void SetValue(object value, bool trackHistory);
+	void SetValue(object? value, bool trackHistory);
 }

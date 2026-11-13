@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -10,20 +10,20 @@ namespace Nerosoft.Euonia.Bus.RabbitMq;
 /// </summary>
 internal abstract class RabbitMqRecipient : DisposableObject
 {
-	// Backing field for the consumer instance. Use a dedicated lock to ensure
-	// the consumer is created and event handlers are attached only once.
+	// 消费者实例的后备字段。使用专用锁确保消费者仅被创建一次，
+	// 且事件处理程序仅被附加一次。
 	private readonly Lock _consumerLock = new();
-	private volatile AsyncEventingBasicConsumer _consumer;
+	private volatile AsyncEventingBasicConsumer? _consumer;
 
 	/// <summary>
 	/// 当消息被接收时触发。
 	/// </summary>
-	public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+	public event EventHandler<MessageReceivedEventArgs> MessageReceived = null!;
 
 	/// <summary>
 	/// 当消息被确认（ACK）时触发。
 	/// </summary>
-	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged;
+	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged = null!;
 
 	/// <summary>
 	/// 消息序列化器，用于消息的序列化与反序列化。
@@ -34,7 +34,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// 初始化 <see cref="RabbitMqRecipient"/> 类的新实例。
 	/// </summary>
 	/// <param name="provider">用于解析服务（如消息序列化器）的服务提供程序。</param>
-	/// <param name="factory">用于建立和管����� RabbitMQ 连接的持久连接工厂。</param>
+	/// <param name="factory">用于建立和管理 RabbitMQ 连接的持久连接工厂。</param>
 	/// <param name="handler">用于处理消息的处理器上下文。</param>
 	/// <param name="options">包装在 <see cref="IOptions{T}"/> 中的 <see cref="RabbitMqBusOptions"/> 配置。</param>
 	protected RabbitMqRecipient(IServiceProvider provider, IPersistentConnection factory, IHandlerContext handler, IOptions<RabbitMqBusOptions> options)
@@ -71,12 +71,12 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置此接收器处理的消息类型。
 	/// </summary>
-	protected Type MessageType { get; }
+	protected Type MessageType { get; } = null!;
 
 	/// <summary>
 	/// 获取或设置此接收器监听的消息通道名称。
 	/// </summary>
-	protected string ChannelName { get; }
+	protected string ChannelName { get; } = null!;
 
 	/// <summary>
 	/// 获取用于与 RabbitMQ 进行通信的持久连接。
@@ -91,7 +91,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// <summary>
 	/// 获取或设置 RabbitMQ 消息通道。
 	/// </summary>
-	protected virtual IChannel Channel { get; set; }
+	protected virtual IChannel Channel { get; set; } = null!;
 
 	/// <summary>
 	/// 获取 RabbitMQ 消费者实例。
@@ -118,7 +118,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 				if (consumer == null)
 				{
 					consumer = new AsyncEventingBasicConsumer(Channel);
-					// Attach the handler only once when the consumer is created.
+					// 仅在创建消费者时附加一次处理程序。
 					consumer.ReceivedAsync += HandleMessageReceivedAsync;
 					_consumer = consumer;
 				}
@@ -210,6 +210,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		var context = new MessageContext(message)
 		{
 			ExecutionDescriptor = MessageExecutionDescriptor.DistributedInbound,
+			Transport = "rabbitmq",
 		};
 		// {
 		// 	MessageId = props.MessageId,
@@ -258,16 +259,16 @@ internal abstract class RabbitMqRecipient : DisposableObject
 			if (shouldReply)
 			{
 				var replyProps = new BasicProperties();
-				replyProps.Headers ??= new Dictionary<string, object>();
+				replyProps.Headers ??= new Dictionary<string, object?>();
 				replyProps.CorrelationId = props.CorrelationId;
 				replyProps.Type = reply.Result?.GetType().Name;
 
 				var response = SerializeMessage(reply);
-				await Channel.BasicPublishAsync(string.Empty, props.ReplyTo, true, replyProps, response);
+				await Channel.BasicPublishAsync(string.Empty, props.ReplyTo!, true, replyProps, response);
 			}
 
-			// When auto-ack is enabled the broker has already acknowledged the message,
-			// so calling BasicAckAsync again would fail with PRECONDITION_FAILED.
+			// 启用自动确认时，代理已确认该消息，
+			// 因此再次调用 BasicAckAsync 会因 PRECONDITION_FAILED 而失败。
 			if (!AutoAck)
 			{
 				// 纯订阅者（无回复通道）的处理失败不能 ACK，否则消息会被静默丢弃；
@@ -305,31 +306,31 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		finally
 		{
 			cancellationRegistration.Dispose();
-			// Unsubscribe to avoid potential memory leaks or repeated calls in long-running
-			// scenarios. The context is per-message, but being defensive is useful.
+			// 取消订阅以避免长时间运行场景中的潜在内存泄漏或重复调用。
+			// 上下文是按消息独立的，但保持防御性仍然有益。
 			context.Responded -= onResponded;
 			context.Failed -= onFailed;
 			context.Completed -= onCompleted;
 		}
 
-		void OnResponded(object s, MessageRepliedEventArgs e)
+		void OnResponded(object? s, MessageRepliedEventArgs e)
 		{
 			if (!shouldReply)
 			{
 				return;
 			}
 
-			taskCompletion.TrySetResult(e.Result);
+			taskCompletion.TrySetResult(e.Result!);
 		}
 
-		void OnFailed(object s, Exception exception)
+		void OnFailed(object? s, Exception exception)
 		{
 			taskCompletion.TrySetException(exception);
 		}
 
-		void OnCompleted(object s, MessageHandledEventArgs e)
+		void OnCompleted(object? s, MessageHandledEventArgs e)
 		{
-			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)));
+			taskCompletion.TryCompleteFromCompletedTask(Task.FromResult(default(object)!));
 		}
 	}
 
@@ -387,7 +388,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// <param name="header">消息头键值对字典，可能为 null。</param>
 	/// <param name="key">要查找的键名。</param>
 	/// <returns>找到的字符串值；如果头字典为 null 或未找到指定键，则返回 <see cref="string.Empty"/>。</returns>
-	protected virtual string GetHeaderValue(IDictionary<string, object> header, string key)
+	protected virtual string GetHeaderValue(IDictionary<string, object?>? header, string key)
 	{
 		if (header == null)
 		{
@@ -401,7 +402,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 				null => string.Empty,
 				string @string => @string,
 				byte[] bytes => Encoding.UTF8.GetString(bytes),
-				_ => value.ToString()
+				_ => value.ToString()!
 			};
 		}
 
@@ -415,7 +416,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 	/// <param name="channel">用于声明交换机、队列及绑定的 RabbitMQ 通道。</param>
 	/// <param name="channelName">当前消息通道的名称，用于构建死信交换机与死信队列的名称。</param>
 	/// <returns>包含 <c>x-dead-letter-exchange</c> 和 <c>x-dead-letter-routing-key</c> 的队列参数字典；未启用死信功能时返回 <c>null</c>。</returns>
-	protected async Task<IDictionary<string, object>> DeclareDeadLetterAsync(IChannel channel, string channelName)
+	protected async Task<IDictionary<string, object?>?> DeclareDeadLetterAsync(IChannel channel, string channelName)
 	{
 		if (!Options.IsDeadLetterEnabled)
 		{
@@ -428,7 +429,7 @@ internal abstract class RabbitMqRecipient : DisposableObject
 		await channel.QueueDeclareAsync(dlqName, true, false, false);
 		await channel.QueueBindAsync(dlqName, dlxName, Constants.DefaultDlxRoutingKey);
 
-		return new Dictionary<string, object>
+		return new Dictionary<string, object?>
 		{
 			{ "x-dead-letter-exchange", dlxName },
 			{ "x-dead-letter-routing-key", Constants.DefaultDlxRoutingKey },
@@ -447,21 +448,21 @@ internal abstract class RabbitMqRecipient : DisposableObject
 			return;
 		}
 
-		// Do not access the Consumer property here (it may throw if Channel is null).
+		// 不要在此处访问 Consumer 属性（当 Channel 为 null 时它可能抛出异常）。
 		if (_consumer != null)
 		{
 			_consumer.ReceivedAsync -= HandleMessageReceivedAsync;
 			_consumer = null;
 		}
 
-		// Dispose the channel if it exists.
+		// 释放通道（如果存在）。
 		try
 		{
 			Channel?.Dispose();
 		}
 		catch
 		{
-			// Swallow exceptions during dispose to avoid throwing in finalizers.
+			// 释放期间吞掉异常，以避免在终结器中抛出。
 		}
 	}
 }

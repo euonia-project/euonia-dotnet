@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class DispatcherCacheInvalidationTests
 {
+	/// <summary>
+	/// 验证首次 <see cref="IDispatcher.Determine"/> 结果被缓存后，运行期新增的传输策略立即出现在判定结果中。
+	/// </summary>
 	[Fact]
 	public async Task Determine_AfterStrategyAdded_IncludesNewTransport()
 	{
@@ -23,7 +26,7 @@ public class DispatcherCacheInvalidationTests
 		configurator.SetConvention(builder => builder.Add<DefaultMessageConvention>());
 		var dispatcher = provider.GetRequiredService<IDispatcher>();
 
-		var channel = typeof(TestMessages.OrderPlacedEvent).FullName;
+		var channel = typeof(TestMessages.OrderPlacedEvent).FullName!;
 
 		// 尚无任何策略：退回默认传输器，该结果会进入缓存。
 		Assert.Equal(["test"], dispatcher.Determine(channel, typeof(TestMessages.OrderPlacedEvent)));

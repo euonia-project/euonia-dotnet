@@ -9,16 +9,20 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 
 /// <summary>
 /// 对某个仓库执行 push 的命令对象（对齐 SAMPLE.md 的 PushCommand 场景）。
-/// 命令体经 <see cref="IObjectFactory.ExecuteAsync{T}"/> 裁决后才执行：
+/// 命令体经 <see cref="IObjectFactory"/> 的 <c>ExecuteAsync</c> 裁决后才执行：
 /// <see cref="BusinessOperation.Execute"/> 的类型级闸门（<see cref="RepositoryPermissions.Push"/> 与角色），
 /// 行级判定（单行授予 <c>repository:push</c>）在命令体内做，避免「先 push 后判定、拒了也 push」。
 /// </summary>
 public sealed class PushRepositoryCommand : ServiceObjectBase<PushRepositoryCommand>
 {
-	/// <summary>目标仓库标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
-	public string RepoId { get; set; }
+	/// <summary>
+	/// 目标仓库标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
+	public string RepoId { get; set; } = null!;
 
-	/// <summary>命令是否已成功执行。</summary>
+	/// <summary>
+	/// 命令是否已成功执行。
+	/// </summary>
 	public bool Pushed { get; private set; }
 
 	[FactoryCreate]
@@ -28,6 +32,13 @@ public sealed class PushRepositoryCommand : ServiceObjectBase<PushRepositoryComm
 		await Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 执行 push：先取目标仓库并做行级判定，通过后把命令标记为已执行。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="NotFoundException">目标仓库不存在时抛出。</exception>
+	/// <exception cref="SecurityException">当前用户不具备该仓库的 <c>repository:push</c> 行级权限时抛出。</exception>
 	[Permission(RepositoryPermissions.Push, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)

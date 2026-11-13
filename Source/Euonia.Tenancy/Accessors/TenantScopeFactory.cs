@@ -1,0 +1,210 @@
+using Nerosoft.Euonia.Execution;
+
+namespace Nerosoft.Euonia.Tenancy;
+
+/// <summary>
+/// 基于执行上下文的 <see cref="ITenantScopeFactory"/> 默认实现。
+/// </summary>
+public sealed class TenantScopeFactory : ITenantScopeFactory
+{
+	private readonly Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions>? _options;
+	private readonly MultiTenancyOptions? _staticOptions;
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	public TenantScopeFactory()
+	{
+	}
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	/// <param name="options">多租户选项，用于跨租户授权。</param>
+	public TenantScopeFactory(Microsoft.Extensions.Options.IOptionsMonitor<MultiTenancyOptions> options)
+	{
+		_options = options;
+	}
+
+	/// <summary>
+	/// 初始化 <see cref="TenantScopeFactory"/> 的新实例。
+	/// </summary>
+	/// <param name="options">固定的多租户选项。</param>
+	public TenantScopeFactory(MultiTenancyOptions options)
+	{
+		_staticOptions = options;
+	}
+
+	/// <inheritdoc />
+	public ITenantScope Begin(ITenantInfo tenant)
+	{
+		ArgumentNullException.ThrowIfNull(tenant);
+		TenantIdValidator.Validate(tenant.Id);
+		EnsureCanSwitch(tenant.Id);
+
+		return new Scope(AmbientExecutionContext.Push(context => Apply(context, tenant)));
+	}
+
+	/// <inheritdoc />
+	public ITenantScope BeginIsolated(ITenantInfo tenant)
+	{
+		ArgumentNullException.ThrowIfNull(tenant);
+		TenantIdValidator.Validate(tenant.Id);
+
+		return new Scope(AmbientExecutionContext.PushNew(context =>
+		{
+			Apply(context, tenant);
+			context.ActorTenantId = tenant.Id;
+		}));
+	}
+
+	/// <inheritdoc />
+	public ITenantScope Begin(ITenantInfo tenant, string? actorTenantId, string? targetTenantId, string? crossTenantReason)
+	{
+		ArgumentNullException.ThrowIfNull(tenant);
+
+		if (string.IsNullOrEmpty(actorTenantId) || string.IsNullOrEmpty(targetTenantId) || string.IsNullOrWhiteSpace(crossTenantReason))
+		{
+			throw new ArgumentException("Cross-tenant scope requires actorTenantId, targetTenantId and crossTenantReason together.");
+		}
+
+		EnsureCanSwitch(tenant.Id);
+		if (!string.Equals(tenant.Id, targetTenantId, StringComparison.Ordinal))
+		{
+			throw new ArgumentException($"Target tenant '{targetTenantId}' does not match the scope tenant '{tenant.Id}'.");
+		}
+
+		TenantIdValidator.Validate(actorTenantId);
+		TenantIdValidator.Validate(targetTenantId);
+
+		// 四参数入口同样可能表达跨租户语义（消息信封），必须走宿主授权策略；同租户无需授权。
+		if (!string.Equals(actorTenantId, targetTenantId, StringComparison.Ordinal))
+		{
+			EnsureCrossTenantAuthorized(targetTenantId);
+		}
+
+		return new Scope(AmbientExecutionContext.Push(context =>
+		{
+			Apply(context, tenant);
+			context.ActorTenantId = actorTenantId;
+			context.TargetTenantId = targetTenantId;
+
+			// 同租户不得被标记为跨租户，否则下游删除/查询会误判为全租户授权。
+			context.IsCrossTenant = !string.Equals(actorTenantId, targetTenantId, StringComparison.Ordinal);
+			context.CrossTenantReason = context.IsCrossTenant ? crossTenantReason : null;
+		}));
+	}
+
+	/// <inheritdoc />
+	public ITenantScope BeginCrossTenant(string reason, string? targetTenantId = null)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(reason);
+		if (targetTenantId != null)
+		{
+			TenantIdValidator.Validate(targetTenantId);
+		}
+
+		EnsureCrossTenantAuthorized(targetTenantId);
+
+		return new Scope(AmbientExecutionContext.Push(context =>
+		{
+			context.TenantId = targetTenantId;
+			context.TenantName = null;
+			context.TargetTenantId = targetTenantId;
+			context.IsCrossTenant = true;
+			context.CrossTenantReason = reason;
+			context.Items.Remove(TenantContextKeys.Info);
+		}));
+	}
+
+	/// <summary>
+	/// 按宿主策略校验跨租户访问；未授权时抛出 <see cref="UnauthorizedAccessException"/>。
+	/// </summary>
+	/// <param name="targetTenantId">目标租户；为 <c>null</c> 时表示系统级全租户作用域。</param>
+	private void EnsureCrossTenantAuthorized(string? targetTenantId)
+	{
+		var options = _options?.CurrentValue ?? _staticOptions;
+		var authorized = options?.CrossTenantScopeAuthorizer?.Invoke(targetTenantId) == true
+		                 || (targetTenantId == null && options?.AllowSystemCrossTenant == true);
+		if (!authorized)
+		{
+			throw new UnauthorizedAccessException("Cross-tenant scope is not authorized by the host policy.");
+		}
+	}
+
+	private static void Apply(ExecutionContextValues context, ITenantInfo tenant)
+	{
+		context.TenantId = tenant.Id;
+		context.TenantName = tenant.Name;
+
+		// 系统级全租户作用域内进入具体租户时，把 target 收敛到该租户而不是继续保持“全租户”。
+		if (context.IsCrossTenant == true && !string.Equals(context.TargetTenantId, tenant.Id, StringComparison.Ordinal))
+		{
+			context.TargetTenantId = tenant.Id;
+		}
+
+		// 操作人租户：首次进入租户作用域时记录，跨租户切换时保留，审计据此区分 Actor/Target。
+		context.ActorTenantId ??= tenant.Id;
+
+		// 进入操作人自己的租户（或 target 已等于 actor）时不再具有跨租户语义，
+		// 否则会同时出现“可读系统作用域”和“删除被拒绝”的矛盾行为。
+		if (context.IsCrossTenant == true
+		    && (string.Equals(context.ActorTenantId, tenant.Id, StringComparison.Ordinal)
+		        || string.Equals(context.TargetTenantId, context.ActorTenantId, StringComparison.Ordinal)))
+		{
+			context.IsCrossTenant = false;
+			context.CrossTenantReason = null;
+		}
+		context.Items[TenantContextKeys.Info] = tenant;
+	}
+
+	private static void EnsureCanSwitch(string tenantId)
+	{
+		var current = AmbientExecutionContext.Current;
+		if (current?.TenantId != null && !string.Equals(current.TenantId, tenantId, StringComparison.Ordinal))
+		{
+			throw new TenantScopeConflictException(current.TenantId, tenantId);
+		}
+	}
+
+	private sealed class Scope : ITenantScope
+	{
+		private readonly IDisposable _lease;
+		private bool _disposed;
+
+		public Scope(IDisposable lease)
+		{
+			_lease = lease;
+			Context = new TenantContext
+			{
+				TenantId = AmbientExecutionContext.Current!.TenantId,
+				ActorTenantId = AmbientExecutionContext.Current!.ActorTenantId,
+				TargetTenantId = AmbientExecutionContext.Current!.TargetTenantId,
+				IsCrossTenant = AmbientExecutionContext.Current!.IsCrossTenant,
+				CrossTenantReason = AmbientExecutionContext.Current!.CrossTenantReason,
+				Tenant = AmbientExecutionContext.Current!.Items.TryGetValue(TenantContextKeys.Info, out var value)
+					         ? value as ITenantInfo
+					         : null,
+			};
+		}
+
+		public TenantContext Context { get; }
+
+		public void Dispose()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			_lease.Dispose();
+		}
+
+		public ValueTask DisposeAsync()
+		{
+			Dispose();
+			return ValueTask.CompletedTask;
+		}
+	}
+}

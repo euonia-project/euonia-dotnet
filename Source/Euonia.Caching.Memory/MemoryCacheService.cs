@@ -1,22 +1,28 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 
 namespace Nerosoft.Euonia.Caching.Memory;
 
 /// <summary>
-/// The implement of <see cref="ICacheService"/> with <see cref="Microsoft.Extensions.Caching.Memory"/>.
+/// 使用 <see cref="Microsoft.Extensions.Caching.Memory"/> 实现的 <see cref="ICacheService"/>。
 /// </summary>
 public class MemoryCacheService : BaseCacheService, ICacheService
 {
 	private readonly MemoryCacheManager _manager;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="MemoryCacheService"/> class.
+	/// 初始化 <see cref="MemoryCacheService"/> 类的新实例。
 	/// </summary>
-	/// <param name="options"></param>
-	public MemoryCacheService(IOptions<MemoryCacheOptions> options)
+	/// <param name="options">包含缓存选项（如键前缀）的选项包装器。</param>
+	/// <param name="keyTransformer">租户键转换器；未注册时为 <c>null</c>。</param>
+	public MemoryCacheService(IOptions<MemoryCacheOptions> options, IKeyTransformer? keyTransformer = null)
 	{
 		_manager = new MemoryCacheManager(options.Value);
 		KeyPrefix = options.Value.KeyPrefix;
+
+		if (keyTransformer != null)
+		{
+			KeyTransformer = keyTransformer;
+		}
 	}
 
 	/// <inheritdoc />
@@ -37,7 +43,7 @@ public class MemoryCacheService : BaseCacheService, ICacheService
 			return true;
 		}
 
-		value = default;
+		value = default!;
 		return false;
 	}
 
@@ -114,7 +120,7 @@ public class MemoryCacheService : BaseCacheService, ICacheService
 
 		key = RewriteKey(key);
 		var item = GetCacheManager<TValue>().GetCacheItem(key);
-		var value = item != null ? item.Value : default;
+		var value = item != null ? item.Value : default!;
 
 		return Task.FromResult(Tuple.Create(item != null, value));
 	}

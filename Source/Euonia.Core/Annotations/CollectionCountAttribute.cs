@@ -137,7 +137,7 @@ public class CollectionCountAttribute : ValidationAttribute
 	/// <param name="value">要验证的属性值（预期为集合）。</param>
 	/// <param name="validationContext">验证操作的上下文信息。</param>
 	/// <returns>指示成功或失败的 <see cref="ValidationResult"/>。</returns>
-	protected override ValidationResult IsValid(object value, ValidationContext validationContext)
+	protected override ValidationResult? IsValid(object? value, ValidationContext validationContext)
 	{
 		if (value == null)
 		{
@@ -160,7 +160,7 @@ public class CollectionCountAttribute : ValidationAttribute
 			var message = ErrorMessage != null
 				? FormatErrorMessage(ErrorMessage)
 				: string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_COLLECTION_MINIMUM_COUNT, validationContext.DisplayName, MinimumCount);
-			return new ValidationResult(message, [validationContext.MemberName]);
+			return new ValidationResult(message, [validationContext.MemberName!]);
 		}
 
 		if (MaximumCount.HasValue && count > MaximumCount.Value)
@@ -168,7 +168,7 @@ public class CollectionCountAttribute : ValidationAttribute
 			var message = ErrorMessage != null
 				? FormatErrorMessage(ErrorMessage)
 				: string.Format(Nerosoft.Euonia.Core.Properties.Resources.IDS_COLLECTION_MAXIMUM_COUNT, validationContext.DisplayName, MaximumCount.Value);
-			return new ValidationResult(message, [validationContext.MemberName]);
+			return new ValidationResult(message, [validationContext.MemberName!]);
 		}
 
 		return ValidationResult.Success;

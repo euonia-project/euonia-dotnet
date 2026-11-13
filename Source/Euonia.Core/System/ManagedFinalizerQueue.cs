@@ -10,6 +10,9 @@ public sealed class ManagedFinalizerQueue
     // 99% 的情况下，终结器不会做任何事情，因为人们会正确释放资源。终结器还必须遍历整个字典，
     // 理论上如果有大量使用，字典可能会很大。因此，我们不希望它运行得太频繁。另一方面，当出现问题时，
     // 我们希望能够在一段合理的时间内恢复。30 秒感觉是一个很好的平衡点。
+    /// <summary>
+    /// 终结器循环两次执行之间的间隔；调试模式缩短为 3 秒以便测试，发布模式为 30 秒以降低空转开销。
+    /// </summary>
     internal static readonly TimeSpan FinalizerCadence = TimeSpan.FromSeconds(
 #if DEBUG
         3 // 为了保持测试快速，在调试模式下使用更短的频率
@@ -96,7 +99,7 @@ public sealed class ManagedFinalizerQueue
             // （并且可能在一段时间内都不会退出）。因此，我们将一个任务作为延续排队，
             // 以便一次只有一个终结器循环在运行。
             _finalizerTask = _finalizerTask.ContinueWith(
-                                          (_, @this) => ((ManagedFinalizerQueue)@this).FinalizerLoop(),
+                                          (_, @this) => ((ManagedFinalizerQueue)@this!).FinalizerLoop(),
                                           state: this,
                                           CancellationToken.None
                                       )
@@ -125,7 +128,7 @@ public sealed class ManagedFinalizerQueue
 
     private Task FinalizeAsync(bool waitForItemFinalization)
     {
-        List<Task> itemFinalizerTasks = null;
+        List<Task>? itemFinalizerTasks = null;
 
         // ConcurrentDictionary 的枚举器可以安全地与写入操作并发使用，并且非常廉价
         // （无锁且不会生成快照副本）
@@ -165,10 +168,13 @@ public sealed class ManagedFinalizerQueue
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 表示一次终结器注册；释放时以原子方式撤销注册，重复释放不产生副作用。
+    /// </summary>
     private sealed class Registration : IDisposable
     {
         private readonly ManagedFinalizerQueue _queue;
-        private IAsyncDisposable _key;
+        private IAsyncDisposable? _key;
 
         public Registration(ManagedFinalizerQueue queue, IAsyncDisposable key)
         {

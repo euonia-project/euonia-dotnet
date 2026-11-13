@@ -13,8 +13,8 @@ public readonly record struct MessageExecutionDescriptor
 	private MessageExecutionDescriptor(
 		MessageProviderLease providerLease,
 		MessageRequestContextSource requestContextSource,
-		IServiceProvider borrowedProvider,
-		RequestContext publisherContext)
+		IServiceProvider? borrowedProvider,
+		RequestContext? publisherContext)
 	{
 		ProviderLease = providerLease;
 		RequestContextSource = requestContextSource;
@@ -35,12 +35,12 @@ public readonly record struct MessageExecutionDescriptor
 	/// <summary>
 	/// 获取复用的调用方服务提供程序；<see cref="MessageProviderLease.OwnScope"/> 时为 <c>null</c>。
 	/// </summary>
-	public IServiceProvider BorrowedProvider { get; }
+	public IServiceProvider? BorrowedProvider { get; }
 
 	/// <summary>
 	/// 获取发布时捕获的发布方请求上下文副本；非 <see cref="MessageRequestContextSource.PublisherSnapshot"/> 时为 <c>null</c>。
 	/// </summary>
-	public RequestContext PublisherContext { get; }
+	public RequestContext? PublisherContext { get; }
 
 	/// <summary>
 	/// 手动调用或无法获取请求作用域时的默认值：新建作用域；仅当当前流没有上下文时从信封恢复。
@@ -53,7 +53,7 @@ public readonly record struct MessageExecutionDescriptor
 	/// </summary>
 	/// <param name="requestServices">入站请求的作用域服务提供程序；为 <c>null</c> 时退化为 <see cref="RemoteInbound"/>。</param>
 	/// <returns>对应的执行描述符。</returns>
-	public static MessageExecutionDescriptor RemoteInboundBorrowed(IServiceProvider requestServices)
+	public static MessageExecutionDescriptor RemoteInboundBorrowed(IServiceProvider? requestServices)
 	{
 		return requestServices == null
 			       ? RemoteInbound
@@ -84,7 +84,7 @@ public readonly record struct MessageExecutionDescriptor
 	/// <param name="provider">调用方显式绑定的服务提供程序；为 <c>null</c> 时新建作用域。</param>
 	/// <param name="publisherContext">发布方请求上下文；为 <c>null</c> 时处理侧回退到消息信封。</param>
 	/// <returns>对应的执行描述符。</returns>
-	public static MessageExecutionDescriptor InProcessCall(IServiceProvider provider, RequestContext publisherContext)
+	public static MessageExecutionDescriptor InProcessCall(IServiceProvider? provider, RequestContext? publisherContext)
 	{
 		return new MessageExecutionDescriptor(
 			provider == null ? MessageProviderLease.OwnScope : MessageProviderLease.Borrow,
@@ -98,7 +98,7 @@ public readonly record struct MessageExecutionDescriptor
 	/// </summary>
 	/// <param name="publisherContext">发布方请求上下文；为 <c>null</c> 时处理侧回退到消息信封。</param>
 	/// <returns>对应的执行描述符。</returns>
-	public static MessageExecutionDescriptor InProcessPublish(RequestContext publisherContext)
+	public static MessageExecutionDescriptor InProcessPublish(RequestContext? publisherContext)
 	{
 		return new MessageExecutionDescriptor(
 			MessageProviderLease.OwnScope,
@@ -112,14 +112,14 @@ public readonly record struct MessageExecutionDescriptor
 	/// </summary>
 	/// <param name="requestServices">本次执行作用域的服务提供程序。</param>
 	/// <returns>上下文副本；没有发布方上下文时返回 <c>null</c>。</returns>
-	internal RequestContext CreateRequestContext(IServiceProvider requestServices)
+	internal RequestContext? CreateRequestContext(IServiceProvider requestServices)
 	{
 		if (PublisherContext == null)
 		{
 			return null;
 		}
 
-		var context = Copy(PublisherContext);
+		var context = Copy(PublisherContext)!;
 		context.RequestServices = requestServices;
 		return context;
 	}
@@ -127,7 +127,7 @@ public readonly record struct MessageExecutionDescriptor
 	/// <summary>
 	/// 复制请求上下文的信息字段；<see cref="RequestContext.RequestServices"/> 属于运行时定位器，不参与复制。
 	/// </summary>
-	private static RequestContext Copy(RequestContext source)
+	private static RequestContext? Copy(RequestContext? source)
 	{
 		if (source == null)
 		{
@@ -149,6 +149,8 @@ public readonly record struct MessageExecutionDescriptor
 			Path = source.Path,
 			RequestAborted = source.RequestAborted,
 			TraceIdentifier = source.TraceIdentifier,
+			TenantId = source.TenantId,
+			CorrelationId = source.CorrelationId,
 		};
 	}
 }

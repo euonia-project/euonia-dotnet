@@ -11,13 +11,17 @@ namespace Nerosoft.Euonia.Sample.Persist.Repositories;
 /// </summary>
 public sealed class RepositoryStore(IApplicationDataContext context) : IRepositoryStore
 {
+	/// <summary>
+	/// 返回代码仓库的查询源，供读侧在数据库端组合权限过滤条件。
+	/// </summary>
+	/// <returns>当前数据上下文中可供进一步筛选的代码仓库查询。</returns>
 	public IQueryable<CodeRepository> Query()
 	{
 		return context.CodeRepositories;
 	}
 
 	/// <inheritdoc />
-	public async Task<CodeRepository> GetAsync(string id, CancellationToken cancellationToken = default)
+	public async Task<CodeRepository?> GetAsync(string id, CancellationToken cancellationToken = default)
 	{
 		// 只读实体用于填充工厂新建的聚合实例（LoadProperty），不参与 SaveChanges，
 		// 必须 AsNoTracking：否则随后的 UpdateAsync(context.Update(...)) 会因同一主键被跟踪两次

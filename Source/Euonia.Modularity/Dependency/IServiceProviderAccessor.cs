@@ -1,12 +1,12 @@
 ﻿namespace Nerosoft.Euonia.Modularity;
 
 /// <summary>
-/// The accessor of <see cref="IServiceProvider"/>.
+/// <see cref="IServiceProvider"/> 的访问器。
 /// </summary>
 public interface IServiceProviderAccessor
 {
 	/// <summary>
-	/// Gets the <see cref="IServiceProvider"/> instance.
+	/// 获取 <see cref="IServiceProvider"/> 实例。
 	/// </summary>
     IServiceProvider ServiceProvider { get; }
 }

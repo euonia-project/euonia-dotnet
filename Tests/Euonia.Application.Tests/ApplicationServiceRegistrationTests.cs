@@ -2,9 +2,15 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Nerosoft.Euonia.Application.Tests;
 
+/// <summary>
+/// 验证应用服务注册结果：接口与实现类均以 Castle 代理解析，并在同一作用域内共享目标实例。
+/// </summary>
 [Collection("AppTests")]
 public class ApplicationServiceRegistrationTests
 {
+	/// <summary>
+	/// 从容器解析接口应用服务时，应得到 Castle 动态代理而非原始实现类型。
+	/// </summary>
 	[Fact]
 	public void InterfaceResolution_ShouldReturnCastleProxy()
 	{
@@ -14,6 +20,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.StartsWith("Castle.Proxies", svc.GetType().FullName);
 	}
 
+	/// <summary>
+	/// 同一作用域内同一服务的两个接口视图应共享目标实例：经一个视图写入的状态可由另一个视图读到，且目标仅创建一次。
+	/// </summary>
 	[Fact]
 	public void InterfaceViews_ShouldShareTargetInstance()
 	{
@@ -30,6 +39,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.Equal(1, OrderAuditService.Created);
 	}
 
+	/// <summary>
+	/// 框架接口 <see cref="IHasLazyServiceProvider"/> 与 <see cref="IApplicationService"/> 不应被注册为应用服务代理，解析结果应为 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void FrameworkInterfaces_ShouldNotBeRegistered()
 	{
@@ -41,6 +53,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.Null(scope.ServiceProvider.GetService<IApplicationService>());
 	}
 
+	/// <summary>
+	/// 直接解析实现类时，应得到保持 Is-A 关系的类代理，其类型名带有 Castle 前缀且可赋值给实现类型。
+	/// </summary>
 	[Fact]
 	public void ConcreteResolution_ShouldReturnClassProxy()
 	{
@@ -52,6 +67,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.True(typeof(CounterService).IsAssignableFrom(svc.GetType()));
 	}
 
+	/// <summary>
+	/// 直接解析实现类时拦截器仍应生效，20 个并发调用下最大并发数应保持为 1。
+	/// </summary>
 	[Fact]
 	public async Task ConcreteResolution_ShouldApplyInterceptors()
 	{
@@ -66,6 +84,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.Equal(1, CounterService.MaxConcurrent);
 	}
 
+	/// <summary>
+	/// 无默认构造函数的实现类无法生成类代理时应回退为裸实例，而对应接口仍解析为代理。
+	/// </summary>
 	[Fact]
 	public void NoDefaultConstructor_ShouldFallBackToRawInstance()
 	{
@@ -80,6 +101,9 @@ public class ApplicationServiceRegistrationTests
 		Assert.StartsWith("Castle.Proxies", proxy.GetType().FullName);
 	}
 
+	/// <summary>
+	/// 分别以接口和实现类解析同一服务时应共享目标实例，经接口写入的状态应能从实现类读取。
+	/// </summary>
 	[Fact]
 	public void InterfaceAndConcrete_ShouldShareTargetInstance()
 	{

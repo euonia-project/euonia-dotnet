@@ -1,18 +1,21 @@
-# 概述
+# Euonia.Core
 
 Euonia.Core 是 Euonia 框架的基础库，提供一组必备的、与具体框架解耦的通用构建模块——集合、反射辅助、扩展方法、异步线程原语、释放工具、异常类型与常用工具类——这些模块被 Euonia 下其他所有包复用。
 
-- **目标框架**：`netstandard2.1`、`net7.0`、`net8.0`、`net9.0`、`net10.0`
+- **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.*`（部分工具按惯例直接放入 `System` / 全局命名空间）
+- **NuGet 包**：`Euonia.Core`
 - **开源**：依据仓库内 `LICENSE` 许可发布
 
-# 快速开始
+## 安装
 
 通过 NuGet 安装：
 
 ```bash
 dotnet add package Euonia.Core
 ```
+
+## 快速开始
 
 直接使用库中的类型，无需额外配置：
 
@@ -22,7 +25,7 @@ using Nerosoft.Euonia;
 var snowflakeId = ObjectId.Snowflake();   // 时间有序的唯一 ID
 ```
 
-# 命名空间导航
+## 命名空间导航
 
 | 命名空间 | 内容 |
 | --- | --- |
@@ -36,13 +39,31 @@ var snowflakeId = ObjectId.Snowflake();   // 时间有序的唯一 ID
 | `Nerosoft.Euonia.Windows` | `ICommand` 实现（`DelegateCommand`、`GenericCommand`） |
 | `System.ComponentModel.DataAnnotations` | Guid、集合元素数量校验特性 |
 
-# 全局命名空间与 `System`
+## 核心类型
+
+高频入口的一张速查表，逐条说明见后续各节：
+
+| 类型 | 命名空间 | 作用 |
+|---|---|---|
+| `Check` / `CheckResult<TValue>` | 全局 | 参数断言与可链式校验结果 |
+| `Optional<T>` | `System` | 显式表达「有值 / 无值」，避免 `null` 语义歧义 |
+| `ObjectId` / `ObjectId<T>` | 全局 | 统一 ID 类型，支持 Snowflake / ULID / Guid / 随机值 |
+| `Singleton<T>` / `ObjectPool<T>` | `System` | 进程级单例容器与对象池 |
+| `DisposableObject` | `System` | 幂等的同步/异步释放基类 |
+| `Weak<T>` / `WeakEventManager` | `System` | 弱引用与弱事件 |
+| `DequeCollection<T>` / `TypeList<T>` | `Nerosoft.Euonia.Collections` | 双端队列、类型列表 |
+| `Reflect` / `PropertyAccessorCache<T>` | `Nerosoft.Euonia.Reflection` | 反射读写与访问器缓存 |
+| `AsyncLock` / `AsyncSemaphore` / `AsyncLazy<T>` | `Nerosoft.Euonia.Threading` | 异步协调原语 |
+| `UserPrincipal` / `UserClaimTypes` | `Nerosoft.Euonia.Security` | 当前用户主体与声明常量 |
+| `Extensions` | 全局 | 字符串、集合、反射、Task 等扩展方法 |
+
+## 全局命名空间与 `System`
 
 以下工具类按惯例直接放到全局命名空间或 `System` 命名空间（`using System;` 即可用，无需额外引入）。
 
-## 断言与校验
+### 断言与校验
 
-### `Check`
+#### `Check`
 
 断言工具类，条件不满足时抛出异常：
 
@@ -55,7 +76,7 @@ Check.EnsureAssignableTo<Animal>(typeof(Dog), nameof(type));
 Check.EnsureLengthInRange(name, "name", maxLength: 50);
 ```
 
-### `CheckResult<TValue>`
+#### `CheckResult<TValue>`
 
 携带值与校验状态的结果对象，可链式处理：
 
@@ -70,16 +91,7 @@ if (result.IsValid)
 }
 ```
 
-### `ArgumentAssert`
-
-参数空引用断言：
-
-```csharp
-ArgumentAssert.ThrowIfNull(configuration, nameof(configuration));
-ArgumentAssert.For<string>.ThrowIfNull(name);   // 泛型特化版本
-```
-
-### `ExceptionAssert`
+#### `ExceptionAssert`
 
 按条件抛出指定类型异常：
 
@@ -90,7 +102,7 @@ ExceptionAssert.ThrowIf<InvalidOperationException>(notReady,
 ExceptionAssert.ThrowIf<NotSupportedException>(unsupported);
 ```
 
-### `Invariant`
+#### `Invariant`
 
 仅在 DEBUG 构建下生效的不变量断言（Release 中被编译移除）：
 
@@ -98,7 +110,7 @@ ExceptionAssert.ThrowIf<NotSupportedException>(unsupported);
 Invariant.Require(_state == State.Ready, "状态必须为 Ready");
 ```
 
-## `Optional<T>`
+### `Optional<T>`
 
 可空值的容器（有值时保证非空）：
 
@@ -112,15 +124,15 @@ string value = maybe.GetOrThrow<InvalidOperationException>(
     () => new InvalidOperationException("缺失"));
 ```
 
-## `Check`（全局、非泛型断言之补充）
+### `Check`（全局、非泛型断言之补充）
 
 见上文 `Check` 一节。另外还有：
 
-### `CheckResult<TValue>`、`ArgumentAssert`、`ExceptionAssert`、`Invariant`
+#### `CheckResult<TValue>`、`ExceptionAssert`、`Invariant`
 
 均已包含在使用示例中，此处从略。
 
-## `Clock`
+### `Clock`
 
 Unix 时间戳辅助：
 
@@ -130,9 +142,9 @@ long ticks = Clock.GetUnixTimestampTicks();
 long then = Clock.ToUnixTimestampMillis(new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 ```
 
-## ID 生成
+### ID 生成
 
-### `ObjectId` 与 `ObjectId<T>`
+#### `ObjectId` 与 `ObjectId<T>`
 
 可包装 `int` / `long` / `Guid` / `string` 的值类型 ID，支持双向隐式转换，并提供多种 ID 生成器入口：
 
@@ -149,20 +161,20 @@ ObjectId<Guid> gid = Guid.NewGuid();                     // 泛型变体
 Guid g = gid;
 ```
 
-### `GuidType`
+#### `GuidType`
 
 Guid 生成策略枚举：`Empty`、`Simple`（随机 v4）、`SequentialAsString`（MySQL/PostgreSQL 风格）、`SequentialAsBinary`（Oracle 风格）、`SequentialAtEnd`（SQL Server 风格）。
 
-## 单例与对象池
+### 单例与对象池
 
-### `Singleton<T>`
+#### `Singleton<T>`
 
 ```csharp
 var svc = Singleton<MyService>.Get(() => new MyService());
-MyService same = Singleton<MyService>.InstanceDOIs;
+MyService same = Singleton<MyService>.Instance;
 ```
 
-### `ObjectPool<T>` 与 `IObjectPoolPolicy<T>`
+#### `ObjectPool<T>` 与 `IObjectPoolPolicy<T>`
 
 ```csharp
 sealed class ListPolicy : IObjectPoolPolicy<List<int>>
@@ -177,9 +189,9 @@ try { list.Add(1); }
 finally { pool.Return(list); }
 ```
 
-## 生命周期、弱引用与事件
+### 生命周期、弱引用与事件
 
-### `DisposableObject` / `DisposedEventArgs`
+#### `DisposableObject` / `DisposedEventArgs`
 
 提供 `Disposed` 事件与终结器兜底的抽象基类：
 
@@ -197,7 +209,7 @@ using var r = new Resource();
 r.Disposed += (s, e) => Console.WriteLine($"Disposed, hash={e.HashCode}");
 ```
 
-### `Weak<T>` 与 `WeakEventManager`
+#### `Weak<T>` 与 `WeakEventManager`
 
 ```csharp
 var weak = new Weak<MyClass>(instance);
@@ -207,14 +219,14 @@ if (weak.Target is { } alive)
 }
 ```
 
-### `AsyncEventHandler<TEventArgs>` 与 `Empty`、`Unit`
+#### `AsyncEventHandler<TEventArgs>` 与 `Empty`、`Unit`
 
 ```csharp
 bool isEmpty = Empty.Value.ToString() == "";   // true
 Task unitTask = Unit.Task;                    // 已完成的任务
 ```
 
-### `LikeOperator` 与 `TextCaseType` / `TextTrimType`
+#### `LikeOperator` 与 `TextCaseType` / `TextTrimType`
 
 ```csharp
 bool a = LikeOperator.LikeString("Hello, World!", "hello*"); // true
@@ -224,9 +236,9 @@ string trimmed = "  text  ".Trim(TextTrimType.Both);
 string camel = "hello_world".ToCamelCase();                 // "helloWorld"
 ```
 
-### `EnumHelper` 与 `EnumParser<T>`、`Reflect`（见下方 Reflection 章节）
+#### `EnumHelper` 与 `EnumParser<T>`、`Reflect`（见下方 Reflection 章节）
 
-## `RequestContext`
+### `RequestContext`
 
 HTTP 请求上下文载体：
 
@@ -240,9 +252,9 @@ var ctx = new RequestContext
 string auth = ctx.Authorization;   // "Bearer abc"
 ```
 
-## 其它
+### 其它
 
-### `ShortUniqueId`
+#### `ShortUniqueId`
 
 Hashids 风格的短 ID 编码器：
 
@@ -252,19 +264,19 @@ string hash = codec.Encode(12345);                 // 例如 "Mz4ZQJkX"
 long decoded = codec.DecodeSingleInt64(hash);      // 12345
 ```
 
-### `ObjectId` / `ObjectId<T>`、`UlidGenerator`、`GuidGenerator`、`RandomId`
+#### `ObjectId` / `ObjectId<T>`、`UlidGenerator`、`GuidGenerator`、`RandomId`
 
 见上方「ID 生成」一节。
 
 ---
 
-# `Nerosoft.Euonia.Collections`
+## `Nerosoft.Euonia.Collections`
 
 ```csharp
 using Nerosoft.Euonia.Collections;
 ```
 
-## `DequeCollection<T>`
+### `DequeCollection<T>`
 
 环形缓冲实现的双端队列，两端 O(1) 进出队，同时实现 `IList<T>`：
 
@@ -280,7 +292,7 @@ deque[0] = "B";
 string[] snapshot = deque.ToArray();      // ["B", "c"]
 ```
 
-## `TypeList` / `TypeList<T>`
+### `TypeList` / `TypeList<T>`
 
 仅允许"可赋值给基类型"的类型集合：
 
@@ -296,7 +308,7 @@ bool hasDog = types.ContainsType<Dog>(); // true
 types.RemoveType<Cat>();
 ```
 
-## `ObservableGroup` / `ReadOnlyObservableGroup` / `ObservableGroupedCollection`
+### `ObservableGroup` / `ReadOnlyObservableGroup` / `ObservableGroupedCollection`
 
 可观测分组集合（每个组本身是 `ObservableCollection` + 不可变 `Key`）：
 
@@ -310,7 +322,7 @@ var grouped = new ObservableGroupedCollection<char, string>(
 grouped.Add(new ObservableGroup<char, string>('x', new[] { "xray" }));
 ```
 
-## `PageableCollection` / `ViewCollection`
+### `PageableCollection` / `ViewCollection`
 
 分页 / 视图集合：
 
@@ -329,26 +341,26 @@ var view = new ViewCollection<string>(items, totalCount: 120);
 view.TotalCount;      // 120
 ```
 
-## 其它
+### 其它
 
 `TreeView<TEntity>`（树节点）、`EquatableReadOnlyList<T>`（按元素比较相等性）、`ReadOnlyObservableGroup`、`ObservableGroupedCollection` 等，API 详见源码与下文"反射/工具"章节示例。
 
 ---
 
-# `Nerosoft.Euonia.Reflection`
+## `Nerosoft.Euonia.Reflection`
 
 ```csharp
 using Nerosoft.Euonia.Reflection;
 ```
 
-## 类型内省：
+### 类型内省：
 
 ```csharp
 var isDerived = typeof(Dog).IsSubclassOf(typeof(Animal));
 var isGeneric = typeof(List<int>).IsAssignableToGenericType(typeof(IList<>));  // true
 ```
 
-## `Reflect` / `Reflect<TTarget>`
+### `Reflect` / `Reflect<TTarget>`
 
 从 Lambda 表达式提取 `PropertyInfo` / `MethodInfo`，并支持读写属性值（含点分隔路径）：
 
@@ -370,7 +382,7 @@ object city = Reflect.GetValue(person, typeof(Person), "Address.City"); // "Rome
 Reflect.SetValue(person, typeof(Person), "Address.City", "Paris");
 ```
 
-## `TypeHelper` / `EnumHelper` / `EnumParser<T>`
+### `TypeHelper` / `EnumHelper` / `EnumParser<T>`
 
 ```csharp
 int n = TypeHelper.CoerceValue<int, string>("42");            // 42
@@ -380,7 +392,7 @@ var desc = EnumHelper.GetCustomerAttribute<DescriptionAttribute>(Status.Active);
 if (EnumParser<DayOfWeek>.TryParse("Friday", out var day)) { }
 ```
 
-## `AssemblyHelper` / `AssemblyLoadContextManager`
+### `AssemblyHelper` / `AssemblyLoadContextManager`
 
 ```csharp
 var types = AssemblyHelper.GetAllTypes(typeof(string).Assembly);
@@ -388,7 +400,7 @@ var assemblies = AssemblyHelper.LoadAssemblies(AppContext.BaseDirectory,
     SearchOption.TopDirectoryOnly)-var
 ```
 
-## `PropertyAccessorCache<T>`
+### `PropertyAccessorCache<T>`
 
 缓存属性的 Lambda 访问器表达式：
 
@@ -399,11 +411,11 @@ LambdaExpression expr = PropertyAccessorCache<Person>.Get(nameof(Person.Name));
 
 ---
 
-# `Nerosoft.Euonia.Threading`
+## `Nerosoft.Euonia.Threading`
 
 所有协调原语均返回 `AwaitableDisposable<T>`，请始终使用 `using (await x.LockAsync())` 形式。
 
-## `AsyncLock`
+### `AsyncLock`
 
 不可重入的异步互斥锁：
 
@@ -419,7 +431,7 @@ public async Task DoStuffAsync()
 }
 ```
 
-## `AsyncSemaphore`
+### `AsyncSemaphore`
 
 异步计数信号量：
 
@@ -436,7 +448,7 @@ try { /* ... */ }
 finally { semaphore.Release(); }
 ```
 
-## `AsyncAutoResetEvent` / `AsyncManualResetEvent`
+### `AsyncAutoResetEvent` / `AsyncManualResetEvent`
 
 ```csharp
 var are = new AsyncAutoResetEvent();
@@ -450,7 +462,7 @@ await waiter;
 mre.Reset();             // 复位后新等待者再次阻塞
 ```
 
-## `AsyncLazy<T>`
+### `AsyncLazy<T>`
 
 线程安全、可直接 await 的异步惰性初始化：
 
@@ -464,7 +476,7 @@ var lazy = new AsyncLazy<int>(async () =>
 int answer = await lazy;
 ```
 
-## `AsyncMonitor` 与 `AsyncConditionVariable`
+### `AsyncMonitor` 与 `AsyncConditionVariable`
 
 ```csharp
 var monitor = new AsyncMonitor();
@@ -477,7 +489,7 @@ using (await monitor.EnterAsync())
 }
 ```
 
-## `AsyncCountdownEvent`
+### `AsyncCountdownEvent`
 
 ```csharp
 var cde = new AsyncCountdownEvent(2);
@@ -487,7 +499,7 @@ cde.Signal();          // 归零 -> allDone 完成
 await allDone;
 ```
 
-## `AsyncProducerConsumerQueue` / `AsyncCollection`
+### `AsyncProducerConsumerQueue` / `AsyncCollection`
 
 ```csharp
 var queue = new AsyncProducerConsumerQueue<int>(maxCount: 5);
@@ -498,7 +510,7 @@ queue.CompleteAdding();
 foreach (var item in queue.GetConsumingEnumerable()) { }
 ```
 
-## `PauseToken` / `PauseTokenSource`
+### `PauseToken` / `PauseTokenSource`
 
 协作式暂停：
 
@@ -519,7 +531,7 @@ source.IsPaused = true;    // 工作循环在此阻塞
 source.IsPaused = false;   // 恢复
 ```
 
-## `DeferralManager` / `IDeferralSource`
+### `DeferralManager` / `IDeferralSource`
 
 让事件参数声明"异步处理器仍在运行"：
 
@@ -534,7 +546,7 @@ using (manager.DeferralSource.GetDeferral())
 await manager.WaitForDeferralsAsync();
 ```
 
-## `State` 与 `StatefulMutex`
+### `State` 与 `StatefulMutex`
 
 绑定状态令牌的跨任务互斥锁，状态失效则获取失败：
 
@@ -548,7 +560,7 @@ mutex.InvalidateState();
 using (await mutex.AcquireAsync(state)) { }   // 抛出 InvalidOperationException
 ```
 
-## `NotifyTaskCompletion<T>`
+### `NotifyTaskCompletion<T>`
 
 任务包装器，完成时触发 `PropertyChanged`：
 
@@ -561,7 +573,7 @@ watcher.PropertyChanged += (s, e) =>
 };
 ```
 
-## `AsyncContext` 与 `AsyncContextThread`
+### `AsyncContext` 与 `AsyncContextThread`
 
 ```csharp
 AsyncContext.Run(async () =>
@@ -583,7 +595,7 @@ using (var thread = new AsyncContextThread())
 }
 ```
 
-## `TimeoutValue` / `TimeoutTask`
+### `TimeoutValue` / `TimeoutTask`
 
 ```csharp
 TimeoutValue timeout = TimeSpan.FromSeconds(5);   // TimeSpan 隐式转换
@@ -596,7 +608,7 @@ using (var t = new TimeoutTask(TimeSpan.FromSeconds(5), CancellationToken.None))
 }
 ```
 
-## `TaskHelper` / `TaskConstants` / `CancellationTokenTaskSource`
+### `TaskHelper` / `TaskConstants` / `CancellationTokenTaskSource`
 
 ```csharp
 Task done = TaskConstants.Completed;               // 复用已完成实例
@@ -613,7 +625,7 @@ using (var source = new CancellationTokenTaskSource<int>(cts.Token))
 
 ---
 
-# `Nerosoft.Euonia.Threading.Interop`
+## `Nerosoft.Euonia.Threading.Interop`
 
 ```csharp
 using Nerosoft.Euonia.Threading.Interop;
@@ -640,11 +652,11 @@ await signalledEDER;
 
 ---
 
-# 释放（`Nerosoft.Euonia.Disposing`）
+## 释放（`Nerosoft.Euonia.Disposing`）
 
 幂等的同步 / 异步释放原语。
 
-## 同步
+### 同步
 
 ```csharp
 public sealed class Resource : SingleDisposable<FileStream>
@@ -665,7 +677,7 @@ using (var group = new CollectionDisposable(stream1, stream2))
 }
 ```
 
-## 异步
+### 异步
 
 ```csharp
 public sealed class Resource : AsyncSingleDisposable<Stream>
@@ -679,11 +691,11 @@ await using (var r = new Resource(stream)) { }
 
 ---
 
-# 异常类型（`System` 命名空间）
+## 异常类型（`System` 命名空间）
 
 所有异常均声明在 `System` 命名空间，抛出 / 捕获无需额外 `using`。
 
-## HTTP 状态异常
+### HTTP 状态异常
 
 | 异常 | HTTP 状态码 |
 | --- | --- |
@@ -704,7 +716,7 @@ await using (var r = new Resource(stream)) { }
 throw new NotFoundException("订单 42 不存在。");
 ```
 
-## `HttpStatusException`
+### `HttpStatusException`
 
 携带任意状态码的基异常：
 
@@ -712,7 +724,7 @@ throw new NotFoundException("订单 42 不存在。");
 throw new HttpStatusException(HttpStatusCode.Forbidden, "不能执行此操作");
 ```
 
-## `HttpStatusCodeAttribute` 与 `ExceptionPrompt`
+### `HttpStatusCodeAttribute` 与 `ExceptionPrompt`
 
 ```csharp
 var status = ex switch
@@ -723,7 +735,7 @@ var status = ex switch
 };
 ```
 
-## 业务与通用异常
+### 业务与通用异常
 
 ```csharp
 throw new NotFoundException("订单 42 不存在。");     // 404
@@ -734,13 +746,13 @@ throw new InvalidValueException("值无效。");
 
 ---
 
-# `Nerosoft.Euonia.Security`
+## `Nerosoft.Euonia.Security`
 
 ```csharp
 using Nerosoft.Euonia.Security;
 ```
 
-## `UserPrincipal`
+### `UserPrincipal`
 
 基于 `ClaimsPrincipal` 的只读类型化访问器：
 
@@ -759,11 +771,11 @@ bool any = principal.IsInRoles("Admin,User", separator: ",");
 var claim = principal.FindClaim("email");
 ```
 
-## `UserClaimTypes`
+### `UserClaimTypes`
 
 OIDC/JWT 声明名常量（`Subject = "sub"`、`Name = "name"`、`Role = "role"`、`Tenant = "tenant"` 等）。
 
-## 账号与凭据异常
+### 账号与凭据异常
 
 ```csharp
 throw new AccountNotFoundException("user@example.com");    // 账号不存在
@@ -779,7 +791,7 @@ catch (AccountException ex)
 
 ---
 
-# `Nerosoft.Euonia.Windows`
+## `Nerosoft.Euonia.Windows`
 
 ```csharp
 using Nerosoft.Euonia.Windows;
@@ -787,7 +799,7 @@ using Nerosoft.Euonia.Windows;
 
 `ICommand` 实现，适用于 WPF / WinUI 等 MVVM 场景。
 
-## `DelegateCommand` / `DelegateCommand<T>`
+### `DelegateCommand` / `DelegateCommand<T>`
 
 ```csharp
 var cmd = new DelegateCommand<string>(
@@ -798,7 +810,7 @@ if (cmd.CanExecute(text)) { cmd.Execute(text); }
 cmd.RaiseCanExecuteChanged();
 ```
 
-## `GenericCommand` / `GenericCommand<T>`
+### `GenericCommand` / `GenericCommand<T>`
 
 ```csharp
 var cmd = new GenericCommand
@@ -812,9 +824,9 @@ cmd.Execute(42);
 
 ---
 
-# `System.ComponentModel.DataAnnotations` 验证特性
+## `System.ComponentModel.DataAnnotations` 验证特性
 
-## `GuidAttribute`
+### `GuidAttribute`
 
 校验字符串是否为合法 GUID：
 
@@ -826,7 +838,7 @@ public class OrderModel
 }
 ```
 
-## `CollectionCountAttribute`
+### `CollectionCountAttribute`
 
 校验集合元素数量范围：
 
@@ -840,7 +852,7 @@ public class PagedModel
 
 ---
 
-# 扩展方法（全局 `Extensions`）
+## 扩展方法（全局 `Extensions`）
 
 库在全局命名空间提供了 `Extensions` 静态扩展类，按领域分文件组织：
 
@@ -850,7 +862,7 @@ string kebab = "HelloWorld".ToKebabCase();     // "hello-world"
 string snake = "HelloWorld".ToSnakeCase();     // "hello_world"
 string camel = "hello_world".ToCamelCase();    // "helloWorld"
 bool isMail = "a@b.com".IsEmail();             // true
-var trimmed = "  text  ".Trim(TextTrimType.Both refinery);
+var trimmed = "  text  ".Trim(TextTrimType.Both);
 
 // 集合
 items.ForEach(x => Console.WriteLine(x));
@@ -878,6 +890,76 @@ Task ignored = someTask.Ignore();
 SynchronizationContextSwitcher.NoContext(() => { });
 ```
 
-# 文档
+## 文档
 
-更多详细信息与高级用法，参见 [Euonia GitHub 仓库](https://github.com/NerooftDev/Euonia) 上的官方文档。
+更多详细信息与高级用法，参见 [Euonia GitHub 仓库](https://github.com/euonia-project/euonia-dotnet) 上的官方文档。
+
+## 注意事项 / 限制
+
+- 大量类型位于**全局命名空间**或 `System`（`Check`、`Optional<T>`、`ObjectId`、`Singleton<T>`、`Extensions` 等），与用户代码同名时需要用 `global::` 或全名限定，否则会解析到本库类型。
+- `Singleton<T>.Instance` 在尚未赋值时直接读 `ConcurrentDictionary` 索引器，会抛 `KeyNotFoundException`；请先 `Singleton<T>.Get(factory)` 或赋值（`Source/Euonia.Core/System/Singleton.cs:12-24`）。
+- `ObjectId.Snowflake()` 使用进程内单例 `SnowflakeId`，而 `SnowflakeId` 是 `internal`，machineId 与 datacenterId 固定为 0、外部无法配置（`Source/Euonia.Core/System/SnowflakeId.cs:4`）；多进程/多机部署需要自行保证唯一性（例如改用 `ObjectId.Ulid()` / `ObjectId.Guid(GuidType)`），否则同一毫秒内可能生成相同 ID。
+- `SnowflakeId.Next()` 在同一毫秒内自增序列号，序列耗尽时忙等下一毫秒；检测到时钟回拨会抛异常（`IDS_TIMESTAMP_EARLIER_THAN_LAST`），不会静默重试。
+- `AsyncLock` / `AsyncSemaphore` 等原语是**进程内**且**不可重入**的（`Source/Euonia.Core/Threading/Coordination/AsyncLock.cs:10-12`）；跨进程互斥请使用 `Euonia.Concurrency` 系列包。
+- 本包没有 DI 注册入口（没有 `AddCore`）：类型要么是静态工具，要么可直接 `new`，直接调用即可，不要期待 `services.AddCore()`。
+- 目标框架为 `net10.0` / `net11.0`；更低 TFM 不在支持范围。
+
+## 相关包
+
+- [`Euonia.Domain`](../Euonia.Domain/README.md) —— DDD 构建块（聚合根、值对象、领域事件、仓储契约）
+- [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块化启动与依赖注入
+- [`Euonia.Mapping`](../Euonia.Mapping/README.md) —— 对象映射抽象
+- [`Euonia.Osba`](../Euonia.Osba/README.md) —— 业务对象运行时（基于本包的权限契约与反射工具）
+- [`Euonia.Security`](../Euonia.Security/README.md) —— 操作权限与行级数据权限策略引擎
+- [`Euonia.Validation`](../Euonia.Validation/README.md) —— 参数与对象校验
+
+## 常见问题与故障排查
+
+### 多实例部署时 `ObjectId.Snowflake()` 生成重复 ID
+
+**原因**：`SnowflakeId` 是 `internal` 单例，machineId 与 datacenterId 固定为 0（`Source/Euonia.Core/System/SnowflakeId.cs:4`），同一毫秒内两个进程会算出相同值（`Source/Euonia.Core/System/ObjectId.cs:191`）。
+**解决**：分布式场景改用 `ObjectId.Ulid()` 或 `ObjectId.Guid(GuidType)`；确实需要雪花 ID 时由宿主生成并保证机器位唯一，再 `new ObjectId(long)`。
+
+### 读 `Singleton<T>.Instance` 抛 `KeyNotFoundException`
+
+**原因**：`Instance` 的 getter 直接索引 `ConcurrentDictionary`，未初始化就抛异常（`Source/Euonia.Core/System/Singleton.cs:12-16`）。
+**解决**：先 `Singleton<T>.Get(() => new T())`，或显式赋值 `Singleton<T>.Instance = ...`；需要随容器释放的对象不要放进 `Singleton<T>`。
+
+### 异步锁偶发卡死
+
+**原因**：`AsyncLock` 不可重入（`Source/Euonia.Core/Threading/Coordination/AsyncLock.cs:10-12`），同一异步流里嵌套 `await _lock.LockAsync()` 会等待自己已持有的锁。
+**解决**：把加锁范围收敛到单个方法；跨方法时改用 `AsyncMonitor`，或给 `LockAsync(ct)` 传超时令牌。
+
+### 业务代码里 `Check` / `ObjectId` 报 CS0104 二义性
+
+**原因**：这些类型位于全局命名空间，与 `using` 引入的同名类型同时可见。
+**解决**：用 `global::Check` / `global::ObjectId` 限定，或在文件顶部起别名；不要为此修改库的命名空间。
+
+### `Check.Ensure` 抛的是 `InvalidOperationException`
+
+**原因**：`Ensure` 表示状态断言，失败抛 `InvalidOperationException`；只有 `EnsureNotNull` 抛 `ArgumentNullException`（`Source/Euonia.Core/System/Check.cs:106-133`）。
+**解决**：参数校验用 `EnsureNotNull` / `EnsureNotNullOrEmpty`，业务前置条件用 `Ensure`，并在调用方 catch 对应类型。
+
+## 最佳实践
+
+- **ID 选型跟着部署形态走**：单进程用 `ObjectId.Snowflake()`，分布式默认 `ObjectId.Ulid()`，需要与 Guid 生态互操作时用 `ObjectId.Guid(GuidType)`。
+- **锁只包住共享可变状态**：`using (await _lock.LockAsync(ct))` 里不要放长耗时 I/O 或再次获取同一把锁。
+- **异步原语一律传 `CancellationToken`**：请求取消时等待能及时退出，避免线程与请求堆积。
+- **进程级单例只放无状态工具**：有生命周期的东西交给 DI 容器，不要塞进 `Singleton<T>`。
+- **升级前读 `## 版本与兼容`**：本包被所有 Euonia 包引用，TFM 或 BCL 行为变化会向下游扩散。
+
+## 版本与兼容
+
+| 项 | 值 |
+|---|---|
+| 目标框架 | `net10.0`、`net11.0` |
+| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 第三方依赖 | 无（仅 BCL） |
+
+- 文档标注的命名空间即当前源码位置（`Check` / `ObjectId` / `Extensions` 在全局，`Optional<T>` / `Singleton<T>` 在 `System`）；升级后若发现位置变化，以源码为准并回提本文档。
+- `SnowflakeId` 是 `internal`，不在兼容性承诺内；外部只应依赖 `ObjectId` 的公开工厂方法。
+- 更低 TFM（`net8.0` / `net9.0`）不在支持范围；跨大版本升级时先升 TFM，再升包。
+
+## 许可证
+
+本项目依据仓库根目录的 [GNU General Public License v3.0](../../LICENSE) 发布。

@@ -9,10 +9,16 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </summary>
 public class InterfaceHandlerFanOutTests
 {
+	/// <summary>
+	/// 用于验证多处理程序扇出的多播事件。
+	/// </summary>
 	private sealed class FanOutEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 第一个扇出处理程序，统计自身调用次数。
+	/// </summary>
 	private sealed class FirstHandler : IHandler<FanOutEvent>
 	{
 		public static int Calls;
@@ -24,6 +30,9 @@ public class InterfaceHandlerFanOutTests
 		}
 	}
 
+	/// <summary>
+	/// 第二个扇出处理程序，统计自身调用次数，用于确认两个实现都被调用。
+	/// </summary>
 	private sealed class SecondHandler : IHandler<FanOutEvent>
 	{
 		public static int Calls;
@@ -35,6 +44,9 @@ public class InterfaceHandlerFanOutTests
 		}
 	}
 
+	/// <summary>
+	/// 验证多播消息的两个 <see cref="IHandler{TMessage}"/> 实现都会被调用一次，而不会被去重或只解析最后一个实现。
+	/// </summary>
 	[Fact]
 	public async Task HandleAsync_MulticastWithTwoInterfaceHandlers_ShouldInvokeBoth()
 	{
@@ -52,7 +64,7 @@ public class InterfaceHandlerFanOutTests
 		configurator.RegisterChannel(typeof(FirstHandler), typeof(SecondHandler));
 
 		await context.HandleAsync(
-			typeof(FanOutEvent).FullName,
+			typeof(FanOutEvent).FullName!,
 			new FanOutEvent(),
 			new MessageContext(),
 			TestContext.Current.CancellationToken);

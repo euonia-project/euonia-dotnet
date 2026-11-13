@@ -8,10 +8,6 @@
 		<PackageTags>euonia, security, authorization, permission, row-level, data-scope, policy</PackageTags>
 	</PropertyGroup>
 
-	<PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-		<LangVersion>latest</LangVersion>
-	</PropertyGroup>
-
 	<ItemGroup>
 		<!-- DI.Abstractions：AddPermission 这一注册入口所需。 -->
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
@@ -34,6 +30,14 @@
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>

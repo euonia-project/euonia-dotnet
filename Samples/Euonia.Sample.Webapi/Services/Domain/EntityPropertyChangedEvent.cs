@@ -3,25 +3,24 @@
 namespace Nerosoft.Euonia.Sample.Domain;
 
 /// <summary>
-/// Represents a domain event that signals a single property's value has changed on an entity.
-/// Inherit from this class to declare concrete events for specific entity properties (for example,
-/// <c>UserNameChangedEvent : EntityPropertyChangedEvent&lt;Guid, string&gt;</c>).
+/// 表示实体上单个属性的值已发生变化的领域事件。
+/// 从本类派生即可为特定实体属性声明具体事件（例如
+/// <c>UserNameChangedEvent : EntityPropertyChangedEvent&lt;Guid, string&gt;</c>）。
 /// </summary>
-/// <typeparam name="TKey">The type used to identify the entity (for example <c>Guid</c>, <c>int</c>, or <c>string</c>).</typeparam>
-/// <typeparam name="TProperty">The type of the property that changed.</typeparam>
+/// <typeparam name="TKey">用于标识实体的类型（例如 <c>Guid</c>、<c>int</c> 或 <c>string</c>）。</typeparam>
+/// <typeparam name="TProperty">发生变化的属性类型。</typeparam>
 /// <remarks>
-/// This class derives from <see cref="DomainEvent"/> to integrate with the domain event handling
-/// infrastructure. It is a simple immutable carrier that contains the entity identifier along with
-/// the previous and current values of the changed property.
+/// 本类派生自 <see cref="DomainEvent"/>，以便与领域事件处理基础设施集成。
+/// 它是一个简单的不可变载体，包含实体标识以及所变更属性的旧值与新值。
 /// </remarks>
 public abstract class EntityPropertyChangedEvent<TKey, TProperty> : DomainEvent
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="EntityPropertyChangedEvent{TKey, TProperty}"/> class.
+	/// 初始化 <see cref="EntityPropertyChangedEvent{TKey, TProperty}"/> 类的新实例。
 	/// </summary>
-	/// <param name="id">The identifier of the entity whose property has changed.</param>
-	/// <param name="oldValue">The value of the property before the change. May be <c>default</c> for the property type.</param>
-	/// <param name="newValue">The value of the property after the change. May be <c>default</c> for the property type.</param>
+	/// <param name="id">属性发生变化的实体的标识。</param>
+	/// <param name="oldValue">变更前的属性值。可能为该属性类型的 <c>default</c>。</param>
+	/// <param name="newValue">变更后的属性值。可能为该属性类型的 <c>default</c>。</param>
 	protected EntityPropertyChangedEvent(TKey id, TProperty oldValue, TProperty newValue)
 	{
 		Id = id;
@@ -30,20 +29,20 @@ public abstract class EntityPropertyChangedEvent<TKey, TProperty> : DomainEvent
 	}
 
 	/// <summary>
-	/// Gets the identifier of the entity whose property has changed.
+	/// 获取属性发生变化的实体的标识。
 	/// </summary>
-	/// <value>The entity identifier.</value>
+	/// <value>实体标识。</value>
 	public TKey Id { get; }
 
 	/// <summary>
-	/// Gets the previous value of the changed property, before the update occurred.
+	/// 获取发生变更的属性在更新前的旧值。
 	/// </summary>
-	/// <value>The property's previous value.</value>
+	/// <value>属性的旧值。</value>
 	public TProperty OldValue { get; }
 
 	/// <summary>
-	/// Gets the current value of the changed property, after the update occurred.
+	/// 获取发生变更的属性在更新后的当前值。
 	/// </summary>
-	/// <value>The property's current value.</value>
+	/// <value>属性的当前值。</value>
 	public TProperty NewValue { get; }
 }

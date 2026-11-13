@@ -10,13 +10,13 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     /// <summary>
     /// 之前的 <see cref="SynchronizationContext"/>。
     /// </summary>
-    private readonly SynchronizationContext _oldContext;
+    private readonly SynchronizationContext? _oldContext;
 
     /// <summary>
     /// 初始化 <see cref="SynchronizationContextSwitcher"/> 类的新实例，并安装新的 <see cref="SynchronizationContext"/>。
     /// </summary>
     /// <param name="newContext">新的 <see cref="SynchronizationContext"/>。可以为 <c>null</c> 以移除现有的 <see cref="SynchronizationContext"/>。</param>
-    private SynchronizationContextSwitcher(SynchronizationContext newContext)
+    private SynchronizationContextSwitcher(SynchronizationContext? newContext)
         : base(new object())
     {
         _oldContext = SynchronizationContext.Current;
@@ -56,7 +56,7 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     /// </summary>
     /// <param name="context">要视为"当前"的上下文。可以为 <c>null</c> 以指示线程池上下文。</param>
     /// <param name="action">要执行的委托。</param>
-    public static void ApplyContext(SynchronizationContext context, Action action)
+    public static void ApplyContext(SynchronizationContext? context, Action action)
     {
         using (new SynchronizationContextSwitcher(context))
             action();
@@ -67,7 +67,7 @@ public sealed class SynchronizationContextSwitcher : SingleDisposable<object>
     /// </summary>
     /// <param name="context">要视为"当前"的上下文。可以为 <c>null</c> 以指示线程池上下文。</param>
     /// <param name="action">要执行的委托。</param>
-    public static T ApplyContext<T>(SynchronizationContext context, Func<T> action)
+    public static T ApplyContext<T>(SynchronizationContext? context, Func<T> action)
     {
         using (new SynchronizationContextSwitcher(context))
             return action();

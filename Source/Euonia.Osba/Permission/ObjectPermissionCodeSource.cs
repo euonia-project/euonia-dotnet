@@ -23,7 +23,9 @@ namespace Nerosoft.Euonia.Osba;
 /// </remarks>
 public sealed class ObjectPermissionCodeSource : IPermissionCodeSource
 {
-	/// <summary>操作 → 工厂方法特性。一个操作可以有多个同义特性（如创建与插入）。</summary>
+	/// <summary>
+	/// 操作 → 工厂方法特性。一个操作可以有多个同义特性（如创建与插入）。
+	/// </summary>
 	private static readonly (string Operation, Type[] AttributeTypes)[] Rules =
 	[
 		(BusinessOperation.Read, [typeof(FactoryFetchAttribute)]),

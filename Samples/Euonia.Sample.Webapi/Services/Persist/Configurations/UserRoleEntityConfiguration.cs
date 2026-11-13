@@ -5,9 +5,16 @@ using Nerosoft.Euonia.Sample.Persist.Entities;
 
 namespace Nerosoft.Euonia.Sample.Persist.Configurations;
 
+/// <summary>
+/// <see cref="UserRoleEntity"/> 的 EF Core 实体映射配置。
+/// </summary>
 [DbContext(typeof(SampleDataContext))]
 public class UserRoleEntityConfiguration : IEntityTypeConfiguration<UserRoleEntity>
 {
+	/// <summary>
+	/// 配置用户角色表名、主键、索引与列映射，以及到用户实体的一对多关系。
+	/// </summary>
+	/// <param name="builder">用于构建实体映射的构建器。</param>
 	public void Configure(EntityTypeBuilder<UserRoleEntity> builder)
 	{
 		builder.ToTable("user_role");

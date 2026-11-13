@@ -15,6 +15,9 @@ public class ObservableDictionaryTests
 		return (dict, events);
 	}
 
+	/// <summary>
+	/// 验证索引器写入新键时发出 <see cref="DictionaryChangedAction.Add"/> 事件，旧值为默认值。
+	/// </summary>
 	[Fact]
 	public void Indexer_NewKey_ShouldRaiseAddEvent()
 	{
@@ -29,6 +32,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(1, e.NewValue);
 	}
 
+	/// <summary>
+	/// 验证索引器覆盖已有键时发出 <see cref="DictionaryChangedAction.Update"/> 事件，并携带新旧值。
+	/// </summary>
 	[Fact]
 	public void Indexer_ExistingKey_ShouldRaiseUpdateEvent()
 	{
@@ -44,6 +50,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(2, e.NewValue);
 	}
 
+	/// <summary>
+	/// 验证索引器写入与当前值相同的值时不发出任何变更事件。
+	/// </summary>
 	[Fact]
 	public void Indexer_SameValue_ShouldNotRaiseEvent()
 	{
@@ -56,6 +65,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(events);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="ObservableDictionary{TKey, TValue}.Add(TKey, TValue)"/> 添加新键时发出新增事件。
+	/// </summary>
 	[Fact]
 	public void Add_ShouldRaiseAddEvent()
 	{
@@ -70,6 +82,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(1, e.NewValue);
 	}
 
+	/// <summary>
+	/// 验证添加重复键时抛出 <see cref="ArgumentException"/>，且不发出任何变更事件。
+	/// </summary>
 	[Fact]
 	public void Add_DuplicateKey_ShouldThrowAndNotRaiseEvent()
 	{
@@ -81,6 +96,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(events);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="ObservableDictionary{TKey, TValue}.TryAdd(TKey, TValue)"/> 添加新键时返回 <see langword="true"/> 并发出新增事件。
+	/// </summary>
 	[Fact]
 	public void TryAdd_NewKey_ShouldRaiseAddEventAndReturnTrue()
 	{
@@ -94,6 +112,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(1, e.NewValue);
 	}
 
+	/// <summary>
+	/// 验证 <c>TryAdd</c> 遇到已有键时返回 <see langword="false"/>，保留原值且不发出事件。
+	/// </summary>
 	[Fact]
 	public void TryAdd_ExistingKey_ShouldReturnFalseAndNotRaiseEvent()
 	{
@@ -108,6 +129,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(1, dict["key"]);
 	}
 
+	/// <summary>
+	/// 验证移除已有键时返回 <see langword="true"/>，并发出携带旧值的移除事件。
+	/// </summary>
 	[Fact]
 	public void Remove_ExistingKey_ShouldRaiseRemoveEventWithOldValue()
 	{
@@ -124,6 +148,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(0, e.NewValue);
 	}
 
+	/// <summary>
+	/// 验证移除不存在的键时返回 <see langword="false"/>，且不发出变更事件。
+	/// </summary>
 	[Fact]
 	public void Remove_MissingKey_ShouldReturnFalseAndNotRaiseEvent()
 	{
@@ -135,6 +162,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(events);
 	}
 
+	/// <summary>
+	/// 验证带输出参数的移除在键存在时返回 <see langword="true"/>、输出旧值并发出移除事件。
+	/// </summary>
 	[Fact]
 	public void RemoveWithOut_ExistingKey_ShouldRaiseRemoveEventAndReturnValue()
 	{
@@ -151,6 +181,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(1, e.OldValue);
 	}
 
+	/// <summary>
+	/// 验证带输出参数的移除在键不存在时返回 <see langword="false"/>、输出默认值且不发事件。
+	/// </summary>
 	[Fact]
 	public void RemoveWithOut_MissingKey_ShouldNotRaiseEvent()
 	{
@@ -163,6 +196,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(events);
 	}
 
+	/// <summary>
+	/// 验证字典包含元素时清空会发出一次清空事件，并清空全部条目。
+	/// </summary>
 	[Fact]
 	public void Clear_WithItems_ShouldRaiseClearEventAndEmptyDictionary()
 	{
@@ -178,6 +214,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(dict);
 	}
 
+	/// <summary>
+	/// 验证对空字典调用清空不会发出任何变更事件。
+	/// </summary>
 	[Fact]
 	public void Clear_Empty_ShouldNotRaiseEvent()
 	{
@@ -188,6 +227,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(events);
 	}
 
+	/// <summary>
+	/// 验证 <c>RaiseItemChangedEvents</c> 为 <see langword="false"/> 时所有写操作都不发出事件，但数据变更照常生效。
+	/// </summary>
 	[Fact]
 	public void RaiseItemChangedEvents_False_ShouldNotRaiseEvents()
 	{
@@ -203,6 +245,9 @@ public class ObservableDictionaryTests
 		Assert.Empty(dict);
 	}
 
+	/// <summary>
+	/// 验证抑制作用域内不发出事件，作用域释放后通知恢复。
+	/// </summary>
 	[Fact]
 	public void SuppressItemChangedEvents_ShouldSuppressAndRestore()
 	{
@@ -221,6 +266,9 @@ public class ObservableDictionaryTests
 		Assert.Equal(DictionaryChangedAction.Add, e.Action);
 	}
 
+	/// <summary>
+	/// 验证嵌套抑制作用域逐层释放后恢复到最初的抑制状态，而不是统一恢复为允许通知。
+	/// </summary>
 	[Fact]
 	public void SuppressItemChangedEvents_Nested_ShouldRestoreInitialState()
 	{

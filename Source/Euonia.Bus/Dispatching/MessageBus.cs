@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Reactive.Subjects;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,7 +6,11 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.Behaviors;
 using Nerosoft.Euonia.Bus.Telemetry;
+using System.Security.Claims;
+using Nerosoft.Euonia.Execution;
+using Nerosoft.Euonia.Messaging;
 using Nerosoft.Euonia.Modularity;
+using Nerosoft.Euonia.Telemetry;
 using Nerosoft.Euonia.Pipeline;
 
 namespace Nerosoft.Euonia.Bus;
@@ -59,7 +63,7 @@ internal sealed class MessageBus : IBus
 	/// <summary>
 	/// 发件箱（Outbox）存储，未注册时为 <c>null</c>。
 	/// </summary>
-	private readonly IOutboxStore _outboxStore;
+	private readonly IOutboxStore? _outboxStore;
 
 	/// <summary>
 	/// 发件箱（Outbox）配置选项。
@@ -99,11 +103,11 @@ internal sealed class MessageBus : IBus
 	/// 此方法验证消息类型，创建带有追踪标识符的路由消息，可选择性地通过管道处理消息，
 	/// 并将其并行发布到所有确定的传输器。
 	/// </remarks>
-	public async Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, CancellationToken cancellationToken = default)
+	public async Task PublishAsync<TMessage>(TMessage message, PublishOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>>? behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new PublishOptions();
 
-		var messageType = message.GetType();
+		var messageType = message!.GetType();
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsMulticast(channel, messageType))
 		{
@@ -117,9 +121,9 @@ internal sealed class MessageBus : IBus
 		var pack = new RoutedMessage<TMessage, Unit>(message, channel, messageId, null, null)
 		{
 			RequestTraceId = requestTraceId,
-			Authorization = context?.Authorization,
-			User = context?.User,
 		};
+
+		ApplyRequestContext(pack, context);
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 		ApplyDeliveryProperties(pack, options);
@@ -151,7 +155,7 @@ internal sealed class MessageBus : IBus
 	/// <summary>
 	/// 执行实际的分发并记录耗时与失败指标。单传输器走直接调用，多传输器才并行。
 	/// </summary>
-	private async Task PublishCoreAsync<TMessage>(IReadOnlyList<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>> behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity activity, CancellationToken cancellationToken)
+	private async Task PublishCoreAsync<TMessage>(IReadOnlyList<string> transports, RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, Unit>>? behavior, bool useOutbox, string channel, Type messageType, long delay, long startTimestamp, Activity? activity, CancellationToken cancellationToken)
 	{
 		try
 		{
@@ -208,11 +212,11 @@ internal sealed class MessageBus : IBus
 	/// 此方法验证消息类型，创建带有关联追踪的路由消息，可选择性地通过管道处理消息，
 	/// 并将其发送到第一个确定的传输器。结果或异常通过回调 Subject 进行传播（如果已提供）。
 	/// </remarks>
-	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult> callback, SendOptions options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, CancellationToken cancellationToken = default)
+	public async Task SendAsync<TMessage, TResult>(TMessage message, Subject<TResult>? callback, SendOptions? options, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>>? behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new SendOptions();
 
-		var messageType = message.GetType();
+		var messageType = message!.GetType();
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsUnicast(channel, messageType))
 		{
@@ -227,9 +231,9 @@ internal sealed class MessageBus : IBus
 		var pack = new RoutedMessage<TMessage, TResult>(message, channel, messageId, correlationId, null)
 		{
 			RequestTraceId = requestTraceId,
-			Authorization = context?.Authorization,
-			User = context?.User,
 		};
+
+		ApplyRequestContext(pack, context);
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 		ApplyDeliveryProperties(pack, options);
@@ -294,11 +298,11 @@ internal sealed class MessageBus : IBus
 	/// 此方法类似于 <see cref="SendAsync{TMessage, TResult}"/>，但直接返回结果而非使用回调机制。
 	/// 验证请求类型，创建路由消息，可选择性地通过管道处理，并将其发送到第一个确定的传输器。
 	/// </remarks>
-	public Task<TResponse> CallAsync<TRequest, TResponse>(TRequest message, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken = default)
+	public Task<TResponse> CallAsync<TRequest, TResponse>(TRequest message, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>>? behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
 
-		var messageType = message.GetType();
+		var messageType = message!.GetType();
 		var channel = GetChannel(messageType, options);
 		if (!_configurator.Convention.IsRequest(channel, messageType))
 		{
@@ -319,7 +323,7 @@ internal sealed class MessageBus : IBus
 	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
 	/// <exception cref="MessageTypeException">当消息类型未归类为请求类型时抛出。</exception>
 	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
-	public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>> behavior, CancellationToken cancellationToken = default)
+	public Task<TResult> CallAsync<TResult>(IRequest<TResult> request, CallOptions options, Action<IPipeline<IMessageEnvelope<IRequest<TResult>>, TResult>>? behavior, CancellationToken cancellationToken = default)
 	{
 		options ??= new CallOptions();
 		var messageType = request.GetType();
@@ -361,7 +365,7 @@ internal sealed class MessageBus : IBus
 	/// <returns>表示异步操作的任务，包含来自处理程序的结果。</returns>
 	/// <exception cref="MessageTransportException">当已配置的传输器未注册时抛出。</exception>
 	/// <exception cref="TimeoutException">当调用在限定时间内未完成时抛出。</exception>
-	private async Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>> behavior, CancellationToken cancellationToken)
+	private async Task<TResponse> CallAsyncCore<TRequest, TResponse>(TRequest message, string channel, Type messageType, CallOptions options, Action<IPipeline<IMessageEnvelope<TRequest>, TResponse>>? behavior, CancellationToken cancellationToken)
 	{
 		var context = _requestAccessor?.Context;
 		var messageId = options.MessageId ?? ObjectId.NewGuid(GuidType.SequentialAsString).ToString();
@@ -371,9 +375,9 @@ internal sealed class MessageBus : IBus
 		var pack = new RoutedMessage<TRequest>(message, channel, messageId, correlationId, null)
 		{
 			RequestTraceId = requestTraceId,
-			Authorization = context?.Authorization,
-			User = context?.User,
 		};
+
+		ApplyRequestContext(pack, context);
 
 		options.MetadataSetter?.Invoke(pack.Metadata);
 		ApplyDeliveryProperties(pack, options);
@@ -396,7 +400,7 @@ internal sealed class MessageBus : IBus
 		// 超时令牌必须传给传输器本身，而不只是取消 WaitAsync 的等待；
 		// 否则超时后底层调用仍会继续执行并占用连接、作用域等资源。
 		var operationToken = timeoutSource?.Token ?? cancellationToken;
-		Task<TResponse> callTask = null;
+		Task<TResponse>? callTask = null;
 
 		try
 		{
@@ -430,7 +434,7 @@ internal sealed class MessageBus : IBus
 	/// <summary>
 	/// 观察超时后仍在执行的调用任务，避免其异常成为未观察异常。
 	/// </summary>
-	private static void ObserveAbandonedCall(Task task)
+	private static void ObserveAbandonedCall(Task? task)
 	{
 		if (task == null)
 		{
@@ -441,6 +445,70 @@ internal sealed class MessageBus : IBus
 		                      CancellationToken.None,
 		                      TaskContinuationOptions.OnlyOnFaulted | TaskContinuationOptions.ExecuteSynchronously,
 		                      TaskScheduler.Default);
+	}
+
+	/// <summary>
+	/// 把调用方请求上下文中的授权信息与用户主体写入消息信封。
+	/// </summary>
+	/// <param name="message">消息信封。</param>
+	/// <param name="context">当前请求上下文；无请求作用域时为 <c>null</c>。</param>
+	/// <remarks>
+	/// 仅写入实际存在的值：信封上的 <see cref="IMessageEnvelope.Authorization"/> 与
+	/// <see cref="IMessageEnvelope.User"/> 在接口中声明为非空，但请求作用域外没有这些信息，
+	/// 未提供时保持信封默认值而不是写入空对象。
+	/// </remarks>
+	private void ApplyRequestContext<TMessage>(RoutedMessage<TMessage> message, RequestContext? context)
+	{
+		if (context == null)
+		{
+			return;
+		}
+
+		if (context.Authorization != null)
+		{
+			message.Authorization = context.Authorization;
+		}
+
+		if (context.User != null)
+		{
+			message.User = context.User;
+		}
+
+		// 租户与用户标识写入信封元数据，供 Outbox/Inbox 与跨进程消费端重建租户作用域。
+		var tenantId = AmbientExecutionContext.Current?.TenantId ?? context.TenantId;
+		if (!string.IsNullOrEmpty(tenantId))
+		{
+			message.Metadata[MessageMetadataKeys.TenantId] = tenantId;
+		}
+
+		var ambient = AmbientExecutionContext.Current;
+		if (!string.IsNullOrEmpty(ambient?.ActorTenantId))
+		{
+			message.Metadata[MessageMetadataKeys.ActorTenantId] = ambient.ActorTenantId;
+		}
+
+		if (!string.IsNullOrEmpty(ambient?.TargetTenantId))
+		{
+			message.Metadata[MessageMetadataKeys.TargetTenantId] = ambient.TargetTenantId;
+		}
+
+		if (ambient?.IsCrossTenant == true)
+		{
+			message.Metadata[MessageMetadataKeys.IsCrossTenant] = true;
+			if (!string.IsNullOrWhiteSpace(ambient.CrossTenantReason))
+			{
+				message.Metadata[MessageMetadataKeys.CrossTenantReason] = ambient.CrossTenantReason;
+			}
+		}
+
+		var userId = AmbientExecutionContext.Current?.UserId ?? context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+		if (!string.IsNullOrEmpty(userId))
+		{
+			message.Metadata[MessageMetadataKeys.UserId] = userId;
+		}
+
+		// W3C 跟踪上下文写入信封，跨进程消费端据此延续链路。
+		_provider.GetService<ITelemetryPropagator>()?.Inject(message.Metadata);
 	}
 
 	/// <summary>
@@ -516,7 +584,7 @@ internal sealed class MessageBus : IBus
 	/// <param name="transportName">要使用的传输器名称。</param>
 	/// <param name="useOutbox">是否对当前传输应用发件箱（Outbox）行为。</param>
 	/// <returns>表示异步管道处理操作的任务，包含处理结果。</returns>
-	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>> behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName, bool useOutbox = false)
+	private Task<TResult> RunWithPipelineAsync<TMessage, TResult>(RoutedMessage<TMessage> pack, Action<IPipeline<IMessageEnvelope<TMessage>, TResult>>? behavior, Func<ITransporter, IMessageEnvelope<TMessage>, Task<TResult>> next, string transportName, bool useOutbox = false)
 	{
 		var pipeline = _provider.GetRequiredService<IPipeline<IMessageEnvelope<TMessage>, TResult>>();
 
@@ -531,7 +599,7 @@ internal sealed class MessageBus : IBus
 			pipeline.Use(typeof(OutgoingOutboxBehavior<TMessage, TResult>), transportName);
 		}
 
-		pipeline.UseOf(pack.Payload.GetType(), true);
+		pipeline.UseOf(pack.Payload!.GetType(), true);
 
 		behavior?.Invoke(pipeline);
 

@@ -52,22 +52,22 @@ public abstract class CacheBackplane : IDisposable
     /// 每当某个键的更改消息到达时触发此事件，
     /// 即表示另一个客户端更改了某个键。
     /// </summary>
-    internal event EventHandler<CacheItemChangedEventArgs> Changed;
+    internal event EventHandler<CacheItemChangedEventArgs>? Changed;
 
     /// <summary>
     /// 每当缓存清空消息到达时触发此事件。
     /// </summary>
-    internal event EventHandler<EventArgs> Cleared;
+    internal event EventHandler<EventArgs>? Cleared;
 
     /// <summary>
     /// 每当清空区域消息到达时触发此事件。
     /// </summary>
-    internal event EventHandler<RegionEventArgs> ClearedRegion;
+    internal event EventHandler<RegionEventArgs>? ClearedRegion;
 
     /// <summary>
     /// 每当某个键的移除消息到达时触发此事件。
     /// </summary>
-    internal event EventHandler<CacheItemEventArgs> Removed;
+    internal event EventHandler<CacheItemEventArgs>? Removed;
 
     /// <summary>
     /// 获取缓存配置。
@@ -82,7 +82,7 @@ public abstract class CacheBackplane : IDisposable
     /// <para>此键可能用于查找缓存供应商特定的配置。</para>
     /// </summary>
     /// <value>配置键。</value>
-    public string ConfigurationKey { get; }
+    public string? ConfigurationKey { get; }
 
     /// <summary>
     /// 执行与释放、重置非托管资源相关的应用程序定义任务。
@@ -258,7 +258,7 @@ internal class CacheItemEventArgs : EventArgs
     /// <summary>
     /// 获取区域。
     /// </summary>
-    public string Region { get; }
+    public string? Region { get; }
 }
 
 /// <summary>

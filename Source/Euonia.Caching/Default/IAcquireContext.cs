@@ -1,13 +1,13 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Interface IAcquireContext
+/// 表示一次缓存获取的上下文，可注册监视缓存项失效的令牌监视器。
 /// </summary>
 public interface IAcquireContext
 {
     /// <summary>
-    /// Gets the monitor.
+    /// 获取监视器。
     /// </summary>
-    /// <value>The monitor.</value>
+    /// <value>监视器。</value>
     Action<IVolatileToken> Monitor { get; }
 }

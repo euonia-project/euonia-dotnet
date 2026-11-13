@@ -69,7 +69,7 @@ public readonly struct TimeoutValue : IEquatable<TimeoutValue>, IComparable<Time
     /// </summary>
     /// <param name="obj">要比较的对象。</param>
     /// <returns>如果相等则返回 <c>true</c>，否则返回 <c>false</c>。</returns>
-    public override bool Equals(object obj) => obj is TimeoutValue that && Equals(that);
+    public override bool Equals(object? obj) => obj is TimeoutValue that && Equals(that);
 
     /// <inheritdoc />
     public override int GetHashCode() => InMilliseconds;

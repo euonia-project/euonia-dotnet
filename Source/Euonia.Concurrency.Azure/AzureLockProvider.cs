@@ -32,7 +32,7 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
     /// <param name="blobClient">要租约的 Blob 客户端。</param>
     /// <param name="options">用于配置同步选项的可选委托。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="blobClient"/> 为 <c>null</c> 时抛出。</exception>
-    public AzureLockProvider(BlobBaseClient blobClient, Action<AzureSynchronizationOptionsBuilder> options = null)
+    public AzureLockProvider(BlobBaseClient blobClient, Action<AzureSynchronizationOptionsBuilder>? options = null)
     {
         BlobClient = new BlobClientWrapper(blobClient ?? throw new ArgumentNullException(nameof(blobClient)));
         Options = AzureSynchronizationOptionsBuilder.GetOptions(options);
@@ -45,7 +45,7 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
     /// <param name="name">用于定位 Blob 的名称。</param>
     /// <param name="options">用于配置同步选项的可选委托。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="blobContainerClient"/> 或 <paramref name="name"/> 为 <c>null</c> 时抛出。</exception>
-    public AzureLockProvider(BlobContainerClient blobContainerClient, string name, Action<AzureSynchronizationOptionsBuilder> options = null)
+    public AzureLockProvider(BlobContainerClient blobContainerClient, string name, Action<AzureSynchronizationOptionsBuilder>? options = null)
     {
         if (blobContainerClient == null)
         {
@@ -92,7 +92,7 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
                 return "__EMPTY__";
             }
 
-            StringBuilder builder = null;
+            StringBuilder? builder = null;
             var slashCount = 0;
             for (var i = 0; i < name.Length; ++i)
             {
@@ -129,7 +129,7 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
     /// <param name="isRetryAfterCreate">指示本次尝试是否发生在创建 Blob 之后。</param>
     /// <param name="cancellationToken">用于取消操作的令牌。</param>
     /// <returns>表示异步操作的任务，包含获取到的锁句柄；失败时返回 <c>null</c>。</returns>
-    private async ValueTask<AzureSynchronizationHandle> TryAcquireAsync(BlobLeaseClientWrapper leaseClient, bool isRetryAfterCreate, CancellationToken cancellationToken)
+    private async ValueTask<AzureSynchronizationHandle?> TryAcquireAsync(BlobLeaseClientWrapper leaseClient, bool isRetryAfterCreate, CancellationToken cancellationToken)
     {
         try
         {
@@ -195,6 +195,9 @@ public sealed partial class AzureLockProvider : ILockProvider<AzureSynchronizati
     }
 }
 
+/// <summary>
+/// 提供 <see cref="AzureLockProvider"/> 的锁获取方法的分部实现。
+/// </summary>
 public sealed partial class AzureLockProvider
 {
 	/// <inheritdoc />
@@ -210,19 +213,19 @@ public sealed partial class AzureLockProvider
     }
 
 	/// <inheritdoc />
-	public AzureSynchronizationHandle TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+	public AzureSynchronizationHandle? TryAcquire(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return Helpers.TryAcquire(this, timeout, cancellationToken);
     }
 
 	/// <inheritdoc />
-	public ValueTask<AzureSynchronizationHandle> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
+	public ValueTask<AzureSynchronizationHandle?> TryAcquireAsync(TimeSpan timeout = default, CancellationToken cancellationToken = default)
     {
         return TryAcquireAsync(new TimeoutValue(timeout), cancellationToken);
     }
 
 	/// <inheritdoc />
-	public ValueTask<AzureSynchronizationHandle> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+	public ValueTask<AzureSynchronizationHandle?> TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
         return BusyWaitHelper.WaitAsync(
             (@lock: this, leaseClient: BlobClient.GetBlobLeaseClient()),
@@ -235,10 +238,13 @@ public sealed partial class AzureLockProvider
     }
 }
 
+/// <summary>
+/// 显式实现非泛型 <see cref="ILockProvider"/> 接口成员。
+/// </summary>
 public sealed partial class AzureLockProvider
 {
     /// <inheritdoc />
-    ISynchronizationHandle ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
+    ISynchronizationHandle? ILockProvider.TryAcquire(TimeSpan timeout, CancellationToken cancellationToken)
     {
         return TryAcquire(timeout, cancellationToken);
     }
@@ -250,9 +256,9 @@ public sealed partial class AzureLockProvider
     }
 
     /// <inheritdoc />
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeSpan timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 
     /// <inheritdoc />
@@ -262,8 +268,8 @@ public sealed partial class AzureLockProvider
     }
 
     /// <inheritdoc />
-    ValueTask<ISynchronizationHandle> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
+    ValueTask<ISynchronizationHandle?> ILockProvider.TryAcquireAsync(TimeoutValue timeout, CancellationToken cancellationToken)
     {
-        return TryAcquireAsync(timeout, cancellationToken).Convert(TaskConversion<ISynchronizationHandle>.ValueTask);
+        return TryAcquireAsync(timeout, cancellationToken).ConvertNullable(TaskConversion<ISynchronizationHandle>.ValueTask);
     }
 }

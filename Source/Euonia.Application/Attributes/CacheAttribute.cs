@@ -18,7 +18,7 @@ public sealed class CacheAttribute : Attribute
 	/// 支持占位符 {service}（服务类型全名）、{method}（方法名）与按序参数占位符（0、1...）。
 	/// 未设置时使用默认格式 {service}.{method}:args。
 	/// </remarks>
-	public string Key { get; set; }
+	public string? Key { get; set; }
 
 	/// <summary>
 	/// 获取或设置缓存过期秒数；不大于 0 表示不设置相对 TTL。
@@ -42,5 +42,5 @@ public sealed class CacheAttribute : Attribute
 	/// <summary>
 	/// 获取或设置缓存组名称；写回时按组登记键，供 <see cref="CacheEvictAttribute"/> 按组失效。
 	/// </summary>
-	public string[] Groups { get; set; }
+	public string[]? Groups { get; set; }
 }

@@ -40,7 +40,7 @@ internal class ParameterRebinder : ExpressionVisitor
     protected override Expression VisitParameter(ParameterExpression node)
     {
 
-        if (_map.TryGetValue(node, out ParameterExpression replacement))
+        if (_map.TryGetValue(node, out var replacement))
         {
             node = replacement;
         }

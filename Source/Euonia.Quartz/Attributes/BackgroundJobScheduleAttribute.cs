@@ -3,58 +3,58 @@
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// The abstract base class for background job schedule attributes.
+/// 后台作业调度特性的抽象基类。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public abstract class BackgroundJobScheduleAttribute : Attribute
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="BackgroundJobScheduleAttribute"/> class.
+	/// 初始化 <see cref="BackgroundJobScheduleAttribute"/> 类的新实例。
 	/// </summary>
-	/// <param name="identity"></param>
+	/// <param name="identity">触发器的标识，配置触发器时会附加 <c>.trigger</c> 后缀作为触发器名称。</param>
 	protected BackgroundJobScheduleAttribute(string identity)
 	{
 		Identity = identity;
 	}
 
 	/// <summary>
-	/// Gets the trigger identity.
+	/// 获取触发器标识。
 	/// </summary>
 	public string Identity { get; }
 
 	/// <summary>
-	/// Gets or sets the start delay time in seconds.
-	/// 0 means start immediately.
+	/// 获取或设置启动延迟时间（以秒为单位）。
+	/// 小于或等于 0 表示立即启动。
 	/// </summary>
 	public int Delay { get; set; }
 
 	/// <summary>
-	/// Gets or sets the trigger priority.
+	/// 获取或设置触发器优先级。
 	/// </summary>
 	public int Priority { get; set; }
 
 	/// <summary>
-	/// Gets or sets the trigger description.
+	/// 获取或设置触发器说明。
 	/// </summary>
-	public string Description { get; set; }
+	public string? Description { get; set; }
 
 	/// <summary>
-	/// Gets or sets the numeric misfire instruction applied to the trigger.
+	/// 获取或设置应用于触发器的数字形式的失火指令。
 	/// <br/>
-	/// <para>The value is interpreted as <see cref="CronTriggerMisfireInstruction"/> for <see cref="CronExpressionScheduleAttribute"/>,
-	/// <see cref="SimpleTriggerMisfireInstruction"/> for <see cref="SimpleScheduleAttribute"/>,
-	/// <see cref="CalendarIntervalTriggerMisfireInstruction"/> for <see cref="CalendarIntervalScheduleAttribute"/> and
-	/// <see cref="DailyTimeIntervalTriggerMisfireInstruction"/> for <see cref="DailyTimeIntervalScheduleAttribute"/>.</para>
-	/// <para><c>-1</c> (<c>IgnoreMisfires</c>) is valid for every schedule type.</para>
+	/// <para>对于 <see cref="CronExpressionScheduleAttribute"/>，该值按 <see cref="CronTriggerMisfireInstruction"/> 解释；
+	/// 对于 <see cref="SimpleScheduleAttribute"/>，按 <see cref="SimpleTriggerMisfireInstruction"/> 解释；
+	/// 对于 <see cref="CalendarIntervalScheduleAttribute"/>，按 <see cref="CalendarIntervalTriggerMisfireInstruction"/> 解释；
+	/// 对于 <see cref="DailyTimeIntervalScheduleAttribute"/>，按 <see cref="DailyTimeIntervalTriggerMisfireInstruction"/> 解释。</para>
+	/// <para><c>-1</c>（<c>IgnoreMisfires</c>）对每种调度类型均有效。</para>
 	/// </summary>
 	/// <remarks>
-	/// Default value: <see langword="null"/>, which leaves the schedule's smart policy in place.
+	/// 默认值：<see langword="null"/>，即保持调度自身的智能策略不变。
 	/// </remarks>
 	public virtual int? MisfirePolicy { get; set; }
 
 	/// <summary>
-	/// Configures the trigger builder.
+	/// 配置触发器构建器。
 	/// </summary>
-	/// <returns></returns>
+	/// <returns>由派生特性构建的 Quartz 调度构建器，用于创建触发器。</returns>
 	public abstract IScheduleBuilder Configure();
 }

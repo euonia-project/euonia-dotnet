@@ -23,6 +23,12 @@ internal sealed class ScopePolicyNode<T>
 	/// </summary>
 	internal static readonly Expression False = Expression.Constant(false, typeof(bool));
 
+	/// <summary>
+	/// 初始化归约节点；缺失的表达式按恒假处理。
+	/// </summary>
+	/// <param name="allow">允许条件；为 <see langword="null"/> 时取 <see cref="False"/>。</param>
+	/// <param name="deny">拒绝条件；为 <see langword="null"/> 时取 <see cref="False"/>。</param>
+	/// <param name="hasAllow">本节点是否真正提供了允许条件。</param>
 	internal ScopePolicyNode(Expression allow, Expression deny, bool hasAllow)
 	{
 		Allow = allow ?? False;

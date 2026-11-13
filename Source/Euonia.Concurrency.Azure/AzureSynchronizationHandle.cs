@@ -11,12 +11,12 @@ public sealed class AzureSynchronizationHandle : ISynchronizationHandle
     /// <summary>
     /// 内部租约句柄，持有实际的租约与 Blob 所有权信息。
     /// </summary>
-    private InternalHandle _internalHandle;
+    private InternalHandle? _internalHandle;
 
     /// <summary>
     /// 终结器队列注册，用于在句柄未被显式释放时执行清理。
     /// </summary>
-    private IDisposable _finalizerRegistration;
+    private IDisposable? _finalizerRegistration;
 
     /// <summary>
     /// 初始化 <see cref="AzureSynchronizationHandle"/> 类的新实例。

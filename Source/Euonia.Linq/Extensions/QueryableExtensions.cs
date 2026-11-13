@@ -72,12 +72,12 @@ public static class QueryableExtensions
         {
             throw new ArgumentNullException(nameof(source));
         }
-        predicate = GetWhereIfNotEmptyExpression(predicate);
-        if (predicate == null)
+        var whereExpression = GetWhereIfNotEmptyExpression(predicate);
+        if (whereExpression == null)
         {
             return source;
         }
-        return source.Where(predicate);
+        return source.Where(whereExpression);
     }
 
     /// <summary>
@@ -166,7 +166,7 @@ public static class QueryableExtensions
     /// <param name="predicate">要检查的谓词表达式。</param>
     /// <returns>值非空时返回原谓词表达式，否则返回 <see langword="null"/>。</returns>
     /// <exception cref="InvalidOperationException">谓词包含多个条件属性时抛出。</exception>
-    public static Expression<Func<TEntity, bool>> GetWhereIfNotEmptyExpression<TEntity>(Expression<Func<TEntity, bool>> predicate) where TEntity : class
+    public static Expression<Func<TEntity, bool>>? GetWhereIfNotEmptyExpression<TEntity>(Expression<Func<TEntity, bool>> predicate) where TEntity : class
     {
         if (predicate == null)
         {
@@ -285,7 +285,7 @@ public static class QueryableExtensions
         }
 
         // 2. 尝试将值转换为正确的类型
-        object value;
+        object? value;
         try
         {
             value = ConvertValue(propertyValue, memberExpression.ReturnType);
@@ -319,12 +319,12 @@ public static class QueryableExtensions
         // 4. 构造新的查询
         var resultExpression = Expression.Call(
             null,
-            GetMethodInfo(Queryable.Where, source, (Expression<Func<TEntity, bool>>)null),
+            GetMethodInfo(Queryable.Where, source, (Expression<Func<TEntity, bool>>?)null),
             new[] { source.Expression, Expression.Quote(expression) });
         return source.Provider.CreateQuery<TEntity>(resultExpression);
 
         // ReSharper disable UnusedParameter.Local
-        static MethodInfo GetMethodInfo<T1, T2, T3>(Func<T1, T2, T3> function, T1 t1, T2 t2)
+        static MethodInfo GetMethodInfo<T1, T2, T3>(Func<T1, T2, T3> function, T1 t1, T2? t2)
         {
             return function.Method;
         }
@@ -337,7 +337,7 @@ public static class QueryableExtensions
     /// <param name="value">值。</param>
     /// <param name="type">目标类型。</param>
     /// <returns>转换后的值；可空值类型会装箱为可空实例。</returns>
-    private static object ConvertValue(object value, Type type)
+    private static object? ConvertValue(object value, Type type)
     {
         var underlyingType = Nullable.GetUnderlyingType(type);
         if (underlyingType != null)

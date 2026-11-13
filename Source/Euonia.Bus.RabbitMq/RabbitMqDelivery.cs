@@ -39,7 +39,7 @@ internal static class RabbitMqDelivery
 	/// </remarks>
 	public static string ResolveSubscriptionId(RabbitMqBusOptions options, string channel)
 	{
-		return string.Collapse(options.SubscriptionId, Assembly.GetEntryAssembly()?.GetName().Name, channel);
+		return string.Collapse(options.SubscriptionId ?? string.Empty, Assembly.GetEntryAssembly()?.GetName().Name ?? string.Empty, channel);
 	}
 
 	/// <summary>
@@ -62,7 +62,7 @@ internal static class RabbitMqDelivery
 	/// <param name="channel">通道名称。</param>
 	/// <param name="queueOverride">消息级的目标队列覆盖值；为空时按通道推导。</param>
 	/// <returns>目标队列名称。</returns>
-	public static string ResolveQueueName(RabbitMqBusOptions options, string channel, string queueOverride = null)
+	public static string ResolveQueueName(RabbitMqBusOptions options, string channel, string? queueOverride = null)
 	{
 		if (!string.IsNullOrWhiteSpace(queueOverride))
 		{
@@ -104,9 +104,9 @@ internal static class RabbitMqDelivery
 	/// <param name="maxPriority">队列上配置的最大优先级；小于等于 0 表示不启用。</param>
 	/// <param name="additional">需要一并附加的其他参数（例如死信配置）；可为 <c>null</c>。</param>
 	/// <returns>队列声明参数；无任何参数时返回 <c>null</c>。</returns>
-	public static IDictionary<string, object> BuildQueueArguments(int maxPriority, IDictionary<string, object> additional = null)
+	public static IDictionary<string, object?>? BuildQueueArguments(int maxPriority, IDictionary<string, object?>? additional = null)
 	{
-		Dictionary<string, object> arguments = additional == null ? [] : new Dictionary<string, object>(additional);
+		Dictionary<string, object?> arguments = additional == null ? [] : new Dictionary<string, object?>(additional);
 
 		if (maxPriority > 0)
 		{

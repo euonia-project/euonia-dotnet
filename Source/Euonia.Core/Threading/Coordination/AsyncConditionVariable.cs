@@ -35,7 +35,7 @@ public sealed class AsyncConditionVariable
     /// </summary>
     /// <param name="asyncLock">与此条件变量关联的锁。</param>
     /// <param name="queue">用于管理等待者的等待队列。可以为 <c>null</c> 以使用默认（FIFO）队列。</param>
-    internal AsyncConditionVariable(AsyncLock asyncLock, IAsyncWaitQueue<object> queue)
+    internal AsyncConditionVariable(AsyncLock asyncLock, IAsyncWaitQueue<object>? queue)
     {
         _asyncLock = asyncLock;
         _queue = queue ?? new DefaultAsyncWaitQueue<object>();
@@ -140,6 +140,9 @@ public sealed class AsyncConditionVariable
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露条件变量的标识、关联锁与等待队列。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

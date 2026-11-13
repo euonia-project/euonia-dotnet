@@ -58,7 +58,7 @@ public class Pipeline
                 result = ((Func<TRequest, TResponse>)@delegate)(request);
             }
 
-            return result;
+            return result!;
         }));
 
         return ((Func<TRequest, TResponse>)@delegate)(context);

@@ -39,12 +39,12 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 	/// <summary>
 	/// 当消息被接收到时触发。
 	/// </summary>
-	public event EventHandler<MessageReceivedEventArgs> MessageReceived;
+	public event EventHandler<MessageReceivedEventArgs> MessageReceived = null!;
 
 	/// <summary>
 	/// 当消息处理完成并确认时触发。
 	/// </summary>
-	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged;
+	public event EventHandler<MessageAcknowledgedEventArgs> MessageAcknowledged = null!;
 
 	#region IDisposable
 
@@ -126,7 +126,8 @@ public abstract class InMemoryRecipient<TRecipient> : DisposableObject, IRecipie
 				{
 					// HandleAsync 自身已捕获处理程序异常并转为 context.Failure；
 					// 这里仅兜底，避免后台任务出现未被观察到的异常。
-					Logger.LogError(exception, "Message '{Id}' pump error: {Message}", pack.Context?.MessageId, exception.Message);
+					var context = pack.Context;
+					Logger.LogError(exception, "Message '{Id}' pump error: {Message}", context?.MessageId, exception.Message);
 				}
 
 				try

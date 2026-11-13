@@ -2,7 +2,7 @@
     <Import Project="..\project.props" />
 
     <PropertyGroup>
-        <TargetFramework>net10.0</TargetFramework>
+        <TargetFramework>net11.0</TargetFramework>
 		<RootNamespace>Nerosoft.Euonia.Sample</RootNamespace>
         <Description>Euonia development framework and toolkit library for .NET application/service. Powered by Nerosoft.</Description>
         <Configurations>Debug;Release</Configurations>

@@ -2,24 +2,27 @@
 
 namespace Nerosoft.Euonia.Sample.Toolkit;
 
+/// <summary>
+/// 提供 RSA 非对称加解密能力的 <see cref="Cryptography"/> 分部声明，实际实现位于嵌套类型 <c>Cryptography.RSA</c>。
+/// </summary>
 public partial class Cryptography
 {
 	// ReSharper disable once InconsistentNaming
 
 	/// <summary>
-	/// RSA helper for performing asymmetric encryption and decryption using PEM/base64-encoded keys.
+	/// 使用 PEM/base64 编码密钥执行非对称加密和解密的 RSA 辅助类。
 	/// </summary>
 	public class RSA
 	{
-		private readonly System.Security.Cryptography.RSA _privateKeyRsaProvider;
-		private readonly System.Security.Cryptography.RSA _publicKeyRsaProvider;
+		private readonly System.Security.Cryptography.RSA? _privateKeyRsaProvider;
+		private readonly System.Security.Cryptography.RSA? _publicKeyRsaProvider;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="RSA"/> class.
+		/// 初始化 <see cref="RSA"/> 类的新实例。
 		/// </summary>
-		/// <param name="privateKey">Base64-encoded private key in PKCS#1 or similar DER format. If null or empty, private key functionality is not available.</param>
-		/// <param name="publicKey">Base64-encoded public key (X.509 SubjectPublicKeyInfo). If null or empty, public key functionality is not available.</param>
-		public RSA(string privateKey, string publicKey = null)
+		/// <param name="privateKey">采用 PKCS#1 或类似 DER 格式的 Base64 编码私钥。如果为 null 或空，则无法使用私钥功能。</param>
+		/// <param name="publicKey">Base64 编码的公钥（X.509 SubjectPublicKeyInfo）。如果为 null 或空，则无法使用公钥功能。</param>
+		public RSA(string privateKey, string? publicKey = null)
 		{
 			if (!string.IsNullOrEmpty(privateKey))
 			{
@@ -33,11 +36,11 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Encrypts the provided plain text using the configured public key.
+		/// 使用配置的公钥加密提供的明文。
 		/// </summary>
-		/// <param name="source">Plain text to encrypt.</param>
-		/// <returns>Base64-encoded cipher text.</returns>
-		/// <exception cref="Exception">Thrown when the public key provider is not configured.</exception>
+		/// <param name="source">要加密的明文。</param>
+		/// <returns>Base64 编码的密文。</returns>
+		/// <exception cref="Exception">未配置公钥提供程序时抛出。</exception>
 		public string Encrypt(string source)
 		{
 			if (_publicKeyRsaProvider == null)
@@ -49,11 +52,11 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Decrypts the provided Base64-encoded cipher text using the configured private key.
+		/// 使用配置的私钥解密提供的 Base64 编码密文。
 		/// </summary>
-		/// <param name="source">Base64-encoded cipher text.</param>
-		/// <returns>Decrypted plain text.</returns>
-		/// <exception cref="Exception">Thrown when the private key provider is not configured.</exception>
+		/// <param name="source">Base64 编码的密文。</param>
+		/// <returns>解密后的明文。</returns>
+		/// <exception cref="Exception">未配置私钥提供程序时抛出。</exception>
 		public string Decrypt(string source)
 		{
 			if (_privateKeyRsaProvider == null)
@@ -65,10 +68,10 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Creates an <see cref="RSA"/> instance from a Base64-encoded private key (DER).
+		/// 从 Base64 编码的私钥（DER）创建 <see cref="RSA"/> 实例。
 		/// </summary>
-		/// <param name="key">Base64-encoded private key bytes (DER/PKCS#1).</param>
-		/// <returns>Initialized <see cref="System.Security.Cryptography.RSA"/> instance.</returns>
+		/// <param name="key">Base64 编码的私钥字节（DER/PKCS#1）。</param>
+		/// <returns>已初始化的 <see cref="System.Security.Cryptography.RSA"/> 实例。</returns>
 		private static System.Security.Cryptography.RSA CreateRsaProviderFromPrivateKey(string key)
 		{
 			var privateKeyBits = Convert.FromBase64String(key);
@@ -118,11 +121,11 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Creates an <see cref="RSA"/> instance from a Base64-encoded public key (X.509/SPKI).
+		/// 从 Base64 编码的公钥（X.509/SPKI）创建 <see cref="RSA"/> 实例。
 		/// </summary>
-		/// <param name="key">Base64-encoded public key bytes (X.509 SubjectPublicKeyInfo).</param>
-		/// <returns>Initialized <see cref="System.Security.Cryptography.RSA"/> instance, or null if parsing fails.</returns>
-		private static System.Security.Cryptography.RSA CreateRsaProviderFromPublicKey(string key)
+		/// <param name="key">Base64 编码的公钥字节（X.509 SubjectPublicKeyInfo）。</param>
+		/// <returns>已初始化的 <see cref="System.Security.Cryptography.RSA"/> 实例；如果解析失败则返回 null。</returns>
+		private static System.Security.Cryptography.RSA? CreateRsaProviderFromPublicKey(string key)
 		{
 			byte[] seqOid = { 0x30, 0x0D, 0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01, 0x05, 0x00 };
 
@@ -144,7 +147,7 @@ public partial class Cryptography
 			}
 
 			var seq = reader.ReadBytes(15);
-			if (!CompareBytes(seq, seqOid)) //make sure Sequence for OID is correct
+			if (!CompareBytes(seq, seqOid)) //确保 OID 的 Sequence 正确
 			{
 				return null;
 			}
@@ -152,30 +155,30 @@ public partial class Cryptography
 			twobytes = reader.ReadUInt16();
 			switch (twobytes)
 			{
-				//data read as little endian order (actual data order for Bit String is 03 81)
+				//数据按小端顺序读取（Bit String 的实际数据顺序为 03 81）
 				case 0x8103:
-					reader.ReadByte(); //advance 1 byte
+					reader.ReadByte(); //前进 1 个字节
 					break;
 				case 0x8203:
-					reader.ReadInt16(); //advance 2 bytes
+					reader.ReadInt16(); //前进 2 个字节
 					break;
 				default:
 					return null;
 			}
 
 			var bt = reader.ReadByte();
-			if (bt != 0x00) //expect null byte next
+			if (bt != 0x00) //期望下一个字节为 null
 				return null;
 
 			twobytes = reader.ReadUInt16();
 			switch (twobytes)
 			{
-				//data read as little endian order (actual data order for Sequence is 30 81)
+				//数据按小端顺序读取（Sequence 的实际数据顺序为 30 81）
 				case 0x8130:
-					reader.ReadByte(); //advance 1 byte
+					reader.ReadByte(); //前进 1 个字节
 					break;
 				case 0x8230:
-					reader.ReadInt16(); //advance 2 bytes
+					reader.ReadInt16(); //前进 2 个字节
 					break;
 				default:
 					return null;
@@ -187,27 +190,27 @@ public partial class Cryptography
 
 			switch (twobytes)
 			{
-				//data read as little endian order (actual data order for Integer is 02 81)
+				//数据按小端顺序读取（Integer 的实际数据顺序为 02 81）
 				case 0x8102:
-					lowByte = reader.ReadByte(); // read next bytes which is bytes in modulus
+					lowByte = reader.ReadByte(); // 读取接下来的字节，即模数中的字节数
 					break;
 				case 0x8202:
-					highByte = reader.ReadByte(); //advance 2 bytes
+					highByte = reader.ReadByte(); //前进 2 个字节
 					lowByte = reader.ReadByte();
 					break;
 				default:
 					return null;
 			}
 
-			byte[] value = { lowByte, highByte, 0x00, 0x00 }; //reverse byte order since asn.1 key uses big endian order
+			byte[] value = { lowByte, highByte, 0x00, 0x00 }; //反转字节顺序，因为 ASN.1 密钥使用大端顺序
 			var modulusSize = BitConverter.ToInt32(value, 0);
 
 			int firstbyte = reader.PeekChar();
 			if (firstbyte == 0x00)
 			{
-				//if first byte (highest order) of modulus is zero, don't include it
-				reader.ReadByte(); //skip this null byte
-				modulusSize -= 1; //reduce modulus buffer size by 1
+				//如果模数首字节（最高位）为零，则不包含它
+				reader.ReadByte(); //跳过这个 null 字节
+				modulusSize -= 1; //将模数缓冲区大小减 1
 			}
 
 			var modulus = reader.ReadBytes(modulusSize);
@@ -220,7 +223,7 @@ public partial class Cryptography
 			int exponentCount = reader.ReadByte();
 			var exponent = reader.ReadBytes(exponentCount);
 
-			// ------- create RSACryptoServiceProvider instance and initialize with public key -----
+			// ------- 创建 RSACryptoServiceProvider 实例并用公钥初始化 -----
 			var rsa = System.Security.Cryptography.RSA.Create();
 			var rsaKeyInfo = new RSAParameters
 			{
@@ -233,10 +236,10 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Reads an ASN.1 INTEGER from the current BinaryReader position and returns the integer size in bytes.
+		/// 从当前 BinaryReader 位置读取 ASN.1 INTEGER 并返回该整数占用的字节数。
 		/// </summary>
-		/// <param name="reader">BinaryReader positioned at an ASN.1 INTEGER tag.</param>
-		/// <returns>Number of bytes that make up the integer value.</returns>
+		/// <param name="reader">定位在 ASN.1 INTEGER 标记处的 BinaryReader。</param>
+		/// <returns>组成该整数值的字节数。</returns>
 		private static int GetIntegerSize(BinaryReader reader)
 		{
 			int count;
@@ -276,11 +279,11 @@ public partial class Cryptography
 		}
 
 		/// <summary>
-		/// Compares two byte arrays for equality.
+		/// 比较两个字节数组是否相等。
 		/// </summary>
-		/// <param name="source">First byte array.</param>
-		/// <param name="target">Second byte array.</param>
-		/// <returns>True if arrays are equal in length and content; otherwise false.</returns>
+		/// <param name="source">第一个字节数组。</param>
+		/// <param name="target">第二个字节数组。</param>
+		/// <returns>如果两个数组长度和内容都相同则返回 true，否则返回 false。</returns>
 		private static bool CompareBytes(byte[] source, byte[] target)
 		{
 			if (source.Length != target.Length)

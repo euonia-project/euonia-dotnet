@@ -10,7 +10,7 @@ internal class MessageChannelResolver
 {
 	private static readonly Lazy<MessageChannelResolver> _instance = new(() => new MessageChannelResolver());
 
-	private readonly ConcurrentDictionary<Type, Lazy<string>> _channels = new();
+	private readonly ConcurrentDictionary<Type, Lazy<string?>> _channels = new();
 
 	/// <summary>
 	/// 获取 <see cref="MessageChannelResolver"/> 的单例实例。
@@ -46,7 +46,7 @@ internal class MessageChannelResolver
 	/// <returns>消息类型对应的通道名称。</returns>
 	public string GetOrAddChannel(Type messageType)
 	{
-		var lazyChannel = _channels.GetOrAdd(messageType, static type => new Lazy<string>(
+		var lazyChannel = _channels.GetOrAdd(messageType, static type => new Lazy<string?>(
 			() => ResolveChannel(type),
 			LazyThreadSafetyMode.ExecutionAndPublication));
 
@@ -58,7 +58,8 @@ internal class MessageChannelResolver
 				_channels.TryRemove(messageType, out _);
 			}
 
-			return channel;
+			// 公共契约（Func<Type, string>）声明非空；解析不到时返回 null 由调用方回退，这里保持既有行为。
+			return channel!;
 		}
 		catch
 		{
@@ -67,9 +68,9 @@ internal class MessageChannelResolver
 		}
 	}
 
-	private static string ResolveChannel(Type messageType)
+	private static string? ResolveChannel(Type messageType)
 	{
-		return PriorityValueFinder.Find<string>(queue =>
+		return PriorityValueFinder.Find<string?>(queue =>
 		{
 			queue.Enqueue(() => messageType.GetCustomAttribute<ChannelAttribute>()?.Name, 1);
 			queue.Enqueue(() => messageType.IsAssignableTo(typeof(ITransportable)) ? messageType.FullName : null, 2);

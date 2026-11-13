@@ -83,10 +83,10 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
+	public static Task<EventArguments<object?, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe, CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
-		=> FromAnyEvent<EventHandler, EventArguments<object, EventArgs>>(
-			x => (sender, args) => x(CreateEventArguments(sender, args)), subscribe, unsubscribe, cancellationToken,
+		=> FromAnyEvent<EventHandler, EventArguments<object?, EventArgs>>(
+			x => (sender, args) => x(CreateEventArguments<object?, EventArgs>(sender, args)), subscribe, unsubscribe, cancellationToken,
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
@@ -98,7 +98,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
+	public static Task<EventArguments<object?, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe, CancellationToken cancellationToken)
 		=> FromEvent(subscribe, unsubscribe, cancellationToken, true);
 
@@ -110,7 +110,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, EventArgs>> FromEvent(Action<EventHandler> subscribe,
+	public static Task<EventArguments<object?, EventArgs>> FromEvent(Action<EventHandler> subscribe,
 																	Action<EventHandler> unsubscribe)
 		=> FromEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
@@ -125,11 +125,11 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe,
 		CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
-		=> FromAnyEvent<EventHandler<TEventArgs>, EventArguments<object, TEventArgs>>(
-			x => (sender, args) => x(CreateEventArguments(sender, args)), subscribe, unsubscribe, cancellationToken,
+		=> FromAnyEvent<EventHandler<TEventArgs>, EventArguments<object?, TEventArgs>>(
+			x => (sender, args) => x(CreateEventArguments<object?, TEventArgs>(sender, args)), subscribe, unsubscribe, cancellationToken,
 			unsubscribeOnCapturedContext);
 
 	/// <summary>
@@ -142,7 +142,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe,
 		CancellationToken cancellationToken)
 		=> FromEvent(subscribe, unsubscribe, cancellationToken, true);
@@ -156,7 +156,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TEventArgs>(
 		Action<EventHandler<TEventArgs>> subscribe, Action<EventHandler<TEventArgs>> unsubscribe)
 		=> FromEvent(subscribe, unsubscribe, CancellationToken.None, true);
 
@@ -173,11 +173,11 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
 		Action<TDelegate> unsubscribe, CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
-		=> FromAnyEvent<TDelegate, EventArguments<object, TEventArgs>>(
-			x => convert((sender, args) => x(CreateEventArguments(sender, args))), subscribe, unsubscribe,
+		=> FromAnyEvent<TDelegate, EventArguments<object?, TEventArgs>>(
+			x => convert((sender, args) => x(CreateEventArguments<object?, TEventArgs>(sender, args))), subscribe, unsubscribe,
 			cancellationToken, unsubscribeOnCapturedContext);
 
 	/// <summary>
@@ -192,7 +192,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
 		Action<TDelegate> unsubscribe, CancellationToken cancellationToken)
 		=> FromEvent(convert, subscribe, unsubscribe, cancellationToken, true);
@@ -208,7 +208,7 @@ public static class EventAsyncFactory
 	/// <remarks>
 	/// <para>在循环中调用此方法通常是反模式，因为事件仅在此方法被调用时才被订阅，并在任务完成时取消订阅。从任务完成到再次调用此方法之间的时间内，事件可能会触发并"丢失"。如果您发现需要在此方法外包裹循环，请考虑改用 Rx 或 TPL Dataflow。</para>
 	/// </remarks>
-	public static Task<EventArguments<object, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
+	public static Task<EventArguments<object?, TEventArgs>> FromEvent<TDelegate, TEventArgs>(
 		Func<EventHandler<TEventArgs>, TDelegate> convert, Action<TDelegate> subscribe,
 		Action<TDelegate> unsubscribe)
 		=> FromEvent(convert, subscribe, unsubscribe, CancellationToken.None, true);
@@ -318,7 +318,7 @@ public static class EventAsyncFactory
 	/// </remarks>
 	public static Task FromActionEvent(Action<Action> subscribe, Action<Action> unsubscribe,
 									   CancellationToken cancellationToken, bool unsubscribeOnCapturedContext)
-		=> FromAnyEvent<Action, object>(x => () => x(null), subscribe, unsubscribe, cancellationToken,
+		=> FromAnyEvent<Action, object?>(x => () => x(null), subscribe, unsubscribe, cancellationToken,
 			unsubscribeOnCapturedContext);
 
 	/// <summary>

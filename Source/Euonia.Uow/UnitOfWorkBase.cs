@@ -19,7 +19,7 @@ public abstract class UnitOfWorkBase : DisposableObject
     /// </summary>
     /// <typeparam name="TService">要解析的服务类型。</typeparam>
     /// <returns>服务实例；若未注册则返回 <c>null</c>。</returns>
-    public TService GetService<TService>()
+    public TService? GetService<TService>()
         where TService : class
     {
         return ServiceProvider.GetService<TService>();
@@ -41,7 +41,7 @@ public abstract class UnitOfWorkBase : DisposableObject
     /// </summary>
     /// <param name="serviceType">要解析的服务类型。</param>
     /// <returns>服务实例；若未注册则返回 <c>null</c>。</returns>
-    public object GetService(Type serviceType)
+    public object? GetService(Type serviceType)
     {
         return ServiceProvider.GetService(serviceType);
     }
@@ -51,7 +51,7 @@ public abstract class UnitOfWorkBase : DisposableObject
     /// </summary>
     /// <param name="serviceType">要解析的服务类型。</param>
     /// <returns>包含所有已解析服务的序列；若未注册则为空序列。</returns>
-    public IEnumerable<object> GetServices(Type serviceType)
+    public IEnumerable<object?> GetServices(Type serviceType)
     {
         return ServiceProvider.GetServices(serviceType);
     }

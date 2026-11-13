@@ -43,7 +43,6 @@ public static class WaitHandleAsyncFactory
     public static Task<bool> FromWaitHandle(WaitHandle handle, TimeSpan timeout, CancellationToken token)
     {
         // 处理同步情况。
-        // Handle synchronous cases.
         var alreadySignalled = handle.WaitOne(0);
         if (alreadySignalled)
             return TaskConstants.BooleanTrue;
@@ -53,7 +52,6 @@ public static class WaitHandleAsyncFactory
             return TaskConstants<bool>.Canceled;
 
         // 注册所有异步情况。
-        // Register all asynchronous cases.
         return DoFromWaitHandle(handle, timeout, token);
     }
 
@@ -61,13 +59,16 @@ public static class WaitHandleAsyncFactory
     {
         var tcs = new TaskCompletionSource<bool>();
         using (new ThreadPoolRegistration(handle, timeout, tcs))
-        using (token.Register(state => ((TaskCompletionSource<bool>)state).TrySetCanceled(), tcs,
+        using (token.Register(state => ((TaskCompletionSource<bool>)state!).TrySetCanceled(), tcs,
                    useSynchronizationContext: false))
         {
             return await tcs.Task.ConfigureAwait(false);
         }
     }
 
+    /// <summary>
+    /// 将等待句柄注册到线程池，并以可释放对象的形式管理注册的取消。
+    /// </summary>
     private sealed class ThreadPoolRegistration : IDisposable
     {
         private readonly RegisteredWaitHandle _registeredWaitHandle;
@@ -75,7 +76,7 @@ public static class WaitHandleAsyncFactory
         public ThreadPoolRegistration(WaitHandle handle, TimeSpan timeout, TaskCompletionSource<bool> tcs)
         {
             _registeredWaitHandle = ThreadPool.RegisterWaitForSingleObject(handle,
-                (state, timedOut) => ((TaskCompletionSource<bool>)state).TrySetResult(!timedOut), tcs,
+                (state, timedOut) => ((TaskCompletionSource<bool>)state!).TrySetResult(!timedOut), tcs,
                 timeout, executeOnlyOnce: true);
         }
 

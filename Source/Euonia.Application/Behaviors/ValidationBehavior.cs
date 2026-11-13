@@ -19,7 +19,7 @@ namespace Nerosoft.Euonia.Application;
 public class ValidationBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
 	where TMessage : class, IMessageEnvelope
 {
-	private readonly IValidatorFactory _validatorFactory;
+	private readonly IValidatorFactory? _validatorFactory;
 
 	/// <summary>
 	/// 初始化 <see cref="ValidationBehavior{TMessage, TResponse}"/> 类的新实例。

@@ -101,6 +101,8 @@ builder.Services.TryAddSingleton<IRequestContextAccessor, RequestContextAccessor
 
 // 示例省略了 ASP.NET Core 认证配置，因此显式关闭端点授权。
 // 生产环境必须保留默认值 true，并为 gRPC 服务配置认证/授权。
+// 自动绑定（配置节 Euonia:Bus:Grpc / 环境变量 Euonia__Bus__Grpc__*）是最低优先级的默认值，
+// 因此这段显式配置写在 AddGrpcBus / AddGrpcBusServer 之前或之后都生效。
 builder.Services.Configure<GrpcBusOptions>(options => options.RequireAuthorization = false);
 
 // ① gRPC 工具链：AddGrpc + MaxReceiveMessageSize/DetailedErrors + 内置拦截器 + 反射

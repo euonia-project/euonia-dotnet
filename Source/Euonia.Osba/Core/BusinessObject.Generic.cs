@@ -28,7 +28,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <summary>
 	/// 已更改属性的只读快照；集合变化时失效。
 	/// </summary>
-	private IReadOnlyList<IPropertyInfo> _changedPropertiesSnapshot;
+	private IReadOnlyList<IPropertyInfo>? _changedPropertiesSnapshot;
 
 	/// <summary>
 	/// 保护 <see cref="_changedProperties"/> 并发访问的同步锁。
@@ -386,18 +386,22 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 		}
 	}
 
-	/// <summary>当前正在回滚的对象集合；阻断环形对象图的递归。</summary>
+	/// <summary>
+	/// 当前正在回滚的对象集合；阻断环形对象图的递归。
+	/// </summary>
 	[ThreadStatic]
-	private static HashSet<object> RejectingGraphs;
+	private static HashSet<object>? RejectingGraphs;
 
-	/// <summary>当前正在提交的对象集合；阻断环形对象图的递归。</summary>
+	/// <summary>
+	/// 当前正在提交的对象集合；阻断环形对象图的递归。
+	/// </summary>
 	[ThreadStatic]
-	private static HashSet<object> AcceptingGraphs;
+	private static HashSet<object>? AcceptingGraphs;
 
 	/// <summary>
 	/// 图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）的反射查找缓存；按（子对象类型, 方法名）取一次。
 	/// </summary>
-	private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Method), MethodInfo> GraphMethodCache = new();
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<(Type Type, string Method), MethodInfo?> GraphMethodCache = new();
 
 	/// <summary>
 	/// 取子对象上可用的无参图方法（<c>RejectChanges</c> / <c>AcceptChanges</c>）；不是可编辑对象时返回 <see langword="null"/>。
@@ -409,7 +413,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// 两个方法都声明在 <see cref="BusinessObject{T}"/> 上，没有非泛型契约可查，只能反射调用；
 	/// 结果按子对象的具体类型缓存，每个类型只查找一次。
 	/// </remarks>
-	private static MethodInfo GetGraphMethod(Type childType, string methodName)
+	private static MethodInfo? GetGraphMethod(Type childType, string methodName)
 	{
 		return GraphMethodCache.GetOrAdd((childType, methodName), static key =>
 		{
@@ -772,7 +776,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="onChanged">值更改时的回调操作。</param>
 	/// <typeparam name="TField">字段的类型。</typeparam>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected virtual void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue, Action<IPropertyInfo, TField, TField> onChanged = null)
+	protected virtual void SetPropertyConvert<TField, TValue>(PropertyInfo<TField> propertyInfo, TValue newValue, Action<IPropertyInfo, TField, TField>? onChanged = null)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -807,7 +811,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="newValue">新值。</param>
 	/// <param name="onChanged">值更改时的回调操作。</param>
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
-	protected virtual void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue, Action<IPropertyInfo, TValue, TValue> onChanged = null)
+	protected virtual void SetProperty<TValue>(PropertyInfo<TValue> propertyInfo, TValue newValue, Action<IPropertyInfo, TValue, TValue>? onChanged = null)
 	{
 		if (!IsBypassingRuleChecks && !CanWriteProperty(propertyInfo, true))
 		{
@@ -882,7 +886,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="propertyInfo">属性。</param>
 	/// <param name="oldValue">旧值。</param>
 	/// <param name="newValue">新值。</param>
-	private void SetPropertyValueBypassingRules(IPropertyInfo propertyInfo, object oldValue, object newValue)
+	private void SetPropertyValueBypassingRules(IPropertyInfo propertyInfo, object? oldValue, object? newValue)
 	{
 		if (!ValuesDiffer(propertyInfo, newValue, oldValue))
 		{
@@ -901,7 +905,7 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <param name="newValue">新值。</param>
 	/// <param name="oldValue">旧值。</param>
 	/// <returns>不同则返回 <see langword="true"/>。</returns>
-	private static bool ValuesDiffer(IPropertyInfo propertyInfo, object newValue, object oldValue)
+	private static bool ValuesDiffer(IPropertyInfo propertyInfo, object? newValue, object? oldValue)
 	{
 		if (oldValue == null)
 		{
@@ -928,6 +932,6 @@ public abstract class BusinessObject<T> : ObjectBase<T>, IBusinessObject
 	/// <typeparam name="TValue">属性值的类型。</typeparam>
 	protected virtual void SetProperty<TValue>(IPropertyInfo propertyInfo, TValue newValue)
 	{
-		SetProperty(propertyInfo, (object)newValue);
+		SetProperty(propertyInfo, newValue!);
 	}
 }

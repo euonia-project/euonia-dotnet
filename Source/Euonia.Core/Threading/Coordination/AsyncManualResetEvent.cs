@@ -19,7 +19,7 @@ public sealed class AsyncManualResetEvent
     /// <summary>
     /// 事件的当前状态。
     /// </summary>
-    private TaskCompletionSource<object> _taskCompletionSource;
+    private TaskCompletionSource<object?> _taskCompletionSource;
 
     /// <summary>
     /// 此实例的半唯一标识符。如果尚未创建 ID，则为 0。
@@ -45,7 +45,7 @@ public sealed class AsyncManualResetEvent
     public AsyncManualResetEvent(bool set)
     {
         _mutex = new object();
-        _taskCompletionSource = Extensions.CreateAsyncTaskSource<object>();
+        _taskCompletionSource = Extensions.CreateAsyncTaskSource<object?>();
         if (set)
             _taskCompletionSource.TrySetResult(null);
     }
@@ -140,12 +140,15 @@ public sealed class AsyncManualResetEvent
         {
             if (_taskCompletionSource.Task.IsCompleted)
             {
-                _taskCompletionSource = Extensions.CreateAsyncTaskSource<object>();
+                _taskCompletionSource = Extensions.CreateAsyncTaskSource<object?>();
             }
         }
     }
 
     // ReSharper disable UnusedMember.Local
+    /// <summary>
+    /// 供调试器显示的只读视图，暴露手动重置事件的标识、设置状态与当前任务。
+    /// </summary>
     [DebuggerNonUserCode]
     private sealed class DebugView
     {

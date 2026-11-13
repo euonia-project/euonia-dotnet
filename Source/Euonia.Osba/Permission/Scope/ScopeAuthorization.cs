@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -112,7 +113,7 @@ internal static class ScopeAuthorization
 	/// <summary>
 	/// 判定前的全部前置条件：不受数据权限约束直接放行；受约束却拿不到上下文则视为配置错误。
 	/// </summary>
-	private static bool TryPrepare(object target, string operation, out BusinessContext context, out IObjectScopeAuthorizer authorizer)
+	private static bool TryPrepare(object target, string operation, [NotNullWhen(true)] out BusinessContext? context, [NotNullWhen(true)] out IObjectScopeAuthorizer? authorizer)
 	{
 		context = null;
 		authorizer = null;
@@ -142,6 +143,8 @@ internal static class ScopeAuthorization
 			target.GetType().Name,
 			operation);
 
+		var resolvedContext = context;
+		context = resolvedContext!;
 		return true;
 	}
 
@@ -181,6 +184,7 @@ internal static class ScopeAuthorization
 	private static void Enforce(object target, string operation, string stage, BusinessContext context, IObjectScopeAuthorizer authorizer)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("authorize", operation);
 		var succeeded = false;
 		try
 		{
@@ -202,6 +206,7 @@ internal static class ScopeAuthorization
 		finally
 		{
 			OsbaDiagnostics.RecordAuthorization(started, "scope", operation, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "authorize", started, succeeded);
 		}
 	}
 }

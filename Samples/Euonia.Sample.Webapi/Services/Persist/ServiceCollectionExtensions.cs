@@ -5,12 +5,15 @@ using Nerosoft.Euonia.Repository.EfCore;
 
 namespace Nerosoft.Euonia.Sample.Persist;
 
+/// <summary>
+/// 示例应用持久化层的辅助类型，负责把 <c>dbtype://connection</c> 形式的连接字符串解析为对应的 EF Core 数据库提供程序。
+/// </summary>
 internal static class ServiceCollectionExtensions
 {
 	private const string CONNECTION_STRING_PATTERN = @"^(?<dbtype>(?:\w|\-)+):\/\/(?<conn>.*)";
 
 	/// <summary>
-	/// Defines a mapping of database type aliases to their corresponding DatabaseType enum values.
+	/// 定义数据库类型别名到对应 DatabaseType 枚举值的映射。
 	/// </summary>
 	private static readonly Dictionary<string, DatabaseType> _databaseTypeAlias = new()
 	{
@@ -31,15 +34,15 @@ internal static class ServiceCollectionExtensions
 	};
 
 	/// <summary>
-	/// Configures the data context based on the provided connection string name.
+	/// 根据提供的连接字符串名称配置数据上下文。
 	/// </summary>
-	/// <param name="connectionString"></param>
-	/// <param name="provider"></param>
-	/// <param name="options"></param>
-	/// <param name="seeding"></param>
-	/// <exception cref="ArgumentException"></exception>
-	/// <exception cref="NotSupportedException"></exception>
-	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task> seeding = null)
+	/// <param name="connectionString">形如 <c>dbtype://connection</c> 的连接字符串，不能为 <see langword="null"/> 或空白。</param>
+	/// <param name="provider">服务提供程序；当前实现未使用该参数。</param>
+	/// <param name="options">要配置的 EF Core 数据上下文选项构建器。</param>
+	/// <param name="seeding">可选的异步初始化委托，接收数据上下文、是否种子阶段与取消令牌。</param>
+	/// <exception cref="ArgumentException">连接字符串为空、格式无效或数据库类型别名未知时抛出。</exception>
+	/// <exception cref="NotSupportedException">连接字符串中的数据库类型不受支持时抛出。</exception>
+	private static void ConfigureDataContext(string connectionString, IServiceProvider provider, DbContextOptionsBuilder options, Func<DbContext, bool, CancellationToken, Task>? seeding = null)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
 

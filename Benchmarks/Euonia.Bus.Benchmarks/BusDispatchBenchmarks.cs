@@ -14,11 +14,14 @@ namespace Euonia.Bus.Benchmarks;
 [ShortRunJob]
 public class BusDispatchBenchmarks
 {
-	private ServiceProvider _provider;
-	private IBus _bus;
-	private NoopTransporter _transporter;
-	private IMessageEnvelope<BenchEvent> _envelope;
+	private ServiceProvider _provider = null!;
+	private IBus _bus = null!;
+	private NoopTransporter _transporter = null!;
+	private IMessageEnvelope<BenchEvent> _envelope = null!;
 
+	/// <summary>
+	/// 构建包含总线服务、日志、选项与空传输器的服务容器，并注册默认消息约定。
+	/// </summary>
 	[GlobalSetup]
 	public void Setup()
 	{
@@ -41,24 +44,36 @@ public class BusDispatchBenchmarks
 		_envelope = new RoutedMessage<BenchEvent>(new BenchEvent(), "bench.channel");
 	}
 
+	/// <summary>
+	/// 释放基准测试所使用的服务容器。
+	/// </summary>
 	[GlobalCleanup]
 	public void Cleanup()
 	{
 		_provider.Dispose();
 	}
 
+	/// <summary>
+	/// 测量通过总线发布多播事件 <c>BenchEvent</c> 的端到端开销。
+	/// </summary>
 	[Benchmark]
 	public Task PublishAsync()
 	{
 		return _bus.PublishAsync(new BenchEvent());
 	}
 
+	/// <summary>
+	/// 测量通过总线发送单播命令 <c>BenchCommand</c> 的端到端开销。
+	/// </summary>
 	[Benchmark]
 	public Task SendAsync()
 	{
 		return _bus.SendAsync(new BenchCommand());
 	}
 
+	/// <summary>
+	/// 测量通过总线调用请求 <c>BenchRequest</c> 并获取响应的端到端开销。
+	/// </summary>
 	[Benchmark]
 	public Task<int> CallAsync()
 	{
@@ -101,12 +116,24 @@ public class BusDispatchBenchmarks
 		return Parallel.ForEachAsync(new[] { "bench" }, async (_, _) => await Task.CompletedTask);
 	}
 
+	/// <summary>
+	/// 基准使用的多播事件，不携带任何负载，仅用于测量发布路径的分发开销。
+	/// </summary>
 	private sealed class BenchEvent : IMulticast;
 
+	/// <summary>
+	/// 基准使用的单播命令，不携带任何负载，仅用于测量发送路径的分发开销。
+	/// </summary>
 	private sealed class BenchCommand : IUnicast;
 
+	/// <summary>
+	/// 基准使用的请求消息，响应类型为 <see cref="int"/>，仅用于测量请求-响应路径的往返开销。
+	/// </summary>
 	private sealed class BenchRequest : IRequest<int>;
 
+	/// <summary>
+	/// 不做任何实际传输的传输器：所有发送与发布方法立即完成，用于把总线框架开销与真实传输开销隔离开。
+	/// </summary>
 	private sealed class NoopTransporter : ITransporter
 	{
 		public string Name => "bench";
@@ -124,12 +151,12 @@ public class BusDispatchBenchmarks
 
 		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 
 		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)
 		{
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 	}
 }

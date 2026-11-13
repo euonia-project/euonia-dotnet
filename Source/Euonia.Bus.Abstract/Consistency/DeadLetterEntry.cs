@@ -13,22 +13,22 @@ public class DeadLetterEntry
 	/// <summary>
 	/// 获取或设置消息的标识符。
 	/// </summary>
-	public string MessageId { get; set; }
+	public string MessageId { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置消息的通道名称。
 	/// </summary>
-	public string Channel { get; set; }
+	public string Channel { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置消息负载的完整类型名称。
 	/// </summary>
-	public string MessageType { get; set; }
+	public string? MessageType { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息内容（信封），重放时需要用到。
 	/// </summary>
-	public IMessageEnvelope Content { get; set; }
+	public IMessageEnvelope Content { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置死信的来源（发件箱或收件箱）。
@@ -41,12 +41,12 @@ public class DeadLetterEntry
 	/// <remarks>
 	/// 发件箱来源时为目标传输器名称；收件箱来源时为目标处理程序类型名称。
 	/// </remarks>
-	public string Target { get; set; }
+	public string Target { get; set; } = null!;
 
 	/// <summary>
 	/// 获取或设置导致转入死信的最后一次错误信息。
 	/// </summary>
-	public string Error { get; set; }
+	public string? Error { get; set; }
 
 	/// <summary>
 	/// 获取或设置转入死信时已累计的重试次数。

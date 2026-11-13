@@ -4,20 +4,20 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Extensions for the configuration builder specific to the redis cache handle.
+/// 针对 redis 缓存句柄的配置构建器扩展。
 /// </summary>
 public static class RedisConfigurationBuilderExtensions
 {
     /// <summary>
-    /// Adds a redis configuration with the given <paramref name="configurationKey"/>.
+    /// 使用给定的 <paramref name="configurationKey"/> 添加 redis 配置。
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="configurationKey">
-    /// The configuration key which can be used to refernce this configuration by a redis cache handle or backplane.
+    /// 配置键，可用于让 redis 缓存句柄或背板引用此配置。
     /// </param>
-    /// <param name="configuration">The redis configuration object.</param>
-    /// <returns>The configuration builder.</returns>
-    /// <exception cref="ArgumentNullException">If <paramref name="configuration"/> or <paramref name="configurationKey"/> are null.</exception>
+    /// <param name="configuration">redis 配置对象。</param>
+    /// <returns>配置构建器。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="configuration"/> 或 <paramref name="configurationKey"/> 为 null 时抛出。</exception>
     public static ConfigurationBuilderCachePart WithRedisConfiguration(this ConfigurationBuilderCachePart part, string configurationKey, Action<RedisConfigurationBuilder> configuration)
     {
         Check.EnsureNotNull(configuration, nameof(configuration));
@@ -29,22 +29,22 @@ public static class RedisConfigurationBuilderExtensions
     }
 
     /// <summary>
-    /// Adds a redis configuration with the given <paramref name="configurationKey"/>.
+    /// 使用给定的 <paramref name="configurationKey"/> 添加 redis 配置。
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="configurationKey">
-    /// The configuration key which can be used to refernce this configuration by a redis cache handle or backplane.
+    /// 配置键，可用于让 redis 缓存句柄或背板引用此配置。
     /// </param>
-    /// <param name="connectionString">The redis connection string.</param>
-    /// <param name="database">The redis database to be used.</param>
+    /// <param name="connectionString">redis 连接字符串。</param>
+    /// <param name="database">要使用的 redis 数据库。</param>
     /// <param name="enableKeyspaceNotifications">
-    /// Enables keyspace notifications to react on eviction/expiration of items.
-    /// Make sure that all servers are configured correctly and 'notify-keyspace-events' is at least set to 'Exe', otherwise CacheManager will not retrieve any events.
-    /// See <see href="https://redis.io/topics/notifications#configuration"/> for configuration details.
+    /// 启用键空间通知，以响应项的逐出/过期。
+    /// 请确保所有服务器均已正确配置，且 'notify-keyspace-events' 至少设置为 'Exe'，否则 CacheManager 将获取不到任何事件。
+    /// 有关配置详情，请参阅 <see href="https://redis.io/topics/notifications#configuration"/>。
     /// </param>
-    /// <returns>The configuration builder.</returns>
+    /// <returns>配置构建器。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="configurationKey"/> or <paramref name="connectionString"/> are null.
+    /// 当 <paramref name="configurationKey"/> 或 <paramref name="connectionString"/> 为 null 时抛出。
     /// </exception>
     public static ConfigurationBuilderCachePart WithRedisConfiguration(this ConfigurationBuilderCachePart part, string configurationKey, string connectionString, int database = 0, bool enableKeyspaceNotifications = false)
     {
@@ -57,22 +57,22 @@ public static class RedisConfigurationBuilderExtensions
     }
 
     /// <summary>
-    /// Adds an existing <see cref="IConnectionMultiplexer"/> to the cache manager configuration which can be referenced by redis cache handle and/or backplane.
+    /// 将现有的 <see cref="IConnectionMultiplexer"/> 添加到缓存管理器配置中，可供 redis 缓存句柄和/或背板引用。
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="configurationKey">
-    /// The configuration key which can be used to refernce this configuration by a redis cache handle or backplane.
+    /// 配置键，可用于让 redis 缓存句柄或背板引用此配置。
     /// </param>
-    /// <param name="redisClient">The connection multiplexer instance.</param>
-    /// <param name="database">The redis database to use for caching.</param>
+    /// <param name="redisClient">连接多路复用器实例。</param>
+    /// <param name="database">用于缓存的 redis 数据库。</param>
     /// <param name="enableKeyspaceNotifications">
-    /// Enables keyspace notifications to react on eviction/expiration of items.
-    /// Make sure that all servers are configured correctly and 'notify-keyspace-events' is at least set to 'Exe', otherwise CacheManager will not retrieve any events.
-    /// See <see href="https://redis.io/topics/notifications#configuration"/> for configuration details.
+    /// 启用键空间通知，以响应项的逐出/过期。
+    /// 请确保所有服务器均已正确配置，且 'notify-keyspace-events' 至少设置为 'Exe'，否则 CacheManager 将获取不到任何事件。
+    /// 有关配置详情，请参阅 <see href="https://redis.io/topics/notifications#configuration"/>。
     /// </param>
-    /// <returns>The configuration builder.</returns>
+    /// <returns>配置构建器。</returns>
     /// <exception cref="ArgumentNullException">
-    /// If <paramref name="configurationKey"/> or <paramref name="redisClient"/> are null.
+    /// 当 <paramref name="configurationKey"/> 或 <paramref name="redisClient"/> 为 null 时抛出。
     /// </exception>
     public static ConfigurationBuilderCachePart WithRedisConfiguration(this ConfigurationBuilderCachePart part, string configurationKey, IConnectionMultiplexer redisClient, int database = 0, bool enableKeyspaceNotifications = false)
     {
@@ -89,19 +89,19 @@ public static class RedisConfigurationBuilderExtensions
     }
 
     /// <summary>
-    /// Configures a cache backplane for the cache manager.
-    /// The <paramref name="redisConfigurationKey"/> is used to find a matching redis configuration.
+    /// 为缓存管理器配置缓存背板。
+    /// 使用 <paramref name="redisConfigurationKey"/> 查找匹配的 redis 配置。
     /// <para>
-    /// If a backplane is defined, at least one cache handle must be marked as backplane
-    /// source. The cache manager then will try to synchronize multiple instances of the same configuration.
+    /// 如果定义了背板，则必须至少将一个缓存句柄标记为背板源。
+    /// 随后缓存管理器将尝试同步使用相同配置的多个实例。
     /// </para>
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="redisConfigurationKey">
-    /// The redis configuration key will be used to find a matching redis connection configuration.
+    /// redis 配置键，用于查找匹配的 redis 连接配置。
     /// </param>
-    /// <returns>The builder instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="redisConfigurationKey"/> is null.</exception>
+    /// <returns>构建器实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="redisConfigurationKey"/> 为 null 时抛出。</exception>
     public static ConfigurationBuilderCachePart WithRedisBackplane(this ConfigurationBuilderCachePart part, string redisConfigurationKey)
     {
         Check.EnsureNotNull(part, nameof(part));
@@ -119,20 +119,20 @@ public static class RedisConfigurationBuilderExtensions
     }
 
     /// <summary>
-    /// Configures a cache backplane for the cache manager.
-    /// The <paramref name="redisConfigurationKey"/> is used to find a matching redis configuration.
+    /// 为缓存管理器配置缓存背板。
+    /// 使用 <paramref name="redisConfigurationKey"/> 查找匹配的 redis 配置。
     /// <para>
-    /// If a backplane is defined, at least one cache handle must be marked as backplane
-    /// source. The cache manager then will try to synchronize multiple instances of the same configuration.
+    /// 如果定义了背板，则必须至少将一个缓存句柄标记为背板源。
+    /// 随后缓存管理器将尝试同步使用相同配置的多个实例。
     /// </para>
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="redisConfigurationKey">
-    /// The redis configuration key will be used to find a matching redis connection configuration.
+    /// redis 配置键，用于查找匹配的 redis 连接配置。
     /// </param>
-    /// <param name="channelName">The pub sub channel name the backplane should use.</param>
-    /// <returns>The builder instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="redisConfigurationKey"/> is null.</exception>
+    /// <param name="channelName">背板应使用的发布/订阅通道名称。</param>
+    /// <returns>构建器实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="redisConfigurationKey"/> 为 null 时抛出。</exception>
     public static ConfigurationBuilderCachePart WithRedisBackplane(this ConfigurationBuilderCachePart part, string redisConfigurationKey, string channelName)
     {
         Check.EnsureNotNull(part, nameof(part));
@@ -146,19 +146,19 @@ public static class RedisConfigurationBuilderExtensions
     }
         
     /// <summary>
-    /// Adds a <see cref="RedisCacheHandle{TCacheValue}"/>.
-    /// This handle requires a redis configuration to be defined with the given <paramref name="redisConfigurationKey"/>.
+    /// 添加一个 <see cref="RedisCacheHandle{TCacheValue}"/>。
+    /// 此句柄要求已使用给定的 <paramref name="redisConfigurationKey"/> 定义了 redis 配置。
     /// </summary>
-    /// <param name="part">The builder instance.</param>
+    /// <param name="part">构建器实例。</param>
     /// <param name="redisConfigurationKey">
-    /// The redis configuration key will be used to find a matching redis connection configuration.
+    /// redis 配置键，用于查找匹配的 redis 连接配置。
     /// </param>
     /// <param name="isBackplaneSource">
-    /// Set this to true if this cache handle should be the source of the backplane.
-    /// This setting will be ignored if no backplane is configured.
+    /// 如果此缓存句柄应作为背板源，请将其设置为 true。
+    /// 如果未配置背板，此设置将被忽略。
     /// </param>
-    /// <returns>The builder instance.</returns>
-    /// <exception cref="ArgumentNullException">Thrown if <paramref name="redisConfigurationKey"/> is null.</exception>
+    /// <returns>构建器实例。</returns>
+    /// <exception cref="ArgumentNullException">当 <paramref name="redisConfigurationKey"/> 为 null 时抛出。</exception>
     public static ConfigurationBuilderCacheHandlePart WithRedisCacheHandle(this ConfigurationBuilderCachePart part, string redisConfigurationKey, bool isBackplaneSource = true)
     {
         Check.EnsureNotNull(part, nameof(part));

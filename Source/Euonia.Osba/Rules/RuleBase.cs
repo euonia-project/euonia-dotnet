@@ -1,10 +1,12 @@
-﻿using System.Reflection;
-
-namespace Nerosoft.Euonia.Osba;
+﻿namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// 规则基类。
+/// 规则基类，提供名称、优先级、相关属性与执行入口。
 /// </summary>
+/// <remarks>
+/// 本类型不包含 <c>Property</c>。对象级规则请继承 <see cref="ObjectRuleBase"/>，
+/// 属性级规则请继承 <see cref="PropertyRuleBase"/>。
+/// </remarks>
 public abstract class RuleBase : IRuleBase
 {
 	/// <summary>
@@ -16,31 +18,20 @@ public abstract class RuleBase : IRuleBase
 	}
 
 	/// <summary>
-	/// 初始化 <see cref="RuleBase"/> 类的新实例。
+	/// 初始化 <see cref="RuleBase"/> 类的新实例，并在规则名称中追加名称段。
 	/// </summary>
-	/// <param name="property">受规则影响的属性。</param>
-	protected RuleBase(IPropertyInfo property)
+	/// <param name="nameSegment">第一个附加名称段。</param>
+	/// <param name="additionalNameSegments">其余附加名称段。</param>
+	protected RuleBase(string nameSegment, params string[] additionalNameSegments)
 	{
-		Name = GenerateName(GetType(), property.Name);
-		Property = property;
-	}
-
-	/// <summary>
-	/// 初始化 <see cref="RuleBase"/> 类的新实例。
-	/// </summary>
-	/// <param name="property">受规则影响的属性。</param>
-	/// <param name="validationType">验证类型成员信息。</param>
-	protected RuleBase(IPropertyInfo property, MemberInfo validationType)
-	{
-		Name = GenerateName(GetType(), property.Name, validationType.Name);
-		Property = property;
+		var names = new string[additionalNameSegments.Length + 1];
+		names[0] = nameSegment;
+		additionalNameSegments.CopyTo(names, 1);
+		Name = GenerateName(GetType(), names);
 	}
 
 	/// <inheritdoc />
 	public string Name { get; }
-
-	/// <inheritdoc />
-	public IPropertyInfo Property { get; }
 
 	/// <inheritdoc />
 	public virtual List<IPropertyInfo> RelatedProperties { get; } = new();

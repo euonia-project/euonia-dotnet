@@ -7,7 +7,7 @@ using StackExchange.Redis;
 namespace Nerosoft.Euonia.Concurrency.Redis.Internal;
 
 /// <summary>
-/// Implements the acquire operation in the RedLock algorithm. See https://redis.io/topics/distlock
+/// 实现 RedLock 算法中的获取操作。参见 https://redis.io/topics/distlock
 /// </summary>
 internal readonly struct RedisLockAcquire
 {
@@ -15,6 +15,12 @@ internal readonly struct RedisLockAcquire
     private readonly IReadOnlyList<IDatabase> _databases;
     private readonly CancellationToken _cancellationToken;
 
+    /// <summary>
+    /// 初始化 RedLock 获取操作。
+    /// </summary>
+    /// <param name="primitive">在各数据库上执行获取的同步原语。</param>
+    /// <param name="databases">参与 RedLock 投票的 Redis 数据库集合，必须包含至少一个元素。</param>
+    /// <param name="cancellationToken">用于中止整个获取过程的取消令牌。</param>
     public RedisLockAcquire(
         IRedisLockAcquirableSynchronizationPrimitive primitive,
         IReadOnlyList<IDatabase> databases,
@@ -25,7 +31,13 @@ internal readonly struct RedisLockAcquire
         _cancellationToken = cancellationToken;
     }
 
-    public async ValueTask<Dictionary<IDatabase, Task<bool>>> TryAcquireAsync()
+    /// <summary>
+    /// 在所有数据库上并发发起获取，并在达到多数派成功时判定获取成功。
+    /// </summary>
+    /// <returns>获取成功时返回各数据库对应的获取任务字典，供后续续期与释放复用；获取失败或超时时返回 <see langword="null"/>。</returns>
+    /// <exception cref="OperationCanceledException">取消令牌已触发。</exception>
+    /// <exception cref="AggregateException">返回错误或已取消的数据库过多，已无法达成多数派。</exception>
+    public async ValueTask<Dictionary<IDatabase, Task<bool>>?> TryAcquireAsync()
     {
         _cancellationToken.ThrowIfCancellationRequested();
 
@@ -50,19 +62,19 @@ internal readonly struct RedisLockAcquire
         }
         finally
         {
-            // clean up
+            // 清理
             if (!succeeded)
             {
-                List<Task> releaseTasks = null;
+                List<Task>? releaseTasks = null;
                 foreach (var kvp in tryAcquireTasks)
                 {
-                    // if the task hasn't finished yet, we don't want to do any releasing now; just
-                    // queue a release command to run when the task eventually completes
+                    // 如果任务尚未完成，我们此刻不想执行任何释放；只需
+                    // 排队一个释放命令，待该任务最终完成时运行
                     if (!kvp.Value.IsCompleted)
                     {
                         RedisLockHelper.FireAndForgetReleaseUponCompletion(primitive, kvp.Key, kvp.Value);
                     }
-                    // otherwise, unless we know we failed to acquire, do a release
+                    // 否则，除非我们已知获取失败，否则执行释放
                     else if (!RedisLockHelper.ReturnedFalse(kvp.Value))
                     {
                         if (isSynchronous)
@@ -73,7 +85,7 @@ internal readonly struct RedisLockAcquire
                             }
                             catch
                             {
-                                // ignore exceptions from release
+                                // 忽略释放时的异常
                             }
                         }
                         else
@@ -108,8 +120,8 @@ internal readonly struct RedisLockAcquire
 
             if (completed == timeout.Task)
             {
-                await completed.ConfigureAwait(false); // propagates cancellation
-                return false; // true timeout
+                await completed.ConfigureAwait(false); // 传播取消
+                return false; // 真正的超时
             }
 
             if (completed.Status == TaskStatus.RanToCompletion)
@@ -132,9 +144,9 @@ internal readonly struct RedisLockAcquire
                     }
                 }
             }
-            else // faulted or canceled
+            else // 出错或已取消
             {
-                // if we get too many faults, the lock is not possible to acquire, so we should throw
+                // 如果出现太多错误，则无法获取锁，因此应当抛出异常
                 ++faultCount;
                 if (RedisLockHelper.HasTooManyFailuresOrFaults(faultCount, _databases.Count))
                 {
@@ -142,7 +154,7 @@ internal readonly struct RedisLockAcquire
                                                        .ToArray();
                     if (faultingTasks.Length == 1)
                     {
-                        await faultingTasks[0].ConfigureAwait(false); // propagate the error
+                        await faultingTasks[0].ConfigureAwait(false); // 传播错误
                     }
 
                     throw new AggregateException(faultingTasks.Select(t => t.Exception ?? global::Extensions.As<Exception>((object)new TaskCanceledException(t))))
@@ -162,11 +174,11 @@ internal readonly struct RedisLockAcquire
     }
 
     /// <summary>
-    /// We only allow synchronous acquire for a single db because StackExchange.Redis does not currently allow for
-    /// single-operation timeouts/cancellations. Therefore, one slow response would jeopardize our ability to claim the
-    /// lock in time. With a single db, the one operation is all that matters so it is fine if we need to wait for it.
+    /// 我们仅允许对单个数据库执行同步获取，因为 StackExchange.Redis 目前不支持
+    /// 单操作超时/取消。因此，一次缓慢的响应就会危及我们按时声明锁的能力。
+    /// 在单数据库场景下，这一次操作就是全部关键所在，所以即使需要等待也可以接受。
     /// </summary>
-    private Dictionary<IDatabase, Task<bool>> TrySingleFullySynchronousAcquire()
+    private Dictionary<IDatabase, Task<bool>>? TrySingleFullySynchronousAcquire()
     {
         var database = _databases.Single();
 
@@ -178,28 +190,28 @@ internal readonly struct RedisLockAcquire
         }
         catch
         {
-            // on failure, still attempt a release just in case
+            // 失败时仍尝试释放，以防万一
             try
             {
                 _primitive.Release(database, fireAndForget: true);
             }
             catch
             {
-                // ignore exceptions from release
-            } // do nothing; we're going to throw anyway and the cause of failure is probably the same
+                // 忽略释放时的异常
+            } // 什么都不做；反正我们即将抛出异常，且失败原因很可能相同
 
             throw;
         }
 
         if (success)
         {
-            // make sure we didn't time out
+            // 确保我们没有超时
             if (_primitive.AcquireTimeout.CompareTo(stopwatch.Elapsed) >= 0)
             {
                 return new Dictionary<IDatabase, Task<bool>> { [database] = Task.FromResult(true) };
             }
 
-            _primitive.Release(database, fireAndForget: true); // timed out, so release
+            _primitive.Release(database, fireAndForget: true); // 已超时，因此释放
         }
         {}
         return null;

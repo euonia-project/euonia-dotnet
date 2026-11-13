@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Bus.HealthChecks.Tests;
 /// </summary>
 public class BusHealthCheckTests
 {
+	/// <summary>
+	/// 无积压且无死信时应返回 <see cref="HealthStatus.Healthy"/>，传输器计数为 0。
+	/// </summary>
 	[Fact]
 	public async Task CheckHealthAsync_WithNoBacklog_ReturnsHealthy()
 	{
@@ -20,6 +23,9 @@ public class BusHealthCheckTests
 		Assert.Equal(0, result.Data["transports"]);
 	}
 
+	/// <summary>
+	/// 死信数量超过阈值时应返回 <see cref="HealthStatus.Unhealthy"/> 并说明死信积压原因。
+	/// </summary>
 	[Fact]
 	public async Task CheckHealthAsync_WhenDeadLettersExceedThreshold_ReturnsUnhealthy()
 	{
@@ -39,6 +45,9 @@ public class BusHealthCheckTests
 		Assert.Contains("Dead letter backlog", result.Description);
 	}
 
+	/// <summary>
+	/// 死信数量未超过阈值时应保持健康并在数据中报告死信数量。
+	/// </summary>
 	[Fact]
 	public async Task CheckHealthAsync_WhenDeadLettersWithinThreshold_ReturnsHealthy()
 	{
@@ -65,6 +74,9 @@ public class BusHealthCheckTests
 		Assert.False(result.Data.ContainsKey("deadLetters"));
 	}
 
+	/// <summary>
+	/// 要求配置传输器但实际缺失时应返回 <see cref="HealthStatus.Unhealthy"/> 并说明原因。
+	/// </summary>
 	[Fact]
 	public async Task CheckHealthAsync_WhenTransporterRequiredButMissing_ReturnsUnhealthy()
 	{
@@ -75,6 +87,9 @@ public class BusHealthCheckTests
 		Assert.Contains("No transporter is configured", result.Description);
 	}
 
+	/// <summary>
+	/// 未注册总线核心服务时应返回不健康并提示缺少配置器。
+	/// </summary>
 	[Fact]
 	public async Task CheckHealthAsync_WhenBusNotRegistered_ReturnsUnhealthy()
 	{
@@ -99,7 +114,7 @@ public class BusHealthCheckTests
 	/// <summary>
 	/// 构造一个注册了总线核心服务的最小容器；传输器数量为 0，因为没有配置任何传输策略。
 	/// </summary>
-	private static ServiceProvider BuildProvider(Action<BusHealthCheckOptions> configure, IDeadLetterStore deadLetterStore = null)
+	private static ServiceProvider BuildProvider(Action<BusHealthCheckOptions>? configure, IDeadLetterStore? deadLetterStore = null)
 	{
 		var services = new ServiceCollection();
 		services.AddLogging();

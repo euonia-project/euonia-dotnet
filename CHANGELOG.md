@@ -7,12 +7,92 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### 全库
+
+- **目标框架**：移除 `netstandard2.1` 支持；当前 Source 库项目面向 `net10.0` / `net11.0`，测试与示例项目面向 `net11.0`。删除相关条件编译分支、仅 netstandard 使用的包引用与 `ArgumentAssert` 兼容 polyfill（改用 `ArgumentNullException.ThrowIfNull`）。
+- **可空引用类型**：所有项目（含测试与示例）启用 `<Nullable>enable</Nullable>`，公开 API 补充可空性标注。
+- **消息信封契约**：`IMessageEnvelope` / `IMessageContext` 的 `RequestTraceId`、`Authorization` 改为 `string?`，
+  `User` 改为可空；请求作用域外或外部消息未携带时确实为 `null`，不再用 `null!` 掩盖。
+- **消息完成/回复事件**：`MessageRepliedEventArgs.Result` 改为 `object?`；`MessageHandledEventArgs.MessageId` 与
+  `MessageContext.Complete(string?)` 允许 `null`，用于“仅完成通知、无响应结果”的语义。
+- **行为变化**：`RoutedMessage.GetTypeName()` 在元数据缺失时返回 `string.Empty`（原为 `null`）；
+  `MessageBusOptions.DefaultTransporter` 默认值改为 `string.Empty`（原为 `null`）；`BusinessException.Code`、
+  若干校验消息默认值由 `null` 改为 `string.Empty`。
+- **Source-level 兼容性**：`ICacheManager` 的泛型方法新增 `where TKey : notnull` 约束（二进制兼容，
+  未约束泛型调用方可能产生 CS8714 警告）。
+- **异常类型**：`Lambda.GetAttribute` / `GetAttributes` 在表达式无法解析出成员时抛出 `ArgumentNullException`
+  （原为 `NullReferenceException`）。
+
+### 平台能力（Tenancy / Auditing / Telemetry）
+
+- **新增产品包**：`Euonia.Tenancy`、`Euonia.Auditing`、`Euonia.Auditing.EfCore`、`Euonia.Auditing.Mongo`、`Euonia.Telemetry`、`Euonia.Telemetry.Otel`，均面向 `net10.0` / `net11.0`。
+- **执行上下文**：新增 `Nerosoft.Euonia.Execution`（`ExecutionContextValues` / `AmbientExecutionContext` / accessor / scope factory），Tenant / User / Correlation 只维护一份来源；后进先出恢复，乱序释放不覆盖。
+- **多租户**：租户作用域（普通 / 隔离 / 跨租户）、解析链（Claim / Host / Route / Header / Message）、配置与缓存存储、写入守卫；EF 影子属性 `tenant_id` + 命名过滤器 `Tenant`、DatabasePerTenant 连接路由、SharedSchema 模型缓存键、Mongo 过滤与写入打标、Quartz 作业租户作用域、缓存键前缀与 `RemoveByPrefixAsync`。
+- **审计**：`IAuditingRecorder` 作用域/动作模型、Castle 拦截器（`[Audited]`，Order -1000）、HTTP 中间件、Bus 参与者、参数脱敏、内存/EF/Mongo 存储、查询与按时间保留、文件 durable spool。
+- **遥测**：`TelemetrySource` / `TelemetryActivity`、标签脱敏与上下文补充、W3C 传播、Bus 消费 Span、HTTP 标签补充、OpenTelemetry 显式源目录与 Resource 接入。
+- **消息**：`MessageContext.Transport`、`IMessageExecutionScopeParticipant`、`MessageExecutionResult`（Skip / DeadLetter）、租户与审计参与者；发布侧把租户 / 用户 / `traceparent` 写入信封元数据。
+- **破坏性变更**：
+  - `SensitiveDataAttribute` / `SensitiveDataMasker` 从 `Nerosoft.Euonia.Application` 迁至 `Euonia.Core/Security`（命名空间 `Nerosoft.Euonia.Security`）。
+  - 软删除查询过滤器改为命名过滤器 `Tombstone`（EF 不允许匿名与命名混用）；`IgnoreQueryFilters()` 仍忽略全部过滤器。
+  - `IMessageContext` 新增 `Transport` 成员；自定义实现需补齐。
+  - `IMessageExecutionScopeParticipant` 采用“异步决议 + 同步安装”模型：`EnterAsync` 只计算，返回 `Install` 委托由执行作用域同步调用。
+  - 应用服务代理新增 `IOrderedInterceptor`；`AuditingInterceptor` 固定最外层。
+- **测试**：Core 103、Repository 14、Application 196、Bus 157、Bus.InMemory 33、Caching.Default 5。
+
+### Euonia.Endpoint
+
+- **新能力族**：新增 `Euonia.Endpoint`、`Euonia.Endpoint.Http`、`Euonia.Endpoint.Grpc`、`Euonia.Endpoint.SourceGenerator`。
+- **契约特性**：`ExposeWebApiAttribute`（`Prefix` / `Route` / `Method` 字符串数组）与 `ExposeGrpcAttribute`（`Prefix` / `Route` / `GrpcMethod`）。
+- **HTTP**：运行时扫描 + Source Generator 生成强类型 Minimal API 映射；支持开关 `Euonia:Endpoint:Http:EnableExposeApplicationServiceAsWebApi`。
+- **gRPC**：基于 `protobuf-net.Grpc` 的代码优先服务，Source Generator 生成 `[Service]` 契约与适配器，支持 unary/server/client/duplex streaming；开关 `Euonia:Endpoint:Grpc:EnableExposeApplicationServiceAsGrpc`。
+- **proto 导出**：`EndpointProtoExporter` 使用 `protobuf-net.Grpc.Reflection` 生成 `.proto`；当前类型映射沿用 protobuf-net 内建 BCL schema。
+- **测试**：新增 `Euonia.Endpoint.Http.Tests` 与 `Euonia.Endpoint.Grpc.Tests`。
+- **路由冲突**：区分“生成路径已映射”和“运行时方法间冲突”；后者按 `ThrowOnRouteConflict` 抛异常或记警告。
+- **参数绑定**：空 body 的必填引用类型返回 400；绑定异常区分 400/500，Problem `detail` 不再外泄原始异常消息。
+- **Generator 对齐**：跳过 `HttpContext` / `IFormFile` / `IAsyncEnumerable` 等运行时拒绝或特殊处理的签名；按参数类型精确匹配重载；`GrpcMethod` 与流式签名不一致时报诊断并跳过。
+- **安全默认值**：HTTP 与 gRPC 的 `RequireAuthorization` 均默认 `true`。
+- **gRPC 注册**：生成适配器仅在开关开启时注册；重复 `Prefix + Route` 自动跳过。
+- **扫描范围**：HTTP 与 gRPC 均支持 `ScanAssemblies` / `ScanEntryAssembly`（HTTP 另支持 `ScanNamespaces` / `ScanTypes`）；未配置时只扫描入口程序集，不再回退到所有模块程序集。
+- **认证特性继承**：HTTP 端点元数据会合并接口方法、实现类、实现方法上的 `[Authorize]` / `[AllowAnonymous]`。
+- **生成路径 body 语义**：生成端点的空 body、JSON `null`、非法 JSON 与非 JSON Content-Type 统一返回 400，与运行时兜底一致。
+- **扫描范围一致性**：`ScanNamespaces` / `ScanTypes` 同时作用于生成路径和运行时兜底；命名空间匹配按段边界判断。
+- **gRPC 启动校验**：生成契约对应的应用服务未注册时默认在 `MapDynamicGrpcEndpoint` 抛出；新增 `ThrowOnUnregisteredService`。
+- **gRPC 认证元数据**：实现类上的 `[Authorize]` / `[AllowAnonymous]` 会合并到 gRPC 服务端点元数据。
+- **路由与类型细节**：运行时兜底支持部分动词预留（如同一路由生成 PUT、运行时补 PATCH）；`TimestampValue` 修正 1970 年之前的时间小数秒；生成参数名对 C# 关键字安全转义。
+- **SourceGenerator 工具链**：Roslyn 包升级到 5.9.0；项目目标 `netstandard2.0;net10.0`，NuGet 包只携带 `netstandard2.0` analyzer。
+- **注册/映射方法命名**：`AddEndpointWebApi` → `AddDynamicHttpEndpoint`、`MapEndpointWebApi` → `MapDynamicHttpEndpoint`、`AddEndpointGrpc` → `AddDynamicGrpcEndpoint`、`MapEndpointGrpc` → `MapDynamicGrpcEndpoint`。
+- **多实现授权**：HTTP/gRPC 仅在接口只有一个实现时合并实现类/方法认证特性；多实现时只用接口元数据，避免任一实现 `[AllowAnonymous]` 误放开端点。
+- **gRPC 插件**：明确 gRPC 仅支持编译期生成；未生成映射但包含 `[ExposeGrpc]` 的程序集在映射时记录 Warning。
+- **生成器对齐**：gRPC 跳过带默认值参数的方法；HTTP 拒绝 ref struct 参数；简单集合生成 `[FromQuery]`；运行时支持 `IReadOnlySet<T>`；`nint`/`nuint` 按简单类型处理；生成参数名规避 `__` 保留前缀。
+- **错误响应**：生成路径 body 绑定失败返回与运行时一致的 ProblemDetails；gRPC 未注册服务在跳过时记录 Warning；gRPC 程序集解析失败记录 Warning。
+- **可选集合**：缺失的可选 query 集合参数返回空集合而不是 `null`。
+- **gRPC 方法级授权**：新增 `GrpcMethodAuthorizationInterceptor`，按生成的方法描述符读取接口/实现方法上的 `[Authorize]` / `[AllowAnonymous]` 并执行策略校验。
+- **增量与兜底性能**：生成器只缓存运行时引用布尔值，避免 `CompilationProvider` 每次编辑触发全量重算；运行时集合绑定在 descriptor 构建阶段缓存工厂。
+- **数值与调用**：`DurationValue` 负小数改为 floor + 正 `Nanos`；反射调用生成映射时解包 `TargetInvocationException`；删除 HTTP 生成器死变量。
+
+### Euonia.Modularity
+
+- **模块依赖图**：加载阶段新增循环依赖、模块依赖自身与非法模块类型校验，错误信息包含具体模块；模块描述符的依赖快照改为不可变列表，并按类型字典查找依赖（O(1)）。
+- **应用程序生命周期**：`Initialize` / `Shutdown` / `Dispose` 幂等且线程安全；新增 `IsInitialized` / `IsShutdown`；初始化后拒绝更换服务提供程序，关闭后拒绝再次初始化。
+- **模块生命周期**：生命周期参与者改为在当前初始化/关闭作用域中解析，支持作用域依赖；重复初始化与卸载自动忽略；`ModuleManager` 暴露 `IsInitialized`。
+- **异步生命周期**：`IModuleContext`、`IModuleLifecycle`、`IModuleManager`、`IApplicationWithServiceProvider`、`IModularityApplication` 均新增异步方法；异步方法未重写时回退到同步方法，二者都重写时异步路径只执行异步版本。
+- **异步应用创建**：新增 `ApplicationFactory.CreateAsync(...)`、`ApplicationWithServiceProvider.InitializeAsync(...)`、`ShutdownAsync(...)` 与 `DisposeAsync()`，支持在模块服务配置和初始化阶段使用 `await`。
+- **插件式模块**：新增 `IModuleSource` / `DelegateModuleSource` / `FileModuleSource` / `FolderModuleSource` 与 `ApplicationCreationOptions.ModuleSources`、`AddModuleFolder`、`AddModuleFiles`，用于加载启动模块依赖图之外的额外模块；排序时若存在模块依赖启动模块，不再强制把启动模块移动到末尾。
+- **自动注册**：同一程序集只扫描一次，避免多模块同程序集导致服务重复注册；支持一个类型声明多个 `ExportService` 特性（修复原先的 `AmbiguousMatchException`）；新增 `[DisableAutomaticRegistration]`、`IncludeSelf`、`AddAssemblyOf(Type)` / `AddTypes(...)`；`OnExposing` 与 `Registry` 回调现在真正参与注册流程。
+- **命名服务**：命名注册表由全局静态字典改为每个 `IServiceCollection` 独立存储，修复多容器之间名称冲突与泄漏；新增按名称取默认值重载。
+- **延迟服务提供程序**：修复键控默认值重载完全忽略已注册服务的问题；默认值结果同样按标识缓存；补充参数校验与线程安全说明。
+- **配置**：显式传入的 `IConfiguration` 不再被忽略；环境名未指定时回退读取 `DOTNET_ENVIRONMENT` / `ASPNETCORE_ENVIRONMENT`；新增 `ReloadOnChange`，构建过程不再修改传入选项；`GetConfiguration` 不再因配置不是根配置而返回 `null`。
+- **模块查找**：新增 `FindModule` / `GetModule` / `TryGetModule` / `IsModuleLoaded` 扩展方法。
+- **代理注册**：合并重复的 `AddProxied*` 实现，新增按 `ServiceLifetime` 注册的 `AddProxied(...)`；注册时校验服务类型必须为接口且实现类型可赋值。
+- **测试**：新增 `Euonia.Modularity.Tests`，覆盖模块排序/循环依赖、自动注册、多个导出特性、命名服务隔离、延迟解析、配置构建与应用生命周期幂等性。
+- **API 变更**：`ExportServiceAttribute.ServiceTypes` 改为只读列表；`IServiceRegistrationContext` 增加 `Services` / `Lifetime` / `ExposedTypes`；`IModularityApplication` 与 `IModuleManager` 增加状态属性；移除始终被注释的 `DependencyAttribute.cs` 与未使用的 `ServiceRegistrationAction.IsClassInterceptorsDisabled`。
+
 ### Euonia.Quartz
 
 - **Quartz.NET 4.6.2**：迁移到 Quartz 4 API。配置入口由 `IServiceCollectionQuartzConfigurator` 改为 `IQuartzBuilder`；
   `QuartzOptions.Scheduling` 改为 `OverwriteExistingData`（原 `OverWriteExistingData`）；调度器设置移入 `QuartzSchedulerOptions`；
   `IJob` / `IJobFactory` / `IJobStore` / `IThreadPool` / `ITypeLoader` 等 SPI 类型移至 `Quartz.Extensibility`。
-- **目标框架**：Quartz 4 仅提供 `net10.0` 资产，`Euonia.Quartz` 相应只面向 `net10.0`；面向 `net9.0` 的应用请继续使用 `2026.4.6`。
+- **目标框架**：`Euonia.Quartz` 随全库升级为 `net10.0` / `net11.0`，不再限制为单一目标框架。
 - **依赖**：移除已合并进 `Quartz` 包的 `Quartz.Extensions.DependencyInjection` 与 `Quartz.Extensions.Hosting`。
 - **行为对齐**：`SchedulerId = "AUTO" / "SYS_PROP"` 映射为 `GenerateInstanceId`；两个 `InterruptJobsOnShutdown*` 标志合并为
   `ShutdownJobInterruption`；`MisfireThreshold` 通过 `quartz.jobStore.misfireThreshold` 同时作用于内存与持久化存储；
@@ -24,6 +104,9 @@
 
 ### Euonia.Osba
 
+- **规则基类拆分**：新增 `ObjectRuleBase` / `PropertyRuleBase` 与 `IObjectRule` / `IPropertyRule` 契约。
+  `IRuleBase` 不再暴露 `Property`；对象级规则继承 `ObjectRuleBase`（无 `Property`），属性级规则继承
+  `PropertyRuleBase`（`Property` 保证非空）。`RuleManager` 按 `IPropertyRule` 分类属性规则，其余规则归为对象级。
 - **易用性：属性注册推断类型**：新增 `RegisterProperty(Expression<Func<T, TValue>>, ...)` 重载，
   可直接写 `RegisterProperty(p => p.Name)`，无需显式泛型参数，值类型也不再装箱。
 - **易用性：读取执行器**：新增 `FetchActuator<T>` 与 `IActuator.For<T>().Fetch(...)`；

@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Http;
 namespace Microsoft.AspNetCore.Authorization;
 
 /// <summary>
-/// The jwt token validation class.
+/// JWT 令牌验证类。
 /// </summary>
 public class TokenValidation
 {
     /// <summary>
-    /// Provides a forwarding func for JWT vs reference tokens (based on existence of dot in token)
+    /// 提供用于在 JWT 与引用令牌之间转发的函数（依据令牌中是否包含点）。
     /// </summary>
-    /// <param name="introspectionScheme">Scheme name of the introspection handler</param>
-    /// <returns></returns>
-    public static Func<HttpContext, string> ForwardReferenceToken(string introspectionScheme = "introspection")
+    /// <param name="introspectionScheme">内省处理程序的方案名称。</param>
+    /// <returns>选择认证方案的委托：引用令牌返回 <paramref name="introspectionScheme"/>，JWT 或其他情况返回 <see langword="null"/>。</returns>
+    public static Func<HttpContext, string?> ForwardReferenceToken(string introspectionScheme = "introspection")
     {
-        string Select(HttpContext context)
+        string? Select(HttpContext context)
         {
             var (scheme, credential) = GetSchemeAndCredential(context);
             if (scheme.Equals("Bearer", StringComparison.OrdinalIgnoreCase) && !credential.Contains('.'))
@@ -29,10 +29,10 @@ public class TokenValidation
     }
 
     /// <summary>
-    /// Extracts scheme and credential from Authorization header (if present)
+    /// 从 Authorization 头中提取方案与凭据（如果存在）。
     /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
+    /// <param name="context">当前 HTTP 请求上下文。</param>
+    /// <returns>解析出的方案与凭据；请求头缺失或格式非法时返回 <see cref="SchemeCredential.Empty"/>。</returns>
     public static SchemeCredential GetSchemeAndCredential(HttpContext context)
     {
         var header = context.Request.Headers.Authorization.FirstOrDefault();

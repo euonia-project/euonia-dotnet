@@ -67,6 +67,9 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	/// </summary>
 	protected CacheItem()
 	{
+		Key = null!;
+		Value = default!;
+		ValueType = null!;
 	}
 
 	/// <summary>
@@ -79,9 +82,9 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	{
 		Check.EnsureNotNull(info, nameof(info));
 
-		Key = info.GetString(nameof(Key));
-		Value = (T)info.GetValue(nameof(Value), typeof(T));
-		ValueType = (Type)info.GetValue(nameof(ValueType), typeof(Type));
+		Key = info.GetString(nameof(Key))!;
+		Value = (T)info.GetValue(nameof(Value), typeof(T))!;
+		ValueType = (Type)info.GetValue(nameof(ValueType), typeof(Type))!;
 		Region = info.GetString(nameof(Region));
 		ExpirationMode = (CacheExpirationMode)info.GetValue(nameof(ExpirationMode), typeof(CacheExpirationMode))!;
 		ExpirationTimeout = (TimeSpan)info.GetValue(nameof(ExpirationTimeout), typeof(TimeSpan))!;
@@ -90,7 +93,7 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 		UsesExpirationDefaults = info.GetBoolean(nameof(UsesExpirationDefaults));
 	}
 
-	private CacheItem(string key, string region, T value, CacheExpirationMode? expiration, TimeSpan? timeout, DateTime? created, DateTime? lastAccessed = null, bool expirationDefaults = true)
+	private CacheItem(string key, string? region, T value, CacheExpirationMode? expiration, TimeSpan? timeout, DateTime? created, DateTime? lastAccessed = null, bool expirationDefaults = true)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 		Check.EnsureNotNull(value, nameof(value));
@@ -98,7 +101,7 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 		Key = key;
 		Region = region;
 		Value = value;
-		ValueType = value.GetType();
+		ValueType = value!.GetType();
 		ExpirationMode = expiration ?? CacheExpirationMode.Default;
 		ExpirationTimeout = ExpirationMode is CacheExpirationMode.None or CacheExpirationMode.Default ? TimeSpan.Zero : timeout ?? TimeSpan.Zero;
 		UsesExpirationDefaults = expirationDefaults;
@@ -187,7 +190,7 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 	/// 获取缓存区域。
 	/// </summary>
 	/// <value>缓存区域。</value>
-	public string Region { get; }
+	public string? Region { get; }
 
 	/// <summary>
 	/// 获取缓存值。
@@ -240,6 +243,13 @@ public class CacheItem<T> : ISerializable, ICacheItemProperties
 			: $"'{Key}', exp:{ExpirationMode} {ExpirationTimeout}, lastAccess:{LastAccessedUtc}";
 	}
 
+	/// <summary>
+	/// 创建带指定过期模式与超时的当前缓存项副本，供缓存句柄在写入前应用过期设置。
+	/// </summary>
+	/// <param name="mode">过期模式。</param>
+	/// <param name="timeout">过期时间。</param>
+	/// <param name="usesHandleDefault">是否表示该过期设置来自缓存句柄的默认值。</param>
+	/// <returns>缓存项的新实例；绝对过期模式会同时把创建时间重置为当前 UTC 时间。</returns>
 	internal CacheItem<T> WithExpiration(CacheExpirationMode mode, TimeSpan timeout, bool usesHandleDefault = true) =>
 		new(Key, Region, Value, mode, timeout, mode == CacheExpirationMode.Absolute ? DateTime.UtcNow : CreatedUtc, LastAccessedUtc, usesHandleDefault);
 

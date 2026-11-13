@@ -51,7 +51,7 @@ public static class IdentityServerAuthenticationExtensions
     /// <param name="authenticationScheme">认证方案名称。</param>
     /// <param name="configureOptions">用于配置 <see cref="IdentityServerAuthenticationOptions"/> 的委托。</param>
     /// <returns>配置后的 <see cref="AuthenticationBuilder"/> 实例。</returns>
-    public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, string authenticationScheme, Action<IdentityServerAuthenticationOptions> configureOptions)
+    public static AuthenticationBuilder AddIdentityServerAuthentication(this AuthenticationBuilder builder, string authenticationScheme, Action<IdentityServerAuthenticationOptions>? configureOptions)
     {
         builder.AddJwtBearer(authenticationScheme + IdentityServerAuthenticationDefaults.JwtAuthenticationScheme, configureOptions: null!);
         builder.AddOAuth2Introspection(authenticationScheme + IdentityServerAuthenticationDefaults.IntrospectionAuthenticationScheme, configureOptions: null);

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <Import Project="..\common.props" />
+    <PropertyGroup>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <NoWarn>$(NoWarn);NU1510</NoWarn>
+    </PropertyGroup>
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+    <ItemGroup>
+        <ProjectReference Include="..\..\Source\Euonia.Endpoint\Euonia.Endpoint.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Endpoint.Grpc\Euonia.Endpoint.Grpc.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Endpoint.SourceGenerator\Euonia.Endpoint.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+</Project>

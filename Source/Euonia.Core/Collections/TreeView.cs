@@ -10,7 +10,7 @@ public class TreeView<TEntity>
     /// 获取或设置实体。
     /// </summary>
     /// <value>实体。</value>
-    public virtual TEntity Entity { get; set; }
+    public virtual TEntity Entity { get; set; } = default!;
 
     /// <summary>
     /// 获取或设置子节点集合。

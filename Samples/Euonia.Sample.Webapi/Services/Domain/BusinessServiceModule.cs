@@ -5,23 +5,22 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Sample.Domain;
 
 /// <summary>
-/// Registers business-layer services for the business module.
+/// 为业务模块注册业务层服务。
 /// </summary>
 /// <remarks>
-/// This module registers business objects and the permission system by scanning
-/// the assembly that contains the <c>BusinessServiceModule</c> type. It derives from
-/// <see cref="ModuleContextBase"/> and participates in the application's modular startup.
+/// 本模块通过扫描包含 <c>BusinessServiceModule</c> 类型的程序集来注册业务对象与权限系统。
+/// 它派生自 <see cref="ModuleContextBase"/>，并参与应用的模块化启动过程。
 /// </remarks>
 /// <seealso cref="ModuleContextBase"/>
 /// <seealso cref="ServiceConfigurationContext"/>
 public class BusinessServiceModule : ModuleContextBase
 {
 	/// <summary>
-	/// Configures services for the business module.
+	/// 为业务模块配置服务。
 	/// </summary>
 	/// <param name="context">
-	/// The <see cref="ServiceConfigurationContext"/> provided by the modular framework.
-	/// Contains the <see cref="IServiceCollection"/> to which services will be registered.
+	/// 模块化框架提供的 <see cref="ServiceConfigurationContext"/>。
+	/// 其中包含用于注册服务的 <see cref="IServiceCollection"/>。
 	/// </param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
@@ -42,6 +41,10 @@ public class BusinessServiceModule : ModuleContextBase
 		context.Services.AddScoped<Nerosoft.Euonia.Security.IScopeSubjectResolver, Nerosoft.Euonia.Sample.Domain.Permissions.ScopeSubjectResolver>();
 	}
 
+	/// <summary>
+	/// 应用初始化钩子：解析一次 <see cref="IScopeGuard"/>，使启动期校验立即执行并在缺漏时当场失败。
+	/// </summary>
+	/// <param name="context">应用初始化上下文，提供用于创建作用域的服务提供程序。</param>
 	public override void OnApplicationInitialization(ApplicationInitializationContext context)
 	{
 		// 解析一次守卫：启动期校验（解析器 / 判定主体 / 扫描范围）随首次解析自动执行，缺漏当场暴露

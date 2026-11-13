@@ -38,7 +38,7 @@ public sealed class PermissionOptions
 	/// <summary>
 	/// 方法入口规则构造器；未声明任何规则时为 <see langword="null"/>。
 	/// </summary>
-	private OperationCodeSourceBuilder _rules;
+	private OperationCodeSourceBuilder? _rules;
 
 	/// <summary>
 	/// 已登记的扫描程序集（按并集累积、幂等去重）。
@@ -53,7 +53,7 @@ public sealed class PermissionOptions
 	/// <summary>
 	/// 显式指定的权限码来源；未指定时为 <see langword="null"/>。
 	/// </summary>
-	private IPermissionCodeSource _source;
+	private IPermissionCodeSource? _source;
 
 	/// <summary>
 	/// 获取是否声明了「本应用没有任何权限模型与权限声明」。
@@ -68,7 +68,7 @@ public sealed class PermissionOptions
 	/// <summary>
 	/// 获取规则构造器；尚未声明任何规则时为 <see langword="null"/>。
 	/// </summary>
-	internal OperationCodeSourceBuilder Rules => _rules;
+	internal OperationCodeSourceBuilder? Rules => _rules;
 
 	/// <summary>
 	/// 登记要扫描权限模型与权限声明的程序集；可多次调用，程序集按并集累积。
@@ -159,7 +159,7 @@ public sealed class PermissionOptions
 	/// <summary>
 	/// 获取显式指定的权限码来源；未指定时为 <see langword="null"/>。
 	/// </summary>
-	internal IPermissionCodeSource ExplicitSource => _source;
+	internal IPermissionCodeSource? ExplicitSource => _source;
 
 	/// <summary>
 	/// 确保规则构造器已创建。

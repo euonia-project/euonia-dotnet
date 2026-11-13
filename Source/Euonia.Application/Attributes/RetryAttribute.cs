@@ -41,5 +41,5 @@ public sealed class RetryAttribute : Attribute
 	/// <remarks>
 	/// 匹配时遍历异常链（含 <see cref="Exception.InnerException"/>），异常链中任意节点可赋值给任一列出的类型即视为可重试。
 	/// </remarks>
-	public Type[] RetryableExceptions { get; set; }
+	public Type[]? RetryableExceptions { get; set; }
 }

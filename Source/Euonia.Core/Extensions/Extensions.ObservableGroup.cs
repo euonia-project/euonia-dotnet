@@ -2,6 +2,9 @@ using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using Nerosoft.Euonia.Collections;
 
+/// <summary>
+/// 提供 <see cref="ObservableGroupedCollection{TKey, TValue}"/> 分组查询与修改的扩展方法。
+/// </summary>
 public static partial class Extensions
 {
 	/// <summary>
@@ -35,7 +38,7 @@ public static partial class Extensions
 	/// <param name="key">要查询的分组键。</param>
 	/// <returns>匹配 <paramref name="key"/> 的第一个分组，如果未找到则为 null。</returns>
 	[Pure]
-	public static ObservableGroup<TKey, TValue> FirstOrDefault<TKey, TValue>(this ObservableGroupedCollection<TKey, TValue> source, TKey key)
+	public static ObservableGroup<TKey, TValue>? FirstOrDefault<TKey, TValue>(this ObservableGroupedCollection<TKey, TValue> source, TKey key)
 	{
 		if (source.TryGetList(out var list))
 		{
@@ -63,7 +66,7 @@ public static partial class Extensions
 	/// <returns>匹配 <paramref name="key"/> 的第一个分组，如果未找到则为 null。</returns>
 	[Pure]
 	[MethodImpl(MethodImplOptions.NoInlining)]
-	private static ObservableGroup<TKey, TValue> FirstOrDefaultWithLinq<TKey, TValue>(ObservableGroupedCollection<TKey, TValue> source, TKey key)
+	private static ObservableGroup<TKey, TValue>? FirstOrDefaultWithLinq<TKey, TValue>(ObservableGroupedCollection<TKey, TValue> source, TKey key)
 		=> source.FirstOrDefault(group => EqualityComparer<TKey>.Default.Equals(group.Key, key));
 
 	/// <summary>

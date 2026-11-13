@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Bus.Grpc;
 using Nerosoft.Euonia.Grpc;
+using Nerosoft.Euonia.Modularity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -24,11 +25,17 @@ public static class ServiceCollectionExtensions
 		/// <param name="name">传输器的名称，用作键控服务注册的键。</param>
 		/// <param name="configureOptions">用于配置 <see cref="GrpcBusOptions"/> 的可选委托。</param>
 		/// <returns>原始服务集合，以支持链式调用。</returns>
-		public IServiceCollection AddGrpcBus(string name = "grpc", Action<GrpcBusOptions> configureOptions = null)
+		public IServiceCollection AddGrpcBus(string name = "grpc", Action<GrpcBusOptions>? configureOptions = null)
 		{
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
+
+			// 自动绑定配置节 Euonia:Bus:Grpc，作为最低优先级的默认值；
+			// 显式 services.Configure<GrpcBusOptions> 与该方法的 configure 形参始终优先，与调用先后无关。
+			services.AddOptions<GrpcBusOptions>()
+			        .BindConfigurationIfAvailable(GrpcBusOptions.SectionName);
+
 			if (configureOptions != null)
 			{
 				services.Configure(configureOptions);
@@ -38,7 +45,7 @@ public static class ServiceCollectionExtensions
 
 			if (!services.Any(descriptor => descriptor.ServiceType == typeof(ITransporter) && descriptor.ServiceKey is string key && key == name))
 			{
-				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetService<GrpcTransporter>());
+				services.AddKeyedSingleton<ITransporter>(name, (provider, _) => provider.GetRequiredService<GrpcTransporter>());
 			}
 
 			return services;
@@ -54,6 +61,12 @@ public static class ServiceCollectionExtensions
 			services.AddOptions();
 			// 保证消息总线核心与内置键控序列化器可用（重复调用安全）。
 			services.AddEuoniaBus();
+
+			// 服务端同样需要配置节支持（例如 Euonia:Bus:Grpc:RequireAuthorization）。
+			// 绑定以 Insert(0) 注册为最低优先级，因此与 AddGrpcBus 共存时不会覆盖客户端或宿主的显式配置。
+			services.AddOptions<GrpcBusOptions>()
+			        .BindConfigurationIfAvailable(GrpcBusOptions.SectionName);
+
 			services.TryAddScoped<RemoteMessageService>();
 			return services;
 		}
@@ -61,17 +74,17 @@ public static class ServiceCollectionExtensions
 }
 
 /// <summary>
-/// The gRPC service collection extensions.
+/// gRPC 服务集合扩展。
 /// </summary>
 public static class GrpcServiceCollectionExtensions
 {
 	/// <summary>
-	/// Add gRPC service to specified <see cref="IServiceCollection"/>.
+	/// 将 gRPC 服务添加到指定的 <see cref="IServiceCollection"/>。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="configureOptions"></param>
-	/// <returns></returns>
-	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions> configureOptions = null)
+	/// <param name="services">要添加 gRPC 服务的服务集合。</param>
+	/// <param name="configureOptions">用于进一步配置 <see cref="GrpcServiceOptions"/> 的可选委托；为 <see langword="null"/> 时使用默认设置。</param>
+	/// <returns>原始服务集合，以支持链式调用。</returns>
+	public static IServiceCollection AddGrpcService(this IServiceCollection services, Action<GrpcServiceOptions>? configureOptions = null)
 	{
 		services.AddGrpc(options =>
 		{

@@ -37,7 +37,7 @@ public class RuleResult
     /// <summary>
     /// 获取规则失败原因的人类可读描述。
     /// </summary>
-    public string Description { get; private set; }
+    public string? Description { get; private set; }
 
     /// <summary>
     /// 获取或设置失败规则的严重级别。
@@ -52,5 +52,5 @@ public class RuleResult
     /// <summary>
     /// 获取或设置受规则影响的属性列表。
     /// </summary>
-    public IList<IPropertyInfo> Properties { get; set; }
+    public IList<IPropertyInfo>? Properties { get; set; }
 }

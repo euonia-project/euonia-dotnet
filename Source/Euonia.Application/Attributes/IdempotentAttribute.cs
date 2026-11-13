@@ -18,7 +18,7 @@ public sealed class IdempotentAttribute : Attribute
 	/// 支持占位符 {service}（服务类型全名）、{method}（方法名）与按序参数占位符（0、1...）。
 	/// 未设置且请求上下文不存在 <c>Idempotency-Key</c> 请求头时，默认以 <c>{service}.{method}:args</c> 为键。
 	/// </remarks>
-	public string Key { get; set; }
+	public string? Key { get; set; }
 
 	/// <summary>
 	/// 获取或设置幂等窗口秒数；窗口内相同键的重复调用去重，默认 60 秒。

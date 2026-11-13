@@ -4,6 +4,10 @@
 
     <ItemGroup>
         <ProjectReference Include="..\..\Source\Euonia.Application\Euonia.Application.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Auditing\Euonia.Auditing.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Auditing.EfCore\Euonia.Auditing.EfCore.csproj" />
+        <ProjectReference Include="..\..\Source\Euonia.Tenancy\Euonia.Tenancy.csproj" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
         <ProjectReference Include="..\..\Source\Euonia.Validation\Euonia.Validation.csproj" />
         <ProjectReference Include="..\..\Source\Euonia.Caching.Memory\Euonia.Caching.Memory.csproj" />
     </ItemGroup>

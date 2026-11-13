@@ -18,7 +18,7 @@ internal class RabbitMqTransporter : ITransporter
 	/// <summary>
 	/// 当消息成功投递到 RabbitMQ 时触发。
 	/// </summary>
-	public event EventHandler<MessageDeliveredEventArgs> Delivered;
+	public event EventHandler<MessageDeliveredEventArgs> Delivered = null!;
 
 	private readonly RabbitMqBusOptions _options;
 	private readonly IPersistentConnection _connection;
@@ -78,7 +78,7 @@ internal class RabbitMqTransporter : ITransporter
 			            await channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, cancellationToken: cancellationToken);
 			            await channel.BasicPublishAsync(exchangeName, $"{exchangeName}@{_options.RoutingKey}", _options.Mandatory, props, messageBody, cancellationToken: cancellationToken);
 
-			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+			            Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 		            });
 	}
 
@@ -143,7 +143,7 @@ internal class RabbitMqTransporter : ITransporter
 				var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 				await channel.BasicPublishAsync("", requestQueueName, _options.Mandatory, props, messageBody, cancellationToken);
 
-				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 			});
 
 			await retryPolicy.ExecuteAsync(() => channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken));
@@ -180,7 +180,7 @@ internal class RabbitMqTransporter : ITransporter
 				var response = _serializer.Deserialize<RabbitMqReply<object>>(Encoding.UTF8.GetString(body));
 				if (response.IsSuccess)
 				{
-					task.TrySetResult(default);
+					task.TrySetResult(default(TResponse)!);
 				}
 				else
 				{
@@ -254,7 +254,7 @@ internal class RabbitMqTransporter : ITransporter
 				var messageBody = await _serializer.SerializeAsync(message, cancellationToken);
 				await channel.BasicPublishAsync("", requestQueueName, _options.Mandatory, props, messageBody, cancellationToken);
 
-				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload, null));
+				Delivered?.Invoke(this, new MessageDeliveredEventArgs(message.Payload!, null!));
 			});
 
 			await retryPolicy.ExecuteAsync(() => channel.BasicConsumeAsync(responseQueueName, true, consumer, cancellationToken: cancellationToken));
@@ -299,7 +299,7 @@ internal class RabbitMqTransporter : ITransporter
 		}
 	}
 
-	private BasicProperties BuildProperties(IMessageEnvelope message, string replyTo = null)
+	private BasicProperties BuildProperties(IMessageEnvelope message, string? replyTo = null)
 	{
 		var props = new BasicProperties
 		{
@@ -315,7 +315,7 @@ internal class RabbitMqTransporter : ITransporter
 			// 未启用优先级（MaxPriority <= 0）时返回 null，表示不设置该属性。
 			Priority = RabbitMqDelivery.ResolvePriority(message.GetPriority(), _options.MaxPriority) ?? 0,
 		};
-		props.Headers ??= new Dictionary<string, object>();
+		props.Headers ??= new Dictionary<string, object?>();
 		props.Headers[MessageHeaders.ConversationId] = message.ConversationId;
 		props.Headers[MessageHeaders.RequestTraceId] = message.RequestTraceId;
 		props.Headers[MessageHeaders.Authorization] = message.Authorization;

@@ -2,7 +2,7 @@
     <Import Project="..\project.props" />
     
     <PropertyGroup>
-        <TargetFrameworks>net9.0;net10.0</TargetFrameworks>
+        <TargetFrameworks>net10.0;net11.0</TargetFrameworks>
         <RootNamespace>Nerosoft.$(MSBuildProjectName.Replace(" ", "_"))</RootNamespace>
         <Description>Euonia development framework and toolkit library for .NET application/service. Powered by Nerosoft.</Description>
         <PackageProjectUrl>https://github.com/euonia-project/euonia-dotnet/</PackageProjectUrl>
@@ -44,4 +44,10 @@
         <None Include="$(MSBuildThisFileDirectory)icon.png" Pack="true" PackagePath="\" Visible="false" />
     </ItemGroup>
     
+    <Target Name="PostClean" AfterTargets="Clean">
+        <!-- Remove /bin -->
+        <RemoveDir Directories="$(BaseOutputPath)" />
+        <!-- Remove /obj -->
+        <RemoveDir Directories="$(BaseIntermediateOutputPath)" />
+    </Target>
 </Project>

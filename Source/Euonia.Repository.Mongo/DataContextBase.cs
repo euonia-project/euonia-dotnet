@@ -5,19 +5,19 @@ using MongoDB.Driver;
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The <see cref="IRepositoryContext"/> abstract implementation for MongoDB.
+/// MongoDB 的 <see cref="IRepositoryContext"/> 抽象实现。
 /// </summary>
-/// <typeparam name="TContext"></typeparam>
+/// <typeparam name="TContext">MongoDB 数据上下文的类型。</typeparam>
 public abstract class DataContextBase<TContext> : MongoDbContext, IRepositoryContext
 	where TContext : MongoDbContext, IRepositoryContext
 {
 	private readonly ILogger<TContext> _logger;
 
 	/// <summary>
-	/// Initialize a new instance of <see cref="DataContextBase{TContext}"/> with database and logger.
+	/// 使用数据库和日志记录器初始化 <see cref="DataContextBase{TContext}"/> 的新实例。
 	/// </summary>
-	/// <param name="database"></param>
-	/// <param name="logger"></param>
+	/// <param name="database">要使用的 MongoDB 数据库。</param>
+	/// <param name="logger">用于创建数据上下文日志记录器的日志工厂。</param>
 	protected DataContextBase(IMongoDatabase database, ILoggerFactory logger)
 		: base(database)
 	{
@@ -40,12 +40,12 @@ public abstract class DataContextBase<TContext> : MongoDbContext, IRepositoryCon
 	}
 
 	/// <summary>
-	/// Gets a value indicating whether the publish events is enabled.
+	/// 获取一个值，指示是否启用事件发布。
 	/// </summary>
 	protected abstract bool EnabledPublishEvents { get; }
 
 	/// <summary>
-	/// Gets the session handle.
+	/// 获取会话句柄。
 	/// </summary>
 	protected IClientSessionHandle Session { get; }
 
@@ -59,7 +59,7 @@ public abstract class DataContextBase<TContext> : MongoDbContext, IRepositoryCon
 	public Guid Id { get; } = Guid.NewGuid();
 
 	/// <summary>
-	/// 
+	/// 获取数据提供程序名称。
 	/// </summary>
 	public virtual string Provider => "MongoDB";
 

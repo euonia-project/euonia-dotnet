@@ -96,7 +96,8 @@ internal static class MessageHandlerFinder
 				var channel = channelResolver?.Invoke(messageType);
 
 				channel ??= messageType.FullName;
-				@delegate(channel, messageType, new ChannelHandler(@interface, null, ImplementationType: handlerType));
+				// 接口处理器没有具体方法信息（由 IHandler<,>.HandleAsync 统一调度），此处传 null 是既定契约。
+				@delegate(channel!, messageType, new ChannelHandler(@interface, null!, ImplementationType: handlerType));
 			}
 		}
 
@@ -124,9 +125,10 @@ internal static class MessageHandlerFinder
 					throw new InvalidOperationException(string.Format(Resources.IDS_HANDLER_SECOND_THIRD_PARAMETER_ARE_CONTEXT_AND_CANCEL, handlerType.FullName, method.Name, parameterTypes));
 			}
 
-			var attribute = method.GetCustomAttribute<SubscribeAttribute>(false);
+			// 上面的查询已按 SubscribeAttribute 过滤，因此此处必定存在。
+			var attribute = method.GetCustomAttribute<SubscribeAttribute>(false)!;
 			var messageType = parameters[0].ParameterType;
-			string channel;
+			string? channel;
 			// 通道名可省略：消息类型不是基础类型时，按消息类型推导通道
 			// （与 IHandler<,> 及分发阶段使用同一个解析器），保证注册与分发落在同一个通道上。
 			if (string.IsNullOrWhiteSpace(attribute.Name))
@@ -144,7 +146,7 @@ internal static class MessageHandlerFinder
 				channel = attribute.Name;
 			}
 
-			@delegate(channel, messageType, new ChannelHandler(handlerType, method));
+			@delegate(channel!, messageType, new ChannelHandler(handlerType, method));
 		}
 	}
 
@@ -159,7 +161,7 @@ internal static class MessageHandlerFinder
 	/// 显式接口实现的方法名带有接口前缀，不能按简单名调用 <see cref="Type.GetMethod(string, Type[])"/> 查找，
 	/// 必须通过接口映射定位，否则合法的显式实现会被误判为缺少方法。
 	/// </returns>
-	private static MethodInfo GetImplementationMethod(Type handlerType, Type interfaceType, Type messageType)
+	private static MethodInfo? GetImplementationMethod(Type handlerType, Type interfaceType, Type messageType)
 	{
 		var interfaceMethod = interfaceType.GetMethod(nameof(IHandler<,>.HandleAsync), [messageType, typeof(IMessageContext), typeof(CancellationToken)]);
 		if (interfaceMethod == null)

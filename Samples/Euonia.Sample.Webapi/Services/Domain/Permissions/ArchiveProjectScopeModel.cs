@@ -29,7 +29,9 @@ public sealed class ArchiveProjectScopeModel : ScopeModel<ArchiveProjectCommand>
 		       .Classify("state", command => command.Project.IsArchived ? "archived" : "active");
 	}
 
-	/// <summary>默认策略：仅项目负责人可归档（未持有 archive 码时也按此收敛）。</summary>
+	/// <summary>
+	/// 默认策略：仅项目负责人可归档（未持有 archive 码时也按此收敛）。
+	/// </summary>
 	public override ScopePolicy<ArchiveProjectCommand> Policy
 		=> ScopePolicy<ArchiveProjectCommand>.Self();
 

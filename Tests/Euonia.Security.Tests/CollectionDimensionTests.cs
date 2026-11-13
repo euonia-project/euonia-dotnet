@@ -17,6 +17,9 @@ public class CollectionDimensionTests
 {
 	#region 编译形态：只产出可下推的那一种形状
 
+	/// <summary>
+	/// 集合维度编译为「存在任一元素属于授予集合」的 <c>Any</c> 加 <c>Contains</c> 形状，而不是先投影再判存在。
+	/// </summary>
 	[Fact]
 	public void MapMany_ShouldCompileTo_AnyOverContains_NotProjectedAny()
 	{
@@ -41,6 +44,9 @@ public class CollectionDimensionTests
 		Assert.DoesNotContain("Select", text);
 	}
 
+	/// <summary>
+	/// 子表属性过滤保留在子查询内部由数据库求值，投影被消除。
+	/// </summary>
 	[Fact]
 	public void MapMany_ShouldKeepChildFilter_InsideAny_AndDropProjection()
 	{
@@ -58,6 +64,9 @@ public class CollectionDimensionTests
 		Assert.DoesNotContain("Convert", text);
 	}
 
+	/// <summary>
+	/// 裸集合选择器（直接取字符串集合）同样可编译，并按集合内容允许或拒绝。
+	/// </summary>
 	[Fact]
 	public void MapMany_ShouldSupport_BareCollectionSelector()
 	{
@@ -74,6 +83,9 @@ public class CollectionDimensionTests
 
 	#region 单一真值来源：下推与内存求值必须一致
 
+	/// <summary>
+	/// 下推查询与内存求值对同一批数据给出相同结果，保证单一真值来源。
+	/// </summary>
 	[Fact]
 	public void MapMany_Pushdown_And_InMemoryEvaluation_ShouldAgree()
 	{
@@ -102,6 +114,9 @@ public class CollectionDimensionTests
 		}
 	}
 
+	/// <summary>
+	/// 子表属性过滤在内存判定与下推查询两条路径上都生效。
+	/// </summary>
 	[Fact]
 	public void MapMany_ChildAttributeFilter_ShouldApply_ToBothPaths()
 	{
@@ -124,6 +139,9 @@ public class CollectionDimensionTests
 
 	#region 允许 / 拒绝代数不受影响
 
+	/// <summary>
+	/// 未授予任何值时编译为恒假常量，不生成空 <c>IN</c> 或空 <c>EXISTS</c>。
+	/// </summary>
 	[Fact]
 	public void MapMany_EmptyGrant_ShouldProduceConstantFalse()
 	{
@@ -135,9 +153,12 @@ public class CollectionDimensionTests
 		// 未授予任何值：恒假常量——不生成空 IN ()，也不生成空 EXISTS
 		var body = Assert.IsAssignableFrom<ConstantExpression>(compiled.Allow.Body);
 
-		Assert.False((bool)body.Value);
+		Assert.False((bool)body.Value!);
 	}
 
+	/// <summary>
+	/// 拒绝条件编译为存在性判断并覆盖允许条件：命中子表关系的行被否决。
+	/// </summary>
 	[Fact]
 	public void MapMany_Deny_ShouldOverride_AndCompileToExistenceCondition()
 	{
@@ -159,6 +180,9 @@ public class CollectionDimensionTests
 		Assert.Same(rows[1], Assert.Single(pushed));
 	}
 
+	/// <summary>
+	/// <c>Any</c> 之下只有拒绝条件时保持 fail-closed：没有允许条件不等于放行。
+	/// </summary>
 	[Fact]
 	public void MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything()
 	{
@@ -177,6 +201,10 @@ public class CollectionDimensionTests
 
 	#region 单行判定的对象图要求
 
+	/// <summary>
+	/// 子集合未加载时判定抛 <see cref="InvalidOperationException"/>，消息包含维度名与修复指引；
+	/// 审计路径给出同样的明确错误，而在下推路径上构造查询不抛异常。
+	/// </summary>
 	[Fact]
 	public void MapMany_UnloadedCollection_ShouldFailLoudly_WithDimensionAndFix()
 	{
@@ -201,6 +229,9 @@ public class CollectionDimensionTests
 		Assert.NotNull(guard.Apply(new[] { unloaded }.AsQueryable()));
 	}
 
+	/// <summary>
+	/// 策略未引用集合维度时不要求子表已加载。
+	/// </summary>
 	[Fact]
 	public void MapMany_PolicyWithoutCollectionDimension_ShouldNotRequireLoadedMembers()
 	{
@@ -210,10 +241,13 @@ public class CollectionDimensionTests
 			ScopePolicy<Workspace>.Grant(ScopeDimensions.Owner),
 			(ScopeDimensions.Owner, "dev"));
 
-		Assert.True(ScopeFilter.Allows(new Workspace { OwnerId = "dev", Members = null }, compiled));
-		Assert.False(ScopeFilter.Allows(new Workspace { OwnerId = "other", Members = null }, compiled));
+		Assert.True(ScopeFilter.Allows(new Workspace { OwnerId = "dev", Members = null! }, compiled));
+		Assert.False(ScopeFilter.Allows(new Workspace { OwnerId = "other", Members = null! }, compiled));
 	}
 
+	/// <summary>
+	/// 集合被初始化为空时无法与「未加载」区分，按拒绝处理（已知边界）。
+	/// </summary>
 	[Fact]
 	public void MapMany_CollectionInitializedToEmpty_ShouldBeDeniedSilently()
 	{
@@ -230,6 +264,9 @@ public class CollectionDimensionTests
 
 	#region 声明期与注册期校验
 
+	/// <summary>
+	/// 同一维度不能既用 <c>Map</c> 又用 <c>MapMany</c>，两种声明顺序都应在构建期抛错。
+	/// </summary>
 	[Fact]
 	public void MapMany_And_Map_ShouldReject_SameDimension()
 	{
@@ -242,6 +279,9 @@ public class CollectionDimensionTests
 			.Map(ScopeDimensions.Member, x => x.Id));
 	}
 
+	/// <summary>
+	/// 未映射的维度即便没有任何授予也会报错。
+	/// </summary>
 	[Fact]
 	public void MapMany_UnmappedDimension_ShouldFail_EvenWithoutGrants()
 	{
@@ -254,6 +294,9 @@ public class CollectionDimensionTests
 		Assert.Contains("unmapped dimension", exception.Message, StringComparison.OrdinalIgnoreCase);
 	}
 
+	/// <summary>
+	/// 不受支持的集合取值形状在注册期被拒绝，而不是等到查询翻译时失败。
+	/// </summary>
 	[Fact]
 	public void MapMany_UnsupportedShape_ShouldFail_AtRegistration()
 	{
@@ -266,6 +309,9 @@ public class CollectionDimensionTests
 		Assert.Contains("tags", exception.Message);
 	}
 
+	/// <summary>
+	/// 只用集合维度的模型能通过注册期校验，不会误报「结构性恒不放行」。
+	/// </summary>
 	[Fact]
 	public void MapMany_ModelWithOnlyCollectionDimensions_ShouldPassRegistryValidation()
 	{
@@ -278,6 +324,9 @@ public class CollectionDimensionTests
 		Assert.True(registry.IsDeclared(typeof(Channel)));
 	}
 
+	/// <summary>
+	/// 审计输出以 <c>member[]</c> 标记集合维度叶子。
+	/// </summary>
 	[Fact]
 	public void MapMany_Explain_ShouldMarkCollectionLeaf()
 	{

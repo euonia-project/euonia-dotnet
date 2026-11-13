@@ -1,5 +1,7 @@
-﻿using System.Globalization;
+using System.Globalization;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Nerosoft.Euonia.Quartz;
+using Quartz.Extensibility;
 using Quartz;
 
 // ReSharper disable UnusedMember.Global
@@ -8,55 +10,77 @@ using Quartz;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Extension methods for setting up Quartz services in an <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+/// 用于在 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" /> 中设置 Quartz 服务的扩展方法。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	/// Adds Quartz services to the specified <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+	/// 将 Quartz 服务添加到指定的 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="options"></param>
-	/// <param name="configure"></param>
-	/// <returns></returns>
+	/// <param name="services">要添加 Quartz 服务的服务集合。</param>
+	/// <param name="options">用于配置 <see cref="QuartzOptions"/> 的委托，会注册到服务集合。</param>
+	/// <param name="configure">直接用于配置 <see cref="IQuartzBuilder"/> 的委托。</param>
+	/// <returns>同一个 <paramref name="services"/> 实例，以便链式调用。</returns>
+	/// <remarks>
+	/// 该重载直接使用 <paramref name="configure"/> 配置构建器；托管服务相关选项取自
+	/// <see cref="Singleton{T}"/> 中共享的 <see cref="BackgroundBuildOptions"/> 实例，
+	/// 不会应用该实例上的作业、扁平属性与构建器配置集合。
+	/// </remarks>
 	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<QuartzOptions> options, Action<IQuartzBuilder> configure)
 	{
 		var buildOptions = Singleton<BackgroundBuildOptions>.Get(() => new BackgroundBuildOptions());
 
 		services.Configure(options);
 		services.AddQuartz(configure);
+		// 作业工厂：从容器解析作业，并把作业数据里的 tenantId 转换为租户作用域。
+		// 注册在 AddQuartz 之后：Quartz 自身也会注册作业工厂，后注册者生效。
+		services.TryAddSingleton<DefaultJobFactory>();
+		services.AddSingleton<IJobFactory>(provider => provider.GetRequiredService<DefaultJobFactory>());
+
 		services.AddQuartzHostedService(ConfigureHostedService(buildOptions));
 		return services;
 	}
 
 	/// <summary>
-	/// Adds Quartz services to the specified <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />.
+	/// 将 Quartz 服务添加到指定的 <see cref="T:Microsoft.Extensions.DependencyInjection.IServiceCollection" />。
 	/// </summary>
-	/// <param name="services"></param>
-	/// <param name="optionsAction"></param>
-	/// <returns></returns>
-	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<BackgroundBuildOptions> optionsAction = null)
+	/// <param name="services">要添加 Quartz 服务的服务集合。</param>
+	/// <param name="optionsAction">用于配置共享 <see cref="BackgroundBuildOptions"/> 的委托；为 <see langword="null"/> 时使用默认选项。</param>
+	/// <returns>同一个 <paramref name="services"/> 实例，以便链式调用。</returns>
+	/// <remarks>
+	/// <para>注册时会依次应用扁平属性、调度器选项、构建器配置操作与已注册的作业，并添加 Quartz 托管服务。</para>
+	/// <para><see cref="BackgroundBuildOptions.MisfireThreshold"/> 会被转换为 <c>quartz.jobStore.misfireThreshold</c> 属性，以便对之后配置的任意作业存储生效。</para>
+	/// </remarks>
+	public static IServiceCollection AddQuartz(this IServiceCollection services, Action<BackgroundBuildOptions>? optionsAction = null)
 	{
 		var buildOptions = Singleton<BackgroundBuildOptions>.Get(() => new BackgroundBuildOptions());
 		optionsAction?.Invoke(buildOptions);
 
-		// Quartz 4 folds the misfire threshold into the job store options, and the flat property is
-		// bridged before the builder callback runs; feeding it as a property keeps it applying to
-		// whichever store (in-memory or persistent) the user configures later.
-		var properties = new Dictionary<string, string>(buildOptions.Properties, StringComparer.OrdinalIgnoreCase);
+		// Quartz 4 将失火阈值合并到作业存储选项中，而扁平属性会在构建器回调运行
+		// 之前被桥接；将其作为属性提供，可确保它对用户稍后配置的任意存储
+		//（内存或持久化）都仍然生效。
+		var properties = new Dictionary<string, string?>(buildOptions.Properties, StringComparer.OrdinalIgnoreCase);
 		if (buildOptions.MisfireThreshold.HasValue && !properties.ContainsKey("quartz.jobStore.misfireThreshold"))
 		{
 			properties["quartz.jobStore.misfireThreshold"] = ((long)buildOptions.MisfireThreshold.Value.TotalMilliseconds)
 				.ToString(CultureInfo.InvariantCulture);
 		}
 
+		services.TryAddSingleton<DefaultJobFactory>();
+
 		services.AddQuartz(properties, quartz =>
 		{
+			// 作业执行 Span 与耗时指标；无监听者时不产生开销。
+			quartz.AddJobMiddleware(new QuartzTelemetryMiddleware());
+
+			// 作业工厂：从容器解析作业并安装租户作用域。
+			quartz.UseJobFactory<DefaultJobFactory>();
+
 			quartz.ConfigureOptions<QuartzOptions>(options =>
 			{
-				// Quartz 4 refuses both flags being stated at once. Overwrite wins when it is on;
-				// otherwise IgnoreDuplicates (when on) turns overwriting off, and only when both are
-				// off does a duplicate key become an error.
+				// Quartz 4 拒绝同时声明这两个标志。覆盖开启时优先；
+				// 否则 IgnoreDuplicates（开启时）会关闭覆盖，并且只有两者都
+				// 关闭时，重复键才会成为错误。
 				if (buildOptions.OverWriteExistingData)
 				{
 					options.Scheduling.OverwriteExistingData = true;
@@ -82,7 +106,15 @@ public static class ServiceCollectionExtensions
 			{
 				quartz.AddJob(type, config);
 			}
+
+			// 最后设置作业工厂，避免后续配置覆盖。
+			quartz.UseJobFactory<DefaultJobFactory>();
 		});
+		// 作业工厂：从容器解析作业，并把作业数据里的 tenantId 转换为租户作用域。
+		// 注册在 AddQuartz 之后：Quartz 自身也会注册作业工厂，后注册者生效。
+		services.TryAddSingleton<DefaultJobFactory>();
+		services.AddSingleton<IJobFactory>(provider => provider.GetRequiredService<DefaultJobFactory>());
+
 		services.AddQuartzHostedService(ConfigureHostedService(buildOptions));
 		return services;
 	}
@@ -105,8 +137,8 @@ public static class ServiceCollectionExtensions
 	{
 		if (!string.IsNullOrWhiteSpace(buildOptions.SchedulerId))
 		{
-			// Quartz 3 treated AUTO/SYS_PROP as "generate the id at startup"; Quartz 4 moves that to
-			// a separate switch instead of accepting the sentinel as the id itself.
+			// Quartz 3 将 AUTO/SYS_PROP 视为“在启动时生成 id”；Quartz 4 将其改为
+			// 一个独立的开关，而不再接受该哨兵值本身作为 id。
 			if (buildOptions.SchedulerId is "AUTO" or "SYS_PROP")
 			{
 				scheduler.GenerateInstanceId = true;
@@ -127,8 +159,8 @@ public static class ServiceCollectionExtensions
 			scheduler.MaxBatchSize = buildOptions.MaxBatchSize.Value;
 		}
 
-		// Quartz 3 exposed two independent flags; Quartz 4 answers the same four-way question with one
-		// enum. Only override the default when the caller actually expressed one of the flags.
+		// Quartz 3 暴露了两个独立的标志；Quartz 4 用一个枚举来回答同样的四选一问题。
+		// 仅当调用方确实表达了其中一个标志时才覆盖默认值。
 		if (buildOptions.InterruptJobsOnShutdown.HasValue || buildOptions.InterruptJobsOnShutdownWithWait.HasValue)
 		{
 			var interrupt = buildOptions.InterruptJobsOnShutdown ?? false;

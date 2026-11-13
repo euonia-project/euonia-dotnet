@@ -16,7 +16,7 @@ public abstract class ExtendableOptions
 	/// <summary>
 	/// 获取或设置指定的消息通道。
 	/// </summary>
-	public virtual string Channel { get; set; }
+	public virtual string? Channel { get; set; }
 
 	/// <summary>
 	/// 获取或设置目标队列名称，覆盖传输器依据通道推导出的默认队列。
@@ -35,7 +35,7 @@ public abstract class ExtendableOptions
 	/// </para>
 	/// </remarks>
 	/// <value>目标队列名称；为 <c>null</c> 或空白时使用传输器推导的默认队列。</value>
-	public virtual string Queue { get; set; }
+	public virtual string? Queue { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息优先级。
@@ -58,7 +58,7 @@ public abstract class ExtendableOptions
 	/// <summary>
 	/// 获取或设置请求追踪标识符。
 	/// </summary>
-	public virtual string RequestTraceId { get; set; }
+	public virtual string? RequestTraceId { get; set; }
 
 	/// <summary>
 	/// 获取或设置消息处理的延迟时间（毫秒）。
@@ -78,7 +78,7 @@ public abstract class ExtendableOptions
 	/// <summary>
 	/// 获取或设置用于自定义消息元数据的委托。
 	/// </summary>
-	public virtual Action<MessageMetadata> MetadataSetter { get; set; }
+	public virtual Action<MessageMetadata>? MetadataSetter { get; set; }
 
 	/// <summary>
 	/// 获取或设置是否为当前消息启用发件箱（Outbox）记录。

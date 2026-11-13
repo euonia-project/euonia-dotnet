@@ -5,9 +5,15 @@ namespace Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 /// </summary>
 public sealed class UnmappedDimensionAsset
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	/// <summary>
+	/// 负责人用户标识，也是该资源唯一被映射的维度。
+	/// </summary>
+	public string OwnerId { get; set; } = null!;
 }
 
 /// <summary>
@@ -31,9 +37,15 @@ public sealed class UnmappedDimensionModel : ScopeModel<UnmappedDimensionAsset>
 /// </summary>
 public sealed class AlwaysDenyAsset
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	/// <summary>
+	/// 负责人用户标识，模型映射的就是这一列。
+	/// </summary>
+	public string OwnerId { get; set; } = null!;
 }
 
 /// <summary>
@@ -58,11 +70,20 @@ public sealed class AlwaysDenyModel : ScopeModel<AlwaysDenyAsset>
 /// </summary>
 public sealed class UnsupportedCollectionAsset
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string[] Tags { get; set; }
+	/// <summary>
+	/// 标签数组，其「数组拼接」的取值形状不受集合维度支持。
+	/// </summary>
+	public string[] Tags { get; set; } = null!;
 
-	public string[] OtherTags { get; set; }
+	/// <summary>
+	/// 另一组标签，与 <see cref="Tags"/> 拼接后构成不受支持的形状。
+	/// </summary>
+	public string[] OtherTags { get; set; } = null!;
 }
 
 /// <summary>
@@ -87,11 +108,20 @@ public sealed class UnsupportedCollectionModel : ScopeModel<UnsupportedCollectio
 /// </summary>
 public sealed class ReportAsset
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	/// <summary>
+	/// 负责人用户标识，对应 <c>owner</c> 维度。
+	/// </summary>
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	/// <summary>
+	/// 所属部门标识，对应 <c>dept</c> 维度。
+	/// </summary>
+	public string DeptId { get; set; } = null!;
 }
 
 /// <summary>

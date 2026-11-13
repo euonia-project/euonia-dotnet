@@ -28,12 +28,20 @@ public sealed record SecurityProfile(string Name, IReadOnlyCollection<string> Co
 /// </summary>
 public sealed class AuthorizationStore(IApplicationDataContext context)
 {
-	public async Task<SecurityProfile> GetAsync(string userId, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 读取指定账号的授权数据；账号没有任何授权行时返回 <see langword="null"/>。
+	/// </summary>
+	/// <param name="userId">账号标识。</param>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>该账号的授权数据；无授权行时为 <see langword="null"/>。</returns>
+	public async Task<SecurityProfile?> GetAsync(string userId, CancellationToken cancellationToken = default)
 	{
 		return await LoadAsync(userId, cancellationToken);
 	}
 
-	/// <summary>返回全部授权数据的快照（用户标识 → 授权）。</summary>
+	/// <summary>
+	/// 返回全部授权数据的快照（用户标识 → 授权）。
+	/// </summary>
 	public async Task<IReadOnlyDictionary<string, SecurityProfile>> SnapshotAsync(CancellationToken cancellationToken = default)
 	{
 		var records = await context.Authorizations.AsNoTracking().ToListAsync(cancellationToken);
@@ -46,31 +54,39 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return result;
 	}
 
-	/// <summary>授予权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> GrantCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 授予权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
+	public async Task<SecurityProfile?> GrantCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
 	{
 		return await GrantAsync(userId, AuthorizationKinds.Code, codes, cancellationToken);
 	}
 
-	/// <summary>撤销权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> RevokeCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 撤销权限码（立即生效，无需重新登录）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
+	public async Task<SecurityProfile?> RevokeCodesAsync(string userId, IEnumerable<string> codes, CancellationToken cancellationToken = default)
 	{
 		return await RevokeAsync(userId, AuthorizationKinds.Code, codes, cancellationToken);
 	}
 
-	/// <summary>授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> AddGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 授予行级权限（<see cref="RepositoryGrant"/> 编码值，立即生效）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
+	public async Task<SecurityProfile?> AddGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
 	{
 		return await GrantAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);
 	}
 
-	/// <summary>撤销行级权限（立即生效）；账号不存在时返回 <see langword="null"/>。</summary>
-	public async Task<SecurityProfile> RemoveGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 撤销行级权限（立即生效）；账号不存在时返回 <see langword="null"/>。
+	/// </summary>
+	public async Task<SecurityProfile?> RemoveGrantsAsync(string userId, IEnumerable<string> grants, CancellationToken cancellationToken = default)
 	{
 		return await RevokeAsync(userId, AuthorizationKinds.Grant, grants, cancellationToken);
 	}
 
-	private async Task<SecurityProfile> GrantAsync(string userId, string kind, IEnumerable<string> values, CancellationToken cancellationToken)
+	private async Task<SecurityProfile?> GrantAsync(string userId, string kind, IEnumerable<string> values, CancellationToken cancellationToken)
 	{
 		if (!await UserExistsAsync(userId, cancellationToken))
 		{
@@ -96,7 +112,7 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return await LoadAsync(userId, cancellationToken);
 	}
 
-	private async Task<SecurityProfile> RevokeAsync(string userId, string kind, IEnumerable<string> values, CancellationToken cancellationToken)
+	private async Task<SecurityProfile?> RevokeAsync(string userId, string kind, IEnumerable<string> values, CancellationToken cancellationToken)
 	{
 		if (!await UserExistsAsync(userId, cancellationToken))
 		{
@@ -120,7 +136,7 @@ public sealed class AuthorizationStore(IApplicationDataContext context)
 		return await context.Users.AsNoTracking().AnyAsync(record => record.Id == userId, cancellationToken);
 	}
 
-	private async Task<SecurityProfile> LoadAsync(string userId, CancellationToken cancellationToken)
+	private async Task<SecurityProfile?> LoadAsync(string userId, CancellationToken cancellationToken)
 	{
 		var records = await context.Authorizations.AsNoTracking()
 		                           .Where(record => record.UserId == userId)

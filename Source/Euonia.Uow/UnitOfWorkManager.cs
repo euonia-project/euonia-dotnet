@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Nerosoft.Euonia.Uow;
 
 /// <summary>
-/// The unit of work manager.
+/// 工作单元管理器。
 /// </summary>
 public class UnitOfWorkManager : IUnitOfWorkManager
 {
@@ -24,10 +24,10 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     private readonly ConditionalWeakTable<IUnitOfWork, EventHandler<DisposedEventArgs>> _disposalHandlers = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="UnitOfWorkManager"/> class.
+    /// 初始化 <see cref="UnitOfWorkManager"/> 类的新实例。
     /// </summary>
-    /// <param name="factory"></param>
-    /// <param name="accessor"></param>
+    /// <param name="factory">用于创建工作单元依赖注入作用域的工厂。</param>
+    /// <param name="accessor">用于读写当前工作单元的工作单元访问器。</param>
     public UnitOfWorkManager(IServiceScopeFactory factory, IUnitOfWorkAccessor accessor)
     {
         _factory = factory;
@@ -35,16 +35,17 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     }
 
     /// <summary>
-    /// Gets the current unit of work instance.
+    /// 获取当前工作单元实例。
     /// </summary>
-    public IUnitOfWork Current => _accessor.GetCurrentUnitOfWork();
+    public IUnitOfWork? Current => _accessor.GetCurrentUnitOfWork();
 
     /// <summary>
-    /// Create a new unit of work.
+    /// 创建新的工作单元。
     /// </summary>
-    /// <param name="options"></param>
-    /// <param name="requiresNew"></param>
-    /// <returns></returns>
+    /// <param name="options">工作单元选项，不能为 <see langword="null"/>。</param>
+    /// <param name="requiresNew">为 <see langword="true"/> 时强制创建新的工作单元，而不复用当前工作单元。</param>
+    /// <returns>新建的工作单元；当前已存在工作单元且 <paramref name="requiresNew"/> 为 <see langword="false"/> 时返回其子工作单元。</returns>
+    /// <exception cref="ArgumentNullException"><paramref name="options"/> 为 <see langword="null"/>。</exception>
     public IUnitOfWork Begin(UnitOfWorkOptions options, bool requiresNew = false)
     {
         Check.EnsureNotNull(options, nameof(options));
@@ -62,11 +63,11 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     }
 
     /// <summary>
-    /// Create a new unit of work.
+    /// 创建新的工作单元。
     /// </summary>
-    /// <param name="isTransactional"></param>
-    /// <param name="requiresNew"></param>
-    /// <returns></returns>
+    /// <param name="isTransactional">指示工作单元是否以事务方式运行。</param>
+    /// <param name="requiresNew">为 <see langword="true"/> 时强制创建新的工作单元，而不复用当前工作单元。</param>
+    /// <returns>新建或派生的工作单元。</returns>
     public IUnitOfWork Begin(bool isTransactional = false, bool requiresNew = false)
     {
         return Begin(new UnitOfWorkOptions(isTransactional), requiresNew);
@@ -101,7 +102,7 @@ public class UnitOfWorkManager : IUnitOfWorkManager
     /// <param name="scope">该工作单元对应的依赖注入作用域，释放工作单元时一并释放。</param>
     /// <param name="outerUow">外层工作单元；释放后需恢复为当前工作单元。</param>
     /// <returns>用于订阅 <see cref="DisposableObject.Disposed"/> 的委托。</returns>
-    private EventHandler<DisposedEventArgs> CreateDisposalHandler(IUnitOfWork unitOfWork, IServiceScope scope, IUnitOfWork outerUow)
+    private EventHandler<DisposedEventArgs> CreateDisposalHandler(IUnitOfWork unitOfWork, IServiceScope scope, IUnitOfWork? outerUow)
     {
         EventHandler<DisposedEventArgs> handler = (_, _) =>
         {

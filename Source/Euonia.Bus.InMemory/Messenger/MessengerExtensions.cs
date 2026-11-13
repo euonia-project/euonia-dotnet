@@ -6,86 +6,85 @@ using System.Runtime.CompilerServices;
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// Extensions for the <see cref="IMessenger"/> type.
+/// <see cref="IMessenger"/> 类型的扩展方法。
 /// </summary>
 public static partial class MessengerExtensions
 {
 	/// <summary>
-	/// A class that acts as a container to load the <see cref="MethodInfo"/> instance linked to
-	/// the <see cref="Register{TMessage,TToken}(IMessenger,IRecipient{TMessage},TToken)"/> method.
-	/// This class is needed to avoid forcing the initialization code in the static constructor to run as soon as
-	/// the <see cref="MessengerExtensions"/> type is referenced, even if that is done just to use methods
-	/// that do not actually require this <see cref="MethodInfo"/> instance to be available.
-	/// We're effectively using this type to leverage the lazy loading of static constructors done by the runtime.
+	/// 充当容器的类，用于加载与
+	/// <see cref="Register{TMessage,TToken}(IMessenger,IRecipient{TMessage},TToken)"/> 方法关联的 <see cref="MethodInfo"/> 实例。
+	/// 需要此类是为了避免在引用 <see cref="MessengerExtensions"/> 类型时立即执行静态构造函数中的初始化代码，
+	/// 即使引用它只是为了使用那些实际上并不需要此 <see cref="MethodInfo"/> 实例的方法。
+	/// 我们实际上利用此类型来利用运行时对静态构造函数的延迟加载。
 	/// </summary>
 	private static class MethodInfos
 	{
 		/// <summary>
-		/// The <see cref="MethodInfo"/> instance associated with <see cref="Register{TMessage,TToken}(IMessenger,IRecipient{TMessage},TToken)"/>.
+		/// 与 <see cref="Register{TMessage,TToken}(IMessenger,IRecipient{TMessage},TToken)"/> 关联的 <see cref="MethodInfo"/> 实例。
 		/// </summary>
 		public static readonly MethodInfo RegisterIRecipient = new Action<IMessenger, IRecipient<object>, Unit>(Register).Method.GetGenericMethodDefinition();
 	}
 
 	/// <summary>
-	/// A non-generic version of <see cref="DiscoveredRecipients{TToken}"/>.
+	/// <see cref="DiscoveredRecipients{TToken}"/> 的非泛型版本。
 	/// </summary>
 	private static class DiscoveredRecipients
 	{
 		/// <summary>
-		/// The <see cref="ConditionalWeakTable{TKey,TValue}"/> instance used to track the preloaded registration action for each recipient.
+		/// 用于跟踪每个接收方预加载的注册操作的 <see cref="ConditionalWeakTable{TKey,TValue}"/> 实例。
 		/// </summary>
 		public static readonly ConditionalWeakTable<Type, Action<IMessenger, object>> RegistrationMethods = new();
 	}
 
 	/// <summary>
-	/// A class that acts as a static container to associate a <see cref="ConditionalWeakTable{TKey,TValue}"/> instance to each
-	/// <typeparamref name="TToken"/> type in use. This is done because we can only use a single type as key, but we need to track
-	/// associations of each recipient type also across different communication channels, each identified by a token.
-	/// Since the token is actually a compile-time parameter, we can use a wrapping class to let the runtime handle a different
-	/// instance for each generic type instantiation. This lets us only worry about the recipient type being inspected.
+	/// 充当静态容器的类，用于为每个正在使用的 <typeparamref name="TToken"/> 类型关联一个
+	/// <see cref="ConditionalWeakTable{TKey,TValue}"/> 实例。这样做是因为我们只能使用单一类型作为键，
+	/// 但还需要跟踪每个接收方类型在不同通信通道（每个通道由令牌标识）中的关联关系。
+	/// 由于令牌实际上是编译时参数，我们可以使用一个包装类让运行时为每个泛型类型实例化处理不同的实例。
+	/// 这让我们只需关注被检查的接收方类型。
 	/// </summary>
-	/// <typeparam name="TToken">The token indicating what channel to use.</typeparam>
+	/// <typeparam name="TToken">指示要使用哪个通道的令牌。</typeparam>
 	private static class DiscoveredRecipients<TToken>
 		where TToken : IEquatable<TToken>
 	{
 		/// <summary>
-		/// The <see cref="ConditionalWeakTable{TKey,TValue}"/> instance used to track the preloaded registration action for each recipient.
+		/// 用于跟踪每个接收方预加载的注册操作的 <see cref="ConditionalWeakTable{TKey,TValue}"/> 实例。
 		/// </summary>
 		public static readonly ConditionalWeakTable<Type, Action<IMessenger, object, TToken>> RegistrationMethods = new();
 	}
 
 	/// <summary>
-	/// Checks whether or not a given recipient has already been registered for a message.
+	/// 检查指定的接收方是否已针对某条消息注册。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to check for the given recipient.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to check the registration.</param>
-	/// <param name="recipient">The target recipient to check the registration for.</param>
-	/// <returns>Whether or not <paramref name="recipient"/> has already been registered for the specified message.</returns>
-	/// <remarks>This method will use the default channel to check for the requested registration.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="recipient"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要检查指定接收方注册情况的消息类型。</typeparam>
+	/// <param name="messenger">用于检查注册情况的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">要检查注册情况的目标接收方。</param>
+	/// <returns><paramref name="recipient"/> 是否已针对指定消息注册。</returns>
+	/// <remarks>此方法将使用默认通道检查所请求的注册。</remarks>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="recipient"/> 为 <see langword="null"/> 时引发。</exception>
 	public static bool IsRegistered<TMessage>(this IMessenger messenger, object recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		return messenger.IsRegistered<TMessage, Unit>(recipient, default);
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	/// <remarks>This method will use the default channel to perform the requested registration.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="recipient"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
+	/// <remarks>此方法将使用默认通道执行所请求的注册。</remarks>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="recipient"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Register<TMessage>(this IMessenger messenger, IRecipient<TMessage> recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		if (messenger is WeakReferenceMessenger weakReferenceMessenger)
 		{
@@ -102,23 +101,23 @@ public static partial class MessengerExtensions
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to receive messages.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="token">The token indicating what channel to use.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	/// <remarks>This method will use the default channel to perform the requested registration.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/>, <paramref name="recipient"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识接收消息时使用哪个通道的令牌类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="token">指示要使用哪个通道的令牌。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
+	/// <remarks>此方法将使用默认通道执行所请求的注册。</remarks>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/>、<paramref name="recipient"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Register<TMessage, TToken>(this IMessenger messenger, IRecipient<TMessage> recipient, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		if (messenger is WeakReferenceMessenger weakReferenceMessenger)
 		{
@@ -135,146 +134,145 @@ public static partial class MessengerExtensions
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="handler">The <see cref="MessageHandler{TRecipient,TMessage}"/> to invoke when a message is received.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	/// <remarks>This method will use the default channel to perform the requested registration.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/>, <paramref name="recipient"/> or <paramref name="handler"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="handler">接收消息时要调用的 <see cref="MessageHandler{TRecipient,TMessage}"/>。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
+	/// <remarks>此方法将使用默认通道执行所请求的注册。</remarks>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/>、<paramref name="recipient"/> 或 <paramref name="handler"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Register<TMessage>(this IMessenger messenger, object recipient, MessageHandler<object, TMessage> handler)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, default(Unit), handler);
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TRecipient">The type of recipient for the message.</typeparam>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="handler">The <see cref="MessageHandler{TRecipient,TMessage}"/> to invoke when a message is received.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	/// <remarks>This method will use the default channel to perform the requested registration.</remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/>, <paramref name="recipient"/> or <paramref name="handler"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TRecipient">消息接收方的类型。</typeparam>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="handler">接收消息时要调用的 <see cref="MessageHandler{TRecipient,TMessage}"/>。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
+	/// <remarks>此方法将使用默认通道执行所请求的注册。</remarks>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/>、<paramref name="recipient"/> 或 <paramref name="handler"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Register<TRecipient, TMessage>(this IMessenger messenger, TRecipient recipient, MessageHandler<TRecipient, TMessage> handler)
 		where TRecipient : class
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, default(Unit), handler);
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为指定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <typeparam name="TToken">The type of token to use to pick the messages to receive.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to register the recipient.</param>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="token">A token used to determine the receiving channel to use.</param>
-	/// <param name="handler">The <see cref="MessageHandler{TRecipient,TMessage}"/> to invoke when a message is received.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/>, <paramref name="recipient"/> or <paramref name="handler"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于选择要接收的消息的令牌类型。</typeparam>
+	/// <param name="messenger">用于注册接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="token">用于确定要使用的接收通道的令牌。</param>
+	/// <param name="handler">接收消息时要调用的 <see cref="MessageHandler{TRecipient,TMessage}"/>。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时引发。</exception>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/>、<paramref name="recipient"/> 或 <paramref name="handler"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Register<TMessage, TToken>(this IMessenger messenger, object recipient, TToken token, MessageHandler<object, TMessage> handler)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		messenger.Register(recipient, token, handler);
 	}
 
 	/// <summary>
-	/// Unregisters a recipient from messages of a given type.
+	/// 从指定类型的消息中注销某个接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to stop receiving.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to unregister the recipient.</param>
-	/// <param name="recipient">The recipient to unregister.</param>
+	/// <typeparam name="TMessage">要停止接收的消息类型。</typeparam>
+	/// <param name="messenger">用于注销接收方的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="recipient">要注销的接收方。</param>
 	/// <remarks>
-	/// This method will unregister the target recipient only from the default channel.
-	/// If the recipient has no registered handler, this method does nothing.
+	/// 此方法仅从默认通道中注销目标接收方。
+	/// 如果该接收方没有已注册的处理程序，此方法不执行任何操作。
 	/// </remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="recipient"/> are <see langword="null"/>.</exception>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="recipient"/> 为 <see langword="null"/> 时引发。</exception>
 	public static void Unregister<TMessage>(this IMessenger messenger, object recipient)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		messenger.Unregister<TMessage, Unit>(recipient, default);
 	}
 
 	/// <summary>
-	/// Sends a message of the specified type to all registered recipients.
+	/// 将指定类型的消息发送给所有已注册的接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to send the message.</param>
-	/// <returns>The message that has been sent.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <param name="messenger">用于发送消息的 <see cref="IMessenger"/> 实例。</param>
+	/// <returns>已发送的消息。</returns>
 	/// <remarks>
-	/// This method is a shorthand for <see cref="Send{TMessage}(IMessenger,TMessage)"/> when the
-	/// message type exposes a parameterless constructor: it will automatically create
-	/// a new <typeparamref name="TMessage"/> instance and send that to its recipients.
+	/// 当消息类型公开无参数构造函数时，此方法是 <see cref="Send{TMessage}(IMessenger,TMessage)"/> 的简写形式：
+	/// 它会自动创建新的 <typeparamref name="TMessage"/> 实例，并将其发送给接收方。
 	/// </remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> is <see langword="null"/>.</exception>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 为 <see langword="null"/> 时引发。</exception>
 	public static TMessage Send<TMessage>(this IMessenger messenger)
 		where TMessage : class, new()
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(messenger);
 
 		return messenger.Send(new TMessage(), default(Unit));
 	}
 
 	/// <summary>
-	/// Sends a message of the specified type to all registered recipients.
+	/// 将指定类型的消息发送给所有已注册的接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to send the message.</param>
-	/// <param name="message">The message to send.</param>
-	/// <returns>The message that was sent (ie. <paramref name="message"/>).</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="message"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <param name="messenger">用于发送消息的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="message">要发送的消息。</param>
+	/// <returns>已发送的消息（即 <paramref name="message"/>）。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="message"/> 为 <see langword="null"/> 时引发。</exception>
 	public static TMessage Send<TMessage>(this IMessenger messenger, TMessage message)
 		where TMessage : class
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(message);
 
 		return messenger.Send(message, default(Unit));
 	}
 
 	/// <summary>
-	/// Sends a message of the specified type to all registered recipients.
+	/// 将指定类型的消息发送给所有已注册的接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to send the message.</typeparam>
-	/// <param name="messenger">The <see cref="IMessenger"/> instance to use to send the message.</param>
-	/// <param name="token">The token indicating what channel to use.</param>
-	/// <returns>The message that has been sen.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识发送消息时使用哪个通道的令牌类型。</typeparam>
+	/// <param name="messenger">用于发送消息的 <see cref="IMessenger"/> 实例。</param>
+	/// <param name="token">指示要使用哪个通道的令牌。</param>
+	/// <returns>已发送的消息。</returns>
 	/// <remarks>
-	/// This method will automatically create a new <typeparamref name="TMessage"/> instance
-	/// just like <see cref="Send{TMessage}(IMessenger)"/>, and then send it to the right recipients.
+	/// 与 <see cref="Send{TMessage}(IMessenger)"/> 一样，此方法会自动创建新的 <typeparamref name="TMessage"/> 实例，
+	/// 然后将其发送给相应的接收方。
 	/// </remarks>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="messenger"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="messenger"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时引发。</exception>
 	public static TMessage Send<TMessage, TToken>(this IMessenger messenger, TToken token)
 		where TMessage : class, new()
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(messenger);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(messenger);
+		ArgumentNullException.ThrowIfNull(token);
 
 		return messenger.Send(new TMessage(), token);
 	}

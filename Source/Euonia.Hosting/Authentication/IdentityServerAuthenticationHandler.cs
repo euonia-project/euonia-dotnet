@@ -109,7 +109,7 @@ public class IdentityServerAuthenticationHandler : AuthenticationHandler<Identit
 	/// <returns>表示异步质询处理的任务。</returns>
 	protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
 	{
-		if (Context.Items.TryGetValue(IdentityServerAuthenticationDefaults.EffectiveSchemeKey + Scheme.Name, out object value))
+		if (Context.Items.TryGetValue(IdentityServerAuthenticationDefaults.EffectiveSchemeKey + Scheme.Name, out object? value))
 		{
 			if (value is string scheme)
 			{

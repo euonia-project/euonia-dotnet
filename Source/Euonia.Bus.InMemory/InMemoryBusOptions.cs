@@ -1,30 +1,31 @@
 ﻿namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// Options for configuring the In-Memory Bus transport.
+/// 用于配置内存总线传输的选项。
 /// </summary>
 public class InMemoryBusOptions
 {
 	/// <summary>
-	/// Gets or sets the transport name.
+	/// 获取或设置传输名称。
 	/// </summary>
 	public string Name { get; set; } = Constants.DefaultTransportName;
 
 	/// <summary>
-	/// 
+	/// 获取或设置一个值，指示是否延迟初始化内存消息信使。默认值为 <see langword="true"/>。
 	/// </summary>
+	/// <remarks>当前实现未读取该选项。</remarks>
 	public bool LazyInitialize { get; set; } = true;
 
 	/// <summary>
-	/// Gets or sets the maximum concurrent calls.
+	/// 获取或设置最大并发调用数。
 	/// </summary>
 	public int MaxConcurrentCalls { get; set; } = 1;
 
 	/// <summary>
-	/// Gets or sets a value indicating whether the subscriber should create for each message channel.
+	/// 获取或设置一个值，指示是否为每个消息通道创建独立的订阅者。
 	/// </summary>
 	/// <value>
-	/// <c>true</c> if the subscriber should create for each message channel; otherwise, <c>false</c>. default is <c>false</c>.
+	/// 如果为每个消息通道创建独立的订阅者，则为 <c>true</c>；否则为 <c>false</c>。默认值为 <c>false</c>。
 	/// </value>
 	public bool MultipleSubscriberInstance { get; set; }
 }

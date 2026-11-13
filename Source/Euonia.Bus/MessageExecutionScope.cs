@@ -18,18 +18,32 @@ namespace Nerosoft.Euonia.Bus;
 /// </remarks>
 internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 {
-	private readonly DefaultRequestContextAccessor _requestContextAccessor;
-	private readonly RequestContext _inheritedRequestContext;
+	private readonly DefaultRequestContextAccessor? _requestContextAccessor;
+	private readonly RequestContext? _inheritedRequestContext;
 	private readonly bool _requestContextInstalled;
-	private readonly IServiceScope _ownedScope;
+	private readonly IServiceScope? _ownedScope;
+	private readonly List<IDisposable> _leases = [];
 	private bool _disposed;
 
+	/// <summary>
+	/// 获取参与者对本次消息处理的裁决。
+	/// </summary>
+	internal MessageExecutionScopeAction Action { get; private set; } = MessageExecutionScopeAction.Continue;
+
+	/// <summary>
+	/// 初始化消息执行作用域：解析或创建服务提供程序，并按描述符安装请求上下文。
+	/// </summary>
+	/// <param name="container">调用方的服务容器，用于判定借用作用域是否可用。</param>
+	/// <param name="scopeFactory">借用作用域不可用时，用于创建本次执行专用作用域的工厂。</param>
+	/// <param name="descriptor">消息执行描述符，指定提供程序租约与请求上下文来源。</param>
+	/// <param name="message">当前处理的消息上下文，用于从信封恢复请求上下文。</param>
+	/// <param name="logger">可选的日志记录器，用于记录借用作用域失效等降级情况。</param>
 	internal MessageExecutionScope(
 		IServiceProvider container,
 		IServiceScopeFactory scopeFactory,
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
-		ILogger logger)
+		MessageContext? message,
+		ILogger? logger)
 	{
 		ServiceProvider = AcquireProvider(container, scopeFactory, descriptor, message, logger, out var ownedScope);
 		_ownedScope = ownedScope;
@@ -76,6 +90,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		catch
 		{
 			// 构造失败时对象不会被释放，必须在此恢复已修改的上下文并释放自有作用域。
+			ReleaseParticipants();
 			RestoreRequestContext();
 			_ownedScope?.Dispose();
 			throw;
@@ -96,6 +111,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		}
 
 		_disposed = true;
+		ReleaseParticipants();
 		RestoreRequestContext();
 		_ownedScope?.Dispose();
 	}
@@ -109,6 +125,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		}
 
 		_disposed = true;
+		ReleaseParticipants();
 		RestoreRequestContext();
 
 		if (_ownedScope is IAsyncDisposable asyncScope)
@@ -122,11 +139,86 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	}
 
 	/// <summary>
+	/// 按 <see cref="IMessageExecutionScopeParticipant.Order"/> 升序安装参与者；任一参与者返回
+	/// <see cref="MessageExecutionScopeAction.Skip"/> 或 <see cref="MessageExecutionScopeAction.DeadLetter"/> 时停止后续进入。
+	/// </summary>
+	internal async Task<IReadOnlyList<MessageExecutionScopeEntry>> ResolveParticipantsAsync(MessageContext? message, CancellationToken cancellationToken = default)
+	{
+		if (message == null)
+		{
+			return [];
+		}
+
+		var entries = new List<MessageExecutionScopeEntry>();
+		foreach (var participant in ServiceProvider.GetServices<IMessageExecutionScopeParticipant>().OrderBy(x => x.Order))
+		{
+			var entry = await participant.EnterAsync(message, ServiceProvider, cancellationToken).ConfigureAwait(false);
+			entries.Add(entry);
+			if (entry.Action != MessageExecutionScopeAction.Continue)
+			{
+				break;
+			}
+		}
+
+		return entries;
+	}
+
+	/// <summary>
+	/// 在调用方执行流中同步安装参与者，直到出现非 <see cref="MessageExecutionScopeAction.Continue"/> 的裁决。
+	/// </summary>
+	/// <param name="entries">按 <see cref="IMessageExecutionScopeParticipant.Order"/> 排序的参与者决议。</param>
+	/// <returns>最终裁决。</returns>
+	internal MessageExecutionResult ApplyParticipants(IReadOnlyList<MessageExecutionScopeEntry> entries)
+	{
+		foreach (var entry in entries)
+		{
+			if (entry.Action != MessageExecutionScopeAction.Continue)
+			{
+				Action = entry.Action;
+				return new MessageExecutionResult(entry.Action);
+			}
+
+			IDisposable? lease;
+			try
+			{
+				lease = entry.Install?.Invoke();
+			}
+			catch (Exception exception)
+			{
+				// 安装失败（例如租户作用域冲突）是不可处理消息，转为死信而不是基础设施重试。
+				_ = exception;
+				Action = MessageExecutionScopeAction.DeadLetter;
+				return new MessageExecutionResult(MessageExecutionScopeAction.DeadLetter);
+			}
+
+			if (lease != null)
+			{
+				_leases.Add(lease);
+			}
+		}
+
+		return MessageExecutionResult.Completed;
+	}
+
+	/// <summary>
+	/// 逆序释放已进入的参与者。
+	/// </summary>
+	private void ReleaseParticipants()
+	{
+		for (var index = _leases.Count - 1; index >= 0; index--)
+		{
+			_leases[index].Dispose();
+		}
+
+		_leases.Clear();
+	}
+
+	/// <summary>
 	/// 恢复本作用域修改过的请求上下文。
 	/// </summary>
 	private void RestoreRequestContext()
 	{
-		if (_requestContextInstalled)
+		if (_requestContextInstalled && _requestContextAccessor != null)
 		{
 			_requestContextAccessor.Context = _inheritedRequestContext;
 		}
@@ -139,9 +231,9 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 		IServiceProvider container,
 		IServiceScopeFactory scopeFactory,
 		MessageExecutionDescriptor descriptor,
-		MessageContext message,
-		ILogger logger,
-		out IServiceScope ownedScope)
+		MessageContext? message,
+		ILogger? logger,
+		out IServiceScope? ownedScope)
 	{
 		ownedScope = null;
 
@@ -173,7 +265,7 @@ internal sealed class MessageExecutionScope : IDisposable, IAsyncDisposable
 	/// <summary>
 	/// 从消息信封恢复请求上下文；信封未携带可用信息时返回 <c>null</c>。
 	/// </summary>
-	private static RequestContext CreateFromEnvelope(IMessageContext message, IServiceProvider requestServices)
+	private static RequestContext? CreateFromEnvelope(IMessageContext? message, IServiceProvider requestServices)
 	{
 		if (message == null)
 		{

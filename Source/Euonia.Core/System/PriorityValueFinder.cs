@@ -1,4 +1,3 @@
-#if NET8_0_OR_GREATER
 namespace System;
 
 /// <summary>
@@ -20,7 +19,7 @@ public static class PriorityValueFinder
     /// <param name="assert">用于测试每个生成值的函数。第一个返回 <c>true</c> 的值将被返回。</param>
     /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。默认为 <typeparamref name="TValue"/> 的默认值。</param>
     /// <returns>满足 <paramref name="assert"/> 的第一个值，如果没有则返回 <paramref name="defaultValue"/>。</returns>
-    public static TValue Find<TValue>(PriorityQueue<Func<TValue>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
+    public static TValue Find<TValue>(PriorityQueue<Func<TValue>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default!)
     {
         while (queue.Count > 0)
         {
@@ -47,7 +46,7 @@ public static class PriorityValueFinder
     /// <param name="assert">用于测试每个生成值的函数。</param>
     /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。</param>
     /// <returns>满足 <paramref name="assert"/> 的第一个值，如果没有则返回 <paramref name="defaultValue"/>。</returns>
-    public static TValue Find<TValue>(Action<PriorityQueue<Func<TValue>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
+    public static TValue Find<TValue>(Action<PriorityQueue<Func<TValue>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default!)
     {
         var queue = new PriorityQueue<Func<TValue>, int>();
         factory(queue);
@@ -67,7 +66,7 @@ public static class PriorityValueFinder
     /// <remarks>
     /// 此方法通过 <c>GetAwaiter().GetResult()</c> 同步地执行异步工厂函数。调用者应注意这可能会阻塞调用线程。
     /// </remarks>
-    public static async Task<TValue> FindAsync<TValue>(PriorityQueue<Func<Task<TValue>>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default)
+    public static async Task<TValue> FindAsync<TValue>(PriorityQueue<Func<Task<TValue>>, int> queue, Func<TValue, bool> assert, TValue defaultValue = default!)
     {
         while (queue.Count > 0)
         {
@@ -94,7 +93,7 @@ public static class PriorityValueFinder
     /// <param name="assert">用于测试每个生成值的函数。</param>
     /// <param name="defaultValue">如果没有任何生成值满足 <paramref name="assert"/>，则返回此值。</param>
     /// <returns>包含满足 <paramref name="assert"/> 的第一个值或 <paramref name="defaultValue"/>（如果没有）的已完成的 <see cref="Task{TResult}"/>。</returns>
-    public static async Task<TValue> FindAsync<TValue>(Action<PriorityQueue<Func<Task<TValue>>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default)
+    public static async Task<TValue> FindAsync<TValue>(Action<PriorityQueue<Func<Task<TValue>>, int>> factory, Func<TValue, bool> assert, TValue defaultValue = default!)
     {
         var queue = new PriorityQueue<Func<Task<TValue>>, int>();
         factory(queue);
@@ -103,4 +102,3 @@ public static class PriorityValueFinder
         return value;
     }
 }
-#endif

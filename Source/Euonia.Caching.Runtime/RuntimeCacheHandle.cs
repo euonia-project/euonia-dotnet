@@ -6,12 +6,12 @@ using Nerosoft.Euonia.Caching.Internal;
 namespace Nerosoft.Euonia.Caching.Runtime;
 
 /// <summary>
-/// Simple implementation for the <see cref="MemoryCache"/>.
+/// <see cref="MemoryCache"/> 的简单实现。
 /// </summary>
-/// <typeparam name="TValue">The type of the cache value.</typeparam>
+/// <typeparam name="TValue">缓存值的类型。</typeparam>
 /// <remarks>
-/// Although the MemoryCache doesn't support regions nor a RemoveAll/Clear method, we will
-/// implement it via cache dependencies.
+/// 尽管 MemoryCache 既不支持区域，也不支持 RemoveAll/Clear 方法，但我们仍会
+/// 通过缓存依赖来实现它。
 /// </remarks>
 public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 {
@@ -23,13 +23,13 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	private readonly bool _isDefaultCache;
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="RuntimeCacheHandle{TCacheValue}"/> class.
+	/// 初始化 <see cref="RuntimeCacheHandle{TCacheValue}"/> 类的新实例。
 	/// </summary>
-	/// <param name="managerConfiguration">The manager configuration.</param>
-	/// <param name="configuration">The cache handle configuration.</param>
-	/// <param name="options">The vendor specific options.</param>
+	/// <param name="managerConfiguration">管理器配置。</param>
+	/// <param name="configuration">缓存句柄配置。</param>
+	/// <param name="options">特定于供应商的选项。</param>
 	/// 
-	public RuntimeCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, RuntimeCacheOptions options = null)
+	public RuntimeCacheHandle(CacheManagerConfiguration managerConfiguration, CacheHandleConfiguration configuration, RuntimeCacheOptions? options = null)
 		: base(managerConfiguration, configuration)
 	{
 		Check.EnsureNotNull(configuration, nameof(configuration));
@@ -37,7 +37,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 		//if (_cacheName.ToUpper(CultureInfo.InvariantCulture).Equals(DefaultName.ToUpper(CultureInfo.InvariantCulture)))
 		if (string.Equals(DEFAULT_NAME, configuration.Name, StringComparison.InvariantCultureIgnoreCase))
 		{
-			//we can't change default cache configuration by code, can we?
+			//我们无法通过代码更改默认缓存配置，对吧？
 			Check.Ensure(options == null, "MemoryCache Default instance can only be configured through app/web.config.");
 
 			_isDefaultCache = true;
@@ -55,15 +55,15 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Gets the cache settings.
+	/// 获取缓存设置。
 	/// </summary>
-	/// <value>The cache settings.</value>
+	/// <value>缓存设置。</value>
 	public NameValueCollection CacheSettings => GetSettings(_cache);
 
 /// <summary>
-    /// Gets the number of items the cache handle currently maintains.
+    /// 获取缓存句柄当前维护的项数。
     /// </summary>
-    /// <value>The count.</value>
+    /// <value>项数。</value>
     public override int Count => (int)_cache.GetCount();
 
     /// <summary>
@@ -82,7 +82,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
     }
 
 	/// <summary>
-	/// Clears this cache, removing all items in the base cache and all regions.
+	/// 清空此缓存，移除基础缓存中的所有项以及所有区域。
 	/// </summary>
 	public override void Clear()
 	{
@@ -91,9 +91,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Clears the cache region, removing all items from the specified <paramref name="region"/> only.
+	/// 清空缓存区域，仅移除指定 <paramref name="region"/> 中的所有项。
 	/// </summary>
-	/// <param name="region">The cache region.</param>
+	/// <param name="region">缓存区域。</param>
 	public override void ClearRegion(string region) =>
 		_cache.Remove(GetRegionTokenKey(region));
 
@@ -112,11 +112,11 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Adds a value to the cache.
+	/// 向缓存中添加一个值。
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
 	/// <returns>
-	/// <c>true</c> if the key was not already added to the cache, <c>false</c> otherwise.
+	/// 如果键尚未添加到缓存中，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	protected override bool AddInternalPrepared(CacheItem<TValue> item)
 	{
@@ -132,19 +132,19 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key) => GetCacheItemInternal(key, null);
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <returns>该 <c>CacheItem</c>。</returns>
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key) => GetCacheItemInternal(key, null);
 
 	/// <summary>
-	/// Gets a <c>CacheItem</c> for the specified key.
+	/// 获取指定键的 <c>CacheItem</c>。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
-	/// <returns>The <c>CacheItem</c>.</returns>
-	protected override CacheItem<TValue> GetCacheItemInternal(string key, string region)
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <param name="region">缓存区域。</param>
+	/// <returns>该 <c>CacheItem</c>。</returns>
+	protected override CacheItem<TValue>? GetCacheItemInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 
@@ -153,10 +153,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 			return null;
 		}
 
-		// maybe the item is already expired because MemoryCache implements a default interval
-		// of 20 seconds! to check for expired items on each store, we do it on access to also
-		// reflect smaller time frames especially for sliding expiration...
-		// cache.Get eventually triggers eviction callback, but just in case...
+		// 该项可能已经过期，因为 MemoryCache 默认每隔 20 秒才检查一次过期项！
+		// 为了在访问时也能反映更小的时间范围（尤其是滑动过期），我们在此处进行检查……
+		// cache.Get 最终会触发逐出回调，但以防万一……
 		if (item.IsExpired)
 		{
 			RemoveInternal(item.Key, item.Region);
@@ -166,9 +165,8 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 
 		if (item.ExpirationMode == CacheExpirationMode.Sliding)
 		{
-			// because we don't use UpdateCallback because of some multithreading issues lets
-			// try to simply reset the item by setting it again.
-			// item = this.GetItemExpiration(item); // done via base cache handle
+			// 由于多线程问题，我们不使用 UpdateCallback，改为通过重新设置该项来重置它。
+			// item = this.GetItemExpiration(item); // 由基础缓存句柄完成
 			_cache.Set(fullKey, item, GetPolicy(item));
 		}
 
@@ -176,10 +174,10 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Puts the <paramref name="item"/> into the cache. If the item exists it will get updated
-	/// with the new value. If the item doesn't exist, the item will be added to the cache.
+	/// 将 <paramref name="item"/> 放入缓存。如果该项已存在，则会用新值更新；
+	/// 如果该项不存在，则会将其添加到缓存。
 	/// </summary>
-	/// <param name="item">The <c>CacheItem</c> to be added to the cache.</param>
+	/// <param name="item">要添加到缓存的 <c>CacheItem</c>。</param>
 	protected override void PutInternalPrepared(CacheItem<TValue> item)
 	{
 		var key = GetItemKey(item);
@@ -188,23 +186,23 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	}
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到该键并将其从缓存中移除，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
 	protected override bool RemoveInternal(string key) => RemoveInternal(key, null);
 
 	/// <summary>
-	/// Removes a value from the cache for the specified key.
+	/// 从缓存中移除指定键的值。
 	/// </summary>
-	/// <param name="key">The key being used to identify the item within the cache.</param>
-	/// <param name="region">The cache region.</param>
+	/// <param name="key">用于在缓存中标识该项的键。</param>
+	/// <param name="region">缓存区域。</param>
 	/// <returns>
-	/// <c>true</c> if the key was found and removed from the cache, <c>false</c> otherwise.
+	/// 如果找到该键并将其从缓存中移除，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
-	protected override bool RemoveInternal(string key, string region)
+	protected override bool RemoveInternal(string key, string? region)
 	{
 		var fullKey = GetItemKey(key, region);
 		if (!_cache.Contains(fullKey))
@@ -230,7 +228,7 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 
 	private void CreateInstanceToken()
 	{
-		// don't add a new key while we are disposing our instance
+		// 释放实例时不要添加新键
 		if (!Disposing)
 		{
 			var instanceItem = new CacheItem<string>(_instanceKey, _instanceKey);
@@ -250,8 +248,8 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 	{
 		var key = GetRegionTokenKey(region);
 
-		// add region token with dependency on our instance token, so that all regions get
-		// removed whenever the instance gets cleared.
+		// 添加区域令牌并使其依赖于我们的实例令牌，这样当实例被清空时，
+		// 所有区域也会被移除。
 		var policy = new CacheItemPolicy()
 		{
 			Priority = CacheItemPriority.NotRemovable,
@@ -268,9 +266,8 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 
 		if (!string.IsNullOrWhiteSpace(item.Region))
 		{
-			// this should be the only place to create the region token if it doesn't exist it
-			// might got removed by clearRegion but next time put or add gets called, the region
-			// should be re added...
+			// 这应该是创建区域令牌的唯一位置；如果它不存在，可能是被 clearRegion 移除了，
+			// 但下次调用 put 或 add 时应重新添加该区域……
 			var regionToken = GetRegionTokenKey(item.Region);
 			if (!_cache.Contains(regionToken))
 			{
@@ -299,9 +296,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 				policy.SlidingExpiration = item.ExpirationTimeout;
 				policy.RemovedCallback = ItemRemoved;
 
-				//// for some reason, we'll get issues with multithreading if we set this...
-				//// see http://stackoverflow.com/questions/21680429/why-does-memorycache-throw-nullreferenceexception
-				////policy.UpdateCallback = new CacheEntryUpdateCallback(ItemUpdated); // must be set, otherwise sliding doesn't work at all.
+				//// 由于某些原因，如果设置此项，我们会遇到多线程问题……
+				//// 参见 http://stackoverflow.com/questions/21680429/why-does-memorycache-throw-nullreferenceexception
+				////policy.UpdateCallback = new CacheEntryUpdateCallback(ItemUpdated); // 必须设置，否则滑动过期完全不起作用。
 				break;
 		}
 
@@ -310,9 +307,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 		return policy;
 	}
 
-	private string GetItemKey(CacheItem<TValue> item) => GetItemKey(item?.Key, item?.Region);
+	private string GetItemKey(CacheItem<TValue> item) => GetItemKey(item.Key, item.Region);
 
-	private string GetItemKey(string key, string region = null)
+	private string GetItemKey(string key, string? region = null)
 	{
 		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
 
@@ -321,9 +318,9 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 			return _instanceKey + ":" + key;
 		}
 
-		// key without region
+		// 不带区域的键
 		// <instance>:key
-		// key with region
+		// 带区域的键
 		// <instance>@<regionlen><regionstring>:<keystring>
 		// <instance>@6region:key
 		return string.Concat(_instanceKey, "@", region.Length, "@", region, ":", key);
@@ -349,13 +346,13 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 			return;
 		}
 
-		// ignore manual removes, stats will be updated already
+		// 忽略手动移除，统计信息已经被更新
 		if (arguments.RemovedReason == CacheEntryRemovedReason.Removed)
 		{
 			return;
 		}
 
-		ParseKeyParts(_instanceKeyLength, fullKey, out bool isToken, out bool hasRegion, out string region, out string key);
+		ParseKeyParts(_instanceKeyLength, fullKey, out bool isToken, out bool hasRegion, out string? region, out string key);
 
 		if (!isToken)
 		{
@@ -368,13 +365,13 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 				Stats.OnRemove();
 			}
 
-			object originalValue = null;
+			object? originalValue = null;
 			if (arguments.CacheItem.Value is CacheItem<TValue> item)
 			{
 				originalValue = item.Value;
 			}
 
-			// trigger cachemanager's remove on evicted and expired items
+			// 对逐出和过期的项触发缓存管理器的移除
 			if (arguments.RemovedReason == CacheEntryRemovedReason.Evicted || arguments.RemovedReason == CacheEntryRemovedReason.CacheSpecificEviction)
 			{
 				TriggerCacheSpecificRemove(key, region, CacheItemRemovedReason.Evicted, originalValue);
@@ -386,13 +383,14 @@ public class RuntimeCacheHandle<TValue> : BaseCacheHandle<TValue>
 		}
 	}
 
-	private static void ParseKeyParts(int instanceKeyLength, string fullKey, out bool isToken, out bool hasRegion, out string region, out string key)
+	private static void ParseKeyParts(int instanceKeyLength, string fullKey, out bool isToken, out bool hasRegion, out string? region, out string key)
 	{
 		var relevantKey = fullKey[instanceKeyLength..];
 		isToken = relevantKey[0] == '_';
 		hasRegion = false;
 		region = null;
-		key = null;
+		// key 仅在非 token 的分支中被使用，且该分支一定会为其赋值。
+		key = null!;
 
 		if (!isToken)
 		{

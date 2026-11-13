@@ -5,8 +5,12 @@ using Nerosoft.Euonia.Modularity;
 
 namespace Nerosoft.Euonia.Concurrency.ZooKeeper;
 
+/// <summary>
+/// ZooKeeper 同步模块，从配置读取连接串与超时参数，并注册 <see cref="ZooKeeperSynchronizationFactory"/> 单例。
+/// </summary>
 internal class ZooKeeperSynchronizationModule : ModuleContextBase
 {
+    /// <inheritdoc />
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         context.Services.TryAddSingleton(provider =>
@@ -26,7 +30,7 @@ internal class ZooKeeperSynchronizationModule : ModuleContextBase
 }
 
 /// <summary>
-/// The ZooKeeperLockModule class contains methods used to configure the ZooKeeper lock.
+/// ZooKeeperLockModule 类包含用于配置 ZooKeeper 锁的方法。
 /// </summary>
 [DependsOn(typeof(ZooKeeperSynchronizationModule))]
 public class ZooKeeperLockModule : ModuleContextBase
@@ -39,7 +43,7 @@ public class ZooKeeperLockModule : ModuleContextBase
 }
 
 /// <summary>
-/// The ZooKeeperSemaphoreModule class contains methods used to configure the ZooKeeper semaphore.
+/// ZooKeeperSemaphoreModule 类包含用于配置 ZooKeeper 信号量的方法。
 /// </summary>
 [DependsOn(typeof(ZooKeeperSynchronizationModule))]
 public class ZooKeeperSemaphoreModule : ModuleContextBase

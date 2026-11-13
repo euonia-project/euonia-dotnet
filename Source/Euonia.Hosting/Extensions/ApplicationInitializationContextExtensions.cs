@@ -64,7 +64,7 @@ public static class ApplicationInitializationContextExtensions
 		/// 与 <see cref="GetEnvironment(ApplicationInitializationContext)"/> 不同，本方法不会在服务缺失时抛出异常，
 		/// 适用于初始化的早期阶段或测试场景中环境服务可能不存在的情况。
 		/// </remarks>
-		public IWebHostEnvironment GetEnvironmentOrNull()
+		public IWebHostEnvironment? GetEnvironmentOrNull()
 		{
 			return context.ServiceProvider.GetService<IWebHostEnvironment>();
 		}

@@ -22,14 +22,14 @@ public interface IRuleContext
     /// 规则通常在类型级共享，不能持有请求态；需要按请求解析服务时，使用本属性或
     /// <see cref="GetService{T}"/>，不要依赖构造函数注入的 Scoped 服务。
     /// </remarks>
-    IServiceProvider ServiceProvider => (Target as IUseBusinessContext)?.BusinessContext?.CurrentServiceProvider;
+    IServiceProvider? ServiceProvider => (Target as IUseBusinessContext)?.BusinessContext?.CurrentServiceProvider;
 
     /// <summary>
     /// 从目标对象当前作用域解析服务；服务不存在时返回 <see langword="default"/>。
     /// </summary>
     /// <typeparam name="T">服务类型。</typeparam>
     /// <returns>解析出的服务；无法解析时为 <see langword="default"/>。</returns>
-    T GetService<T>()
+    T? GetService<T>()
     {
         return ServiceProvider?.GetService(typeof(T)) is T service ? service : default;
     }
@@ -43,19 +43,19 @@ public interface IRuleContext
     /// 向规则上下文添加一个错误结果。
     /// </summary>
     /// <param name="description">错误描述。</param>
-    void AddErrorResult(string description);
+    void AddErrorResult(string? description);
 
     /// <summary>
     /// 向规则上下文添加一个警告结果。
     /// </summary>
     /// <param name="description">警告描述。</param>
-    void AddWarningResult(string description);
+    void AddWarningResult(string? description);
 
     /// <summary>
     /// 向规则上下文添加一个信息结果。
     /// </summary>
     /// <param name="description">信息描述。</param>
-    void AddInformationResult(string description);
+    void AddInformationResult(string? description);
 
     /// <summary>
     /// 向规则上下文添加一个成功结果。

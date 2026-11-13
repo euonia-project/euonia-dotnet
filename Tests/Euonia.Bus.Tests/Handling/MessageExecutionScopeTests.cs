@@ -15,6 +15,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class MessageExecutionScopeTests
 {
+	/// <summary>
+	/// 验证发件箱重试使用独立的执行作用域重新投递，并把传输状态置为成功。
+	/// </summary>
 	[Fact]
 	public async Task OutboxDispatcher_RedeliversWithOwnScope()
 	{
@@ -24,16 +27,19 @@ public class MessageExecutionScopeTests
 
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/ambient" }, "test.events", "ambient-outbox-1");
 		store.Insert(envelope, ["test"]);
-		store.Get("ambient-outbox-1").GetTransport("test").MarkAsFailed("first attempt failed");
+		store.Get("ambient-outbox-1")!.GetTransport("test")!.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new OutboxDispatcher(provider, store, new OutboxOptions());
 
 		await dispatcher.RetryAllAsync();
 
 		Assert.Contains("ambient-outbox-1", delivered);
-		Assert.Equal(OutboxTransportStatus.Success, store.Get("ambient-outbox-1").GetTransport("test").Status);
+		Assert.Equal(OutboxTransportStatus.Success, store.Get("ambient-outbox-1")!.GetTransport("test")!.Status);
 	}
 
+	/// <summary>
+	/// 验证收件箱重试在独立执行作用域中运行处理器，处理器可解析作用域服务且状态置为成功。
+	/// </summary>
 	[Fact]
 	public async Task InboxDispatcher_ExecutesHandlerWithOwnScope()
 	{
@@ -51,7 +57,7 @@ public class MessageExecutionScopeTests
 				{
 					_ = factory.GetRequiredService<ScopedProbe>();
 					handled++;
-					return Task.FromResult<object>(null);
+					return Task.FromResult<object>(null!);
 				})
 			]
 		};
@@ -59,16 +65,19 @@ public class MessageExecutionScopeTests
 		var envelope = TestMessages.Envelope(new TestMessages.OrderPlacedEvent { OrderId = "orders/ambient" }, "test.events", "ambient-inbox-1");
 		IInboxStore store = new InMemoryInboxStore();
 		store.Insert("test.events", envelope, ["MyHandler"]);
-		store.Get("ambient-inbox-1").GetHandler("MyHandler").MarkAsFailed("first attempt failed");
+		store.Get("ambient-inbox-1")!.GetHandler("MyHandler")!.MarkAsFailed("first attempt failed");
 
 		var dispatcher = new InboxDispatcher(provider, store, new InboxOptions { Enabled = true }, container);
 
 		await dispatcher.RetryAllAsync();
 
 		Assert.Equal(1, handled);
-		Assert.Equal(InboxHandlerStatus.Success, store.Get("ambient-inbox-1").GetHandler("MyHandler").Status);
+		Assert.Equal(InboxHandlerStatus.Success, store.Get("ambient-inbox-1")!.GetHandler("MyHandler")!.Status);
 	}
 
+	/// <summary>
+	/// 验证死信重放使用原消息的追踪标识执行处理器，而不是沿用触发方的请求上下文。
+	/// </summary>
 	[Fact]
 	public async Task ReplayDeadLetterAsync_ExecutesHandlerWithOwnScope()
 	{
@@ -98,17 +107,17 @@ public class MessageExecutionScopeTests
 		adminScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>().Context = new RequestContext { TraceIdentifier = "trace-admin" };
 
 		var payload = new ReplayProbeEvent();
-		var envelope = new RoutedMessage<ReplayProbeEvent>(payload, typeof(ReplayProbeEvent).FullName)
+		var envelope = new RoutedMessage<ReplayProbeEvent>(payload, typeof(ReplayProbeEvent).FullName!)
 		{
 			MessageId = "replay-ambient-1",
 			RequestTraceId = "trace-original",
 		};
 
 		await handlerContext.ReplayDeadLetterAsync(
-			typeof(ReplayProbeEvent).FullName,
+			typeof(ReplayProbeEvent).FullName!,
 			payload,
 			new MessageContext(envelope),
-			typeof(ReplayProbeHandler).FullName,
+			typeof(ReplayProbeHandler).FullName!,
 			TestContext.Current.CancellationToken);
 
 		var state = provider.GetRequiredService<ProbeState>();
@@ -116,6 +125,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal("trace-original", state.TraceIdentifier);
 	}
 
+	/// <summary>
+	/// 验证重放时清空继承的请求上下文，执行结束后恢复触发方自身的上下文。
+	/// </summary>
 	[Fact]
 	public async Task EnvelopeOverride_WithEmptyEnvelope_ClearsInheritedContext()
 	{
@@ -131,7 +143,7 @@ public class MessageExecutionScopeTests
 		var environment = new MessageExecutionEnvironment(provider, null);
 		var message = new MessageContext();
 
-		RequestContext observed = null;
+		RequestContext? observed = null;
 		await environment.RunAsync(MessageExecutionDescriptor.Replay, message, _ =>
 		{
 			observed = contextAccessor.Context;
@@ -143,6 +155,9 @@ public class MessageExecutionScopeTests
 		Assert.Equal("trace-admin", contextAccessor.Context?.TraceIdentifier);
 	}
 
+	/// <summary>
+	/// 验证借用的服务提供程序已被释放时，执行环境改用新建的执行作用域。
+	/// </summary>
 	[Fact]
 	public async Task BorrowedProvider_WhenDisposed_IsReplacedByOwnScope()
 	{
@@ -160,7 +175,7 @@ public class MessageExecutionScopeTests
 			ExecutionDescriptor = MessageExecutionDescriptor.InProcessCall(borrowed, null),
 		};
 
-		IServiceProvider observed = null;
+		IServiceProvider? observed = null;
 		await environment.RunAsync(message.ExecutionDescriptor, message, scopedProvider =>
 		{
 			observed = scopedProvider;
@@ -171,6 +186,9 @@ public class MessageExecutionScopeTests
 		Assert.NotSame(borrowed, observed);
 	}
 
+	/// <summary>
+	/// 验证借用根容器时执行环境改用新建的执行作用域，不会把作用域服务解析到根容器上。
+	/// </summary>
 	[Fact]
 	public async Task BorrowedProvider_WhenRootContainer_IsReplacedByOwnScope()
 	{
@@ -184,7 +202,7 @@ public class MessageExecutionScopeTests
 			ExecutionDescriptor = MessageExecutionDescriptor.InProcessCall(provider, null),
 		};
 
-		IServiceProvider observed = null;
+		IServiceProvider? observed = null;
 		await environment.RunAsync(message.ExecutionDescriptor, message, scopedProvider =>
 		{
 			observed = scopedProvider;
@@ -195,6 +213,9 @@ public class MessageExecutionScopeTests
 		Assert.NotSame(provider, observed);
 	}
 
+	/// <summary>
+	/// 验证每次执行都基于发布方快照创建独立的请求上下文，且请求服务指向本次执行作用域。
+	/// </summary>
 	[Fact]
 	public async Task PublisherSnapshot_CreatesIndependentContextPerExecution()
 	{
@@ -217,9 +238,9 @@ public class MessageExecutionScopeTests
 		var contextAccessor = observerScope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>();
 		var environment = new MessageExecutionEnvironment(provider, null);
 
-		RequestContext first = null;
-		RequestContext second = null;
-		IServiceProvider firstProvider = null;
+		RequestContext? first = null;
+		RequestContext? second = null;
+		IServiceProvider? firstProvider = null;
 
 		await environment.RunAsync(descriptor, message, scopedProvider =>
 		{
@@ -267,17 +288,27 @@ public class MessageExecutionScopeTests
 	{
 	}
 
+	/// <summary>
+	/// 记录处理器是否执行以及请求跟踪标识的共享状态，用于跨作用域断言执行结果。
+	/// </summary>
 	private sealed class ProbeState
 	{
 		public bool Handled { get; set; }
 
-		public string TraceIdentifier { get; set; }
+		public string? TraceIdentifier { get; set; }
 	}
 
+	/// <summary>
+	/// 用于验证重放执行作用域的探测事件。
+	/// </summary>
 	private sealed class ReplayProbeEvent : IMulticast
 	{
 	}
 
+	/// <summary>
+	/// 探测处理器：从执行作用域解析 <see cref="ScopedProbe"/> 并记录请求跟踪标识，
+	/// 用于验证重放时仍使用独立执行作用域与正确的请求上下文。
+	/// </summary>
 	private sealed class ReplayProbeHandler(IServiceAccessor accessor, IRequestContextAccessor requestContext, ProbeState state) : IHandler<ReplayProbeEvent>
 	{
 		public Task HandleAsync(ReplayProbeEvent message, IMessageContext context, CancellationToken cancellationToken = default)
@@ -289,6 +320,9 @@ public class MessageExecutionScopeTests
 		}
 	}
 
+	/// <summary>
+	/// 记录被投递消息标识的传输器替身，供执行作用域测试断言消息是否已由总线送出。
+	/// </summary>
 	private sealed class RecordingTransporter(ICollection<string> delivered) : ITransporter
 	{
 		public string Name => "test";

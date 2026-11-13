@@ -1,23 +1,29 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Caching.Redis;
 
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// The implement of <see cref="ICacheService"/> with Redis.
+/// 使用 Redis 的 <see cref="ICacheService"/> 实现。
 /// </summary>
 public class RedisCacheService : BaseCacheService, ICacheService
 {
 	private readonly RedisCacheManager _manager;
 
 	/// <summary>
-	/// 
+	/// 初始化 <see cref="RedisCacheService"/> 类的新实例。
 	/// </summary>
-	/// <param name="options"></param>
-	public RedisCacheService(IOptions<RedisCacheOptions> options)
+	/// <param name="options">包含 Redis 缓存选项（如键前缀）的选项包装器。</param>
+	/// <param name="keyTransformer">租户键转换器；未注册时为 <c>null</c>。</param>
+	public RedisCacheService(IOptions<RedisCacheOptions> options, IKeyTransformer? keyTransformer = null)
 	{
 		_manager = new RedisCacheManager(options.Value);
 		KeyPrefix = options.Value.KeyPrefix;
+
+		if (keyTransformer != null)
+		{
+			KeyTransformer = keyTransformer;
+		}
 	}
 
 	/// <inheritdoc />
@@ -38,7 +44,7 @@ public class RedisCacheService : BaseCacheService, ICacheService
 			return true;
 		}
 
-		value = default;
+		value = default!;
 		return false;
 	}
 
@@ -114,7 +120,7 @@ public class RedisCacheService : BaseCacheService, ICacheService
 
 		key = RewriteKey(key);
 		var item = GetCacheManager<TValue>().GetCacheItem(key);
-		var value = item != null ? item.Value : default;
+		var value = item != null ? item.Value : default!;
 
 		return Task.FromResult(Tuple.Create(item != null, value));
 	}

@@ -38,7 +38,7 @@ public static class MessageProperties
 	/// </summary>
 	/// <param name="message">消息信封。</param>
 	/// <returns>目标队列名称；未设置时返回 <c>null</c>。</returns>
-	public static string GetQueue(this IMessageEnvelope message)
+	public static string? GetQueue(this IMessageEnvelope message)
 	{
 		return message?.Metadata?[QueueKey] as string;
 	}

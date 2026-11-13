@@ -17,7 +17,7 @@ public class UserPrincipal
 	/// </summary>
 	/// <param name="claims">包含用户声明的 <see cref="ClaimsPrincipal"/>。可以为 <c>null</c>，
 	/// 此时大多数访问器将相应地返回 <c>null</c> 或 <c>false</c>。</param>
-	public UserPrincipal(ClaimsPrincipal claims)
+	public UserPrincipal(ClaimsPrincipal? claims)
 	{
 		Claims = claims;
 	}
@@ -25,7 +25,7 @@ public class UserPrincipal
 	/// <summary>
 	/// 获取底层的 <see cref="ClaimsPrincipal"/> 实例。
 	/// </summary>
-	public ClaimsPrincipal Claims { get; }
+	public ClaimsPrincipal? Claims { get; }
 
 	/// <summary>
 	/// 获取用户标识（Subject）。
@@ -38,7 +38,7 @@ public class UserPrincipal
 	/// </list>
 	/// 如果找不到匹配的声明，此属性返回 <c>null</c>。
 	/// </remarks>
-	public string UserId
+	public string? UserId
 	{
 		get
 		{
@@ -49,15 +49,11 @@ public class UserPrincipal
 				"Jwt" or "Bearer" or "JwtBearer" => Claims.FindFirst(UserClaimTypes.Subject)?.Value,
 				// 对于 Windows、Cookie 身份验证，优先使用 NameIdentifier 声明
 				"Windows" or "Cookies" or "Cookie"  => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value,
-#if NET8_0_OR_GREATER
-				_ => PriorityValueFinder.Find<string>(queue =>
+				_ => PriorityValueFinder.Find<string?>(queue =>
 				{
 					queue.Enqueue(() => Claims.FindFirst(UserClaimTypes.Subject)?.Value, 1);
 					queue.Enqueue(() => Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value, 2);
 				}, value => !string.IsNullOrEmpty(value))
-#else
-				_ => (Claims.FindFirst(UserClaimTypes.Subject) ?? Claims.FindFirst(ClaimTypes.NameIdentifier))?.Value
-#endif
 			};
 		}
 	}
@@ -68,7 +64,7 @@ public class UserPrincipal
 	/// <value>
 	/// <see cref="UserClaimTypes.Name"/> 声明的值，如果声明缺失或底层 <see cref="ClaimsPrincipal"/> 为 <c>null</c> 则返回 <c>null</c>。
 	/// </value>
-	public string Username
+	public string? Username
 	{
 		get
 		{
@@ -79,15 +75,11 @@ public class UserPrincipal
 				"Jwt" or "Bearer" or "JwtBearer" => Claims?.FindFirst(UserClaimTypes.Name)?.Value,
 				// 对于 Windows、Cookie 身份验证，优先使用 Name 声明
 				"Windows" or "Cookies" or "Cookie" => Claims?.FindFirst(ClaimTypes.Name)?.Value,
-#if NET8_0_OR_GREATER
-				_ => PriorityValueFinder.Find<string>(queue =>
+				_ => PriorityValueFinder.Find<string?>(queue =>
 				{
 					queue.Enqueue(() => Claims.FindFirst(UserClaimTypes.Name)?.Value, 1);
 					queue.Enqueue(() => Claims.FindFirst(ClaimTypes.Name)?.Value, 2);
 				}, value => !string.IsNullOrEmpty(value))
-#else
-				_ => (Claims.FindFirst(UserClaimTypes.Name) ?? Claims.FindFirst(ClaimTypes.Name))?.Value
-#endif
 			};
 		}
 	}
@@ -98,7 +90,7 @@ public class UserPrincipal
 	/// <value>
 	/// <see cref="UserClaimTypes.Code"/> 声明的值，如果声明缺失或底层 <see cref="ClaimsPrincipal"/> 为 <c>null</c> 则返回 <c>null</c>。
 	/// </value>
-	public string Code => Claims?.FindFirst(UserClaimTypes.Code)?.Value;
+	public string? Code => Claims?.FindFirst(UserClaimTypes.Code)?.Value;
 
 	/// <summary>
 	/// 获取与用户关联的租户标识。
@@ -106,7 +98,7 @@ public class UserPrincipal
 	/// <value>
 	/// <see cref="UserClaimTypes.Tenant"/> 声明的值。如果声明或底层 <see cref="ClaimsPrincipal"/> 不存在则可能为 <c>null</c>。
 	/// </value>
-	public string Tenant => Claims?.FindFirst(UserClaimTypes.Tenant)?.Value;
+	public string? Tenant => Claims?.FindFirst(UserClaimTypes.Tenant)?.Value;
 
 	/// <summary>
 	/// 获取用户的角色名称序列。
@@ -117,7 +109,7 @@ public class UserPrincipal
 	/// 调用方应视情况容忍空序列或 <c>null</c>。
 	/// </remarks>
 	/// <value>角色名称（声明值）的 <see cref="IEnumerable{T}"/> 或 <c>null</c>。</value>
-	public IEnumerable<string> Roles => Claims?.FindAll(UserClaimTypes.Role).Select(t => t.Value);
+	public IEnumerable<string>? Roles => Claims?.FindAll(UserClaimTypes.Role).Select(t => t.Value);
 
 	/// <summary>
 	/// 获取一个值，指示用户是否已通过身份验证。
@@ -131,7 +123,7 @@ public class UserPrincipal
 	/// </summary>
 	/// <param name="claimType">要搜索的声明类型。</param>
 	/// <returns>找到的第一个匹配 <see cref="Claim"/>；如果未找到则返回 <c>null</c>。</returns>
-	public Claim FindClaim(string claimType)
+	public Claim? FindClaim(string claimType)
 	{
 		return Claims?.FindFirst(claimType);
 	}
@@ -171,7 +163,7 @@ public class UserPrincipal
 	/// <param name="roles">要检查的角色名称序列。</param>
 	/// <returns>如果用户已通过身份验证且至少属于一个指定角色，则为 <c>true</c>；否则为 <c>false</c>。
 	/// 如果 <paramref name="roles"/> 为 <c>null</c> 或空，则返回 <c>false</c>。</returns>
-	public bool IsInRoles(IEnumerable<string> roles)
+	public bool IsInRoles(IEnumerable<string>? roles)
 	{
 		return roles != null && roles.Any(IsInRole);
 	}
@@ -184,11 +176,7 @@ public class UserPrincipal
 	/// <returns>如果用户已通过身份验证且至少属于一个解析出的角色，则为 <c>true</c>；否则为 <c>false</c>。</returns>
 	public bool IsInRoles(string role, string separator = ",")
 	{
-#if NET5_0_OR_GREATER
 		ArgumentNullException.ThrowIfNull(role);
-#else
-		ArgumentAssert.ThrowIfNull(role, nameof(role));
-#endif
 
 		var roles = role.Split(separator, StringSplitOptions.RemoveEmptyEntries)
 		                .Select(t => t.Trim())
@@ -202,6 +190,11 @@ public class UserPrincipal
 	/// </summary>
 	private IEnumerable<Claim> FindRoleClaims()
 	{
+		if (Claims == null)
+		{
+			return Array.Empty<Claim>();
+		}
+
 		var claims = new List<Claim>(Claims.FindAll(UserClaimTypes.Role));
 		foreach (var identity in Claims.Identities)
 		{

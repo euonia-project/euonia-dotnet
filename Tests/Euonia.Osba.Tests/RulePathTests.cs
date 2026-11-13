@@ -15,6 +15,9 @@ public class RulePathTests
 {
 	#region 命令链路（核心缺陷）
 
+	/// <summary>
+	/// 对象级规则失败时命令执行抛出验证异常，且命令体不会执行。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteActuator_ObjectRuleFails_ShouldThrow_AndNotRunCommandBody()
 	{
@@ -32,6 +35,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 对象级规则通过时命令体正常执行并返回结果。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteActuator_ObjectRulePasses_ShouldRunCommandBody()
 	{
@@ -47,6 +53,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 只有警告级违规时命令体仍会执行，违规集合中保留警告且没有错误。
+	/// </summary>
 	[Fact]
 	public async Task ExecuteActuator_WarningOnlyRule_ShouldRunCommandBody()
 	{
@@ -64,6 +73,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 工厂执行路径在对象级规则失败时于命令体之前抛出验证异常。
+	/// </summary>
 	[Fact]
 	public async Task FactoryExecute_ObjectRuleFails_ShouldThrow_BeforeCommandBody()
 	{
@@ -80,6 +92,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 可编辑对象在对象级规则失败时保存仍会抛出验证异常。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ObjectRuleFails_ShouldStillThrow_ForEditablePath()
 	{
@@ -100,6 +115,9 @@ public class RulePathTests
 
 	#region 显式校验入口
 
+	/// <summary>
+	/// 校验无效对象返回 <c>false</c>，并把违规写入违规集合。
+	/// </summary>
 	[Fact]
 	public async Task ValidateAsync_OnInvalidObject_ShouldReturnFalse_AndPopulateBrokenRules()
 	{
@@ -118,6 +136,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 校验有效对象返回 <c>true</c>，且不产生任何违规。
+	/// </summary>
 	[Fact]
 	public async Task ValidateAsync_OnValidObject_ShouldReturnTrue()
 	{
@@ -130,6 +151,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 无效对象调用 <c>EnsureValidAsync</c> 会抛出验证异常。
+	/// </summary>
 	[Fact]
 	public async Task EnsureValidAsync_OnInvalidObject_ShouldThrow()
 	{
@@ -146,6 +170,9 @@ public class RulePathTests
 
 	#region 挂起检查后的陈旧判定
 
+	/// <summary>
+	/// 挂起规则检查后保存不会依据陈旧的违规结论拦截。
+	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WhenRuleCheckingSuspended_ShouldNotThrow_OnStaleBrokenRules()
 	{
@@ -177,6 +204,9 @@ public class RulePathTests
 
 	#region 违规集合的一致性
 
+	/// <summary>
+	/// 规则以 <c>null</c> 或空白描述报告失败时不算通过，并以占位文案记录违规。
+	/// </summary>
 	[Fact]
 	public async Task CheckObjectRules_BlankErrorResult_ShouldNotThrow_AndMarkInvalid()
 	{
@@ -200,6 +230,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 连续两次检查不会重复累积违规。
+	/// </summary>
 	[Fact]
 	public async Task CheckObjectRules_RunTwice_ShouldNotAccumulateErrors()
 	{
@@ -215,6 +248,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 外部清空违规集合后计数归零，对象恢复有效。
+	/// </summary>
 	[Fact]
 	public async Task BrokenRules_ClearFromOutside_ShouldResetIsValid()
 	{
@@ -233,6 +269,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 外部移除违规项后计数同步更新，对象恢复有效。
+	/// </summary>
 	[Fact]
 	public async Task BrokenRules_RemoveFromOutside_ShouldResetIsValid()
 	{
@@ -253,6 +292,9 @@ public class RulePathTests
 
 	#region 实例级规则
 
+	/// <summary>
+	/// 实例级规则只作用于添加它的对象，不影响同类的新实例。
+	/// </summary>
 	[Fact]
 	public async Task AddInstanceRule_ShouldApplyToCurrentInstanceOnly()
 	{
@@ -269,6 +311,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 绑定属性的附加规则会被对象级检查纳入，失败时阻止执行。
+	/// </summary>
 	[Fact]
 	public async Task WithRule_PropertyBoundRule_ShouldRunInObjectPass_AndAttributeToProperty()
 	{
@@ -287,6 +332,9 @@ public class RulePathTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 绑定属性的规则失败时，违规归因到对应属性名。
+	/// </summary>
 	[Fact]
 	public async Task WithRule_PropertyBoundRule_ShouldAttributeBrokenRuleToPropertyName()
 	{

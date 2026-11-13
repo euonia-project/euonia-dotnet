@@ -1,12 +1,12 @@
 ﻿<Project>
     <PropertyGroup>
-        <Version>2026.4.7</Version>
+        <Version>2026.5.0</Version>
         <Authors>damon</Authors>
         <Company>Nerosoft Ltd.</Company>
         <Product>Euonia</Product>
         <Copyright>© 2018-$([System.DateTime]::Now.Year) Nerosoft. All Rights Reserved.</Copyright>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>disable</Nullable>
+        <Nullable>enable</Nullable>
         <LangVersion>latest</LangVersion>
         <NoWarn>CS2002;IDE0290;IDE0300;IDE0301;IDE0305;IDE0028</NoWarn>
     </PropertyGroup>

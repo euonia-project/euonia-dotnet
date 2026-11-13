@@ -67,12 +67,12 @@ public sealed class NotifyTaskCompletion<TResult> : INotifyPropertyChanged
     /// <summary>
     /// 获取任务包装器任务。
     /// </summary>
-    public Task TaskCompletion { get; }
+    public Task? TaskCompletion { get; }
 
     /// <summary>
     /// 获取指定任务的结果。
     /// </summary>
-    public TResult Result => Task.Status == TaskStatus.RanToCompletion ? Task.Result : default;
+    public TResult? Result => Task.Status == TaskStatus.RanToCompletion ? Task.Result : default;
 
     /// <summary>
     /// 获取任务的状态。
@@ -107,22 +107,22 @@ public sealed class NotifyTaskCompletion<TResult> : INotifyPropertyChanged
     /// <summary>
     /// 获取任务上发生的异常（如果发生）。
     /// </summary>
-    public AggregateException Exception => Task.Exception;
+    public AggregateException? Exception => Task.Exception;
 
     /// <summary>
     /// 获取任务的内部异常。
     /// </summary>
-    public Exception InnerException => Exception?.InnerException;
+    public Exception? InnerException => Exception?.InnerException;
 
     /// <summary>
     /// 获取任务的错误消息。
     /// </summary>
-    public string ErrorMessage => InnerException?.Message ?? Exception.Message;
+    public string? ErrorMessage => InnerException?.Message ?? Exception?.Message;
 
     /// <summary>
     /// 属性更改事件。
     /// </summary>
-    public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 /// <summary>
@@ -188,7 +188,7 @@ public sealed class NotifyTaskCompletion : INotifyPropertyChanged
     /// <summary>
     /// 获取任务包装器任务。
     /// </summary>
-    public Task TaskCompletion { get; }
+    public Task? TaskCompletion { get; }
 
     /// <summary>
     /// 获取任务的状态。
@@ -223,20 +223,20 @@ public sealed class NotifyTaskCompletion : INotifyPropertyChanged
     /// <summary>
     /// 获取任务上发生的异常（如果发生）。
     /// </summary>
-    public AggregateException Exception => Task.Exception;
+    public AggregateException? Exception => Task.Exception;
 
     /// <summary>
     /// 获取任务的内部异常。
     /// </summary>
-    public Exception InnerException => Exception?.InnerException;
+    public Exception? InnerException => Exception?.InnerException;
 
     /// <summary>
     /// 获取任务的错误消息。
     /// </summary>
-    public string ErrorMessage => InnerException?.Message ?? Exception.Message;
+    public string? ErrorMessage => InnerException?.Message ?? Exception?.Message;
 
     /// <summary>
     /// 属性更改事件。
     /// </summary>
-    public event PropertyChangedEventHandler PropertyChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 }

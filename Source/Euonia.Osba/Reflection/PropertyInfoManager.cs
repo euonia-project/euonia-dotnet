@@ -32,7 +32,7 @@ public static class PropertyInfoManager
 	/// 线程静态 ⇒ 读它无需加锁。
 	/// </summary>
 	[ThreadStatic]
-	private static Dictionary<Type, PropertyInfoList> _initializing;
+	private static Dictionary<Type, PropertyInfoList>? _initializing;
 
 	/// <summary>
 	/// 获取对象类型的属性列表缓存；若不存在则创建并完成一次静态初始化。
@@ -132,7 +132,7 @@ public static class PropertyInfoManager
 	/// <param name="objectType">对象类型。</param>
 	/// <param name="propertyName">属性名称。</param>
 	/// <returns>匹配的属性信息；如果未找到则为 <c>null</c>。</returns>
-	public static IPropertyInfo GetRegisteredProperty(Type objectType, string propertyName)
+	public static IPropertyInfo? GetRegisteredProperty(Type objectType, string propertyName)
 	{
 		return GetRegisteredProperties(objectType).FirstOrDefault(p => p.Name == propertyName);
 	}

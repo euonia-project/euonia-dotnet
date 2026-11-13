@@ -42,7 +42,7 @@ public interface IRepositoryContext : IDisposable
 	/// </summary>
 	/// <returns>当前事务；若没有活动事务则为 <c>null</c>。</returns>
 	/// <exception cref="NotSupportedException">当底层数据提供程序不支持关系型事务时抛出。</exception>
-	IDbTransaction GetTransaction();
+	IDbTransaction? GetTransaction();
 
 	/// <summary>
 	/// 以异步方式将上下文中的所有变更保存到数据存储。

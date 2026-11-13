@@ -44,14 +44,14 @@ public class IdempotentInterceptor : IInterceptor
 
 	private readonly IServiceProvider _serviceProvider;
 
-	private readonly IRequestContextAccessor _requestContextAccessor;
+	private readonly IRequestContextAccessor? _requestContextAccessor;
 
 	/// <summary>
 	/// 初始化 <see cref="IdempotentInterceptor"/> 类的新实例。
 	/// </summary>
 	/// <param name="serviceProvider">用于解析 <see cref="ICacheService"/> 的服务容器。</param>
 	/// <param name="requestContextAccessor">请求上下文访问器，提供 <c>Idempotency-Key</c> 请求头；可省略。</param>
-	public IdempotentInterceptor(IServiceProvider serviceProvider, IRequestContextAccessor requestContextAccessor = null)
+	public IdempotentInterceptor(IServiceProvider serviceProvider, IRequestContextAccessor? requestContextAccessor = null)
 	{
 		_serviceProvider = serviceProvider;
 		_requestContextAccessor = requestContextAccessor;
@@ -95,7 +95,7 @@ public class IdempotentInterceptor : IInterceptor
 			else
 			{
 				invocation.ReturnValue = _wrapAsyncMethods.GetOrAdd(resultType, type => _wrapAsyncMethod.MakeGenericMethod(type))
-					.Invoke(this, new object[] { invocation, proceedInfo, cache, key, timeout, lockWait });
+					.Invoke(this, new object?[] { invocation, proceedInfo, cache, key, timeout, lockWait });
 			}
 
 			return;
@@ -123,7 +123,7 @@ public class IdempotentInterceptor : IInterceptor
 
 		invocation.Proceed();
 		_writeSyncMethod.MakeGenericMethod(invocation.Method.ReturnType)
-			.Invoke(null, new object[] { invocation.ReturnValue, cache, key, timeout });
+			.Invoke(null, new object?[] { invocation.ReturnValue, cache, key, timeout });
 	}
 
 	private async Task InterceptTaskAsync(IInvocation invocation, IInvocationProceedInfo proceedInfo, ICacheService cache, string key, TimeSpan? timeout, TimeSpan lockWait)
@@ -135,7 +135,8 @@ public class IdempotentInterceptor : IInterceptor
 		}
 
 		proceedInfo.Invoke();
-		await ((Task)invocation.ReturnValue).ConfigureAwait(false);
+		// Proceed 之后返回 Task 的方法其 ReturnValue 必为任务实例。
+		await ((Task)invocation.ReturnValue!).ConfigureAwait(false);
 		cache.AddOrUpdate(key, DoneMarker, timeout);
 	}
 
@@ -148,7 +149,7 @@ public class IdempotentInterceptor : IInterceptor
 		}
 
 		proceedInfo.Invoke();
-		var result = await ((Task<T>)invocation.ReturnValue).ConfigureAwait(false);
+		var result = await ((Task<T>)invocation.ReturnValue!).ConfigureAwait(false);
 		if (result != null)
 		{
 			cache.AddOrUpdate(key, result, timeout);
@@ -190,7 +191,7 @@ public class IdempotentInterceptor : IInterceptor
 		return await SemaphoreLockStore.AcquireAsync(key, 1, lockWait).ConfigureAwait(false);
 	}
 
-	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, TimeSpan? timeout)
+	private static void WriteBackSync<T>(object? rawReturnValue, ICacheService cache, string key, TimeSpan? timeout)
 	{
 		if (rawReturnValue != null)
 		{
@@ -198,7 +199,7 @@ public class IdempotentInterceptor : IInterceptor
 		}
 	}
 
-	private static bool IsTaskMethod(MethodInfo method, out Type resultType)
+	private static bool IsTaskMethod(MethodInfo method, out Type? resultType)
 	{
 		if (method.ReturnType == typeof(Task))
 		{
@@ -257,7 +258,7 @@ public class IdempotentInterceptor : IInterceptor
 		return builder.ToString();
 	}
 
-	private string ResolveRequestKey(IdempotentAttribute attribute)
+	private string? ResolveRequestKey(IdempotentAttribute attribute)
 	{
 		if (!attribute.UseRequestKey)
 		{
@@ -274,7 +275,7 @@ public class IdempotentInterceptor : IInterceptor
 		return string.IsNullOrEmpty(requestKey) ? null : requestKey;
 	}
 
-	private static string RenderArgument(object argument)
+	private static string RenderArgument(object? argument)
 	{
 		if (argument == null)
 		{
@@ -301,7 +302,7 @@ public class IdempotentInterceptor : IInterceptor
 		}
 	}
 
-	private static IdempotentAttribute ResolveAttribute(IInvocation invocation)
+	private static IdempotentAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<IdempotentAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<IdempotentAttribute>();

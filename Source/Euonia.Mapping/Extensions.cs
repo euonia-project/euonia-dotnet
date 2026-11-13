@@ -21,7 +21,7 @@ public static class Extensions
 	public static TDestination ProjectedAs<TDestination>(this object source)
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt<TDestination>(source);
 	}
 
@@ -34,7 +34,7 @@ public static class Extensions
 	/// <exception cref="ArgumentNullException"><paramref name="source"/> 为 <see langword="null"/>。</exception>
 	public static object ProjectedAs(this object source, Type destinationType)
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt(source, destinationType);
 	}
 
@@ -48,7 +48,7 @@ public static class Extensions
 	public static List<TDestination> ProjectedAsCollection<TDestination>(this IEnumerable<object> items)
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt<List<TDestination>>(items);
 	}
 }

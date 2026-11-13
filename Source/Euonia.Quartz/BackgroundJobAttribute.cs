@@ -3,43 +3,42 @@
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// The background job attribute.
+/// 后台作业特性。
 /// </summary>
 [AttributeUsage(AttributeTargets.Class)]
 public class BackgroundJobAttribute : Attribute
 {
 	/// <summary>
-	/// Initialize a new instance of <see cref="BackgroundJobAttribute"/>.
+	/// 初始化 <see cref="BackgroundJobAttribute"/> 的新实例。
 	/// </summary>
-	/// <param name="name">The job name.</param>
-	/// <exception cref="ArgumentNullException"></exception>
+	/// <param name="name">作业名称；注册作业时若未显式指定名称，则使用该值。</param>
 	public BackgroundJobAttribute(string name)
     {
         Name = name;
     }
 
     /// <summary>
-    /// Gets the job name.
+    /// 获取作业名称。
     /// </summary>
     public string Name { get; }
 
     /// <summary>
-    /// Gets or sets the quartz job group name.
+    /// 获取或设置 Quartz 作业组名称。
     /// </summary>
-    public string Group { get; set; }
+    public string? Group { get; set; }
 
     /// <summary>
-    /// Gets or sets a description for the job.
+    /// 获取或设置作业的说明。
     /// </summary>
-    public string Description { get; set; }
+    public string? Description { get; set; }
     
     /// <summary>
-    /// Instructs the <see cref="IScheduler" /> whether or not the job should be re-executed if a 'recovery' or 'fail-over' situation is encountered.
+    /// 指示当遇到“恢复（recovery）”或“故障转移（fail-over）”情形时，<see cref="IScheduler" /> 是否应重新执行该作业。
     /// </summary>
     public bool? RequestRecovery { get; set; }
 
     /// <summary>
-    /// Whether or not the job should remain stored after it is orphaned (no <see cref="ITrigger" />s point to it).
+    /// 作业在成为孤立作业（没有 <see cref="ITrigger" /> 指向它）后是否仍应保留存储。
     /// </summary>
     public bool? StoreDurably { get; set; }
 }

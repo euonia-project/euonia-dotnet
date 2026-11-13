@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// <summary>
 /// 按当前用户（claim 中的 subject）查找授权数据并解析为权限主体。
 /// 角色由令牌中的声明提供；行级授予（<see cref="AuthorizationKinds.Grant"/>，编码 <c>"{op}|{id}"</c>）
-/// 按操作码分组，再经 <see cref="ScopeSubjectSetBuilder.AddGrant"/> 下推到对应资源的行级维度：
+/// 按操作码分组，再经 <see cref="ScopeSubjectSetBuilder.AddGrant(string, string, string)"/> 下推到对应资源的行级维度：
 /// <c>repository:*</c> → <see cref="RepositoryScopeModel.RepositoryDimension"/>、
 /// <c>project:*</c> → <see cref="ProjectScopeModel.ProjectDimension"/>；其余前缀一律忽略。
 /// <para>
@@ -23,18 +23,29 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 	private readonly AuthorizationStore _store;
 	private readonly ITeamStore _teams;
 
+	/// <summary>
+	/// 初始化解析器，注入授权数据存储与团队存储。
+	/// </summary>
+	/// <param name="store">授权数据的读取入口。</param>
+	/// <param name="teams">团队存储，用于反向展开当前用户所属的团队。</param>
 	public ScopeSubjectResolver(AuthorizationStore store, ITeamStore teams)
 	{
 		_store = store;
 		_teams = teams;
 	}
 
-	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+	/// <summary>
+	/// 根据当前用户的声明解析权限主体；缺少用户标识或无授权数据时返回空主体。
+	/// </summary>
+	/// <param name="user">当前请求的用户声明主体，可能为 <see langword="null"/>。</param>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>包含权限码、行级授予与团队维度的权限主体集合。</returns>
+	public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 	{
 		return ResolveCoreAsync(user, cancellationToken);
 	}
 
-	private async ValueTask<ScopeSubjectSet> ResolveCoreAsync(ClaimsPrincipal user, CancellationToken cancellationToken)
+	private async ValueTask<ScopeSubjectSet> ResolveCoreAsync(ClaimsPrincipal? user, CancellationToken cancellationToken)
 	{
 		// sub 在部分 JwtBearer 版本中被映射成 ClaimTypes.NameIdentifier，两个都认
 		var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value
@@ -66,7 +77,8 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		foreach (var group in authorization.Grants
 		                                 .Select(ParseGrant)
 		                                 .Where(grant => grant.HasValue)
-		                                 .GroupBy(grant => grant!.Value.Operation))
+		                                 .Select(grant => grant.GetValueOrDefault())
+		                                 .GroupBy(grant => grant.Operation))
 		{
 			var dimension = ResolveDimension(group.Key);
 			if (dimension == null)
@@ -80,7 +92,7 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 			// 故读码额外并列挂一份；写码之间仍彼此独立（edit 不蕴含 archive）。
 			foreach (var code in ScopeCodesFor(group.Key, dimension))
 			{
-				builder.AddGrant(code, dimension, group.Select(grant => grant.Value.Id));
+				builder.AddGrant(code, dimension, group.Select(grant => grant.Id));
 			}
 		}
 
@@ -105,7 +117,9 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		}
 	}
 
-	/// <summary>解析 <c>"{op}|{id}"</c> 形态的行级授予；格式非法时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 解析 <c>"{op}|{id}"</c> 形态的行级授予；格式非法时返回 <see langword="null"/>。
+	/// </summary>
 	private static (string Operation, string Id)? ParseGrant(string value)
 	{
 		if (string.IsNullOrWhiteSpace(value))
@@ -122,8 +136,10 @@ public sealed class ScopeSubjectResolver : IScopeSubjectResolver
 		return (value[..index], value[(index + 1)..]);
 	}
 
-	/// <summary>按操作码前缀把行级授予路由到相应资源的行级维度；未知前缀忽略。</summary>
-	private static string ResolveDimension(string operation)
+	/// <summary>
+	/// 按操作码前缀把行级授予路由到相应资源的行级维度；未知前缀忽略。
+	/// </summary>
+	private static string? ResolveDimension(string operation)
 	{
 		if (operation.StartsWith("repository:", StringComparison.Ordinal))
 		{

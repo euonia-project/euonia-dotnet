@@ -6,7 +6,7 @@ namespace Nerosoft.Euonia.Bus;
 internal class OverridableTransportStrategy : ITransportStrategy
 {
 	private readonly ITransportStrategy _innerStrategy;
-	private Func<string, Type, bool> _outgoingEvaluator, _incomingEvaluator;
+	private Func<string, Type, bool>? _outgoingEvaluator, _incomingEvaluator;
 
 	/// <summary>
 	/// 初始化 <see cref="OverridableTransportStrategy"/> 类的新实例。

@@ -1,48 +1,54 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// 
+/// 按缓存键存储缓存项并协调并发访问的内部容器。
 /// </summary>
-/// <typeparam name="TKey"></typeparam>
-/// <typeparam name="TResult"></typeparam>
-internal class CacheItem<TKey, TResult>
+/// <typeparam name="TKey">缓存键的类型，不能为 <see langword="null"/>。</typeparam>
+/// <typeparam name="TResult">缓存结果的类型。</typeparam>
+internal class CacheItem<TKey, TResult> where TKey : notnull
 {
     /// <summary>
-    /// The cache context accessor
+    /// 缓存上下文访问器
     /// </summary>
     private readonly ICacheContextAccessor _accessor;
 
     /// <summary>
-    /// The entries
+    /// 条目集合
     /// </summary>
     private readonly ConcurrentDictionary<TKey, CacheEntry> _entries;
 
     /// <summary>
-    /// `GetOrAdd` call on the dictionary is not thread safe and we might end up creating a SemaphoreSlim more than once.
-    /// To prevent this, Lazy`1 is used. In the worst case multiple Lazy`1 objects are created for multiple
-    /// threads but only one of the objects succeeds in creating a SemaphoreSlim due to use of Lazy`1.Value.
+    /// 字典上的 `GetOrAdd` 调用不是线程安全的，可能会导致多次创建同一个 SemaphoreSlim。
+    /// 为避免此问题，这里使用 Lazy`1。最坏情况下，多个线程会创建多个 Lazy`1 对象，
+    /// 但由于使用了 Lazy`1.Value，最终只有一个对象能成功创建 SemaphoreSlim。
     /// </summary>
     private readonly ConcurrentDictionary<TKey, Lazy<SemaphoreSlim>> _semaphoreSlims = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheItem{TKey, TResult}"/> class.
+    /// 初始化 <see cref="CacheItem{TKey, TResult}"/> 类的新实例。
     /// </summary>
-    /// <param name="accessor">The cache context accessor.</param>
+    /// <param name="accessor">缓存上下文访问器。</param>
     public CacheItem(ICacheContextAccessor accessor)
     {
         _accessor = accessor;
         _entries = new ConcurrentDictionary<TKey, CacheEntry>();
     }
 
+    /// <summary>
+    /// 获取指定键的缓存结果；键不存在或其令牌已失效时，通过 <paramref name="acquire"/> 创建并缓存结果。
+    /// </summary>
+    /// <param name="key">缓存键。</param>
+    /// <param name="acquire">在获取上下文中产生结果的委托，可通过上下文监视易变令牌。</param>
+    /// <returns>缓存中已有或新创建的结果。</returns>
     public TResult GetOrAdd(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
     {
         // 与 TryGet 保持一致：token 失效的条目视为不存在，必须重新获取。
         if (_entries.TryGetValue(key, out var stale) && !stale.Tokens.All(t => t.IsCurrent))
         {
-            // netstandard2.1 没有 TryRemove(KeyValuePair)；ICollection.Remove 提供原子的“值相同才删除”。
-            ((ICollection<KeyValuePair<TKey, CacheEntry>>)_entries).Remove(new KeyValuePair<TKey, CacheEntry>(key, stale));
+            _entries.TryRemove(new KeyValuePair<TKey, CacheEntry>(key, stale));
         }
 
         var entry = _entries.GetOrAdd(key, _ =>
@@ -54,22 +60,34 @@ internal class CacheItem<TKey, TResult>
         return entry.Result;
     }
 
+    /// <summary>
+    /// 添加或更新指定键的缓存结果；现有条目及其令牌仍有效时复用条目，否则重新创建。
+    /// </summary>
+    /// <param name="key">缓存键。</param>
+    /// <param name="acquire">在获取上下文中产生结果的委托。</param>
+    /// <returns>写入后的结果。</returns>
     public TResult AddOrUpdate(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
     {
         var entry = _entries.AddOrUpdate(key,
-            // "Add" lambda
+            // "新增" lambda
             k =>
             {
                 var entry = CreateEntry(k, acquire);
                 PropagateTokens(entry);
                 return entry;
             },
-            // "Update" lambda
+            // "更新" lambda
             (k, currentEntry) => UpdateEntry(currentEntry, k, acquire));
 
         return entry.Result;
     }
 
+    /// <summary>
+    /// 异步获取指定键的缓存结果；未命中时用信号量串行化同一键的并发加载，避免惊群与重复创建。
+    /// </summary>
+    /// <param name="key">缓存键。</param>
+    /// <param name="acquire">异步产生结果的委托。</param>
+    /// <returns>缓存中已有或新创建的结果。</returns>
     public async Task<TResult> GetOrAddAsync(TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
         if (_entries.TryGetValue(key, out var entry) && entry.Tokens.All(t => t.IsCurrent))
@@ -107,12 +125,12 @@ internal class CacheItem<TKey, TResult>
     }
 
     /// <summary>
-    /// Try to get cache item.
+    /// 尝试获取缓存项。
     /// </summary>
-    /// <param name="key"></param>
-    /// <param name="value"></param>
-    /// <returns></returns>
-    public bool TryGet(TKey key, out TResult value)
+    /// <param name="key">要查找的缓存键。</param>
+    /// <param name="value">命中时返回缓存值；未命中时为其类型的默认值。</param>
+    /// <returns>找到条目且其所有令牌均有效时为 <see langword="true"/>；否则为 <see langword="false"/>。</returns>
+    public bool TryGet(TKey key, [MaybeNullWhen(false)] out TResult value)
     {
         if (_entries.TryGetValue(key, out var entry))
         {
@@ -131,13 +149,19 @@ internal class CacheItem<TKey, TResult>
         // return result;
     }
 
+    /// <summary>
+    /// 异步添加或更新指定键的缓存结果，同一键的并发调用由信号量串行化。
+    /// </summary>
+    /// <param name="key">缓存键。</param>
+    /// <param name="acquire">异步产生结果的委托。</param>
+    /// <returns>写入后的结果。</returns>
     public async Task<TResult> AddOrUpdateAsync(TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
         CacheEntry result;
 
         var semaphoreSlim = GetSemaphoreSlim(key);
 
-        // async lock
+        // 异步锁
         await semaphoreSlim.WaitAsync();
 
         try
@@ -166,10 +190,10 @@ internal class CacheItem<TKey, TResult>
         var entry = new CacheEntry();
         var context = new AcquireContext<TKey>(key, entry.AddToken);
 
-        IAcquireContext parentContext = null;
+        IAcquireContext? parentContext = null;
         try
         {
-            // Push context
+            // 压入上下文
             parentContext = _accessor.Current;
             _accessor.Current = context;
 
@@ -177,7 +201,7 @@ internal class CacheItem<TKey, TResult>
         }
         finally
         {
-            // Pop context
+            // 弹出上下文
             _accessor.Current = parentContext;
         }
 
@@ -185,7 +209,7 @@ internal class CacheItem<TKey, TResult>
         return entry;
     }
 
-    private async Task<CacheEntry> UpdateEntryAsync(CacheEntry currentEntry, TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
+    private async Task<CacheEntry> UpdateEntryAsync(CacheEntry? currentEntry, TKey key, Func<AcquireContext<TKey>, Task<TResult>> acquire)
     {
         // currentEntry 可能为 null（例如来自 AddOrUpdateAsync），此时必须新建条目
         var entry = currentEntry == null || currentEntry.Tokens.Any(t => t is { IsCurrent: false }) ? await CreateEntryAsync(key, acquire) : currentEntry;
@@ -198,10 +222,10 @@ internal class CacheItem<TKey, TResult>
         var entry = new CacheEntry();
         var context = new AcquireContext<TKey>(key, entry.AddToken);
 
-        IAcquireContext parentContext = null;
+        IAcquireContext? parentContext = null;
         try
         {
-            // Push context
+            // 压入上下文
             parentContext = _accessor.Current;
             _accessor.Current = context;
 
@@ -209,7 +233,7 @@ internal class CacheItem<TKey, TResult>
         }
         finally
         {
-            // Pop context
+            // 弹出上下文
             _accessor.Current = parentContext;
         }
 
@@ -218,12 +242,12 @@ internal class CacheItem<TKey, TResult>
     }
 
     /// <summary>
-    /// Propagates the tokens.
+    /// 传播令牌。
     /// </summary>
-    /// <param name="entry">The entry.</param>
+    /// <param name="entry">条目。</param>
     private void PropagateTokens(CacheEntry entry)
     {
-        // Bubble up volatile tokens to parent context
+        // 将易变令牌向上冒泡到父上下文
         if (_accessor.Current == null)
         {
             return;
@@ -236,11 +260,11 @@ internal class CacheItem<TKey, TResult>
     }
 
     /// <summary>
-    /// Retrieve the SemaphoreSlim specific to this cache key.
-    /// This method is thread safe due to its use of Lazy`1.
+    /// 获取专用于该缓存键的 SemaphoreSlim。
+    /// 此方法是线程安全的，因为它使用了 Lazy`1。
     /// </summary>
-    /// <param name="key"></param>
-    /// <returns></returns>
+    /// <param name="key">缓存键。</param>
+    /// <returns>与该键唯一关联的信号量，保证同一键的加载操作串行执行。</returns>
     private SemaphoreSlim GetSemaphoreSlim(TKey key)
     {
         var semaphoreSlim = _semaphoreSlims.GetOrAdd(key, _ => new Lazy<SemaphoreSlim>(() => new SemaphoreSlim(1, 1)));
@@ -248,31 +272,31 @@ internal class CacheItem<TKey, TResult>
     }
 
     /// <summary>
-    /// Class CacheEntry.
+    /// CacheEntry 类。
     /// </summary>
     private class CacheEntry
     {
         /// <summary>
-        /// The tokens
+        /// 缓存项关联的易变令牌；任一令牌失效都会使缓存项失效。
         /// </summary>
-        private IList<IVolatileToken> _tokens;
+        private IList<IVolatileToken>? _tokens;
 
         /// <summary>
-        /// Gets or sets the result.
+        /// 获取或设置结果。
         /// </summary>
-        /// <value>The result.</value>
-        public TResult Result { get; set; }
+        /// <value>结果。</value>
+        public TResult Result { get; set; } = default!;
 
         /// <summary>
-        /// Gets the tokens.
+        /// 获取令牌。
         /// </summary>
-        /// <value>The tokens.</value>
+        /// <value>令牌。</value>
         public IEnumerable<IVolatileToken> Tokens => _tokens ?? Enumerable.Empty<IVolatileToken>();
 
         /// <summary>
-        /// Adds the token.
+        /// 添加令牌。
         /// </summary>
-        /// <param name="volatileToken">The volatile token.</param>
+        /// <param name="volatileToken">易变令牌。</param>
         public void AddToken(IVolatileToken volatileToken)
         {
             _tokens ??= new List<IVolatileToken>();
@@ -281,7 +305,7 @@ internal class CacheItem<TKey, TResult>
         }
 
         /// <summary>
-        /// Compacts the tokens.
+        /// 压缩令牌。
         /// </summary>
         public void CompactTokens()
         {

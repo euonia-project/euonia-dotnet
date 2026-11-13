@@ -17,13 +17,13 @@ internal static class UnitOfWorkHelper
 	/// </returns>
 	public static bool IsUnitOfWorkType(Type implementationType)
 	{
-		//Explicitly defined UnitOfWorkAttribute
+		//显式定义 UnitOfWorkAttribute
 		if (HasUnitOfWorkAttribute(implementationType) || AnyMethodHasUnitOfWorkAttribute(implementationType))
 		{
 			return true;
 		}
 
-		//Conventional classes
+		//约定类
 		if (typeof(IUnitOfWorkEnabled).GetTypeInfo().IsAssignableFrom(implementationType))
 		{
 			return true;
@@ -46,11 +46,11 @@ internal static class UnitOfWorkHelper
 	/// 判断顺序为：方法上的 <see cref="UnitOfWorkAttribute"/> → 声明类型上的 <see cref="UnitOfWorkAttribute"/> →
 	/// 声明类型是否实现 <see cref="IUnitOfWorkEnabled"/>。目标特性将 <see cref="UnitOfWorkAttribute.IsDisabled"/> 设为 <c>true</c> 时返回 <c>false</c>。
 	/// </remarks>
-	public static bool IsUnitOfWorkMethod(MethodInfo methodInfo, out UnitOfWorkAttribute unitOfWorkAttribute)
+	public static bool IsUnitOfWorkMethod(MethodInfo methodInfo, out UnitOfWorkAttribute? unitOfWorkAttribute)
 	{
 		ArgumentNullException.ThrowIfNull(methodInfo);
 
-		//Method declaration
+		//方法声明
 		var attrs = methodInfo.GetCustomAttributes(true).OfType<UnitOfWorkAttribute>().ToArray();
 		if (attrs.Any())
 		{
@@ -60,7 +60,7 @@ internal static class UnitOfWorkHelper
 
 		if (methodInfo.DeclaringType != null)
 		{
-			//Class declaration
+			//类声明
 			attrs = methodInfo.DeclaringType.GetTypeInfo().GetCustomAttributes(true).OfType<UnitOfWorkAttribute>().ToArray();
 			if (attrs.Any())
 			{
@@ -68,7 +68,7 @@ internal static class UnitOfWorkHelper
 				return !unitOfWorkAttribute.IsDisabled;
 			}
 
-			//Conventional classes
+			//约定类
 			if (typeof(IUnitOfWorkEnabled).GetTypeInfo().IsAssignableFrom(methodInfo.DeclaringType))
 			{
 				unitOfWorkAttribute = null;
@@ -85,7 +85,7 @@ internal static class UnitOfWorkHelper
 	/// </summary>
 	/// <param name="methodInfo">要查询的方法。</param>
 	/// <returns>方法上的 <see cref="UnitOfWorkAttribute"/>；若方法上未标注则回退到声明类型上的特性；均未标注时返回 <c>null</c>。</returns>
-	public static UnitOfWorkAttribute GetUnitOfWorkAttribute(MethodInfo methodInfo)
+	public static UnitOfWorkAttribute? GetUnitOfWorkAttribute(MethodInfo methodInfo)
 	{
 		var attrs = methodInfo.GetCustomAttributes(true).OfType<UnitOfWorkAttribute>().ToArray();
 		if (attrs.Length > 0)

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Bus.HealthChecks;
+using Nerosoft.Euonia.Modularity;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -37,8 +38,13 @@ public static class HealthChecksBuilderExtensions
 		/// });
 		/// </code>
 		/// </example>
-		public IHealthChecksBuilder AddEuoniaBusHealthChecks(Action<BusHealthCheckOptions> configure = null, HealthStatus? failureStatus = null, IEnumerable<string> tags = null, TimeSpan? timeout = null)
+		public IHealthChecksBuilder AddEuoniaBusHealthChecks(Action<BusHealthCheckOptions>? configure = null, HealthStatus? failureStatus = null, IEnumerable<string>? tags = null, TimeSpan? timeout = null)
 		{
+			// 自动绑定配置节 Euonia:Bus:HealthChecks，作为最低优先级的默认值；
+			// 显式 services.Configure<BusHealthCheckOptions> 与 configure 形参始终优先，与调用先后无关。
+			builder.Services.AddOptions<BusHealthCheckOptions>()
+			       .BindConfigurationIfAvailable(BusHealthCheckOptions.SectionName);
+
 			if (configure != null)
 			{
 				builder.Services.Configure(configure);

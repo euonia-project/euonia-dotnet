@@ -1,4 +1,6 @@
-﻿using System.Globalization;
+using System.Diagnostics;
+using System.Globalization;
+using Nerosoft.Euonia.Caching;
 
 namespace Nerosoft.Euonia.Caching.Internal;
 
@@ -32,6 +34,17 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </summary>
 	/// <value>如果已释放，则为 <c>true</c>；否则为 <c>false</c>。</value>
 	protected bool Disposed { get; set; }
+
+	/// <summary>
+	/// 启动缓存活动；无监听者时返回 <c>null</c>，不产生额外开销。
+	/// </summary>
+	private Activity? StartCacheActivity(string name, string operation)
+	{
+		var typeName = GetType().Name;
+		var genericStart = typeName.IndexOf((char)96, StringComparison.Ordinal);
+		var system = genericStart > 0 ? typeName[..genericStart] : typeName;
+		return CacheTelemetry.Start(name, operation, system);
+	}
 
 	/// <summary>
 	/// 获取或设置一个值，指示此 <see cref="BaseCache{TCacheValue}"/> 是否正在释放。
@@ -183,7 +196,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 			return item.Value;
 		}
 
-		return default;
+		return default!;
 	}
 
 	/// <summary>
@@ -206,7 +219,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 			return item.Value;
 		}
 
-		return default;
+		return default!;
 	}
 
 	/// <summary>
@@ -221,7 +234,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </exception>
 	public virtual TOut Get<TOut>(string key)
 	{
-		object value = Get(key);
+		object? value = Get(key);
 		return GetCasted<TOut>(value);
 	}
 
@@ -242,7 +255,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </exception>
 	public virtual TOut Get<TOut>(string key, string region)
 	{
-		object value = Get(key, region);
+		object? value = Get(key, region);
 		return GetCasted<TOut>(value);
 	}
 
@@ -252,11 +265,23 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <param name="key">用于标识缓存中项的键。</param>
 	/// <returns><c>CacheItem</c>。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
-	public virtual CacheItem<TValue> GetCacheItem(string key)
+	public virtual CacheItem<TValue>? GetCacheItem(string key)
 	{
-		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+		var activity = StartCacheActivity(CacheTelemetry.GetActivity, "get");
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		return GetCacheItemInternal(key);
+		try
+		{
+			Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+			var item = GetCacheItemInternal(key);
+			success = true;
+			return item;
+		}
+		finally
+		{
+			CacheTelemetry.Complete(activity, "get", success, stopwatch);
+		}
 	}
 
 	/// <summary>
@@ -268,12 +293,24 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <exception cref="ArgumentNullException">
 	/// 当 <paramref name="key"/> 或 <paramref name="region"/> 为 <c>null</c> 时抛出。
 	/// </exception>
-	public virtual CacheItem<TValue> GetCacheItem(string key, string region)
+	public virtual CacheItem<TValue>? GetCacheItem(string key, string region)
 	{
-		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
-		Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
+		var activity = StartCacheActivity(CacheTelemetry.GetActivity, "get");
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		return GetCacheItemInternal(key, region);
+		try
+		{
+			Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+			Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
+			var item = GetCacheItemInternal(key, region);
+			success = true;
+			return item;
+		}
+		finally
+		{
+			CacheTelemetry.Complete(activity, "get", success, stopwatch);
+		}
 	}
 
 	/// <summary>
@@ -329,9 +366,20 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </exception>
 	public virtual void Put(CacheItem<TValue> item)
 	{
-		Check.EnsureNotNull(item, nameof(item));
+		var activity = StartCacheActivity(CacheTelemetry.SetActivity, "set");
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		PutInternal(item);
+		try
+		{
+			Check.EnsureNotNull(item, nameof(item));
+			PutInternal(item);
+			success = true;
+		}
+		finally
+		{
+			CacheTelemetry.Complete(activity, "set", success, stopwatch);
+		}
 	}
 
 	/// <summary>
@@ -344,9 +392,21 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <exception cref="ArgumentNullException">当 <paramref name="key"/> 为 <c>null</c> 时抛出。</exception>
 	public virtual bool Remove(string key)
 	{
-		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+		var activity = StartCacheActivity(CacheTelemetry.RemoveActivity, "remove");
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		return RemoveInternal(key);
+		try
+		{
+			Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+			var removed = RemoveInternal(key);
+			success = true;
+			return removed;
+		}
+		finally
+		{
+			CacheTelemetry.Complete(activity, "remove", success, stopwatch);
+		}
 	}
 
 	/// <summary>
@@ -362,10 +422,22 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </exception>
 	public virtual bool Remove(string key, string region)
 	{
-		Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
-		Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
+		var activity = StartCacheActivity(CacheTelemetry.RemoveActivity, "remove");
+		var stopwatch = Stopwatch.StartNew();
+		var success = false;
 
-		return RemoveInternal(key, region);
+		try
+		{
+			Check.EnsureNotNullOrWhiteSpace(key, nameof(key));
+			Check.EnsureNotNullOrWhiteSpace(region, nameof(region));
+			var removed = RemoveInternal(key, region);
+			success = true;
+			return removed;
+		}
+		finally
+		{
+			CacheTelemetry.Complete(activity, "remove", success, stopwatch);
+		}
 	}
 
 	/// <summary>
@@ -410,7 +482,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// </summary>
 	/// <param name="key">用于标识缓存中项的键。</param>
 	/// <returns><c>CacheItem</c>。</returns>
-	protected abstract CacheItem<TValue> GetCacheItemInternal(string key);
+	protected abstract CacheItem<TValue>? GetCacheItemInternal(string key);
 
 	/// <summary>
 	/// 获取指定键和区域的 <c>CacheItem</c>。
@@ -418,7 +490,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <param name="key">用于标识缓存中项的键。</param>
 	/// <param name="region">缓存区域。</param>
 	/// <returns><c>CacheItem</c>。</returns>
-	protected abstract CacheItem<TValue> GetCacheItemInternal(string key, string region);
+	protected abstract CacheItem<TValue>? GetCacheItemInternal(string key, string? region);
 
 	/// <summary>
 	/// 从缓存中移除指定键的值。
@@ -437,7 +509,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <returns>
 	/// 如果找到并从缓存中移除了该键，则为 <c>true</c>；否则为 <c>false</c>。
 	/// </returns>
-	protected abstract bool RemoveInternal(string key, string region);
+	protected abstract bool RemoveInternal(string key, string? region);
 
 	/// <summary>
 	/// 检查实例是否已释放。
@@ -445,14 +517,7 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <exception cref="ObjectDisposedException">如果实例已释放。</exception>
 	protected void CheckDisposed()
 	{
-		#if NET8_0_OR_GREATER
 		ObjectDisposedException.ThrowIf(Disposed, this);
-		#else
-		if(Disposed)
-		{
-			throw new ObjectDisposedException(GetType().FullName);
-		}
-		#endif
 	}
 
 	/// <summary>
@@ -461,11 +526,11 @@ public abstract class BaseCache<TValue> : ICache<TValue>
 	/// <typeparam name="TOut">类型。</typeparam>
 	/// <param name="value">值。</param>
 	/// <returns>转换后的值。</returns>
-	protected static TOut GetCasted<TOut>(object value)
+	protected static TOut GetCasted<TOut>(object? value)
 	{
 		if (value == null)
 		{
-			return default;
+			return default!;
 		}
 
 		// 快速路径：类型已匹配时直接转换，避免 Convert.ChangeType 的开销。

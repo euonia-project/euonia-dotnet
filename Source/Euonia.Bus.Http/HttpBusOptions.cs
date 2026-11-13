@@ -6,6 +6,20 @@ namespace Nerosoft.Euonia.Bus.Http;
 public class HttpBusOptions
 {
 	/// <summary>
+	/// 选项对应的配置节名称（推荐使用）：<c>Euonia:Bus:Http</c>。
+	/// </summary>
+	/// <remarks>对应环境变量前缀为 <c>Euonia__Bus__Http__</c>。</remarks>
+	public const string SectionName = "Euonia:Bus:Http";
+
+	/// <summary>
+	/// 兼容旧版配置节名称：<c>HttpBus</c>。
+	/// </summary>
+	/// <remarks>
+	/// 为兼容既有部署保留；<see cref="SectionName"/> 在绑定顺序上晚于该旧节，因此新节优先，显式 <c>Configure</c> 回调最高。
+	/// </remarks>
+	public const string LegacySectionName = "HttpBus";
+
+	/// <summary>
 	/// 获取或设置一个值，指示该功能是否启用。
 	/// </summary>
 	public bool Enabled { get; set; } = true;
@@ -19,7 +33,7 @@ public class HttpBusOptions
 	/// 获取或设置客户端请求的服务端地址（BaseAddress），例如 <c>https://api.example.com</c>。
 	/// 与 <see cref="Route"/> 拼接形成完整请求地址；为空时仅使用 <see cref="Route"/>。
 	/// </summary>
-	public string Endpoint { get; set; }
+	public string? Endpoint { get; set; }
 
 	/// <summary>
 	/// 获取或设置远程调用路由，例如 <c>/bus/call</c>。
@@ -47,7 +61,7 @@ public class HttpBusOptions
 	/// 获取或设置 <see cref="HttpMessageHandler"/> 工厂。
 	/// 主要用于测试场景（例如使用 <see cref="HttpClientHandler"/> 的替代实现）。
 	/// </summary>
-	public Func<HttpMessageHandler> MessageHandlerFactory { get; set; }
+	public Func<HttpMessageHandler>? MessageHandlerFactory { get; set; }
 
 	/// <summary>
 	/// 获取通道 → 端点的路由表：键为精确通道名或通配符模式（含 <c>*</c>/<c>?</c> 即自动按模式匹配），值为服务端 BaseAddress。

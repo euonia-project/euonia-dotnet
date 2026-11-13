@@ -8,7 +8,7 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Sample.Domain.Commands;
 
 /// <summary>
-/// 把账号加入团队的命令对象。命令体经 <see cref="IObjectFactory.ExecuteAsync{T}"/> 裁决后才执行：
+/// 把账号加入团队的命令对象。命令体经 <see cref="IObjectFactory"/> 的 <c>ExecuteAsync</c> 裁决后才执行：
 /// <see cref="TeamPermissions.Edit"/> 的类型级闸门（与角色）先过，行级判定（仅本团队负责人）
 /// 在命令体内做，避免「先加成员后判定、拒了也加进去了」。
 /// </summary>
@@ -19,11 +19,15 @@ namespace Nerosoft.Euonia.Sample.Domain.Commands;
 /// </remarks>
 public sealed class AddTeamMemberCommand : ServiceObjectBase<AddTeamMemberCommand>
 {
-	/// <summary>目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
-	public string TeamId { get; set; }
+	/// <summary>
+	/// 目标团队标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
+	public string TeamId { get; set; } = null!;
 
-	/// <summary>要加入的账号标识（由 <see cref="FactoryCreateAttribute"/> 填充）。</summary>
-	public string UserId { get; set; }
+	/// <summary>
+	/// 要加入的账号标识（由 <see cref="FactoryCreateAttribute"/> 填充）。
+	/// </summary>
+	public string UserId { get; set; } = null!;
 
 	[FactoryCreate]
 	private Task CreateAsync(string teamId, string userId, CancellationToken cancellationToken = default)
@@ -33,6 +37,13 @@ public sealed class AddTeamMemberCommand : ServiceObjectBase<AddTeamMemberComman
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 执行加入团队成员：先取目标团队并做行级判定，通过后把账号写入成员表。
+	/// </summary>
+	/// <param name="cancellationToken">取消操作的令牌。</param>
+	/// <returns>表示异步执行操作的任务。</returns>
+	/// <exception cref="NotFoundException">目标团队不存在时抛出。</exception>
+	/// <exception cref="SecurityException">当前用户不是该团队负责人、行级判定未通过时抛出。</exception>
 	[Permission(TeamPermissions.Edit, RoleName.Developer, RoleName.ProjectManager)]
 	[FactoryExecute]
 	protected override async Task ExecuteAsync(CancellationToken cancellationToken = default)

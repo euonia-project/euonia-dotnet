@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
 // ReSharper disable UnusedType.Global
@@ -35,7 +36,7 @@ public static class EnumParser<T>
     /// <param name="name">要解析的字符串名称。</param>
     /// <param name="value">解析成功时输出枚举值。</param>
     /// <returns>如果解析成功，则为 true；否则为 false。</returns>
-    public static bool TryParse(string name, out T value)
+    public static bool TryParse(string name, [MaybeNullWhen(false)] out T value)
     {
         return _dictionary.TryGetValue(name, out value);
     }

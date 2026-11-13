@@ -10,12 +10,18 @@ namespace Nerosoft.Euonia.Osba;
 /// </remarks>
 public enum ValidationState
 {
-	/// <summary>尚未校验，或校验结论已因对象变更而失效。</summary>
+	/// <summary>
+	/// 尚未校验，或校验结论已因对象变更而失效。
+	/// </summary>
 	NotValidated,
 
-	/// <summary>最近一次完整校验通过。</summary>
+	/// <summary>
+	/// 最近一次完整校验通过。
+	/// </summary>
 	Valid,
 
-	/// <summary>最近一次校验存在 Error 级违规。</summary>
+	/// <summary>
+	/// 最近一次校验存在 Error 级违规。
+	/// </summary>
 	Invalid
 }

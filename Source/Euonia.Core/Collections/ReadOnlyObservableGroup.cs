@@ -45,5 +45,5 @@ public sealed class ReadOnlyObservableGroup<TKey, TValue> : ReadOnlyObservableCo
     public TKey Key { get; }
 
     /// <inheritdoc/>
-    object IReadOnlyObservableGroup.Key => Key;
+    object IReadOnlyObservableGroup.Key => Key!;
 }

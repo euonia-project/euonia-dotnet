@@ -33,9 +33,9 @@ public class Weak<T>
     /// <summary>
     /// 获取或设置弱引用目标。
     /// </summary>
-    public T Target
+    public T? Target
     {
-        get => (T)_target.Target;
+        get => (T?)_target.Target;
         set => _target.Target = value;
     }
 }

@@ -5,15 +5,15 @@ using System.Runtime.CompilerServices;
 namespace Nerosoft.Euonia.Bus.InMemory;
 
 /// <summary>
-/// A class providing a reference implementation for the <see cref="IMessenger"/> interface.
+/// 为 <see cref="IMessenger"/> 接口提供参考实现的类。
 /// </summary>
 /// <remarks>
-/// This <see cref="IMessenger"/> implementation uses strong references to track the registered
-/// recipients, so it is necessary to manually unregister them when they're no longer needed.
+/// 此 <see cref="IMessenger"/> 实现使用强引用来跟踪已注册的
+/// 接收方，因此当它们不再需要时必须手动注销。
 /// </remarks>
 public sealed class StrongReferenceMessenger : IMessenger
 {
-	// This messenger uses the following logic to link stored instances together:
+	// 此消息信使使用以下逻辑将存储的实例关联在一起：
 	// --------------------------------------------------------------------------------------------------------
 	//   ITypeDictionary<Recipient, HashSet<IMapping>> recipientsMap;
 	//                   |                 \________________[*]ITypeDictionary<Recipient, ITypeDictionary<TToken>>
@@ -34,61 +34,62 @@ public sealed class StrongReferenceMessenger : IMessenger
 	//                /       /
 	// ITypeDictionary<EquatableType, IMapping> typesMap;
 	// --------------------------------------------------------------------------------------------------------
-	// Each combination of <TMessage, TToken> results in a concrete Mapping type (if TToken is Unit) or Mapping<Token> type,
-	// which holds the references from registered recipients to handlers. Mapping is used when the default channel is being
-	// requested, as in that case there will only ever be up to a handler per recipient, per message type. In that case,
-	// each recipient will only track the message dispatcher (stored as an object?, see notes below), instead of a dictionary
-	// mapping each TToken value to the corresponding dispatcher for that recipient. When a custom channel is used, the
-	// dispatchers are stored in a <TToken, object?> dictionary, so that each recipient can have up to one registered handler
-	// for a given token, for each message type. Note that the registered dispatchers are only stored as object references, as
-	// they can either be null or a MessageHandlerDispatcher.For<TRecipient, TMessage> instance.
+	// 每种 <TMessage, TToken> 组合都会产生一个具体的 Mapping 类型（若 TToken 为 Unit）或 Mapping<Token> 类型，
+	// 它保存从已注册接收方到处理程序的引用。当请求默认通道时使用 Mapping，
+	// 因为在这种情况下每个接收方、每种消息类型最多只会有一个处理程序。此时，
+	// 每个接收方只跟踪消息调度器（存储为 object?，见下文说明），而不是使用一个将
+	// 每个 TToken 值映射到该接收方对应调度器的字典。当使用自定义通道时，
+	// 调度器存储在 <TToken, object?> 字典中，这样每个接收方对于给定的令牌，
+	// 每种消息类型最多可以有一个已注册的处理程序。注意，已注册的调度器只以 object 引用的形式存储，
+	// 因为它们要么为 null，要么是 MessageHandlerDispatcher.For<TRecipient, TMessage> 实例。
 	//
-	// The first case happens if the handler was registered through an IRecipient<TMessage> instance, while the second one is
-	// used to wrap input MessageHandler<TRecipient, TMessage> instances. The MessageHandlerDispatcher.For<TRecipient, TMessage>
-	// instances will just be cast to MessageHandlerDispatcher when invoking it. This allows users to retain type information on
-	// each registered recipient, instead of having to manually cast each recipient to the right type within the handler
-	// (additionally, using double dispatch here avoids the need to alias delegate types). The type conversion is guaranteed to be
-	// respected due to how the messenger type itself works - as registered handlers are always invoked on their respective recipients.
+	// 第一种情况发生在处理程序通过 IRecipient<TMessage> 实例注册时，第二种情况则
+	// 用于包装输入的 MessageHandler<TRecipient, TMessage> 实例。调用时，
+	// MessageHandlerDispatcher.For<TRecipient, TMessage> 实例只会被强制转换为 MessageHandlerDispatcher。
+	// 这允许用户在各自已注册的接收方上保留类型信息，而无需在处理程序内部手动将
+	// 每个接收方强制转换为正确的类型（此外，此处使用双重分派避免了为委托类型起别名的需要）。
+	// 由于消息信使类型本身的工作方式，类型转换保证会被遵守——因为已注册的处理程序
+	// 总是在其各自的接收方上调用。
 	//
-	// Each mapping is stored in the types map, which associates each pair of concrete types to its mapping instance. Mapping instances
-	// are exposed as IMapping items, as each will be a closed type over a different combination of TMessage and TToken generic type
-	// parameters (or just of TMessage, for the default channel). Each existing recipient is also stored in the main recipients map,
-	// along with a set of all the existing (dictionaries of) handlers for that recipient (for all message types and token types, if any).
+	// 每个映射都存储在类型映射中，后者将每一对具体类型关联到其映射实例。映射实例
+	// 以 IMapping 项的形式暴露，因为每个实例都是针对 TMessage 和 TToken 泛型类型参数
+	// 不同组合（对于默认通道则仅针对 TMessage）的封闭类型。每个现存的接收方也会存储在
+	// 主接收方映射中，同时存储该接收方所有现存处理程序（字典）的集合（涵盖所有消息类型和令牌类型，如有）。
 	//
-	// A recipient is stored in the main map as long as it has at least one registered handler in any of the existing mappings for every
-	// message/token type combination. The shared map is used to access the set of all registered handlers for a given recipient, without
-	// having to know in advance the type of message or token being used for the registration, and without having to use reflection. This
-	// is the same approach used in the types map, as we expose saved items as IMapping values too.
+	// 只要接收方在每种消息/令牌类型组合的任一现存映射中至少有一个已注册的处理程序，
+	// 它就会存储在主映射中。共享映射用于访问给定接收方的所有已注册处理程序的集合，
+	// 无需事先知道注册时使用的消息或令牌类型，也无需使用反射。这与类型映射中使用的
+	// 方法相同，因为我们也把保存的项以 IMapping 值的形式暴露。
 	//
-	// Note that each mapping stored in the associated set for each recipient also indirectly implements either ITypeDictionary<Recipient, Token>
-	// or ITypeDictionary<Recipient>, with any token type currently in use by that recipient (or none, if using the default channel). This allows
-	// to retrieve the type-closed mappings of registered handlers with a given token type, for any message type, for every receiver, again
-	// without having to use reflection. This shared map is used to unregister messages from a given recipients either unconditionally, by
-	// message type, by token, or for a specific pair of message type and token value.
+	// 注意，存储在每个接收方关联集合中的每个映射也间接实现了
+	// ITypeDictionary<Recipient, Token> 或 ITypeDictionary<Recipient>，其令牌类型为该接收方
+	// 当前使用的类型（若使用默认通道则没有令牌）。这使得可以获取给定令牌类型、任意消息类型、
+	// 每个接收方对应的已注册处理程序的类型封闭映射，同样无需使用反射。此共享映射用于
+	// 从给定接收方注销消息，可以无条件注销、按消息类型注销、按令牌注销，
+	// 或按特定的消息类型与令牌值组合注销。
 
 	/// <summary>
-	/// The collection of currently registered recipients, with a link to their linked message receivers.
+	/// 当前已注册接收方的集合，并链接到其关联的消息接收器。
 	/// </summary>
 	/// <remarks>
-	/// This collection is used to allow reflection-free access to all the existing
-	/// registered recipients from <see cref="UnregisterAll"/> and other methods in this type,
-	/// so that all the existing handlers can be removed without having to dynamically create
-	/// the generic types for the containers of the various dictionaries mapping the handlers.
+	/// 此集合用于从 <see cref="UnregisterAll"/> 及此类型中的其他方法无反射地访问
+	/// 所有现存的已注册接收方，从而可以移除所有现存处理程序，而无需为
+	/// 映射处理程序的各种字典容器动态创建泛型类型。
 	/// </remarks>
 	private readonly TypeDictionary<Recipient, HashSet<IMapping>> _recipientsMap = new();
 
 	/// <summary>
-	/// The <see cref="Mapping"/> and <see cref="Mapping{TToken}"/> instance for types combination.
+	/// 类型组合对应的 <see cref="Mapping"/> 和 <see cref="Mapping{TToken}"/> 实例。
 	/// </summary>
 	/// <remarks>
-	/// The values are just of type <see cref="ITypeDictionary{T}"/> as we don't know the type parameters in advance.
-	/// Each method relies on <see cref="GetOrAddMapping{TMessage,TToken}"/> to get the type-safe instance of the
-	/// <see cref="Mapping"/> or <see cref="Mapping{TToken}"/> class for each pair of generic arguments in use.
+	/// 值的类型只是 <see cref="ITypeDictionary{T}"/>，因为我们无法预先知道类型参数。
+	/// 每个方法依赖 <see cref="GetOrAddMapping{TMessage,TToken}"/> 来获取所用每一对泛型参数
+	/// 对应的 <see cref="Mapping"/> 或 <see cref="Mapping{TToken}"/> 类的类型安全实例。
 	/// </remarks>
 	private readonly TypeDictionary<EquatableType, IMapping> _typesMap = new();
 
 	/// <summary>
-	/// Gets the default <see cref="StrongReferenceMessenger"/> instance.
+	/// 获取默认的 <see cref="StrongReferenceMessenger"/> 实例。
 	/// </summary>
 	public static StrongReferenceMessenger Default { get; } = new();
 
@@ -97,8 +98,8 @@ public sealed class StrongReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		lock (_recipientsMap)
 		{
@@ -135,9 +136,9 @@ public sealed class StrongReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
-		ArgumentAssert.ThrowIfNull(handler);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(handler);
 
 		Register<TMessage, TToken>(recipient, token, new MessageHandlerDispatcher.For<TRecipient, TMessage>(handler));
 	}
@@ -151,15 +152,15 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Registers a recipient for a given type of message.
+	/// 为给定类型的消息注册接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-	/// <typeparam name="TToken">The type of token to use to pick the messages to receive.</typeparam>
-	/// <param name="recipient">The recipient that will receive the messages.</param>
-	/// <param name="token">A token used to determine the receiving channel to use.</param>
-	/// <param name="dispatcher">The input <see cref="MessageHandlerDispatcher"/> instance to register, or null.</param>
-	/// <exception cref="InvalidOperationException">Thrown when trying to register the same message twice.</exception>
-	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher dispatcher)
+	/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于选择要接收的消息的令牌类型。</typeparam>
+	/// <param name="recipient">将接收消息的接收方。</param>
+	/// <param name="token">用于确定接收通道的令牌。</param>
+	/// <param name="dispatcher">要注册的 <see cref="MessageHandlerDispatcher"/> 实例，或 null。</param>
+	/// <exception cref="InvalidOperationException">尝试重复注册同一条消息时抛出。</exception>
+	private void Register<TMessage, TToken>(object recipient, TToken token, MessageHandlerDispatcher? dispatcher)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
@@ -168,10 +169,10 @@ public sealed class StrongReferenceMessenger : IMessenger
 			Recipient key = new(recipient);
 			IMapping mapping;
 
-			// Fast path for unit tokens
+			// 针对 unit 令牌的快速路径
 			if (typeof(TToken) == typeof(Unit))
 			{
-				// Get the <TMessage> registration list for this recipient
+				// 获取此接收方的 <TMessage> 注册列表
 				var underlyingMapping = GetOrAddMapping<TMessage>();
 				ref var registeredHandler = ref underlyingMapping.GetOrAddValueRef(key);
 
@@ -180,20 +181,20 @@ public sealed class StrongReferenceMessenger : IMessenger
 					ThrowInvalidOperationExceptionForDuplicateRegistration();
 				}
 
-				// Store the input handler
+				// 存储输入的处理程序
 				registeredHandler = dispatcher;
 
 				mapping = underlyingMapping;
 			}
 			else
 			{
-				// Get the <TMessage, TToken> registration list for this recipient
+				// 获取此接收方的 <TMessage, TToken> 注册列表
 				var underlyingMapping = GetOrAddMapping<TMessage, TToken>();
 				ref var map = ref underlyingMapping.GetOrAddValueRef(key);
 
 				map ??= new TypeDictionary<TToken, object>();
 
-				// Add the new registration entry
+				// 添加新的注册项
 				ref var registeredHandler = ref map.GetOrAddValueRef(token);
 
 				if (registeredHandler is not null)
@@ -205,7 +206,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 				mapping = underlyingMapping;
 			}
 
-			// Make sure this registration map is tracked for the current recipient
+			// 确保此注册映射已被当前接收方跟踪
 			ref var set = ref _recipientsMap.GetOrAddValueRef(key);
 
 			set ??= new HashSet<IMapping>();
@@ -217,11 +218,11 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// <inheritdoc/>
 	public void UnregisterAll(object recipient)
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(recipient);
 
 		lock (_recipientsMap)
 		{
-			// If the recipient has no registered messages at all, ignore
+			// 如果接收方完全没有注册任何消息，则忽略
 			Recipient key = new(recipient);
 
 			if (!_recipientsMap.TryGetValue(key, out var set))
@@ -229,25 +230,24 @@ public sealed class StrongReferenceMessenger : IMessenger
 				return;
 			}
 
-			// Removes all the lists of registered handlers for the recipient
+			// 移除该接收方的所有已注册处理程序列表
 			foreach (var mapping in set)
 			{
 				if (mapping.TryRemove(key) &&
 					mapping.Count == 0)
 				{
-					// Maps here are really of type Mapping<,> and with unknown type arguments.
-					// If after removing the current recipient a given map becomes empty, it means
-					// that there are no registered recipients at all for a given pair of message
-					// and token types. In that case, we also remove the map from the types map.
-					// The reason for keeping a key in each mapping is that removing items from a
-					// dictionary (a hashed collection) only costs O(1) in the best case, while
-					// if we had tried to iterate the whole dictionary every time we would have
-					// paid an O(n) minimum cost for each single remove operation.
+					// 此处的映射实际上是 Mapping<,> 类型，且类型参数未知。
+					// 如果移除当前接收方后某个映射变为空，说明对于给定的消息类型
+					// 和令牌类型组合已不存在任何已注册接收方。在这种情况下，
+					// 我们也会从类型映射中移除该映射。在每个映射中保留键的原因是：
+					// 从字典（哈希集合）中移除项在最好情况下只需 O(1) 开销，而
+					// 若每次尝试遍历整个字典，则每次单独的移除操作至少需要
+					// 付出 O(n) 的代价。
 					_ = _typesMap.TryRemove(mapping.TypeArguments);
 				}
 			}
 
-			// Remove the associated set in the recipients map
+			// 移除接收方映射中关联的集合
 			_ = _recipientsMap.TryRemove(key);
 		}
 	}
@@ -256,36 +256,34 @@ public sealed class StrongReferenceMessenger : IMessenger
 	public void UnregisterAll<TToken>(object recipient, TToken token)
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
-		// This method is never called with the unit type, so this path is not implemented. This
-		// exception should not ever be thrown, it's here just to double check for regressions in
-		// case a bug was introduced that caused this path to somehow be invoked with the Unit type.
-		// This type is internal, so consumers of the library would never be able to pass it here,
-		// and there are (and shouldn't be) any APIs publicly exposed from the library that would
-		// cause this path to be taken either. When using the default channel, only UnregisterAll(object)
-		// is supported, which would just unregister all recipients regardless of the selected channel.
+		// 此方法从不会以 unit 类型调用，因此未实现该路径。此异常不应
+		// 被抛出，它只是为了双重检查是否存在回归——以防引入的 bug
+		// 导致该路径以某种方式以 Unit 类型被调用。此类型是 internal 的，
+		// 因此库的使用者永远无法将其传入此处，并且库中也没有（也不应有）
+		// 任何公开暴露的 API 会导致走到此路径。使用默认通道时，仅支持
+		// UnregisterAll(object)，它只会注销所有接收方，而不考虑所选通道。
 		if (typeof(TToken) == typeof(Unit))
 		{
 			throw new NotImplementedException();
 		}
 
 		var lockTaken = false;
-		object[] maps = null;
+		object[]? maps = null;
 		var i = 0;
 
-		// We use an explicit try/finally block here instead of the lock syntax so that we can use a single
-		// one both to release the lock and to clear the rented buffer and return it to the pool. The reason
-		// why we're declaring the buffer here and clearing and returning it in this outer finally block is
-		// that doing so doesn't require the lock to be kept, and releasing it before performing this last
-		// step reduces the total time spent while the lock is acquired, which in turn reduces the lock
-		// contention in multi-threaded scenarios where this method is invoked concurrently.
+		// 此处我们显式使用 try/finally 块而不是 lock 语法，这样就能用同一个块
+		// 既释放锁，又清空租用的缓冲区并将其归还到池中。之所以在此处声明缓冲区、
+		// 并在此外层 finally 块中清空并归还它，是因为这样做无需保持锁，且在执行
+		// 这最后一步之前释放锁可以减少持有锁的总时间，从而减少在多线程场景中
+		// 并发调用此方法时的锁争用。
 		try
 		{
 			Monitor.Enter(_recipientsMap, ref lockTaken);
 
-			// Get the shared set of mappings for the recipient, if present
+			// 获取该接收方共享的映射集合（如果存在）
 			Recipient key = new(recipient);
 
 			if (!_recipientsMap.TryGetValue(key, out var set))
@@ -293,68 +291,61 @@ public sealed class StrongReferenceMessenger : IMessenger
 				return;
 			}
 
-			// Copy the candidate mappings for the target recipient to a local array, as we can't modify the
-			// contents of the set while iterating it. The rented buffer is oversized and will also include
-			// mappings for handlers of messages that are registered through a different token. Note that
-			// we're using just an object array to minimize the number of total rented buffers, that would
-			// just remain in the shared pool unused, other than when they are rented here. Instead, we're
-			// using a type that would possibly also be used by the users of the library, which increases
-			// the opportunities to reuse existing buffers for both. When we need to reference an item
-			// stored in the buffer with the type we know it will have, we use Unsafe.As<T> to avoid the
-			// expensive type check in the cast, since we already know the assignment will be valid.
+			// 将目标接收方的候选映射复制到本地数组，因为遍历集合时无法修改其内容。
+			// 租用的缓冲区会偏大，还会包含通过其他令牌注册的消息处理程序的映射。
+			// 注意，我们仅使用 object 数组以尽量减少租用缓冲区的总数——否则这些缓冲区
+			// 除了在此处被租用外，只会在共享池中闲置。相反，我们使用一种库的使用者
+			// 也可能用到的类型，这增加了双方复用现有缓冲区的机会。当需要以已知类型
+			// 引用缓冲区中存储的项时，我们使用 Unsafe.As<T> 以避免强制转换中昂贵的
+			// 类型检查，因为我们已经知道赋值是有效的。
 			maps = ArrayPool<object>.Shared.Rent(set.Count);
 
 			foreach (var item in set)
 			{
-				// Select all mappings using the same token type
+				// 选择所有使用相同令牌类型的映射
 				if (item is ITypeDictionary<Recipient, ITypeDictionary<TToken>> mapping)
 				{
 					maps[i++] = mapping;
 				}
 			}
 
-			// Iterate through all the local maps. These are all the currently
-			// existing maps of handlers for messages of any given type, with a token
-			// of the current type, for the target recipient. We heavily rely on
-			// interfaces here to be able to iterate through all the available mappings
-			// without having to know the concrete type in advance, and without having
-			// to deal with reflection: we can just check if the type of the closed interface
-			// matches with the token type currently in use, and operate on those instances.
+			// 遍历所有本地映射。这些都是目标接收方当前存在的、令牌类型为当前类型、
+			// 消息类型为任意给定类型的处理程序映射。我们在此严重依赖接口，
+			// 以便能够遍历所有可用的映射，而无需预先知道具体类型，也无需
+			// 处理反射：我们只需检查封闭接口的类型是否与当前使用的令牌类型匹配，
+			// 然后对这些实例进行操作。
 			foreach (var obj in maps.AsSpan(0, i))
 			{
 				var handlersMap = Unsafe.As<ITypeDictionary<Recipient, ITypeDictionary<TToken>>>(obj);
 
-				// We don't need whether or not the map contains the recipient, as the
-				// sequence of maps has already been copied from the set containing all
-				// the mappings for the target recipients: it is guaranteed to be here.
+				// 我们不需要检查映射是否包含该接收方，因为映射序列已经
+				// 从包含目标接收方所有映射的集合中复制而来：它必定存在。
 				var holder = handlersMap[key];
 
-				// Try to remove the registered handler for the input token,
-				// for the current message type (unknown from here).
+				// 尝试移除输入令牌、当前消息类型（此处未知）对应的已注册处理程序。
 				if (holder.TryRemove(token) &&
 					holder.Count == 0)
 				{
-					// If the map is empty, remove the recipient entirely from its container
+					// 如果映射为空，则从容器中完全移除该接收方
 					_ = handlersMap.TryRemove(key);
 
 					var mapping = Unsafe.As<IMapping>(handlersMap);
 
-					// This recipient has no registrations left for this combination of token
-					// and message type, so this mapping can be removed from its associated set.
+					// 该接收方已没有此令牌和消息类型组合的注册项，
+					// 因此可以从其关联集合中移除该映射。
 					_ = set.Remove(mapping);
 
-					// If the resulting set is empty, then this means that there are no more handlers
-					// left for this recipient for any message or token type, so the recipient can also
-					// be removed from the map of all existing recipients with at least one handler.
+					// 如果结果集合为空，说明该接收方已没有针对任何消息或令牌类型
+					// 的处理程序，因此也可以从所有至少有一个处理程序的现存接收方映射中
+					// 移除该接收方。
 					if (set.Count == 0)
 					{
 						_ = _recipientsMap.TryRemove(key);
 					}
 
-					// If no handlers are left at all for any recipient, across all message types and token
-					// types, remove the set of mappings entirely for the current recipient, and remove the
-					// strong reference to it as well. This is the same situation that would've been achieved
-					// by just calling UnregisterAll(recipient).
+					// 如果跨所有消息类型和令牌类型，任何接收方都已无处理程序剩余，
+					// 则完全移除当前接收方的映射集合，并同时移除对其的强引用。
+					// 这与直接调用 UnregisterAll(recipient) 所达到的效果相同。
 					if (handlersMap.Count == 0)
 					{
 						_ = _typesMap.TryRemove(mapping.TypeArguments);
@@ -364,16 +355,16 @@ public sealed class StrongReferenceMessenger : IMessenger
 		}
 		finally
 		{
-			// Release the lock, if we did acquire it
+			// 如果已获取锁，则释放它
 			if (lockTaken)
 			{
 				Monitor.Exit(_recipientsMap);
 			}
 
-			// If we got to renting the array of maps, return it to the shared pool.
-			// Remove references to avoid leaks coming from the shared memory pool.
-			// We manually create a span and clear it as a small optimization, as
-			// arrays rented from the pool can be larger than the requested size.
+			// 如果已租用映射数组，则将其归还到共享池。
+			// 清除引用以避免共享内存池产生泄漏。
+			// 我们手动创建 span 并清空它作为一种小优化，因为
+			// 从池中租用的数组可能大于请求的大小。
 			if (maps is not null)
 			{
 				maps.AsSpan(0, i).Clear();
@@ -388,14 +379,14 @@ public sealed class StrongReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(recipient);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(recipient);
+		ArgumentNullException.ThrowIfNull(token);
 
 		lock (_recipientsMap)
 		{
 			if (typeof(TToken) == typeof(Unit))
 			{
-				// Get the registration list, if available
+				// 获取注册列表（如果可用）
 				if (!TryGetMapping<TMessage>(out var mapping))
 				{
 					return;
@@ -403,19 +394,19 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				Recipient key = new(recipient);
 
-				// Remove the handler (there can only be one for the unit type)
+				// 移除处理程序（unit 类型只能有一个）
 				if (!mapping.TryRemove(key))
 				{
 					return;
 				}
 
-				// Remove the map entirely from this container, and remove the link to the map itself to
-				// the current mapping between existing registered recipients (or entire recipients too).
-				// This is the same as below, except for the unit type there can only be one handler, so
-				// removing it already implies the target recipient has no remaining handlers left.
+				// 从此容器中完全移除该映射，并移除映射本身与现存已注册接收方
+				// （或整个接收方）之间当前映射的链接。这与下面的逻辑相同，
+				// 只是对于 unit 类型只能有一个处理程序，因此移除它就意味着
+				// 目标接收方已没有剩余的处理程序。
 				_ = mapping.TryRemove(key);
 
-				// If there are no handlers left at all for this type combination, drop it
+				// 如果此类型组合已无任何处理程序剩余，则将其丢弃
 				if (mapping.Count == 0)
 				{
 					_ = _typesMap.TryRemove(mapping.TypeArguments);
@@ -423,9 +414,9 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				var set = _recipientsMap[key];
 
-				// The current mapping no longer has any handlers left for this recipient.
-				// Remove it and then also remove the recipient if this was the last handler.
-				// Again, this is the same as below, except with the assumption of the unit type.
+				// 当前映射已不再为该接收方保留任何处理程序。
+				// 移除它，如果这是最后一个处理程序，则同时移除该接收方。
+				// 同样，这与下面的逻辑相同，只是以 unit 类型为前提。
 				_ = set.Remove(mapping);
 
 				if (set.Count == 0)
@@ -435,7 +426,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 			}
 			else
 			{
-				// Get the registration list, if available
+				// 获取注册列表（如果可用）
 				if (!TryGetMapping<TMessage, TToken>(out var mapping))
 				{
 					return;
@@ -448,18 +439,17 @@ public sealed class StrongReferenceMessenger : IMessenger
 					return;
 				}
 
-				// Remove the target handler
+				// 移除目标处理程序
 				if (dictionary.TryRemove(token) &&
 					dictionary.Count == 0)
 				{
-					// If the map is empty, it means that the current recipient has no remaining
-					// registered handlers for the current <TMessage, TToken> combination, regardless,
-					// of the specific token value (ie. the channel used to receive messages of that type).
-					// We can remove the map entirely from this container, and remove the link to the map itself
-					// to the current mapping between existing registered recipients (or entire recipients too).
+					// 如果映射为空，说明当前接收方已没有针对当前 <TMessage, TToken> 组合的
+					// 已注册处理程序，无论具体令牌值是什么（即用于接收该类型消息的通道）。
+					// 我们可以从此容器中完全移除该映射，并移除映射本身与现存已注册接收方
+					// （或整个接收方）之间当前映射的链接。
 					_ = mapping.TryRemove(key);
 
-					// If there are no handlers left at all for this type combination, drop it
+					// 如果此类型组合已无任何处理程序剩余，则将其丢弃
 					if (mapping.Count == 0)
 					{
 						_ = _typesMap.TryRemove(mapping.TypeArguments);
@@ -467,10 +457,10 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 					var set = _recipientsMap[key];
 
-					// The current mapping no longer has any handlers left for this recipient
+					// 当前映射已不再为该接收方保留任何处理程序
 					_ = set.Remove(mapping);
 
-					// If the current recipients has no handlers left at all, remove it
+					// 如果当前接收方已无任何处理程序剩余，则移除它
 					if (set.Count == 0)
 					{
 						_ = _recipientsMap.TryRemove(key);
@@ -485,8 +475,8 @@ public sealed class StrongReferenceMessenger : IMessenger
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(message);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(token);
 
 		object[] rentedArray;
 		Span<object> pairs;
@@ -496,13 +486,13 @@ public sealed class StrongReferenceMessenger : IMessenger
 		{
 			if (typeof(TToken) == typeof(Unit))
 			{
-				// Check whether there are any registered recipients
+				// 检查是否存在任何已注册的接收方
 				if (!TryGetMapping<TMessage>(out var mapping))
 				{
 					goto End;
 				}
 
-				// Check the number of remaining handlers, see below
+				// 检查剩余处理程序的数量，详见下文
 				var totalHandlersCount = mapping.Count;
 
 				if (totalHandlersCount == 0)
@@ -512,7 +502,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
 
-				// Same logic as below, except here we're only traversing one handler per recipient
+				// 逻辑与下文相同，只是此处每个接收方仅遍历一个处理程序
 				var mappingEnumerator = mapping.GetEnumerator();
 
 				while (mappingEnumerator.MoveNext())
@@ -524,23 +514,21 @@ public sealed class StrongReferenceMessenger : IMessenger
 			}
 			else
 			{
-				// Check whether there are any registered recipients
+				// 检查是否存在任何已注册的接收方
 				if (!TryGetMapping<TMessage, TToken>(out var mapping))
 				{
 					goto End;
 				}
 
-				// We need to make a local copy of the currently registered handlers, since users might
-				// try to unregister (or register) new handlers from inside one of the currently existing
-				// handlers. We can use memory pooling to reuse arrays, to minimize the average memory
-				// usage. In practice, we usually just need to pay the small overhead of copying the items.
-				// The current mapping contains all the currently registered recipients and handlers for
-				// the <TMessage, TToken> combination in use. In the worst case scenario, all recipients
-				// will have a registered handler with a token matching the input one, meaning that we could
-				// have at worst a number of pending handlers to invoke equal to the total number of recipient
-				// in the mapping. This relies on the fact that tokens are unique, and that there is only
-				// one handler associated with a given token. We can use this upper bound as the requested
-				// size for each array rented from the pool, which guarantees that we'll have enough space.
+				// 我们需要对当前已注册的处理程序做本地副本，因为用户可能会在
+				// 某个现有处理程序内部尝试注销（或注册）新的处理程序。我们可以
+				// 使用内存池来复用数组，以尽量减少平均内存占用。实践中，我们
+				// 通常只需承担复制项的小额开销。当前映射包含所用 <TMessage, TToken>
+				// 组合的所有当前已注册接收方和处理程序。在最坏情况下，所有接收方
+				// 都有一个令牌与输入令牌匹配的已注册处理程序，这意味着我们最多
+				// 可能需要调用等于映射中接收方总数的待处理处理程序。这依赖于
+				// 令牌唯一且给定令牌只关联一个处理程序这一事实。我们可以将这个
+				// 上界作为从池中租用每个数组的请求大小，从而保证有足够的空间。
 				var totalHandlersCount = mapping.Count;
 
 				if (totalHandlersCount == 0)
@@ -548,29 +536,27 @@ public sealed class StrongReferenceMessenger : IMessenger
 					goto End;
 				}
 
-				// Rent the array and also assign it to a span, which will be used to access values.
-				// We're doing this to avoid the array covariance checks slowdown in the loops below.
+				// 租用数组并同时将其赋给 span，用于访问值。
+				// 这样做是为了避免下文循环中数组协变的检查拖慢性能。
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
 
-				// Copy the handlers to the local collection.
-				// The array is oversized at this point, since it also includes
-				// handlers for different tokens. We can reuse the same variable
-				// to count the number of matching handlers to invoke later on.
-				// This will be the array slice with valid handler in the rented buffer.
+				// 将处理程序复制到本地集合。
+				// 此时数组是偏大的，因为它还包含用于不同令牌的处理程序。
+				// 我们可以复用同一个变量来统计稍后要调用的匹配处理程序数量。
+				// 这将是租用缓冲区中有效处理程序所在的数组切片。
 				var mappingEnumerator = mapping.GetEnumerator();
 
-				// Explicit enumerator usage here as we're using a custom one
-				// that doesn't expose the single standard Current property.
+				// 此处显式使用枚举器，因为我们使用的是自定义枚举器，
+				// 它不暴露标准的单个 Current 属性。
 				while (mappingEnumerator.MoveNext())
 				{
-					// Pick the target handler, if the token is a match for the recipient
+					// 如果令牌与接收方匹配，则选取目标处理程序
 					if (mappingEnumerator.GetValue().TryGetValue(token, out var handler))
 					{
-						// This span access should always guaranteed to be valid due to the size of the
-						// array being set according to the current total number of registered handlers,
-						// which will always be greater or equal than the ones matching the previous test.
-						// We're still using a checked span accesses here though to make sure an out of
-						// bounds write can never happen even if an error was present in the logic above.
+						// 由于数组大小是根据当前已注册处理程序总数设置的，
+						// 而该总数总是大于或等于匹配上述检查的数量，因此此 span
+						// 访问应始终保证有效。不过我们仍在此使用带检查的 span 访问，
+						// 以确保即使上述逻辑存在错误也绝不会发生越界写入。
 						pairs[2 * i] = handler;
 						pairs[(2 * i) + 1] = mappingEnumerator.GetKey().Target;
 						i++;
@@ -581,13 +567,13 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 		try
 		{
-			// The core broadcasting logic is the same as the weak reference messenger one
+			// 核心广播逻辑与弱引用消息信使相同
 			WeakReferenceMessenger.SendAll(pairs, i, message);
 		}
 		finally
 		{
-			// As before, we also need to clear it first to avoid having potentially long
-			// lasting memory leaks due to leftover references being stored in the pool.
+			// 和之前一样，我们还需要先清空它，以避免残留引用存储在池中
+			// 而导致潜在的长期内存泄漏。
 			Array.Clear(rentedArray, 0, 2 * i);
 
 			ArrayPool<object>.Shared.Return(rentedArray);
@@ -598,20 +584,20 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Sends a message of the specified type to all registered recipients.
+	/// 将指定类型的消息发送给所有已注册的接收方。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to send the message.</typeparam>
-	/// <param name="message">The message to send.</param>
-	/// <param name="token">The token indicating what channel to use.</param>
-	/// <returns>The message that was sent (ie. <paramref name="message"/>).</returns>
-	/// <exception cref="System.ArgumentNullException">Thrown if <paramref name="message"/> or <paramref name="token"/> are <see langword="null"/>.</exception>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识发送消息时使用哪个通道的令牌类型。</typeparam>
+	/// <param name="message">要发送的消息。</param>
+	/// <param name="token">指示使用哪个通道的令牌。</param>
+	/// <returns>已发送的消息（即 <paramref name="message"/>）。</returns>
+	/// <exception cref="System.ArgumentNullException">当 <paramref name="message"/> 或 <paramref name="token"/> 为 <see langword="null"/> 时抛出。</exception>
 	internal TMessage UnsafeSend<TMessage, TToken>(TMessage message, TToken token)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
-		ArgumentAssert.ThrowIfNull(message);
-		ArgumentAssert.For<TToken>.ThrowIfNull(token);
+		ArgumentNullException.ThrowIfNull(message);
+		ArgumentNullException.ThrowIfNull(token);
 
 		object[] rentedArray;
 		Span<object> pairs;
@@ -621,13 +607,13 @@ public sealed class StrongReferenceMessenger : IMessenger
 		{
 			if (typeof(TToken) == typeof(Unit))
 			{
-				// Check whether there are any registered recipients
+				// 检查是否存在任何已注册的接收方
 				if (!TryGetMapping<TMessage>(out var mapping))
 				{
 					throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE, DescribeMessage(message)));
 				}
 
-				// Check the number of remaining handlers, see below
+				// 检查剩余处理程序的数量，详见下文
 				var totalHandlersCount = mapping.Count;
 
 				if (totalHandlersCount == 0)
@@ -637,7 +623,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
 
-				// Same logic as below, except here we're only traversing one handler per recipient
+				// 逻辑与下文相同，只是此处每个接收方仅遍历一个处理程序
 				var mappingEnumerator = mapping.GetEnumerator();
 
 				while (mappingEnumerator.MoveNext())
@@ -649,23 +635,21 @@ public sealed class StrongReferenceMessenger : IMessenger
 			}
 			else
 			{
-				// Check whether there are any registered recipients
+				// 检查是否存在任何已注册的接收方
 				if (!TryGetMapping<TMessage, TToken>(out var mapping))
 				{
 					throw new InvalidOperationException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE_AND_TOKEN, DescribeMessage(message), token));
 				}
 
-				// We need to make a local copy of the currently registered handlers, since users might
-				// try to unregister (or register) new handlers from inside one of the currently existing
-				// handlers. We can use memory pooling to reuse arrays, to minimize the average memory
-				// usage. In practice, we usually just need to pay the small overhead of copying the items.
-				// The current mapping contains all the currently registered recipients and handlers for
-				// the <TMessage, TToken> combination in use. In the worst case scenario, all recipients
-				// will have a registered handler with a token matching the input one, meaning that we could
-				// have at worst a number of pending handlers to invoke equal to the total number of recipient
-				// in the mapping. This relies on the fact that tokens are unique, and that there is only
-				// one handler associated with a given token. We can use this upper bound as the requested
-				// size for each array rented from the pool, which guarantees that we'll have enough space.
+				// 我们需要对当前已注册的处理程序做本地副本，因为用户可能会在
+				// 某个现有处理程序内部尝试注销（或注册）新的处理程序。我们可以
+				// 使用内存池来复用数组，以尽量减少平均内存占用。实践中，我们
+				// 通常只需承担复制项的小额开销。当前映射包含所用 <TMessage, TToken>
+				// 组合的所有当前已注册接收方和处理程序。在最坏情况下，所有接收方
+				// 都有一个令牌与输入令牌匹配的已注册处理程序，这意味着我们最多
+				// 可能需要调用等于映射中接收方总数的待处理处理程序。这依赖于
+				// 令牌唯一且给定令牌只关联一个处理程序这一事实。我们可以将这个
+				// 上界作为从池中租用每个数组的请求大小，从而保证有足够的空间。
 				var totalHandlersCount = mapping.Count;
 
 				if (totalHandlersCount == 0)
@@ -673,29 +657,27 @@ public sealed class StrongReferenceMessenger : IMessenger
 					throw new MessageDeliverException(string.Format(Resources.IDS_NO_RECIPIENTS_FOR_MESSAGE_TYPE, DescribeMessage(message)));
 				}
 
-				// Rent the array and also assign it to a span, which will be used to access values.
-				// We're doing this to avoid the array covariance checks slowdown in the loops below.
+				// 租用数组并同时将其赋给 span，用于访问值。
+				// 这样做是为了避免下文循环中数组协变的检查拖慢性能。
 				pairs = rentedArray = ArrayPool<object>.Shared.Rent(2 * totalHandlersCount);
 
-				// Copy the handlers to the local collection.
-				// The array is oversized at this point, since it also includes
-				// handlers for different tokens. We can reuse the same variable
-				// to count the number of matching handlers to invoke later on.
-				// This will be the array slice with valid handler in the rented buffer.
+				// 将处理程序复制到本地集合。
+				// 此时数组是偏大的，因为它还包含用于不同令牌的处理程序。
+				// 我们可以复用同一个变量来统计稍后要调用的匹配处理程序数量。
+				// 这将是租用缓冲区中有效处理程序所在的数组切片。
 				var mappingEnumerator = mapping.GetEnumerator();
 
-				// Explicit enumerator usage here as we're using a custom one
-				// that doesn't expose the single standard Current property.
+				// 此处显式使用枚举器，因为我们使用的是自定义枚举器，
+				// 它不暴露标准的单个 Current 属性。
 				while (mappingEnumerator.MoveNext())
 				{
-					// Pick the target handler, if the token is a match for the recipient
+					// 如果令牌与接收方匹配，则选取目标处理程序
 					if (mappingEnumerator.GetValue().TryGetValue(token, out var handler))
 					{
-						// This span access should always guaranteed to be valid due to the size of the
-						// array being set according to the current total number of registered handlers,
-						// which will always be greater or equal than the ones matching the previous test.
-						// We're still using a checked span accesses here though to make sure an out of
-						// bounds write can never happen even if an error was present in the logic above.
+						// 由于数组大小是根据当前已注册处理程序总数设置的，
+						// 而该总数总是大于或等于匹配上述检查的数量，因此此 span
+						// 访问应始终保证有效。不过我们仍在此使用带检查的 span 访问，
+						// 以确保即使上述逻辑存在错误也绝不会发生越界写入。
 						pairs[2 * i] = handler;
 						pairs[(2 * i) + 1] = mappingEnumerator.GetKey().Target;
 						i++;
@@ -714,13 +696,13 @@ public sealed class StrongReferenceMessenger : IMessenger
 
 		try
 		{
-			// The core broadcasting logic is the same as the weak reference messenger one
+			// 核心广播逻辑与弱引用消息信使相同
 			WeakReferenceMessenger.SendAll(pairs, i, message);
 		}
 		finally
 		{
-			// As before, we also need to clear it first to avoid having potentially long
-			// lasting memory leaks due to leftover references being stored in the pool.
+			// 和之前一样，我们还需要先清空它，以避免残留引用存储在池中
+			// 而导致潜在的长期内存泄漏。
 			Array.Clear(rentedArray, 0, 2 * i);
 
 			ArrayPool<object>.Shared.Return(rentedArray);
@@ -732,11 +714,10 @@ public sealed class StrongReferenceMessenger : IMessenger
 	/// <inheritdoc/>
 	void IMessenger.Cleanup()
 	{
-		// The current implementation doesn't require any kind of cleanup operation, as
-		// all the internal data structures are already kept in sync whenever a recipient
-		// is added or removed. This method is implemented through an explicit interface
-		// implementation so that developers using this type directly will not see it in
-		// the API surface (as it wouldn't be useful anyway, since it's a no-op here).
+		// 当前实现不需要任何形式的清理操作，因为每当添加或移除接收方时，
+		// 所有内部数据结构都已保持同步。此方法通过显式接口实现来提供，
+		// 以便直接使用此类型的开发者不会在 API 表面上看到它
+		// （反正它也没有用处，因为此处它是空操作）。
 	}
 
 	/// <inheritdoc/>
@@ -750,23 +731,23 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Tries to get the <see cref="Mapping"/> instance of currently
-	/// registered recipients for the input <typeparamref name="TMessage"/> type.
+	/// 尝试获取输入 <typeparamref name="TMessage"/> 类型当前已注册接收方的
+	/// <see cref="Mapping"/> 实例。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <param name="mapping">The resulting <see cref="Mapping"/> instance, if found.</param>
-	/// <returns>Whether or not the required <see cref="Mapping"/> instance was found.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <param name="mapping">找到时返回的 <see cref="Mapping"/> 实例。</param>
+	/// <returns>是否找到了所需的 <see cref="Mapping"/> 实例。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool TryGetMapping<TMessage>([NotNullWhen(true)] out Mapping mapping)
+	private bool TryGetMapping<TMessage>([NotNullWhen(true)] out Mapping? mapping)
 		where TMessage : class
 	{
 		EquatableType key = new(typeof(TMessage), typeof(Unit));
 
 		if (_typesMap.TryGetValue(key, out var target))
 		{
-			// This method and the ones below are the only ones handling values in the types map,
-			// and here we are sure that the object reference we have points to an instance of the
-			// right type. Using an unsafe cast skips two conditional branches and is faster.
+			// 此方法及以下方法是类型映射中唯一处理值的方法，
+			// 此处我们确信所持有的对象引用指向正确类型的实例。
+			// 使用非安全强制转换可跳过两个条件分支，速度更快。
 			mapping = Unsafe.As<Mapping>(target);
 
 			return true;
@@ -778,15 +759,15 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Tries to get the <see cref="Mapping{TToken}"/> instance of currently registered recipients
-	/// for the combination of types <typeparamref name="TMessage"/> and <typeparamref name="TToken"/>.
+	/// 尝试获取类型 <typeparamref name="TMessage"/> 和 <typeparamref name="TToken"/> 组合
+	/// 当前已注册接收方的 <see cref="Mapping{TToken}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to send the message.</typeparam>
-	/// <param name="mapping">The resulting <see cref="Mapping{TToken}"/> instance, if found.</param>
-	/// <returns>Whether or not the required <see cref="Mapping{TToken}"/> instance was found.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识发送消息时使用哪个通道的令牌类型。</typeparam>
+	/// <param name="mapping">找到时返回的 <see cref="Mapping{TToken}"/> 实例。</param>
+	/// <returns>是否找到了所需的 <see cref="Mapping{TToken}"/> 实例。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
-	private bool TryGetMapping<TMessage, TToken>([NotNullWhen(true)] out Mapping<TToken> mapping)
+	private bool TryGetMapping<TMessage, TToken>([NotNullWhen(true)] out Mapping<TToken>? mapping)
 		where TMessage : class
 		where TToken : IEquatable<TToken>
 	{
@@ -805,11 +786,11 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Gets the <see cref="Mapping"/> instance of currently
-	/// registered recipients for the input <typeparamref name="TMessage"/> type.
+	/// 获取输入 <typeparamref name="TMessage"/> 类型当前已注册接收方的
+	/// <see cref="Mapping"/> 实例。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <returns>A <see cref="Mapping"/> instance with the requested type arguments.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <returns>具有所请求类型参数的 <see cref="Mapping"/> 实例。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private Mapping GetOrAddMapping<TMessage>()
 		where TMessage : class
@@ -823,12 +804,12 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Gets the <see cref="Mapping{TToken}"/> instance of currently registered recipients
-	/// for the combination of types <typeparamref name="TMessage"/> and <typeparamref name="TToken"/>.
+	/// 获取类型 <typeparamref name="TMessage"/> 和 <typeparamref name="TToken"/> 组合
+	/// 当前已注册接收方的 <see cref="Mapping{TToken}"/> 实例。
 	/// </summary>
-	/// <typeparam name="TMessage">The type of message to send.</typeparam>
-	/// <typeparam name="TToken">The type of token to identify what channel to use to send the message.</typeparam>
-	/// <returns>A <see cref="Mapping{TToken}"/> instance with the requested type arguments.</returns>
+	/// <typeparam name="TMessage">要发送的消息类型。</typeparam>
+	/// <typeparam name="TToken">用于标识发送消息时使用哪个通道的令牌类型。</typeparam>
+	/// <returns>具有所请求类型参数的 <see cref="Mapping{TToken}"/> 实例。</returns>
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
 	private Mapping<TToken> GetOrAddMapping<TMessage, TToken>()
 		where TMessage : class
@@ -843,27 +824,27 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// A mapping type representing a link to recipients and their view of handlers per communication channel.
+	/// 表示接收方链接及其按通信通道划分的处理程序视图的映射类型。
 	/// </summary>
 	/// <remarks>
-	/// This type is a specialization of <see cref="Mapping{TToken}"/> for <see cref="Unit"/> tokens.
+	/// 此类型是 <see cref="Mapping{TToken}"/> 针对 <see cref="Unit"/> 令牌的特化。
 	/// </remarks>
 	private sealed class Mapping : TypeDictionary<Recipient, object>, IMapping
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Mapping"/> class.
+		/// 初始化 <see cref="Mapping"/> 类的新实例。
 		/// </summary>
-		/// <param name="messageType">The message type being used.</param>
+		/// <param name="messageType">正在使用的消息类型。</param>
 		private Mapping(Type messageType)
 		{
 			TypeArguments = new EquatableType(messageType, typeof(Unit));
 		}
 
 		/// <summary>
-		/// Creates a new instance of the <see cref="Mapping"/> class.
+		/// 创建 <see cref="Mapping"/> 类的新实例。
 		/// </summary>
-		/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-		/// <returns>A new <see cref="Mapping"/> instance.</returns>
+		/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+		/// <returns>新的 <see cref="Mapping"/> 实例。</returns>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Mapping Create<TMessage>()
 			where TMessage : class
@@ -876,30 +857,30 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// A mapping type representing a link to recipients and their view of handlers per communication channel.
+	/// 表示接收方链接及其按通信通道划分的处理程序视图的映射类型。
 	/// </summary>
-	/// <typeparam name="TToken">The type of token to use to pick the messages to receive.</typeparam>
+	/// <typeparam name="TToken">用于选择要接收的消息的令牌类型。</typeparam>
 	/// <remarks>
-	/// This type is defined for simplicity and as a workaround for the lack of support for using type aliases
-	/// over open generic types in C# (using type aliases can only be used for concrete, closed types).
+	/// 定义此类型是为了简化实现，并作为 C# 不支持在开放泛型类型上使用类型别名
+	/// 的一种变通方案（类型别名只能用于具体的封闭类型）。
 	/// </remarks>
 	private sealed class Mapping<TToken> : TypeDictionary<Recipient, TypeDictionary<TToken, object>>, IMapping
 		where TToken : IEquatable<TToken>
 	{
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Mapping{TToken}"/> class.
+		/// 初始化 <see cref="Mapping{TToken}"/> 类的新实例。
 		/// </summary>
-		/// <param name="messageType">The message type being used.</param>
+		/// <param name="messageType">正在使用的消息类型。</param>
 		private Mapping(Type messageType)
 		{
 			TypeArguments = new EquatableType(messageType, typeof(TToken));
 		}
 
 		/// <summary>
-		/// Creates a new instance of the <see cref="Mapping{TToken}"/> class.
+		/// 创建 <see cref="Mapping{TToken}"/> 类的新实例。
 		/// </summary>
-		/// <typeparam name="TMessage">The type of message to receive.</typeparam>
-		/// <returns>A new <see cref="Mapping{TToken}"/> instance.</returns>
+		/// <typeparam name="TMessage">要接收的消息类型。</typeparam>
+		/// <returns>新的 <see cref="Mapping{TToken}"/> 实例。</returns>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Mapping<TToken> Create<TMessage>()
 			where TMessage : class
@@ -912,39 +893,38 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// An interface for the <see cref="Mapping"/> and <see cref="Mapping{TToken}"/> types which allows to retrieve
-	/// the type arguments from a given generic instance without having any prior knowledge about those arguments.
+	/// <see cref="Mapping"/> 和 <see cref="Mapping{TToken}"/> 类型的接口，用于在事先不了解
+	/// 类型参数的情况下，从给定的泛型实例中获取这些参数。
 	/// </summary>
 	private interface IMapping : ITypeDictionary<Recipient>
 	{
 		/// <summary>
-		/// Gets the <see cref="EquatableType"/> instance representing the current type arguments.
+		/// 获取表示当前类型参数的 <see cref="EquatableType"/> 实例。
 		/// </summary>
 		EquatableType TypeArguments { get; }
 	}
 
 	/// <summary>
-	/// A simple type representing a recipient.
+	/// 表示接收方的简单类型。
 	/// </summary>
 	/// <remarks>
-	/// This type is used to enable fast indexing in each mapping dictionary,
-	/// since it acts as an external override for the <see cref="GetHashCode"/> and
-	/// <see cref="Equals(object?)"/> methods for arbitrary objects, removing both
-	/// the virtual call and preventing instances overriding those methods in this context.
-	/// Using this type guarantees that all the equality operations are always only done
-	/// based on reference equality for each registered recipient, regardless of its type.
+	/// 此类型用于在每个映射字典中实现快速索引，因为它为任意对象充当
+	/// <see cref="GetHashCode"/> 和 <see cref="Equals(object?)"/> 方法的外部替代实现，
+	/// 消除了虚调用，并防止实例在此上下文中重写这些方法。
+	/// 使用此类型可保证对所有已注册接收方的相等性操作始终仅基于引用相等，
+	/// 而与其类型无关。
 	/// </remarks>
 	private readonly struct Recipient : IEquatable<Recipient>
 	{
 		/// <summary>
-		/// The registered recipient.
+		/// 已注册的接收方。
 		/// </summary>
 		public readonly object Target;
 
 		/// <summary>
-		/// Initializes a new instance of the <see cref="Recipient"/> struct.
+		/// 初始化 <see cref="Recipient"/> 结构的新实例。
 		/// </summary>
-		/// <param name="target">The target recipient instance.</param>
+		/// <param name="target">目标接收方实例。</param>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public Recipient(object target)
 		{
@@ -959,7 +939,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 		}
 
 		/// <inheritdoc/>
-		public override bool Equals(object obj)
+		public override bool Equals(object? obj)
 		{
 			return obj is Recipient other && Equals(other);
 		}
@@ -973,7 +953,7 @@ public sealed class StrongReferenceMessenger : IMessenger
 	}
 
 	/// <summary>
-	/// Throws an <see cref="InvalidOperationException"/> when trying to add a duplicate handler.
+	/// 尝试添加重复的处理程序时抛出 <see cref="InvalidOperationException"/>。
 	/// </summary>
 	private static void ThrowInvalidOperationExceptionForDuplicateRegistration()
 	{

@@ -1,8 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Caching.Redis;
 
 /// <summary>
-/// <see cref="RedisConfigurationBuilder"/> helps creating the <see cref="RedisConfiguration"/>
-/// object via code.
+/// <see cref="RedisConfigurationBuilder"/> 用于通过代码创建 <see cref="RedisConfiguration"/> 对象。
 /// </summary>
 public class RedisConfigurationBuilder
 {
@@ -12,17 +11,17 @@ public class RedisConfigurationBuilder
     private readonly List<ServerEndPoint> _endpoints = new();
     private bool _isSsl;
     private readonly string _key;
-    private string _password;
-    private string _sslHost;
+    private string? _password;
+    private string? _sslHost;
     private bool _enabledKeyspaceNotifications;
-    private string _useVersion;
+    private string? _useVersion;
     private bool _useTwemproxy;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="RedisConfigurationBuilder"/> class.
+    /// 初始化 <see cref="RedisConfigurationBuilder"/> 类的新实例。
     /// </summary>
-    /// <param name="configurationKey">The configuration key.</param>
-    /// <exception cref="ArgumentNullException">If configurationKey is null.</exception>
+    /// <param name="configurationKey">配置键。</param>
+    /// <exception cref="ArgumentNullException">当 configurationKey 为 null 时抛出。</exception>
     public RedisConfigurationBuilder(string configurationKey)
     {
         Check.EnsureNotNullOrWhiteSpace(configurationKey, nameof(configurationKey));
@@ -31,10 +30,9 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Creates the <see cref="RedisConfiguration"/> out of the currently specified properties,
-    /// if possible.
+    /// 根据当前指定的属性创建 <see cref="RedisConfiguration"/>（如果可行）。
     /// </summary>
-    /// <returns>The <c>RedisConfiguration</c></returns>
+    /// <returns><c>RedisConfiguration</c>。</returns>
     public RedisConfiguration Build() =>
         new(
             key: _key,
@@ -50,12 +48,12 @@ public class RedisConfigurationBuilder
             strictCompatibilityModeVersion: _useVersion);
 
     /// <summary>
-    /// Enable the flag to have CacheManager react on keyspace notifications from redis.
-    /// CacheManager will listen only for eviction and expiration events (not all events).
-    /// Use this feature only if you also have configured Redis correctly: notify-keyspace-events must be set to AT LEAST Exe.
+    /// 启用该标志，使 CacheManager 响应来自 redis 的键空间通知。
+    /// CacheManager 只会监听逐出和过期事件（并非所有事件）。
+    /// 仅在你已正确配置 Redis 的情况下使用此功能：notify-keyspace-events 必须至少设置为 Exe。
     /// <see href="https://redis.io/topics/notifications#configuration"/>
     /// </summary>
-    /// <returns>The builder.</returns>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder EnableKeyspaceEvents()
     {
         _enabledKeyspaceNotifications = true;
@@ -63,11 +61,11 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Can be used to control the available Redis features CacheManager can use. E.g. if set to <c>"2.4"</c>, this would disable all LUA support and would
-    /// force CacheManager to use other APIs
+    /// 可用于控制 CacheManager 能够使用的 Redis 功能。例如，若设置为 <c>"2.4"</c>，将禁用所有 LUA 支持，
+    /// 并强制 CacheManager 使用其他 API。
     /// </summary>
-    /// <param name="version"></param>
-    /// <returns>The builder.</returns>
+    /// <param name="version">要兼容的 Redis 版本号（例如 <c>"2.4"</c>）。</param>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder UseCompatibilityMode(string version)
     {
         _useVersion = version;
@@ -75,9 +73,9 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Enable this in case you are using Redis behind Twemproxy.
+    /// 如果你在 Twemproxy 后面使用 Redis，请启用此项。
     /// </summary>
-    /// <returns>The builder.</returns>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder UseTwemproxy()
     {
         _useTwemproxy = true;
@@ -85,10 +83,10 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// If set to true, commands which might be risky are enabled, like Clear which will delete
-    /// all entries in the redis database.
+    /// 若设置为 true，则启用可能具有风险的操作，例如会删除
+    /// redis 数据库中所有条目的 Clear。
     /// </summary>
-    /// <returns>The builder.</returns>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder WithAllowAdmin()
     {
         _allowAdmin = true;
@@ -96,10 +94,10 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Sets the timeout in milliseconds for connect operations.
+    /// 设置连接操作的超时时间（毫秒）。
     /// </summary>
-    /// <param name="timeout">The timeout in milliseconds.</param>
-    /// <returns>The builder.</returns>
+    /// <param name="timeout">超时时间（毫秒）。</param>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder WithConnectionTimeout(int timeout)
     {
         _connectionTimeout = timeout;
@@ -107,12 +105,11 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Sets the database.
-    /// <para>Maximum number of database depends on the redis server configuration.</para>Default
-    /// is <c>0</c>.
+    /// 设置数据库。
+    /// <para>数据库的最大数量取决于 redis 服务器配置。</para>默认为 <c>0</c>。
     /// </summary>
-    /// <param name="databaseIndex">The database index.</param>
-    /// <returns>The builder.</returns>
+    /// <param name="databaseIndex">数据库索引。</param>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder WithDatabase(int databaseIndex)
     {
         _database = databaseIndex;
@@ -120,12 +117,12 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Adds an endpoint to the connection configuration.
-    /// <para>Call this multiple times to add multiple endpoints.</para>
+    /// 向连接配置添加一个终结点。
+    /// <para>多次调用可添加多个终结点。</para>
     /// </summary>
-    /// <param name="host">The host or IP of the redis server.</param>
-    /// <param name="port">The port of the redis server.</param>
-    /// <returns>The builder.</returns>
+    /// <param name="host">redis 服务器的主机或 IP。</param>
+    /// <param name="port">redis 服务器的端口。</param>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder WithEndpoint(string host, int port)
     {
         var endpoint = new ServerEndPoint(host, port);
@@ -134,10 +131,10 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Sets the password for the redis server.
+    /// 设置 redis 服务器的密码。
     /// </summary>
-    /// <param name="serverPassword">The redis server password.</param>
-    /// <returns>The builder.</returns>
+    /// <param name="serverPassword">redis 服务器密码。</param>
+    /// <returns>构建器。</returns>
     public RedisConfigurationBuilder WithPassword(string serverPassword)
     {
         _password = serverPassword;
@@ -145,14 +142,14 @@ public class RedisConfigurationBuilder
     }
 
     /// <summary>
-    /// Enables SSL encryption.
+    /// 启用 SSL 加密。
     /// <para>
-    /// If host is specified it will enforce a particular SSL host identity on the server's certificate.
+    /// 若指定了主机，则会在服务器证书上强制校验特定的 SSL 主机标识。
     /// </para>
     /// </summary>
-    /// <param name="host">The SSL host.</param>
-    /// <returns>The builder.</returns>
-    public RedisConfigurationBuilder WithSsl(string host = null)
+    /// <param name="host">SSL 主机。</param>
+    /// <returns>构建器。</returns>
+    public RedisConfigurationBuilder WithSsl(string? host = null)
     {
         _isSsl = true;
         _sslHost = host;

@@ -3,27 +3,27 @@ using Quartz;
 namespace Nerosoft.Euonia.Quartz;
 
 /// <summary>
-/// The background job options.
+/// 后台作业选项。
 /// </summary>
 public class BackgroundJobOptions
 {
     /// <summary>
-    /// Gets the job name.
+    /// 获取作业名称。
     /// </summary>
-    public string Name { get; set; }
+    public string? Name { get; set; }
 
     /// <summary>
-    /// Gets or sets the quartz job group name.
+    /// 获取或设置 Quartz 作业组名称。
     /// </summary>
-    public string Group { get; set; }
+    public string? Group { get; set; }
 
     /// <summary>
-    /// Gets or sets job configuration.
+    /// 获取或设置作业配置。
     /// </summary>
-    public Action<IJobConfigurator<IJob>> JobConfigure { get; set; }
+    public Action<IJobConfigurator<IJob>>? JobConfigure { get; set; }
 
     /// <summary>
-    /// Gets or sets trigger configuration.
+    /// 获取或设置触发器配置。
     /// </summary>
     public List<Action<ITriggerConfigurator<IJob>>> TriggerConfigure { get; } = new();
 }

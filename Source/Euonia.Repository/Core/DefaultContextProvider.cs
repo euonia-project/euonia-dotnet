@@ -3,7 +3,7 @@
 namespace Nerosoft.Euonia.Repository;
 
 /// <summary>
-/// The default context provider.
+/// 默认上下文提供程序。
 /// </summary>
 public class DefaultContextProvider : IContextProvider
 {
@@ -11,9 +11,9 @@ public class DefaultContextProvider : IContextProvider
     private readonly Dictionary<Type, Func<object>> _functions = new();
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="DefaultContextProvider"/> class.
+    /// 初始化 <see cref="DefaultContextProvider"/> 类的新实例。
     /// </summary>
-    /// <param name="provider"></param>
+    /// <param name="provider">用于解析上下文工厂的服务提供程序。</param>
     public DefaultContextProvider(IServiceProvider provider)
     {
         _factories = provider.GetServices<IContextFactory>()
@@ -21,10 +21,11 @@ public class DefaultContextProvider : IContextProvider
     }
 
     /// <summary>
-    /// Gets the context.
+    /// 获取上下文。
     /// </summary>
-    /// <typeparam name="TContext"></typeparam>
-    /// <returns></returns>
+    /// <typeparam name="TContext">要获取的数据上下文类型。</typeparam>
+    /// <returns>与 <typeparamref name="TContext"/> 对应的上下文实例。</returns>
+    /// <exception cref="InvalidOperationException">未注册任何上下文工厂，或没有工厂能创建 <typeparamref name="TContext"/> 时抛出。</exception>
     public TContext GetContext<TContext>()
         where TContext : class, IRepositoryContext
     {

@@ -29,5 +29,5 @@ public interface IRequestContextAccessor : IScopedDependency
 	/// 当前异步执行上下文中的 <see cref="RequestContext"/> 实例；
 	/// 如果尚未设置上下文（例如在 HTTP 请求作用域之外），则返回 <c>null</c>。
 	/// </value>
-	RequestContext Context { get; }
+	RequestContext? Context { get; }
 }

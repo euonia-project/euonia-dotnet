@@ -104,6 +104,10 @@ public class StatefulMutex : IDisposable
     {
         private readonly StatefulMutex _parent;
 
+        /// <summary>
+        /// 为指定的 <see cref="StatefulMutex"/> 创建状态上下文。
+        /// </summary>
+        /// <param name="parent">持有底层互斥体的父对象。</param>
         internal Context(StatefulMutex parent)
         {
             _parent = parent;

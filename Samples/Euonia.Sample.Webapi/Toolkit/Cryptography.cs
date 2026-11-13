@@ -1,7 +1,7 @@
 ﻿namespace Nerosoft.Euonia.Sample.Toolkit;
 
 /// <summary>
-/// Provides cryptographic utilities and functions.
+/// 提供加密实用工具和函数。
 /// </summary>
 public partial class Cryptography
 {

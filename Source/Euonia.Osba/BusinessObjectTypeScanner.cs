@@ -46,7 +46,7 @@ internal static class BusinessObjectTypeScanner
 				Trace.WriteLine($"[AddBusinessObject] 程序集 '{assembly.FullName}' 中有类型无法加载，已跳过：{loaderException?.Message}");
 			}
 
-			return exception.Types.Where(type => type != null);
+			return exception.Types.OfType<Type>();
 		}
 	}
 }

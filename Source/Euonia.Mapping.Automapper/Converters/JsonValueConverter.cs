@@ -14,16 +14,16 @@ public class JsonValueConverter<T> : IValueConverter<string, T>
     {
         if (string.IsNullOrEmpty(sourceMember))
         {
-            return default;
+            return default!;
         }
 
         try
         {
-            return JsonConvert.DeserializeObject<T>(sourceMember);
+            return JsonConvert.DeserializeObject<T>(sourceMember)!;
         }
         catch (Exception)
         {
-            return default;
+            return default!;
         }
     }
 }

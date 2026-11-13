@@ -19,6 +19,9 @@ namespace Nerosoft.Euonia.Application.Tests;
 /// </remarks>
 public class CacheGroupEvictionTests
 {
+	/// <summary>
+	/// 在真实内存缓存上登记组键后执行失效，应返回移除数量 1，且缓存项不再可读取。
+	/// </summary>
 	[Fact]
 	public void Evict_WithRealMemoryCache_RemovesCachedEntry()
 	{
@@ -36,6 +39,9 @@ public class CacheGroupEvictionTests
 		Assert.False(cache.TryGet<SampleDto>(key, out _));
 	}
 
+	/// <summary>
+	/// 失效一个组时只应移除该组的缓存项，其他组的条目应保持可读取。
+	/// </summary>
 	[Fact]
 	public void Evict_LeavesEntriesOfOtherGroupsIntact()
 	{
@@ -65,8 +71,11 @@ public class CacheGroupEvictionTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 缓存组失效测试使用的数据类型，用于区分不同组中的缓存条目。
+	/// </summary>
 	private sealed class SampleDto
 	{
-		public string Name { get; set; }
+		public string Name { get; set; } = null!;
 	}
 }

@@ -20,7 +20,7 @@ internal static class ActiveMqDelivery
 	/// ActiveMQ 的队列由通道名称直接决定，因此覆盖值可以完整替换它。
 	/// 消费端按通道注册，只有当目标队列上确实有消费者时消息才会被处理。
 	/// </remarks>
-	public static string ResolveQueueName(string channel, string queueOverride = null)
+	public static string ResolveQueueName(string channel, string? queueOverride = null)
 	{
 		return string.IsNullOrWhiteSpace(queueOverride) ? channel : queueOverride;
 	}

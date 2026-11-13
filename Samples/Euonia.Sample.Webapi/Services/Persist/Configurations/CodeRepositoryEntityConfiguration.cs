@@ -5,9 +5,16 @@ using Nerosoft.Euonia.Sample.Domain.Aggregates;
 
 namespace Nerosoft.Euonia.Sample.Persist.Configurations;
 
+/// <summary>
+/// <see cref="CodeRepository"/> 的 EF Core 实体映射配置。
+/// </summary>
 [DbContext(typeof(SampleDataContext))]
 public class CodeRepositoryEntityConfiguration : IEntityTypeConfiguration<CodeRepository>
 {
+	/// <summary>
+	/// 配置代码仓库表名、主键与列映射，并忽略业务对象基类中不属于持久化模型的属性。
+	/// </summary>
+	/// <param name="builder">用于构建实体映射的构建器。</param>
 	public void Configure(EntityTypeBuilder<CodeRepository> builder)
 	{
 		builder.ToTable("code_repository");

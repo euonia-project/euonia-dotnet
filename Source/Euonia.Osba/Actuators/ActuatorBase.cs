@@ -52,7 +52,7 @@ public abstract class ActuatorBase<TTarget>
 	/// <remarks>
 	/// 惰性创建：既有调用方不关心规则时零开销、也不改变任何行为。
 	/// </remarks>
-	private RuleScope _ruleScope;
+	private RuleScope? _ruleScope;
 
 	/// <summary>
 	/// 获取本次操作的规则范围，按需创建。
@@ -276,7 +276,39 @@ public abstract class ActuatorBase<TTarget>
 	/// <returns>处理完成并终结后的目标对象。</returns>
 	public async Task<TTarget> ExecuteAsync(CancellationToken cancellationToken = default)
 	{
-		var target = await Factory().ConfigureAwait(false);
+		var activity = OsbaDiagnostics.StartOperation("execute", typeof(TTarget).FullName);
+		var started = System.Diagnostics.Stopwatch.GetTimestamp();
+		var succeeded = false;
+
+		try
+		{
+			var result = await ExecuteCoreAsync(cancellationToken).ConfigureAwait(false);
+			succeeded = true;
+			return result;
+		}
+		finally
+		{
+			OsbaDiagnostics.CompleteOperation(activity, "execute", started, succeeded);
+		}
+	}
+
+	private async Task<TTarget> ExecuteCoreAsync(CancellationToken cancellationToken)
+	{
+		var fetch = OsbaDiagnostics.StartOperation("fetch", typeof(TTarget).FullName);
+		var fetchStarted = System.Diagnostics.Stopwatch.GetTimestamp();
+		TTarget target;
+
+		try
+		{
+			target = await Factory().ConfigureAwait(false);
+		}
+		catch
+		{
+			OsbaDiagnostics.CompleteOperation(fetch, "fetch", fetchStarted, false);
+			throw;
+		}
+
+		OsbaDiagnostics.CompleteOperation(fetch, "fetch", fetchStarted, true);
 
 		if (_ruleScope != null)
 		{

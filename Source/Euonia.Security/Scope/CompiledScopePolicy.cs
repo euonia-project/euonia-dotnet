@@ -27,9 +27,19 @@ public sealed class CompiledScopePolicy<T>
 	private readonly Lazy<Func<T, bool>> _allow;
 	private readonly Lazy<Func<T, bool>> _deny;
 
-	/// <summary>集合维度的加载探测与已编译的探测委托，按需编译：下推路径不做探测，不应付出编译开销。</summary>
+	/// <summary>
+	/// 集合维度的加载探测与已编译的探测委托，按需编译：下推路径不做探测，不应付出编译开销。
+	/// </summary>
 	private readonly Lazy<(ScopeLoadGuard<T> Guard, Func<T, bool> IsMissing)[]> _loadGuards;
 
+	/// <summary>
+	/// 初始化已编译策略；表达式在此只保存，委托按需编译。
+	/// </summary>
+	/// <param name="allow">允许条件。</param>
+	/// <param name="deny">拒绝条件。</param>
+	/// <param name="hasAllow">策略是否提供了允许条件，用于区分「无条件放行」与「只含拒绝」。</param>
+	/// <param name="scopeKey">本次编译使用的策略键，仅用于审计与排障。</param>
+	/// <param name="loadGuards">集合维度的加载探测；为 <see langword="null"/> 时按无探测处理。</param>
 	internal CompiledScopePolicy(Expression<Func<T, bool>> allow, Expression<Func<T, bool>> deny, bool hasAllow, string scopeKey, IReadOnlyList<ScopeLoadGuard<T>> loadGuards)
 	{
 		Allow = allow;

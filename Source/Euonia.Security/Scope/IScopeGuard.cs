@@ -65,7 +65,7 @@ public interface IScopeGuard
 	/// <typeparam name="T">资源类型。</typeparam>
 	/// <param name="identifier">业务操作名或权限码；为 <see langword="null"/> 时取模型为「无操作」准备的默认策略。</param>
 	/// <returns>已编译的策略；未注册时返回 <see langword="null"/>。</returns>
-	CompiledScopePolicy<T> GetPolicy<T>(string identifier = null)
+	CompiledScopePolicy<T>? GetPolicy<T>(string? identifier = null)
 		where T : class;
 
 	/// <summary>
@@ -79,7 +79,7 @@ public interface IScopeGuard
 	/// 读侧查询没有「目标对象」可供推断操作，因此要按标识区分可见性时必须显式传入；
 	/// 不做行级细分的应用直接调用即可（默认策略）。
 	/// </remarks>
-	IQueryable<T> Apply<T>(IQueryable<T> source, string identifier = null)
+	IQueryable<T> Apply<T>(IQueryable<T> source, string? identifier = null)
 		where T : class;
 
 	/// <summary>
@@ -90,7 +90,7 @@ public interface IScopeGuard
 	/// <param name="identifier">业务操作名或权限码；为 <see langword="null"/> 时按该资源当前对应的操作解析（见 <see cref="AllowsObject"/>）。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	/// <remarks>与 <see cref="AllowsObject"/> 共用同一套操作解析与同一份策略，同一实例经两个入口必然得到同一结论。</remarks>
-	bool Allows<T>(T resource, string identifier = null)
+	bool Allows<T>(T? resource, string? identifier = null)
 		where T : class;
 
 	/// <summary>
@@ -101,7 +101,7 @@ public interface IScopeGuard
 	/// <param name="identifier">业务操作名或权限码；为 <see langword="null"/> 时按该资源当前对应的操作解析。</param>
 	/// <returns>判定结果与命中路径。</returns>
 	/// <remarks>解释与判定必须同口径：<see cref="Explain{T}"/> 不能给出比 <see cref="Allows{T}"/> 更宽松的结论，否则排障时会读反。</remarks>
-	ScopeDecision Explain<T>(T resource, string identifier = null)
+	ScopeDecision Explain<T>(T? resource, string? identifier = null)
 		where T : class;
 
 	/// <summary>
@@ -111,7 +111,7 @@ public interface IScopeGuard
 	/// <param name="identifier">业务操作名或权限码；为 <see langword="null"/> 时按目标对象当前对应的操作自动解析。</param>
 	/// <returns>可访问则返回 <see langword="true"/>；否则返回 <see langword="false"/>。</returns>
 	/// <remarks>目标类型未声明权限模型时返回 <see langword="true"/>（不受数据权限约束）。</remarks>
-	bool AllowsObject(object resource, string identifier = null);
+	bool AllowsObject(object? resource, string? identifier = null);
 
 	/// <summary>
 	/// 解释任意对象为何可访问或被拒绝（非泛型入口，供拒绝时给出原因）。
@@ -119,7 +119,7 @@ public interface IScopeGuard
 	/// <param name="resource">待判定的资源；为 <see langword="null"/> 时给出拒绝说明，而不是「不受约束」。</param>
 	/// <param name="identifier">业务操作名或权限码；为 <see langword="null"/> 时按目标对象当前对应的操作自动解析。</param>
 	/// <returns>判定说明，形如 <c>[scope=delete] 判定：拒绝；…</c>。</returns>
-	string ExplainObject(object resource, string identifier = null);
+	string ExplainObject(object? resource, string? identifier = null);
 
 	/// <summary>
 	/// 使本作用域内缓存的授权数据与已编译策略失效并<b>立即重新解析</b>。
@@ -136,5 +136,5 @@ public interface IScopeGuard
 	/// <summary>
 	/// 获取当前用户的声明主体（供应用侧解析使用）。
 	/// </summary>
-	ClaimsPrincipal User { get; }
+	ClaimsPrincipal? User { get; }
 }

@@ -1,28 +1,30 @@
-﻿namespace Nerosoft.Euonia.Caching;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Provides the default implementation for a cache manager.
-/// The cache manager provides an abstraction over the cache holder allowing it to be easily swaped and isolating it within a component context.
-/// Implements the <see cref="ICacheManager" />
+/// 提供缓存管理器的默认实现。
+/// 缓存管理器在缓存持有者之上提供了一层抽象，使其可以轻松替换，并可在组件上下文中隔离。
+/// 实现 <see cref="ICacheManager" />
 /// </summary>
 /// <seealso cref="ICacheManager" />
 public class DefaultCacheManager : ICacheManager
 {
     /// <summary>
-    /// The component
+    /// 缓存所属的组件类型，用作缓存分区的键。
     /// </summary>
     private readonly Type _component;
 
     /// <summary>
-    /// The cache holder
+    /// 缓存持有者
     /// </summary>
     private readonly ICacheHolder _holder;
 
     /// <summary>
-    /// Constructs a new cache manager for a given component type and with a specific cache holder implementation.
+    /// 为给定组件类型和特定的缓存持有者实现构造新的缓存管理器。
     /// </summary>
-    /// <param name="component">The component to which the cache applies (context).</param>
-    /// <param name="holder">The cache holder that contains the entities cached.</param>
+    /// <param name="component">缓存所适用的组件（上下文）。</param>
+    /// <param name="holder">包含已缓存实体的缓存持有者。</param>
     public DefaultCacheManager(Type component, ICacheHolder holder)
     {
         _component = component;
@@ -30,69 +32,69 @@ public class DefaultCacheManager : ICacheManager
     }
 
     /// <summary>
-    /// Gets a cache entry from the cache holder.
+    /// 从缓存持有者获取缓存条目。
     /// </summary>
-    /// <typeparam name="TKey">The type of the key to be used to fetch the cache entry.</typeparam>
-    /// <typeparam name="TResult">The type of the entry to be obtained from the cache.</typeparam>
-    /// <returns>The entry from the cache.</returns>
-    private CacheItem<TKey, TResult> GetCache<TKey, TResult>()
+    /// <typeparam name="TKey">用于获取缓存条目的键类型。</typeparam>
+    /// <typeparam name="TResult">从缓存中获取的条目类型。</typeparam>
+    /// <returns>来自缓存的条目。</returns>
+    private CacheItem<TKey, TResult> GetCache<TKey, TResult>() where TKey : notnull
     {
         return _holder.GetCache<TKey, TResult>(_component);
     }
 
     /// <inheritdoc />
-    public TResult Get<TKey, TResult>(TKey key)
+    public TResult Get<TKey, TResult>(TKey key) where TKey : notnull
     {
-        return TryGet<TKey, TResult>(key, out var result) ? result : default;
+        return TryGet<TKey, TResult>(key, out var result) ? result : default!;
     }
 
     /// <summary>
-    /// Gets the specified key.
+    /// 获取指定的键。
     /// </summary>
-    /// <typeparam name="TKey">The type of the t key.</typeparam>
-    /// <typeparam name="TResult">The type of the t result.</typeparam>
-    /// <param name="key">The key.</param>
-    /// <param name="acquire">The acquire.</param>
-    /// <returns>TResult.</returns>
-    public TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
+    /// <typeparam name="TKey">键的类型。</typeparam>
+    /// <typeparam name="TResult">结果的类型。</typeparam>
+    /// <param name="key">键。</param>
+    /// <param name="acquire">获取方法。</param>
+    /// <returns>TResult。</returns>
+    public TResult GetOrAdd<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull
     {
         return GetCache<TKey, TResult>().GetOrAdd(key, acquire);
     }
 
     /// <inheritdoc />
-    public TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire)
+    public TResult AddOrUpdate<TKey, TResult>(TKey key, Func<AcquireContext<TKey>, TResult> acquire) where TKey : notnull
     {
         return GetCache<TKey, TResult>().AddOrUpdate(key, acquire);
     }
 
     /// <summary>
-    /// Try gets the specified key.
+    /// 尝试获取指定的键。
     /// </summary>
-    /// <typeparam name="TKey">The type of the t key.</typeparam>
-    /// <typeparam name="TResult">The type of the t result.</typeparam>
-    /// <param name="key">The key.</param>
-    /// <param name="result">The cached value of key.</param>
-    /// <returns></returns>
-    public bool TryGet<TKey, TResult>(TKey key, out TResult result)
+    /// <typeparam name="TKey">键的类型。</typeparam>
+    /// <typeparam name="TResult">结果的类型。</typeparam>
+    /// <param name="key">键。</param>
+    /// <param name="result">键对应的缓存值。</param>
+    /// <returns>如果缓存中存在该键则为 <c>true</c>；否则为 <c>false</c>，此时 <paramref name="result"/> 为默认值。</returns>
+    public bool TryGet<TKey, TResult>(TKey key, [MaybeNullWhen(false)] out TResult result) where TKey : notnull
     {
         return GetCache<TKey, TResult>().TryGet(key, out result);
     }
 }
 
 /// <summary>
-/// Provides the default implementation for a cache manager.
-/// The cache manager provides an abstraction over the cache holder allowing it to be easily swaped and isolating it within a component context.
-/// Implements the <see cref="DefaultCacheManager" />
+/// 提供缓存管理器的默认实现。
+/// 缓存管理器在缓存持有者之上提供了一层抽象，使其可以轻松替换，并可在组件上下文中隔离。
+/// 实现 <see cref="DefaultCacheManager" />
 /// </summary>
-/// <typeparam name="TComponent">The type of the component to which the cache applies (context)..</typeparam>
+/// <typeparam name="TComponent">缓存所适用的组件（上下文）类型。</typeparam>
 /// <seealso cref="DefaultCacheManager" />
 /// <seealso cref="DefaultCacheManager" />
 public class DefaultCacheManager<TComponent> : DefaultCacheManager
 {
     /// <summary>
-    /// Constructs a new cache manager for a given component type and with a specific cache holder implementation.
+    /// 为给定组件类型和特定的缓存持有者实现构造新的缓存管理器。
     /// </summary>
-    /// <param name="holder">The cache holder that contains the entities cached.</param>
+    /// <param name="holder">包含已缓存实体的缓存持有者。</param>
     public DefaultCacheManager(ICacheHolder holder)
         : base(typeof(TComponent), holder)
     {

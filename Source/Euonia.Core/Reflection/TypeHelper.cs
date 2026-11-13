@@ -17,7 +17,7 @@ public class TypeHelper
 	/// <remarks>
 	/// 此方法处理多种转换场景，包括：直接赋值兼容、可空类型、枚举解析、基本类型转换以及通过 <see cref="TypeDescriptor"/> 进行的类型转换。
 	/// </remarks>
-	public static object CoerceValue(Type desiredType, Type valueType, object value)
+	public static object? CoerceValue(Type desiredType, Type valueType, object? value)
 	{
 		if (desiredType.IsAssignableFrom(valueType))
 		{
@@ -45,33 +45,33 @@ public class TypeHelper
 
 		if (desiredType.IsEnum)
 		{
-			if ((value as byte?).HasValue)
+			if (value is byte byteValue)
 			{
-				return Enum.Parse(desiredType, ((byte?)value).Value.ToString());
+				return Enum.Parse(desiredType, byteValue.ToString());
 			}
 
-			if ((value as short?).HasValue)
+			if (value is short shortValue)
 			{
-				return Enum.Parse(desiredType, ((short?)value).Value.ToString());
+				return Enum.Parse(desiredType, shortValue.ToString());
 			}
 
-			if ((value as int?).HasValue)
+			if (value is int intValue)
 			{
-				return Enum.Parse(desiredType, ((int?)value).Value.ToString());
+				return Enum.Parse(desiredType, intValue.ToString());
 			}
 
-			if ((value as long?).HasValue)
+			if (value is long longValue)
 			{
-				return Enum.Parse(desiredType, ((long?)value).Value.ToString());
+				return Enum.Parse(desiredType, longValue.ToString());
 			}
 		}
 
 		if (desiredType.IsEnum && (valueType == typeof(string) || Enum.GetUnderlyingType(desiredType) == valueType))
 		{
-			return Enum.Parse(desiredType, value.ToString() ?? string.Empty);
+			return Enum.Parse(desiredType, value?.ToString() ?? string.Empty);
 		}
 
-		if ((desiredType.IsPrimitive || desiredType == typeof(decimal)) && valueType == typeof(string) && string.IsNullOrEmpty((string)value))
+		if ((desiredType.IsPrimitive || desiredType == typeof(decimal)) && valueType == typeof(string) && string.IsNullOrEmpty(value as string))
 		{
 			value = 0;
 		}
@@ -93,7 +93,7 @@ public class TypeHelper
 				var cnv1 = TypeDescriptor.GetConverter(valueType);
 				if (converter.CanConvertFrom(valueType))
 				{
-					return converter.ConvertFrom(value);
+					return converter.ConvertFrom(value!);
 				}
 
 				if (cnv1.CanConvertTo(desiredType))
@@ -113,9 +113,9 @@ public class TypeHelper
 	/// <param name="valueType">值的原始类型。</param>
 	/// <param name="value">要转换的值。</param>
 	/// <returns>转换后的 <typeparamref name="T"/> 类型值。</returns>
-	public static T CoerceValue<T>(Type valueType, object value)
+	public static T CoerceValue<T>(Type valueType, object? value)
 	{
-		return (T)CoerceValue(typeof(T), valueType, value);
+		return (T)CoerceValue(typeof(T), valueType, value)!;
 	}
 
 	/// <summary>
@@ -127,6 +127,6 @@ public class TypeHelper
 	/// <returns>转换后的 <typeparamref name="TOutput"/> 类型值。</returns>
 	public static TOutput CoerceValue<TOutput, TInput>(TInput value)
 	{
-		return (TOutput)CoerceValue(typeof(TOutput), typeof(TInput), value);
+		return (TOutput)CoerceValue(typeof(TOutput), typeof(TInput), value)!;
 	}
 }

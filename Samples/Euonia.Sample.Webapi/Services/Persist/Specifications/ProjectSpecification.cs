@@ -3,18 +3,27 @@ using Nerosoft.Euonia.Sample.Domain.Aggregates;
 
 namespace Nerosoft.Euonia.Sample.Persist.Specifications;
 
-/// <summary>项目查询规范。</summary>
+/// <summary>
+/// 项目查询规范。
+/// </summary>
 internal static class ProjectSpecification
 {
+	/// <summary>
+	/// 匹配所有项目的规范，以主键非空作为条件。
+	/// </summary>
 	public static readonly Specification<Project> All = new DirectSpecification<Project>(t => t.Id != null);
 
-	/// <summary>Id 等于 <paramref name="id"/>。</summary>
+	/// <summary>
+	/// Id 等于 <paramref name="id"/>。
+	/// </summary>
 	public static Specification<Project> IdEquals(string id)
 	{
 		return new DirectSpecification<Project>(t => t.Id == id);
 	}
 
-	/// <summary>名称包含 <paramref name="keyword"/>。</summary>
+	/// <summary>
+	/// 名称包含 <paramref name="keyword"/>。
+	/// </summary>
 	public static Specification<Project> NameContains(string keyword)
 	{
 		return new DirectSpecification<Project>(t => t.Name.Contains(keyword));

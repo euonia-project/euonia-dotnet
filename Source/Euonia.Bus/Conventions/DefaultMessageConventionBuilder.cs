@@ -22,7 +22,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	public IMessageConventionBuilder EvaluateUnicast(Func<string, Type, bool> convention)
 	{
-		ArgumentAssert.ThrowIfNull(convention);
+		ArgumentNullException.ThrowIfNull(convention);
 		_convention.DefineUnicastTypeConvention(convention);
 		return this;
 	}
@@ -34,7 +34,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	public IMessageConventionBuilder EvaluateMulticast(Func<string, Type, bool> convention)
 	{
-		ArgumentAssert.ThrowIfNull(convention);
+		ArgumentNullException.ThrowIfNull(convention);
 		_convention.DefineMulticastTypeConvention(convention);
 		return this;
 	}
@@ -46,7 +46,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	public IMessageConventionBuilder EvaluateRequest(Func<string, Type, bool> convention)
 	{
-		ArgumentAssert.ThrowIfNull(convention);
+		ArgumentNullException.ThrowIfNull(convention);
 		_convention.DefineRequestTypeConvention(convention);
 		return this;
 	}
@@ -58,7 +58,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	/// <returns>返回当前的 <see cref="IMessageConventionBuilder"/> 实例，以便进行链式调用。</returns>
 	public IMessageConventionBuilder Evaluate(Func<string, Type, MessageConventionType> convention)
 	{
-		ArgumentAssert.ThrowIfNull(convention);
+		ArgumentNullException.ThrowIfNull(convention);
 		_convention.DefineTypeConvention(convention);
 		return this;
 	}
@@ -72,7 +72,7 @@ public class DefaultMessageConventionBuilder : IMessageConventionBuilder
 	public IMessageConventionBuilder Add<TConvention>(TConvention convention)
 		where TConvention : class, IMessageConvention
 	{
-		ArgumentAssert.ThrowIfNull(convention);
+		ArgumentNullException.ThrowIfNull(convention);
 		_convention.Add(convention);
 		return this;
 	}

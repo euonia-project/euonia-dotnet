@@ -1,18 +1,18 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Class AcquireContext.
-/// Implements the <see cref="IAcquireContext" />
+/// <see cref="AcquireContext{TKey}"/> 类。
+/// 实现 <see cref="IAcquireContext" />。
 /// </summary>
-/// <typeparam name="TKey">The type of the t key.</typeparam>
+/// <typeparam name="TKey">键的类型。</typeparam>
 /// <seealso cref="IAcquireContext" />
 public class AcquireContext<TKey> : IAcquireContext
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="AcquireContext{TKey}"/> class.
+    /// 初始化 <see cref="AcquireContext{TKey}"/> 类的新实例。
     /// </summary>
-    /// <param name="key">The key.</param>
-    /// <param name="monitor">The monitor.</param>
+    /// <param name="key">键。</param>
+    /// <param name="monitor">监视器。</param>
     public AcquireContext(TKey key, Action<IVolatileToken> monitor)
     {
         Key = key;
@@ -20,37 +20,37 @@ public class AcquireContext<TKey> : IAcquireContext
     }
 
     /// <summary>
-    /// Gets the key.
+    /// 获取键。
     /// </summary>
-    /// <value>The key.</value>
+    /// <value>键。</value>
     public TKey Key { get; }
 
     /// <summary>
-    /// Gets the monitor.
+    /// 获取监视器。
     /// </summary>
-    /// <value>The monitor.</value>
+    /// <value>监视器。</value>
     public Action<IVolatileToken> Monitor { get; }
 }
 
 /// <summary>
-/// Simple implementation of "IAcquireContext" given a lambda
-/// Implements the <see cref="IAcquireContext" />
+/// 基于 lambda 的 "IAcquireContext" 简单实现。
+/// 实现 <see cref="IAcquireContext" />。
 /// </summary>
 /// <seealso cref="IAcquireContext" />
 public class SimpleAcquireContext : IAcquireContext
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="SimpleAcquireContext"/> class.
+    /// 初始化 <see cref="SimpleAcquireContext"/> 类的新实例。
     /// </summary>
-    /// <param name="monitor">The monitor.</param>
+    /// <param name="monitor">监视器。</param>
     public SimpleAcquireContext(Action<IVolatileToken> monitor)
     {
         Monitor = monitor;
     }
 
     /// <summary>
-    /// Gets the monitor.
+    /// 获取监视器。
     /// </summary>
-    /// <value>The monitor.</value>
+    /// <value>监视器。</value>
     public Action<IVolatileToken> Monitor { get; }
 }

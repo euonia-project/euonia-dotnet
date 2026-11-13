@@ -28,7 +28,7 @@ public static class PropertyAccessorCache<T> where T : class
     /// </summary>
     /// <param name="propertyName">属性名称。</param>
     /// <returns>属性的 Lambda 表达式，如果未找到则返回 null。</returns>
-    public static LambdaExpression Get(string propertyName)
+    public static LambdaExpression? Get(string propertyName)
     {
         return _cache.GetValueOrDefault(propertyName);
     }

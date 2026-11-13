@@ -12,12 +12,24 @@ namespace Nerosoft.Euonia.Security.Tests.Fixtures;
 /// </remarks>
 public sealed class GuardedAsset
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 资源标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string OwnerId { get; set; }
+	/// <summary>
+	/// 负责人用户标识，对应 <c>owner</c> 维度。
+	/// </summary>
+	public string OwnerId { get; set; } = null!;
 
-	public string DeptId { get; set; }
+	/// <summary>
+	/// 所属部门标识，对应 <c>dept</c> 维度。
+	/// </summary>
+	public string DeptId { get; set; } = null!;
 
+	/// <summary>
+	/// 带 <c>guarded:run</c> 权限码的示例操作，方法体为空。
+	/// </summary>
 	[Permission("guarded:run")]
 	public void Run() { }
 }
@@ -31,15 +43,26 @@ public sealed class GuardedAsset
 /// </remarks>
 public sealed class GuardedAssetModel : ScopeModel<GuardedAsset>
 {
+	/// <summary>
+	/// 映射 owner 与 dept 两个行内维度。
+	/// </summary>
+	/// <param name="builder">权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<GuardedAsset> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, x => x.OwnerId)
 		       .Map(ScopeDimensions.Dept, x => x.DeptId);
 	}
 
+	/// <summary>
+	/// 默认策略：仅当负责人维度命中时放行。
+	/// </summary>
 	public override ScopePolicy<GuardedAsset> Policy =>
 		ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Owner);
 
+	/// <summary>
+	/// 为 <c>execute</c> 操作声明按部门判定的策略，并把授予键显式写为权限码 <c>guarded:run</c>。
+	/// </summary>
+	/// <param name="policies">按操作收集声明的策略集合。</param>
 	public override void Declare(ScopePolicySet<GuardedAsset> policies)
 	{
 		policies.ForOperation(BusinessOperation.Execute, ScopePolicy<GuardedAsset>.Grant(ScopeDimensions.Dept), "guarded:run");

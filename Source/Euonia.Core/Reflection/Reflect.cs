@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 using System.Reflection;
 
@@ -18,7 +19,7 @@ public static class Reflect
 	/// <exception cref="ArgumentException">当表达式不是 <see cref="MemberExpression"/>、或不表示属性、或属性为静态时抛出。</exception>
 	public static PropertyInfo GetProperty<T>(Expression<Func<T>> expression)
 	{
-		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
+		ArgumentNullException.ThrowIfNull(expression, nameof(expression));
 
 		if (expression.Body is not MemberExpression memberExpression)
 		{
@@ -56,7 +57,7 @@ public static class Reflect
 	/// <exception cref="ArgumentException">当表达式不引用属性时抛出。</exception>
 	public static PropertyInfo GetProperty<T, TResult>(Expression<Func<T, TResult>> expression)
 	{
-		ArgumentAssert.ThrowIfNull(expression, nameof(expression));
+		ArgumentNullException.ThrowIfNull(expression, nameof(expression));
 
 		var result = expression.Body switch
 		{
@@ -111,13 +112,13 @@ public static class Reflect
 			{
 				var unaryExpression = (UnaryExpression)lambda.Body;
 				var methodCallExpression = (MethodCallExpression)unaryExpression.Operand;
-				var methodCallObject = (ConstantExpression)methodCallExpression.Object;
+				var methodCallObject = (ConstantExpression?)methodCallExpression.Object;
 				if (methodCallObject == null)
 				{
 					throw new NullReferenceException(nameof(methodCallObject));
 				}
 
-				var methodInfo = (MethodInfo)methodCallObject.Value;
+				var methodInfo = (MethodInfo)methodCallObject.Value!;
 				return methodInfo;
 			}
 			case ExpressionType.Call:
@@ -192,7 +193,7 @@ public static class Reflect
 	/// <param name="property">属性表达式。</param>
 	/// <returns>属性值。</returns>
 	/// <exception cref="ArgumentNullException">当 <paramref name="property"/> 为 null 时抛出。</exception>
-	public static object GetValue<T>(T item, Expression<Func<T, object>> property)
+	public static object? GetValue<T>(T item, Expression<Func<T, object>> property)
 	{
 		if (property == null)
 		{
@@ -276,7 +277,7 @@ public static class Reflect
 	/// <param name="defaultValue">默认值（默认为 null）。</param>
 	/// <param name="inherit">是否从基类继承特性。</param>
 	/// <returns>找到的特性实例，如果未找到则返回 <paramref name="defaultValue"/>。</returns>
-	public static TAttribute GetSingleAttributeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default, bool inherit = true)
+	public static TAttribute? GetSingleAttributeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute? defaultValue = default, bool inherit = true)
 		where TAttribute : Attribute
 	{
 		if (memberInfo.IsDefined(typeof(TAttribute), inherit))
@@ -295,7 +296,7 @@ public static class Reflect
 	/// <param name="defaultValue">默认值（默认为 null）。</param>
 	/// <param name="inherit">是否从基类继承特性。</param>
 	/// <returns>找到的特性实例，如果未找到则返回 <paramref name="defaultValue"/>。</returns>
-	public static TAttribute GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute defaultValue = default, bool inherit = true)
+	public static TAttribute? GetSingleAttributeOfMemberOrDeclaringTypeOrDefault<TAttribute>(MemberInfo memberInfo, TAttribute? defaultValue = default, bool inherit = true)
 		where TAttribute : class
 	{
 		return memberInfo.GetCustomAttributes(inherit).OfType<TAttribute>().FirstOrDefault()
@@ -328,7 +329,7 @@ public static class Reflect
 	/// <param name="objectType">对象类型。</param>
 	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
 	/// <returns>属性值，如果路径中某个属性不存在则返回 null。</returns>
-	public static object GetValue(object obj, Type objectType, string propertyPath)
+	public static object? GetValue(object? obj, Type objectType, string propertyPath)
 	{
 		var value = obj;
 		var currentType = objectType;
@@ -369,10 +370,10 @@ public static class Reflect
 	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
 	/// <param name="value">要设置的值。</param>
 	/// <exception cref="MissingMemberException">当路径中的某个属性不存在时抛出。</exception>
-	public static void SetValue(object obj, Type objectType, string propertyPath, object value)
+	public static void SetValue(object? obj, Type objectType, string propertyPath, object? value)
 	{
 		var currentType = objectType;
-		PropertyInfo property;
+		PropertyInfo? property;
 		var objectPath = currentType.FullName;
 		var absolutePropertyPath = propertyPath;
 		if (objectPath != null && absolutePropertyPath.StartsWith(objectPath, StringComparison.Ordinal))
@@ -435,7 +436,8 @@ public static class Reflect
 
 			constants.AddRange(targetType.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy)
 			                             .Where(x => x.IsLiteral && !x.IsInitOnly)
-			                             .Select(x => x.GetValue(null)?.ToString()));
+			                             .Select(x => x.GetValue(null)?.ToString())
+			                             .OfType<string>());
 
 			var nestedTypes = targetType.GetNestedTypes(BindingFlags.Public);
 
@@ -459,7 +461,7 @@ public static class Reflect
 	/// <param name="parameters">方法参数。</param>
 	/// <returns>方法调用的返回值。</returns>
 	/// <exception cref="ArgumentNullException">当找不到指定名称的方法时抛出。</exception>
-	public static object InvokeGenericMethod(object obj, string methodName, Type[] genericTypes, params object[] parameters)
+	public static object? InvokeGenericMethod(object obj, string methodName, Type[] genericTypes, params object?[] parameters)
 	{
 		var method = obj.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public);
 		if (method == null)
@@ -479,7 +481,7 @@ public static class Reflect
 	/// <param name="propertyName">属性名称。</param>
 	/// <param name="value">输出属性值。</param>
 	/// <returns>如果属性存在且类型匹配，则为 true；否则为 false。</returns>
-	public static bool TryGetPropertyValue<T>(object obj, string propertyName, out T value)
+	public static bool TryGetPropertyValue<T>(object obj, string propertyName, [MaybeNullWhen(false)] out T value)
 	{
 		value = default!;
 		var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -488,7 +490,7 @@ public static class Reflect
 			return false;
 		}
 
-		value = (T)property.GetValue(obj);
+		value = (T)property.GetValue(obj)!;
 		return true;
 	}
 
@@ -499,7 +501,7 @@ public static class Reflect
 	/// <param name="propertyName">属性名称。</param>
 	/// <param name="value">输出属性值。</param>
 	/// <returns>如果属性存在，则为 true；否则为 false。</returns>
-	public static bool TryGetPropertyValue(object obj, string propertyName, out object value)
+	public static bool TryGetPropertyValue(object obj, string propertyName, [MaybeNullWhen(false)] out object value)
 	{
 		value = null!;
 		var property = obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
@@ -508,7 +510,7 @@ public static class Reflect
 			return false;
 		}
 
-		value = property.GetValue(obj);
+		value = property.GetValue(obj)!;
 		return true;
 	}
 
@@ -521,7 +523,7 @@ public static class Reflect
 	/// <param name="typeToLookThroughTheMethods">要检索方法的类型，以便遍历并尝试找到正确的方法。</param>
 	/// <param name="methodParameterTypes">要匹配的方法参数类型数组。</param>
 	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
-	public static MethodInfo FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, params Type[] methodParameterTypes)
+	public static MethodInfo? FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, params Type[] methodParameterTypes)
 	{
 		return FindMethod(methodNameToRetrieve, typeToLookThroughTheMethods, x => MethodParameterSelector(x, methodParameterTypes));
 	}
@@ -533,7 +535,7 @@ public static class Reflect
 	/// <param name="typeToLookThroughTheMethods">要检索方法的类型，以便遍历并尝试找到正确的方法。</param>
 	/// <param name="methodSelector">允许调用方查看参数并选择正确方法的委托。</param>
 	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
-	public static MethodInfo FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, Func<MethodInfo, bool> methodSelector)
+	public static MethodInfo? FindMethod(string methodNameToRetrieve, Type typeToLookThroughTheMethods, Func<MethodInfo, bool> methodSelector)
 	{
 		return FindMethod(methodNameToRetrieve, typeToLookThroughTheMethods.GetMethods(), methodSelector);
 	}
@@ -545,7 +547,7 @@ public static class Reflect
 	/// <param name="methodsToLookThrough">名称相同的方法集合，用于遍历并根据方法选择器进行检查。</param>
 	/// <param name="methodSelector">允许调用方查看参数并选择正确方法的委托。</param>
 	/// <returns>找到的 <see cref="MethodInfo"/>，如果未找到则返回 null。</returns>
-	public static MethodInfo FindMethod(string methodNameToRetrieve, IEnumerable<MethodInfo> methodsToLookThrough, Func<MethodInfo, bool> methodSelector)
+	public static MethodInfo? FindMethod(string methodNameToRetrieve, IEnumerable<MethodInfo> methodsToLookThrough, Func<MethodInfo, bool> methodSelector)
 	{
 		return methodsToLookThrough.FirstOrDefault(methodToInspect => string.Equals(methodNameToRetrieve, methodToInspect.Name, StringComparison.OrdinalIgnoreCase) && methodSelector(methodToInspect));
 	}
@@ -562,47 +564,48 @@ public static class Reflect
 	/// <returns>方法参数类型是否完全匹配。</returns>
 	private static bool MethodParameterSelector(MethodBase methodToEvaluate, params Type[] methodParameterTypes)
 	{
-		//we are going to match the GetParameters and the MethodParameterTypes. It needs to match index for index and type for type. So GetParameters[0].Type must match MethodParameterTypes[0].Type...[1].Type must match [1].Type
+		// 将 GetParameters 与 MethodParameterTypes 逐索引、逐类型进行匹配。
+		// 也就是说 GetParameters[0].Type 必须匹配 MethodParameterTypes[0].Type，[1].Type 必须匹配 [1].Type
 
-		//holds the index with the method parameter types we are up too
+		// 记录当前处理方法参数类型所使用的索引
 		int i = 0;
 
-		//let's loop through the parameters
+		// 遍历参数
 		foreach (ParameterInfo thisParameter in methodToEvaluate.GetParameters())
 		{
-			//it's a generic parameter...ie...TSource then we are going to ignore it because whatever we pass in would be TSource
+			// 这是泛型参数（例如 TSource），直接忽略，因为无论传入什么都会被当作 TSource
 			if (!thisParameter.ParameterType.IsGenericParameter)
 			{
-				//is this a generic type? we need to compare this differently
+				// 这是泛型类型吗？需要采用不同的比较方式
 				if (thisParameter.ParameterType.IsGenericType)
 				{
-					//is the method parameter a generic type?
+					// 方法参数是泛型类型吗？
 					if (!methodParameterTypes[i].IsGenericType)
 					{
-						//it isn't so return false..cause they aren't the same
+						// 不是，因此返回 false，因为二者并不相同
 						return false;
 					}
 
-					//if the generic type's don't match then return false...This might be problematic...it works for the scenario which I'm using it for so we will leave this and modify afterwards
+					// 泛型类型不匹配则返回 false……这可能存在问题，但在当前使用场景下可行，因此先保留，之后再修改
 					if (thisParameter.ParameterType.GetGenericTypeDefinition() != methodParameterTypes[i].GetGenericTypeDefinition())
 					{
-						//doesn't match return false
+						// 不匹配，返回 false
 						return false;
 					}
 				}
 				else if (thisParameter.ParameterType != methodParameterTypes[i].UnderlyingSystemType)
 				{
-					//this is a regular parameter so we can compare it normally
-					//we don't have a match...so return false
+					// 这是普通参数，可以按常规方式比较
+					// 不匹配，因此返回 false
 					return false;
 				}
 			}
 
-			//increment the index
+			// 递增索引
 			i++;
 		}
 
-		//if we get here then everything matches so return true
+		// 走到这里说明全部匹配，返回 true
 		return true;
 	}
 
@@ -732,7 +735,7 @@ public static class Reflect<TTarget>
 	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 null。</exception>
 	public static void SetValue<TValue>(TTarget item, TValue value, Expression<Func<TTarget, TValue>> property)
 	{
-		ArgumentAssert.ThrowIfNull(property, nameof(property));
+		ArgumentNullException.ThrowIfNull(property, nameof(property));
 
 		var propertyInfo = GetProperty(property);
 
@@ -746,7 +749,7 @@ public static class Reflect<TTarget>
 	/// <param name="property">属性表达式。</param>
 	/// <returns>属性值。</returns>
 	/// <exception cref="ArgumentNullException"><paramref name="property"/> 为 null。</exception>
-	public static object GetValue(TTarget item, Expression<Func<TTarget, object>> property)
+	public static object? GetValue(TTarget item, Expression<Func<TTarget, object>> property)
 	{
 		if (property == null)
 		{
@@ -784,7 +787,7 @@ public static class Reflect<TTarget>
 	/// <param name="obj">目标对象。</param>
 	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
 	/// <returns>属性值。</returns>
-	public static object GetValue(TTarget obj, string propertyPath)
+	public static object? GetValue(TTarget obj, string propertyPath)
 	{
 		return Reflect.GetValue(obj, typeof(TTarget), propertyPath);
 	}
@@ -795,7 +798,7 @@ public static class Reflect<TTarget>
 	/// <param name="obj">目标对象。</param>
 	/// <param name="propertyPath">属性路径（以 '.' 分隔）。</param>
 	/// <param name="value">要设置的值。</param>
-	public static void SetValue(TTarget obj, string propertyPath, object value)
+	public static void SetValue(TTarget obj, string propertyPath, object? value)
 	{
 		Reflect.SetValue(obj, typeof(TTarget), propertyPath, value);
 	}

@@ -17,9 +17,15 @@ namespace Nerosoft.Euonia.Sample.Domain.Permissions;
 /// </summary>
 public sealed class ProjectScopeModel : ScopeModel<Project>
 {
-	/// <summary>行级授予维度：值为项目标识。解析器经 <c>AddGrant(码, 本维度, 项目id集合)</c> 展开。</summary>
+	/// <summary>
+	/// 行级授予维度：值为项目标识。解析器经 <c>AddGrant(码, 本维度, 项目id集合)</c> 展开。
+	/// </summary>
 	public const string ProjectDimension = "project";
 
+	/// <summary>
+	/// 定义项目的数据权限维度：所有者、资源标识，并把归档状态声明为 <c>state</c> 分类属性。
+	/// </summary>
+	/// <param name="builder">数据权限模型构建器。</param>
 	public override void Define(ScopeModelBuilder<Project> builder)
 	{
 		builder.Map(ScopeDimensions.Owner, p => p.OwnerId)
@@ -27,9 +33,16 @@ public sealed class ProjectScopeModel : ScopeModel<Project>
 		       .Classify("state", p => p.IsArchived ? "archived" : "active");
 	}
 
+	/// <summary>
+	/// 获取默认策略：仅项目所有者本人可访问，项目没有公开概念。
+	/// </summary>
 	public override ScopePolicy<Project> Policy
 		=> ScopePolicy<Project>.Self();
 
+	/// <summary>
+	/// 按操作声明策略：读允许本人或单行授予；编辑与删除在此基础上对已归档项目一律否决。
+	/// </summary>
+	/// <param name="policies">按资源类型收集操作策略的策略集合。</param>
 	public override void Declare(ScopePolicySet<Project> policies)
 	{
 		// 读侧显式按码：已登录用户必须持有 project:view（类型级闸门由工厂/控制器检查），
@@ -81,17 +94,23 @@ public sealed class ProjectScopeModel : ScopeModel<Project>
 /// </remarks>
 public readonly record struct ProjectGrant(string Operation, string ProjectId)
 {
-	/// <summary>操作码与项目标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。</summary>
+	/// <summary>
+	/// 操作码与项目标识的分隔符（操作码含 <c>:</c>，故用 <c>|</c>）。
+	/// </summary>
 	public const string Separator = "|";
 
-	/// <summary>编码为授权行的值。</summary>
+	/// <summary>
+	/// 编码为授权行的值。
+	/// </summary>
 	/// <returns>形如 <c>"project:edit|&lt;project-id&gt;"</c> 的字符串。</returns>
 	public override string ToString()
 	{
 		return string.Concat(Operation, Separator, ProjectId);
 	}
 
-	/// <summary>解析授权行的值；格式非法时返回 <see langword="null"/>。</summary>
+	/// <summary>
+	/// 解析授权行的值；格式非法时返回 <see langword="null"/>。
+	/// </summary>
 	/// <param name="value">授权行上存储的值。</param>
 	/// <returns>解析结果；格式非法时返回 <see langword="null"/>。</returns>
 	public static ProjectGrant? Parse(string value)

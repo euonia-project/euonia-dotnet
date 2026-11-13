@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -24,6 +25,71 @@ namespace Nerosoft.Euonia.Caching.Memory;
 internal static class MemoryCacheStoreRegistry
 {
 	private static readonly ConditionalWeakTable<MemoryCacheOptions, Lazy<MemoryCache>> _stores = new();
+
+	private static readonly ConditionalWeakTable<MemoryCache, ConcurrentDictionary<string, byte>> _keys = new();
+
+	/// <summary>
+	/// 记录已写入共享存储的键，供前缀删除使用。
+	/// </summary>
+	public static void Track(MemoryCache cache, string key)
+	{
+		_keys.GetOrCreateValue(cache).TryAdd(key, 0);
+	}
+
+	/// <summary>
+	/// 移除键记录。
+	/// </summary>
+	public static void Untrack(MemoryCache cache, string key)
+	{
+		if (_keys.TryGetValue(cache, out var keys))
+		{
+			keys.TryRemove(key, out _);
+		}
+	}
+
+	/// <summary>
+	/// 清空键记录。
+	/// </summary>
+	public static void ClearTracked(MemoryCache cache)
+	{
+		if (_keys.TryGetValue(cache, out var keys))
+		{
+			keys.Clear();
+		}
+	}
+
+	/// <summary>
+	/// 按前缀删除缓存项。
+	/// </summary>
+	/// <param name="cache">共享存储。</param>
+	/// <param name="prefix">键前缀。</param>
+	/// <returns>移除的条目数。</returns>
+	public static long RemoveByPrefix(MemoryCache cache, string prefix)
+	{
+		if (!_keys.TryGetValue(cache, out var keys))
+		{
+			return 0;
+		}
+
+		long removed = 0;
+		foreach (var key in keys.Keys)
+		{
+			if (!key.StartsWith(prefix, StringComparison.Ordinal))
+			{
+				continue;
+			}
+
+			if (cache.TryGetValue(key, out _))
+			{
+				cache.Remove(key);
+				removed++;
+			}
+
+			keys.TryRemove(key, out _);
+		}
+
+		return removed;
+	}
 
 	/// <summary>
 	/// 获取指定配置对应的共享存储；不存在时创建一次。

@@ -22,7 +22,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="config">用于配置映射表达式的委托；可为 <see langword="null"/>。</param>
 		/// <param name="assertConfiguration">是否在创建映射器前断言配置有效性。</param>
 		/// <returns>操作完成后返回该实例的引用。</returns>
-		public IServiceCollection AddAutomapper(Func<IEnumerable<Type>> factory, Action<MapperConfigurationExpression> config = null, bool assertConfiguration = false)
+		public IServiceCollection AddAutomapper(Func<IEnumerable<Type>> factory, Action<MapperConfigurationExpression>? config = null, bool assertConfiguration = false)
 		{
 			var types = factory?.Invoke();
 			return services.AddAutomapper(types, config, assertConfiguration);
@@ -35,7 +35,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="config">用于配置映射表达式的委托；可为 <see langword="null"/>。</param>
 		/// <param name="assertConfiguration">是否在创建映射器前断言配置有效性。</param>
 		/// <returns>操作完成后返回该实例的引用。</returns>
-		public IServiceCollection AddAutomapper(Action<List<Type>> handler, Action<MapperConfigurationExpression> config = null, bool assertConfiguration = false)
+		public IServiceCollection AddAutomapper(Action<List<Type>> handler, Action<MapperConfigurationExpression>? config = null, bool assertConfiguration = false)
 		{
 			var types = new List<Type>();
 			handler?.Invoke(types);
@@ -93,7 +93,7 @@ public static class ServiceCollectionExtensions
 		/// <param name="config">用于配置映射表达式的委托；可为 <see langword="null"/>。</param>
 		/// <param name="assertConfiguration">是否在创建映射器前断言配置有效性。</param>
 		/// <returns>操作完成后返回该实例的引用。</returns>
-		public IServiceCollection AddAutomapper(IEnumerable<Type> types, Action<MapperConfigurationExpression> config = null, bool assertConfiguration = false)
+		public IServiceCollection AddAutomapper(IEnumerable<Type>? types, Action<MapperConfigurationExpression>? config = null, bool assertConfiguration = false)
 		{
 			return services.AddSingleton(provider =>
 			{

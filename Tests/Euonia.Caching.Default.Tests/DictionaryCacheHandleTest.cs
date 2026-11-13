@@ -2,8 +2,14 @@ using Nerosoft.Euonia.Caching.Internal;
 
 namespace Nerosoft.Euonia.Caching.Tests;
 
+/// <summary>
+/// 针对字典缓存句柄的测试，重点验证句柄释放后后台过期扫描是否停止。
+/// </summary>
 public class DictionaryCacheHandleTest
 {
+	/// <summary>
+	/// 验证缓存管理器释放后过期扫描不再运行，不会再触发条目移除事件。
+	/// </summary>
 	[Fact]
 	public async Task TestExpirationScan_StopsAfterDispose()
 	{

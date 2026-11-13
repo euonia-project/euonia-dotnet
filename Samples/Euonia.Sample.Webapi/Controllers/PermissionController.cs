@@ -12,7 +12,7 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 /// 角色由账号角色表（user_role）承载，随令牌传递，改角色后重新登录生效；
 /// 权限码由 <see cref="ScopeSubjectResolver"/> 在下一次解析时生效，
 /// 故撤销即时生效、无需重新签发令牌。
-/// <b>团队归属不在这里</b>：它是业务关系（<see cref="TeamMember"/> / <c>team_member</c>），
+/// <b>团队归属不在这里</b>：它是业务关系（<see cref="Nerosoft.Euonia.Sample.Domain.Aggregates.TeamMember"/> / <c>team_member</c>），
 /// 由团队端点（<c>POST /api/team/{id}/members</c>）在 <c>team:edit</c> 的行级闸门下维护，
 /// 本控制器只负责<b>查看</b>。
 /// 变更类操作仅限项目管理角色（视作许可管理员）。
@@ -22,7 +22,9 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [ApiController]
 public class PermissionController(AuthorizationStore store, IUserRepository users, ITeamStore teams) : ControllerBase
 {
-	/// <summary>列出全部账号的授权。</summary>
+	/// <summary>
+	/// 列出全部账号的授权。
+	/// </summary>
 	[HttpGet]
 	public async Task<IActionResult> List(CancellationToken cancellationToken)
 	{
@@ -38,7 +40,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(items);
 	}
 
-	/// <summary>查看指定账号的授权。</summary>
+	/// <summary>
+	/// 查看指定账号的授权。
+	/// </summary>
 	[HttpGet("{userId}")]
 	public async Task<IActionResult> Get(string userId, CancellationToken cancellationToken)
 	{
@@ -51,7 +55,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(view);
 	}
 
-	/// <summary>调整指定账号的角色（增/删，可都留空）。</summary>
+	/// <summary>
+	/// 调整指定账号的角色（增/删，可都留空）。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/roles")]
 	public async Task<IActionResult> UpdateRoles(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -67,7 +73,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(await ToViewAsync(userId, cancellationToken));
 	}
 
-	/// <summary>授予/撤销指定账号的权限码。撤销即时生效。</summary>
+	/// <summary>
+	/// 授予/撤销指定账号的权限码。撤销即时生效。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/codes")]
 	public Task<IActionResult> UpdateCodes(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -75,7 +83,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Mutate(userId, input, store.GrantCodesAsync, store.RevokeCodesAsync, cancellationToken);
 	}
 
-	/// <summary>授予/撤销指定账号的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|&lt;repository-id&gt;"</c>）。即时生效。</summary>
+	/// <summary>
+	/// 授予/撤销指定账号的仓库行级权限（<see cref="RepositoryGrant"/> 编码值，如 <c>"repository:push|&lt;repository-id&gt;"</c>）。即时生效。
+	/// </summary>
 	[Authorize(Roles = RoleName.ProjectManager)]
 	[HttpPut("{userId}/grants")]
 	public Task<IActionResult> UpdateGrants(string userId, [FromBody] PermissionChangeInput input, CancellationToken cancellationToken)
@@ -83,7 +93,9 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Mutate(userId, input, store.AddGrantsAsync, store.RemoveGrantsAsync, cancellationToken);
 	}
 
-	/// <summary>账号列表（账号标识 + 显示名）。</summary>
+	/// <summary>
+	/// 账号列表（账号标识 + 显示名）。
+	/// </summary>
 	[HttpGet("users")]
 	public async Task<IActionResult> Users(CancellationToken cancellationToken)
 	{
@@ -96,7 +108,7 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(items);
 	}
 
-	private async Task<IActionResult> Mutate(string userId, PermissionChangeInput input, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile>> grant, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile>> revoke, CancellationToken cancellationToken)
+	private async Task<IActionResult> Mutate(string userId, PermissionChangeInput input, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile?>> grant, Func<string, IEnumerable<string>, CancellationToken, Task<SecurityProfile?>> revoke, CancellationToken cancellationToken)
 	{
 		var authorization = await grant(userId, input?.Add ?? [], cancellationToken);
 		if (authorization == null)
@@ -108,7 +120,7 @@ public class PermissionController(AuthorizationStore store, IUserRepository user
 		return Ok(await ToViewAsync(userId, cancellationToken));
 	}
 
-	private async Task<AuthorizationView> ToViewAsync(string userId, CancellationToken cancellationToken)
+	private async Task<AuthorizationView?> ToViewAsync(string userId, CancellationToken cancellationToken)
 	{
 		// “未知账号”以账号表为准：账号存在但从未被授权时返回空视图，
 		// 而不是把「没有授权行」误判成「账号不存在」。

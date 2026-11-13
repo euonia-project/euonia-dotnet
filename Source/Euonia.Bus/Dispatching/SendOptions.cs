@@ -8,5 +8,5 @@ public class SendOptions : ExtendableOptions
 	/// <summary>
 	/// 获取或设置关联标识符。
 	/// </summary>
-	public string CorrelationId { get; set; }
+	public string? CorrelationId { get; set; }
 }

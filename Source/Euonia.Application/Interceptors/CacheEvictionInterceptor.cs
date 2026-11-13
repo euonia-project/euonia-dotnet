@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using Castle.DynamicProxy;
 
@@ -62,14 +63,14 @@ public class CacheEvictionInterceptor : IInterceptor
 		if (returnType == typeof(Task))
 		{
 			invocation.Proceed();
-			invocation.ReturnValue = AttachContinuation((Task)invocation.ReturnValue, groups);
+			invocation.ReturnValue = AttachContinuation((Task)invocation.ReturnValue!, groups);
 			return;
 		}
 
 		if (returnType == typeof(ValueTask))
 		{
 			invocation.Proceed();
-			invocation.ReturnValue = new ValueTask(AttachContinuation(((ValueTask)invocation.ReturnValue).AsTask(), groups));
+			invocation.ReturnValue = new ValueTask(AttachContinuation(((ValueTask)invocation.ReturnValue!).AsTask(), groups));
 			return;
 		}
 
@@ -88,8 +89,8 @@ public class CacheEvictionInterceptor : IInterceptor
 	private static void AttachGenericContinuation<T>(IInvocation invocation, bool isValueTask, string[] groups, CacheEvictionInterceptor interceptor)
 	{
 		var source = isValueTask
-			? ((ValueTask<T>)invocation.ReturnValue).AsTask()
-			: (Task<T>)invocation.ReturnValue;
+			? ((ValueTask<T>)invocation.ReturnValue!).AsTask()
+			: (Task<T>)invocation.ReturnValue!;
 
 		var wrapped = interceptor.EvictAfterAsync(source, groups);
 		invocation.ReturnValue = isValueTask ? new ValueTask<T>(wrapped) : (object)wrapped;
@@ -121,7 +122,7 @@ public class CacheEvictionInterceptor : IInterceptor
 		return value;
 	}
 
-	private static bool TryUnwrapAsync(Type returnType, out Type valueType, out bool isValueTask)
+	private static bool TryUnwrapAsync(Type returnType, [NotNullWhen(true)] out Type? valueType, out bool isValueTask)
 	{
 		valueType = null;
 		if (returnType.IsGenericType && returnType.GetGenericTypeDefinition() == typeof(Task<>))
@@ -142,7 +143,7 @@ public class CacheEvictionInterceptor : IInterceptor
 		return false;
 	}
 
-	private static CacheEvictAttribute ResolveAttribute(IInvocation invocation)
+	private static CacheEvictAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<CacheEvictAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<CacheEvictAttribute>();

@@ -16,7 +16,7 @@ public class DictionaryChangedEventArgs<TKey, TValue> : EventArgs
 	/// <param name="action">字典中发生的更改类型。</param>
 	/// <param name="oldValue">更改前与键关联的值。如果键是新增的，则可能是该类型的默认值。</param>
 	/// <param name="newValue">更改后与键关联的值。如果键被移除，则可能是该类型的默认值。</param>
-	public DictionaryChangedEventArgs(TKey key, DictionaryChangedAction action, TValue oldValue, TValue newValue)
+	public DictionaryChangedEventArgs(TKey key, DictionaryChangedAction action, TValue? oldValue, TValue? newValue)
 	{
 		Key = key;
 		Action = action;
@@ -37,10 +37,10 @@ public class DictionaryChangedEventArgs<TKey, TValue> : EventArgs
 	/// <summary>
 	/// 获取更改发生前的先前值。
 	/// </summary>
-	public TValue OldValue { get; }
+	public TValue? OldValue { get; }
 
 	/// <summary>
 	/// 获取与更改事件关联的新值。
 	/// </summary>
-	public TValue NewValue { get; }
+	public TValue? NewValue { get; }
 }

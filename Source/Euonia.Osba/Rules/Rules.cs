@@ -25,6 +25,10 @@ public class Rules : IRules
 	/// </summary>
 	private static readonly ConcurrentDictionary<Type, ObjectEditState[]> _ruleStates = new();
 
+	/// <summary>
+	/// 为指定的业务对象创建规则集合实例。
+	/// </summary>
+	/// <param name="object">参与规则检查的业务对象。</param>
 	internal Rules(IHasRuleCheck @object)
 	{
 		_target = @object;
@@ -66,7 +70,7 @@ public class Rules : IRules
 	/// <summary>
 	/// 惰性创建的违规集合。
 	/// </summary>
-	private BrokenRuleCollection _brokenRules;
+	private BrokenRuleCollection _brokenRules = null!;
 
 	/// <summary>
 	/// 获取违规集合；首次访问时创建。
@@ -214,6 +218,10 @@ public class Rules : IRules
 		}
 	}
 
+	/// <summary>
+	/// 替换后续规则检查所针对的业务对象。
+	/// </summary>
+	/// <param name="target">新的业务对象。</param>
 	internal void SetTarget(IHasRuleCheck target)
 	{
 		_target = target;
@@ -305,14 +313,14 @@ public class Rules : IRules
 
 		lock (_lockObject)
 		{
-			if (_instanceRules.Any(rule => ReferenceEquals(rule.Property, property)))
+			if (_instanceRules.OfType<IPropertyRule>().Any(rule => ReferenceEquals(rule.Property, property)))
 			{
 				return true;
 			}
 
 			foreach (var scope in _operationScopes)
 			{
-				if (scope.Rules.Any(rule => ReferenceEquals(rule.Property, property)))
+				if (scope.Rules.OfType<IPropertyRule>().Any(rule => ReferenceEquals(rule.Property, property)))
 				{
 					return true;
 				}
@@ -337,7 +345,7 @@ public class Rules : IRules
 	/// <c>ObjectBase.EnsureRulesAsync</c> 在调用本方法<b>之前</b>单独处理（只跑变更过的属性）。
 	/// </para>
 	/// <para>
-	/// <b>实例级与操作级规则不按 <see cref="IRuleBase.Property"/> 过滤，全部纳入对象级检查</b>：
+	/// <b>实例级与操作级规则不按 <see cref="IPropertyRule.Property"/> 过滤，全部纳入对象级检查</b>：
 	/// 它们是调用方为「本次操作」显式附加的（执行器 <c>WithRule</c>），语义就是「这次必须满足」，
 	/// 按属性过滤会让 <c>WithRule(new XxxRule(SomeProperty))</c> 静默不执行。
 	/// 属性只用于结果归因（<see cref="BrokenRule.Property"/>）与变更通知。
@@ -383,7 +391,8 @@ public class Rules : IRules
 			return typed.Count == 0 ? Array.Empty<IRuleBase>() : typed;
 		}
 
-		var matched = supplemental.Where(rule => ReferenceEquals(rule.Property, property));
+		var matched = supplemental.OfType<IPropertyRule>()
+		                          .Where(rule => ReferenceEquals(rule.Property, property));
 
 		return FilterByScope(typed.Concat(matched), scopes)
 		       .OrderBy(rule => rule.Priority)
@@ -583,7 +592,7 @@ public class Rules : IRules
 				return;
 			}
 
-			var existing = BrokenRules.Select(t => new ValidationResult(t.Property, t.Description));
+			var existing = BrokenRules.Select(t => new ValidationResult(t.Property!, t.Description!));
 			throw new ValidationException(message, existing);
 		}
 
@@ -594,7 +603,7 @@ public class Rules : IRules
 			return;
 		}
 
-		var errors = BrokenRules.Select(t => new ValidationResult(t.Property, t.Description));
+		var errors = BrokenRules.Select(t => new ValidationResult(t.Property!, t.Description!));
 		throw new ValidationException(message, errors);
 	}
 
@@ -620,8 +629,8 @@ public class Rules : IRules
 
 		// 比较口径必须与 BrokenRuleCollection.ClearRules(string) 的序数相等保持一致，
 		// 否则仅大小写不同的两个属性只会清理其中一个，陈旧条目跨轮累积导致 IsValid 失真。
-		foreach (var property in rules.Select(rule => rule.Property)
-		                              .Where(property => property != null)
+		foreach (var property in rules.OfType<IPropertyRule>()
+		                              .Select(rule => rule.Property)
 		                              .DistinctBy(property => property.Name))
 		{
 			BrokenRules.ClearRules(property);
@@ -789,8 +798,8 @@ public class Rules : IRules
 	/// <returns>受影响的属性列表和规则任务列表。</returns>
 	private (List<string> Properties, List<Task> Tasks) RunRules(IEnumerable<IRuleBase> rules, bool cascade, out int executedCount, CancellationToken cancellationToken = default)
 	{
-		List<string> affectProperties = null;
-		List<Task> tasks = null;
+		List<string>? affectProperties = null;
+		List<Task>? tasks = null;
 		var editableObject = Target as IEditableObject;
 		executedCount = 0;
 
@@ -814,7 +823,7 @@ public class Rules : IRules
 			{
 				Target = Target,
 				Rule = rule,
-				PropertyName = rule.Property?.Name
+				PropertyName = rule is IPropertyRule propertyRule ? propertyRule.Property.Name : null
 			};
 
 			if (cascade && rule.RelatedProperties.Count > 0)
@@ -862,6 +871,7 @@ public class Rules : IRules
 	private static Task RunRule(IRuleBase rule, IRuleContext context, CancellationToken cancellationToken)
 	{
 		var started = Stopwatch.GetTimestamp();
+		var activity = OsbaDiagnostics.StartOperation("rule", rule.Name);
 		Task task;
 		try
 		{
@@ -870,6 +880,7 @@ public class Rules : IRules
 		catch (OperationCanceledException)
 		{
 			OsbaDiagnostics.RecordRule(started, rule.Name, false);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, false);
 			context.Complete();
 			throw;
 		}
@@ -877,6 +888,7 @@ public class Rules : IRules
 		{
 			context.AddErrorResult(Describe(rule, ex));
 			OsbaDiagnostics.RecordRule(started, rule.Name, false);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, false);
 			context.Complete();
 			return Task.CompletedTask;
 		}
@@ -885,11 +897,12 @@ public class Rules : IRules
 		{
 			var succeeded = !context.Results.Any(result => result.Severity == RuleSeverity.Error);
 			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, succeeded);
 			context.Complete();
 			return Task.CompletedTask;
 		}
 
-		return AwaitRuleAsync(rule, task, context, started);
+		return AwaitRuleAsync(rule, task, context, started, activity);
 	}
 
 	/// <summary>
@@ -899,8 +912,9 @@ public class Rules : IRules
 	/// <param name="task">规则任务。</param>
 	/// <param name="context">上下文。</param>
 	/// <param name="started">起始时间戳。</param>
+	/// <param name="activity">规则执行活动；可为 <c>null</c>。</param>
 	/// <returns>规则任务。</returns>
-	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context, long started)
+	private static async Task AwaitRuleAsync(IRuleBase rule, Task task, IRuleContext context, long started, Activity? activity)
 	{
 		var succeeded = false;
 		try
@@ -925,6 +939,7 @@ public class Rules : IRules
 		finally
 		{
 			OsbaDiagnostics.RecordRule(started, rule.Name, succeeded);
+			OsbaDiagnostics.CompleteOperation(activity, "rule", started, succeeded);
 			context.Complete();
 		}
 	}
@@ -935,19 +950,20 @@ public class Rules : IRules
 	/// <param name="ruleContext">规则上下文。</param>
 	private void OnRuleCompleted(IRuleContext ruleContext)
 	{
-		List<IPropertyInfo> notify = null;
+		List<IPropertyInfo>? notify = null;
 
 		lock (_lockObject)
 		{
 			var results = ruleContext.Results;
+			var ruleProperty = (ruleContext.Rule as IPropertyRule)?.Property;
 			if (results.Count > 0)
 			{
-				BrokenRules.Add(results, ruleContext.Rule.Property?.Name);
+				BrokenRules.Add(results, ruleProperty?.Name);
 			}
 
 			RunningRules.Remove(ruleContext.Rule);
 
-			var property = ruleContext.Rule.Property;
+			var property = ruleProperty;
 			if (property != null && IsNotRunning(property))
 			{
 				(notify ??= []).Add(property);
@@ -986,7 +1002,7 @@ public class Rules : IRules
 	{
 		foreach (var running in RunningRules)
 		{
-			if (ReferenceEquals(running.Property, property))
+			if (running is IPropertyRule propertyRule && ReferenceEquals(propertyRule.Property, property))
 			{
 				return false;
 			}

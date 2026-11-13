@@ -13,6 +13,9 @@ namespace Nerosoft.Euonia.Pipeline.Tests;
 /// </summary>
 public class PipelineLifecycleRegressionTests
 {
+	/// <summary>
+	/// 记录管道中已执行组件名称的测试请求。
+	/// </summary>
 	private class Request
 	{
 		public List<string> Executed { get; } = [];
@@ -29,11 +32,17 @@ public class PipelineLifecycleRegressionTests
 		}
 	}
 
+	/// <summary>
+	/// 声明 <see cref="TaggingBehavior"/> 的请求，用于验证按请求类型声明的行为在每次调用时应用一次。
+	/// </summary>
 	[PipelineBehavior(typeof(TaggingBehavior))]
 	private sealed class AttributedRequest : Request
 	{
 	}
 
+	/// <summary>
+	/// 把自身名称写入请求执行记录的管道行为。
+	/// </summary>
 	private sealed class TaggingBehavior : IPipelineBehavior<Request, int>
 	{
 		public Task<int> HandleAsync(Request context, PipelineDelegate<Request, int> next)
@@ -43,6 +52,9 @@ public class PipelineLifecycleRegressionTests
 		}
 	}
 
+	/// <summary>
+	/// <see cref="IPipeline{TRequest, TResponse}.Build"/> 是非破坏性的：连续两次构建都执行同一组件，组件表不被消费。
+	/// </summary>
 	[Fact]
 	public async Task Build_Should_Not_Consume_Registered_Components()
 	{
@@ -60,6 +72,9 @@ public class PipelineLifecycleRegressionTests
 		Assert.Single(pipeline.Components);
 	}
 
+	/// <summary>
+	/// 带累积委托的 <c>RunAsync</c> 不会把累积委托写回组件表：多次运行后组件表仍为空，后续构建也不含它。
+	/// </summary>
 	[Fact]
 	public async Task RunAsync_With_Accumulate_Should_Not_Leak_Accumulate_Into_Registered_Components()
 	{
@@ -81,6 +96,9 @@ public class PipelineLifecycleRegressionTests
 		Assert.Empty(later.Executed);
 	}
 
+	/// <summary>
+	/// 请求类型上声明的行为在每次调用时都应用一次，不会逐次累积；调用后组件表保持为空。
+	/// </summary>
 	[Fact]
 	public async Task RunAsync_Should_Apply_Request_Behaviors_On_Every_Invocation_Without_Piling_Up()
 	{
@@ -97,6 +115,9 @@ public class PipelineLifecycleRegressionTests
 		}
 	}
 
+	/// <summary>
+	/// 注册与构建并发进行时组件表保持一致：全部注册完成后数量恰好等于注册次数。
+	/// </summary>
 	[Fact]
 	public async Task Components_Should_Remain_Consistent_While_Registration_Races_With_Building()
 	{

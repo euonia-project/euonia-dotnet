@@ -15,7 +15,7 @@ internal class OverridableMessageConvention : IMessageConvention
 	/// 单播、多播和请求消息类型的自定义判断函数。
 	/// 为 <c>null</c> 时表示未覆盖，将回退到内部约定的判断逻辑。
 	/// </summary>
-	private Func<string, Type, bool> _isUnicast, _isMulticast, _isRequest;
+	private Func<string, Type, bool>? _isUnicast, _isMulticast, _isRequest;
 
 	/// <summary>
 	/// 初始化 <see cref="OverridableMessageConvention"/> 类的新实例。

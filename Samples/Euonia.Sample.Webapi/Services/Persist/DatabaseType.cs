@@ -1,37 +1,37 @@
 ﻿namespace Nerosoft.Euonia.Sample.Persist;
 
 /// <summary>
-/// Enum representing different types of databases.
+/// 表示不同数据库类型的枚举。
 /// </summary>
 internal enum DatabaseType
 {
 	/// <summary>
-	/// Microsoft SQL Server
+	/// Microsoft SQL Server 数据库。
 	/// </summary>
 	SqlServer,
 
 	/// <summary>
-	/// MySQL
+	/// MySQL 数据库。
 	/// </summary>
 	MySql,
 
 	/// <summary>
-	/// PostgreSQL
+	/// PostgreSQL 数据库。
 	/// </summary>
 	PostgreSql,
 
 	/// <summary>
-	/// SQLite
+	/// SQLite 数据库。
 	/// </summary>
 	Sqlite,
 
 	/// <summary>
-	/// MongoDB
+	/// MongoDB 数据库。
 	/// </summary>
 	MongoDb,
 
 	/// <summary>
-	/// InMemory
+	/// 内存数据库（主要用于测试）。
 	/// </summary>
 	InMemory,
 }

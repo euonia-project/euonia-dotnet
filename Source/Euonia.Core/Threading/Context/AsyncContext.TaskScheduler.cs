@@ -1,5 +1,8 @@
 namespace Nerosoft.Euonia.Threading;
 
+/// <summary>
+/// 单线程异步上下文；此分部类包含将其任务调度到上下文的 <see cref="TaskScheduler"/> 实现。
+/// </summary>
 public sealed partial class AsyncContext
 {
     /// <summary>

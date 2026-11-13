@@ -1,17 +1,17 @@
 namespace Nerosoft.Euonia.Sample.Domain.Dtos;
 
 /// <summary>
-/// Password change input for the current user.
+/// 当前用户的密码修改输入。
 /// </summary>
 public class UserChangePasswordDto
 {
 	/// <summary>
-	/// Gets or sets the current password, used to prove ownership of the account.
+	/// 获取或设置当前密码，用于证明对账户的所有权。
 	/// </summary>
-	public string OldPassword { get; set; }
+	public string OldPassword { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the new password.
+	/// 获取或设置新密码。
 	/// </summary>
-	public string NewPassword { get; set; }
+	public string NewPassword { get; set; } = null!;
 }

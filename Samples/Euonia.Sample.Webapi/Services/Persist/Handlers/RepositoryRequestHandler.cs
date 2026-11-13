@@ -18,6 +18,7 @@ namespace Nerosoft.Euonia.Sample.Persist.Handlers;
 internal class RepositoryRequestHandler(IRepositoryStore store, IScopeGuard guard)
 	: IHandler<RepositoryListQueryRequest, PagedResult<RepositoryDto>>
 {
+	/// <inheritdoc/>
 	public async Task<PagedResult<RepositoryDto>> HandleAsync(RepositoryListQueryRequest message, IMessageContext context, CancellationToken cancellationToken = default)
 	{
 		var page = message.Page < 1 ? 1 : message.Page;
@@ -59,7 +60,7 @@ internal class RepositoryRequestHandler(IRepositoryStore store, IScopeGuard guar
 		return new PagedResult<RepositoryDto>(total, page, pageSize, items);
 	}
 
-	private static IQueryable<CodeRepository> ApplySort(IQueryable<CodeRepository> query, string sortBy)
+	private static IQueryable<CodeRepository> ApplySort(IQueryable<CodeRepository> query, string? sortBy)
 	{
 		// 排序白名单：只允许按实体列排序，非法值回落默认（Id）。
 		return sortBy?.ToLowerInvariant() switch

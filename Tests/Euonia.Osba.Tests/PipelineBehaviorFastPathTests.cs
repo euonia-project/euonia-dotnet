@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class PipelineBehaviorFastPathTests
 {
+	/// <summary>
+	/// 验证目标类型上通过 <see cref="PipelineBehaviorAttribute"/> 声明的管道行为在空管道快路径下仍会执行。
+	/// </summary>
 	[Fact]
 	public async Task DeclaredPipelineBehavior_ShouldRunOnFastPath()
 	{
@@ -28,6 +31,9 @@ public class PipelineBehaviorFastPathTests
 		Assert.Equal(1, TrackingBehavior.Ran);
 	}
 
+	/// <summary>
+	/// 验证未声明管道行为的普通目标仍走快路径，行为不会被执行且结果正常返回。
+	/// </summary>
 	[Fact]
 	public async Task PlainTarget_ShouldStillBypassPipeline()
 	{
@@ -54,8 +60,14 @@ public class PipelineBehaviorFastPathTests
 [PipelineBehavior(typeof(TrackingBehavior))]
 public class AttributedTarget : BusinessObject<AttributedTarget>
 {
+	/// <summary>
+	/// 标识属性的元数据。
+	/// </summary>
 	public static readonly PropertyInfo<string> IdProperty = RegisterProperty(p => p.Id);
 
+	/// <summary>
+	/// 获取或设置目标对象的标识。
+	/// </summary>
 	public string Id
 	{
 		get => GetProperty(IdProperty);
@@ -75,9 +87,17 @@ public class AttributedTarget : BusinessObject<AttributedTarget>
 /// </summary>
 public class TrackingBehavior : IPipelineBehavior<AttributedTarget, AttributedTarget>
 {
-	/// <summary>行为执行次数。</summary>
+	/// <summary>
+	/// 行为执行次数。
+	/// </summary>
 	public static int Ran;
 
+	/// <summary>
+	/// 统计执行次数后调用管道中的下一个处理器。
+	/// </summary>
+	/// <param name="context">管道上下文，即目标对象。</param>
+	/// <param name="next">管道中的下一个处理器。</param>
+	/// <returns>下一个处理器返回的目标对象。</returns>
 	public Task<AttributedTarget> HandleAsync(AttributedTarget context, PipelineDelegate<AttributedTarget, AttributedTarget> next)
 	{
 		Interlocked.Increment(ref Ran);

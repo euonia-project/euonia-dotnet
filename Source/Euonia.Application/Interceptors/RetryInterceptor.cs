@@ -72,10 +72,11 @@ public class RetryInterceptor : IInterceptor
 		if (returnType.IsGenericType && !returnType.IsGenericTypeDefinition && returnType.GetGenericTypeDefinition() == typeof(ValueTask<>))
 		{
 			var resultType = returnType.GetGenericArguments()[0];
+			// RetryTypedAsync<T> 恒返回非空 Task<T>，反射调用结果不会是 null。
 			var task = _retryTypedMethods.GetOrAdd(resultType, type => _retryTypedMethod.MakeGenericMethod(type))
-				.Invoke(this, new object[] { proceedInfo, invocation, attribute, true });
+				.Invoke(this, new object?[] { proceedInfo, invocation, attribute, true })!;
 			invocation.ReturnValue = _wrapValueTaskMethods.GetOrAdd(resultType, type => _wrapValueTaskMethod.MakeGenericMethod(type))
-				.Invoke(null, new object[] { task });
+				.Invoke(null, new object?[] { task });
 			return;
 		}
 
@@ -90,7 +91,7 @@ public class RetryInterceptor : IInterceptor
 			try
 			{
 				proceedInfo.Invoke();
-				var task = isValueTask ? ((ValueTask)invocation.ReturnValue).AsTask() : (Task)invocation.ReturnValue;
+				var task = isValueTask ? ((ValueTask)invocation.ReturnValue!).AsTask() : (Task)invocation.ReturnValue!;
 				await task.ConfigureAwait(false);
 				return;
 			}
@@ -116,8 +117,8 @@ public class RetryInterceptor : IInterceptor
 			{
 				proceedInfo.Invoke();
 				var result = isValueTask
-					? await ((ValueTask<T>)invocation.ReturnValue).AsTask().ConfigureAwait(false)
-					: await ((Task<T>)invocation.ReturnValue).ConfigureAwait(false);
+					? await ((ValueTask<T>)invocation.ReturnValue!).AsTask().ConfigureAwait(false)
+					: await ((Task<T>)invocation.ReturnValue!).ConfigureAwait(false);
 				return result;
 			}
 			catch (Exception exception)
@@ -133,9 +134,9 @@ public class RetryInterceptor : IInterceptor
 		}
 	}
 
-	private static ValueTask<T> WrapValueTask<T>(object rawTask)
+	private static ValueTask<T> WrapValueTask<T>(object? rawTask)
 	{
-		return new ValueTask<T>((Task<T>)rawTask);
+		return new ValueTask<T>((Task<T>)rawTask!);
 	}
 
 	private static void RetrySync(IInvocationProceedInfo proceedInfo, IInvocation invocation, RetryAttribute attribute)
@@ -226,7 +227,7 @@ public class RetryInterceptor : IInterceptor
 		return delay;
 	}
 
-	private static RetryAttribute ResolveAttribute(IInvocation invocation)
+	private static RetryAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<RetryAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<RetryAttribute>()

@@ -22,7 +22,7 @@ internal static class RuleTestHarness
 	/// <param name="provider">解析出的服务提供程序。</param>
 	/// <param name="configure">可选的额外服务注册。</param>
 	/// <returns>服务作用域；调用方负责释放。</returns>
-	internal static IServiceScope CreateScope(out IServiceProvider provider, Action<IServiceCollection> configure = null)
+	internal static IServiceScope CreateScope(out IServiceProvider provider, Action<IServiceCollection>? configure = null)
 	{
 		var services = new ServiceCollection();
 		services.AddBusinessObject();
@@ -71,6 +71,9 @@ public abstract class RuleTestCommand<T> : ServiceObject<T>
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 执行命令体：置位 <see cref="Executed"/> 并立即完成。
+	/// </summary>
 	[FactoryExecute]
 	protected internal override Task ExecuteAsync(CancellationToken cancellationToken = default)
 	{
@@ -84,6 +87,9 @@ public abstract class RuleTestCommand<T> : ServiceObject<T>
 /// </summary>
 public class RuleFailCommand : RuleTestCommand<RuleFailCommand>
 {
+	/// <summary>
+	/// 注册恒失败的对象级规则：命令体执行前必须被拦下。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AlwaysFailObjectRule>();
@@ -95,6 +101,9 @@ public class RuleFailCommand : RuleTestCommand<RuleFailCommand>
 /// </summary>
 public class RulePassCommand : RuleTestCommand<RulePassCommand>
 {
+	/// <summary>
+	/// 注册恒通过的对象级规则：命令体应正常执行。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AlwaysPassObjectRule>();
@@ -106,6 +115,9 @@ public class RulePassCommand : RuleTestCommand<RulePassCommand>
 /// </summary>
 public class RuleWarnCommand : RuleTestCommand<RuleWarnCommand>
 {
+	/// <summary>
+	/// 注册只产生警告的对象级规则：警告不阻断命令执行。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<WarnOnlyObjectRule>();
@@ -117,6 +129,9 @@ public class RuleWarnCommand : RuleTestCommand<RuleWarnCommand>
 /// </summary>
 public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 {
+	/// <summary>
+	/// <see cref="Name"/> 属性的元数据，供实例级规则与属性值读写使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>
@@ -137,7 +152,7 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 	/// <summary>
 	/// 对象的标识。
 	/// </summary>
-	public string Id { get; private set; }
+	public string Id { get; private set; } = null!;
 
 	/// <summary>
 	/// 供测试观察的字段值。
@@ -157,12 +172,18 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 		AcceptChanges();
 	}
 
+	/// <summary>
+	/// 插入工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 更新工厂方法：累加 <see cref="UpdateCount"/> 后直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -170,6 +191,9 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 删除工厂方法：累加 <see cref="DeleteCount"/> 后直接完成。
+	/// </summary>
 	[FactoryDelete]
 	protected internal override Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
@@ -183,6 +207,9 @@ public class RuleCleanEditable : EditableObject<RuleCleanEditable>
 /// </summary>
 public class RuleFailEditable : EditableObject<RuleFailEditable>
 {
+	/// <summary>
+	/// <see cref="Name"/> 属性的元数据，供属性值读写使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>
@@ -204,6 +231,9 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 		set => SetProperty(NameProperty, value);
 	}
 
+	/// <summary>
+	/// 注册恒失败的对象级规则，供类型级规则场景验证保存被拦下。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AlwaysFailObjectRule>();
@@ -216,12 +246,18 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 		AcceptChanges();
 	}
 
+	/// <summary>
+	/// 插入工厂方法：本测试对象不落库，直接完成。
+	/// </summary>
 	[FactoryInsert]
 	protected internal override Task InsertAsync(CancellationToken cancellationToken = default)
 	{
 		return Task.CompletedTask;
 	}
 
+	/// <summary>
+	/// 更新工厂方法：累加 <see cref="UpdateCount"/> 后直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -235,6 +271,9 @@ public class RuleFailEditable : EditableObject<RuleFailEditable>
 /// </summary>
 public class RulePropertyBoundEditable : EditableObject<RulePropertyBoundEditable>
 {
+	/// <summary>
+	/// <see cref="Name"/> 属性的元数据，供绑定到属性的实例级规则使用。
+	/// </summary>
 	public static readonly PropertyInfo<string> NameProperty = RegisterProperty<string>(p => p.Name);
 
 	/// <summary>
@@ -258,6 +297,9 @@ public class RulePropertyBoundEditable : EditableObject<RulePropertyBoundEditabl
 		AcceptChanges();
 	}
 
+	/// <summary>
+	/// 更新工厂方法：仅为触发对象级检查，直接完成。
+	/// </summary>
 	[FactoryUpdate]
 	protected internal override Task UpdateAsync(CancellationToken cancellationToken = default)
 	{
@@ -275,6 +317,9 @@ public class RuleBlankMessageEditable : EditableObject<RuleBlankMessageEditable>
 	/// </summary>
 	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
 
+	/// <summary>
+	/// 注册分别以 <c>null</c> 与空白串描述错误的规则，用于验证空白描述不会被当成通过。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<NullMessageRule>();
@@ -292,6 +337,9 @@ public class RuleBrokenRulesEditable : EditableObject<RuleBrokenRulesEditable>
 	/// </summary>
 	public Nerosoft.Euonia.Osba.Rules PublicRules => Rules;
 
+	/// <summary>
+	/// 注册恒失败的对象级规则，用于验证违规集合的计数一致性。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AlwaysFailObjectRule>();
@@ -313,6 +361,9 @@ public class RuleDeleteEditable : EditableObject<RuleDeleteEditable>
 	/// </summary>
 	public int DeleteCount { get; private set; }
 
+	/// <summary>
+	/// 注册恒失败的对象级规则，用于验证删除路径的规则开关。
+	/// </summary>
 	protected override void AddRules()
 	{
 		Rules.AddRule<AlwaysFailObjectRule>();
@@ -324,6 +375,9 @@ public class RuleDeleteEditable : EditableObject<RuleDeleteEditable>
 		AcceptChanges();
 	}
 
+	/// <summary>
+	/// 删除工厂方法：累加 <see cref="DeleteCount"/> 后直接完成。
+	/// </summary>
 	[FactoryDelete]
 	protected internal override Task DeleteAsync(CancellationToken cancellationToken = default)
 	{
@@ -346,7 +400,7 @@ public sealed class RuleTestDependency
 /// <summary>
 /// 需要从容器解析依赖的失败规则。
 /// </summary>
-public sealed class DependentFailRule : RuleBase
+public sealed class DependentFailRule : ObjectRuleBase
 {
 	private readonly RuleTestDependency _dependency;
 
@@ -370,7 +424,7 @@ public sealed class DependentFailRule : RuleBase
 /// <summary>
 /// 恒失败的对象级规则。
 /// </summary>
-public sealed class AlwaysFailObjectRule : RuleBase
+public sealed class AlwaysFailObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -383,7 +437,7 @@ public sealed class AlwaysFailObjectRule : RuleBase
 /// <summary>
 /// 恒通过的对象级规则。
 /// </summary>
-public sealed class AlwaysPassObjectRule : RuleBase
+public sealed class AlwaysPassObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -399,7 +453,7 @@ public sealed class AlwaysPassObjectRule : RuleBase
 /// <remarks>
 /// 复用 <see cref="OsbaFeatureTests"/> 中已有的同名规则（规则本身无状态，可安全共享）。
 /// </remarks>
-public sealed class WarnOnlyObjectRule : RuleBase
+public sealed class WarnOnlyObjectRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -412,12 +466,12 @@ public sealed class WarnOnlyObjectRule : RuleBase
 /// <summary>
 /// 记录被检查时目标对象当前 <c>Name</c> 值的失败规则，用于验证规则看到的是 Handle 之后的状态。
 /// </summary>
-public sealed class NameSnapshotFailRule : RuleBase
+public sealed class NameSnapshotFailRule : ObjectRuleBase
 {
 	/// <summary>
 	/// 最近一次执行时观察到的名称。
 	/// </summary>
-	public string Observed { get; private set; }
+	public string Observed { get; private set; } = null!;
 
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -435,7 +489,7 @@ public sealed class NameSnapshotFailRule : RuleBase
 /// <summary>
 /// 绑定到属性的恒失败规则（属性级）。
 /// </summary>
-public sealed class PropertyBoundFailRule : RuleBase
+public sealed class PropertyBoundFailRule : PropertyRuleBase
 {
 	/// <summary>
 	/// 初始化 <see cref="PropertyBoundFailRule"/>。
@@ -457,7 +511,7 @@ public sealed class PropertyBoundFailRule : RuleBase
 /// <summary>
 /// 用 <c>null</c> 描述报告错误的规则。
 /// </summary>
-public sealed class NullMessageRule : RuleBase
+public sealed class NullMessageRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)
@@ -470,7 +524,7 @@ public sealed class NullMessageRule : RuleBase
 /// <summary>
 /// 用空白描述报告错误的规则。
 /// </summary>
-public sealed class WhitespaceMessageRule : RuleBase
+public sealed class WhitespaceMessageRule : ObjectRuleBase
 {
 	/// <inheritdoc />
 	public override Task ExecuteAsync(IRuleContext context, CancellationToken cancellationToken = default)

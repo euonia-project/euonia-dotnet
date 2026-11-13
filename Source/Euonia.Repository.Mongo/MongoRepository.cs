@@ -6,20 +6,20 @@ using MongoDB.Driver.Linq;
 namespace Nerosoft.Euonia.Repository.Mongo;
 
 /// <summary>
-/// The class used to implement the repository pattern for MongoDB.
+/// 用于为 MongoDB 实现仓储模式的类。
 /// </summary>
-/// <typeparam name="TContext"></typeparam>
-/// <typeparam name="TEntity"></typeparam>
-/// <typeparam name="TKey"></typeparam>
+/// <typeparam name="TContext">MongoDB 数据上下文的类型。</typeparam>
+/// <typeparam name="TEntity">实体的类型。</typeparam>
+/// <typeparam name="TKey">实体键的类型。</typeparam>
 public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEntity, TKey>
 	where TKey : IEquatable<TKey>
 	where TEntity : class, IEntity<TKey>
 	where TContext : MongoDbContext, IRepositoryContext
 {
 	/// <summary>
-	/// Initialize a new instance of <see cref="MongoRepository{TContext, TEntity, TKey}"/> with context.
+	/// 使用上下文初始化 <see cref="MongoRepository{TContext, TEntity, TKey}"/> 的新实例。
 	/// </summary>
-	/// <param name="provider"></param>
+	/// <param name="provider">用于获取 MongoDB 数据上下文的上下文提供程序。</param>
 	public MongoRepository(IContextProvider provider)
 		: base(provider)
 	{
@@ -28,7 +28,7 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	/// <inheritdoc />
 	protected override void Dispose(bool disposing)
 	{
-		// ignore.
+		// 忽略。
 	}
 
 	/// <inheritdoc />
@@ -44,7 +44,7 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	}
 
 	/// <inheritdoc />
-	public override IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle)
+	public override IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle)
 	{
 		ArgumentNullException.ThrowIfNull(predicate);
 		IQueryable<TEntity> query = Context.Collection<TEntity>().AsQueryable();
@@ -56,14 +56,14 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	}
 
 	/// <inheritdoc />
-	public override async Task<TEntity> GetAsync(TKey key, CancellationToken cancellationToken = default)
+	public override async Task<TEntity?> GetAsync(TKey key, CancellationToken cancellationToken = default)
 	{
 		var id = MongoDB.Bson.ObjectId.Parse(key.ToString());
 		return await Context.FindAsync<TEntity>(id, cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		ArgumentNullException.ThrowIfNull(predicate);
 		var options = new FindOptions<TEntity> { Limit = 1 };
@@ -72,39 +72,39 @@ public class MongoRepository<TContext, TEntity, TKey> : Repository<TContext, TEn
 	}
 
 	/// <inheritdoc />
-	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).ToListAsync(cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, int offset, int count, CancellationToken cancellationToken = default)
+	public override Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).Skip(offset).Take(count).ToListAsync(cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override async Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		var result = await Context.Collection<TEntity>().CountDocumentsAsync(predicate, null, cancellationToken);
 		return (int)result;
 	}
 
 	/// <inheritdoc />
-	public override async Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		var result = await Context.Collection<TEntity>().CountDocumentsAsync(predicate, null, cancellationToken);
 		return result;
 	}
 
 	/// <inheritdoc />
-	public override Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		return BuildQuery(predicate, handle).AnyAsync(predicate, cancellationToken);
 	}
 
 	/// <inheritdoc />
-	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, CancellationToken cancellationToken = default)
+	public override async Task<bool> AllAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
 	{
 		// All(p) ≡ !Any(!p)。此前的实现返回 !Any(p)，语义完全相反：
 		// 只要**不存在**满足谓词的实体就返回 true，即断言的成立恰好依赖于反例。

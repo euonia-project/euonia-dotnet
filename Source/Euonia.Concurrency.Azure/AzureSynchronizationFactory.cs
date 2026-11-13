@@ -15,7 +15,7 @@ public sealed class AzureSynchronizationFactory : ILockFactory
     /// <summary>
     /// 用于配置同步选项的可选委托。
     /// </summary>
-    private readonly Action<AzureSynchronizationOptionsBuilder> _options;
+    private readonly Action<AzureSynchronizationOptionsBuilder>? _options;
 
     /// <summary>
     /// 构造一个工厂，其将 Blob 限定在提供的 <paramref name="blobContainerClient"/> 内，并使用提供的 <paramref name="options"/> 配置。
@@ -23,7 +23,7 @@ public sealed class AzureSynchronizationFactory : ILockFactory
     /// <param name="blobContainerClient">用于限定 Blob 作用域的 Blob 容器客户端。</param>
     /// <param name="options">用于配置同步选项的可选委托。</param>
     /// <exception cref="ArgumentNullException">当 <paramref name="blobContainerClient"/> 为 <c>null</c> 时抛出。</exception>
-    public AzureSynchronizationFactory(BlobContainerClient blobContainerClient, Action<AzureSynchronizationOptionsBuilder> options = null)
+    public AzureSynchronizationFactory(BlobContainerClient blobContainerClient, Action<AzureSynchronizationOptionsBuilder>? options = null)
     {
         _blobContainerClient = blobContainerClient ?? throw new ArgumentNullException(nameof(blobContainerClient));
         _options = options;

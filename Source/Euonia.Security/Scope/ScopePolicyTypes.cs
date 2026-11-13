@@ -11,16 +11,22 @@ internal sealed class GrantScopePolicy<T> : ScopePolicy<T>
 {
 	private readonly string _dimension;
 
+	/// <summary>
+	/// 初始化授予维度条件。
+	/// </summary>
+	/// <param name="dimension">资源模型上已映射的维度名。</param>
 	internal GrantScopePolicy(string dimension)
 	{
 		_dimension = dimension;
 	}
 
+	/// <inheritdoc />
 	internal override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
 	{
 		return ScopePolicyNode<T>.AllowOnly(context.GrantCondition(_dimension));
 	}
 
+	/// <inheritdoc />
 	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
 	{
 		// 集合维度（子表维度）带 "[]" 标记：审计时要能一眼看出授予的是「资源标识」还是「子表里的值」
@@ -29,6 +35,7 @@ internal sealed class GrantScopePolicy<T> : ScopePolicy<T>
 		traces.Add(new ScopePolicyLeaf<T>($"Grant({_dimension}{marker})", context.Lambda(context.GrantCondition(_dimension)), negated));
 	}
 
+	/// <inheritdoc />
 	public override string ToString()
 	{
 		return $"Grant({_dimension})";
@@ -44,21 +51,28 @@ internal sealed class WhereScopePolicy<T> : ScopePolicy<T>
 {
 	private readonly Expression<Func<T, bool>> _predicate;
 
+	/// <summary>
+	/// 初始化直接谓词条件。
+	/// </summary>
+	/// <param name="predicate">以资源为入参的布尔谓词，将原样重绑定到规范参数后下推。</param>
 	internal WhereScopePolicy(Expression<Func<T, bool>> predicate)
 	{
 		_predicate = predicate;
 	}
 
+	/// <inheritdoc />
 	internal override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
 	{
 		return ScopePolicyNode<T>.AllowOnly(context.Rebind(_predicate));
 	}
 
+	/// <inheritdoc />
 	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
 	{
 		traces.Add(new ScopePolicyLeaf<T>($"Where({_predicate})", context.Lambda(context.Rebind(_predicate)), negated));
 	}
 
+	/// <inheritdoc />
 	public override string ToString()
 	{
 		return $"Where({_predicate})";
@@ -85,15 +99,23 @@ internal abstract class CompositeScopePolicy<T> : ScopePolicy<T>
 {
 	private readonly ScopePolicy<T>[] _policies;
 
+	/// <summary>
+	/// 初始化组合策略。
+	/// </summary>
+	/// <param name="policies">子策略数组，按引用持有；空数组的语义由派生类的折叠方式决定。</param>
 	private protected CompositeScopePolicy(ScopePolicy<T>[] policies)
 	{
 		_policies = policies;
 	}
 
-	/// <summary>审计输出用的算子名：<c>All</c> 或 <c>Any</c>。</summary>
+	/// <summary>
+	/// 审计输出用的算子名：<c>All</c> 或 <c>Any</c>。
+	/// </summary>
 	private protected abstract string OperatorName { get; }
 
-	/// <summary>把收集到的允许条件折叠成一个表达式；空集的取值决定本节点的默认语义。</summary>
+	/// <summary>
+	/// 把收集到的允许条件折叠成一个表达式；空集的取值决定本节点的默认语义。
+	/// </summary>
 	private protected abstract Expression FoldAllows(List<Expression> allows);
 
 	/// <inheritdoc />
@@ -146,13 +168,19 @@ internal abstract class CompositeScopePolicy<T> : ScopePolicy<T>
 internal sealed class AllScopePolicy<T> : CompositeScopePolicy<T>
 	where T : class
 {
+	/// <summary>
+	/// 初始化「与」策略。
+	/// </summary>
+	/// <param name="policies">参与合取的子策略。</param>
 	internal AllScopePolicy(ScopePolicy<T>[] policies)
 		: base(policies)
 	{
 	}
 
+	/// <inheritdoc />
 	private protected override string OperatorName => "All";
 
+	/// <inheritdoc />
 	private protected override Expression FoldAllows(List<Expression> allows)
 	{
 		// 空集折叠为 True：全部分支都没有允许条件时「与」不施加任何限制
@@ -168,13 +196,19 @@ internal sealed class AllScopePolicy<T> : CompositeScopePolicy<T>
 internal sealed class AnyScopePolicy<T> : CompositeScopePolicy<T>
 	where T : class
 {
+	/// <summary>
+	/// 初始化「或」策略。
+	/// </summary>
+	/// <param name="policies">参与析取的子策略。</param>
 	internal AnyScopePolicy(ScopePolicy<T>[] policies)
 		: base(policies)
 	{
 	}
 
+	/// <inheritdoc />
 	private protected override string OperatorName => "Any";
 
+	/// <inheritdoc />
 	private protected override Expression FoldAllows(List<Expression> allows)
 	{
 		// 空集折叠为 False：没有任何分支提供允许条件时一律拒绝（fail-closed）
@@ -191,11 +225,16 @@ internal sealed class DenyScopePolicy<T> : ScopePolicy<T>
 {
 	private readonly ScopePolicy<T> _policy;
 
+	/// <summary>
+	/// 初始化拒绝策略。
+	/// </summary>
+	/// <param name="policy">产生拒绝条件的子策略；其允许与拒绝条件都会成为本节点的拒绝条件。</param>
 	internal DenyScopePolicy(ScopePolicy<T> policy)
 	{
 		_policy = policy;
 	}
 
+	/// <inheritdoc />
 	internal override ScopePolicyNode<T> Reduce(ScopeCompileContext<T> context)
 	{
 		var inner = _policy.Reduce(context);
@@ -215,12 +254,14 @@ internal sealed class DenyScopePolicy<T> : ScopePolicy<T>
 		return ScopePolicyNode<T>.DenyOnly(ScopePolicyNode<T>.Fold(conditions, Expression.OrElse, ScopePolicyNode<T>.False));
 	}
 
+	/// <inheritdoc />
 	internal override void CollectLeaves(ScopeCompileContext<T> context, bool negated, List<ScopePolicyLeaf<T>> traces)
 	{
 		// 进入 Deny 即翻转一次语义：Deny 之下的叶子成为拒绝条件
 		_policy.CollectLeaves(context, !negated, traces);
 	}
 
+	/// <inheritdoc />
 	public override string ToString()
 	{
 		return $"Deny({_policy})";

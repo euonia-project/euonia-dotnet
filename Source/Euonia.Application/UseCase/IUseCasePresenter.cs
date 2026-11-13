@@ -1,25 +1,25 @@
 ﻿namespace Nerosoft.Euonia.Application;
 
 /// <summary>
-/// Defines the structure of use case execute response presenter.
+/// 定义用例执行响应呈现器的结构。
 /// </summary>
-/// <typeparam name="TOutput"></typeparam>
+/// <typeparam name="TOutput">用例执行结果（输出）的类型。</typeparam>
 public interface IUseCasePresenter<TOutput> : IUseCaseOutputFailure,
 											  IUseCaseOutputSuccess<TOutput>,
 											  IDisposable
 {
 	/// <summary>
-	/// Occurs when the use case is successfully executed.
+	/// 在用例成功执行时发生。
 	/// </summary>
-	event EventHandler<TOutput> OnSucceed;
+	event EventHandler<TOutput>? OnSucceed;
 
 	/// <summary>
-	/// Occurs when the use case is failed to execute.
+	/// 在用例执行失败时发生。
 	/// </summary>
-	event EventHandler<Exception> OnFailed;
+	event EventHandler<Exception>? OnFailed;
 
 	/// <summary>
-	/// Occurs when the use case is canceled.
+	/// 在用例被取消时发生。
 	/// </summary>
-	event EventHandler OnCanceled;
+	event EventHandler? OnCanceled;
 }

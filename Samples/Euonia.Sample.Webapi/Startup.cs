@@ -1,22 +1,36 @@
-﻿namespace Nerosoft.Euonia.Sample;
+namespace Nerosoft.Euonia.Sample;
 
+using Nerosoft.Euonia.Auditing;
+using Nerosoft.Euonia.Hosting;
 using Nerosoft.Euonia.Sample.Filters;
+using Nerosoft.Euonia.Telemetry;
+using Nerosoft.Euonia.Tenancy;
 
+/// <summary>
+/// 示例应用的启动配置，负责注册服务并构建 HTTP 请求管道。
+/// </summary>
 public class Startup
 {
+    /// <summary>
+    /// 使用应用配置初始化 <see cref="Startup"/>。
+    /// </summary>
+    /// <param name="configuration">应用配置。</param>
     public Startup(IConfiguration configuration)
     {
         Configuration = configuration;
     }
 
+    /// <summary>
+    /// 获取应用配置。
+    /// </summary>
     public IConfiguration Configuration { get; }
 
     /// <summary>
-    /// Configure application services.
+    /// 配置应用服务。
     /// </summary>
-    /// <param name="services"></param>
+    /// <param name="services">用于注册应用程序服务的服务集合。</param>
     /// <remarks>
-    /// This method gets called by the runtime. Use this method to add services to the container.
+    /// 此方法由运行时调用。使用此方法向容器添加服务。
     /// </remarks>
     public void ConfigureServices(IServiceCollection services)
     {
@@ -32,9 +46,24 @@ public class Startup
 
         services.AddModularityApplication<HostModuleContext>(Configuration);
 
+        // 平台能力：租户可选（示例无租户体系时仍可运行）、审计落内存、遥测仅埋点。
+        services.AddTenancyAspNetCore(options =>
+        {
+            options.Enabled = true;
+            options.RequireTenant = false;
+        });
+        services.AddInMemoryTenantStore([new TenantInfo { Id = "sample", Name = "Sample", Status = TenantStatus.Active }]);
+        services.AddAuditing(options => options.Enabled = true);
+        services.AddInMemoryAuditingStore();
+        services.AddEuoniaTelemetry(options => options.Enabled = true);
     }
 
-    // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
+    // 此方法由运行时调用。使用此方法配置 HTTP 请求管道。
+    /// <summary>
+    /// 配置 HTTP 请求管道，依次启用模块初始化、统一异常处理、开发环境文档、认证授权与端点映射。
+    /// </summary>
+    /// <param name="app">用于构建请求管道的应用构建器。</param>
+    /// <param name="env">提供当前宿主环境信息的运行环境。</param>
     public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
     {
         // 统一异常映射必须位于最外层：其余中间件（包括 Swagger 的文档页）都在其内侧，
@@ -51,9 +80,13 @@ public class Startup
         app.UseHttpsRedirection();
 
         app.UseAuthentication();
+        app.UseExecutionContext();
+        app.UseAuditing();
 
         app.UseRouting();
 
+        app.UseTenancy();
+        app.UseEuoniaTelemetry();
         app.UseAuthorization();
 
         app.UseEndpoints(endpoints =>

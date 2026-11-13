@@ -31,7 +31,7 @@ public interface IServiceContext
 	/// <summary>
 	/// 获取应用服务自动注册时的类型筛选器；为 <see langword="null"/> 时不筛选。
 	/// </summary>
-	Func<Type, bool> ApplicationServiceTypeFilter { get; }
+	Func<Type, bool>? ApplicationServiceTypeFilter { get; }
 
 	/// <summary>
 	/// 配置应用所需的服务。

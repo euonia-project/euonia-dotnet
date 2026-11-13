@@ -1,27 +1,26 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Class Clock.
-/// Implements the <see cref="ICacheClock" />
+/// Clock 类。
+/// 实现 <see cref="ICacheClock" />
 /// </summary>
 /// <seealso cref="ICacheClock" />
 public class DefaultCacheClock : ICacheClock
 {
     /// <summary>
-    /// Gets the current <see cref="DateTime" /> of the system, expressed in Utc
+    /// 获取系统的当前 <see cref="DateTime" />，以 UTC 表示
     /// </summary>
-    /// <value>The UTC now.</value>
+    /// <value>当前 UTC 时间。</value>
     public DateTime UtcNow => DateTime.UtcNow;
 
     /// <summary>
-    /// Provides a <see cref="IVolatileToken" /> instance which can be used to cache some information for a
-    /// specific duration.
+    /// 提供一个 <see cref="IVolatileToken" /> 实例，可用于在指定时长内缓存某些信息。
     /// </summary>
-    /// <param name="duration">The duration that the token must be valid.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <param name="duration">令牌必须保持有效的时长。</param>
+    /// <returns>IVolatileToken。</returns>
     /// <example>
-    /// This sample shows how to use the <see cref="When" /> method by returning the result of
-    /// a method named LoadVotes(), which is computed every 10 minutes only.
+    /// 此示例演示如何通过返回名为 LoadVotes() 的方法结果来使用 <see cref="When" /> 方法，
+    /// 该方法每 10 分钟才计算一次。
     /// <code>
     /// _cacheManager.Get("votes",
     /// ctx => {
@@ -35,14 +34,13 @@ public class DefaultCacheClock : ICacheClock
     }
 
     /// <summary>
-    /// Provides a <see cref="IVolatileToken" /> instance which can be used to cache some
-    /// until a specific date and time.
+    /// 提供一个 <see cref="IVolatileToken" /> 实例，可用于将某些内容缓存到指定的日期和时间之前。
     /// </summary>
-    /// <param name="absoluteUtc">The date and time that the token must be valid until.</param>
-    /// <returns>IVolatileToken.</returns>
+    /// <param name="absoluteUtc">令牌必须保持有效的截止日期和时间。</param>
+    /// <returns>IVolatileToken。</returns>
     /// <example>
-    /// This sample shows how to use the <see cref="WhenUtc" /> method by returning the result of
-    /// a method named LoadVotes(), which is computed once, and no more until the end of the year.
+    /// 此示例演示如何通过返回名为 LoadVotes() 的方法结果来使用 <see cref="WhenUtc" /> 方法，
+    /// 该方法只计算一次，直到年末之前不再计算。
     /// <code>
     /// var endOfYear = _clock.UtcNow;
     /// endOfYear.Month = 12;
@@ -58,23 +56,26 @@ public class DefaultCacheClock : ICacheClock
         return new AbsoluteExpirationToken(this, absoluteUtc);
     }
 
+    /// <summary>
+    /// 以固定 UTC 时刻为失效点的易变令牌，用于在指定时长或日期之前保持缓存有效。
+    /// </summary>
     private class AbsoluteExpirationToken : IVolatileToken
     {
         /// <summary>
-        /// The clock
+        /// 用于创建易变令牌的缓存时钟。
         /// </summary>
         private readonly ICacheClock _clock;
 
         /// <summary>
-        /// The invalidate UTC
+        /// 失效时间（UTC）
         /// </summary>
         private readonly DateTime _invalidateUtc;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AbsoluteExpirationToken"/> class.
+        /// 初始化 <see cref="AbsoluteExpirationToken"/> 类的新实例。
         /// </summary>
-        /// <param name="clock">The clock.</param>
-        /// <param name="invalidateUtc">The invalidate UTC.</param>
+        /// <param name="clock">时钟。</param>
+        /// <param name="invalidateUtc">失效时间（UTC）。</param>
         public AbsoluteExpirationToken(ICacheClock clock, DateTime invalidateUtc)
         {
             _clock = clock;
@@ -82,10 +83,10 @@ public class DefaultCacheClock : ICacheClock
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AbsoluteExpirationToken"/> class.
+        /// 初始化 <see cref="AbsoluteExpirationToken"/> 类的新实例。
         /// </summary>
-        /// <param name="clock">The clock.</param>
-        /// <param name="duration">The duration.</param>
+        /// <param name="clock">时钟。</param>
+        /// <param name="duration">时长。</param>
         public AbsoluteExpirationToken(ICacheClock clock, TimeSpan duration)
         {
             _clock = clock;
@@ -93,9 +94,9 @@ public class DefaultCacheClock : ICacheClock
         }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is current.
+        /// 获取一个值，指示此实例当前是否有效。
         /// </summary>
-        /// <value><c>true</c> if this instance is current; otherwise, <c>false</c>.</value>
+        /// <value>如果此实例当前有效，则为 <c>true</c>；否则为 <c>false</c>。</value>
         public bool IsCurrent => _clock.UtcNow < _invalidateUtc;
     }
 }

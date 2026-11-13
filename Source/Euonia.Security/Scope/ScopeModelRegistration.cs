@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
@@ -16,13 +18,19 @@ namespace Nerosoft.Euonia.Security;
 /// </remarks>
 public sealed class ScopeModelRegistration
 {
-	/// <summary>授权标识 → 策略；实际类型是 <see cref="ScopePolicy{T}"/>。</summary>
+	/// <summary>
+	/// 授权标识 → 策略；实际类型是 <see cref="ScopePolicy{T}"/>。
+	/// </summary>
 	private readonly IReadOnlyDictionary<string, object> _policies;
 
-	/// <summary>授权标识 → 授予键。</summary>
+	/// <summary>
+	/// 授权标识 → 授予键。
+	/// </summary>
 	private readonly IReadOnlyDictionary<string, string> _keys;
 
-	/// <summary>授予键 → 授权标识（键与标识共用命名空间，因此这是一一对应的反向索引）。</summary>
+	/// <summary>
+	/// 授予键 → 授权标识（键与标识共用命名空间，因此这是一一对应的反向索引）。
+	/// </summary>
 	private readonly Dictionary<string, string> _byKey;
 
 	/// <summary>
@@ -82,7 +90,7 @@ public sealed class ScopeModelRegistration
 	/// 没写则与从前一样回落到 <see cref="ScopeKeys.Default"/>。</description></item>
 	/// </list>
 	/// </remarks>
-	internal bool TryResolve(string identifier, out object policy, out string key)
+	internal bool TryResolve(string? identifier, [MaybeNullWhen(false)] out object policy, out string key)
 	{
 		var name = Normalize(identifier);
 
@@ -118,7 +126,7 @@ public sealed class ScopeModelRegistration
 	/// 不规范化的话，<c>"delete"</c> 与 <c>"delete "</c> 会是两条不同的判定路径，
 	/// 而后者会连授予键都取错。
 	/// </remarks>
-	private static string Normalize(string identifier)
+	private static string? Normalize(string? identifier)
 	{
 		return string.IsNullOrWhiteSpace(identifier) ? null : identifier.Trim();
 	}

@@ -4,8 +4,15 @@ using Serilog.Events;
 
 namespace Nerosoft.Euonia.Sample;
 
+/// <summary>
+/// 示例应用的入口类型，负责配置日志与宿主构建选项后启动服务。
+/// </summary>
 public class Program
 {
+	/// <summary>
+	/// 配置 Serilog 日志输出与宿主选项，并启动示例应用。
+	/// </summary>
+	/// <param name="args">命令行参数。</param>
 	public static void Main(string[] args)
 	{
 		static void HostBuilderOptionsAction(HostBuilderOptions options)

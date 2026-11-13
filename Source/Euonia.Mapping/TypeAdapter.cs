@@ -21,7 +21,7 @@ public class TypeAdapter
 		where TSource : class
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt<TSource, TDestination>(source);
 	}
 
@@ -38,7 +38,7 @@ public class TypeAdapter
 		where TSource : class
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt(source, destination);
 	}
 
@@ -52,7 +52,7 @@ public class TypeAdapter
 	public static TDestination ProjectedAs<TDestination>(object item)
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt<TDestination>(item);
 	}
 
@@ -66,7 +66,7 @@ public class TypeAdapter
 	public static List<TDestination> ProjectedAsCollection<TDestination>(IEnumerable<object> items)
 		where TDestination : class
 	{
-		var adapter = TypeAdapterFactory.CreateAdapter();
+		var adapter = TypeAdapterFactory.CreateAdapter()!;
 		return adapter.Adapt<List<TDestination>>(items);
 	}
 }

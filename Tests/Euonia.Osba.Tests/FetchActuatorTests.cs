@@ -8,6 +8,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class FetchActuatorTests
 {
+	/// <summary>
+	/// 验证未提供 Handle 时，读取执行器仍会加载并返回目标对象。
+	/// </summary>
 	[Fact]
 	public async Task Fetch_WithoutHandle_ShouldStillLoad()
 	{
@@ -22,6 +25,9 @@ public class FetchActuatorTests
 		Assert.Equal("initial", result.Name);
 	}
 
+	/// <summary>
+	/// 验证读取执行器加载对象后会应用 Handle 修改，但不触发任何保存操作。
+	/// </summary>
 	[Fact]
 	public async Task Fetch_ShouldLoadAndHandleWithoutSaving()
 	{

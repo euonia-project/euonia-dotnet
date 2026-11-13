@@ -16,6 +16,9 @@ public class BusStressTests
 {
 	private const int ParallelOperations = 200;
 
+	/// <summary>
+	/// 验证 200 组并发的发布、发送与调用全部完成，各路径的调用次数与操作数一致。
+	/// </summary>
 	[Fact]
 	public async Task ParallelPublishSendCall_CompletesWithoutErrors()
 	{
@@ -39,6 +42,9 @@ public class BusStressTests
 		Assert.Equal(ParallelOperations, transporter.Called);
 	}
 
+	/// <summary>
+	/// 验证同一处理器在 512 次并发注册后，通道中只保留一份注册。
+	/// </summary>
 	[Fact]
 	public async Task ConcurrentChannelRegistration_RegistersSameHandlerExactlyOnce()
 	{
@@ -59,6 +65,9 @@ public class BusStressTests
 		Assert.Single(registration.Handlers);
 	}
 
+	/// <summary>
+	/// 验证 1000 条并发写入的死信记录全部保留，没有丢失。
+	/// </summary>
 	[Fact]
 	public async Task ConcurrentDeadLetterWrites_KeepEveryTarget()
 	{
@@ -101,12 +110,24 @@ public class BusStressTests
 		return provider;
 	}
 
+	/// <summary>
+	/// 压测用多播事件。
+	/// </summary>
 	private sealed class StressEvent : IMulticast;
 
+	/// <summary>
+	/// 压测用单播命令。
+	/// </summary>
 	private sealed class StressCommand : IUnicast;
 
+	/// <summary>
+	/// 压测用请求，返回 <see cref="int"/>。
+	/// </summary>
 	private sealed class StressRequest : IRequest<int>;
 
+	/// <summary>
+	/// 压测用事件处理器，不做业务处理，只保证消息可被消费。
+	/// </summary>
 	private sealed class StressHandler
 	{
 		public Task HandleAsync(StressEvent message, IMessageContext context, CancellationToken cancellationToken = default)
@@ -115,6 +136,9 @@ public class BusStressTests
 		}
 	}
 
+	/// <summary>
+	/// 以无锁计数统计发布、发送与调用次数的压测传输器，供并发断言核对投递数量。
+	/// </summary>
 	private sealed class StressTransporter : ITransporter
 	{
 		private int _published;
@@ -144,7 +168,7 @@ public class BusStressTests
 		public Task<TResponse> SendAsync<TMessage, TResponse>(IMessageEnvelope<TMessage> message, CancellationToken cancellationToken = default)
 		{
 			Interlocked.Increment(ref _sent);
-			return Task.FromResult(default(TResponse));
+			return Task.FromResult(default(TResponse)!);
 		}
 
 		public Task<TResponse> CallAsync<TRequest, TResponse>(IMessageEnvelope<TRequest> message, CancellationToken cancellationToken = default)

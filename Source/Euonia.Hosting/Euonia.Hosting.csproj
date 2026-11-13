@@ -24,7 +24,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\Euonia.Auditing\Euonia.Auditing.csproj" />
         <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
+        <ProjectReference Include="..\Euonia.Telemetry\Euonia.Telemetry.csproj" />
+        <ProjectReference Include="..\Euonia.Tenancy\Euonia.Tenancy.csproj" />
         <ProjectReference Include="..\Euonia.Validation\Euonia.Validation.csproj" />
     </ItemGroup>
 
@@ -41,6 +44,14 @@
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>

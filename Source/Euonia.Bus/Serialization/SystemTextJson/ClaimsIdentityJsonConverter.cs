@@ -11,7 +11,7 @@ namespace Nerosoft.Euonia.Bus.SystemTextJson;
 internal class ClaimsIdentityJsonConverter : JsonConverter<ClaimsIdentity>
 {
 	/// <inheritdoc />
-	public override ClaimsIdentity Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+	public override ClaimsIdentity? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
 	{
 		if (reader.TokenType == JsonTokenType.Null)
 		{
@@ -23,10 +23,10 @@ internal class ClaimsIdentityJsonConverter : JsonConverter<ClaimsIdentity>
 			throw new JsonException();
 		}
 
-		IEnumerable<Claim> claims = null;
-		string authenticationType = null;
-		string nameClaimType = null;
-		string roleClaimType = null;
+		IEnumerable<Claim>? claims = null;
+		string? authenticationType = null;
+		string? nameClaimType = null;
+		string? roleClaimType = null;
 
 		while (reader.Read())
 		{

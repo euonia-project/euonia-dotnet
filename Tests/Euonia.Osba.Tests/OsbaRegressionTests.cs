@@ -8,6 +8,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class OsbaRegressionTests
 {
+	/// <summary>
+	/// 验证新建的 <see cref="FieldData{T}"/> 未被修改过，变更标志为 <see langword="false"/>。
+	/// </summary>
 	[Fact]
 	public void NewFieldData_ShouldNotBeChanged()
 	{
@@ -16,6 +19,9 @@ public class OsbaRegressionTests
 		Assert.False(field.IsChanged);
 	}
 
+	/// <summary>
+	/// 验证为 <see cref="FieldData{T}"/> 赋值后会被标记为已修改。
+	/// </summary>
 	[Fact]
 	public void SettingValue_ShouldMarkAsChanged()
 	{
@@ -25,6 +31,10 @@ public class OsbaRegressionTests
 		Assert.True(field.IsChanged);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="FieldData{T}.Undo"/> 会恢复上一次的值且不把恢复的值重新压入历史，
+	/// 连续撤销可回到原始值并清除变更标志。
+	/// </summary>
 	[Fact]
 	public void Undo_ShouldRestorePreviousValue_AndNotRepushHistory()
 	{
@@ -45,6 +55,9 @@ public class OsbaRegressionTests
 		Assert.False(field.IsChanged);
 	}
 
+	/// <summary>
+	/// 回归测试：历史深度受限时裁剪最旧记录不得倒置撤销顺序，撤销应优先恢复最新的值。
+	/// </summary>
 	[Fact]
 	public void Undo_AfterHistoryTrim_ShouldRestoreNewestValuesFirst()
 	{
@@ -65,6 +78,9 @@ public class OsbaRegressionTests
 		Assert.Equal(1, field.Value);
 	}
 
+	/// <summary>
+	/// 验证 <see cref="FieldData{T}.MarkAsUnchanged"/> 清除变更标志与历史记录，此后撤销不改变当前值。
+	/// </summary>
 	[Fact]
 	public void MarkAsUnchanged_ShouldClearHistory()
 	{
@@ -79,6 +95,9 @@ public class OsbaRegressionTests
 		Assert.Equal("first", field.Value);
 	}
 
+	/// <summary>
+	/// 验证未显式提供友好名称时，<see cref="PropertyInfo{T}.FriendlyName"/> 回退为属性名。
+	/// </summary>
 	[Fact]
 	public void FriendlyName_ShouldReturnPropertyName_WhenNotProvided()
 	{
@@ -87,19 +106,26 @@ public class OsbaRegressionTests
 		Assert.Equal("Name", property.FriendlyName);
 	}
 
+	/// <summary>
+	/// 验证显式提供友好名称时，<see cref="PropertyInfo{T}.FriendlyName"/> 返回该值而非属性名。
+	/// </summary>
 	[Fact]
 	public void FriendlyName_ShouldReturnExplicitValue_WhenProvided()
 	{
-		var property = new PropertyInfo<string>("Name", "Full Name", default(string));
+		var property = new PropertyInfo<string>("Name", "Full Name", default(string)!);
 
 		Assert.Equal("Full Name", property.FriendlyName);
 	}
 
+	/// <summary>
+	/// 验证订阅 <see cref="FieldData{T}"/> 的忙碌变更事件不会抛出
+	/// <see cref="NotImplementedException"/>。
+	/// </summary>
 	[Fact]
 	public void FieldData_BusyChangedEvent_ShouldNotThrow()
 	{
 		var field = new FieldData<string>("Name");
-		BusyChangedEventArgs raised = null;
+		BusyChangedEventArgs? raised = null;
 
 		((INotifyBusy)field).BusyChanged += (_, args) => raised = args;
 
@@ -107,6 +133,9 @@ public class OsbaRegressionTests
 		Assert.Null(raised);
 	}
 
+	/// <summary>
+	/// 验证以可变引用类型作为静态默认值注册时，每个对象获得独立实例，修改集合不会互相影响。
+	/// </summary>
 	[Fact]
 	public void RegisterProperty_WithMutableDefault_ShouldNotShareInstanceAcrossObjects()
 	{
@@ -119,6 +148,9 @@ public class OsbaRegressionTests
 		Assert.Empty(second.Tags);
 	}
 
+	/// <summary>
+	/// 验证以工厂提供默认值时，每个对象各调用一次工厂并获得独立实例。
+	/// </summary>
 	[Fact]
 	public void RegisterProperty_WithFactory_ShouldCreateIndependentInstancePerObject()
 	{
@@ -132,6 +164,9 @@ public class OsbaRegressionTests
 		Assert.Empty(second.FactoryTags);
 	}
 
+	/// <summary>
+	/// 验证以可克隆引用类型作为默认值注册时，每个对象获得克隆副本，互不共享状态。
+	/// </summary>
 	[Fact]
 	public void RegisterProperty_WithCloneableDefault_ShouldCreateIndependentInstancePerObject()
 	{
@@ -144,6 +179,9 @@ public class OsbaRegressionTests
 		Assert.Equal("initial", second.Child.Name);
 	}
 
+	/// <summary>
+	/// 验证以值类型默认值注册的属性返回该类型的默认值。
+	/// </summary>
 	[Fact]
 	public void RegisterProperty_WithValueTypeDefault_ShouldReturnDefaultValue()
 	{
@@ -152,6 +190,10 @@ public class OsbaRegressionTests
 		Assert.Equal(0, obj.Number);
 	}
 
+	/// <summary>
+	/// 验证解析 <see cref="BusinessContextAccessor"/> 本身不会产生环境上下文副作用，
+	/// 显式设置的提供程序可跨异步边界流向派生任务。
+	/// </summary>
 	[Fact]
 	public async Task BusinessContextAccessor_ShouldFlowExplicitlySetProviderAcrossAsyncBoundary()
 	{
@@ -174,6 +216,9 @@ public class OsbaRegressionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证不同并行异步流之间 <see cref="BusinessContextAccessor.Current"/> 相互隔离，不会泄漏。
+	/// </summary>
 	[Fact]
 	public async Task BusinessContextAccessor_ShouldIsolateBetweenParallelFlows()
 	{
@@ -200,6 +245,10 @@ public class OsbaRegressionTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 验证 <see cref="BusinessContextAccessor.Clear"/> 会清除当前提供程序，
+	/// 之后 <see cref="BusinessContextAccessor.Current"/> 为 <see langword="null"/>。
+	/// </summary>
 	[Fact]
 	public void BusinessContextAccessor_Clear_ShouldResetCurrentProvider()
 	{
@@ -241,12 +290,24 @@ public class DefaultValueBusinessObject : BusinessObject<DefaultValueBusinessObj
 	public static readonly PropertyInfo<int> NumberProperty =
 		RegisterProperty<int>(nameof(Number));
 
+	/// <summary>
+	/// 获取注册时提供的可变集合默认值。
+	/// </summary>
 	public List<string> Tags => ReadProperty(TagsProperty);
 
+	/// <summary>
+	/// 获取由工厂创建的集合默认值。
+	/// </summary>
 	public List<string> FactoryTags => ReadProperty(FactoryTagsProperty);
 
+	/// <summary>
+	/// 获取注册时提供的可克隆子对象默认值。
+	/// </summary>
 	public DefaultValueChild Child => ReadProperty(ChildProperty);
 
+	/// <summary>
+	/// 获取以值类型默认值注册的数值。
+	/// </summary>
 	public int Number => ReadProperty(NumberProperty);
 }
 
@@ -255,13 +316,24 @@ public class DefaultValueBusinessObject : BusinessObject<DefaultValueBusinessObj
 /// </summary>
 public class DefaultValueChild : ICloneable
 {
+	/// <summary>
+	/// 以指定名称初始化 <see cref="DefaultValueChild"/> 的新实例。
+	/// </summary>
+	/// <param name="name">子对象名称。</param>
 	public DefaultValueChild(string name)
 	{
 		Name = name;
 	}
 
+	/// <summary>
+	/// 获取或设置子对象名称。
+	/// </summary>
 	public string Name { get; set; }
 
+	/// <summary>
+	/// 创建包含当前名称的副本。
+	/// </summary>
+	/// <returns>新的 <see cref="DefaultValueChild"/> 实例。</returns>
 	public object Clone()
 	{
 		return new DefaultValueChild(Name);

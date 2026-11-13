@@ -81,7 +81,7 @@ public interface IOutboxStore
 	/// </summary>
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>对应的发件箱条目；未找到时返回 <c>null</c>。</returns>
-	OutboxEntry Get(string messageId);
+	OutboxEntry? Get(string messageId);
 
 	/// <summary>
 	/// 获取发件箱条目并写入缓存。
@@ -93,7 +93,7 @@ public interface IOutboxStore
 	/// <param name="messageId">消息标识符。</param>
 	/// <returns>对应的发件箱条目；未找到时返回 <c>null</c>。</returns>
 	/// <exception cref="ArgumentException">当 <paramref name="messageId"/> 为 <c>null</c> 或空白时抛出。</exception>
-	OutboxEntry GetAndCache(string messageId)
+	OutboxEntry? GetAndCache(string messageId)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(messageId);
 		return StoreEntryCache<IOutboxStore, OutboxEntry>.GetOrAdd(this, messageId, Get);

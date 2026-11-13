@@ -17,6 +17,9 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// </summary>
 public class EfCoreCollectionDimensionTests
 {
+	/// <summary>
+	/// 验证子表维度下推时翻译为 <c>EXISTS</c> 相关子查询，并按子表内的有效成员关系筛选父行。
+	/// </summary>
 	[Fact]
 	public void MapMany_Apply_ShouldTranslateTo_Exists_Subquery()
 	{
@@ -40,6 +43,9 @@ public class EfCoreCollectionDimensionTests
 		Assert.Null(materialized.Members);
 	}
 
+	/// <summary>
+	/// 验证按操作声明的拒绝策略下推为 <c>NOT EXISTS</c>，且只否决仍然生效的成员关系。
+	/// </summary>
 	[Fact]
 	public void MapMany_Apply_ForDeclaredKey_ShouldTranslateTo_NotExists()
 	{
@@ -55,6 +61,9 @@ public class EfCoreCollectionDimensionTests
 		Assert.Equal(["w2", "w3"], query.Select(workspace => workspace.Id).OrderBy(id => id).ToList());
 	}
 
+	/// <summary>
+	/// 验证 SQLite 下推查询的结果与加载完整对象图后的内存判定结果一致。
+	/// </summary>
 	[Fact]
 	public void MapMany_Sqlite_ShouldAgree_With_InMemory()
 	{
@@ -72,7 +81,7 @@ public class EfCoreCollectionDimensionTests
 		                    .AsNoTracking()
 		                    .ToList();
 
-		var compiled = fixture.Guard.GetPolicy<EfWorkspace>();
+		var compiled = fixture.Guard.GetPolicy<EfWorkspace>()!;
 
 		var inMemory = loaded.Where(workspace => ScopeFilter.Allows(workspace, compiled))
 		                     .Select(workspace => workspace.Id)
@@ -85,6 +94,9 @@ public class EfCoreCollectionDimensionTests
 
 	#region 装配
 
+	/// <summary>
+	/// 内存 SQLite 测试装配：建立数据库结构、播种工作区数据，并构建带权限守卫的服务提供者。
+	/// </summary>
 	private sealed class Fixture : IDisposable
 	{
 		private readonly SqliteConnection _connection;
@@ -153,9 +165,12 @@ public class EfCoreCollectionDimensionTests
 		}
 	}
 
+	/// <summary>
+	/// 返回当前用户标识 <c>dev</c> 作为成员维度值的范围主体解析器，模拟子表授予的「子表里应当出现的值」。
+	/// </summary>
 	private sealed class MemberResolver : IScopeSubjectResolver
 	{
-		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
+		public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal? user, CancellationToken cancellationToken = default)
 		{
 			// 子表维度授予的是「子表里应当出现的值」——也就是当前用户自己的标识
 			return ValueTask.FromResult(ScopeSubjectSet.CreateBuilder()
@@ -176,27 +191,51 @@ public class EfCoreCollectionDimensionTests
 
 #region 受控资源与模型
 
-/// <summary>EF 实体：工作区（父行）。</summary>
+/// <summary>
+/// EF 实体：工作区（父行）。
+/// </summary>
 public sealed class EfWorkspace
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 工作区标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string Name { get; set; }
+	/// <summary>
+	/// 工作区名称。
+	/// </summary>
+	public string Name { get; set; } = null!;
 
-	/// <summary>子表行。刻意不初始化：EF 未加载时保持 <see langword="null"/>。</summary>
-	public List<EfWorkspaceMember> Members { get; set; }
+	/// <summary>
+	/// 子表行。刻意不初始化：EF 未加载时保持 <see langword="null"/>。
+	/// </summary>
+	public List<EfWorkspaceMember> Members { get; set; } = null!;
 }
 
-/// <summary>EF 实体：工作区成员（子表行，带状态属性）。</summary>
+/// <summary>
+/// EF 实体：工作区成员（子表行，带状态属性）。
+/// </summary>
 public sealed class EfWorkspaceMember
 {
-	public string Id { get; set; }
+	/// <summary>
+	/// 成员关系标识。
+	/// </summary>
+	public string Id { get; set; } = null!;
 
-	public string WorkspaceId { get; set; }
+	/// <summary>
+	/// 所属工作区标识。
+	/// </summary>
+	public string WorkspaceId { get; set; } = null!;
 
-	public string UserId { get; set; }
+	/// <summary>
+	/// 成员的用户标识。
+	/// </summary>
+	public string UserId { get; set; } = null!;
 
-	public string Status { get; set; }
+	/// <summary>
+	/// 成员关系状态，仅 <c>active</c> 视为有效。
+	/// </summary>
+	public string Status { get; set; } = null!;
 }
 
 /// <summary>
@@ -205,13 +244,24 @@ public sealed class EfWorkspaceMember
 /// </summary>
 public sealed class EfWorkspaceScopeModel : ScopeModel<EfWorkspace>
 {
+	/// <summary>
+	/// 定义子表维度映射：父行是否可见由子表中属于当前用户且状态有效的成员关系决定。
+	/// </summary>
+	/// <param name="builder">当前受控资源类型的范围模型构建器。</param>
 	public override void Define(ScopeModelBuilder<EfWorkspace> builder)
 	{
 		builder.MapMany(ScopeDimensions.Member, x => x.Members.Where(m => m.Status == "active").Select(m => m.UserId));
 	}
 
+	/// <summary>
+	/// 默认行范围策略：要求成员维度授予后才允许访问。
+	/// </summary>
 	public override ScopePolicy<EfWorkspace> Policy => ScopePolicy<EfWorkspace>.Grant(ScopeDimensions.Member);
 
+	/// <summary>
+	/// 声明删除操作的行范围策略：放行所有行并拒绝生效的成员关系，用于验证拒绝条件下推为 <c>NOT EXISTS</c>。
+	/// </summary>
+	/// <param name="policies">用于登记按操作划分的策略集合。</param>
 	public override void Declare(ScopePolicySet<EfWorkspace> policies)
 	{
 		// 删除的默认行范围与默认策略相反：不是成员的全部放行——用于验证拒绝条件下推成 NOT EXISTS
@@ -223,11 +273,20 @@ public sealed class EfWorkspaceScopeModel : ScopeModel<EfWorkspace>
 	}
 }
 
-/// <summary>子表维度的检查用 SQLite 上下文。</summary>
+/// <summary>
+/// 子表维度的检查用 SQLite 上下文。
+/// </summary>
 internal sealed class WorkspaceDbContext(DbContextOptions<WorkspaceDbContext> options) : DbContext(options)
 {
+	/// <summary>
+	/// 获取工作区实体集合，作为子表维度下推查询的根。
+	/// </summary>
 	public DbSet<EfWorkspace> Workspaces => Set<EfWorkspace>();
 
+	/// <summary>
+	/// 配置工作区与成员表的映射：表名、主键、列名及一对多外键关系。
+	/// </summary>
+	/// <param name="modelBuilder">EF Core 的模型构建器。</param>
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
 		modelBuilder.Entity<EfWorkspace>(entity =>

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace Nerosoft.Euonia.Collections;
@@ -32,7 +33,7 @@ public sealed class ObservableGroupedCollection<TKey, TValue> : ObservableCollec
     /// <param name="list">结果 <see cref="List{T}"/>（如果正在使用的话）。</param>
     /// <returns>是否找到了 <see cref="List{T}"/> 实例。</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool TryGetList(out List<ObservableGroup<TKey, TValue>> list)
+    internal bool TryGetList([MaybeNullWhen(false)] out List<ObservableGroup<TKey, TValue>> list)
     {
         list = Items as List<ObservableGroup<TKey, TValue>>;
 

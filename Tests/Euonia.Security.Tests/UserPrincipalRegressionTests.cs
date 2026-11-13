@@ -10,6 +10,9 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// </summary>
 public class UserPrincipalRegressionTests
 {
+	/// <summary>
+	/// 底层 <c>ClaimsPrincipal</c> 为 <c>null</c> 时，用户名、用户标识、编码均返回 <c>null</c>，且视为未认证。
+	/// </summary>
 	[Fact]
 	public void Accessors_Should_Return_Defaults_When_Claims_Principal_Is_Missing()
 	{
@@ -21,6 +24,10 @@ public class UserPrincipalRegressionTests
 		Assert.False(principal.IsAuthenticated);
 	}
 
+	/// <summary>
+	/// 令牌类认证（<c>Jwt</c>、<c>Bearer</c>、<c>JwtBearer</c>）下，用户名与用户标识应取自 <see cref="UserClaimTypes.Name"/> 与 <see cref="UserClaimTypes.Subject"/>。
+	/// </summary>
+	/// <param name="authenticationType">用于构造身份声明的认证类型。</param>
 	[Theory]
 	[InlineData("Jwt")]
 	[InlineData("Bearer")]
@@ -36,6 +43,10 @@ public class UserPrincipalRegressionTests
 		Assert.Equal("token-sub", principal.UserId);
 	}
 
+	/// <summary>
+	/// Windows 与 Cookie 类认证（<c>Windows</c>、<c>Cookies</c>、<c>Cookie</c>）下，用户名与用户标识应取自 <see cref="ClaimTypes.Name"/> 与 <see cref="ClaimTypes.NameIdentifier"/>。
+	/// </summary>
+	/// <param name="authenticationType">用于构造身份声明的认证类型。</param>
 	[Theory]
 	[InlineData("Windows")]
 	[InlineData("Cookies")]
@@ -51,6 +62,9 @@ public class UserPrincipalRegressionTests
 		Assert.Equal("domain-id", principal.UserId);
 	}
 
+	/// <summary>
+	/// 认证类型无法识别时，用户名与用户标识应回退到优先级查找，而不是直接返回 <c>null</c>。
+	/// </summary>
 	[Fact]
 	public void Username_And_UserId_Should_Fall_Back_When_Authentication_Type_Is_Not_Known()
 	{
@@ -63,6 +77,9 @@ public class UserPrincipalRegressionTests
 		Assert.Equal("fallback-id", principal.UserId);
 	}
 
+	/// <summary>
+	/// 回退查找时，用户名应优先取 <see cref="UserClaimTypes.Name"/> 而非 <see cref="ClaimTypes.Name"/>。
+	/// </summary>
 	[Fact]
 	public void Username_Should_Prefer_UserClaimTypes_Name_Over_ClaimTypes_Name_In_Fallback()
 	{

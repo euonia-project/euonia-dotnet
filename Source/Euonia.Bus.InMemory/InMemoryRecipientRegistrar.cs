@@ -29,7 +29,7 @@ public sealed class InMemoryRecipientRegistrar : IRecipientRegistrar
 	/// <summary>
 	/// 用于允许或禁止特定消息类型传入处理的传输策略。
 	/// </summary>
-	private readonly ITransportStrategy _strategy;
+	private readonly ITransportStrategy? _strategy;
 
 	/// <summary>
 	/// 此注册器使用的日志记录器。

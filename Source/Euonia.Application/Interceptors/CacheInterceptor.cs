@@ -32,6 +32,9 @@ public class CacheInterceptor : IInterceptor
 
 	private readonly IServiceProvider _serviceProvider;
 
+	/// <summary>
+	/// 根据 <see cref="CacheAttribute"/> 预先算出的过期参数：相对超时或绝对到期时间，以及时间值是否按 UTC 解释。
+	/// </summary>
 	private readonly struct CacheExpirations
 	{
 		public TimeSpan? Timeout { get; init; }
@@ -106,12 +109,12 @@ public class CacheInterceptor : IInterceptor
 		if (isAsync)
 		{
 			_writeAsyncMethod.MakeGenericMethod(valueType)
-			                 .Invoke(null, new object[] { invocation, cache, key, expirations, isValueTask, manager, groups, _serviceProvider });
+			                 .Invoke(null, new object?[] { invocation, cache, key, expirations, isValueTask, manager, groups, _serviceProvider });
 		}
 		else
 		{
 			_writeSyncMethod.MakeGenericMethod(valueType)
-			                .Invoke(null, new object[] { invocation.ReturnValue, cache, key, expirations, manager, groups });
+			                .Invoke(null, new object?[] { invocation.ReturnValue, cache, key, expirations, manager, groups });
 		}
 	}
 
@@ -128,11 +131,11 @@ public class CacheInterceptor : IInterceptor
 		return false;
 	}
 
-	private static void WriteBackAsync<T>(IInvocation invocation, ICacheService cache, string key, CacheExpirations expirations, bool isValueTask, ICacheGroupManager manager, string[] groups, IServiceProvider serviceProvider)
+	private static void WriteBackAsync<T>(IInvocation invocation, ICacheService cache, string key, CacheExpirations expirations, bool isValueTask, ICacheGroupManager? manager, string[] groups, IServiceProvider serviceProvider)
 	{
 		var source = isValueTask
-			? ((ValueTask<T>)invocation.ReturnValue).AsTask()
-			: (Task<T>)invocation.ReturnValue;
+			? ((ValueTask<T>)invocation.ReturnValue!).AsTask()
+			: (Task<T>)invocation.ReturnValue!;
 
 		// 把回写**并入返回的 Task**，而不是挂一个 fire-and-forget 的 continuation。
 		// 原实现丢弃了 ContinueWith 返回的任务，导致调用方 await 完成时缓存往往尚未写入：
@@ -142,7 +145,7 @@ public class CacheInterceptor : IInterceptor
 
 		invocation.ReturnValue = isValueTask ? new ValueTask<T>(wrapped) : (object)wrapped;
 
-		static async Task<T> WriteAndReturnAsync(Task<T> source, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager manager, string[] groups, IServiceProvider serviceProvider)
+		static async Task<T> WriteAndReturnAsync(Task<T> source, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager? manager, string[] groups, IServiceProvider serviceProvider)
 		{
 			T value;
 
@@ -190,7 +193,7 @@ public class CacheInterceptor : IInterceptor
 		factory?.CreateLogger<CacheInterceptor>().LogWarning(exception, "Failed to write the cache entry for key '{Key}'.", key);
 	}
 
-	private static void WriteBackSync<T>(object rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager manager, string[] groups)
+	private static void WriteBackSync<T>(object? rawReturnValue, ICacheService cache, string key, CacheExpirations expirations, ICacheGroupManager? manager, string[] groups)
 	{
 		if (rawReturnValue != null)
 		{
@@ -202,7 +205,7 @@ public class CacheInterceptor : IInterceptor
 		}
 	}
 
-	private static void WriteToCache<TValue>(ICacheService cache, string key, TValue value, CacheExpirations expirations, ICacheGroupManager manager, string[] groups)
+	private static void WriteToCache<TValue>(ICacheService cache, string key, TValue value, CacheExpirations expirations, ICacheGroupManager? manager, string[] groups)
 	{
 		if (groups.Length > 0)
 		{
@@ -237,7 +240,7 @@ public class CacheInterceptor : IInterceptor
 		return false;
 	}
 
-	private static CacheAttribute ResolveAttribute(IInvocation invocation)
+	private static CacheAttribute? ResolveAttribute(IInvocation invocation)
 	{
 		return invocation.Method.GetCustomAttribute<CacheAttribute>()
 		       ?? invocation.MethodInvocationTarget?.GetCustomAttribute<CacheAttribute>();
@@ -276,7 +279,7 @@ public class CacheInterceptor : IInterceptor
 		return template;
 	}
 
-	private static string RenderArgument(object argument)
+	private static string RenderArgument(object? argument)
 	{
 		if (argument == null)
 		{

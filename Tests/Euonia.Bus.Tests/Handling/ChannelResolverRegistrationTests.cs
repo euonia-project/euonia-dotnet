@@ -17,6 +17,9 @@ namespace Nerosoft.Euonia.Bus.Tests;
 /// </remarks>
 public class ChannelResolverRegistrationTests
 {
+	/// <summary>
+	/// 验证替换默认解析器的自定义通道解析器生效时，处理器注册使用该解析器给出的通道。
+	/// </summary>
 	[Fact]
 	public void RegisterChannel_WithCustomResolver_RegistersOnResolvedChannel()
 	{
@@ -32,6 +35,9 @@ public class ChannelResolverRegistrationTests
 		Assert.Contains(CustomChannel, configurator.Registrations.Keys);
 	}
 
+	/// <summary>
+	/// 验证未替换默认解析器时仍优先采用自定义解析器给出的通道完成注册。
+	/// </summary>
 	[Fact]
 	public void RegisterChannel_WithNonReplacingResolver_UsesCustomResolverFirst()
 	{
@@ -86,6 +92,9 @@ public class ChannelResolverRegistrationTests
 		return services.BuildServiceProvider();
 	}
 
+	/// <summary>
+	/// 统计被调用次数的订单事件处理器，用于验证自定义通道解析器注册后消息仍能命中处理器。
+	/// </summary>
 	private sealed class CountingHandler : IHandler<TestMessages.OrderPlacedEvent>
 	{
 		public static int Invocations;

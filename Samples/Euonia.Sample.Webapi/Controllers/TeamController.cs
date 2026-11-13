@@ -17,15 +17,19 @@ namespace Nerosoft.Euonia.Sample.Controllers;
 [Produces("application/json")]
 public class TeamController(ITeamApplicationService service) : ControllerBase
 {
-	/// <summary>分页查询团队（须持有 team:view 码并按行范围过滤）。</summary>
+	/// <summary>
+	/// 分页查询团队（须持有 team:view 码并按行范围过滤）。
+	/// </summary>
 	[HttpGet]
 	[ProducesResponseType(StatusCodes.Status200OK)]
-	public Task<IActionResult> List([FromQuery] string keyword = null, [FromQuery] string sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
+	public Task<IActionResult> List([FromQuery] string? keyword = null, [FromQuery] string? sortBy = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
 	{
 		return InvokeAsync(() => service.FindAsync(keyword, sortBy, page, pageSize, cancellationToken));
 	}
 
-	/// <summary>查看团队详情（行级视图判定）。</summary>
+	/// <summary>
+	/// 查看团队详情（行级视图判定）。
+	/// </summary>
 	[HttpGet("{id}")]
 	[ProducesResponseType(StatusCodes.Status200OK)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -35,7 +39,9 @@ public class TeamController(ITeamApplicationService service) : ControllerBase
 		return InvokeAsync(() => service.GetAsync(id, cancellationToken));
 	}
 
-	/// <summary>创建团队（负责人取当前用户）。</summary>
+	/// <summary>
+	/// 创建团队（负责人取当前用户）。
+	/// </summary>
 	[HttpPost]
 	[ProducesResponseType(StatusCodes.Status201Created)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -45,7 +51,9 @@ public class TeamController(ITeamApplicationService service) : ControllerBase
 		return Created($"/api/team/{id}", new { id });
 	}
 
-	/// <summary>更新团队（仅名称）。</summary>
+	/// <summary>
+	/// 更新团队（仅名称）。
+	/// </summary>
 	[HttpPut("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -56,7 +64,9 @@ public class TeamController(ITeamApplicationService service) : ControllerBase
 		return NoContent();
 	}
 
-	/// <summary>删除团队。</summary>
+	/// <summary>
+	/// 删除团队。
+	/// </summary>
 	[HttpDelete("{id}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -82,7 +92,9 @@ public class TeamController(ITeamApplicationService service) : ControllerBase
 		return NoContent();
 	}
 
-	/// <summary>把账号移出团队（<c>team:edit</c>，行级仅本团队负责人）。</summary>
+	/// <summary>
+	/// 把账号移出团队（<c>team:edit</c>，行级仅本团队负责人）。
+	/// </summary>
 	[HttpDelete("{id}/members/{userId}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status403Forbidden)]

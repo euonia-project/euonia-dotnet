@@ -4,22 +4,22 @@ using Nerosoft.Euonia.Sample.Constants;
 namespace Nerosoft.Euonia.Sample.Persist.Entities;
 
 /// <summary>
-/// Represents a role assigned to a user.
+/// 表示分配给用户的角色。
 /// </summary>
 public class UserRoleEntity : Entity<string>, IHasCreateTime
 {
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UserRoleEntity"/> class.
-	/// This constructor is private to enforce controlled creation of instances.
+	/// 初始化 <see cref="UserRoleEntity"/> 类的新实例。
+	/// 此构造函数为私有，以确保实例只能受控创建。
 	/// </summary>
 	private UserRoleEntity()
 	{
 	}
 
 	/// <summary>
-	/// Initializes a new instance of the <see cref="UserRoleEntity"/> class with the specified name.
+	/// 使用指定名称初始化 <see cref="UserRoleEntity"/> 类的新实例。
 	/// </summary>
-	/// <param name="name">The name of the role.</param>
+	/// <param name="name">角色的名称。</param>
 	private UserRoleEntity(string name)
 		: this()
 	{
@@ -27,30 +27,30 @@ public class UserRoleEntity : Entity<string>, IHasCreateTime
 	}
 
 	/// <summary>
-	/// Gets or sets the name of the role.
+	/// 获取或设置角色的名称。
 	/// </summary>
-	public string Name { get; set; }
+	public string Name { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the ID of the user associated with this role.
+	/// 获取或设置与此角色关联的用户 ID。
 	/// </summary>
-	public string UserId { get; set; }
+	public string UserId { get; set; } = null!;
 
 	/// <summary>
-	/// Gets or sets the creation time of the role.
+	/// 获取或设置角色的创建时间。
 	/// </summary>
 	public DateTime CreatedAt { get; set; }
 
 	/// <summary>
-	/// Gets or sets the user associated with this role.
+	/// 获取或设置与此角色关联的用户。
 	/// </summary>
-	public UserEntity UserEntity { get; set; }
+	public UserEntity UserEntity { get; set; } = null!;
 
 	/// <summary>
-	/// Creates a new instance of the <see cref="UserRoleEntity"/> class with the specified name.
+	/// 使用指定名称创建 <see cref="UserRoleEntity"/> 类的新实例。
 	/// </summary>
-	/// <param name="name">The name of the role.</param>
-	/// <returns>A new instance of the <see cref="UserRoleEntity"/> class.</returns>
+	/// <param name="name">角色的名称。</param>
+	/// <returns><see cref="UserRoleEntity"/> 类的新实例。</returns>
 	internal static UserRoleEntity Create(string name)
 	{
 		name = name.Trim().ToLowerInvariant();

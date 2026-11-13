@@ -20,7 +20,7 @@ public class RepositoryModule : ModuleContextBase
 	/// </param>
 	public override void ConfigureServices(ServiceConfigurationContext context)
 	{
-		// Registers the repository context provider into the DI container.
+		// 将仓储上下文提供程序注册到依赖注入容器中。
 		context.Services.AddContextProvider();
 	}
 }

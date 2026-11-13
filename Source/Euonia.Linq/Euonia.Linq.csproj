@@ -8,14 +8,6 @@
         <PackageTags>euonia, linq, specification, expression, predicate, queryable</PackageTags>
     </PropertyGroup>
 
-    <PropertyGroup>
-        <TargetFrameworks>netstandard2.1;$(TargetFrameworks)</TargetFrameworks>
-    </PropertyGroup>
-
-    <PropertyGroup Condition="$(TargetFramework.Contains('netstandard'))">
-        <LangVersion>latest</LangVersion>
-    </PropertyGroup>
-
     <ItemGroup>
         <ProjectReference Include="..\Euonia.Core\Euonia.Core.csproj" />
     </ItemGroup>
@@ -33,6 +25,14 @@
             <Generator>ResXFileCodeGenerator</Generator>
             <LastGenOutput>Resources.Designer.cs</LastGenOutput>
         </EmbeddedResource>
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
     </ItemGroup>
 
 </Project>

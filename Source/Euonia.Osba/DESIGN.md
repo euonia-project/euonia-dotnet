@@ -1,6 +1,6 @@
 # Euonia.Osba 设计文档
 
-> 状态：与当前源码同步（`2026.4.6` 版本线）
+> 状态：与当前源码同步（`2026.4.7` 版本线）
 > 范围：对象模型、规则、工厂、执行器、权限边界、性能与公共 API 兼容性
 > 配套文档：[`README.md`](README.md)（使用与文件结构）、[`SAMPLE.md`](SAMPLE.md)（端到端示例）、[`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)（权限设计）
 
@@ -303,8 +303,11 @@ None → New / Changed / Deleted → None
 
 ### 5.1 规则类型
 
-- `RuleBase`：规则基类，生成 `rule://命名空间.类型名/属性名` 名称。
-- `CommonRule.Required` / `Regular` / `Lambda`：常用规则。
+- `RuleBase`：通用规则基类，生成 `rule://命名空间.类型名` 名称。
+- `ObjectRuleBase`：对象级规则基类，实现 `IObjectRule`，不暴露 `Property`。
+- `PropertyRuleBase`：属性级规则基类，实现 `IPropertyRule`，`Property` 保证非空，名称包含属性名。
+- `IObjectRule` / `IPropertyRule`：对象级 / 属性级规则契约，供规则管理器分类。
+- `CommonRule.Required` / `Regular` / `Lambda`：常用属性级规则。
 - `DataAnnotationRule`：把 DataAnnotations 转成规则。
 - `ExecuteOnStateAttribute`：规则只在特定编辑状态下执行。
 - 属性级 / 对象级规则：属性级在属性变更或保存前检查；对象级在保存/执行前检查。

@@ -1,18 +1,18 @@
 ﻿namespace Nerosoft.Euonia.Caching;
 
 /// <summary>
-/// Class CacheKey.
-/// Implements the <see cref="System.Tuple{Type, Type, Type}" />
+/// <see cref="CacheKey"/> 类。
+/// 实现 <see cref="System.Tuple{Type, Type, Type}" />。
 /// </summary>
 /// <seealso cref="System.Tuple{Type, Type, Type}" />
 internal class CacheKey : Tuple<Type, Type, Type>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="CacheKey"/> class.
+    /// 初始化 <see cref="CacheKey"/> 类的新实例。
     /// </summary>
-    /// <param name="component">The component.</param>
-    /// <param name="key">The key.</param>
-    /// <param name="result">The result.</param>
+    /// <param name="component">组件。</param>
+    /// <param name="key">键。</param>
+    /// <param name="result">结果。</param>
     public CacheKey(Type component, Type key, Type result)
         : base(component, key, result)
     {
