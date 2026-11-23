@@ -67,7 +67,8 @@ public sealed class OrderService(IRepository<AppDbContext, Order, long> reposito
 - **统一注册**：`AddEfCoreRepository` 注册 `DbContext` 与开放式泛型仓储，并注册 `UnitOfWorkContextFactory`。
 - **连接串解析**：`AddDataContextFactory<TContext>` 按名称、上下文类型名、`Default`、解析器与代码默认值依次解析。
 - **工作单元**：`UnitOfWorkContext` / `UnitOfWorkContextFactory` 在事务性工作单元中复用上下文并开启事务。
-- **值转换与生成**：`UniversalTimeConverter`、`SnowflakeIdValueGenerator`、`GuidVersion7ValueGenerator`、`UlidValueGenerator` 等。
+- **值转换与生成**：`UniversalTimeConverter`、`SnowflakeIdValueGenerator`、`GuidVersion7ValueGenerator`、`UlidValueGenerator`、`EpochTimestampGenerator` 等。
+- **实体条目扩展**：`EntityEntryExtensions.TrySetProperty` 在属性存在时设置当前值。
 - **查询扩展**：`Include` / `IncludeIf` / `Tracking` / `Attach`（EF Core 专用）。
 - **多租户**：`MultiTenantDataContextBase<TContext>`、`TenantConnectionStringResolver<TContext>` 等。
 
@@ -154,6 +155,8 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 | `ConnectionConfigurator` | `(DbContextOptionsBuilder, string) -> DbContextOptionsBuilder` 委托 |
 | `DataContextExtensions` | `GetTableName`、`GetForeignKey`、`SetTombstoneQueryFilter` |
 | `RepositoryExtensions` | EF Core 专用 `Include` / `IncludeIf` / `Tracking` / `Attach` |
+| `EntityEntryExtensions.TrySetProperty` | 属性存在时设置实体条目的当前值 |
+| `EpochTimestampGenerator` | 为 `long` 属性生成毫秒级 Unix 时间戳 |
 | `UniversalTimeConverter` / `SnowflakeIdValueGenerator` / `GuidVersion7ValueGenerator` / `UlidValueGenerator` | 值转换与值生成器 |
 
 ## 注意事项 / 限制

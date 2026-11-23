@@ -12,6 +12,10 @@
 - **新增**：`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 `Cryptography.AES`/`DES`/`SHA`/`MD5`/`Base64`/`RSA`、`PasswordComplexity`/`PasswordGenerator`、`RandomUtility`。
 - **安全说明**：AES/DES 使用 ECB + PKCS7，ECB 不隐藏明文模式；MD5 不具备抗碰撞性。新数据应使用带随机 IV 的 AES 与 SHA-256。
 
+### 数据访问（Repository）
+
+- **新增**：`Euonia.Repository.EfCore` 增加 `EntityEntryExtensions.TrySetProperty` 与 `EpochTimestampGenerator`。
+
 ### 全库
 
 - **目标框架**：移除 `netstandard2.1` 支持；当前 Source 库项目面向 `net10.0` / `net11.0`，测试与示例项目面向 `net11.0`。删除相关条件编译分支、仅 netstandard 使用的包引用与 `ArgumentAssert` 兼容 polyfill（改用 `ArgumentNullException.ThrowIfNull`）。

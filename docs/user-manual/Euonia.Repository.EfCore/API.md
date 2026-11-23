@@ -27,7 +27,8 @@
 | `RepositoryExtensions.Tracking` | 切换 `AsTracking` / `AsNoTracking` | `tracking=true` |
 | `RepositoryExtensions.Attach` | 附加已存在实体 | 上下文必须是 `DbContext` |
 | `UniversalTimeConverter` | 统一 UTC 时间转换 | 值转换器 |
-| `SnowflakeIdValueGenerator` / `GuidVersion7ValueGenerator` / `UlidValueGenerator` | 值生成器 | 生成主键 |
+| `SnowflakeIdValueGenerator` / `GuidVersion7ValueGenerator` / `UlidValueGenerator` / `EpochTimestampGenerator` | 值生成器 | 生成主键或时间戳 |
+| `EntityEntryExtensions.TrySetProperty` | 属性存在时设置 `EntityEntry` 当前值 | 属性不存在时不操作 |
 | `MultiTenantDataContextBase<TContext>` / `TenantConnectionStringResolver<TContext>` | 多租户上下文与连接串 | 依赖 `Euonia.Tenancy` |
 
 ### 配置：ConnectionStrings

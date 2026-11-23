@@ -6,7 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 程序集 | Euonia.Repository.EfCore |
-| 公共类型 | 22 |
+| 公共类型 | 24 |
 | 命名空间 | 2 |
 
 ## 命名空间 Microsoft.Extensions.DependencyInjection
@@ -92,6 +92,20 @@
 - IQueryable<TEntity> Queryable()
 - System.Threading.Tasks.Task UpdateAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task UpdateAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
+
+### Nerosoft.Euonia.Repository.EfCore.EntityEntryExtensions
+
+**类型**：static class
+
+- static void TrySetProperty<TProperty>(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry, System.String propertyName, TProperty value)
+
+### Nerosoft.Euonia.Repository.EfCore.EpochTimestampGenerator
+
+**类型**：class
+基类 Microsoft.EntityFrameworkCore.ValueGeneration.ValueGenerator<System.Int64>
+
+- System.Boolean GeneratesTemporaryValues { get; }
+- System.Int64 Next(Microsoft.EntityFrameworkCore.ChangeTracking.EntityEntry entry)
 
 ### Nerosoft.Euonia.Repository.EfCore.GuidVersion7ValueGenerator
 
