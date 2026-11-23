@@ -12,6 +12,11 @@
 - **新增**：`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 `Cryptography.AES`/`DES`/`SHA`/`MD5`/`Base64`/`RSA`、`PasswordComplexity`/`PasswordGenerator`、`RandomUtility`。
 - **安全说明**：AES/DES 使用 ECB + PKCS7，ECB 不隐藏明文模式；MD5 不具备抗碰撞性。新数据应使用带随机 IV 的 AES 与 SHA-256。
 
+### 应用层（Application）
+
+- **新增**：`RequestInfoBehavior` 将请求追踪标识、IP、User-Agent、Referer 与客户端名称/版本写入消息元数据，并在 `ApplicationModule` 中默认注册。
+- **新增**：`DomainMessageConvention` 按 `ICommand` / `IEvent` / `IRequest<>` 将领域消息分类为单播、多播或请求。
+
 ### 数据访问（Repository）
 
 - **新增**：`Euonia.Repository.EfCore` 的 `DataContextBase` 增加自动审计与软删除（按四个审计接口写入，操作人字段名可重写，默认 `CreatedBy` / `UpdatedBy` / `DeletedBy`），并增加 `EntityEntryExtensions.TrySetProperty`、`EpochTimestampGenerator`、`EfCoreRepository.SetOf<T>` / `LookupAsync`。

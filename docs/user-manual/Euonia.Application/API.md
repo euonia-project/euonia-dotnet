@@ -15,6 +15,8 @@
 | 类型/成员 | 说明 | 关键参数/默认值 |
 |-----------|------|-----------------|
 | `ApplicationModule` | 注册全部拦截器、管道行为、presenter 与用例执行器 | 通过 `[DependsOn]` 引入 |
+| `RequestInfoBehavior<TMessage,TResponse>` | 将请求追踪标识、IP、User-Agent、Referer 与客户端名称/版本写入消息元数据 | 从 `IRequestContextAccessor` 读取；无上下文时直接放行 |
+| `DomainMessageConvention` | 按 `ICommand` / `IEvent` / `IRequest<>` 分类领域消息 | 需在总线配置中注册 |
 | `ServiceContextBase` | 应用服务上下文基类，默认开启自动注册 | `Assembly` 默认上下文类型程序集 |
 | `Register<TContext>()` | 注册上下文并扫描应用服务/管道行为 | 不注册用例 |
 | `IApplicationService` | 应用服务标记接口 | 继承 `IHasLazyServiceProvider` |
