@@ -1,8 +1,10 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.RegularExpressions;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -102,63 +104,63 @@ public static class ServiceCollectionExtensions
 			}
 
 			services.AddAuthentication(options =>
-			        {
-				        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-			        })
-			        .AddJwtBearer(options =>
-			        {
-				        options.Authority = bearerOptions.Authority;
-				        options.RequireHttpsMetadata = bearerOptions.RequireHttpsMetadata;
-				        options.Audience = bearerOptions.Audience;
+					{
+						options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+					})
+					.AddJwtBearer(options =>
+					{
+						options.Authority = bearerOptions.Authority;
+						options.RequireHttpsMetadata = bearerOptions.RequireHttpsMetadata;
+						options.Audience = bearerOptions.Audience;
 
-				        options.Events = new JwtBearerEvents()
-				        {
-					        OnMessageReceived = context =>
-					        {
-						        var authorizationValue = context.Request.Headers[HeaderNames.Authorization].ToString();
+						options.Events = new JwtBearerEvents()
+						{
+							OnMessageReceived = context =>
+							{
+								var authorizationValue = context.Request.Headers[HeaderNames.Authorization].ToString();
 
-						        var token = Regex.Match(authorizationValue, @"^Bearer\s+(.*)").Groups[1].Value;
+								var token = Regex.Match(authorizationValue, @"^Bearer\s+(.*)").Groups[1].Value;
 
-						        context.Token = token;
-						        return Task.CompletedTask;
-					        },
-					        OnChallenge = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Error);
-						        Console.WriteLine(context.ErrorDescription);
-						        return Task.CompletedTask;
-					        },
-					        OnAuthenticationFailed = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        System.Diagnostics.Debug.WriteLine(context.Exception);
-						        return Task.CompletedTask;
-					        },
-					        OnForbidden = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        return Task.CompletedTask;
-					        },
-					        OnTokenValidated = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        return Task.CompletedTask;
-					        }
-				        };
-				        options.TokenValidationParameters = new TokenValidationParameters
-				        {
-					        NameClaimType = bearerOptions.NameClaimType,
-					        RoleClaimType = bearerOptions.RoleClaimType,
-					        ValidIssuers = bearerOptions.Issuer,
-					        //ValidAudience = "api",
-					        ValidateIssuer = bearerOptions.ValidateIssuer,
-					        ValidateAudience = bearerOptions.ValidateAudience,
-					        IssuerSigningKey = new SymmetricSecurityKey(key)
-				        };
-			        });
+								context.Token = token;
+								return Task.CompletedTask;
+							},
+							OnChallenge = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Error);
+								Console.WriteLine(context.ErrorDescription);
+								return Task.CompletedTask;
+							},
+							OnAuthenticationFailed = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								System.Diagnostics.Debug.WriteLine(context.Exception);
+								return Task.CompletedTask;
+							},
+							OnForbidden = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								return Task.CompletedTask;
+							},
+							OnTokenValidated = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								return Task.CompletedTask;
+							}
+						};
+						options.TokenValidationParameters = new TokenValidationParameters
+						{
+							NameClaimType = bearerOptions.NameClaimType,
+							RoleClaimType = bearerOptions.RoleClaimType,
+							ValidIssuers = bearerOptions.Issuer,
+							//ValidAudience = "api",
+							ValidateIssuer = bearerOptions.ValidateIssuer,
+							ValidateAudience = bearerOptions.ValidateAudience,
+							IssuerSigningKey = new SymmetricSecurityKey(key)
+						};
+					});
 			return services;
 		}
 
@@ -217,6 +219,38 @@ public static class ServiceCollectionExtensions
 		public IWebHostEnvironment GetHostingEnvironment()
 		{
 			return services.GetSingletonInstance<IWebHostEnvironment>();
+		}
+
+		/// <summary>
+		/// 注册权限判定所需的全部服务，并声明本应用没有权限模型与权限声明。
+		/// </summary>
+		/// <returns>传入的服务集合，以便链式调用。</returns>
+		public IServiceCollection AddPermissionGuard()
+		{
+			return services.AddPermissionGuard(static options => options.NoModels());
+		}
+
+		/// <summary>
+		/// 注册权限判定所需的全部服务，并按给定配置初始化权限体系。
+		/// </summary>
+		/// <param name="configure">权限体系配置回调。</param>
+		/// <returns>传入的服务集合，以便链式调用。</returns>
+		public IServiceCollection AddPermissionGuard(Action<PermissionOptions> configure)
+		{
+			ArgumentNullException.ThrowIfNull(services);
+			ArgumentNullException.ThrowIfNull(configure);
+
+			services.AddHttpContextAccessor();
+			services.TryAddScoped(provider => provider.GetRequiredService<IHttpContextAccessor>().HttpContext?.User
+											   ?? new ClaimsPrincipal(new ClaimsIdentity()));
+			services.AddUserPrincipal();
+
+			services.AddAuthorization();
+			services.TryAddSingleton<DefaultAuthorizationPolicyProvider>();
+			services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+			services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, PermissionAuthorizationHandler>());
+
+			return services.AddPermission(configure);
 		}
 	}
 }
