@@ -118,6 +118,7 @@ public void Configure(IApplicationBuilder app)
 - **模块集成**：`[DependsOn(typeof(HostingModule))]` 注册执行上下文、请求上下文访问器、用户主体与 `IApplicationBuilder` 访问器。
 - **认证**：`AddJwtAuthentication(...)` 注册 JWT Bearer；`AddIdentityServerAuthentication(...)` 同时注册 JWT 与 OAuth2 内省子方案。
 - **授权**：`[AuthorizeRoles]`、`AddScopePolicy(...)`、`RequireScope(...)` 与 `ScopePolicy.Create(...)`。
+- **权限控制**：`AddPermissionGuard(...)` 注册权限策略提供程序与授权处理器；`[RequiresPermission(...)]` 将权限码映射为动态策略，按 `IScopeGuard` 解析的权限集合判定。
 - **请求管道**：`InitializeApplication()` 触发模块初始化；`UseCulture()`、`UseJwt()`、`UseDefaultRequestContextAccessor()` 提供区域性、认证回退与请求上下文安装。
 - **平台中间件扩展**：`UseTenancy()`、`UseAuditing()`、`UseEuoniaTelemetry()` 按对应 `*Options.Enabled` 决定是否安装；`UseExecutionContext()` 总是安装。
 
@@ -134,6 +135,9 @@ public void Configure(IApplicationBuilder app)
 | `AddUserPrincipal(...)` | 注册当前请求的 `UserPrincipal` |
 | `AddScopePolicy(...)` / `RequireScope(...)` | 基于 scope 的授权策略 |
 | `AuthorizeRolesAttribute` | 基于角色的授权特性 |
+| `AddPermissionGuard(...)` | 注册权限策略提供程序、授权处理器与权限体系 | 无参重载等价于 `AddPermissionGuard(p => p.NoModels())` |
+| `RequiresPermissionAttribute` | 声明控制器/方法的权限码 | 多个权限码为“任一满足” |
+| `PermissionPolicyProvider` / `PermissionAuthorizationHandler` | 权限策略还原与 `IScopeGuard` 判定 | 由 `AddPermissionGuard` 注册 |
 | `UseTenancy()` / `UseAuditing()` / `UseEuoniaTelemetry()` / `UseExecutionContext()` | 租户、审计、遥测与执行上下文中间件 |
 | `TenantHttpKeys` | 租户上下文、失败代码与候选值的 `HttpContext.Items` 键 |
 

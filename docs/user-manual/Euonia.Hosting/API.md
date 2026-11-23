@@ -28,6 +28,9 @@
 | `AddScopePolicy(policyName, params string[] scopes)` | 注册基于 scope 的授权策略 | scope 满足其一即可 |
 | `RequireScope(params string[] scopes)` | 给 `AuthorizationPolicyBuilder` 添加 scope 要求 | 用于自定义策略 |
 | `[AuthorizeRoles(params string[] roles)]` | 基于角色的授权特性 | 多角色逗号连接 |
+| `AddPermissionGuard(Action<PermissionOptions>?)` | 注册权限策略提供程序、授权处理器并调用 `AddPermission` | 无参重载使用 `NoModels()` |
+| `[RequiresPermission(params string[] permissions)]` | 声明操作所需权限码 | 策略名前缀 `Permission:`，多码为“任一满足” |
+| `PermissionPolicyProvider` / `PermissionAuthorizationHandler` | 权限策略提供程序与判定处理器 | 依赖 `IScopeGuard` 与 `IHttpContextAccessor` |
 | `InitializeApplication()` | 设置 `IApplicationBuilder` 并执行模块初始化 | 放在管道最前面 |
 | `UseTenancy()` / `UseAuditing()` / `UseEuoniaTelemetry()` | 按选项启用租户/审计/遥测中间件 | 选项未启用时为空操作 |
 | `UseExecutionContext()` | 安装执行上下文中间件 | 总是安装，放在认证之后 |

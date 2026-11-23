@@ -114,6 +114,26 @@ public sealed class OrdersController : ControllerBase
 }
 ```
 
+### 4.1 权限控制
+
+在模块中注册权限策略提供程序与授权处理器：
+
+```csharp
+using Microsoft.AspNetCore.Authorization;
+
+context.Services.AddPermissionGuard();
+```
+
+控制器用 `[RequiresPermission]` 声明权限码；权限码由宿主注册的 `IScopeSubjectResolver` 经 `IScopeGuard` 解析，不写入 JWT：
+
+```csharp
+[HttpGet]
+[RequiresPermission("orders.read", "orders.manage")]
+public IActionResult Get() => Ok(new[] { "order-1" });
+```
+
+多个权限码为“任一满足”；类与方法同时标注时为“同时满足”。未认证返回 401，认证但无权限返回 403。
+
 ### 5. 运行与验证
 
 ```bash

@@ -6,7 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 程序集 | Euonia.Hosting |
-| 公共类型 | 25 |
+| 公共类型 | 30 |
 | 命名空间 | 5 |
 
 ## 命名空间 Microsoft.AspNetCore.Authentication
@@ -115,6 +115,41 @@
 
 - static Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder RequireScope(Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder builder, System.String[] scope)
 
+### Microsoft.AspNetCore.Authorization.PermissionAuthorizationHandler
+
+**类型**：class
+基类 Microsoft.AspNetCore.Authorization.AuthorizationHandler<Microsoft.AspNetCore.Authorization.PermissionRequirement>
+
+- PermissionAuthorizationHandler(Nerosoft.Euonia.Security.IScopeGuard guard, Microsoft.AspNetCore.Http.IHttpContextAccessor accessor)
+
+### Microsoft.AspNetCore.Authorization.PermissionPolicyProvider
+
+**类型**：class
+接口 Microsoft.AspNetCore.Authorization.IAuthorizationPolicyProvider
+
+- PermissionPolicyProvider(Microsoft.AspNetCore.Authorization.DefaultAuthorizationPolicyProvider fallback)
+- Task<Microsoft.AspNetCore.Authorization.AuthorizationPolicy> GetDefaultPolicyAsync()
+- Task<Microsoft.AspNetCore.Authorization.AuthorizationPolicy> GetFallbackPolicyAsync()
+- Task<Microsoft.AspNetCore.Authorization.AuthorizationPolicy> GetPolicyAsync(System.String policyName)
+
+### Microsoft.AspNetCore.Authorization.PermissionRequirement
+
+**类型**：class
+接口 Microsoft.AspNetCore.Authorization.IAuthorizationRequirement
+
+- PermissionRequirement(System.String[] permissions)
+- System.String[] Permissions { get; }
+
+### Microsoft.AspNetCore.Authorization.RequiresPermissionAttribute
+
+**类型**：class
+基类 Microsoft.AspNetCore.Authorization.AuthorizeAttribute
+
+- RequiresPermissionAttribute(System.String[] permissions)
+- System.String[] Permissions { get; }
+- static const System.String PolicyPrefix = Permission:
+- static const System.String PolicySeparator = |
+
 ### Microsoft.AspNetCore.Authorization.AuthorizeRolesAttribute
 
 **类型**：class
@@ -158,6 +193,13 @@
 - static Microsoft.AspNetCore.Builder.IApplicationBuilder UseJwt(Microsoft.AspNetCore.Builder.IApplicationBuilder app, System.String schema = "Bearer")
 
 ## 命名空间 Microsoft.Extensions.DependencyInjection
+
+### Microsoft.Extensions.DependencyInjection.PermissionServiceCollectionExtensions
+
+**类型**：static class
+
+- static Microsoft.Extensions.DependencyInjection.IServiceCollection AddPermissionGuard(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
+- static Microsoft.Extensions.DependencyInjection.IServiceCollection AddPermissionGuard(Microsoft.Extensions.DependencyInjection.IServiceCollection services, System.Action<Nerosoft.Euonia.Security.PermissionOptions> configure)
 
 ### Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions
 
