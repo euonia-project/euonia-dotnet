@@ -1,0 +1,14 @@
+flowchart LR
+    PA["Order 类型级<br/>order:read"]
+    UM["UpdateAsync<br/>方法级 order:update"]
+    AM["ArchiveAsync<br/>方法级 order:archive<br/>（非工厂入口，示意）"]
+    UR["update 路径要求<br/>order:read + order:update"]
+    AR["archive 路径要求（示意）<br/>order:read + order:archive"]
+    N["方法级只对被调用方法生效<br/>兄弟方法不叠加"]
+
+    PA --> UR
+    UM --> UR
+    PA -.->|"示意"| AR
+    AM -.->|"若该方法也经工厂调用（示意）"| AR
+    UR -.-> N
+    AR -.-> N

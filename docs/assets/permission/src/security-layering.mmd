@@ -1,0 +1,11 @@
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
+flowchart LR
+    Host["宿主应用<br/>组合根接线"]
+    Osba["Euonia.Osba<br/>上层业务对象运行时<br/>参考宿主（可选）"]
+    Security["Euonia.Security<br/>底层能力包 · 权限策略引擎"]
+    Core["Euonia.Core<br/>权限契约（共同依赖）"]
+
+    Host --> Osba
+    Host --> Security
+    Osba -->|"引用 Core 等基础包"| Core
+    Security -->|"只引用 Core"| Core

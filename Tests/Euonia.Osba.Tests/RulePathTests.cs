@@ -98,7 +98,7 @@ public class RulePathTests
 	[Fact]
 	public async Task SaveAsync_ObjectRuleFails_ShouldStillThrow_ForEditablePath()
 	{
-		// 可编辑路径的行为不得因本次重构而改变
+		// 可编辑路径的行为必须保持不变
 		using var scope = RuleTestHarness.CreateScope(out var provider);
 		var editable = RuleTestHarness.Create<RuleFailEditable>(provider);
 		editable.MarkAsNew();

@@ -690,7 +690,14 @@ _无公共成员。_
 **类型**：class
 ### Nerosoft.Euonia.Osba.ObjectPermissionCodeSource
 
-**类型**：class
+**类型**：class（**已废弃**：`[Obsolete]` 兼容层，按工厂约定扫描的 `IPermissionCodeSource` 兼容实现）
+接口 Nerosoft.Euonia.Security.IPermissionCodeSource
+
+- static Nerosoft.Euonia.Osba.ObjectPermissionCodeSource Instance { get; }
+- IReadOnlyList<System.String> AllOperations { get; }
+- IReadOnlyCollection<System.String> CodesFor(System.Type type, System.String operation)
+- IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.String operation)
+
 ### Nerosoft.Euonia.Osba.ObjectReflector
 
 **类型**：class

@@ -2,8 +2,8 @@
 
 > 面向**维护者与评审者**的设计决策记录。使用说明见 [README.md](README.md)。
 
-本文记录「为什么这样设计」，以及**被否决的方案**与**已知边界**。每条决策都给出它所解决的问题；
-若没有那个问题，该决策就不成立，可以重新评估。
+本文记录当前架构的决策、已知边界与回归护栏。每条决策都给出它所解决的问题；若没有那个问题，
+该决策就不成立，可以重新评估。
 
 ---
 
@@ -13,14 +13,14 @@
 （`AddPermission` 这一注册入口所需），**不拦截任何调用**：它回答「能不能」，不回答「在哪里裁决」。
 强制执行点由使用方决定。
 
-**为什么要有两处接口**：权限要按「资源当前代表哪个业务操作」选策略，而
+**为什么要有这些接口**：权限要按「资源当前代表哪个业务操作」选策略，而
 「资源类型 → 操作」的对应关系因框架而异（同一类型在不同框架下可能代表不同操作，
-也可能一个操作对应多个方法）。若引擎直接去猜，就等于把某个宿主框架的类型体系写进引擎，
-使引擎无法独立使用。因此这些判断定义成接口（契约都在 Core）：
+也可能一个操作对应多个方法）；权限码本身也可能不在代码里。若引擎直接去猜，就等于把某个宿主框架的
+类型体系写进引擎，使引擎无法独立使用。因此这些判断定义成接口（契约都在 Core）：
 
 | 接口 | 回答的问题 | 缺席时的行为 |
 |---|---|---|
-| `IPermissionCodeSource` | 「哪个方法对应哪个业务操作」 | 扫不到方法级权限码，故不存在方法级声明 |
+| `IPermissionRequirementSource` | 「这个类型、这个将被调用的方法要求哪些权限码与角色」 | **不缺席也能工作**：闸门内建「读声明」路径；只有码来自数据时才需要实现（§1.10） |
 | `IObjectOperationResolver` | 「这个资源实例当前代表哪个操作」 | 未显式给出操作的判定按默认策略（`ScopeKeys.Default`）判定 |
 | `IScopeSubjectResolver` | 「当前用户的授权值是什么」 | 已声明模型或权限码时启动期报错 |
 
@@ -56,8 +56,8 @@ graph TD
     end
 
     subgraph B["② 装配与启动"]
-        B1["注册<br/>ScopeModelRegistry.Create：程序集扫描<br/>Build() 是唯一校验入口"]
-        B2["启动期校验<br/>模型级：注册期 Build（校验项见 README §5.6），一次报全 ScopeModelValidationException.Diagnostics<br/>缺解析器 / 缺用户主体：首次解析 IScopeGuard 时的启动校验"]
+        Reg["注册<br/>ScopeModelRegistry.Create：程序集扫描<br/>Build() 是唯一校验入口"]
+        Startup["启动期校验<br/>模型级：注册期 Build（校验项见 README §5.6），一次报全 ScopeModelValidationException.Diagnostics<br/>缺解析器 / 缺用户主体：首次解析 IScopeGuard 时的启动校验"]
     end
 
     subgraph C["③ 请求作用域"]
@@ -85,13 +85,13 @@ graph TD
     end
 
     A1 --> D4
-    A2 --> B1
-    A3 --> B2
+    A2 --> Reg
+    A3 --> Startup
     A3 --> C2
     A3 --> F2
 
-    B1 --> B2
-    B1 --> C2
+    Reg --> Startup
+    Reg --> C2
     C1 --> C2
     C2 --> D1
     C2 --> D2
@@ -107,8 +107,8 @@ graph TD
 
 读法（自上而下、自左向右）：
 
-- **① 声明层**：能预定义的都写在这里。操作权限点（`PermissionAttribute`）与数据权限模型
-  （`ScopeModel<T>`）由程序集扫描发现；授权数据来源 `IScopeSubjectResolver`
+- **① 声明层**：能预定义的都写在这里。权限码就写在 `PermissionAttribute` 上——发现 = 读声明
+  （§1.10），`ScopeModel<T>` 的模型与策略同样由声明承载；授权数据来源 `IScopeSubjectResolver`
   由使用方实现，是**唯一**的数据入口。
 - **② 装配与启动**：扫描 + 注册期校验一体完成，配置错误全部 fail-fast
   （保留前缀 §1.6、声明冲突 §1.7；启动期校验清单见 README §5.6）。
@@ -118,7 +118,7 @@ graph TD
 - **④ 判定引擎**：操作权限判定走 `IPermissionChecker`（码来自授权数据，§1.2）；
   数据权限把策略编译成 **一对表达式**（§1.3/§1.4），策略与授予键按授权标识的声明选取（§1.7）。
 - **⑤ 判定出口**：读侧 `guard.Apply` 下推成 SQL `WHERE`（绝不烘进 EF 全局过滤器，
-  该做法已被否决，见第 3 章）；单行 `Allows`/`Explain` 与查询共用同一棵表达式，
+  原因见 §1.3）；单行 `Allows`/`Explain` 与查询共用同一棵表达式，
   结论不可能漂移。**本库不拦截任何调用**——在何处、以何种异常形态强制，是使用方的决定。
 - **⑥ 外部世界**：授权数据与数据库都是使用方的，框架只消费解析结果与表达式树。
 
@@ -137,7 +137,7 @@ graph TD
 
 **收益**：行级权限直接获得表达式引擎的全部能力——可下推、可 deny、可审计、可组合。
 
-**被否决的方案**：
+**替代方案与取舍**：
 
 | 方案 | 否决理由 |
 |---|---|
@@ -292,7 +292,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 **代价**：单行判定要求对象图完整（§2.5）；取值形状只支持一种（见下）。
 
-**被否决的方案**：
+**替代方案与取舍**：
 
 | 方案 | 否决理由 |
 |---|---|
@@ -304,69 +304,27 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ---
 
-### 1.10 规则以「配置」形态声明，但校验仍在注册处
+### 1.10 要求来源与判定坐标
 
-**问题**：若注册调用要求使用方先**构造**一个来源对象（`OperationCodeSource.Create()…Build()`）再传进来，
-会带来两个实际后果：
+**问题**：权限要求可能写在声明里，也可能来自数据（数据库、配置表、既有鉴权系统）；
+判定还需要知道「这一次调用的是哪个方法」，否则同类型下的方法级要求无法隔离。
 
-1. 它看起来像「注册引擎服务」，于是被当成一次性调用；而它的载荷其实是**业务配置**
-   （「哪个方法对应哪个操作」）——配置与注册绑在一起，配置本身却无处安放；
-2. 模块化应用里，每个模块想贡献自己的操作入口约定时，只能「自己造一个来源」或「共享一个来源实例」，
-   README §3.2 的合并语义因此显得多余。
+**决策**：
 
-**决策**：规则成为注册调用**接受的配置**——`AddPermission(o => o.Scan(assemblies).OnAttributeOrName(…))`（回调）
-或回调内 `Source(...)` 指定自定义 `IPermissionCodeSource`。两种载体产出**同一套规则**
-（同一份编译、同一份注册期校验、同一套合并），可混用并取并集。
+- **判定坐标是「类型 + 将被调用的方法」**：类型级要求对该类型的所有方法生效；方法级要求只对被调用的
+  那个方法生效。操作（`operation`）只是数据权限的授权标识，不参与权限码发现。
+- **发现 = 读声明**：`PermissionRequirements` 直接读类型与方法上的 `PermissionAttribute`，按类型 /
+  方法缓存；读取时裁剪权限码、复制角色数组并去重。
+- **来源是增量**：`IPermissionRequirementSource` 与声明取并集，多个来源之间也取并集，按「码 + 角色」
+  去重并保持首次出现顺序。
+- **方法上下文由宿主提供**：宿主工厂在调用前解析出 `MethodInfo` 并交给闸门；闸门据此取要求，再逐条
+  交给 `IPermissionChecker`。
 
-**收益**：
+**收益**：新增权限码或新增操作不需要改装配；方法级隔离由「只读被调用的那一个方法」结构性保证；
+数据驱动的码可以在不改声明的前提下接入。
 
-- 一次注册调用即可「声明规则 + 注册引擎」，模块各自贡献并自动合并；
-- **配置错误仍在注册处抛出**：回调在注册处编译，不推迟到容器构建或首次判定；
-- 载体选择成为显式取舍：规则放代码（推荐），或放别处（自定义来源）。
-
-**被否决的方案**：
-
-| 方案 | 否决理由 |
-|---|---|
-| `services.ConfigurePermissionRules(...)` 之类的分离式注册 | 配置可能被遗忘（注册了引擎却没声明规则），且校验被推迟到容器构建——本库的既有性质是「配置错误在注册处抛出」，这条不能为了形态好看而放弃 |
-| `IOptions<T>` / `Configure<T>` 延迟绑定 | 同上：容器构建期才报错；且多次调用的合并顺序不再由调用方决定 |
-| 保留一个接收「构造好的来源对象」的 `AddPermission` 重载 | 看似是「规则既不在代码也不在配置里」（例如来自数据库）的唯一出口；实际上回调内的 `Source(...)` 已覆盖同一出口，多留一个重载只会让来源有两种形态、合并语义多一条分叉 |
-| 配置节载体（`AddPermission(configuration.GetSection(…), assemblies)` 与 `ConfigurationRuleBinder`） | 它把鉴权口径搬进可被部署改动的地方——把某个方法从「需要审批码」改成「无码」只是一次配置改动；表达力也小于回调（只能承载类型名 + 方法名），且会给本库引入 `Microsoft.Extensions.Configuration.Abstractions` 依赖。规则来自配置的宿主应实现 `IPermissionCodeSource` 自定义来源：出口保留，形态统一 |
-
----
-
-### 1.11 运行期判定与注册期校验用同一个来源
-
-**问题**：宿主框架的运行期判定（操作权限闸门、数据权限的策略选取）若直接使用它自己的约定来源，
-而注册期校验用的是容器里注册的 `IPermissionCodeSource`（宿主补充的规则都在里面），两者就会分叉——
-后果是：宿主通过回调 / 自定义来源补充的规则**只在启动期生效**，被它识别为入口的方法上的
-`[Permission]` 不进判定、为该码声明的行级策略不生效、判定退回默认策略，而启动期**不报错**。
-表现为「闸门比配置写的更宽松」，正是本库最不能接受的一类失败。
-
-**决策**：运行期与注册期问**同一个来源**。为此：
-
-- 「要求」并入 `IPermissionCodeSource`（Core）：`RequirementsFor` 是它的成员，默认实现把权限码折算成
-  「有码、无角色」——把只给码的来源的码整个丢掉会让闸门比来源本身更宽松，而角色要求本就不在这类来源的
-  表达力之内（能表达角色的实现覆写它即可）；
-- 合并来源对每个成员取要求并去重，不再需要「能回答要求的来源」这类能力判定；
-- 宿主框架的运行期从容器解析该来源（宿主本身不引用引擎：契约在 Core，模型注册表由宿主用
-  `AddPermission` 注册），来源缺席或回答不了要求时回落到宿主自己的约定来源。
-
-**收益**：宿主的补充规则在运行期同样生效（与宿主自己的约定来源取并集）；
-注册期校验与操作权限闸门两处对「某操作解析到哪些要求」不可能得出不同答案。
-策略的选取则完全与来源无关——它按**授权标识**进行，授予键来自模型声明，没有去问来源的解析层。
-
-**回归护栏**：`Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing`——
-一旦宿主规则在运行期被忽略，该用例即报「没有抛出异常」而转红。
-
-**被否决的方案**：
-
-| 方案 | 否决理由 |
-|---|---|
-| 宿主的判定只查容器里的 `IPermissionCodeSource.CodesFor` | 它回答不了角色，会把「带角色要求」的规则降级成只看权限码 |
-| 两个来源各自查询、结果在调用点取并集 | 并集与去重会散落到每个调用点；「谁先谁后」成为新的分叉点，合并逻辑应当只有一处 |
-| 不修，只在文档里写清楚 | 这是一条 fail-open 的静默路径，与「配置写了却不生效」等价；文档不能替代修复 |
-
+**代价**：方法级要求只在提供方法上下文的闸门上生效；没有方法上下文的查询入口只能回答类型级与
+来源要求（§2.8）。
 ## 2. 已知边界与取舍
 
 这些是**有意接受**的限制，不是待办事项。使用方需要知道它们。
@@ -422,7 +380,7 @@ query            ≡ source.Where(Allow).Where(!Deny)
 
 ### 2.6 子表维度只有存在量词
 
-「子行**全部**命中」这类全称量词不支持（见 §1.9 被否决的方案）。
+「子行**全部**命中」这类全称量词不支持（见 §1.9）。
 需要这类语义时，应把它建模成另一个维度或另一个资源，而不是给策略语言加量词。
 
 ### 2.7 子表维度把关系表的写入口变成授权面
@@ -431,22 +389,16 @@ query            ≡ source.Where(Allow).Where(!Deny)
 否则「给自己加一行」就是一次提权。这是子表维度的固有性质，不是实现缺陷：
 它同时是收益（撤销即时生效、无需同步）与责任（写入面即授权面）。
 
----
+### 2.8 方法级要求只在提供方法上下文的闸门上生效
 
-## 3. 被否决的方案
+查询类入口（业务代码里的条件判断）没有「将被调用的方法」这一上下文，因此只能反映类型级与来源要求；
+方法级要求不会在查询里叠加。真正的拦截在闸门：它持有 `MethodInfo`，越过闸门就绕过了方法级要求。
+需要在某个方法级码上分支时，用 `IPermissionChecker.IsGranted("order:update")` 直接查询。
 
-| 方案 | 否决理由 |
-|---|---|
-| **EF 全局查询过滤器**（`HasQueryFilter`/`SetQueryFilter`）做读侧强制 | EF 的模型（含全局过滤器）**按 DbContext 类型缓存**，而 `Allow`/`Deny` 捕获了每用户不同的集合常量，一旦烘进缓存模型就会被跨请求复用——**数据泄漏**。本仓既有的 `SetTombstoneQueryFilter` 之所以安全，只是因为它过滤的是常量 `!IsDeleted` |
-| **通用表达式 DSL**（策略写成字符串再解析，类似 Rego） | 会引入解析器 + 求值器 + 翻译器三份实现，正是本设计要消灭的漂移源 |
-| **同步的解析器接口** | 解析器必然查库；同步签名会把同步 I/O 带进请求链路。用 `ValueTask` + 单次解析已足够 |
-| **引用 `Euonia.Linq` 复用表达式组合子** | 其承重的 `ParameterRebinder` 是 `internal`，外部用不上；且 `Source/` 下没有任何项目在用该组合子。为三个方法引入 ProjectReference 不划算，改为 25 行的内部参数替换 + body 层归并 |
-| **在注册服务的过程中直接检查解析器是否已注册** | 解析器通常在那之后才注册，在那里检查会误报。改为在注册时记录状态（内部的注册登记），由首次解析 `IScopeGuard` 时的启动校验检查 |
-| **保留一个读令牌声明的 `ClaimPermissionChecker`**（默认实现之外的备选） | 「读令牌」这条回退路径与「撤销必须立即生效」相悖：权限码固化在令牌里，过期前无法撤销。自定义需求由宿主自建 `IPermissionChecker` 承接即可，见 §1.2 |
+**代价**：把查询入口当安全边界的代码会低估要求——拦截始终在闸门。
 
 ---
-
-## 4. 回归护栏
+## 3. 回归护栏
 
 以下测试不是覆盖率填充，而是**钉住上面每一条决策**。改动若让它们转红，说明决策被无意推翻了：
 
@@ -455,33 +407,31 @@ query            ≡ source.Where(Allow).Where(!Deny)
 | `Pushdown_And_InMemoryEvaluation_ShouldAgree` | §1.3 单一真值来源 |
 | `Apply_ShouldProduceExpressionBasedWhere_NotEnumerableWhere` | §1.3 可下推（是表达式而非委托） |
 | `Any_WithDenyOnlyBranch_ShouldNotDegradeToAllowAll` | §1.4 `HasAllow` 不可省 |
-| `Any_OfOnlyDenyBranches_ShouldDenyEverything` | §1.4 fail-closed |
+| `Any_OfOnlyDenyBranches_ShouldDenyEverything` | §1.4 默认拒绝 |
 | `Deny_ShouldOverrideGrant_EvenInNestedAny` | §1.4 deny 上浮 |
 | `EmptySubjects_ShouldProduceConstantFalse_NotEmptyIn` | §1.4 不生成空 `IN ()` |
 | `RowLevel_SameUserSameType_DifferentRowsDifferentRights` | §1.1 行级权限 |
 | `RowLevel_CodeGrantShouldOverrideDefault_NotUnion` | §1.6 覆盖而非并集 |
 | `RevokedPermission_ShouldTakeEffectWithoutReissuingToken` | §1.2 撤销立即生效 |
 | `Permissions_ShouldComeFromResolver_NotClaims` | §1.2 权限码不来自令牌 |
-| `GuardResolution_ShouldFailWhenResolverMissing` | §3 启动期校验 |
+| `GuardResolution_ShouldFailWhenResolverMissing` | 启动期校验（见 README §3） |
 | `Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes` | §1.8 缓存失效不可被回滚（解析闸门串行化） |
 | `PolicySet_ShouldRejectReservedScopeKey` / `PolicySet_ShouldAllowFrameworkDefaultKeys` / `PolicySet_ShouldRejectDuplicateOperation` | §1.6 保留命名空间；§1.7 一个标识一个声明位 |
 | `Declared_Grant_Key_Should_Be_Addressable_As_An_Identifier` / `Identifier_And_Grant_Key_Should_Share_One_Namespace` / `For_Should_Declare_A_Code_As_Both_Identifier_And_Grant_Key` | §1.7 标识与授予键共用命名空间；按码声明等价于按操作声明并指定同名键 |
 | `AddPermission_Should_Key_Execute_From_Model_Declaration` / `_From_Operation_When_Model_Declares_None` / `_Not_Key_Declared_Operation_From_Other_Declarations` | §1.7 键随声明给出（未声明则以标识自身为键） |
 | `AddCode_Should_Reject_Reserved_Namespace` | §1.6 保留命名空间（授权数据这一侧同样不得携带保留码） |
-| `Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance` | §1.3 两个单行判定入口对同一实例结论一致；派生/代理实例不得 fail-open |
+| `Allows_And_AllowsObject_Should_Agree_For_Proxy_Instance` | §1.3 两个单行判定入口对同一实例结论一致；派生/代理实例不得静默放行 |
 | `MapMany_ShouldCompileTo_AnyOverContains_NotProjectedAny` / `MapMany_UnsupportedShape_ShouldFail_AtRegistration` | §1.9 只产出确定可下推的形状，其余在注册期拒绝 |
 | `MapMany_Pushdown_And_InMemoryEvaluation_ShouldAgree` | §1.3 单一真值来源（子表维度同样成立） |
 | `MapMany_UnloadedCollection_ShouldFailLoudly_WithDimensionAndFix` | §2.5 判定不了就失败，绝不静默拒绝 |
 | `MapMany_CollectionInitializedToEmpty_ShouldBeDeniedSilently` | §2.5 已知边界：初始化为空集合时静默拒绝——**有意保留**，不要改成放行 |
-| `MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything` | §1.4 fail-closed（子表维度同样适用） |
+| `MapMany_DenyOnlyInsideAny_ShouldStillDenyEverything` | §1.4 默认拒绝（子表维度同样适用） |
 | `MapMany_Apply_ShouldTranslateTo_Exists_Subquery` / `MapMany_Apply_ForDeclaredKey_ShouldTranslateTo_NotExists`（EF Core + SQLite） | §1.9 可下推：真实提供程序必须产出 `EXISTS` / `NOT EXISTS` |
 | `MapMany_Sqlite_ShouldAgree_With_InMemory` | §1.3 下推与内存判定一致（真实提供程序，非 LINQ-to-Objects） |
-| `Callback_Should_Declare_Rules_Inline` / `Callbacks_From_Different_Modules_Should_Merge` / `Callback_And_Custom_Source_Should_Merge` | §1.10 回调载体与自定义来源的并集合并 |
-| `Callback_Without_Rules_Should_Fail_At_Registration` | §1.10 忘了给规则必须是错误，不是静默放行 |
-| `Merged_Sources_Should_Expose_Requirements_From_Every_Source` | §1.11 合并来源能回答「要求」（含角色）；只给码的来源折算为「有码、无角色」 |
-| `Factory_Boundary_Should_Reject_When_Host_Declared_Requirement_Is_Missing` | §1.11 运行期与注册期用同一个来源——宿主规则一旦被忽略即转红 |
-
-> 配置节载体、`IScopeKeyResolver` 解析层与死策略/歧义校验被删除时，钉住它们的用例
-> （`Configuration_*`、`ValidateKeyResolution` 等）随各自被替换的结构一并删除；
-> 「在途解析」那条竞态用例改为 `Refresh_WhileAResolveIsInFlight_ShouldWinAfterItCompletes`
-> （语义从「失效打断在途解析」变为「刷新排在在途解析之后」）——本表只列**当前存在**的护栏。
+| `Merged_Sources_Should_Expose_Requirements_From_Every_Source` | §1.10 合并来源能回答「要求」（含角色） |
+| `Any_Code_Should_Be_Discovered_From_Attribute_Without_Any_Rule` / `Scan_Alone_Should_Be_A_Complete_Configuration` | §1.10 码即声明（只 `Scan` 就是完整配置） |
+| `Type_Level_Code_Should_Apply_To_Every_Operation` | §1.10 类型级对该类型的所有操作生效 |
+| `Method_Level_Code_Should_Not_Leak_To_Sibling_Methods` / `For_Method_Should_Not_Contain_Sibling_Declarations` | §1.10 方法级隔离：只读被调用的那一个方法 |
+| `Codes_Should_Be_Trimmed_And_De_Duplicated` / `Merge_Should_Trim_Codes` | §1.10 规范化：`" order:read"` 必须命中授予 |
+| `Empty_Code_Should_Fail_At_Registration` / `Reserved_Prefix_Should_Fail_At_Registration` / `Duplicate_Code_On_Same_Member_Should_Fail_At_Registration` / `Violations_Should_Be_Reported_Together` | §1.10 启动期声明校验，一次报全 |
+| `Custom_Requirement_Source_Should_Be_Additive` | §1.10 来源是增量，与声明取并集 |

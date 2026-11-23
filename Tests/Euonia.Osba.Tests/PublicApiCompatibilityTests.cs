@@ -118,7 +118,7 @@ public sealed class LegacyPropertyObject : EditableObject<LegacyPropertyObject>
 public sealed class LegacyFieldData : IFieldData
 {
 	/// <summary>
-	/// 字段名，固定返回 <c>legacy</c> 以验证旧契约。
+	/// 字段名，固定返回 <c>legacy</c> 以验证既有 <see cref="IFieldData"/> 实现仍可用。
 	/// </summary>
 	public string Name => "legacy";
 

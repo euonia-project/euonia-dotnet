@@ -112,10 +112,10 @@ flowchart LR
     Hosting --> Endpoint
     Endpoint --> EndpointImpl
 
-    classDef core fill:#1F6FEB,stroke:#0B4FB3,color:#FFFFFF,stroke-width:2px
-    classDef foundation fill:#EAF2FB,stroke:#7EB3E8,color:#173A5E,stroke-width:1.5px
+    classDef core fill:#1F6FEB,stroke:#0b4fb3,color:#FFFFFF,stroke-width:2px
+    classDef foundation fill:#EAF2FB,stroke:#7eb3e8,color:#173A5E,stroke-width:1.5px
     classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
-    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
+    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6b3a0f,stroke-width:1.5px
     classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
     classDef platform fill:#ECFDF5,stroke:#6EC5A8,color:#134E3A,stroke-width:1.5px
     classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
@@ -131,7 +131,7 @@ flowchart LR
 
     style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
     style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
-    style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
+    style M fill:#FFFBF5,stroke:#f2d3b3,stroke-width:1.5px,color:#6b3a0f
     style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
     style P fill:#F4FEFB,stroke:#BFEADB,stroke-width:1.5px,color:#134E3A
 
@@ -139,6 +139,14 @@ flowchart LR
 ```
 
 > 图中虚线框表示聚合的适配器/提供程序包；箭头表示主要的依赖或组合关系，不覆盖所有项目引用，完整依赖以各项目 `.csproj` 为准。
+
+权限契约相关包的项目引用方向如图 1 所示：Security 只引用 Core；Osba 引用 Core 等基础包，但不引用 Security。
+
+**图 1：Core / Security / Osba 的依赖方向**
+
+<img src="docs/assets/permission/security-layering.svg" alt="图 1：Core / Security / Osba 的依赖方向" width="760" />
+
+如图 1 所示，两包之间没有项目引用：权限契约都在 Core，由宿主在组合根接线。
 
 ### 设计取向
 
@@ -190,7 +198,7 @@ flowchart LR
 | [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net10.0 / net11.0 | EF Core 上下文基类、仓储实现、值转换与 ID 值生成器 |
 | [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net10.0 / net11.0 | MongoDB 上下文、仓储、模型配置与事务支持 |
 | [Euonia.Osba](Source/Euonia.Osba/README.md) | net10.0 / net11.0 | 面向对象可扩展业务架构：富业务对象运行时、规则、工厂、执行器、生命周期与权限边界 |
-| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | 操作权限与行级数据权限的策略引擎，可脱离 Osba 独立使用 |
+| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | 操作权限与行级数据权限的策略引擎，可独立使用 |
 
 ### 消息总线
 
@@ -229,7 +237,7 @@ flowchart LR
 | `Nerosoft.Euonia.Disposing` | 同步/异步一次性释放原语：`SingleDisposable<T>`、`AsyncSingleDisposable<T>`、`CollectionDisposable`、`NoopDisposable` |
 | `Nerosoft.Euonia.Reflection` | `AssemblyHelper`、`AssemblyLoadContextManager`、`TypeHelper`、`Reflect` / `Reflect<T>`、`EnumHelper`、`EnumParser<T>`、`PropertyAccessorCache<T>`、`MethodInvokerBuilder` |
 | `Nerosoft.Euonia.Threading` | `AsyncLock`、`AsyncSemaphore`、`AsyncManualResetEvent`、`AsyncAutoResetEvent`、`AsyncConditionVariable`、`AsyncMonitor`、`AsyncCountdownEvent`、`AsyncLazy<T>`、`AsyncProducerConsumerQueue<T>`、`AsyncCollection<T>`、`AsyncContext`、`PauseToken`、`StatefulMutex` |
-| `Nerosoft.Euonia.Security` | `UserPrincipal`、`UserClaimTypes`、`BusinessOperation`、`PermissionAttribute`、`IPermissionChecker`、`IPermissionCodeSource`、`IObjectScopeAuthorizer`、`IObjectOperationResolver` 等权限契约 |
+| `Nerosoft.Euonia.Security` | `UserPrincipal`、`UserClaimTypes`、`BusinessOperation`、`PermissionAttribute`、`IPermissionChecker`、`IPermissionRequirementSource`、`PermissionRequirements`、`IObjectScopeAuthorizer`、`IObjectOperationResolver` 等权限契约（兼容契约 `IPermissionCodeSource` 已标 `[Obsolete]`） |
 | `System`（异常） | `BadRequestException`、`ForbiddenException`、`NotFoundException`、`ConflictException`、`InternalServerErrorException`、`BadGatewayException`、`GatewayTimeoutException`、`MethodNotAllowedException`、`RequestTimeoutException`、`TooManyRequestsException`、`ServiceUnavailableException`、`UpgradeRequiredException`、`BusinessException`、`ConfigurationException`、`InvalidValueException` |
 
 常用扩展方法覆盖字符串大小写/校验/脱敏、集合拓扑排序与分页、类型与程序集、Claims、事件、任务协调等。异常类型通过 `[HttpStatusCode]` 与 `HttpStatusException` 统一映射为 HTTP 状态码。
@@ -370,7 +378,7 @@ await using var handle = await locker.AcquireAsync(
 
 - **隔离模式**：`SharedTable`（影子 `TenantId` + 命名过滤器）、`DatabasePerTenant`（按租户连接串）、`SharedSchema`（按租户 schema，模型缓存键区分）。
 - **解析链**：Header / Claim / Host / Route / Message，按 `Order` 组合；结果带候选与失败码，冲突返回 `Conflict`。
-- **写入守卫**：新增自动写入租户；跨租户更新/删除/迁移抛 `CrossTenantOperationException`；`Begin` / `BeginIsolated` / `BeginCrossTenant` 区分操作人与目标租户。
+- **写入守卫**：新增自动写入租户；跨租户更新/删除/搬迁抛 `CrossTenantOperationException`；`Begin` / `BeginIsolated` / `BeginCrossTenant` 区分操作人与目标租户。
 - **边界适配**：EF Core 模型与过滤器、Mongo 过滤器与写入打标、Quartz 作业租户作用域、缓存/锁/幂等键前缀与 `RemoveByPrefixAsync`。
 
 ```csharp
@@ -414,7 +422,7 @@ services.AddAuditingEfCore<AuditingDbContext>(options =>
 app.UseAuditing();
 ```
 
-DDL 与索引见 [docs/sql/euonia_audit.sql](docs/sql/euonia_audit.sql)，租户列迁移步骤见 [docs/sql/README.md](docs/sql/README.md)。
+DDL 与索引见 [docs/sql/euonia_audit.sql](docs/sql/euonia_audit.sql)，租户列升级步骤见 [docs/sql/README.md](docs/sql/README.md)。
 
 ### Telemetry（Euonia.Telemetry / Euonia.Telemetry.Otel）
 
@@ -679,7 +687,7 @@ Osba 与权限引擎的分工：
 
 ### Security（Euonia.Security）
 
-> 独立的权限策略引擎：操作权限与行级数据权限，不依赖任何对象模型、用户模型或应用框架。
+> 独立的策略引擎：操作权限与行级数据权限，只依赖 `Euonia.Core` 的权限契约，不绑定任何对象模型、用户模型或应用框架。
 
 #### 两条线
 
@@ -687,23 +695,31 @@ Osba 与权限引擎的分工：
 |---|---|---|
 | 回答 | 当前用户**能否执行某项操作** | 当前用户**能看到/操作哪些数据行** |
 | 出口 | `IPermissionChecker` | `IScopeGuard` |
-| 依据 | `[Permission]` 权限码/角色，或宿主自定义判定 | 资源维度 × 从应用数据实时解析的授权集合 |
+| 依据 | `[Permission]` 任意权限码 / 角色（类型级或方法级；**方法级只在宿主工厂调用该方法时生效**） | 资源维度 × 从应用数据实时解析的授权集合 |
 | 失败 | 断言失败，由调用方裁决 | 判定为不可访问 |
+
+两条线的分工与唯一的交汇点如图 2 所示。
+
+**图 2：权限的两条判定线**
+
+<img src="docs/assets/permission/permission-two-tracks.svg" alt="图 2：权限的两条判定线" width="760" />
+
+如图 2 所示，两条线共享同一份授权数据，但坐标系不同：权限码判布尔，授权标识取策略与授予键；
+同名不代表存在映射。
 
 #### 装配
 
 ```csharp
-services.AddPermission(permission => permission
-    .Scan(typeof(Order).Assembly)
-    .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
-    .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
+services.AddPermission(permission => permission.Scan(typeof(Order).Assembly));
 
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 services.AddUserPrincipal();   // ASP.NET Core 宿主；非 Web 宿主需自行注册当前用户主体
 ```
 
-- 规则必须显式给出；没有方法级权限码时用 `p.NoOperationCodes()` 明确断言，不能靠“忘记配置”静默放行。
-- `AddPermission` 可多次调用，各模块的扫描程序集、权限码来源与操作规则按并集合并。
+- **权限码是任意字符串、单一维度**：写在类型或方法上的 `[Permission("order:read")]`，没有「资源 + 操作」两段结构；**新增权限码、新增操作都不需要回来改配置**。
+- 方法级声明由宿主工厂交给闸门的 `MethodInfo` 决定：只在该方法被调用时生效，不波及同类型的其它方法；类型级声明对该类型的全部操作生效。
+- `AddPermission` 可多次调用，各模块的扫描程序集与要求来源按并集合并。权限码来自数据（数据库 / 配置表 / 既有鉴权系统）时用 `Requirements(IPermissionRequirementSource)`，它与声明取并集。
+- 空配置、零程序集、空权限码、`@` 保留前缀、同成员重复码都在启动期（注册或首次解析 `IScopeGuard`）fail-fast，不会静默放行。
 - 没有默认 `IScopeSubjectResolver`：授权值由应用从数据实时解析，撤销立即生效。
 
 #### 判定
@@ -717,6 +733,12 @@ guard.Explain(order, BusinessOperation.Read);   // 审计：命中了哪条策�
 ```
 
 核心不变式：策略编译成 `Allow` / `Deny` 一对表达式，**读侧下推与单行判定共用同一份编译结果**；最终结论是 `Allow && !Deny`，`Deny` 一律优先。数据权限的模型与策略写在同一个 `ScopeModel<T>` 声明里，启动期完整校验，配置错误 fail-fast。
+
+权限码与数据权限的**授权标识**（`read` / `approve`…）共用一个字符串命名空间，但**没有映射关系**：
+码判「能不能」，标识取「哪条策略、哪个授予键」。
+
+可运行的最小工程见 [`docs/examples/security-console`](docs/examples/security-console)：
+`dotnet run --project docs/examples/security-console`。
 
 更多内容见 [`Source/Euonia.Security/README.md`](Source/Euonia.Security/README.md) 与 [`DESIGN.md`](Source/Euonia.Security/DESIGN.md)。
 
@@ -1266,7 +1288,7 @@ euonia-net/
 - **Security**：[README](Source/Euonia.Security/README.md)、[DESIGN](Source/Euonia.Security/DESIGN.md)
 - **Bus 示例**：[SAMPLE](Source/Euonia.Bus/SAMPLE.md)、[HTTP SAMPLE](Source/Euonia.Bus.Http/SAMPLE.md)、[gRPC SAMPLE](Source/Euonia.Bus.Grpc/SAMPLE.md)
 - **平台能力**：[Tenancy](Source/Euonia.Tenancy/README.md)、[Auditing](Source/Euonia.Auditing/README.md)、[Telemetry](Source/Euonia.Telemetry/README.md)、[Telemetry.Otel](Source/Euonia.Telemetry.Otel/README.md)
-- **SQL / 迁移**：[审计库 DDL](docs/sql/euonia_audit.sql)、[租户列迁移 playbook](docs/sql/README.md)
+- **SQL / 升级**：[审计库 DDL](docs/sql/euonia_audit.sql)、[租户列升级 playbook](docs/sql/README.md)
 - **示例应用**：[Samples/Euonia.Sample.Webapi](Samples/Euonia.Sample.Webapi)
 
 ### 项目链接

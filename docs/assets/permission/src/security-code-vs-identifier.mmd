@@ -1,0 +1,12 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart LR
+    subgraph Code["权限码：布尔判定"]
+        C1["[Permission('order:delete')]<br/>类型级 / 方法级"] --> C2["IPermissionChecker<br/>IsGranted / IsInRole"]
+        C2 --> C3["能 / 不能"]
+    end
+    subgraph Id["授权标识：数据权限寻址"]
+        I1["read / update / approve / order:delete"] --> I2["ScopePolicySet<br/>For / ForOperation"]
+        I2 --> I3["IScopeGuard<br/>Apply / Allows / Explain"]
+        I3 --> I4["哪些行 / 命中哪条策略"]
+    end
+    C1 -.->|"共用字符串命名空间，但无映射"| I1

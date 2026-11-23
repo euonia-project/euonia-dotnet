@@ -940,11 +940,17 @@ _无公共成员。_
 
 ### Nerosoft.Euonia.Security.IPermissionCodeSource
 
-**类型**：interface
+**类型**：interface（**已废弃**：`[Obsolete]`，兼容层——按 `(类型, 操作)` 回答；新代码用 `IPermissionRequirementSource`）
 
 - IReadOnlyList<System.String> AllOperations { get; }
 - IReadOnlyCollection<System.String> CodesFor(System.Type type, System.String operation)
 - IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.String operation)
+
+### Nerosoft.Euonia.Security.IPermissionRequirementSource
+
+**类型**：interface
+
+- IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.Reflection.MethodInfo method, System.String operation)
 
 ### Nerosoft.Euonia.Security.OperationConventions
 
@@ -962,6 +968,16 @@ _无公共成员。_
 - System.String Message { get; set; }
 - System.String Permission { get; }
 - System.String[] Roles { get; }
+
+### Nerosoft.Euonia.Security.PermissionRequirements
+
+**类型**：static class
+
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type, System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> Merge(params IEnumerable<Nerosoft.Euonia.Security.PermissionAttribute>[] sets)
+- static Nerosoft.Euonia.Security.IPermissionRequirementSource Adapt(Nerosoft.Euonia.Security.IPermissionCodeSource source)
 
 ### Nerosoft.Euonia.Security.SensitiveDataAttribute
 

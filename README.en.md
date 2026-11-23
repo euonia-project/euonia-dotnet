@@ -112,10 +112,10 @@ flowchart LR
     Hosting --> Endpoint
     Endpoint --> EndpointImpl
 
-    classDef core fill:#1F6FEB,stroke:#0B4FB3,color:#FFFFFF,stroke-width:2px
-    classDef foundation fill:#EAF2FB,stroke:#7EB3E8,color:#173A5E,stroke-width:1.5px
+    classDef core fill:#1F6FEB,stroke:#0b4fb3,color:#FFFFFF,stroke-width:2px
+    classDef foundation fill:#EAF2FB,stroke:#7eb3e8,color:#173A5E,stroke-width:1.5px
     classDef domain fill:#EAF7EF,stroke:#79C79A,color:#1E4D34,stroke-width:1.5px
-    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6B3A0F,stroke-width:1.5px
+    classDef messaging fill:#FFF3E3,stroke:#E8A15C,color:#6b3a0f,stroke-width:1.5px
     classDef hosting fill:#F3ECFB,stroke:#B79BE0,color:#43265E,stroke-width:1.5px
     classDef platform fill:#ECFDF5,stroke:#6EC5A8,color:#134E3A,stroke-width:1.5px
     classDef aggregate fill:#FFFFFF,stroke:#94A3B8,color:#334155,stroke-width:1.5px,stroke-dasharray: 4 3
@@ -131,7 +131,7 @@ flowchart LR
 
     style F fill:#F7FBFF,stroke:#B7D3EE,stroke-width:1.5px,color:#173A5E
     style D fill:#F7FCF9,stroke:#BFE5CF,stroke-width:1.5px,color:#1E4D34
-    style M fill:#FFFBF5,stroke:#F2D3B3,stroke-width:1.5px,color:#6B3A0F
+    style M fill:#FFFBF5,stroke:#f2d3b3,stroke-width:1.5px,color:#6b3a0f
     style H fill:#FBF8FE,stroke:#D9C9F0,stroke-width:1.5px,color:#43265E
     style P fill:#F4FEFB,stroke:#BFEADB,stroke-width:1.5px,color:#134E3A
 
@@ -139,6 +139,14 @@ flowchart LR
 ```
 
 > Dashed boxes group adapter/provider packages. Arrows indicate the main dependency or composition relationships and do not cover every project reference; the complete dependency set is defined by each project's `.csproj`.
+
+How the permission-related packages reference each other is shown in Figure 1: Security references Core only, while Osba references Core and other base packages but not Security.
+
+**Figure 1: Dependency direction of Core / Security / Osba**
+
+<img src="docs/assets/permission/security-layering-en.svg" alt="Figure 1: Dependency direction of Core / Security / Osba" width="760" />
+
+As shown in Figure 1, there is no project reference between the two packages: the permission contracts live in Core, and the host wires them together in its composition root.
 
 ### Design Orientation
 
@@ -190,7 +198,7 @@ flowchart LR
 | [Euonia.Repository.EfCore](Source/Euonia.Repository.EfCore/README.md) | net10.0 / net11.0 | EF Core context base classes, repository implementation, value converters, and ID value generators |
 | [Euonia.Repository.Mongo](Source/Euonia.Repository.Mongo/README.md) | net10.0 / net11.0 | MongoDB context, repository, model configuration, and transaction support |
 | [Euonia.Osba](Source/Euonia.Osba/README.md) | net10.0 / net11.0 | Object-Oriented Scalable Business Architecture: rich business object runtime, rules, factories, actuators, lifecycle, and permission boundaries |
-| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | Policy engine for operation permissions and row-level data permissions, usable standalone without Osba |
+| [Euonia.Security](Source/Euonia.Security/README.md) | net10.0 / net11.0 | Policy engine for operation permissions and row-level data permissions, usable standalone |
 
 ### Message Bus
 
@@ -229,7 +237,7 @@ flowchart LR
 | `Nerosoft.Euonia.Disposing` | Synchronous/asynchronous exactly-once disposal primitives: `SingleDisposable<T>`, `AsyncSingleDisposable<T>`, `CollectionDisposable`, `NoopDisposable` |
 | `Nerosoft.Euonia.Reflection` | `AssemblyHelper`, `AssemblyLoadContextManager`, `TypeHelper`, `Reflect` / `Reflect<T>`, `EnumHelper`, `EnumParser<T>`, `PropertyAccessorCache<T>`, `MethodInvokerBuilder` |
 | `Nerosoft.Euonia.Threading` | `AsyncLock`, `AsyncSemaphore`, `AsyncManualResetEvent`, `AsyncAutoResetEvent`, `AsyncConditionVariable`, `AsyncMonitor`, `AsyncCountdownEvent`, `AsyncLazy<T>`, `AsyncProducerConsumerQueue<T>`, `AsyncCollection<T>`, `AsyncContext`, `PauseToken`, `StatefulMutex` |
-| `Nerosoft.Euonia.Security` | `UserPrincipal`, `UserClaimTypes`, `BusinessOperation`, `PermissionAttribute`, `IPermissionChecker`, `IPermissionCodeSource`, `IObjectScopeAuthorizer`, `IObjectOperationResolver`, and other permission contracts |
+| `Nerosoft.Euonia.Security` | `UserPrincipal`, `UserClaimTypes`, `BusinessOperation`, `PermissionAttribute`, `IPermissionChecker`, `IPermissionRequirementSource`, `PermissionRequirements`, `IObjectScopeAuthorizer`, `IObjectOperationResolver`, and other permission contracts (the legacy `IPermissionCodeSource` is marked `[Obsolete]`) |
 | `System` (exceptions) | `BadRequestException`, `ForbiddenException`, `NotFoundException`, `ConflictException`, `InternalServerErrorException`, `BadGatewayException`, `GatewayTimeoutException`, `MethodNotAllowedException`, `RequestTimeoutException`, `TooManyRequestsException`, `ServiceUnavailableException`, `UpgradeRequiredException`, `BusinessException`, `ConfigurationException`, `InvalidValueException` |
 
 Common extension methods cover string casing/validation/masking, collection topological sorting and paging, types and assemblies, claims, events, task coordination, and more. Exception types are uniformly mapped to HTTP status codes through `[HttpStatusCode]` and `HttpStatusException`.
@@ -392,7 +400,7 @@ EF contexts inherit `MultiTenantDataContextBase<TContext>`, or call `modelBuilde
 - **Entry points**: HTTP middleware, Bus participant, and the Castle interceptor (`Order = -1000`).
 - **Stores**: in-memory, EF Core (dedicated audit DB), and MongoDB; `IAuditingStoreRouter` allows one audit database per tenant.
 - **Reliability**: bounded queue plus a durable file spool; successful records are batched by default, failures are written immediately, and the queue drains on shutdown.
-- **Semantics**: `AuditingTriggerMode` (All / WritesOnly), `RecordAnonymous`, fail-open writes, and query authorization scoped to the actor tenant.
+- **Semantics**: `AuditingTriggerMode` (All / WritesOnly), `RecordAnonymous`, writes that continue when auditing fails, and query authorization scoped to the actor tenant.
 
 ```csharp
 services.AddAuditing(options =>
@@ -646,7 +654,7 @@ How Osba and the permission engine divide the work:
 | | Operation permission | Data permission |
 |---|---|---|
 | Answers | **Whether the current user can perform an operation** | **Which data rows the current user can see/act on** |
-| Granularity | Type-level `[Permission]` + row-level (policies declared by authorization identifier) | Row-level |
+| Granularity | Type-level `[Permission]` plus the method-level declaration of the invoked factory method + row-level (policies declared by authorization identifier) | Row-level |
 | Enforcement point | `BusinessObjectFactory` call boundary | Query pushdown + factory save boundary |
 | Failure mode | `SecurityException` | The row is excluded from queries / saving throws `SecurityException` |
 
@@ -662,30 +670,47 @@ The two are not an adapter relationship: Osba only faces the Core permission con
 
 > A standalone permission policy engine for operation permissions and row-level data permissions, with no dependency on any object model, user model, or application framework.
 
+A standalone policy engine: it depends only on the permission contracts in `Euonia.Core` and binds to no
+object model, user model, or application framework.
+
 #### The Two Tracks
 
 | | Operation permission | Data permission |
 |---|---|---|
 | Answers | **Whether the current user can perform an operation** | **Which data rows the current user can see/act on** |
 | Output | `IPermissionChecker` | `IScopeGuard` |
-| Basis | `[Permission]` permission code/role, or a host-defined decision | Resource dimension × authorization set resolved live from application data |
+| Basis | `[Permission]` arbitrary permission code / role (type-level or method-level; **method-level applies only when the host factory invokes that method**) | Resource dimension × authorization set resolved live from application data |
 | Failure | Assertion failure, adjudicated by the caller | Evaluated as inaccessible |
+
+How the two tracks divide the work, and where they touch, is shown in Figure 2.
+
+**Figure 2: The two permission decision tracks**
+
+<img src="docs/assets/permission/permission-two-tracks-en.svg" alt="Figure 2: The two permission decision tracks" width="760" />
+
+As shown in Figure 2, both tracks share the same authorization data but not the same coordinate system:
+a permission code answers a boolean question, while an authorization identifier selects the policy and
+grant key; sharing a name does not imply a mapping between them.
 
 #### Wiring
 
 ```csharp
-services.AddPermission(permission => permission
-    .Scan(typeof(Order).Assembly)
-    .OnAttributeOrName(BusinessOperation.Read,   "Order", typeof(FetchAttribute))
-    .OnAttributeOrName(BusinessOperation.Create, "Order", typeof(CreateAttribute)));
+services.AddPermission(permission => permission.Scan(typeof(Order).Assembly));
 
 services.AddScoped<IScopeSubjectResolver, MySubjectResolver>();
 services.AddUserPrincipal();   // ASP.NET Core hosts; non-web hosts must register the current principal themselves
 ```
 
-- Rules must be stated explicitly; when there is no method-level permission code, use `p.NoOperationCodes()` to assert so explicitly rather than silently allowing access by "forgetting to configure".
-- `AddPermission` can be called multiple times; the scanned assemblies, permission code sources, and operation rules of each module are merged as a union.
+- **A permission code is an arbitrary string in a single dimension**: it is written on `[Permission("order:read")]` at the type or method level and has no "resource + operation" structure; **adding a code or an operation never requires touching the configuration**.
+- Method-level declarations are decided by the `MethodInfo` the host factory hands to the gate: they apply only when that method is invoked and never leak to sibling methods of the same type; type-level declarations apply to every operation of the type.
+- `AddPermission` can be called multiple times; the scanned assemblies and requirement sources of each module are merged as a union. When permission codes live in data (database, configuration table, an existing authorization system), use `Requirements(IPermissionRequirementSource)`; it is additive to declarations.
+- Empty configuration, zero scanned assemblies, empty permission codes, the reserved `@` prefix, and duplicate codes on the same member all fail fast at startup (at registration or when `IScopeGuard` is first resolved); nothing is silently allowed.
 - There is no default `IScopeSubjectResolver`: authorization values are resolved live from data by the application, so revocation takes effect immediately.
+
+Permission codes and data-permission **authorization identifiers** (`read`, `approve`, …) share one string namespace but have **no mapping between them**: a code answers "may this user do it", an identifier selects "which policy and which grant key".
+
+A runnable minimal sample lives in [`docs/examples/security-console`](docs/examples/security-console):
+`dotnet run --project docs/examples/security-console`.
 
 #### Evaluation
 

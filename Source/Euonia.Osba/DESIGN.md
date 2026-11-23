@@ -155,7 +155,7 @@ Euonia.Osba.Domain（可选适配包，未来可加）
 - **领域事件**：用 `OnSavingAsync` / `OnSavedAsync` 收集与发布。
 - **仓储/UoW**：在工厂方法内部调用；Osba 不拥有事务边界。
 - **原始值与回滚**：用 `GetOriginalValue` / `GetChangedValues` / `RejectChanges` 做审计、并发检查与编辑取消。
-- **状态机**：用 `CanTransitionTo` / `StateChanged` 表达聚合状态迁移。
+- **状态机**：用 `CanTransitionTo` / `StateChanged` 表达聚合状态转换。
 
 ---
 
@@ -257,13 +257,13 @@ None → New / Changed / Deleted → None
 ```
 
 - `MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 都是 `virtual`，统一经过 `TransitionTo`。
-- `CanTransitionTo(ObjectEditState)`：派生类可禁止非法迁移。
-- `TransitionTo(...)`：可整体替换迁移逻辑。
-- `OnStateChanged(...)`：迁移后的领域行为。
-- `StateChanged` 事件：外部观察迁移。
+- `CanTransitionTo(ObjectEditState)`：派生类可禁止非法转换。
+- `TransitionTo(...)`：可整体替换转换逻辑。
+- `OnStateChanged(...)`：转换后的领域行为。
+- `StateChanged` 事件：外部观察转换。
 - `AcceptChanges` 复位到 `None`，不经过 `CanTransitionTo`，但会触发 `StateChanged`。
 
-默认迁移是宽松的；需要严格领域状态机时，在派生类重写 `CanTransitionTo`。
+默认转换是宽松的；需要严格领域状态机时，在派生类重写 `CanTransitionTo`。
 
 ### 4.4 属性访问与装载控制
 
@@ -394,7 +394,7 @@ None → New / Changed / Deleted → None
 - 目标对象由工厂方法内部创建并填充，调用前没有可判定的行；
 - 行级权限只能在写入后复核；
 - `InsertAsync` / `ExecuteAsync(criteria)` 已标记 `[Obsolete]`；
-- 受数据权限约束的类型应使用 `Fetch → IScopeGuard.AllowsObject → Save`。
+- 受数据权限约束的类型应使用 `Fetch → IObjectScopeAuthorizer.Allows → Save`。
 
 ### 6.5 读取语义
 
@@ -449,14 +449,23 @@ flowchart LR
 
 ## 8. 权限边界
 
-Osba 的权限设计遵循「契约在 Core，实现各一半」：
+Osba 在工厂边界执行两类权限，契约全部来自 `Euonia.Core`：
 
-- `Euonia.Core` 提供权限契约：`PermissionAttribute`、`IPermissionChecker`、`IPermissionCodeSource`、`IObjectScopeAuthorizer`、`IObjectOperationResolver`、`BusinessOperation`。
-- Osba 负责对象/操作/范围裁决与 fail-closed。
-- 宿主通过 `AddPermission` 接入具体鉴权引擎。
-- Osba 不引用 `Euonia.Security`。
+- **操作权限**：`[Permission]` 声明类型级/方法级要求；工厂把即将 invoke 的 `MethodInfo` 交给
+  `ObjectAuthorization`，由 `IPermissionChecker` 判定。判定不了抛 `InvalidOperationException`，
+  不满足抛 `SecurityException`。
+- **数据权限**：`ScopeAuthorization` 在保存边界调用 `IObjectScopeAuthorizer` 的
+  `IsConstrained` / `Allows` / `Explain` / `EnsureResolvedAsync`。前置/后置时机由工厂入口决定。
+- **查询**：`BusinessObject.CanPerformOperation(operation)` 只反映类型级与已登记来源，
+  不含方法级声明；真正的拦截在工厂边界。
+- **依赖**：Osba 不引用具体鉴权引擎；宿主在组合根注册 `IPermissionChecker` /
+  `IObjectScopeAuthorizer` 等实现。
 
-权限裁决只发生在工厂边界；规则绕过不等于权限放行。详见 [`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)。
+需要策略引擎时，宿主可选装配 `Euonia.Security`，调用
+`AddPermission(p => p.Scan(asm))`；装配细节见 [PERMISSION.md](PERMISSION.md)。
+
+权限裁决只发生在工厂边界；规则绕过不等于权限放行。详见
+[`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md)。
 
 ---
 
@@ -528,7 +537,7 @@ Euonia.Osba.Standalone.Tests    7 passed
 - 属性类型推断与旧表达式重载；
 - `FetchActuator` 与执行器管道；
 - 生命周期回调；
-- 原始值 / 回滚 / 状态迁移；
+- 原始值 / 回滚 / 状态转换；
 - 规则服务解析与外部规则注册；
 - 自定义工厂；
 - 旧公共 API 兼容性。

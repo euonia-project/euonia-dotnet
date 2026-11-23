@@ -69,7 +69,7 @@ public class PermissionWithoutEngineTests
 	}
 
 	/// <summary>
-	/// 声明了权限要求却未注册检查器时，保存应失败并提示缺少检查器，而不是静默放行。
+	/// 声明了权限要求却未注册检查器时，保存应失败并提示缺少检查器，而不是默认通过。
 	/// </summary>
 	[Fact]
 	public async Task Requirements_Without_Checker_Should_FailLoudly_Not_Silently_Allow()
@@ -149,7 +149,7 @@ public class PermissionWithoutEngineTests
 		Assert.True(visible.CanSeeOwnRow(BusinessOperation.Read));                  // 授权器放行
 		Assert.Equal("可见", visible.ExplainOwnRow(BusinessOperation.Read));
 
-		// 工厂边界同样走授权器：受约束的对象没接线时必须报错，而不是静默放行
+		// 工厂边界同样走授权器：受约束的对象没接线时必须报错，而不是默认通过
 		var unwired = GroundedEntity("host:read");
 		var exception = Assert.Throws<InvalidOperationException>(
 			() => factory.SaveAsync(unwired, TestContext.Current.CancellationToken).GetAwaiter().GetResult());
@@ -159,9 +159,32 @@ public class PermissionWithoutEngineTests
 		BusinessContextAccessor.Clear();
 	}
 
+	/// <summary>
+	/// 没有任何要求来源（<see cref="IPermissionCodeSource"/>）时，类型级 <see cref="PermissionAttribute"/>
+	/// 仍应在工厂边界生效：这是「内建读声明 + 无引擎」的守卫用例。
+	/// </summary>
+	[Fact]
+	public async Task Type_Level_Requirement_Should_Enforce_Without_Any_Source()
+	{
+		using var scope = CreateScope(codes: [], out var provider, registerCodeSource: false);
+
+		// 不注册任何来源：要求只能由内建路径（PermissionRequirements）发现
+		Assert.Null(provider.GetService<IPermissionCodeSource>());
+
+		var factory = provider.GetRequiredService<IObjectFactory>();
+		var entity = new TypeLevelGroundedEntity { Name = "type-level" };
+		entity.BusinessContext = provider.GetRequiredService<BusinessContext>();
+		entity.MarkAsChanged();
+
+		await Assert.ThrowsAsync<SecurityException>(
+			() => factory.SaveAsync(entity, TestContext.Current.CancellationToken));
+
+		BusinessContextAccessor.Clear();
+	}
+
 	#region 装配
 
-	private static IServiceScope CreateScope(string[]? codes, out IServiceProvider provider)
+	private static IServiceScope CreateScope(string[]? codes, out IServiceProvider provider, bool registerCodeSource = true)
 	{
 		var services = new ServiceCollection();
 
@@ -169,7 +192,11 @@ public class PermissionWithoutEngineTests
 
 		// 宿主的实现：要求来自「配置表」（这里的 GroundedEntity 声明了 host:* 码），
 		// 判定来自当前用户的权限码集合（现实里可能是配置、权限表或已有鉴权框架）
-		services.AddSingleton<IPermissionCodeSource, TableRequirementProvider>();
+		if (registerCodeSource)
+		{
+			services.AddSingleton<IPermissionCodeSource, TableRequirementProvider>();
+		}
+
 		services.AddSingleton<IObjectScopeAuthorizer, VisibleScopeAuthorizer>();
 
 		if (codes != null)
@@ -302,6 +329,28 @@ public class PlainEntity : EditableObject<PlainEntity>
 
 	/// <summary>
 	/// 无权限要求的实体在工厂更新路径上执行的更新逻辑。
+	/// </summary>
+	/// <param name="cancellationToken">取消令牌。</param>
+	[FactoryUpdate]
+	protected override async Task UpdateAsync(CancellationToken cancellationToken = default)
+	{
+		await Task.CompletedTask;
+	}
+}
+
+/// <summary>
+/// 只在类型上声明权限要求的实体：用于验证「没有任何来源时类型级要求仍然生效」。
+/// </summary>
+[Permission("standalone:type")]
+public class TypeLevelGroundedEntity : EditableObject<TypeLevelGroundedEntity>
+{
+	/// <summary>
+	/// 获取或设置实体名称。
+	/// </summary>
+	public string Name { get; set; } = string.Empty;
+
+	/// <summary>
+	/// 无来源场景下的更新工厂实现：类型级 <c>standalone:type</c> 要求必须由内建路径发现。
 	/// </summary>
 	/// <param name="cancellationToken">取消令牌。</param>
 	[FactoryUpdate]

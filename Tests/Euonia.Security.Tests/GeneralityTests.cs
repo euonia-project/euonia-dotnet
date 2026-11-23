@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
+using Nerosoft.Euonia.Security.Properties;
 using Nerosoft.Euonia.Security.Tests.BrokenFixtures;
 using Nerosoft.Euonia.Security.Tests.Fixtures;
 
@@ -406,7 +407,13 @@ public class GeneralityTests
 				.Add(new AssetModel())
 				.Build());
 
-		Assert.Contains(exception.Diagnostics, x => x.Message.Contains("more than one permission model"));
+		// 断言具体诊断文本（资源模板 + 资源类型全名 + 冲突的模型名），而不是泛化消息
+		var expected = string.Format(
+			Resources.IDS_SCOPE_MULTIPLE_MODELS_FOR_TYPE,
+			typeof(Asset).FullName!,
+			nameof(AssetModel));
+
+		Assert.Contains(exception.Diagnostics, x => string.Equals(x.Message, expected, StringComparison.Ordinal));
 	}
 
 	/// <summary>
@@ -447,8 +454,20 @@ public class GeneralityTests
 				.Build());
 
 		Assert.Equal(2, exception.Diagnostics.Count);
-		Assert.Contains("unmapped dimension", exception.Message, StringComparison.OrdinalIgnoreCase);
-		Assert.Contains("can never allow structurally", exception.Message, StringComparison.OrdinalIgnoreCase);
+
+		// 断言具体诊断文本（资源模板 + 维度名），而不是泛化消息
+		var unmapped = string.Format(
+			Resources.IDS_SCOPE_DIMENSION_NOT_MAPPED,
+			nameof(UnmappedDimensionAsset),
+			ScopeDimensions.Dept,
+			ScopeDimensions.Owner);
+
+		Assert.Contains(unmapped, exception.Message, StringComparison.Ordinal);
+		Assert.Contains(Resources.IDS_SCOPE_POLICY_NEVER_ALLOW, exception.Message, StringComparison.Ordinal);
+
+		// 同时保留模型名断言，便于定位
+		Assert.Contains(nameof(UnmappedDimensionModel), exception.Message, StringComparison.Ordinal);
+		Assert.Contains(nameof(AlwaysDenyModel), exception.Message, StringComparison.Ordinal);
 	}
 
 	/// <summary>
@@ -465,7 +484,8 @@ public class GeneralityTests
 		var diagnostic = Assert.Single(exception.Diagnostics);
 
 		Assert.Equal(nameof(AlwaysDenyModel), diagnostic.ModelName);
-		Assert.Contains("can never allow structurally", diagnostic.Message, StringComparison.OrdinalIgnoreCase);
+		// 文案随当前 UI 文化变化：与资源原文比较，而不是写死英文
+		Assert.Equal(Resources.IDS_SCOPE_POLICY_NEVER_ALLOW, diagnostic.Message);
 	}
 
 	#endregion
@@ -594,7 +614,7 @@ public class GeneralityTests
 		Assert.True(guard.Allows(visible));
 		Assert.True(guard.AllowsObject(visible));
 
-		// 代理类型本身未注册，但基类注册了：必须按声明类型判定，不得静默放行。
+		// 代理类型本身未注册，但基类注册了：必须按声明类型判定，不得当作没有要求直接通过。
 		Assert.False(guard.Allows(invisible));
 		Assert.False(guard.AllowsObject(invisible));
 	}

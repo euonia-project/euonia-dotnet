@@ -37,7 +37,7 @@ public class RuntimeRequirementSourceTests
 
 	/// <summary>
 	/// 目标对象没有 <c>BusinessContext</c> 时仍应使用环境来源发现宿主要求；由于无法判定，
-	/// 必须抛出 <see cref="InvalidOperationException"/> 而不是静默放行。
+	/// 必须抛出 <see cref="InvalidOperationException"/> 而不是默认通过。
 	/// </summary>
 	[Fact]
 	public async Task Factory_Boundary_Should_Use_Ambient_Source_When_Target_Has_No_BusinessContext()
@@ -47,7 +47,7 @@ public class RuntimeRequirementSourceTests
 		var factory = provider.GetRequiredService<IObjectFactory>();
 
 		// 手工构造的对象的 BusinessContext 为 null；宿主注册的来源仍必须生效，
-		// 否则工厂边界会静默放行本应被拒绝的更新。
+		// 否则工厂边界会默认通过本应被拒绝的更新。
 		var target = new AmbientTask();
 		target.MarkAsChanged();
 

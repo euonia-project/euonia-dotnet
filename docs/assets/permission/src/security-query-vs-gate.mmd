@@ -1,0 +1,5 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart LR
+    Q["查询：宿主查询入口<br/>只读类型级 + 来源要求"] --> QR["布尔结论<br/>不抛异常，不是闸门"]
+    I["业务分支：IsGranted(code)<br/>直接判定指定码，不收集声明"] --> IR["true / false"]
+    G["宿主闸门<br/>类型级 ∪ 被调用方法级 ∪ 来源要求"] --> GR["拒绝抛 SecurityException"]

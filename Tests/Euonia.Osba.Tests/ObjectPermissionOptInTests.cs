@@ -40,7 +40,7 @@ public class ObjectPermissionOptInTests
 		Assert.Null(provider.GetService<ScopeModelRegistry>());
 
 		// Osba 自己的权限契约同样不由 AddBusinessObject 注册：
-		// 没有来源、没有判定实现，工厂边界在「声明了要求」时会报错而不是静默放行
+		// 没有来源、没有判定实现，工厂边界在「声明了要求」时会报错而不是默认通过
 		Assert.Null(provider.GetService<IPermissionCodeSource>());
 		Assert.Null(provider.GetService<IPermissionChecker>());
 		Assert.Null(provider.GetService<IObjectScopeAuthorizer>());
@@ -116,7 +116,7 @@ public class ObjectPermissionOptInTests
 	}
 
 	/// <summary>
-	/// 验证缺少主体解析器时解析范围守卫会抛出 <see cref="InvalidOperationException"/>，而不是静默放行。
+	/// 验证缺少主体解析器时解析范围守卫会抛出 <see cref="InvalidOperationException"/>，而不是默认通过。
 	/// </summary>
 	[Fact]
 	public void Missing_Resolver_Should_Fail_Validation_Not_Silently_Permit()

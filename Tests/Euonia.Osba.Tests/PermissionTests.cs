@@ -322,17 +322,17 @@ public class PermissionTests
 
 	#endregion
 
-	#region 无法判定时必须失败，不能静默放行
+	#region 无法判定时必须失败，不能默认通过
 
 	/// <summary>
 	/// 验证目标声明了权限要求却未接入业务上下文时，保存抛出 <see cref="InvalidOperationException"/>
-	/// 暴露配置错误，而不是静默放行。
+	/// 暴露配置错误，而不是默认通过。
 	/// </summary>
 	[Fact]
 	public async Task SaveAsync_WithRequirementsButNoBusinessContext_ShouldFailInsteadOfBypassing()
 	{
 		// 目标声明了权限要求，却没接入 BusinessContext —— 此时解析不到权限检查器。
-		// 这是配置错误（多半是调用方 new 出对象后忘了接线），必须暴露而不是静默放行。
+		// 这是配置错误（多半是调用方 new 出对象后忘了接线），必须暴露而不是默认通过。
 		using var scope = CreatePermissionScope(UserWith(), out var provider);
 
 		var factory = provider.GetRequiredService<IObjectFactory>();

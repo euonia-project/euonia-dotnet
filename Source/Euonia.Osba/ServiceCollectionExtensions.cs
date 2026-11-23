@@ -17,10 +17,9 @@ public static class ServiceCollectionExtensions
 	/// <param name="assemblies">要扫描业务对象类型的程序集数组。</param>
 	/// <remarks>
 	/// 不注册任何权限服务：Osba 本身不认识任何鉴权实现。
-	/// 需要权限时，接引擎用
-	/// <c>AddPermission(p =&gt; { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })</c>
-	/// （规则来源就用 Osba 的工厂约定），或注册自己的
-	/// <c>IPermissionCodeSource</c> / <c>IPermissionChecker</c> / <c>IObjectScopeAuthorizer</c>。
+	/// 需要权限时注册引擎：<c>AddPermission(p =&gt; p.Scan(assemblies))</c>，类型与方法上的
+	/// <c>[Permission]</c> 声明自动生效。需要自定义判定、要求来源或行级授权时，再注册
+	/// <c>IPermissionChecker</c> / <c>IPermissionRequirementSource</c> / <c>IObjectScopeAuthorizer</c>。
 	/// </remarks>
 	public static IServiceCollection AddBusinessObject(this IServiceCollection services, params Assembly[] assemblies)
 	{

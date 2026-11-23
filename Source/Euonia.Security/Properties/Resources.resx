@@ -117,8 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="IDS_PERMISSION_CODE_DUPLICATE" xml:space="preserve">
+    <value>The permission code '{1}' is declared more than once on '{0}'. Remove the duplicate declaration - identical codes on the same member can only be a copy/paste mistake.</value>
+  </data>
+  <data name="IDS_PERMISSION_CODE_EMPTY" xml:space="preserve">
+    <value>The [Permission] declaration on '{0}' has an empty permission code. Either give it a code (any non-empty string works) or remove the attribute; a roles-only requirement must declare at least one role.</value>
+  </data>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>The permission configuration is empty: no operation entry rule was declared, and neither a code source / NoOperationCodes / NoModels was given nor a scanning assembly was added. Use OnAttributeOrName / OnMethod to declare the entry rule when there are method-level permission codes; give a code source via Source when the rules come from elsewhere; assert NoOperationCodes when there are none; assert NoModels when the application really has no permission model and no declaration.</value>
+    <value>The permission configuration is empty: nothing was declared. Pass at least one assembly to scan with Scan(...) so permission models and [Permission] declarations can be discovered; when the application really has no permission model and no [Permission] declaration, assert NoModels() explicitly. A permission requirement source can be supplied with Requirements(...) when the permission codes come from data.</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>The permission configuration contradicts itself: NoOperationCodes was asserted (no method-level permission codes) yet operation entry rules were declared. Only one of the two is allowed: declare rules when there are method-level permission codes, assert NoOperationCodes when there are none.</value>

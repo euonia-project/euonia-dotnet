@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    participant C as 调用方
+    participant F as 宿主工厂
+    participant A as 宿主闸门
+    participant P as PermissionRequirements
+    participant S as 要求来源
+    participant K as IPermissionChecker
+
+    C->>F: 业务调用（保存 / 执行）
+    F->>F: 解析出将被调用的 MethodInfo
+    F->>A: 校验(target, operation, method)
+    A->>P: For(type, method)
+    P-->>A: 类型级 ∪ 该方法级
+    opt 登记了要求来源
+        A->>S: RequirementsFor(...)
+        S-->>A: 来源要求（可为空）
+    end
+    A->>A: Merge + 按「码 + 角色」去重
+    A->>K: IsGranted(code) / IsInRole(role)
+    alt 全部满足
+        K-->>A: true
+        A-->>F: 放行
+        F->>F: 调用该方法
+    else 任一不满足
+        K-->>A: false
+        A-->>C: SecurityException
+    end

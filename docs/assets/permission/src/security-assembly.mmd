@@ -1,0 +1,11 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart TB
+    Host["宿主应用"] --> Options["AddPermission(PermissionOptions)<br/>Scan / Requirements / NoModels"]
+    Options --> Scanner["PermissionDeclarationScanner<br/>启动期声明校验"]
+    Options --> Registry["ScopeModelRegistry<br/>数据权限模型"]
+    Options --> Source["CompositeRequirementSource<br/>内建声明 ∪ 自定义来源 ∪ 旧来源适配"]
+    Source --> Gate["宿主闸门<br/>工厂 / 拦截器 / 中间件"]
+    Gate --> Checker["IPermissionChecker<br/>IsGranted / IsInRole"]
+    Checker -->|"true / false"| Gate
+    Gate --> Verdict["放行 / SecurityException"]
+    Registry --> Guard["IScopeGuard<br/>行级判定与下推"]

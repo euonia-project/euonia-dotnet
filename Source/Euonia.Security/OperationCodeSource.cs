@@ -4,25 +4,23 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 通用权限码来源：用「操作入口判定规则」回答「某类型在某操作上声明了哪些权限码」。
+/// 兼容入口：用「操作入口判定规则」按 <c>(类型, 操作)</c> 回答权限要求与权限码。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 规则是<b>数据</b>而非代码：换框架只是换一组规则（见 README §3.3、§3.4）。
-/// 宿主经由 <see cref="Microsoft.Extensions.DependencyInjection.PermissionOptions"/> 的
-/// <c>OnAttributeOrName</c> / <c>OnMethod</c> 声明规则，本类型是那份声明的执行体，故不公开。
+/// 规则是数据：每个已声明的操作对应一组入口判定谓词，由 <c>OnAttributeOrName</c> / <c>OnMethod</c> 配置构造。
+/// <b>类型级</b> <see cref="PermissionAttribute"/> 对本来源声明的每个操作生效；<b>方法级</b>声明只在
+/// 该方法被本操作的规则命中时生效。
 /// </para>
 /// <para>
-/// 收集范围与运行时判定一致：<b>类型级</b> <see cref="PermissionAttribute"/> 对本来源已声明的每个操作生效，
-/// <b>方法级</b>只在该方法被本操作的规则识别为操作入口时才生效，否则入口方法上的权限声明会被静默忽略。
-/// </para>
-/// <para>
-/// 操作词汇以 <see cref="AllOperations"/> 为准：<b>只有声明过规则的操作才属于本来源</b>，未声明规则的操作不参与判定。
+/// 操作集合以 <see cref="AllOperations"/> 为准：只有声明过规则的操作才属于本来源。
+/// 按「类型 + 被调用的方法」收集要求请使用 <see cref="PermissionRequirements.For(Type, MethodInfo)"/>。
 /// </para>
 /// <para>
 /// 结果按（类型，操作）缓存，反复调用不会重复反射。
 /// </para>
 /// </remarks>
+[Obsolete("按 (type, operation) 查询的兼容类型。请使用 PermissionRequirements / IPermissionRequirementSource；本类型将在下个主版本移除。")]
 internal sealed class OperationCodeSource : IPermissionCodeSource
 {
 	/// <summary>
@@ -71,8 +69,8 @@ internal sealed class OperationCodeSource : IPermissionCodeSource
 
 	/// <inheritdoc />
 	/// <remarks>
-	/// 供需要 <see cref="PermissionAttribute.Roles"/> 的运行期判定使用；
-	/// 只关心权限码的调用方用 <see cref="CodesFor"/>。
+	/// 按 <c>(类型, 操作)</c> 收集，只读<b>被本操作规则命中的方法</b>。
+	/// 按被调用的方法收集请使用 <see cref="PermissionRequirements.For(Type, MethodInfo)"/>。
 	/// </remarks>
 	public IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, string operation)
 	{
@@ -218,9 +216,9 @@ internal sealed class OperationCodeSourceBuilder
 	/// <returns>权限码来源。</returns>
 	/// <exception cref="InvalidOperationException">未声明任何规则时抛出。</exception>
 	/// <remarks>
-	/// 拒绝「没有规则」的来源：它会让所有方法级 <see cref="PermissionAttribute"/> 静默失效，
-	/// 而这与 <see cref="EmptyCodeSource"/> 表达的是两件不同的事。
-	/// 若确实没有方法级权限码，请显式使用 <see cref="EmptyCodeSource.Instance"/>。
+	/// 拒绝「没有规则」的构造结果：这样的来源对任何操作都不回答要求，与
+	/// <see cref="EmptyCodeSource"/> 是两件不同的事。确实没有方法级权限码时，显式使用
+	/// <see cref="EmptyCodeSource.Instance"/>。
 	/// </remarks>
 	public OperationCodeSource Build()
 	{

@@ -8,7 +8,7 @@
 - **NuGet 包**：`Euonia.Osba`
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Osba`
-- **依赖**：`Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation`（不引用 `Euonia.Security` / `Euonia.Domain`）
+- **依赖**：`Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation`（不引用具体鉴权引擎 / `Euonia.Domain`）
 - **完整参考**：[Source/Euonia.Osba/README.md](../../../Source/Euonia.Osba/README.md)
 
 ## API 参考
@@ -28,15 +28,29 @@
 | `ActuatorBase<T>` | `Handle(Action<T>)`、`WithRule(...)`、`BypassRule<TRule>()`、`ExecuteAsync(ct)` | 规则只作用于本次执行 |
 | `BusinessContext` / `BusinessContextAccessor` | 业务上下文与手动作用域 | `GetRequiredService<T>()`、`SetCurrent`、`Clear` |
 | `[FactoryCreate]` … `[FactoryDelete]` / `[FactoryExecute]` | 工厂方法标记 | 也可用约定名（`CreateAsync` 等，大小写敏感） |
+| `[Permission("...")]` | 声明权限要求（类型级 / 方法级） | 码为任意非空字符串；方法级只在工厂调用该方法时生效 |
+| `AddPermission(p => p.Scan(asm))` | 由策略引擎提供：读取声明并注册判定 | 新增码 / 操作无需改配置；码来自数据时用 `Requirements(...)` |
+| `CanPerformOperation(string operation)` | 操作权限查询（不抛异常） | 只含类型级 + 已登记来源，**不含方法级**；拦截在工厂边界 |
 | `CommonRule.Required` / `Regular` / `Lambda` | 内置属性规则 | 经 `Rules.AddRule(...)` 注册 |
 
+已废弃 API：
+
+| 已废弃成员 | 现状 | 替代 |
+|---|---|---|
+| `ObjectPermissionCodeSource` | 保留，标 `[Obsolete]` | 无需登记；声明自动生效 |
+| `PermissionOptions.Source(...)` | 保留，标 `[Obsolete]` | `Requirements(...)` |
+
 `OsbaOptions` **没有配置节**，不读取 `IConfiguration`：全部选项在 `AddBusinessObject(options => ...)` 回调里以代码给出。
+
+## 宿主装配
+
+需要策略引擎时，可选装配 `Euonia.Security`，调用 `AddPermission(p => p.Scan(asm))`；
+具体装配见 [Euonia.Security 用户手册](../Euonia.Security/API.md)。
 
 ## 相关文档
 
 - [教程](TUTORIAL.md)
 - [项目 README](../../../Source/Euonia.Osba/README.md) —— 架构设计、逐文件结构、陷阱清单
 - [Euonia.Core 用户手册](../Euonia.Core/API.md) —— 本包依赖的权限契约与反射工具
-- [Euonia.Security 用户手册](../Euonia.Security/API.md) —— 用 `AddPermission` 接上操作/数据权限
 - [Euonia.Mapping 用户手册](../Euonia.Mapping/API.md) —— DTO 投影
 - [仓库根 README](../../../README.md)

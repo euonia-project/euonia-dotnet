@@ -12,7 +12,7 @@ namespace Nerosoft.Euonia.Security.Tests;
 /// 运行期的授权门永远用 <see cref="BusinessOperation"/> 的小写常量查询（见 <c>ObjectAuthorization</c>），
 /// 而声明端的配置键、回调参数可以写成任意大小写。两侧一旦按序数比较，
 /// 声明端写 <c>"Execute"</c> 就会让规则表查不到 → <c>RequirementsFor</c> 返回空 →
-/// <c>ObjectAuthorization</c> 认为「没有任何权限要求」而<b>静默放行</b>（fail-open）。
+/// <c>ObjectAuthorization</c> 认为「没有任何权限要求」而直接通过。
 /// <para>
 /// 口径依据：<see cref="CompositeCodeSource.CodesFor"/> 早已按 <c>OrdinalIgnoreCase</c> 去重，
 /// 并在文档里写明理由——两个模块分别声明 <c>repo:delete</c> 与 <c>Repo:Delete</c> 必须收敛成同一个码，

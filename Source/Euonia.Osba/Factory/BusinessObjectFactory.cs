@@ -52,7 +52,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return WithActivator(target, initialize =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Create);
+			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Create, method);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
@@ -71,7 +71,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		return WithActivator(target, initialize =>
 		{
-			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Read);
+			ObjectAuthorization.EnsureAuthorized(target!, BusinessOperation.Read, method);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			InvokeSynchronously(method, target, criteria);
@@ -94,7 +94,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default, method).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
@@ -111,7 +111,7 @@ public class BusinessObjectFactory : IObjectFactory
 		var target = GetObjectInstance<TTarget>();
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Read, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Read, default, method).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
@@ -132,7 +132,7 @@ public class BusinessObjectFactory : IObjectFactory
 		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Create);
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Create, default, method).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
@@ -152,7 +152,7 @@ public class BusinessObjectFactory : IObjectFactory
 		ScopeAuthorization.WarnIfWriteBeforeCheck(target!, BusinessOperation.Update);
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Update, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Update, default, method).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);
@@ -185,7 +185,7 @@ public class BusinessObjectFactory : IObjectFactory
 		try
 		{
 			// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, operation, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, operation, cancellationToken, method, typeof(TTarget)).ConfigureAwait(false);
 
 			// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, operation, cancellationToken).ConfigureAwait(false);
@@ -236,7 +236,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, cancellationToken, typeof(TTarget)).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, cancellationToken, method, typeof(TTarget)).ConfigureAwait(false);
 
 			// 目标由调用方提供：可以前置判定
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, BusinessOperation.Execute, cancellationToken).ConfigureAwait(false);
@@ -276,7 +276,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, default, method).ConfigureAwait(false);
 			initialize();
 
 			var lifecycle = target as IObjectLifecycle;
@@ -315,7 +315,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Delete, default).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Delete, default, method).ConfigureAwait(false);
 			initialize();
 			using var loadScope = (target as ObjectBase)?.BeginLoad();
 			await InvokeAsync(method, target, criteria).ConfigureAwait(false);

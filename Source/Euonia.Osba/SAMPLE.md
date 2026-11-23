@@ -1,10 +1,8 @@
 # Euonia.Osba 全景示例
 
 > 一份从零到可运行的完整示例，覆盖业务对象、工厂、状态机、规则、执行器与权限体系。
-> 权限的深入说明见 [PERMISSION.md](PERMISSION.md)，
-> 多种业务场景的权限示例见 [PERMISSION-SAMPLE.md](PERMISSION-SAMPLE.md)，
-> 接线决策见 [PERMISSION-DESIGN.md](PERMISSION-DESIGN.md)，
-> 引擎自身的语义与取舍见 [Euonia.Security/DESIGN.md](../Euonia.Security/DESIGN.md)。
+> 权限的说明与示例见 [PERMISSION.md](PERMISSION.md) 与
+> [PERMISSION-SAMPLE.md](PERMISSION-SAMPLE.md)，边界设计见 [PERMISSION-DESIGN.md](PERMISSION-DESIGN.md)。
 
 **本文的全部代码可以直接放进项目使用。**
 
@@ -34,68 +32,36 @@
 ```csharp
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Osba;
-using Nerosoft.Euonia.Security;
 
 var services = new ServiceCollection();
 
-// 注册 Osba 基础设施，并扫描程序集里的业务对象与权限模型
+// 扫描业务对象并注册工厂、业务上下文与对象类型
 services.AddBusinessObject(typeof(Repo).Assembly);
 
 // 应用自己的服务
-services.AddSingleton<RepoStore>();                                  // 本示例用内存存储代替数据库
-services.AddSingleton<RepoAcl>();                                    // 行级授权数据
-services.AddSingleton<IScopeSubjectResolver, DemoSubjectResolver>();
-services.AddSingleton(DemoUser.Dev);                                 // 当前用户（UserPrincipal）
+services.AddSingleton<RepoStore>();   // 本示例用内存存储代替数据库
 
 var provider = services.BuildServiceProvider();
 
-// 建立请求作用域并设置上下文
 using var scope = provider.CreateScope();
 BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
 
-// 首次解析守卫：启动期校验（声明了权限模型或 [Permission] 却忘了注册解析器时在这里失败）
-_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
-
 var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
-var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
 
 // ... 业务代码 ...
 
-BusinessContextAccessor.Clear();   // 用完清理（静态 AsyncLocal）
+BusinessContextAccessor.Clear();
 ```
 
-`AddBusinessObject` 会注册：`IActuator`、`BusinessContext` 与 `BusinessContextAccessor`、
-`IObjectFactory`，并把扫描到的每个业务对象类型注册为 Transient。
-全部使用 `TryAdd*`——已注册的服务不会被覆盖。**它不注册任何权限服务**：
-是否启用权限由应用决定，需要时再用引擎的 `AddPermission` 接上（规则来源用 Osba 的工厂约定，见下文）。
+`AddBusinessObject` 会注册 `IActuator`、`BusinessContext` 与 `BusinessContextAccessor`、
+`IObjectFactory`，并把扫描到的每个业务对象类型注册为 Transient。全部使用 `TryAdd*`：
+已注册的服务不会被覆盖。它**不注册任何权限服务**；权限由宿主在组合根按需装配。
 
 > **两个容易踩的点**
 > 1. `AddBusinessObject(...)` 返回 `IServiceCollection`，可以链式调用；需要启动期校验时用
 >    `AddBusinessObject(o => o.ValidateOnStartup = true, assemblies)`。
 > 2. 手动 `CreateScope()` 的场景必须**先** `SetCurrent(scope.ServiceProvider)`，**再**解析
 >    `BusinessContext`/工厂；用完 `Clear()`。ASP.NET Core 下由中间件自动完成，无需手写。
-
-需要一个不含任何权限声明的用户（权限码只能来自授权数据）：
-
-```csharp
-public static class DemoUser
-{
-    public static UserPrincipal Dev => Create("dev");
-
-    private static UserPrincipal Create(string userId)
-    {
-        var identity = new ClaimsIdentity(
-            [new Claim(UserClaimTypes.Subject, userId)],
-            "Bearer",
-            ClaimTypes.Name,
-            UserClaimTypes.Role);
-
-        return new UserPrincipal(new ClaimsPrincipal(identity));
-    }
-}
-```
-
----
 
 ## 2. 第一个业务对象
 
@@ -306,7 +272,7 @@ await factory.SaveAsync(loaded);
 
 // 直接指定操作（目标对象由工厂内部创建并填充）
 // 注意：criteria 写入口无法在写入前判定行级权限；受数据权限约束的类型请用
-// Fetch → IScopeGuard.AllowsObject → Save，或在工厂方法内先判定。
+// Fetch → IObjectScopeAuthorizer.Allows → Save，或在工厂方法内先判定。
 await factory.UpdateAsync<Repo>(repoId);
 await factory.DeleteAsync<Repo>(repoId);     // 返回 Task，无结果
 // factory.InsertAsync<Repo>(repoId) 已标记 [Obsolete]：改用 CreateAsync + SaveAsync
@@ -353,7 +319,7 @@ protected override Task UpdateAsync(CancellationToken cancellationToken = defaul
 - 参数**精确匹配**的重载优先于靠可选参数凑上的重载；
 - 拼错名字 → `MissingMethodException`；加了 `[FactoryXxx]` 则不限名字。
 - **漏写 `[FactoryInsert]/[FactoryUpdate]/[FactoryDelete]/[FactoryExecute]` 会在保存/执行时抛
-  `NotSupportedException`**，不再调用基类空实现“静默成功”；迁移期可用
+  `NotSupportedException`**，不再调用基类空实现“静默成功”；兼容期可用
   `AddBusinessObject(o => o.StrictFactoryMethods = false, assemblies)` 临时回退。
 - 工厂方法可以返回 `Task`、`Task<T>`、`ValueTask`、`ValueTask<T>`，都会被等待。
 
@@ -649,273 +615,56 @@ services.AddScoped<IActuatorBehavior<Repo>, AuditBehavior<Repo>>();
 
 ---
 
-## 6. 权限体系
+## 6. 权限示例
 
-两套权限共享同一份**授权数据**：由应用实现，从数据实时解析、按请求缓存。
+完整示例工程：[docs/examples/osba-console](../../docs/examples/osba-console/README.md)。
 
-### 6.1 声明权限码
-
-```csharp
-[FactoryInsert]
-protected override Task InsertAsync(CancellationToken cancellationToken = default) { ... }   // 无权限码
-
-[FactoryUpdate]
-[Permission("repo:push")]                     // ← 类型级闸门：做这个操作必须持有该码
-protected override Task UpdateAsync(CancellationToken cancellationToken = default) { ... }
-
-[FactoryDelete]
-[Permission("repo:delete")]
-protected override Task DeleteAsync(CancellationToken cancellationToken = default) { ... }
+```bash
+dotnet run --project docs/examples/osba-console
 ```
 
-> **`[Permission]` 的码只决定类型级闸门，不参与行级策略的选取。**
-> 行级策略按**授权标识**声明：`ForOperation` 的第三个参数是授予键，`For(...)` 则用权限码同时作
-> 标识与键（见 §6.3）——方法上的 `[Permission]` 与模型里的键写同一个字面量只是惯例，
-> 两者对不上时策略照样按模型声明执行。
+预期输出：
 
-### 6.2 授权数据来源
+```text
+granted(order:read+order:update) => saved=A-1
+missing(order:update) => SecurityException
+missing(order:read) => SecurityException
+```
 
-权限码**来自授权数据，而不是令牌**——权限码多时不会撑爆 Token，且**取消授权立即生效**，
-不需要重新签发令牌。
+关键代码：
 
 ```csharp
-/// <summary>
-/// 行级授权数据（真实系统里是数据库里的一张 ACL 表）。
-/// </summary>
-public sealed class RepoAcl
+[Permission("order:read")]                    // 类型级：对该类型的所有方法生效
+public sealed class Order : EditableObject<Order>
 {
-    public List<(string RepoId, string UserId, string Operation)> Entries { get; } = [];
-}
+    public string Name { get; set; } = string.Empty;
 
-public sealed class DemoSubjectResolver(RepoAcl acl) : IScopeSubjectResolver
-{
-    public ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
-    {
-        var userId = user?.FindFirst(UserClaimTypes.Subject)?.Value;
-
-        if (userId == null)
-        {
-            return ValueTask.FromResult(ScopeSubjectSet.Empty);      // 匿名 → 空集合，fail-closed
-        }
-
-        var builder = ScopeSubjectSet.CreateBuilder()
-                                     .AddCodes(["repo:create", "repo:push", "repo:delete"])   // 类型级
-                                     .AddSelf(userId)                                          // 「本人」
-                                     .Add(ScopeDimensions.Dept, "TeamA");                      // 可见范围
-
-        // 行级：ACL 里逐条授权
-        foreach (var operation in new[] { "repo:push", "repo:delete" })
-        {
-            builder.AddGrant(
-                operation,
-                "repo",
-                acl.Entries.Where(entry => entry.UserId == userId && entry.Operation == operation)
-                   .Select(entry => entry.RepoId));
-        }
-
-        return ValueTask.FromResult(builder.Build());
-    }
+    [Permission("order:update")]               // 方法级：只在 UpdateAsync 被工厂调用时生效
+    [FactoryUpdate]
+    protected override Task UpdateAsync(CancellationToken cancellationToken = default)
+        => Task.CompletedTask;
 }
 ```
 
-### 6.3 资源侧声明
-
 ```csharp
-public sealed class RepoScope : ScopeModel<Repo>
-{
-    public override void Define(ScopeModelBuilder<Repo> builder)
-    {
-        builder.Map(ScopeDimensions.Owner, r => r.OwnerId)
-               .Map(ScopeDimensions.Dept, r => r.TeamId)
-               .Map("repo", r => r.Id)                    // 资源标识也作为维度 → 行级权限的前提
-               .Classify("level", r => r.Level);          // 分类属性：不参与授权
-    }
-
-    // 默认策略：未单独声明的标识都用它
-    public override ScopePolicy<Repo> Policy =>
-        ScopePolicy<Repo>.Any(
-            ScopePolicy<Repo>.Self(),
-            ScopePolicy<Repo>.Grant(ScopeDimensions.Dept));
-
-    // 按操作声明行级策略：第三个参数是该操作的授予键（权限码）
-    public override void Declare(ScopePolicySet<Repo> policies)
-    {
-        // 注意：Create 不需要单独声明。保存新行时默认策略一样适用，而且此时字段已由调用方填完，
-        // 于是「本人创建的、或建在自己团队下的」才允许落库——这正是想要的效果。
-        policies.ForOperation(BusinessOperation.Update, ScopePolicy<Repo>.Grant("repo"), "repo:push");
-        policies.ForOperation(BusinessOperation.Delete, ScopePolicy<Repo>.Grant("repo"), "repo:delete");
-    }
-}
-
-// 读模型也需要自己的声明，否则查询侧不受约束
-public sealed class RepoRecordScope : ScopeModel<RepoRecord>
-{
-    public override void Define(ScopeModelBuilder<RepoRecord> builder)
-    {
-        builder.Map(ScopeDimensions.Owner, r => r.OwnerId)
-               .Map(ScopeDimensions.Dept, r => r.TeamId);
-    }
-
-    public override ScopePolicy<RepoRecord> Policy =>
-        ScopePolicy<RepoRecord>.Any(
-            ScopePolicy<RepoRecord>.Self(),
-            ScopePolicy<RepoRecord>.Grant(ScopeDimensions.Dept));
-}
+services.AddBusinessObject(typeof(Order).Assembly);
+services.AddPermission(p => p.Scan(typeof(Order).Assembly));   // 可选策略引擎
 ```
 
-**模型与策略写在同一个类型里**，所以结构上不可能出现「有模型没策略」。
-模型由 `AddPermission` 的扫描发现，并在**注册期**完成校验（未映射维度、策略恒不放行、重复授予键等都会启动即失败）。
-
-> **未声明模型的类型不受任何数据权限约束**——这是当前边界。所以查询用的读模型也要单独声明，
-> 否则 `guard.Apply` 会原样返回。
-
-### 6.4 判定
-
 ```csharp
-// 读侧：下推到数据库（生成的是表达式树，由 EF/提供程序翻成 WHERE）
-var visible = await guard.Apply(dbContext.Repos).ToListAsync();
-
-// 单行判定
-guard.Allows(repo);                                  // 按当前对象状态对应的操作解析
-guard.Allows(repo, BusinessOperation.Delete);        // 显式指定操作
-guard.Explain(repo, BusinessOperation.Delete);       // 审计：命中了哪条策略
-
-// 业务对象内部
-protected bool CanDelete()
-{
-    return CanPerformOperation(BusinessOperation.Delete)                                                    // 操作级
-        && BusinessContext.GetRequiredService<IScopeGuard>().AllowsObject(this, BusinessOperation.Delete);  // 行级
-}
+var order = new Order { Name = "A-1", BusinessContext = businessContext };
+order.MarkAsChanged();
+var saved = await factory.SaveAsync(order, CancellationToken.None);
 ```
 
-**判定语义**：策略编译成 `Allow`/`Deny` 一对表达式，结论恒为 `Allow && !Deny`。
-`Deny` 是**否决**（压过一切、且一律上浮），不是布尔取反——需要取反请用
-`ScopePolicy<Repo>.Where(r => !...)`。
+- 第一条输出：类型级 `order:read` 与方法级 `order:update` 都满足，更新成功。
+- 第二条输出：缺少方法级 `order:update`，工厂边界抛出 `SecurityException`。
+- 第三条输出：缺少类型级 `order:read`，更新路径同样被拒绝。
 
-### 6.5 权限与规则：两条线，互不相干
+**宿主装配**：需要策略引擎时，可选装配 `Euonia.Security` 并调用
+`AddPermission(p => p.Scan(asm))`；完整装配见示例工程。
 
-| | 权限线（工厂边界） | 验证线（规则） |
-|---|---|---|
-| 回答 | 这个用户**能不能**做这件事 / 碰这行 | 这份数据**合不合法** |
-| 位置 | `ObjectAuthorization` + `ScopeAuthorization`，在 `BusinessObjectFactory` 调用边界 | `EditableObject.SaveAsync`；服务对象由 `ObjectRuleGuard` 在执行体之前 |
-| 结果 | `SecurityException` | `ValidationException`（`Errors` 带属性名） |
-| 可否绕过 | **不可**，无任何开关 | 可（`SuspendRuleChecking` / `BypassRuleChecks` / `WithRuleChecksOnDelete`） |
-
-**新增、更新、删除、命令执行的越权一律 `SecurityException`**——没有形态差异。
-`EditableObject<T>` 在 `IsDeleted` 时默认跳过的是**验证规则**，与权限无关。
-
-```csharp
-try
-{
-    repo.MarkAsChanged();
-    await repo.SaveAsync();
-}
-catch (SecurityException ex)            // 越权：新增/更新/删除/命令 都走这里
-{
-    Console.WriteLine($"越权：{ex.Message}");
-}
-catch (ValidationException ex)          // 数据不合法，与权限无关
-{
-    foreach (var error in ex.Errors) { Console.WriteLine(error.ErrorMessage); }
-}
-```
-
-> `IObjectFactory.Insert/Update/DeleteAsync(criteria)`、`ExecuteAsync(criteria)` 这些
-> criteria 低层入口不做**验证规则**判定（调用前对象为空，无从校验），但**权限仍然强制**。
-
-> **不要把权限断言写进 `AddRules()`**。规则可被绕过、`Rules.RunAsync` 又把所有异常转成错误，
-> 规则在结构上就抛不出 `SecurityException`。需要条件分支请用 `CanPerformOperation` /
-> `IScopeGuard.AllowsObject`，需要「越权即拒」交给工厂边界即可。
-
----
-
-## 7. 端到端
-
-把上面的片段串起来，一次完整流程：
-
-```csharp
-var services = new ServiceCollection();
-services.AddBusinessObject(typeof(Repo).Assembly);
-services.AddPermission(p =>                                                                     // 显式接入引擎
-{
-    p.Scan(typeof(Repo).Assembly);
-    p.Source(ObjectPermissionCodeSource.Instance);
-});
-services.AddSingleton<RepoStore>();
-services.AddSingleton<RepoAcl>();
-services.AddSingleton<IScopeSubjectResolver, DemoSubjectResolver>();
-services.AddSingleton(DemoUser.Dev);
-
-var provider = services.BuildServiceProvider();
-
-using var scope = provider.CreateScope();
-BusinessContextAccessor.SetCurrent(scope.ServiceProvider);
-_ = scope.ServiceProvider.GetRequiredService<IScopeGuard>();   // 首次解析守卫：启动期校验在此执行
-
-var factory = scope.ServiceProvider.GetRequiredService<IObjectFactory>();
-var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
-var store = scope.ServiceProvider.GetRequiredService<RepoStore>();
-var acl = scope.ServiceProvider.GetRequiredService<RepoAcl>();
-
-await guard.EnsureResolvedAsync();                 // 同步判定前预热（工厂入口自带；直接调守卫需手动预热）
-
-// 1. 造两个属于 TeamA、所有者为 dev 的仓库
-async Task<Repo> CreateAsync(string name, string teamId, string ownerId)
-{
-    var repo = await factory.CreateAsync<Repo>(name);
-    repo.TeamId = teamId;
-    repo.OwnerId = ownerId;
-    repo.Level = "normal";
-    repo.MarkAsNew();
-    return await repo.SaveAsync();
-}
-
-var a1 = await CreateAsync("repo-a1", "TeamA", "dev");
-var a2 = await CreateAsync("repo-a2", "TeamA", "dev");
-
-// 别的团队、别人拥有的仓库：直接种入存储，代表「早就存在的行」
-// （dev 建不出它——创建时默认策略就要求「本人所有」或「建在自己团队下」）
-store.Repos["repo-b1"] = new RepoRecord("repo-b1", "repo-b1", "TeamB", "someone", "normal", false);
-
-// 2. 写入行级授权：两个都能 push，只有 a1 能 delete
-acl.Entries.Add((a1.Id, "dev", "repo:push"));
-acl.Entries.Add((a2.Id, "dev", "repo:push"));
-acl.Entries.Add((a1.Id, "dev", "repo:delete"));
-await guard.RefreshAsync();                        // 授权数据变了：失效并立即重新解析
-
-// 3. 读侧：只有本团队/本人的仓库可见
-var visible = guard.Apply(store.Repos.Values.AsQueryable()).ToList();
-Console.WriteLine(string.Join(", ", visible.Select(r => r.Name)));   // repo-a1, repo-a2
-
-// 4. 行级操作权限：同一用户、同一类型，不同仓库结论不同
-Console.WriteLine(guard.Allows(a2, BusinessOperation.Update));   // True（push 即更新操作）
-Console.WriteLine(guard.Allows(a2, BusinessOperation.Delete));   // False ← 这就是「行级操作权限」
-
-// 5. 越权删除被工厂边界拦下
-try
-{
-    a2.MarkAsDeleted();
-    await a2.SaveAsync();
-}
-catch (SecurityException ex)
-{
-    Console.WriteLine($"越权删除被拒绝：{ex.Message}");
-    // Data scope denied. Delete (before): Repo. [scope=delete] 判定：拒绝；…
-}
-
-// 6. 服务对象走执行器
-var actuator = scope.ServiceProvider.GetRequiredService<IActuator>();
-await actuator.For<PushService>()
-              .Execute(a1.Id, CancellationToken.None)
-              .Handle(command => command.Note = "first")
-              .ExecuteAsync(CancellationToken.None);
-
-BusinessContextAccessor.Clear();
-```
-
----
-
-## 8. 易错点清单
+## 7. 易错点清单
 
 ### 装配
 
@@ -1005,23 +754,9 @@ BusinessContextAccessor.Clear();
 
 ### 权限
 
-46. 权限码来自 `IScopeSubjectResolver`，**不在令牌里**；忘记注册解析器 →
-    首次解析 `IScopeGuard` 时启动期校验失败（守卫是判定入口，首次判定前必然先解析它，不会静默放行）。
-47. **行级策略按授权标识声明，不在 `[Permission]` 上**：`ForOperation` 的第三个参数是授予键，
-    省略时取操作名自身；`For(code, …)` 则让标识与键同为权限码。授予键与 `[Permission]` 对不上时，
-    解析器写在权限码下的行级授予不会被查到——该操作改用默认键上的授予（或没有授予），行级收窄静默失效。
-48. `Self()` 等价于 `Grant(owner)`，解析器必须 `AddSelf(userId)` 才成立——漏了是 fail-closed，不会反向放行。
-49. `Deny` 是**全局否决**且一律上浮，不是布尔取反。
-50. 码级授予**覆盖**默认键（不是并集）；权限码通配（`repo:*`）**不参与**维度查找。
-51. **越权一律抛 `SecurityException`**——新增/更新/删除/命令执行形态完全一致。
-    越权**不会**出现在 `ValidationException.Errors` 里：权限不走规则通道，
-    规则集合里只应有数据校验规则（见 §6.5）。
-52. **`Create` / `CreateAsync` 不做数据范围判定**——它们只构造对象、不落库，且按设计由调用方随后填充字段
-    （框架自带示例 `User.CreateAsync` 也只填 `Username`）。判定发生在**落库那一刻**：
-    `SaveAsync`（新增）与 `InsertAsync`。所以「本人或本团队」这类默认策略写一次就够，
-    不需要为 `Create` 另写策略。
-53. 未声明 `ScopeModel<T>` 的类型不受数据权限约束——**读模型也要单独声明**。
-54. **忘给对象接 `BusinessContext` 不会静默放行**：声明了 `[Permission]` 或 `ScopeModel<T>` 的类型，若目标对象没接入上下文，工厂会在强制点抛 `InvalidOperationException` 并指明缺少 `BusinessContext`。
-    这是有意的——「判定不了」不等于「没有要求」。通过工厂创建/读取对象时会自动接线；手工 `new` 的对象必须自己设。
-55. 不要把 `Allow`/`Deny` 塞进 EF 全局查询过滤器——EF 按 DbContext 类型缓存模型，
-    会把每用户不同的常量烘进缓存，导致**跨用户数据泄漏**。逐查询用 `guard.Apply(query)`。
+46. 权限码写在 `[Permission]` 上：类型级对该类型的所有方法生效，方法级只在对应方法被工厂调用时生效。
+47. `CanPerformOperation` 只反映类型级与已登记来源，不含方法级声明；方法级判断用
+    `IPermissionChecker.IsGranted`，真正的拦截在工厂边界。
+48. 越权一律抛 `SecurityException`，不会出现在 `ValidationException.Errors` 里。
+49. 有要求却缺 `BusinessContext` 或判定实现时抛 `InvalidOperationException`，不会静默放行。
+50. 数据权限由 `IObjectScopeAuthorizer` 实现负责；形态与时机见 [PERMISSION.md](PERMISSION.md)。

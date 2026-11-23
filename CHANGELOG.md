@@ -102,6 +102,35 @@
 - **移除/限制**：Quartz 4 不再提供专用线程池与零大小线程池，`UseDedicatedThreadPool` / `UseZeroSizeThreadPool` 会抛出
   `NotSupportedException`，请改用 `UseDefaultThreadPool` 或 `UseThreadPool<T>`。
 
+### 权限系统（Euonia.Security / Euonia.Osba）
+
+- **新增：权限码单维度任意字符串**：`[Permission]` 的权限码不再拆成「资源 + 操作」，任意非空字符串
+  （可含 `:`、`-`、`.`）都是合法码；冒号只是命名习惯，不是结构。首尾空白在读取时裁剪，码与策略标识
+  一律忽略大小写。
+- **新增：`[Permission]` 零配置发现**：类型级（含继承链）与**将被调用的那个方法**级（含 override 链）
+  声明直接生效，新增权限码或新增操作都不需要修改 `AddPermission`；
+  `services.AddPermission(p => p.Scan(typeof(Order).Assembly))` 即完整配置。方法级声明只在该方法被宿主
+  工厂调用时生效，不波及同类型的其它方法。
+- **新增：`IPermissionRequirementSource` / `PermissionRequirements`（Core）**：按「类型 + 将被调用的方法」
+  回答权限要求；`PermissionRequirements.For(Type, MethodInfo?)` / `Merge` / `Adapt` 提供带缓存的读取、
+  按「码 + 角色」去重与旧契约适配，判定路径不再新增反射。
+- **新增：`PermissionOptions.Requirements(IPermissionRequirementSource)`**：权限码来自数据库 / 配置表 /
+  既有鉴权系统时登记要求来源，与声明取并集（增量，不是替换）；`Scan` / `NoModels` 语义不变。
+- **新增：启动期声明校验**：空权限码（且未声明角色）、保留前缀 `@`、同一成员重复声明同一个码，
+  在注册期**一次报全**（`IDS_PERMISSION_CODE_EMPTY` / `IDS_SCOPE_CODE_RESERVED_PREFIX` /
+  `IDS_PERMISSION_CODE_DUPLICATE`），不再等到运行期才发现声明永远匹配不上。
+- **变更：旧 API 标记 `[Obsolete]`**：`PermissionOptions.OnAttributeOrName` / `OnMethod` / `Source` /
+  `NoOperationCodes`、`IPermissionCodeSource`、`ObjectPermissionCodeSource` 全部保留（编译警告 CS0618，
+  不是错误），旧来源仍作为并集的一份参与判定；新代码请改用 `Requirements` / `IPermissionRequirementSource`。
+- **破坏性变更**：
+  - **B1**：未在旧配置里声明的操作方法，其方法级 `[Permission]` **现在也会生效**（修复「漏配置即放行」）；
+    确实不该被约束的方法请删除其声明。
+  - **B2**：同一操作下多个入口方法的要求**不再互相叠加**，只取实际被调用方法的要求；需要叠加时把两个码
+    写在同一方法上或写到类型级。
+  - **B3**：`ObjectBase.CanPerformOperation(operation)` 只含类型级与旧来源要求，**不含方法级**；它是查询
+    入口而不是闸门，需要在方法级码上分支时用 `IPermissionChecker.IsGranted("order:update")`。
+- **测试**：1360 total / 0 failed / 13 skipped（基线 1329 + 新增 31）。
+
 ### Euonia.Osba
 
 - **规则基类拆分**：新增 `ObjectRuleBase` / `PropertyRuleBase` 与 `IObjectRule` / `IPropertyRule` 契约。

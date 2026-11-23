@@ -22,9 +22,8 @@ internal sealed class EmptyCodeSource : IPermissionCodeSource
 
 	/// <inheritdoc />
 	/// <remarks>
-	/// <b>空集，而不是一份默认词表</b>：本来源没有任何规则，因此它对「本应用用到哪些操作」这个问题的诚实回答就是「不知道」——
+	/// <b>空集</b>：本来源不提供任何操作与权限码；显式断言「本应用没有方法级权限码」时使用。
 	/// 操作集由宿主的对象模型决定（见 <c>IObjectOperationResolver</c>），引擎不替它枚举。
-	/// 这里曾经回落到 CRUD 五项，那等于把某个宿主框架的词汇表当成引擎的默认值。
 	/// </remarks>
 	public IReadOnlyList<string> AllOperations { get; } = [];
 
