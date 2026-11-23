@@ -831,6 +831,41 @@ catch (AccountException ex)
 }
 ```
 
+### 密码学
+
+`Cryptography`（AES/DES/SHA/MD5/Base64/RSA）、`PasswordComplexity`、`PasswordGenerator` 与 `RandomUtility` 提供常用的安全原语：
+
+```csharp
+using Nerosoft.Euonia.Security;
+
+var key = RandomUtility.GenerateRandomString(32);          // 32 字节 UTF-8 密钥
+var cipher = Cryptography.AES.Encrypt("secret", key);      // Base64 密文
+var digest = Cryptography.SHA.Encrypt(cipher!);            // SHA-256 / Base64
+
+var password = PasswordGenerator.GeneratePassword(PasswordComplexity.All, 12, 16);
+var otp = RandomUtility.GenerateRandomDigit(6);
+```
+
+| 类型 | 用途 |
+|---|---|
+| `Cryptography.AES` | AES 加密/解密（ECB + PKCS7，兼容既有数据） |
+| `Cryptography.DES` | DES 加密 / 32 字节密钥的 AES 兼容实现（ECB + PKCS7） |
+| `Cryptography.MD5` | MD5 摘要（小写十六进制） |
+| `Cryptography.SHA` | SHA-256 摘要（Base64 输出） |
+| `Cryptography.Base64` | UTF-8 字符串的 Base64 编解码 |
+| `Cryptography.RSA` | RSA 加密/解密（PEM、PKCS#1、PKCS#8、SPKI） |
+| `PasswordComplexity` / `PasswordGenerator` | 按字符类型要求生成密码学安全密码 |
+| `RandomUtility` | 安全随机字符串/数字/字节，`Random` 的安全实现 |
+
+安全约束：
+
+- AES 使用 ECB + PKCS7；ECB 不隐藏明文模式，新数据应使用带随机 IV 的 CBC/GCM。
+- 无参 `Encrypt(source)` / `Decrypt(source)` 使用固定的 32 字节默认盐值，仅用于兼容既有数据；生产环境请显式传入密钥。
+- `Cryptography.SHA` 是一次 SHA-256，不能替代 PBKDF2/Argon2 等慢哈希。
+- `Cryptography.DES` / `Cryptography.MD5` 为兼容既有调用保留；新数据请优先使用 AES 与 SHA-256。
+
+完整 API 见 [Euonia.Core API 手册](../../docs/user-manual/Euonia.Core/API.md)，用法见 [教程](../../docs/user-manual/Euonia.Core/TUTORIAL.md)。
+
 ---
 
 ## `Nerosoft.Euonia.Windows`

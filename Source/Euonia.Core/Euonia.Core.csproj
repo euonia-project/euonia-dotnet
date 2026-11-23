@@ -5,8 +5,8 @@
 
     <PropertyGroup>
         <RootNamespace>Nerosoft.Euonia.Core</RootNamespace>
-        <Description>Euonia 核心基础库：提供基类、对象标识（Snowflake、ULID、ObjectId、ShortUniqueId）、集合、反射工具、异步协调原语、可释放模式、安全原语与常用扩展。 / Core foundation for Euonia: base classes, object identifiers (Snowflake, ULID, ObjectId, ShortUniqueId), collections, reflection helpers, async coordination primitives, disposable patterns, security primitives and common extensions.</Description>
-        <PackageTags>euonia, core, foundation, objectid, snowflake, ulid, collections, reflection, async, threading, extensions</PackageTags>
+        <Description>Euonia 核心基础库：提供基类、对象标识（Snowflake、ULID、ObjectId、ShortUniqueId）、集合、反射工具、异步协调原语、可释放模式、安全与密码学原语（AES/DES/SHA/MD5/RSA/密码/随机）及常用扩展。 / Core foundation for Euonia: base classes, object identifiers, collections, reflection helpers, async coordination primitives, disposable patterns, security and cryptography primitives (AES/DES/SHA/MD5/RSA/password/random) and common extensions.</Description>
+        <PackageTags>euonia, core, foundation, objectid, snowflake, ulid, collections, reflection, async, threading, security, cryptography, extensions</PackageTags>
     </PropertyGroup>
 
     <ItemGroup>

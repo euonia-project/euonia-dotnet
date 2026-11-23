@@ -138,6 +138,58 @@ dotnet run -- 加急
 - **对象池泄漏**：`Lease()` 后必须 `Return()`（用 `try/finally`），否则策略里的清理逻辑不会执行。
 - **CS0104 二义性**：全局命名空间的 `Check` / `ObjectId` 与 `using` 引入的同名类型冲突，用 `global::Check` 限定。
 
+## 密码学
+
+`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 AES/DES/SHA/MD5/Base64/RSA、密码生成与安全随机数。
+
+### 1. 加密与摘要
+
+```csharp
+using Nerosoft.Euonia.Security;
+
+var salt = RandomUtility.GenerateRandomString(32);        // 32 字节 UTF-8
+var cipher = Cryptography.AES.Encrypt(clientSecret, salt);
+var digest = Cryptography.SHA.Encrypt(cipher!);           // 存储摘要
+
+var actual = Cryptography.SHA.Encrypt(Cryptography.AES.Encrypt(input, salt)!);
+if (!CryptographicOperations.FixedTimeEquals(
+        Encoding.UTF8.GetBytes(actual),
+        Encoding.UTF8.GetBytes(digest)))
+{
+    throw new UnauthorizedAccessException();
+}
+```
+
+密钥长度必须是 16 / 24 / 32 字节；`RandomUtility.GenerateRandomString(32)` 正好生成 32 个十六进制字符（32 字节）。
+
+### 2. 生成密码与验证码
+
+```csharp
+var password = PasswordGenerator.GeneratePassword(
+    PasswordComplexity.ContainsLowercase
+    | PasswordComplexity.ContainsUppercase
+    | PasswordComplexity.ContainsDigit,
+    minLength: 48,
+    maxLength: 48);
+
+var otp = RandomUtility.GenerateRandomDigit(6);
+```
+
+### 3. 验证
+
+```bash
+dotnet test Tests/Euonia.Core.Tests/Euonia.Core.Tests.csproj
+```
+
+### 4. 常见失败点
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| `ArgumentException: AES 密钥长度必须为 16、24 或 32 字节` | 密钥长度不对 | 使用 `RandomUtility.GenerateRandomString(32)` 或显式 16/24/32 字节 |
+| `FormatException` | 待解密的字符串不是合法 Base64 | 检查密文来源，确认未被截断 |
+| `CryptographicException` | 密文被篡改、密钥不匹配或填充非法 | 检查密钥与完整性校验 |
+| RSA 构造抛 `CryptographicException` | 密钥不是 PEM / PKCS#1 / PKCS#8 / SPKI | 用 `RSA.ExportRSAPrivateKeyPem()` 等平台 API 重新导出 |
+
 ## 相关文档
 
 - [API 参考](API.md)

@@ -84,6 +84,26 @@ Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释�
 
 `Euonia.Core` **没有配置节**，也不读取 `IConfiguration`：静态工具直接调用，可实例化的类型直接 `new`，权限契约由使用方实现；无需 `appsettings` 与环境变量。
 
+## 密码学
+
+命名空间：`Nerosoft.Euonia.Security`。
+
+| 类型 | 关键成员 | 说明 |
+|---|---|---|
+| `Cryptography.AES` | `Encrypt(string?, string/byte[])`、`Decrypt(string?, string/byte[])` | ECB + PKCS7，兼容既有数据 |
+| `Cryptography.DES` | `Encrypt(string, string/byte[])`、`Decrypt(string, byte[])` | 字符串密钥走 DES；32 字节密钥走 AES；ECB + PKCS7 |
+| `Cryptography.MD5` | `Encrypt(string)` | 小写十六进制 MD5 摘要 |
+| `Cryptography.SHA` | `Encrypt(string)` | SHA-256，Base64 输出 |
+| `Cryptography.Base64` | `Encode` / `Decode` | UTF-8 与 Base64 互转 |
+| `Cryptography.RSA` | 构造、`Encrypt`、`Decrypt`、`Dispose` | PEM / PKCS#1 / PKCS#8 / SPKI；PKCS#1 v1.5 填充 |
+| `PasswordComplexity` | Flags 枚举 | 小写/大写/数字/符号 |
+| `PasswordGenerator` | `GeneratePassword(complexity, minLength, maxLength)` | 保证每种要求的字符至少出现一次 |
+| `RandomUtility` | `GenerateRandomString` / `GenerateRandomDigit` / `GenerateRandomBytes` | CSPRNG；`Random` 的安全实现 |
+
+行为与安全约束：
+
+- AES 密钥长度必须为 16/24/32 字节；空输入返回 `null`；无参重载使用固定默认盐值。
+
 ## 相关文档
 
 - [教程](TUTORIAL.md)
