@@ -119,6 +119,7 @@ public void Configure(IApplicationBuilder app)
 - **认证**：`AddJwtAuthentication(...)` 注册 JWT Bearer；`AddIdentityServerAuthentication(...)` 同时注册 JWT 与 OAuth2 内省子方案。
 - **授权**：`[AuthorizeRoles]`、`AddScopePolicy(...)`、`RequireScope(...)` 与 `ScopePolicy.Create(...)`。
 - **权限控制**：`AddPermissionGuard(...)` 注册权限策略提供程序与授权处理器；`[RequiresPermission(...)]` 将权限码映射为动态策略，按 `IScopeGuard` 解析的权限集合判定。
+- **流控**：`AddEuoniaRateLimiting(...)` 注册按客户端 IP 分区的双窗口（分钟 + 小时）限流策略；`UseEuoniaRateLimiting()` 启用中间件，拒绝时返回 429 与 `Retry-After`。
 - **请求管道**：`InitializeApplication()` 触发模块初始化；`UseCulture()`、`UseJwt()`、`UseDefaultRequestContextAccessor()` 提供区域性、认证回退与请求上下文安装。
 - **平台中间件扩展**：`UseTenancy()`、`UseAuditing()`、`UseEuoniaTelemetry()` 按对应 `*Options.Enabled` 决定是否安装；`UseExecutionContext()` 总是安装。
 
@@ -138,6 +139,9 @@ public void Configure(IApplicationBuilder app)
 | `AddPermissionGuard(...)` | 注册权限策略提供程序、授权处理器与权限体系 | 无参重载等价于 `AddPermissionGuard(p => p.NoModels())` |
 | `RequiresPermissionAttribute` | 声明控制器/方法的权限码 | 多个权限码为“任一满足” |
 | `PermissionPolicyProvider` / `PermissionAuthorizationHandler` | 权限策略还原与 `IScopeGuard` 判定 | 由 `AddPermissionGuard` 注册 |
+| `AddEuoniaRateLimiting(...)` | 注册双窗口限流默认策略与 429 响应 | 默认策略名 `euonia`，按 IP 分区 |
+| `DualWindowRateLimiter` / `DualWindowRateLimiterOptions` | 分钟 + 小时组合限流器 | 默认 5 次/分钟、10 次/小时；可配置 |
+| `UseEuoniaRateLimiting()` | 启用 ASP.NET Core 限流中间件 | 需先注册 `AddEuoniaRateLimiting` |
 | `UseTenancy()` / `UseAuditing()` / `UseEuoniaTelemetry()` / `UseExecutionContext()` | 租户、审计、遥测与执行上下文中间件 |
 | `TenantHttpKeys` | 租户上下文、失败代码与候选值的 `HttpContext.Items` 键 |
 
