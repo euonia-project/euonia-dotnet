@@ -15,6 +15,10 @@
 | 类型/成员 | 说明 | 关键参数/默认值 |
 |-----------|------|-----------------|
 | `DataContextBase<TContext>` | EF Core 上下文基类，实现 `IRepositoryContext` | `AutoSetEntryValues` 必须重写 |
+| `DataContextBase.GetCurrentUserId` | 提供当前用户标识，供审计字段写入 | 返回 `null` 时跳过审计；`AutoSetEntryValues` 需为 `true` |
+| `DataContextBase.CreatedByFieldName` / `UpdatedByFieldName` / `DeletedByFieldName` | 操作人字段名 | 默认 `CreatedBy` / `UpdatedBy` / `DeletedBy`，可重写 |
+| `EfCoreRepository.SetOf<T>` | 访问其他实体类型的查询 | 转发到上下文 |
+| `EfCoreRepository.LookupAsync` | 按主键集合投影为字典 | 主键为空时返回空字典 |
 | `EfCoreRepository<TContext, TEntity, TKey>` | EF Core 仓储实现 | 通过 `IContextProvider` 取上下文 |
 | `AddEfCoreRepository<TContext>(Action<DbContextOptionsBuilder>)` | 注册上下文、仓储与 `UnitOfWorkContextFactory` | `contextLifeTime` 默认 `Scoped` |
 | `AddEfCoreRepository<TContextService, TContextImplementation>(...)` | 指定服务/实现类型 | 适合接口上下文 |

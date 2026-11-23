@@ -88,7 +88,7 @@ public sealed class UserEntity : Entity<string>, IHasCreateTime, IHasUpdateTime,
 	/// <summary>
 	/// 获取或设置更新时间。
 	/// </summary>
-	public DateTime UpdatedAt { get; set; }
+	public DateTime? UpdatedAt { get; set; }
 
 	/// <summary>
 	/// 获取或设置一个值，指示此实例是否已删除。

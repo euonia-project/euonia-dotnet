@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Nerosoft.Euonia.Repository;
 using Nerosoft.Euonia.Repository.EfCore;
@@ -27,8 +27,7 @@ internal static class EntityTypeBuilderExtensions
 		builder.Property(t => t.UpdatedAt)
 			   .HasColumnName("updated_at")
 			   .HasValueGenerator<UtcTimeValueGenerator>()
-			   .ValueGeneratedOnAddOrUpdate()
-			   .IsRequired();
+			   .ValueGeneratedOnAddOrUpdate();
 
 		builder.Property(t => t.CreatedBy)
 			   .HasColumnName("created_by")
@@ -130,8 +129,7 @@ internal static class EntityTypeBuilderExtensions
 	{
 		builder.Property(t => t.UpdatedAt)
 			   .HasColumnName("updated_at")
-			   .HasValueGenerator<UtcTimeValueGenerator>()
-			   .IsRequired();
+			   .HasValueGenerator<UtcTimeValueGenerator>();
 	}
 
 	/// <summary>

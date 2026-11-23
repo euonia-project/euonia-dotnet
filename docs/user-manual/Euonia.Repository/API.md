@@ -15,7 +15,9 @@
 | 类型/成员 | 说明 | 关键参数/默认值 |
 |-----------|------|-----------------|
 | `IRepository<TEntity>` | 基础仓储：查询、CRUD、分页 | `autoSave` 默认 `true` |
-| `IRepository<TEntity, TKey>` | 增加按键查询 | `TKey : IEquatable<TKey>` |
+| `IRepository<TEntity, TKey>` | 增加按键查询与按键删除 | `TKey : IEquatable<TKey>`；`DeleteAsync(id)` 对 `ITombstone` 软删除 |
+| `IRepository.GetAsync` / `FindAsync` / `CountAsync` | 仅接收查询委托的重载 | `handle` 可为 `null` |
+| `IAuditable<TUser>` | 创建、更新、删除审计与软删除契约 | `DeletedBy` 为用户标识类型 |
 | `IRepository<TContext, TEntity, TKey>` | 绑定上下文的仓储 | 暴露 `Context` |
 | `IRepositoryContext` | 上下文契约：集合、连接、事务、保存 | `SaveChangesAsync`、`BeginTransactionAsync` |
 | `IContextProvider` | 解析上下文；可注册自定义工厂 | `GetContext<TContext>()`、`SetFactory` |

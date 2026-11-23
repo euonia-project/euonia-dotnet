@@ -89,7 +89,9 @@
 - Task<TEntity> InsertAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task InsertAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<System.Int64> LongCountAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
+- Task<Dictionary<TKey, System.String>> LookupAsync(IEnumerable<TKey> ids, Expression<Func<TEntity, System.Collections.Generic.KeyValuePair<TKey, System.String>>> selector, System.Threading.CancellationToken cancellationToken = default)
 - IQueryable<TEntity> Queryable()
+- IQueryable<T> SetOf<T>()
 - System.Threading.Tasks.Task UpdateAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task UpdateAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 

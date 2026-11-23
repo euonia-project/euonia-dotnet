@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Nerosoft.Euonia.Repository;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
 
@@ -134,11 +135,100 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	}
 
 	/// <summary>
-	/// 在保存变更前设置实体条目的值，派生类可重写以填充审计字段等。
+	/// 获取创建人字段的名称；默认值为 <c>CreatedBy</c>。
+	/// </summary>
+	protected virtual string CreatedByFieldName => "CreatedBy";
+
+	/// <summary>
+	/// 获取更新人字段的名称；默认值为 <c>UpdatedBy</c>。
+	/// </summary>
+	protected virtual string UpdatedByFieldName => "UpdatedBy";
+
+	/// <summary>
+	/// 获取删除人字段的名称；默认值为 <c>DeletedBy</c>。
+	/// </summary>
+	protected virtual string DeletedByFieldName => "DeletedBy";
+
+	/// <summary>
+	/// 获取当前用户的标识；返回 <c>null</c> 时跳过审计字段写入。
+	/// </summary>
+	/// <returns>当前用户的标识，类型由实体上的操作用户字段决定。</returns>
+	protected virtual object? GetCurrentUserId()
+	{
+		return null;
+	}
+
+	/// <summary>
+	/// 在保存变更前设置实体条目的值：为实现了 <see cref="IHasCreateTime"/>、<see cref="IHasUpdateTime"/>、
+	/// <see cref="IHasDeleteTime"/> 或 <see cref="ITombstone"/> 的实体填充审计字段，并将删除转换为软删除。
 	/// </summary>
 	/// <param name="entries">变更跟踪器中当前被跟踪的所有实体条目。</param>
 	protected virtual void SetEntryValues(IEnumerable<EntityEntry> entries)
 	{
+		var userId = GetCurrentUserId();
+
+		if (userId is null)
+		{
+			return;
+		}
+
+		var now = DateTimeKind switch
+		{
+			DateTimeKind.Utc => DateTime.UtcNow,
+			DateTimeKind.Local => DateTime.Now,
+			_ => DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified)
+		};
+
+		foreach (var entry in entries)
+		{
+			switch (entry.State)
+			{
+				case EntityState.Added:
+					if (entry.Entity is IHasCreateTime created)
+					{
+						created.CreatedAt = now;
+						entry.TrySetProperty(CreatedByFieldName, userId);
+					}
+
+					if (entry.Entity is IHasUpdateTime added)
+					{
+						added.UpdatedAt = now;
+						entry.TrySetProperty(UpdatedByFieldName, userId);
+					}
+
+					break;
+
+				case EntityState.Modified:
+					if (entry.Entity is IHasUpdateTime modified)
+					{
+						modified.UpdatedAt = now;
+						entry.TrySetProperty(UpdatedByFieldName, userId);
+					}
+
+					if (entry.Entity is ITombstone { IsDeleted: true } && entry.Property(nameof(ITombstone.IsDeleted)).OriginalValue is false)
+					{
+						if (entry.Entity is IHasDeleteTime deleted)
+						{
+							deleted.DeletedAt = now;
+						}
+
+						entry.TrySetProperty(DeletedByFieldName, userId);
+					}
+
+					break;
+
+				case EntityState.Deleted when entry.Entity is ITombstone tombstone:
+					tombstone.IsDeleted = true;
+					if (entry.Entity is IHasDeleteTime deleteTime)
+					{
+						deleteTime.DeletedAt = now;
+					}
+
+					entry.TrySetProperty(DeletedByFieldName, userId);
+					entry.State = EntityState.Modified;
+					break;
+			}
+		}
 	}
 
 	/// <summary>

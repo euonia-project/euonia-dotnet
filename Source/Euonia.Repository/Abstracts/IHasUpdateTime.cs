@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Repository;
+namespace Nerosoft.Euonia.Repository;
 
 /// <summary>
 /// 表示包含更新时间属性的对象。
@@ -9,5 +9,5 @@ public interface IHasUpdateTime
     /// 获取或设置对象的最后修改时间。
     /// </summary>
     /// <value>对象的最后修改时间。</value>
-    DateTime UpdatedAt { get; set; }
+    DateTime? UpdatedAt { get; set; }
 }

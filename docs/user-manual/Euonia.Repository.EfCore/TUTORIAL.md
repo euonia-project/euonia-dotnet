@@ -149,6 +149,22 @@ curl http://localhost:5000/orders/recent
 
 预期最近订单列表包含刚创建的订单及其订单行；关闭跟踪后返回对象不再被上下文跟踪，适合只读查询。
 
+### 5. 审计与软删除
+
+上下文继承 `DataContextBase<TContext>` 并启用 `AutoSetEntryValues` 后，会为实现了 `IHasCreateTime`、`IHasUpdateTime`、`IHasDeleteTime` 或 `ITombstone` 的实体写入对应字段；删除时写入 `DeletedAt`、`IsDeleted` 并改为 `Modified`。操作人字段名默认是 `CreatedBy`、`UpdatedBy`、`DeletedBy`，字段名不同时重写：
+
+```csharp
+protected override bool AutoSetEntryValues => true;
+
+protected override object? GetCurrentUserId() => _currentUser.Id;
+
+protected override string CreatedByFieldName => "CreatorId";
+protected override string UpdatedByFieldName => "ModifierId";
+protected override string DeletedByFieldName => "RemoverId";
+```
+
+`GetCurrentUserId()` 返回 `null` 时跳过审计。`IAuditable<TUser>` 可同时提供四个接口与三个用户字段，但不是必需；`IRepository<TEntity, TKey>.DeleteAsync(id)` 会对实现 `ITombstone` 的实体执行软删除。
+
 ### 常见失败点
 
 - **连接串解析失败**：本示例直接传连接串；若改用 `AddDataContextFactory`，它要求 `{provider}://` 前缀并注册键控 `ConnectionConfigurator`，缺少前缀抛 `ArgumentException`，provider 未注册抛 `NotSupportedException`。

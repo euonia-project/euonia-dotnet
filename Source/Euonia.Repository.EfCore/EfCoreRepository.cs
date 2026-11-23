@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using Nerosoft.Euonia.Linq;
 using Nerosoft.Euonia.Repository;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
@@ -24,6 +25,46 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	protected override void Dispose(bool disposing)
 	{
 		//Context?.Dispose();
+	}
+
+	/// <summary>
+	/// 获取指定实体类型的可查询集合。
+	/// </summary>
+	/// <typeparam name="T">要查询的实体类型。</typeparam>
+	/// <returns>针对 <typeparamref name="T"/> 的查询对象。</returns>
+	public IQueryable<T> SetOf<T>()
+		where T : class
+	{
+		return Context.SetOf<T>();
+	}
+
+	/// <summary>
+	/// 按主键集合查找实体，并投影为键值对字典。
+	/// </summary>
+	/// <param name="ids">要查找的主键集合。</param>
+	/// <param name="selector">将实体投影为键值对的表达式。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>主键到投影值的字典；<paramref name="ids"/> 为空时返回空字典。</returns>
+	public virtual async Task<Dictionary<TKey, string>> LookupAsync(IEnumerable<TKey> ids, Expression<Func<TEntity, KeyValuePair<TKey, string>>> selector, CancellationToken cancellationToken = default)
+	{
+		ArgumentNullException.ThrowIfNull(ids);
+		ArgumentNullException.ThrowIfNull(selector);
+
+		var array = ids as TKey[] ?? [.. ids];
+		if (array.Length == 0)
+		{
+			return [];
+		}
+
+		var predicate = PredicateBuilder.PropertyInRange<TEntity, TKey>(nameof(IEntity<TKey>.Id), array);
+		var items = await Context.Set<TEntity>()
+		                         .AsNoTracking()
+		                         .Where(predicate)
+		                         .Select(selector)
+		                         .ToListAsync(cancellationToken)
+		                         .ConfigureAwait(false);
+
+		return items.ToDictionary(item => item.Key, item => item.Value);
 	}
 
 	/// <inheritdoc />

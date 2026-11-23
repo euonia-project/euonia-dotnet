@@ -14,7 +14,10 @@
 
 ### 数据访问（Repository）
 
-- **新增**：`Euonia.Repository.EfCore` 增加 `EntityEntryExtensions.TrySetProperty` 与 `EpochTimestampGenerator`。
+- **新增**：`Euonia.Repository.EfCore` 的 `DataContextBase` 增加自动审计与软删除（按四个审计接口写入，操作人字段名可重写，默认 `CreatedBy` / `UpdatedBy` / `DeletedBy`），并增加 `EntityEntryExtensions.TrySetProperty`、`EpochTimestampGenerator`、`EfCoreRepository.SetOf<T>` / `LookupAsync`。
+- **新增**：`Euonia.Repository` 的 `IRepository` 增加 `GetAsync` / `FindAsync` / `CountAsync` 查询委托重载与 `DeleteAsync(TKey)`；`IAuditable<TUser>` 增加 `DeletedBy`、`DeletedAt`、`IsDeleted`，`UpdatedBy` 改为可空。
+- **升级提示**：`IAuditable<TUser>` 新增成员，现有实现需补齐；`DataContextBase` 在 `AutoSetEntryValues` 为 `true` 时写入这些字段。
+- **变更**：`IHasUpdateTime.UpdatedAt` 改为 `DateTime?`，实现类与 EF 映射需允许 `null`。
 
 ### 全库
 
