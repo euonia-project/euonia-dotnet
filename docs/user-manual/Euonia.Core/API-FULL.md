@@ -256,6 +256,8 @@
 - static Task<Task<TResult>> WhenAny<TResult>(IEnumerable<Task<TResult>> this)
 - static IEnumerable<T> WhereIf<T>(IEnumerable<T> source, System.Boolean condition, Func<T, System.Boolean> predicate)
 - static IEnumerable<T> WhereIf<T>(IEnumerable<T> source, System.Boolean condition, Func<T, System.Int32, System.Boolean> predicate)
+- static TValue GetValue<TValue>(System.Text.Json.Nodes.JsonNode node, System.String name)
+- static TValue GetValue<TValue>(System.Text.Json.Nodes.JsonNode node, System.String[] names)
 
 ### ObjectId
 

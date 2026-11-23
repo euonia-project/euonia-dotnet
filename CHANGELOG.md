@@ -7,6 +7,10 @@
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 
+### 核心（Core）
+
+- **新增**：`Extensions.GetValue<TValue>` 按点/斜杠路径读取 `JsonNode`，路径不存在时返回默认值。
+
 ### 安全与密码学（Euonia.Core）
 
 - **新增**：`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 `Cryptography.AES`/`DES`/`SHA`/`MD5`/`Base64`/`RSA`、`PasswordComplexity`/`PasswordGenerator`、`RandomUtility`。

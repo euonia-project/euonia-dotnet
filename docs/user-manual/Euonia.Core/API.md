@@ -61,6 +61,7 @@ Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释�
 | `"PayWeb".ToKebabCase()` | 命名风格转换 | 另有 `ToCamelCase` / `ToSnakeCase` |
 | `dictionary.GetOrAdd(key, factory)` | 字典取值或创建 | 两个工厂重载 |
 | `items.ForEach(action)` | 集合遍历 | 返回 `void` |
+| `Extensions.GetValue<TValue>` | 按点/斜杠路径读取 `JsonNode` | 路径不存在返回 `default` |
 
 ### 权限契约
 

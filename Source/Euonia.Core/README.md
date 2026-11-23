@@ -56,7 +56,7 @@ var snowflakeId = ObjectId.Snowflake();   // 时间有序的唯一 ID
 | `AsyncLock` / `AsyncSemaphore` / `AsyncLazy<T>` | `Nerosoft.Euonia.Threading` | 异步协调原语 |
 | `UserPrincipal` / `UserClaimTypes` | `Nerosoft.Euonia.Security` | 当前用户主体与声明常量 |
 | `PermissionAttribute` / `PermissionRequirements` / `IPermissionRequirementSource` | `Nerosoft.Euonia.Security` | 权限声明、内建读取器与可选的要求来源 |
-| `Extensions` | 全局 | 字符串、集合、反射、Task 等扩展方法 |
+| `Extensions` | 全局 | 字符串、集合、反射、Task、JSON 路径读取等扩展方法 |
 
 ## 全局命名空间与 `System`
 
@@ -270,6 +270,17 @@ long decoded = codec.DecodeSingleInt64(hash);      // 12345
 见上方「ID 生成」一节。
 
 ---
+
+### JSON 路径读取
+
+`Extensions.GetValue<TValue>` 按 `.` 或 `/` 分隔的路径读取 `JsonNode`，路径不存在时返回目标类型的默认值：
+
+```csharp
+var node = JsonNode.Parse("""{"user":{"name":"Alice"},"items":[{"id":1}]}""")!;
+
+var name = node.GetValue<string>("user.name");
+var id = node.GetValue<int>("items/0/id");
+```
 
 ## `Nerosoft.Euonia.Collections`
 
