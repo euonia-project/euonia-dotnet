@@ -67,7 +67,6 @@ public static class ServiceCollectionExtensions
 		/// <summary>
 		/// 注册权限判定所需的全部服务，并按给定配置初始化权限体系。
 		/// </summary>
-		/// <param name="services">服务集合。</param>
 		/// <param name="configure">权限体系配置回调。</param>
 		/// <returns>传入的服务集合，以便链式调用。</returns>
 		public IServiceCollection AddPermissionGuard(Action<PermissionOptions> configure)

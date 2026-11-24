@@ -21,6 +21,8 @@
 - **新增**：`Euonia.Hosting.Webapi` 提供 `AddEuoniaWebApi` / `UseEuoniaWebApi`，组合控制器、统一异常响应、OpenAPI、健康检查与 CORS；并提供 `AddPermissionGuard` 与 `AddEuoniaRateLimiting` / `UseEuoniaRateLimiting`。
 - **新增**：`Euonia.Hosting.Azfunc`（仅 `net10.0`）提供 `AddEuoniaFunctions` / `UseEuoniaFunctions`、请求上下文中转、请求追踪、JWT 认证、函数级双窗口限流、异常中间件与 `FunctionBase<T>`；并支持 Security 体系（`ClaimsPrincipal`、`UserPrincipal`、`AddEuoniaFunctionsSecurity`、`IPermissionChecker`）。
 - **新增**：`JwtAuthenticationMiddleware` 校验 Bearer JWT，并按函数/类型上的 `[Authorize]` 角色与 `[AllowAnonymous]` 执行认证；基于策略的授权仍使用 `IPermissionChecker`。
+- **修复**：`AddJwtAuthentication` 将 `JwtAuthenticationOptions.Audience` 写入 `ValidAudience`；Azure Functions 对 `[AllowAnonymous]` 先放行 JWT 校验，并支持方法/类型上的多个 `[Authorize]` 特性。
+- **完善**：`AddEuoniaWebApi` 归一化空的 CORS 来源并校验健康检查路径；JWT 校验失败与角色不足分别返回 401/403。
 - **调整**：Web API 请求追踪与权限、流控适配迁移到 `Euonia.Hosting.Webapi`；异常处理改用 ASP.NET Core 内置 `UseExceptionHandler()` + `EuoniaExceptionHandler`。
 - **调整**：`Euonia.Hosting.Azfunc` 依赖 `Euonia.Hosting`，复用其用户主体、权限、异常映射与限流核心，不再直接依赖 `Euonia.Security`。
 - **新增**：`Euonia.Hosting` 公开 `ExceptionExtensions` 的异常状态码/消息/明细映射，供 Web API 与 Azure Functions 共用。
