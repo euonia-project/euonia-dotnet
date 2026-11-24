@@ -23,8 +23,14 @@ public static class ServiceCollectionExtensions
 		{
 			var options = new EuoniaWebApiOptions();
 			configure?.Invoke(options);
+			options.AllowedOrigins ??= [];
 
-			services.AddSingleton(options);
+			if (options.EnableHealthChecks)
+			{
+				ArgumentException.ThrowIfNullOrWhiteSpace(options.HealthCheckPath);
+			}
+
+			services.TryAddSingleton(options);
 			services.AddControllers();
 			services.AddHealthChecks();
 

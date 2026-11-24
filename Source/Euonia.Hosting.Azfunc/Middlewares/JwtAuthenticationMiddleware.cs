@@ -34,13 +34,6 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 			return;
 		}
 
-		var principal = Authenticate(httpContext.Request.Headers[HeaderNames.Authorization].ToString(), options.JwtAuthentication);
-
-		if (principal is not null)
-		{
-			httpContext.User = principal;
-		}
-
 		var method = FunctionMethodResolver.Resolve(context);
 
 		if (method is null)
@@ -49,16 +42,25 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 			throw new AuthenticationException("无法解析函数入口方法。");
 		}
 
+		// 匿名函数不应因为携带了过期或无效令牌而被拒绝。
 		if (IsAllowAnonymous(method))
 		{
 			await next(context);
 			return;
 		}
 
-		var authorize = method.GetCustomAttribute<AuthorizeAttribute>(inherit: true)
-		                ?? method.DeclaringType?.GetCustomAttribute<AuthorizeAttribute>(inherit: true);
+		var principal = Authenticate(httpContext.Request.Headers[HeaderNames.Authorization].ToString(), options.JwtAuthentication);
 
-		if (authorize is null)
+		if (principal is not null)
+		{
+			httpContext.User = principal;
+		}
+
+		var authorizeAttributes = method.GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+			.Concat(method.DeclaringType?.GetCustomAttributes<AuthorizeAttribute>(inherit: true) ?? [])
+			.ToArray();
+
+		if (authorizeAttributes.Length == 0)
 		{
 			await next(context);
 			return;
@@ -69,13 +71,18 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 			throw new AuthenticationException("请求未经身份验证。");
 		}
 
-		if (!string.IsNullOrWhiteSpace(authorize.Policy))
+		foreach (var authorize in authorizeAttributes)
 		{
-			throw new UnauthorizedAccessException("Azure Functions 不支持基于策略的授权特性，请使用角色或 IPermissionChecker。");
-		}
+			if (!string.IsNullOrWhiteSpace(authorize.Policy))
+			{
+				throw new UnauthorizedAccessException("Azure Functions 不支持基于策略的授权特性，请使用角色或 IPermissionChecker。");
+			}
 
-		if (!string.IsNullOrWhiteSpace(authorize.Roles))
-		{
+			if (string.IsNullOrWhiteSpace(authorize.Roles))
+			{
+				continue;
+			}
+
 			var roles = authorize.Roles.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 			if (!roles.Any(httpContext.User.IsInRole))

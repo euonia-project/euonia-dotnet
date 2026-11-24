@@ -34,7 +34,7 @@ public static class WebApplicationExtensions
 			app.UseHttpsRedirection();
 		}
 
-		if (options.AllowedOrigins.Length > 0)
+		if (options.AllowedOrigins is { Length: > 0 })
 		{
 			app.UseCors();
 		}
@@ -78,7 +78,7 @@ public static class WebApplicationExtensions
 			app.UseHttpsRedirection();
 		}
 
-		if (options.AllowedOrigins.Length > 0)
+		if (options.AllowedOrigins is { Length: > 0 })
 		{
 			app.UseCors();
 		}

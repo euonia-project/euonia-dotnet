@@ -153,7 +153,7 @@ public static class ServiceCollectionExtensions
 							NameClaimType = bearerOptions.NameClaimType,
 							RoleClaimType = bearerOptions.RoleClaimType,
 							ValidIssuers = bearerOptions.Issuer,
-							//ValidAudience = "api",
+							ValidAudience = bearerOptions.Audience,
 							ValidateIssuer = bearerOptions.ValidateIssuer,
 							ValidateAudience = bearerOptions.ValidateAudience,
 							IssuerSigningKey = new SymmetricSecurityKey(key)

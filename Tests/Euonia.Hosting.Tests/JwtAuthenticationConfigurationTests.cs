@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,6 +48,25 @@ public sealed class JwtAuthenticationConfigurationTests
         {
             Assert.Equal(ConfigurationSigningKey, ResolveSigningKey());
         });
+    }
+
+    /// <summary>
+    /// 配置的受众应写入 <see cref="TokenValidationParameters.ValidAudience"/>。
+    /// </summary>
+    [Fact]
+    public void AddJwtAuthentication_ConfiguresAudience()
+    {
+        var services = new ServiceCollection();
+        services.AddJwtAuthentication(new JwtAuthenticationOptions
+        {
+            SigningKey = "configuration-signing-key-0123456789abcdef",
+            Audience = "euonia-tests"
+        });
+
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptionsMonitor<JwtBearerOptions>>().Get(JwtBearerDefaults.AuthenticationScheme);
+
+        Assert.Equal("euonia-tests", options.TokenValidationParameters.ValidAudience);
     }
 
     private static string ResolveSigningKey()

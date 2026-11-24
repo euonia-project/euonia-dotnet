@@ -49,6 +49,33 @@ public class EuoniaWebApiTests
 	}
 
 	/// <summary>
+	/// 允许来源为 null 时应归一化为空数组。
+	/// </summary>
+	[Fact]
+	public void AddEuoniaWebApi_NullAllowedOrigins_Normalizes()
+	{
+		var services = new ServiceCollection();
+
+		services.AddEuoniaWebApi(options => options.AllowedOrigins = null!);
+
+		using var provider = services.BuildServiceProvider();
+
+		Assert.Empty(provider.GetRequiredService<EuoniaWebApiOptions>().AllowedOrigins);
+	}
+
+	/// <summary>
+	/// 启用健康检查时空白路径应被拒绝。
+	/// </summary>
+	[Fact]
+	public void AddEuoniaWebApi_BlankHealthCheckPath_Throws()
+	{
+		var services = new ServiceCollection();
+
+		Assert.Throws<ArgumentException>(() =>
+			services.AddEuoniaWebApi(options => options.HealthCheckPath = " "));
+	}
+
+	/// <summary>
 	/// 配置允许来源后应注册默认 CORS 策略。
 	/// </summary>
 	[Fact]
