@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Hosting;
 /// <summary>
 /// 提供将异常映射为 HTTP 状态码、错误明细与错误消息的扩展方法。
 /// </summary>
-internal static class ExceptionExtensions
+public static class ExceptionExtensions
 {
 	/// <summary>
 	/// 为 <see cref="Exception"/> 提供响应输出所需的转换成员。
@@ -24,8 +24,9 @@ internal static class ExceptionExtensions
 			return exception switch
 			{
 				HttpStatusException ex => ex.StatusCode,
+				ArgumentException => HttpStatusCode.BadRequest,
 				ValidationException => HttpStatusCode.BadRequest,
-				Nerosoft.Euonia.Validation.ValidationException => HttpStatusCode.BadRequest,
+				Validation.ValidationException => HttpStatusCode.BadRequest,
 				AuthenticationException => HttpStatusCode.Unauthorized,
 				UnauthorizedAccessException => HttpStatusCode.Forbidden,
 				NotImplementedException => HttpStatusCode.NotImplemented,

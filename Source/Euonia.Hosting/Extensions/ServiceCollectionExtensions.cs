@@ -1,10 +1,8 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.RegularExpressions;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -221,36 +219,5 @@ public static class ServiceCollectionExtensions
 			return services.GetSingletonInstance<IWebHostEnvironment>();
 		}
 
-		/// <summary>
-		/// 注册权限判定所需的全部服务，并声明本应用没有权限模型与权限声明。
-		/// </summary>
-		/// <returns>传入的服务集合，以便链式调用。</returns>
-		public IServiceCollection AddPermissionGuard()
-		{
-			return services.AddPermissionGuard(static options => options.NoModels());
-		}
-
-		/// <summary>
-		/// 注册权限判定所需的全部服务，并按给定配置初始化权限体系。
-		/// </summary>
-		/// <param name="configure">权限体系配置回调。</param>
-		/// <returns>传入的服务集合，以便链式调用。</returns>
-		public IServiceCollection AddPermissionGuard(Action<PermissionOptions> configure)
-		{
-			ArgumentNullException.ThrowIfNull(services);
-			ArgumentNullException.ThrowIfNull(configure);
-
-			services.AddHttpContextAccessor();
-			services.TryAddScoped(provider => provider.GetRequiredService<IHttpContextAccessor>().HttpContext?.User
-											   ?? new ClaimsPrincipal(new ClaimsIdentity()));
-			services.AddUserPrincipal();
-
-			services.AddAuthorization();
-			services.TryAddSingleton<DefaultAuthorizationPolicyProvider>();
-			services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
-			services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, PermissionAuthorizationHandler>());
-
-			return services.AddPermission(configure);
-		}
 	}
 }

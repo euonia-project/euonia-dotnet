@@ -114,26 +114,6 @@ public sealed class OrdersController : ControllerBase
 }
 ```
 
-### 4.1 权限控制
-
-在模块中注册权限策略提供程序与授权处理器：
-
-```csharp
-using Microsoft.AspNetCore.Authorization;
-
-context.Services.AddPermissionGuard();
-```
-
-控制器用 `[RequiresPermission]` 声明权限码；权限码由宿主注册的 `IScopeSubjectResolver` 经 `IScopeGuard` 解析，不写入 JWT：
-
-```csharp
-[HttpGet]
-[RequiresPermission("orders.read", "orders.manage")]
-public IActionResult Get() => Ok(new[] { "order-1" });
-```
-
-多个权限码为“任一满足”；类与方法同时标注时为“同时满足”。未认证返回 401，认证但无权限返回 403。
-
 ### 5. 运行与验证
 
 ```bash
@@ -148,14 +128,14 @@ curl -i http://localhost:5000/api/orders/public
 curl -i http://localhost:5000/api/orders
 ```
 
-如果启动端口不是 5000，以 `dotnet run` 输出或 `launchSettings.json` 为准。观察响应头 `x-request-trace-id`；它由 `HostingModule` 自动安装的 `RequestTraceMiddleware` 写入。若启动日志显示模块已加载，但请求上下文仍为空，优先检查 `app.InitializeApplication()` 是否在管道最前面。
+如果启动端口不是 5000，以 `dotnet run` 输出或 `launchSettings.json` 为准。响应头 `x-request-trace-id` 由 `Euonia.Hosting.Webapi` 的 `UseEuoniaWebApi()` 写入；若启动日志显示模块已加载，但请求上下文仍为空，优先检查 `app.InitializeApplication()` 是否在管道最前面。
 
 ### 常见失败点
 
 - **所有受保护端点都 401**：`Startup.Configure` 漏了 `UseAuthentication()`，或 `AddJwtAuthentication` 没执行；先确认模块依赖链包含 `HostingModule`。
 - **启动时 `ArgumentNullException`**：使用了 `AddJwtAuthentication(string)` 但配置节不存在或 `SigningKey` 为空；本教程用 `Action<JwtAuthenticationOptions>` 直接配置。
-- **没有 `x-request-trace-id`**：模块没有通过 `[DependsOn(typeof(HostingModule))]` 加载，或 `InitializeApplication` 没有执行。
-- **异常返回 HTML**：`ExceptionHandlingMiddleware` 是内部类型，不会自动入管道；应用需自行提供异常映射中间件（示例应用使用 `ApiExceptionMiddleware`）。
+- **没有 `x-request-trace-id`**：未调用 `UseEuoniaWebApi()`，或 `InitializeApplication` 没有执行。
+- **异常返回 HTML**：未使用 `Euonia.Hosting.Webapi` 的 `UseEuoniaWebApi()`；其他宿主需自行提供异常映射中间件。
 
 ## 相关文档
 

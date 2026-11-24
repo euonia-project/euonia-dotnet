@@ -1,6 +1,3 @@
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Hosting.RateLimiting;
 using System.Threading.RateLimiting;
 
@@ -98,25 +95,4 @@ public class RateLimitingTests
 		Assert.True(lease.IsAcquired);
 	}
 
-	/// <summary>
-	/// 注册后应能解析选项并设置拒绝状态码。
-	/// </summary>
-	[Fact]
-	public void AddEuoniaRateLimiting_RegistersOptions()
-	{
-		var services = new ServiceCollection();
-
-		services.AddEuoniaRateLimiting(options =>
-		{
-			options.DefaultLimiter.MinutePermitLimit = 1;
-			options.PolicyName = "custom";
-		});
-
-		using var provider = services.BuildServiceProvider();
-
-		Assert.Equal("custom", provider.GetRequiredService<EuoniaRateLimitingOptions>().PolicyName);
-
-		var limiterOptions = provider.GetRequiredService<IOptions<RateLimiterOptions>>().Value;
-		Assert.Equal(429, limiterOptions.RejectionStatusCode);
-	}
 }

@@ -35,7 +35,11 @@ public sealed class DualWindowRateLimiterOptions
 	/// </summary>
 	public bool AutoReplenishment { get; set; } = true;
 
-	internal void Validate()
+	/// <summary>
+	/// 校验窗口与请求数配置。
+	/// </summary>
+	/// <exception cref="ArgumentOutOfRangeException">窗口或请求数配置非法。</exception>
+	public void Validate()
 	{
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(MinutePermitLimit);
 		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(HourPermitLimit);
