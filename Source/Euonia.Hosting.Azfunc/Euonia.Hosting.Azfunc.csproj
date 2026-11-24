@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0</TargetFrameworks>
+        <Description>Euonia Azure Functions 隔离工作进程宿主包：函数基类、统一异常响应、请求追踪、请求上下文中转、Security 与双窗口流控。 / Azure Functions isolated worker host support for Euonia: function base, unified exception responses, request tracing, request-context bridging, security and dual-window rate limiting.</Description>
+        <PackageTags>euonia, hosting, azure-functions, isolated-worker, middleware, security, rate-limiting</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Azure.Functions.Worker" />
+        <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Euonia.Hosting.Azfunc.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Hosting\Euonia.Hosting.csproj" />
+        <ProjectReference Include="..\Euonia.Modularity\Euonia.Modularity.csproj" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
+    </ItemGroup>
+
+</Project>

@@ -23,6 +23,8 @@
         <Project Path="Source/Euonia.Telemetry.Otel/Euonia.Telemetry.Otel.csproj" />
         <Project Path="Source/Euonia.Tenancy/Euonia.Tenancy.csproj" />
         <Project Path="Source/Euonia.Hosting/Euonia.Hosting.csproj" />
+        <Project Path="Source/Euonia.Hosting.Webapi/Euonia.Hosting.Webapi.csproj" />
+        <Project Path="Source/Euonia.Hosting.Azfunc/Euonia.Hosting.Azfunc.csproj" />
         <Project Path="Source/Euonia.Linq/Euonia.Linq.csproj" />
         <Project Path="Source/Euonia.Modularity/Euonia.Modularity.csproj" />
         <Project Path="Source/Euonia.Pipeline/Euonia.Pipeline.csproj" />

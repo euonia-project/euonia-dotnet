@@ -111,6 +111,8 @@
         <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.Connections.Abstractions" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(FrameworkPreviousVersion)" />
+        <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+        <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(FrameworkPreviousVersion)" />
     </ItemGroup>

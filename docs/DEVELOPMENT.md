@@ -37,8 +37,8 @@
 
 | 目录/文件 | 作用 |
 |---|---|
-| Source/ | 45 个可打包项目，每个项目一个 README |
-| Tests/ | 29 个测试/夹具项目，使用 xunit.v3 + Microsoft.Testing.Platform |
+| Source/ | 47 个可打包项目，每个项目一个 README |
+| Tests/ | 31 个测试/夹具项目，使用 xunit.v3 + Microsoft.Testing.Platform |
 | Samples/Euonia.Sample.Webapi/ | 可运行的模块化 Web API 示例 |
 | Benchmarks/ | 3 个 BenchmarkDotNet 基准项目 |
 | docs/ | 开发指南、用户手册、SQL/迁移说明 |

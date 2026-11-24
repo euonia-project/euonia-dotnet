@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <Import Project="..\common.props" />
+
+    <PropertyGroup>
+        <Description>Euonia ASP.NET Core Web API 宿主组合包：控制器、统一异常响应、OpenAPI、健康检查、CORS、权限授权与双窗口流控。 / ASP.NET Core Web API host composition for Euonia: controllers, unified exception responses, OpenAPI, health checks, CORS, permission authorization and dual-window rate limiting.</Description>
+        <PackageTags>euonia, hosting, webapi, aspnetcore, openapi, healthchecks, cors, authorization, rate-limiting</PackageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Euonia.Hosting.Webapi.Tests" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Euonia.Hosting\Euonia.Hosting.csproj" />
+        <ProjectReference Include="..\Euonia.Security\Euonia.Security.csproj" />
+    </ItemGroup>
+
+    <PropertyGroup>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="README.md" Pack="true" PackagePath="" />
+    </ItemGroup>
+
+</Project>

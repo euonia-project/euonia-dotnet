@@ -16,6 +16,16 @@
 - **新增**：`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 `Cryptography.AES`/`DES`/`SHA`/`MD5`/`Base64`/`RSA`、`PasswordComplexity`/`PasswordGenerator`、`RandomUtility`。
 - **安全说明**：AES/DES 使用 ECB + PKCS7，ECB 不隐藏明文模式；MD5 不具备抗碰撞性。新数据应使用带随机 IV 的 AES 与 SHA-256。
 
+### 宿主（Hosting）
+
+- **新增**：`Euonia.Hosting.Webapi` 提供 `AddEuoniaWebApi` / `UseEuoniaWebApi`，组合控制器、统一异常响应、OpenAPI、健康检查与 CORS；并提供 `AddPermissionGuard` 与 `AddEuoniaRateLimiting` / `UseEuoniaRateLimiting`。
+- **新增**：`Euonia.Hosting.Azfunc`（仅 `net10.0`）提供 `AddEuoniaFunctions` / `UseEuoniaFunctions`、请求上下文中转、请求追踪、JWT 认证、函数级双窗口限流、异常中间件与 `FunctionBase<T>`；并支持 Security 体系（`ClaimsPrincipal`、`UserPrincipal`、`AddEuoniaFunctionsSecurity`、`IPermissionChecker`）。
+- **新增**：`JwtAuthenticationMiddleware` 校验 Bearer JWT，并按函数/类型上的 `[Authorize]` 角色与 `[AllowAnonymous]` 执行认证；基于策略的授权仍使用 `IPermissionChecker`。
+- **调整**：Web API 请求追踪与权限、流控适配迁移到 `Euonia.Hosting.Webapi`；异常处理改用 ASP.NET Core 内置 `UseExceptionHandler()` + `EuoniaExceptionHandler`。
+- **调整**：`Euonia.Hosting.Azfunc` 依赖 `Euonia.Hosting`，复用其用户主体、权限、异常映射与限流核心，不再直接依赖 `Euonia.Security`。
+- **新增**：`Euonia.Hosting` 公开 `ExceptionExtensions` 的异常状态码/消息/明细映射，供 Web API 与 Azure Functions 共用。
+- **调整**：ASP.NET Core 权限授权适配（`AddPermissionGuard`、`[RequiresPermission]`、`PermissionPolicyProvider`、`PermissionAuthorizationHandler`）与流控适配（`AddEuoniaRateLimiting` / `UseEuoniaRateLimiting`）迁移到 `Euonia.Hosting.Webapi`；`Euonia.Hosting` 仅保留 `DualWindowRateLimiter` 核心。
+
 ### 应用层（Application）
 
 - **新增**：`RequestInfoBehavior` 将请求追踪标识、IP、User-Agent、Referer 与客户端名称/版本写入消息元数据，并在 `ApplicationModule` 中默认注册。
