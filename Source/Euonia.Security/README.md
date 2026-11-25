@@ -877,7 +877,7 @@ x => x.Tags.Concat(x.OtherTags)                             // ❌ 注册期报�
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 依赖 | `Euonia.Core`、`Microsoft.Extensions.DependencyInjection.Abstractions` |
 
 - **不依赖 EF Core**：下推只生成表达式树，SQL 翻译由宿主的 ORM 完成；换 ORM 只需保证表达式可翻译。

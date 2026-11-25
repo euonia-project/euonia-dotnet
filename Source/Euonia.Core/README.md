@@ -1041,7 +1041,7 @@ SynchronizationContextSwitcher.NoContext(() => { });
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 第三方依赖 | 无（仅 BCL） |
 
 - 文档标注的命名空间即当前源码位置（`Check` / `ObjectId` / `Extensions` 在全局，`Optional<T>` / `Singleton<T>` 在 `System`）；升级后若发现位置变化，以源码为准并回提本文档。

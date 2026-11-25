@@ -151,7 +151,7 @@ Quartz 集成没有框架自带的配置节；所有选项都通过 `AddQuartz` 
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：Quartz.NET 4.7.3（由 `Directory.Packages.props` 锁定）；`BackgroundBuildOptions` 与 `BackgroundJobOptions` 都是代码配置。
 - 已知边界：Quartz 4 的 `IJob.Execute` 返回 `ValueTask` 并接收 `CancellationToken`；不再支持零大小/专用线程池；租户作用域在作业执行体内安装。
 - 升级提示：从 Quartz 3 升级时先改 `IJob` 签名，再移除 `UseZeroSizeThreadPool`/`UseDedicatedThreadPool` 调用，并复核 `MisfireThreshold` 与持久化存储配置。

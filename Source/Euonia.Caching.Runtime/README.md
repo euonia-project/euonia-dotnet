@@ -180,7 +180,7 @@ services.AddSingleton<ICacheService, RuntimeCacheService>();
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`System.Runtime.Caching`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
 - **已知边界**：默认实例不能通过代码配置限制；无租户键转换与前缀删除；进程内、不跨节点。
 - **升级注意**：缓存不持久化，升级重启即清空；命名实例的历史 `app.config`/`web.config` 配置不会自动迁移到 `RuntimeCacheOptions`，升级时需显式迁移限额与轮询参数。

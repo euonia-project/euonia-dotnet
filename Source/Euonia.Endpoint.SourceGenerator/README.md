@@ -18,7 +18,7 @@ dotnet add package Euonia.Endpoint.SourceGenerator
 `dotnet add package` 只写入普通 `PackageReference`，而 analyzer 必须带上 `PrivateAssets="all"` / `OutputItemType="Analyzer"` 才不会作为运行时依赖传递。把引用改成下面的形式（包引用）：
 
 ```xml
-<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.5.0"
+<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.5.1"
                   PrivateAssets="all"
                   OutputItemType="Analyzer"
                   ReferenceOutputAssembly="false" />
@@ -230,7 +230,7 @@ obj/Debug/net10.0/generated/Euonia.Endpoint.SourceGenerator/
 | 项 | 值 |
 |---|---|
 | 目标框架 | `netstandard2.0`（analyzer）、`net10.0`（IDE，仅本地） |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | Roslyn | `Microsoft.CodeAnalysis.CSharp` 5.9.0（`PrivateAssets="all"`） |
 
 - **包只含 analyzer**：`IncludeBuildOutput=false`、`SuppressDependenciesWhenPacking=true`，包内只有 `analyzers/dotnet/cs/Euonia.Endpoint.SourceGenerator.dll`，不会引入运行时依赖。

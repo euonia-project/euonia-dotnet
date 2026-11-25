@@ -3,9 +3,8 @@
 本文件记录 Euonia 各版本的更新内容，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 `年份.主版本.修订号`（如 `2026.4.3`）。
 
-## [未发布]
+## [2026.5.1] - 2026-11-25
 
-<!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
 ### 修复（本次审查修复）
 
 #### 安全与密码学（Euonia.Core）
@@ -86,6 +85,12 @@
 - **新增**：`Euonia.Repository` 的 `IRepository` 增加 `GetAsync` / `FindAsync` / `CountAsync` 查询委托重载与 `DeleteAsync(TKey)`；`IAuditable<TUser>` 增加 `DeletedBy`、`DeletedAt`、`IsDeleted`，`UpdatedBy` 改为可空。
 - **升级提示**：`IAuditable<TUser>` 新增成员，现有实现需补齐；`DataContextBase` 在 `AutoSetEntryValues` 为 `true` 时写入这些字段。
 - **变更**：`IHasUpdateTime.UpdatedAt` 改为 `DateTime?`，实现类与 EF 映射需允许 `null`。
+
+## [未发布]
+
+<!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
+
+## [2026.5.0] - 2026-11-13
 
 ### 全库
 
@@ -885,7 +890,9 @@ Actuator 支持任意业务对象类型，小幅重构。
 - 新增 `ScopePolicy` 单元测试、缓存分组失效测试、缓存类型无关性测试、Redis 缓存服务测试、
   重试组合测试、熔断半开探测测试、UoW 作用域回归测试等。
 
-[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.4.4...HEAD
+[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.5.1...HEAD
+[2026.5.1]: https://github.com/Nerosoft/Euonia/compare/v2026.5.0...v2026.5.1
+[2026.5.0]: https://github.com/Nerosoft/Euonia/compare/v2026.4.4...v2026.5.0
 [2026.4.0]: https://github.com/Nerosoft/Euonia/compare/v2026.3.16...v2026.4.0
 [2026.4.1]: https://github.com/Nerosoft/Euonia/compare/v2026.4.0...v2026.4.1
 [2026.4.2]: https://github.com/Nerosoft/Euonia/compare/v2026.4.1...v2026.4.2

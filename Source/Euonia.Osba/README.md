@@ -99,7 +99,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 | 项目 | 值 |
 |---|---|
 | 目标框架 | `net10.0;net11.0` |
-| 当前版本 | `2026.5.0`（见仓库根 `project.props`） |
+| 当前版本 | `2026.5.1`（见仓库根 `project.props`） |
 | 根命名空间 | `Nerosoft.Euonia.Osba` |
 | 包名 | `Euonia.Osba` |
 | 许可 | GPL-3.0（见仓库根 `LICENSE`） |
@@ -133,7 +133,7 @@ dotnet add package Euonia.Osba
 或直接在项目中引用：
 
 ```xml
-<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.1" />
 ```
 
 ### 2.2 装配
@@ -1840,7 +1840,7 @@ flowchart TB
 
 ## 9. 版本与许可
 
-- 当前版本：`2026.5.0`（见仓库根 `project.props`）。
+- 当前版本：`2026.5.1`（见仓库根 `project.props`）。
 - 目标框架：`net10.0`、`net11.0`。
 - 许可：GNU General Public License v3.0，见仓库根 [`LICENSE`](../../LICENSE)。
 
@@ -1888,7 +1888,7 @@ flowchart TB
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 依赖 | `Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation` |
 
 - **不引用具体鉴权引擎 / `Euonia.Domain`**：权限契约来自 Core，DDD 只是可选投影；升级时不会因这两个包引入传递依赖（§1.5）。

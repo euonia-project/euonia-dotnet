@@ -4,7 +4,7 @@
 
 Euonia is a development framework for building enterprise-grade .NET applications and services. It combines **Object-Oriented Scalable Business Architecture (OSBA)** with **Domain-Driven Design (DDD)** and provides complete infrastructure: from base primitives, modular hosting, domain modeling, business objects, permission policies, and the message bus, all the way to repositories, caching, distributed synchronization, and dynamic HTTP/gRPC endpoints.
 
-- **Current version**: 2026.5.0 (see [project.props](project.props))
+- **Current version**: 2026.5.1 (see [project.props](project.props))
 - **Target frameworks**: .NET 10 / .NET 11; test and sample projects target .NET 11, and the Endpoint Source Generator ships as a `netstandard2.0` analyzer
 - **Package scale**: 45 packable projects under Source, each with its own README
 - **Tests**: 29 test/fixture projects with 1,300+ test cases; plus 3 BenchmarkDotNet benchmark projects
@@ -1037,23 +1037,23 @@ dotnet run
 The following are examples for the core packages; see [Package Overview](#package-overview) for the complete list, and versions can be managed centrally through `project.props`:
 
 ```xml
-<PackageReference Include="Euonia.Core" Version="2026.5.0" />
-<PackageReference Include="Euonia.Modularity" Version="2026.5.0" />
-<PackageReference Include="Euonia.Hosting" Version="2026.5.0" />
-<PackageReference Include="Euonia.Domain" Version="2026.5.0" />
-<PackageReference Include="Euonia.Application" Version="2026.5.0" />
-<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
-<PackageReference Include="Euonia.Security" Version="2026.5.0" />
-<PackageReference Include="Euonia.Bus" Version="2026.5.0" />
-<PackageReference Include="Euonia.Bus.InMemory" Version="2026.5.0" />
-<PackageReference Include="Euonia.Repository.EfCore" Version="2026.5.0" />
-<PackageReference Include="Euonia.Caching" Version="2026.5.0" />
-<PackageReference Include="Euonia.Caching.Memory" Version="2026.5.0" />
-<PackageReference Include="Euonia.Concurrency" Version="2026.5.0" />
-<PackageReference Include="Euonia.Tenancy" Version="2026.5.0" />
-<PackageReference Include="Euonia.Auditing" Version="2026.5.0" />
-<PackageReference Include="Euonia.Telemetry" Version="2026.5.0" />
-<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.5.0" />
+<PackageReference Include="Euonia.Core" Version="2026.5.1" />
+<PackageReference Include="Euonia.Modularity" Version="2026.5.1" />
+<PackageReference Include="Euonia.Hosting" Version="2026.5.1" />
+<PackageReference Include="Euonia.Domain" Version="2026.5.1" />
+<PackageReference Include="Euonia.Application" Version="2026.5.1" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.1" />
+<PackageReference Include="Euonia.Security" Version="2026.5.1" />
+<PackageReference Include="Euonia.Bus" Version="2026.5.1" />
+<PackageReference Include="Euonia.Bus.InMemory" Version="2026.5.1" />
+<PackageReference Include="Euonia.Repository.EfCore" Version="2026.5.1" />
+<PackageReference Include="Euonia.Caching" Version="2026.5.1" />
+<PackageReference Include="Euonia.Caching.Memory" Version="2026.5.1" />
+<PackageReference Include="Euonia.Concurrency" Version="2026.5.1" />
+<PackageReference Include="Euonia.Tenancy" Version="2026.5.1" />
+<PackageReference Include="Euonia.Auditing" Version="2026.5.1" />
+<PackageReference Include="Euonia.Telemetry" Version="2026.5.1" />
+<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.5.1" />
 ```
 
 ### 2. Modular Host
@@ -1254,7 +1254,7 @@ euonia-net/
 
 ## Versioning and Compatibility
 
-- **Version number**: `year.major.revision` (for example `2026.5.0`), controlled centrally by `<Version>` in [project.props](project.props).
+- **Version number**: `year.major.revision` (for example `2026.5.1`), controlled centrally by `<Version>` in [project.props](project.props).
 - **Target frameworks**: Source library projects target `net10.0;net11.0`; test and sample projects target `net11.0`; `Euonia.Endpoint.SourceGenerator` targets `netstandard2.0;net10.0`, and the NuGet package carries only the `netstandard2.0` analyzer.
 - **`netstandard2.1` removed**: the related conditional compilation branches and compatibility polyfills are no longer provided.
 - **Nullable reference types**: all projects enable `<Nullable>enable</Nullable>`, and public APIs carry nullability annotations.

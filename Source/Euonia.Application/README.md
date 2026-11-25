@@ -189,7 +189,7 @@ public sealed class CancelOrderEndpoint(IUseCaseExecutor executor)
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Euonia.Modularity`（Castle.Core 5.2.1）、`Euonia.Caching`、`Euonia.Concurrency`、`Euonia.Pipeline`、`Euonia.Validation`、`Euonia.Uow`。
 - 已知边界：类代理要求无参构造与 `virtual` 方法；`Register<T>` 不注册用例；缓存拦截器在缺少 `ICacheService` 时静默退化。
 - 升级提示：代理注册与拦截器排序以当前源码为准；升级 Modularity/Castle 后重跑应用服务注册与拦截器测试。

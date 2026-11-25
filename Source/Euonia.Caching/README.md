@@ -213,7 +213,7 @@ public sealed class UserProfileService(ICacheManager<UserProfile> cache)
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：抽象层仅依赖 `Microsoft.Extensions.DependencyInjection.Abstractions` 与 `Euonia.Core`；具体能力由 Memory/Redis/Runtime 提供程序包决定。
 - **已知边界**：字典/内存句柄只在进程内共享，只有配置了分布式提供程序与背板才跨节点；`CacheUpdateMode.Up` 只回填句柄链，不代表写穿所有节点。
 - **升级注意**：Redis 缓存值含程序集限定类型名，DTO 改名或迁移程序集后旧键可能无法反序列化；滚动升级期间新旧实例可能同时消费背板，建议先小流量验证并按提供程序清理不兼容键。

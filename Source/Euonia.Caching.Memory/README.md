@@ -171,7 +171,7 @@ services.AddSingleton<ICacheService, MemoryCacheService>();
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`Microsoft.Extensions.Caching.Memory`、`Microsoft.Extensions.Options`、`Euonia.Caching`。
 - **已知边界**：`InstanceName` 只是句柄标识，存储按 `MemoryCacheOptions` 实例共享；进程/应用池回收后缓存丢失；没有跨进程失效。
 - **升级注意**：缓存内容不落盘，升级重启即清空，无需数据迁移；升级后若改了 `KeyPrefix` 或泛型类型，旧键自然不可达，需接受一次冷启动。

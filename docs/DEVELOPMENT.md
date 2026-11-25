@@ -236,7 +236,7 @@ Source 下每个项目通常包含：项目文件、README.md、命名空间目�
 
 ## 11. 版本、打包与发布
 
-- 版本唯一来源：project.props 的 Version（当前 2026.5.0）。
+- 版本唯一来源：project.props 的 Version（当前 2026.5.1）。
 - 依赖版本唯一来源：Directory.Packages.props。
 - 打包：dotnet pack Source/<Project>/<Project>.csproj -c Release -o ./artifacts。
 - 检查 nupkg 内容：README、lib/<tfm>、analyzers（SourceGenerator）、依赖项。

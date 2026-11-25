@@ -215,7 +215,7 @@ var list = new List<object> { order }.ProjectedAsCollection<OrderDto>();
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 实现包依赖 | AutoMapper 17.0.0、Mapster / Mapster.DependencyInjection 10.0.14（`Directory.Packages.props`） |
 
 - **全局命名空间的 `Extensions` 是兼容边界**：扩展方法位置不变，`ProjectedAs*` 的方法名与泛型约束属于公开契约。

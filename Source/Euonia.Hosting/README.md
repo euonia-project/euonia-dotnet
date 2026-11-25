@@ -194,7 +194,7 @@ public void Configure(IApplicationBuilder app)
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Microsoft.AspNetCore.App` 共享框架、`Duende.IdentityModel` 8.1.0、`Duende.AspNetCore.Authentication.OAuth2Introspection` 7.0.2；JwtBearer/OpenIdConnect 随目标框架版本。
 - 已知边界：`JwtAuthenticationOptions` 没有框架默认配置节；`AddJwtAuthentication` 会清空进程级入站声明映射；请求追踪与统一异常由 `Euonia.Hosting.Webapi` 装配。
 - 升级提示：升级 ASP.NET Core 或 Duende 包后，重新验证 `AddIdentityServerAuthentication` 的 JWT/内省子方案与 `TokenValidationParameters` 行为。

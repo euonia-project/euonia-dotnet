@@ -4,7 +4,7 @@
 
 Euonia 是用于构建企业级 .NET 应用与服务的开发框架。它把 **面向对象可扩展业务架构（OSBA）** 与 **领域驱动设计（DDD）** 结合起来，提供从基础原语、模块化宿主、领域建模、业务对象、权限策略、消息总线，到仓储、缓存、分布式同步、动态 HTTP/gRPC 端点的完整基础设施。
 
-- **当前版本**：2026.5.0（见 [project.props](project.props)）
+- **当前版本**：2026.5.1（见 [project.props](project.props)）
 - **目标框架**：.NET 10 / .NET 11；测试与示例项目面向 .NET 11，Endpoint Source Generator 以 `netstandard2.0` analyzer 发布
 - **包规模**：Source 下 45 个可打包项目，每个包都附带独立 README
 - **测试**：29 个测试/夹具项目，1,300+ 个测试用例；另有 3 个 BenchmarkDotNet 基准项目
@@ -1053,23 +1053,23 @@ dotnet run
 以下为核心包示例；完整清单见[包一览](#包一览)，版本号可按 `project.props` 统一管理：
 
 ```xml
-<PackageReference Include="Euonia.Core" Version="2026.5.0" />
-<PackageReference Include="Euonia.Modularity" Version="2026.5.0" />
-<PackageReference Include="Euonia.Hosting" Version="2026.5.0" />
-<PackageReference Include="Euonia.Domain" Version="2026.5.0" />
-<PackageReference Include="Euonia.Application" Version="2026.5.0" />
-<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
-<PackageReference Include="Euonia.Security" Version="2026.5.0" />
-<PackageReference Include="Euonia.Bus" Version="2026.5.0" />
-<PackageReference Include="Euonia.Bus.InMemory" Version="2026.5.0" />
-<PackageReference Include="Euonia.Repository.EfCore" Version="2026.5.0" />
-<PackageReference Include="Euonia.Caching" Version="2026.5.0" />
-<PackageReference Include="Euonia.Caching.Memory" Version="2026.5.0" />
-<PackageReference Include="Euonia.Concurrency" Version="2026.5.0" />
-<PackageReference Include="Euonia.Tenancy" Version="2026.5.0" />
-<PackageReference Include="Euonia.Auditing" Version="2026.5.0" />
-<PackageReference Include="Euonia.Telemetry" Version="2026.5.0" />
-<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.5.0" />
+<PackageReference Include="Euonia.Core" Version="2026.5.1" />
+<PackageReference Include="Euonia.Modularity" Version="2026.5.1" />
+<PackageReference Include="Euonia.Hosting" Version="2026.5.1" />
+<PackageReference Include="Euonia.Domain" Version="2026.5.1" />
+<PackageReference Include="Euonia.Application" Version="2026.5.1" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.1" />
+<PackageReference Include="Euonia.Security" Version="2026.5.1" />
+<PackageReference Include="Euonia.Bus" Version="2026.5.1" />
+<PackageReference Include="Euonia.Bus.InMemory" Version="2026.5.1" />
+<PackageReference Include="Euonia.Repository.EfCore" Version="2026.5.1" />
+<PackageReference Include="Euonia.Caching" Version="2026.5.1" />
+<PackageReference Include="Euonia.Caching.Memory" Version="2026.5.1" />
+<PackageReference Include="Euonia.Concurrency" Version="2026.5.1" />
+<PackageReference Include="Euonia.Tenancy" Version="2026.5.1" />
+<PackageReference Include="Euonia.Auditing" Version="2026.5.1" />
+<PackageReference Include="Euonia.Telemetry" Version="2026.5.1" />
+<PackageReference Include="Euonia.Telemetry.Otel" Version="2026.5.1" />
 ```
 
 ### 2. 模块化宿主
@@ -1270,7 +1270,7 @@ euonia-net/
 
 ## 版本与兼容性
 
-- **版本号**：`年份.主版本.修订号`（如 `2026.5.0`），统一由 [project.props](project.props) 的 `<Version>` 控制。
+- **版本号**：`年份.主版本.修订号`（如 `2026.5.1`），统一由 [project.props](project.props) 的 `<Version>` 控制。
 - **目标框架**：Source 库项目为 `net10.0;net11.0`；测试与示例项目为 `net11.0`；`Euonia.Endpoint.SourceGenerator` 为 `netstandard2.0;net10.0`，NuGet 包只携带 `netstandard2.0` analyzer。
 - **已移除 `netstandard2.1`**：不再提供相关条件编译分支与兼容 polyfill。
 - **可空引用类型**：所有项目启用 `<Nullable>enable</Nullable>`，公开 API 带可空性标注。

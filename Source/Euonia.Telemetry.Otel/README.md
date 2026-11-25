@@ -27,7 +27,7 @@ builder.Services.AddEuoniaOpenTelemetry(
     {
         options.Enabled = true;
         options.ServiceName = "order-service";
-        options.ServiceVersion = "2026.5.0";
+        options.ServiceVersion = "2026.5.1";
         options.Environment = builder.Environment.EnvironmentName;
     },
     configure: otel => otel.AddOtlpExporter());
@@ -93,7 +93,7 @@ public static IServiceCollection AddEuoniaOpenTelemetry(
     "Telemetry": {
       "Enabled": true,
       "ServiceName": "order-service",
-      "ServiceVersion": "2026.5.0",
+      "ServiceVersion": "2026.5.1",
       "Environment": "Production"
     }
   }
@@ -217,7 +217,7 @@ EuoniaOpenTelemetryExtensions.UseEuoniaPropagator(); // 进程级全局设置，
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.0`（`project.props:3`）。
+- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.1`（`project.props:3`）。
 - **关键依赖**：OpenTelemetry `1.21.0`（`Directory.Packages.props:9,31-33`），同时引用 Hosting 与 OTLP 导出器；`Euonia.Telemetry` 与 `Euonia.Core` 同版本。
 - **升级注意**：升级 OpenTelemetry 时同步升级宿主的 `OpenTelemetry.Instrumentation.*`，它们与 SDK 主版本需一致。
 - **已知边界**：只包装 tracer 侧的 OTLP 导出器；指标与日志导出用 OTel 原生 API；源订阅在 Provider 构建期固定。

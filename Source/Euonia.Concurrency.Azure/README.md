@@ -187,7 +187,7 @@ await using var handle = await provider.AcquireAsync(TimeSpan.FromSeconds(5));
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`Azure.Storage.Blobs`、`Euonia.Concurrency`、`Euonia.Modularity`。
 - **已知边界**：只实现锁，不实现信号量；不创建容器；非无限租约限制 15–60 秒；存储模拟器下 Blob 名称上限更短（256）。
 - **升级注意**：锁状态在 Azure 侧，升级不迁移数据；改动锁名前缀会让新旧实例锁不同 Blob，滚动升级期间需保持命名一致。

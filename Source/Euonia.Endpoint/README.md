@@ -279,7 +279,7 @@ public sealed class OrderDto
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 第三方依赖 | 无（不引用 ASP.NET Core，也不引用 protobuf-net） |
 
 - **契约稳定优先**：`ExposeWebApi` / `ExposeGrpc` 的公开属性（`Prefix` / `Route` / `Method`）与 `GrpcMethod` 枚举值是兼容性边界，扩展只会新增成员。
