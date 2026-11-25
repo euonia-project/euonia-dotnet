@@ -378,8 +378,9 @@ public sealed class ClassLevelAsset
 }
 
 /// <summary>
-/// 按「带 <c>run</c> 特性即视为执行入口」的约定提供权限码的来源，
-/// 用于验证方法级声明只有经 <see cref="IPermissionCodeSource"/> 才能被看见。
+/// 按「名为 <c>Run</c> 的方法即执行入口」的约定提供权限码的兼容来源（<see cref="IPermissionCodeSource"/>），
+/// 用于验证 <see cref="IPermissionCodeSource"/> 的按操作收集口径仍然保留；
+/// 方法级声明在当前模型下按被调用的方法自动生效，不需要该来源。
 /// </summary>
 public sealed class ConventionCodeSource : IPermissionCodeSource
 {

@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Security.Claims;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
+using Nerosoft.Euonia.Security.Properties;
 using Nerosoft.Euonia.Security.Tests.Fixtures;
 
 namespace Nerosoft.Euonia.Security.Tests;
@@ -27,9 +28,9 @@ public class PhaseOneRegressionTests
 	[Fact]
 	public void ObjectScopeAuthorizer_Should_See_Models_Registered_By_A_Later_AddPermission()
 	{
-		// 回归：IObjectScopeAuthorizer 曾在首次注册时被直接 new 出实例并捕获当时的注册表；
-		// 第二次 AddPermission 换掉了容器里的 ScopeModelRegistry，TryAddSingleton 却因描述符已存在
-		// 而不再登记 —— 于是第二个模块的模型被判为「不受约束」，行级数据权限被静默跳过（fail-open）。
+		// 当前保证：第二次 AddPermission 换掉容器里的 ScopeModelRegistry 后，
+		// IObjectScopeAuthorizer 必须使用最新注册表，第二个模块的模型必须被视为受约束，
+		// 行级数据权限不能因此被跳过。
 		var services = new ServiceCollection();
 
 		services.AddPermission(p => { p.Scan(TestAssembly); p.Source(RunCodeSource()); });
@@ -165,7 +166,8 @@ public class PhaseOneRegressionTests
 		var guard = provider.GetRequiredService<IScopeGuard>();
 
 		Assert.False(guard.AllowsObject(null));
-		Assert.Contains("Decision: deny", guard.ExplainObject(null), StringComparison.OrdinalIgnoreCase);
+		// 文案随当前 UI 文化变化：断言资源本身（"deny" / "拒绝"），而不是写死英文
+		Assert.Contains(Resources.IDS_DECISION_DENY, guard.ExplainObject(null), StringComparison.Ordinal);
 		// 未注册权限模型的类型：null 资源同样判不出，不得因「类型不受约束」而放行
 		Assert.False(guard.Allows<ClassLevelAsset>(null));
 		Assert.False(guard.Explain<ClassLevelAsset>(null).Allowed);
@@ -212,7 +214,7 @@ public class PhaseOneRegressionTests
 	}
 
 	/// <summary>
-	/// 新增模块时注册表必须照常重建，新模型应出现在新的 <see cref="ScopeModelRegistry"/> 中。
+	/// 新增模块时注册表必须照常重建，刚注册的模型应出现在新的 <see cref="ScopeModelRegistry"/> 中。
 	/// </summary>
 	[Fact]
 	public void Adding_A_New_Module_Should_Still_Rebuild()

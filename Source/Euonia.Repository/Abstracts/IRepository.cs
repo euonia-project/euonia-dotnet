@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 using Nerosoft.Euonia.Linq;
 
 namespace Nerosoft.Euonia.Repository;
@@ -52,6 +52,17 @@ public interface IRepository<TEntity> : IDisposable
 	Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// 异步获取查询处理后的第一个实体。
+	/// </summary>
+	/// <param name="handle">在查询之前应用的查询处理，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>查询结果中的第一个实体；无结果时为 <c>null</c>。</returns>
+	Task<TEntity?> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return GetAsync(_ => true, handle, cancellationToken);
+	}
+
+	/// <summary>
 	/// 异步查找序列中所有满足指定条件的实体。
 	/// </summary>
 	/// <param name="predicate">用于筛选实体的条件表达式。</param>
@@ -96,6 +107,17 @@ public interface IRepository<TEntity> : IDisposable
 	Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default);
 
 	/// <summary>
+	/// 异步查找查询处理后的所有实体。
+	/// </summary>
+	/// <param name="handle">在查询之前应用的查询处理，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>查询结果中的实体列表；无结果时为空列表。</returns>
+	Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return FindAsync(_ => true, handle, cancellationToken);
+	}
+
+	/// <summary>
 	/// 异步获取序列中满足指定条件的实体数量。
 	/// </summary>
 	/// <param name="predicate">用于筛选实体的条件表达式。</param>
@@ -114,6 +136,17 @@ public interface IRepository<TEntity> : IDisposable
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
 	/// <returns>满足条件的实体数量。</returns>
 	Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// 异步获取查询处理后的实体数量。
+	/// </summary>
+	/// <param name="handle">在计数之前应用的查询处理，可为 <c>null</c>。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>查询结果中的实体数量。</returns>
+	Task<int> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return CountAsync(_ => true, handle, cancellationToken);
+	}
 
 	/// <summary>
 	/// 异步获取序列中满足指定条件的实体数量，并以 <see cref="long"/> 返回。
@@ -309,6 +342,39 @@ public interface IRepository<TEntity, in TKey> : IRepository<TEntity>
 		}
 
 		return FindAsync(PredicateBuilder.PropertyInRange<TEntity, TKey>(nameof(IEntity<>.Id), array), handle, cancellationToken);
+	}
+
+	/// <summary>
+	/// 异步删除具有指定主键的实体；实现 <see cref="ITombstone"/> 的实体改为软删除。
+	/// </summary>
+	/// <param name="id">要删除实体的主键。</param>
+	/// <param name="autoSave">指示是否在删除后自动调用 <see cref="IRepository{TEntity}.SaveChangesAsync"/>。</param>
+	/// <param name="cancellationToken">用于取消操作的令牌。</param>
+	/// <returns>表示异步操作的任务。</returns>
+	/// <exception cref="NotFoundException">找不到具有指定主键的实体时抛出。</exception>
+	async Task DeleteAsync(TKey id, bool autoSave = true, CancellationToken cancellationToken = default)
+	{
+		var entity = await GetAsync(id, cancellationToken);
+
+		if (entity is null)
+		{
+			throw new NotFoundException();
+		}
+
+		if (entity is ITombstone tombstone)
+		{
+			tombstone.IsDeleted = true;
+			await UpdateAsync(entity, false, cancellationToken);
+		}
+		else
+		{
+			await DeleteAsync(entity, false, cancellationToken);
+		}
+
+		if (autoSave)
+		{
+			await SaveChangesAsync(cancellationToken);
+		}
 	}
 }
 

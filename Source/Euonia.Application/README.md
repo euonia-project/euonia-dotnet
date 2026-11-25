@@ -79,7 +79,8 @@ public sealed class CancelOrderUseCase : IUseCase<CancelOrderInput, CancelOrderO
 - **应用服务**：`BaseApplicationService` 通过 `ILazyServiceProvider` 懒加载总线、当前用户、请求上下文、日志与用例执行器。
 - **自动注册**：`ServiceContextBase` + `services.Register<TContext>()` 按程序集扫描应用服务与管道行为，并为实现类型与接口生成共享目标实例的代理。
 - **拦截器**：日志、授权、校验、追踪、锁、计时、缓存、缓存失效、幂等、重试与熔断。
-- **管道行为**：`ValidationBehavior`、`UserContextBehavior`、`CorrelationIdBehavior`，可挂到消息总线的处理管道上。
+- **管道行为**：`ValidationBehavior`、`UserContextBehavior`、`CorrelationIdBehavior`、`RequestInfoBehavior`，可挂到消息总线的处理管道上。
+- **消息约定**：`DomainMessageConvention` 按 `ICommand` / `IEvent` / `IRequest<>` 将领域消息分类为单播、多播或请求；在总线配置中 `Add<DomainMessageConvention>()` 后生效。
 
 ## 核心类型
 
@@ -188,7 +189,7 @@ public sealed class CancelOrderEndpoint(IUseCaseExecutor executor)
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Euonia.Modularity`（Castle.Core 5.2.1）、`Euonia.Caching`、`Euonia.Concurrency`、`Euonia.Pipeline`、`Euonia.Validation`、`Euonia.Uow`。
 - 已知边界：类代理要求无参构造与 `virtual` 方法；`Register<T>` 不注册用例；缓存拦截器在缺少 `ICacheService` 时静默退化。
 - 升级提示：代理注册与拦截器排序以当前源码为准；升级 Modularity/Castle 后重跑应用服务注册与拦截器测试。

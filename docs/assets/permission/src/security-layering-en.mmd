@@ -1,0 +1,11 @@
+%%{init: {"flowchart": {"wrappingWidth": 600}}}%%
+flowchart LR
+    Host["Host application<br/>composition root"]
+    Osba["Euonia.Osba<br/>upper-layer business object runtime<br/>reference host (optional)"]
+    Security["Euonia.Security<br/>lower-layer capability<br/>permission policy engine"]
+    Core["Euonia.Core<br/>permission contracts<br/>(shared dependency)"]
+
+    Host --> Osba
+    Host --> Security
+    Osba -->|"references Core and other base packages"| Core
+    Security -->|"references Core only"| Core

@@ -128,14 +128,14 @@ curl -i http://localhost:5000/api/orders/public
 curl -i http://localhost:5000/api/orders
 ```
 
-如果启动端口不是 5000，以 `dotnet run` 输出或 `launchSettings.json` 为准。观察响应头 `x-request-trace-id`；它由 `HostingModule` 自动安装的 `RequestTraceMiddleware` 写入。若启动日志显示模块已加载，但请求上下文仍为空，优先检查 `app.InitializeApplication()` 是否在管道最前面。
+如果启动端口不是 5000，以 `dotnet run` 输出或 `launchSettings.json` 为准。响应头 `x-request-trace-id` 由 `Euonia.Hosting.Webapi` 的 `UseEuoniaWebApi()` 写入；若启动日志显示模块已加载，但请求上下文仍为空，优先检查 `app.InitializeApplication()` 是否在管道最前面。
 
 ### 常见失败点
 
 - **所有受保护端点都 401**：`Startup.Configure` 漏了 `UseAuthentication()`，或 `AddJwtAuthentication` 没执行；先确认模块依赖链包含 `HostingModule`。
 - **启动时 `ArgumentNullException`**：使用了 `AddJwtAuthentication(string)` 但配置节不存在或 `SigningKey` 为空；本教程用 `Action<JwtAuthenticationOptions>` 直接配置。
-- **没有 `x-request-trace-id`**：模块没有通过 `[DependsOn(typeof(HostingModule))]` 加载，或 `InitializeApplication` 没有执行。
-- **异常返回 HTML**：`ExceptionHandlingMiddleware` 是内部类型，不会自动入管道；应用需自行提供异常映射中间件（示例应用使用 `ApiExceptionMiddleware`）。
+- **没有 `x-request-trace-id`**：未调用 `UseEuoniaWebApi()`，或 `InitializeApplication` 没有执行。
+- **异常返回 HTML**：未使用 `Euonia.Hosting.Webapi` 的 `UseEuoniaWebApi()`；其他宿主需自行提供异常映射中间件。
 
 ## 相关文档
 

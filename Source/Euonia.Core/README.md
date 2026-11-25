@@ -35,7 +35,7 @@ var snowflakeId = ObjectId.Snowflake();   // 时间有序的唯一 ID
 | `Nerosoft.Euonia.Threading` | `AsyncLock`、信号量、事件、监视器、`AsyncContext` 等异步原语 |
 | `Nerosoft.Euonia.Threading.Interop` | 将 `WaitHandle` / .NET 事件转为 `Task` |
 | `Nerosoft.Euonia.Disposing` | 同步/异步幂等释放原语 |
-| `Nerosoft.Euonia.Security` | 用户主体、声明类型、账号/凭据异常 |
+| `Nerosoft.Euonia.Security` | 用户主体、声明类型、权限声明与契约、账号/凭据异常 |
 | `Nerosoft.Euonia.Windows` | `ICommand` 实现（`DelegateCommand`、`GenericCommand`） |
 | `System.ComponentModel.DataAnnotations` | Guid、集合元素数量校验特性 |
 
@@ -55,7 +55,8 @@ var snowflakeId = ObjectId.Snowflake();   // 时间有序的唯一 ID
 | `Reflect` / `PropertyAccessorCache<T>` | `Nerosoft.Euonia.Reflection` | 反射读写与访问器缓存 |
 | `AsyncLock` / `AsyncSemaphore` / `AsyncLazy<T>` | `Nerosoft.Euonia.Threading` | 异步协调原语 |
 | `UserPrincipal` / `UserClaimTypes` | `Nerosoft.Euonia.Security` | 当前用户主体与声明常量 |
-| `Extensions` | 全局 | 字符串、集合、反射、Task 等扩展方法 |
+| `PermissionAttribute` / `PermissionRequirements` / `IPermissionRequirementSource` | `Nerosoft.Euonia.Security` | 权限声明、内建读取器与可选的要求来源 |
+| `Extensions` | 全局 | 字符串、集合、反射、Task、JSON 路径读取等扩展方法 |
 
 ## 全局命名空间与 `System`
 
@@ -269,6 +270,17 @@ long decoded = codec.DecodeSingleInt64(hash);      // 12345
 见上方「ID 生成」一节。
 
 ---
+
+### JSON 路径读取
+
+`Extensions.GetValue<TValue>` 按 `.` 或 `/` 分隔的路径读取 `JsonNode`，路径不存在时返回目标类型的默认值：
+
+```csharp
+var node = JsonNode.Parse("""{"user":{"name":"Alice"},"items":[{"id":1}]}""")!;
+
+var name = node.GetValue<string>("user.name");
+var id = node.GetValue<int>("items/0/id");
+```
 
 ## `Nerosoft.Euonia.Collections`
 
@@ -775,6 +787,47 @@ var claim = principal.FindClaim("email");
 
 OIDC/JWT 声明名常量（`Subject = "sub"`、`Name = "name"`、`Role = "role"`、`Tenant = "tenant"` 等）。
 
+### 权限声明与契约
+
+权限的「基础词汇」与跨边界契约都在这里；Core 只定义契约，不绑定任何实现。
+
+| 类型 | 用途 |
+|---|---|
+| `PermissionAttribute` | 声明权限要求；权限码是任意非空字符串、单一维度（`order:read` 的冒号只是命名习惯），不得以 `@` 开头，首尾空白会被裁剪 |
+| `BusinessOperation` | **数据权限**的授权标识词汇（`read` / `create` / `update` / `delete` / `execute`），与权限码没有映射关系 |
+| `PermissionRequirements` | 内建读取器：`For(type)` / `For(method)` / `For(type, method)` / `Merge` / `Adapt`，带缓存、裁剪与去重 |
+| `IPermissionRequirementSource` | 要求来源（推荐）：`RequirementsFor(Type, MethodInfo?, string)`；不注册也能工作，码来自数据时才实现 |
+| `IPermissionChecker` / `IObjectScopeAuthorizer` / `IObjectOperationResolver` | 操作权限判定 / 行级数据权限判定 / 对象状态 → 操作的跨边界契约 |
+
+已废弃成员：
+
+| 成员 | 现状 | 替代 |
+|---|---|---|
+| `IPermissionCodeSource` | 保留，标 `[Obsolete]` | `IPermissionRequirementSource` |
+
+契约关系如图 1 所示。
+
+<img src="../../docs/assets/permission/core-contracts.svg" alt="图 1：Core 权限契约关系" width="760" />
+
+**图 1：Core 权限契约关系**
+
+如图 1 所示，声明由 `PermissionRequirements` 读取并缓存；`IPermissionRequirementSource` 是可选增量；
+`IPermissionChecker` / `IObjectScopeAuthorizer` / `IObjectOperationResolver` 由使用方实现。
+
+```csharp
+[Permission("order:read")]                  // 类型级：对该类型的所有方法生效
+public class Order
+{
+    [Permission("order:cancel")]            // 方法级：只在 Cancel 被调用时生效
+    public void Cancel() { }
+}
+
+var typeRequirements = PermissionRequirements.For(typeof(Order));
+var method = typeof(Order).GetMethod(nameof(Order.Cancel))!;
+var requirements = PermissionRequirements.For(typeof(Order), method);   // 类型级 ∪ 方法级
+```
+
+
 ### 账号与凭据异常
 
 ```csharp
@@ -788,6 +841,43 @@ catch (AccountException ex)
     var details = ex.Details;
 }
 ```
+
+### 密码学
+
+`Cryptography`（AES/DES/SHA/MD5/Base64/RSA）、`PasswordComplexity`、`PasswordGenerator` 与 `RandomUtility` 提供常用的安全原语：
+
+```csharp
+using Nerosoft.Euonia.Security;
+
+var key = RandomUtility.GenerateRandomString(32);          // 32 字节 UTF-8 密钥
+var cipher = Cryptography.AES.EncryptGcm("secret", key);   // AES-GCM 认证加密（推荐）
+var plain = Cryptography.AES.DecryptGcm(cipher!, key);     // 密文被篡改时抛 CryptographicException
+var digest = Cryptography.SHA.Encrypt(cipher!);            // SHA-256 / Base64
+
+var password = PasswordGenerator.GeneratePassword(PasswordComplexity.All, 12, 16);
+var otp = RandomUtility.GenerateRandomDigit(6);
+```
+
+| 类型 | 用途 |
+|---|---|
+| `Cryptography.AES` | AES 加密/解密（推荐 GCM；ECB + PKCS7 仅兼容遗留数据） |
+| `Cryptography.DES` | DES 加密 / 字节数组密钥的 AES 兼容实现（ECB + PKCS7，仅限兼容遗留数据） |
+| `Cryptography.MD5` | MD5 摘要（小写十六进制） |
+| `Cryptography.SHA` | SHA-256 摘要（Base64 输出） |
+| `Cryptography.Base64` | UTF-8 字符串的 Base64 编解码 |
+| `Cryptography.RSA` | RSA 加密/解密（PEM、PKCS#1、PKCS#8、SPKI；默认 OAEP-SHA256 填充） |
+| `PasswordComplexity` / `PasswordGenerator` | 按字符类型要求生成密码学安全密码 |
+| `RandomUtility` | 安全随机字符串/数字/字节，`Random` 的安全实现 |
+
+安全约束：
+
+- 新数据请使用 AES-GCM（`EncryptGcm` / `DecryptGcm`，随机 nonce + 认证标签，篡改抛 `CryptographicException`）；ECB + PKCS7 不隐藏明文模式，仅用于兼容遗留数据。
+- 所有加解密 API 均要求显式传入密钥；内置默认密钥的无参重载已删除。
+- RSA 默认使用 OAEP（SHA-256）填充；PKCS#1 v1.5 仅通过显式传入 `RSAEncryptionPadding.Pkcs1` 的重载兼容遗留数据。
+- `Cryptography.SHA` 是一次 SHA-256，不能替代 PBKDF2/Argon2 等慢哈希。
+- `Cryptography.DES` / `Cryptography.MD5` 仅限兼容遗留数据；新数据请优先使用 AES-GCM 与 SHA-256。
+
+完整 API 见 [Euonia.Core API 手册](../../docs/user-manual/Euonia.Core/API.md)，用法见 [教程](../../docs/user-manual/Euonia.Core/TUTORIAL.md)。
 
 ---
 
@@ -909,8 +999,6 @@ SynchronizationContextSwitcher.NoContext(() => { });
 - [`Euonia.Domain`](../Euonia.Domain/README.md) —— DDD 构建块（聚合根、值对象、领域事件、仓储契约）
 - [`Euonia.Modularity`](../Euonia.Modularity/README.md) —— 模块化启动与依赖注入
 - [`Euonia.Mapping`](../Euonia.Mapping/README.md) —— 对象映射抽象
-- [`Euonia.Osba`](../Euonia.Osba/README.md) —— 业务对象运行时（基于本包的权限契约与反射工具）
-- [`Euonia.Security`](../Euonia.Security/README.md) —— 操作权限与行级数据权限策略引擎
 - [`Euonia.Validation`](../Euonia.Validation/README.md) —— 参数与对象校验
 
 ## 常见问题与故障排查
@@ -953,7 +1041,7 @@ SynchronizationContextSwitcher.NoContext(() => { });
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 第三方依赖 | 无（仅 BCL） |
 
 - 文档标注的命名空间即当前源码位置（`Check` / `ObjectId` / `Extensions` 在全局，`Optional<T>` / `Singleton<T>` 在 `System`）；升级后若发现位置变化，以源码为准并回提本文档。

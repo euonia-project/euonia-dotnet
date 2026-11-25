@@ -322,7 +322,7 @@ public sealed class OrderService : IOrderService
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Castle.Core` 5.2.1、`Microsoft.Extensions.*` 11.0.0（由 `Directory.Packages.props` 锁定）。
 - 已知边界：环境变量源位于配置末尾；普通 `IConfigurationRoot` 包装后返回新视图；带前缀的配置交给自动包装时，前缀隔离不是强保证。
 - 升级提示：环境变量优先于命令行、原生 `__` 优先于自定义 `_` 的规则已固定；升级后如仍依赖旧顺序，需要显式调整配置源。

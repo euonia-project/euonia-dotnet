@@ -6,7 +6,7 @@ using Nerosoft.Euonia.Sample.Constants;
 using Nerosoft.Euonia.Sample.Domain.Aggregates;
 using Nerosoft.Euonia.Sample.Domain.Permissions;
 using Nerosoft.Euonia.Sample.Persist.Entities;
-using Nerosoft.Euonia.Sample.Toolkit;
+using Nerosoft.Euonia.Security;
 using Nerosoft.Euonia.Uow;
 
 namespace Nerosoft.Euonia.Sample.Persist;

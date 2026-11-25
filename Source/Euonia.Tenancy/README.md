@@ -258,7 +258,7 @@ if (tenantId != null)
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.0`（`project.props:3`）。
+- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.1`（`project.props:3`）。
 - **关键依赖**：`Euonia.Core` + `Microsoft.Extensions.*` `11.0.0`（`Directory.Packages.props:5`）；HTTP 解析器与中间件在 `Euonia.Hosting`，需同版本对齐。
 - **升级注意**：`MultiTenancyOptions` 的属性名即配置键，重命名属于破坏性变更；`Euonia:MultiTenancy:Tenants` 为数组，环境变量需带索引。
 - **已知边界**：启动校验只做静态检查（存储缺失、`DefaultTenantId` 非法、`CrossTenantRoles` 含空、`DatabasePerTenant` 缺模板）；租户模型扫描由 EF 适配层在首次建上下文时完成。

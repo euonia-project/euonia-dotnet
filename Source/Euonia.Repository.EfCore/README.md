@@ -63,11 +63,13 @@ public sealed class OrderService(IRepository<AppDbContext, Order, long> reposito
 ## 主要功能
 
 - **上下文基类**：`DataContextBase<TContext>` 实现 `IRepositoryContext`，提供 `SetEntryValues` 与 `ConfigureModel` 钩子。
+- **审计**：`DataContextBase<TContext>` 在 `AutoSetEntryValues` 为 `true` 时，为实现 `IHasCreateTime` / `IHasUpdateTime` / `IHasDeleteTime` / `ITombstone` 的实体填充审计字段，并将删除转换为软删除；当前用户标识由 `GetCurrentUserId()` 提供，操作人字段名默认为 `CreatedBy` / `UpdatedBy` / `DeletedBy` 且可重写。
 - **仓储实现**：`EfCoreRepository<TContext, TEntity, TKey>` 基于 `IRepositoryContext` + `DbSet` 完成查询与 CRUD，并记录仓储遥测。
 - **统一注册**：`AddEfCoreRepository` 注册 `DbContext` 与开放式泛型仓储，并注册 `UnitOfWorkContextFactory`。
 - **连接串解析**：`AddDataContextFactory<TContext>` 按名称、上下文类型名、`Default`、解析器与代码默认值依次解析。
 - **工作单元**：`UnitOfWorkContext` / `UnitOfWorkContextFactory` 在事务性工作单元中复用上下文并开启事务。
-- **值转换与生成**：`UniversalTimeConverter`、`SnowflakeIdValueGenerator`、`GuidVersion7ValueGenerator`、`UlidValueGenerator` 等。
+- **值转换与生成**：`UniversalTimeConverter`、`SnowflakeIdValueGenerator`、`GuidVersion7ValueGenerator`、`UlidValueGenerator`、`EpochTimestampGenerator` 等。
+- **实体条目扩展**：`EntityEntryExtensions.TrySetProperty` 在属性存在时设置当前值。
 - **查询扩展**：`Include` / `IncludeIf` / `Tracking` / `Attach`（EF Core 专用）。
 - **多租户**：`MultiTenantDataContextBase<TContext>`、`TenantConnectionStringResolver<TContext>` 等。
 
@@ -137,7 +139,8 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 | `AutoSetEntryValues` | 抽象属性 | 保存时是否调用 `SetEntryValues`；派生类必须重写 |
 | `DateTimeKind` | `Unspecified` | 派生类在 `SetEntryValues` 中写入日期时间时使用的 Kind |
 | `contextLifeTime` | `Scoped` | `AddEfCoreRepository` / `AddDataContextFactory` 的生命周期参数 |
-| `SetEntryValues` | 空实现 | 保存前填充审计字段等；基类不做任何填充 |
+| `SetEntryValues` | 基类实现 | 按四个审计接口写入时间与操作人；可重写，重写时应调用 `base` |
+| `CreatedByFieldName` / `UpdatedByFieldName` / `DeletedByFieldName` | `CreatedBy` / `UpdatedBy` / `DeletedBy` | 操作人字段名称，供字段名不同的实体重写 |
 | `ConfigureModel` | 空实现 | 在软删除过滤器之后追加模型配置 |
 
 > 本包没有 `Euonia:Repository` 配置节；除 `ConnectionStrings` 外均为代码配置。
@@ -154,6 +157,8 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 | `ConnectionConfigurator` | `(DbContextOptionsBuilder, string) -> DbContextOptionsBuilder` 委托 |
 | `DataContextExtensions` | `GetTableName`、`GetForeignKey`、`SetTombstoneQueryFilter` |
 | `RepositoryExtensions` | EF Core 专用 `Include` / `IncludeIf` / `Tracking` / `Attach` |
+| `EntityEntryExtensions.TrySetProperty` | 属性存在时设置实体条目的当前值 |
+| `EpochTimestampGenerator` | 为 `long` 属性生成毫秒级 Unix 时间戳 |
 | `UniversalTimeConverter` / `SnowflakeIdValueGenerator` / `GuidVersion7ValueGenerator` / `UlidValueGenerator` | 值转换与值生成器 |
 
 ## 注意事项 / 限制
@@ -161,7 +166,7 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 1. `AddEfCoreRepository` **不注册** `IContextProvider`；需要 `[DependsOn(typeof(RepositoryModule))]` 或显式 `services.AddContextProvider()`，否则解析仓储会失败。
 2. `AddEfCoreRepository` 不解析 `ConnectionStrings`；要使用名称回退、环境变量与 `{provider}://` 前缀，请改用 `AddDataContextFactory<TContext>()`。
 3. `DataContextBase.OnModelCreating` 只应用带 `[DbContext(typeof(TContext))]` 的 `IEntityTypeConfiguration`；没有该特性的配置不会被加载。
-4. `AutoSetEntryValues => true` 只会调用 `SetEntryValues`；基类实现为空，审计字段需要派生类自己填充。
+4. `AutoSetEntryValues => true` 时，基类会为实现了四个审计接口的实体写入字段；实体没有实现对应接口、`GetCurrentUserId()` 返回 `null`，或字段名与默认值不同且未重写 `*FieldName` 时，对应字段不会被写入。
 5. 软删除过滤器以命名过滤器 `TenantFilterNames.Tombstone` 注册；EF Core 不允许命名与匿名查询过滤器混用。
 6. `AddDataContextFactory` 要求连接串带 `{provider}://` 前缀，并为该 provider 注册键控 `ConnectionConfigurator`；否则抛 `NotSupportedException`。
 7. `AddEfCoreRepository<TContext>(..., ServiceLifetime.Singleton)` 会把 `DbContext` 注册为单例，`AddEfCoreRepository(ServiceLifetime.Singleton)` 会把开放式仓储注册为单例；两者都与 EF Core 的线程模型冲突，生产环境应保持 `Scoped`。
@@ -184,7 +189,7 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 连接串必须带 `{provider}://` 前缀，例如 `sqlite://Data Source=app.db`；前缀对应的 provider 还必须注册键控 `ConnectionConfigurator`。缺少前缀会抛 `ArgumentException`，provider 未注册会抛 `NotSupportedException`。
 
 ### `AutoSetEntryValues => true`，审计字段仍为空
-`DataContextBase` 只提供 `SetEntryValues` 钩子，基类实现为空；`AutoSetEntryValues` 为 `true` 仅表示保存前调用它。需要在派生上下文中重写 `SetEntryValues` 并填充 `CreatedAt`/`UpdatedAt` 等字段。
+检查实体是否实现对应的审计接口（`IHasCreateTime` / `IHasUpdateTime` / `IHasDeleteTime` / `ITombstone`），`GetCurrentUserId()` 是否返回非 `null`，以及操作人字段名是否与 `CreatedByFieldName` / `UpdatedByFieldName` / `DeletedByFieldName` 一致。
 
 ### 实体配置没有生效
 `DataContextBase.OnModelCreating` 只加载带 `[DbContext(typeof(TContext))]` 的 `IEntityTypeConfiguration`。没有该特性、或指向其他上下文类型的配置不会被应用。
@@ -197,13 +202,13 @@ CONNECTION_STRING_DEFAULT="sqlite://Data Source=app.db"   # 仓库 alias
 - 模块同时使用 `[DependsOn(typeof(RepositoryModule))]` 与 `AddDataContextFactory<TContext>()`，让连接串按名称/环境变量解析。
 - 每个 provider 注册一个键控 `ConnectionConfigurator`（如 `"sqlite"`），连接串用 `ConnectionStrings__Default` 或 `CONNECTION_STRING_DEFAULT` 覆盖。
 - 迁移与建库放在部署阶段；不要在请求路径里 `EnsureCreated`。
-- 派生上下文重写 `SetEntryValues` 与 `ConfigureModel`，保持审计字段、软删除过滤器和租户过滤器顺序一致。
+- 如需自定义审计逻辑，重写 `SetEntryValues` 时调用 `base.SetEntryValues(entries)`，保持审计字段、软删除过滤器和租户过滤器顺序一致。
 
 ## 版本与兼容
 
 - 目标框架：`net10.0`、`net11.0`（`Source/common.props`）。
 - 关键依赖：`Euonia.Repository`、`Euonia.Uow`、`Microsoft.EntityFrameworkCore` / `Relational`；具体版本由仓库构建属性决定。
-- 已知边界：`AddEfCoreRepository` 不解析 `ConnectionStrings`；`DataContextBase` 的审计填充是空钩子；软删除使用命名过滤器，不能与匿名过滤器混用。
+- 已知边界：`AddEfCoreRepository` 不解析 `ConnectionStrings`；`DataContextBase` 的操作人字段名默认 `CreatedBy` / `UpdatedBy` / `DeletedBy`；软删除使用命名过滤器，不能与匿名过滤器混用。
 
 ## 许可证
 

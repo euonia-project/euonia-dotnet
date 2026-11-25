@@ -2,6 +2,8 @@
 
 > 由程序集公共元数据生成，覆盖本包全部公开类型与公共成员签名。
 > 语义、用法和配置说明见 [API.md](API.md)；端到端示例见 [TUTORIAL.md](TUTORIAL.md)。
+> 文末另附「跨程序集契约」一节：它们位于 `Euonia.Core`（命名空间相同），不属于本程序集，
+> 但本包的编程模型（`[Permission]` 声明、要求来源、兼容契约适配）直接依赖它们。
 
 | 项 | 值 |
 |---|---|
@@ -17,10 +19,17 @@
 
 - new Microsoft.Extensions.DependencyInjection.PermissionOptions()
 - Microsoft.Extensions.DependencyInjection.PermissionOptions NoModels()
-- Microsoft.Extensions.DependencyInjection.PermissionOptions NoOperationCodes()
-- Microsoft.Extensions.DependencyInjection.PermissionOptions OnAttributeOrName(System.String operation, System.String namePrefix, System.Type[] attributeTypes)
-- Microsoft.Extensions.DependencyInjection.PermissionOptions OnMethod(System.String operation, Func<System.Reflection.MethodInfo, System.Boolean> predicate)
+- Microsoft.Extensions.DependencyInjection.PermissionOptions Requirements(Nerosoft.Euonia.Security.IPermissionRequirementSource source)
 - Microsoft.Extensions.DependencyInjection.PermissionOptions Scan(System.Reflection.Assembly[] assemblies)
+- [Obsolete] Microsoft.Extensions.DependencyInjection.PermissionOptions NoOperationCodes()
+- [Obsolete] Microsoft.Extensions.DependencyInjection.PermissionOptions OnAttributeOrName(System.String operation, System.String namePrefix, System.Type[] attributeTypes)
+- [Obsolete] Microsoft.Extensions.DependencyInjection.PermissionOptions OnMethod(System.String operation, Func<System.Reflection.MethodInfo, System.Boolean> predicate)
+- [Obsolete] Microsoft.Extensions.DependencyInjection.PermissionOptions Source(Nerosoft.Euonia.Security.IPermissionCodeSource source)
+
+> `[Obsolete]` 成员保留只为兼容：`OnAttributeOrName` / `OnMethod` 与方法级 `[Permission]` 的生效
+> 无关（现在总是按被调用的方法生效），`NoOperationCodes` 是空操作，`Source` 的替代入口是
+> `Requirements`。清单见 [API.md](API.md#已废弃成员仅兼容勿用于新代码)。
+
 ### Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions
 
 **类型**：static class
@@ -266,3 +275,62 @@
 ### Nerosoft.Euonia.Security.SubjectPermissionChecker
 
 **类型**：class
+接口 Nerosoft.Euonia.Security.IPermissionChecker
+
+- new Nerosoft.Euonia.Security.SubjectPermissionChecker(Nerosoft.Euonia.Security.UserPrincipal user, Nerosoft.Euonia.Security.IScopeGuard guard)
+- System.Boolean IsGranted(System.String permission)
+- System.Boolean IsInRole(System.String role)
+- System.Threading.Tasks.ValueTask<System.Boolean> IsGrantedAsync(System.String permission, System.Threading.CancellationToken cancellationToken = default)
+- System.Threading.Tasks.ValueTask EnsureResolvedAsync(System.Threading.CancellationToken cancellationToken = default)
+
+## 跨程序集契约（位于 Euonia.Core）
+
+> 以下类型与前面的类型同属命名空间 `Nerosoft.Euonia.Security`，但定义在 `Euonia.Core` 程序集，
+> 因此不计入上表的 27 个公共类型。它们本包全部直接使用。
+
+### Nerosoft.Euonia.Security.IPermissionRequirementSource
+
+**类型**：interface
+
+- IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.Reflection.MethodInfo method, System.String operation)
+
+> `method` 可以为 `null`（表示「不是从某个具体方法进入的」，只返回类型级要求）；`operation` 由宿主传入
+> 且非空，实现忽略它。
+
+### Nerosoft.Euonia.Security.PermissionRequirements
+
+**类型**：static class
+
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type, System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> Merge(IEnumerable<Nerosoft.Euonia.Security.PermissionAttribute>[] sets)
+- static Nerosoft.Euonia.Security.IPermissionRequirementSource Adapt(Nerosoft.Euonia.Security.IPermissionCodeSource source)
+
+> `For(Type, MethodInfo)` 的 `method` 可为 `null`（只返回类型级）；`Merge` 为 `params` 形参，
+> 按「码 + 角色」去重并保持首次出现顺序。
+
+### Nerosoft.Euonia.Security.PermissionAttribute
+
+**类型**：sealed class
+基类 System.Attribute
+
+- new Nerosoft.Euonia.Security.PermissionAttribute(System.String permission)
+- new Nerosoft.Euonia.Security.PermissionAttribute(System.String permission, System.String[] roles)
+- System.String Permission { get; }
+- System.String[] Roles { get; }
+- System.String Message { get; set; }
+
+> 可标注类型或方法，`AllowMultiple = true`、`Inherited = true`。`permission` 为任意非空字符串
+> （不以 `@` 开头、首尾空白在读取时裁剪）；只想校验角色时可以传空码并至少给一个角色。
+
+### Nerosoft.Euonia.Security.IPermissionCodeSource（**已废弃**）
+
+**类型**：interface
+
+- IReadOnlyList<System.String> AllOperations { get; }
+- IReadOnlyCollection<System.String> CodesFor(System.Type type, System.String operation)
+- IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.String operation)
+
+> 引擎不再消费本契约；保留仅为既有实现与 `Source(...)` 配置能继续编译。`RequirementsFor` 有默认
+> 实现（把 `CodesFor` 的码折算为「有码、无角色」）。新代码请实现 `IPermissionRequirementSource`。

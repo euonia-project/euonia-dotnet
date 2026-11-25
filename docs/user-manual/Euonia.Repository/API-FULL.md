@@ -66,10 +66,11 @@
 ### IAuditable<TUser>
 
 **类型**：interface
-接口 Nerosoft.Euonia.Repository.IHasCreateTime、Nerosoft.Euonia.Repository.IHasUpdateTime
+接口 Nerosoft.Euonia.Repository.IHasCreateTime、Nerosoft.Euonia.Repository.IHasUpdateTime、Nerosoft.Euonia.Repository.IHasDeleteTime、Nerosoft.Euonia.Repository.ITombstone
 
 - TUser CreatedBy { get; set; }
-- TUser UpdatedBy { get; set; }
+- TUser? UpdatedBy { get; set; }
+- TUser? DeletedBy { get; set; }
 
 ### IConcurrentEntity<T>
 
@@ -133,7 +134,7 @@
 
 **类型**：interface
 
-- System.DateTime UpdatedAt { get; set; }
+- System.Nullable<System.DateTime> UpdatedAt { get; set; }
 
 ### IRepository<TEntity>
 
@@ -148,14 +149,17 @@
 - IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle)
 - Task<System.Int32> CountAsync(Expression<Func<TEntity, System.Boolean>> predicate, System.Threading.CancellationToken cancellationToken = default)
 - Task<System.Int32> CountAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
+- Task<System.Int32> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task DeleteAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task DeleteAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, System.Int32 offset, System.Int32 count, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Int32 offset, System.Int32 count, System.Threading.CancellationToken cancellationToken = default)
+- Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> GetAsync(Expression<Func<TEntity, System.Boolean>> predicate, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> GetAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
+- Task<TEntity> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> InsertAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task InsertAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<System.Int64> LongCountAsync(Expression<Func<TEntity, System.Boolean>> predicate, System.Threading.CancellationToken cancellationToken = default)
@@ -170,6 +174,7 @@
 **类型**：interface
 接口 IRepository<TEntity>、System.IDisposable
 
+- System.Threading.Tasks.Task DeleteAsync(TKey id, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(IEnumerable<TKey> keys, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(IEnumerable<TKey> keys, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> GetAsync(TKey key, System.Threading.CancellationToken cancellationToken = default)
@@ -215,12 +220,15 @@
 - Task<System.Boolean> AnyAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - IQueryable<TEntity> BuildQuery(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle)
 - Task<System.Int32> CountAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
+- Task<System.Int32> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task DeleteAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task DeleteAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<List<TEntity>> FindAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Int32 offset, System.Int32 count, System.Threading.CancellationToken cancellationToken = default)
+- Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> GetAsync(TKey key, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> GetAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
+- Task<TEntity> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)
 - Task<TEntity> InsertAsync(TEntity entity, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task InsertAsync(IEnumerable<TEntity> entities, System.Boolean autoSave = true, System.Threading.CancellationToken cancellationToken = default)
 - Task<System.Int64> LongCountAsync(Expression<Func<TEntity, System.Boolean>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>> handle, System.Threading.CancellationToken cancellationToken = default)

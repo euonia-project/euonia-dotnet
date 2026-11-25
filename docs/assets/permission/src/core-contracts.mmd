@@ -1,0 +1,15 @@
+flowchart TB
+    PA["PermissionAttribute"]
+    PRS["PermissionRequirements"]
+    PR["IPermissionRequirementSource"]
+    CK["IPermissionChecker"]
+    SA["IObjectScopeAuthorizer"]
+    OOR["IObjectOperationResolver"]
+    USE["权限判定 / 行级判定"]
+
+    PA -->|"被读取"| PRS
+    PRS -->|"供来源实现复用"| PR
+    PR -.实现.-> USE
+    CK --> USE
+    SA --> USE
+    OOR --> USE

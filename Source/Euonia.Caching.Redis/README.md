@@ -187,7 +187,7 @@ public static void AddRedisCache(IServiceCollection services, IConfiguration con
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`StackExchange.Redis`、`Euonia.Caching`；按 Redis 服务端能力自动选择 LUA 或兼容路径。
 - **已知边界**：`RedisCacheService` 构造时固定装配句柄与背板；`Clear` 依赖 `allowAdmin`；键空间通知需要服务端配置；前缀删除使用 `SCAN`，不是 O(1)。
 - **升级注意**：缓存值含程序集限定类型名，升级前评估 DTO 兼容性；滚动升级期间新旧实例共享同一数据库时，建议先灰度并保留回滚窗口。

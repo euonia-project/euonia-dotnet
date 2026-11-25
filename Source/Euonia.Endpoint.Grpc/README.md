@@ -415,7 +415,7 @@ app.Run();
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0`（`FrameworkReference Microsoft.AspNetCore.App`） |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 关键依赖 | `protobuf-net` 3.4.40、`protobuf-net.Grpc` / `protobuf-net.Grpc.AspNetCore` / `protobuf-net.Grpc.Reflection` 1.3.14、`Grpc.AspNetCore.Server.Reflection` |
 
 - **wire 兼容由 `DataMember(Order)` 决定**：字段号是跨语言契约，升级本包不会改变序列化格式。

@@ -1,6 +1,6 @@
 # Euonia.Hosting
 
-Euonia 的 ASP.NET Core 托管基础设施：`HostUtility` 负责构建并运行宿主，`HostingModule` 注册请求上下文、用户主体、请求追踪，并提供 JWT 与 IdentityServer（JWT + 内省）认证、角色与 scope 授权，以及租户、审计、遥测中间件扩展。
+Euonia 的 ASP.NET Core 托管基础设施：`HostUtility` 负责构建并运行宿主，`HostingModule` 注册请求上下文与用户主体，并提供 JWT 与 IdentityServer（JWT + 内省）认证、角色与 scope 授权，以及租户、审计、遥测中间件扩展。请求追踪与统一异常管道由 `Euonia.Hosting.Webapi` 装配。
 
 - **目标框架**：`net10.0`、`net11.0`
 - **根命名空间**：`Nerosoft.Euonia.Hosting`（服务注册与授权扩展位于 `Microsoft.Extensions.DependencyInjection`、`Microsoft.AspNetCore.Builder`、`Microsoft.AspNetCore.Authorization`、`Microsoft.AspNetCore.Authentication`）
@@ -118,6 +118,7 @@ public void Configure(IApplicationBuilder app)
 - **模块集成**：`[DependsOn(typeof(HostingModule))]` 注册执行上下文、请求上下文访问器、用户主体与 `IApplicationBuilder` 访问器。
 - **认证**：`AddJwtAuthentication(...)` 注册 JWT Bearer；`AddIdentityServerAuthentication(...)` 同时注册 JWT 与 OAuth2 内省子方案。
 - **授权**：`[AuthorizeRoles]`、`AddScopePolicy(...)`、`RequireScope(...)` 与 `ScopePolicy.Create(...)`。
+- **流控核心**：`DualWindowRateLimiter` 提供可配置的分钟 + 小时双窗口租约；ASP.NET Core 适配器位于 `Euonia.Hosting.Webapi`，Azure Functions 适配器位于 `Euonia.Hosting.Azfunc`。
 - **请求管道**：`InitializeApplication()` 触发模块初始化；`UseCulture()`、`UseJwt()`、`UseDefaultRequestContextAccessor()` 提供区域性、认证回退与请求上下文安装。
 - **平台中间件扩展**：`UseTenancy()`、`UseAuditing()`、`UseEuoniaTelemetry()` 按对应 `*Options.Enabled` 决定是否安装；`UseExecutionContext()` 总是安装。
 
@@ -127,13 +128,14 @@ public void Configure(IApplicationBuilder app)
 |------|------|
 | `HostUtility` | `Run` / `RunAsync<TStartup>` 构建并运行宿主 |
 | `HostBuilderOptions` | `EnableHttp2`、`CaptureStartupErrors`、`ConfigureWebHostBuilder`、`ConfigureHostBuilder` 等 |
-| `HostingModule` | 注册执行上下文、请求上下文访问器、用户主体与请求追踪中间件 |
+| `HostingModule` | 注册执行上下文、请求上下文访问器、用户主体与 `IApplicationBuilder` 访问器 |
 | `AddJwtAuthentication(...)` | 注册 JWT Bearer 认证（代码配置、配置节名、选项实例与无参四种重载） |
 | `AddIdentityServerAuthentication(...)` | 注册 JWT + OAuth2 内省组合认证方案 |
 | `JwtAuthenticationOptions` / `IdentityServerAuthenticationOptions` | 两类认证的选项 |
 | `AddUserPrincipal(...)` | 注册当前请求的 `UserPrincipal` |
 | `AddScopePolicy(...)` / `RequireScope(...)` | 基于 scope 的授权策略 |
 | `AuthorizeRolesAttribute` | 基于角色的授权特性 |
+| `DualWindowRateLimiter` / `DualWindowRateLimiterOptions` | 分钟 + 小时组合限流器核心 | 默认 5 次/分钟、10 次/小时；可配置 |
 | `UseTenancy()` / `UseAuditing()` / `UseEuoniaTelemetry()` / `UseExecutionContext()` | 租户、审计、遥测与执行上下文中间件 |
 | `TenantHttpKeys` | 租户上下文、失败代码与候选值的 `HttpContext.Items` 键 |
 
@@ -161,7 +163,7 @@ public void Configure(IApplicationBuilder app)
 - `HostUtility.Run<TStartup>` 通过 `UseStartup<TStartup>` 启动，`TStartup` 必须是可构造的类；`ConfigureHostBuilder` 在 `createHostBuilder` 返回后、`Build()` 之前执行。
 - `AddJwtAuthentication(string sectionName)` 依赖调用时已注册的 `IConfiguration`；`IConfiguration` 本身缺失时会在 `GetConfiguration()!` 处抛 `NullReferenceException`，配置节不存在或未提供 `SigningKey` 时会在注册阶段因 `SigningKey` 为 `null` 抛出 `ArgumentNullException`。需要完全代码配置时请用 `Action<JwtAuthenticationOptions>` 重载。
 - `AddJwtAuthentication` 会清空 `JwtSecurityTokenHandler.DefaultInboundClaimTypeMap`，该设置是进程级的；依赖默认声明映射的代码需要显式配置映射。
-- `HostingModule` 会自动插入 `RequestTraceMiddleware`（响应头 `x-request-trace-id`）和请求上下文访问器；`ExceptionHandlingMiddleware` 是内部类型，仅以 Transient 注册，不会自动加入管道，应用需自行提供异常映射中间件（示例应用使用 `ApiExceptionMiddleware`）。
+- `HostingModule` 只安装请求上下文访问器；请求追踪与统一异常由 `Euonia.Hosting.Webapi` 的 `UseEuoniaWebApi()` 装配。
 - `UseTenancy()` 应位于 `UseAuthentication()` 与 `UseRouting()` 之后、`UseAuthorization()` 之前，否则 Header 解析拿不到已认证身份；`UseAuditing()` 应位于租户中间件之前，`UseEuoniaTelemetry()` 应位于租户中间件之后。对应 `*Options.Enabled` 为 `false` 或选项未注册时，这些扩展是空操作。
 - `HostBuilderOptions.ApplicationName` 保存入口程序集名，默认构建路径未消费该值；实际应用名以宿主 `HostingEnvironment.ApplicationName` 为准，并写入 `SERVICE_NAME` 环境变量。
 
@@ -175,13 +177,13 @@ public void Configure(IApplicationBuilder app)
 **原因**：`UseTenancy()` 在 `MultiTenancyOptions` 未注册或 `Enabled = false` 时直接返回；中间件顺序错误（位于 `UseAuthentication` 之前）会让 Header 解析拿不到已认证身份；`RequireTenant = true` 时解析失败会由租户中间件写出错误。
 **解决**：先 `AddTenancyAspNetCore(options => options.Enabled = true)`；按 `UseAuthentication` → `UseRouting` → `UseTenancy` → `UseAuthorization` 排序；匿名请求需要租户头时设置 `TrustHeaderForAnonymous = true`，并确认 `HeaderName` 与客户端一致。
 
-### 模块初始化没有执行，或 `RequestTraceMiddleware` 不生效
-**原因**：`AddModularityApplication<T>` 只注册模块与服务；不调用 `app.InitializeApplication()` 就不会执行 `OnApplicationInitialization`。模块未通过 `[DependsOn(typeof(HostingModule))]` 引入时，请求上下文与 `x-request-trace-id` 也不会安装。
+### 模块初始化没有执行，或请求上下文为空
+**原因**：`AddModularityApplication<T>` 只注册模块与服务；不调用 `app.InitializeApplication()` 就不会执行 `OnApplicationInitialization`，请求上下文也不会安装。
 **解决**：在 `Startup.Configure` 最前面调用 `app.InitializeApplication()`；检查模块依赖链包含 `HostingModule`，并用 `application.IsModuleLoaded<HostingModule>()` 或启动日志确认。
 
 ### 异常响应仍是 HTML 或没有统一 JSON
-**原因**：`ExceptionHandlingMiddleware` 是内部类型，`HostingModule` 只把它注册为 Transient，**不会**自动插入请求管道；自动插入的只有 `RequestTraceMiddleware`。
-**解决**：在应用侧实现异常中间件并放在管道最外层（示例应用使用 `ApiExceptionMiddleware`），按需把 `HttpStatusException`、校验异常、认证/授权异常与超时异常映射为 400/401/403/504 等状态码；不要依赖 `UseMiddleware<ExceptionHandlingMiddleware>()`，该类型无法从应用程序集引用。
+**原因**：`HostingModule` 不再安装异常中间件；`Euonia.Hosting.Webapi` 通过 `UseEuoniaWebApi()` 启用 ASP.NET Core 内置 `UseExceptionHandler()` 与 `EuoniaExceptionHandler`，其他宿主需自行提供异常映射。
+**解决**：Web API 使用 `UseEuoniaWebApi()`；其他 ASP.NET Core 宿主在应用侧实现异常中间件并放在管道最外层。
 
 ## 最佳实践
 
@@ -192,9 +194,9 @@ public void Configure(IApplicationBuilder app)
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Microsoft.AspNetCore.App` 共享框架、`Duende.IdentityModel` 8.1.0、`Duende.AspNetCore.Authentication.OAuth2Introspection` 7.0.2；JwtBearer/OpenIdConnect 随目标框架版本。
-- 已知边界：`JwtAuthenticationOptions` 没有框架默认配置节；`ExceptionHandlingMiddleware` 为内部类型；`AddJwtAuthentication` 会清空进程级入站声明映射。
+- 已知边界：`JwtAuthenticationOptions` 没有框架默认配置节；`AddJwtAuthentication` 会清空进程级入站声明映射；请求追踪与统一异常由 `Euonia.Hosting.Webapi` 装配。
 - 升级提示：升级 ASP.NET Core 或 Duende 包后，重新验证 `AddIdentityServerAuthentication` 的 JWT/内省子方案与 `TokenValidationParameters` 行为。
 
 ## 相关包

@@ -6,7 +6,7 @@
 | 项 | 值 |
 |---|---|
 | 程序集 | Euonia.Application |
-| 公共类型 | 53 |
+| 公共类型 | 55 |
 | 命名空间 | 2 |
 
 ## 命名空间 Microsoft.Extensions.DependencyInjection
@@ -430,6 +430,24 @@ _无公共成员。_
 - System.Threading.Tasks.Task ExecuteAsync<TUseCase, TInput>(TInput input, IUseCasePresenter<Nerosoft.Euonia.Application.EmptyUseCaseOutput> presenter, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task ExecuteAsync<TUseCase, TOutput>(IUseCasePresenter<TOutput> presenter, System.Threading.CancellationToken cancellationToken = default)
 - System.Threading.Tasks.Task ExecuteAsync<TUseCase>(IUseCasePresenter<Nerosoft.Euonia.Application.EmptyUseCaseOutput> presenter, System.Threading.CancellationToken cancellationToken = default)
+
+### DomainMessageConvention
+
+**类型**：class
+接口 Nerosoft.Euonia.Bus.IMessageConvention
+
+- System.Boolean IsMulticast(System.String channel, System.Type type)
+- System.Boolean IsRequest(System.String channel, System.Type type)
+- System.Boolean IsUnicast(System.String channel, System.Type type)
+- System.String Name { get; }
+
+### RequestInfoBehavior<TMessage, TResponse>
+
+**类型**：class
+接口 Nerosoft.Euonia.Pipeline.IPipelineBehavior<TMessage, TResponse>
+
+- RequestInfoBehavior<TMessage, TResponse>(System.IServiceProvider provider)
+- Task<TResponse> HandleAsync(TMessage context, Nerosoft.Euonia.Pipeline.PipelineDelegate<TMessage, TResponse> next)
 
 ### UserContextBehavior<TMessage, TResponse>
 

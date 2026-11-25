@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text.RegularExpressions;
 using Duende.IdentityModel;
 using Microsoft.AspNetCore.Authentication;
@@ -102,63 +102,63 @@ public static class ServiceCollectionExtensions
 			}
 
 			services.AddAuthentication(options =>
-			        {
-				        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
-				        options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-			        })
-			        .AddJwtBearer(options =>
-			        {
-				        options.Authority = bearerOptions.Authority;
-				        options.RequireHttpsMetadata = bearerOptions.RequireHttpsMetadata;
-				        options.Audience = bearerOptions.Audience;
+					{
+						options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultSignInScheme = JwtBearerDefaults.AuthenticationScheme;
+						options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+					})
+					.AddJwtBearer(options =>
+					{
+						options.Authority = bearerOptions.Authority;
+						options.RequireHttpsMetadata = bearerOptions.RequireHttpsMetadata;
+						options.Audience = bearerOptions.Audience;
 
-				        options.Events = new JwtBearerEvents()
-				        {
-					        OnMessageReceived = context =>
-					        {
-						        var authorizationValue = context.Request.Headers[HeaderNames.Authorization].ToString();
+						options.Events = new JwtBearerEvents()
+						{
+							OnMessageReceived = context =>
+							{
+								var authorizationValue = context.Request.Headers[HeaderNames.Authorization].ToString();
 
-						        var token = Regex.Match(authorizationValue, @"^Bearer\s+(.*)").Groups[1].Value;
+								var token = Regex.Match(authorizationValue, @"^Bearer\s+(.*)").Groups[1].Value;
 
-						        context.Token = token;
-						        return Task.CompletedTask;
-					        },
-					        OnChallenge = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Error);
-						        Console.WriteLine(context.ErrorDescription);
-						        return Task.CompletedTask;
-					        },
-					        OnAuthenticationFailed = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        System.Diagnostics.Debug.WriteLine(context.Exception);
-						        return Task.CompletedTask;
-					        },
-					        OnForbidden = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        return Task.CompletedTask;
-					        },
-					        OnTokenValidated = context =>
-					        {
-						        System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
-						        return Task.CompletedTask;
-					        }
-				        };
-				        options.TokenValidationParameters = new TokenValidationParameters
-				        {
-					        NameClaimType = bearerOptions.NameClaimType,
-					        RoleClaimType = bearerOptions.RoleClaimType,
-					        ValidIssuers = bearerOptions.Issuer,
-					        //ValidAudience = "api",
-					        ValidateIssuer = bearerOptions.ValidateIssuer,
-					        ValidateAudience = bearerOptions.ValidateAudience,
-					        IssuerSigningKey = new SymmetricSecurityKey(key)
-				        };
-			        });
+								context.Token = token;
+								return Task.CompletedTask;
+							},
+							OnChallenge = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Error);
+								Console.WriteLine(context.ErrorDescription);
+								return Task.CompletedTask;
+							},
+							OnAuthenticationFailed = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								System.Diagnostics.Debug.WriteLine(context.Exception);
+								return Task.CompletedTask;
+							},
+							OnForbidden = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								return Task.CompletedTask;
+							},
+							OnTokenValidated = context =>
+							{
+								System.Diagnostics.Debug.WriteLine(context.Result?.Failure);
+								return Task.CompletedTask;
+							}
+						};
+						options.TokenValidationParameters = new TokenValidationParameters
+						{
+							NameClaimType = bearerOptions.NameClaimType,
+							RoleClaimType = bearerOptions.RoleClaimType,
+							ValidIssuers = bearerOptions.Issuer,
+							ValidAudience = bearerOptions.Audience,
+							ValidateIssuer = bearerOptions.ValidateIssuer,
+							ValidateAudience = bearerOptions.ValidateAudience,
+							IssuerSigningKey = new SymmetricSecurityKey(key)
+						};
+					});
 			return services;
 		}
 
@@ -218,5 +218,6 @@ public static class ServiceCollectionExtensions
 		{
 			return services.GetSingletonInstance<IWebHostEnvironment>();
 		}
+
 	}
 }

@@ -1,0 +1,23 @@
+flowchart TB
+    F["宿主工厂<br/>参考实现：Osba BusinessObjectFactory"]
+    R["解析即将 invoke 的 MethodInfo"]
+    G["宿主闸门<br/>参考实现：Osba ObjectAuthorization"]
+    subgraph Core["Euonia.Core（契约与读取器）"]
+        P["PermissionRequirements.For(type, method)<br/>类型级 + 该方法级"]
+        S["IPermissionRequirementSource<br/>可选：自定义来源 / 旧来源适配器"]
+        M["PermissionRequirements.Merge"]
+        C["IPermissionChecker<br/>返回 true / false"]
+    end
+    OK["宿主 InvokeAsync(method)"]
+    NO["宿主抛 SecurityException"]
+
+    F --> R
+    R --> G
+    G --> P
+    G --> S
+    P --> M
+    S --> M
+    M --> C
+    C -->|"true / false"| G
+    G -->|"满足"| OK
+    G -->|"不满足"| NO

@@ -157,7 +157,7 @@ FILESYNCHRONIZATION_DIRECTORY=/var/lib/myapp/locks     # 仓库 alias
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`Euonia.Concurrency`、`Euonia.Modularity`；不需要额外基础设施。
 - **已知边界**：仅锁、无信号量；忙等待固定 50ms–1s；`UnauthorizedAccessException` 最多重试 400 次；文件名使用“安全前缀 + Base32 哈希 + `.lock`”，极长路径可能抛 `PathTooLongException`。
 - **升级注意**：锁文件在释放时删除，不承载数据，无需迁移；升级后保持 `Directory` 与锁名不变即可继续互斥。

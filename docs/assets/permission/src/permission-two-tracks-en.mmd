@@ -1,0 +1,10 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart LR
+    subgraph Decl["Declarations (code)"]
+        A["[Permission] arbitrary code<br/>type-level / method-level"]
+        M["ScopeModel<T><br/>Policy / Declare"]
+    end
+    A --> F["Discovery: read declarations<br/>type ∪ invoked method"]
+    F --> C["IPermissionChecker<br/>can / cannot"]
+    M --> Q["IScopeGuard<br/>which rows"]
+    C -.->|"codes and identifiers have no mapping"| Q

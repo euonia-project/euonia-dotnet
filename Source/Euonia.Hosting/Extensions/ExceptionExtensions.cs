@@ -8,7 +8,7 @@ namespace Nerosoft.Euonia.Hosting;
 /// <summary>
 /// 提供将异常映射为 HTTP 状态码、错误明细与错误消息的扩展方法。
 /// </summary>
-internal static class ExceptionExtensions
+public static class ExceptionExtensions
 {
 	/// <summary>
 	/// 为 <see cref="Exception"/> 提供响应输出所需的转换成员。
@@ -24,8 +24,9 @@ internal static class ExceptionExtensions
 			return exception switch
 			{
 				HttpStatusException ex => ex.StatusCode,
+				ArgumentException => HttpStatusCode.BadRequest,
 				ValidationException => HttpStatusCode.BadRequest,
-				Nerosoft.Euonia.Validation.ValidationException => HttpStatusCode.BadRequest,
+				Validation.ValidationException => HttpStatusCode.BadRequest,
 				AuthenticationException => HttpStatusCode.Unauthorized,
 				UnauthorizedAccessException => HttpStatusCode.Forbidden,
 				NotImplementedException => HttpStatusCode.NotImplemented,
@@ -64,21 +65,15 @@ internal static class ExceptionExtensions
 					return null;
 				}
 
+				// MemberNames 可能含重复或空白键，直接 ToDictionary 会在异常处理器内再次抛异常。
 				return validationException.ValidationResult
 				                          .MemberNames
-				                          .ToDictionary(t => t, _ => new[]
+				                          .Where(name => !string.IsNullOrWhiteSpace(name))
+				                          .GroupBy(name => name!)
+				                          .ToDictionary(group => group.Key, _ => new[]
 				                          {
 					                          validationException.ValidationResult.ErrorMessage
 				                          });
-
-				// return validationException.ValidationResult.MemberNames
-				//                           .Distinct()
-				//                           .ToDictionary(
-				// 	                          t => t,
-				// 	                          t => validationException.ValidationResult.MemberNames
-				// 	                                                  .Where(x => (x ?? "_") == t)
-				// 	                                                  .Select(x => validationException.ValidationResult.ErrorMessage)
-				// 	                                                  .ToArray());
 			}
 		}
 

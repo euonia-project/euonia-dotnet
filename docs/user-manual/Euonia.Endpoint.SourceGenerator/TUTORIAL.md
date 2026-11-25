@@ -29,7 +29,7 @@ dotnet add package Euonia.Endpoint.SourceGenerator
 把普通引用改成 analyzer（`dotnet add package` 不会自动加这些元数据）：
 
 ```xml
-<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.5.0"
+<PackageReference Include="Euonia.Endpoint.SourceGenerator" Version="2026.5.1"
                   PrivateAssets="all"
                   OutputItemType="Analyzer"
                   ReferenceOutputAssembly="false" />

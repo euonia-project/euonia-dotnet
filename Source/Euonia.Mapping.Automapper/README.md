@@ -139,7 +139,7 @@ TypeAdapterFactory.SetCurrent(new AutomapperTypeAdapterFactory(mapper));
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：AutoMapper 17.0.0、Newtonsoft.Json 13.0.4（由 `Directory.Packages.props` 锁定）；`AutomapperOptions` 为纯代码配置。
 - 已知边界：`ProjectedAs` 在全局命名空间；`AutomapperModule` 注册 `IMapper` 与键控工厂，并在初始化时设置当前工厂；配置校验延迟到映射器构建。
 - 升级提示：升级 AutoMapper 后复核 Profile 注册方式、`MapperConfigurationExpression` API 与 `AssertConfigurationIsValid` 行为。

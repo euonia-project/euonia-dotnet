@@ -9,7 +9,7 @@ namespace Nerosoft.Euonia.Osba.Tests;
 /// <remarks>
 /// 规则表按 <see cref="BusinessOperation"/> 的小写常量登记，而调用方可能传入任意大小写的操作名。
 /// 按序数比较时 <c>AttributeTypesOf</c> 返回空 → <c>RequirementsFor</c> 返回空 →
-/// <c>ObjectAuthorization</c> 视为「没有任何权限要求」而<b>静默放行</b>。
+/// <c>ObjectAuthorization</c> 视为「没有任何权限要求」而直接通过。
 /// </remarks>
 public class PermissionOperationCaseTests
 {

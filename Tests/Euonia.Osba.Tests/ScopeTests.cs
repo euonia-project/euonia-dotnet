@@ -565,17 +565,17 @@ public class ScopeTests
 
 	#endregion
 
-	#region 无法判定时必须失败，不能静默放行
+	#region 无法判定时必须失败，不能默认通过
 
 	/// <summary>
 	/// 已声明范围模型但目标缺少 <c>BusinessContext</c> 时无法判定，应抛出
-	/// <see cref="InvalidOperationException"/>，而不是静默放行。
+	/// <see cref="InvalidOperationException"/>，而不是默认通过。
 	/// </summary>
 	[Fact]
 	public async Task SaveAsync_ModeledTypeWithoutBusinessContext_ShouldFailInsteadOfBypassing()
 	{
 		// 类型已声明数据权限模型，但目标对象没接入 BusinessContext —— 判定不了。
-		// 这是配置错误（多半是忘了接线），必须暴露而不是静默放行。
+		// 这是配置错误（多半是忘了接线），必须暴露而不是默认通过。
 		using var scope = CreateScope(User("dev"), new CountingScopeResolver(), out var provider);
 
 		var factory = provider.GetRequiredService<IObjectFactory>();

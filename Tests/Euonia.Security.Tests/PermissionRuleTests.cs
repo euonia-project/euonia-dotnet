@@ -33,16 +33,20 @@ public class PermissionRuleTests
 	}
 
 	/// <summary>
-	/// 未声明任何规则的空回调应在注册期抛出 <see cref="InvalidOperationException"/>，并在消息中指出 <c>NoModels</c> 与 <c>NoOperationCodes</c>。
+	/// 未声明任何规则的空回调应在注册期抛出 <see cref="InvalidOperationException"/>，并在消息中指出 <c>Scan</c> 与 <c>NoModels</c>。
 	/// </summary>
+	/// <remarks>
+	/// 空配置提示指向新写法：权限码不再需要入口规则，配置至少 <c>Scan</c> 一个程序集；
+	/// 确实没有模型与声明时断言 <c>NoModels</c>（不再提示已废弃的 <c>NoOperationCodes</c>）。
+	/// </remarks>
 	[Fact]
 	public void Callback_Without_Rules_Should_Fail_At_Registration()
 	{
 		// 空回调几乎总是漏写：直接报错，并指明「说清楚意图」的写法
 		var exception = Assert.Throws<InvalidOperationException>(() => new ServiceCollection().AddPermission(p => { }));
 
+		Assert.Contains("Scan", exception.Message);
 		Assert.Contains("NoModels", exception.Message);
-		Assert.Contains("NoOperationCodes", exception.Message);
 	}
 
 	/// <summary>

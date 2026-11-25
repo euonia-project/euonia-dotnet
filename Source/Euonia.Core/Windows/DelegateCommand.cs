@@ -5,10 +5,10 @@ namespace Nerosoft.Euonia.Windows;
 /// <summary>
 /// 委托命令类（泛型版本）。
 /// 实现 <see cref="ICommand" /> 接口
-/// 实现 <see cref="System.Windows.Input.ICommand" /> 接口
+/// 实现 <see cref="ICommand" /> 接口
 /// </summary>
 /// <typeparam name="T">命令参数的类型。</typeparam>
-/// <seealso cref="System.Windows.Input.ICommand" />
+/// <seealso cref="ICommand" />
 /// <seealso cref="ICommand" />
 public class DelegateCommand<T> : ICommand
 {

@@ -82,13 +82,13 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 
 - **属性系统**：静态注册、类型级元数据缓存、实例级字段数组、环形撤销历史、按需可观察值。
 - **变更追踪**：`ChangedProperties` / `HasChangedProperties` / `AcceptChanges` / `MarkAsClean`，只回写改过的字段；属性直接改回基线后自动移出 `ChangedProperties`。
-- **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态迁移（`CanTransitionTo` / `StateChanged`）。
+- **领域对象控制**：原始值（`GetOriginalValue` / `GetOriginalValues`）、`GetChangedValues`、`RejectChanges`，以及可重写的状态转换（`CanTransitionTo` / `StateChanged`）。
 - **状态机**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted`，保存时由 `ScopeOperationMap` 唯一映射到业务操作。
 - **规则系统**：`ObjectRuleBase`、`PropertyRuleBase`、`CommonRule.Required/Regular/Lambda`、`DataAnnotationRule`、`ExecuteOnStateAttribute`；对象级规则通过 `IObjectRule` 约束、不暴露属性，属性级规则通过 `IPropertyRule` 保证 `Property` 非空；支持类型级 / 实例级 / 操作级规则，支持优先级、严重级别、按操作绕过。
 - **工厂**：约定名 + 特性双通道查找，支持可选参数、`params`、`Task` / `ValueTask`，并缓存反射结果。
 - **执行器**：`IActuator.For<T>().Fetch/Create/Update/Delete/Execute(...)` 把「取对象 → Handle → 终结」串成管道，可挂 `IActuatorBehavior<T>`。
 - **生命周期回调**：`IObjectLifecycle` 在保存与执行边界提供 `OnSavingAsync` / `OnSavedAsync` / `OnExecutingAsync` / `OnExecutedAsync` 扩展点。
-- **权限**：操作权限与行级数据权限；契约在 `Euonia.Core`，Osba 只实现自己的一半，**不引用 `Euonia.Security`**。
+- **权限**：操作权限与行级数据权限；契约在 `Euonia.Core`，Osba 只实现工厂边界的一半，**不引用具体鉴权引擎**。
 - **上下文**：`BusinessContext` / `BusinessContextAccessor`，按异步流传播；支持手动作用域，后台任务应使用 `IServiceScopeFactory` 新建作用域。
 - **可观测性**：`ActivitySource("Euonia.Osba")`、`Meter("Euonia.Osba")`、`ILoggerFactory` 回退。
 - **启动期校验**：工厂签名、`[Inject]` 可解析性、属性元数据、缺失持久化方法。
@@ -99,7 +99,7 @@ Osba 的核心抽象是**业务对象**：一个对象同时拥有
 | 项目 | 值 |
 |---|---|
 | 目标框架 | `net10.0;net11.0` |
-| 当前版本 | `2026.5.0`（见仓库根 `project.props`） |
+| 当前版本 | `2026.5.1`（见仓库根 `project.props`） |
 | 根命名空间 | `Nerosoft.Euonia.Osba` |
 | 包名 | `Euonia.Osba` |
 | 许可 | GPL-3.0（见仓库根 `LICENSE`） |
@@ -116,7 +116,7 @@ Euonia.Osba
 
 **刻意不引用**：
 
-- `Euonia.Security`：Osba 只面对 Core 里的权限契约（`IPermissionChecker`、`IPermissionCodeSource`、`IObjectScopeAuthorizer`、`IObjectOperationResolver`、`PermissionAttribute`），接引擎由宿主用 `AddPermission` 一行完成，不需要适配包。
+- **具体鉴权引擎**：Osba 只面对 Core 里的权限契约（`IPermissionChecker`、`IPermissionRequirementSource`、`IObjectScopeAuthorizer`、`IObjectOperationResolver`、`PermissionAttribute`、`PermissionRequirements`），接引擎由宿主在组合根完成，不需要适配包。
 - `Euonia.Domain`：Osba 是业务模型运行时，DDD 只是可选投影；直接依赖会把所有宿主绑定到聚合、实体、领域事件与仓储/UoW 语义。需要 DDD 时通过适配层/组合接入；MVVM 则直接使用通知、集合与编辑状态能力。
 - EF Core / 任何具体数据库：持久化由业务对象的工厂方法通过 `BusinessContext` 自行完成。
 
@@ -133,7 +133,7 @@ dotnet add package Euonia.Osba
 或直接在项目中引用：
 
 ```xml
-<PackageReference Include="Euonia.Osba" Version="2026.5.0" />
+<PackageReference Include="Euonia.Osba" Version="2026.5.1" />
 ```
 
 ### 2.2 装配
@@ -378,14 +378,13 @@ using Nerosoft.Euonia.Security;
 
 services.AddBusinessObject(typeof(Repo).Assembly);
 
-services.AddPermission(options =>
-{
-    options.Scan(typeof(Repo).Assembly);
-    options.Source(ObjectPermissionCodeSource.Instance); // 用 Osba 的工厂方法约定收集 [Permission]
-});
+// 一次 Scan 即完整配置：权限码写在 [Permission] 上，方法级按被调用的方法自动生效
+services.AddPermission(options => options.Scan(typeof(Repo).Assembly));
 ```
 
-也可以不接引擎，只注册自己的 `IPermissionCodeSource` / `IPermissionChecker` / `IObjectScopeAuthorizer`。
+也可以不接引擎，只注册自己的 `IPermissionChecker` / `IObjectScopeAuthorizer`：`[Permission]` 声明由
+内建读取器（`PermissionRequirements`）直接生效。码来自数据时，再注册一个
+`IPermissionRequirementSource` 实现（接引擎时则用 `AddPermission` 回调里的 `Requirements(...)`）。
 
 ### 2.8 运行
 
@@ -426,7 +425,7 @@ flowchart TB
     end
 
     subgraph Optional["运行时可选"]
-        Security["Euonia.Security<br/>策略引擎"]
+        Engine["宿主可选装配<br/>鉴权引擎"]
         Database["EF Core / 数据库 / 远程服务"]
     end
 
@@ -452,7 +451,7 @@ flowchart TB
     Actuators --> Pipeline
     Rules --> Validation
 
-    Security -. 实现 Core 权限契约 .-> Core
+    Engine -. 实现 Core 权限契约 .-> Core
     Database -. 工厂方法内部持久化 .-> Factory
 ```
 
@@ -461,7 +460,7 @@ flowchart TB
 1. 对象模型（`Core/`）只依赖 `Abstracts/`、`Reflection/`、`Rules/`、`Permission/` 的契约与少量实现，不依赖 `Factory/` / `Actuators/`。
 2. 工厂（`Factory/`）依赖对象模型与权限边界，是「工厂边界」的强制点。
 3. 执行器（`Actuators/`）依赖对象模型、工厂与 `Euonia.Pipeline`，只负责编排，不直接做持久化。
-4. 权限边界（`Permission/`）只依赖 `Euonia.Core` 里的权限契约；**不引用** `Euonia.Security`。
+4. 权限边界（`Permission/`）只依赖 `Euonia.Core` 里的权限契约；**不引用任何具体鉴权引擎**。
 5. 规则系统（`Rules/`）只做数据校验，不参与授权；权限边界只做授权，不写规则。
 
 ### 3.2 对象模型
@@ -603,7 +602,7 @@ classDiagram
 | `IObjectLifecycle` | 保存 / 执行生命周期回调契约 | 由 `ObjectBase` 实现，派生类覆写 `OnSaving/OnSaved/OnExecuting/OnExecuted` |
 | `ObjectBase<T>` | 泛型属性注册入口 | `RegisterProperty` 的多种重载 |
 | `BusinessObject<T>` | 变更追踪 + 泛型 `Get/SetProperty` + 原始值 / 回滚 | `ChangedProperties`、`GetOriginalValue`、`RejectChanges`；字段模式与字典模式共用存储 |
-| `ObservableObject<T>` | 编辑状态机 + 繁忙状态 + `IsSavable` | `MarkAsNew/Changed/Deleted` 可重写（`TransitionTo`）；`CanTransitionTo` / `StateChanged` 可控制迁移 |
+| `ObservableObject<T>` | 编辑状态机 + 繁忙状态 + `IsSavable` | `MarkAsNew/Changed/Deleted` 可重写（`TransitionTo`）；`CanTransitionTo` / `StateChanged` 可控制转换 |
 | `EditableObject<T>` | 保存流程 + `Saved` 事件 + 工厂方法空实现 | `SaveAsync` 先校验、再走 `IObjectFactory`；删除成功后复位为 `None` |
 | `ReadOnlyObject<T>` | 只读对象 | `CanWriteProperty => false`；`LoadProperty` 只在装载作用域或显式绕过时允许 |
 | `ServiceObject<T>` | 一次独立业务操作 | 只保留属性 + 规则；`ExecuteAsync` 是执行体 |
@@ -636,7 +635,7 @@ stateDiagram-v2
 
 > `ObjectEditState` 由调用方通过公开的 `MarkAsNew/Changed/Deleted` 设置。它改变的是**实际执行的操作**，每个操作各自应用自己的策略，不构成「把同一变更路由到更宽松的键」的越权通道。
 >
-> `MarkAsNew/Changed/Deleted` 是 `virtual`，统一经过 `TransitionTo`：派生类可重写 `CanTransitionTo` 表达领域状态机（例如禁止 `Deleted` 回到 `New`），并通过 `StateChanged` 观察迁移。`AcceptChanges` 是提交/复位，不经过 `CanTransitionTo`，但会触发 `StateChanged`。
+> `MarkAsNew/Changed/Deleted` 是 `virtual`，统一经过 `TransitionTo`：派生类可重写 `CanTransitionTo` 表达领域状态机（例如禁止 `Deleted` 回到 `New`），并通过 `StateChanged` 观察转换。`AcceptChanges` 是提交/复位，不经过 `CanTransitionTo`，但会触发 `StateChanged`。
 
 ### 3.4 属性存储与变更追踪
 
@@ -765,7 +764,7 @@ sequenceDiagram
 
 - 目标对象由工厂方法内部创建并填充，调用前没有可判定的行，行级权限只能在**写入后**复核；
 - `InsertAsync` / `ExecuteAsync(criteria)` 已标记 `[Obsolete]`；
-- 受数据权限约束的类型应使用 `Fetch → IScopeGuard.AllowsObject → Save`，或在工厂方法内部先判定；
+- 受数据权限约束的类型应使用 `Fetch → IObjectScopeAuthorizer.Allows → Save`，或在工厂方法内部先判定；
 - 框架会在 `ScopeAuthorization.WarnIfWriteBeforeCheck` 写诊断日志，但不会改变行为。
 
 ### 3.6 规则系统
@@ -881,89 +880,53 @@ sequenceDiagram
 
 ### 3.8 权限体系
 
-Osba 的权限设计遵循「契约在 Core，实现各一半」：
-
-```mermaid
-flowchart TB
-    subgraph CoreContracts["Euonia.Core 权限契约"]
-        PA["PermissionAttribute<br/>类型级 / 方法级声明"]
-        PC["IPermissionCodeSource<br/>权限码来源"]
-        CK["IPermissionChecker<br/>操作权限判定"]
-        OSA["IObjectScopeAuthorizer<br/>行级数据权限判定"]
-        OOR["IObjectOperationResolver<br/>对象状态 → 操作"]
-        BO["BusinessOperation<br/>read/create/update/delete/execute"]
-    end
-
-    subgraph OsbaHalf["Euonia.Osba 实现的一半"]
-        OPCS["ObjectPermissionCodeSource<br/>按工厂方法约定扫描 [Permission]"]
-        SOM["ScopeOperationMap<br/>状态 → 操作的唯一映射"]
-        OORI["ObjectOperationResolver"]
-        OA["ObjectAuthorization<br/>操作权限闸门 / 查询"]
-        SA["ScopeAuthorization<br/>行级前置 / 后置判定"]
-        WARM["AuthorizationWarmup<br/>判定前预热授权数据"]
-    end
-
-    subgraph HostHalf["宿主 / Euonia.Security 实现的一半"]
-        Engine["策略引擎<br/>策略编译 / 行级判定 / 查询下推"]
-        Resolver["IScopeSubjectResolver<br/>授权数据实时解析"]
-    end
-
-    PA --> OPCS
-    PC --> OPCS
-    OPCS --> OA
-    CK --> OA
-    SOM --> SA
-    OSA --> SA
-    OOR --> OORI
-    Engine -.实现.-> CK
-    Engine -.实现.-> OSA
-    Resolver -.提供数据.-> Engine
-    OA -->|"拒绝"| SE["SecurityException"]
-    SA -->|"拒绝"| SE
-```
-
-#### 3.8.1 两条线
+Osba 在**工厂边界**执行权限；契约全部来自 `Euonia.Core`，Osba 不引用具体鉴权引擎。
 
 | | 操作权限 | 数据权限（行级） |
 |---|---|---|
-| 回答 | 当前用户能否执行某项操作 | 当前用户能看到/操作哪些行 |
-| 声明 | 类型级 / 工厂方法级 `[Permission]` | `ScopeModel<T>` + `ScopePolicy` |
+| 回答 | 当前用户能否执行某个方法 | 当前用户能看到/操作哪些行 |
+| 声明 | 类型级 / 被调用方法级 `[Permission]` | 由 `IObjectScopeAuthorizer` 实现定义 |
 | 判定 | `IPermissionChecker` | `IObjectScopeAuthorizer` |
-| 强制点 | `BusinessObjectFactory` 调用边界 | 查询下推 + 工厂保存边界 |
-| 失败形态 | `SecurityException` | 查询排除该行 / 保存抛 `SecurityException` |
-| 与规则的关系 | 完全独立，不受规则绕过影响 | 完全独立，不受规则绕过影响 |
+| 强制点 | `BusinessObjectFactory` 调用边界 | 工厂保存边界 |
+| 失败形态 | `SecurityException` | 保存抛 `SecurityException` |
 
-#### 3.8.2 操作权限
+**操作权限**：
 
-- `ObjectAuthorization` 是操作权限的**唯一**实现：收集要求 → 调用 `IPermissionChecker` → 拒绝抛 `SecurityException`。
-- 要求来自宿主注册的 `IPermissionCodeSource`；未注册时回落到 `ObjectPermissionCodeSource.Instance`（按工厂方法约定扫描）。
-- 类型级要求适用于该类型支持的全部操作；方法级要求只在该方法被执行时生效；两者取并集。
-- **查询 vs 闸门**：
-  - `ObjectBase.CanPerformOperation(operation)` 是查询语义：不抛异常，无从判定时返回 `true`；供业务方法内部做条件分支。
-  - `ObjectAuthorization.EnsureAuthorized(...)` 是闸门：拒绝抛 `SecurityException`，判定不了抛 `InvalidOperationException`；由工厂边界调用。
-- **fail-closed**：目标声明了权限要求，却没有 `BusinessContext` 或没有注册 `IPermissionChecker` → `InvalidOperationException`，不会静默放行。
+- `[Permission]` 可打在类型（对所有方法生效）或方法（只在该方法被工厂调用时生效）上。
+- 工厂解析出**即将 invoke 的 `MethodInfo`**，交给 `ObjectAuthorization`；判定不了抛
+  `InvalidOperationException`，不满足抛 `SecurityException`。
+- `BusinessObject.CanPerformOperation(operation)` 是查询：只含类型级与已登记来源，
+  不含方法级声明；拦截始终在工厂边界。
 
-#### 3.8.3 行级数据权限
+**数据权限**：
 
-- `ScopeAuthorization` 是行级数据权限在工厂边界的强制点。
-- **前置判定**：目标由调用方提供且已填充（`SaveAsync(target)`、`ExecuteAsync(target)`）→ 调用业务方法前判定，失败无副作用。
-- **后置判定**：目标由工厂方法内部填充（`Fetch`、`*Async(criteria)`）→ 业务方法返回后判定。
-- `SaveAsync` 对 `Create` / `Update` 做前置 + 后置；`Delete` / `Execute` 只做前置。
-- **已知边界**：criteria 写入口的写入发生在判定之前；框架写诊断日志，但无法在写入前拦截。受约束类型请走 `Fetch → 判定 → Save`。
+- `ScopeAuthorization` 在保存边界调用 `IObjectScopeAuthorizer.IsConstrained` / `Allows` /
+  `Explain` / `EnsureResolvedAsync`。
+- 前置判定发生在业务方法之前（`SaveAsync(target)` / `ExecuteAsync(target)`），
+  后置判定发生在工厂方法返回之后（`Fetch` / `InsertAsync` / `UpdateAsync` 等）。
+- 后置检查阻止越权对象返回，不阻止已经发生的写入；预提交强制由持久化层负责。
 
-#### 3.8.4 接线
+**宿主装配**：
 
 ```csharp
 services.AddBusinessObject(typeof(Repo).Assembly);
-
-services.AddPermission(options =>
-{
-    options.Scan(typeof(Repo).Assembly);
-    options.Source(ObjectPermissionCodeSource.Instance);
-});
+services.AddPermission(options => options.Scan(typeof(Repo).Assembly));   // 可选：Euonia.Security
 ```
 
-`AddPermission`、`IScopeGuard`、`IScopeSubjectResolver`、`ScopeModel<T>` 等由 `Euonia.Security` 提供；Osba 只提供 `ObjectPermissionCodeSource` 与 `ScopeOperationMap` 这两块「对象模型自己的知识」。
+完整示例：
+
+```bash
+dotnet run --project docs/examples/osba-console
+```
+
+```text
+granted(order:read+order:update) => saved=A-1
+missing(order:update) => SecurityException
+missing(order:read) => SecurityException
+```
+
+详细声明、判定与故障排查见 [PERMISSION.md](PERMISSION.md)；示例说明见
+[docs/examples/osba-console](../../docs/examples/osba-console/README.md)。
 
 ### 3.9 业务上下文与作用域
 
@@ -1487,41 +1450,17 @@ public sealed class Repo : EditableObject<Repo>
 ### 4.10 权限接线
 
 ```csharp
-// 1) 声明
-[FactoryUpdate]
+// 声明：类型级对所有方法生效，方法级只对被工厂调用的方法生效
 [Permission("repo:push")]
 protected override Task UpdateAsync(CancellationToken cancellationToken = default) { ... }
 
-// 2) 注册 Osba
 services.AddBusinessObject(typeof(Repo).Assembly);
-
-// 3) 接引擎（可选）
-services.AddPermission(options =>
-{
-    options.Scan(typeof(Repo).Assembly);
-    options.Source(ObjectPermissionCodeSource.Instance);
-});
-
-// 4) 授权数据来源（应用实现）
-public sealed class MySubjectResolver : IScopeSubjectResolver
-{
-    public async ValueTask<ScopeSubjectSet> ResolveAsync(ClaimsPrincipal user, CancellationToken ct = default)
-        => ScopeSubjectSet.CreateBuilder()
-                          .AddCodes(await GetPermissionCodesAsync(user, ct))
-                          .AddSelf(userId)
-                          .AddGrant("repo:delete", "repo", await GetDeletableReposAsync(user, ct))
-                          .Build();
-}
-
-// 5) 判定
-var guard = scope.ServiceProvider.GetRequiredService<IScopeGuard>();
-await guard.EnsureResolvedAsync();             // 同步判定前预热（幂等）
-var visible = guard.Apply(dbContext.Repos);    // 下推到数据库
-guard.Allows(repo, BusinessOperation.Delete);  // 单行判定
-guard.Explain(repo, BusinessOperation.Delete); // 审计
+services.AddPermission(options => options.Scan(typeof(Repo).Assembly));   // 可选：接入策略引擎
 ```
 
-> 权限码来自授权数据，不固化在令牌里；`[Permission]` 只决定类型级闸门，行级策略按授权标识声明。详见 [`PERMISSION.md`](PERMISSION.md)。
+工厂在调用 `UpdateAsync` 前读取类型级与方法级声明，并交给 `IPermissionChecker` 判定。
+完整声明、判定与示例见 [`PERMISSION.md`](PERMISSION.md) 与
+[`docs/examples/osba-console`](../../docs/examples/osba-console/README.md)。
 
 ### 4.11 诊断
 
@@ -1722,7 +1661,7 @@ flowchart TB
     P["Permission/"]
 
     P --> P1["ObjectAuthorization.cs<br/>操作权限唯一实现：收集要求 → IPermissionChecker → 拒绝抛 SecurityException；查询 / 闸门双入口"]
-    P --> P2["ObjectPermissionCodeSource.cs<br/>默认权限码来源：按工厂方法约定扫描类型级与方法级 [Permission]"]
+    P --> P2["ObjectPermissionCodeSource.cs<br/>兼容层：按工厂约定扫描的兼容来源（[Obsolete]，显式登记才参与）"]
     P --> P3["ObjectOperationResolver.cs<br/>IObjectOperationResolver 实现：委托 ScopeOperationMap"]
     P --> P4["ScopeOperationMap.cs<br/>对象状态 → 业务操作的唯一映射"]
     P --> P5["AuthorizationWarmup.cs<br/>判定前预热授权数据：同步入口阻塞一次，异步入口 await"]
@@ -1862,8 +1801,8 @@ flowchart TB
 45. `WithRule` 附加的规则在 `Handle` 之后执行；不在 `Handle` 里设值，规则看不到变更。
 46. 越权一律 `SecurityException`；越权不会出现在 `ValidationException.Errors` 里。
 47. `Create` / `CreateAsync` 不做数据范围判定；新增的判定发生在 `SaveAsync` 的工厂边界，criteria 的 `InsertAsync` 只能在写入后复核。
-48. 未声明 `ScopeModel<T>` 的类型不受数据权限约束；读模型也要单独声明。
-49. 忘给对象接 `BusinessContext` 不会静默放行：声明了 `[Permission]` 或 `ScopeModel<T>` 的类型会在强制点抛 `InvalidOperationException`。
+48. 数据权限约束由 `IObjectScopeAuthorizer` 实现定义；未受约束的类型不做行级判定，读模型也要单独声明。
+49. 忘给对象接 `BusinessContext` 不会静默放行：声明了 `[Permission]` 或受数据权限约束的类型会在强制点抛 `InvalidOperationException`。
 50. 不要把 `Allow` / `Deny` 塞进 EF 全局查询过滤器；逐查询用 `guard.Apply(query)`。
 
 ---
@@ -1890,10 +1829,7 @@ flowchart TB
 | [`SAMPLE.md`](SAMPLE.md) | 从零到运行的端到端示例：对象、工厂、状态机、规则、执行器、权限 |
 | [`PERMISSION.md`](PERMISSION.md) | 权限体系完整说明：声明、来源、行级策略、判定、故障排查 |
 | [`PERMISSION-SAMPLE.md`](PERMISSION-SAMPLE.md) | 多种业务场景的权限示例 |
-| [`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md) | 权限接线设计决策：为什么 Osba 不引用引擎、fail-closed、两条线 |
-| [`ARCHITECTURE-REVIEW.md`](ARCHITECTURE-REVIEW.md) | 架构 / 性能 / 正确性评审报告（历史基线，部分问题已修复，阅读时以当前代码为准） |
-| [`../Euonia.Security/README.md`](../Euonia.Security/README.md) | 策略引擎用法 |
-| [`../Euonia.Security/DESIGN.md`](../Euonia.Security/DESIGN.md) | 策略引擎设计取舍 |
+| [`PERMISSION-DESIGN.md`](PERMISSION-DESIGN.md) | 权限边界设计：契约、强制点、已知边界 |
 | [`../Euonia.Core/README.md`](../Euonia.Core/README.md) | 权限契约（`IPermissionChecker` 等）、反射工具、`AsyncContext`、`Check` |
 | [`../Euonia.Modularity/README.md`](../Euonia.Modularity/README.md) | `IHasLazyServiceProvider` / `InjectAttribute` 与模块启动 |
 | [`../Euonia.Pipeline/README.md`](../Euonia.Pipeline/README.md) | `IPipeline<TRequest,TResponse>` / `IPipelineBehavior` |
@@ -1904,7 +1840,7 @@ flowchart TB
 
 ## 9. 版本与许可
 
-- 当前版本：`2026.5.0`（见仓库根 `project.props`）。
+- 当前版本：`2026.5.1`（见仓库根 `project.props`）。
 - 目标框架：`net10.0`、`net11.0`。
 - 许可：GNU General Public License v3.0，见仓库根 [`LICENSE`](../../LICENSE)。
 
@@ -1921,8 +1857,8 @@ flowchart TB
 
 ### 抛 `Object state transition from 'A' to 'B' is not allowed.`
 
-**原因**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 之间的迁移不满足默认状态机（`Source/Euonia.Osba/Core/ObservableObject.cs:98`）。
-**解决**：确认没有对已删除对象再标记修改；确有自定义迁移时重写 `CanTransitionTo` 并在 `StateChanged` 里记录，不要直接改状态字段。
+**原因**：`MarkAsNew` / `MarkAsChanged` / `MarkAsDeleted` 之间的状态转换不满足默认状态机（`Source/Euonia.Osba/Core/ObservableObject.cs:98`）。
+**解决**：确认没有对已删除对象再标记修改；确有自定义状态机时重写 `CanTransitionTo` 并在 `StateChanged` 里记录，不要直接改状态字段。
 
 ### 启动正常，第一次 `SaveAsync` 才报缺少持久化方法
 
@@ -1932,7 +1868,7 @@ flowchart TB
 ### 声明了 `[Permission]` 后调用即抛异常
 
 **原因**：对象声明了权限要求，但容器里没有 `IPermissionChecker`（资源 `Resources.resx:136`：`... but {1} is not registered in the container. Call AddPermission ...`）。
-**解决**：宿主 `services.AddPermission(p => { p.Scan(assemblies); p.Source(ObjectPermissionCodeSource.Instance); })`，或自行注册 `IPermissionChecker` / `IObjectScopeAuthorizer`（§3.8.4、§6 第 49 条）。
+**解决**：宿主 `services.AddPermission(p => p.Scan(assemblies))`，或自行注册 `IPermissionChecker` / `IObjectScopeAuthorizer`；码来自数据时用 `Requirements(...)` 登记 `IPermissionRequirementSource`（§3.8.4、§6 第 49 条）。
 
 ### `[Inject]` 注入带 key 的服务报 `IKeyedServiceProvider` 错误
 
@@ -1944,17 +1880,17 @@ flowchart TB
 - **生产开 `ValidateOnStartup`**：把工厂签名、`[Inject]` 可解析性、属性元数据问题提前到启动阶段，配合 `DiagnosticLevel = Warning` 让警告可见。
 - **按程序集注册一次**：`services.AddBusinessObject(options, typeof(Repo).Assembly)`；选项以第一次装配为准，模块化宿主在根模块里配置。
 - **服务对象用对象级规则**：`ServiceObject<T>` 没有 `ChangedProperties` / `SaveAsync`，校验写成 `ObjectRuleBase` 子类而不是属性规则。
-- **读模型单独声明 `ScopeModel<T>`**：不声明就没有行级约束（§6 第 48 条），不要指望写模型上的策略覆盖读侧。
-- **权限只在宿主接线**：Osba 不引用 `Euonia.Security`，用 `AddPermission` 一行接引擎；不要为了权限在业务对象里手写鉴权分支。
+- **读模型也要受数据权限约束**：由宿主的 `IObjectScopeAuthorizer` 实现决定如何声明模型与策略。
+- **权限只在宿主接线**：Osba 不引用具体鉴权引擎，由宿主在组合根注册判定实现；不要为了权限在业务对象里手写鉴权分支。
 
 ## 版本与兼容
 
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0` |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 依赖 | `Euonia.Core`、`Euonia.Modularity`、`Euonia.Pipeline`、`Euonia.Validation` |
 
-- **不引用 `Euonia.Security` / `Euonia.Domain`**：权限契约来自 Core，DDD 只是可选投影；升级时不会因这两个包引入传递依赖（§1.5）。
+- **不引用具体鉴权引擎 / `Euonia.Domain`**：权限契约来自 Core，DDD 只是可选投影；升级时不会因这两个包引入传递依赖（§1.5）。
 - **公共 API 兼容策略**见 [§3.16](#316-公共-api-兼容性策略)：新增成员优先，破坏性变更走主版本。
 - 文档结构（§1–§9）保持稳定；新增的 FAQ / 最佳实践 / 兼容说明是无编号章节，不会占用既有编号。

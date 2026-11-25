@@ -291,7 +291,8 @@ public class CollectionDimensionTests
 			ScopeModelDescriptor.Create(new WorkspaceModel()),
 			ScopeSubjectSet.Empty));
 
-		Assert.Contains("unmapped dimension", exception.Message, StringComparison.OrdinalIgnoreCase);
+		// 文案随当前 UI 文化变化：断言出错的那个维度名（语言无关），而不是写死英文
+		Assert.Contains("nonexistent", exception.Message, StringComparison.Ordinal);
 	}
 
 	/// <summary>

@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
@@ -13,12 +14,21 @@ namespace Nerosoft.Euonia.Osba;
 /// </summary>
 /// <remarks>
 /// <para>
-/// 要求来自宿主注册的来源（<see cref="IPermissionCodeSource"/>，未注册时回落到 Osba 的默认来源），
-/// 判定交给宿主注册的 <see cref="IPermissionChecker"/>。本类只有两副面孔：
+/// 要求从两处来并取并集：<see cref="PermissionRequirements"/> 读取的声明
+/// （类型级 + <b>即将被调用的那个方法</b>的方法级），以及宿主注册的 <see cref="IPermissionRequirementSource"/>
+/// （未注册该契约时使用 <see cref="IPermissionCodeSource"/> 的适配器）。声明让 <c>[Permission]</c>
+/// 零配置生效，来源让权限码可以来自数据。
+/// </para>
+/// <para>
+/// 判定坐标是「类型 + 被调用的方法」：类型级要求对所有方法生效，方法级要求只对被调用的那一个方法生效；
+/// 操作名用于数据权限寻址与按操作回答的来源，不参与声明中权限码的发现。
+/// 类型一律取目标的<b>运行时类型</b>（DI 可能把静态类型映射到派生类）；方法级声明在运行时类型上
+/// 解析实际实现并与静态方法声明取并集（见 <see cref="PermissionRequirements"/>），派生 override 与
+/// <c>new</c> 遮蔽上的要求都不会漏判。
 /// </para>
 /// <list type="bullet">
 /// <item><description><b>查询</b>（<see cref="IsGranted"/>）：不抛异常，无从判定时返回 <see langword="true"/>。
-/// <see cref="ObjectBase.CanPerformOperation"/> 用的就是它。</description></item>
+/// <see cref="ObjectBase.CanPerformOperation"/> 用的就是它；它<b>没有</b>方法上下文，因而只含类型级要求与来源要求。</description></item>
 /// <item><description><b>闸门</b>（<see cref="EnsureAuthorized"/> / <see cref="EnsureAuthorizedAsync"/>）：
 /// 拒绝抛 <see cref="SecurityException"/>，判定不了抛 <see cref="InvalidOperationException"/>。</description></item>
 /// </list>
@@ -34,16 +44,13 @@ internal static class ObjectAuthorization
 	/// 校验当前用户是否被允许对目标执行业务操作，拒绝时抛出 <see cref="SecurityException"/>。
 	/// </summary>
 	/// <param name="target">目标业务对象；非 <see cref="ObjectBase"/> 类型时自动放行。</param>
-	/// <param name="operation">要执行的操作。</param>
-	/// <param name="requirementType">
-	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
-	/// 工厂按静态类型查找并调用方法时应传入该静态类型，以覆盖被 <c>new</c> 遮蔽的基类方法上的要求。
-	/// </param>
+	/// <param name="operation">要执行的操作（数据权限的授权标识）。</param>
+	/// <param name="method">即将被调用的方法（可以是按静态类型查找到的声明）；为 <see langword="null"/> 时只收集类型级要求。</param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
-	internal static void EnsureAuthorized(object target, string operation, Type? requirementType = null)
+	internal static void EnsureAuthorized(object target, string operation, MethodInfo? method = null)
 	{
-		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
+		if (!TryPrepare(target, operation, method, out var businessObject, out var checker, out var requirements))
 		{
 			return;
 		}
@@ -58,12 +65,9 @@ internal static class ObjectAuthorization
 	/// 异步版本的 <see cref="EnsureAuthorized"/>：判定前先把授权数据解析出来，避免冷缓存阻塞线程。
 	/// </summary>
 	/// <param name="target">目标业务对象；非 <see cref="ObjectBase"/> 类型时自动放行。</param>
-	/// <param name="operation">要执行的操作。</param>
+	/// <param name="operation">要执行的操作（数据权限的授权标识）。</param>
 	/// <param name="cancellationToken">用于取消操作的令牌。</param>
-	/// <param name="requirementType">
-	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
-	/// 工厂按静态类型查找并调用方法时应传入该静态类型，以覆盖被 <c>new</c> 遮蔽的基类方法上的要求。
-	/// </param>
+	/// <param name="method">即将被调用的方法（可以是按静态类型查找到的声明）；为 <see langword="null"/> 时只收集类型级要求。</param>
 	/// <exception cref="InvalidOperationException">目标声明了权限要求却无法判定（未接入上下文/未注册判定实现）时抛出。</exception>
 	/// <exception cref="SecurityException">当前用户未被授权执行该操作时抛出。</exception>
 	/// <remarks>
@@ -71,9 +75,9 @@ internal static class ObjectAuthorization
 	/// 这里在判定前先 await <see cref="AuthorizationWarmup"/>，授权数据命中暖路径后
 	/// 判定直接走同步快路径，整条异步链路不会退化成 sync-over-async。
 	/// </remarks>
-	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, Type? requirementType = null)
+	internal static async ValueTask EnsureAuthorizedAsync(object target, string operation, CancellationToken cancellationToken = default, MethodInfo? method = null)
 	{
-		if (!TryPrepare(target, operation, requirementType, out var businessObject, out var checker, out var requirements))
+		if (!TryPrepare(target, operation, method, out var businessObject, out var checker, out var requirements))
 		{
 			return;
 		}
@@ -90,8 +94,14 @@ internal static class ObjectAuthorization
 	/// <param name="operation">要执行的操作。</param>
 	/// <returns>无权限要求、或要求全部满足时返回 <see langword="true"/>；无从判定（未接入上下文/未注册判定实现）时同样返回 <see langword="true"/>。</returns>
 	/// <remarks>
+	/// <para>
 	/// 真正的拦截在工厂边界的闸门（<see cref="EnsureAuthorized"/>），本方法供业务方法内部做条件分支使用。
 	/// 无从判定返回 <see langword="true"/> 是刻意的查询口径——它不构成放行通道。
+	/// </para>
+	/// <para>
+	/// 这里<b>没有方法上下文</b>，因此只收集类型级要求与来源给出的要求：方法级声明按被调用的方法判定，
+	/// 不在此叠加。需要在方法级码上分支时，用 <see cref="IPermissionChecker.IsGranted"/> 直接查询。
+	/// </para>
 	/// </remarks>
 	internal static bool IsGranted(ObjectBase target, string operation)
 	{
@@ -112,14 +122,12 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="target">目标对象。</param>
 	/// <param name="operation">要执行的操作。</param>
-	/// <param name="requirementType">
-	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
-	/// </param>
+	/// <param name="method">即将被调用的方法；为 <see langword="null"/> 时只收集类型级要求。</param>
 	/// <param name="businessObject">需要继续判定的业务对象。</param>
 	/// <param name="checker">判定实现。</param>
 	/// <param name="requirements">为目标收集到的权限要求。</param>
 	/// <returns>需要判定则返回 <see langword="true"/>。</returns>
-	private static bool TryPrepare(object target, string operation, Type? requirementType, [NotNullWhen(true)] out ObjectBase? businessObject, [NotNullWhen(true)] out IPermissionChecker? checker, out IReadOnlyList<PermissionAttribute> requirements)
+	private static bool TryPrepare(object target, string operation, MethodInfo? method, [NotNullWhen(true)] out ObjectBase? businessObject, [NotNullWhen(true)] out IPermissionChecker? checker, out IReadOnlyList<PermissionAttribute> requirements)
 	{
 		checker = null;
 		requirements = [];
@@ -130,7 +138,7 @@ internal static class ObjectAuthorization
 			return false;
 		}
 
-		requirements = Requirements(candidate, operation, requirementType);
+		requirements = Requirements(candidate, operation, method);
 
 		if (requirements.Count == 0)
 		{
@@ -166,7 +174,7 @@ internal static class ObjectAuthorization
 	/// </summary>
 	/// <param name="businessObject">目标业务对象。</param>
 	/// <param name="operation">要执行的操作。</param>
-	/// <param name="requirements">按调用方静态类型收集到的权限要求。</param>
+	/// <param name="requirements">按目标运行时类型与方法上下文收集到的权限要求。</param>
 	/// <param name="checker">判定实现。</param>
 	/// <exception cref="SecurityException">目标不满足任一权限要求时抛出。</exception>
 	private static void Enforce(ObjectBase businessObject, string operation, IReadOnlyList<PermissionAttribute> requirements, IPermissionChecker checker)
@@ -176,8 +184,8 @@ internal static class ObjectAuthorization
 		var succeeded = false;
 		try
 		{
-			// 先按调用方传入的 requirements 判定一次：这是权威集合，能覆盖「派生类型用 new 遮蔽
-			// 基类工厂方法」的运行时类型收集缺口。
+			// 先按收集到的 requirements 判定一次：这是权威集合，已按运行时类型解析实际实现，
+			// 覆盖派生 override 与 new 遮蔽两种情形（见 PermissionRequirements）。
 			foreach (var requirement in requirements)
 			{
 				if (!IsSatisfied(checker, requirement))
@@ -237,24 +245,60 @@ internal static class ObjectAuthorization
 	}
 
 	/// <summary>
-	/// 收集目标在指定操作上的要求；未注册权限码来源时回落到 Osba 的默认来源（工厂约定扫描）。
+	/// 收集目标在指定方法与指定操作上的权限要求：内建声明 ∪ 宿主来源。
 	/// </summary>
 	/// <param name="businessObject">目标业务对象。</param>
-	/// <param name="operation">业务操作。</param>
-	/// <param name="requirementType">
-	/// 收集权限要求时使用的类型；为 <see langword="null"/> 时使用目标的运行时类型。
-	/// </param>
-	/// <returns>权限要求列表。</returns>
-	private static IReadOnlyList<PermissionAttribute> Requirements(ObjectBase businessObject, string operation, Type? requirementType = null)
+	/// <param name="operation">业务操作（数据权限的授权标识）。</param>
+	/// <param name="method">即将被调用的方法（可以是按静态类型查找到的声明）；为 <see langword="null"/> 时只收集类型级要求。</param>
+	/// <returns>去重后的权限要求列表。</returns>
+	/// <remarks>
+	/// 这里<b>不做反射</b>：全部读取经 <see cref="PermissionRequirements"/> 的缓存。
+	/// 类型一律按目标的<b>运行时类型</b>收集：DI 可能把静态类型映射到派生类，派生类型上的声明必须生效；
+	/// 方法级要求由 <see cref="PermissionRequirements"/> 在运行时类型上解析实际实现（override / <c>new</c> 遮蔽），
+	/// 取「静态方法声明 ∪ 实际实现声明」的并集，因此按静态类型查找到的方法也不会漏判。
+	/// </remarks>
+	private static IReadOnlyList<PermissionAttribute> Requirements(ObjectBase businessObject, string operation, MethodInfo? method = null)
 	{
+		var type = businessObject.GetType();
+
+		// 内建路径：类型级 + 即将被调用的那个方法（命中缓存，零反射）
+		var primary = PermissionRequirements.For(type, method);
+
 		// 不能只看业务对象自身的上下文：手工构造/反序列化的对象没有 BusinessContext，
 		// 但宿主注册的来源仍应生效；与 ScopeAuthorization 一致地回退到环境作用域。
-		var provider = businessObject.BusinessContext?.GetService<IPermissionCodeSource>()
-		               ?? BusinessContextAccessor.Current?.GetService<IPermissionCodeSource>()
-		               ?? ObjectPermissionCodeSource.Instance;
+		var provider = businessObject.BusinessContext?.CurrentServiceProvider ?? BusinessContextAccessor.Current;
 
-		// 工厂按静态类型查找并调用方法；若目标是派生类型且用 new 遮蔽了基类方法，
-		// 按运行时类型收集会漏掉实际被调用的基类方法上的要求。调用方应传入工厂使用的静态类型。
-		return provider.RequirementsFor(requirementType ?? businessObject.GetType(), operation);
+		IReadOnlyList<PermissionAttribute> extra = provider == null ? [] : RequirementsFrom(provider, type, method, operation);
+
+		return extra.Count == 0 ? primary : PermissionRequirements.Merge(primary, extra);
+	}
+
+	/// <summary>
+	/// 从宿主容器收集要求：优先使用 <see cref="IPermissionRequirementSource"/>，
+	/// 只注册了 <see cref="IPermissionCodeSource"/> 时使用其适配器。
+	/// </summary>
+	/// <param name="provider">宿主容器（对象上下文或环境作用域）。</param>
+	/// <param name="type">资源类型。</param>
+	/// <param name="method">即将被调用的方法。</param>
+	/// <param name="operation">业务操作。</param>
+	/// <returns>来源给出的权限要求；没有来源或来源无要求时为空集合。</returns>
+	/// <remarks>
+	/// 没有注册任何来源时返回空集合；类型级与方法级要求仍由 <see cref="PermissionRequirements"/> 提供。
+	/// </remarks>
+	private static IReadOnlyList<PermissionAttribute> RequirementsFrom(IServiceProvider provider, Type type, MethodInfo? method, string operation)
+	{
+		// 宿主注册的要求来源（宿主可用引擎，也可用自己的实现）
+		if (provider.GetService<IPermissionRequirementSource>() is { } requirementSource)
+		{
+			return requirementSource.RequirementsFor(type, method, operation);
+		}
+
+		// 只注册了按 (类型, 操作) 回答的来源：适配后忽略 method
+		if (provider.GetService<IPermissionCodeSource>() is { } codeSource)
+		{
+			return PermissionRequirements.Adapt(codeSource).RequirementsFor(type, method, operation);
+		}
+
+		return [];
 	}
 }

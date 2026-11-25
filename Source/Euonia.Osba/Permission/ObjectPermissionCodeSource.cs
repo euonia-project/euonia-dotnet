@@ -5,22 +5,20 @@ using Nerosoft.Euonia.Security;
 namespace Nerosoft.Euonia.Osba;
 
 /// <summary>
-/// Osba 的默认权限码来源：按<b>工厂方法约定</b>收集类型级与方法级的 <see cref="PermissionAttribute"/>。
+/// 兼容入口：按<b>工厂方法约定</b>收集类型级与方法级 <see cref="PermissionAttribute"/>，按 <c>(类型, 操作)</c> 回答。
 /// </summary>
 /// <remarks>
 /// <para>
 /// 规则表就是「哪个工厂方法特性对应哪个操作」，与对象工厂查找工厂方法用的是<b>同一套候选口径</b>
 /// （<see cref="ObjectReflector.GetFactoryMethods"/>）：特性命中，或方法名落在该特性推导出的约定名里。
-/// 两个口径同源是刻意的——「工厂会调用的方法」与「权限扫描会看的方法」一旦分叉，
-/// 就会出现在某个方法上声明了权限却从不生效（或反之）的静默缺口。
+/// 按「类型 + 被调用的方法」收集要求由 <see cref="PermissionRequirements.For(Type, MethodInfo)"/> 完成。
 /// </para>
 /// <para>
-/// 本实现的实例在 Osba 内以静态单例存在（<see cref="Instance"/>），用于「宿主没有注册任何
-/// <see cref="IPermissionCodeSource"/>」时的兜底：声明了要求但无人判定必须报错，
-/// 而不是因为没装权限实现就静默放行。
+/// 宿主显式登记 <c>Source(ObjectPermissionCodeSource.Instance)</c> 时，本来源作为一份权限码来源参与要求并集。
 /// </para>
 /// <para>结果按（类型，操作）缓存，反复调用不会重复反射。</para>
 /// </remarks>
+[Obsolete("按 (type, operation) 查询的兼容类型。请使用 PermissionRequirements / IPermissionRequirementSource；本类型将在下个主版本移除。")]
 public sealed class ObjectPermissionCodeSource : IPermissionCodeSource
 {
 	/// <summary>
@@ -36,8 +34,7 @@ public sealed class ObjectPermissionCodeSource : IPermissionCodeSource
 	];
 
 	/// <summary>
-	/// 默认实例：宿主未注册 <see cref="IPermissionCodeSource"/> 时由工厂边界兜底使用；
-	/// 注册期的声明扫描也取它。
+	/// 共享实例：宿主显式登记 <c>Source(ObjectPermissionCodeSource.Instance)</c> 时使用。
 	/// </summary>
 	public static ObjectPermissionCodeSource Instance { get; } = new();
 

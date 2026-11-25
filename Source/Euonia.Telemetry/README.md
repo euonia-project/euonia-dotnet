@@ -104,7 +104,7 @@ builder.Services.AddEuoniaTelemetry(options =>
     "Telemetry": {
       "Enabled": true,
       "ServiceName": "order-service",
-      "ServiceVersion": "2026.5.0",
+      "ServiceVersion": "2026.5.1",
       "Environment": "Production",
       "RecordTenantId": true,
       "RecordUserId": false,
@@ -254,7 +254,7 @@ public sealed class OrderService(ILogger<OrderService> logger, ITelemetryContext
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.0`（`project.props:3`）。
+- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.1`（`project.props:3`）。
 - **关键依赖**：`Euonia.Core` 与 `Microsoft.Extensions.*` `11.0.0`（`Directory.Packages.props:5`），不依赖 OpenTelemetry。
 - **兼容边界**：本包只做埋点内核，不导出数据；升级 OpenTelemetry 只影响 `Euonia.Telemetry.Otel`，配置文件与标签键保持稳定。
 - **已知边界**：Resource 类属性（`ServiceName` 等）在 OTel Provider 构建期固定，热更新只切换跟踪/指标开关。

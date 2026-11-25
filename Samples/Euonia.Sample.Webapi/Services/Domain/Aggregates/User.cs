@@ -3,7 +3,7 @@ using Nerosoft.Euonia.Sample.Business.Rules;
 using Nerosoft.Euonia.Sample.Domain.Events;
 using Nerosoft.Euonia.Sample.Domain.Repositories;
 using Nerosoft.Euonia.Sample.Persist.Entities;
-using Nerosoft.Euonia.Sample.Toolkit;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Sample.Domain.Aggregates;
 

@@ -6,9 +6,9 @@ namespace Nerosoft.Euonia.Security.Tests.Fixtures;
 /// 方法级声明权限码、并且模型按该码声明行级策略的资源。
 /// </summary>
 /// <remarks>
-/// 单独放在一个程序集里，是因为这类声明<b>必须</b>配合 <see cref="IPermissionCodeSource"/>：
-/// <c>AddPermission</c> 按程序集扫描，若与「不声明按码策略」的类型同处一个程序集，
-/// 那些用例会连带被死策略校验拒绝。
+/// 单独放在一个程序集里，与按 <c>TestAssembly</c> 扫描的用例隔离：本类型用于验证
+/// 按 <c>(类型, 操作)</c> 查询的兼容来源（<see cref="IPermissionCodeSource"/>）的按操作收集口径；
+/// 其方法级声明在当前模型下按被调用的方法自动生效，不再依赖该来源。
 /// </remarks>
 public sealed class GuardedAsset
 {

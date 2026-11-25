@@ -1,27 +1,29 @@
-using System.Reflection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Nerosoft.Euonia.Reflection;
 using Nerosoft.Euonia.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// 权限体系的注册入口：一个 <c>AddPermission</c> 回调声明扫描范围、操作入口规则与断言，
-/// 据此构建模型注册表与判定服务。
+/// 权限体系的注册入口：一个 <c>AddPermission</c> 回调声明扫描范围、可选的要求来源与断言，
+/// 据此构建模型注册表、要求来源与判定服务。
 /// </summary>
 public static class ServiceCollectionExtensions
 {
 	/// <summary>
-	/// 注册权限体系：扫描范围、操作入口规则、断言都在同一个回调里声明。
+	/// 注册权限体系：扫描范围、要求来源与断言都在同一个回调里声明。
 	/// </summary>
 	/// <param name="services">要注册权限服务的 <see cref="IServiceCollection"/>。</param>
-	/// <param name="configure">配置回调，例如 <c>p =&gt; { p.Scan(typeof(Order).Assembly); p.OnAttributeOrName(…); }</c>。</param>
+	/// <param name="configure">配置回调，例如 <c>p =&gt; p.Scan(typeof(Order).Assembly)</c>。</param>
 	/// <returns>原 <paramref name="services"/>，便于链式调用。</returns>
-	/// <exception cref="InvalidOperationException">配置自相矛盾时抛出（如既断言无码又声明了入口规则、既断言无模型又传入了扫描程序集）。</exception>
+	/// <exception cref="InvalidOperationException">配置自相矛盾或存在违规的 <c>[Permission]</c> 声明时抛出（如断言无模型却传入了扫描程序集、指定来源又声明入口规则、权限码为空或落在保留前缀上、同一成员重复声明同一个码）。</exception>
 	/// <remarks>
 	/// <para>
-	/// 这是权限体系的<b>唯一入口</b>。规则、扫描范围与断言在同一处声明，
-	/// 注册期即完成模型扫描与全部校验——配置错误在启动时失败而非运行期。
+	/// 这是权限体系的<b>唯一入口</b>。扫描范围、要求来源与断言在同一处声明，
+	/// 注册期即完成模型扫描、声明校验与全部自洽性校验——配置错误在启动时失败而非运行期。
+	/// </para>
+	/// <para>
+	/// 权限码写在对类型或方法上的 <c>[Permission]</c> 上，<see cref="PermissionOptions.Scan"/> 之外
+	/// 不需要任何登记；<see cref="PermissionOptions.Requirements"/> 只在权限码来自数据时才需要。
 	/// </para>
 	/// <para>
 	/// 使用了权限（方法级权限码或数据权限模型）时，应用还需注册
@@ -38,9 +40,9 @@ public static class ServiceCollectionExtensions
 		configure(options);
 		Validate(options);
 
-		// 什么都不说不是合法配置：来源、规则、断言、扫描范围四者一个都没有时，回调没有表达任何意图。
+		// 什么都不说不是合法配置：来源、要求来源、规则、断言、扫描范围一个都没有时，回调没有表达任何意图。
 		Check.Ensure(
-			options.ExplicitSource != null || options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
+			options.ExplicitSource != null || options.RequirementSources.Count > 0 || options.Rules != null || options.NoCodesAsserted || options.NoModelsAsserted || options.Assemblies.Count > 0,
 			Resources.IDS_PERMISSION_CONFIG_EMPTY);
 
 		Apply(services, GetOrCreateRegistration(services), options);
@@ -50,14 +52,13 @@ public static class ServiceCollectionExtensions
 	/// <summary>
 	/// 校验配置的自洽性。
 	/// </summary>
+	/// <remarks>
+	/// 两条互斥关系：<see cref="PermissionOptions.NoModels"/> 与扫描程序集、
+	/// <see cref="PermissionOptions.Source"/> 与入口规则。
+	/// <see cref="PermissionOptions.NoOperationCodes"/> 不参与校验：它与 <c>On*</c> 可同时调用（规则照旧参与并集）。
+	/// </remarks>
 	private static void Validate(PermissionOptions options)
 	{
-		var hasRules = options.Rules is { } rules && OperationCodeSource.HasDeclarations(rules);
-
-		Check.Ensure(
-			!(options.NoCodesAsserted && hasRules),
-			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_CODES);
-
 		Check.Ensure(
 			!(options.NoModelsAsserted && options.Assemblies.Count > 0),
 			Resources.IDS_PERMISSION_CONFIG_CONTRADICTS_MODELS);
@@ -76,6 +77,12 @@ public static class ServiceCollectionExtensions
 	/// </remarks>
 	private static void Apply(IServiceCollection services, PermissionRegistration registration, PermissionOptions options)
 	{
+		var assemblies = registration.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
+
+		// 声明级违规（空码 / 保留前缀 / 同成员重复码）一次报全；校验先于状态累积，
+		// 失败不会把半份配置留在注册状态里。扫描结果按程序集缓存，重复注册是零成本。
+		PermissionDeclarationScanner.EnsureValid(assemblies);
+
 		// 来源三选一：Source() 指定 > 回调产出的规则 > 无码断言
 		var source = options.ExplicitSource;
 
@@ -89,8 +96,6 @@ public static class ServiceCollectionExtensions
 			source = EmptyCodeSource.Instance;
 		}
 
-		var assemblies = registration.Assemblies.Concat(options.Assemblies).Distinct().ToArray();
-
 		if (options.NoModelsAsserted)
 		{
 			registration.NoModelsAsserted = true;
@@ -99,6 +104,11 @@ public static class ServiceCollectionExtensions
 		if (source != null)
 		{
 			registration.AddSource(source);
+		}
+
+		foreach (var requirementSource in options.RequirementSources)
+		{
+			registration.AddRequirementSource(requirementSource);
 		}
 
 		registration.AddAssemblies([.. options.Assemblies]);
@@ -118,12 +128,16 @@ public static class ServiceCollectionExtensions
 		services.RemoveAll<IPermissionCodeSource>();
 		services.AddSingleton(registration.CodeSource);
 
+		// 闸门按「类型 + 被调用的方法」取要求：内建声明永远参与，登记来源只是增量
+		services.RemoveAll<IPermissionRequirementSource>();
+		services.AddSingleton(registration.RequirementSource);
+
 		// 契约由引擎实现自己那一半（TryAdd：宿主可换成自己的实现）；契约在 Core，无需适配包。
 		// 工厂委托延迟解析：注册表在容器里只保留最新一份，契约解析时取到的必然是它。
 		services.TryAddSingleton<IObjectScopeAuthorizer>(provider => new ObjectScopeAuthorizer(
 			provider.GetRequiredService<ScopeModelRegistry>()));
 
-		// 启动期校验读取的是累计状态，故就地更新（同一实例，不再 RemoveAll + 重建快照）
+		// 启动期校验读取的是累计状态，故就地更新（同一实例，无需 RemoveAll + 重建快照）
 		registration.RequiresSubjectResolver = registration.HasDeclarations(registry);
 	}
 
@@ -213,34 +227,5 @@ public static class ServiceCollectionExtensions
 		var registration = new PermissionRegistration();
 		services.AddSingleton(registration);
 		return registration;
-	}
-
-	/// <summary>
-	/// 判断给定程序集中是否存在权限声明（类型级 <see cref="PermissionAttribute"/> 或可解析的权限码）。
-	/// </summary>
-	internal static bool HasPermissionDeclarations(IEnumerable<Assembly> assemblies, IPermissionCodeSource codeSource)
-	{
-		foreach (var type in AssemblyHelper.LoadTypes(assemblies)!)
-		{
-			if (!type.IsClass || type.IsAbstract)
-			{
-				continue;
-			}
-
-			if (type.GetCustomAttributes<PermissionAttribute>(true).Any())
-			{
-				return true;
-			}
-
-			foreach (var operation in codeSource.AllOperations)
-			{
-				if (codeSource.CodesFor(type, operation).Count > 0)
-				{
-					return true;
-				}
-			}
-		}
-
-		return false;
 	}
 }

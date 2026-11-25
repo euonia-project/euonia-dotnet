@@ -70,7 +70,7 @@ public sealed class ScopeModelBuilder<T> : IScopeModelBuilder
 	/// 因此「只算有效成员」这类条件由数据库实时求值，而不是解析期的一次性快照。
 	/// </para>
 	/// <para>
-	/// <b>取值的来源不再是资源行自身的列</b>，这带来一条使用要求：单行判定（<c>IScopeGuard.Allows</c> /
+	/// <b>当维度取值来自关联表时，取值的来源是关联行，不是资源行自身的列</b>。这带来一条使用要求：单行判定（<c>IScopeGuard.Allows</c> /
 	/// <c>AllowsObject</c>，以及工厂边界的自动判定）在内存中求值同一个表达式，
 	/// 因此实例上对应的子集合<b>必须已加载</b>；未加载时会以明确异常失败，而不是静默拒绝。
 	/// 查询路径（<c>IScopeGuard.Apply</c>）由数据库求值，不受此限。

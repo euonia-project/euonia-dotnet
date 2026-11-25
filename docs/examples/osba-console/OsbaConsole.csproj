@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    可独立运行的 Osba 示例：业务对象工厂边界上的方法级权限。
+    运行命令见同目录 README.md。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 业务对象与工厂边界 -->
+    <ProjectReference Include="../../../Source/Euonia.Osba/Euonia.Osba.csproj" />
+    <!-- 宿主装配权限引擎（Osba 本身不引用引擎） -->
+    <ProjectReference Include="../../../Source/Euonia.Security/Euonia.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ServiceCollection / BuildServiceProvider：示例用最小 DI 装配，不引入主机。 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+</Project>

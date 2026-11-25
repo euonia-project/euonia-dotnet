@@ -1,0 +1,10 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart LR
+    subgraph Decl["声明（代码）"]
+        A["[Permission] 任意码<br/>类型级 / 方法级"]
+        M["ScopeModel<T><br/>Policy / Declare"]
+    end
+    A --> F["发现：读声明<br/>类型 ∪ 被调用的方法"]
+    F --> C["IPermissionChecker<br/>能 / 不能"]
+    M --> Q["IScopeGuard<br/>哪些行"]
+    C -.->|"码与授权标识无映射"| Q

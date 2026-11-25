@@ -1,0 +1,24 @@
+flowchart TB
+    subgraph Core["Euonia.Core（权限契约）"]
+        PA["PermissionAttribute"]
+        PRS["PermissionRequirements"]
+        PR["IPermissionRequirementSource"]
+        CK["IPermissionChecker"]
+        SA["IObjectScopeAuthorizer"]
+        OOR["IObjectOperationResolver"]
+    end
+    subgraph Osba["Euonia.Osba（工厂边界）"]
+        OA["ObjectAuthorization"]
+        OSA["ScopeAuthorization"]
+        OORI["ObjectOperationResolver"]
+    end
+    HOST["宿主可选装配<br/>策略引擎实现"]
+
+    PA -->|"被读取"| PRS
+    OA -->|"内建读取"| PRS
+    OA -->|"消费"| PR
+    OA -->|"判定"| CK
+    OSA --> SA
+    OORI -.实现.-> OOR
+    HOST -.可选装配.-> CK
+    HOST -.可选装配.-> PR

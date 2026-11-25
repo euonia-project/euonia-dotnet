@@ -256,6 +256,8 @@
 - static Task<Task<TResult>> WhenAny<TResult>(IEnumerable<Task<TResult>> this)
 - static IEnumerable<T> WhereIf<T>(IEnumerable<T> source, System.Boolean condition, Func<T, System.Boolean> predicate)
 - static IEnumerable<T> WhereIf<T>(IEnumerable<T> source, System.Boolean condition, Func<T, System.Int32, System.Boolean> predicate)
+- static TValue GetValue<TValue>(System.Text.Json.Nodes.JsonNode node, System.String name)
+- static TValue GetValue<TValue>(System.Text.Json.Nodes.JsonNode node, System.String[] names)
 
 ### ObjectId
 
@@ -940,11 +942,17 @@ _无公共成员。_
 
 ### Nerosoft.Euonia.Security.IPermissionCodeSource
 
-**类型**：interface
+**类型**：interface（**已废弃**：`[Obsolete]`，兼容层——按 `(类型, 操作)` 回答；新代码用 `IPermissionRequirementSource`）
 
 - IReadOnlyList<System.String> AllOperations { get; }
 - IReadOnlyCollection<System.String> CodesFor(System.Type type, System.String operation)
 - IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.String operation)
+
+### Nerosoft.Euonia.Security.IPermissionRequirementSource
+
+**类型**：interface
+
+- IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> RequirementsFor(System.Type type, System.Reflection.MethodInfo method, System.String operation)
 
 ### Nerosoft.Euonia.Security.OperationConventions
 
@@ -962,6 +970,16 @@ _无公共成员。_
 - System.String Message { get; set; }
 - System.String Permission { get; }
 - System.String[] Roles { get; }
+
+### Nerosoft.Euonia.Security.PermissionRequirements
+
+**类型**：static class
+
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> For(System.Type type, System.Reflection.MethodInfo method)
+- static IReadOnlyList<Nerosoft.Euonia.Security.PermissionAttribute> Merge(params IEnumerable<Nerosoft.Euonia.Security.PermissionAttribute>[] sets)
+- static Nerosoft.Euonia.Security.IPermissionRequirementSource Adapt(Nerosoft.Euonia.Security.IPermissionCodeSource source)
 
 ### Nerosoft.Euonia.Security.SensitiveDataAttribute
 
@@ -1048,6 +1066,103 @@ _无公共成员。_
 - System.Boolean IsInRole(System.String role)
 - System.Boolean IsInRoles(IEnumerable<System.String> roles)
 - System.Boolean IsInRoles(System.String role, System.String separator = ",")
+
+### Nerosoft.Euonia.Security.Cryptography
+
+**类型**：static class
+
+- static class Nerosoft.Euonia.Security.Cryptography.AES
+- static class Nerosoft.Euonia.Security.Cryptography.DES
+- static class Nerosoft.Euonia.Security.Cryptography.MD5
+- static class Nerosoft.Euonia.Security.Cryptography.Base64
+- static class Nerosoft.Euonia.Security.Cryptography.RSA
+- static class Nerosoft.Euonia.Security.Cryptography.SHA
+
+### Nerosoft.Euonia.Security.Cryptography.AES
+
+**类型**：static class
+
+- static System.String Encrypt(System.String source, System.String key)
+- static System.String Encrypt(System.String source, System.Byte[] key)
+- static System.String Decrypt(System.String source, System.String key)
+- static System.String Decrypt(System.String source, System.Byte[] key)
+- static System.String EncryptGcm(System.String source, System.String key)
+- static System.String EncryptGcm(System.String source, System.Byte[] key)
+- static System.String DecryptGcm(System.String source, System.String key)
+- static System.String DecryptGcm(System.String source, System.Byte[] key)
+
+### Nerosoft.Euonia.Security.Cryptography.DES
+
+**类型**：static class
+
+- static System.String Encrypt(System.String source, System.Byte[] key)
+- static System.String Encrypt(System.String source, System.String key)
+- static System.String Decrypt(System.String source, System.Byte[] key)
+
+### Nerosoft.Euonia.Security.Cryptography.MD5
+
+**类型**：static class
+
+- static System.String Encrypt(System.String value)
+
+### Nerosoft.Euonia.Security.Cryptography.Base64
+
+**类型**：static class
+
+- static System.String Encode(System.String source)
+- static System.String Decode(System.String source)
+
+### Nerosoft.Euonia.Security.Cryptography.RSA
+
+**类型**：class
+接口 System.IDisposable
+
+- new Nerosoft.Euonia.Security.Cryptography.RSA(System.String privateKey, System.String publicKey = null)
+- System.String Encrypt(System.String source)
+- System.String Encrypt(System.String source, System.Security.Cryptography.RSAEncryptionPadding padding)
+- System.String Decrypt(System.String source)
+- System.String Decrypt(System.String source, System.Security.Cryptography.RSAEncryptionPadding padding)
+- void Dispose()
+
+### Nerosoft.Euonia.Security.Cryptography.SHA
+
+**类型**：static class
+
+- static System.String Encrypt(System.String source)
+
+### Nerosoft.Euonia.Security.PasswordComplexity
+
+**类型**：enum
+接口 System.IComparable、System.ISpanFormattable、System.IFormattable、System.IConvertible
+
+| 值 |
+|---|
+| None |
+| ContainsLowercase |
+| ContainsUppercase |
+| ContainsDigit |
+| ContainsSymbol |
+| All |
+
+### Nerosoft.Euonia.Security.PasswordGenerator
+
+**类型**：static class
+
+- static System.String GeneratePassword(Nerosoft.Euonia.Security.PasswordComplexity complexity, System.Int32 minLength = 8, System.Int32 maxLength = 16)
+
+### Nerosoft.Euonia.Security.RandomUtility
+
+**类型**：class
+
+- static System.String GenerateRandomString(System.Int32 length = 32)
+- static System.String GenerateRandomDigit(System.Int32 length = 6)
+- static System.Byte[] GenerateRandomBytes(System.Int32 length)
+- override System.Int32 Next()
+- override System.Int32 Next(System.Int32 maxValue)
+- override System.Int32 Next(System.Int32 minValue, System.Int32 maxValue)
+- override System.Double NextDouble()
+- override void NextBytes(System.Byte[] buffer)
+- override void NextBytes(System.Span<System.Byte> buffer)
 
 ## 命名空间 Nerosoft.Euonia.Threading
 

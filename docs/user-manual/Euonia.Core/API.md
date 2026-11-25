@@ -61,16 +61,55 @@ Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释�
 | `"PayWeb".ToKebabCase()` | 命名风格转换 | 另有 `ToCamelCase` / `ToSnakeCase` |
 | `dictionary.GetOrAdd(key, factory)` | 字典取值或创建 | 两个工厂重载 |
 | `items.ForEach(action)` | 集合遍历 | 返回 `void` |
+| `Extensions.GetValue<TValue>` | 按点/斜杠路径读取 `JsonNode` | 路径不存在或转换失败返回 `default` |
+
+### 权限契约
+
+| 类型/成员 | 说明 | 关键参数/默认值 |
+|---|---|---|
+| `PermissionAttribute(string permission, params string[] roles)` | 声明权限要求；`permission` 为任意非空字符串、单一维度 | 可多次；类型级 / 方法级 |
+| `PermissionRequirements.For(Type)` / `For(MethodInfo)` / `For(Type, MethodInfo?)` | 读声明（带缓存、裁剪、去重） | `method` 为 `null` 时只读类型级 |
+| `PermissionRequirements.Merge(params IEnumerable<PermissionAttribute>[])` | 多来源并集 | 按「码 + 角色」去重 |
+| `IPermissionRequirementSource.RequirementsFor(Type, MethodInfo?, string)` | 要求来源（推荐，可选） | 不注册也能工作 |
+| `IPermissionChecker` / `IObjectScopeAuthorizer` / `IObjectOperationResolver` | 操作权限判定 / 行级数据权限判定 / 对象状态 → 操作 | 跨边界契约 |
+| `BusinessOperation` | **数据权限**的授权标识常量 | `read` / `create` / `update` / `delete` / `execute` |
+
+已废弃成员：
+
+| 成员 | 现状 | 替代 |
+|---|---|---|
+| `IPermissionCodeSource` | 保留，标 `[Obsolete]` | `IPermissionRequirementSource` |
+| `PermissionRequirements.Adapt` | 保留，标在契约兼容路径 | 直接使用 `PermissionRequirements` |
 
 ### 选项（代码配置）
 
-`Euonia.Core` **没有配置节**，也不读取 `IConfiguration`：以上类型要么是静态工具，要么可直接 `new`，无需 `appsettings` 与环境变量。
+`Euonia.Core` **没有配置节**，也不读取 `IConfiguration`：静态工具直接调用，可实例化的类型直接 `new`，权限契约由使用方实现；无需 `appsettings` 与环境变量。
+
+## 密码学
+
+命名空间：`Nerosoft.Euonia.Security`。
+
+| 类型 | 关键成员 | 说明 |
+|---|---|---|
+| `Cryptography.AES` | `EncryptGcm` / `DecryptGcm(string?, string/byte[])`；`Encrypt` / `Decrypt(string?, string/byte[])` | GCM 推荐（随机 nonce + 认证标签）；ECB + PKCS7 仅兼容遗留数据 |
+| `Cryptography.DES` | `Encrypt(string, string/byte[])`、`Decrypt(string, byte[])` | 仅限兼容遗留数据；字符串密钥走 DES；字节数组密钥（16/24/32）走 AES；ECB + PKCS7 |
+| `Cryptography.MD5` | `Encrypt(string)` | 小写十六进制 MD5 摘要 |
+| `Cryptography.SHA` | `Encrypt(string)` | SHA-256，Base64 输出 |
+| `Cryptography.Base64` | `Encode` / `Decode` | UTF-8 与 Base64 互转 |
+| `Cryptography.RSA` | 构造、`Encrypt`、`Decrypt`（含显式 padding 重载）、`Dispose` | PEM / PKCS#1 / PKCS#8 / SPKI；默认 OAEP-SHA256，Pkcs1 仅兼容遗留数据 |
+| `PasswordComplexity` | Flags 枚举 | 小写/大写/数字/符号 |
+| `PasswordGenerator` | `GeneratePassword(complexity, minLength, maxLength)` | 保证每种要求的字符至少出现一次 |
+| `RandomUtility` | `GenerateRandomString` / `GenerateRandomDigit` / `GenerateRandomBytes` | CSPRNG；`Random` 的安全实现 |
+
+行为与安全约束：
+
+- AES 密钥长度必须为 16/24/32 字节；空输入返回 `null`；所有重载均要求显式密钥（内置默认密钥重载已删除）。
+- AES-GCM 输出为 Base64(nonce(12B) + 认证标签(16B) + 密文)；解密校验标签，篡改抛 `CryptographicException`。
+- RSA 默认 OAEP（SHA-256）填充；遗留 PKCS#1 v1.5 密文用显式 `RSAEncryptionPadding.Pkcs1` 重载解密。
 
 ## 相关文档
 
 - [教程](TUTORIAL.md)
 - [项目 README](../../../Source/Euonia.Core/README.md) —— 完整类型清单、注意事项、版本与兼容
-- [Euonia.Osba 用户手册](../Euonia.Osba/API.md) —— 基于本包权限契约的业务对象运行时
-- [Euonia.Security 用户手册](../Euonia.Security/API.md) —— 使用本包 `UserPrincipal` / `IPermissionChecker`
 - [Euonia.Mapping 用户手册](../Euonia.Mapping/API.md) —— 对象映射抽象
 - [仓库根 README](../../../README.md)

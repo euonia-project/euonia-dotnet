@@ -3,9 +3,94 @@
 本文件记录 Euonia 各版本的更新内容，格式参考 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
 版本号遵循 `年份.主版本.修订号`（如 `2026.4.3`）。
 
+## [2026.5.1] - 2026-11-25
+
+### 修复（本次审查修复）
+
+#### 安全与密码学（Euonia.Core）
+
+- **修复**：删除 AES/DES 硬编码默认密钥重载及 `DefaultSalt` 常量（未发布 API，直接移除）；DES 整体标注为仅限兼容遗留数据。
+- **新增**：AES 提供基于 `AesGcm` 的推荐加密 API（`EncryptGcm`/`DecryptGcm`，随机 nonce + 认证标签，篡改检测）；现有 ECB 方法保留并标注"仅兼容遗留数据"。
+- **修复**：RSA 加密/解密默认改用 `RSAEncryptionPadding.OaepSHA256`，新增显式 padding 重载供 Pkcs1 兼容使用。
+- **修复**：`JsonNode.GetValue<TValue>` 兑现文档契约——类型不匹配时返回默认值而非抛异常；新增 `JsonArray` 终点反序列化支持。
+- **修复**：`PasswordGenerator` 将字符类型校验移至随机取长度之前，消除非确定性失败；修复 `maxLength == int.MaxValue` 溢出。
+- **修复**：MD5 改用 `Encoding.UTF8`（跨运行时一致）；RSA 构造函数公钥导入失败时释放已导入私钥；DES 字符串密钥 ECB 不再复用密钥作 IV；DES byte[] 重载增加显式密钥长度校验。
+
+#### 权限体系（Euonia.Security / Euonia.Osba / Euonia.Hosting.Webapi）
+
+- **修复**：工厂权限收集改为按运行时类型 + override/new 遮蔽并集判定，修复 DI 映射派生类时方法级 `[Permission]` 被绕过的 fail-open 回归。
+- **修复**：`RequiresPermissionAttribute` 拒绝含 `|` 的权限码并复用 `ScopeKeys.Validate`，统一两入口校验口径，防止分隔符注入弱化授权。
+- **修复**：`PermissionRequirement.Permissions` 改 `IReadOnlyList<string>` 防静态策略缓存污染；构造时拒绝空白码项。
+- **修复**：`AddPermissionGuard` 改 `TryAddSingleton` 并将注册移至 `AddAuthorization()` 之前，避免被宿主默认策略提供程序覆盖。
+- **修复**：扫描器去重键改用 `StringComparer.OrdinalIgnoreCase` 复合键，修复 Unicode 展开字符（如 ß/SS）启动误报。
+
+#### 宿主与限流（Euonia.Hosting / Euonia.Hosting.Webapi / Euonia.Hosting.Azfunc）
+
+- **修复**：Webapi 按 IP 限流分区改用 MemoryCache 承载 + 驱逐回调 Dispose，修复定时器永久泄漏导致的远程可触发 DoS。
+- **修复**：`DualWindowRateLimiter` 新增 `TryReplenish()` 公开方法，修复 `AutoReplenishment=false` 时永久 429 锁死。
+- **修复**：两宿主异常处理器对 5xx 一律返回通用消息，完整异常仅写日志，防止内部信息泄漏。
+- **修复**：Azfunc JWT 中间件先解析授权特性再认证，匿名函数带过期令牌不再 401，与 Webapi 行为一致。
+- **修复**：`FunctionMethodResolver` 同名重载 fail-closed 并缓存解析结果，防止授权绕过与每请求全程序集扫描。
+- **修复**：`HttpContextAccessorMiddleware` 在 finally 中还原 `IHttpContextAccessor` 与 `RequestContext`，防止跨触发器上下文污染。
+- **修复**：Azfunc 限流 `MemoryCache.GetOrCreate` 改用 `Lazy<T>` + 双重检查锁，修复并发竞态下实例泄漏。
+- **修复**：`ExceptionExtensions.GetErrorDetails` 对 DataAnnotations `MemberNames` 过滤空白并 GroupBy 去重，防止异常处理器内再抛异常。
+- **修复**：两宿主异常中间件在 `RequestAborted` 时不写响应、不记 500。
+
+#### 数据访问与应用层（Euonia.Repository.EfCore / Euonia.Application）
+
+- **修复**：`DataContextBase.SetEntryValues` 解耦操作人写入与时间戳/软删除转换，`GetCurrentUserId()` 为 null 时仍执行软删除，修复匿名/后台场景物理删除数据丢失。
+- **修复**：Deleted→Modified 转换仅标记审计列为 `IsModified`，stub 删除不再用默认值覆盖整行数据。
+- **修复**：Modified 分支访问 `IsDeleted` 前检查元数据判空，`[NotMapped] IsDeleted` 实体 SaveChanges 不再抛异常。
+- **修复**：`EfCoreRepository.DeleteAsync(TKey)` 改用带全局过滤器的查询，修复绕过墓碑/租户过滤器导致的跨租户写风险。
+- **修复**：`RequestContextExtensions` Headers 构建改用 `StringComparer.OrdinalIgnoreCase`，修复 HTTP/2 下元数据丢失。
+- **修复**：`RequestInfoBehavior` IP 解析取 XFF 首跳并经 `IPAddress.TryParse` 校验，非法值回退 `RemoteIpAddress`。
+- **修复**：`EpochTimestampGenerator` 用 `Interlocked.CompareExchange` 保证进程内严格单调，文档注明跨进程不保证唯一。
+- **修复**：`EntityEntryExtensions.TrySetProperty` 增加类型兼容性检查，不兼容时跳过，兑现 Try 语义。
+- **修复**：`IAuditable` XML 文档更正 `DeletedBy` 值类型语义说明。
+
+#### 测试
+
+- 新增 89 个回归测试覆盖上述所有修复路径（加密 GCM/OAEP/契约/边界、权限 override 并集/码校验/缓存防污染、限流分区驱逐/TryReplenish/竞态、JWT 匿名认证/重载歧义、软删除 null 用户/stub/NotMapped/过滤器绕过、HTTP/2 头大小写、IP 校验、时间戳单调等）。
+
+
+### 核心（Core）
+
+- **新增**：`Extensions.GetValue<TValue>` 按点/斜杠路径读取 `JsonNode`，路径不存在时返回默认值。
+
+### 安全与密码学（Euonia.Core）
+
+- **新增**：`Euonia.Core` 在 `Nerosoft.Euonia.Security` 下提供 `Cryptography.AES`/`DES`/`SHA`/`MD5`/`Base64`/`RSA`、`PasswordComplexity`/`PasswordGenerator`、`RandomUtility`。
+- **安全说明**：AES/DES 使用 ECB + PKCS7，ECB 不隐藏明文模式；MD5 不具备抗碰撞性。新数据应使用带随机 IV 的 AES 与 SHA-256。
+
+### 宿主（Hosting）
+
+- **新增**：`Euonia.Hosting.Webapi` 提供 `AddEuoniaWebApi` / `UseEuoniaWebApi`，组合控制器、统一异常响应、OpenAPI、健康检查与 CORS；并提供 `AddPermissionGuard` 与 `AddEuoniaRateLimiting` / `UseEuoniaRateLimiting`。
+- **新增**：`Euonia.Hosting.Azfunc`（仅 `net10.0`）提供 `AddEuoniaFunctions` / `UseEuoniaFunctions`、请求上下文中转、请求追踪、JWT 认证、函数级双窗口限流、异常中间件与 `FunctionBase<T>`；并支持 Security 体系（`ClaimsPrincipal`、`UserPrincipal`、`AddEuoniaFunctionsSecurity`、`IPermissionChecker`）。
+- **新增**：`JwtAuthenticationMiddleware` 校验 Bearer JWT，并按函数/类型上的 `[Authorize]` 角色与 `[AllowAnonymous]` 执行认证；基于策略的授权仍使用 `IPermissionChecker`。
+- **修复**：`AddJwtAuthentication` 将 `JwtAuthenticationOptions.Audience` 写入 `ValidAudience`；Azure Functions 对 `[AllowAnonymous]` 先放行 JWT 校验，并支持方法/类型上的多个 `[Authorize]` 特性。
+- **完善**：`AddEuoniaWebApi` 归一化空的 CORS 来源并校验健康检查路径；JWT 校验失败与角色不足分别返回 401/403。
+- **调整**：Web API 请求追踪与权限、流控适配迁移到 `Euonia.Hosting.Webapi`；异常处理改用 ASP.NET Core 内置 `UseExceptionHandler()` + `EuoniaExceptionHandler`。
+- **调整**：`Euonia.Hosting.Azfunc` 依赖 `Euonia.Hosting`，复用其用户主体、权限、异常映射与限流核心，不再直接依赖 `Euonia.Security`。
+- **新增**：`Euonia.Hosting` 公开 `ExceptionExtensions` 的异常状态码/消息/明细映射，供 Web API 与 Azure Functions 共用。
+- **调整**：ASP.NET Core 权限授权适配（`AddPermissionGuard`、`[RequiresPermission]`、`PermissionPolicyProvider`、`PermissionAuthorizationHandler`）与流控适配（`AddEuoniaRateLimiting` / `UseEuoniaRateLimiting`）迁移到 `Euonia.Hosting.Webapi`；`Euonia.Hosting` 仅保留 `DualWindowRateLimiter` 核心。
+
+### 应用层（Application）
+
+- **新增**：`RequestInfoBehavior` 将请求追踪标识、IP、User-Agent、Referer 与客户端名称/版本写入消息元数据，并在 `ApplicationModule` 中默认注册。
+- **新增**：`DomainMessageConvention` 按 `ICommand` / `IEvent` / `IRequest<>` 将领域消息分类为单播、多播或请求。
+
+### 数据访问（Repository）
+
+- **新增**：`Euonia.Repository.EfCore` 的 `DataContextBase` 增加自动审计与软删除（按四个审计接口写入，操作人字段名可重写，默认 `CreatedBy` / `UpdatedBy` / `DeletedBy`），并增加 `EntityEntryExtensions.TrySetProperty`、`EpochTimestampGenerator`、`EfCoreRepository.SetOf<T>` / `LookupAsync`。
+- **新增**：`Euonia.Repository` 的 `IRepository` 增加 `GetAsync` / `FindAsync` / `CountAsync` 查询委托重载与 `DeleteAsync(TKey)`；`IAuditable<TUser>` 增加 `DeletedBy`、`DeletedAt`、`IsDeleted`，`UpdatedBy` 改为可空。
+- **升级提示**：`IAuditable<TUser>` 新增成员，现有实现需补齐；`DataContextBase` 在 `AutoSetEntryValues` 为 `true` 时写入这些字段。
+- **变更**：`IHasUpdateTime.UpdatedAt` 改为 `DateTime?`，实现类与 EF 映射需允许 `null`。
+
 ## [未发布]
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
+
+## [2026.5.0] - 2026-11-13
 
 ### 全库
 
@@ -101,6 +186,35 @@
   `IgnoreDuplicates` 与 `OverWriteExistingData` 触发 Quartz 4 启动校验失败。
 - **移除/限制**：Quartz 4 不再提供专用线程池与零大小线程池，`UseDedicatedThreadPool` / `UseZeroSizeThreadPool` 会抛出
   `NotSupportedException`，请改用 `UseDefaultThreadPool` 或 `UseThreadPool<T>`。
+
+### 权限系统（Euonia.Security / Euonia.Osba）
+
+- **新增：权限码单维度任意字符串**：`[Permission]` 的权限码不再拆成「资源 + 操作」，任意非空字符串
+  （可含 `:`、`-`、`.`）都是合法码；冒号只是命名习惯，不是结构。首尾空白在读取时裁剪，码与策略标识
+  一律忽略大小写。
+- **新增：`[Permission]` 零配置发现**：类型级（含继承链）与**将被调用的那个方法**级（含 override 链）
+  声明直接生效，新增权限码或新增操作都不需要修改 `AddPermission`；
+  `services.AddPermission(p => p.Scan(typeof(Order).Assembly))` 即完整配置。方法级声明只在该方法被宿主
+  工厂调用时生效，不波及同类型的其它方法。
+- **新增：`IPermissionRequirementSource` / `PermissionRequirements`（Core）**：按「类型 + 将被调用的方法」
+  回答权限要求；`PermissionRequirements.For(Type, MethodInfo?)` / `Merge` / `Adapt` 提供带缓存的读取、
+  按「码 + 角色」去重与旧契约适配，判定路径不再新增反射。
+- **新增：`PermissionOptions.Requirements(IPermissionRequirementSource)`**：权限码来自数据库 / 配置表 /
+  既有鉴权系统时登记要求来源，与声明取并集（增量，不是替换）；`Scan` / `NoModels` 语义不变。
+- **新增：启动期声明校验**：空权限码（且未声明角色）、保留前缀 `@`、同一成员重复声明同一个码，
+  在注册期**一次报全**（`IDS_PERMISSION_CODE_EMPTY` / `IDS_SCOPE_CODE_RESERVED_PREFIX` /
+  `IDS_PERMISSION_CODE_DUPLICATE`），不再等到运行期才发现声明永远匹配不上。
+- **变更：旧 API 标记 `[Obsolete]`**：`PermissionOptions.OnAttributeOrName` / `OnMethod` / `Source` /
+  `NoOperationCodes`、`IPermissionCodeSource`、`ObjectPermissionCodeSource` 全部保留（编译警告 CS0618，
+  不是错误），旧来源仍作为并集的一份参与判定；新代码请改用 `Requirements` / `IPermissionRequirementSource`。
+- **破坏性变更**：
+  - **B1**：未在旧配置里声明的操作方法，其方法级 `[Permission]` **现在也会生效**（修复「漏配置即放行」）；
+    确实不该被约束的方法请删除其声明。
+  - **B2**：同一操作下多个入口方法的要求**不再互相叠加**，只取实际被调用方法的要求；需要叠加时把两个码
+    写在同一方法上或写到类型级。
+  - **B3**：`ObjectBase.CanPerformOperation(operation)` 只含类型级与旧来源要求，**不含方法级**；它是查询
+    入口而不是闸门，需要在方法级码上分支时用 `IPermissionChecker.IsGranted("order:update")`。
+- **测试**：1360 total / 0 failed / 13 skipped（基线 1329 + 新增 31）。
 
 ### Euonia.Osba
 
@@ -776,7 +890,9 @@ Actuator 支持任意业务对象类型，小幅重构。
 - 新增 `ScopePolicy` 单元测试、缓存分组失效测试、缓存类型无关性测试、Redis 缓存服务测试、
   重试组合测试、熔断半开探测测试、UoW 作用域回归测试等。
 
-[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.4.4...HEAD
+[未发布]: https://github.com/Nerosoft/Euonia/compare/v2026.5.1...HEAD
+[2026.5.1]: https://github.com/Nerosoft/Euonia/compare/v2026.5.0...v2026.5.1
+[2026.5.0]: https://github.com/Nerosoft/Euonia/compare/v2026.4.4...v2026.5.0
 [2026.4.0]: https://github.com/Nerosoft/Euonia/compare/v2026.3.16...v2026.4.0
 [2026.4.1]: https://github.com/Nerosoft/Euonia/compare/v2026.4.0...v2026.4.1
 [2026.4.2]: https://github.com/Nerosoft/Euonia/compare/v2026.4.1...v2026.4.2

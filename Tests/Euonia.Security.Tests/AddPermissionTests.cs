@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Principal;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Security;
+using Nerosoft.Euonia.Security.Properties;
 using Nerosoft.Euonia.Security.Tests.Fixtures;
 
 namespace Nerosoft.Euonia.Security.Tests;
@@ -217,7 +218,8 @@ public class AddPermissionTests
 
 		var exception = Assert.Throws<InvalidOperationException>(provider.GetRequiredService<IScopeGuard>);
 
-		Assert.Contains("without any assembly", exception.Message, StringComparison.OrdinalIgnoreCase);
+		// 文案随当前 UI 文化变化：断言资源本身与稳定的成员名，而不是写死英文
+		Assert.Contains(Resources.IDS_PERMISSION_NO_ASSEMBLY_SCANNED, exception.Message, StringComparison.Ordinal);
 		Assert.Contains("NoModels", exception.Message, StringComparison.Ordinal);
 	}
 

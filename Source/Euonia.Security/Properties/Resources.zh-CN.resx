@@ -117,8 +117,14 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="IDS_PERMISSION_CODE_DUPLICATE" xml:space="preserve">
+    <value>'{0}' 上的权限码 '{1}' 被重复声明。请删除重复声明——同一成员上的相同权限码只可能是复制粘贴错误。</value>
+  </data>
+  <data name="IDS_PERMISSION_CODE_EMPTY" xml:space="preserve">
+    <value>'{0}' 上的 [Permission] 权限码为空。请给出权限码（任意非空字符串都可以），或删除该特性；只想校验角色时必须至少声明一个角色。</value>
+  </data>
   <data name="IDS_PERMISSION_CONFIG_EMPTY" xml:space="preserve">
-    <value>权限配置是空的：没有声明操作入口规则，也没有给出权限码来源 / 断言 NoOperationCodes / NoModels 或扫描程序集。有方法级权限码请用 OnAttributeOrName / OnMethod 声明入口规则；规则来自别处请用 Source 给出权限码来源；没有方法级权限码请断言 NoOperationCodes；确实没有任何权限模型与声明请断言 NoModels。</value>
+    <value>权限配置是空的：没有声明任何内容。请用 Scan(...) 至少传入一个要扫描的程序集，以发现权限模型与 [Permission] 声明；若本应用确实没有任何权限模型与 [Permission] 声明，请显式断言 NoModels()。权限码来自数据时可用 Requirements(...) 提供要求来源。</value>
   </data>
   <data name="IDS_PERMISSION_CONFIG_CONTRADICTS_CODES" xml:space="preserve">
     <value>权限配置自相矛盾：已断言 NoOperationCodes（没有方法级权限码），却又声明了操作入口规则。两者只能取其一：有方法级权限码就声明规则，没有就断言 NoOperationCodes。</value>

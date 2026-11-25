@@ -189,7 +189,7 @@ public sealed class AuditQueryService(IAuditingStoreQuery store)
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`MongoDB.Driver`、`Euonia.Auditing`；持久化模型为 `AuditingRecord`/`AuditingAction` 的 BSON 映射。
 - **升级注意**：新增可空字段可直接兼容；重命名/删除字段或改变 `ScopeId` 生成规则需要数据迁移或双写；旧集合若已有重复 `ScopeId`，必须先清理再建唯一索引。
 - **已知边界**：单文档 upsert 保证同一 `ScopeId` 幂等，但跨文档无事务；查询受租户授权约束；不创建 TTL 索引。

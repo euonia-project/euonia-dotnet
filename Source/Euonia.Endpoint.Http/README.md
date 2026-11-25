@@ -370,7 +370,7 @@ app.Run();
 | 项 | 值 |
 |---|---|
 | 目标框架 | `net10.0`、`net11.0`（`FrameworkReference Microsoft.AspNetCore.App`） |
-| 包版本 | `2026.5.0`（仓库根 `project.props`） |
+| 包版本 | `2026.5.1`（仓库根 `project.props`） |
 | 依赖 | `Euonia.Endpoint`、`Microsoft.Extensions.Logging.Abstractions`、`Microsoft.Extensions.Options.ConfigurationExtensions` |
 
 - **配置键稳定**：`Euonia:Endpoint:Http` 下的 9 个选项是兼容性边界，新增选项会有默认值，不改变既有行为。

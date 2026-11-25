@@ -16,17 +16,17 @@
         <PackageVersion Include="Autofac.Extensions.DependencyInjection" Version="11.0.2" />
         <PackageVersion Include="Autofac.Extras.DynamicProxy" Version="8.1.0" />
         <PackageVersion Include="AutoMapper" Version="17.0.0" />
-        <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.1" />
+        <PackageVersion Include="Azure.Storage.Blobs" Version="12.30.2" />
         <PackageVersion Include="Castle.Core" Version="5.2.1" />
         <PackageVersion Include="Consul" Version="1.8.0" />
         <PackageVersion Include="FluentValidation" Version="12.2.0" />
         <PackageVersion Include="Duende.IdentityModel" Version="8.1.0" />
-        <PackageVersion Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="7.0.2" />
+        <PackageVersion Include="Duende.AspNetCore.Authentication.OAuth2Introspection" Version="7.0.3" />
         <PackageVersion Include="Mapster" Version="10.0.14" />
         <PackageVersion Include="Mapster.DependencyInjection" Version="10.0.14" />
-        <PackageVersion Include="MediatR" Version="14.3.0" />
+        <PackageVersion Include="MediatR" Version="15.0.0" />
         <PackageVersion Include="MediatR.Contracts" Version="2.0.1" />
-        <PackageVersion Include="MongoDB.Driver" Version="3.13.0" />
+        <PackageVersion Include="MongoDB.Driver" Version="3.14.1" />
         <PackageVersion Include="Newtonsoft.Json" Version="13.0.4" />
         <PackageVersion Include="OpenTelemetry" Version="$(OpenTelemetryVersion)" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
@@ -36,15 +36,15 @@
         <PackageVersion Include="protobuf-net.Grpc" Version="1.3.14" />
         <PackageVersion Include="protobuf-net.Grpc.AspNetCore" Version="1.3.14" />
         <PackageVersion Include="protobuf-net.Grpc.Reflection" Version="1.3.14" />
-        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.9.0" />
-        <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.12.0" />
+        <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.12.0" />
         <PackageVersion Include="Quartz" Version="$(QuartzVersion)" />
-        <PackageVersion Include="RabbitMQ.Client" Version="7.2.2" />
+        <PackageVersion Include="RabbitMQ.Client" Version="7.3.0" />
         <PackageVersion Include="Refit" Version="$(RefitVersion)" />
         <PackageVersion Include="Refit.HttpClientFactory" Version="$(RefitVersion)" />
         <PackageVersion Include="Refit.Newtonsoft.Json" Version="$(RefitVersion)" />
         <PackageVersion Include="Serilog" Version="4.4.0" />
-        <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+        <PackageVersion Include="Serilog.AspNetCore" Version="11.0.0" />
         <PackageVersion Include="Serilog.Enrichers.Environment" Version="3.0.1" />
         <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
         <PackageVersion Include="StackExchange.Redis" Version="3.4.35" />
@@ -111,6 +111,8 @@
         <PackageVersion Include="Microsoft.AspNetCore.Authorization" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.Connections.Abstractions" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="$(FrameworkPreviousVersion)" />
+        <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
+        <PackageVersion Include="Microsoft.Azure.Functions.Worker.Extensions.Http.AspNetCore" Version="2.1.1" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="$(FrameworkPreviousVersion)" />
         <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="$(FrameworkPreviousVersion)" />
     </ItemGroup>

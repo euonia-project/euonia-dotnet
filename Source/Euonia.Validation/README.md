@@ -180,7 +180,7 @@ amount.Validate();
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：FluentValidation 12.2.0（由 `Directory.Packages.props` 锁定）；没有配置节或 `*Options`。
 - 已知边界：验证器以 Singleton 注册；结构体/枚举目标被跳过；全局工厂需手动设置；FluentValidation 异常的 `Message` 为空。
 - 升级提示：升级 FluentValidation 后复核 `IValidator<T>` 接口实现与 `ValidationResult.Errors` 结构，并重跑空值/多条件规则测试。

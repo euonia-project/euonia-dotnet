@@ -136,7 +136,7 @@ public sealed record SubmitOrderContext(long OrderId);
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：`Microsoft.Extensions.DependencyInjection.Abstractions` 11.0.0；没有配置节或第三方运行时依赖。
 - 已知边界：方法级行为的 `CancellationToken` 参数不受支持；`PipelineBehaviorAttribute` 不可继承；`RunAsync` 不传终结点时返回默认值。
 - 升级提示：升级后先跑管道顺序与“累积委托不泄漏到组件表”的回归测试，再调整行为优先级。

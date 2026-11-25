@@ -4,7 +4,7 @@ using System.Reflection;
 namespace Nerosoft.Euonia.Security;
 
 /// <summary>
-/// 权限体系在一次注册过程中的累积状态：并集的权限码来源与扫描程序集、显式断言、
+/// 权限体系在一次注册过程中的累积状态：并集的权限码来源 / 要求来源与扫描程序集、显式断言、
 /// 最近一次成功构建的注册表，以及供启动期校验读取的「是否需要授权数据解析器」。
 /// </summary>
 /// <remarks>
@@ -21,6 +21,7 @@ namespace Nerosoft.Euonia.Security;
 internal sealed class PermissionRegistration
 {
 	private readonly List<IPermissionCodeSource> _sources = [];
+	private readonly List<IPermissionRequirementSource> _requirementSources = [];
 	private readonly List<Assembly> _assemblies = [];
 
 	/// <summary>
@@ -34,6 +35,20 @@ internal sealed class PermissionRegistration
 		if (!_sources.Any(source => ReferenceEquals(source, codeSource)))
 		{
 			_sources.Add(codeSource);
+		}
+	}
+
+	/// <summary>
+	/// 累积一个权限要求来源；同一来源实例按幂等处理。
+	/// </summary>
+	/// <param name="requirementSource">权限要求来源。</param>
+	public void AddRequirementSource(IPermissionRequirementSource requirementSource)
+	{
+		ArgumentNullException.ThrowIfNull(requirementSource);
+
+		if (!_requirementSources.Any(source => ReferenceEquals(source, requirementSource)))
+		{
+			_requirementSources.Add(requirementSource);
 		}
 	}
 
@@ -53,7 +68,7 @@ internal sealed class PermissionRegistration
 	}
 
 	/// <summary>
-	/// 合并后的权限码来源。
+	/// 合并后的权限码来源：按 <c>(类型, 操作)</c> 回答的只读视图。
 	/// </summary>
 	public IPermissionCodeSource CodeSource => _sources switch
 	{
@@ -61,6 +76,31 @@ internal sealed class PermissionRegistration
 		[var single] => single,
 		_ => new CompositeCodeSource([.. _sources])
 	};
+
+	/// <summary>
+	/// 合并后的权限要求来源：内建声明 ∪ 登记的自定义来源 ∪ 权限码来源的适配器。
+	/// </summary>
+	/// <remarks>
+	/// 内建声明永远参与（<see cref="AttributeRequirementSource"/>），因此即使宿主不登记任何来源，
+	/// 闸门也能按「类型 + 被调用的方法」收集要求；自定义来源与权限码来源是<b>增量</b>的。
+	/// </remarks>
+	public IPermissionRequirementSource RequirementSource
+	{
+		get
+		{
+			var sources = new List<IPermissionRequirementSource>(_requirementSources.Count + _sources.Count + 1)
+			{
+				AttributeRequirementSource.Instance
+			};
+
+			sources.AddRange(_requirementSources);
+
+			// 按 (类型, 操作) 回答的来源没有方法上下文：适配后忽略 method，只作为并集的一份参与判定
+			sources.AddRange(_sources.Select(PermissionRequirements.Adapt));
+
+			return new CompositeRequirementSource([.. sources]);
+		}
+	}
 
 	/// <summary>
 	/// 合并后的扫描程序集。
@@ -76,8 +116,9 @@ internal sealed class PermissionRegistration
 	/// 获取或设置一个值，指示是否必须注册 <see cref="IScopeSubjectResolver"/>。
 	/// </summary>
 	/// <remarks>
-	/// 声明了权限模型（<see cref="IScopeModel{T}"/>）或使用了 <see cref="PermissionAttribute"/>
-	/// 时为 <see langword="true"/>——两者都需要从授权数据解析「用户被授予了什么」。
+	/// 声明了权限模型（<see cref="IScopeModel{T}"/>）、扫描到 <see cref="PermissionAttribute"/> 声明，
+	/// 或登记了任一权限要求 / 权限码来源时为 <see langword="true"/>——它们都需要从授权数据解析
+	/// 「用户被授予了什么」。
 	/// </remarks>
 	public bool RequiresSubjectResolver { get; set; }
 
@@ -125,13 +166,20 @@ internal sealed class PermissionRegistration
 	}
 
 	/// <summary>
-	/// 累积的贡献中是否存在权限模型或权限码声明。
+	/// 累积的贡献中是否存在权限模型或权限声明。
 	/// </summary>
 	/// <param name="registry">当前构建的模型注册表。</param>
 	/// <returns>存在声明则返回 <see langword="true"/>。</returns>
+	/// <remarks>
+	/// 只读三种输入：权限模型、扫描到的 <see cref="PermissionAttribute"/> 声明、登记的来源。
+	/// <see cref="EmptyCodeSource"/> 是「本应用没有方法级权限码」的显式断言而不是一份来源，
+	/// 因此它不算作「登记了来源」，否则空断言会强行要求一个用不上的主体解析器。
+	/// </remarks>
 	public bool HasDeclarations(ScopeModelRegistry registry)
 	{
 		return registry.HasDeclarations
-		       || Microsoft.Extensions.DependencyInjection.ServiceCollectionExtensions.HasPermissionDeclarations(Assemblies, CodeSource);
+		       || _requirementSources.Count > 0
+		       || _sources.Exists(static source => source is not EmptyCodeSource)
+		       || PermissionDeclarationScanner.HasDeclarations(Assemblies);
 	}
 }

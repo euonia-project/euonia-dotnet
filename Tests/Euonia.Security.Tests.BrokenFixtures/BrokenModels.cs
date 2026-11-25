@@ -17,7 +17,7 @@ public sealed class UnmappedDimensionAsset
 }
 
 /// <summary>
-/// 策略引用了未映射维度的模型：应在注册期报错，而不是运行时静默放行。
+/// 策略引用了未映射维度的模型：应在注册期报错，而不是到运行时才失败。
 /// </summary>
 public sealed class UnmappedDimensionModel : ScopeModel<UnmappedDimensionAsset>
 {

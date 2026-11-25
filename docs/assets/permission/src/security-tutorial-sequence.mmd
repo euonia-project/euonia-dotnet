@@ -1,0 +1,26 @@
+sequenceDiagram
+    autonumber
+    participant App as 应用
+    participant DI as AddPermission
+    participant B as 调用边界
+    participant C as IPermissionChecker
+    participant G as IScopeGuard
+    participant R as IScopeSubjectResolver
+
+    App->>DI: p.Scan(assembly)
+    DI-->>App: 注册模型与要求来源
+    App->>B: 查询列表 / 删除订单
+    opt 有 [Permission] 且经过宿主工厂
+        B->>B: 解析出 MethodInfo
+        B->>C: EnsureResolvedAsync()（预热）
+        C->>G: EnsureResolvedAsync()
+        G->>R: ResolveAsync(user)
+        R-->>G: ScopeSubjectSet（dept、grant）
+        B->>C: IsGranted("order:delete")
+        C-->>B: true / false
+        B->>B: false ⇒ SecurityException
+    end
+    B->>G: EnsureResolvedAsync()（已预热）
+    B->>G: Apply(orders) / Allows(order, id)
+    G-->>B: 可见行 / 单行结论
+    B-->>App: visible=o-1 / delete(o-1)=True

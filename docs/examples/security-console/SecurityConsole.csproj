@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    可独立运行的最小示例：只引用 Euonia.Security（策略引擎），不引用任何对象框架。
+    运行命令见同目录 README.md。
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../Source/Euonia.Security/Euonia.Security.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- ServiceCollection / BuildServiceProvider：示例用最小 DI 装配，不引入主机。 -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+</Project>

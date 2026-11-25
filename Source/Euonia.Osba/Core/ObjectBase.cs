@@ -1544,10 +1544,15 @@ public abstract class ObjectBase : IOsbaObject, IHasRuleCheck, IObjectLifecycle,
 	/// <returns>允许则返回 <c>true</c>；无权限要求或无从判定时同样返回 <c>true</c>。</returns>
 	/// <remarks>
 	/// <para>
-	/// 这是操作级权限<b>唯一的判定入口</b>，也是派生类唯一的定制点：内置操作与自定义操作一视同仁，
-	/// 都按类型级与方法级 <see cref="PermissionAttribute"/> 要求委托给宿主注册的
+	/// 这是操作级权限<b>查询</b>的入口，也是派生类唯一的定制点：内置操作与自定义操作一视同仁，
+	/// 都按类型级 <see cref="PermissionAttribute"/>（以及宿主登记的权限来源）要求委托给宿主注册的
 	/// <see cref="IPermissionChecker"/>。判定逻辑本身归 <c>ObjectAuthorization</c>，
 	/// 本方法只是它暴露在对象上的那一面。
+	/// </para>
+	/// <para>
+	/// <b>不含方法级要求</b>：本方法没有「将被调用的方法」这一上下文；方法级声明由工厂边界在拿到
+	/// 被调用的方法时判定。确需在业务方法内部按某个方法级码分支时，
+	/// 直接用 <c>BusinessContext.GetService&lt;IPermissionChecker&gt;().IsGranted("order:update")</c>。
 	/// </para>
 	/// <para>
 	/// <b>查询语义</b>：本方法不抛异常，无从判定（未接入 <see cref="BusinessContext"/>、未注册判定实现）

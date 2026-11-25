@@ -27,7 +27,7 @@ dotnet add package Euonia.Repository.Mongo
 - **查询能力**：`GetAsync`、`FindAsync`、`CountAsync`、`LongCountAsync`、`AnyAsync`、`AllAsync`、`BuildQuery`。
 - **附加句柄**：所有查询可传入 `Func<IQueryable<TEntity>, IQueryable<TEntity>>` 追加过滤/排序/预加载。
 - **上下文管理**：`IContextProvider`、`IContextFactory`、`IRepositoryContext` 与 `AddContextProvider()`。
-- **实体契约**：`IEntity` / `IEntity<TKey>`、`IAuditable<TUser>`、`IHasCreateTime`、`IHasUpdateTime`、`IHasDeleteTime`、`IHasSnowflakeId`、`ITombstone`、`IConcurrentEntity<T>`。
+- **实体契约**：`IEntity` / `IEntity<TKey>`、`IAuditable<TUser>`（创建/更新/删除审计与软删除）、`IHasCreateTime`、`IHasUpdateTime`、`IHasDeleteTime`、`IHasSnowflakeId`、`ITombstone`、`IConcurrentEntity<T>`。
 - **分页排序**：`Paginate`、`Sort`、`GetPagedCollectionAsync`。
 - **连接串契约**：`ConnectionStringAttribute`、`IConnectionStringResolver<TContext>`。
 - **遥测**：`RepositoryTelemetry` 提供 `euonia.repository.execute` 活动与耗时指标。

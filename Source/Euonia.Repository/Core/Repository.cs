@@ -1,4 +1,4 @@
-﻿using System.Linq.Expressions;
+using System.Linq.Expressions;
 
 namespace Nerosoft.Euonia.Repository;
 
@@ -48,13 +48,31 @@ public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IR
 	public abstract Task<TEntity?> GetAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc/>
+	public virtual Task<TEntity?> GetAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return GetAsync(_ => true, handle, cancellationToken);
+	}
+
+	/// <inheritdoc/>
 	public abstract Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc/>
+	public virtual Task<List<TEntity>> FindAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return FindAsync(_ => true, handle, cancellationToken);
+	}
 
 	/// <inheritdoc/>
 	public abstract Task<List<TEntity>> FindAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, int offset, int count, CancellationToken cancellationToken = default);
 
 	/// <inheritdoc />
 	public abstract Task<int> CountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc />
+	public virtual Task<int> CountAsync(Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default)
+	{
+		return CountAsync(_ => true, handle, cancellationToken);
+	}
 
 	/// <inheritdoc />
 	public abstract Task<long> LongCountAsync(Expression<Func<TEntity, bool>> predicate, Func<IQueryable<TEntity>, IQueryable<TEntity>>? handle, CancellationToken cancellationToken = default);
@@ -82,6 +100,32 @@ public abstract class Repository<TContext, TEntity, TKey> : DisposableObject, IR
 
 	/// <inheritdoc/>
 	public abstract Task DeleteAsync(IEnumerable<TEntity> entities, bool autoSave = true, CancellationToken cancellationToken = default);
+
+	/// <inheritdoc/>
+	public virtual async Task DeleteAsync(TKey id, bool autoSave = true, CancellationToken cancellationToken = default)
+	{
+		var entity = await GetAsync(id, cancellationToken).ConfigureAwait(false);
+
+		if (entity is null)
+		{
+			throw new NotFoundException();
+		}
+
+		if (entity is ITombstone tombstone)
+		{
+			tombstone.IsDeleted = true;
+			await UpdateAsync(entity, false, cancellationToken).ConfigureAwait(false);
+		}
+		else
+		{
+			await DeleteAsync(entity, false, cancellationToken).ConfigureAwait(false);
+		}
+
+		if (autoSave)
+		{
+			await SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+		}
+	}
 
 	/// <summary>
 	/// 异步提交更改。

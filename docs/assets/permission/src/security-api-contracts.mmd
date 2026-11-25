@@ -1,0 +1,28 @@
+%%{init: {"flowchart": {"wrappingWidth": 420}}}%%
+flowchart TB
+    subgraph Core["Euonia.Core：契约"]
+        PA["PermissionAttribute"]
+        IRS["IPermissionRequirementSource"]
+        PR["PermissionRequirements"]
+        IC["IPermissionChecker"]
+    end
+    subgraph Sec["Euonia.Security：契约与实现"]
+        ISR["IScopeSubjectResolver"]
+        PO["PermissionOptions<br/>Scan / Requirements / NoModels"]
+        CS["引擎内建组合来源<br/>声明 ∪ 自定义 ∪ 旧来源（internal）"]
+        SG["IScopeGuard / ScopeGuard"]
+        SPC["SubjectPermissionChecker<br/>由 AddPermission 注册"]
+    end
+    subgraph Host["宿主职责"]
+        H1["注册 UserPrincipal"]
+        H2["实现 IScopeSubjectResolver"]
+        H3["可选：实现 IPermissionRequirementSource"]
+    end
+    PO --> CS
+    CS --> IRS
+    IRS -->|"内建来源读取声明"| PR
+    SPC --> IC
+    SG --> ISR
+    H2 --> ISR
+    H3 --> IRS
+    H1 -.->|"作为判定主体"| SPC

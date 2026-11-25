@@ -4,29 +4,26 @@ using Nerosoft.Euonia.Security;
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// 权限体系的配置入口：一次 <c>AddPermission(options => …)</c> 声明扫描范围、操作入口规则与可选断言。
+/// 权限体系的配置入口：一次 <c>AddPermission(options => …)</c> 声明扫描范围、可选的要求来源与断言。
 /// </summary>
 /// <remarks>
 /// <para>
-/// 推荐形态——绝大多数应用只需要一个配置回调：
+/// 推荐形态——绝大多数应用只需要一次 <see cref="Scan"/>：
 /// </para>
 /// <code>
-/// services.AddPermission(permission =>
-/// {
-///     permission.Scan(typeof(Order).Assembly);
-///     permission.OnAttributeOrName(BusinessOperation.Read, "Order", typeof(FetchAttribute));
-/// });
+/// services.AddPermission(permission => permission.Scan(typeof(Order).Assembly));
 /// </code>
 /// <para>
-/// <see cref="Scan"/> 可多次调用（程序集按并集累积）。规则只有两个入口：<see cref="OnAttributeOrName"/>
-/// 覆盖「打特性或按推导出的名字」这一最常见约定，<see cref="OnMethod"/> 是任意谓词的逃生舱。
+/// 权限码直接写在对类型或方法上的 <see cref="PermissionAttribute"/> 里，引擎按<b>声明</b>发现它们，
+/// 因此新增权限码、新增操作都不需要回来改配置。方法级声明只在该方法被工厂调用时生效。
 /// </para>
 /// <para>
-/// 两种特殊场景用显式断言表达：
+/// 只有三处例外需要额外声明：
 /// </para>
 /// <list type="bullet">
-/// <item><see cref="NoOperationCodes"/>：本应用没有方法级权限码。</item>
+/// <item><see cref="Requirements"/>：权限码来自数据（数据库 / 配置表 / 既有鉴权系统），与声明取并集。</item>
 /// <item><see cref="NoModels"/>：本应用没有任何权限模型与权限声明（用于零扫描范围的显式放行）。</item>
+/// <item><see cref="Source"/> / <see cref="OnAttributeOrName"/> / <see cref="OnMethod"/> / <see cref="NoOperationCodes"/>：兼容入口，见各成员的备注。</item>
 /// </list>
 /// <para>
 /// 未调用 <see cref="Scan"/> 且未断言 <see cref="NoModels"/> 时，启动期校验会拒绝——
@@ -44,6 +41,11 @@ public sealed class PermissionOptions
 	/// 已登记的扫描程序集（按并集累积、幂等去重）。
 	/// </summary>
 	private readonly HashSet<Assembly> _assemblies = [];
+
+	/// <summary>
+	/// 已登记的权限要求来源（按实例幂等去重，与内建声明取并集）。
+	/// </summary>
+	private readonly List<IPermissionRequirementSource> _requirementSources = [];
 
 	/// <summary>
 	/// 获取是否声明了「本应用没有方法级权限码」。
@@ -71,6 +73,11 @@ public sealed class PermissionOptions
 	internal OperationCodeSourceBuilder? Rules => _rules;
 
 	/// <summary>
+	/// 获取累积的权限要求来源。
+	/// </summary>
+	internal IReadOnlyCollection<IPermissionRequirementSource> RequirementSources => _requirementSources;
+
+	/// <summary>
 	/// 登记要扫描权限模型与权限声明的程序集；可多次调用，程序集按并集累积。
 	/// </summary>
 	/// <param name="assemblies">要扫描的程序集。</param>
@@ -89,13 +96,43 @@ public sealed class PermissionOptions
 	}
 
 	/// <summary>
-	/// 断言本应用没有方法级权限码：方法上的 <see cref="PermissionAttribute"/> 不参与判定。
+	/// 登记一个权限要求来源：权限码不在声明里、而在数据里（数据库、配置表、既有鉴权系统）时使用。
+	/// </summary>
+	/// <param name="source">权限要求来源，按「类型 + 将被调用的方法（可选）」回答要求。</param>
+	/// <returns>当前配置，便于链式调用。</returns>
+	/// <remarks>
+	/// <para>
+	/// 来源是<b>增量</b>的：它与写在类型/方法上的 <see cref="PermissionAttribute"/> 取并集，
+	/// 也与其他已登记来源取并集（按「码 + 角色」去重）。不登记来源时闸门同样工作，
+	/// 只是要求全部来自声明。
+	/// </para>
+	/// <para>
+	/// 同一个来源实例重复登记是幂等的。需要按 <c>(类型, 操作)</c> 回答时，用
+	/// <see cref="PermissionRequirements.Adapt"/> 适配后登记。
+	/// </para>
+	/// </remarks>
+	/// <exception cref="ArgumentNullException"><paramref name="source"/> 为 <see langword="null"/> 时抛出。</exception>
+	public PermissionOptions Requirements(IPermissionRequirementSource source)
+	{
+		ArgumentNullException.ThrowIfNull(source);
+
+		if (!_requirementSources.Any(existing => ReferenceEquals(existing, source)))
+		{
+			_requirementSources.Add(source);
+		}
+
+		return this;
+	}
+
+	/// <summary>
+	/// 兼容入口：本应用没有方法级权限码的断言。
 	/// </summary>
 	/// <returns>当前配置，便于链式调用。</returns>
 	/// <remarks>
-	/// 这是显式选择而非默认值：方法上的 <see cref="PermissionAttribute"/> 与类型级声明不同，
-	/// 它必须由本来源声明了入口规则才会被收集，否则形同虚设——所以「没有方法级权限码」要说出来。
+	/// 不改变判定行为（方法级 <see cref="PermissionAttribute"/> 总是生效），但算作一次显式配置：
+	/// 「空回调 + 本断言」因此不会被判为「配置是空的」。
 	/// </remarks>
+	[Obsolete("兼容入口：不改变判定行为；仅为兼容既有配置保留（仍算一次显式配置）。")]
 	public PermissionOptions NoOperationCodes()
 	{
 		NoCodesAsserted = true;
@@ -119,6 +156,11 @@ public sealed class PermissionOptions
 	/// <param name="namePrefix">特性名中要剥离的前缀；为 <see langword="null"/> 时不去前缀。</param>
 	/// <param name="attributeTypes">入口特性类型；一个操作可以有多个（如 Create 与 Insert 同义）。</param>
 	/// <returns>当前配置，便于链式调用。</returns>
+	/// <remarks>
+	/// 兼容入口：声明的规则会作为一份权限码来源参与要求并集。方法级 <see cref="PermissionAttribute"/>
+	/// 总是生效，新代码无需调用本方法。
+	/// </remarks>
+	[Obsolete("兼容入口：声明操作入口规则。方法级 [Permission] 总是生效，新代码无需调用。")]
 	public PermissionOptions OnAttributeOrName(string operation, string namePrefix, params Type[] attributeTypes)
 	{
 		EnsureRules().OnAttributeOrName(operation, namePrefix, attributeTypes);
@@ -131,6 +173,11 @@ public sealed class PermissionOptions
 	/// <param name="operation">业务操作名。</param>
 	/// <param name="predicate">判定方法是否为该操作入口的谓词。</param>
 	/// <returns>当前配置，便于链式调用。</returns>
+	/// <remarks>
+	/// 兼容入口：声明的谓词会作为一份权限码来源参与要求并集。方法级 <see cref="PermissionAttribute"/>
+	/// 总是生效，新代码无需调用本方法。
+	/// </remarks>
+	[Obsolete("兼容入口：声明任意入口判定谓词。方法级 [Permission] 总是生效，新代码无需调用。")]
 	public PermissionOptions OnMethod(string operation, Func<MethodInfo, bool> predicate)
 	{
 		EnsureRules().OnMethod(operation, predicate);
@@ -143,9 +190,11 @@ public sealed class PermissionOptions
 	/// <param name="source">权限码来源，回答「某类型在某操作上声明了哪些权限码」。</param>
 	/// <returns>当前配置，便于链式调用。</returns>
 	/// <remarks>
-	/// 指定来源后不能再声明入口规则（<see cref="OnAttributeOrName"/>、<see cref="OnMethod"/>）——
-	/// 两者是互斥的来源形态。
+	/// 兼容入口：按 <c>(类型, 操作)</c> 回答的来源会经由 <see cref="PermissionRequirements.Adapt"/>
+	/// 参与要求并集。需要按「类型 + 将被调用的方法」回答时，请改用 <see cref="Requirements"/>。
+	/// 指定来源后不能再声明入口规则（<see cref="OnAttributeOrName"/>、<see cref="OnMethod"/>）。
 	/// </remarks>
+	[Obsolete("兼容入口：按 (类型, 操作) 指定权限码来源。请使用 Requirements(IPermissionRequirementSource)。")]
 	public PermissionOptions Source(IPermissionCodeSource source)
 	{
 		ArgumentNullException.ThrowIfNull(source);

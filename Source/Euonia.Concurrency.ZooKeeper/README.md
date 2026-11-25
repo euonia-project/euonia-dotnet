@@ -201,7 +201,7 @@ var underDir = new ZooKeeperSynchronizationFactory(
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.0`（`project.props:3`）。
+- **目标框架**：`net10.0`、`net11.0`；包版本 `2026.5.1`（`project.props:3`）。
 - **关键依赖**：`ZooKeeperNetEx` `3.4.12.4`（`Directory.Packages.props:62`），对应 ZooKeeper 3.4 客户端协议；3.5+ 的容器节点等特性不可用。
 - **升级注意**：连接按“连接串 + 超时 + 认证”作为池键缓存，会话最长保留 10 分钟（`ZooKeeperConnection.cs:20`）；改这些参数会产生新池条目而不是复用旧会话。
 - **已知边界**：模块版本无法从配置注入认证；顺序节点名经 `ZooKeeperPath` 规范化，`Name` 返回完整路径。

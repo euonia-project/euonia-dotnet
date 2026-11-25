@@ -154,7 +154,7 @@ if (handle is null)
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`Euonia.Core`（`Nerosoft.Euonia.Threading.TimeoutValue`）；提供程序包各自依赖 Redis/ZooKeeper/Azure SDK。
 - **已知边界**：抽象层不注册服务、不读取配置；信号量与句柄丢失监视并非所有实现都支持。
 - **升级注意**：升级抽象包时同步升级提供程序包，避免接口实现缺失；锁/票据本身不持久化业务数据，无数据迁移。

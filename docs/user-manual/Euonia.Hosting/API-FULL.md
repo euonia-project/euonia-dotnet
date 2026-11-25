@@ -6,8 +6,8 @@
 | 项 | 值 |
 |---|---|
 | 程序集 | Euonia.Hosting |
-| 公共类型 | 25 |
-| 命名空间 | 5 |
+| 公共类型 | 28 |
+| 命名空间 | 6 |
 
 ## 命名空间 Microsoft.AspNetCore.Authentication
 
@@ -171,6 +171,14 @@
 - static Microsoft.Extensions.DependencyInjection.IServiceCollection AddUserPrincipal(Microsoft.Extensions.DependencyInjection.IServiceCollection services)
 ## 命名空间 Nerosoft.Euonia.Hosting
 
+### Nerosoft.Euonia.Hosting.ExceptionExtensions
+
+**类型**：static class
+
+- static System.Net.HttpStatusCode GetStatusCode(System.Exception exception)
+- static System.Collections.Generic.IReadOnlyDictionary<System.String, System.String[]> GetErrorDetails(System.Exception exception)
+- static System.String GetErrorMessage(System.Exception exception)
+
 ### Nerosoft.Euonia.Hosting.ApplicationInitializationContextExtensions
 
 **类型**：static class
@@ -247,3 +255,28 @@
 - static const System.String Candidates = Euonia:Tenant:Candidates
 - static const System.String Context = Euonia:Tenant:Context
 - static const System.String Failure = Euonia:Tenant:Failure
+
+## 命名空间 Nerosoft.Euonia.Hosting.RateLimiting
+
+### Nerosoft.Euonia.Hosting.RateLimiting.DualWindowRateLimiter
+
+**类型**：class
+基类 System.Threading.RateLimiting.RateLimiter
+
+- new Nerosoft.Euonia.Hosting.RateLimiting.DualWindowRateLimiter()
+- new Nerosoft.Euonia.Hosting.RateLimiting.DualWindowRateLimiter(Nerosoft.Euonia.Hosting.RateLimiting.DualWindowRateLimiterOptions options)
+- System.Nullable<System.TimeSpan> IdleDuration { get; }
+- System.Threading.RateLimiting.RateLimiterStatistics GetStatistics()
+
+### Nerosoft.Euonia.Hosting.RateLimiting.DualWindowRateLimiterOptions
+
+**类型**：class
+
+- System.Boolean AutoReplenishment { get; set; }
+- System.Int32 HourPermitLimit { get; set; }
+- System.TimeSpan HourWindow { get; set; }
+- System.Int32 MinutePermitLimit { get; set; }
+- System.TimeSpan MinuteWindow { get; set; }
+- System.Int32 QueueLimit { get; set; }
+- void Validate()
+

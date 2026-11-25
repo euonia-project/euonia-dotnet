@@ -9,9 +9,9 @@ namespace Nerosoft.Euonia.Security;
 /// 框架只保留 <see cref="Prefix"/>（<c>@</c>）这一个前缀，其中只有一个有意义的键——<see cref="Default"/>。
 /// </para>
 /// <para>
-/// <b>操作名不再映射到 <c>@</c> 命名空间</b>：未单独声明策略的标识直接以自身为键
+/// <b>操作名不映射到 <c>@</c> 命名空间</b>：未单独声明策略的标识直接以自身为键
 /// （见 <c>ScopeModelRegistration.TryResolve</c>），因此宿主自定义的操作（<c>approve</c>、<c>push</c>）
-/// 与权限码一样能承载行级授予——把操作名塞进保留前缀只会让它的授予永远取不到。
+/// 与权限码一样能承载行级授予。
 /// </para>
 /// <para>
 /// 这里刻意不用字面量 <c>*</c> 作通配键（理由见 DESIGN §1.6）。键的完整解析规则见 README §5.8。
@@ -30,12 +30,18 @@ public static class ScopeKeys
 	public const string Default = "@default";
 
 	/// <summary>
-	/// 校验一个操作名。
+	/// 校验一个操作名（数据权限的授权标识）。
 	/// </summary>
 	/// <param name="operation">操作名。</param>
 	/// <returns>校验通过的操作名。</returns>
 	/// <exception cref="ArgumentException">当 <paramref name="operation"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当 <paramref name="operation"/> 使用了框架保留前缀 <see cref="Prefix"/> 时抛出。</exception>
+	/// <remarks>
+	/// <b>操作名与权限码共用一个字符串命名空间，但语义不同</b>：操作名是数据权限的寻址坐标
+	/// （<c>read</c> / <c>update</c> / 宿主自定义的 <c>approve</c>），权限码是布尔判定的单位。
+	/// 因此二者同名不是错误，也不需要互相映射；同名时行级授予就写在那个键上（见 <see cref="KeyFor"/>）。
+	/// 本方法是操作名校验的唯一实现。
+	/// </remarks>
 	public static string ValidateOperation(string operation)
 	{
 		Check.EnsureNotNullOrWhiteSpace(operation, nameof(operation));
@@ -65,6 +71,11 @@ public static class ScopeKeys
 	/// <returns>校验通过的权限码。</returns>
 	/// <exception cref="ArgumentException">当 <paramref name="code"/> 为 <see langword="null"/>、空或仅由空白字符组成时抛出。</exception>
 	/// <exception cref="InvalidOperationException">当权限码落在框架保留命名空间内时抛出。</exception>
+	/// <remarks>
+	/// 本方法是权限码校验的唯一实现：启动期声明扫描（<c>PermissionDeclarationScanner</c>）
+	/// 直接复用它，因此扫描期与运行期的规则、文案一致。权限码本身是任意字符串，
+	/// 这里只拒绝两件事——空白与保留前缀 <see cref="Prefix"/>。
+	/// </remarks>
 	public static string Validate(string code)
 	{
 		Check.EnsureNotNullOrWhiteSpace(code, nameof(code));

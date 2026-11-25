@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage;
+using Nerosoft.Euonia.Repository;
 
 namespace Nerosoft.Euonia.Repository.EfCore;
 
@@ -134,11 +135,149 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	}
 
 	/// <summary>
-	/// 在保存变更前设置实体条目的值，派生类可重写以填充审计字段等。
+	/// 获取创建人字段的名称；默认值为 <c>CreatedBy</c>。
+	/// </summary>
+	protected virtual string CreatedByFieldName => "CreatedBy";
+
+	/// <summary>
+	/// 获取更新人字段的名称；默认值为 <c>UpdatedBy</c>。
+	/// </summary>
+	protected virtual string UpdatedByFieldName => "UpdatedBy";
+
+	/// <summary>
+	/// 获取删除人字段的名称；默认值为 <c>DeletedBy</c>。
+	/// </summary>
+	protected virtual string DeletedByFieldName => "DeletedBy";
+
+	/// <summary>
+	/// 获取当前用户的标识；返回 <c>null</c> 时仅跳过操作用户字段（CreatedBy/UpdatedBy/DeletedBy）的写入，
+	/// 时间戳填充与软删除转换仍会执行（匿名/后台场景）。
+	/// </summary>
+	/// <returns>当前用户的标识，类型由实体上的操作用户字段决定。</returns>
+	protected virtual object? GetCurrentUserId()
+	{
+		return null;
+	}
+
+	/// <summary>
+	/// 在保存变更前设置实体条目的值：为实现了 <see cref="IHasCreateTime"/>、<see cref="IHasUpdateTime"/>、
+	/// <see cref="IHasDeleteTime"/> 或 <see cref="ITombstone"/> 的实体填充审计字段，并将删除转换为软删除。
+	/// 当前用户标识为 <c>null</c>（匿名/后台场景）时，时间戳填充与软删除转换仍会执行，仅跳过操作用户字段的写入。
 	/// </summary>
 	/// <param name="entries">变更跟踪器中当前被跟踪的所有实体条目。</param>
 	protected virtual void SetEntryValues(IEnumerable<EntityEntry> entries)
 	{
+		var userId = GetCurrentUserId();
+
+		var now = DateTimeKind switch
+		{
+			DateTimeKind.Utc => DateTime.UtcNow,
+			DateTimeKind.Local => DateTime.Now,
+			_ => DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified)
+		};
+
+		foreach (var entry in entries)
+		{
+			switch (entry.State)
+			{
+				case EntityState.Added:
+					if (entry.Entity is IHasCreateTime created)
+					{
+						created.CreatedAt = now;
+						if (userId is not null)
+						{
+							entry.TrySetProperty(CreatedByFieldName, userId);
+						}
+					}
+
+					if (entry.Entity is IHasUpdateTime added)
+					{
+						added.UpdatedAt = now;
+						if (userId is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+						}
+					}
+
+					break;
+
+				case EntityState.Modified:
+					if (entry.Entity is IHasUpdateTime modified)
+					{
+						modified.UpdatedAt = now;
+						if (userId is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+						}
+					}
+
+					// IsDeleted 可能未映射（如 [NotMapped]），entry.Property 对未映射属性会抛异常，
+					// 先检查元数据判空，与 TrySetProperty 的防御风格一致。
+					if (entry.Entity is ITombstone { IsDeleted: true }
+					    && entry.Metadata.FindProperty(nameof(ITombstone.IsDeleted)) is not null
+					    && entry.Property(nameof(ITombstone.IsDeleted)).OriginalValue is false)
+					{
+						if (entry.Entity is IHasDeleteTime deleted)
+						{
+							deleted.DeletedAt = now;
+						}
+
+						if (userId is not null)
+						{
+							entry.TrySetProperty(DeletedByFieldName, userId);
+						}
+					}
+
+					break;
+
+				case EntityState.Deleted when entry.Entity is ITombstone tombstone:
+					// 软删除转换只写本次真正赋值的审计列：先记录这些列，转为 Modified 后仅保留其修改标记。
+					// 这样 stub 删除不会用 default 覆盖整行，匿名用户删除也不会把未赋值的审计列写成 null。
+					var updatedProperties = new HashSet<string>(StringComparer.Ordinal);
+
+					tombstone.IsDeleted = true;
+					if (entry.Metadata.FindProperty(nameof(ITombstone.IsDeleted)) is not null)
+					{
+						updatedProperties.Add(nameof(ITombstone.IsDeleted));
+					}
+
+					if (entry.Entity is IHasDeleteTime deleteTime)
+					{
+						deleteTime.DeletedAt = now;
+						updatedProperties.Add(nameof(IHasDeleteTime.DeletedAt));
+					}
+
+					if (userId is not null && entry.Metadata.FindProperty(DeletedByFieldName) is not null)
+					{
+						entry.TrySetProperty(DeletedByFieldName, userId);
+						updatedProperties.Add(DeletedByFieldName);
+					}
+
+					if (entry.Entity is IHasUpdateTime deletedWithUpdateTime)
+					{
+						deletedWithUpdateTime.UpdatedAt = now;
+						updatedProperties.Add(nameof(IHasUpdateTime.UpdatedAt));
+
+						if (userId is not null && entry.Metadata.FindProperty(UpdatedByFieldName) is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+							updatedProperties.Add(UpdatedByFieldName);
+						}
+					}
+
+					entry.State = EntityState.Modified;
+
+					foreach (var property in entry.Properties)
+					{
+						// 主键列不参与 UPDATE，保持 EF 默认行为。
+						if (property.Metadata.IsPrimaryKey()) continue;
+
+						property.IsModified = updatedProperties.Contains(property.Metadata.Name);
+					}
+
+					break;
+			}
+		}
 	}
 
 	/// <summary>

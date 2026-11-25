@@ -183,7 +183,7 @@ REDISSYNCHRONIZATION_CONNECTIONSTRING=localhost:6379    # 仓库 alias
 
 ## 版本与兼容
 
-- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.0`（`project.props`）。
+- **目标框架**：`net10.0`、`net11.0`；仓库统一包版本 `2026.5.1`（`project.props`）。
 - **关键依赖**：`StackExchange.Redis`、`Euonia.Concurrency`、`Euonia.Modularity`。
 - **已知边界**：配置键是模块内手写字符串（无常量类型）；`Database` 默认 `-1`；自动续期不可禁用；锁键无自动前缀。
 - **升级注意**：锁状态在 Redis 侧，升级不迁移数据；若升级改变锁键格式或名称，新旧实例会锁定不同键，需停写窗口或双写过渡。

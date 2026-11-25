@@ -22,7 +22,10 @@ internal static class RequestContextExtensions
 		{
 			return new RequestContext
 			{
-				Headers = context.Request.Headers.ToDictionary(t => t.Key, t => t.Value.ToString()),
+				// HTTP 头名不区分大小写（HTTP/2 中一律小写），字典必须忽略大小写，
+				// 否则按 "User-Agent" 等规范大小写精确匹配会全部 miss。
+				// Request.Headers 本身不区分大小写，不存在重复键风险。
+				Headers = context.Request.Headers.ToDictionary(t => t.Key, t => t.Value.ToString(), StringComparer.OrdinalIgnoreCase),
 				ConnectionId = context.Connection.Id,
 				User = new ClaimsPrincipal(context.User),
 				RemotePort = context.Connection.RemotePort,

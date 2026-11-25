@@ -1,4 +1,4 @@
-﻿namespace Nerosoft.Euonia.Sample.Domain.Dtos;
+namespace Nerosoft.Euonia.Sample.Domain.Dtos;
 
 /// <summary>
 /// 用户详情（读模型）。
@@ -43,7 +43,7 @@ public class UserDetailDto
 	/// <summary>
 	/// 获取或设置最后更新时间。
 	/// </summary>
-	public DateTime UpdatedAt { get; set; }
+	public DateTime? UpdatedAt { get; set; }
 
 	/// <summary>
 	/// 获取或设置授予该用户的角色名称。

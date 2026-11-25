@@ -36,6 +36,8 @@
 | Euonia.Core | [教程](Euonia.Core/TUTORIAL.md) / [API](Euonia.Core/API.md) / [完整 API](Euonia.Core/API-FULL.md) | [README](../../Source/Euonia.Core/README.md) |
 | Euonia.Modularity | [教程](Euonia.Modularity/TUTORIAL.md) / [API](Euonia.Modularity/API.md) / [完整 API](Euonia.Modularity/API-FULL.md) | [README](../../Source/Euonia.Modularity/README.md) |
 | Euonia.Hosting | [教程](Euonia.Hosting/TUTORIAL.md) / [API](Euonia.Hosting/API.md) / [完整 API](Euonia.Hosting/API-FULL.md) | [README](../../Source/Euonia.Hosting/README.md) |
+| Euonia.Hosting.Webapi | [教程](Euonia.Hosting.Webapi/TUTORIAL.md) / [API](Euonia.Hosting.Webapi/API.md) / [完整 API](Euonia.Hosting.Webapi/API-FULL.md) | [README](../../Source/Euonia.Hosting.Webapi/README.md) |
+| Euonia.Hosting.Azfunc | [教程](Euonia.Hosting.Azfunc/TUTORIAL.md) / [API](Euonia.Hosting.Azfunc/API.md) / [完整 API](Euonia.Hosting.Azfunc/API-FULL.md) | [README](../../Source/Euonia.Hosting.Azfunc/README.md) |
 | Euonia.Application | [教程](Euonia.Application/TUTORIAL.md) / [API](Euonia.Application/API.md) / [完整 API](Euonia.Application/API-FULL.md) | [README](../../Source/Euonia.Application/README.md) |
 | Euonia.Pipeline | [教程](Euonia.Pipeline/TUTORIAL.md) / [API](Euonia.Pipeline/API.md) / [完整 API](Euonia.Pipeline/API-FULL.md) | [README](../../Source/Euonia.Pipeline/README.md) |
 | Euonia.Domain | [教程](Euonia.Domain/TUTORIAL.md) / [API](Euonia.Domain/API.md) / [完整 API](Euonia.Domain/API-FULL.md) | [README](../../Source/Euonia.Domain/README.md) |

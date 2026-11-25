@@ -125,7 +125,7 @@ var result = await db.People.Where(predicate).ToListAsync();
 
 ## 版本与兼容
 
-- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.0`）。
+- 目标框架：`net10.0`、`net11.0`；包版本由仓库根 `project.props` 统一管理（当前 `2026.5.1`）。
 - 关键依赖：仅依赖 `Euonia.Core`；没有 DI 注册、配置节或第三方查询 provider。
 - 已知边界：动态属性名失败时静默返回原查询；`WhereIfNotEmpty` 仅支持单条件；`QueryHandler<T>` 非线程安全。
 - 升级提示：表达式树由调用方 provider 执行，升级 EF Core/数据库 provider 后应重跑动态查询与边界测试。
