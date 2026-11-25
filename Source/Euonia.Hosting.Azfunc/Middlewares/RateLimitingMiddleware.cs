@@ -53,6 +53,12 @@ internal sealed class RateLimitingMiddleware : IFunctionsWorkerMiddleware, IDisp
 
 		var limiter = GetOrCreateLimiter(key);
 
+		// 手动补充模式下没有框架心跳，请求到达时惰性补充，避免窗口过期后永久 429。
+		if (!_options.RateLimiting.AutoReplenishment)
+		{
+			limiter.TryReplenish();
+		}
+
 		using var lease = limiter.AttemptAcquire();
 
 		if (!lease.IsAcquired)

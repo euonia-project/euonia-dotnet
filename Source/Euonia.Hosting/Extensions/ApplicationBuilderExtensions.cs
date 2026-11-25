@@ -128,11 +128,27 @@ public static class ApplicationBuilderExtensions
 		/// <returns>当前 <see cref="IApplicationBuilder"/> 实例，用于链式调用。</returns>
 		public IApplicationBuilder UseDefaultRequestContextAccessor()
 		{
-			return app.Use((httpContext, next) =>
+			return app.Use(async (httpContext, next) =>
 			{
 				var accessor = httpContext.RequestServices.GetService<DefaultRequestContextAccessor>();
-				accessor?.Context = RequestContext.From(httpContext);
-				return next();
+				var previous = accessor?.Context;
+				try
+				{
+					if (accessor is not null)
+					{
+						accessor.Context = RequestContext.From(httpContext);
+					}
+
+					await next();
+				}
+				finally
+				{
+					// 与 Azfunc 中间件一致：恢复进入管道前的 AsyncLocal 值，避免请求上下文跨执行流残留。
+					if (accessor is not null)
+					{
+						accessor.Context = previous;
+					}
+				}
 			});
 		}
 

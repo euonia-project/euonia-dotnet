@@ -27,6 +27,16 @@ internal sealed class DualWindowRateLimiterStore : IDisposable
 	}
 
 	/// <summary>
+	/// 获取内部限流器是否由定时器自动补充。
+	/// </summary>
+	internal bool AutoReplenishment => _options.AutoReplenishment;
+
+	/// <summary>
+	/// 获取外部补充周期（取两个窗口中较短者）。
+	/// </summary>
+	internal TimeSpan ReplenishmentPeriod => TimeSpan.FromTicks(Math.Min(_options.MinuteWindow.Ticks, _options.HourWindow.Ticks));
+
+	/// <summary>
 	/// 获取或创建指定分区的限流器；并发下保证同一分区只有一个实例。
 	/// </summary>
 	/// <param name="key">分区键。</param>

@@ -5,10 +5,12 @@ namespace Nerosoft.Euonia.Hosting.RateLimiting;
 /// <summary>
 /// 组合分钟与小时两个固定窗口限流器，任一窗口超限即拒绝；释放时同时释放两个租约。
 /// </summary>
-public sealed class DualWindowRateLimiter : RateLimiter
+public sealed class DualWindowRateLimiter : ReplenishingRateLimiter
 {
 	private readonly FixedWindowRateLimiter _minute;
 	private readonly FixedWindowRateLimiter _hourly;
+	private readonly bool _autoReplenishment;
+	private readonly TimeSpan _replenishmentPeriod;
 
 	/// <summary>
 	/// 使用默认配置（5 次/分钟、10 次/小时）初始化 <see cref="DualWindowRateLimiter"/>。
@@ -29,6 +31,9 @@ public sealed class DualWindowRateLimiter : RateLimiter
 		ArgumentNullException.ThrowIfNull(options);
 		options.Validate();
 
+		_autoReplenishment = options.AutoReplenishment;
+		_replenishmentPeriod = TimeSpan.FromTicks(Math.Min(options.MinuteWindow.Ticks, options.HourWindow.Ticks));
+
 		_minute = new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
 		{
 			PermitLimit = options.MinutePermitLimit,
@@ -45,6 +50,12 @@ public sealed class DualWindowRateLimiter : RateLimiter
 			AutoReplenishment = options.AutoReplenishment
 		});
 	}
+
+	/// <inheritdoc />
+	public override bool IsAutoReplenishing => _autoReplenishment;
+
+	/// <inheritdoc />
+	public override TimeSpan ReplenishmentPeriod => _replenishmentPeriod;
 
 	/// <inheritdoc />
 	public override TimeSpan? IdleDuration
@@ -91,9 +102,9 @@ public sealed class DualWindowRateLimiter : RateLimiter
 	/// 返回值不表示计数是否实际被重置：仅当窗口自上次补充起已经过期时才会重置计数。
 	/// </returns>
 	/// <remarks>
-	/// 供 <see cref="DualWindowRateLimiterOptions.AutoReplenishment"/> 为 <c>false</c> 时由调用方在窗口过期后定期调用。
+	/// 当 <see cref="IsAutoReplenishing"/> 为 <c>false</c> 时，由宿主定时器或调用方定期调用，避免窗口过期后永久拒绝请求。
 	/// </remarks>
-	public bool TryReplenish()
+	public override bool TryReplenish()
 	{
 		var minuteReplenished = _minute.TryReplenish();
 		var hourlyReplenished = _hourly.TryReplenish();

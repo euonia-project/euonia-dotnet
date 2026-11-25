@@ -231,72 +231,52 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 					break;
 
 				case EntityState.Deleted when entry.Entity is ITombstone tombstone:
+					// 软删除转换只写本次真正赋值的审计列：先记录这些列，转为 Modified 后仅保留其修改标记。
+					// 这样 stub 删除不会用 default 覆盖整行，匿名用户删除也不会把未赋值的审计列写成 null。
+					var updatedProperties = new HashSet<string>(StringComparer.Ordinal);
+
 					tombstone.IsDeleted = true;
+					if (entry.Metadata.FindProperty(nameof(ITombstone.IsDeleted)) is not null)
+					{
+						updatedProperties.Add(nameof(ITombstone.IsDeleted));
+					}
+
 					if (entry.Entity is IHasDeleteTime deleteTime)
 					{
 						deleteTime.DeletedAt = now;
+						updatedProperties.Add(nameof(IHasDeleteTime.DeletedAt));
 					}
 
-					if (userId is not null)
+					if (userId is not null && entry.Metadata.FindProperty(DeletedByFieldName) is not null)
 					{
 						entry.TrySetProperty(DeletedByFieldName, userId);
+						updatedProperties.Add(DeletedByFieldName);
 					}
 
 					if (entry.Entity is IHasUpdateTime deletedWithUpdateTime)
 					{
 						deletedWithUpdateTime.UpdatedAt = now;
-						if (userId is not null)
+						updatedProperties.Add(nameof(IHasUpdateTime.UpdatedAt));
+
+						if (userId is not null && entry.Metadata.FindProperty(UpdatedByFieldName) is not null)
 						{
 							entry.TrySetProperty(UpdatedByFieldName, userId);
+							updatedProperties.Add(UpdatedByFieldName);
 						}
 					}
 
 					entry.State = EntityState.Modified;
 
-					// 转为 Modified 会把所有属性标记为已修改；stub 删除（实体仅含主键）时其余属性的
-					// CurrentValue 与 OriginalValue 均为 default，若全部写入会用默认值覆盖数据库中的真实数据。
-					// 因此对 CurrentValue 等于 OriginalValue 的非审计属性取消修改标记，
-					// 使生成的 UPDATE 仅包含实际变化的列（审计列 + 主键）。
 					foreach (var property in entry.Properties)
 					{
-						if (!property.IsModified) continue;
-						var name = property.Metadata.Name;
-						// 审计列始终保持修改标记
-						if (name == nameof(ITombstone.IsDeleted)
-						    || name == nameof(IHasDeleteTime.DeletedAt)
-						    || name == DeletedByFieldName
-						    || name == nameof(IHasUpdateTime.UpdatedAt)
-						    || name == UpdatedByFieldName)
-						{
-							continue;
-						}
-
-						// 主键列不参与 UPDATE，保持 EF 默认行为
+						// 主键列不参与 UPDATE，保持 EF 默认行为。
 						if (property.Metadata.IsPrimaryKey()) continue;
 
-						// 仅当 CurrentValue 与 OriginalValue 相等时才取消修改标记；
-						// 已加载实体上用户主动修改过的非审计列仍会被写入。
-						if (Equals(property.CurrentValue, property.OriginalValue))
-						{
-							property.IsModified = false;
-						}
+						property.IsModified = updatedProperties.Contains(property.Metadata.Name);
 					}
 
 					break;
 			}
-		}
-	}
-
-	/// <summary>
-	/// 将指定属性标记为已修改；属性未在模型中映射时不做任何操作。
-	/// </summary>
-	/// <param name="entry">实体项。</param>
-	/// <param name="propertyName">属性名称。</param>
-	private static void MarkPropertyModified(EntityEntry entry, string propertyName)
-	{
-		if (entry.Metadata.FindProperty(propertyName) is not null)
-		{
-			entry.Property(propertyName).IsModified = true;
 		}
 	}
 

@@ -102,6 +102,53 @@ public class DataContextSoftDeleteRegressionTests
 	}
 
 	/// <summary>
+	/// D2：匿名用户的 stub 删除不得把未赋值的审计列（UpdatedBy/DeletedBy）写成 null。
+	/// </summary>
+	[Fact]
+	public async Task SaveChangesAsync_AnonymousStubRemove_PreservesUnwrittenAuditColumns()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		await using var connection = new SqliteConnection("DataSource=:memory:");
+		await connection.OpenAsync(cancellationToken);
+
+		var options = new DbContextOptionsBuilder<AnonymousContext>()
+		              .UseSqlite(connection)
+		              .Options;
+
+		await using var context = new AnonymousContext(options);
+		await context.Database.EnsureCreatedAsync(cancellationToken);
+
+		var record = new AnonymousRecord
+		{
+			Id = Guid.NewGuid(),
+			Name = "keep-me",
+			CreatedBy = "creator",
+			UpdatedBy = "updater"
+		};
+		context.Add(record);
+		await context.SaveChangesAsync(cancellationToken);
+
+		context.Entry(record).State = EntityState.Detached;
+
+		var stub = new AnonymousRecord { Id = record.Id };
+		context.Remove(stub);
+		await context.SaveChangesAsync(cancellationToken);
+
+		var stored = await context.Set<AnonymousRecord>()
+		                          .IgnoreQueryFilters()
+		                          .AsNoTracking()
+		                          .SingleAsync(x => x.Id == record.Id, cancellationToken);
+
+		Assert.True(stored.IsDeleted);
+		Assert.Equal("keep-me", stored.Name);
+		Assert.Equal("creator", stored.CreatedBy);
+		Assert.Equal("updater", stored.UpdatedBy);
+		Assert.Null(stored.DeletedBy);
+		Assert.NotNull(stored.DeletedAt);
+		Assert.NotNull(stored.UpdatedAt);
+	}
+
+	/// <summary>
 	/// 中3：IsDeleted 被 [NotMapped] 标记时，SaveChanges 不应因 entry.Property 访问未映射属性而抛异常。
 	/// </summary>
 	[Fact]

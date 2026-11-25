@@ -73,6 +73,54 @@ public class RateLimitingPartitionTests
 	}
 
 	/// <summary>
+	/// 手动补充模式下分区包装限流器应暴露 TryReplenish，供框架心跳调用，避免永久 429。
+	/// </summary>
+	[Fact]
+	public async Task DefaultPolicy_ManualMode_WrapperTryReplenish_RestoresPermit()
+	{
+		var services = new ServiceCollection();
+		services.AddEuoniaRateLimiting(options =>
+		{
+			options.DefaultLimiter.MinutePermitLimit = 1;
+			options.DefaultLimiter.MinuteWindow = TimeSpan.FromSeconds(1);
+			options.DefaultLimiter.HourPermitLimit = 10;
+			options.DefaultLimiter.HourWindow = TimeSpan.FromSeconds(1);
+			options.DefaultLimiter.AutoReplenishment = false;
+		});
+
+		using var provider = services.BuildServiceProvider();
+		var factory = GetPolicyPartitionFactory(provider, EuoniaRateLimitingOptions.DefaultPolicyName);
+		var wrapper = factory(CreateHttpContext("10.0.0.5"));
+		var replenishing = Assert.IsAssignableFrom<ReplenishingRateLimiter>(wrapper);
+
+		Assert.False(replenishing.IsAutoReplenishing);
+
+		using (var first = wrapper.AttemptAcquire())
+		{
+			Assert.True(first.IsAcquired);
+		}
+
+		using (var denied = wrapper.AttemptAcquire())
+		{
+			Assert.False(denied.IsAcquired);
+		}
+
+		// 分区缓存的滑动过期与窗口等长，中途访问一次以模拟活跃分区并刷新过期时间。
+		await Task.Delay(600, TestContext.Current.CancellationToken);
+		using (var keepAlive = wrapper.AttemptAcquire())
+		{
+			Assert.False(keepAlive.IsAcquired);
+		}
+
+		await Task.Delay(600, TestContext.Current.CancellationToken);
+
+		Assert.True(replenishing.TryReplenish());
+
+		using var restored = wrapper.AttemptAcquire();
+		Assert.True(restored.IsAcquired);
+	}
+
+	/// <summary>
 	/// 容器释放时应级联释放分区存储中的限流器。
 	/// </summary>
 	/// <remarks>

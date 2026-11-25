@@ -9,9 +9,15 @@ namespace Nerosoft.Euonia.Hosting.RateLimiting;
 /// </summary>
 /// <param name="store">分区限流器存储。</param>
 /// <param name="key">分区键。</param>
-internal sealed class StoreBackedRateLimiter(DualWindowRateLimiterStore store, string key) : RateLimiter
+internal sealed class StoreBackedRateLimiter(DualWindowRateLimiterStore store, string key) : ReplenishingRateLimiter
 {
 	private long _lastAccessTimestamp = Stopwatch.GetTimestamp();
+
+	/// <inheritdoc />
+	public override bool IsAutoReplenishing => store.AutoReplenishment;
+
+	/// <inheritdoc />
+	public override TimeSpan ReplenishmentPeriod => store.ReplenishmentPeriod;
 
 	/// <inheritdoc />
 	public override TimeSpan? IdleDuration => Stopwatch.GetElapsedTime(Volatile.Read(ref _lastAccessTimestamp));
@@ -49,6 +55,20 @@ internal sealed class StoreBackedRateLimiter(DualWindowRateLimiterStore store, s
 	{
 		Volatile.Write(ref _lastAccessTimestamp, Stopwatch.GetTimestamp());
 		return await store.GetOrCreate(key).AcquireAsync(permitCount, cancellationToken);
+	}
+
+	/// <inheritdoc />
+	public override bool TryReplenish()
+	{
+		// 分区尚未创建时无需补充；恰好被驱逐释放时按未补充处理。
+		try
+		{
+			return store.TryGet(key)?.TryReplenish() ?? false;
+		}
+		catch (ObjectDisposedException)
+		{
+			return false;
+		}
 	}
 
 	/// <inheritdoc />

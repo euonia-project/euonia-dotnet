@@ -124,6 +124,47 @@ public class RateLimitingMiddlewareTests
 		Assert.True(second.Response.Headers.ContainsKey("Retry-After"));
 	}
 
+	/// <summary>
+	/// 手动补充模式下窗口过期后，后续请求应惰性补充并重新放行，而不是永久 429。
+	/// </summary>
+	[Fact]
+	public async Task ManualReplenishment_WindowExpired_RequestSucceedsAgain()
+	{
+		var options = new EuoniaFunctionsOptions
+		{
+			RateLimiting = new DualWindowRateLimiterOptions
+			{
+				MinutePermitLimit = 1,
+				MinuteWindow = TimeSpan.FromSeconds(1),
+				HourPermitLimit = 10,
+				HourWindow = TimeSpan.FromSeconds(1),
+				AutoReplenishment = false
+			}
+		};
+		using var middleware = new RateLimitingMiddleware(options, NullLogger<RateLimitingMiddleware>.Instance);
+		var definition = TestFunctionContext.CreateDefinition("ManualReplenishFunction", "Ns.ManualReplenishFunction.Run");
+		var services = new ServiceCollection().BuildServiceProvider();
+
+		var first = CreateHttpContext("10.1.0.5");
+		await middleware.Invoke(TestFunctionContext.Create(first, services, definition), _ => Task.CompletedTask);
+		Assert.Equal(StatusCodes.Status200OK, first.Response.StatusCode);
+
+		var second = CreateHttpContext("10.1.0.5");
+		await middleware.Invoke(TestFunctionContext.Create(second, services, definition), _ => Task.CompletedTask);
+		Assert.Equal(StatusCodes.Status429TooManyRequests, second.Response.StatusCode);
+
+		// 中途请求用于刷新分区缓存的滑动过期，并确认窗口尚未重置。
+		await Task.Delay(600, TestContext.Current.CancellationToken);
+		var third = CreateHttpContext("10.1.0.5");
+		await middleware.Invoke(TestFunctionContext.Create(third, services, definition), _ => Task.CompletedTask);
+		Assert.Equal(StatusCodes.Status429TooManyRequests, third.Response.StatusCode);
+
+		await Task.Delay(600, TestContext.Current.CancellationToken);
+		var fourth = CreateHttpContext("10.1.0.5");
+		await middleware.Invoke(TestFunctionContext.Create(fourth, services, definition), _ => Task.CompletedTask);
+		Assert.Equal(StatusCodes.Status200OK, fourth.Response.StatusCode);
+	}
+
 	private static DefaultHttpContext CreateHttpContext(string ip)
 	{
 		var context = new DefaultHttpContext

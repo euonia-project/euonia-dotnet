@@ -56,4 +56,37 @@ public class RequestContextExtensionsTests
 		Assert.True(captured.Headers.TryGetValue("X-Client-Name", out var clientName));
 		Assert.Equal("h2-client", clientName);
 	}
+
+	/// <summary>
+	/// UseDefaultRequestContextAccessor 应在请求结束后恢复进入管道前的 AsyncLocal 值，
+	/// 与 Azfunc 的 HttpContextAccessorMiddleware 保持一致。
+	/// </summary>
+	[Fact]
+	public async Task UseDefaultRequestContextAccessor_RestoresPreviousContext()
+	{
+		var services = new ServiceCollection();
+		services.AddScoped<DefaultRequestContextAccessor>();
+		await using var provider = services.BuildServiceProvider();
+		using var scope = provider.CreateScope();
+
+		var accessor = scope.ServiceProvider.GetRequiredService<DefaultRequestContextAccessor>();
+		var previous = new RequestContext { TraceIdentifier = "previous" };
+		accessor.Context = previous;
+
+		RequestContext? captured = null;
+		var app = new ApplicationBuilder(scope.ServiceProvider);
+		app.UseDefaultRequestContextAccessor();
+		app.Use(async (_, next) =>
+		{
+			captured = accessor.Context;
+			await next();
+		});
+
+		var httpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider };
+		await app.Build()(httpContext);
+
+		Assert.NotNull(captured);
+		Assert.NotSame(previous, captured);
+		Assert.Same(previous, accessor.Context);
+	}
 }

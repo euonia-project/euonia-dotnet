@@ -14,22 +14,7 @@ public partial class Cryptography
 	/// </summary>
 	public class DES
 	{
-		/// <summary>
-		/// 无密钥参数的重载所使用的默认 32 字节盐/密钥。
-		/// </summary>
-		private static readonly byte[] _defaultSalt = { 0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x33, 0x3B, 0x43, 0x4B, 0x9B, 0x93, 0x8B, 0x83, 0x7B, 0x73, 0x6B, 0x63, 0x5B, 0x53, 0xF3, 0xFB, 0xA3, 0xAB, 0xB3, 0xBB, 0xC3, 0xEB, 0xE3, 0xDB, 0xD3, 0xCB };
-
 		#region Encrypt
-
-		/// <summary>
-		/// 使用默认 32 字节密钥加密指定的字符串（内部使用 ECB 模式的 AES 算法）。
-		/// </summary>
-		/// <param name="source">要加密的明文。</param>
-		/// <returns>Base64 编码的密文。</returns>
-		public static string Encrypt(string source)
-		{
-			return Encrypt(source, _defaultSalt);
-		}
 
 		/// <summary>
 		/// 使用提供的 32 字节密钥加密指定的字符串（内部使用 ECB 模式的 AES 算法）。
@@ -69,7 +54,8 @@ public partial class Cryptography
 			var keyBytes = Encoding.UTF8.GetBytes(key);
 			var sourceBytes = Encoding.UTF8.GetBytes(source);
 			using var memory = new MemoryStream();
-			using var crypto = new CryptoStream(memory, provider.CreateEncryptor(keyBytes, keyBytes), CryptoStreamMode.Write);
+			// ECB 模式忽略 IV，不再把密钥复用为 IV。
+			using var crypto = new CryptoStream(memory, provider.CreateEncryptor(keyBytes, null), CryptoStreamMode.Write);
 			crypto.Write(sourceBytes, 0, sourceBytes.Length);
 			crypto.FlushFinalBlock();
 			return Convert.ToBase64String(memory.ToArray());
@@ -78,16 +64,6 @@ public partial class Cryptography
 		#endregion
 
 		#region Decrypt
-
-		/// <summary>
-		/// 使用默认 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES 算法）。
-		/// </summary>
-		/// <param name="source">Base64 编码的密文。</param>
-		/// <returns>解密后的明文。</returns>
-		public static string Decrypt(string source)
-		{
-			return Decrypt(source, _defaultSalt);
-		}
 
 		/// <summary>
 		/// 使用提供的 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES 算法）。
