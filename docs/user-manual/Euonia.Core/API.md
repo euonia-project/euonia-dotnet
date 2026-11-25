@@ -61,7 +61,7 @@ Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释�
 | `"PayWeb".ToKebabCase()` | 命名风格转换 | 另有 `ToCamelCase` / `ToSnakeCase` |
 | `dictionary.GetOrAdd(key, factory)` | 字典取值或创建 | 两个工厂重载 |
 | `items.ForEach(action)` | 集合遍历 | 返回 `void` |
-| `Extensions.GetValue<TValue>` | 按点/斜杠路径读取 `JsonNode` | 路径不存在返回 `default` |
+| `Extensions.GetValue<TValue>` | 按点/斜杠路径读取 `JsonNode` | 路径不存在或转换失败返回 `default` |
 
 ### 权限契约
 
@@ -91,19 +91,21 @@ Euonia 的基础库：断言、ID 生成、异步协调原语、对象池、释�
 
 | 类型 | 关键成员 | 说明 |
 |---|---|---|
-| `Cryptography.AES` | `Encrypt(string?, string/byte[])`、`Decrypt(string?, string/byte[])` | ECB + PKCS7，兼容既有数据 |
-| `Cryptography.DES` | `Encrypt(string, string/byte[])`、`Decrypt(string, byte[])` | 字符串密钥走 DES；32 字节密钥走 AES；ECB + PKCS7 |
+| `Cryptography.AES` | `EncryptGcm` / `DecryptGcm(string?, string/byte[])`；`Encrypt` / `Decrypt(string?, string/byte[])` | GCM 推荐（随机 nonce + 认证标签）；ECB + PKCS7 仅兼容遗留数据 |
+| `Cryptography.DES` | `Encrypt(string, string/byte[])`、`Decrypt(string, byte[])` | 仅限兼容遗留数据；字符串密钥走 DES；字节数组密钥（16/24/32）走 AES；ECB + PKCS7 |
 | `Cryptography.MD5` | `Encrypt(string)` | 小写十六进制 MD5 摘要 |
 | `Cryptography.SHA` | `Encrypt(string)` | SHA-256，Base64 输出 |
 | `Cryptography.Base64` | `Encode` / `Decode` | UTF-8 与 Base64 互转 |
-| `Cryptography.RSA` | 构造、`Encrypt`、`Decrypt`、`Dispose` | PEM / PKCS#1 / PKCS#8 / SPKI；PKCS#1 v1.5 填充 |
+| `Cryptography.RSA` | 构造、`Encrypt`、`Decrypt`（含显式 padding 重载）、`Dispose` | PEM / PKCS#1 / PKCS#8 / SPKI；默认 OAEP-SHA256，Pkcs1 仅兼容遗留数据 |
 | `PasswordComplexity` | Flags 枚举 | 小写/大写/数字/符号 |
 | `PasswordGenerator` | `GeneratePassword(complexity, minLength, maxLength)` | 保证每种要求的字符至少出现一次 |
 | `RandomUtility` | `GenerateRandomString` / `GenerateRandomDigit` / `GenerateRandomBytes` | CSPRNG；`Random` 的安全实现 |
 
 行为与安全约束：
 
-- AES 密钥长度必须为 16/24/32 字节；空输入返回 `null`；无参重载使用固定默认盐值。
+- AES 密钥长度必须为 16/24/32 字节；空输入返回 `null`；所有重载均要求显式密钥（内置默认密钥重载已删除）。
+- AES-GCM 输出为 Base64(nonce(12B) + 认证标签(16B) + 密文)；解密校验标签，篡改抛 `CryptographicException`。
+- RSA 默认 OAEP（SHA-256）填充；遗留 PKCS#1 v1.5 密文用显式 `RSAEncryptionPadding.Pkcs1` 重载解密。
 
 ## 相关文档
 

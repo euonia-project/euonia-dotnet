@@ -7,7 +7,7 @@ using System.Text.Json.Nodes;
 /// <remarks>
 /// 此静态类是无状态的，提供便捷辅助方法，使用分隔路径（点或斜杠）
 /// 或路径段序列来导航 <see cref="JsonObject"/> 与 <see cref="JsonArray"/> 结构。
-/// 当路径无法解析时，方法返回指定值类型的默认值。
+/// 当路径无法解析或值无法转换为指定类型时，方法返回该类型的默认值。
 /// </remarks>
 public static partial class Extensions
 {
@@ -56,9 +56,9 @@ public static partial class Extensions
 		/// - 当前节点为 <see cref="JsonArray"/> 时的数组索引（整数或可解析为 int 的字符串）。
 		/// </param>
 		/// <returns>
-		/// 若最终节点为 <see cref="JsonValue"/>，或最终的 <see cref="JsonObject"/>
+		/// 若最终节点为 <see cref="JsonValue"/>，或最终的 <see cref="JsonObject"/> / <see cref="JsonArray"/>
 		/// 可反序列化为 <typeparamref name="TValue"/>，则返回转换为 <typeparamref name="TValue"/> 的值。
-		/// 若路径不存在或最终节点无法转换，则返回 <typeparamref name="TValue"/> 的默认值。
+		/// 若路径不存在、最终节点无法转换或转换过程抛出异常，则返回 <typeparamref name="TValue"/> 的默认值。
 		/// </returns>
 		/// <exception cref="ArgumentNullException"><paramref name="node"/> 为 <c>null</c>。</exception>
 		/// <remarks>
@@ -70,15 +70,20 @@ public static partial class Extensions
 		///    c. 若上述步骤均未成功，返回 <typeparamref name="TValue"/> 的默认值。
 		/// 3. 成功遍历后，尝试返回：
 		///    - 通过 <see cref="JsonNode.GetValue{TValue}()"/> 转换的 <see cref="JsonValue"/>，或
-		///    - 通过 <see cref="JsonSerializer.Deserialize{TValue}(JsonNode,JsonSerializerOptions)"/> 反序列化的 <see cref="JsonObject"/>。
+		///    - 通过 <see cref="JsonSerializer.Deserialize{TValue}(JsonNode,JsonSerializerOptions)"/> 反序列化的 <see cref="JsonObject"/> / <see cref="JsonArray"/>。
 		/// 4. 否则返回默认值。
+		/// <para>
+		/// <paramref name="names"/> 为 <c>null</c> 或空数组时，直接对根节点执行同样的转换。
+		/// 转换过程中的异常（如 <see cref="InvalidOperationException"/>、<see cref="JsonException"/>、<see cref="FormatException"/>）
+		/// 会被捕获并返回默认值，不向调用方抛出。
+		/// </para>
 		/// </remarks>
 		public TValue GetValue<TValue>(params string[] names)
 		{
 			ArgumentNullException.ThrowIfNull(node);
 			if (names is null || names.Length == 0)
 			{
-				return node.GetValue<TValue>();
+				return ConvertNode<TValue>(node)!;
 			}
 
 			var currentNode = node;
@@ -97,12 +102,26 @@ public static partial class Extensions
 				}
 			}
 
-			return currentNode switch
+			return ConvertNode<TValue>(currentNode)!;
+		}
+	}
+
+	private static TValue? ConvertNode<TValue>(JsonNode? node)
+	{
+		try
+		{
+			return node switch
 			{
 				JsonValue jsonValue => jsonValue.GetValue<TValue>(),
-				JsonObject jsonObject => jsonObject.Deserialize<TValue>() ?? default!,
-				_ => default!
+				JsonObject jsonObject => jsonObject.Deserialize<TValue>(),
+				JsonArray jsonArray => jsonArray.Deserialize<TValue>(),
+				_ => default
 			};
+		}
+		catch (Exception exception) when (exception is InvalidOperationException or JsonException or FormatException or NotSupportedException or InvalidCastException or OverflowException)
+		{
+			// 契约：路径存在但值无法转换为 TValue 时返回默认值，而不是抛出异常。
+			return default;
 		}
 	}
 }

@@ -9,8 +9,12 @@ public static partial class Cryptography
 	/// </summary>
 	/// <remarks>
 	/// <para>
-	/// 使用 ECB 模式与 PKCS7 填充；ECB 对相同明文块产生相同密文块，
-	/// 不适用于需要语义安全的新数据。新代码应使用随机 IV 的 CBC/GCM。
+	/// 新代码请使用 <see cref="EncryptGcm(string?,string)"/> / <see cref="DecryptGcm(string?,string)"/> 等 GCM 方法：
+	/// AES-GCM 使用随机 nonce 与认证标签，同时提供机密性与完整性保护。
+	/// </para>
+	/// <para>
+	/// 显式密钥的 <see cref="Encrypt(string?,string)"/> / <see cref="Decrypt(string?,string)"/> 重载使用 ECB + PKCS7，
+	/// 仅用于兼容遗留数据；ECB 对相同明文块产生相同密文块，不适用于需要语义安全的新数据。
 	/// </para>
 	/// <para>
 	/// 密钥长度必须为 16、24 或 32 字节。字符串密钥按其 UTF-8 字节使用。
@@ -18,26 +22,15 @@ public static partial class Cryptography
 	/// </remarks>
 	public static class AES
 	{
-		// ReSharper disable once InconsistentNaming
-		private static readonly byte[] DefaultSalt =
-		[
-			0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x33, 0x3B, 0x43, 0x4B, 0x9B, 0x93, 0x8B, 0x83, 0x7B, 0x73,
-			0x6B, 0x63, 0x5B, 0x53, 0xF3, 0xFB, 0xA3, 0xAB, 0xB3, 0xBB, 0xC3, 0xEB, 0xE3, 0xDB, 0xD3, 0xCB
-		];
+		private const int NonceSize = 12;
+		private const int TagSize = 16;
 
 		/// <summary>
-		/// 使用内置的默认密钥加密指定的明文。
+		/// 使用 UTF-8 编码的密钥字符串加密指定的明文（ECB + PKCS7）。
 		/// </summary>
-		/// <param name="source">要加密的明文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
-		/// <returns>Base64 编码的密文；输入为空时返回 <see langword="null"/>。</returns>
-		public static string? Encrypt(string? source)
-		{
-			return Encrypt(source, DefaultSalt);
-		}
-
-		/// <summary>
-		/// 使用 UTF-8 编码的密钥字符串加密指定的明文。
-		/// </summary>
+		/// <remarks>
+		/// 仅用于兼容遗留数据；新代码请使用 <see cref="EncryptGcm(string?,string)"/>。
+		/// </remarks>
 		/// <param name="source">要加密的明文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
 		/// <param name="key">密钥字符串，其 UTF-8 字节长度必须为 16、24 或 32。</param>
 		/// <returns>Base64 编码的密文；输入为空时返回 <see langword="null"/>。</returns>
@@ -50,8 +43,11 @@ public static partial class Cryptography
 		}
 
 		/// <summary>
-		/// 使用指定的密钥字节加密明文。
+		/// 使用指定的密钥字节加密明文（ECB + PKCS7）。
 		/// </summary>
+		/// <remarks>
+		/// 仅用于兼容遗留数据；新代码请使用 <see cref="EncryptGcm(string?,byte[])"/>。
+		/// </remarks>
 		/// <param name="source">要加密的明文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
 		/// <param name="key">AES 密钥字节，长度必须为 16、24 或 32。</param>
 		/// <returns>Base64 编码的密文；输入为空时返回 <see langword="null"/>。</returns>
@@ -81,18 +77,11 @@ public static partial class Cryptography
 		}
 
 		/// <summary>
-		/// 使用内置的默认密钥解密指定的 Base64 密文。
+		/// 使用 UTF-8 编码的密钥字符串解密 Base64 密文（ECB + PKCS7）。
 		/// </summary>
-		/// <param name="source">Base64 编码的密文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
-		/// <returns>解密后的明文；输入为空时返回 <see langword="null"/>。</returns>
-		public static string? Decrypt(string? source)
-		{
-			return Decrypt(source, DefaultSalt);
-		}
-
-		/// <summary>
-		/// 使用 UTF-8 编码的密钥字符串解密 Base64 密文。
-		/// </summary>
+		/// <remarks>
+		/// 仅用于兼容遗留数据；新代码请使用 <see cref="DecryptGcm(string?,string)"/>。
+		/// </remarks>
 		/// <param name="source">Base64 编码的密文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
 		/// <param name="key">密钥字符串，其 UTF-8 字节长度必须为 16、24 或 32。</param>
 		/// <returns>解密后的明文；输入为空时返回 <see langword="null"/>。</returns>
@@ -106,8 +95,11 @@ public static partial class Cryptography
 		}
 
 		/// <summary>
-		/// 使用指定的密钥字节解密 Base64 密文。
+		/// 使用指定的密钥字节解密 Base64 密文（ECB + PKCS7）。
 		/// </summary>
+		/// <remarks>
+		/// 仅用于兼容遗留数据；新代码请使用 <see cref="DecryptGcm(string?,byte[])"/>。
+		/// </remarks>
 		/// <param name="source">Base64 编码的密文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
 		/// <param name="key">AES 密钥字节，长度必须为 16、24 或 32。</param>
 		/// <returns>解密后的明文；输入为空时返回 <see langword="null"/>。</returns>
@@ -135,6 +127,122 @@ public static partial class Cryptography
 			var result = decryptor.TransformFinalBlock(bytes, 0, bytes.Length);
 
 			return Encoding.UTF8.GetString(result);
+		}
+
+		/// <summary>
+		/// 使用 AES-GCM 与 UTF-8 编码的密钥字符串加密指定的明文，是新代码的推荐加密方式。
+		/// </summary>
+		/// <param name="source">要加密的明文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
+		/// <param name="key">密钥字符串，其 UTF-8 字节长度必须为 16、24 或 32。</param>
+		/// <returns>Base64 编码的密文载荷；输入为空时返回 <see langword="null"/>。</returns>
+		/// <exception cref="ArgumentException"><paramref name="key"/> 为空或长度不合法。</exception>
+		/// <remarks>
+		/// 输出格式为 Base64(nonce(12 字节) + 认证标签(16 字节) + 密文)。nonce 每次随机生成，
+		/// 相同明文两次加密产生不同密文；解密请使用 <see cref="DecryptGcm(string?,string)"/>。
+		/// </remarks>
+		public static string? EncryptGcm(string? source, string key)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+			return EncryptGcm(source, Encoding.UTF8.GetBytes(key));
+		}
+
+		/// <summary>
+		/// 使用 AES-GCM 与指定的密钥字节加密明文，是新代码的推荐加密方式。
+		/// </summary>
+		/// <param name="source">要加密的明文；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
+		/// <param name="key">AES 密钥字节，长度必须为 16、24 或 32。</param>
+		/// <returns>Base64 编码的密文载荷；输入为空时返回 <see langword="null"/>。</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="key"/> 为 <see langword="null"/>。</exception>
+		/// <exception cref="ArgumentException"><paramref name="key"/> 长度不合法。</exception>
+		/// <remarks>
+		/// 输出格式为 Base64(nonce(12 字节) + 认证标签(16 字节) + 密文)。nonce 每次随机生成，
+		/// 相同明文两次加密产生不同密文；解密请使用 <see cref="DecryptGcm(string?,byte[])"/>。
+		/// </remarks>
+		public static string? EncryptGcm(string? source, byte[] key)
+		{
+			if (string.IsNullOrEmpty(source))
+			{
+				return null;
+			}
+
+			ArgumentNullException.ThrowIfNull(key);
+			ValidateKey(key);
+
+			var plaintext = Encoding.UTF8.GetBytes(source);
+			var nonce = RandomNumberGenerator.GetBytes(NonceSize);
+			var ciphertext = new byte[plaintext.Length];
+			var tag = new byte[TagSize];
+
+			using var gcm = new AesGcm(key, TagSize);
+			gcm.Encrypt(nonce, plaintext, ciphertext, tag);
+
+			var payload = new byte[NonceSize + TagSize + ciphertext.Length];
+			nonce.CopyTo(payload, 0);
+			tag.CopyTo(payload, NonceSize);
+			ciphertext.CopyTo(payload, NonceSize + TagSize);
+
+			return Convert.ToBase64String(payload);
+		}
+
+		/// <summary>
+		/// 使用 AES-GCM 与 UTF-8 编码的密钥字符串解密 Base64 密文载荷。
+		/// </summary>
+		/// <param name="source">Base64 编码的密文载荷（nonce + 认证标签 + 密文）；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
+		/// <param name="key">密钥字符串，其 UTF-8 字节长度必须为 16、24 或 32。</param>
+		/// <returns>解密后的明文；输入为空时返回 <see langword="null"/>。</returns>
+		/// <exception cref="ArgumentException"><paramref name="key"/> 为空或长度不合法。</exception>
+		/// <exception cref="FormatException"><paramref name="source"/> 不是合法的 Base64。</exception>
+		/// <exception cref="CryptographicException"><paramref name="source"/> 长度不足以包含 nonce 与认证标签，或密文/标签被篡改导致认证失败。</exception>
+		/// <remarks>
+		/// 解密时校验认证标签；密文、nonce 或标签的任何篡改都会抛出 <see cref="CryptographicException"/>，不会返回部分明文。
+		/// </remarks>
+		public static string? DecryptGcm(string? source, string key)
+		{
+			ArgumentException.ThrowIfNullOrWhiteSpace(key);
+
+			return DecryptGcm(source, Encoding.UTF8.GetBytes(key));
+		}
+
+		/// <summary>
+		/// 使用 AES-GCM 与指定的密钥字节解密 Base64 密文载荷。
+		/// </summary>
+		/// <param name="source">Base64 编码的密文载荷（nonce + 认证标签 + 密文）；为 <see langword="null"/> 或空时返回 <see langword="null"/>。</param>
+		/// <param name="key">AES 密钥字节，长度必须为 16、24 或 32。</param>
+		/// <returns>解密后的明文；输入为空时返回 <see langword="null"/>。</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="key"/> 为 <see langword="null"/>。</exception>
+		/// <exception cref="ArgumentException"><paramref name="key"/> 长度不合法。</exception>
+		/// <exception cref="FormatException"><paramref name="source"/> 不是合法的 Base64。</exception>
+		/// <exception cref="CryptographicException"><paramref name="source"/> 长度不足以包含 nonce 与认证标签，或密文/标签被篡改导致认证失败。</exception>
+		/// <remarks>
+		/// 解密时校验认证标签；密文、nonce 或标签的任何篡改都会抛出 <see cref="CryptographicException"/>，不会返回部分明文。
+		/// </remarks>
+		public static string? DecryptGcm(string? source, byte[] key)
+		{
+			if (string.IsNullOrEmpty(source))
+			{
+				return null;
+			}
+
+			ArgumentNullException.ThrowIfNull(key);
+			ValidateKey(key);
+
+			var payload = Convert.FromBase64String(source);
+
+			if (payload.Length < NonceSize + TagSize)
+			{
+				throw new CryptographicException("AES-GCM 密文载荷不合法：长度不足以包含 nonce 与认证标签。");
+			}
+
+			var nonce = payload.AsSpan(0, NonceSize);
+			var tag = payload.AsSpan(NonceSize, TagSize);
+			var ciphertext = payload.AsSpan(NonceSize + TagSize);
+			var plaintext = new byte[ciphertext.Length];
+
+			using var gcm = new AesGcm(key, TagSize);
+			gcm.Decrypt(nonce, ciphertext, tag, plaintext);
+
+			return Encoding.UTF8.GetString(plaintext);
 		}
 
 		private static void ValidateKey(byte[] key)

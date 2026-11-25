@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Security.Authentication;
 using Nerosoft.Euonia.Hosting;
@@ -31,5 +32,22 @@ public class ExceptionExtensionsTests
 	{
 		Assert.Equal(400, (int)new AggregateException(new ArgumentException()).GetStatusCode());
 		Assert.Equal(403, (int)new TargetInvocationException(new UnauthorizedAccessException()).GetStatusCode());
+	}
+
+	/// <summary>
+	/// 验证异常的 MemberNames 含重复与空白键时应过滤去重，而不是在异常处理器内再次抛异常。
+	/// </summary>
+	[Fact]
+	public void GetErrorDetails_DuplicateAndBlankMemberNames_Deduplicates()
+	{
+		var result = new ValidationResult("字段无效", ["name", "name", "", " ", null!]);
+		var exception = new ValidationException(result, null, null);
+
+		var details = exception.GetErrorDetails();
+
+		Assert.NotNull(details);
+		var entry = Assert.Single(details);
+		Assert.Equal("name", entry.Key);
+		Assert.Equal(["字段无效"], entry.Value);
 	}
 }

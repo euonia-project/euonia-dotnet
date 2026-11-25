@@ -42,9 +42,21 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 			throw new AuthenticationException("无法解析函数入口方法。");
 		}
 
-		// 匿名函数不应因为携带了过期或无效令牌而被拒绝。
-		if (IsAllowAnonymous(method))
+		var authorizeAttributes = method.GetCustomAttributes<AuthorizeAttribute>(inherit: true)
+			.Concat(method.DeclaringType?.GetCustomAttributes<AuthorizeAttribute>(inherit: true) ?? [])
+			.ToArray();
+
+		// 先解析授权特性再认证：无 [Authorize] 或显式 [AllowAnonymous] 的函数仅尝试认证，
+		// 成功则设置 User，失败静默放行，避免匿名函数因携带过期或无效令牌被 401。
+		if (authorizeAttributes.Length == 0 || IsAllowAnonymous(method))
 		{
+			var anonymousPrincipal = TryAuthenticate(httpContext.Request.Headers[HeaderNames.Authorization].ToString(), options.JwtAuthentication);
+
+			if (anonymousPrincipal is not null)
+			{
+				httpContext.User = anonymousPrincipal;
+			}
+
 			await next(context);
 			return;
 		}
@@ -54,16 +66,6 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 		if (principal is not null)
 		{
 			httpContext.User = principal;
-		}
-
-		var authorizeAttributes = method.GetCustomAttributes<AuthorizeAttribute>(inherit: true)
-			.Concat(method.DeclaringType?.GetCustomAttributes<AuthorizeAttribute>(inherit: true) ?? [])
-			.ToArray();
-
-		if (authorizeAttributes.Length == 0)
-		{
-			await next(context);
-			return;
 		}
 
 		if (httpContext.User.Identity?.IsAuthenticated != true)
@@ -92,6 +94,19 @@ internal sealed class JwtAuthenticationMiddleware(ILogger<JwtAuthenticationMiddl
 		}
 
 		await next(context);
+	}
+
+	private static System.Security.Claims.ClaimsPrincipal? TryAuthenticate(string authorization, Microsoft.AspNetCore.Authentication.JwtAuthenticationOptions options)
+	{
+		try
+		{
+			return Authenticate(authorization, options);
+		}
+		catch (AuthenticationException)
+		{
+			// 匿名路径：无效或过期令牌不影响放行。
+			return null;
+		}
 	}
 
 	private static System.Security.Claims.ClaimsPrincipal? Authenticate(string authorization, Microsoft.AspNetCore.Authentication.JwtAuthenticationOptions options)

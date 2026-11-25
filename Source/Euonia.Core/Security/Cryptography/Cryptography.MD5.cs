@@ -22,7 +22,7 @@ public static partial class Cryptography
 		{
 			ArgumentNullException.ThrowIfNull(value);
 
-			var bytes = System.Security.Cryptography.MD5.HashData(Encoding.Default.GetBytes(value));
+			var bytes = System.Security.Cryptography.MD5.HashData(Encoding.UTF8.GetBytes(value));
 			var builder = new StringBuilder(bytes.Length * 2);
 
 			foreach (var @byte in bytes)

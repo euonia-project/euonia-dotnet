@@ -14,13 +14,25 @@ namespace Nerosoft.Euonia.Hosting.Azfunc;
 internal sealed class HttpContextAccessorMiddleware : IFunctionsWorkerMiddleware
 {
 	/// <inheritdoc />
-	public Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
+	public async Task Invoke(FunctionContext context, FunctionExecutionDelegate next)
 	{
 		var httpContext = context.GetHttpContext();
 
-		if (httpContext is not null)
+		if (httpContext is null)
 		{
-			context.InstanceServices.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
+			await next(context);
+			return;
+		}
+
+		var httpContextAccessor = context.InstanceServices.GetRequiredService<IHttpContextAccessor>();
+		var requestContextAccessor = context.InstanceServices.GetService<DefaultRequestContextAccessor>();
+
+		var previousHttpContext = httpContextAccessor.HttpContext;
+		var previousRequestContext = requestContextAccessor?.Context;
+
+		try
+		{
+			httpContextAccessor.HttpContext = httpContext;
 
 			var user = context.InstanceServices.GetService<UserPrincipal>();
 
@@ -29,11 +41,9 @@ internal sealed class HttpContextAccessorMiddleware : IFunctionsWorkerMiddleware
 				context.Items["User"] = user;
 			}
 
-			var accessor = context.InstanceServices.GetService<DefaultRequestContextAccessor>();
-
-			if (accessor is not null)
+			if (requestContextAccessor is not null)
 			{
-				accessor.Context = new RequestContext
+				requestContextAccessor.Context = new RequestContext
 				{
 					Headers = httpContext.Request.Headers.ToDictionary(item => item.Key, item => item.Value.ToString()),
 					ConnectionId = httpContext.Connection.Id,
@@ -46,8 +56,18 @@ internal sealed class HttpContextAccessorMiddleware : IFunctionsWorkerMiddleware
 					RequestServices = httpContext.RequestServices
 				};
 			}
-		}
 
-		return next(context);
+			await next(context);
+		}
+		finally
+		{
+			// IHttpContextAccessor 与 AsyncLocal 请求上下文不清理会污染同执行流上的后续触发器（timer/queue）。
+			httpContextAccessor.HttpContext = previousHttpContext;
+
+			if (requestContextAccessor is not null)
+			{
+				requestContextAccessor.Context = previousRequestContext;
+			}
+		}
 	}
 }

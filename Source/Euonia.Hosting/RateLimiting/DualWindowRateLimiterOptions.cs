@@ -33,6 +33,10 @@ public sealed class DualWindowRateLimiterOptions
 	/// <summary>
 	/// 获取或设置是否自动补充令牌；默认 <c>true</c>。
 	/// </summary>
+	/// <remarks>
+	/// 设为 <c>false</c> 时窗口到期不会自动或惰性重置计数，
+	/// 调用方必须在窗口过期后定期调用 <see cref="DualWindowRateLimiter.TryReplenish"/>，否则许可耗尽后将一直拒绝请求。
+	/// </remarks>
 	public bool AutoReplenishment { get; set; } = true;
 
 	/// <summary>

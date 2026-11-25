@@ -83,6 +83,24 @@ public sealed class DualWindowRateLimiter : RateLimiter
 		};
 	}
 
+	/// <summary>
+	/// 手动补充两个窗口的请求计数。
+	/// </summary>
+	/// <returns>
+	/// 任一内部限流器处于手动补充模式时返回 <c>true</c>；两个窗口均启用自动补充时返回 <c>false</c>。
+	/// 返回值不表示计数是否实际被重置：仅当窗口自上次补充起已经过期时才会重置计数。
+	/// </returns>
+	/// <remarks>
+	/// 供 <see cref="DualWindowRateLimiterOptions.AutoReplenishment"/> 为 <c>false</c> 时由调用方在窗口过期后定期调用。
+	/// </remarks>
+	public bool TryReplenish()
+	{
+		var minuteReplenished = _minute.TryReplenish();
+		var hourlyReplenished = _hourly.TryReplenish();
+
+		return minuteReplenished || hourlyReplenished;
+	}
+
 	/// <inheritdoc />
 	protected override RateLimitLease AttemptAcquireCore(int permitCount)
 	{

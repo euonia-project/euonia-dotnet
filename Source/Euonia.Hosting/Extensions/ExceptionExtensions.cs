@@ -65,21 +65,15 @@ public static class ExceptionExtensions
 					return null;
 				}
 
+				// MemberNames 可能含重复或空白键，直接 ToDictionary 会在异常处理器内再次抛异常。
 				return validationException.ValidationResult
 				                          .MemberNames
-				                          .ToDictionary(t => t, _ => new[]
+				                          .Where(name => !string.IsNullOrWhiteSpace(name))
+				                          .GroupBy(name => name!)
+				                          .ToDictionary(group => group.Key, _ => new[]
 				                          {
 					                          validationException.ValidationResult.ErrorMessage
 				                          });
-
-				// return validationException.ValidationResult.MemberNames
-				//                           .Distinct()
-				//                           .ToDictionary(
-				// 	                          t => t,
-				// 	                          t => validationException.ValidationResult.MemberNames
-				// 	                                                  .Where(x => (x ?? "_") == t)
-				// 	                                                  .Select(x => validationException.ValidationResult.ErrorMessage)
-				// 	                                                  .ToArray());
 			}
 		}
 

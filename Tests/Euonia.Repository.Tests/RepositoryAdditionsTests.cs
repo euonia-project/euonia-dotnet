@@ -50,6 +50,45 @@ public class RepositoryAdditionsTests
 		Assert.True(stored.IsDeleted);
 	}
 
+	/// <summary>
+	/// 中4：已软删除的记录不应再被 DeleteAsync(id) 命中（按 id 查询必须走全局查询过滤器），
+	/// 应抛 NotFoundException 而不是对墓碑记录重复删除。
+	/// </summary>
+	[Fact]
+	public async Task DeleteAsync_ById_AlreadySoftDeleted_ThrowsNotFoundException()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		await using var fixture = await RepositoryFixture.CreateAsync(cancellationToken);
+		var repository = fixture.Repository;
+		var record = new AuditRecord { Id = Guid.NewGuid(), Name = "delete-once" };
+
+		await repository.InsertAsync(record, cancellationToken: cancellationToken);
+		await repository.DeleteAsync(record.Id, cancellationToken: cancellationToken);
+
+		// 修复前：GetAsync(id) 经 Context.FindAsync 绕过墓碑过滤器（且命中已跟踪实例），
+		// 已软删除记录可被再次删除，不抛异常。
+		await Assert.ThrowsAsync<NotFoundException>(() => repository.DeleteAsync(record.Id, cancellationToken: cancellationToken));
+	}
+
+	/// <summary>
+	/// 中4：软删除后按 id 查询应返回 null，而不是绕过过滤器读回墓碑记录。
+	/// </summary>
+	[Fact]
+	public async Task GetAsync_ById_AfterSoftDelete_ReturnsNull()
+	{
+		var cancellationToken = TestContext.Current.CancellationToken;
+		await using var fixture = await RepositoryFixture.CreateAsync(cancellationToken);
+		var repository = fixture.Repository;
+		var record = new AuditRecord { Id = Guid.NewGuid(), Name = "hidden" };
+
+		await repository.InsertAsync(record, cancellationToken: cancellationToken);
+		await repository.DeleteAsync(record.Id, cancellationToken: cancellationToken);
+
+		var found = await repository.GetAsync(record.Id, cancellationToken);
+
+		Assert.Null(found);
+	}
+
 	[Fact]
 	public async Task LookupAsync_ReturnsDictionary()
 	{

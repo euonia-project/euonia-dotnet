@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using System.Text;
 using Nerosoft.Euonia.Security;
 
@@ -18,11 +19,38 @@ public class CryptographyDesTests
 	}
 
 	[Fact]
-	public void EncryptAndDecrypt_WithDefaultKey_RoundTrips()
+	public void Encrypt_WithInvalidByteKeyLength_ThrowsArgumentException()
 	{
-		var ciphertext = Cryptography.DES.Encrypt("default-key");
+		// 回归：修复前 aes.Key 赋值抛 CryptographicException，与文档承诺的 ArgumentException 不符。
+		Assert.Throws<ArgumentException>(() => Cryptography.DES.Encrypt("value", new byte[5]));
+		Assert.Throws<ArgumentException>(() => Cryptography.DES.Encrypt("value", new byte[17]));
+	}
 
-		Assert.Equal("default-key", Cryptography.DES.Decrypt(ciphertext));
+	[Fact]
+	public void Decrypt_WithInvalidByteKeyLength_ThrowsArgumentException()
+	{
+		Assert.Throws<ArgumentException>(() => Cryptography.DES.Decrypt("AAAA", new byte[5]));
+		Assert.Throws<ArgumentException>(() => Cryptography.DES.Decrypt("AAAA", new byte[17]));
+	}
+
+	[Fact]
+	public void Encrypt_WithStringKey_MatchesLegacyEcbDes()
+	{
+		// 兼容契约：字符串密钥重载必须与遗留 DES（ECB + PKCS7，不使用 IV）的密文保持一致。
+		const string plaintext = "DES 测试 123";
+		var ciphertext = Cryptography.DES.Encrypt(plaintext, DesKey);
+
+#pragma warning disable SYSLIB0021 // 测试中显式构造遗留 DES 作为参照。
+		using var provider = System.Security.Cryptography.DES.Create();
+#pragma warning restore SYSLIB0021
+		provider.Mode = CipherMode.ECB;
+		provider.Padding = PaddingMode.PKCS7;
+
+		var sourceBytes = Encoding.UTF8.GetBytes(plaintext);
+		using var encryptor = provider.CreateEncryptor(Encoding.UTF8.GetBytes(DesKey), null);
+		var expected = Convert.ToBase64String(encryptor.TransformFinalBlock(sourceBytes, 0, sourceBytes.Length));
+
+		Assert.Equal(expected, ciphertext);
 	}
 
 	[Fact]

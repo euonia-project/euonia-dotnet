@@ -184,8 +184,8 @@ public class BusinessObjectFactory : IObjectFactory
 		var succeeded = false;
 		try
 		{
-			// 传入静态目标类型：派生类型若用 new 遮蔽基类工厂方法，实际执行的是基类方法。
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, operation, cancellationToken, method, typeof(TTarget)).ConfigureAwait(false);
+			// 判定按目标的运行时类型收集：派生 override / new 遮蔽上的声明由 ObjectAuthorization 解析并集，不会漏判。
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, operation, cancellationToken, method).ConfigureAwait(false);
 
 			// 目标由调用方提供且已承载数据：可以前置判定，失败即无副作用地拒绝
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, operation, cancellationToken).ConfigureAwait(false);
@@ -236,7 +236,7 @@ public class BusinessObjectFactory : IObjectFactory
 
 		return await WithActivatorAsync(target, async initialize =>
 		{
-			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, cancellationToken, method, typeof(TTarget)).ConfigureAwait(false);
+			await ObjectAuthorization.EnsureAuthorizedAsync(target!, BusinessOperation.Execute, cancellationToken, method).ConfigureAwait(false);
 
 			// 目标由调用方提供：可以前置判定
 			await ScopeAuthorization.EnsureAuthorizedBeforeAsync(target!, BusinessOperation.Execute, cancellationToken).ConfigureAwait(false);

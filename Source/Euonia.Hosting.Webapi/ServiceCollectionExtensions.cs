@@ -79,9 +79,11 @@ public static class ServiceCollectionExtensions
 											   ?? new ClaimsPrincipal(new ClaimsIdentity()));
 			services.AddUserPrincipal();
 
-			services.AddAuthorization();
+			// 权限策略提供程序必须先于 AddAuthorization 做 TryAdd：AddAuthorization 内部会 TryAdd 默认提供程序，
+			// 排在其后注册永远不生效；排在前面则既尊重宿主预注册的实现，也保证默认提供程序被权限提供程序取代。
 			services.TryAddSingleton<DefaultAuthorizationPolicyProvider>();
-			services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+			services.TryAddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();
+			services.AddAuthorization();
 			services.TryAddEnumerable(ServiceDescriptor.Scoped<IAuthorizationHandler, PermissionAuthorizationHandler>());
 
 			return services.AddPermission(configure);

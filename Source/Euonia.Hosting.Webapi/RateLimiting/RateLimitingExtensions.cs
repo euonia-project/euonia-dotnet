@@ -39,6 +39,11 @@ public static class RateLimitingApplicationBuilderExtensions
 		ArgumentOutOfRangeException.ThrowIfNullOrWhiteSpace(options.PolicyName);
 		options.DefaultLimiter.Validate();
 
+		// 分区限流器由 MemoryCache 承载并在驱逐时 Dispose，避免按 IP 分区时自动补充定时器永久泄漏；
+		// 注册为单例实例，容器释放时统一清理。
+		var store = new DualWindowRateLimiterStore(options.DefaultLimiter);
+		services.AddSingleton(store);
+
 		services.AddSingleton(options);
 		services.AddRateLimiter(limiter =>
 		{
@@ -77,7 +82,9 @@ public static class RateLimitingApplicationBuilderExtensions
 						key = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 					}
 
-					return RateLimitPartition.Get(key, _ => new DualWindowRateLimiter(options.DefaultLimiter));
+					// 框架会缓存分区并在空闲驱逐后重新调用工厂；返回共享存储支撑的包装限流器，
+					// 保证同一分区计数不因框架驱逐而重置，真实限流器的生命周期由存储管理。
+					return RateLimitPartition.Get(key, _ => new StoreBackedRateLimiter(store, key));
 				});
 			}
 		});

@@ -30,4 +30,11 @@ public class CryptographyMd5Tests
 	{
 		Assert.Throws<ArgumentNullException>(() => Cryptography.MD5.Encrypt(null!));
 	}
+
+	[Fact]
+	public void Encrypt_Unicode_MatchesUtf8Digest()
+	{
+		// 契约：摘要必须按 UTF-8 字节计算，而不是系统默认编码。
+		Assert.Equal("640a432eb04d9ceded1bc624548b2371", Cryptography.MD5.Encrypt("Euonia 中文"));
+	}
 }

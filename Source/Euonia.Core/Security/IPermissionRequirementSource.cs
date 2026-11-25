@@ -24,8 +24,8 @@ public interface IPermissionRequirementSource
 	/// <summary>
 	/// 收集指定类型、指定被调用方法与指定授权标识上的全部权限要求。
 	/// </summary>
-	/// <param name="type">资源类型；工厂按静态类型查找并调用方法时应传入该静态类型。</param>
-	/// <param name="method">将要执行的方法；为 <see langword="null"/> 时只收集类型级要求。</param>
+	/// <param name="type">资源类型；工厂边界强制时传入目标的<b>运行时类型</b>（DI 可能把静态类型映射到派生类）。</param>
+	/// <param name="method">将要执行的方法（可以是按静态类型查找到的声明）；为 <see langword="null"/> 时只收集类型级要求。</param>
 	/// <param name="operation">授权标识（数据权限的操作名）；实现可以忽略它。</param>
 	/// <returns>权限要求列表；没有任何要求时返回空集合。</returns>
 	IReadOnlyList<PermissionAttribute> RequirementsFor(Type type, MethodInfo? method, string operation);

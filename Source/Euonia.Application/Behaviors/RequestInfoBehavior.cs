@@ -1,3 +1,4 @@
+using System.Net;
 using Microsoft.Extensions.DependencyInjection;
 using Nerosoft.Euonia.Bus;
 using Nerosoft.Euonia.Modularity;
@@ -11,10 +12,18 @@ namespace Nerosoft.Euonia.Application;
 /// <typeparam name="TMessage">由管道处理的消息类型。必须是实现了 <see cref="IMessageEnvelope"/> 接口的类。</typeparam>
 /// <typeparam name="TResponse">管道返回的响应类型。</typeparam>
 /// <remarks>
+/// <para>
 /// 请求上下文不存在时直接调用下一个管道委托，不写入任何元数据。IP 地址优先从代理头读取，
 /// 依次尝试 <c>X-Forwarded-For</c>、<c>x-client-ip</c>、<c>CF-Connecting-IP</c>、
-/// <c>X-Forwarded-Client-Ip</c>、<c>X-Real-IP</c>、<c>CLIENT-IP</c>，均缺失时使用
-/// <see cref="RequestContext.RemoteIpAddress"/>。
+/// <c>X-Forwarded-Client-Ip</c>、<c>X-Real-IP</c>、<c>CLIENT-IP</c>；
+/// <c>X-Forwarded-For</c> 为逗号分隔的多跳链时取第一个（最初客户端）地址。
+/// 所有候选值均须经 <c>IPAddress.TryParse</c> 校验，非法值继续尝试下一来源，
+/// 均缺失或非法时回退到 <see cref="RequestContext.RemoteIpAddress"/>。
+/// </para>
+/// <para>
+/// 代理头可被客户端伪造，仅在可信代理部署（由代理覆写或校验这些头）下，
+/// 从中解析的 IP 才可信；不可信网络环境中不应将其用于安全决策。
+/// </para>
 /// </remarks>
 public class RequestInfoBehavior<TMessage, TResponse> : IPipelineBehavior<TMessage, TResponse>
 	where TMessage : class, IMessageEnvelope
@@ -88,9 +97,19 @@ public class RequestInfoBehavior<TMessage, TResponse> : IPipelineBehavior<TMessa
 		{
 			foreach (var headerKey in IpHeaderKeys)
 			{
-				if (headers.TryGetValue(headerKey, out var ip) && !string.IsNullOrWhiteSpace(ip))
+				if (!headers.TryGetValue(headerKey, out var value) || string.IsNullOrWhiteSpace(value))
 				{
-					return ip;
+					continue;
+				}
+
+				// X-Forwarded-For 可能是逗号分隔的多跳链，取第一个（最初客户端）地址；
+				// 其余头为单值，Split 取首段亦无副作用。
+				var candidate = value.Split(',')[0].Trim();
+
+				// 代理头可被伪造且可能携带非法值，校验失败时继续尝试下一来源。
+				if (IPAddress.TryParse(candidate, out _))
+				{
+					return candidate;
 				}
 			}
 		}

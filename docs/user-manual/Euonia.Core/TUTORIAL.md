@@ -161,6 +161,17 @@ if (!CryptographicOperations.FixedTimeEquals(
 ```
 
 密钥长度必须是 16 / 24 / 32 字节；`RandomUtility.GenerateRandomString(32)` 正好生成 32 个十六进制字符（32 字节）。
+所有加解密重载都要求显式密钥（内置默认密钥的无参重载已删除）。
+
+上例的 `Encrypt` / `Decrypt` 使用 ECB + PKCS7，仅用于兼容遗留数据；**新数据请改用 AES-GCM**：
+
+```csharp
+var cipher = Cryptography.AES.EncryptGcm(clientSecret, salt);   // Base64(nonce + 认证标签 + 密文)
+var plain = Cryptography.AES.DecryptGcm(cipher!, salt);          // 密文被篡改时抛 CryptographicException
+```
+
+RSA（`Cryptography.RSA`）默认使用 OAEP（SHA-256）填充；解密遗留的 PKCS#1 v1.5 密文时显式传入
+`RSAEncryptionPadding.Pkcs1` 重载。`Cryptography.DES` 整体仅限兼容遗留数据。
 
 ### 2. 生成密码与验证码
 

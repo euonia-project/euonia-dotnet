@@ -95,4 +95,53 @@ public class RateLimitingTests
 		Assert.True(lease.IsAcquired);
 	}
 
+	/// <summary>
+	/// 手动补充模式耗尽后窗口到期不会惰性重置；TryReplenish 应恢复放行。
+	/// </summary>
+	[Fact]
+	public async Task TryReplenish_ManualMode_RestoresPermitsAfterWindow()
+	{
+		using var limiter = new DualWindowRateLimiter(new DualWindowRateLimiterOptions
+		{
+			MinutePermitLimit = 1,
+			MinuteWindow = TimeSpan.FromMilliseconds(100),
+			HourPermitLimit = 10,
+			HourWindow = TimeSpan.FromMilliseconds(100),
+			AutoReplenishment = false
+		});
+
+		using (var first = limiter.AttemptAcquire())
+		{
+			Assert.True(first.IsAcquired);
+		}
+
+		using (var denied = limiter.AttemptAcquire())
+		{
+			Assert.False(denied.IsAcquired);
+		}
+
+		await Task.Delay(300, TestContext.Current.CancellationToken);
+
+		// 关闭自动补充后窗口到期不会惰性重置，仍应拒绝。
+		using (var stillDenied = limiter.AttemptAcquire())
+		{
+			Assert.False(stillDenied.IsAcquired);
+		}
+
+		Assert.True(limiter.TryReplenish());
+
+		using var restored = limiter.AttemptAcquire();
+		Assert.True(restored.IsAcquired);
+	}
+
+	/// <summary>
+	/// 自动补充模式下 TryReplenish 应返回 false。
+	/// </summary>
+	[Fact]
+	public void TryReplenish_AutoMode_ReturnsFalse()
+	{
+		using var limiter = new DualWindowRateLimiter();
+
+		Assert.False(limiter.TryReplenish());
+	}
 }

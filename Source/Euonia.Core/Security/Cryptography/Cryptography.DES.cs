@@ -5,42 +5,28 @@ namespace Nerosoft.Euonia.Security;
 public static partial class Cryptography
 {
 	/// <summary>
-	/// DES 辅助类，提供加密与解密方法。
+	/// DES 辅助类，提供加密与解密方法，仅限兼容遗留数据。
 	/// </summary>
 	/// <remarks>
 	/// <para>
-	/// 字符串密钥重载使用系统 <see cref="System.Security.Cryptography.DES"/>（ECB + PKCS7）；
-	/// 32 字节密钥重载内部使用 ECB 模式的 AES，明文按 UTF-16（Unicode）编码。
-	/// 这些行为为兼容既有数据而保留。
+	/// 本类型整体仅为兼容遗留数据保留，新代码请使用 <see cref="AES"/> 的 GCM 方法
+	/// （如 <see cref="AES.EncryptGcm(string?,string)"/>）。DES 密钥空间过小且 ECB 不隐藏明文模式，不具备现代安全性。
 	/// </para>
 	/// <para>
-	/// 使用字符串密钥的加密没有对应的解密重载；解密请使用 32 字节密钥重载。
+	/// 字符串密钥重载使用系统 <see cref="System.Security.Cryptography.DES"/>（ECB + PKCS7），密钥 UTF-8 字节必须为 8；
+	/// 字节数组密钥重载内部使用 ECB 模式的 AES，密钥长度必须为 16、24 或 32 字节，明文按 UTF-16（Unicode）编码。
+	/// </para>
+	/// <para>
+	/// 使用字符串密钥的加密没有对应的解密重载；解密请使用字节数组密钥重载。
 	/// </para>
 	/// </remarks>
 	public static class DES
 	{
-		// ReSharper disable once InconsistentNaming
-		private static readonly byte[] DefaultSalt =
-		[
-			0x03, 0x0B, 0x13, 0x1B, 0x23, 0x2B, 0x33, 0x3B, 0x43, 0x4B, 0x9B, 0x93, 0x8B, 0x83, 0x7B, 0x73,
-			0x6B, 0x63, 0x5B, 0x53, 0xF3, 0xFB, 0xA3, 0xAB, 0xB3, 0xBB, 0xC3, 0xEB, 0xE3, 0xDB, 0xD3, 0xCB
-		];
-
 		/// <summary>
-		/// 使用默认的 32 字节密钥加密指定字符串（内部使用 ECB 模式的 AES）。
+		/// 使用提供的密钥字节加密指定字符串（内部使用 ECB 模式的 AES），仅限兼容遗留数据。
 		/// </summary>
 		/// <param name="source">要加密的明文。</param>
-		/// <returns>Base64 编码的密文。</returns>
-		public static string Encrypt(string source)
-		{
-			return Encrypt(source, DefaultSalt);
-		}
-
-		/// <summary>
-		/// 使用提供的 32 字节密钥加密指定字符串（内部使用 ECB 模式的 AES）。
-		/// </summary>
-		/// <param name="source">要加密的明文。</param>
-		/// <param name="key">用作 AES 密钥的 32 字节密钥。</param>
+		/// <param name="key">用作 AES 密钥的字节数组，长度必须为 16、24 或 32 字节。</param>
 		/// <returns>Base64 编码的密文。</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="source"/> 或 <paramref name="key"/> 为 <see langword="null"/>。</exception>
 		/// <exception cref="ArgumentException"><paramref name="key"/> 长度不合法。</exception>
@@ -48,6 +34,7 @@ public static partial class Cryptography
 		{
 			ArgumentNullException.ThrowIfNull(source);
 			ArgumentNullException.ThrowIfNull(key);
+			ValidateKey(key);
 
 			using var aes = Aes.Create();
 			aes.Key = key;
@@ -90,7 +77,8 @@ public static partial class Cryptography
 			var sourceBytes = Encoding.UTF8.GetBytes(source);
 
 			using var output = new MemoryStream();
-			using (var crypto = new CryptoStream(output, provider.CreateEncryptor(keyBytes, keyBytes), CryptoStreamMode.Write))
+			// ECB 模式不使用 IV，传 null 避免把密钥复用为 IV。
+			using (var crypto = new CryptoStream(output, provider.CreateEncryptor(keyBytes, null), CryptoStreamMode.Write))
 			{
 				crypto.Write(sourceBytes, 0, sourceBytes.Length);
 				crypto.FlushFinalBlock();
@@ -100,20 +88,10 @@ public static partial class Cryptography
 		}
 
 		/// <summary>
-		/// 使用默认的 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES）。
+		/// 使用提供的密钥字节解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES），仅限兼容遗留数据。
 		/// </summary>
 		/// <param name="source">Base64 编码的密文。</param>
-		/// <returns>解密后的明文。</returns>
-		public static string Decrypt(string source)
-		{
-			return Decrypt(source, DefaultSalt);
-		}
-
-		/// <summary>
-		/// 使用提供的 32 字节密钥解密指定的 Base64 编码密文（内部使用 ECB 模式的 AES）。
-		/// </summary>
-		/// <param name="source">Base64 编码的密文。</param>
-		/// <param name="key">用作 AES 密钥的 32 字节密钥。</param>
+		/// <param name="key">用作 AES 密钥的字节数组，长度必须为 16、24 或 32 字节。</param>
 		/// <returns>解密后的明文。</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="source"/> 或 <paramref name="key"/> 为 <see langword="null"/>。</exception>
 		/// <exception cref="ArgumentException"><paramref name="key"/> 长度不合法。</exception>
@@ -122,6 +100,7 @@ public static partial class Cryptography
 		{
 			ArgumentNullException.ThrowIfNull(source);
 			ArgumentNullException.ThrowIfNull(key);
+			ValidateKey(key);
 
 			using var aes = Aes.Create();
 			aes.Key = key;
@@ -133,6 +112,14 @@ public static partial class Cryptography
 			using var reader = new StreamReader(crypto, Encoding.Unicode);
 
 			return reader.ReadToEnd();
+		}
+
+		private static void ValidateKey(byte[] key)
+		{
+			if (key.Length is not (16 or 24 or 32))
+			{
+				throw new ArgumentException("AES 密钥长度必须为 16、24 或 32 字节。", nameof(key));
+			}
 		}
 	}
 }

@@ -6,6 +6,53 @@
 ## [未发布]
 
 <!-- 在此累积下一个版本的变更，发布时改写为正式版本号与日期 -->
+### 修复（本次审查修复）
+
+#### 安全与密码学（Euonia.Core）
+
+- **修复**：删除 AES/DES 硬编码默认密钥重载及 `DefaultSalt` 常量（未发布 API，直接移除）；DES 整体标注为仅限兼容遗留数据。
+- **新增**：AES 提供基于 `AesGcm` 的推荐加密 API（`EncryptGcm`/`DecryptGcm`，随机 nonce + 认证标签，篡改检测）；现有 ECB 方法保留并标注"仅兼容遗留数据"。
+- **修复**：RSA 加密/解密默认改用 `RSAEncryptionPadding.OaepSHA256`，新增显式 padding 重载供 Pkcs1 兼容使用。
+- **修复**：`JsonNode.GetValue<TValue>` 兑现文档契约——类型不匹配时返回默认值而非抛异常；新增 `JsonArray` 终点反序列化支持。
+- **修复**：`PasswordGenerator` 将字符类型校验移至随机取长度之前，消除非确定性失败；修复 `maxLength == int.MaxValue` 溢出。
+- **修复**：MD5 改用 `Encoding.UTF8`（跨运行时一致）；RSA 构造函数公钥导入失败时释放已导入私钥；DES 字符串密钥 ECB 不再复用密钥作 IV；DES byte[] 重载增加显式密钥长度校验。
+
+#### 权限体系（Euonia.Security / Euonia.Osba / Euonia.Hosting.Webapi）
+
+- **修复**：工厂权限收集改为按运行时类型 + override/new 遮蔽并集判定，修复 DI 映射派生类时方法级 `[Permission]` 被绕过的 fail-open 回归。
+- **修复**：`RequiresPermissionAttribute` 拒绝含 `|` 的权限码并复用 `ScopeKeys.Validate`，统一两入口校验口径，防止分隔符注入弱化授权。
+- **修复**：`PermissionRequirement.Permissions` 改 `IReadOnlyList<string>` 防静态策略缓存污染；构造时拒绝空白码项。
+- **修复**：`AddPermissionGuard` 改 `TryAddSingleton` 并将注册移至 `AddAuthorization()` 之前，避免被宿主默认策略提供程序覆盖。
+- **修复**：扫描器去重键改用 `StringComparer.OrdinalIgnoreCase` 复合键，修复 Unicode 展开字符（如 ß/SS）启动误报。
+
+#### 宿主与限流（Euonia.Hosting / Euonia.Hosting.Webapi / Euonia.Hosting.Azfunc）
+
+- **修复**：Webapi 按 IP 限流分区改用 MemoryCache 承载 + 驱逐回调 Dispose，修复定时器永久泄漏导致的远程可触发 DoS。
+- **修复**：`DualWindowRateLimiter` 新增 `TryReplenish()` 公开方法，修复 `AutoReplenishment=false` 时永久 429 锁死。
+- **修复**：两宿主异常处理器对 5xx 一律返回通用消息，完整异常仅写日志，防止内部信息泄漏。
+- **修复**：Azfunc JWT 中间件先解析授权特性再认证，匿名函数带过期令牌不再 401，与 Webapi 行为一致。
+- **修复**：`FunctionMethodResolver` 同名重载 fail-closed 并缓存解析结果，防止授权绕过与每请求全程序集扫描。
+- **修复**：`HttpContextAccessorMiddleware` 在 finally 中还原 `IHttpContextAccessor` 与 `RequestContext`，防止跨触发器上下文污染。
+- **修复**：Azfunc 限流 `MemoryCache.GetOrCreate` 改用 `Lazy<T>` + 双重检查锁，修复并发竞态下实例泄漏。
+- **修复**：`ExceptionExtensions.GetErrorDetails` 对 DataAnnotations `MemberNames` 过滤空白并 GroupBy 去重，防止异常处理器内再抛异常。
+- **修复**：两宿主异常中间件在 `RequestAborted` 时不写响应、不记 500。
+
+#### 数据访问与应用层（Euonia.Repository.EfCore / Euonia.Application）
+
+- **修复**：`DataContextBase.SetEntryValues` 解耦操作人写入与时间戳/软删除转换，`GetCurrentUserId()` 为 null 时仍执行软删除，修复匿名/后台场景物理删除数据丢失。
+- **修复**：Deleted→Modified 转换仅标记审计列为 `IsModified`，stub 删除不再用默认值覆盖整行数据。
+- **修复**：Modified 分支访问 `IsDeleted` 前检查元数据判空，`[NotMapped] IsDeleted` 实体 SaveChanges 不再抛异常。
+- **修复**：`EfCoreRepository.DeleteAsync(TKey)` 改用带全局过滤器的查询，修复绕过墓碑/租户过滤器导致的跨租户写风险。
+- **修复**：`RequestContextExtensions` Headers 构建改用 `StringComparer.OrdinalIgnoreCase`，修复 HTTP/2 下元数据丢失。
+- **修复**：`RequestInfoBehavior` IP 解析取 XFF 首跳并经 `IPAddress.TryParse` 校验，非法值回退 `RemoteIpAddress`。
+- **修复**：`EpochTimestampGenerator` 用 `Interlocked.CompareExchange` 保证进程内严格单调，文档注明跨进程不保证唯一。
+- **修复**：`EntityEntryExtensions.TrySetProperty` 增加类型兼容性检查，不兼容时跳过，兑现 Try 语义。
+- **修复**：`IAuditable` XML 文档更正 `DeletedBy` 值类型语义说明。
+
+#### 测试
+
+- 新增 89 个回归测试覆盖上述所有修复路径（加密 GCM/OAEP/契约/边界、权限 override 并集/码校验/缓存防污染、限流分区驱逐/TryReplenish/竞态、JWT 匿名认证/重载歧义、软删除 null 用户/stub/NotMapped/过滤器绕过、HTTP/2 头大小写、IP 校验、时间戳单调等）。
+
 
 ### 核心（Core）
 

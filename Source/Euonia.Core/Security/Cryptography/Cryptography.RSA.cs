@@ -13,7 +13,8 @@ public static partial class Cryptography
 	/// 公钥支持 PEM、Base64 编码的 SubjectPublicKeyInfo（SPKI）或 PKCS#1（RSAPublicKey）DER。
 	/// </para>
 	/// <para>
-	/// 加密使用 PKCS#1 v1.5 填充；新协议建议改用 OAEP。
+	/// 加密与解密默认使用 OAEP（SHA-256）填充；PKCS#1 v1.5 仅通过显式传入
+	/// <see cref="RSAEncryptionPadding.Pkcs1"/> 的重载用于兼容遗留数据。
 	/// 本类型持有非托管密钥材料，使用完毕后应调用 <see cref="Dispose"/>。
 	/// </para>
 	/// </remarks>
@@ -44,49 +45,96 @@ public static partial class Cryptography
 
 			if (!string.IsNullOrWhiteSpace(publicKey))
 			{
-				_publicKey = ImportPublicKey(publicKey);
+				try
+				{
+					_publicKey = ImportPublicKey(publicKey);
+				}
+				catch
+				{
+					// 构造失败时释放已导入的私钥，避免非托管密钥材料泄漏。
+					_privateKey?.Dispose();
+
+					throw;
+				}
 			}
 		}
 
 		/// <summary>
-		/// 使用公钥加密指定的明文。
+		/// 使用公钥与默认的 OAEP（SHA-256）填充加密指定的明文。
 		/// </summary>
 		/// <param name="source">要加密的明文。</param>
 		/// <returns>Base64 编码的密文。</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="source"/> 为 <see langword="null"/>。</exception>
 		/// <exception cref="InvalidOperationException">未配置公钥。</exception>
+		/// <remarks>
+		/// 兼容遗留的 PKCS#1 v1.5 密文请使用 <see cref="Encrypt(string,RSAEncryptionPadding)"/> 并显式传入 <see cref="RSAEncryptionPadding.Pkcs1"/>。
+		/// </remarks>
 		public string Encrypt(string source)
 		{
+			return Encrypt(source, RSAEncryptionPadding.OaepSHA256);
+		}
+
+		/// <summary>
+		/// 使用公钥与指定的填充模式加密指定的明文。
+		/// </summary>
+		/// <param name="source">要加密的明文。</param>
+		/// <param name="padding">RSA 加密填充模式；新数据使用 <see cref="RSAEncryptionPadding.OaepSHA256"/>，<see cref="RSAEncryptionPadding.Pkcs1"/> 仅用于兼容遗留数据。</param>
+		/// <returns>Base64 编码的密文。</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="source"/> 或 <paramref name="padding"/> 为 <see langword="null"/>。</exception>
+		/// <exception cref="InvalidOperationException">未配置公钥。</exception>
+		public string Encrypt(string source, RSAEncryptionPadding padding)
+		{
 			ArgumentNullException.ThrowIfNull(source);
+			ArgumentNullException.ThrowIfNull(padding);
 
 			if (_publicKey is null)
 			{
 				throw new InvalidOperationException("未配置公钥，无法加密。");
 			}
 
-			var bytes = _publicKey.Encrypt(Encoding.UTF8.GetBytes(source), RSAEncryptionPadding.Pkcs1);
+			var bytes = _publicKey.Encrypt(Encoding.UTF8.GetBytes(source), padding);
 
 			return Convert.ToBase64String(bytes);
 		}
 
 		/// <summary>
-		/// 使用私钥解密指定的 Base64 密文。
+		/// 使用私钥与默认的 OAEP（SHA-256）填充解密指定的 Base64 密文。
 		/// </summary>
 		/// <param name="source">Base64 编码的密文。</param>
 		/// <returns>解密后的明文。</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="source"/> 为 <see langword="null"/>。</exception>
 		/// <exception cref="InvalidOperationException">未配置私钥。</exception>
 		/// <exception cref="FormatException"><paramref name="source"/> 不是合法的 Base64。</exception>
+		/// <exception cref="CryptographicException">密文不是使用 OAEP（SHA-256）填充加密的，或已被篡改。</exception>
+		/// <remarks>
+		/// 解密遗留的 PKCS#1 v1.5 密文请使用 <see cref="Decrypt(string,RSAEncryptionPadding)"/> 并显式传入 <see cref="RSAEncryptionPadding.Pkcs1"/>。
+		/// </remarks>
 		public string Decrypt(string source)
 		{
+			return Decrypt(source, RSAEncryptionPadding.OaepSHA256);
+		}
+
+		/// <summary>
+		/// 使用私钥与指定的填充模式解密指定的 Base64 密文。
+		/// </summary>
+		/// <param name="source">Base64 编码的密文。</param>
+		/// <param name="padding">RSA 加密填充模式，必须与加密时使用的填充一致；<see cref="RSAEncryptionPadding.Pkcs1"/> 仅用于兼容遗留数据。</param>
+		/// <returns>解密后的明文。</returns>
+		/// <exception cref="ArgumentNullException"><paramref name="source"/> 或 <paramref name="padding"/> 为 <see langword="null"/>。</exception>
+		/// <exception cref="InvalidOperationException">未配置私钥。</exception>
+		/// <exception cref="FormatException"><paramref name="source"/> 不是合法的 Base64。</exception>
+		/// <exception cref="CryptographicException">密文与指定的填充模式不匹配，或已被篡改。</exception>
+		public string Decrypt(string source, RSAEncryptionPadding padding)
+		{
 			ArgumentNullException.ThrowIfNull(source);
+			ArgumentNullException.ThrowIfNull(padding);
 
 			if (_privateKey is null)
 			{
 				throw new InvalidOperationException("未配置私钥，无法解密。");
 			}
 
-			var bytes = _privateKey.Decrypt(Convert.FromBase64String(source), RSAEncryptionPadding.Pkcs1);
+			var bytes = _privateKey.Decrypt(Convert.FromBase64String(source), padding);
 
 			return Encoding.UTF8.GetString(bytes);
 		}

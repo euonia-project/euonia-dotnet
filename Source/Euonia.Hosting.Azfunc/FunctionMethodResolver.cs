@@ -9,13 +9,14 @@ namespace Nerosoft.Euonia.Hosting.Azfunc;
 /// </summary>
 internal static class FunctionMethodResolver
 {
-	private static readonly ConcurrentDictionary<string, MethodInfo> Cache = new(StringComparer.Ordinal);
+	private static readonly ConcurrentDictionary<string, ResolutionResult> Cache = new(StringComparer.Ordinal);
 
 	/// <summary>
 	/// 解析当前函数的目标方法；无法解析时返回 <c>null</c>。
 	/// </summary>
 	/// <param name="context">函数执行上下文。</param>
 	/// <returns>目标方法；入口点为空或无法解析时为 <c>null</c>。</returns>
+	/// <exception cref="InvalidOperationException">入口点匹配到多个同名方法，无法安全判定授权特性。</exception>
 	public static MethodInfo? Resolve(FunctionContext context)
 	{
 		var entryPoint = context.FunctionDefinition.EntryPoint;
@@ -25,35 +26,36 @@ internal static class FunctionMethodResolver
 			return null;
 		}
 
-		var key = context.FunctionDefinition.PathToAssembly + "|" + entryPoint;
-
-		if (Cache.TryGetValue(key, out var cached))
-		{
-			return cached;
-		}
-
-		var method = ResolveCore(context.FunctionDefinition.PathToAssembly, entryPoint);
-
-		if (method is not null)
-		{
-			Cache.TryAdd(key, method);
-		}
-
-		return method;
+		return ResolveCached(context.FunctionDefinition.PathToAssembly, entryPoint);
 	}
 
 	internal static MethodInfo? Resolve(string? pathToAssembly, string entryPoint)
 	{
-		return ResolveCore(pathToAssembly, entryPoint);
+		return ResolveCached(pathToAssembly, entryPoint);
 	}
 
-	private static MethodInfo? ResolveCore(string? pathToAssembly, string entryPoint)
+	private static MethodInfo? ResolveCached(string? pathToAssembly, string entryPoint)
+	{
+		var key = (pathToAssembly ?? string.Empty) + "|" + entryPoint;
+
+		// 缓存包含失败结果，避免无法解析的入口点每请求都扫描全部程序集。
+		var result = Cache.GetOrAdd(key, _ => ResolveCore(pathToAssembly, entryPoint));
+
+		if (result.ErrorMessage is not null)
+		{
+			throw new InvalidOperationException(result.ErrorMessage);
+		}
+
+		return result.Method;
+	}
+
+	private static ResolutionResult ResolveCore(string? pathToAssembly, string entryPoint)
 	{
 		var separator = entryPoint.LastIndexOf('.');
 
 		if (separator <= 0 || separator == entryPoint.Length - 1)
 		{
-			return null;
+			return new ResolutionResult(null, null);
 		}
 
 		var typeName = entryPoint[..separator];
@@ -61,9 +63,30 @@ internal static class FunctionMethodResolver
 
 		var type = ResolveType(pathToAssembly, typeName);
 
-		return type?.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
-		            .FirstOrDefault(method => method.Name == methodName);
+		if (type is null)
+		{
+			return new ResolutionResult(null, null);
+		}
+
+		var matches = type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static)
+		                  .Where(method => method.Name == methodName)
+		                  .ToArray();
+
+		if (matches.Length == 0)
+		{
+			return new ResolutionResult(null, null);
+		}
+
+		if (matches.Length > 1)
+		{
+			// fail-closed：同名重载无法确定授权特性归属，宁可拒绝执行也不猜测。
+			return new ResolutionResult(null, $"函数入口点 {entryPoint} 匹配到 {matches.Length} 个同名方法，无法确定授权特性，已拒绝执行。");
+		}
+
+		return new ResolutionResult(matches[0], null);
 	}
+
+	private sealed record ResolutionResult(MethodInfo? Method, string? ErrorMessage);
 
 	private static Type? ResolveType(string? pathToAssembly, string typeName)
 	{

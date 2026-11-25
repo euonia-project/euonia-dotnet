@@ -113,7 +113,10 @@ public class EfCoreRepository<TContext, TEntity, TKey> : Repository<TContext, TE
 	private async Task<TEntity?> GetCoreAsync(TKey key, CancellationToken cancellationToken)
 	{
 		ArgumentNullException.ThrowIfNull(key);
-		return await Context.FindAsync<TEntity>([key], cancellationToken);
+		// Context.FindAsync 会绕过全局查询过滤器（墓碑/租户），导致按主键仍可读到已软删除
+		// 或其它租户的数据；改用带过滤器的查询，与 GetAsync(predicate) 路径保持一致。
+		var predicate = PredicateBuilder.PropertyEqual<TEntity, TKey>(nameof(IEntity<TKey>.Id), key);
+		return await BuildQuery(predicate, null).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 	}
 
 	/// <inheritdoc />

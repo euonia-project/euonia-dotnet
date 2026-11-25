@@ -134,8 +134,10 @@ internal static class PermissionDeclarationScanner
 	/// <param name="declarations">该成员上声明的全部 <see cref="PermissionAttribute"/>。</param>
 	private static void Validate(List<string> diagnostics, string member, PermissionAttribute[] declarations)
 	{
-		// 去重键与判定口径一致：码忽略大小写、角色按序数；同码不同角色是合法要求，不报重复
-		var seen = new HashSet<string>(StringComparer.Ordinal);
+		// 去重键与判定口径一致：码按 OrdinalIgnoreCase、角色按序数；同码不同角色是合法要求，不报重复。
+		// 不能用 ToUpperInvariant 自行归一：不变大写会把 ß 展开成 SS，使 "straße" 与 "STRASSE" 被误判重复，
+		// 而运行期（PermissionRequirements）按 OrdinalIgnoreCase 视其为两个码。
+		var seen = new HashSet<(string Code, string[] Roles)>(DeclarationKeyComparer.Instance);
 
 		foreach (var declaration in declarations)
 		{
@@ -168,10 +170,61 @@ internal static class PermissionDeclarationScanner
 				continue;
 			}
 
-			if (!seen.Add($"{code.ToUpperInvariant()}\u001f{string.Join("\u001e", declaration.Roles)}"))
+			if (!seen.Add((code, declaration.Roles)))
 			{
 				diagnostics.Add(string.Format(Resources.IDS_PERMISSION_CODE_DUPLICATE, member, code));
 			}
+		}
+	}
+
+	/// <summary>
+	/// 声明去重键的比较器：码按 <see cref="StringComparer.OrdinalIgnoreCase"/>（与运行期判定口径完全一致），
+	/// 角色序列按 <see cref="StringComparer.Ordinal"/> 逐项比较。
+	/// </summary>
+	/// <remarks>
+	/// 刻意不做 ToUpperInvariant 归一：不变大写会展开 Unicode 字符（ß → SS），把运行期视为两个码的
+	/// <c>straße</c> 与 <c>STRASSE</c> 误判为重复；OrdinalIgnoreCase 不做展开，两码得以并存。
+	/// </remarks>
+	private sealed class DeclarationKeyComparer : IEqualityComparer<(string Code, string[] Roles)>
+	{
+		/// <summary>
+		/// 共享实例。
+		/// </summary>
+		internal static DeclarationKeyComparer Instance { get; } = new();
+
+		/// <inheritdoc />
+		public bool Equals((string Code, string[] Roles) x, (string Code, string[] Roles) y)
+		{
+			if (!StringComparer.OrdinalIgnoreCase.Equals(x.Code, y.Code) || x.Roles.Length != y.Roles.Length)
+			{
+				return false;
+			}
+
+			for (var index = 0; index < x.Roles.Length; index++)
+			{
+				if (!StringComparer.Ordinal.Equals(x.Roles[index], y.Roles[index]))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		/// <inheritdoc />
+		public int GetHashCode((string Code, string[] Roles) obj)
+		{
+			var hash = new HashCode();
+
+			// 哈希必须与 Equals 的比较规则一致；角色允许 null 项，按 0 参与
+			hash.Add(StringComparer.OrdinalIgnoreCase.GetHashCode(obj.Code));
+
+			foreach (var role in obj.Roles)
+			{
+				hash.Add(role == null ? 0 : StringComparer.Ordinal.GetHashCode(role));
+			}
+
+			return hash.ToHashCode();
 		}
 	}
 

@@ -150,7 +150,8 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	protected virtual string DeletedByFieldName => "DeletedBy";
 
 	/// <summary>
-	/// 获取当前用户的标识；返回 <c>null</c> 时跳过审计字段写入。
+	/// 获取当前用户的标识；返回 <c>null</c> 时仅跳过操作用户字段（CreatedBy/UpdatedBy/DeletedBy）的写入，
+	/// 时间戳填充与软删除转换仍会执行（匿名/后台场景）。
 	/// </summary>
 	/// <returns>当前用户的标识，类型由实体上的操作用户字段决定。</returns>
 	protected virtual object? GetCurrentUserId()
@@ -161,16 +162,12 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 	/// <summary>
 	/// 在保存变更前设置实体条目的值：为实现了 <see cref="IHasCreateTime"/>、<see cref="IHasUpdateTime"/>、
 	/// <see cref="IHasDeleteTime"/> 或 <see cref="ITombstone"/> 的实体填充审计字段，并将删除转换为软删除。
+	/// 当前用户标识为 <c>null</c>（匿名/后台场景）时，时间戳填充与软删除转换仍会执行，仅跳过操作用户字段的写入。
 	/// </summary>
 	/// <param name="entries">变更跟踪器中当前被跟踪的所有实体条目。</param>
 	protected virtual void SetEntryValues(IEnumerable<EntityEntry> entries)
 	{
 		var userId = GetCurrentUserId();
-
-		if (userId is null)
-		{
-			return;
-		}
 
 		var now = DateTimeKind switch
 		{
@@ -187,13 +184,19 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 					if (entry.Entity is IHasCreateTime created)
 					{
 						created.CreatedAt = now;
-						entry.TrySetProperty(CreatedByFieldName, userId);
+						if (userId is not null)
+						{
+							entry.TrySetProperty(CreatedByFieldName, userId);
+						}
 					}
 
 					if (entry.Entity is IHasUpdateTime added)
 					{
 						added.UpdatedAt = now;
-						entry.TrySetProperty(UpdatedByFieldName, userId);
+						if (userId is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+						}
 					}
 
 					break;
@@ -202,17 +205,27 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 					if (entry.Entity is IHasUpdateTime modified)
 					{
 						modified.UpdatedAt = now;
-						entry.TrySetProperty(UpdatedByFieldName, userId);
+						if (userId is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+						}
 					}
 
-					if (entry.Entity is ITombstone { IsDeleted: true } && entry.Property(nameof(ITombstone.IsDeleted)).OriginalValue is false)
+					// IsDeleted 可能未映射（如 [NotMapped]），entry.Property 对未映射属性会抛异常，
+					// 先检查元数据判空，与 TrySetProperty 的防御风格一致。
+					if (entry.Entity is ITombstone { IsDeleted: true }
+					    && entry.Metadata.FindProperty(nameof(ITombstone.IsDeleted)) is not null
+					    && entry.Property(nameof(ITombstone.IsDeleted)).OriginalValue is false)
 					{
 						if (entry.Entity is IHasDeleteTime deleted)
 						{
 							deleted.DeletedAt = now;
 						}
 
-						entry.TrySetProperty(DeletedByFieldName, userId);
+						if (userId is not null)
+						{
+							entry.TrySetProperty(DeletedByFieldName, userId);
+						}
 					}
 
 					break;
@@ -224,10 +237,66 @@ public abstract class DataContextBase<TContext> : DbContext, IRepositoryContext
 						deleteTime.DeletedAt = now;
 					}
 
-					entry.TrySetProperty(DeletedByFieldName, userId);
+					if (userId is not null)
+					{
+						entry.TrySetProperty(DeletedByFieldName, userId);
+					}
+
+					if (entry.Entity is IHasUpdateTime deletedWithUpdateTime)
+					{
+						deletedWithUpdateTime.UpdatedAt = now;
+						if (userId is not null)
+						{
+							entry.TrySetProperty(UpdatedByFieldName, userId);
+						}
+					}
+
 					entry.State = EntityState.Modified;
+
+					// 转为 Modified 会把所有属性标记为已修改；stub 删除（实体仅含主键）时其余属性的
+					// CurrentValue 与 OriginalValue 均为 default，若全部写入会用默认值覆盖数据库中的真实数据。
+					// 因此对 CurrentValue 等于 OriginalValue 的非审计属性取消修改标记，
+					// 使生成的 UPDATE 仅包含实际变化的列（审计列 + 主键）。
+					foreach (var property in entry.Properties)
+					{
+						if (!property.IsModified) continue;
+						var name = property.Metadata.Name;
+						// 审计列始终保持修改标记
+						if (name == nameof(ITombstone.IsDeleted)
+						    || name == nameof(IHasDeleteTime.DeletedAt)
+						    || name == DeletedByFieldName
+						    || name == nameof(IHasUpdateTime.UpdatedAt)
+						    || name == UpdatedByFieldName)
+						{
+							continue;
+						}
+
+						// 主键列不参与 UPDATE，保持 EF 默认行为
+						if (property.Metadata.IsPrimaryKey()) continue;
+
+						// 仅当 CurrentValue 与 OriginalValue 相等时才取消修改标记；
+						// 已加载实体上用户主动修改过的非审计列仍会被写入。
+						if (Equals(property.CurrentValue, property.OriginalValue))
+						{
+							property.IsModified = false;
+						}
+					}
+
 					break;
 			}
+		}
+	}
+
+	/// <summary>
+	/// 将指定属性标记为已修改；属性未在模型中映射时不做任何操作。
+	/// </summary>
+	/// <param name="entry">实体项。</param>
+	/// <param name="propertyName">属性名称。</param>
+	private static void MarkPropertyModified(EntityEntry entry, string propertyName)
+	{
+		if (entry.Metadata.FindProperty(propertyName) is not null)
+		{
+			entry.Property(propertyName).IsModified = true;
 		}
 	}
 

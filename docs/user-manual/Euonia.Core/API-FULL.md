@@ -1082,21 +1082,21 @@ _无公共成员。_
 
 **类型**：static class
 
-- static System.String Encrypt(System.String source)
 - static System.String Encrypt(System.String source, System.String key)
 - static System.String Encrypt(System.String source, System.Byte[] key)
-- static System.String Decrypt(System.String source)
 - static System.String Decrypt(System.String source, System.String key)
 - static System.String Decrypt(System.String source, System.Byte[] key)
+- static System.String EncryptGcm(System.String source, System.String key)
+- static System.String EncryptGcm(System.String source, System.Byte[] key)
+- static System.String DecryptGcm(System.String source, System.String key)
+- static System.String DecryptGcm(System.String source, System.Byte[] key)
 
 ### Nerosoft.Euonia.Security.Cryptography.DES
 
 **类型**：static class
 
-- static System.String Encrypt(System.String source)
 - static System.String Encrypt(System.String source, System.Byte[] key)
 - static System.String Encrypt(System.String source, System.String key)
-- static System.String Decrypt(System.String source)
 - static System.String Decrypt(System.String source, System.Byte[] key)
 
 ### Nerosoft.Euonia.Security.Cryptography.MD5
@@ -1119,7 +1119,9 @@ _无公共成员。_
 
 - new Nerosoft.Euonia.Security.Cryptography.RSA(System.String privateKey, System.String publicKey = null)
 - System.String Encrypt(System.String source)
+- System.String Encrypt(System.String source, System.Security.Cryptography.RSAEncryptionPadding padding)
 - System.String Decrypt(System.String source)
+- System.String Decrypt(System.String source, System.Security.Cryptography.RSAEncryptionPadding padding)
 - void Dispose()
 
 ### Nerosoft.Euonia.Security.Cryptography.SHA

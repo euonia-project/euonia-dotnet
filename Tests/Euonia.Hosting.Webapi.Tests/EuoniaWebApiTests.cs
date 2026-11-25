@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Nerosoft.Euonia.Hosting.Webapi;
@@ -114,5 +116,86 @@ public class EuoniaWebApiTests
 		using var document = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
 		Assert.Equal(400, document.RootElement.GetProperty("status").GetInt32());
 		Assert.Equal("bad", document.RootElement.GetProperty("message").GetString());
+	}
+
+	/// <summary>
+	/// 500 响应不应包含原始异常消息，仅返回通用提示。
+	/// </summary>
+	[Fact]
+	public async Task ExceptionHandler_ServerError_ReturnsGenericMessage()
+	{
+		var handler = new EuoniaExceptionHandler(NullLogger<EuoniaExceptionHandler>.Instance);
+		var context = new DefaultHttpContext
+		{
+			Response = { Body = new MemoryStream() }
+		};
+
+		var handled = await handler.TryHandleAsync(context, new InvalidOperationException("数据库连接字符串泄露"), TestContext.Current.CancellationToken);
+
+		Assert.True(handled);
+		Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
+
+		context.Response.Body.Position = 0;
+		using var document = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+		Assert.Equal(500, document.RootElement.GetProperty("status").GetInt32());
+		var message = document.RootElement.GetProperty("message").GetString();
+		Assert.NotNull(message);
+		Assert.Equal("服务器内部错误，请稍后重试", message);
+		Assert.DoesNotContain("数据库连接字符串泄露", message);
+	}
+
+	/// <summary>
+	/// Development 环境下 500 响应应保留原始异常消息便于调试。
+	/// </summary>
+	[Fact]
+	public async Task ExceptionHandler_ServerError_Development_ReturnsOriginalMessage()
+	{
+		var services = new ServiceCollection();
+		services.AddSingleton<IHostEnvironment>(new TestHostEnvironment("Development"));
+		var handler = new EuoniaExceptionHandler(NullLogger<EuoniaExceptionHandler>.Instance);
+		var context = new DefaultHttpContext
+		{
+			Response = { Body = new MemoryStream() },
+			RequestServices = services.BuildServiceProvider()
+		};
+
+		await handler.TryHandleAsync(context, new InvalidOperationException("调试详情"), TestContext.Current.CancellationToken);
+
+		context.Response.Body.Position = 0;
+		using var document = await JsonDocument.ParseAsync(context.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
+		Assert.Equal("调试详情", document.RootElement.GetProperty("message").GetString());
+	}
+
+	/// <summary>
+	/// 客户端已中止时不应写响应，直接返回未处理。
+	/// </summary>
+	[Fact]
+	public async Task ExceptionHandler_RequestAborted_SkipsResponse()
+	{
+		var handler = new EuoniaExceptionHandler(NullLogger<EuoniaExceptionHandler>.Instance);
+		using var cts = new CancellationTokenSource();
+		cts.Cancel();
+		var context = new DefaultHttpContext
+		{
+			Response = { Body = new MemoryStream() },
+			RequestAborted = cts.Token
+		};
+
+		var handled = await handler.TryHandleAsync(context, new InvalidOperationException("不应输出"), TestContext.Current.CancellationToken);
+
+		Assert.False(handled);
+		Assert.Equal(0, context.Response.Body.Length);
+		Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+	}
+
+	private sealed class TestHostEnvironment(string environmentName) : IHostEnvironment
+	{
+		public string EnvironmentName { get; set; } = environmentName;
+
+		public string ApplicationName { get; set; } = "Euonia.Hosting.Webapi.Tests";
+
+		public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+
+		public IFileProvider ContentRootFileProvider { get; set; } = null!;
 	}
 }

@@ -123,4 +123,108 @@ public class PermissionAuthorizationTests
 		Assert.IsType<PermissionPolicyProvider>(provider.GetRequiredService<IAuthorizationPolicyProvider>());
 		Assert.Contains(provider.GetServices<IAuthorizationHandler>(), item => item is PermissionAuthorizationHandler);
 	}
+
+	/// <summary>
+	/// 含策略分隔符 <c>|</c> 的权限码应在构造时被拒绝：否则策略提供程序会把 "a|b" 拆成
+	/// “持有 a 或 b 即通过”，静默放宽判定（fail-open）。
+	/// </summary>
+	[Fact]
+	public void RequiresPermissionAttribute_CodeWithSeparator_Throws()
+	{
+		var exception = Assert.Throws<ArgumentException>(() => new RequiresPermissionAttribute("a|b"));
+
+		Assert.Contains("|", exception.Message, StringComparison.Ordinal);
+		Assert.Throws<ArgumentException>(() => new RequiresPermissionAttribute("a", "b|c"));
+	}
+
+	/// <summary>
+	/// 框架保留前缀 <c>@</c> 的码应在构造时被拒绝，与启动期声明扫描（ScopeKeys.Validate）同一口径；
+	/// 首尾空白不得绕过保留前缀校验。
+	/// </summary>
+	[Fact]
+	public void RequiresPermissionAttribute_ReservedPrefix_Throws()
+	{
+		Assert.Throws<InvalidOperationException>(() => new RequiresPermissionAttribute("@x"));
+		Assert.Throws<InvalidOperationException>(() => new RequiresPermissionAttribute(" @x"));
+	}
+
+	/// <summary>
+	/// 权限码首尾空白应在构造时裁剪，策略名与 Permissions 都用裁剪后的码。
+	/// </summary>
+	[Fact]
+	public void RequiresPermissionAttribute_TrimsCodes()
+	{
+		var attribute = new RequiresPermissionAttribute(" account.user.create ");
+
+		Assert.Equal(RequiresPermissionAttribute.PolicyPrefix + "account.user.create", attribute.Policy);
+		Assert.Equal(["account.user.create"], attribute.Permissions);
+	}
+
+	/// <summary>
+	/// 空白权限码项应在构造时被拒绝（与特性口径对齐）；null 集合抛 ArgumentNullException。
+	/// </summary>
+	[Fact]
+	public void PermissionRequirement_WhitespaceCode_Throws()
+	{
+		Assert.Throws<ArgumentException>(() => new PermissionRequirement(["a", " "]));
+		Assert.Throws<ArgumentException>(() => new PermissionRequirement([null!]));
+		Assert.Throws<ArgumentNullException>(() => new PermissionRequirement(null!));
+	}
+
+	/// <summary>
+	/// 权限码集合应是构造时的防御性副本且只读：策略实例被静态缓存，
+	/// 构造后修改源数组不得污染要求。
+	/// </summary>
+	[Fact]
+	public void PermissionRequirement_DefensivelyCopiesCodes()
+	{
+		var codes = new[] { "a", "b" };
+		var requirement = new PermissionRequirement(codes);
+
+		codes[0] = "evil";
+
+		Assert.Equal(["a", "b"], requirement.Permissions);
+		Assert.IsType<System.Collections.ObjectModel.ReadOnlyCollection<string>>(requirement.Permissions);
+	}
+
+	/// <summary>
+	/// 宿主预注册的策略提供程序不应被 AddPermissionGuard 覆盖（TryAdd 语义）。
+	/// </summary>
+	[Fact]
+	public void AddPermissionGuard_ShouldNotOverwriteHostPolicyProvider()
+	{
+		var services = new ServiceCollection();
+		var hostProvider = new StubPolicyProvider();
+		services.AddSingleton<IAuthorizationPolicyProvider>(hostProvider);
+
+		services.AddPermissionGuard();
+
+		using var provider = services.BuildServiceProvider();
+
+		Assert.Same(hostProvider, provider.GetRequiredService<IAuthorizationPolicyProvider>());
+	}
+
+	/// <summary>
+	/// 宿主自定义策略提供程序的桩实现：仅用于验证注册不被覆盖。
+	/// </summary>
+	private sealed class StubPolicyProvider : IAuthorizationPolicyProvider
+	{
+		/// <inheritdoc />
+		public Task<AuthorizationPolicy> GetDefaultPolicyAsync()
+		{
+			return Task.FromResult(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+		}
+
+		/// <inheritdoc />
+		public Task<AuthorizationPolicy?> GetFallbackPolicyAsync()
+		{
+			return Task.FromResult<AuthorizationPolicy?>(null);
+		}
+
+		/// <inheritdoc />
+		public Task<AuthorizationPolicy?> GetPolicyAsync(string policyName)
+		{
+			return Task.FromResult<AuthorizationPolicy?>(null);
+		}
+	}
 }

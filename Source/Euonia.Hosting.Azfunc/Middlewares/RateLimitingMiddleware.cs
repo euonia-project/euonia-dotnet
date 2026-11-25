@@ -17,6 +17,7 @@ internal sealed class RateLimitingMiddleware : IFunctionsWorkerMiddleware, IDisp
 	private readonly EuoniaFunctionsOptions _options;
 	private readonly ILogger<RateLimitingMiddleware> _logger;
 	private readonly MemoryCache _limiters = new(new MemoryCacheOptions());
+	private readonly object _sync = new();
 
 	/// <summary>
 	/// 初始化 <see cref="RateLimitingMiddleware"/>。
@@ -50,18 +51,7 @@ internal sealed class RateLimitingMiddleware : IFunctionsWorkerMiddleware, IDisp
 		// 每个函数独立计数，避免一个热点函数耗尽同一 IP 在其它函数上的配额。
 		key = context.FunctionDefinition.Name + ":" + key;
 
-		var limiter = _limiters.GetOrCreate(key, entry =>
-		{
-			entry.SlidingExpiration = TimeSpan.FromHours(1);
-			entry.RegisterPostEvictionCallback(static (_, value, _, _) => (value as IDisposable)?.Dispose());
-			return new DualWindowRateLimiter(_options.RateLimiting);
-		});
-
-		if (limiter is null)
-		{
-			await next(context);
-			return;
-		}
+		var limiter = GetOrCreateLimiter(key);
 
 		using var lease = limiter.AttemptAcquire();
 
@@ -93,9 +83,38 @@ internal sealed class RateLimitingMiddleware : IFunctionsWorkerMiddleware, IDisp
 		await next(context);
 	}
 
+	private DualWindowRateLimiter GetOrCreateLimiter(string key)
+	{
+		if (!_limiters.TryGetValue(key, out Lazy<DualWindowRateLimiter>? lazy))
+		{
+			lock (_sync)
+			{
+				// MemoryCache.GetOrCreate 并发下工厂可能多次执行；缓存 Lazy 并加锁，
+				// 保证同一分区只创建一个限流器，落选工厂不会泄漏定时器。
+				lazy = _limiters.GetOrCreate(key, entry =>
+				{
+					// 过期时间不小于最长窗口，避免活跃分区被提前驱逐导致计数重置。
+					entry.SlidingExpiration = TimeSpan.FromTicks(Math.Max(_options.RateLimiting.MinuteWindow.Ticks, _options.RateLimiting.HourWindow.Ticks));
+					entry.RegisterPostEvictionCallback(static (_, value, _, _) =>
+					{
+						if (value is Lazy<DualWindowRateLimiter> { IsValueCreated: true } created)
+						{
+							created.Value.Dispose();
+						}
+					});
+					return new Lazy<DualWindowRateLimiter>(() => new DualWindowRateLimiter(_options.RateLimiting));
+				});
+			}
+		}
+
+		return lazy!.Value;
+	}
+
 	/// <inheritdoc />
 	public void Dispose()
 	{
+		// MemoryCache.Dispose 不触发驱逐回调，先 Compact 释放全部分区限流器。
+		_limiters.Compact(1.0);
 		_limiters.Dispose();
 	}
 }
