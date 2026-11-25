@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Nerosoft.Euonia.Sample.Domain.Repositories;
 using Nerosoft.Euonia.Sample.Persist.Entities;
-using Nerosoft.Euonia.Sample.Toolkit;
+using Nerosoft.Euonia.Security;
 
 namespace Nerosoft.Euonia.Sample.Controllers;
 
